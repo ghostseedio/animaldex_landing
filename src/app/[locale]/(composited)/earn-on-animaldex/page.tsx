@@ -9,6 +9,7 @@ import {
     earnPaths,
     earnProductPageMeta,
     earnStatus,
+    guideEarnSteps,
     supportArticleHrefs
 } from "@/data/earn-economy";
 import {buildEarnPageMetadata, earnBreadcrumbList, earnFaqSchema} from "@/lib/earn-page-metadata";
@@ -27,7 +28,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
             "earn on AnimalDex",
             "AnimalDex earnings",
             "AnimalDex Credits",
-            "wildlife guide marketplace",
+            "virtual wildlife guides",
             "wildlife creator rewards"
         ]
     });
@@ -40,11 +41,11 @@ const faqs = [
     },
     {
         question: "What can actually become real money?",
-        answer: "Earnings records completed cash Guide outings from the app. Website guests pay the listed fee by card, Apple Pay, or Google Pay, and that payment is not added to withdrawable Earnings automatically. Creator Rewards and Sponsored Challenge cash are not currently paying."
+        answer: "Virtual Wildlife Guides: when someone buys a guide AnimalDex built from your wild sightings, your share is released to Earnings 8 days after the purchase. Buying guides is coming soon. Creator Rewards and Sponsored Challenge cash are not currently paying."
     },
     {
         question: "Do I need payouts set up to start?",
-        answer: "No. You can build a collection, apply to become a Guide, and join Sponsored Challenges without a payout method. Payouts are reviewed when Earnings become Available — they are not instant."
+        answer: "No. You can build a collection, check the Wildlife Guides made from your sightings, and join Sponsored Challenges without a payout method. Payouts are reviewed when Earnings become Available — they are not instant."
     }
 ];
 
@@ -101,12 +102,12 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
                     </p>
                     <ul className="flex flex-col divide-y divide-white/[0.07]">
                         <LedgerRow
-                            href={earnPaths.becomeGuide}
+                            href={earnPaths.wildlifeGuidesMarketplace}
                             event="earn_path_clicked"
                             label="wildlife_guides"
                             title="Wildlife Guides"
                             status={earnStatus.guides}
-                            detail="Approved locals list real-money experiences. Website guests pay the listed fee. That payment is not withdrawable Earnings yet."
+                            detail="Virtual guides AnimalDex builds from your wild sightings, one per place. Buyers pay a small real-money fee; your share is released to Earnings 8 days after the purchase."
                         />
                         <LedgerRow
                             href={earnPaths.creatorRewards}
@@ -156,18 +157,38 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
                 </div>
             </section>
 
+            <section aria-labelledby="guide-steps" className="flex flex-col gap-6">
+                <h2 id="guide-steps" className="font-display text-3xl font-black uppercase tracking-[0.04em] text-white md:text-4xl">
+                    How Wildlife Guides earn
+                </h2>
+                <p className="max-w-2xl text-ink-300">
+                    A Wildlife Guide is virtual: advice from someone who has been there, not a tour. Buyers get your notes on every animal, a chat with you, and introductions to local people you met.
+                </p>
+                <ol className="flex flex-col divide-y divide-white/[0.07]">
+                    {guideEarnSteps.map((step, index) => (
+                        <li key={step.title} className="flex gap-4 py-4">
+                            <span className="font-display text-2xl font-black text-primary-200">{index + 1}</span>
+                            <span className="flex flex-col gap-1">
+                                <span className="font-bold text-white">{step.title}</span>
+                                <span className="text-sm leading-6 text-ink-300">{step.detail}</span>
+                            </span>
+                        </li>
+                    ))}
+                </ol>
+            </section>
+
             <section aria-labelledby="choose-path" className="flex flex-col gap-8">
                 <h2 id="choose-path" className="font-display text-3xl font-black uppercase tracking-[0.04em] text-white md:text-4xl">
                     Choose a path
                 </h2>
                 <div className="grid gap-10 md:grid-cols-3">
                     <PathBlock
-                        href={earnPaths.becomeGuide}
+                        href={earnPaths.wildlifeGuidesMarketplace}
                         event="earn_path_clicked"
-                        label="become_guide"
-                        kicker="Live beta"
-                        title="Become a Wildlife Guide"
-                        body="The only live real-money loop. Build the wild collection, apply, and list an experience."
+                        label="wildlife_guides_page"
+                        kicker="Coming soon"
+                        title="Wildlife Guides"
+                        body="Log wild animals with location on. Each place with 3 or more species becomes a virtual guide you can check, price and share."
                     />
                     <PathBlock
                         href={earnPaths.creatorRewards}

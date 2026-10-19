@@ -24,19 +24,19 @@ function readRepo(...parts: string[]) {
 
 const productCopy = [
     readRepo("src/app/[locale]/(composited)/earn-on-animaldex/page.tsx"),
-    readRepo("src/app/[locale]/(composited)/become-a-wildlife-guide/page.tsx"),
     readRepo("src/app/[locale]/(composited)/creator-rewards/page.tsx"),
     readRepo("src/app/[locale]/(composited)/sponsor-a-challenge/page.tsx"),
     readRepo("src/data/support-content.ts"),
     readRepo("src/data/blog/earn/creator-cluster.ts"),
     readRepo("src/data/blog/earn/business-cluster.ts"),
-    readRepo("src/data/blog/earn/guide-cluster.ts")
+    readRepo("src/data/blog/earn/guide-cluster.ts"),
+    readRepo("src/data/blog/earn/experiences-cluster.ts")
 ].join("\n");
 
 test("canonical earn routes are unique and sitemap-listed", () => {
     assert.deepEqual([...earnCanonicalRoutes], [
         "/earn-on-animaldex",
-        "/become-a-wildlife-guide",
+        "/wildlife-guides",
         "/creator-rewards",
         "/sponsor-a-challenge"
     ]);
@@ -56,7 +56,6 @@ test("support articles compile to the advertised paths", () => {
         ["earnings", "What are Creator Rewards?"],
         ["earnings", "Why are Creator Rewards unavailable?"],
         ["wildlife-guides", "How do I become a Wildlife Guide?"],
-        ["wildlife-guides", "How do Wildlife Guide bookings and payments work?"],
         ["sponsored-challenges", "What are Sponsored Challenges?"],
         ["sponsored-challenges", "How can a business sponsor an AnimalDex Challenge?"]
     ] as const;
@@ -67,6 +66,11 @@ test("support articles compile to the advertised paths", () => {
         assert.ok(article, `missing ${category}/${slug}`);
         assert.match(article.body, /Credit|Guide|Challenge|Creator/i);
     }
+    // Reworded for virtual guides; the indexed URL is kept.
+    const payments = getSupportArticleBySlugs("wildlife-guides", "how-do-wildlife-guide-bookings-and-payments-work");
+    assert.ok(payments, "missing wildlife-guides payments article");
+    assert.equal(payments.title, "How do Wildlife Guide purchases and payments work?");
+    assert.equal(supportArticleHrefs.guidePayments, "/support/wildlife-guides/how-do-wildlife-guide-bookings-and-payments-work");
 
     assert.equal(supportArticleHrefs.howEarn, "/support/earnings/how-do-i-earn-on-animaldex");
     assert.equal(supportArticleHrefs.becomeGuide, "/support/wildlife-guides/how-do-i-become-a-wildlife-guide");
@@ -82,10 +86,9 @@ test("earn blogs are registered and internally linked", () => {
         const linked = JSON.stringify(post.sections);
         assert.ok(
             linked.includes(earnPaths.earn) ||
-                linked.includes(earnPaths.becomeGuide) ||
+                linked.includes(earnPaths.wildlifeGuidesMarketplace) ||
                 linked.includes(earnPaths.creatorRewards) ||
                 linked.includes(earnPaths.sponsor) ||
-                linked.includes(earnPaths.wildlifeExperiences) ||
                 linked.includes("/support/"),
             `${slug} should link into the earn hub`
         );
@@ -104,8 +107,15 @@ test("copy keeps the Credits / Earnings firewall", () => {
     assert.doesNotMatch(productCopy, /Creator Rewards is (live and paying|currently paying)/i);
     assert.doesNotMatch(productCopy, /cash prizes are live/i);
     assert.match(productCopy, /currently paused/i);
-    assert.match(productCopy, new RegExp(String(earnFacts.wildCaptures)));
-    assert.match(productCopy, new RegExp(String(earnFacts.wildSpecies)));
+    assert.match(productCopy, new RegExp(`${earnFacts.guideMinSpecies} or more`));
+});
+
+test("Wildlife Guides copy is virtual only", () => {
+    // In-person guiding (applications, bookings, guests, cash on the day) was removed.
+    assert.doesNotMatch(productCopy, /["'`]\/(become-a-wildlife-guide|wildlife-experiences|app\/guides)\b/);
+    assert.doesNotMatch(productCopy, /Guide Seller Terms|seller application|cash on the day to the Guide|approved (local )?Guides?\b/i);
+    assert.doesNotMatch(productCopy, /request a date/i);
+    assert.match(productCopy, /virtual/i);
 });
 
 test("footer and contact expose the new commercial routes", () => {
@@ -116,8 +126,8 @@ test("footer and contact expose the new commercial routes", () => {
     assert.match(footer, /public-navigation/);
     assert.match(nav, /earn-on-animaldex/);
     assert.match(nav, /sponsor-a-challenge/);
-    // Become a Wildlife Guide and Creator Rewards were deliberately retired from
-    // public navigation; they keep their routes and their in-page links, and
+    // Become a Wildlife Guide was removed (it redirects to /wildlife-guides) and
+    // Creator Rewards was deliberately retired from public navigation;
     // `public-navigation.test.ts` guards that they stay out of the header and footer.
     assert.doesNotMatch(nav, /become-a-wildlife-guide/);
     assert.doesNotMatch(nav, /creator-rewards/);

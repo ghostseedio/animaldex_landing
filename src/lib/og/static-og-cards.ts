@@ -74,7 +74,7 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
     },
     "wildlife-guides": {
         kicker: "Wildlife guides",
-        title: "Book local experts to find wild animals",
+        title: "Virtual guides to wild places, from people who've been",
         tiles: [art("african-lion", "Safari"), art("atlantic-puffin", "Birding"), art("red-eyed-tree-frog", "Night walks")]
     },
     "support": {
@@ -96,11 +96,6 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
         title: "Turn your wildlife knowledge into income",
         tiles: [art("bengal-tiger", "Guide"), art("scarlet-macaw", "Create"), art("grizzly-bear", "Sponsor")]
     },
-    "become-a-wildlife-guide": {
-        kicker: "Become a wildlife guide",
-        title: "Share your local wildlife with travellers",
-        tiles: [art("giraffe", "Giraffe"), art("common-kingfisher", "Kingfisher"), art("green-iguana", "Iguana")]
-    },
     "creator-rewards": {
         kicker: "Creator Rewards",
         title: "Rewards for great wildlife content",
@@ -110,11 +105,6 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
         kicker: "Sponsor a challenge",
         title: "Put your brand behind a real animal challenge",
         tiles: [art("polar-bear", "Polar Bear"), art("monarch-butterfly", "Monarch"), art("koala", "Koala")]
-    },
-    "wildlife-experiences": {
-        kicker: "Wildlife experiences",
-        title: "Guided trips to see animals in the wild",
-        tiles: [art("hippopotamus", "Hippo"), art("humpback-whale", "Whale"), art("three-toed-sloth", "Sloth")]
     },
 
     // Legal

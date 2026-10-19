@@ -263,9 +263,9 @@ const useCaseData: UseCaseLanding[] = [
             event: "photography_to_collection"
         },
         experienceCta: {
-            label: "Find a wildlife photography Guide",
-            href: "/wildlife-experiences?category=wildlife_photography#experiences",
-            event: "photography_to_wildlife_experiences"
+            label: "Browse virtual Wildlife Guides",
+            href: "/wildlife-guides",
+            event: "photography_to_wildlife_guides"
         },
         relatedSlugs: ["import-instagram-wildlife-photos", "herping-field-journal"],
         keyActions: [
@@ -758,9 +758,9 @@ const useCaseData: UseCaseLanding[] = [
             event: "herping_to_import"
         },
         experienceCta: {
-            label: "Find a herping experience",
-            href: "/wildlife-experiences?category=herping#experiences",
-            event: "herping_to_wildlife_experiences"
+            label: "Browse virtual Wildlife Guides",
+            href: "/wildlife-guides",
+            event: "herping_to_wildlife_guides"
         },
         relatedSlugs: ["import-instagram-wildlife-photos", "wildlife-photography-companion-app", "identify-reptiles"],
         limitationNote: "Some herps are indexed at group level when a species-level card is not the honest catalog result. AnimalDex will not invent a species name to look more precise.",

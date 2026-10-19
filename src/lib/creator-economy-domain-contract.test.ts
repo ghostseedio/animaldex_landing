@@ -27,7 +27,7 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const gradeSource = readFileSync(join(here, "capture-grade.ts"), "utf8");
-const guideSource = readFileSync(join(here, "guide-marketplace-core.ts"), "utf8");
+const guideSource = readFileSync(join(here, "virtual-wildlife-guides.ts"), "utf8");
 const giftSource = readFileSync(join(here, "capture-gifts.ts"), "utf8");
 const giftRouteSource = readFileSync(join(here, "../app/api/app/gifts/route.ts"), "utf8");
 const catalogRouteSource = readFileSync(join(here, "../app/api/app/gifts/catalog/route.ts"), "utf8");
@@ -95,8 +95,8 @@ test("gift API routes use user session client and fail closed", () => {
 });
 
 test("guide listed price helpers do not describe credits or earnings ledgers", () => {
-    assert.match(guideSource, /amount_minor/);
-    assert.match(guideSource, /currency_code/);
+    assert.match(guideSource, /amountMinor/);
+    assert.match(guideSource, /currencyCode/);
     assert.doesNotMatch(guideSource, /credit_balances/);
     assert.doesNotMatch(guideSource, /earning_entries/);
 });

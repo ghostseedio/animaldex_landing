@@ -46,8 +46,8 @@ import type {
 } from "@/data/profile-authenticated";
 import ProfileSocialControls from "@/app/[locale]/(composited)/u/[handle]/profile-social-controls";
 import {formatAppInteger} from "@/lib/format-numbers";
-import {categoryLabel, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
-import VirtualWildlifeGuidesShop from "@/app/[locale]/(composited)/u/[handle]/virtual-wildlife-guides-shop";
+import {OwnerShopGuides, PublicShopGuides, type ProfileShopLabels} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-guides";
+import {GUIDE_BAND, GuideBandHeader} from "@/components/wildlife-guides/guide-ui";
 import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 
 export type ProfileTab = "history" | "stats" | "shop" | "locations";
@@ -191,12 +191,11 @@ type ProfileContentProps = {
         completedBinders: ProfileBinder[] | null;
         /** The owner's whole library for History (iOS reads every card, not public rows). */
         historyCaptures: PublicProfileCapture[];
-        /** iOS Shop tab badge: Wildlife Guide requests waiting on this seller. */
-        pendingGuideRequests: number;
     } | null;
     listedPacks: ProfileListedPack[];
-    listedGuides?: PublicGuideListing[];
     virtualGuides?: VirtualGuideProfile;
+    /** profile.shop.* strings for the Shop tab. */
+    shopLabels: ProfileShopLabels;
     social?: ProfileSocialState | null;
     signInHref?: string;
     surface?: "marketing" | "app";
@@ -335,13 +334,14 @@ function WildIdentityCard({
 }
 
 /** iOS `ShopDestinationRow`. */
-function ShopDestinationRow({href, external = false, tint, title, subtitle, status}: {
+function ShopDestinationRow({href, external = false, tint, title, subtitle, status, actionTitle}: {
     href: string;
     external?: boolean;
     tint: string;
     title: string;
     subtitle: string;
     status: string;
+    actionTitle: string;
 }) {
     const body = (
         <>
@@ -353,7 +353,7 @@ function ShopDestinationRow({href, external = false, tint, title, subtitle, stat
                 <span className="mt-0.5 block text-xs leading-5 text-white/45">{subtitle}</span>
                 <span className="mt-1 block text-[11px] font-semibold text-white/60">{status}</span>
             </span>
-            <span className="shrink-0 text-xs font-extrabold" style={{color: THEME.neon}}>Manage ›</span>
+            <span className="shrink-0 text-xs font-extrabold" style={{color: THEME.neon}}>{actionTitle} ›</span>
         </>
     );
     const className = "flex items-center gap-3 border-b border-white/[0.06] px-[18px] py-3.5 transition hover:bg-white/[0.03]";
@@ -516,8 +516,8 @@ export default function ProfileContent({
     viewerAvatarUrl,
     ownerExtras,
     listedPacks,
-    listedGuides = [],
     virtualGuides,
+    shopLabels,
     social = null,
     signInHref = "/account",
     surface = "marketing",
@@ -848,14 +848,6 @@ export default function ProfileContent({
                             >
                                 <span className={`relative flex h-5 items-center ${isActive ? "text-white" : "text-white/40"}`}>
                                     {TAB_ICONS[tab]}
-                                    {tab === "shop" && viewer.isOwner && ownerExtras && ownerExtras.pendingGuideRequests > 0 ? (
-                                        <span
-                                            className="absolute -right-3 -top-1.5 min-w-[16px] rounded-full bg-primary-400 px-1 text-center text-[9px] font-black leading-4 text-black"
-                                            aria-label={`${ownerExtras.pendingGuideRequests} guide requests`}
-                                        >
-                                            {ownerExtras.pendingGuideRequests}
-                                        </span>
-                                    ) : null}
                                 </span>
                                 <span className={`h-0.5 w-full ${isActive ? "bg-white" : "bg-transparent"}`} />
                             </button>
@@ -938,46 +930,41 @@ export default function ProfileContent({
 
             {activeTab === "shop" ? (
                 viewer.isOwner ? (
-                    // iOS `ownerDashboard`: destinations, not product cards.
+                    // iOS `ownerDashboard`: Wildlife Guides first, then Sealed Packs, then Ways to earn.
                     <div className={`flex flex-col ${bleed}`}>
-                        {virtualGuides ? <VirtualWildlifeGuidesShop profile={virtualGuides} owner /> : null}
+                        <OwnerShopGuides
+                            initial={virtualGuides?.kind === "owner" ? virtualGuides.mine : null}
+                            labels={shopLabels}
+                            locale={locale}
+                        />
+                        <GuideBandHeader title={shopLabels.sealedPacks} />
                         <ShopDestinationRow
                             href={`${localePrefix}/app/train/packs`}
                             tint="#FF9500"
-                            title="Sealed Packs"
-                            subtitle="Bundle eligible captures into mystery packs. Sold for Credits."
-                            status={listedPacks.length > 0 ? `${listedPacks.length} for sale` : "No active listings"}
-                        />
-                        <ShopDestinationRow
-                            href={`${localePrefix}/app/guides`}
-                            tint="#32ADE6"
-                            title="Wildlife Guides"
-                            subtitle="Create real-world wildlife experiences. Paid in real money."
-                            status={listedGuides.length > 0 ? `${listedGuides.length} published` : "Application available"}
+                            title={shopLabels.sealedPacks}
+                            subtitle={shopLabels.sealedPacksDetail}
+                            status={listedPacks.length > 0 ? shopLabels.packsForSale.replace("{count}", String(listedPacks.length)) : shopLabels.noActiveListings}
+                            actionTitle={shopLabels.manage}
                         />
                         <Link
                             href={`${localePrefix}/earn-on-animaldex`}
-                            className="flex items-center gap-3 border-b border-white/[0.06] px-[18px] py-3.5 text-sm font-semibold text-white transition hover:bg-white/[0.03]"
+                            className="flex items-center gap-3 px-[18px] pb-7 pt-4 text-sm font-semibold text-white transition hover:opacity-80"
                         >
-                            <span className="flex-1">Ways to earn</span>
-                            <span className="text-xs text-white/40">Credits and real money ›</span>
+                            <span className="flex-1">{shopLabels.waysToEarn}</span>
+                            <span className="text-xs text-white/40">{shopLabels.waysToEarnDetail} ›</span>
                         </Link>
                     </div>
                 ) : (
-                    // iOS `publicStorefront`.
-                    <div className="flex flex-col gap-3">
-                        <p className="text-xs font-medium uppercase tracking-[0.09em] text-white">For sale</p>
-                        {virtualGuides?.cards.length ? <VirtualWildlifeGuidesShop profile={virtualGuides} /> : null}
-                        {listedPacks.length === 0 && listedGuides.length === 0 && !virtualGuides?.cards.length ? (
-                            <div className="border border-white/10 bg-surface-900/60 px-5 py-8 text-center">
-                                <p className="font-display text-xl font-bold text-white">Nothing listed yet</p>
-                                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/45">
-                                    This collector doesn&rsquo;t have any packs or Wildlife Guides available right now.
-                                </p>
-                            </div>
-                        ) : null}
+                    // iOS `publicStorefront`: the person's guides, then their packs; one empty state for neither.
+                    <div className={`flex flex-col ${bleed}`}>
+                        <PublicShopGuides
+                            guides={virtualGuides?.kind === "public" ? virtualGuides.guides : []}
+                            labels={shopLabels}
+                            locale={locale}
+                        />
+                        {listedPacks.length > 0 ? <GuideBandHeader title={shopLabels.sealedPacks} /> : null}
                         {listedPacks.map((pack) => (
-                            <div key={pack.id} className=" border border-white/10 bg-surface-900/60 p-4">
+                            <div key={pack.id} className={`${GUIDE_BAND} px-[18px] py-4`}>
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <h3 className="font-display text-xl font-bold text-white">{pack.themeTitle}</h3>
@@ -1001,34 +988,12 @@ export default function ProfileContent({
                                 </p>
                             </div>
                         ))}
-                        {listedGuides.length > 0 ? (
-                            <h3 className="mt-3 font-display text-lg font-bold text-white">Wildlife Guides</h3>
+                        {listedPacks.length === 0 && !(virtualGuides?.kind === "public" && virtualGuides.guides.length > 0) ? (
+                            <div className="px-5 py-9 text-center">
+                                <p className="font-display text-xl font-bold text-white">{shopLabels.nothingListedTitle}</p>
+                                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/45">{shopLabels.nothingListedDetail}</p>
+                            </div>
                         ) : null}
-                        {listedGuides.map((guide) => (
-                            <Link
-                                key={guide.id}
-                                href={guidePath(guide)}
-                                className=" border border-white/10 bg-surface-900/60 p-4 transition hover:bg-surface-900/80"
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-primary-200">
-                                            {categoryLabel(guide.service_category)}
-                                        </p>
-                                        <h3 className="mt-1 font-display text-xl font-bold text-white">{guide.title}</h3>
-                                        <p className="mt-1 text-sm text-white/45">
-                                            {guideAreaServedName(guide)} · {formatGuidePrice(guide.amount_minor, guide.currency_code, locale)} / person
-                                        </p>
-                                        {guide.public_summary ? (
-                                            <p className="mt-2 line-clamp-2 text-xs text-white/35">{guide.public_summary}</p>
-                                        ) : null}
-                                    </div>
-                                    <span className="shrink-0 bg-primary-400 px-3 py-2 text-xs font-black text-black">
-                                        View
-                                    </span>
-                                </div>
-                            </Link>
-                        ))}
                     </div>
                 )
             ) : null}

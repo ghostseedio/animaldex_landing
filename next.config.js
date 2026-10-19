@@ -115,6 +115,13 @@ module.exports = withNextIntl({
                 {source: `${prefix}${from}`, destination: `${prefix}${to}`, permanent: true},
                 {source: `${prefix}${from}/:path*`, destination: `${prefix}${to}/:path*`, permanent: true}
             ])),
+            // Oct 2026: Wildlife Guides are virtual only. The in-person experiences
+            // directory and the seller application are gone; their indexed URLs
+            // land on the virtual guides list in one hop.
+            ...["/wildlife-experiences", "/become-a-wildlife-guide"].flatMap((from) => ["", "/id"].flatMap((prefix) => [
+                {source: `${prefix}${from}`, destination: `${prefix}/wildlife-guides`, permanent: true},
+                {source: `${prefix}${from}/:path*`, destination: `${prefix}/wildlife-guides`, permanent: true}
+            ])),
             ...reversedComparisonRedirects(),
             // "tiger vs cheetah" has no battle page yet; the speed matchup is the
             // closest published answer (Search Console, Oct 2026).

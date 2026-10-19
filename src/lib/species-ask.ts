@@ -246,8 +246,8 @@ export function inferAskProductRoutes(
 
     routes.push({
         intent: "experiences",
-        label: "Find wildlife experiences",
-        href: "/wildlife-experiences"
+        label: "Find Wildlife Guides",
+        href: "/wildlife-guides"
     });
 
     return uniqueRoutes(routes);

@@ -30,7 +30,7 @@ const HUBS: CatalogItem[] = [
     {kind: "hub", title: "Pokémon and their real animal matches", href: "/pokemon-animals", slug: "pokemon-animals"},
     {kind: "hub", title: "Animal challenges", href: "/challenges", slug: "challenges"},
     {kind: "hub", title: "Capture animals app (AnimalDex)", href: "/capture-animals-app", slug: "capture-animals-app"},
-    {kind: "hub", title: "Wildlife experiences and guides", href: "/wildlife-experiences", slug: "wildlife-experiences"},
+    {kind: "hub", title: "Virtual Wildlife Guides", href: "/wildlife-guides", slug: "wildlife-guides"},
     {kind: "hub", title: "AnimalDex blog", href: "/blog", slug: "blog"}
 ];
 

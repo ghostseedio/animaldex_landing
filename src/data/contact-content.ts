@@ -83,7 +83,7 @@ const en: ContactContent = {
             label: "Creators",
             heading: "Create with AnimalDex.",
             description:
-                "Press and brand collaborations are one route. Earning on AnimalDex is another: AnimalDex Wildlife Guides are in live beta, and Creator Rewards is a paused company-funded program — not a collaboration pitch.",
+                "Press and brand collaborations are one route. Earning on AnimalDex is another: virtual Wildlife Guides built from your own sightings are coming soon, and Creator Rewards is a paused company-funded program — not a collaboration pitch.",
             cta: "Pitch a collaboration",
             microcopy: "To earn in-product, start with Ways to earn on AnimalDex.",
             href: mailto("AnimalDex Creator Collaboration")
@@ -159,7 +159,7 @@ const id: ContactContent = {
             label: "Kreator",
             heading: "Berkarya dengan AnimalDex.",
             description:
-                "Kolaborasi pers dan brand adalah satu jalur. Menghasilkan di AnimalDex adalah jalur lain: Wildlife Guide sedang beta, dan Creator Rewards adalah program yang sedang dijeda — bukan pitch kolaborasi.",
+                "Kolaborasi pers dan brand adalah satu jalur. Menghasilkan di AnimalDex adalah jalur lain: Wildlife Guide virtual dari penampakan satwamu sendiri segera hadir, dan Creator Rewards adalah program yang sedang dijeda — bukan pitch kolaborasi.",
             cta: "Ajukan kolaborasi",
             microcopy: "Untuk menghasilkan di dalam produk, mulai dari Ways to earn on AnimalDex.",
             href: mailto("AnimalDex Creator Collaboration")

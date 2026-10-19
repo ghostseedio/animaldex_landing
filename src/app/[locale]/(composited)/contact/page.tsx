@@ -156,7 +156,7 @@ export default async function ContactPage({params}: {params: {locale: string}}) 
                         In-product earning is separate from a collaboration pitch.{" "}
                         <EarnTrackLink href="/earn-on-animaldex" event="earn_path_clicked" label="contact_earn" className="text-primary-200 hover:text-white">Ways to earn</EarnTrackLink>
                         {", "}
-                        <EarnTrackLink href="/become-a-wildlife-guide" event="guide_cta_clicked" label="contact_guide" className="text-primary-200 hover:text-white">become a Wildlife Guide</EarnTrackLink>
+                        <EarnTrackLink href="/wildlife-guides" event="guide_cta_clicked" label="contact_guide" className="text-primary-200 hover:text-white">Wildlife Guides</EarnTrackLink>
                         {", "}
                         <EarnTrackLink href="/creator-rewards" event="creator_rewards_cta_clicked" label="contact_creator" className="text-primary-200 hover:text-white">Creator Rewards</EarnTrackLink>
                         {", or "}

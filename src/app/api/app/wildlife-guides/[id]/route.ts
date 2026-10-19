@@ -1,65 +1,105 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {isUuid, sanitizeGuidePatch, sanitizeSpeciesPatch} from "@/lib/virtual-wildlife-guides";
+
+const NO_STORE = {"Cache-Control": "private, no-store"};
+
+function failure(message: string, status = 400) {
+    return NextResponse.json({error: message}, {status, headers: NO_STORE});
+}
+
+/** Server error codes, as plain sentences for the editor. */
+function readableError(message: string) {
+    if (/guide_not_found/.test(message)) return "This guide is no longer available.";
+    if (/species_not_on_guide/.test(message)) return "That animal is not on this guide.";
+    if (/note_length/.test(message)) return "A note can be at most 1,000 characters.";
+    if (/auth_required/.test(message)) return "Sign in to edit your guides.";
+    return message;
+}
+
+async function signedIn() {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return {error: failure("Supabase is not configured.", 503)} as const;
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return {error: failure("Authentication required.", 401)} as const;
+    return {supabase} as const;
+}
 
 export async function GET(request: Request, {params}: {params: {id: string}}) {
+    if (!isUuid(params.id)) return failure("Guide not found.", 404);
     const supabase = createSupabaseServerClient();
-    if (!supabase) return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
+    if (!supabase) return failure("Supabase is not configured.", 503);
     const owner = new URL(request.url).searchParams.get("owner") === "1";
     let data: unknown = null;
     if (owner) {
         const {data: {user}} = await supabase.auth.getUser();
-        if (!user) return NextResponse.json({error: "Authentication required."}, {status: 401});
+        if (!user) return failure("Authentication required.", 401);
         const {data: mine, error} = await supabase.rpc("get_my_wildlife_guide", {p_listing_id: params.id});
-        if (error) return NextResponse.json({error: error.message}, {status: 400});
+        if (error) return failure(readableError(error.message));
         data = mine;
     } else {
         const {data: guide, error} = await supabase.rpc("get_public_wildlife_guide", {p_listing_id: params.id});
-        if (error) return NextResponse.json({error: error.message}, {status: 400});
+        if (error) return failure(readableError(error.message));
         data = guide;
     }
-    if (!data) return NextResponse.json({error: "Guide not found."}, {status: 404});
-    return NextResponse.json({guide: data}, {headers: {"Cache-Control": "private, no-store"}});
+    if (!data) return failure("Guide not found.", 404);
+    return NextResponse.json({guide: data}, {headers: NO_STORE});
 }
 
+/**
+ * One of three edits, by body shape:
+ * - `{speciesProfileId, hidden?, note?}`: show/hide an animal, or set its note
+ *   (`note: null` or "" clears it and brings back the draft);
+ * - `{mediaId, hidden}`: show/hide a photo;
+ * - otherwise the guide's own fields, only the ones that changed.
+ */
 export async function PATCH(request: Request, {params}: {params: {id: string}}) {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({error: "Authentication required."}, {status: 401});
-    const input = await request.json().catch(() => ({})) as Record<string, unknown>;
-    if (typeof input.speciesProfileId === "string") {
-        const {speciesProfileId, ...speciesPatch} = input;
-        const {data, error} = await supabase.rpc("update_my_wildlife_guide_species", {p_listing_id: params.id, p_species_profile_id: speciesProfileId, p_patch: speciesPatch});
-        if (error) return NextResponse.json({error: error.message}, {status: 400});
-        return NextResponse.json({guide: data}, {headers: {"Cache-Control": "private, no-store"}});
+    if (!isUuid(params.id)) return failure("Guide not found.", 404);
+    const auth = await signedIn();
+    if ("error" in auth) return auth.error;
+    const {supabase} = auth;
+    const input = await request.json().catch(() => null) as Record<string, unknown> | null;
+    if (!input || typeof input !== "object" || Array.isArray(input)) return failure("Send the guide changes as JSON.");
+
+    if (input.speciesProfileId !== undefined) {
+        if (typeof input.speciesProfileId !== "string" || !isUuid(input.speciesProfileId)) return failure("Unknown animal.");
+        const {speciesProfileId, ...rest} = input;
+        const result = sanitizeSpeciesPatch(rest);
+        if ("error" in result) return failure(result.error);
+        const {data, error} = await supabase.rpc("update_my_wildlife_guide_species", {
+            p_listing_id: params.id,
+            p_species_profile_id: speciesProfileId,
+            p_patch: result.patch
+        });
+        if (error) return failure(readableError(error.message));
+        return NextResponse.json({guide: data}, {headers: NO_STORE});
     }
-    if (typeof input.mediaId === "string") {
-        const {mediaId, ...mediaPatch} = input;
-        const {data, error} = await supabase.rpc("update_my_wildlife_guide_media", {p_listing_id: params.id, p_media_id: mediaId, p_patch: mediaPatch});
-        if (error) return NextResponse.json({error: error.message}, {status: 400});
-        return NextResponse.json({guide: data}, {headers: {"Cache-Control": "private, no-store"}});
+
+    if (input.mediaId !== undefined) {
+        if (typeof input.mediaId !== "string" || !isUuid(input.mediaId)) return failure("Unknown photo.");
+        if (typeof input.hidden !== "boolean") return failure("hidden must be true or false.");
+        const {data, error} = await supabase.rpc("update_my_wildlife_guide_media", {
+            p_listing_id: params.id,
+            p_media_id: input.mediaId,
+            p_patch: {hidden: input.hidden}
+        });
+        if (error) return failure(readableError(error.message));
+        return NextResponse.json({guide: data}, {headers: NO_STORE});
     }
-    const patch: Record<string, unknown> = {};
-    for (const key of ["title", "summary", "overview", "seasonLine", "areaLabel", "visibility"]) {
-        if (typeof input[key] === "string") patch[key] = input[key];
-    }
-    if (typeof input.priceAuto === "boolean") patch.priceAuto = input.priceAuto;
-    if (Number.isInteger(input.amountMinor)) patch.amountMinor = input.amountMinor;
-    if (Array.isArray(input.contacts)) patch.contacts = input.contacts;
-    if (typeof input.privateNotes === "string") patch.privateNotes = input.privateNotes;
-    if (!Object.keys(patch).length) return NextResponse.json({error: "There are no guide changes to save."}, {status: 400});
-    const {data, error} = await supabase.rpc("update_my_wildlife_guide", {p_listing_id: params.id, p_patch: patch});
-    if (error) return NextResponse.json({error: error.message}, {status: 400});
-    if (!data) return NextResponse.json({error: "Guide not found."}, {status: 404});
-    return NextResponse.json({guide: data}, {headers: {"Cache-Control": "private, no-store"}});
+
+    const result = sanitizeGuidePatch(input);
+    if ("error" in result) return failure(result.error);
+    const {data, error} = await supabase.rpc("update_my_wildlife_guide", {p_listing_id: params.id, p_patch: result.patch});
+    if (error) return failure(readableError(error.message));
+    if (!data) return failure("Guide not found.", 404);
+    return NextResponse.json({guide: data}, {headers: NO_STORE});
 }
 
 export async function DELETE(_request: Request, {params}: {params: {id: string}}) {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({error: "Authentication required."}, {status: 401});
-    const {error} = await supabase.rpc("delete_my_wildlife_guide", {p_listing_id: params.id});
-    if (error) return NextResponse.json({error: error.message}, {status: 400});
-    return NextResponse.json({ok: true}, {headers: {"Cache-Control": "private, no-store"}});
+    if (!isUuid(params.id)) return failure("Guide not found.", 404);
+    const auth = await signedIn();
+    if ("error" in auth) return auth.error;
+    const {error} = await auth.supabase.rpc("delete_my_wildlife_guide", {p_listing_id: params.id});
+    if (error) return failure(readableError(error.message));
+    return NextResponse.json({ok: true}, {headers: NO_STORE});
 }

@@ -30,7 +30,6 @@ export const START_COLLECTION_HREF = "/#download";
 export const BLOG_HREF = "/blog";
 export const LOCATIONS_HREF = "/locations";
 export const INSTAGRAM_WILDLIFE_ARCHIVE_HREF = "/use-cases/import-instagram-wildlife-photos";
-export const WILDLIFE_EXPERIENCES_HREF = "/wildlife-experiences";
 export const EARN_ON_ANIMALDEX_HREF = "/earn-on-animaldex";
 export const ANIMAL_FREQUENCIES_HREF = "/animal-frequencies";
 export const ANIMAL_TRIALS_HREF = "/animal-trials";
@@ -51,8 +50,7 @@ export const exploreAnimalLinks: PublicNavLink[] = [
     {href: "/comparisons", labelKey: "compareAnimals", preview: "compare"},
     {href: "/tier-list", labelKey: "animalTierLists", preview: "tiers"},
     {href: "/animal-hybrids", labelKey: "animalHybrids", preview: "hybrid"},
-    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"},
-    {href: WILDLIFE_EXPERIENCES_HREF, labelKey: "wildlifeExperiences", preview: "experiences"}
+    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"}
 ];
 
 /**

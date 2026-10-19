@@ -677,11 +677,11 @@ export default async function Home({params}: HomePageProps) {
                     ))}
                 </DragSlider>
                 <p className="px-4 text-center text-sm text-ink-400">
-                    Looking for a trip, not only an app?{" "}
-                    <Link href="/wildlife-experiences" className="text-primary-200 hover:text-white">
-                        Browse local wildlife experiences
+                    Planning a trip, not only a walk?{" "}
+                    <Link href="/wildlife-guides" className="text-primary-200 hover:text-white">
+                        Browse virtual Wildlife Guides
                     </Link>
-                    {" — herping, birding, night walks, and photography outings led by approved Guides."}
+                    {" — notes on every animal from explorers who logged wildlife at a place, with a chat with the author."}
                 </p>
             </section>
 

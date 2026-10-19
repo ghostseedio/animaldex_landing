@@ -9,15 +9,15 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 test("uniqueSitemapEntries keeps the first lastmod for a duplicated loc", () => {
     const unique = uniqueSitemapEntries([
-        {url: "https://animaldex.app/wildlife-experiences", lastModified: new Date("2026-08-01")},
-        {url: "https://animaldex.app/wildlife-experiences"},
-        {url: "https://animaldex.app/id/wildlife-experiences"}
+        {url: "https://animaldex.app/wildlife-guides", lastModified: new Date("2026-08-01")},
+        {url: "https://animaldex.app/wildlife-guides"},
+        {url: "https://animaldex.app/id/wildlife-guides"}
     ]);
 
     assert.equal(unique.length, 2);
-    assert.equal(unique[0]?.url, "https://animaldex.app/wildlife-experiences");
+    assert.equal(unique[0]?.url, "https://animaldex.app/wildlife-guides");
     assert.ok(unique[0]?.lastModified);
-    assert.equal(unique[1]?.url, "https://animaldex.app/id/wildlife-experiences");
+    assert.equal(unique[1]?.url, "https://animaldex.app/id/wildlife-guides");
 });
 
 test("serializeSitemapXml escapes loc values", () => {

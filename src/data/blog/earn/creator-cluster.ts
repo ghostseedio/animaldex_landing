@@ -155,7 +155,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             {
                 title: "What this page is not promising",
                 paragraphs: [
-                    "A collection is not a payout. Credits you spend on scans stay Credits and cannot be converted to cash. Creator Rewards, the company-funded program designed to recognise live contribution during open periods, is currently paused with no published reopen date. The reason to index species now is the record itself: a list you can search, compare and keep building, and the option to apply as an AnimalDex Wildlife Guide once the wild-collection gates of 45 wild captures, 20 wild species and a 30-day account are met."
+                    "A collection is not a payout. Credits you spend on scans stay Credits and cannot be converted to cash. Creator Rewards, the company-funded program designed to recognise live contribution during open periods, is currently paused with no published reopen date. The reason to index species now is the record itself: a list you can search, compare and keep building, and, wherever you log enough wild species at one place, a virtual Wildlife Guide that AnimalDex builds from your sightings."
                 ],
                 pullQuote: "The unit you collect is the animal identity, not the file. One card per species, backed by the captures that prove it.",
                 inlineLinks: [earnRelatedLinks.creator, earnRelatedLinks.guide, earnRelatedLinks.earn]
@@ -265,7 +265,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                 title: "Guiding is the local route that uses your knowledge",
                 paragraphs: [
                     "If you already know a wetland at first light, or which public trail goes quiet after rain, other people will pay for that time. That is guiding, not licensing, and it is the one route where a modest portfolio and deep local knowledge beat a famous name with no idea where the heron roosts. The customer is buying orientation: where to stand, when to arrive, how not to flush the bird for everyone else.",
-                    "AnimalDex Wildlife Guides is a live beta for exactly this. Approved locals list a real-money experience with an area, a duration and a per-person price; collectors request a date; the guide accepts; and the guest pays the guide cash on the day. AnimalDex does not collect the cash. Completing the outing records seller net on Earnings. You still need any permits the land requires, and you still cannot promise a sighting."
+                    "AnimalDex does not list or book guided walks, so a walk you lead stays your own business, paid directly by your guests, under whatever permits the land requires. What AnimalDex adds is a virtual route for the same knowledge. Each place where you log 3 or more wild species, with a public photo, becomes a virtual Wildlife Guide that other explorers will be able to buy for a small real-money fee: your notes on every animal, a direct chat with you, and introductions to local people you met. It is advice, not a tour, buying is coming soon, and nobody is ever promised a sighting."
                 ],
                 media: {
                     type: "gallery",
@@ -303,7 +303,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                 title: "What AnimalDex does and does not pay",
                 paragraphs: [
                     "Creator Rewards is designed as a company-funded allocation during open periods for eligible live contribution. It is currently paused. It will never be “Credits times a rate” or “Score times a rate”, and there is no per-capture fee. Do not plan rent around it.",
-                    "Credits are not cash and cannot be withdrawn. Sponsored Challenges, which a zoo, park or brand can run inside the app, pay achievements today, not cash. The only real-money flow on the platform right now is the guide route above, and that money passes from guest to guide in person.",
+                    "Credits are not cash and cannot be withdrawn. Sponsored Challenges, which a zoo, park or brand can run inside the app, pay achievements today, not cash. The real-money route on the platform is virtual Wildlife Guides, and buying them is coming soon.",
                     "The useful move is still the same whichever program is open: original live captures, breadth across groups, and capture quality. That work has value in the collection even when no period is paying, and it is the same work that makes the other six rows of the table easier."
                 ],
                 inlineLinks: [earnRelatedLinks.creator, earnRelatedLinks.earn, earnRelatedLinks.sponsor]
@@ -311,7 +311,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             {
                 title: "A practical mix",
                 paragraphs: [
-                    "Keep licensing and assignments if you have them; they are slow but they compound. Build a print edit of fifteen images with local stories. Use AnimalDex to keep a public species record, and if you meet the wild-collection gates, list the guided morning you already know how to run. Treat Creator Rewards as a possible later program, not income you can invoice against."
+                    "Keep licensing and assignments if you have them; they are slow but they compound. Build a print edit of fifteen images with local stories. Use AnimalDex to keep a public species record; the places where you find enough wild species become virtual guides you can check, price and share. Treat Creator Rewards as a possible later program, not income you can invoice against."
                 ],
                 pullQuote: "What still sells is specificity: a behaviour nobody else has, a species nobody else has covered, a place you can reach on a Tuesday.",
                 inlineLinks: [
@@ -322,7 +322,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
         faq: [
             {
                 question: "Does AnimalDex pay photographers for uploading photos?",
-                answer: "No. Live captures build a collection; they do not earn a fee. Credits are not cash and cannot be withdrawn. Creator Rewards is paused, and when it runs it is a company-funded allocation for eligible live contribution, not a per-photo rate. The only real-money flow today is Wildlife Guides, where the guest pays the guide cash on the day."
+                answer: "No. Live captures build a collection; they do not earn a fee. Credits are not cash and cannot be withdrawn. Creator Rewards is paused, and when it runs it is a company-funded allocation for eligible live contribution, not a per-photo rate. The real-money route is virtual Wildlife Guides built from your sightings, and buying them is coming soon."
             },
             {
                 question: "How much do wildlife photographers earn from stock photography?",
@@ -330,7 +330,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "Can you make a living as a wildlife photography guide?",
-                answer: "Some people do, usually by combining guiding with workshops and tours at sites they know in every season. Local guiding on its own is more often a side income: small groups, a per-person price, cash on the day, and permits where the land requires them. Nobody can promise sightings, and the customers who return are the ones you were honest with."
+                answer: "Some people do, usually by combining guiding with workshops and tours at sites they know in every season. Local guiding on its own is more often a side income: small groups, a per-person price, and permits where the land requires them. Nobody can promise sightings, and the customers who return are the ones you were honest with."
             },
             {
                 question: "What sells better, prints or licensing?",
@@ -348,7 +348,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.guidingSideIncome}`,
         title: "Turn Local Wildlife Knowledge Into a Guiding Side Income",
         description:
-            "Know the public paths, seasons and honest expectations for local wildlife? What a guided outing sells, what it needs, and how cash on the day works.",
+            "Know the public paths, seasons and honest expectations for local wildlife? What a guided outing sells, what it needs, and where AnimalDex fits.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("how-to-turn-local-wildlife-knowledge-into-a-guiding-side-income"),
@@ -371,9 +371,9 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             "Knowledge is the product. The animal is not.",
             "What a guided outing actually sells",
             "Know the site like a resident",
-            "Eligibility is a collection problem first",
+            "Your sightings can become a virtual guide",
             "Price, permits and promises",
-            "Cash on the day, record after"
+            "Where the money goes"
         ],
         sections: [
             {
@@ -381,7 +381,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                 paragraphs: [
                     "People pay for orientation: where to stand, how early to arrive, what “quiet” actually means on that trail, and how not to wreck the morning for the animal and for everyone behind you. They do not pay you to manufacture a sighting, and the guides who last are the ones who say so in the first sentence of the listing.",
                     "That is good news for anyone with a decade of Sunday walks and no famous portfolio. The person who knows that the kingfisher uses the downstream perch after 8 a.m. and the upstream one before has something a visiting photographer with better glass cannot buy anywhere else.",
-                    "An AnimalDex Wildlife Guide listing is a public pitch for that orientation: category, area, duration, guest limit and a real-money price per person. Exact meeting points stay private until you accept a request."
+                    "A good pitch for that orientation names the kind of outing, the area, the duration, the guest limit and a price per person. Keep exact meeting points private until you have agreed to take someone."
                 ],
                 media: {
                     type: "image",
@@ -425,21 +425,19 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                 }
             },
             {
-                title: "Eligibility is a collection problem first",
+                title: "Your sightings can become a virtual guide",
                 paragraphs: [
-                    "You apply after 45 qualifying wild captures, 20 wild species and a 30-day-old account, plus an 18+ attestation and the current Guide Seller Terms. Meeting those numbers lets you apply. A person still reviews the application, and that gate exists so the marketplace is not an open classifieds board. It is not a promise that every birder who hits 45 captures is approved."
+                    "AnimalDex does not list or book guided walks, and there is no application to fill in. Each place where you log 3 or more wild species, with a public photo, becomes a virtual Wildlife Guide that other explorers will be able to buy for a small real-money fee: your notes on every animal, a direct chat with you, and introductions to local people you met. AnimalDex writes the page from your sightings; you check the draft note for each animal and add your own tips."
                 ],
                 table: {
-                    columns: ["Gate", "Threshold", "Why it exists"],
+                    columns: ["What you need", "Details"],
                     rows: [
-                        {cells: ["Qualifying wild captures", `${earnFacts.wildCaptures}`, "Shows you have been out, repeatedly, with the in-app camera"]},
-                        {cells: ["Wild species", `${earnFacts.wildSpecies}`, "Shows breadth beyond one easy bird at one feeder"]},
-                        {cells: ["Account age", `${earnFacts.accountAgeDays} days`, "Keeps throwaway accounts out of a real-money marketplace"]},
-                        {cells: ["18+ attestation and Seller Terms", "Required", "You are selling a service to the public under your own name"]},
-                        {cells: ["Human review", "Every application", "Numbers open the door; a person decides who walks through it"]}
+                        {cells: ["Wild animals logged with location on", "Each wild capture with a location counts toward the place it was taken."]},
+                        {cells: [`${earnFacts.guideMinSpecies} or more species at one place`, "Different species, not repeat sightings of the same animal."]},
+                        {cells: ["A public photo", "A guide's photos come from your public captures, so a place needs at least one."]}
                     ]
                 },
-                inlineLinks: [earnRelatedLinks.guide, {text: "How do I become a Wildlife Guide?", slug: "how-do-i-become-a-wildlife-guide", href: supportArticleHrefs.becomeGuide}]
+                inlineLinks: [earnRelatedLinks.guide, {text: "How to become a Wildlife Guide with AnimalDex", slug: "how-to-become-a-wildlife-guide-with-animaldex", href: blogHrefs.becomeGuideHowTo}]
             },
             {
                 title: "Price, permits and promises",
@@ -463,15 +461,15 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                 ]
             },
             {
-                title: "Cash on the day, record after",
+                title: "Where the money goes",
                 paragraphs: [
-                    "The collector pays you in person. AnimalDex does not process the payment and never holds it. When you mark the outing complete, seller net is recorded on Earnings so you have a record of what the guiding side of the account has done. Credits are never part of the booking, and nothing you earn from a scan, a mission or a comparison win moves across to the Earnings side.",
-                    "That split is deliberate. It keeps the game economy and the real-money marketplace on different sides of a wall, so a guide's reputation rests on walks that happened, not on Credits bought."
+                    "A walk you lead is paid by your guests directly; AnimalDex does not process that money and never holds it. A virtual guide is different: once buying opens, your share of each sale is released to Earnings 8 days after the purchase, in real money. Credits are never part of it, and nothing you earn from a scan, a mission or a comparison win moves across to the Earnings side.",
+                    "That split is deliberate. It keeps the game economy and real money on different sides of a wall, so a guide's reputation rests on animals actually found, not on Credits bought."
                 ],
                 pullQuote: "Promise the morning, not the animal: the route, the start time, the species you usually get, and the one you sometimes get.",
                 inlineLinks: [
-                    {text: "How Guide bookings and payments work", slug: "how-do-wildlife-guide-bookings-and-payments-work", href: supportArticleHrefs.guidePayments},
-                    earnRelatedLinks.experiences
+                    {text: "How buying a Wildlife Guide works", slug: "how-do-wildlife-guide-bookings-and-payments-work", href: supportArticleHrefs.guidePayments},
+                    earnRelatedLinks.marketplace
                 ]
             }
         ],
@@ -482,15 +480,15 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "How much can I charge for a guided birding walk?",
-                answer: "Local guided walks are commonly priced per person for two to three hours, with small groups of about four to six. Set the price against the local market and what the morning reliably delivers, not against a famous tour operator. Guests pay you cash on the day; AnimalDex does not take the payment or a cut of it."
+                answer: "Local guided walks are commonly priced per person for two to three hours, with small groups of about four to six. Set the price against the local market and what the morning reliably delivers, not against a famous tour operator. Guests pay you directly; AnimalDex does not book walks, take the payment or a cut of it."
             },
             {
-                question: "What do I need to apply as an AnimalDex Wildlife Guide?",
-                answer: "An account at least 30 days old with 45 qualifying wild captures and 20 wild species, an 18+ attestation and acceptance of the current Guide Seller Terms. Meeting the numbers lets you apply; a person then reviews the application. Approval is not automatic."
+                question: "What do I need to become an AnimalDex Wildlife Guide?",
+                answer: "No application. Log wild animals with location on; each place where you find 3 or more species, with a public photo, becomes a virtual guide automatically. You can check, edit, price, hide or delete it. AnimalDex Wildlife Guides are virtual, so you are never asked to lead a walk."
             },
             {
                 question: "Can I guarantee a sighting on a guided walk?",
-                answer: "No, and you should not try. Wild animals do not keep appointments, and a listing that promises one books refunds. Describe the route, the start time and what the walk usually produces, including how often the headline animal shows. AnimalDex guide terms also forbid baiting, playback and disturbance to force a sighting."
+                answer: "No, and you should not try. Wild animals do not keep appointments, and a listing that promises one books refunds. Describe the route, the start time and what the walk usually produces, including how often the headline animal shows. Never use baiting, playback or disturbance to force a sighting."
             }
         ],
         sources: [
@@ -746,7 +744,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             {
                 title: "Keep the record honest",
                 paragraphs: [
-                    "Live captures only. No luring, no handling, no turning logs and stones without putting them back exactly as they were, and no manufacturing a frog for the camera. AnimalDex Wildlife Guide terms forbid baiting and disturbance, and a personal list should hold the same line for the same reason: the record is worthless if you coerced the animal.",
+                    "Live captures only. No luring, no handling, no turning logs and stones without putting them back exactly as they were, and no manufacturing a frog for the camera. A personal list should hold the same line against baiting and disturbance as a good guide does, for the same reason: the record is worthless if you coerced the animal.",
                     "Location honesty is part of the same rule. A live capture is made where you were standing, in the app, at the moment you saw the animal; that is the whole point of recording live rather than uploading from a gallery, and it is why gallery uploads are not captures. If you later bring old material in through the Instagram import, each post is reviewed for the species and the historical location before it joins the collection. A record with a forged place is not a record, and for a sensitive species it is actively harmful.",
                     "Which raises the obvious tension: an honest location for a rare snake's den is also a map for the people you least want there. The answer is not to lie about where you were. It is to be careful about what you publish."
                 ],
@@ -762,7 +760,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                     rows: [
                         {cells: ["Count of wild species collected", "Which pond, which log, which crevice"]},
                         {cells: ["Count of qualifying wild captures", "A capture-by-capture location dump"]},
-                        {cells: ["Breadth across birds, herps, insects and the rest", "Exact meeting points of a guided walk until a request is accepted"]},
+                        {cells: ["Breadth across birds, herps, insects and the rest", "Exact spots of sensitive animals, which a virtual guide keeps private too"]},
                         {cells: ["That the captures were live, in-app photos", "Anything that would let a stranger find a sensitive animal from your list"]}
                     ]
                 }
@@ -770,7 +768,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             {
                 title: "If you later guide",
                 paragraphs: [
-                    "The same public wild record is what collectors see as aggregate credentials on a Wildlife Guide listing. It is not a capture-ID dump. It is a count of wild species and qualifying wild captures: enough to show a prospective guest that you have actually walked the sites at night, not enough to dox a den. The gates to apply are 45 qualifying wild captures, 20 wild species and a 30-day account, and a person reviews every application. Guides is a live beta; guests pay the guide in person, and AnimalDex does not handle the cash."
+                    "The same public wild record is what AnimalDex builds virtual Wildlife Guides from. Each place where you log 3 or more wild species, with a public photo, becomes a virtual Wildlife Guide that other explorers will be able to buy for a small real-money fee: your notes on every animal, a direct chat with you, and introductions to local people you met. Exact spots stay private, threatened animals get no spot or timing, and a guide is advice, not a tour. Buying is coming soon."
                 ],
                 pullQuote: "The record is worthless if you coerced the animal, and worthless if you lied about where you were.",
                 inlineLinks: [
@@ -1058,7 +1056,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
                 title: "What never becomes Earnings",
                 paragraphs: [
                     "Credits, AnimalDex Score, Capture XP, Gift spend, PvP wins and Pack sales stay on the Credits side of the firewall. None of them converts, withdraws or accrues toward a payout. Community Gifts, if a future period counts them at all, would count as event signals, not as the Credit price of the Gift.",
-                    "The only real-money flow on the platform today is Wildlife Guides, a live beta where a guest pays an approved guide cash on the day and the completed outing records seller net on Earnings. Sponsored Challenges pay achievements, not cash. If someone tells you otherwise, they have the product wrong."
+                    "The real-money route on the platform is virtual Wildlife Guides: a seller's share of each sale is released to Earnings 8 days after the purchase, and buying is coming soon. Sponsored Challenges pay achievements, not cash. If someone tells you otherwise, they have the product wrong."
                 ],
                 inlineLinks: [
                     earnRelatedLinks.earn,
@@ -1096,7 +1094,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "Does AnimalDex pay per capture?",
-                answer: "No. There is no per-capture fee, no rate per species and no conversion from Credits or Score to cash. Captures build a collection. Creator Rewards, when open, is an allocation from a company-funded pool for eligible accounts, not a tariff. The only real-money flow today is Wildlife Guides, paid cash on the day by the guest."
+                answer: "No. There is no per-capture fee, no rate per species and no conversion from Credits or Score to cash. Captures build a collection. Creator Rewards, when open, is an allocation from a company-funded pool for eligible accounts, not a tariff. The real-money route is virtual Wildlife Guides built from your sightings, and buying them is coming soon."
             },
             {
                 question: "Do Instagram imports count as genuine contribution?",
@@ -1104,7 +1102,7 @@ export const creatorEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "What is the difference between Credits and Earnings on AnimalDex?",
-                answer: "Credits are the in-app currency used for scans, upgrades and game actions. They are not cash and cannot be withdrawn or converted. Earnings is the real-money side, which today records seller net from completed Wildlife Guide outings paid cash on the day. Nothing moves from the Credits side to the Earnings side."
+                answer: "Credits are the in-app currency used for scans, upgrades and game actions. They are not cash and cannot be withdrawn or converted. Earnings is the real-money side, which records a seller's share of virtual Wildlife Guide sales once buying opens. Nothing moves from the Credits side to the Earnings side."
             }
         ],
         sources: [

@@ -4,6 +4,8 @@ export type SupportFAQ = {
     linkHref?: string;
     linkLabel?: string;
     searchAliases?: string[];
+    /** Keeps an indexed article URL when its question is reworded. */
+    slug?: string;
 };
 
 export type SupportSection = {
@@ -183,7 +185,7 @@ const en: SupportContent = {
             items: [
                 {
                     question: "How do I earn on AnimalDex?",
-                    answer: "There are two separate economies. Credits are a closed virtual currency from missions, qualified referrals, first-time wild species captures, Sealed Packs, PvP stakes, and Credit Offers. Earnings is the real-money ledger. Today, completed AnimalDex Wildlife Guide outings can record seller net. Creator Rewards is a company-funded program that is currently paused. Sponsored Challenge cash is not live. Credits cannot be withdrawn or converted into Earnings.",
+                    answer: "There are two separate economies. Credits are a closed virtual currency from missions, qualified referrals, first-time wild species captures, Sealed Packs, PvP stakes, and Credit Offers. Earnings is the real-money ledger. Virtual Wildlife Guides will add a seller's share of each sale when buying opens. Creator Rewards is a company-funded program that is currently paused. Sponsored Challenge cash is not live. Credits cannot be withdrawn or converted into Earnings.",
                     linkHref: "/earn-on-animaldex",
                     linkLabel: "Ways to earn on AnimalDex"
                 },
@@ -195,7 +197,7 @@ const en: SupportContent = {
                 },
                 {
                     question: "What are AnimalDex Earnings?",
-                    answer: "Earnings is AnimalDex's real-money ledger. It only records fiat from allowed sources: completed Wildlife Guide settlements, finalized Creator Reward allocations when a period posts, and possible later deterministic Sponsored Challenge cash. Available Earnings stay recorded until a payout is completed. Payouts are reviewed and are not instant. There is no live Withdraw action while payouts are not open.",
+                    answer: "Earnings is AnimalDex's real-money ledger. It only records fiat from allowed sources: a seller's share of Wildlife Guide sales, finalized Creator Reward allocations when a period posts, and possible later deterministic Sponsored Challenge cash. Available Earnings stay recorded until a payout is completed. Payouts are reviewed and are not instant. There is no live Withdraw action while payouts are not open.",
                     linkHref: "/earn-on-animaldex",
                     linkLabel: "Ways to earn on AnimalDex"
                 },
@@ -222,19 +224,20 @@ const en: SupportContent = {
         {
             id: "wildlife-guides",
             title: "AnimalDex Wildlife Guides",
-            description: "Becoming a Guide seller and how the listed fee is paid.",
+            description: "Virtual guides built from your own wild sightings, and how buying one works.",
             items: [
                 {
                     question: "How do I become a Wildlife Guide?",
-                    answer: "Build 45 qualifying wild captures, 20 canonical wild species, and a 30-day-old account. Attest that you are 18+, accept the current Guide Seller Terms, and submit an application. Meeting the numbers lets you apply — it does not approve you automatically. A person reviews every application. You must follow ethical wildlife rules and hold any local permits your activity requires.",
-                    linkHref: "/become-a-wildlife-guide",
-                    linkLabel: "Become an AnimalDex Wildlife Guide"
+                    answer: "You don't apply. Capture wild animals in the app with location on. Each place where you find 3 or more species, with a public photo, becomes a virtual guide automatically. AnimalDex writes the page from your sightings; check the draft note for each animal and add your tips and the local people you met. Keep the automatic price or choose your own. Exact spots stay private, and you can edit, price, hide or delete any guide from the Shop tab on your profile. A Wildlife Guide is advice from someone who has been there, not a tour.",
+                    linkHref: "/wildlife-guides",
+                    linkLabel: "Virtual Wildlife Guides"
                 },
                 {
-                    question: "How do Wildlife Guide bookings and payments work?",
-                    answer: "A guest chooses a date and group size on a published listing and pays the listed fee on the website. Apple Pay, Google Pay, and cards appear when the device supports them. The Guide still accepts or declines. Credits are never used. That website payment is not added to withdrawable Earnings automatically, and it should not also be collected in cash.",
-                    linkHref: "/become-a-wildlife-guide",
-                    linkLabel: "How Guide payments work"
+                    question: "How do Wildlife Guide purchases and payments work?",
+                    slug: "how-do-wildlife-guide-bookings-and-payments-work",
+                    answer: "Buying a guide is coming soon. A buyer will pay a small real-money fee for the author's notes on every animal, a direct chat with the author, and introductions to local people the author met. Credits are not used. The author replies to a buyer within 48 hours, and buyers can ask for a refund within 7 days. The author's share is released to Earnings 8 days after the purchase. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly.",
+                    linkHref: "/wildlife-guides",
+                    linkLabel: "Virtual Wildlife Guides"
                 }
             ]
         },

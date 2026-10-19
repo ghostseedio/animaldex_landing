@@ -1,28 +1,28 @@
 import type {Metadata} from "next";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
-import Link from "@/app/[locale]/_components/link";
-import {EarnTrackLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
-import GuideCard from "@/components/guides/guide-card";
-import {GuidePageView} from "@/components/guides/guide-analytics";
-import {getPublicGuideListings} from "@/data/guide-marketplace";
-import {categoryLabel, guideAreaServedName, guideLocationSlug, isLocationPageIndexable, type GuideCategory} from "@/lib/guide-marketplace-core";
+import {GuideListPage} from "@/components/wildlife-guides/guide-list-page";
+import {GuidePageView} from "@/components/wildlife-guides/guide-page-view";
+import {getAllPublicWildlifeGuides} from "@/data/virtual-wildlife-guides";
+import {locationsWithGuides} from "@/data/wildlife-guide-locations";
 import {withOgCard} from "@/lib/og/og-image";
+import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {MIN_INDEXABLE_GUIDE_LIST, guidePath} from "@/lib/virtual-wildlife-guides";
 
 export const revalidate = 86400;
 
-type WildlifeGuidesPageProps = {
-    params: {locale: string};
-};
+type Props = {params: {locale: string}};
 
-export async function generateMetadata({params}: WildlifeGuidesPageProps): Promise<Metadata> {
-    const title = "Wildlife Guides";
-    const description = "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.";
+const TITLE = "Virtual Wildlife Guides";
+const DESCRIPTION = "Virtual wildlife guides to real places, built from explorers' own wild sightings: which animals they found, how rare they are and when, with notes, a chat with the author and local introductions.";
+
+export async function generateMetadata({params}: Props): Promise<Metadata> {
+    const guides = await getAllPublicWildlifeGuides();
     const canonical = getLocalePath(params.locale, "/wildlife-guides");
-
     return withOgCard({
-        title,
-        description,
+        title: TITLE,
+        description: DESCRIPTION,
+        // Nothing to list until guides go public: keep the page out of the index until then.
+        robots: guides.length > 0 ? {index: true, follow: true} : {index: false, follow: true},
         alternates: {
             canonical,
             languages: localeConfig.locales.reduce((acc, localeItem) => {
@@ -31,28 +31,24 @@ export async function generateMetadata({params}: WildlifeGuidesPageProps): Promi
             }, {"x-default": getLocalePath(localeConfig.defaultLocale, "/wildlife-guides")} as Record<string, string>)
         },
         openGraph: {
-            title: "AnimalDex Wildlife Guides",
-            description: "Explore real wildlife experiences hosted by approved AnimalDex Guide sellers.",
+            title: `AnimalDex ${TITLE}`,
+            description: DESCRIPTION,
             url: canonical,
             locale: getMetadataLocale(params.locale)
         }
     }, "AnimalDex wildlife guides", "page", "wildlife-guides");
 }
 
-export default async function WildlifeGuidesPage({params}: WildlifeGuidesPageProps) {
-    const listings = await getPublicGuideListings();
-    const categories = Array.from(new Set(listings.map((item) => item.service_category)));
-    const locations = Array.from(new Map(listings.map((item) => [guideLocationSlug(item), guideAreaServedName(item)])).entries())
-        .filter(([slug]) => isLocationPageIndexable(listings.filter((item) => guideLocationSlug(item) === slug)));
-
+export default async function WildlifeGuidesPage({params}: Props) {
+    const guides = await getAllPublicWildlifeGuides();
+    const places = locationsWithGuides(guides, MIN_INDEXABLE_GUIDE_LIST);
     const pageUrl = getAbsoluteUrl(params.locale, "/wildlife-guides");
-    const description = "Find published wildlife experiences hosted by approved AnimalDex Guide sellers, with public areas, group sizes, prices and verified aggregate wildlife credentials.";
-    const guidesJsonLd: Record<string, unknown>[] = [
+    const jsonLd: Record<string, unknown>[] = [
         {
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            name: "Wildlife Guides",
-            description,
+            name: TITLE,
+            description: DESCRIPTION,
             url: pageUrl,
             inLanguage: params.locale,
             isPartOf: {"@type": "WebSite", name: "AnimalDex", url: getAbsoluteUrl(params.locale, "/")}
@@ -65,33 +61,34 @@ export default async function WildlifeGuidesPage({params}: WildlifeGuidesPagePro
                 {"@type": "ListItem", position: 2, name: "Wildlife Guides", item: pageUrl}
             ]
         },
-        ...(locations.length > 0 ? [{
+        ...(guides.length > 0 ? [{
             "@context": "https://schema.org",
             "@type": "ItemList",
-            itemListElement: locations.map(([slug, label], index) => ({
+            itemListElement: guides.slice(0, 100).map((guide, index) => ({
                 "@type": "ListItem",
                 position: index + 1,
-                name: `Wildlife Guides in ${label}`,
-                url: getAbsoluteUrl(params.locale, `/wildlife-guides/${slug}`)
+                name: guide.title,
+                url: getAbsoluteUrl(params.locale, guidePath(guide))
             }))
         }] : [])
     ];
 
-    return <>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(guidesJsonLd)}} />
-        <GuidePageView event="guide_web_location_page_view" dimensions={{page_type: "guide_discovery", location: "all"}} />
-        <section className="bg-canvas-950 px-5 pb-16 pt-32 text-white sm:px-8"><div className="mx-auto max-w-6xl">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-primary-300">Marketplace directory</p>
-            <h1 className="mt-4 max-w-4xl font-display text-5xl sm:text-7xl">Browse all Wildlife Guides</h1>
-            <p className="mt-6 max-w-3xl text-xl leading-8 text-white/65">Every published listing, grouped by category. Compare public area, duration, group size, price, and each host’s aggregate wild-species record, then open a listing to request a date in AnimalDex.</p>
-            <p className="mt-4 max-w-3xl text-base text-white/50">New here? Start on <Link href="/wildlife-experiences" className="text-primary-300 hover:text-white">Wildlife Experiences</Link> for how requests work, categories, and FAQs. This page is the marketplace index — not a second booking product.</p>
-            <p className="mt-4 max-w-3xl text-base text-white/50">Want to lead outings yourself? <EarnTrackLink href="/become-a-wildlife-guide" event="guide_cta_clicked" label="marketplace_become_guide" className="text-primary-300 hover:text-white">Become an AnimalDex Wildlife Guide</EarnTrackLink>.</p>
-            {categories.length > 0 && <div className="mt-8 flex flex-wrap gap-2">{categories.map((category) => <a key={category} href={`#${category}`} className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/70 hover:border-primary-300">{categoryLabel(category as GuideCategory)}</a>)}</div>}
-        </div></section>
-        <section className="min-h-[36rem] bg-canvas-900 px-5 py-16 text-white sm:px-8"><div className="mx-auto max-w-6xl">
-            {locations.length > 0 && <nav aria-label="Guide locations" className="mb-12"><h2 className="font-display text-2xl">Browse established locations</h2><div className="mt-4 flex flex-wrap gap-3">{locations.map(([slug, label]) => <Link key={slug} href={`/wildlife-guides/${slug}`} className="rounded-full bg-white/[0.06] px-4 py-2 text-sm hover:bg-white/10">Wildlife Guides in {label}</Link>)}</div></nav>}
-            {listings.length === 0 ? <div className="  border border-white/10 bg-white/[0.03] p-10"><h2 className="font-display text-3xl">New experiences are being reviewed</h2><p className="mt-4 max-w-2xl text-white/60">There are no publicly available Guide listings right now. Published experiences will appear here after seller and listing approval.</p></div>
-                : <div className="space-y-16">{categories.map((category) => { const rows = listings.filter((item) => item.service_category === category); return <section key={category} id={category}><h2 className="font-display text-3xl">{categoryLabel(category as GuideCategory)} Guides</h2><div className="mt-7 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{rows.map((listing) => <GuideCard key={listing.id} listing={listing} locale={params.locale}/>)}</div></section>; })}</div>}
-        </div></section>
-    </>;
+    return (
+        <>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd).replace(/</g, "\\u003c")}} />
+            <GuidePageView event="wildlife_guide_web_list_view" dimensions={{page_type: "guide_index", location: "all"}} />
+            <GuideListPage
+                locale={params.locale}
+                eyebrow="Virtual guides"
+                title="Wildlife Guides"
+                intro="Each guide is one place, written from an explorer's own wild sightings there: the animals they found, how rare they are and the months they saw them. Open a guide to see what it covers."
+                links={places.map((place) => ({href: `/wildlife-guides/${place.slug}`, label: `${place.name} · ${place.count}`}))}
+                linksTitle="Places"
+                guides={guides}
+                listTitle="All guides"
+                emptyTitle="Guides are on their way"
+                emptyDetail="Explorers' guides will appear here once guides launch. Log wild animals with location on in the AnimalDex app, and the places where you find several species become guides of your own."
+            />
+        </>
+    );
 }

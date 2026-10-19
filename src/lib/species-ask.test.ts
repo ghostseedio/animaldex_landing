@@ -82,7 +82,7 @@ test("Ask routes people through AnimalDex instead of ending in a chatbot", () =>
     const grounding = orangutanGrounding();
     const where = inferAskProductRoutes("Where can I see orangutans?", grounding);
     assert.ok(where.some((route) => route.href === "/locations/borneo"));
-    assert.ok(where.some((route) => route.href === "/wildlife-experiences"));
+    assert.ok(where.some((route) => route.href === "/wildlife-guides"));
 
     const compare = inferAskProductRoutes("Orangutan vs chimpanzee?", grounding);
     assert.ok(compare.some((route) => route.href === "/comparisons/orangutan-vs-chimpanzee"));
@@ -131,6 +131,6 @@ test("every answer includes product follow-ups instead of a dead-end chat", () =
     assert.ok(routes.some((route) => route.href === "/comparisons/orangutan-vs-chimpanzee"));
     assert.ok(routes.some((route) => route.href === "#animal-power"));
     assert.ok(routes.some((route) => route.href === "#where"));
-    assert.ok(routes.some((route) => route.href === "/wildlife-experiences"));
+    assert.ok(routes.some((route) => route.href === "/wildlife-guides"));
     assert.equal(routes.some((route) => route.intent === "collect"), false);
 });

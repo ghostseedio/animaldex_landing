@@ -1054,8 +1054,8 @@ const answerPageData: AnswerPageEntry[] = [
                 description: "Bring eligible older trip photos into the same collection after species and location review."
             },
             {
-                title: "Wildlife experiences",
-                description: "When you want a local outing rather than a solo walk, browse published AnimalDex Wildlife Guide experiences for herping, birding, photography, and night wildlife."
+                title: "Wildlife Guides",
+                description: "Before a trip, a virtual Wildlife Guide gives you notes on every animal from an explorer who logged wildlife at that place, plus a chat with them."
             }
         ],
         speciesSlugs: ["african-wild-dog", "bald-eagle", "white-headed-vulture"],

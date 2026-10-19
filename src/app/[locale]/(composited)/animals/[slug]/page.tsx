@@ -1475,7 +1475,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 </ul>
                 <div className="mt-6 flex flex-wrap gap-3">
                     <Link
-                        href="/wildlife-experiences"
+                        href="/wildlife-guides"
                         className="rounded-2xl border border-primary-400/30 px-5 py-3 text-sm font-bold text-primary-100 hover:border-primary-200 hover:text-white"
                     >
                         {t("whereExperiencesCta")}

@@ -43,7 +43,7 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
     "collections-cards": ["collection", "cards", "album", "journal"],
     "credits-purchases": ["credits", "purchase", "pro", "restore", "billing", "subscription", "paddle", "web purchase", "payment pending"],
     earnings: ["earnings", "earn", "creator rewards", "payout", "cash", "money", "withdraw"],
-    "wildlife-guides": ["wildlife guide", "guide", "booking", "cash on the day", "seller", "birding"],
+    "wildlife-guides": ["wildlife guide", "guide", "virtual guide", "place guide", "seller", "birding"],
     "sponsored-challenges": ["sponsored challenge", "sponsor", "campaign", "zoo", "aquarium", "tourism"],
     "instagram-import": ["instagram", "ig", "instagram import", "import posts", "old wildlife photos", "reels", "professional account", "instagram connect", "location import", "wrong species", "connected services", "wildlife photos", "import credits", "screening", "paddle"],
     "account-login": ["login", "password", "sign in", "account", "email"],
@@ -77,7 +77,7 @@ function buildKeywords(section: SupportSection, faq: SupportFAQ) {
 }
 
 function compileArticle(section: SupportSection, faq: SupportFAQ, sortOrder: number): SupportArticle {
-    const slug = slugifySupportText(faq.question);
+    const slug = faq.slug ?? slugifySupportText(faq.question);
     const id = `${section.id}/${slug}`;
     const keywords = buildKeywords(section, faq);
 

@@ -15,7 +15,7 @@ function copy(item: AppNotification) {
         };
     }
     if (item.sourceKey?.startsWith("guide-seller-approved:")) {
-        return {title: "Wildlife Guide approved", detail: "Open Wildlife Guides to publish listings and manage requests.", icon: "location" as const};
+        return {title: "Wildlife Guides update", detail: "Open Wildlife Guides to check your guides.", icon: "location" as const};
     }
     if (item.eventType.startsWith("campaign_")) {
         const label = item.eventType.replace("campaign_", "").replaceAll("_", " ");
@@ -63,7 +63,7 @@ function notificationHref(item: AppNotification) {
     if (item.captureId) return `/app/capture/${encodeURIComponent(item.captureId)}`;
     if (item.campaignId) return "/app/missions";
     if (item.comparisonSlug?.trim()) return `/challenges/${encodeURIComponent(item.comparisonSlug.trim())}`;
-    if (item.sourceKey?.startsWith("guide-seller-approved:")) return "/app/guides?tab=listings";
+    if (item.sourceKey?.startsWith("guide-seller-approved:")) return "/app/guides";
     if (item.actorUsername?.trim()) return `/u/${encodeURIComponent(item.actorUsername.trim().replace(/^@/, ""))}`;
     if (item.eventType === "credit_bonus") return "/app/earnings";
     return "/app/notifications";

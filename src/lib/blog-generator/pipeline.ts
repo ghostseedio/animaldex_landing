@@ -55,7 +55,7 @@ Product facts you must never contradict:
 - Only live, in-app camera captures count toward a collection. Uploaded or imported photos never count as captures.
 - Credits are in-app only and are not cash. Never promise money, income or payouts.
 - Creator Rewards is currently paused. Do not mention it unless the topic requires, and then say it is paused.
-- Wildlife Guides is in beta. Sponsored challenges award achievements, not money.`;
+- Wildlife Guides are virtual only: guides AnimalDex builds per place from a user's own wild sightings (notes per animal, a chat with the author, introductions to local people). Never describe in-person tours, bookings or guide applications. Buying guides is coming soon. Sponsored challenges award achievements, not money.`;
 
 // The bar every stage is held to. "Viral" here means the reader feels a jolt
 // and wants to tell someone, earned by true facts, never by invented outrage.

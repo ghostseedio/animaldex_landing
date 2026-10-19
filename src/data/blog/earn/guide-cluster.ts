@@ -7,7 +7,7 @@ const publishedAt = "2026-08-30";
 const updatedAt = "2026-10-07";
 
 const guidePaymentsLink = {
-    text: "How Guide bookings and payments work",
+    text: "How buying a Wildlife Guide works",
     slug: "how-do-wildlife-guide-bookings-and-payments-work",
     href: supportArticleHrefs.guidePayments
 };
@@ -24,18 +24,18 @@ export const guideEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.becomeGuideHowTo}`,
         title: "How to Become a Wildlife Guide With AnimalDex",
         description:
-            `Apply to be an AnimalDex Wildlife Guide after ${earnFacts.wildCaptures} wild captures, ${earnFacts.wildSpecies} wild species and a ${earnFacts.accountAgeDays}-day account. What review checks, how listings and bookings work.`,
+            `There is no application. Each place where you log ${earnFacts.guideMinSpecies} or more wild species, with a public photo, becomes a virtual guide you can check, price and share.`,
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("how-to-become-a-wildlife-guide-with-animaldex"),
-        readingMinutes: 7,
+        readingMinutes: 6,
         tags: ["wildlife-guides", "earning"],
         searchIntents: [
             "become wildlife guide",
             "AnimalDex wildlife guide",
             "how to become a wildlife guide",
-            "wildlife guide application requirements",
-            "list a guided nature walk"
+            "virtual wildlife guide",
+            "sell a wildlife guide to a place"
         ],
         speciesSlugs: [],
         relatedSlugs: [
@@ -44,38 +44,35 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "how-to-start-offering-local-birding-experiences"
         ],
         tableOfContents: [
-            "This is a seller application, not a job listing",
-            "The application gates",
-            "What the human review looks at",
-            "Writing a listing that passes review",
-            "After approval: accept, meet, complete",
-            "Your first three walks",
+            "A guide made from your sightings, not a tour",
+            "How a place becomes a guide",
+            "Check what AnimalDex wrote",
+            "Price, sharing and privacy",
+            "When someone buys your guide",
             "What to expect from the money"
         ],
         sections: [
             {
-                title: "This is a seller application, not a job listing",
+                title: "A guide made from your sightings, not a tour",
                 paragraphs: [
-                    "AnimalDex Wildlife Guides is a marketplace for approved locals. You list an experience with a real-money price. Collectors in the app request a date and a group size. You accept, meet them in the field, and get paid in cash on the day. AnimalDex is not your employer, does not set your hours, and is not the organiser of the outing. It is the place the listing lives and the record of what you completed.",
-                    "The program is in live beta: listings, requests, acceptance and completion all work today, and the rules below are the current Guide Seller Terms. Nothing on this page is a guarantee that you will be approved or that anyone will book you."
+                    "AnimalDex Wildlife Guides are virtual. Each place where you have logged wild animals can become a guide that other explorers pay a small fee for: your notes on every animal, a direct chat with you to ask anything, and introductions to local people you met, where they can help. You are not hired, you do not lead anyone anywhere, and nobody is promised an animal.",
+                    "A virtual guide is advice from someone who has been there, not a tour. The author is not with the buyer, and wildlife is never guaranteed. Buying is coming soon; until then your guides are ready for you to check and edit, and explorers will be able to find them when guides launch."
                 ],
                 inlineLinks: [earnRelatedLinks.guide, earnRelatedLinks.marketplace]
             },
             {
-                title: "The application gates",
+                title: "How a place becomes a guide",
                 paragraphs: [
-                    "Three numbers unlock the application form. They are earned inside the app, with live captures, and they cannot be bought with Credits or skipped by uploading an old photo library. Gallery uploads are not captures. Imported Instagram posts are reviewed one by one before any of them count as a capture, and they still have to be wild to count here.",
-                    "Meeting the numbers lets you apply. It does not make you a Guide."
+                    "There is no application form and no review queue to join. Capture wild animals with location on, and AnimalDex groups your sightings by place. Pets, farm animals and zoo or aquarium animals are not part of a guide; it is built from wild animals you found yourself.",
+                    `A place with ${earnFacts.guideMinSpecies} or more wild species, and a public photo, becomes a guide automatically. Places that are not there yet show on your profile as growing into guides, with how many more species each one needs.`
                 ],
                 table: {
-                    columns: ["Gate", "What counts", "Why it exists"],
+                    columns: ["What you need", "Details"],
                     rows: [
-                        {cells: [`${earnFacts.wildCaptures} qualifying wild captures`, "Live in-app photos of free-living animals that passed capture review. Zoo, aquarium and pet captures do not count.", "Shows you actually spend time in the field, not that you own a camera."]},
-                        {cells: [`${earnFacts.wildSpecies} canonical wild species`, "Distinct species, resolved to a canonical name. Forty captures of one robin still count as one species.", "A guide who can tell guests what they are looking at needs breadth, not one lucky subject."]},
-                        {cells: [`${earnFacts.accountAgeDays}-day account age`, "Counted from account creation to the day you apply.", "Slows down throwaway accounts and gives the capture record time to mean something."]},
-                        {cells: ["18+ attestation", "You confirm you are an adult.", "You are meeting strangers outdoors and taking cash. That is an adult transaction."]},
-                        {cells: ["Guide Seller Terms", "You accept the current version at application time.", "The terms carry the ethics rules: no baiting, luring, calling in, cornering or handling."]},
-                        {cells: ["Human review", "A person reads your profile, your public wild record and your application.", "Numbers can be gamed. A reviewer looks for a credible local."]}
+                        {cells: ["Wild animals logged with location on", "Each wild capture with a location counts toward the place it was taken."]},
+                        {cells: [`${earnFacts.guideMinSpecies} or more species at one place`, "Different species, not repeat sightings of the same animal."]},
+                        {cells: ["A public photo", "A guide's photos and videos come from your public captures, so a place needs at least one."]},
+                        {cells: ["Your location visible to others", "If your location is not public, nobody else can see your guides. Change who sees your locations in Settings to share them."]}
                     ]
                 },
                 media: {
@@ -85,37 +82,25 @@ export const guideEarnBlogPosts: BlogPost[] = [
                         alt: "A small group of birdwatchers with binoculars looking up into trees on a guided walk",
                         width: 1400,
                         height: 941,
-                        caption: "A guided bird walk is the kind of small-group, public-path outing the marketplace is built for. Photo: Department of the Interior. U.S. Fish and Wildlife Service. National Conservation Training Center. 10/1997-8888, Public domain, via Wikimedia Commons."
+                        caption: "Birdwatchers on a morning walk. A virtual guide helps a visitor plan a morning like this; the author is not there with them. Photo: Department of the Interior. U.S. Fish and Wildlife Service. National Conservation Training Center. 10/1997-8888, Public domain, via Wikimedia Commons."
                     }
                 },
-                inlineLinks: [
-                    {text: "How do I become a Wildlife Guide (support)", slug: "how-do-i-become-a-wildlife-guide", href: supportArticleHrefs.becomeGuide},
-                    {text: "Import Instagram wildlife photos", slug: "import-instagram-wildlife-photos", href: "/use-cases/import-instagram-wildlife-photos"}
-                ]
+                inlineLinks: [earnRelatedLinks.guide]
             },
             {
-                title: "What the human review looks at",
+                title: "Check what AnimalDex wrote",
                 paragraphs: [
-                    "The reviewer is answering one question: would a collector be safe and well served meeting this person at a trailhead. The public wild record is the main evidence. A cluster of captures across one region, spread over months and several habitats, reads as a local. A burst of captures from one holiday week reads as a visitor. Neither is a crime, but only one is a guide.",
-                    "The application itself asks what you want to list, where, and what qualifies you. Plain answers work. If your area requires a licence to lead paid groups in a national park or a reserve, say that you hold it or that your route avoids that land. The reviewer does not verify permits for you, and approval does not stand in for one.",
-                    "Approval can be withdrawn. A guest complaint about harassment, a report of a handled or baited animal, or a listing that misrepresents the outing are all grounds."
-                ]
-            },
-            {
-                title: "Writing a listing that passes review",
-                paragraphs: [
-                    "A listing is reviewed before it is published. The fields are simple, and the common failure is overpromising. Lead with the habitat, the time of day and the kind of attention you give guests. Do not lead with a species you cannot guarantee.",
-                    "The public listing shows a general area, not a pin. The exact meeting point is shared only after you accept a request, which protects both you and the site."
+                    "AnimalDex writes the page from your sightings: a title, the place, a search summary, an about-this-place section, the best time to go, and every animal you found there with how rare it is. Each animal gets a draft note. Check the draft note for each animal, then add your own tips and the local people you met.",
+                    "A good note says where in the area, what time of day, and anything that helped you find the animal. Only buyers read it. Threatened animals are different: don't share an exact spot or time for them; point buyers to a licensed local guide instead. Anything you write yourself is kept, and you can hide any animal or photo you would rather leave out."
                 ],
                 table: {
-                    columns: ["Listing field", "Write this", "Not this"],
+                    columns: ["Part of the guide", "Write this", "Not this"],
                     rows: [
-                        {cells: ["Title", "Dawn reedbed walk, two hours", "Guaranteed kingfisher photo tour"]},
-                        {cells: ["Pitch", "What you do, how far you walk, what guests should bring", "Superlatives and sighting promises"]},
-                        {cells: ["Public area", "A town, valley or reserve name", "A trailhead, a nest site, a den"]},
-                        {cells: ["Duration", "The real time from meeting to parting", "Two hours that is really four"]},
-                        {cells: ["Guest limit", "The number you can brief and keep quiet", "Whatever fills a minibus"]},
-                        {cells: ["Price per person", "A real-money figure you would say out loud", "Credits, discounts or tips-only"]}
+                        {cells: ["Animal note", "Where in the area, what time of day, what helped you find it", "A promise the animal will be there"]},
+                        {cells: ["About this place", "What the place is like and what a visitor should expect", "Superlatives and sighting guarantees"]},
+                        {cells: ["Best time", "The months and hours you actually found animals", "Every month, just in case"]},
+                        {cells: ["Local contacts", "People you met who are happy to be contacted: a boat captain, a ranger, a guesthouse", "Anyone who has not agreed to it"]},
+                        {cells: ["Notes for buyers", "Getting there, best spots to start, what to bring", "A nest, den or roost of a threatened animal"]}
                     ]
                 },
                 media: {
@@ -125,36 +110,36 @@ export const guideEarnBlogPosts: BlogPost[] = [
                         alt: "A local bird guide walking with a spotting scope on a tripod over his shoulder and binoculars round his neck",
                         width: 751,
                         height: 1400,
-                        caption: "A spotting scope on a tripod is the single piece of kit that lets a small group share a distant bird without approaching it. Photo: PJeganathan, CC BY-SA 4.0, via Wikimedia Commons."
+                        caption: "A local bird guide with a spotting scope. Someone like this can be one of your guide's local contacts, but only if they are happy to be contacted. Photo: PJeganathan, CC BY-SA 4.0, via Wikimedia Commons."
                     }
                 },
                 speciesSlugs: ["common-kingfisher", "mallard", "great-egret"]
             },
             {
-                title: "After approval: accept, meet, complete",
+                title: "Price, sharing and privacy",
                 paragraphs: [
-                    "A collector sends a request for a date and a guest count. You accept or decline. Once accepted, you share the meeting point and any briefing notes. On the day, the collector pays you in cash. AnimalDex does not collect, hold or process that money, and Credits are never part of it.",
-                    "When the outing is over you mark it complete, and the seller net is recorded on your Earnings ledger. That record is what the app can show about your history as a Guide. The listed price by itself is not money owed to you by anyone; the booking is between you and the guest."
-                ],
-                inlineLinks: [guidePaymentsLink, earnRelatedLinks.experiences]
+                    "Keep the automatic price or choose your own. The automatic price is set from how many animals the guide has and how rare they are. Either way it is a small real-money fee for your notes, your answers and any introductions you make. Credits are not used.",
+                    "One switch on your profile shares all your guides. With it on, new places become guides automatically; with it off, every guide is hidden and new ones start hidden. You can also hide a single guide, edit any of it, or delete it. A deleted guide disappears for everyone, and AnimalDex won't make a new guide for that place. Exact spots stay private."
+                ]
             },
             {
-                title: "Your first three walks",
+                title: "When someone buys your guide",
                 paragraphs: [
-                    "Most new Guides try to launch with the walk they would most like to sell. Launch with the walk you can run in your sleep."
+                    "The buyer gets your notes on every animal, a direct chat with you, and introductions to the local people in your guide. Reply to them within 48 hours. Buyers can ask for a refund within 7 days.",
+                    "Any local guide or operator you introduce is independent of AnimalDex, and the buyer agrees terms with them directly. AnimalDex does not arrange outings, and your guide never promises a sighting."
                 ],
                 cards: [
                     {
-                        label: "Walk one: the route you already do",
-                        body: "Your regular patch, at the time you already go, for two or three guests who are probably friends of friends. The purpose is to learn how long you actually take with people who stop to ask questions. Write down the real duration."
+                        label: "Before you share",
+                        body: "Read every draft note. Rewrite the ones that are vague, hide animals or photos you would rather leave out, and check the threatened animals give no spot or timing."
                     },
                     {
-                        label: "Walk two: strangers from the app",
-                        body: "Same route, same window, first request from a collector you have never met. Send a clear meeting point, a what-to-bring list and a weather call the evening before. Notice what they asked that you did not expect."
+                        label: "When a buyer writes",
+                        body: "Answer within 48 hours. The questions people ask are the best guide to what your notes are missing, so add the answer to the guide as well."
                     },
                     {
-                        label: "Walk three: the adjusted listing",
-                        body: "Change the duration, guest cap and price to match what walks one and two taught you. This is usually a shorter walk, a smaller cap and a slightly higher price than the first draft."
+                        label: "After the sale",
+                        body: "Your share of the sale is released to Earnings 8 days after the purchase, in real money."
                     }
                 ],
                 media: {
@@ -164,39 +149,40 @@ export const guideEarnBlogPosts: BlogPost[] = [
                         alt: "A park ranger leads a line of visitors along a gravel trail across open tundra",
                         width: 1400,
                         height: 948,
-                        caption: "A ranger-led walk on a marked trail. Keep your own first walks on public paths you could describe without a map. Photo: NPS Photo / Emily Mesner, Public domain, via Wikimedia Commons."
+                        caption: "A ranger-led walk on a marked trail. Local guides a buyer meets through your introductions are independent of AnimalDex. Photo: NPS Photo / Emily Mesner, Public domain, via Wikimedia Commons."
                     }
-                }
+                },
+                inlineLinks: [guidePaymentsLink]
             },
             {
                 title: "What to expect from the money",
                 paragraphs: [
-                    "Guiding is part-time and seasonal for almost everyone who does it. Dawn walks sell in spring and autumn. Night walks sell in the warm months. Weeks go by with no requests, then a long weekend brings three. Price so that a single walk with the minimum group covers your travel and your morning, and treat anything beyond that as the reward for the hours you were going to spend outside anyway.",
-                    "Nobody at AnimalDex will tell you what you will earn, because nobody knows. The marketplace gives approved locals a place to be found by people who already care about wildlife. The rest is your route, your reliability and your reputation."
+                    "Your share of each sale is released to Earnings 8 days after the purchase, in real money. Credits are never part of it, and buying Credits never turns into Earnings.",
+                    "Nobody at AnimalDex will tell you what you will earn, because nobody knows. A guide to a place people want to visit, with honest notes and quick answers, is more useful than one that is not. The rest depends on the place and on you."
                 ],
                 inlineLinks: [sideIncomeLink, earnRelatedLinks.earn]
             }
         ],
         faq: [
             {
-                question: "Do I become a Guide automatically when I reach the capture and species numbers?",
-                answer: `No. Reaching ${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species and a ${earnFacts.accountAgeDays}-day account only unlocks the application form. A person then reviews your public wild record and your answers. Approval can be declined without a reason, and it can be withdrawn later if you break the Guide Seller Terms.`
+                question: "Do I have to apply to become an AnimalDex Wildlife Guide?",
+                answer: `No. Each place where you log ${earnFacts.guideMinSpecies} or more wild species with location on, with a public photo, becomes a virtual guide automatically. You can check it, edit it, price it, hide it or delete it, and one switch turns sharing off for all your guides.`
             },
             {
-                question: "Does AnimalDex pay me for bookings?",
-                answer: "No. The collector pays you in cash when you meet. AnimalDex does not collect, hold or process that money, and Credits are never used for a booking. When you mark the outing complete, the seller net is recorded on your Earnings ledger as a record, not as a transfer from AnimalDex."
+                question: "Do I have to meet buyers or lead a tour?",
+                answer: "No. A Wildlife Guide on AnimalDex is virtual: your notes on every animal, a direct chat with you, and introductions to local people you met. It is advice from someone who has been there, not a tour, and the author is not with the buyer."
             },
             {
-                question: "Can I use photos from my camera roll or Instagram to reach the capture gate?",
-                answer: "Not directly. Captures are live photos taken inside the app. A camera-roll upload is a gallery image, not a capture. The Instagram import reviews each post before it can become a capture, and only wild subjects count toward the Guide gates. Zoo and pet captures are valid in your collection but do not qualify here."
+                question: "How does AnimalDex pay me for a guide?",
+                answer: "Buying is coming soon. When someone buys your guide, your share of the sale is released to Earnings 8 days after the purchase, in real money. Buyers can ask for a refund within 7 days, and Credits are not used."
             },
             {
-                question: "What permits or insurance do I need to be an AnimalDex Wildlife Guide?",
-                answer: "Whatever your location requires for leading paid groups, which varies by country, park and landowner. AnimalDex does not check permits or insurance and approval is not a licence. Many parks require a commercial-use permit for paid walks, and public liability insurance is normal practice. Find out before you list, not after a booking."
+                question: "Can buyers find my exact spots?",
+                answer: "Exact spots stay private. Your notes say where in the area and when, and only buyers read them. For threatened animals, no spot or timing is shared; point buyers to a licensed local guide instead."
             },
             {
-                question: "How much can a wildlife guide earn through AnimalDex?",
-                answer: "There is no figure to quote. Guiding income is part-time, seasonal and set by your own price, group size and how often collectors request you. Some approved Guides may receive no requests. Treat it as a way to be paid for walks you already do, not as a salary."
+                question: "How much can a Wildlife Guide earn through AnimalDex?",
+                answer: "There is no figure to quote. It depends on the place, how many people want to visit it, the price and how helpful your notes and answers are. Treat it as a small return on wildlife you were going to find anyway, not as a salary."
             }
         ],
         sources: [
@@ -210,7 +196,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.birdersGuideIncome}`,
         title: "Can Birders Make Money as Local Guides?",
         description:
-            "Yes, if people will pay for local knowledge and you stay legal. How local birding guides actually earn, how to price a walk, and where a listing fits.",
+            "Yes, if people will pay for local knowledge and you stay legal. How local birding guides actually earn, how to price a walk, and where AnimalDex fits.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("can-birders-make-money-as-local-guides"),
@@ -251,7 +237,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 title: "The market is already there",
                 paragraphs: [
                     "Dawn-chorus walks, wetland mornings, shorebird high tides and migration weekends are established products in most countries with a birding culture. Spring migration on the Great Lakes draws tens of thousands of visitors to a single boardwalk in May. Crane stopovers on the Platte River and in New Mexico fill hotels in March and November. Reserves in the UK, India, Spain and Costa Rica all have local guides who earn from the same walks they would do unpaid.",
-                    "The hard part was never inventing birding. It is trust and discovery: a visitor with two free mornings has no way to tell a careful local from a stranger with binoculars. That gap is what a reviewed marketplace listing is for."
+                    "The hard part was never inventing birding. It is trust and discovery: a visitor with two free mornings has no way to tell a careful local from a stranger with binoculars. That gap is filled by reputation: reserve event lists, local clubs, past guests and the advice of people who have already been."
                 ],
                 media: {
                     type: "image",
@@ -303,8 +289,8 @@ export const guideEarnBlogPosts: BlogPost[] = [
             {
                 title: "Where AnimalDex helps, and where it stops",
                 paragraphs: [
-                    `AnimalDex Wildlife Guides is one listing path, currently in beta. After you reach the wild-collection gates (${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, a ${earnFacts.accountAgeDays}-day account) and pass a human review, you can publish a listing in the Birding category. Collectors browse by area and category, see your pitch and your aggregate wild credentials, and send a request for a date and group size.`,
-                    "The app passes the request, records your acceptance, and records the seller net when you mark the outing complete. It does not collect the cash, verify your permits, insure you, or promise birds. It is a reviewed place to be found, not a tour operator."
+                    "AnimalDex does not list or book guided walks. Its Wildlife Guides are virtual: each place where you log 3 or more wild species, with a public photo, becomes a guide that visitors will be able to buy for a small fee. They get your notes on every bird you found there, a direct chat with you, and introductions to local people you met, where they can help.",
+                    "That is advice, not a tour. If you also lead walks, the guided walk itself is your own business, arranged and paid directly with your guests. AnimalDex does not organise outings, collect payment for them, verify your permits, insure you, or promise birds. Buying a virtual guide is coming soon.",
                 ],
                 media: {
                     type: "image",
@@ -321,7 +307,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             {
                 title: "Start smaller than a tour company",
                 paragraphs: [
-                    "A two-hour public-path walk for a handful of guests is a listing. A minibus, a packed lunch and a guaranteed eagle is a different business with vehicle insurance, food hygiene and a refund policy, and it is a bad promise on top. Start with the walk you already do, at the time you already do it, and let the guest cap stay low until you have run it with strangers a few times.",
+                    "A two-hour public-path walk for a handful of guests is a product. A minibus, a packed lunch and a guaranteed eagle is a different business with vehicle insurance, food hygiene and a refund policy, and it is a bad promise on top. Start with the walk you already do, at the time you already do it, and let the guest cap stay low until you have run it with strangers a few times.",
                     "Small groups are also better birding. Six people can stop on a path without blocking it, stay quiet at a reedbed and all get on a scope within a minute. Twelve cannot."
                 ],
                 media: {
@@ -343,7 +329,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 title: "Staying legal and insured",
                 paragraphs: [
                     "Paid guiding is a commercial activity, and land managers treat it as one. National parks and many reserves require a commercial-use permit for guided groups even on public trails. Some countries license nature guides outright. Private land needs the owner's permission whether or not money changes hands. Public liability insurance is normal practice and is sometimes a permit condition.",
-                    "Income is taxable where you live, and it is your job to record it. AnimalDex's Earnings ledger shows seller net for completed outings, which is a useful record, but it is not an accountant."
+                    "Income is taxable where you live, and it is your job to record it. Keep your own record of what each walk brought in; nobody else will do it for you."
                 ]
             }
         ],
@@ -358,11 +344,11 @@ export const guideEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "Do I need a licence to lead paid birding walks?",
-                answer: "Often, yes. National parks and many reserves require a commercial-use permit for paid groups, some countries license nature guides, and private land needs the owner's permission. Rules differ by site, so ask the land manager before you list. AnimalDex does not verify permits, and approval as a Guide is not a licence."
+                answer: "Often, yes. National parks and many reserves require a commercial-use permit for paid groups, some countries license nature guides, and private land needs the owner's permission. Rules differ by site, so ask the land manager before you take paying guests."
             },
             {
-                question: "What does an AnimalDex Wildlife Guide listing give a birder?",
-                answer: `A reviewed place to be found by collectors already in the app. After ${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, a ${earnFacts.accountAgeDays}-day account and a human review, you can list a birding experience with a real-money price. Requests arrive in the app; payment is cash on the day; completed outings record seller net on your Earnings.`
+                question: "What does an AnimalDex Wildlife Guide give a birder?",
+                answer: "A way to share what you know about a place without leading anyone there. Each place where you log 3 or more wild species, with a public photo, becomes a virtual guide: your notes on every bird, a chat with you, and introductions to local people you met. Buying is coming soon, the fee is a small real-money amount, and Credits are not used. AnimalDex does not list or book in-person walks."
             }
         ],
         sources: [
@@ -376,7 +362,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.startBirdingExperiences}`,
         title: "How to Start Offering Local Birding Experiences",
         description:
-            "Pick a public route, a duration, a guest cap and an honest price. How to scout, time a walk by season and tide, brief guests and list your first walk.",
+            "Pick a public route, a duration, a guest cap and an honest price. How to scout, time a walk by season and tide, brief guests and run your first walk.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("how-to-start-offering-local-birding-experiences"),
@@ -403,7 +389,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "Group size, pace and the briefing",
             "Weather, cancellation and safety",
             "Keep meeting points private",
-            "Apply first, then list",
+            "Where AnimalDex fits",
             "Your first three walks"
         ],
         sections: [
@@ -460,14 +446,14 @@ export const guideEarnBlogPosts: BlogPost[] = [
             {
                 title: "Weather, cancellation and safety",
                 paragraphs: [
-                    "Birding in rain is possible; birding in a gale on an exposed sea wall is not, and a wet group with no birds is a bad review. Decide your cancellation rule before you list: for example, you call the walk by 20:00 the night before if the forecast shows sustained heavy rain or wind above a set speed, and you offer another date. Because payment is cash on the day, a cancelled walk simply does not happen. Put the rule in the listing so nobody has to argue about it.",
+                    "Birding in rain is possible; birding in a gale on an exposed sea wall is not, and a wet group with no birds is a bad review. Decide your cancellation rule before you list: for example, you call the walk by 20:00 the night before if the forecast shows sustained heavy rain or wind above a set speed, and you offer another date. If guests pay on the day, a cancelled walk simply does not happen; if they paid ahead, say how you refund or rebook. Put the rule in the listing so nobody has to argue about it.",
                     "You are meeting strangers outdoors, often before daylight. Tell someone where you will be, carry a phone and a small first-aid kit, know where the nearest road access is on the route, and keep the group together on the walk back. If a guest is struggling, shorten the route rather than split the group."
                 ]
             },
             {
                 title: "Keep meeting points private",
                 paragraphs: [
-                    "AnimalDex listings show a general area, such as a town or a reserve. The exact meeting point waits until you accept a request. That protects you from being met by someone you did not accept, and it protects the site: a published pin at a roost or a nest draws people who are not with a guide."
+                    "Advertise a general area, such as a town or a reserve, and share the exact meeting point only with people you have agreed to take. That protects you from being met by someone you did not expect, and it protects the site: a published pin at a roost or a nest draws people who are not with a guide."
                 ],
                 media: {
                     type: "image",
@@ -476,19 +462,19 @@ export const guideEarnBlogPosts: BlogPost[] = [
                         alt: "A wooden boardwalk curving through a marsh of tall reeds and open water under a cloudy sky",
                         width: 1400,
                         height: 1050,
-                        caption: "Marsh boardwalk at Point Pelee, Ontario. A route like this is easy to describe once a request is accepted and hard to overcrowd. Photo: Ken Lund from Reno, Nevada, USA, CC BY-SA 2.0, via Wikimedia Commons."
+                        caption: "Marsh boardwalk at Point Pelee, Ontario. A route like this is easy to describe once a guest is confirmed and hard to overcrowd. Photo: Ken Lund from Reno, Nevada, USA, CC BY-SA 2.0, via Wikimedia Commons."
                     }
                 }
             },
             {
-                title: "Apply first, then list",
+                title: "Where AnimalDex fits",
                 paragraphs: [
-                    `You cannot skip the wild-collection gates or the human review. Build ${earnFacts.wildCaptures} qualifying wild captures across ${earnFacts.wildSpecies} species with live in-app photos, wait out the ${earnFacts.accountAgeDays}-day account age, apply, and list only after approval. Listings are reviewed too, so an honest pitch gets published faster than a grand one.`,
-                    "Then price in real money, take cash on the day and mark the outing complete so the seller net is recorded on Earnings. Wildlife Guides is in beta, and nobody is promised bookings."
+                    "AnimalDex does not list or book guided walks, so the walk itself stays your own business, arranged and paid directly with your guests. What AnimalDex does is turn your sightings into a virtual guide. Each place where you log 3 or more wild species, with a public photo, becomes a guide that visitors will be able to buy for a small fee: your notes on every bird, a direct chat with you, and introductions to local people you met.",
+                    "It is advice, not a tour, and it never promises a bird. Buying is coming soon, and Credits are not used."
                 ],
                 inlineLinks: [
                     earnRelatedLinks.guide,
-                    earnRelatedLinks.experiences,
+                    earnRelatedLinks.marketplace,
                     {text: "How to become a Wildlife Guide with AnimalDex", slug: "how-to-become-a-wildlife-guide-with-animaldex", href: blogHrefs.becomeGuideHowTo}
                 ]
             },
@@ -503,7 +489,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                         body: "Run the exact listed route at the listed time with two or three people who will tell you the truth. Time it with stops. Note which points worked and where everyone got cold."
                     },
                     {
-                        label: "Walk two: a request from the app",
+                        label: "Walk two: first strangers",
                         body: "First strangers. Send the briefing the night before, arrive ten minutes early, start with the two-minute rules talk. Afterwards write down every question you could not answer."
                     },
                     {
@@ -524,11 +510,11 @@ export const guideEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "What should I do if the weather is bad on the day of a walk?",
-                answer: "Decide a cancellation rule before you list and put it in the listing: for example, you call the walk by the evening before if the forecast shows sustained heavy rain or strong wind, and you offer a new date. Because payment is cash on the day, a cancelled walk involves no refund. Light rain is usually fine; exposed coast in a gale is not."
+                answer: "Decide a cancellation rule before you list and put it in the listing: for example, you call the walk by the evening before if the forecast shows sustained heavy rain or strong wind, and you offer a new date. If guests pay on the day, a cancelled walk involves no refund; if they paid ahead, refund or rebook them. Light rain is usually fine; exposed coast in a gale is not."
             },
             {
-                question: "Do I need to be approved before I can list a birding walk on AnimalDex?",
-                answer: `Yes. You need ${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, a ${earnFacts.accountAgeDays}-day account, an 18+ attestation and a human review before you can apply and list. Each listing is also reviewed before it is published. Wildlife Guides is in beta and approval does not guarantee requests.`
+                question: "Can I list a birding walk on AnimalDex?",
+                answer: "No. AnimalDex does not list or book in-person walks. Your sightings can become a virtual guide instead: each place where you log 3 or more wild species, with a public photo, becomes a guide with your notes on every bird, a chat with you, and introductions to local people you met. Buying is coming soon."
             }
         ],
         sources: [
@@ -542,7 +528,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.herpersGuide}`,
         title: "How Herpers Can Turn Local Knowledge Into Guided Walks",
         description:
-            "Night herping walks can be listed if you stay legal, skip handling and never promise a snake. Scouting, lights, chytrid hygiene, group size and pricing.",
+            "Night herping walks can be offered if you stay legal, skip handling and never promise a snake. Scouting, lights, chytrid hygiene, group size and pricing.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("how-herpers-can-turn-local-knowledge-into-guided-wildlife-experiences"),
@@ -569,14 +555,14 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "Lights, hygiene and the chytrid rule",
             "Safety: venomous species, terrain and the group",
             "Pricing a night walk",
-            "Same marketplace, same cash rule",
+            "Where AnimalDex fits",
             "Your first three walks"
         ],
         sections: [
             {
                 title: "Herping is easy to do badly",
                 paragraphs: [
-                    "Flipping cover boards for a crowd, pinning a snake for a photo, or shining a frog in the face for ten minutes so everyone gets the shot is not a listing AnimalDex wants, and it is not what careful herpers do on their own time either. The Guide Seller Terms are explicit: no baiting, luring, calling in, cornering or handling of wild animals, and nothing that disturbs dens, nests or protected habitat.",
+                    "Flipping cover boards for a crowd, pinning a snake for a photo, or shining a frog in the face for ten minutes so everyone gets the shot is not a walk worth selling, and it is not what careful herpers do on their own time either. Hold yourself to a simple rule: no baiting, luring, calling in, cornering or handling of wild animals, and nothing that disturbs dens, nests or protected habitat.",
                     "The reason is not squeamishness. Amphibians breathe and drink through skin that absorbs whatever is on your hands. Reptiles under cover are there for temperature and moisture, and a board left askew is a refuge lost. A guided walk multiplies whatever the guide does by the number of guests and the number of nights, so the standard has to be higher than for a solo outing."
                 ]
             },
@@ -662,10 +648,10 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 }
             },
             {
-                title: "Same marketplace, same cash rule",
+                title: "Where AnimalDex fits",
                 paragraphs: [
-                    `Apply after the wild-collection gates (${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, ${earnFacts.accountAgeDays} days of account age) and a human review. Herping and Night wildlife are both listing categories. Price in real money, collect cash on the day, and mark the outing complete so the seller net is recorded on Earnings. AnimalDex does not handle the cash, verify your permits or promise anyone a snake.`,
-                    "Your own herping captures are also the evidence a reviewer reads. A record of frogs, newts and snakes spread across local sites and seasons, photographed in place without handling, is the application."
+                    "AnimalDex does not list or book night walks; a walk you lead is your own business, arranged and paid directly with your guests, under whatever permits your site needs. What AnimalDex does is turn your sightings into a virtual guide. Each place where you log 3 or more wild species, with a public photo, becomes a guide visitors will be able to buy for a small fee: your notes on every animal, a direct chat with you, and introductions to local people you met.",
+                    "For threatened species, no spot or timing is shared in a guide; point buyers to a licensed local guide instead. A guide is advice, not a tour, and it never promises anyone a snake. Buying is coming soon."
                 ],
                 media: {
                     type: "image",
@@ -679,7 +665,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 },
                 inlineLinks: [
                     earnRelatedLinks.guide,
-                    earnRelatedLinks.experiences,
+                    earnRelatedLinks.marketplace,
                     {text: "Herping field journal", slug: "herping-field-journal", href: "/use-cases/herping-field-journal"}
                 ]
             },
@@ -694,7 +680,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                         body: "Walk the route in daylight to find the ditches, the slick edges and the head-height branches. Then do it alone on a listed-type night and time it. Note where you would stand a group of six."
                     },
                     {
-                        label: "Walk two: first request",
+                        label: "Walk two: first strangers",
                         body: "Brief the night before: boots, a torch each, no touching anything, the weather call. Start with the rules at the car. Afterwards, write down what guests wanted to know about species you did not see."
                     },
                     {
@@ -707,7 +693,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
         faq: [
             {
                 question: "Can you touch frogs or snakes on a guided herping walk?",
-                answer: "No. The AnimalDex Guide Seller Terms ban handling, cornering, baiting and luring wild animals, and careful herping practice agrees. Amphibian skin absorbs whatever is on your hands, and chytrid fungus spreads on wet gear. Guests watch animals in place, lights stay on them for seconds, and nobody picks anything up."
+                answer: "No. Careful herping practice rules out handling, cornering, baiting and luring wild animals. Amphibian skin absorbs whatever is on your hands, and chytrid fungus spreads on wet gear. Guests watch animals in place, lights stay on them for seconds, and nobody picks anything up."
             },
             {
                 question: "What is the best time of year for a herping walk?",
@@ -718,8 +704,8 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 answer: "Clean mud off boots and let them dry fully between sites, do not carry water, nets or animals from one pond to another, and do not let anyone handle amphibians. Batrachochytrium dendrobatidis spreads on damp equipment and has caused declines worldwide. On a guided walk, a boot brush at the car and a no-touching rule cover most of the risk."
             },
             {
-                question: "Can I list a night herping walk on AnimalDex?",
-                answer: `Yes, after approval. You need ${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, a ${earnFacts.accountAgeDays}-day account and a human review, then your listing is reviewed too. Herping and Night wildlife are both categories. Payment is cash on the day and sightings can never be promised. You hold any permit for night access yourself.`
+                question: "Can I sell a night herping walk on AnimalDex?",
+                answer: "No. AnimalDex does not list or book in-person walks. Your sightings can become a virtual guide instead: notes on every animal, a chat with you, and introductions to local people you met, for a small fee once buying opens. Threatened species get no spot or timing, and sightings are never promised."
             }
         ],
         sources: [
@@ -734,7 +720,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.ethicalGuide}`,
         title: "What Makes a Great Ethical Wildlife Guide?",
         description:
-            "An ethical wildlife guide sells orientation, not a guaranteed animal. Distance rules, no baiting or handling, honest listings, safety and permits.",
+            "An ethical wildlife guide sells orientation, not a guaranteed animal. Distance rules, no baiting or handling, honest pitches, safety and permits.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("what-makes-a-great-ethical-wildlife-guide"),
@@ -758,7 +744,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "The animal does not owe the guest a photo",
             "Distance, noise and when to walk away",
             "No baiting, luring, calling in, cornering or handling",
-            "Honesty in the listing",
+            "Honesty in the pitch",
             "Safety is yours",
             "Permits, land access and insurance",
             "A short ethics checklist"
@@ -767,7 +753,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             {
                 title: "The animal does not owe the guest a photo",
                 paragraphs: [
-                    "A great guide briefs distance, noise and the moment to walk away before anyone lifts binoculars. A poor guide manufactures the moment: a bait pile, a recording on loop, a snake lifted off the path. The difference is not subtle to the animal, and increasingly it is not subtle to guests either. AnimalDex Wildlife Guide terms put it in one line: no baiting, luring, calling in, cornering or handling, and nests, dens and protected habitats stay alone.",
+                    "A great guide briefs distance, noise and the moment to walk away before anyone lifts binoculars. A poor guide manufactures the moment: a bait pile, a recording on loop, a snake lifted off the path. The difference is not subtle to the animal, and increasingly it is not subtle to guests either. The rule fits in one line: no baiting, luring, calling in, cornering or handling, and nests, dens and protected habitats stay alone.",
                     "What you sell instead is orientation. Where to stand, which way the light falls, what that call was, why the heron is standing like that, when to stop and let the animal finish what it is doing. Guests remember the explanation long after they forget the photo they did not get."
                 ],
                 media: {
@@ -791,7 +777,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                     columns: ["Situation", "What a good guide does"],
                     rows: [
                         {cells: ["Animal stops what it was doing and looks at the group", "Stops, waits, and backs off if the animal does not settle within a minute"]},
-                        {cells: ["Nest, den, roost or colony found", "Notes it for the walk's commentary from a distance; never marks it on a listing or a pin"]},
+                        {cells: ["Nest, den, roost or colony found", "Notes it for the walk's commentary from a distance; never marks it on a map, a post or a pin"]},
                         {cells: ["Animal with young", "Doubles the usual distance; leaves if the adult shows alarm"]},
                         {cells: ["Guest wants to get closer for a photo", "Puts the bird on a scope or explains the lens choice; the answer is still no"]},
                         {cells: ["Animal on the path", "The group waits for it to finish crossing"]},
@@ -804,14 +790,14 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 title: "No baiting, luring, calling in, cornering or handling",
                 paragraphs: [
                     "Each word in the terms covers a specific bad habit. Baiting is food put out so an animal appears on cue, which habituates it and often ends with it hit on a road or shot as a nuisance. Luring covers mimicked calls, squeaking and decoys. Calling in means playback of a recorded song to pull a territorial bird into view; it costs the bird energy and time during the season it can least afford it. Cornering is positioning a group so an animal has no exit, which is how most defensive bites and most abandoned nests happen. Handling is picking anything up.",
-                    "Some of these are legal in some places and common on some tours. The AnimalDex terms ban them on listed outings regardless, because the marketplace cannot tell a careful user of playback from a careless one and has no interest in trying."
+                    "Some of these are legal in some places and common on some tours. A careful guide skips them regardless, because guests cannot tell a careful user of playback from a careless one, and neither can the next guide who copies you."
                 ]
             },
             {
-                title: "Honesty in the listing",
+                title: "Honesty in the pitch",
                 paragraphs: [
-                    "The public area, the duration, the group size and the price should match the day. Wildlife sightings cannot be promised, so the listing describes what you do rather than what will appear. A pitch that says you will spend two hours on a known loop, put birds on a scope and explain calls is honest on a day when the reedbed is quiet. A pitch that names a bird is not.",
-                    "If your route needs a licence, a commercial-use permit or a landowner's permission, you hold it. AnimalDex does not verify permits for you, and approval as a Guide does not substitute for one."
+                    "The public area, the duration, the group size and the price should match the day. Wildlife sightings cannot be promised, so the pitch describes what you do rather than what will appear. A pitch that says you will spend two hours on a known loop, put birds on a scope and explain calls is honest on a day when the reedbed is quiet. A pitch that names a bird is not.",
+                    "If your route needs a licence, a commercial-use permit or a landowner's permission, you hold it. Nobody else can hold it for you. If you write a virtual guide on AnimalDex, the same honesty applies: say what you found and when, never promise an animal, and give no spot or timing for threatened species."
                 ],
                 media: {
                     type: "image",
@@ -829,7 +815,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 title: "Safety is yours",
                 paragraphs: [
                     "You are meeting people from the internet outdoors, sometimes before dawn or after dark. Assess the route in advance for terrain, water, traffic and weather exposure. Brief guests on footwear, the pace and what happens if the weather turns. Carry a first-aid kit and a charged phone, tell someone where you will be, and keep the group together on narrow or wet sections. Stop the walk if conditions fail; a shortened outing is a better story than an injury.",
-                    "The same duty runs the other way. Harassment of a guest, or harm to a guest or an animal, ends access to Wildlife Guides. Complaints are read by a person."
+                    "The same duty runs the other way. Treat guests with respect, and never put a guest or an animal at risk for a sighting."
                 ]
             },
             {
@@ -841,12 +827,12 @@ export const guideEarnBlogPosts: BlogPost[] = [
             {
                 title: "A short ethics checklist",
                 paragraphs: [
-                    "Before you publish a listing, read it against these three cards."
+                    "Before you advertise a walk, read it against these three cards."
                 ],
                 cards: [
                     {
                         label: "Before the walk",
-                        body: "Route scouted in daylight. Permits and permission in hand. Listing describes the attention guests get, not a guaranteed animal. Cancellation rule written down. Meeting point shared only after acceptance."
+                        body: "Route scouted in daylight. Permits and permission in hand. The pitch describes the attention guests get, not a guaranteed animal. Cancellation rule written down. Meeting point shared only with confirmed guests."
                     },
                     {
                         label: "During the walk",
@@ -854,7 +840,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                     },
                     {
                         label: "After the walk",
-                        body: "Outing marked complete. Sensitive locations kept out of captures, captions and messages. Anything that went wrong noted and fixed in the listing before the next request."
+                        body: "Sensitive locations kept out of captures, captions and messages. Anything that went wrong noted and fixed in the pitch before the next walk."
                     }
                 ],
                 media: {
@@ -879,7 +865,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "Is using bird call playback on a tour unethical?",
-                answer: "Many birding codes discourage it and some reserves ban it, because playback pulls territorial birds off nests and feeding and costs them energy in the breeding season. On AnimalDex Wildlife Guide outings it is banned outright under the no calling in rule, along with baiting, luring, cornering and handling, whatever the local law allows."
+                answer: "Many birding codes discourage it and some reserves ban it, because playback pulls territorial birds off nests and feeding and costs them energy in the breeding season. An ethical guide leaves it out under the no calling in rule, along with baiting, luring, cornering and handling, whatever the local law allows."
             },
             {
                 question: "What does an ethical wildlife guide actually sell?",
@@ -887,7 +873,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "Does AnimalDex check a guide's permits or insurance?",
-                answer: "No. Approval as a Wildlife Guide follows a human review of your wild record and application, but it is not a licence. Permits, landowner permission and insurance are your responsibility and vary by country, park and site. The listing terms require that you hold whatever your location needs for leading paid groups."
+                answer: "No. AnimalDex does not list, book or vet in-person guides. Its Wildlife Guides are virtual: advice from someone who has been to a place, not a tour. Any local guide or operator a guide's author introduces is independent of AnimalDex, so check their permits, landowner permission and insurance yourself, and agree terms with them directly."
             }
         ],
         sources: [
@@ -902,7 +888,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.photographyGuideClients}`,
         title: "How Wildlife Photography Guides Can Find New Clients",
         description:
-            "Photo clients pay for field time and identification context, not a baited perch. How to shape an ethical session, price it and reach people who book.",
+            "Photo clients pay for field time and identification context, not a baited perch. How to shape an ethical session, price it and reach new clients.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("how-wildlife-photography-guides-can-find-new-clients"),
@@ -923,28 +909,28 @@ export const guideEarnBlogPosts: BlogPost[] = [
             "how-to-become-a-wildlife-guide-with-animaldex"
         ],
         tableOfContents: [
-            "Collectors are already looking",
+            "Your wild record is a portfolio",
             "Sell the session you can keep ethical",
             "What photography clients actually want",
             "Shaping a session: light, distance, pace",
             "Pricing a photography session",
             "Where else clients come from",
-            "The booking is still cash on the day",
+            "Where AnimalDex fits",
             "Your first three sessions"
         ],
         sections: [
             {
-                title: "Collectors are already looking",
+                title: "Your wild record is a portfolio",
                 paragraphs: [
-                    "AnimalDex users open published Guide listings by area and category, and Wildlife photography is one of the categories. They see your public pitch, your general area, your price and your aggregate wild credentials: how many wild captures and species sit behind the listing. They do not see your private capture map or where you found anything.",
-                    "That audience is unusual. People who have built a wild collection in the app already carry a camera, already know what a good capture looks like and already understand that the animal might not turn up. They are the easiest photography clients to brief and the quickest to write a fair review."
+                    "The first thing a prospective photography client asks is whether you actually find animals where you say you do. A dated record of wild captures, species by species and place by place, answers that before you have said a word, and a public AnimalDex collection is one way to keep that record.",
+                    "Keep it honest. A record of animals photographed in place, at a distance, with no bait in the frame, is the portfolio of a guide people can trust with their own morning."
                 ],
-                inlineLinks: [earnRelatedLinks.marketplace, earnRelatedLinks.experiences]
+                inlineLinks: [earnRelatedLinks.marketplace]
             },
             {
                 title: "Sell the session you can keep ethical",
                 paragraphs: [
-                    "A slow public-path morning with identification talk is listable. A baited owl perch, a kingfisher pool with a stocked fish tank, or a fox fed at a fixed spot is not, and the Guide Seller Terms say so: no baiting, luring, calling in, cornering or handling. If your current photo-tour product depends on disturbance, do not bring it to AnimalDex, and consider whether it is the product you want your name on anywhere.",
+                    "A slow public-path morning with identification talk is a session worth selling. A baited owl perch, a kingfisher pool with a stocked fish tank, or a fox fed at a fixed spot is not: no baiting, luring, calling in, cornering or handling. If your current photo-tour product depends on disturbance, consider whether it is the product you want your name on anywhere.",
                     "The ethical session is also the better teaching session. Fieldcraft, light, position and patience are what a client takes home. A set of identical photographs from a hide with a bait log is what they could have bought anywhere."
                 ],
                 media: {
@@ -1016,7 +1002,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             {
                 title: "Where else clients come from",
                 paragraphs: [
-                    "A marketplace listing works best alongside the things that already bring photography clients: your own published work with honest captions, a camera club talk, a reserve's events list, and past clients who had a good morning. Your AnimalDex wild collection is itself a portfolio with dates and species attached, which answers the question every prospective client asks first: does this person actually find animals here.",
+                    "Most photography clients come from the same few places: your own published work with honest captions, a camera club talk, a reserve's events list, and past clients who had a good morning. Your AnimalDex wild collection is itself a portfolio with dates and species attached, which answers the question every prospective client asks first: does this person actually find animals here.",
                     "Keep sensitive locations out of all of it. A caption that names the roost is a caption that empties it."
                 ],
                 media: {
@@ -1035,9 +1021,9 @@ export const guideEarnBlogPosts: BlogPost[] = [
                 ]
             },
             {
-                title: "The booking is still cash on the day",
+                title: "Where AnimalDex fits",
                 paragraphs: [
-                    `Requests come through the app once you are an approved Guide, which takes ${earnFacts.wildCaptures} qualifying wild captures, ${earnFacts.wildSpecies} wild species, a ${earnFacts.accountAgeDays}-day account and a human review. Payment does not come through the app. You take cash when you meet, and when you mark the session complete the seller net is recorded on Earnings. Credits are never used, nobody is promised bookings, and Wildlife Guides is in beta.`
+                    "AnimalDex does not list or book photography sessions; a session you lead is your own business, arranged and paid directly with your client. What AnimalDex does is turn your sightings into a virtual guide. Each place where you log 3 or more wild species, with a public photo, becomes a guide visitors will be able to buy for a small fee: your notes on every animal, a direct chat with you, and introductions to local people you met. It is advice, not a tour, buying is coming soon, and Credits are not used."
                 ],
                 inlineLinks: [earnRelatedLinks.guide, guidePaymentsLink]
             },
@@ -1053,7 +1039,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
                     },
                     {
                         label: "Session two: one client",
-                        body: "Take the first request with a cap of one or two. Spend the morning on their camera, not yours. Write down every settings question and every moment you wanted to step closer and did not."
+                        body: "Take your first paying client alone, or two at most. Spend the morning on their camera, not yours. Write down every settings question and every moment you wanted to step closer and did not."
                     },
                     {
                         label: "Session three: the corrected listing",
@@ -1065,11 +1051,11 @@ export const guideEarnBlogPosts: BlogPost[] = [
         faq: [
             {
                 question: "How do wildlife photography guides find clients?",
-                answer: "Mostly through reputation: published work with honest captions, camera club talks, reserve event listings, past clients and a reviewed marketplace listing where people who already photograph wildlife are looking. An AnimalDex Wildlife Guide listing in the Wildlife photography category shows your pitch, area, price and aggregate wild credentials to collectors browsing by region."
+                answer: "Mostly through reputation: published work with honest captions, camera club talks, reserve event listings and past clients who had a good morning. A dated public record of the wild animals you have photographed, place by place, helps a new client trust that you find animals where you say you do."
             },
             {
                 question: "What is wrong with baited photography hides?",
-                answer: "Food put out on a schedule habituates wild animals to people and to a place, which ends with roadkill, nuisance shootings and abandoned natural feeding. It also produces identical photographs. AnimalDex Guide Seller Terms ban baiting, luring, calling in, cornering and handling on listed outings, so a baited hide cannot be listed even where it is legal."
+                answer: "Food put out on a schedule habituates wild animals to people and to a place, which ends with roadkill, nuisance shootings and abandoned natural feeding. It also produces identical photographs. An ethical session skips baiting, luring, calling in, cornering and handling, even where a baited hide is legal."
             },
             {
                 question: "How much should a wildlife photography guide charge?",
@@ -1077,7 +1063,7 @@ export const guideEarnBlogPosts: BlogPost[] = [
             },
             {
                 question: "Can a photography guide get paid through AnimalDex?",
-                answer: "No. Requests arrive through the app once you are an approved Guide, but the client pays you in cash on the day. AnimalDex does not collect or process that money and Credits are never used. When you mark the session complete, the seller net is recorded on your Earnings ledger as a record of the outing."
+                answer: "Not for sessions: AnimalDex does not list or book in-person photography sessions. What it can pay for is a virtual guide built from your sightings. Once buying opens, your share of each sale is released to Earnings 8 days after the purchase, in real money. Credits are not used."
             }
         ],
         sources: [

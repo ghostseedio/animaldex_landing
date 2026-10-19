@@ -782,9 +782,9 @@ export const businessEarnBlogPosts: BlogPost[] = [
                 title: "Signage, partners and the people who already know the ground",
                 paragraphs: [
                     "A regional Challenge lives or dies on partners. Visitor centres, reserves, hotels and cafés need the same one-paragraph brief: the objective, that it is free to join in the AnimalDex app, that captures are live photos taken in the region during the window, and that the reward is an achievement. An information board at a trailhead that lists the species people are likely to see is worth more than a poster of the campaign logo.",
-                    "If approved AnimalDex Wildlife Guides already list in the area, travellers can book a cash-on-the-day outing separately. That marketplace is not the Challenge, AnimalDex does not collect the Guide's cash, and the Guides program is in beta. But a Guide who knows which bay the seals use this month is the best conversion tool a wildlife campaign has."
+                    "AnimalDex Wildlife Guides are separate from the Challenge and are virtual: guides to a place, built from the wild animals their author logged there, with notes on every animal, a chat with the author and introductions to local people they met. Buying is coming soon, and AnimalDex does not book or run outings. But someone who knows which bay the seals use this month is the best conversion tool a wildlife campaign has."
                 ],
-                inlineLinks: [earnRelatedLinks.marketplace, earnRelatedLinks.guide, post(blogHrefs.chooseLocalGuide, "How to choose a local wildlife guide")],
+                inlineLinks: [earnRelatedLinks.marketplace, post(blogHrefs.chooseLocalGuide, "How to choose a local wildlife guide")],
                 media: {
                     type: "image",
                     image: {

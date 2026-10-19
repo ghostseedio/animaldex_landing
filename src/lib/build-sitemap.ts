@@ -26,8 +26,9 @@ import {getDiscoverCapturePostsForSitemap} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
 import {speciesEntries} from "@/data/species";
 import {legendaryEarthBeastEntries, LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH} from "@/data/legendary-earth-beasts";
-import {getPublicGuideListings} from "@/data/guide-marketplace";
-import {buildGuideSitemapPaths, guidePath} from "@/lib/guide-marketplace-core";
+import {getAllPublicWildlifeGuides} from "@/data/virtual-wildlife-guides";
+import {locationsWithGuides} from "@/data/wildlife-guide-locations";
+import {MIN_INDEXABLE_GUIDE_LIST, guidePath} from "@/lib/virtual-wildlife-guides";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
 
 /** Pages 2..n of a paged hub; page 1 is the hub URL listed on its own. */
@@ -102,13 +103,13 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             return [];
         }),
         getSitemapChallengeEntries(),
-        getPublicGuideListings().catch((error) => {
-            console.error("Unable to load public Guide listings for sitemap.", error);
+        // Empty until virtual guides go public; the RPC then lists only public guides.
+        getAllPublicWildlifeGuides().catch((error) => {
+            console.error("Unable to load public Wildlife Guides for sitemap.", error);
             return [];
         })
     ]);
 
-    const guideListingsByPath = new Map(guideListings.map((item) => [guidePath(item), item]));
     const localizedEntries = localeConfig.locales.flatMap((locale) => {
         // Keep /id in the sitemap as a real Indonesian homepage. Do not request
         // indexing of /id copies of English article bodies; those detail URLs
@@ -132,10 +133,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/support")},
             {url: getAbsoluteUrl(locale, "/contact")},
             {url: getAbsoluteUrl(locale, "/earn-on-animaldex")},
-            {url: getAbsoluteUrl(locale, "/become-a-wildlife-guide")},
             {url: getAbsoluteUrl(locale, "/creator-rewards")},
             {url: getAbsoluteUrl(locale, "/sponsor-a-challenge")},
-            {url: getAbsoluteUrl(locale, "/wildlife-experiences")},
             {url: getAbsoluteUrl(locale, "/wildlife-guides")},
             {url: getAbsoluteUrl(locale, "/branding")},
             {url: getAbsoluteUrl(locale, "/comparisons")},
@@ -261,13 +260,16 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             url: getAbsoluteUrl(locale, getSupportArticlePath(article)),
             lastModified: new Date(article.updatedAt)
         }));
-        const guideListingEntries = buildGuideSitemapPaths(guideListings).map((path) => {
-            const listing = guideListingsByPath.get(path);
-            return {
-                url: getAbsoluteUrl(locale, path),
-                ...(listing ? {lastModified: new Date(listing.updated_at)} : {})
-            };
-        });
+        const guideListingEntries = [
+            ...guideListings.map((guide) => ({
+                url: getAbsoluteUrl(locale, guidePath(guide)),
+                ...(guide.publishedAt ? {lastModified: new Date(guide.publishedAt)} : {})
+            })),
+            // Only the place pages the page itself would index (enough guides).
+            ...locationsWithGuides(guideListings, MIN_INDEXABLE_GUIDE_LIST).map((place) => ({
+                url: getAbsoluteUrl(locale, `/wildlife-guides/${place.slug}`)
+            }))
+        ];
 
         return [
             ...staticEntries,

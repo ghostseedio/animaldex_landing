@@ -48,7 +48,7 @@ test("every static share card a page asks for exists", () => {
     assert.ok(found >= 20, `expected the page share-card calls to be found, got ${found}`);
     assert.deepEqual(missing, []);
     // Earn pages build their key from the route path.
-    for (const key of ["earn-on-animaldex", "become-a-wildlife-guide", "creator-rewards", "sponsor-a-challenge", "wildlife-experiences"]) {
+    for (const key of ["earn-on-animaldex", "creator-rewards", "sponsor-a-challenge", "wildlife-guides"]) {
         assert.ok(STATIC_OG_CARDS[key], key);
     }
 });

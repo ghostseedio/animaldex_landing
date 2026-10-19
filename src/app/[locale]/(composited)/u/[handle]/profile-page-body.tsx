@@ -12,7 +12,6 @@ import {
     getProfileSocialState,
     getProfileViewerState
 } from "@/data/profile-authenticated";
-import {getPublicGuideListingsForUser} from "@/data/guide-marketplace";
 import {getCollectionBinders} from "@/data/collection-binders";
 import {getScopedTranslator} from "@/loaders/translation";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
@@ -21,6 +20,7 @@ import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {appStoreUrl} from "@/lib/store-links";
 import {animalLevel} from "@/lib/animal-level";
 import {getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
+import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
 
 function profilePath(handle: string) {
     return `/u/${encodeURIComponent(handle)}`;
@@ -57,18 +57,6 @@ async function getOwnerHistoryCaptures(): Promise<PublicProfileCapture[]> {
     }));
 }
 
-/** iOS Shop tab badge: Wildlife Guide requests waiting on this seller. */
-async function getPendingGuideRequestCount(userId: string) {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return 0;
-    const {count} = await supabase
-        .from("guide_booking_requests")
-        .select("id", {count: "exact", head: true})
-        .eq("seller_user_id", userId)
-        .eq("status", "pending");
-    return count ?? 0;
-}
-
 export async function ProfilePageBody({
     locale,
     handle,
@@ -100,14 +88,13 @@ export async function ProfilePageBody({
 
     if (viewer.isOwner) {
         const completedSets = buildOwnerCompletedSets(profile.powerSetCompletions);
-        const [credits, tradeUnlock, collection, historyCaptures, pendingGuideRequests] = await Promise.all([
+        const [credits, tradeUnlock, collection, historyCaptures] = await Promise.all([
             getProfileCreditsSummary(),
             getOwnerTradeUnlockSummary(profile.collectorScore),
             // The owner's real binders, as on iOS (`collectionBinders.filter(\.isComplete)`).
             // Binder progress is built from the viewer's own captures, so only the owner has it.
             getCollectionBinders().catch(() => null),
-            getOwnerHistoryCaptures(),
-            getPendingGuideRequestCount(profile.userId)
+            getOwnerHistoryCaptures()
         ]);
 
         ownerExtras = {
@@ -128,17 +115,14 @@ export async function ProfilePageBody({
                     href: binder.href
                 }))
                 : null,
-            historyCaptures,
-            pendingGuideRequests
+            historyCaptures
         };
     }
 
     const listedPacksPromise = getMemberListedPacks(profile.userId);
-    const listedGuidesPromise = getPublicGuideListingsForUser(profile.userId);
     const virtualGuidesPromise = getVirtualGuideProfile(profile.userId, viewer.isOwner);
-    const [listedPacks, listedGuides, social, virtualGuides] = await Promise.all([
+    const [listedPacks, social, virtualGuides] = await Promise.all([
         listedPacksPromise,
-        listedGuidesPromise,
         // Also records this visit as a profile view for a signed-in non-owner.
         getProfileSocialState(profile.userId),
         virtualGuidesPromise
@@ -290,8 +274,8 @@ export async function ProfilePageBody({
                 viewerAvatarUrl={viewer.viewerAvatarUrl}
                 ownerExtras={ownerExtras}
                 listedPacks={listedPacks}
-                listedGuides={listedGuides}
                 virtualGuides={virtualGuides}
+                shopLabels={Object.fromEntries(PROFILE_SHOP_LABEL_KEYS.map((key) => [key, t(`shop.${key}`)]))}
                 social={social}
                 signInHref={`/account?next=${encodeURIComponent(profilePath(profile.username))}`}
                 surface={surface}

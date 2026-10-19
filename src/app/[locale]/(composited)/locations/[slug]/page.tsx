@@ -9,12 +9,12 @@ import LocationHero from "@/app/[locale]/(composited)/locations/_components/loca
 import LocationAnimalsList from "@/app/[locale]/(composited)/locations/_components/location-animals-list";
 import LocationBestFor from "@/app/[locale]/(composited)/locations/_components/location-best-for";
 import LocationSpottingTips from "@/app/[locale]/(composited)/locations/_components/location-spotting-tips";
-import LocationGuideListings from "@/app/[locale]/(composited)/locations/_components/location-guide-listings";
+import LocationWildlifeGuides from "@/app/[locale]/(composited)/locations/_components/location-wildlife-guides";
 import RelatedLocationsSection from "@/app/[locale]/(composited)/locations/_components/related-locations-section";
 import RelatedChallengesSection from "@/app/[locale]/(composited)/challenges/_components/related-challenges-section";
 import RelatedRankingsSection from "@/app/[locale]/(composited)/rankings/_components/related-rankings-section";
 import {getBlogPost} from "@/data/blog";
-import {blogHrefs, earnPaths} from "@/data/earn-economy";
+import {blogHrefs} from "@/data/earn-economy";
 import {getChallenge} from "@/data/challenges";
 import {DATABASE_BACKED_LOCATION_SPECIES, getLocationPage, getRelatedLocations, locationPages} from "@/data/locations";
 import {getLocationMap, getLocationMapSpeciesSlugs} from "@/data/location-maps";
@@ -561,7 +561,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 items={location.spottingTips}
             />
 
-            {/* Live Guide inventory is read at view time: this page is static and never
+            {/* Live virtual guides are read at view time: this page is static and never
                 revalidates, and SEO SSG may not make remote reads. */}
             <section id="wildlife-guides" className="scroll-mt-28 rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6" aria-labelledby="location-wildlife-guides">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("wildlifeGuidesEyebrow")}</p>
@@ -570,7 +570,7 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                 </h2>
                 <p className="mt-3 max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{t("wildlifeGuidesDescription")}</p>
                 <div className="mt-5">
-                    <LocationGuideListings
+                    <LocationWildlifeGuides
                         slug={location.slug}
                         locale={locale}
                         labels={{
@@ -592,11 +592,11 @@ export default async function LocationDetailPage({params}: LocationPageProps) {
                     {t("chooseGuideReadMore")}
                 </Link>
                 <div className="mt-6 flex flex-wrap gap-3">
-                    <Link href={earnPaths.wildlifeExperiences} className="inline-flex min-h-11 items-center rounded-full bg-primary-400 px-5 py-2.5 text-sm font-bold text-black hover:bg-primary-300">
-                        {t("wildlifeGuidesCta")}
+                    <Link href={`/wildlife-guides/${location.slug}`} className="inline-flex min-h-11 items-center rounded-full bg-primary-400 px-5 py-2.5 text-sm font-bold text-black hover:bg-primary-300">
+                        {t("wildlifeGuidesCta", {location: location.name})}
                     </Link>
-                    <Link href={earnPaths.becomeGuide} className="inline-flex min-h-11 items-center rounded-full border border-primary-400/50 px-5 py-2.5 text-sm font-bold text-primary-200 hover:bg-primary-400/10">
-                        {t("becomeGuideCta")}
+                    <Link href="/earn-on-animaldex" className="inline-flex min-h-11 items-center rounded-full border border-primary-400/50 px-5 py-2.5 text-sm font-bold text-primary-200 hover:bg-primary-400/10">
+                        {t("ownGuideCta")}
                     </Link>
                 </div>
             </section>

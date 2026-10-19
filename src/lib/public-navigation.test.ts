@@ -19,8 +19,7 @@ import {
     moreNavGroups,
     productLinks,
     resourceLinks,
-    START_COLLECTION_HREF,
-    WILDLIFE_EXPERIENCES_HREF
+    START_COLLECTION_HREF
 } from "@/data/public-navigation";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -43,8 +42,7 @@ test("public navigation keeps existing SEO routes", () => {
         "/comparisons",
         "/tier-list",
         "/animal-hybrids",
-        LOCATIONS_HREF,
-        WILDLIFE_EXPERIENCES_HREF
+        LOCATIONS_HREF
     ]);
     assert.deepEqual(animalWisdomLinks.map((link) => link.href), [
         "/animal-wisdom",
@@ -65,13 +63,15 @@ test("public navigation keeps existing SEO routes", () => {
     assert.equal(START_COLLECTION_HREF, "/#download");
     assert.equal(INSTAGRAM_WILDLIFE_ARCHIVE_HREF, "/use-cases/import-instagram-wildlife-photos");
 
-    // Retired from public navigation by an explicit product decision: the Guide
-    // and Creator Rewards pages are reachable by URL and in-page links only.
+    // Retired from public navigation by an explicit product decision: Wildlife
+    // Guides and Creator Rewards are reachable by URL and in-page links only.
+    // The in-person pages (/become-a-wildlife-guide, /wildlife-experiences) were
+    // removed and now redirect to /wildlife-guides.
     const everyNavHref = [
         ...productLinks, ...exploreAnimalLinks, ...animalWisdomLinks, ...resourceLinks,
         ...headerDropdowns.flatMap((section) => section.links), ...moreNavGroups.flat()
     ].map((link) => link.href);
-    for (const retired of ["/wildlife-guides", "/become-a-wildlife-guide", "/creator-rewards"]) {
+    for (const retired of ["/wildlife-guides", "/become-a-wildlife-guide", "/wildlife-experiences", "/creator-rewards"]) {
         assert.ok(!everyNavHref.includes(retired), `${retired} should not be in public navigation`);
     }
 });
@@ -139,7 +139,6 @@ test("the mobile drawer shows every link exactly once", () => {
     ];
 
     assert.ok(explore?.links.some((link) => link.href === LOCATIONS_HREF));
-    assert.ok(explore?.links.some((link) => link.href === WILDLIFE_EXPERIENCES_HREF));
     assert.ok(lessons?.links.some((link) => link.href === ANIMAL_FREQUENCIES_HREF));
     assert.ok(lessons?.links.some((link) => link.href === ANIMAL_TRIALS_HREF));
 

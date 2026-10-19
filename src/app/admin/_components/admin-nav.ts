@@ -3,7 +3,6 @@ import {
     ChatRound,
     ClapperboardPlay,
     ClipboardCheck,
-    Compass,
     CupStar,
     GalleryWide,
     Graph,
@@ -88,7 +87,6 @@ export const adminNavGroups: AdminNavGroup[] = [
             {href: "/admin/blog-generator", label: "Blog generator", icon: MagicStick3, hint: "AI-researched articles"},
             {href: "/admin/assets", label: "Assets", icon: GalleryWide, hint: "Reusable media"},
             {href: "/admin/story-videos", label: "Story videos", icon: ClapperboardPlay, hint: "Share to official socials"},
-            {href: "/admin/guides", label: "Wildlife Guides", icon: Compass, hint: "Sellers and listings"},
         ],
     },
     {

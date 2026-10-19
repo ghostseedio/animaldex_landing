@@ -45,9 +45,7 @@ export async function handlePaddleEvent(
 
     try {
         let result: PaddleWebhookResult;
-        if (event.event_type === "transaction.completed" && asString(customData(event.data).kind) === "guide_experience") {
-            result = await fulfillGuideCheckout(supabase, event);
-        } else if (event.event_type === "transaction.completed") {
+        if (event.event_type === "transaction.completed") {
             result = await fulfillTransaction(supabase, event);
         } else if (event.event_type.startsWith("subscription.")) {
             result = await syncSubscription(supabase, event);
@@ -70,23 +68,6 @@ export async function handlePaddleEvent(
         });
         throw error;
     }
-}
-
-async function fulfillGuideCheckout(supabase: SupabaseClient, event: PaddleEvent): Promise<PaddleWebhookResult> {
-    const object = event.data;
-    const custom = customData(object);
-    const checkoutId = asString(custom.checkout_id);
-    const transactionId = asString(object.id);
-    const status = asString(object.status);
-    if (!checkoutId || !transactionId || status !== "completed") {
-        throw new Error("guide_checkout_mismatch");
-    }
-    const {error} = await supabase.rpc("mark_guide_web_checkout_paid", {
-        p_checkout_id: checkoutId,
-        p_transaction_id: transactionId
-    });
-    if (error) throw new Error(error.message);
-    return {ok: true};
 }
 
 async function fulfillTransaction(supabase: SupabaseClient, event: PaddleEvent): Promise<PaddleWebhookResult> {
@@ -176,11 +157,5 @@ async function recordAdjustment(supabase: SupabaseClient, event: PaddleEvent): P
         p_occurred_at: event.occurred_at
     });
     if (error) throw new Error(error.message);
-    if ((action === "refund" || action === "chargeback") && (status === "approved" || status === "refunded")) {
-        const {error: guideError} = await supabase.rpc("mark_guide_web_checkout_refunded", {
-            p_transaction_id: transactionId
-        });
-        if (guideError) throw new Error(guideError.message);
-    }
     return {ok: true};
 }

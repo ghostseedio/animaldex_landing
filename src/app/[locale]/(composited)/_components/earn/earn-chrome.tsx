@@ -59,7 +59,7 @@ export function EarnPrimaryCta({
 
 const earnMarketingHrefs = [
     "/earn-on-animaldex",
-    "/become-a-wildlife-guide",
+    "/wildlife-guides",
     "/creator-rewards",
     "/sponsor-a-challenge"
 ] as const;

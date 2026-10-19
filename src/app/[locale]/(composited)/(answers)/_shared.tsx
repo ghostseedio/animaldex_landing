@@ -579,10 +579,10 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                                             variant="secondary"
                                         />
                                         <Link
-                                            href="/wildlife-experiences"
+                                            href="/wildlife-guides"
                                             className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border border-primary-200/25 bg-white/[0.045] px-5 text-sm font-black uppercase tracking-[0.12em] text-primary-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:border-primary-200/60 hover:bg-primary-400 hover:text-canvas-950"
                                         >
-                                            Wildlife experiences →
+                                            Wildlife Guides →
                                         </Link>
                                         </>
                                     ) : null}

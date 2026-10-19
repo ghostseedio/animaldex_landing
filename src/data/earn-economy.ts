@@ -1,10 +1,8 @@
 export const earnPaths = {
     earn: "/earn-on-animaldex",
-    becomeGuide: "/become-a-wildlife-guide",
     creatorRewards: "/creator-rewards",
     sponsor: "/sponsor-a-challenge",
     wildlifeGuidesMarketplace: "/wildlife-guides",
-    wildlifeExperiences: "/wildlife-experiences",
     contact: "/contact",
     support: "/support",
     download: "/#download"
@@ -12,13 +10,13 @@ export const earnPaths = {
 
 export const earnCanonicalRoutes = [
     earnPaths.earn,
-    earnPaths.becomeGuide,
+    earnPaths.wildlifeGuidesMarketplace,
     earnPaths.creatorRewards,
     earnPaths.sponsor
 ] as const;
 
 export const earnStatus = {
-    guides: "BETA — AVAILABLE",
+    guides: "COMING SOON",
     creatorRewards: "CURRENTLY PAUSED",
     sponsoredChallenges: "AVAILABLE",
     challengeAchievements: "Achievement rewards available today",
@@ -26,9 +24,8 @@ export const earnStatus = {
 } as const;
 
 export const earnFacts = {
-    wildCaptures: 45,
-    wildSpecies: 20,
-    accountAgeDays: 30,
+    /** Virtual Wildlife Guides: a place with this many wild species, and a public photo, becomes a guide. */
+    guideMinSpecies: 3,
     payoutSlaDays: 14,
     starterCredits: 10,
     referralInviterCredits: 5,
@@ -37,14 +34,13 @@ export const earnFacts = {
     packPlatformFeePercent: 10
 } as const;
 
-export const guideCategories = [
-    {id: "general-wildlife", title: "General wildlife", detail: "Local walks for birds, mammals, reptiles, and whatever is active that day."},
-    {id: "birding", title: "Birding", detail: "Dawn choruses, wetlands, and countryside edges for people who already carry binoculars."},
-    {id: "herping", title: "Herping", detail: "Evening and night walks for frogs, snakes, and other reptiles — without handling."},
-    {id: "insects-macro", title: "Insects / macro", detail: "Slow looks at butterflies, bees, and smaller wildlife along public paths."},
-    {id: "marine-wildlife", title: "Marine wildlife", detail: "Shorelines, tide lines, and publicly accessible coast — not boat charters AnimalDex operates."},
-    {id: "wildlife-photography", title: "Wildlife photography", detail: "Field time for people who want identification context while they shoot."},
-    {id: "night-wildlife", title: "Night wildlife", detail: "After-dark watching with lights used to look, not to lure."}
+/** iOS `ShopPresentation.guideEarnSteps`: virtual guides, built from the author's own sightings. */
+export const guideEarnSteps = [
+    {title: "Log wild animals", detail: "Capture wild animals with location on. Each place where you find 3 or more species, with a public photo, becomes a guide automatically."},
+    {title: "Check your guide", detail: "AnimalDex writes the page from your sightings. Check the draft note for each animal, add your tips and the local people you met."},
+    {title: "Set your price", detail: "Keep the automatic price or choose your own. It is a small real-money fee for your notes and answers; Credits are not used."},
+    {title: "Answer buyers", detail: "When someone buys your guide, reply to them within 48 hours. Buyers can ask for a refund within 7 days."},
+    {title: "Get paid", detail: "Your share of each sale is released to Earnings 8 days after the purchase, in real money."}
 ] as const;
 
 export const challengeObjectives = [
@@ -116,23 +112,12 @@ export const earnProductPageMeta = {
     earn: {
         title: "Ways to Earn on AnimalDex | Credits vs Real-Money Earnings",
         description:
-            "See how AnimalDex Credits and real-money Earnings differ. Wildlife Guides are in live beta. Creator Rewards are paused. Sponsored Challenge cash is not live."
-    },
-    becomeGuide: {
-        // The layout template appends " | AnimalDex", so titles here never carry the brand.
-        title: "Become a Wildlife Tour Guide: Lead Nature Tours",
-        description:
-            "Become a wildlife or nature tour guide. List birding, herping or night walks on AnimalDex, set your price, and guests pay the listed fee online."
+            "See how AnimalDex Credits and real-money Earnings differ. Virtual Wildlife Guides are coming soon. Creator Rewards are paused. Sponsored Challenge cash is not live."
     },
     creatorRewards: {
         title: "AnimalDex Creator Rewards | Rewarding Wildlife Contribution",
         description:
             "Creator Rewards is a company-funded program for eligible live wildlife contribution during open reward periods. It is currently paused and not open for payouts."
-    },
-    wildlifeExperiences: {
-        title: "Find a Wildlife Guide: Birding & Nature Tours",
-        description:
-            "Find a local wildlife guide for birding, herping, night walks, and nature tours. Approved Guides set the price. Pay the listed fee on the website."
     },
     sponsor: {
         title: "Sponsor an AnimalDex Challenge | Wildlife Campaigns & Partnerships",

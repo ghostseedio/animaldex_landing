@@ -1,4 +1,4 @@
-import {blogHrefs, earnPaths, supportArticleHrefs} from "@/data/earn-economy";
+import {blogHrefs, supportArticleHrefs} from "@/data/earn-economy";
 import {earnBlogPost, earnRelatedLinks} from "@/data/blog/earn/_shared";
 import {contentThumb} from "@/data/content-thumbnails";
 import type {BlogPost} from "@/data/blog/types";
@@ -7,7 +7,7 @@ const publishedAt = "2026-08-30";
 const updatedAt = "2026-10-07";
 
 const guidePaymentsLink = {
-    text: "How Guide bookings and payments work",
+    text: "How buying a Wildlife Guide works",
     slug: "how-do-wildlife-guide-bookings-and-payments-work",
     href: supportArticleHrefs.guidePayments
 };
@@ -37,10 +37,10 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
         tableOfContents: [
             "A good herping trip is still a walk",
             "What a trustworthy listing shows",
-            "Questions to ask before you request",
+            "Questions to ask before you book",
             "Why sightings change with season and rain",
             "What to bring and what to leave behind",
-            "How booking works on AnimalDex",
+            "Where AnimalDex fits",
             "Log what you find, not what you were promised"
         ],
         sections: [
@@ -49,9 +49,9 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 paragraphs: [
                     "Herping is the hobby of looking for reptiles and amphibians in the field. Done well it is slow: a public path after rain, a stone wall at dusk, a pond edge with a torch held low. The animal decides whether it appears. If a listing promises a snake, a catch, or a posed photo, keep walking, because the only way to guarantee those things is to keep animals in a bag or bait them to a spot.",
                     "The ethics are simple and worth stating plainly. No handling, so the animal is not stressed and so nobody gets bitten. No baiting or playback. No pulling animals out of cover or flipping every rock on a hillside. Lights are used to see, not to pin an animal in place. And sightings are never guaranteed, because a garter snake on a trail is weather, luck, and knowledge, not a product.",
-                    "On AnimalDex, herping is one of seven Wildlife Guide categories, defined in the app as evening and night walks for frogs, snakes and other reptiles without handling. Guides are approved local sellers who passed wild-collection gates and a human review. A listing shows a general public area, a duration, a guest cap and a per-person cash price. It does not sell a specific animal."
+                    "AnimalDex does not list, book or run tours. Its Wildlife Guides are virtual: a guide to a place, built from the wild animals its author logged there. A buyer gets the author's notes on every animal (where, when and how they found it), a direct chat with the author, and introductions to local people the author met, where they can help. Buying is coming soon. For threatened species, no spot or timing is shared; buyers are pointed to a licensed local guide instead."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences, ethicalGuideLink],
+                inlineLinks: [earnRelatedLinks.marketplace, ethicalGuideLink],
                 media: {
                     type: "image",
                     image: {
@@ -67,7 +67,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "What a trustworthy listing shows",
                 paragraphs: [
                     "You can learn most of what you need from the copy before you message anyone. Read it the way you would read a job advert: what is stated, what is vague, and what is quietly promised.",
-                    "The table below is the checklist we use when we look at herping listings, on AnimalDex or anywhere else."
+                    "The table below is a checklist for any herping listing, wherever you find it."
                 ],
                 table: {
                     columns: ["Look for", "Red flag"],
@@ -78,14 +78,14 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                         {cells: ["Copy that says sightings are not guaranteed", "Species named as if they were on a menu, or photos of people holding snakes"]},
                         {cells: ["A clear no-handling, no-baiting rule", "Handling offered as the highlight, or hooks and bags in the photos"]},
                         {cells: ["Mention of road safety, protected species, and local rules", "Silence on all three"]},
-                        {cells: ["A cash-on-the-day price paid to the Guide", "Upfront transfers to a third party with no refund terms"]}
+                        {cells: ["A clear price paid to the person leading you", "Upfront transfers to a third party with no refund terms"]}
                     ]
                 }
             },
             {
-                title: "Questions to ask before you request",
+                title: "Questions to ask before you book",
                 paragraphs: [
-                    "A Guide who answers these plainly is easier to trust than one who talks only about rare animals. Ask in the app thread, so the answers are on record."
+                    "A Guide who answers these plainly is easier to trust than one who talks only about rare animals. Ask in writing, so the answers are on record."
                 ],
                 cards: [
                     {label: "Where, roughly, do we meet and walk?", body: "You want a general public area and the distance you will cover. A Guide who refuses to name even the reserve is protecting a spot from you, not from poachers."},
@@ -137,10 +137,10 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 }
             },
             {
-                title: "How booking works on AnimalDex",
+                title: "Where AnimalDex fits",
                 paragraphs: [
-                    "You request a date in the app. A request is not an instant booking: the Guide accepts or declines, and you can ask questions in between. You pay the per-person price in cash on the day, directly to the Guide. AnimalDex does not collect that payment and does not operate the walk. Wildlife Guides is a beta programme, so the directory only shows experiences that approved Guides have actually published. If there is no herping listing in your area, there is no hidden one.",
-                    "That design is deliberate. A listing with a public area, a guest cap, and cash on the day leaves little room for the bait-and-pose business model, but it still does not make every outing perfect. Read the copy and ask the questions above."
+                    "AnimalDex does not list, book or run tours. Its Wildlife Guides are virtual: a guide to a place, built from the wild animals its author logged there. A buyer gets the author's notes on every animal (where, when and how they found it), a direct chat with the author, and introductions to local people the author met, where they can help. Buying is coming soon.",
+                    "A virtual guide is advice from someone who has been there, not a tour. The author is not with you, and wildlife is never guaranteed. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly. A herping walk itself is booked and paid with the guide who runs it, so read their copy and ask the questions above."
                 ],
                 inlineLinks: [guidePaymentsLink, earnRelatedLinks.marketplace]
             },
@@ -167,7 +167,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             },
             {
                 question: "How do I know if a reptile guide is legitimate?",
-                answer: "Look for a named public area, a small guest cap, a duration tied to dusk or rain, and copy that says sightings are not guaranteed. Ask how they handle roads, private land, and protected species. On AnimalDex, Guides have passed wild-collection gates and a human review, listings show the facts above, and you pay cash on the day directly to the Guide."
+                answer: "Look for a named public area, a small guest cap, a duration tied to dusk or rain, and copy that says sightings are not guaranteed. Ask how they handle roads, private land, and protected species. A local guide met through an AnimalDex virtual guide is independent of AnimalDex, so the same checks apply."
             },
             {
                 question: "What should I bring on a herping walk?",
@@ -213,9 +213,9 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "Pace, not a checklist",
                 paragraphs: [
                     "Most herping time is walking, listening, and checking edges. You stop at a drystone wall, a culvert, the lit side of a building, the margin of a pond. The Guide points a torch low across the ground, you look for eyeshine or a shape that does not match the leaves, and then you move on. You may see a gecko on a wall and nothing else. That is still a successful outing if the Guide taught you where and why to look, because the knowledge transfers to every walk you take afterwards.",
-                    "Expect a small group, usually a handful of people, and a Guide who sets the pace rather than the loudest guest. On AnimalDex the listing tells you the general public area, the duration, and the guest cap before you request. Herping is described in the app as evening and night walks for frogs, snakes and other reptiles without handling, and that last phrase is the one to hold the Guide to."
+                    "Expect a small group, usually a handful of people, and a Guide who sets the pace rather than the loudest guest. A good listing tells you the general public area, the duration, and the guest cap before you book, and says the walk is for frogs, snakes and other reptiles without handling. That last phrase is the one to hold the Guide to."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences],
+                inlineLinks: [earnRelatedLinks.marketplace],
                 media: {
                     type: "image",
                     image: {
@@ -246,7 +246,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "What the Guide should refuse",
                 paragraphs: [
-                    "Baiting, flipping every rock, pulling animals from cover, or lining up a photo that stresses the animal. If that is the product, it is not an experience worth taking, on AnimalDex or anywhere else. The honest version is slower and leaves everything exactly where it was.",
+                    "Baiting, flipping every rock, pulling animals from cover, or lining up a photo that stresses the animal. If that is the product, it is not an experience worth taking, anywhere. The honest version is slower and leaves everything exactly where it was.",
                     "Here is how the two kinds of trip look in practice."
                 ],
                 table: {
@@ -303,7 +303,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "After the walk: how to log it",
                 paragraphs: [
                     "Add each animal to your herping field journal in the app while the night is fresh: the live photo, the time, the weather, and the general habitat. Keep the Guide's area general in your notes too; publishing a precise location for a sensitive species helps collectors more than it helps you. Over a season the pattern in your own log, which nights produced which animals, becomes the field craft you paid the Guide to start.",
-                    "Payment stays simple: you requested the date in AnimalDex, the Guide accepted, and you paid cash on the day. AnimalDex does not run the walk and does not collect that money."
+                    "If you want the notes before the next trip, an AnimalDex virtual guide to the place, when one exists, gives you its author's notes on every animal they found there and a chat with them. It is advice, not a tour, and buying is coming soon."
                 ],
                 inlineLinks: [herpingJournalLink, guidePaymentsLink],
                 pullQuote: "A gecko on a wall and a lesson in where to look is a good night. A snake pulled from a bag is not."
@@ -343,7 +343,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
         canonicalUrl: `https://animaldex.app${blogHrefs.chooseLocalGuide}`,
         title: "How to Choose a Local Wildlife Guide",
         description:
-            "How to choose a local wildlife guide: the facts a listing should show, questions to ask, group size, honesty about sightings, and how payment works.",
+            "How to choose a local wildlife guide: the facts a listing should show, questions to ask, group size, honesty about sightings, and where AnimalDex fits.",
         publishedAt,
         updatedAt,
         featuredImage: contentThumb("how-to-choose-a-local-wildlife-guide"),
@@ -355,21 +355,21 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
         tableOfContents: [
             "Read the public facts",
             "What a listing shows and what it leaves out",
-            "Questions worth asking in the app",
+            "Questions worth asking before you book",
             "Group size and why small matters",
             "Honesty about sightings is the main signal",
-            "How approval, booking, and payment work",
+            "Where AnimalDex fits",
             "After you book: what to bring and how to log"
         ],
         sections: [
             {
                 title: "Read the public facts",
                 paragraphs: [
-                    "On AnimalDex a published listing shows the category, a general public area, duration, guest cap, and a cash-on-the-day price. That is enough to decide whether the outing fits you. It is not a hotel-style review page, and that is deliberate: a short, factual listing is harder to game than a wall of five-star quotes.",
-                    "Approved AnimalDex Wildlife Guides have passed a human review after meeting wild-collection gates: at least 45 wild captures, 20 wild species, and a 30-day-old account. That proves someone has spent real time in the field with the app. Approval is not a promise of sightings or of a perfect host, so the choosing is still yours.",
+                    "A good listing shows the kind of outing, a general public area, the duration, the guest cap and the price. That is enough to decide whether the outing fits you. A short, factual listing is also harder to game than a wall of five-star quotes.",
+                    "Credentials help, but they are not a promise of sightings or of a perfect host, so the choosing is still yours.",
                     "The same test works for any local guide, on any platform. Can you see where you are going, for how long, with how many people, and for how much, before you commit? If any of those is missing, ask."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences, earnRelatedLinks.marketplace],
+                inlineLinks: [earnRelatedLinks.marketplace],
                 media: {
                     type: "image",
                     image: {
@@ -384,7 +384,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "What a listing shows and what it leaves out",
                 paragraphs: [
-                    "Use this table against any listing. The right-hand column is not proof of a bad Guide, but each entry is a question you should get answered before you request."
+                    "Use this table against any listing. The right-hand column is not proof of a bad Guide, but each entry is a question you should get answered before you book."
                 ],
                 table: {
                     columns: ["Good sign", "Ask about it, or walk away"],
@@ -394,15 +394,15 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                         {cells: ["A duration that matches the activity (dawn for birds, dusk for herps, low tide for shore)", "A fixed slot that ignores light, tide, or season"]},
                         {cells: ["A small guest cap", "No cap, or a cheaper price for bigger groups"]},
                         {cells: ["Sightings described as possible, not promised", "'Guaranteed', 'you will see', or photos of handled animals"]},
-                        {cells: ["Cash on the day to the Guide, with the price stated per person", "Deposits to a third party, hidden fees, or tips demanded"]},
+                        {cells: ["A clear per-person price, paid to the person leading you", "Deposits to a third party, hidden fees, or tips demanded"]},
                         {cells: ["A no-handling, no-baiting, no-playback rule", "Feeding, calling in, or touching offered as the highlight"]}
                     ]
                 }
             },
             {
-                title: "Questions worth asking in the app",
+                title: "Questions worth asking before you book",
                 paragraphs: [
-                    "What is the meeting area, in general terms? What happens if it rains? What is off-limits? Do you need your own transport? A Guide who answers those plainly is easier to trust than one who only talks about rare animals. Ask in the request thread so the answers are in writing."
+                    "What is the meeting area, in general terms? What happens if it rains? What is off-limits? Do you need your own transport? A Guide who answers those plainly is easier to trust than one who only talks about rare animals. Ask in writing so the answers are on record."
                 ],
                 cards: [
                     {label: "Where do we meet?", body: "A car park, a station, or a reserve entrance in general terms is fine. You do not need the exact owl tree; you do need to know how to get there and how far you will walk."},
@@ -410,13 +410,13 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                     {label: "What will you not do?", body: "You want to hear no handling, no feeding or baiting, no call playback, no lights held on animals, no leaving the path on sensitive ground."},
                     {label: "Who else is coming?", body: "The guest cap is on the listing; ask how many are already confirmed. Two people and a Guide is a different morning from six."},
                     {label: "Is this suitable for me?", body: "Say how far you can walk, whether you can stand still for twenty minutes, and whether children are coming. Honest Guides will say no when it does not fit."},
-                    {label: "How do I pay?", body: "On AnimalDex the answer is cash on the day, per person, to the Guide. If someone asks for a transfer elsewhere first, stop."}
+                    {label: "How do I pay?", body: "Get the total price, what it includes and how to pay in writing before the day. If someone asks for a transfer to a third party, stop."}
                 ]
             },
             {
                 title: "Group size and why small matters",
                 paragraphs: [
-                    "Wildlife is easier to see with fewer people. Six people walking a path make less noise than twenty, stop faster, and fit on a verge. A Guide can also keep a small group at a sensible distance from an animal, which is impossible when half the group is still arriving while the other half is already too close. Guest caps on AnimalDex listings exist for that reason, not as a luxury feature.",
+                    "Wildlife is easier to see with fewer people. Six people walking a path make less noise than twenty, stop faster, and fit on a verge. A Guide can also keep a small group at a sensible distance from an animal, which is impossible when half the group is still arriving while the other half is already too close. A guest cap exists for that reason, not as a luxury feature.",
                     "Small groups also change what the Guide can tell you. With four people, a Guide can explain why a heron is standing where it is and show each person the field marks through their own binoculars. With a coach party, the Guide is counting heads."
                 ],
                 media: {
@@ -439,10 +439,10 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 pullQuote: "A Guide who says 'probably not tonight, here is why' is worth more than one who says 'guaranteed'."
             },
             {
-                title: "How approval, booking, and payment work",
+                title: "Where AnimalDex fits",
                 paragraphs: [
-                    "Wildlife Guides is an AnimalDex beta. Guides apply after meeting the wild-collection gates, pass a human review, and publish listings in one of seven categories. You request a date in the app; the Guide accepts or declines; you pay cash on the day, per person, directly to them. AnimalDex does not take that payment and does not operate the outing, so if an experience is not published, it does not exist on the platform.",
-                    "Approval tells you the Guide has real field time with the app and a reviewed listing. It does not rate their patience or their knowledge of a particular reserve, which is why the questions above still matter."
+                    "AnimalDex does not list, book or run tours. Its Wildlife Guides are virtual: a guide to a place, built from the wild animals its author logged there. A buyer gets the author's notes on every animal (where, when and how they found it), a direct chat with the author, and introductions to local people the author met, where they can help. Buying is coming soon.",
+                    "A virtual guide is advice from someone who has been there, not a tour. The author is not with you, and wildlife is never guaranteed. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly. The questions above still apply to anyone you book."
                 ],
                 inlineLinks: [guidePaymentsLink, ethicalGuideLink],
                 media: {
@@ -474,19 +474,19 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             },
             {
                 question: "What questions should I ask a wildlife tour guide?",
-                answer: "Ask where you meet in general terms, what happens if the weather turns, what the Guide will not do (handling, feeding, playback, lights on animals), how many guests are already confirmed, whether the walk suits your fitness or children, and how payment works. On AnimalDex, ask in the request thread so the answers are in writing."
+                answer: "Ask where you meet in general terms, what happens if the weather turns, what the Guide will not do (handling, feeding, playback, lights on animals), how many guests are already confirmed, whether the walk suits your fitness or children, and how payment works. Ask in writing so the answers are on record."
             },
             {
-                question: "Are AnimalDex Wildlife Guides vetted?",
-                answer: "Yes, to a point. Guides must have at least 45 wild captures, 20 wild species, and a 30-day-old account, then pass a human review before listings go live. That proves genuine field time. It does not guarantee sightings or a perfect host, so read the listing and ask questions before you request a date."
+                question: "Does AnimalDex vet local wildlife guides?",
+                answer: "No. AnimalDex does not list or book in-person guides. Its Wildlife Guides are virtual guides written by people who logged wild animals at a place. Any local guide an author introduces is independent of AnimalDex, so check their permits and reviews and agree terms with them directly."
             },
             {
-                question: "How do I pay a local wildlife guide on AnimalDex?",
-                answer: "You request a date in the app, the Guide accepts, and you pay the per-person price in cash on the day, directly to the Guide. AnimalDex does not collect the payment, take a deposit, or operate the outing. If anyone asks for a transfer to a third party before the day, that is not how the programme works."
+                question: "Can I book a local wildlife guide on AnimalDex?",
+                answer: "No. AnimalDex does not book, take payment for or operate outings. A virtual guide can introduce you to local people its author met, but you arrange and pay any outing with them directly. Buying a virtual guide is coming soon."
             },
             {
                 question: "Is a small group better for a wildlife walk?",
-                answer: "Almost always. Fewer people make less noise, stop faster, and can be kept at a safe distance from animals. The Guide can explain field marks to each person instead of counting heads. Listings on AnimalDex carry a guest cap for this reason; ask how many places are already taken before you request."
+                answer: "Almost always. Fewer people make less noise, stop faster, and can be kept at a safe distance from animals. The Guide can explain field marks to each person instead of counting heads. A good listing carries a guest cap for this reason; ask how many places are already taken before you book."
             }
         ],
         sources: [
@@ -540,9 +540,9 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "When a Guide earns the fee",
                 paragraphs: [
                     "A new city, a short travel window, or a habitat you have never walked: that is when a local birding Guide helps. You are paying for timing and place knowledge, not for a guaranteed species list. A Guide who has walked the same estuary for ten winters knows which hour of the falling tide brings the waders onto the near mud, which hedge the migrants drop into after a night of south-westerlies, and which path is flooded in March. You could learn that yourself in three seasons. With two mornings in town, you cannot.",
-                    "A second pair of ears is the other reason. Most birds are heard before they are seen, and in an unfamiliar region a Guide picks out the one call you would have walked past. AnimalDex birding listings are small-group experiences with a general public area, a duration, a guest cap, and a cash price; the category is written for people who already carry binoculars. Request them in the app."
+                    "A second pair of ears is the other reason. Most birds are heard before they are seen, and in an unfamiliar region a Guide picks out the one call you would have walked past. If you would rather go alone with notes from someone who has been, an AnimalDex virtual guide to the place gives you its author's notes on every bird they found there and a chat with them; it is advice, not a tour, and buying is coming soon."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences]
+                inlineLinks: [earnRelatedLinks.marketplace]
             },
             {
                 title: "Guide vs alone, side by side",
@@ -622,8 +622,8 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 answer: "A birding Guide picks the hour and the route, names birds by call before you see them, shows you how to scan habitat such as mudflats and reedbeds, and keeps the group at a distance that does not flush birds. A good one also explains what is unlikely that week, and leaves you better at birding on your own."
             },
             {
-                question: "How much does a local birding guide cost on AnimalDex?",
-                answer: "Each listing shows its own per-person price, paid in cash on the day directly to the Guide. AnimalDex does not collect the payment or take a deposit. Prices vary by region, duration, and guest cap, so compare the listing facts rather than looking for a single platform rate."
+                question: "How much does a local birding guide cost?",
+                answer: "There is no single rate. Prices vary by region, duration and group size, and most local guides price per person with a group minimum. Compare the listing facts, get the total in writing, and check how and when you pay. AnimalDex does not book or take payment for guided walks."
             },
             {
                 question: "What time of day is best for birdwatching?",
@@ -669,9 +669,9 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "Dark, slow, and quieter than you think",
                 paragraphs: [
                     "You meet at a public area as the light goes, walk a known path, and use lights in short bursts. Frogs, moths, geckos, bats, foxes, and owls are the usual possibilities, never a promise. Most of the time you are standing still, letting your eyes adjust and listening, because at night the ears find more than the eyes.",
-                    "If a walk is sold as a guaranteed civet, owl, or snake, treat that as a warning, not a feature. The only way to guarantee a nocturnal animal is to feed it at a fixed spot or keep it somewhere. On AnimalDex, night wildlife is a Guide category defined as after-dark watching with lights used to look, not to lure, led by approved local Guides on public ground with a small guest cap and a cash-on-the-day price."
+                    "If a walk is sold as a guaranteed civet, owl, or snake, treat that as a warning, not a feature. The only way to guarantee a nocturnal animal is to feed it at a fixed spot or keep it somewhere. A good night walk is after-dark watching with lights used to look, not to lure, on public ground with a small group."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences],
+                inlineLinks: [earnRelatedLinks.marketplace],
                 media: {
                     type: "image",
                     image: {
@@ -761,7 +761,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "Logging night sightings",
                 paragraphs: [
                     "Night photos are harder, so note more. Record the time, the weather, the moon, and what you heard as well as what you saw. A live capture in AnimalDex of a frog from a metre away, taken under a low red light with no flash on its face, identifies fine. For an owl you only heard, keep the note in your own journal rather than forcing a capture. Over a few walks the log shows you which nights work in your area, which is the point of going with a Guide in the first place.",
-                    "Booking is the same as any AnimalDex experience: request a date, the Guide accepts, cash on the day to the Guide. AnimalDex does not run the walk."
+                    "AnimalDex does not run night walks. Its Wildlife Guides are virtual guides to a place, with the author's notes on what they found there after dark and a chat with them. A virtual guide is advice from someone who has been there, not a tour. The author is not with you, and wildlife is never guaranteed. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly."
                 ],
                 inlineLinks: [herpingJournalLink, guidePaymentsLink]
             }
@@ -823,9 +823,9 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "Field time, not a studio",
                 paragraphs: [
                     "The useful listing tells you the public area, how long you will be out, and how many people share the path. It will not promise a leopard or a perfectly perched kingfisher. A wildlife photography tour should buy you two things: time in the right place at the right light, and someone who can tell you what you are looking at and what it will do next. That identification context is what separates a photo of a bird from a record of a species.",
-                    "On AnimalDex, wildlife photography is a Guide category described as field time for people who want identification context while they shoot. Experiences are led by approved Wildlife Guides on public ground, with a guest cap and a per-person price paid in cash on the day. Booking and payment stay in the app and cash-on-the-day flow; AnimalDex does not operate the outing."
+                    "A good photography outing is field time for people who want identification context while they shoot, on public ground, with a small group and a clear per-person price. AnimalDex does not list, book or operate photography tours; its Wildlife Guides are virtual guides to a place, built from the wild animals their author logged there."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences, photoCompanionLink],
+                inlineLinks: [earnRelatedLinks.marketplace, photoCompanionLink],
                 media: {
                     type: "image",
                     image: {
@@ -850,14 +850,14 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                         {cells: ["A small guest cap so everyone has a clean angle", "Eight tripods on one perch"]},
                         {cells: ["Natural perches, natural behaviour, distance", "Baited perches, live or dead animals placed for the shot, call playback"]},
                         {cells: ["A Guide who talks about identification and behaviour", "A Guide who talks only about settings and 'the shot'"]},
-                        {cells: ["Cash on the day to the Guide, price per person", "Deposits elsewhere, or 'image fees' added later"]}
+                        {cells: ["A clear per-person price, paid to the person leading you", "Deposits elsewhere, or 'image fees' added later"]}
                     ]
                 }
             },
             {
                 title: "Questions to ask before you book",
                 paragraphs: [
-                    "Ask in the request thread so the answers are in writing. These six cover most of it."
+                    "Ask in writing so the answers are on record. These six cover most of it."
                 ],
                 cards: [
                     {label: "How do you get the animals close?", body: "The honest answer is 'we don't; we get you to where they already are, at the right time'. Bait, lures, and playback are the wrong answers."},
@@ -890,7 +890,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 title: "Ethics behind the lens",
                 paragraphs: [
                     "The pressure to get the frame is the whole ethical problem with photography tours. The rules that keep an outing honest are the same ones birding and herping use, with a few additions for cameras: no baiting perches, no live bait for raptors or owls, no playback to pull a bird in, no flash on nocturnal animals, no approaching nests or dens, no flushing a bird for a flight shot, and no moving an animal to a better background. Distance plus patience is the product.",
-                    "A slow public-path morning with identification talk is listable on AnimalDex. A baited owl perch is not. If the Guide's own portfolio shows the same owl on the same stump in twenty frames, you know how those frames were made."
+                    "A slow public-path morning with identification talk is worth paying for. A baited owl perch is not. If the Guide's own portfolio shows the same owl on the same stump in twenty frames, you know how those frames were made."
                 ],
                 inlineLinks: [ethicalGuideLink],
                 pullQuote: "A tour that can guarantee the frame has already decided to disturb the animal."
@@ -920,7 +920,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "After the outing",
                 paragraphs: [
-                    "Use the same app to identify and keep the species you actually photographed. That is a collection, not a proof of a paid sighting. A live capture from the day, with the time and the general place, sits in your Dex next to the camera frame you will edit later. Keep the exact perch out of anything you publish for sensitive species. Payment was cash on the day to the Guide; AnimalDex did not take it and did not run the morning."
+                    "Use the same app to identify and keep the species you actually photographed. That is a collection, not a proof of a paid sighting. A live capture from the day, with the time and the general place, sits in your Dex next to the camera frame you will edit later. Keep the exact perch out of anything you publish for sensitive species."
                 ],
                 inlineLinks: [
                     {text: "How wildlife photographers can build a species collection", slug: "how-wildlife-photographers-can-build-a-digital-species-collection", href: blogHrefs.photographerCollection},
@@ -935,7 +935,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             },
             {
                 question: "Are baited wildlife photography hides ethical?",
-                answer: "Baiting perches, using live prey for owls or raptors, and playing calls to pull birds in all alter behaviour and are not ethical, whatever the resulting frame looks like. An ethical tour sells distance, timing, and patience. On AnimalDex, a slow public-path morning is listable; a baited perch is not."
+                answer: "Baiting perches, using live prey for owls or raptors, and playing calls to pull birds in all alter behaviour and are not ethical, whatever the resulting frame looks like. An ethical tour sells distance, timing, and patience: a slow public-path morning, never a baited perch."
             },
             {
                 question: "What lens do I need for a wildlife photography tour?",
@@ -976,7 +976,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             "Ethical or exploitative: the tells",
             "The tourist traps that look harmless",
             "Questions to ask any operator",
-            "What an AnimalDex listing does and does not guarantee",
+            "What an AnimalDex virtual guide does and does not do",
             "Do not invent a city page in your head",
             "Log what you actually saw"
         ],
@@ -987,7 +987,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                     "If the animal is called in, fed, or held for the camera, it is not an ethical wildlife experience. Distance and patience are the product. That one sentence sorts most of what a resort desk or a street tout will offer you: the sloth you can hold, the turtle you can ride, the owl that waits on a stump, the monkeys that come to the balcony for fruit. Each is a wild animal whose behaviour has been bent to fit a schedule.",
                     "The ethical version is less convenient. It happens at the hour the animal chooses, in the place it already lives, with a Guide who keeps you far enough away that the animal does not change what it is doing. You may see less. What you see is real, and your photos will show an animal rather than a prop."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences],
+                inlineLinks: [earnRelatedLinks.marketplace],
                 media: {
                     type: "image",
                     image: {
@@ -1051,10 +1051,10 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
                 ]
             },
             {
-                title: "What an AnimalDex listing does and does not guarantee",
+                title: "What an AnimalDex virtual guide does and does not do",
                 paragraphs: [
-                    "AnimalDex listings are limited to approved Guides, public areas, and cash paid directly to the host. Guides have met wild-collection gates and passed a human review; categories are defined in the app with the ethics built in, such as herping without handling and night walks with lights used to look, not to lure; every listing shows a general area, a duration, a guest cap, and a per-person price. Wildlife Guides is a beta programme.",
-                    "That still does not make every outing perfect, and it does not promise sightings. Read the copy, ask the questions above in the request thread, and treat the answers as the real listing. Payment is cash on the day; AnimalDex does not collect it and does not operate the experience."
+                    "AnimalDex does not list, book or run tours. Its Wildlife Guides are virtual: a guide to a place, built from the wild animals its author logged there. A buyer gets the author's notes on every animal (where, when and how they found it), a direct chat with the author, and introductions to local people the author met, where they can help. Buying is coming soon.",
+                    "A virtual guide is advice from someone who has been there, not a tour. The author is not with you, and wildlife is never guaranteed. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly. Ask any operator the questions above before you pay them."
                 ],
                 inlineLinks: [guidePaymentsLink, ethicalGuideLink],
                 pullQuote: "If the animal is in a human's hands, the experience has already failed."
@@ -1062,7 +1062,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "Do not invent a city page in your head",
                 paragraphs: [
-                    "If no experience is published for the place you are visiting, there is not a hidden AnimalDex tour there. The directory only shows what approved Guides have actually listed, and empty regions stay empty until someone local lists one. Use the app for your own sightings, or wait until a Guide lists one. Outside the app, apply the table and the questions above to whatever is on offer, and be willing to walk away with no booking at all."
+                    "If there is no virtual guide for the place you are visiting, there is not a hidden one. Guides only exist where someone has logged enough wild animals to make one. Use the app for your own sightings, apply the table and the questions above to whatever is on offer, and be willing to walk away with no booking at all."
                 ],
                 inlineLinks: [earnRelatedLinks.marketplace]
             },
@@ -1096,7 +1096,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             },
             {
                 question: "Does AnimalDex have wildlife tours in every city?",
-                answer: "No. The directory shows only experiences that approved Guides have actually published, so many places have none. There is no hidden listing for a city that shows nothing. Use the app for your own sightings there, and apply the same ethical checks to any operator you find elsewhere."
+                answer: "No. AnimalDex does not run or book tours anywhere. Its Wildlife Guides are virtual guides to places where someone has logged wild animals, so many places have none. Use the app for your own sightings there, and apply the same ethical checks to any operator you find."
             }
         ],
         sources: [
@@ -1134,15 +1134,15 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "Pick the activity, then the listing",
                 paragraphs: [
-                    "Animal lovers do not all want the same morning. Birding is ears and sky. Herping is edges and patience. Night walks are frogs and insects. Macro is the path you already walked, taken slowly. Marine listings on AnimalDex are shore and tide line, not a boat AnimalDex operates. Photography is any of the above with a longer lens and a stricter ethic.",
-                    "Choosing the activity first makes the listing easy to judge, because each kind of outing has its own right time, right kit, and realistic cast. AnimalDex organises Wildlife Guide experiences into seven categories for exactly this reason, and a listing in the wrong category for what you want is a listing to skip."
+                    "Animal lovers do not all want the same morning. Birding is ears and sky. Herping is edges and patience. Night walks are frogs and insects. Macro is the path you already walked, taken slowly. Marine is shore and tide line at its simplest. Photography is any of the above with a longer lens and a stricter ethic.",
+                    "Choosing the activity first makes the listing easy to judge, because each kind of outing has its own right time, right kit, and realistic cast. A listing in the wrong kind of outing for what you want is a listing to skip."
                 ],
-                inlineLinks: [earnRelatedLinks.experiences]
+                inlineLinks: [earnRelatedLinks.marketplace]
             },
             {
                 title: "Seven kinds of outing compared",
                 paragraphs: [
-                    "The seven AnimalDex Guide categories, with the plain version of what each one is."
+                    "Seven common kinds of wildlife outing, with the plain version of what each one is."
                 ],
                 table: {
                     columns: ["Category", "Best time", "Bring", "Realistic cast"],
@@ -1199,7 +1199,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "Marine shore time",
                 paragraphs: [
-                    "Marine wildlife on AnimalDex means shorelines, tide lines, and publicly accessible coast, not boat charters AnimalDex operates. The whole activity runs on the tide table: the lowest tides, around new and full moon, expose rock pools and mud that are underwater most of the month. On rocky shores that means anemones, crabs, hermit crabs in borrowed shells, and small fish in pools. On sand and mud it means shorebirds: sanderlings running the wave line, oystercatchers working the mussel beds, and whatever waders the season brings.",
+                    "Marine wildlife here means shorelines, tide lines, and publicly accessible coast, not boat charters. The whole activity runs on the tide table: the lowest tides, around new and full moon, expose rock pools and mud that are underwater most of the month. On rocky shores that means anemones, crabs, hermit crabs in borrowed shells, and small fish in pools. On sand and mud it means shorebirds: sanderlings running the wave line, oystercatchers working the mussel beds, and whatever waders the season brings.",
                     "Rules for the shore: turn a rock back the way you found it, keep nothing, do not move animals between pools, and give roosting shorebirds a wide berth, because every flush costs them energy they need for migration. Where seals or turtles occur, they are watched from a distance, never approached."
                 ],
                 speciesSlugs: ["sanderling", "hermit-crab", "eurasian-oystercatcher"],
@@ -1238,11 +1238,11 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             {
                 title: "What AnimalDex can and cannot show you",
                 paragraphs: [
-                    "The live directory only shows published, approved experiences. Empty categories stay empty until a Guide lists one. That is better than a fake best-of city list, and it means the absence of a listing is information, not a bug. Every listing shows a general public area, duration, guest cap, and a per-person price paid in cash on the day to the Guide; requests are not instant bookings, and AnimalDex does not operate any outing. Wildlife Guides is a beta programme.",
-                    "Whichever activity you pick, log what you actually see as live captures in the app, with the time and the general place. If you want to lead the outing instead of joining one, that is a different page."
+                    "AnimalDex does not list, book or run tours. Its Wildlife Guides are virtual: a guide to a place, built from the wild animals its author logged there. A buyer gets the author's notes on every animal (where, when and how they found it), a direct chat with the author, and introductions to local people the author met, where they can help. Buying is coming soon.",
+                    "Whichever activity you pick, log what you actually see as live captures in the app, with the time and the general place. A place where you log enough wild species can become a virtual guide of your own."
                 ],
                 inlineLinks: [
-                    {text: "Become an AnimalDex Wildlife Guide", slug: "become-a-wildlife-guide", href: earnPaths.becomeGuide},
+                    earnRelatedLinks.guide,
                     guidePaymentsLink
                 ]
             }
@@ -1262,7 +1262,7 @@ export const experienceDiscoveryBlogPosts: BlogPost[] = [
             },
             {
                 question: "Does AnimalDex run boat trips or safaris?",
-                answer: "No. AnimalDex does not operate any outing. Marine listings cover shorelines, tide lines, and publicly accessible coast led by approved local Guides, not boat charters. All experiences are on public ground with a guest cap, and you pay the Guide in cash on the day."
+                answer: "No. AnimalDex does not operate or book any outing. Its Wildlife Guides are virtual: advice from someone who logged wild animals at a place, with their notes, a chat with them, and introductions to local people they met. Any operator they introduce is independent of AnimalDex."
             },
             {
                 question: "What should I bring on a wildlife activity?",
