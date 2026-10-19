@@ -1,6 +1,6 @@
 import "server-only";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
-import {getFreshConnection} from "@/lib/social/oauth";
+import {getFreshConnection, type OAuthPlatform} from "@/lib/social/oauth";
 import {listConnectionRows} from "@/lib/social/store";
 import type {SocialConnection, SocialPlatform} from "@/lib/social/types";
 
@@ -8,8 +8,9 @@ import type {SocialConnection, SocialPlatform} from "@/lib/social/types";
 // accounts, stored as one admin_social_metric_snapshots row per platform per
 // sync. Each platform uses its read-only API key from the environment when one
 // is set, otherwise the OAuth login /admin/story-videos already holds for
-// posting. Lifetime-view snapshots on consecutive days give the daily log its
-// automatic views (see auto-log.ts).
+// posting. TikTok has no such login any more (posting goes through Zernio), so
+// it only syncs with TIKTOK_RESEARCH_ACCESS_TOKEN. Lifetime-view snapshots on
+// consecutive days give the daily log its automatic views (see auto-log.ts).
 
 export type SocialMetric = {
     platform: string;
@@ -30,7 +31,14 @@ export type SocialMetric = {
 export const SOCIAL_METRIC_PROVIDERS = ["YouTube", "Instagram", "Facebook", "X", "TikTok"] as const;
 type Provider = (typeof SOCIAL_METRIC_PROVIDERS)[number];
 
+type LoginProvider = Exclude<Provider, "TikTok">;
+
 const PROVIDER_PLATFORM: Record<Provider, SocialPlatform> = {YouTube: "youtube", Instagram: "instagram", Facebook: "facebook", X: "x", TikTok: "tiktok"};
+const LOGIN_PLATFORM: Record<LoginProvider, OAuthPlatform> = {YouTube: "youtube", Instagram: "instagram", Facebook: "facebook", X: "x"};
+
+function hasLogin(provider: Provider, connected: Set<SocialPlatform>): provider is LoginProvider {
+    return provider !== "TikTok" && connected.has(PROVIDER_PLATFORM[provider]);
+}
 
 const number = (value: unknown) => (value == null || !Number.isFinite(Number(value)) ? null : Number(value));
 const env = (name: string) => process.env[name]?.trim() || "";
@@ -46,7 +54,7 @@ export function hasApiKey(provider: Provider) {
 /** Providers that can be synced: an API key, or a Story videos login. */
 export async function syncableProviders() {
     const connected = new Set(await listConnectionRows().then((rows) => rows.map((row) => row.platform)).catch(() => [] as SocialPlatform[]));
-    return new Set(SOCIAL_METRIC_PROVIDERS.filter((provider) => hasApiKey(provider) || connected.has(PROVIDER_PLATFORM[provider])));
+    return new Set(SOCIAL_METRIC_PROVIDERS.filter((provider) => hasApiKey(provider) || hasLogin(provider, connected)));
 }
 
 async function json(response: Response, what: string) {
@@ -56,7 +64,6 @@ async function json(response: Response, what: string) {
 }
 
 const bearer = (connection: SocialConnection) => ({Authorization: `Bearer ${connection.accessToken}`});
-const hasScope = (connection: SocialConnection, scope: string) => (connection.scopes ?? "").split(/[\s,]+/).includes(scope);
 
 // ---------------------------------------------------------------------------
 // API keys (read-only credentials set in the environment)
@@ -131,34 +138,6 @@ async function xByLogin(connection: SocialConnection): Promise<SocialMetric> {
     return {platform: "X", configured: true, source: "story-videos", followers: number(metrics?.followers_count), views, posts: number(metrics?.tweet_count), note: "Views count only posts shared from Story videos"};
 }
 
-/** Sums view_count over every video on the account (TikTok Display API, scope video.list). */
-async function tiktokTotalViews(connection: SocialConnection) {
-    let total = 0;
-    let cursor: number | undefined;
-    for (let page = 0; page < 50; page += 1) {
-        const body = await json(await fetch("https://open.tiktokapis.com/v2/video/list/?fields=id,view_count", {
-            method: "POST",
-            headers: {...bearer(connection), "Content-Type": "application/json"},
-            body: JSON.stringify({max_count: 20, ...(cursor != null ? {cursor} : {})}),
-            cache: "no-store"
-        }), "TikTok videos");
-        for (const video of body.data?.videos ?? []) total += Number(video.view_count ?? 0) || 0;
-        if (!body.data?.has_more) break;
-        cursor = body.data.cursor;
-    }
-    return total;
-}
-
-async function tiktokByLogin(connection: SocialConnection): Promise<SocialMetric> {
-    const stats = hasScope(connection, "user.info.stats");
-    const videos = hasScope(connection, "video.list");
-    if (!stats && !videos) throw new Error("the TikTok login can only post; reconnect it with the user.info.stats and video.list scopes to sync followers and views");
-    const user = stats
-        ? (await json(await fetch("https://open.tiktokapis.com/v2/user/info/?fields=follower_count,video_count", {headers: bearer(connection), cache: "no-store"}), "TikTok"))?.data?.user
-        : null;
-    return {platform: "TikTok", configured: true, source: "story-videos", followers: number(user?.follower_count), views: videos ? await tiktokTotalViews(connection) : null, posts: number(user?.video_count)};
-}
-
 const BY_KEY: Record<Provider, () => Promise<SocialMetric>> = {
     YouTube: youtubeByKey,
     Instagram: () => metaByKey("Instagram"),
@@ -167,19 +146,18 @@ const BY_KEY: Record<Provider, () => Promise<SocialMetric>> = {
     TikTok: tiktokByKey
 };
 
-const BY_LOGIN: Record<Provider, (connection: SocialConnection) => Promise<SocialMetric>> = {
+const BY_LOGIN: Record<LoginProvider, (connection: SocialConnection) => Promise<SocialMetric>> = {
     YouTube: youtubeByLogin,
     Instagram: instagramByLogin,
     Facebook: facebookByLogin,
-    X: xByLogin,
-    TikTok: tiktokByLogin
+    X: xByLogin
 };
 
 async function loadProvider(provider: Provider, connected: Set<SocialPlatform>): Promise<SocialMetric> {
     const blank: SocialMetric = {platform: provider, configured: false, followers: null, views: null, posts: null};
     try {
         // A Story videos login sees lifetime views where most API keys don't, so it goes first.
-        if (connected.has(PROVIDER_PLATFORM[provider])) return await BY_LOGIN[provider](await getFreshConnection(PROVIDER_PLATFORM[provider]));
+        if (hasLogin(provider, connected)) return await BY_LOGIN[provider](await getFreshConnection(LOGIN_PLATFORM[provider]));
         if (hasApiKey(provider)) return await BY_KEY[provider]();
         return blank;
     } catch (error) {

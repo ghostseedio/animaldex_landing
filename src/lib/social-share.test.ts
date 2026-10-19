@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {defaultShareCaption, defaultShareTitle, fitForX, X_POST_LIMIT, xLength} from "./social/captions";
 import {decryptToken, encryptToken} from "./social/token-crypto";
 import {needsRefresh} from "./social/refresh-policy";
-import {tiktokChunkPlan} from "./social/publishers";
 import {mediaPathOf} from "./social/story-videos";
 import type {SocialConnection} from "./social/types";
 
@@ -41,15 +40,6 @@ test("refresh margins: minutes for short-lived tokens, a week for Instagram", ()
     assert.equal(needsRefresh({...base, expiresAt: new Date(now + 2 * 60_000)}, now), true);
     assert.equal(needsRefresh({...base, platform: "instagram", expiresAt: new Date(now + 3 * 86_400_000)}, now), true);
     assert.equal(needsRefresh({...base, platform: "instagram", expiresAt: new Date(now + 30 * 86_400_000)}, now), false);
-});
-
-test("TikTok sends story-sized files whole and chunks large ones", () => {
-    assert.deepEqual(tiktokChunkPlan(40 * 1024 * 1024), {chunkSize: 40 * 1024 * 1024, count: 1});
-    const big = 130 * 1024 * 1024 + 123;
-    const plan = tiktokChunkPlan(big);
-    assert.equal(plan.chunkSize, 10 * 1024 * 1024);
-    assert.equal(plan.count, 13);
-    assert.ok(big - plan.chunkSize * (plan.count - 1) < 128 * 1024 * 1024);
 });
 
 test("media path is read from the stable URL", () => {
@@ -125,28 +115,27 @@ test("the template gives Facebook a clickable guide link", () => {
     assert.match(buildTemplateCopy(beetle).facebook.caption, /https:\/\/animaldex\.app\/animals\/asiatic-rhinoceros-beetle/);
 });
 
-import {parseTikTokCreatorInfo, readTikTokOptions, tiktokOptionsProblem} from "./social/tiktok-options";
+import {readTikTokOptions, tiktokOptionsProblem} from "./social/tiktok-options";
 
-test("TikTok posts need an explicit privacy choice that the account allows", () => {
-    const allowed = ["FOLLOWER_OF_CREATOR", "SELF_ONLY"];
-    assert.match(tiktokOptionsProblem(readTikTokOptions({}), allowed) ?? "", /Choose who can view/);
-    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "PUBLIC_TO_EVERYONE"}), allowed) ?? "", /not available/);
-    assert.equal(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY"}), allowed), null);
-    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY", brandContent: true}), allowed) ?? "", /Branded content cannot be private/);
+const tiktokAccount = {
+    privacyLevels: [{value: "FOLLOWER_OF_CREATOR", label: "Followers"}, {value: "SELF_ONLY", label: "Only me"}],
+    interactions: {allowComment: true, allowDuet: false, allowStitch: true}
+};
+
+test("TikTok posts need an explicit privacy choice that the account allows, and the preview confirmed", () => {
+    assert.match(tiktokOptionsProblem(readTikTokOptions({}), tiktokAccount) ?? "", /Choose who can view/);
+    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "PUBLIC_TO_EVERYONE", previewConfirmed: true}), tiktokAccount) ?? "", /not available/);
+    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY"}), tiktokAccount) ?? "", /confirm you consent/);
+    assert.equal(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY", previewConfirmed: true}), tiktokAccount), null);
+    assert.equal(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "PUBLIC_TO_EVERYONE", previewConfirmed: true}), null), null);
+    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY", brandContent: true, previewConfirmed: true}), tiktokAccount) ?? "", /Branded content cannot be private/);
+    assert.match(tiktokOptionsProblem(readTikTokOptions({privacyLevel: "SELF_ONLY", allowDuet: true, previewConfirmed: true}), tiktokAccount) ?? "", /Duets are turned off/);
 });
 
-test("TikTok interaction and disclosure settings default to off", () => {
+test("TikTok interaction, disclosure and AI settings default to off", () => {
     const options = readTikTokOptions({privacyLevel: "SELF_ONLY", allowComment: "yes"});
-    assert.deepEqual(options, {privacyLevel: "SELF_ONLY", allowComment: false, allowDuet: false, allowStitch: false, brandOrganic: false, brandContent: false});
+    assert.deepEqual(options, {privacyLevel: "SELF_ONLY", allowComment: false, allowDuet: false, allowStitch: false, brandOrganic: false, brandContent: false, madeWithAi: false, previewConfirmed: false});
     assert.equal(readTikTokOptions(null), undefined);
-});
-
-test("creator_info is read defensively", () => {
-    const info = parseTikTokCreatorInfo({creator_nickname: "animaldex.app", privacy_level_options: ["SELF_ONLY", 3], comment_disabled: true, max_video_post_duration_sec: 600});
-    assert.deepEqual(info.privacyLevelOptions, ["SELF_ONLY"]);
-    assert.equal(info.commentDisabled, true);
-    assert.equal(info.maxVideoPostDurationSec, 600);
-    assert.equal(parseTikTokCreatorInfo(undefined).nickname, null);
 });
 
 import {needsFrameRateFix, readMp4VideoInfo} from "./social/mp4-info";

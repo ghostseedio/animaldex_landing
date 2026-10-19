@@ -3,17 +3,25 @@ import {getSiteUrl} from "@/lib/site";
 import {pickFacebookPage} from "@/lib/social/facebook-page";
 import {needsRefresh} from "@/lib/social/refresh-policy";
 import {getConnection, saveConnection} from "@/lib/social/store";
-import type {SocialConnection, SocialPlatform} from "@/lib/social/types";
+import {isSocialPlatform, type SocialConnection, type SocialPlatform} from "@/lib/social/types";
 
 // One OAuth app per platform, connected once by an admin to the official
 // AnimalDex account. Each app must list this redirect URI:
 //   <site>/api/admin/social/callback/<platform>
+// TikTok is not here: its posts go through Zernio (zernio.ts), which holds the
+// TikTok account connection, so this app has no TikTok OAuth app or tokens.
 
 type ProviderEnv = {id: string; secret: string};
 
-const ENV_NAMES: Record<SocialPlatform, {id: string; secret: string}> = {
+/** The platforms this app connects itself (everything but TikTok). */
+export type OAuthPlatform = Exclude<SocialPlatform, "tiktok">;
+
+export function isOAuthPlatform(platform: unknown): platform is OAuthPlatform {
+    return isSocialPlatform(platform) && platform !== "tiktok";
+}
+
+const ENV_NAMES: Record<OAuthPlatform, {id: string; secret: string}> = {
     youtube: {id: "YOUTUBE_OAUTH_CLIENT_ID", secret: "YOUTUBE_OAUTH_CLIENT_SECRET"},
-    tiktok: {id: "TIKTOK_CLIENT_KEY", secret: "TIKTOK_CLIENT_SECRET"},
     instagram: {id: "INSTAGRAM_APP_ID", secret: "INSTAGRAM_APP_SECRET"},
     // The Meta app's own ID/secret (App settings → Basic), not the Instagram ones.
     facebook: {id: "FACEBOOK_APP_ID", secret: "FACEBOOK_APP_SECRET"},
@@ -22,22 +30,22 @@ const ENV_NAMES: Record<SocialPlatform, {id: string; secret: string}> = {
 
 const GRAPH_VERSION = "v23.0";
 
-export function getProviderEnvNames(platform: SocialPlatform) {
+export function getProviderEnvNames(platform: OAuthPlatform) {
     return ENV_NAMES[platform];
 }
 
-function providerEnv(platform: SocialPlatform): ProviderEnv | null {
+function providerEnv(platform: OAuthPlatform): ProviderEnv | null {
     const names = ENV_NAMES[platform];
     const id = process.env[names.id]?.trim();
     const secret = process.env[names.secret]?.trim();
     return id && secret ? {id, secret} : null;
 }
 
-export function isProviderConfigured(platform: SocialPlatform) {
+export function isProviderConfigured(platform: OAuthPlatform) {
     return providerEnv(platform) !== null;
 }
 
-function requireEnv(platform: SocialPlatform) {
+function requireEnv(platform: OAuthPlatform) {
     const env = providerEnv(platform);
     if (!env) {
         const names = ENV_NAMES[platform];
@@ -46,14 +54,14 @@ function requireEnv(platform: SocialPlatform) {
     return env;
 }
 
-export function getRedirectUri(platform: SocialPlatform) {
+export function getRedirectUri(platform: OAuthPlatform) {
     return `${getSiteUrl()}/api/admin/social/callback/${platform}`;
 }
 
 export type OAuthStart = {url: string; state: string; verifier: string};
 
 /** The provider's consent URL, plus the state/PKCE verifier the callback must see again. */
-export function buildAuthorizeUrl(platform: SocialPlatform): OAuthStart {
+export function buildAuthorizeUrl(platform: OAuthPlatform): OAuthStart {
     const env = requireEnv(platform);
     const state = randomBytes(24).toString("base64url");
     const verifier = randomBytes(48).toString("base64url");
@@ -71,20 +79,6 @@ export function buildAuthorizeUrl(platform: SocialPlatform): OAuthStart {
             prompt: "consent",
             include_granted_scopes: "true",
             state
-        }).toString();
-    } else if (platform === "tiktok") {
-        url = new URL("https://www.tiktok.com/v2/auth/authorize/");
-        url.search = new URLSearchParams({
-            client_key: env.id,
-            redirect_uri: redirectUri,
-            response_type: "code",
-            // Direct posting only: video.upload (send to drafts) was dropped so the
-            // TikTok review covers exactly what the app requests.
-            scope: "user.info.basic,video.publish",
-            state,
-            // TikTok requires PKCE and, unlike RFC 7636, hex-encodes the SHA-256.
-            code_challenge: createHash("sha256").update(verifier).digest("hex"),
-            code_challenge_method: "S256"
         }).toString();
     } else if (platform === "instagram") {
         url = new URL("https://www.instagram.com/oauth/authorize");
@@ -149,7 +143,7 @@ function xBasicAuth(env: ProviderEnv) {
 }
 
 /** Exchanges the callback code for tokens and looks up which account was connected. */
-export async function exchangeCode(platform: SocialPlatform, code: string, verifier: string): Promise<SocialConnection> {
+export async function exchangeCode(platform: OAuthPlatform, code: string, verifier: string): Promise<SocialConnection> {
     const env = requireEnv(platform);
     const redirectUri = getRedirectUri(platform);
 
@@ -164,21 +158,6 @@ export async function exchangeCode(platform: SocialPlatform, code: string, verif
         if (!item) throw new Error("That Google account has no YouTube channel");
         return {
             platform, accountId: item.id ?? null, accountName: item.snippet?.title ?? null,
-            accessToken: token.access_token, refreshToken: token.refresh_token ?? null,
-            expiresAt: expiresIn(token.expires_in), scopes: token.scope ?? null
-        };
-    }
-
-    if (platform === "tiktok") {
-        const token = await readJson(await fetch("https://open.tiktokapis.com/v2/oauth/token/", form({
-            client_key: env.id, client_secret: env.secret, code, grant_type: "authorization_code", redirect_uri: redirectUri, code_verifier: verifier
-        })), "TikTok token exchange");
-        if (token.error) throw new Error(`TikTok token exchange: ${token.error_description ?? token.error}`);
-        const info = await readJson(await fetch("https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name", {
-            headers: {Authorization: `Bearer ${token.access_token}`}
-        }), "TikTok account lookup");
-        return {
-            platform, accountId: token.open_id ?? null, accountName: info.data?.user?.display_name ?? null,
             accessToken: token.access_token, refreshToken: token.refresh_token ?? null,
             expiresAt: expiresIn(token.expires_in), scopes: token.scope ?? null
         };
@@ -238,8 +217,9 @@ export async function exchangeCode(platform: SocialPlatform, code: string, verif
 }
 
 async function refresh(connection: SocialConnection): Promise<SocialConnection> {
-    const env = requireEnv(connection.platform);
     const {platform} = connection;
+    if (!isOAuthPlatform(platform)) throw new Error(`${platform} is not an OAuth connection`);
+    const env = requireEnv(platform);
 
     if (platform === "instagram") {
         const token = await readJson(await fetch(`https://graph.instagram.com/refresh_access_token?${new URLSearchParams({
@@ -257,14 +237,6 @@ async function refresh(connection: SocialConnection): Promise<SocialConnection> 
         return {...connection, accessToken: token.access_token, refreshToken: token.refresh_token ?? connection.refreshToken, expiresAt: expiresIn(token.expires_in)};
     }
 
-    if (platform === "tiktok") {
-        const token = await readJson(await fetch("https://open.tiktokapis.com/v2/oauth/token/", form({
-            client_key: env.id, client_secret: env.secret, grant_type: "refresh_token", refresh_token: connection.refreshToken
-        })), "TikTok token refresh");
-        if (token.error) throw new Error(`TikTok token refresh: ${token.error_description ?? token.error}`);
-        return {...connection, accessToken: token.access_token, refreshToken: token.refresh_token ?? connection.refreshToken, expiresAt: expiresIn(token.expires_in)};
-    }
-
     const token = await readJson(await fetch("https://api.x.com/2/oauth2/token", {
         ...form({grant_type: "refresh_token", refresh_token: connection.refreshToken, client_id: env.id}),
         headers: {"Content-Type": "application/x-www-form-urlencoded", Authorization: xBasicAuth(env)}
@@ -274,7 +246,7 @@ async function refresh(connection: SocialConnection): Promise<SocialConnection> 
 }
 
 /** The stored connection with a usable access token, refreshing (and saving) it if needed. */
-export async function getFreshConnection(platform: SocialPlatform): Promise<SocialConnection> {
+export async function getFreshConnection(platform: OAuthPlatform): Promise<SocialConnection> {
     const connection = await getConnection(platform);
     if (!connection) throw new Error(`${platform} is not connected`);
     if (!needsRefresh(connection)) return connection;

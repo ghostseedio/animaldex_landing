@@ -4,8 +4,9 @@ import {useCallback, useEffect, useMemo, useState} from "react";
 import {CheckCircle, ClapperboardPlay, CloseCircle, PlugCircle, Refresh, Share} from "solar-icon-set";
 import {X_POST_LIMIT, xLength} from "@/lib/social/captions";
 import {COPY_LIMITS, type ShareCopy, VISIBLE_CHARS} from "@/lib/social/share-copy";
-import {TIKTOK_PRIVACY_LABELS, type TikTokCreatorInfo, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
-import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions} from "@/lib/social/types";
+import {EMPTY_TIKTOK_OPTIONS, TIKTOK_PRIVACY_LABELS, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
+import type {TikTokAccountInfo} from "@/lib/social/zernio-core";
+import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions, type ZernioShareInfo} from "@/lib/social/types";
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
@@ -51,12 +52,16 @@ function blogVideoToShareable(video: BlogVideo): Video {
 
 type Connection = {
     platform: SocialPlatform;
+    /** "oauth" = our own app connection; "zernio" = posted through Zernio (TikTok). Missing = oauth. */
+    provider?: "oauth" | "zernio";
     configured: boolean;
     connected: boolean;
     accountName: string | null;
     expiresAt: string | null;
     envNames: {id: string; secret: string};
-    redirectUri: string;
+    redirectUri: string | null;
+    manageUrl?: string | null;
+    error?: string | null;
 };
 
 const KIND_LABELS: Record<Video["kind"], string> = {
@@ -67,13 +72,21 @@ const KIND_LABELS: Record<Video["kind"], string> = {
     blog_video: "Page video"
 };
 
-/** Not-yet-public options. TikTok has none: its drafts scope (video.upload) is not requested. */
+/** Not-yet-public options. TikTok drafts go to the account's inbox through Zernio. */
 const DRAFT_LABELS: Partial<Record<SocialPlatform, string>> = {
     youtube: "Upload as private",
+    tiktok: "Send to TikTok inbox (draft)",
     facebook: "Save as draft"
 };
 
 const STALE_MS = 30 * 60_000;
+
+// Mirrors scheduleProblem() in src/lib/social/zernio-core.ts (the server checks the same).
+const MIN_SCHEDULE_LEAD_MS = 2 * 60_000;
+const MAX_SCHEDULE_DAYS = 30;
+const SCHEDULE_PICKER_LEAD_MS = 5 * 60_000;
+
+const BROWSER_TIMEZONE = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
 
 async function api<T>(input: string, init?: RequestInit): Promise<T> {
     const response = await fetch(input, {cache: "no-store", ...init});
@@ -82,14 +95,57 @@ async function api<T>(input: string, init?: RequestInit): Promise<T> {
     return body as T;
 }
 
+function zernioInfo(post: SocialPostRow): ZernioShareInfo | null {
+    const info = post.options?.zernio;
+    return info && typeof info.postId === "string" && info.postId ? info : null;
+}
+
+/** A TikTok post waiting in Zernio for its scheduled time. */
+function isScheduled(post: SocialPostRow) {
+    return post.status === "queued" && Boolean(zernioInfo(post)?.scheduledFor);
+}
+
 function statusTone(post: SocialPostRow): "good" | "bad" | "warn" {
     if (post.status === "published") return "good";
     if (post.status === "failed") return "bad";
     return "warn";
 }
 
+/** In-process uploads that stopped reporting. Posts handed to Zernio are tracked there, so they never go stale. */
 function isStale(post: SocialPostRow) {
+    if (zernioInfo(post)) return false;
     return (post.status === "queued" || post.status === "processing") && Date.now() - Date.parse(post.updated_at) > STALE_MS;
+}
+
+function inFlight(post: SocialPostRow) {
+    return (post.status === "queued" || post.status === "processing") && !isStale(post);
+}
+
+function statusLabel(post: SocialPostRow) {
+    if (isStale(post)) return "stale";
+    if (isScheduled(post)) return "scheduled";
+    return post.status;
+}
+
+function formatLocal(iso: string) {
+    const time = Date.parse(iso);
+    return Number.isFinite(time) ? new Date(time).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"}) : iso;
+}
+
+/** A Date as the value a <input type="datetime-local"> wants (local wall time, minute precision). */
+function toLocalInputValue(date: Date) {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Null when the picked local time can be scheduled, otherwise why not (same rules as the server). */
+function localScheduleProblem(localValue: string, now = Date.now()): string | null {
+    if (!localValue) return "Pick a time to schedule the TikTok post, or post now";
+    const time = new Date(localValue).getTime();
+    if (!Number.isFinite(time)) return "The schedule time is not a valid date";
+    if (time < now + MIN_SCHEDULE_LEAD_MS) return "Schedule at least a few minutes ahead, or post now";
+    if (time > now + MAX_SCHEDULE_DAYS * 86_400_000) return `Schedule within the next ${MAX_SCHEDULE_DAYS} days`;
+    return null;
 }
 
 export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
@@ -100,6 +156,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
     const [notice, setNotice] = useState("");
     const [sharing, setSharing] = useState<Video | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [cancelling, setCancelling] = useState<string | null>(null);
 
     const loadPosts = useCallback(async () => {
         const body = await api<{posts: SocialPostRow[]}>("/api/admin/social/posts");
@@ -128,13 +185,16 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
         if (connected || connectError) window.history.replaceState(null, "", window.location.pathname);
     }, [loadAll]);
 
-    // Poll the log while anything is still uploading.
-    const inFlight = posts.some((post) => (post.status === "queued" || post.status === "processing") && !isStale(post));
+    // Poll the log while anything is still uploading or publishing. Posts merely waiting for
+    // their scheduled time in Zernio only need an occasional check (the server reconciles on GET).
+    const activeInFlight = posts.some((post) => inFlight(post) && !isScheduled(post));
+    const scheduledInFlight = posts.some(isScheduled);
+    const pollMs = activeInFlight ? 5_000 : scheduledInFlight ? 30_000 : 0;
     useEffect(() => {
-        if (!inFlight) return;
-        const interval = window.setInterval(() => loadPosts().catch(() => undefined), 5_000);
+        if (!pollMs) return;
+        const interval = window.setInterval(() => loadPosts().catch(() => undefined), pollMs);
         return () => window.clearInterval(interval);
-    }, [inFlight, loadPosts]);
+    }, [pollMs, loadPosts]);
 
     const postsByVideo = useMemo(() => {
         const map = new Map<string, SocialPostRow[]>();
@@ -149,6 +209,22 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
             await loadAll();
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to disconnect");
+        }
+    }
+
+    async function cancelScheduled(post: SocialPostRow) {
+        const when = zernioInfo(post)?.scheduledFor;
+        if (!window.confirm(`Cancel the TikTok post scheduled for ${when ? formatLocal(when) : "later"}? It is removed from Zernio and can be shared again.`)) return;
+        setCancelling(post.id);
+        setError("");
+        try {
+            await api(`/api/admin/social/posts?id=${encodeURIComponent(post.id)}`, {method: "DELETE"});
+            setNotice("Scheduled TikTok post cancelled.");
+            await loadPosts();
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to cancel the scheduled post");
+        } finally {
+            setCancelling(null);
         }
     }
 
@@ -172,6 +248,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     {SOCIAL_PLATFORMS.map((platform) => {
                         const connection = connections.find((candidate) => candidate.platform === platform);
+                        const viaZernio = connection?.provider === "zernio";
                         return (
                             <article key={platform} className="flex flex-col gap-3 border border-line-300 bg-surface-900 p-4">
                                 <div className="flex items-center justify-between gap-2">
@@ -180,7 +257,30 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                         ? <Badge tone="good"><CheckCircle size={12} iconStyle="Bold" />Connected</Badge>
                                         : connection ? <Badge>{connection.configured ? "Not connected" : "Not set up"}</Badge> : <Skeleton className="h-4 w-20" />}
                                 </div>
-                                {connection?.connected ? (
+                                {!connection ? (
+                                    <div aria-label="Loading" className="mt-auto flex flex-col gap-2">
+                                        <Skeleton className="h-3 w-2/3" />
+                                        <Skeleton className="h-8 w-full" />
+                                    </div>
+                                ) : viaZernio ? (
+                                    <>
+                                        {connection.connected ? (
+                                            <>
+                                                <p className="text-sm text-ink-300">Posting through Zernio{connection.accountName ? <> as <span className="text-white">{connection.accountName}</span></> : null}</p>
+                                                {connection.error ? <p className="text-xs leading-5 text-amber-200">{connection.error}</p> : null}
+                                            </>
+                                        ) : connection.configured ? (
+                                            <p className="text-xs leading-5 text-red-200">{connection.error || "Zernio has no connected TikTok account for this id."}</p>
+                                        ) : (
+                                            <p className="text-xs leading-5 text-ink-500">
+                                                Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server. Zernio holds the TikTok connection; this app keeps no TikTok credentials.
+                                            </p>
+                                        )}
+                                        {connection.manageUrl ? (
+                                            <a href={connection.manageUrl} target="_blank" rel="noreferrer" className={cn(buttonVariants({size: "sm"}), "mt-auto")}>Manage in Zernio ↗</a>
+                                        ) : null}
+                                    </>
+                                ) : connection.connected ? (
                                     <>
                                         <p className="text-sm text-ink-300">{connection.accountName ?? "Account connected"}</p>
                                         <div className="mt-auto flex gap-2">
@@ -188,17 +288,12 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                             <Button size="sm" variant="danger" onClick={() => disconnect(platform)}>Disconnect</Button>
                                         </div>
                                     </>
-                                ) : connection?.configured ? (
+                                ) : connection.configured ? (
                                     <a href={`/api/admin/social/connect/${platform}`} className={cn(buttonVariants({variant: "primary", size: "sm"}), "mt-auto")}><PlugCircle size={15} />Connect account</a>
-                                ) : connection ? (
-                                    <p className="text-xs leading-5 text-ink-500">
-                                        Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server, with redirect URI <code className="break-all text-ink-300">{connection.redirectUri}</code> in the platform&apos;s app.
-                                    </p>
                                 ) : (
-                                    <div aria-label="Loading" className="mt-auto flex flex-col gap-2">
-                                        <Skeleton className="h-3 w-2/3" />
-                                        <Skeleton className="h-8 w-full" />
-                                    </div>
+                                    <p className="text-xs leading-5 text-ink-500">
+                                        Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server{connection.redirectUri ? <>, with redirect URI <code className="break-all text-ink-300">{connection.redirectUri}</code> in the platform&apos;s app</> : null}.
+                                    </p>
                                 )}
                             </article>
                         );
@@ -242,7 +337,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                         {shares.length > 0 && (
                                             <div className="flex flex-wrap gap-1">
                                                 {shares.map((post) => (
-                                                    <Badge key={post.id} title={post.error ?? undefined} tone={statusTone(post)} className="normal-case tracking-normal">{SOCIAL_PLATFORM_LABELS[post.platform]}: {isStale(post) ? "stale" : post.status}</Badge>
+                                                    <Badge key={post.id} title={post.error ?? (isScheduled(post) ? `Scheduled for ${formatLocal(zernioInfo(post)!.scheduledFor!)}` : undefined)} tone={statusTone(post)} className="normal-case tracking-normal">{SOCIAL_PLATFORM_LABELS[post.platform]}: {statusLabel(post)}</Badge>
                                                 ))}
                                             </div>
                                         )}
@@ -265,19 +360,31 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                 <tr><TH>When</TH><TH>Video</TH><TH>Platform</TH><TH>Status</TH><TH>Result</TH></tr>
                             </thead>
                             <tbody>
-                                {posts.map((post) => (
-                                    <tr key={post.id} className="transition hover:bg-white/[.02]">
-                                        <TD className="whitespace-nowrap tabular-nums text-ink-400">{new Date(post.created_at).toLocaleString()}</TD>
-                                        <TD className="text-white">{post.species_name ?? post.page_slug}<span className="block text-[11px] text-ink-500">{KIND_LABELS[post.media_kind as Video["kind"]] ?? post.media_kind}</span></TD>
-                                        <TD>{SOCIAL_PLATFORM_LABELS[post.platform]}{post.mode === "draft" ? <span className="block text-[11px] text-ink-500">{DRAFT_LABELS[post.platform] ?? "draft"}</span> : null}</TD>
-                                        <TD><Badge tone={statusTone(post)}>{isStale(post) ? "stale" : post.status}</Badge></TD>
-                                        <TD className="text-ink-300">
-                                            {post.external_url ? <a href={post.external_url} target="_blank" rel="noreferrer" className="font-bold text-primary-100 hover:text-white">Open post ↗</a>
-                                                : post.error ? <span className="text-red-200">{post.error}</span>
-                                                    : post.external_id ? <span className="text-ink-400">ID {post.external_id}</span> : null}
-                                        </TD>
-                                    </tr>
-                                ))}
+                                {posts.map((post) => {
+                                    const zernio = zernioInfo(post);
+                                    const scheduled = isScheduled(post);
+                                    return (
+                                        <tr key={post.id} className="transition hover:bg-white/[.02]">
+                                            <TD className="whitespace-nowrap tabular-nums text-ink-400">{new Date(post.created_at).toLocaleString()}</TD>
+                                            <TD className="text-white">{post.species_name ?? post.page_slug}<span className="block text-[11px] text-ink-500">{KIND_LABELS[post.media_kind as Video["kind"]] ?? post.media_kind}</span></TD>
+                                            <TD>{SOCIAL_PLATFORM_LABELS[post.platform]}{post.mode === "draft" ? <span className="block text-[11px] text-ink-500">{DRAFT_LABELS[post.platform] ?? "draft"}</span> : null}</TD>
+                                            <TD><Badge tone={statusTone(post)}>{statusLabel(post)}</Badge></TD>
+                                            <TD className="text-ink-300">
+                                                {scheduled && zernio?.scheduledFor ? (
+                                                    <span className="flex flex-wrap items-center gap-2">
+                                                        <span className="tabular-nums">Posts {formatLocal(zernio.scheduledFor)}{zernio.timezone && zernio.timezone !== BROWSER_TIMEZONE ? <span className="block text-[11px] text-ink-500">scheduled in {zernio.timezone}</span> : null}</span>
+                                                        <Button size="sm" variant="danger" loading={cancelling === post.id} onClick={() => cancelScheduled(post)}>Cancel</Button>
+                                                    </span>
+                                                ) : post.platform === "tiktok" && post.status === "processing" && zernio ? (
+                                                    <span className="flex items-center gap-2 text-ink-400"><Spinner size={12} />Publishing…</span>
+                                                ) : post.external_url ? <a href={post.external_url} target="_blank" rel="noreferrer" className="font-bold text-primary-100 hover:text-white">Open post ↗</a>
+                                                    : post.error ? <span className="text-red-200">{post.error}</span>
+                                                        : post.status === "published" && post.external_id ? <span className="text-ink-400">Published (ID {post.external_id})</span>
+                                                            : post.external_id ? <span className="text-ink-400">ID {post.external_id}</span> : null}
+                                            </TD>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </Table>
                     </Card>
@@ -332,6 +439,8 @@ function VisiblePreview({text, visible}: {text: string; visible: number}) {
 
 const fieldClass = "mt-1.5 w-full border border-line-300 bg-canvas-900 px-3 py-2 text-sm text-white outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-300/20";
 
+type TikTokWhen = "now" | "schedule";
+
 function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: ShareDialogProps) {
     const pageUrl = `${siteUrl}${video.pagePath ?? `/animals/${video.pageSlug}`}`;
     const [copy, setCopy] = useState<ShareCopy | null>(null);
@@ -342,32 +451,40 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const [xLink, setXLink] = useState(false);
     const [modes, setModes] = useState<Record<SocialPlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", facebook: "post", x: "post"});
     // A draft and a direct post are separate shares; each can happen once.
-    const blocked = (platform: SocialPlatform, mode: SocialPostMode = modes[platform]) => shares.some((post) => post.platform === platform && post.mode === mode && (post.status === "published" || ((post.status === "queued" || post.status === "processing") && !isStale(post))));
+    const blocked = (platform: SocialPlatform, mode: SocialPostMode = modes[platform]) => shares.some((post) => post.platform === platform && post.mode === mode && (post.status === "published" || inFlight(post)));
     const available = (platform: SocialPlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected)
         && !(blocked(platform, "post") && (!DRAFT_LABELS[platform] || blocked(platform, "draft")));
     const [selected, setSelected] = useState<SocialPlatform[]>(() => SOCIAL_PLATFORMS.filter(available));
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const tiktokConnected = Boolean(connections.find((candidate) => candidate.platform === "tiktok")?.connected);
-    const [tiktokCreator, setTiktokCreator] = useState<TikTokCreatorInfo | null>(null);
-    const [tiktokCreatorError, setTiktokCreatorError] = useState("");
+    const [tiktokAccount, setTiktokAccount] = useState<TikTokAccountInfo | null>(null);
+    const [tiktokAccountError, setTiktokAccountError] = useState("");
     // TikTok's guidelines: no preset privacy level, every interaction off until the poster turns it on.
-    const [tiktok, setTiktok] = useState<TikTokPostOptions>({privacyLevel: "", allowComment: false, allowDuet: false, allowStitch: false, brandOrganic: false, brandContent: false});
+    const [tiktok, setTiktok] = useState<TikTokPostOptions>(EMPTY_TIKTOK_OPTIONS);
     const [tiktokDisclose, setTiktokDisclose] = useState(false);
+    const [tiktokWhen, setTiktokWhen] = useState<TikTokWhen>("now");
+    const [tiktokScheduleLocal, setTiktokScheduleLocal] = useState("");
 
     useEffect(() => {
         if (!tiktokConnected) return;
-        api<{creator: TikTokCreatorInfo}>("/api/admin/social/tiktok-creator")
-            .then((body) => setTiktokCreator(body.creator))
-            .catch((caught) => setTiktokCreatorError(caught instanceof Error ? caught.message : "Unable to load the TikTok account"));
+        api<{account: TikTokAccountInfo}>("/api/admin/social/tiktok-account")
+            .then((body) => {
+                setTiktokAccount(body.account);
+                // A toggle ticked before the account answered, which the account forbids, would be stuck on behind a disabled box.
+                const allowed = body.account.interactions;
+                setTiktok((current) => ({...current, allowComment: current.allowComment && allowed.allowComment, allowDuet: current.allowDuet && allowed.allowDuet, allowStitch: current.allowStitch && allowed.allowStitch}));
+            })
+            .catch((caught) => setTiktokAccountError(caught instanceof Error ? caught.message : "Unable to load the TikTok account"));
     }, [tiktokConnected]);
 
     const tiktokDirect = selected.includes("tiktok") && modes.tiktok === "post";
-    const tiktokTooLong = Boolean(tiktokDirect && tiktokCreator?.maxVideoPostDurationSec && video.durationSeconds && video.durationSeconds > tiktokCreator.maxVideoPostDurationSec);
+    const tiktokScheduling = tiktokDirect && tiktokWhen === "schedule";
+    const tiktokTooLong = Boolean(tiktokDirect && tiktokAccount?.maxVideoDurationSec && video.durationSeconds && video.durationSeconds > tiktokAccount.maxVideoDurationSec);
     const tiktokProblem = tiktokDirect
-        ? (tiktokTooLong ? `This video is longer than the ${tiktokCreator?.maxVideoPostDurationSec}s this TikTok account can post`
+        ? (tiktokTooLong ? `This video is longer than the ${tiktokAccount?.maxVideoDurationSec}s this TikTok account can post`
             : tiktokDisclose && !tiktok.brandOrganic && !tiktok.brandContent ? "Choose what the commercial content is, or turn the disclosure off"
-                : tiktokOptionsProblem(tiktok, tiktokCreator?.privacyLevelOptions ?? null))
+                : tiktokOptionsProblem(tiktok, tiktokAccount) ?? (tiktokScheduling ? localScheduleProblem(tiktokScheduleLocal) : null))
         : null;
 
     const draft = useCallback(async (regenerate = false) => {
@@ -419,6 +536,8 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
             facebook: copy.facebook.caption,
             x: xText
         };
+        // Resolved once so the notice and the request agree on the time.
+        const scheduledFor = tiktokScheduling && tiktokScheduleLocal ? new Date(tiktokScheduleLocal).toISOString() : null;
         try {
             const body = await api<{queued: SocialPlatform[]; skipped: SocialPlatform[]}>("/api/admin/social/posts", {
                 method: "POST",
@@ -430,7 +549,10 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                         platform,
                         caption: captionFor[platform],
                         mode: modes[platform],
-                        ...(platform === "tiktok" ? {tiktok: {...tiktok, brandOrganic: tiktokDisclose && tiktok.brandOrganic, brandContent: tiktokDisclose && tiktok.brandContent}} : {})
+                        ...(platform === "tiktok" ? {
+                            tiktok: {...tiktok, brandOrganic: tiktokDisclose && tiktok.brandOrganic, brandContent: tiktokDisclose && tiktok.brandContent},
+                            ...(scheduledFor ? {scheduledFor, timezone: BROWSER_TIMEZONE} : {})
+                        } : {})
                     }))
                 })
             });
@@ -438,7 +560,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
             const skipped = body.skipped.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ");
             onShared([
                 queued && `Uploading ${video.speciesName} to ${queued}.`,
-                body.queued.includes("tiktok") && "TikTok can take a few minutes to process the video before it appears.",
+                body.queued.includes("tiktok") && (scheduledFor ? `TikTok scheduled for ${formatLocal(scheduledFor)}.` : "TikTok can take a few minutes to publish."),
                 skipped && `Already shared to ${skipped}.`
             ].filter(Boolean).join(" "));
         } catch (caught) {
@@ -533,14 +655,18 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                 </label>
                                 <VisiblePreview text={copy.tiktok.caption} visible={VISIBLE_CHARS.tiktok} />
                                 <TikTokPostSettings
-                                    creator={tiktokCreator}
-                                    creatorError={tiktokCreatorError}
+                                    account={tiktokAccount}
+                                    accountError={tiktokAccountError}
                                     connected={tiktokConnected}
                                     draftMode={modes.tiktok === "draft"}
                                     options={tiktok}
                                     onChange={setTiktok}
                                     disclose={tiktokDisclose}
                                     onDiscloseChange={setTiktokDisclose}
+                                    when={tiktokWhen}
+                                    onWhenChange={setTiktokWhen}
+                                    scheduleLocal={tiktokScheduleLocal}
+                                    onScheduleLocalChange={setTiktokScheduleLocal}
                                 />
                             </>
                         )}
@@ -593,44 +719,55 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
 }
 
 type TikTokPostSettingsProps = {
-    creator: TikTokCreatorInfo | null;
-    creatorError: string;
+    account: TikTokAccountInfo | null;
+    accountError: string;
     connected: boolean;
     draftMode: boolean;
     options: TikTokPostOptions;
     onChange: (options: TikTokPostOptions) => void;
     disclose: boolean;
     onDiscloseChange: (disclose: boolean) => void;
+    when: TikTokWhen;
+    onWhenChange: (when: TikTokWhen) => void;
+    scheduleLocal: string;
+    onScheduleLocalChange: (value: string) => void;
 };
 
-/** The posting choices TikTok's Content Sharing Guidelines require us to show (and not preset). */
-function TikTokPostSettings({creator, creatorError, connected, draftMode, options, onChange, disclose, onDiscloseChange}: TikTokPostSettingsProps) {
-    if (!connected) return <p className="mt-4 text-xs text-ink-500">Connect TikTok to choose its posting settings.</p>;
-    if (draftMode) return <p className="mt-4 text-xs text-ink-400">Sent to the account&apos;s TikTok drafts: privacy, interactions and disclosure are chosen in the TikTok app when you finish the post.</p>;
+/** The posting choices TikTok's Content Sharing Guidelines require us to show (and not preset), plus when to post. */
+function TikTokPostSettings({account, accountError, connected, draftMode, options, onChange, disclose, onDiscloseChange, when, onWhenChange, scheduleLocal, onScheduleLocalChange}: TikTokPostSettingsProps) {
+    if (!connected) return <p className="mt-4 text-xs text-ink-500">TikTok posts go through Zernio; set it up on the server to choose its posting settings.</p>;
+    if (draftMode) return <p className="mt-4 text-xs text-ink-400">Sent to the account&apos;s TikTok inbox as a draft: privacy, interactions and disclosure are chosen in the TikTok app when you finish the post. Drafts cannot be scheduled.</p>;
     const set = (patch: Partial<TikTokPostOptions>) => onChange({...options, ...patch});
     const interactions: Array<{key: "allowComment" | "allowDuet" | "allowStitch"; label: string; disabled: boolean}> = [
-        {key: "allowComment", label: "Comment", disabled: Boolean(creator?.commentDisabled)},
-        {key: "allowDuet", label: "Duet", disabled: Boolean(creator?.duetDisabled)},
-        {key: "allowStitch", label: "Stitch", disabled: Boolean(creator?.stitchDisabled)}
+        {key: "allowComment", label: "Comment", disabled: account ? !account.interactions.allowComment : false},
+        {key: "allowDuet", label: "Duet", disabled: account ? !account.interactions.allowDuet : false},
+        {key: "allowStitch", label: "Stitch", disabled: account ? !account.interactions.allowStitch : false}
     ];
+    const minLocal = toLocalInputValue(new Date(Date.now() + SCHEDULE_PICKER_LEAD_MS));
+    const maxLocal = toLocalInputValue(new Date(Date.now() + MAX_SCHEDULE_DAYS * 86_400_000));
+    const scheduleProblem = when === "schedule" ? localScheduleProblem(scheduleLocal) : null;
+    const resolved = when === "schedule" && scheduleLocal && !scheduleProblem ? new Date(scheduleLocal) : null;
     return (
         <div className="mt-5 flex flex-col gap-4 border border-line-300 bg-canvas-900 p-4">
             <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {creator?.avatarUrl ? <img src={creator.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
-                <p className="text-sm text-white">Posting to TikTok as <strong>{creator?.nickname ?? (creatorError ? "unknown account" : "…")}</strong></p>
+                {account?.avatarUrl ? <img src={account.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <span className="h-9 w-9 rounded-full bg-white/10" />}
+                <p className="text-sm text-white">Posting to TikTok as <strong>{account?.nickname ?? (accountError ? "unknown account" : "…")}</strong></p>
             </div>
-            {creatorError && <p className="text-xs text-red-200">{creatorError}</p>}
+            {accountError && <p className="text-xs text-red-200">{accountError}</p>}
+            {account && !account.canPostMore && (
+                <Alert tone="warn" className="text-xs">TikTok&apos;s daily API posting cap is reached for this account; schedule it for later or try tomorrow.</Alert>
+            )}
 
             <label className="block text-xs font-bold text-ink-300">Who can view this video
                 <select value={options.privacyLevel} onChange={(event) => set({privacyLevel: event.target.value})} className={fieldClass}>
                     <option value="" disabled>Choose who can view…</option>
-                    {(creator?.privacyLevelOptions ?? []).map((level) => (
-                        <option key={level} value={level} disabled={disclose && options.brandContent && level === "SELF_ONLY"}>{TIKTOK_PRIVACY_LABELS[level] ?? level}</option>
+                    {(account?.privacyLevels ?? []).map((level) => (
+                        <option key={level.value} value={level.value} disabled={disclose && options.brandContent && level.value === "SELF_ONLY"}>{TIKTOK_PRIVACY_LABELS[level.value] ?? level.label}</option>
                     ))}
                 </select>
             </label>
-            <p className="-mt-2 text-[11px] text-ink-500">Until TikTok audits the app it only accepts &quot;Only me&quot;, from a private account.</p>
+            <p className="-mt-2 text-[11px] text-ink-500">Posted through Zernio to @animaldex.app; the levels are the ones that account allows. Accounts connected through TikTok for Business can only post videos as Everyone.</p>
 
             <fieldset>
                 <legend className="text-xs font-bold text-ink-300">Allow users to</legend>
@@ -662,6 +799,50 @@ function TikTokPostSettings({creator, creatorError, connected, draftMode, option
                     </div>
                 )}
             </div>
+
+            <label className="flex items-start gap-2 text-sm text-white">
+                <input type="checkbox" className="mt-1" checked={options.madeWithAi} onChange={(event) => set({madeWithAi: event.target.checked})} />
+                <span>AI-generated content<span className="block text-[11px] text-ink-500">Adds TikTok&apos;s AI-generated label. Our story videos are AI-made, so this stays on unless the clip is real footage.</span></span>
+            </label>
+
+            <fieldset>
+                <legend className="text-xs font-bold text-ink-300">When</legend>
+                <div className="mt-2 flex flex-wrap gap-4">
+                    {([["now", "Post now"], ["schedule", "Schedule"]] as Array<[TikTokWhen, string]>).map(([value, label]) => (
+                        <label key={value} className="flex items-center gap-2 text-sm text-white">
+                            <input type="radio" name="tiktok-when" value={value} checked={when === value} onChange={() => onWhenChange(value)} />
+                            {label}
+                        </label>
+                    ))}
+                </div>
+                {when === "schedule" && (
+                    <div className="mt-3">
+                        <label className="block text-xs font-bold text-ink-300">Publish at
+                            <input
+                                type="datetime-local"
+                                value={scheduleLocal}
+                                min={minLocal}
+                                max={maxLocal}
+                                step={60}
+                                onChange={(event) => onScheduleLocalChange(event.target.value)}
+                                className={cn(fieldClass, "max-w-xs")}
+                            />
+                        </label>
+                        <p className={`mt-1 text-[11px] ${scheduleProblem && scheduleLocal ? "text-amber-200" : "text-ink-500"}`}>
+                            {scheduleProblem && scheduleLocal
+                                ? scheduleProblem
+                                : resolved
+                                    ? `Posts ${resolved.toLocaleString(undefined, {dateStyle: "full", timeStyle: "short"})} (${BROWSER_TIMEZONE}). Zernio publishes it at that moment.`
+                                    : `Between 2 minutes and ${MAX_SCHEDULE_DAYS} days ahead, in your timezone (${BROWSER_TIMEZONE}).`}
+                        </p>
+                    </div>
+                )}
+            </fieldset>
+
+            <label className="flex items-start gap-2 border-t border-line-300 pt-4 text-sm text-white">
+                <input type="checkbox" className="mt-1" checked={options.previewConfirmed} onChange={(event) => set({previewConfirmed: event.target.checked})} />
+                <span>I previewed this video and consent to it being posted to the AnimalDex TikTok account<span className="block text-[11px] text-ink-500">Required by TikTok before a post can be made through a third party.</span></span>
+            </label>
         </div>
     );
 }

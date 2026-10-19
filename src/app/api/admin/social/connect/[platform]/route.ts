@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
-import {buildAuthorizeUrl} from "@/lib/social/oauth";
+import {buildAuthorizeUrl, isOAuthPlatform} from "@/lib/social/oauth";
 import {isSocialPlatform} from "@/lib/social/types";
 
 const OAUTH_COOKIE = "animaldex_social_oauth";
@@ -9,6 +9,7 @@ const OAUTH_COOKIE = "animaldex_social_oauth";
 export async function GET(request: NextRequest, {params}: {params: {platform: string}}) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
     if (!isSocialPlatform(params.platform)) return NextResponse.json({error: "Unknown platform"}, {status: 404});
+    if (!isOAuthPlatform(params.platform)) return NextResponse.json({error: "TikTok is connected through Zernio"}, {status: 404});
     try {
         const start = buildAuthorizeUrl(params.platform);
         const response = NextResponse.redirect(start.url);

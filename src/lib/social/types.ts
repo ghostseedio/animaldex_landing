@@ -36,19 +36,44 @@ export type SocialConnectionSummary = {
 export type SocialPostStatus = "queued" | "processing" | "published" | "failed";
 export type SocialPostMode = "post" | "draft";
 
-/** TikTok's required posting choices (Content Sharing Guidelines): nothing is preset. */
+/**
+ * TikTok's required posting choices (Content Sharing Guidelines): nothing is
+ * preset, the poster picks each one in the share dialog. Sent to Zernio as
+ * tiktokSettings (src/lib/social/zernio-core.ts).
+ */
 export type TikTokPostOptions = {
+    /** One of the creator's allowed values: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY. */
     privacyLevel: string;
     allowComment: boolean;
     allowDuet: boolean;
     allowStitch: boolean;
-    /** Commercial content disclosure: promoting the creator's own brand. */
+    /** Commercial content disclosure: promoting the creator's own brand ("Promotional content" label). */
     brandOrganic: boolean;
-    /** Commercial content disclosure: paid partnership for a third party. */
+    /** Commercial content disclosure: paid partnership for a third party ("Paid partnership" label; cannot be SELF_ONLY). */
     brandContent: boolean;
+    /** AI-generated content label (our story videos are AI-made, so the dialog defaults this on). */
+    madeWithAi: boolean;
+    /** The poster previewed the video and consents to it being posted (TikTok's legal requirement; must be true). */
+    previewConfirmed: boolean;
 };
 
-export type SocialPostOptions = {tiktok?: TikTokPostOptions};
+/** Bookkeeping for a share that went through Zernio (TikTok). */
+export type ZernioShareInfo = {
+    /** Zernio post id (also kept in external_id). */
+    postId: string;
+    /** Absolute ISO time the post publishes at, or null for "post now". */
+    scheduledFor: string | null;
+    /** IANA zone the admin scheduled in, for display. */
+    timezone: string | null;
+    /** TikTok's own video id once published. */
+    platformPostId?: string | null;
+    /** When Zernio reported the post published (ISO); drives the URL back-fill window. */
+    publishedAt?: string | null;
+    /** Last time the row was reconciled with Zernio (ISO). */
+    syncedAt?: string | null;
+};
+
+export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo};
 
 export type SocialPostRow = {
     id: string;

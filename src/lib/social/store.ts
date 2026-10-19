@@ -4,6 +4,8 @@ import type {SocialConnection, SocialPlatform, SocialPostRow, SocialPostStatus} 
 
 // Service-role REST access to admin_social_connections / admin_social_posts
 // (supabase/migrations/20261009180000_admin_social_posts.sql).
+// admin_social_connections holds OAuth tokens for YouTube/Instagram/Facebook/X
+// only; TikTok posts go through Zernio (zernio.ts) and keep no row here.
 
 function rest(path: string, init: RequestInit & {prefer?: string} = {}) {
     const url = getSupabaseUrl();
@@ -87,7 +89,17 @@ export async function insertPost(post: NewSocialPost): Promise<SocialPostRow | n
     return row ?? null;
 }
 
-export async function updatePost(id: string, patch: Partial<Pick<SocialPostRow, "external_id" | "external_url" | "error">> & {status: SocialPostStatus}) {
+/** The row whose external_id matches (for TikTok, the Zernio post id). */
+export async function findPostByExternalId(externalId: string): Promise<SocialPostRow | null> {
+    const response = await expectOk(await rest(`admin_social_posts?external_id=eq.${encodeURIComponent(externalId)}&select=*&order=created_at.desc&limit=1`), "Loading share");
+    const [row] = await response.json() as SocialPostRow[];
+    return row ?? null;
+}
+
+export type SocialPostPatch = Partial<Pick<SocialPostRow, "external_id" | "external_url" | "error" | "options">> & {status: SocialPostStatus};
+
+/** Writes the whole `options` object when given (jsonb column), so callers merge first. */
+export async function updatePost(id: string, patch: SocialPostPatch) {
     await expectOk(await rest(`admin_social_posts?id=eq.${id}`, {
         method: "PATCH",
         prefer: "return=minimal",

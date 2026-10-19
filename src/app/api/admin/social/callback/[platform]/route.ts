@@ -1,7 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {getSiteUrl} from "@/lib/site";
-import {exchangeCode} from "@/lib/social/oauth";
+import {exchangeCode, isOAuthPlatform} from "@/lib/social/oauth";
 import {saveConnection} from "@/lib/social/store";
 import {isSocialPlatform} from "@/lib/social/types";
 
@@ -18,6 +18,7 @@ export async function GET(request: NextRequest, {params}: {params: {platform: st
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
     const {platform} = params;
     if (!isSocialPlatform(platform)) return NextResponse.json({error: "Unknown platform"}, {status: 404});
+    if (!isOAuthPlatform(platform)) return NextResponse.json({error: "TikTok is connected through Zernio"}, {status: 404});
 
     const query = request.nextUrl.searchParams;
     const denied = query.get("error_description") || query.get("error");

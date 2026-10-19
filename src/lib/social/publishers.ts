@@ -1,9 +1,11 @@
-import type {PublishRequest, PublishResult, SocialConnection, SocialPlatform} from "@/lib/social/types";
+import type {OAuthPlatform} from "@/lib/social/oauth";
+import type {PublishRequest, PublishResult, SocialConnection} from "@/lib/social/types";
 
 // One function per platform: take the downloaded video and a caption, publish
 // it to the connected official account, return the post id and link.
 // Long-running (uploads plus platform-side processing), so these run in the
-// background job in runner.ts, never inside a request.
+// background job in runner.ts, never inside a request. TikTok is not here:
+// runner.ts hands it to Zernio (zernio.ts).
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -55,88 +57,6 @@ async function publishYouTube(connection: SocialConnection, request: PublishRequ
         body: request.video
     }), "YouTube upload");
     return {externalId: video.id, externalUrl: `https://www.youtube.com/shorts/${video.id}`};
-}
-
-// ── TikTok: Content Posting API, FILE_UPLOAD. "post" publishes directly
-// (unaudited apps are forced to SELF_ONLY), "draft" lands in the account's
-// TikTok inbox to finish on the phone.
-const TIKTOK_CHUNK = 10 * 1024 * 1024;
-
-export function tiktokChunkPlan(size: number) {
-    // Under 5 MB, or up to one 64 MB chunk: send it whole. Otherwise 10 MB
-    // chunks, the remainder folded into the last one (TikTok's rule).
-    if (size <= 64 * 1024 * 1024) return {chunkSize: size, count: 1};
-    return {chunkSize: TIKTOK_CHUNK, count: Math.floor(size / TIKTOK_CHUNK)};
-}
-
-async function publishTikTok(connection: SocialConnection, request: PublishRequest): Promise<PublishResult> {
-    const auth = {Authorization: `Bearer ${connection.accessToken}`, "Content-Type": "application/json; charset=UTF-8"};
-    const {chunkSize, count} = tiktokChunkPlan(request.video.length);
-    const sourceInfo = {source: "FILE_UPLOAD", video_size: request.video.length, chunk_size: chunkSize, total_chunk_count: count};
-
-    let initUrl: string;
-    let body: Record<string, unknown>;
-    if (request.mode === "draft") {
-        initUrl = "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/";
-        body = {source_info: sourceInfo};
-    } else {
-        // The poster's own choices from the share dialog (TikTok forbids presetting them).
-        const chosen = request.options?.tiktok;
-        if (!chosen?.privacyLevel) throw new Error("No TikTok privacy level was chosen");
-        const creator = await readJson(await fetch("https://open.tiktokapis.com/v2/post/publish/creator_info/query/", {method: "POST", headers: auth}), "TikTok creator info");
-        const allowed: string[] = creator?.data?.privacy_level_options ?? [];
-        if (allowed.length && !allowed.includes(chosen.privacyLevel)) throw new Error(`TikTok no longer allows "${chosen.privacyLevel}" for this account; choose again`);
-        initUrl = "https://open.tiktokapis.com/v2/post/publish/video/init/";
-        body = {
-            post_info: {
-                title: request.caption.slice(0, 2200),
-                privacy_level: chosen.privacyLevel,
-                disable_comment: !chosen.allowComment,
-                disable_duet: !chosen.allowDuet,
-                disable_stitch: !chosen.allowStitch,
-                brand_organic_toggle: chosen.brandOrganic,
-                brand_content_toggle: chosen.brandContent,
-                is_aigc: true
-            },
-            source_info: sourceInfo
-        };
-    }
-    const initResponse = await fetch(initUrl, {method: "POST", headers: auth, body: JSON.stringify(body)});
-    if (initResponse.status === 403) {
-        const text = await initResponse.clone().text();
-        if (text.includes("unaudited_client_can_only_post_to_private_accounts")) {
-            throw new Error("TikTok has not audited the app yet, so it only accepts posts set to \"Only me\" from a private account. Choose \"Only me\" (and keep the account private) until the audit passes.");
-        }
-    }
-    const init = await readJson(initResponse, "TikTok upload start");
-    if (init?.error?.code && init.error.code !== "ok") throw new Error(`TikTok: ${init.error.message || init.error.code}`);
-    const publishId: string = init.data.publish_id;
-    const uploadUrl: string = init.data.upload_url;
-
-    for (let index = 0; index < count; index += 1) {
-        const from = index * chunkSize;
-        const to = index === count - 1 ? request.video.length : from + chunkSize;
-        const chunk = request.video.subarray(from, to);
-        const response = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: {"Content-Type": "video/mp4", "Content-Length": String(chunk.length), "Content-Range": `bytes ${from}-${to - 1}/${request.video.length}`},
-            body: chunk
-        });
-        if (!response.ok && response.status !== 206) await readJson(response, `TikTok chunk ${index + 1}/${count}`);
-    }
-
-    const postId = await poll("TikTok processing", async () => {
-        const status = await readJson(await fetch("https://open.tiktokapis.com/v2/post/publish/status/fetch/", {
-            method: "POST", headers: auth, body: JSON.stringify({publish_id: publishId})
-        }), "TikTok status");
-        const state: string | undefined = status?.data?.status;
-        if (state === "FAILED") throw new Error(`TikTok rejected the video: ${status.data.fail_reason ?? "unknown reason"}`);
-        if (state === "SEND_TO_USER_INBOX") return "";
-        if (state === "PUBLISH_COMPLETE") return String(status.data.publicaly_available_post_id?.[0] ?? status.data.publicly_available_post_id?.[0] ?? "");
-        return null;
-    });
-    // The stored account name is the display name, not the @handle a post URL needs.
-    return {externalId: postId || publishId, externalUrl: null};
 }
 
 // ── Instagram: Reels via the Instagram Login content publishing API: create
@@ -256,9 +176,8 @@ async function publishX(connection: SocialConnection, request: PublishRequest): 
     return {externalId: id, externalUrl: handle ? `https://x.com/${handle}/status/${id}` : `https://x.com/i/web/status/${id}`};
 }
 
-export const publishers: Record<SocialPlatform, (connection: SocialConnection, request: PublishRequest) => Promise<PublishResult>> = {
+export const publishers: Record<OAuthPlatform, (connection: SocialConnection, request: PublishRequest) => Promise<PublishResult>> = {
     youtube: publishYouTube,
-    tiktok: publishTikTok,
     instagram: publishInstagram,
     facebook: publishFacebook,
     x: publishX
