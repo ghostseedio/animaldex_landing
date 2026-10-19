@@ -47,6 +47,8 @@ import type {
 import ProfileSocialControls from "@/app/[locale]/(composited)/u/[handle]/profile-social-controls";
 import {formatAppInteger} from "@/lib/format-numbers";
 import {categoryLabel, formatGuidePrice, guideAreaServedName, guidePath, type PublicGuideListing} from "@/lib/guide-marketplace-core";
+import VirtualWildlifeGuidesShop from "@/app/[locale]/(composited)/u/[handle]/virtual-wildlife-guides-shop";
+import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 
 export type ProfileTab = "history" | "stats" | "shop" | "locations";
 
@@ -194,6 +196,7 @@ type ProfileContentProps = {
     } | null;
     listedPacks: ProfileListedPack[];
     listedGuides?: PublicGuideListing[];
+    virtualGuides?: VirtualGuideProfile;
     social?: ProfileSocialState | null;
     signInHref?: string;
     surface?: "marketing" | "app";
@@ -514,6 +517,7 @@ export default function ProfileContent({
     ownerExtras,
     listedPacks,
     listedGuides = [],
+    virtualGuides,
     social = null,
     signInHref = "/account",
     surface = "marketing",
@@ -936,6 +940,7 @@ export default function ProfileContent({
                 viewer.isOwner ? (
                     // iOS `ownerDashboard`: destinations, not product cards.
                     <div className={`flex flex-col ${bleed}`}>
+                        {virtualGuides ? <VirtualWildlifeGuidesShop profile={virtualGuides} owner /> : null}
                         <ShopDestinationRow
                             href={`${localePrefix}/app/train/packs`}
                             tint="#FF9500"
@@ -962,7 +967,8 @@ export default function ProfileContent({
                     // iOS `publicStorefront`.
                     <div className="flex flex-col gap-3">
                         <p className="text-xs font-medium uppercase tracking-[0.09em] text-white">For sale</p>
-                        {listedPacks.length === 0 && listedGuides.length === 0 ? (
+                        {virtualGuides?.cards.length ? <VirtualWildlifeGuidesShop profile={virtualGuides} /> : null}
+                        {listedPacks.length === 0 && listedGuides.length === 0 && !virtualGuides?.cards.length ? (
                             <div className="border border-white/10 bg-surface-900/60 px-5 py-8 text-center">
                                 <p className="font-display text-xl font-bold text-white">Nothing listed yet</p>
                                 <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/45">

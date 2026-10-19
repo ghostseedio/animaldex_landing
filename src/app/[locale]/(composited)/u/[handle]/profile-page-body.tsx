@@ -20,6 +20,7 @@ import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {appStoreUrl} from "@/lib/store-links";
 import {animalLevel} from "@/lib/animal-level";
+import {getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 
 function profilePath(handle: string) {
     return `/u/${encodeURIComponent(handle)}`;
@@ -134,11 +135,13 @@ export async function ProfilePageBody({
 
     const listedPacksPromise = getMemberListedPacks(profile.userId);
     const listedGuidesPromise = getPublicGuideListingsForUser(profile.userId);
-    const [listedPacks, listedGuides, social] = await Promise.all([
+    const virtualGuidesPromise = getVirtualGuideProfile(profile.userId, viewer.isOwner);
+    const [listedPacks, listedGuides, social, virtualGuides] = await Promise.all([
         listedPacksPromise,
         listedGuidesPromise,
         // Also records this visit as a profile view for a signed-in non-owner.
-        getProfileSocialState(profile.userId)
+        getProfileSocialState(profile.userId),
+        virtualGuidesPromise
     ]);
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
@@ -288,6 +291,7 @@ export async function ProfilePageBody({
                 ownerExtras={ownerExtras}
                 listedPacks={listedPacks}
                 listedGuides={listedGuides}
+                virtualGuides={virtualGuides}
                 social={social}
                 signInHref={`/account?next=${encodeURIComponent(profilePath(profile.username))}`}
                 surface={surface}
