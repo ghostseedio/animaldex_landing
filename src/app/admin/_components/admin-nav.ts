@@ -66,6 +66,7 @@ export const adminNavGroups: AdminNavGroup[] = [
         label: "Operations",
         items: [
             {href: "/admin/jobs", label: "Scheduled jobs", icon: Stopwatch, hint: "pg_cron scheduler health"},
+            {href: "/admin/api-status", label: "API status", icon: Wallet, hint: "AI keys, credit and spend"},
             {href: "/admin/support", label: "Support", icon: ChatRound, hint: "Customer inbox"},
             {href: "/admin/notifications", label: "Notifications", icon: Bell, hint: "Push and in-app messages"},
             {href: "/admin/integrity", label: "Capture integrity", icon: ShieldWarning, hint: "Forged provenance signals"},

@@ -8,6 +8,7 @@ import {EMPTY_TIKTOK_OPTIONS, TIKTOK_PRIVACY_LABELS, tiktokOptionsProblem} from 
 import type {TikTokAccountInfo} from "@/lib/social/zernio-core";
 import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions, type ZernioShareInfo} from "@/lib/social/types";
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
+import AdminAutomation from "@/app/admin/story-videos/admin-automation";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
@@ -244,7 +245,9 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                 </div>
             ) : null}
 
-            <Section title="Official accounts" className="mt-6">
+            <AdminAutomation onChanged={() => void loadAll()} />
+
+            <Section title="Official accounts">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     {SOCIAL_PLATFORMS.map((platform) => {
                         const connection = connections.find((candidate) => candidate.platform === platform);
@@ -381,7 +384,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                         <tr key={post.id} className="transition hover:bg-white/[.02]">
                                             <TD className="whitespace-nowrap tabular-nums text-ink-400">{new Date(post.created_at).toLocaleString()}</TD>
                                             <TD className="text-white">{post.species_name ?? post.page_slug}<span className="block text-[11px] text-ink-500">{KIND_LABELS[post.media_kind as Video["kind"]] ?? post.media_kind}</span></TD>
-                                            <TD>{SOCIAL_PLATFORM_LABELS[post.platform]}{post.mode === "draft" ? <span className="block text-[11px] text-ink-500">{DRAFT_LABELS[post.platform] ?? "draft"}</span> : null}</TD>
+                                            <TD>{SOCIAL_PLATFORM_LABELS[post.platform]}{post.options?.auto ? <Badge tone="ios" className="ml-2">Auto</Badge> : null}{post.mode === "draft" ? <span className="block text-[11px] text-ink-500">{DRAFT_LABELS[post.platform] ?? "draft"}</span> : null}</TD>
                                             <TD><Badge tone={statusTone(post)}>{statusLabel(post)}</Badge></TD>
                                             <TD className="text-ink-300">
                                                 {scheduled && zernio?.scheduledFor ? (

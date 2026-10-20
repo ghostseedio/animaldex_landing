@@ -1,3 +1,5 @@
+import {recordAutomationRun} from "@/lib/automation-runs";
+import {contentVideoBusy} from "@/lib/content-video/runner";
 import {blogShareCopy} from "@/lib/content-video/share";
 import {CONTENT_VIDEO_MEDIA_KIND, listContentVideos} from "@/lib/content-video/store";
 import {autoShareTargets, autoTikTokOptions, isStale, isUploading, pickNextAutoShare} from "@/lib/social/auto-share-plan";
@@ -98,9 +100,50 @@ async function draftCopy(video: Candidate) {
     return generateShareCopy(context);
 }
 
-/** One run: shares the next due video, or says why nothing went out. `dryRun` stops before queuing. */
+/** True while this server is still uploading a share (the auto-generate timer waits for it too). */
+export async function isSocialUploadRunning() {
+    const now = Date.now();
+    return (await listPosts(200)).some((post) => isUploading(post, now));
+}
+
+/** What the next run would share, without health checks or copy drafting: for the admin panel. */
+export async function previewAutoShare() {
+    const rows = await listConnectionRows();
+    const connected = SOCIAL_PLATFORMS.filter((platform) => isOAuthPlatform(platform)
+        ? isProviderConfigured(platform) && rows.some((row) => row.platform === platform)
+        : isZernioConfigured());
+    const [posts, videos] = await Promise.all([listPosts(1000), candidates()]);
+    const now = Date.now();
+    const due = videos.filter((video) => pickNextAutoShare([video], posts, connected, now));
+    const next = pickNextAutoShare(videos, posts, connected, now);
+    return {
+        connected,
+        queueLength: due.length,
+        next: next ? {mediaPath: next.video.mediaPath, name: next.video.speciesName, kind: next.video.kind, platforms: next.platforms} : null
+    };
+}
+
+/** One timer run, logged to admin_automation_runs (dry runs are not logged). */
 export async function runAutoShare({dryRun = false} = {}): Promise<AutoShareResult> {
+    try {
+        const result = await shareNext(dryRun);
+        if (!dryRun) {
+            await recordAutomationRun(result.shared
+                ? {job: "social-auto-share", outcome: "acted", summary: `${result.video.name} → ${result.queued.join(", ")}`, ref: result.video.mediaPath, detail: {kind: result.video.kind, queued: result.queued, skipped: result.skipped, copySource: result.copySource}}
+                : {job: "social-auto-share", outcome: "skipped", summary: result.reason, detail: result.skipped ? {skipped: result.skipped} : null});
+        }
+        return result;
+    } catch (error) {
+        if (!dryRun) await recordAutomationRun({job: "social-auto-share", outcome: "failed", summary: error instanceof Error ? error.message : String(error)});
+        throw error;
+    }
+}
+
+/** Shares the next due video, or says why nothing went out. `dryRun` stops before queuing. */
+async function shareNext(dryRun: boolean): Promise<AutoShareResult> {
     if (process.env.SOCIAL_AUTO_SHARE_DISABLED?.trim() === "1") return {ok: true, shared: false, reason: "SOCIAL_AUTO_SHARE_DISABLED=1"};
+    // Both encode with ffmpeg on two vCPUs: let a page video finish first.
+    if (contentVideoBusy()) return {ok: true, shared: false, reason: "A page video is being made"};
 
     const now = Date.now();
     const posts = await listPosts(1000);

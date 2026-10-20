@@ -65,13 +65,16 @@ export function contentVideoBusy() {
     return running.size > 0;
 }
 
-/** Starts (or resumes) a video in the background. False when one is already running. */
-export function startContentVideoJob(id: string) {
+/** Starts (or resumes) a video in the background; `onDone` runs once it stops. False when one is already running. */
+export function startContentVideoJob(id: string, onDone?: () => Promise<void>) {
     if (running.size > 0) return false;
     running.add(id);
     runJob(id)
         .catch((error) => console.error(`[content-video] ${id} crashed`, error))
-        .finally(() => running.delete(id));
+        .finally(() => {
+            running.delete(id);
+            onDone?.().catch((error) => console.error(`[content-video] ${id} after-run step failed`, error));
+        });
     return true;
 }
 
