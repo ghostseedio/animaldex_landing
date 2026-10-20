@@ -24,22 +24,23 @@ ENV_FILE=/opt/animaldex/shared/app.env
 RUNNER=/usr/local/bin/animaldex-social-auto-share.sh
 LOG=/var/log/animaldex-social-auto-share.log
 
-if ! grep -q '^CRON_SECRET=' "$ENV_FILE"; then
-    echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$ENV_FILE"
+# app.env is root-only (chmod 600), so it is read and written with sudo, and
+# the service gets CRON_SECRET through EnvironmentFile.
+if ! sudo grep -q '^CRON_SECRET=' "$ENV_FILE"; then
+    echo "CRON_SECRET=$(openssl rand -hex 32)" | sudo tee -a "$ENV_FILE" > /dev/null
     echo "Added CRON_SECRET to $ENV_FILE (live after the next deploy)."
 fi
 
 sudo tee "$RUNNER" > /dev/null <<'RUNNER_EOF'
 #!/usr/bin/env bash
 set -uo pipefail
-SECRET=$(grep '^CRON_SECRET=' /opt/animaldex/shared/app.env | cut -d= -f2-)
+: "${CRON_SECRET:?CRON_SECRET is required}"
 URL='http://127.0.0.1:3001/api/cron/social-auto-share'
-RESULT=$(curl -sS -m 300 -X POST -H "Authorization: Bearer $SECRET" "$URL" 2>&1)
+RESULT=$(curl -sS -m 300 -X POST -H "Authorization: Bearer $CRON_SECRET" "$URL" 2>&1)
 echo "$(date -u +%FT%TZ) $RESULT" >> /var/log/animaldex-social-auto-share.log
 RUNNER_EOF
 sudo chmod 755 "$RUNNER"
 sudo touch "$LOG"
-sudo chown "$(id -un)" "$LOG"
 
 sudo tee /etc/systemd/system/animaldex-social-auto-share.service > /dev/null <<SERVICE_EOF
 [Unit]
@@ -48,7 +49,7 @@ After=docker.service
 
 [Service]
 Type=oneshot
-User=$(id -un)
+EnvironmentFile=$ENV_FILE
 ExecStart=$RUNNER
 Nice=10
 SERVICE_EOF
