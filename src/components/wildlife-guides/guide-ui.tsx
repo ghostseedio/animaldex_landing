@@ -57,7 +57,7 @@ export function GuideMessageBand({title, detail, icon = "binoculars", children}:
     );
 }
 
-export type GuideGlyphName = "binoculars" | "lock" | "clock" | "warning" | "leaf" | "paw" | "eye-off" | "check" | "note" | "chat" | "people" | "sparkles";
+export type GuideGlyphName = "binoculars" | "lock" | "clock" | "warning" | "leaf" | "paw" | "eye-off" | "check" | "note" | "chat" | "people" | "sparkles" | "tick";
 
 export function GuideGlyph({name, className = ""}: {name: GuideGlyphName; className?: string}) {
     const common = {viewBox: "0 0 24 24", className, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true};
@@ -74,6 +74,8 @@ export function GuideGlyph({name, className = ""}: {name: GuideGlyphName; classN
             return <svg {...common}><circle cx="7" cy="9" r="1.6" /><circle cx="11" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="18" cy="10" r="1.6" /><path d="M8 17c0-3 2-5 4-5s4 2 4 5c0 2-2 2-4 2s-4 0-4-2Z" /></svg>;
         case "eye-off":
             return <svg {...common}><path d="M3 3l18 18" /><path d="M10.6 6.1A9.7 9.7 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-3 3.4M6.2 7.6A15 15 0 0 0 3 12s4 6 9 6a9 9 0 0 0 3.4-.7" /></svg>;
+        case "tick":
+            return <svg {...common} strokeWidth={3}><path d="m5 12 5 5 9-10" /></svg>;
         case "sparkles":
             return <svg {...common}><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>;
         case "note":

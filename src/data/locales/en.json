@@ -2206,7 +2206,17 @@
       "waysToEarn": "Ways to earn",
       "waysToEarnDetail": "Credits and real money",
       "nothingListedTitle": "Nothing listed yet",
-      "nothingListedDetail": "This collector doesn't have any packs or Wildlife Guides available right now."
+      "nothingListedDetail": "This collector doesn't have any packs or Wildlife Guides available right now.",
+      "termsTitle": "Before your guides can be sold",
+      "termsLine1": "Your guides are advice from your own sightings. Keep them accurate.",
+      "termsLine2": "Reply to buyers within 48 hours, or they get a refund.",
+      "termsLine3": "Never share exact spots or times for threatened animals.",
+      "termsLine4": "Only share contacts who agreed to be introduced.",
+      "termsLine5": "You get 70% of each sale after store fees, in Earnings 8 days later.",
+      "termsRead": "Read the Wildlife Guide Author Terms",
+      "termsAge": "I'm 18 or older",
+      "termsAccept": "Accept and sell my guides",
+      "termsFailed": "The terms could not be accepted. Try again."
     }
   },
   "errors": {

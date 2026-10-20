@@ -2195,7 +2195,17 @@
       "waysToEarn": "Cara menghasilkan",
       "waysToEarnDetail": "Kredit dan uang sungguhan",
       "nothingListedTitle": "Belum ada yang dijual",
-      "nothingListedDetail": "Kolektor ini belum punya paket atau Wildlife Guides yang tersedia saat ini."
+      "nothingListedDetail": "Kolektor ini belum punya paket atau Wildlife Guides yang tersedia saat ini.",
+      "termsTitle": "Sebelum panduanmu bisa dijual",
+      "termsLine1": "Panduanmu adalah saran dari penampakanmu sendiri. Pastikan akurat.",
+      "termsLine2": "Balas pembeli dalam 48 jam, atau mereka mendapat pengembalian dana.",
+      "termsLine3": "Jangan pernah membagikan lokasi atau waktu persis untuk satwa yang terancam.",
+      "termsLine4": "Bagikan hanya kontak yang setuju untuk diperkenalkan.",
+      "termsLine5": "Kamu mendapat 70% dari setiap penjualan setelah biaya toko, masuk ke Pendapatan 8 hari kemudian.",
+      "termsRead": "Baca Ketentuan Penulis Wildlife Guide",
+      "termsAge": "Saya berusia 18 tahun atau lebih",
+      "termsAccept": "Setujui dan jual panduanku",
+      "termsFailed": "Ketentuan tidak bisa disetujui. Coba lagi."
     }
   },
   "errors": {

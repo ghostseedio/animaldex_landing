@@ -49,7 +49,9 @@ export function normalizeMyGuides(payload: Record<string, unknown>): MyWildlifeG
         settings: {
             autoPublish: typeof settings.autoPublish === "boolean" ? settings.autoPublish : true,
             ...(typeof settings.noticeAcknowledgedAt === "string" ? {noticeAcknowledgedAt: settings.noticeAcknowledgedAt} : {}),
-            ...(typeof settings.locationVisibility === "string" ? {locationVisibility: settings.locationVisibility} : {})
+            ...(typeof settings.locationVisibility === "string" ? {locationVisibility: settings.locationVisibility} : {}),
+            ...(typeof settings.termsAccepted === "boolean" ? {termsAccepted: settings.termsAccepted} : {}),
+            ...(typeof settings.termsVersion === "string" ? {termsVersion: settings.termsVersion} : {})
         },
         publicEnabled: payload.publicEnabled === true,
         minSpecies: typeof payload.minSpecies === "number" ? payload.minSpecies : 3,

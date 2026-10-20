@@ -199,6 +199,11 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                         ? "AnimalDex is writing this guide from your sightings. Check back in a few minutes."
                         : guideSalesLine(guide.owner?.salesCount)}
                 </p>
+                {guide.owner?.pausedBy === "moderation" && guide.owner.moderationNote ? (
+                    <p className="mt-1.5 text-xs font-semibold leading-5 text-[#FFCC00]">Hidden by AnimalDex: {guide.owner.moderationNote}</p>
+                ) : guide.owner?.authorTermsAccepted === false ? (
+                    <p className="mt-1.5 text-xs font-semibold leading-5 text-[#FFCC00]">Accept the author terms in your Shop so explorers can buy this guide.</p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     {guide.owner?.generationStatus !== "pending" && !askOpen ? (
                         <button type="button" onClick={() => setAskOpen(true)} className="flex items-center gap-1.5 text-xs font-semibold hover:underline" style={{color: GUIDE_NEON}}>

@@ -171,12 +171,18 @@ export default function GuideBuyerSections({initial, locale = "en", viewerLoaded
                     ))}
                 </ul>
                 <div className="mt-4">
-                    {viewer === undefined ? (
-                        <PriceLine guide={guide} locale={locale} />
-                    ) : isAuthor ? (
+                    {isAuthor ? (
                         <AuthorState guide={guide} locale={locale} />
                     ) : guide.purchase && purchaseIsActive(guide.purchase) ? (
                         <BoughtState guide={guide} purchase={guide.purchase} locale={locale} onChange={setGuide} />
+                    ) : guide.forSale === false ? (
+                        // Public, but its author hasn't accepted the author terms yet.
+                        <div>
+                            <p className="font-display text-2xl font-bold text-white">{formatGuidePrice(guide.amountMinor, guide.currencyCode, locale)}</p>
+                            <p className="mt-1 text-xs text-white/60">This guide isn&rsquo;t for sale yet.</p>
+                        </div>
+                    ) : viewer === undefined ? (
+                        <PriceLine guide={guide} locale={locale} />
                     ) : (
                         <BuyState guide={guide} viewer={viewer} locale={locale} onChange={setGuide} />
                     )}

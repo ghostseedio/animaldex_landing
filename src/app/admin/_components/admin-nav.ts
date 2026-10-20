@@ -3,6 +3,7 @@ import {
     ChatRound,
     ClapperboardPlay,
     ClipboardCheck,
+    Compass,
     CupStar,
     GalleryWide,
     Graph,
@@ -94,6 +95,7 @@ export const adminNavGroups: AdminNavGroup[] = [
         items: [
             {href: "/admin/creator-rewards", label: "Creator Rewards", icon: CupStar, hint: "Company-funded periods"},
             {href: "/admin/creator-reviews", label: "Creator reviews", icon: ClipboardCheck, hint: "Application queue"},
+            {href: "/admin/wildlife-guides", label: "Wildlife Guides", icon: Compass, hint: "Refund reviews and moderation"},
             {href: "/admin/payouts", label: "Payouts", icon: Wallet, hint: "Wise payout console"},
             {href: "/admin/payout-corridors", label: "Payout corridors", icon: Routing, hint: "Supported destinations"},
         ],

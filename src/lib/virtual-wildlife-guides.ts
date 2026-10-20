@@ -74,7 +74,15 @@ export type GuideGrowingPlace = {
 };
 
 export type MyWildlifeGuides = {
-    settings: {autoPublish: boolean; noticeAcknowledgedAt?: string; locationVisibility?: string};
+    settings: {
+        autoPublish: boolean;
+        noticeAcknowledgedAt?: string;
+        locationVisibility?: string;
+        /** Accepted the current Wildlife Guide Author Terms and confirmed 18+. */
+        termsAccepted?: boolean;
+        /** The terms version to accept. */
+        termsVersion?: string;
+    };
     publicEnabled: boolean;
     minSpecies: number;
     guides: GuideCard[];
@@ -121,6 +129,10 @@ export type GuideOwnerState = {
     publiclyVisible: boolean;
     /** Paid and not refunded purchases (migration 20261020100000). */
     salesCount?: number;
+    /** The author accepted the current author terms (migration 20261020140000). */
+    authorTermsAccepted?: boolean;
+    /** Why AnimalDex hid this guide (pausedBy "moderation"). */
+    moderationNote?: string;
 };
 
 /** The viewer's own purchase of a guide (migration 20261020100000). */
@@ -208,6 +220,8 @@ export type GuideDetail = {
     amountMinor: number;
     /** What the guide costs in Credits. */
     creditsPrice?: number;
+    /** Public and its author accepted the author terms; absent from older servers. */
+    forSale?: boolean;
     /** The viewer's own purchase, when they bought it. */
     purchase?: GuidePurchase;
     publishedAt?: string;
@@ -258,6 +272,18 @@ export function isGuideCategory(value: string | null | undefined): value is stri
 export function guideCategoryLabel(category: string | null | undefined) {
     return (category && GUIDE_CATEGORIES[category]) || "Wildlife";
 }
+
+/** The full author terms (src/data/wildlife-guide-author-terms.md, version 2026-10-virtual-guides-v1). */
+export const GUIDE_AUTHOR_TERMS_PATH = "/legal/wildlife-guide-author-terms";
+
+/** iOS authorTermsSummary: the author terms in five lines. */
+export const GUIDE_AUTHOR_TERMS_SUMMARY = [
+    "Your guides are advice from your own sightings. Keep them accurate.",
+    "Reply to buyers within 48 hours, or they get a refund.",
+    "Never share exact spots or times for threatened animals.",
+    "Only share contacts who agreed to be introduced.",
+    "You get 70% of each sale after store fees, in Earnings 8 days later."
+] as const;
 
 export const GUIDE_DISCLAIMER =
     "This is a virtual guide: advice from someone who has been there, not a tour. The author is not with you. Wildlife is never guaranteed. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly. Respect wildlife and local rules.";

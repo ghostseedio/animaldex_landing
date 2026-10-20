@@ -11,6 +11,7 @@ import {
     GuideSwitch as Switch
 } from "@/components/wildlife-guides/guide-ui";
 import {
+    GUIDE_AUTHOR_TERMS_PATH,
     guidePath,
     locationIsPublic,
     ownerGuideStatus,
@@ -59,6 +60,31 @@ export function OwnerShopGuides({initial, labels, locale}: {initial: MyWildlifeG
     }, [initial]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+    const [confirmsAge, setConfirmsAge] = useState(false);
+    const [accepting, setAccepting] = useState(false);
+    const [termsError, setTermsError] = useState("");
+
+    /** Accepts the terms version shown to the author; their guides become buyable. */
+    async function acceptTerms() {
+        const version = mine?.settings.termsVersion;
+        if (!version || !confirmsAge) return;
+        setAccepting(true);
+        setTermsError("");
+        try {
+            const response = await fetch("/api/app/wildlife-guides/terms", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({version, ageConfirmed: true})
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error || labels.termsFailed);
+            if (payload.mine) setMine(payload.mine as MyWildlifeGuides);
+        } catch (caught) {
+            setTermsError(caught instanceof Error ? caught.message : labels.termsFailed);
+        } finally {
+            setAccepting(false);
+        }
+    }
 
     async function updateSettings(autoPublish: boolean | null, acknowledgeNotice: boolean) {
         if (!mine) return;
@@ -120,6 +146,47 @@ export function OwnerShopGuides({initial, labels, locale}: {initial: MyWildlifeG
                             {labels.dontShare}
                         </button>
                     </div>
+                </div>
+            ) : null}
+            {hasGuides && mine.settings.termsAccepted === false ? (
+                <div className={`${GUIDE_BAND} px-[18px] py-[18px]`}>
+                    <p className="font-display text-base font-bold text-white">{labels.termsTitle}</p>
+                    <ul className="mt-3 grid gap-2">
+                        {(["termsLine1", "termsLine2", "termsLine3", "termsLine4", "termsLine5"] as const).map((key) => (
+                            <li key={key} className="flex items-start gap-2.5 text-xs leading-5 text-white/65">
+                                <span className="mt-0.5 shrink-0" style={{color: GUIDE_NEON}}><GuideGlyph name="tick" className="h-3 w-3" /></span>
+                                {labels[key]}
+                            </li>
+                        ))}
+                    </ul>
+                    <a
+                        href={GUIDE_AUTHOR_TERMS_PATH}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block text-xs font-semibold hover:underline"
+                        style={{color: GUIDE_NEON}}
+                    >
+                        {labels.termsRead} →
+                    </a>
+                    <label className="mt-3 flex cursor-pointer items-center gap-3">
+                        <input
+                            type="checkbox"
+                            checked={confirmsAge}
+                            onChange={(event) => setConfirmsAge(event.target.checked)}
+                            className="h-5 w-5 shrink-0 accent-[#A7F432]"
+                        />
+                        <span className="text-sm font-semibold text-white">{labels.termsAge}</span>
+                    </label>
+                    <button
+                        type="button"
+                        disabled={!confirmsAge || accepting || !mine.settings.termsVersion}
+                        onClick={() => void acceptTerms()}
+                        className="mt-3 rounded-full px-4 py-2 text-xs font-extrabold text-black transition hover:opacity-90 disabled:opacity-40"
+                        style={{backgroundColor: GUIDE_NEON}}
+                    >
+                        {accepting ? "…" : labels.termsAccept}
+                    </button>
+                    {termsError ? <p role="alert" className="mt-2 text-xs text-red-300">{termsError}</p> : null}
                 </div>
             ) : null}
             {!isLocationPublic ? (

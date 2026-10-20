@@ -157,7 +157,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ...hubPageEntries(locale, animalHybridsPagination, getAnimalHybridCards().length),
             {url: getAbsoluteUrl(locale, "/legal/privacy")},
             {url: getAbsoluteUrl(locale, "/legal/terms")},
-            {url: getAbsoluteUrl(locale, "/legal/refunds")}
+            {url: getAbsoluteUrl(locale, "/legal/refunds")},
+            {url: getAbsoluteUrl(locale, "/legal/wildlife-guide-author-terms")}
         ];
 
         const useCaseEntries = useCases.filter((entry) => !isPermanentlyRedirected(`/use-cases/${entry.slug}`)).map((entry) => ({
