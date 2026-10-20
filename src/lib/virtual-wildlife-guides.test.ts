@@ -8,6 +8,11 @@ import {
     guidePath,
     guideValidationProblem,
     growingDetail,
+    guideCardCharge,
+    guideSalesLine,
+    isValidBuyerEmail,
+    purchaseIsActive,
+    purchaseIsRefunded,
     ownerGuideStatus,
     parseGuideRouteSegment,
     sanitizeGuidePatch,
@@ -93,4 +98,19 @@ test("API patches are validated, and a species note can be cleared", () => {
     assert.deepEqual(sanitizeSpeciesPatch({note: "   "}), {patch: {note: null}});
     assert.deepEqual(sanitizeSpeciesPatch({hidden: true}), {patch: {hidden: true}});
     assert.ok("error" in sanitizeSpeciesPatch({note: "x".repeat(1001)}));
+});
+
+test("buying: sales line, purchase states, card charge and email check", () => {
+    assert.equal(guideSalesLine(0), "Buyers see this page. Only buyers see your notes and contacts.");
+    assert.equal(guideSalesLine(1), "Bought once. Buyers see this page. Only buyers see your notes and contacts.");
+    assert.equal(guideSalesLine(3), "Bought 3 times. Buyers see this page. Only buyers see your notes and contacts.");
+    assert.equal(purchaseIsActive({id: "p", status: "paid"}), true);
+    assert.equal(purchaseIsActive({id: "p", status: "released"}), true);
+    assert.equal(purchaseIsActive({id: "p", status: "refunded"}), false);
+    assert.equal(purchaseIsRefunded({id: "p", status: "refunded"}), true);
+    assert.deepEqual(guideCardCharge({amountMinor: 499, currencyCode: "usd"}), {currency: "USD", amountMinor: 499});
+    assert.equal(guideCardCharge({amountMinor: 350000, currencyCode: "IDR"}), null);
+    assert.equal(isValidBuyerEmail("guest@example.com"), true);
+    assert.equal(isValidBuyerEmail("guest@example"), false);
+    assert.equal(isValidBuyerEmail("not an email"), false);
 });

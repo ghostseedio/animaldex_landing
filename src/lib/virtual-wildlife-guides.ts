@@ -119,7 +119,75 @@ export type GuideOwnerState = {
     priceAuto: boolean;
     sellerEditedFields?: string[];
     publiclyVisible: boolean;
+    /** Paid and not refunded purchases (migration 20261020100000). */
+    salesCount?: number;
 };
+
+/** The viewer's own purchase of a guide (migration 20261020100000). */
+export type GuidePurchase = {
+    id: string;
+    status: "paid" | "released" | "refunded" | string;
+    channel?: "credits" | "web_card" | string;
+    paidAt?: string;
+    replyDueAt?: string;
+    sellerRepliedAt?: string;
+    refundWindowEndsAt?: string;
+    refundStatus?: "none" | "review" | "processing" | "done" | string;
+    refundReason?: string;
+    canRequestRefund?: boolean;
+};
+
+/** A guide this person bought (get_my_wildlife_guide_purchases). */
+export type GuideBought = {
+    purchaseId: string;
+    status: string;
+    refundStatus?: string;
+    paidAt?: string;
+    guide: Pick<GuideCard, "id" | "title" | "areaLabel" | "currencyCode" | "amountMinor" | "speciesCount" | "rareSpeciesCount" | "coverMedia">;
+    seller?: GuideSeller;
+};
+
+/** Paid and not refunded: the notes and the chat are open. */
+export function purchaseIsActive(purchase: GuidePurchase | null | undefined) {
+    return purchase?.status === "paid" || purchase?.status === "released";
+}
+
+export function purchaseIsRefunded(purchase: GuidePurchase | null | undefined) {
+    return purchase?.status === "refunded";
+}
+
+/** "Bought once." / "Bought N times." before the owner note, as on iOS. */
+export function guideSalesLine(salesCount: number | null | undefined) {
+    const base = "Buyers see this page. Only buyers see your notes and contacts.";
+    if (!salesCount || salesCount <= 0) return base;
+    return `${salesCount === 1 ? "Bought once." : `Bought ${salesCount} times.`} ${base}`;
+}
+
+/** "Oct 22, 2026, 3:04 PM": the reply deadline, in the viewer's time zone. */
+export function formatGuideDateTime(value: string | null | undefined, locale = "en") {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat(locale, {dateStyle: "medium", timeStyle: "short"}).format(date);
+}
+
+/** "Oct 27, 2026". */
+export function formatGuideDate(value: string | null | undefined, locale = "en") {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat(locale, {dateStyle: "medium"}).format(date);
+}
+
+export function isValidBuyerEmail(value: string) {
+    const email = value.trim();
+    return email.length >= 6 && email.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+/** Guide prices are USD cents; the card charge is the same amount in USD. */
+export function guideCardCharge(guide: Pick<GuideDetail, "amountMinor" | "currencyCode">) {
+    const currency = (guide.currencyCode || "USD").toUpperCase();
+    if (currency !== "USD" || !Number.isInteger(guide.amountMinor) || guide.amountMinor <= 0) return null;
+    return {currency: "USD" as const, amountMinor: guide.amountMinor};
+}
 
 export type GuideDetail = {
     id: string;
@@ -138,6 +206,10 @@ export type GuideDetail = {
     serviceCategory?: string;
     currencyCode: string;
     amountMinor: number;
+    /** What the guide costs in Credits. */
+    creditsPrice?: number;
+    /** The viewer's own purchase, when they bought it. */
+    purchase?: GuidePurchase;
     publishedAt?: string;
     updatedAt?: string;
     disclaimerVersion?: number;

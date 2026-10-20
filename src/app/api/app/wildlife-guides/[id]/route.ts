@@ -38,9 +38,19 @@ export async function GET(request: Request, {params}: {params: {id: string}}) {
         if (error) return failure(readableError(error.message));
         data = mine;
     } else {
+        // With a session this is the viewer's version: their purchase, and the
+        // notes and contacts when they bought it.
         const {data: guide, error} = await supabase.rpc("get_public_wildlife_guide", {p_listing_id: params.id});
         if (error) return failure(readableError(error.message));
         data = guide;
+        if (!data) {
+            // A buyer can always reopen a guide the author later paused.
+            const {data: {user}} = await supabase.auth.getUser();
+            if (user) {
+                const {data: bought} = await supabase.rpc("get_bought_wildlife_guide", {p_listing_id: params.id});
+                data = bought;
+            }
+        }
     }
     if (!data) return failure("Guide not found.", 404);
     return NextResponse.json({guide: data}, {headers: NO_STORE});

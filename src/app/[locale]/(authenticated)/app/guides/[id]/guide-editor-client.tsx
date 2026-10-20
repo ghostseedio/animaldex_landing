@@ -21,6 +21,7 @@ import {
     formatGuidePrice,
     guideFormFrom,
     guidePath,
+    guideSalesLine,
     guideStatsLine,
     guideValidationProblem,
     type GuideContact,
@@ -170,7 +171,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 <p className="mt-1 text-xs leading-5 text-white/60">
                     {guide.owner?.generationStatus === "pending"
                         ? "AnimalDex is writing this guide from your sightings. Check back in a few minutes."
-                        : "Buyers see the public page. Only buyers see your notes and contacts."}
+                        : guideSalesLine(guide.owner?.salesCount)}
                 </p>
                 {guide.owner?.publiclyVisible ? (
                     <Link href={guidePath(guide)} className="mt-2 inline-block text-xs font-semibold hover:underline" style={{color: GUIDE_NEON}}>

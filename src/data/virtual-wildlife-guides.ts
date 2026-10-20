@@ -1,7 +1,7 @@
 import "server-only";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getSupabaseHeaders, getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
-import type {GuideCard, GuideDetail, MyWildlifeGuides} from "@/lib/virtual-wildlife-guides";
+import type {GuideBought, GuideCard, GuideDetail, MyWildlifeGuides} from "@/lib/virtual-wildlife-guides";
 import type {GuideLocationQuery} from "@/data/wildlife-guide-locations";
 
 export type PublicGuideQuery = {
@@ -131,6 +131,24 @@ export async function getMyWildlifeGuide(listingId: string): Promise<GuideDetail
     const supabase = createSupabaseServerClient();
     if (!supabase) return null;
     const {data, error} = await supabase.rpc("get_my_wildlife_guide", {p_listing_id: listingId});
+    if (error || !data || typeof data !== "object") return null;
+    return data as GuideDetail;
+}
+
+/** Guides the signed-in person bought, newest first (refunded ones too). */
+export async function getMyWildlifeGuidePurchases(): Promise<GuideBought[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+    const {data, error} = await supabase.rpc("get_my_wildlife_guide_purchases");
+    if (error || !Array.isArray(data)) return [];
+    return data as GuideBought[];
+}
+
+/** A guide the signed-in person bought, even if the author has since paused it. */
+export async function getBoughtWildlifeGuide(listingId: string): Promise<GuideDetail | null> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+    const {data, error} = await supabase.rpc("get_bought_wildlife_guide", {p_listing_id: listingId});
     if (error || !data || typeof data !== "object") return null;
     return data as GuideDetail;
 }

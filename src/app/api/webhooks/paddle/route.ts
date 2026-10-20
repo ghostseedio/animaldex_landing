@@ -8,6 +8,7 @@ import {
     type PaddleEvent
 } from "@/lib/paddle-server";
 import {handlePaddleEvent} from "@/lib/paddle-webhook";
+import {createWildlifeGuideFulfillment} from "@/lib/wildlife-guide-fulfillment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     const supabase = createSupabaseServiceClient();
     if (!supabase) return NextResponse.json({error: "Webhook processing is not configured."}, {status: 503});
     try {
-        return NextResponse.json(await handlePaddleEvent(supabase, event, rawBody));
+        return NextResponse.json(await handlePaddleEvent(supabase, event, rawBody, createWildlifeGuideFulfillment(supabase)));
     } catch (error) {
         return NextResponse.json({error: error instanceof Error ? error.message : "webhook_failed"}, {status: 400});
     }
