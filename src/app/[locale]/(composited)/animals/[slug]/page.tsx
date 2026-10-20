@@ -40,6 +40,8 @@ import {getChallengesForSpecies} from "@/data/challenges";
 import {getRankingTierListTitle, getRankingsForSpecies} from "@/data/rankings";
 import {getSpeciesDietContent} from "@/data/species-diet";
 import {getSpeciesPageData} from "@/data/database-species-pages";
+import {getPublicSpeciesSightings, getPublicWildlifeGuides, type SpeciesSightings} from "@/data/virtual-wildlife-guides";
+import {formatGuidePrice, guidePath} from "@/lib/virtual-wildlife-guides";
 import {ogContentImage} from "@/lib/og/og-image";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {
@@ -405,10 +407,16 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
     // Daily ISR: these fetches' revalidate lowers the route's `revalidate = false`.
     // The Power icons share the story media's window, so they add no extra rebuilds.
-    const [storyMedia, powerIconIndex] = await Promise.all([
+    const [storyMedia, powerIconIndex, sightings, speciesGuides] = await Promise.all([
         getSpeciesStoryMedia(entry.slug, locale),
-        fetchAnimalPowerIconIndex({revalidate: STORY_MEDIA_REVALIDATE_SECONDS})
+        fetchAnimalPowerIconIndex({revalidate: STORY_MEDIA_REVALIDATE_SECONDS}),
+        // Where explorers saw it, and the guides that cover it: both daily, like the page.
+        entry.speciesProfileId ? getPublicSpeciesSightings(entry.speciesProfileId) : Promise.resolve(null),
+        entry.speciesProfileId
+            ? getPublicWildlifeGuides({speciesProfileId: entry.speciesProfileId, limit: 3, revalidate: 86400})
+            : Promise.resolve([])
     ]);
+    const sightingPlaces = describeSightingPlaces(sightings, locale);
     const legendaryBeast = getLegendaryEarthBeast(entry.slug);
     const legendaryCatalogSeed = legendaryBeast ? getLegendaryCatalogSeedByBeastSlug(legendaryBeast.slug) : null;
     const legendaryCaptureNote = legendaryBeast ? getLegendaryCaptureRequirementMessage(legendaryBeast.slug) : null;
@@ -573,10 +581,19 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             answer: `${entry.name} is found in ${entry.analysis.nativeRange}`
         }
     ];
+    // Answers "where can I see X in the wild" from real sightings, only when there are some.
+    const whereSeeFaq = sightingPlaces.length > 0 ? {
+        question: t("faqWhereSee", {animal: entry.name.toLowerCase()}),
+        answer: t("faqWhereSeeAnswer", {
+            animal: entry.name.toLowerCase(),
+            places: new Intl.ListFormat(locale, {style: "long", type: "conjunction"}).format(sightingPlaces.slice(0, 3).map((item) => item.label)),
+            months: busiestMonths(sightings, locale)
+        })
+    } : null;
     const faqSchema = {
         "@context": "https://schema.org",
         "@type": "FAQPage",
-        mainEntity: faqItems.map((item) => ({
+        mainEntity: [...faqItems, ...(whereSeeFaq ? [whereSeeFaq] : [])].map((item) => ({
             "@type": "Question",
             name: item.question,
             acceptedAnswer: {
@@ -1473,6 +1490,42 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         <li key={item}>{renderTextWithSpeciesLinks(item.charAt(0).toUpperCase() + item.slice(1), linkMatcher)}</li>
                     ))}
                 </ul>
+                {sightingPlaces.length > 0 ? (
+                    <div className="mt-6">
+                        <h3 className="font-display text-xl font-bold text-white">{t("whereSightingsTitle")}</h3>
+                        {sightings?.threatened ? (
+                            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-300">{t("whereSightingsThreatened", {animal: entry.name})}</p>
+                        ) : null}
+                        <ul className="mt-3 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+                            {sightingPlaces.map((item) => (
+                                <li key={item.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+                                    <span className="text-base font-semibold text-white">{item.label}</span>
+                                    <span className="text-sm text-ink-300">
+                                        {[item.months, item.sightings === 1 ? t("whereSightingOne") : t("whereSightingMany", {count: item.sightings})].filter(Boolean).join(" · ")}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ) : null}
+                {speciesGuides.length > 0 ? (
+                    <div className="mt-6">
+                        <h3 className="font-display text-xl font-bold text-white">{t("whereGuidesTitle", {animal: entry.name})}</h3>
+                        <ul className="mt-3 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+                            {speciesGuides.map((guide) => (
+                                <li key={guide.id}>
+                                    <Link href={guidePath(guide)} className="flex items-baseline justify-between gap-4 py-3 hover:text-primary-100">
+                                        <span className="min-w-0">
+                                            <span className="block text-base font-semibold text-white">{guide.title}</span>
+                                            <span className="block text-sm text-ink-300">{guide.areaLabel}</span>
+                                        </span>
+                                        <span className="shrink-0 text-sm font-bold text-white">{formatGuidePrice(guide.amountMinor, guide.currencyCode, locale)}</span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ) : null}
                 <div className="mt-6 flex flex-wrap gap-3">
                     <Link
                         href="/wildlife-guides"
@@ -1645,4 +1698,48 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
         </article>
     );
+}
+
+/** Town-level places (or countries) where explorers saw the species, labelled for this locale. */
+function describeSightingPlaces(sightings: SpeciesSightings | null, locale: string) {
+    if (!sightings) return [];
+    let regions: Intl.DisplayNames | null = null;
+    try {
+        regions = new Intl.DisplayNames([locale], {type: "region"});
+    } catch {
+        regions = null;
+    }
+    return sightings.places.map((place, index) => {
+        const country = place.countryCode ? regions?.of(place.countryCode) ?? place.countryCode : "";
+        return {
+            key: `${place.place ?? ""}-${place.countryCode ?? ""}-${index}`,
+            label: place.place || country,
+            sightings: place.sightings,
+            months: formatMonthList(place.months ?? [], locale)
+        };
+    }).filter((item) => item.label);
+}
+
+function formatMonthList(months: number[], locale: string) {
+    const formatter = new Intl.DateTimeFormat(locale, {month: "short", timeZone: "UTC"});
+    return months
+        .filter((month) => month >= 1 && month <= 12)
+        .map((month) => formatter.format(new Date(Date.UTC(2026, month - 1, 15))))
+        .join(", ");
+}
+
+/** The one to three months with the most sightings, as words ("May and June"). */
+function busiestMonths(sightings: SpeciesSightings | null, locale: string) {
+    const counts = sightings?.monthCounts ?? [];
+    const peak = Math.max(0, ...counts);
+    if (peak === 0) return "";
+    const formatter = new Intl.DateTimeFormat(locale, {month: "long", timeZone: "UTC"});
+    const top = counts
+        .map((count, index) => ({count, index}))
+        .filter((item) => item.count > 0)
+        .sort((a, b) => b.count - a.count || a.index - b.index)
+        .slice(0, 3)
+        .sort((a, b) => a.index - b.index)
+        .map((item) => formatter.format(new Date(Date.UTC(2026, item.index, 15))));
+    return new Intl.ListFormat(locale, {style: "long", type: "conjunction"}).format(top);
 }

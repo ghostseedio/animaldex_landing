@@ -10,6 +10,17 @@ export type PublicGuideQuery = {
     countryCode?: string | null;
     near?: {lat: number; lng: number; radiusM?: number} | null;
     limit?: number;
+    /** Seconds; animal pages refresh daily and pass 86400 so guides don't refresh them sooner. */
+    revalidate?: number;
+};
+
+/** Public wild sightings of one species by town-level place (get_public_species_sightings). */
+export type SpeciesSightings = {
+    threatened: boolean;
+    sightingCount: number;
+    explorerCount: number;
+    monthCounts: number[];
+    places: {place?: string; countryCode?: string; sightings: number; explorers: number; months?: number[]; lastSeenMonth?: string}[];
 };
 
 /**
@@ -81,8 +92,22 @@ export async function getPublicWildlifeGuides(query: PublicGuideQuery = {}): Pro
         p_limit: Math.min(Math.max(query.limit ?? 50, 1), 50)
     };
     const tags = ["public-wildlife-guides", ...(query.userId ? [`public-wildlife-guides-${query.userId}`] : [])];
-    const value = await publicRpc<unknown>("get_public_wildlife_guides", body, 300, tags);
+    const value = await publicRpc<unknown>("get_public_wildlife_guides", body, query.revalidate ?? 300, tags);
     return Array.isArray(value) ? value as GuideCard[] : [];
+}
+
+/**
+ * Where explorers saw a species in the wild. Threatened species only list
+ * countries. Cached for a day, like the animal pages that show it.
+ */
+export async function getPublicSpeciesSightings(speciesProfileId: string): Promise<SpeciesSightings | null> {
+    const value = await publicRpc<SpeciesSightings>(
+        "get_public_species_sightings",
+        {p_species_profile_id: speciesProfileId, p_limit: 8},
+        86400,
+        ["species-sightings"]
+    );
+    return value && Array.isArray(value.places) ? value : null;
 }
 
 /** Public guides for a location page: by country, or near the place's centre. */
