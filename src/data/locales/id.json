@@ -1784,6 +1784,9 @@
       "linksStripped": "Tautan dihapus otomatis."
     },
     "generating": {
+      "idleEyebrow": "Belum ditulis",
+      "idleDescription": "Belum ada yang menjalankan matchup ini. Tekan Buat dan kami akan menulisnya sekarang. Butuh waktu sampai satu menit, dan halaman jadinya tetap tayang di alamat ini.",
+      "start": "Buat perbandingan ini",
       "eyebrow": "Menyusun perbandinganmu",
       "title": "{animalA} vs {animalB}",
       "description": "Belum ada yang menjalankan matchup ini, jadi kami menulisnya sekarang. Butuh waktu sampai satu menit, dan halaman jadinya tetap tayang di alamat ini.",

@@ -1,10 +1,13 @@
 "use client";
 
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 
 export type ComparisonGeneratingCopy = {
+    idleEyebrow: string;
+    idleDescription: string;
+    startLabel: string;
     eyebrow: string;
     title: string;
     description: string;
@@ -43,11 +46,14 @@ export default function ComparisonGenerating({
     copy
 }: ComparisonGeneratingProps) {
     const router = useRouter();
-    const [status, setStatus] = useState<"working" | "error" | "rate-limited">("working");
+    // Generation is paid, so it never starts on page load: the screen checks
+    // status, then waits for a person to press Generate (bots crawled these
+    // pages and auto-started hundreds of comparisons).
+    const [status, setStatus] = useState<"checking" | "idle" | "working" | "error" | "rate-limited">("checking");
+    const [intent, setIntent] = useState<string | null>(null);
     const [stepIndex, setStepIndex] = useState(0);
     const [seconds, setSeconds] = useState(0);
     const [attempt, setAttempt] = useState(0);
-    const startedRef = useRef(false);
 
     const finish = useCallback((readySlug: string) => {
         // The canonical row may live under the reversed pair slug.
@@ -69,7 +75,32 @@ export default function ComparisonGenerating({
         router.refresh();
     }, [basePath, router, slug]);
 
+    const check = useCallback(async () => {
+        setStatus("checking");
+        try {
+            const response = await fetch(
+                `/api/comparisons/generate?slug=${encodeURIComponent(slug)}`,
+                {cache: "no-store"}
+            );
+            const payload = response.ok
+                ? (await response.json()) as {status?: string; slug?: string; intent?: string | null}
+                : null;
+            if (payload?.status === "ready" && payload.slug) {
+                finish(payload.slug);
+                return;
+            }
+            setIntent(payload?.intent ?? null);
+            setStatus("idle");
+        } catch {
+            setStatus("error");
+        }
+    }, [finish, slug]);
+
     const generate = useCallback(async () => {
+        if (!intent) {
+            setStatus("error");
+            return;
+        }
         setStatus("working");
         setStepIndex(0);
         setSeconds(0);
@@ -118,10 +149,23 @@ export default function ComparisonGenerating({
             const response = await fetch("/api/comparisons/generate", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({slug})
+                body: JSON.stringify({slug, intent})
             });
 
             if (settled) return;
+
+            if (response.status === 403) {
+                settled = true;
+                window.clearInterval(pollTimer);
+                // An expired token just needs a fresh one; anything else is refused.
+                const payload = (await response.json().catch(() => null)) as {error?: string} | null;
+                if (payload?.error === "intent_expired") {
+                    void check();
+                } else {
+                    setStatus("error");
+                }
+                return;
+            }
 
             if (response.status === 429) {
                 settled = true;
@@ -150,14 +194,11 @@ export default function ComparisonGenerating({
         } catch {
             // Network drop or function timeout: the poll keeps watching.
         }
-    }, [finish, slug]);
+    }, [check, finish, intent, slug]);
 
     useEffect(() => {
-        // React 18 double-invokes effects in dev; only pay for one generation.
-        if (startedRef.current && attempt === 0) return;
-        startedRef.current = true;
-        void generate();
-    }, [attempt, generate]);
+        void check();
+    }, [attempt, check]);
 
     useEffect(() => {
         if (status !== "working") return;
@@ -213,6 +254,28 @@ export default function ComparisonGenerating({
                                 {copy.retryLabel}
                             </button>
                         ) : null}
+                        <Link
+                            href="/comparisons"
+                            className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-ink-200 transition hover:border-white/35 hover:text-white"
+                        >
+                            {copy.browseLabel}
+                        </Link>
+                    </div>
+                </>
+            ) : status !== "working" ? (
+                <>
+                    <p className="mt-10 text-xs font-bold uppercase tracking-[0.24em] text-primary-200">{copy.idleEyebrow}</p>
+                    <h1 className="mt-3 font-display text-3xl font-bold text-white md:text-4xl">{copy.title}</h1>
+                    <p className="mt-3 max-w-[34rem] text-base leading-7 text-ink-200">{copy.idleDescription}</p>
+                    <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => void generate()}
+                            disabled={status !== "idle"}
+                            className="rounded-full bg-primary-400 px-6 py-3 text-sm font-bold text-black transition hover:bg-primary-300 disabled:opacity-50"
+                        >
+                            {copy.startLabel}
+                        </button>
                         <Link
                             href="/comparisons"
                             className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-ink-200 transition hover:border-white/35 hover:text-white"

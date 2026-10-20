@@ -13,6 +13,7 @@ import {
     speciesComparisonSlugCacheTag
 } from "@/data/species-comparisons";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
+import {issueComparisonIntent, isSameOriginBrowserRequest, looksLikeBot, verifyComparisonIntent} from "@/lib/comparison-generation-guard";
 
 /** A published (static/snapshot) entry for either order, else a generated DB row under the canonical slug. */
 async function findReadyComparison(requestedSlug: string, reversedSlug: string) {
@@ -25,6 +26,10 @@ export const runtime = "nodejs";
 
 const GENERATION_LIMIT = 5;
 const GENERATION_WINDOW_MS = 60 * 60 * 1000;
+// Site-wide ceiling on new paid comparisons per day. The site runs as one
+// process on the VM, so this in-memory window is effectively global.
+const SITE_GENERATION_LIMIT = Number(process.env.COMPARISON_DAILY_GENERATION_LIMIT) || 40;
+const SITE_GENERATION_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 type GenerateRequestBody = {
     animalA?: string;
@@ -32,6 +37,7 @@ type GenerateRequestBody = {
     slug?: string;
     comparisonType?: string;
     refreshImage?: boolean;
+    intent?: string;
 };
 
 function normalizeSlug(value: unknown) {
@@ -42,6 +48,7 @@ function normalizeSlug(value: unknown) {
  * Cheap status probe. Generation takes ~45s, which can outlive the platform's
  * function timeout, so the client polls this instead of trusting the POST to
  * return. Reads published entries and generated rows — never spends an AI call.
+ * A pending answer carries the signed intent token a generate click needs.
  */
 export async function GET(request: Request) {
     const {searchParams} = new URL(request.url);
@@ -56,7 +63,11 @@ export async function GET(request: Request) {
     const existing = await findReadyComparison(slug, reversedSlug);
 
     if (!existing) {
-        return NextResponse.json({status: "pending"}, {headers: {"Cache-Control": "no-store"}});
+        // The intent token the generating screen must send back with its click.
+        return NextResponse.json(
+            {status: "pending", intent: issueComparisonIntent(slug)},
+            {headers: {"Cache-Control": "no-store"}}
+        );
     }
 
     return NextResponse.json(
@@ -114,6 +125,23 @@ export async function POST(request: Request) {
         return NextResponse.json({status: "ready", slug: existing.slug, title: existing.title});
     }
 
+    // Only a person on our own generating screen may spend: same-origin browser
+    // fetch, no bot user agent, and the signed intent token that page rendered.
+    // The token is bound to the page's slug, so the pair must come from that slug.
+    const intent = verifyComparisonIntent(normalizeSlug(body.slug), body.intent);
+    const pairMatchesIntent = Boolean(fromSlug)
+        && fromSlug?.animalASlug === animalASlug
+        && fromSlug?.animalBSlug === animalBSlug;
+    if (looksLikeBot(request.headers.get("user-agent")) || !isSameOriginBrowserRequest(request) || intent !== "ok" || !pairMatchesIntent) {
+        console.warn("[comparisons/generate] refused", {
+            slug: normalizeSlug(body.slug) || requestedSlug,
+            intent,
+            ip: getRequestIdentifier(request),
+            userAgent: request.headers.get("user-agent")?.slice(0, 200) ?? null
+        });
+        return NextResponse.json({error: intent === "expired" ? "intent_expired" : "forbidden"}, {status: 403});
+    }
+
     const limit = checkRateLimit(
         `comparison-generate:${getRequestIdentifier(request)}`,
         GENERATION_LIMIT,
@@ -124,6 +152,15 @@ export async function POST(request: Request) {
         return NextResponse.json(
             {error: "rate_limited", retryAfterSeconds: limit.retryAfterSeconds},
             {status: 429, headers: {"Retry-After": String(limit.retryAfterSeconds)}}
+        );
+    }
+
+    const siteLimit = checkRateLimit("comparison-generate:site", SITE_GENERATION_LIMIT, SITE_GENERATION_WINDOW_MS);
+    if (!siteLimit.allowed) {
+        console.warn("[comparisons/generate] site daily cap reached", {limit: SITE_GENERATION_LIMIT});
+        return NextResponse.json(
+            {error: "rate_limited", retryAfterSeconds: siteLimit.retryAfterSeconds},
+            {status: 429, headers: {"Retry-After": String(siteLimit.retryAfterSeconds)}}
         );
     }
 

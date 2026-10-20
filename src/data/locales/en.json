@@ -1794,6 +1794,9 @@
       "linksStripped": "Links are removed automatically."
     },
     "generating": {
+      "idleEyebrow": "Not written yet",
+      "idleDescription": "Nobody has run this matchup yet. Press Generate and we'll write it now. It takes up to a minute, and the finished page stays live at this address.",
+      "start": "Generate this comparison",
       "eyebrow": "Building your comparison",
       "title": "{animalA} vs {animalB}",
       "description": "Nobody has run this matchup yet, so we're writing it now. This takes up to a minute, and the finished page stays live at this address.",

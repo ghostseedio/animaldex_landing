@@ -2,7 +2,7 @@ import ComparisonGenerating from "@/app/[locale]/(composited)/comparisons/[slug]
 import type {ComparableAnimal} from "@/data/comparison-animals";
 import {getScopedTranslator} from "@/loaders/translation";
 
-/** The "generating this matchup" screen with its translated copy; it starts generation and reloads when ready. */
+/** The "generate this matchup" screen with its translated copy; it generates on a click and reloads when ready. */
 export async function renderComparisonGenerating({locale, basePath, slug, animalA, animalB}: {
     locale: string;
     basePath: string;
@@ -21,6 +21,9 @@ export async function renderComparisonGenerating({locale, basePath, slug, animal
                 animalAArtwork={data.animalA.artworkUrl}
                 animalBArtwork={data.animalB.artworkUrl}
                 copy={{
+                    idleEyebrow: t("generating.idleEyebrow"),
+                    idleDescription: t("generating.idleDescription"),
+                    startLabel: t("generating.start"),
                     eyebrow: t("generating.eyebrow"),
                     title: t("generating.title", {animalA: data.animalA.name, animalB: data.animalB.name}),
                     description: t("generating.description"),
