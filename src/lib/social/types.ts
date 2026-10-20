@@ -73,7 +73,8 @@ export type ZernioShareInfo = {
     syncedAt?: string | null;
 };
 
-export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo};
+/** `auto`: queued by the scheduled auto-share rather than from the admin page. */
+export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo; auto?: boolean};
 
 export type SocialPostRow = {
     id: string;

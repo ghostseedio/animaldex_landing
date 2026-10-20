@@ -4,23 +4,11 @@ import {runShareJob} from "@/lib/social/runner";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
 import {shareableContentVideo} from "@/lib/content-video/share";
 import {insertPost, listPosts, updatePost} from "@/lib/social/store";
+import {isStale} from "@/lib/social/auto-share-plan";
 import {readTikTokOptions, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {isSocialPlatform, type SocialPlatform, type SocialPostOptions, type SocialPostRow} from "@/lib/social/types";
 import {deleteZernioPost, describeZernioError, isZernioConfigured, scheduleProblem, ZernioError, zernioConfigProblem} from "@/lib/social/zernio";
 import {reconcileZernioRows} from "@/lib/social/zernio-sync";
-
-/**
- * A queued/processing row older than this is assumed dead (server restarted
- * mid-upload). Rows that already have a Zernio post id are never stale: the
- * post lives in Zernio and is reconciled from there.
- */
-const STALE_MS = 30 * 60_000;
-
-function isStale(post: SocialPostRow, now: number) {
-    if (post.status !== "queued" && post.status !== "processing") return false;
-    if (post.platform === "tiktok" && post.options?.zernio?.postId) return false;
-    return now - Date.parse(post.updated_at) > STALE_MS;
-}
 
 /** The share log, with waiting TikTok rows brought up to date from Zernio first. */
 export async function GET(request: NextRequest) {
