@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     if (!authorized(request)) return NextResponse.json({error: "unauthorized"}, {status: 401});
     try {
         const rows = await listConnectionRows();
-        const results = await Promise.all(rows.filter((row) => isOAuthPlatform(row.platform)).map(async (row) => {
+        const results = await Promise.all(rows.map(async (row) => {
+            if (!isOAuthPlatform(row.platform)) return null;
             try {
                 const connection = await checkOAuthConnection(row.platform);
                 return {platform: row.platform, ok: true, expiresAt: connection.expiresAt?.toISOString() ?? null};
@@ -31,8 +32,9 @@ export async function POST(request: NextRequest) {
                 return {platform: row.platform, ok: false, error};
             }
         }));
-        const failed = results.filter((result) => !result.ok).length;
-        return NextResponse.json({ok: failed === 0, checked: results.length, failed, results}, {status: failed ? 503 : 200});
+        const oauthResults = results.filter((result): result is NonNullable<typeof result> => result !== null);
+        const failed = oauthResults.filter((result) => !result.ok).length;
+        return NextResponse.json({ok: failed === 0, checked: oauthResults.length, failed, results: oauthResults}, {status: failed ? 503 : 200});
     } catch (cause) {
         const error = cause instanceof Error ? cause.message : "Unable to check social connections.";
         console.error("[social-token-health] check failed", error);
