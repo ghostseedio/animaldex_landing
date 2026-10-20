@@ -26,8 +26,8 @@ export function isStale(post: SocialPostRow, now: number) {
 
 /** An upload this server is still working on (a Zernio-held TikTok post is not: it waits in Zernio). */
 export function isUploading(post: SocialPostRow, now: number) {
-    if (post.status === "processing") return !isStale(post, now);
-    return post.status === "queued" && !post.options?.zernio?.postId && !isStale(post, now);
+    if (post.status !== "queued" && post.status !== "processing") return false;
+    return !post.options?.zernio?.postId && !isStale(post, now);
 }
 
 /** Platforms this video still needs: no live or published share (in any mode) and attempts left. */

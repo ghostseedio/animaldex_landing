@@ -11,6 +11,7 @@ import {insertPost, listConnectionRows, listPosts, updatePost} from "@/lib/socia
 import {type AdminStoryVideo, listAdminStoryVideos} from "@/lib/social/story-videos";
 import {SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostRow, type TikTokPostOptions} from "@/lib/social/types";
 import {describeZernioError, getTikTokAccount, isZernioConfigured} from "@/lib/social/zernio";
+import {reconcileZernioRows} from "@/lib/social/zernio-sync";
 
 // Unattended sharing, run by the VM timer (POST /api/cron/social-auto-share):
 // each run shares the oldest video that some connected platform has not had
@@ -146,7 +147,8 @@ async function shareNext(dryRun: boolean): Promise<AutoShareResult> {
     if (contentVideoBusy()) return {ok: true, shared: false, reason: "A page video is being made"};
 
     const now = Date.now();
-    const posts = await listPosts(1000);
+    // Brings waiting TikTok rows up to date from Zernio, as opening the share log does.
+    const posts = await reconcileZernioRows(await listPosts(1000)).catch(() => listPosts(1000));
     const uploading = posts.find((post) => isUploading(post, now));
     if (uploading) return {ok: true, shared: false, reason: `An upload is still running (${uploading.platform}, ${uploading.media_path})`};
 

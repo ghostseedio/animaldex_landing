@@ -44,6 +44,7 @@ test("an upload in this server blocks the next run; a TikTok post waiting in Zer
     assert.ok(isUploading(post({status: "processing"}), now));
     assert.ok(isUploading(post({status: "queued", platform: "tiktok", options: {zernio: {postId: "", scheduledFor: null, timezone: null}}}), now));
     assert.ok(!isUploading(post({status: "queued", platform: "tiktok", options: {zernio: {postId: "z1", scheduledFor: null, timezone: null}}}), now));
+    assert.ok(!isUploading(post({status: "processing", platform: "tiktok", options: {zernio: {postId: "z1", scheduledFor: null, timezone: null}}}), now));
     assert.ok(!isUploading(post({status: "processing", updated_at: old}), now));
 });
 
