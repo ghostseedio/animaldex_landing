@@ -61,7 +61,10 @@ function ownerStatusText(guide: GuideDetail) {
     const owner = guide.owner;
     if (!owner) return {text: "Your guide", live: false};
     if (owner.generationStatus === "pending") return {text: "Writing…", live: false};
-    if (owner.status === "published") return owner.publiclyVisible ? {text: "Public", live: true} : {text: "Ready, not public yet", live: false};
+    if (owner.status === "published") {
+        if (!owner.publiclyVisible) return {text: "Ready, not public yet", live: false};
+        return owner.salesPausedAt ? {text: "Public · sales paused", live: false} : {text: "Public", live: true};
+    }
     if (owner.status === "paused") return {text: owner.pausedBy === "author_off" ? "Not shared" : "Paused", live: false};
     return {text: "Hidden", live: false};
 }
@@ -78,6 +81,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [askOpen, setAskOpen] = useState(false);
+    const [resuming, setResuming] = useState(false);
 
     const currentForm = useMemo<GuideForm>(() => ({...form, contacts: contacts.map(({name, role, contact, note}) => ({name, role, contact, note}))}), [form, contacts]);
     const problem = guideValidationProblem(currentForm);
@@ -162,6 +166,23 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
         }
     }
 
+    /** Selling stopped after a missed reply; the author says they can answer again. */
+    async function resumeSales() {
+        setResuming(true);
+        setMessage(null);
+        try {
+            const response = await fetch(`/api/app/wildlife-guides/${encodeURIComponent(guide.id)}/resume-sales`, {method: "POST"});
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.guide) throw new Error(payload.error || "Could not resume sales.");
+            setGuide(payload.guide as GuideDetail);
+            router.refresh();
+        } catch (caught) {
+            setMessage({tone: "error", text: caught instanceof Error ? caught.message : "Could not resume sales."});
+        } finally {
+            setResuming(false);
+        }
+    }
+
     async function deleteGuide() {
         setDeleting(true);
         setMessage(null);
@@ -201,8 +222,23 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 </p>
                 {guide.owner?.pausedBy === "moderation" && guide.owner.moderationNote ? (
                     <p className="mt-1.5 text-xs font-semibold leading-5 text-[#FFCC00]">Hidden by AnimalDex: {guide.owner.moderationNote}</p>
+                ) : guide.owner?.salesPausedAt ? (
+                    <div className="mt-2">
+                        <p className="text-xs font-semibold leading-5 text-[#FFCC00]">
+                            A buyer had no reply within 48 hours and was refunded, so this guide stopped selling. It is still public. Resume sales when you can answer buyers.
+                        </p>
+                        <button
+                            type="button"
+                            disabled={resuming}
+                            onClick={() => void resumeSales()}
+                            className="mt-2 rounded-full px-4 py-2 text-xs font-extrabold text-black transition hover:opacity-90 disabled:opacity-50"
+                            style={{backgroundColor: GUIDE_NEON}}
+                        >
+                            {resuming ? "Resuming…" : "Resume sales"}
+                        </button>
+                    </div>
                 ) : guide.owner?.authorTermsAccepted === false ? (
-                    <p className="mt-1.5 text-xs font-semibold leading-5 text-[#FFCC00]">Accept the author terms in your Shop so explorers can buy this guide.</p>
+                    <p className="mt-1.5 text-xs font-semibold leading-5 text-[#FFCC00]">This guide is for sale. Accept the Author Terms in your Shop to be paid for it.</p>
                 ) : null}
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     {guide.owner?.generationStatus !== "pending" && !askOpen ? (

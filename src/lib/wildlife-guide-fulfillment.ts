@@ -4,7 +4,7 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import type {WildlifeGuideFulfillment, WildlifeGuideWebPurchase} from "@/lib/paddle-webhook";
 import {getSiteUrl} from "@/lib/site";
 import {sendResendEmail} from "@/lib/support";
-import {guidePath} from "@/lib/virtual-wildlife-guides";
+import {GUIDE_BUYER_TERMS_PATH, formatGuidePrice, guidePath} from "@/lib/virtual-wildlife-guides";
 
 /**
  * The real side effects of a Wildlife Guide card purchase, for the Paddle
@@ -54,16 +54,32 @@ export async function createSignInLink(service: SupabaseClient, email: string, n
 /** Emails the buyer a link that signs them in on the guide's page. */
 export async function sendGuideAccessEmail(
     service: SupabaseClient,
-    input: {email: string; listingId: string; idempotencyKey: string}
+    input: {email: string; listingId: string; idempotencyKey: string; purchaseId?: string}
 ) {
     const {data: listing} = await service
         .from("guide_listings")
         .select("id, slug, title")
         .eq("id", input.listingId)
         .maybeSingle();
+    // Also the guest's receipt: what they paid and the refund promises.
+    const {data: purchase} = input.purchaseId
+        ? await service
+            .from("guide_purchases")
+            .select("charge_amount_minor, charge_currency, amount_minor, currency_code")
+            .eq("id", input.purchaseId)
+            .maybeSingle()
+        : {data: null};
     const title = (listing?.title as string | undefined)?.trim() || "your Wildlife Guide";
     const path = guidePath({id: input.listingId, slug: listing?.slug as string | undefined, title});
     const link = await createSignInLink(service, input.email, path);
+    const paid = purchase
+        ? formatGuidePrice(
+            Number(purchase.charge_amount_minor ?? purchase.amount_minor),
+            String(purchase.charge_currency ?? purchase.currency_code ?? "USD"),
+            "en"
+        )
+        : null;
+    const termsUrl = new URL(GUIDE_BUYER_TERMS_PATH, getSiteUrl()).toString();
     const text = [
         `Thanks for buying "${title}".`,
         "",
@@ -73,13 +89,20 @@ export async function sendGuideAccessEmail(
         "The author's notes and contacts are unlocked, and you can message the author from the guide page.",
         "The link works once and expires after an hour. If it has expired, open the guide page and ask for a new link with the same email.",
         "",
+        ...(paid ? [`Paid: ${paid} by card (through Paddle, our payment provider, which also emails you a receipt).`] : []),
+        ...(input.purchaseId ? [`Order: ${input.purchaseId}`] : []),
+        "If the author doesn't reply within 48 hours you're refunded automatically, and you can ask for a refund within 7 days.",
+        `You agreed to the Wildlife Guide Buyer Terms: ${termsUrl}`,
+        "",
         "This is a virtual guide: advice from someone who has been there, not a tour."
     ].join("\n");
     const html = `<p>Thanks for buying <strong>${escapeHtml(title)}</strong>.</p>
 <p><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 20px;background:#A7F432;color:#000;font-weight:700;text-decoration:none">Open your guide</a></p>
 <p>This link signs you in to AnimalDex. The author's notes and contacts are unlocked, and you can message the author from the guide page.</p>
 <p style="color:#666;font-size:13px">The link works once and expires after an hour. If it has expired, open the guide page and ask for a new link with the same email.</p>
-<p style="color:#666;font-size:13px">This is a virtual guide: advice from someone who has been there, not a tour.</p>`;
+${paid ? `<p style="color:#333;font-size:14px">Paid: <strong>${escapeHtml(paid)}</strong> by card (through Paddle, our payment provider, which also emails you a receipt).${input.purchaseId ? `<br>Order: ${escapeHtml(input.purchaseId)}` : ""}</p>` : ""}
+<p style="color:#333;font-size:14px">If the author doesn't reply within 48 hours you're refunded automatically, and you can ask for a refund within 7 days.</p>
+<p style="color:#666;font-size:13px">You agreed to the <a href="${escapeHtml(termsUrl)}" style="color:#666">Wildlife Guide Buyer Terms</a>. This is a virtual guide: advice from someone who has been there, not a tour.</p>`;
     await sendResendEmail({
         from: fromHeader(),
         to: normalizeEmail(input.email),
@@ -126,7 +149,7 @@ export function createWildlifeGuideFulfillment(service: SupabaseClient): Wildlif
         },
 
         async sendAccessLink({email, purchaseId, listingId}) {
-            await sendGuideAccessEmail(service, {email, listingId, idempotencyKey: `wildlife-guide-access:${purchaseId}`});
+            await sendGuideAccessEmail(service, {email, listingId, purchaseId, idempotencyKey: `wildlife-guide-access:${purchaseId}`});
         }
     };
 }

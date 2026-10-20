@@ -13,10 +13,14 @@ import {
 } from "@/components/wildlife-guides/guide-ui";
 import {
     GUIDE_AUTHOR_TERMS_PATH,
+    formatGuidePrice,
+    guideAuthorName,
     guidePath,
+    guideSaleLine,
     locationIsPublic,
     ownerGuideStatus,
     type GuideBought,
+    type GuideSale,
     type GuideCard,
     type GuideGrowingPlace,
     type MyWildlifeGuides
@@ -49,6 +53,7 @@ const STATUS_LABEL_KEYS = {
     notShared: "statusNotShared",
     paused: "statusPaused",
     public: "statusPublic",
+    salesPaused: "statusSalesPaused",
     notPublic: "statusNotPublic",
     ready: "statusReady",
     hidden: "statusHidden"
@@ -67,7 +72,7 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
     const [accepting, setAccepting] = useState(false);
     const [termsError, setTermsError] = useState("");
 
-    /** Accepts the terms version shown to the author; their guides become buyable. */
+    /** Accepts the terms version shown to the author; what they have earned moves to Earnings. */
     async function acceptTerms() {
         const version = mine?.settings.termsVersion;
         if (!version || !confirmsAge) return;
@@ -123,6 +128,8 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
 
     const isLocationPublic = locationIsPublic(mine.settings);
     const hasGuides = mine.guides.length > 0;
+    // Earned and only waiting for the author terms: held past day 8, or replied and not yet due.
+    const waitingMinor = (mine.earnings?.heldMinor ?? 0) + (mine.earnings?.pendingMinor ?? 0);
 
     return (
         <>
@@ -151,9 +158,15 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
                     </div>
                 </div>
             ) : null}
-            {hasGuides && mine.settings.termsAccepted === false ? (
+            {(hasGuides || mine.sales.length > 0) && mine.settings.termsAccepted === false ? (
                 <div className={`${GUIDE_BAND} px-[18px] py-[18px]`}>
                     <p className="font-display text-base font-bold text-white">{labels.termsTitle}</p>
+                    <p className="mt-1.5 text-xs leading-5 text-white/60">{labels.termsIntro}</p>
+                    {waitingMinor > 0 ? (
+                        <p className="mt-2 text-sm font-semibold" style={{color: GUIDE_NEON}}>
+                            {(labels.termsHeld || "{amount} is waiting for you.").replace("{amount}", formatGuidePrice(waitingMinor, mine.earnings?.currencyCode || "USD", locale))}
+                        </p>
+                    ) : null}
                     <ul className="mt-3 grid gap-2">
                         {(["termsLine1", "termsLine2", "termsLine3", "termsLine4", "termsLine5"] as const).map((key) => (
                             <li key={key} className="flex items-start gap-2.5 text-xs leading-5 text-white/65">
@@ -191,6 +204,14 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
                     </button>
                     {termsError ? <p role="alert" className="mt-2 text-xs text-red-300">{termsError}</p> : null}
                 </div>
+            ) : null}
+            {mine.sales.length > 0 ? (
+                <>
+                    <GuideBandHeader title={labels.salesTitle || "Your sales"} />
+                    {mine.sales.map((sale) => (
+                        <SaleRow key={sale.purchaseId} sale={sale} labels={labels} locale={locale} localePrefix={localePrefix} />
+                    ))}
+                </>
             ) : null}
             {!isLocationPublic ? (
                 <GuideMessageBand title={labels.privateTitle} detail={labels.privateDetail} icon="lock" />
@@ -263,6 +284,35 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
                 </>
             ) : null}
         </>
+    );
+}
+
+/**
+ * One of the author's sales: who bought which guide and what it means for
+ * them now. Awaiting a reply, it shows the earnings at stake and the hours
+ * left, with the buyer's chat one tap away.
+ */
+function SaleRow({sale, labels, locale, localePrefix}: {sale: GuideSale; labels: ProfileShopLabels; locale: string; localePrefix: string}) {
+    const awaiting = sale.state === "awaiting_reply";
+    const buyerName = sale.buyer ? guideAuthorName(sale.buyer) : labels.salesBuyer || "A buyer";
+    return (
+        <div className={`${GUIDE_BAND} flex items-center gap-3 px-[18px] py-3`}>
+            <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-white">{buyerName} · {sale.guideTitle}</span>
+                <span className={`mt-0.5 block text-xs leading-5 ${awaiting ? "font-semibold text-[#FFCC00]" : "text-white/60"}`}>
+                    {guideSaleLine(sale, locale, labels)}
+                </span>
+            </span>
+            {awaiting && sale.buyer?.userId ? (
+                <Link
+                    href={`${localePrefix}/app/messages/${sale.buyer.userId}`}
+                    className="shrink-0 rounded-full px-4 py-2 text-xs font-extrabold text-black transition hover:opacity-90"
+                    style={{backgroundColor: GUIDE_NEON}}
+                >
+                    {labels.salesMessage || "Message"}
+                </Link>
+            ) : null}
+        </div>
     );
 }
 

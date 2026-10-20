@@ -1,6 +1,13 @@
 # Buying a Wildlife Guide on the website
 
-Server side: migration `20261020100000_wildlife_guide_purchases.sql` (AnimalDex repo). Guide prices are USD cents (`guide_listings.amount_minor`), so card checkout charges that amount in USD.
+Server side: migrations `20261020100000_wildlife_guide_purchases.sql` and `20261020160000_wildlife_guide_sell_first_pay_after_terms.sql` (AnimalDex repo). Guide prices are USD cents (`guide_listings.amount_minor`), so card checkout charges that amount in USD.
+
+## Selling before the author terms (since 20261020160000)
+
+- A public guide is **for sale whether or not its author accepted the Wildlife Guide Author Terms** (`forSale` = public, purchases on, sales not paused). The terms gate the **payout**: on day 8 the author's 70% goes to Earnings if they have accepted; otherwise it is held (`payout_held_at`) and released the moment they accept.
+- **Every purchase needs the buyer's consent** to the Wildlife Guide Buyer Terms (`/legal/wildlife-guide-buyer-terms`). The guide JSON carries `buyerTermsVersion`; the page has a required checkbox and sends it back as `buyerTermsVersion`; both purchase RPCs refuse without the current version (`buyer_terms_required`). It is stored on `guide_purchases.buyer_terms_version` / `buyer_terms_accepted_at`.
+- The author is told about each sale in the app, by push and by email, with their earnings and the 48-hour reply deadline, and reminded 12 hours before it. **No reply: the buyer is refunded automatically and the guide keeps its public page (and search traffic) but stops selling** (`sales_paused_at`) until the author presses Resume sales (`resume_my_wildlife_guide_sales`).
+- The author's Shop lists their sales (`get_my_wildlife_guides().sales`, `.earnings`): awaiting reply (with hours left and the money at stake), pending payout, held for the terms, paid out, refunded.
 
 ## Flows
 
@@ -11,6 +18,8 @@ Server side: migration `20261020100000_wildlife_guide_purchases.sql` (AnimalDex 
 | Buyer | Ask for a refund (`request_wildlife_guide_refund`) | `POST /api/app/wildlife-guides/{id}/refund` |
 | Guest buyer | Email me a new sign-in link | `POST /api/wildlife-guides/{id}/access-link` |
 | VM timer | Send queued card refunds to Paddle | `POST /api/cron/wildlife-guide-refunds` |
+| VM timer | Send queued sales emails (Resend) | `POST /api/cron/wildlife-guide-emails` |
+| Author | Resume sales after a missed reply | `POST /api/app/wildlife-guides/{id}/resume-sales` |
 
 ### Card checkout
 
@@ -36,6 +45,23 @@ Server side: migration `20261020100000_wildlife_guide_purchases.sql` (AnimalDex 
 
 Supabase Auth: the sign-in link lands on `https://animaldex.app/auth/confirm`; it is built from the hashed token, so no redirect-URL allowlist change is needed. Links expire with the project's email OTP expiry (default one hour); the guide page offers "Email me a new link".
 
+## Emails
+
+The database queues every sales email in `wildlife_guide_email_outbox` (kind + a payload captured at the time); `POST /api/cron/wildlife-guide-emails` claims up to 25 (`claim_wildlife_guide_emails`), renders them (`src/lib/wildlife-guide-emails.ts`), sends through Resend from `SUPPORT_FROM_EMAIL` with reply-to the same address, and finishes each as sent, skipped (`no_address`, unknown kind) or failed (retried with backoff, 8 attempts).
+
+| Kind | To | When |
+| --- | --- | --- |
+| `seller_sale` | Author | Every paid purchase: buyer, earnings, reply deadline, "accept the terms to be paid" if not accepted |
+| `seller_reply_reminder` | Author | 12 hours before the deadline, if no reply |
+| `seller_no_reply_refund` | Author | The buyer was refunded; sales paused, guide still public |
+| `seller_payout_released` | Author | The share reached Earnings |
+| `seller_payout_held` | Author | Day 8 with the author terms not accepted |
+| `buyer_purchase` | Buyer | Receipt for Credits and signed-in card purchases (a guest's sign-in email is their receipt) |
+| `buyer_refund` | Buyer | Any refund, with why and where the money goes |
+| `buyer_refund_review` / `buyer_refund_declined` | Buyer | A second refund in 90 days went to review / was declined (with the operator's reason) |
+
+Pushes for the same events come from the `dispatch-wildlife-guide-push` edge function (trigger on `user_notifications` with `source_key LIKE 'wildlife-guide-%'`); the author's open their Shop.
+
 ## Card refunds
 
 Refunds are decided in the database (no reply within 48 hours, a buyer's request within 7 days, a duplicate purchase). Credits refunds are immediate; a card refund is queued (`status = refunded`, `refund_status = processing`) until the website sends it to Paddle. `POST /api/cron/wildlife-guide-refunds`:
@@ -46,52 +72,14 @@ Refunds are decided in the database (no reply within 48 hours, a buyer's request
 
 ### Schedule it on the VM (not installed)
 
-Same pattern as `scripts/install-identity-review-timer.sh`. Every 10 minutes is enough (the database sweep that queues no-reply refunds runs every 10 minutes too).
+One timer runs the card refunds and the emails every 10 minutes. On the VM, from the repo checkout:
 
 ```bash
-# 1. CRON_SECRET must be in /opt/animaldex/shared/app.env (the identity-review installer adds it).
-grep -q '^CRON_SECRET=' /opt/animaldex/shared/app.env || echo "CRON_SECRET=$(openssl rand -hex 32)" >> /opt/animaldex/shared/app.env
-# (live in the container after the next deploy-selfhost.sh)
-
-# 2. Runner
-sudo tee /usr/local/bin/animaldex-guide-refunds.sh > /dev/null <<'EOF'
-#!/usr/bin/env bash
-set -uo pipefail
-SECRET=$(grep '^CRON_SECRET=' /opt/animaldex/shared/app.env | cut -d= -f2-)
-RESULT=$(curl -sS -m 120 -X POST -H "Authorization: Bearer $SECRET" 'http://127.0.0.1:3001/api/cron/wildlife-guide-refunds' 2>&1)
-echo "$(date -u +%FT%TZ) $RESULT" >> /var/log/animaldex-guide-refunds.log
-EOF
-sudo chmod 755 /usr/local/bin/animaldex-guide-refunds.sh
-sudo touch /var/log/animaldex-guide-refunds.log && sudo chown "$(id -un)" /var/log/animaldex-guide-refunds.log
-
-# 3. Service + timer
-sudo tee /etc/systemd/system/animaldex-guide-refunds.service > /dev/null <<EOF
-[Unit]
-Description=AnimalDex Wildlife Guide card refunds
-After=docker.service
-
-[Service]
-Type=oneshot
-User=$(id -un)
-ExecStart=/usr/local/bin/animaldex-guide-refunds.sh
-EOF
-sudo tee /etc/systemd/system/animaldex-guide-refunds.timer > /dev/null <<'EOF'
-[Unit]
-Description=Wildlife Guide card refunds every 10 minutes
-
-[Timer]
-OnCalendar=*:5/10
-RandomizedDelaySec=60
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-sudo systemctl daemon-reload
-sudo systemctl enable --now animaldex-guide-refunds.timer
-systemctl list-timers --no-pager | grep animaldex-guide-refunds
+bash scripts/install-wildlife-guide-timer.sh
 ```
 
-Check it by hand: `curl -sS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3001/api/cron/wildlife-guide-refunds` should answer `{"ok":true,"due":0,…}`.
+It adds `CRON_SECRET` to `/opt/animaldex/shared/app.env` if missing (live in the container after the next `deploy-selfhost.sh`), writes `/usr/local/bin/animaldex-wildlife-guides.sh` and enables `animaldex-wildlife-guides.timer`. Log: `/var/log/animaldex-wildlife-guides.log`.
+
+Check it by hand: `curl -sS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3001/api/cron/wildlife-guide-refunds` should answer `{"ok":true,"due":0,…}`, and `…/api/cron/wildlife-guide-emails` `{"ok":true,"claimed":0,…}`.
 
 A card payment reversed **after** the author's share was released is left with `refund_status = review` by the database; recover the share with an Earnings adjustment.

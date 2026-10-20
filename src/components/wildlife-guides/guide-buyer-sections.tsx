@@ -12,6 +12,7 @@ import {
 } from "@/components/wildlife-guides/guide-ui";
 import {openPaddleTransactionCheckout, type PaddleRuntimeEnvironment} from "@/lib/paddle-checkout";
 import {
+    GUIDE_BUYER_TERMS_PATH,
     GUIDE_DISCLAIMER,
     GUIDE_INCLUDED,
     formatGuideDate,
@@ -176,10 +177,10 @@ export default function GuideBuyerSections({initial, locale = "en", viewerLoaded
                     ) : guide.purchase && purchaseIsActive(guide.purchase) ? (
                         <BoughtState guide={guide} purchase={guide.purchase} locale={locale} onChange={setGuide} />
                     ) : guide.forSale === false ? (
-                        // Public, but its author hasn't accepted the author terms yet.
+                        // Public, but purchases are off or sales paused after a missed reply.
                         <div>
                             <p className="font-display text-2xl font-bold text-white">{formatGuidePrice(guide.amountMinor, guide.currencyCode, locale)}</p>
-                            <p className="mt-1 text-xs text-white/60">This guide isn&rsquo;t for sale yet.</p>
+                            <p className="mt-1 text-xs text-white/60">This guide isn&rsquo;t for sale right now.</p>
                         </div>
                     ) : viewer === undefined ? (
                         <PriceLine guide={guide} locale={locale} />
@@ -313,6 +314,8 @@ function BuyState({guide, viewer, locale, onChange}: {
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [linkSent, setLinkSent] = useState(false);
+    // Agreeing to the Buyer Terms (and to access straight away) comes before either way to pay.
+    const [agreed, setAgreed] = useState(false);
     const creditsKey = useRef(newKey());
     // One card checkout per page and email: a retried tap reopens the same Paddle transaction.
     const cardKeys = useRef(new Map<string, string>());
@@ -341,7 +344,7 @@ function BuyState({guide, viewer, locale, onChange}: {
             const response = await fetch(`/api/app/wildlife-guides/${encodeURIComponent(guide.id)}/purchase`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({idempotencyKey: creditsKey.current})
+                body: JSON.stringify({idempotencyKey: creditsKey.current, buyerTermsVersion: guide.buyerTermsVersion})
             });
             const payload = await response.json().catch(() => ({}));
             if (payload.code === "insufficient_credits") {
@@ -360,7 +363,14 @@ function BuyState({guide, viewer, locale, onChange}: {
         }
     }
 
+    function requireAgreement() {
+        if (agreed) return true;
+        setError("Tick the box to agree to the Buyer Terms first.");
+        return false;
+    }
+
     async function payByCard() {
+        if (!requireAgreement()) return;
         const buyerEmail = viewer ? viewer.email ?? "" : email.trim().toLowerCase();
         if (!viewer && !isValidBuyerEmail(buyerEmail)) {
             setError("Enter the email to send your guide to.");
@@ -374,7 +384,11 @@ function BuyState({guide, viewer, locale, onChange}: {
             const response = await fetch(`/api/wildlife-guides/${encodeURIComponent(guide.id)}/checkout`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({email: viewer ? undefined : buyerEmail, idempotencyKey: cardKeys.current.get(keyFor)})
+                body: JSON.stringify({
+                    email: viewer ? undefined : buyerEmail,
+                    idempotencyKey: cardKeys.current.get(keyFor),
+                    buyerTermsVersion: guide.buyerTermsVersion
+                })
             });
             const payload = await response.json().catch(() => ({})) as CheckoutReply;
             if (payload.code === "checkout_closed") cardKeys.current.delete(keyFor);
@@ -445,6 +459,24 @@ function BuyState({guide, viewer, locale, onChange}: {
                 <p className="text-xs leading-5 text-white/60">You were refunded for this guide. You can buy it again.</p>
             ) : null}
             <PriceLine guide={guide} locale={locale} />
+            <label className="flex cursor-pointer items-start gap-3">
+                <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(event) => {
+                        setAgreed(event.target.checked);
+                        setError("");
+                    }}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#A7F432]"
+                />
+                <span className="text-xs leading-5 text-white/70">
+                    I agree to the{" "}
+                    <a href={GUIDE_BUYER_TERMS_PATH} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{color: GUIDE_NEON}}>
+                        Wildlife Guide Buyer Terms
+                    </a>{" "}
+                    and want the guide straight away. It&rsquo;s advice from another explorer, not a tour, and sightings aren&rsquo;t guaranteed.
+                </span>
+            </label>
 
             {viewer ? (
                 <>
@@ -464,7 +496,7 @@ function BuyState({guide, viewer, locale, onChange}: {
                     ) : (
                         <div className="flex flex-wrap gap-2.5">
                             {guide.creditsPrice ? (
-                                <button type="button" disabled={buying || cardBusy} onClick={() => setConfirmCredits(true)} className={primaryButton} style={{backgroundColor: GUIDE_NEON}}>
+                                <button type="button" disabled={buying || cardBusy} onClick={() => { if (requireAgreement()) setConfirmCredits(true); }} className={primaryButton} style={{backgroundColor: GUIDE_NEON}}>
                                     Buy for {guide.creditsPrice} Credits
                                 </button>
                             ) : null}

@@ -8,7 +8,8 @@ const NO_STORE = {"Cache-Control": "private, no-store"};
 
 /**
  * The author accepts the Wildlife Guide Author Terms version they were shown
- * and confirms they are 18 or older; their guides become buyable. Returns the
+ * and confirms they are 18 or older; from then on their share of each sale is
+ * paid, and any share held for the terms is released at once. Returns the
  * author's guides as get_my_wildlife_guides does.
  */
 export async function POST(request: Request) {

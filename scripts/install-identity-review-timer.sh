@@ -21,17 +21,17 @@ ENV_FILE=/opt/animaldex/shared/app.env
 RUNNER=/usr/local/bin/animaldex-identity-review.sh
 LOG=/var/log/animaldex-identity-review.log
 
-if ! grep -q '^CRON_SECRET=' "$ENV_FILE"; then
-    echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$ENV_FILE"
+if ! sudo grep -q '^CRON_SECRET=' "$ENV_FILE"; then
+    echo "CRON_SECRET=$(openssl rand -hex 32)" | sudo tee -a "$ENV_FILE" > /dev/null
     echo "Added CRON_SECRET to $ENV_FILE (live after the next deploy)."
 fi
 
 sudo tee "$RUNNER" > /dev/null <<'RUNNER_EOF'
 #!/usr/bin/env bash
 set -uo pipefail
-SECRET=$(grep '^CRON_SECRET=' /opt/animaldex/shared/app.env | cut -d= -f2-)
+: "${CRON_SECRET:?CRON_SECRET is required}"
 URL='http://127.0.0.1:3001/api/admin/maintenance/identity-review/scan?days=3&limit=12'
-RESULT=$(curl -sS -m 900 -X POST -H "Authorization: Bearer $SECRET" "$URL" 2>&1)
+RESULT=$(curl -sS -m 900 -X POST -H "Authorization: Bearer $CRON_SECRET" "$URL" 2>&1)
 echo "$(date -u +%FT%TZ) $RESULT" >> /var/log/animaldex-identity-review.log
 RUNNER_EOF
 sudo chmod 755 "$RUNNER"
@@ -46,6 +46,7 @@ After=docker.service
 [Service]
 Type=oneshot
 User=$(id -un)
+EnvironmentFile=$ENV_FILE
 ExecStart=$RUNNER
 Nice=10
 SERVICE_EOF

@@ -50,6 +50,9 @@ export async function POST(request: Request, {params}: {params: {id: string}}) {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
     if (idempotencyKey.length < 8 || idempotencyKey.length > 200) return jsonError("Checkout could not be started. Try again.");
+    // The Buyer Terms version the buyer ticked; the database refuses the purchase without the current one.
+    const buyerTermsVersion = typeof body.buyerTermsVersion === "string" ? body.buyerTermsVersion.trim().slice(0, 80) : "";
+    if (!buyerTermsVersion) return jsonError("Agree to the Buyer Terms to buy this guide.", 400, "buyer_terms_required");
 
     // Signed in: the account's own email and id, never what the form says.
     const session = createSupabaseServerClient();
@@ -76,9 +79,13 @@ export async function POST(request: Request, {params}: {params: {id: string}}) {
         p_buyer_user_id: viewer?.id ?? null,
         p_idempotency_key: idempotencyKey,
         p_charge_currency: charge.currency,
-        p_charge_amount_minor: charge.amountMinor
+        p_charge_amount_minor: charge.amountMinor,
+        p_buyer_terms_version: buyerTermsVersion
     });
     if (createError) {
+        if (/buyer_terms_required/.test(createError.message)) {
+            return jsonError("The Buyer Terms were updated. Reload the page to read and agree to them.", 409, "buyer_terms_required");
+        }
         if (/own_guide/.test(createError.message)) return jsonError("This is your own guide.", 400, "own_guide");
         if (/guide_not_for_sale/.test(createError.message)) return jsonError("This guide is not for sale right now.", 409, "not_for_sale");
         return jsonError("Checkout could not be started. Try again.", 500);

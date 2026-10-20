@@ -3,9 +3,11 @@
 
 These terms apply when you sell a Wildlife Guide on AnimalDex. They sit alongside the [AnimalDex Terms of Use](/legal/terms).
 
+AnimalDex builds a guide for each place where you share wild sightings, and a public guide can be bought before you accept these terms. You are paid for a sale only once you have accepted them (section 7).
+
 ### 1. Who can sell
 
-You must be 18 or older and in good standing on AnimalDex. You confirm your age when you accept these terms.
+To be paid you must be 18 or older and in good standing on AnimalDex. You confirm your age when you accept these terms.
 
 ### 2. What you sell
 
@@ -13,7 +15,7 @@ A Wildlife Guide is advice built from your own sightings: your notes, answers to
 
 ### 3. Answering buyers
 
-When someone buys your guide you must reply in their chat within 48 hours. If you don't, the buyer is refunded and your guide is paused until you turn it back on.
+When someone buys your guide we tell you in the app, by push notification and by email, and the buyer's chat opens in your Messages. You must reply in that chat within 48 hours; we remind you 12 hours before the deadline. If you don't reply, the buyer is refunded automatically, you are not paid for that sale, and your guide stops selling (it stays visible) until you resume sales in your Shop.
 
 ### 4. Wildlife and the law
 
@@ -29,7 +31,7 @@ Buyers can ask for a refund within 7 days. Refunded purchases are not paid to yo
 
 ### 7. Payment
 
-You receive 70% of each sale after app-store or card fees, added to your Earnings 8 days after the purchase if it was not refunded. Payouts follow the Earnings terms. You are responsible for your own taxes.
+You receive 70% of each sale after app-store or card fees, added to your Earnings 8 days after the purchase if it was not refunded. If you have not accepted these terms by then, your share is held and added to your Earnings as soon as you accept them. Payouts follow the Earnings terms. You are responsible for your own taxes.
 
 ### 8. Removal
 
@@ -37,4 +39,4 @@ AnimalDex may hide a guide or stop you selling if a guide breaks these terms or 
 
 ### 9. Changes
 
-We may update these terms; you will be asked to accept a new version before your guides can be sold again.
+We may update these terms; you will be asked to accept the new version before further sales are paid to you.

@@ -1,7 +1,7 @@
 import "server-only";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getSupabaseHeaders, getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
-import type {GuideBought, GuideCard, GuideDetail, MyWildlifeGuides} from "@/lib/virtual-wildlife-guides";
+import type {GuideBought, GuideCard, GuideDetail, GuideEarnings, GuideSale, MyWildlifeGuides} from "@/lib/virtual-wildlife-guides";
 import type {GuideLocationQuery} from "@/data/wildlife-guide-locations";
 
 export type PublicGuideQuery = {
@@ -56,7 +56,9 @@ export function normalizeMyGuides(payload: Record<string, unknown>): MyWildlifeG
         publicEnabled: payload.publicEnabled === true,
         minSpecies: typeof payload.minSpecies === "number" ? payload.minSpecies : 3,
         guides: Array.isArray(payload.guides) ? payload.guides as GuideCard[] : [],
-        growing: Array.isArray(payload.growing) ? payload.growing as MyWildlifeGuides["growing"] : []
+        growing: Array.isArray(payload.growing) ? payload.growing as MyWildlifeGuides["growing"] : [],
+        sales: Array.isArray(payload.sales) ? payload.sales as GuideSale[] : [],
+        ...(payload.earnings && typeof payload.earnings === "object" ? {earnings: payload.earnings as GuideEarnings} : {})
     };
 }
 

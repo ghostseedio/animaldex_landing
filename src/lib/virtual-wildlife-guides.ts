@@ -63,6 +63,9 @@ export type GuideCard = {
     generationStatus?: string;
     priceAuto?: boolean;
     publiclyVisible?: boolean;
+    /** Selling stopped after a buyer had no reply (migration 20261020160000); the guide stays public. */
+    salesPausedAt?: string;
+    salesPausedReason?: "no_reply" | string;
 };
 
 export type GuideGrowingPlace = {
@@ -87,6 +90,40 @@ export type MyWildlifeGuides = {
     minSpecies: number;
     guides: GuideCard[];
     growing: GuideGrowingPlace[];
+    /** The author's sales still in play and the last 60 days (migration 20261020160000). */
+    sales: GuideSale[];
+    earnings?: GuideEarnings;
+};
+
+/**
+ * One sale of the author's guide. awaiting_reply: the author must answer in
+ * Messages by replyDueAt or the buyer is refunded and earningsMinor is lost.
+ * payout_held: past day 8, waiting for the author to accept the author terms.
+ */
+export type GuideSaleState = "awaiting_reply" | "pending_payout" | "payout_held" | "paid_out" | "refunded";
+
+export type GuideSale = {
+    purchaseId: string;
+    guideId: string;
+    guideTitle: string;
+    state: GuideSaleState | string;
+    refundReason?: string;
+    currencyCode: string;
+    earningsMinor: number;
+    paidAt?: string;
+    replyDueAt?: string;
+    repliedAt?: string;
+    releaseAt?: string;
+    buyer?: GuideSeller;
+};
+
+/** The author's share by stage, in USD cents. */
+export type GuideEarnings = {
+    currencyCode: string;
+    awaitingReplyMinor: number;
+    pendingMinor: number;
+    heldMinor: number;
+    paidOutMinor: number;
 };
 
 export type GuideSpecies = {
@@ -129,10 +166,15 @@ export type GuideOwnerState = {
     publiclyVisible: boolean;
     /** Paid and not refunded purchases (migration 20261020100000). */
     salesCount?: number;
-    /** The author accepted the current author terms (migration 20261020140000). */
+    /** The author accepted the current author terms; since 20261020160000 this gates being paid, not selling. */
     authorTermsAccepted?: boolean;
     /** Why AnimalDex hid this guide (pausedBy "moderation"). */
     moderationNote?: string;
+    /** Selling stopped after a missed reply; the author resumes it. */
+    salesPausedAt?: string;
+    salesPausedReason?: "no_reply" | string;
+    /** This guide's sales, as in MyWildlifeGuides.sales. */
+    sales?: GuideSale[];
 };
 
 /** The viewer's own purchase of a guide (migration 20261020100000). */
@@ -220,8 +262,10 @@ export type GuideDetail = {
     amountMinor: number;
     /** What the guide costs in Credits. */
     creditsPrice?: number;
-    /** Public and its author accepted the author terms; absent from older servers. */
+    /** Public, purchases on and sales not paused; absent from older servers. */
     forSale?: boolean;
+    /** The Wildlife Guide Buyer Terms version a purchase agrees to (migration 20261020160000). */
+    buyerTermsVersion?: string;
     /** The viewer's own purchase, when they bought it. */
     purchase?: GuidePurchase;
     publishedAt?: string;
@@ -275,11 +319,57 @@ export function guideCategoryLabel(category: string | null | undefined) {
 
 /** The full author terms (src/data/wildlife-guide-author-terms.md, version 2026-10-virtual-guides-v1). */
 export const GUIDE_AUTHOR_TERMS_PATH = "/legal/wildlife-guide-author-terms";
+export const GUIDE_BUYER_TERMS_PATH = "/legal/wildlife-guide-buyer-terms";
+
+/** Whole hours left until a deadline, at least 1; null once it has passed. */
+export function hoursUntil(value: string | null | undefined, now = Date.now()) {
+    const time = value ? new Date(value).getTime() : Number.NaN;
+    if (Number.isNaN(time) || time <= now) return null;
+    return Math.max(1, Math.ceil((time - now) / 3_600_000));
+}
+
+/** The sale-line templates; {amount}, {hours} and {date} are filled in. Locale files override them. */
+export const GUIDE_SALE_LINES = {
+    saleAwaiting: "Reply within {hours} h to keep {amount}. No reply and the buyer is refunded.",
+    saleAwaitingLate: "No reply yet: the buyer is being refunded and {amount} won't be paid.",
+    salePending: "{amount} goes to your Earnings on {date}.",
+    saleHeld: "{amount} is waiting for you. Accept the Author Terms to get it.",
+    salePaidOut: "{amount} paid to your Earnings.",
+    saleRefundedNoReply: "Refunded: no reply within 48 hours. {amount} not earned.",
+    saleRefunded: "Refunded to the buyer."
+};
+
+/** The line under one of the author's sales. */
+export function guideSaleLine(
+    sale: GuideSale,
+    locale = "en",
+    lines: Partial<Record<keyof typeof GUIDE_SALE_LINES, string>> = {},
+    now = Date.now()
+) {
+    const template = (key: keyof typeof GUIDE_SALE_LINES) => lines[key] || GUIDE_SALE_LINES[key];
+    const fill = (text: string, values: Record<string, string>) =>
+        text.replace(/\{(amount|hours|date)\}/g, (_, name: string) => values[name] ?? "");
+    const amount = formatGuidePrice(sale.earningsMinor, sale.currencyCode, locale);
+    switch (sale.state) {
+    case "awaiting_reply": {
+        const hours = hoursUntil(sale.replyDueAt, now);
+        return hours ? fill(template("saleAwaiting"), {amount, hours: String(hours)}) : fill(template("saleAwaitingLate"), {amount});
+    }
+    case "pending_payout":
+        return fill(template("salePending"), {amount, date: formatGuideDate(sale.releaseAt, locale) ?? ""});
+    case "payout_held":
+        return fill(template("saleHeld"), {amount});
+    case "paid_out":
+        return fill(template("salePaidOut"), {amount});
+    default:
+        return sale.refundReason === "no_reply" ? fill(template("saleRefundedNoReply"), {amount}) : template("saleRefunded");
+    }
+}
 
 /** iOS authorTermsSummary: the author terms in five lines. */
 export const GUIDE_AUTHOR_TERMS_SUMMARY = [
     "Your guides are advice from your own sightings. Keep them accurate.",
-    "Reply to buyers within 48 hours, or they get a refund.",
+    "Reply to buyers within 48 hours, or they're refunded and you aren't paid.",
     "Never share exact spots or times for threatened animals.",
     "Only share contacts who agreed to be introduced.",
     "You get 70% of each sale after store fees, in Earnings 8 days later."
@@ -458,20 +548,21 @@ export function guideAuthorName(seller: GuideSeller | null | undefined) {
  * ------------------------------------------------------------------ */
 
 export type GuideStatusTone = "neutral" | "muted" | "caution" | "live";
-export type GuideStatusKey = "writing" | "notShared" | "paused" | "public" | "notPublic" | "ready" | "hidden";
+export type GuideStatusKey = "writing" | "notShared" | "paused" | "public" | "salesPaused" | "notPublic" | "ready" | "hidden";
 
 const STATUS_LABELS: Record<GuideStatusKey, string> = {
     writing: "Writing…",
     notShared: "Not shared",
     paused: "Paused",
     public: "Public",
+    salesPaused: "Sales paused",
     notPublic: "Not public",
     ready: "Ready",
     hidden: "Hidden"
 };
 
 export function ownerGuideStatus(
-    card: Pick<GuideCard, "generationStatus" | "status" | "pausedBy" | "publiclyVisible">,
+    card: Pick<GuideCard, "generationStatus" | "status" | "pausedBy" | "publiclyVisible" | "salesPausedAt">,
     mine: {publicEnabled: boolean; locationIsPublic: boolean}
 ): {key: GuideStatusKey; label: string; tone: GuideStatusTone} {
     const status = (key: GuideStatusKey, tone: GuideStatusTone) => ({key, label: STATUS_LABELS[key], tone});
@@ -480,7 +571,8 @@ export function ownerGuideStatus(
         return card.pausedBy === "author_off" ? status("notShared", "muted") : status("paused", "caution");
     }
     if (card.status === "published") {
-        if (card.publiclyVisible) return status("public", "live");
+        // Still public (and in search), but a missed reply stopped selling.
+        if (card.publiclyVisible) return card.salesPausedAt ? status("salesPaused", "caution") : status("public", "live");
         return mine.publicEnabled && mine.locationIsPublic ? status("notPublic", "muted") : status("ready", "neutral");
     }
     return status("hidden", "muted");
