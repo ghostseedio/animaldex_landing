@@ -13,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
             // static pages (noindex; each view reads the database).
             disallow: ["/admin", "/api/admin", "/app", "/api/app", "/compare/"]
         },
-        sitemap: `${getSiteUrl()}/sitemap.xml`
+        sitemap: [`${getSiteUrl()}/sitemap.xml`, `${getSiteUrl()}/video-sitemap.xml`]
     };
 }

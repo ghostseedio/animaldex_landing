@@ -1,7 +1,7 @@
 import snapshot from "@/data/published-page-videos.json";
 import ArticleVideoBrief from "@/app/[locale]/(composited)/blog/_components/article-video-brief";
 import PageVideoIsland from "@/app/[locale]/(composited)/_components/page-video/page-video-island";
-import {pageVideoChapters, type PageVideoCopy} from "@/app/[locale]/(composited)/_components/page-video/page-video-copy";
+import {pageVideoChapters, pageVideoSchema, type PageVideoCopy} from "@/app/[locale]/(composited)/_components/page-video/page-video-copy";
 import type {SourceType} from "@/lib/content-video/plan";
 import type {PublishedContentVideo} from "@/lib/content-video/store";
 
@@ -25,20 +25,8 @@ const videos = (snapshot as unknown as {videos: Record<string, PublishedContentV
  */
 export default function PageVideo({type, slug, pageTitle, pageDescription, pageUrl, copy}: PageVideoProps) {
     const video = videos[`${type}:${slug}`];
-    if (!video) return <PageVideoIsland type={type} slug={slug} copy={copy} />;
-    const schema = {
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
-        name: video.title || pageTitle,
-        description: video.hookText ? `${video.hookText}. ${pageDescription}` : pageDescription,
-        thumbnailUrl: video.posterUrl ?? undefined,
-        uploadDate: video.publishedAt,
-        contentUrl: video.videoUrl,
-        inLanguage: "en",
-        ...(video.durationSeconds ? {duration: `PT${Math.round(video.durationSeconds)}S`} : {}),
-        isPartOf: {"@id": pageUrl},
-        publisher: {"@type": "Organization", name: "AnimalDex"}
-    };
+    if (!video) return <PageVideoIsland type={type} slug={slug} copy={copy} page={{pageTitle, pageDescription, pageUrl}} />;
+    const schema = pageVideoSchema(video, {pageTitle, pageDescription, pageUrl});
     return (
         <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />

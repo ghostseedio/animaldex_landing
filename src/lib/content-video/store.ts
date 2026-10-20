@@ -190,3 +190,31 @@ export async function getPublishedContentVideo(slug: string, type: SourceType = 
         return null;
     }
 }
+
+export type PublishedContentVideoListing = PublishedContentVideo & {type: SourceType; slug: string};
+
+/** Every published page video, newest first, for the video sitemap. Empty when the database is unreachable. */
+export async function listPublishedContentVideos(): Promise<PublishedContentVideoListing[]> {
+    if (!getSupabaseUrl() || !getSupabaseServiceKey()) return [];
+    try {
+        const response = await rest(
+            "admin_content_videos?archived_at=is.null&published_at=not.is.null&video_path=not.is.null&select=source_type,source_slug,source_title,video_path,poster_path,duration_seconds,plan,published_at&order=published_at.desc&limit=5000",
+            {next: {revalidate: 3600, tags: [CONTENT_VIDEO_CACHE_TAG]}}
+        );
+        if (!response.ok) return [];
+        const rows = await response.json() as Array<Pick<ContentVideoRow, "source_type" | "source_slug" | "source_title" | "video_path" | "poster_path" | "duration_seconds" | "plan" | "published_at">>;
+        return rows.filter((row) => row.video_path && row.published_at).map((row) => ({
+            type: row.source_type,
+            slug: row.source_slug,
+            videoUrl: publicStorageUrl(row.video_path!),
+            posterUrl: row.poster_path ? publicStorageUrl(row.poster_path) : null,
+            durationSeconds: row.duration_seconds === null ? null : Number(row.duration_seconds),
+            title: row.plan?.title || row.source_title,
+            hookText: row.plan?.hookText ?? "",
+            timeline: [],
+            publishedAt: row.published_at!
+        }));
+    } catch {
+        return [];
+    }
+}

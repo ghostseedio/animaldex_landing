@@ -13,6 +13,8 @@ export type AdminStoryVideo = {
     locale: string | null;
     stableUrl: string;
     signedUrl: string | null;
+    /** A still from the same species (same capture when there is one), for the admin card's poster. */
+    posterUrl: string | null;
     durationSeconds: number | null;
     hasAudio: boolean;
     /** Narration text and opening headline (story_video only; either may be null). */
@@ -47,6 +49,10 @@ async function videosForSpecies(row: StoryMediaIndexRow & {species_profile_id: s
         items?: StoryMediaItem[];
     };
     const pageSlug = row.page_slug?.trim() || toAnimalPageSlug(row);
+    // The videos have no poster of their own (preload="none" shows a black box).
+    const stills = (body.items ?? []).filter((item) => item.kind === "still" && item.media_type === "image");
+    const posterFor = (captureId: string | null) =>
+        (stills.find((still) => captureId && still.capture_id === captureId) ?? stills[0])?.stable_url ?? null;
     return (body.items ?? []).flatMap((item) => {
         const mediaPath = mediaPathOf(item.stable_url);
         if (!mediaPath || item.media_type !== "video" || !ADMIN_VIDEO_KINDS.has(item.kind)) return [];
@@ -56,6 +62,7 @@ async function videosForSpecies(row: StoryMediaIndexRow & {species_profile_id: s
             locale: item.locale ?? null,
             stableUrl: item.stable_url,
             signedUrl: item.signed_url,
+            posterUrl: posterFor(item.capture_id),
             durationSeconds: item.duration_seconds,
             hasAudio: item.kind === "story_video",
             script: typeof item.script === "string" && item.script.trim() ? item.script.trim() : null,

@@ -1,5 +1,579 @@
 {
-    "generatedAt": "2026-10-10T06:02:59.099Z",
+    "generatedAt": "2026-10-20T12:51:33.974Z",
     "note": "Published page videos baked into static pages at build time. Refresh with: npm run refresh:page-videos",
-    "videos": {}
+    "videos": {
+        "blog:do-mosquitoes-really-cause-malaria": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/do-mosquitoes-really-cause-malaria/16af75ea-6af3-4aff-b2e9-6709cede154b-mvgjgogd.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/do-mosquitoes-really-cause-malaria/16af75ea-6af3-4aff-b2e9-6709cede154b-mvgjgogd.jpg",
+            "durationSeconds": 46.62,
+            "title": "Was the Mosquito Framed? The Malaria Debate",
+            "hookText": "THE MOSQUITO WAS FRAMED?",
+            "timeline": [
+                {
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "THE MOSQUITO WAS FRAMED?",
+                    "duration": 5.31,
+                    "narration": "It's blamed for 610,000 deaths a year. Some say it's framed."
+                },
+                {
+                    "kind": "scene",
+                    "start": 5.31,
+                    "overlay": "PASTEUR vs BÉCHAMP",
+                    "duration": 5.83,
+                    "narration": "Pasteur said germs invade you. His rival Béchamp said germs follow disease."
+                },
+                {
+                    "kind": "scene",
+                    "start": 11.14,
+                    "overlay": "MAL'ARIA = BAD AIR",
+                    "duration": 3.23,
+                    "narration": "Even the name is a clue. Malaria means bad air."
+                },
+                {
+                    "kind": "scene",
+                    "start": 14.37,
+                    "overlay": "HEALTHY CARRIERS",
+                    "duration": 4.6,
+                    "narration": "In parts of Africa, many parasite carriers feel completely fine."
+                },
+                {
+                    "kind": "scene",
+                    "start": 18.97,
+                    "overlay": "DRAWN TO THE SICK",
+                    "duration": 4.53,
+                    "statCard": {
+                        "name": "mosquito",
+                        "tier": "E",
+                        "stats": {
+                            "size": 2,
+                            "speed": 10,
+                            "rarity": 3,
+                            "dominance": 6,
+                            "intelligence": 9
+                        }
+                    },
+                    "narration": "Mosquitoes even prefer people already infected. Killer, or cleanup crew?"
+                },
+                {
+                    "kind": "scene",
+                    "start": 23.5,
+                    "overlay": "THE 1900 TEST",
+                    "duration": 5.25,
+                    "narration": "But in 1900, two doctors hid behind mosquito screens in Rome's marshes. They stayed well."
+                },
+                {
+                    "kind": "scene",
+                    "start": 28.75,
+                    "overlay": "NO SWAMP NEEDED",
+                    "duration": 4.73,
+                    "narration": "Infected mosquitoes shipped to London gave malaria to a man nowhere near a swamp."
+                },
+                {
+                    "kind": "scene",
+                    "start": 33.48,
+                    "overlay": "THE DEATHBED QUOTE?",
+                    "duration": 5.38,
+                    "narration": "And Pasteur's famous deathbed confession? Historians can't find proof he said it."
+                },
+                {
+                    "kind": "scene",
+                    "start": 38.86,
+                    "overlay": "KILLER OR SCAPEGOAT?",
+                    "duration": 4.53,
+                    "narration": "So what if Béchamp was half right, and your body decides how sick you get?"
+                },
+                {
+                    "kind": "end",
+                    "start": 43.39,
+                    "overlay": "PASTEUR OR BÉCHAMP?",
+                    "duration": 3.23,
+                    "narration": "Team Pasteur or Team Béchamp? Tell me in the comments."
+                }
+            ],
+            "publishedAt": "2026-10-20T11:00:08.87+00:00"
+        },
+        "blog:what-is-the-most-agile-animal": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/what-is-the-most-agile-animal/8a1f9595-66a6-4cd6-a6d0-25fa83182b9d-mv2am9rg.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/what-is-the-most-agile-animal/8a1f9595-66a6-4cd6-a6d0-25fa83182b9d-mv2am9rg.jpg",
+            "durationSeconds": 36.84,
+            "title": "The Most Agile Animal Has No Bones",
+            "hookText": "THE CHEETAH ISN'T #1",
+            "timeline": [
+                {
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "THE CHEETAH ISN'T #1",
+                    "duration": 5.12,
+                    "narration": "Forget the cheetah. Earth's most agile animal has no bones."
+                },
+                {
+                    "kind": "scene",
+                    "start": 5.12,
+                    "overlay": "300+ KM/H",
+                    "duration": 3.49,
+                    "narration": "The peregrine falcon dives at over 300 kilometres an hour."
+                },
+                {
+                    "kind": "scene",
+                    "start": 8.61,
+                    "overlay": "CHEETAH? ONLY #5",
+                    "duration": 3.04,
+                    "narration": "But speed isn't agility. The cheetah only ranks fifth."
+                },
+                {
+                    "kind": "scene",
+                    "start": 11.65,
+                    "overlay": "MISSILE GUIDANCE",
+                    "duration": 4.34,
+                    "narration": "The falcon steers like a homing missile, catching pigeons that dodge at the last second."
+                },
+                {
+                    "kind": "scene",
+                    "start": 15.99,
+                    "overlay": "4 WINGS, 4 ENGINES",
+                    "duration": 4.79,
+                    "narration": "Dragonflies drive all four wings separately, and predict exactly where their prey will fly."
+                },
+                {
+                    "kind": "scene",
+                    "start": 20.78,
+                    "overlay": "#2, #3, #4",
+                    "duration": 6.22,
+                    "narration": "Falcon, dolphin, dragonfly. All beaten by one animal without a single bone."
+                },
+                {
+                    "kind": "scene",
+                    "start": 27,
+                    "overlay": "500 MILLION NEURONS",
+                    "duration": 5.31,
+                    "narration": "The octopus. Its only hard part is its beak, so it pours through gaps barely wider."
+                },
+                {
+                    "kind": "end",
+                    "start": 32.31,
+                    "overlay": "FULL TOP 10 ON ANIMALDEX",
+                    "duration": 4.53,
+                    "narration": "Which one would you rank first? Full top ten on AnimalDex."
+                }
+            ],
+            "publishedAt": "2026-10-10T09:26:04.427+00:00"
+        },
+        "blog:what-is-the-most-dangerous-animal": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/what-is-the-most-dangerous-animal/3d6e1f46-98eb-414b-9b7c-0d33c30b0d97-mvgh3h0d.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/what-is-the-most-dangerous-animal/3d6e1f46-98eb-414b-9b7c-0d33c30b0d97-mvgh3h0d.jpg",
+            "durationSeconds": 49.17,
+            "title": "The Deadliest Animal Isn't a Shark",
+            "hookText": "Deadlier than any predator",
+            "timeline": [
+                {
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "Deadlier than any predator",
+                    "duration": 3.62,
+                    "narration": "The deadliest animal on Earth isn't a shark. It's this."
+                },
+                {
+                    "kind": "scene",
+                    "start": 3.62,
+                    "overlay": "Sharks: under 10",
+                    "duration": 3.95,
+                    "narration": "Forget sharks. They usually kill fewer than ten people a year."
+                },
+                {
+                    "kind": "scene",
+                    "start": 7.57,
+                    "overlay": "610,000 malaria deaths",
+                    "duration": 7.13,
+                    "narration": "Mosquitoes spread malaria, dengue and Zika. Malaria alone caused an estimated 610,000 deaths in 2024."
+                },
+                {
+                    "kind": "scene",
+                    "start": 14.7,
+                    "overlay": "Up to 138,000 a year",
+                    "duration": 6.35,
+                    "narration": "Snakes kill up to about 138,000 people a year. But the deadliest snake isn't the most venomous."
+                },
+                {
+                    "kind": "scene",
+                    "start": 21.05,
+                    "overlay": "Hippo: #2 by encounter",
+                    "duration": 5.77,
+                    "narration": "Face to face in the wild, the ranking flips. Crocodiles come first, hippos right behind."
+                },
+                {
+                    "kind": "scene",
+                    "start": 26.82,
+                    "overlay": "Common near farms",
+                    "duration": 6.68,
+                    "narration": "Meet the saw-scaled viper. Far less toxic than the inland taipan, it kills more because it lives where people walk barefoot."
+                },
+                {
+                    "kind": "scene",
+                    "start": 33.5,
+                    "overlay": "1,500 kg or more",
+                    "duration": 6.55,
+                    "narration": "Hippos only eat grass, yet they charge people, capsize boats, and bite with tusks up to about fifty centimetres."
+                },
+                {
+                    "kind": "scene",
+                    "start": 40.05,
+                    "overlay": "Nets + repellent",
+                    "duration": 6.09,
+                    "narration": "So the deadliest threat is the smallest. In malaria areas, nets and repellent save lives."
+                },
+                {
+                    "kind": "end",
+                    "start": 46.14,
+                    "overlay": "Full ranking on AnimalDex",
+                    "duration": 3.03,
+                    "narration": "The full ranking is on AnimalDex."
+                }
+            ],
+            "publishedAt": "2026-10-10T07:04:24+00:00"
+        },
+        "blog:what-is-the-smartest-animal": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/what-is-the-smartest-animal/25cd1988-03f7-42bb-9667-f1f843271049-mv29jo5u.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/what-is-the-smartest-animal/25cd1988-03f7-42bb-9667-f1f843271049-mv29jo5u.jpg",
+            "durationSeconds": 39.48,
+            "title": "A Chimp Beat College Students. It's Still Not #1.",
+            "hookText": "CHIMP BEAT COLLEGE STUDENTS",
+            "timeline": [
+                {
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "CHIMP BEAT COLLEGE STUDENTS",
+                    "duration": 3.62,
+                    "narration": "A young chimp beat university students at a memory test."
+                },
+                {
+                    "kind": "scene",
+                    "start": 3.62,
+                    "overlay": "RAVEN: RANK #5",
+                    "duration": 3.49,
+                    "narration": "Yet the chimp isn't number one. This bird plans for tomorrow."
+                },
+                {
+                    "kind": "scene",
+                    "start": 7.11,
+                    "overlay": "39 CULTURAL BEHAVIOURS",
+                    "duration": 3.62,
+                    "narration": "Chimps fish termites with twigs and crack nuts with stone hammers."
+                },
+                {
+                    "kind": "scene",
+                    "start": 10.73,
+                    "overlay": "15-GRAM BRAIN",
+                    "duration": 3.56,
+                    "narration": "Ravens saved a tool for the next day. Only apes had shown that."
+                },
+                {
+                    "kind": "scene",
+                    "start": 14.29,
+                    "overlay": "#1 DOLPHIN",
+                    "duration": 6.03,
+                    "narration": "But number one? The dolphin. It recognises itself in a mirror."
+                },
+                {
+                    "kind": "scene",
+                    "start": 20.32,
+                    "overlay": "TOOLS vs TALK",
+                    "duration": 4.79,
+                    "narration": "Chimps hit back: hands that make tools, traditions passed down for generations."
+                },
+                {
+                    "kind": "scene",
+                    "start": 25.11,
+                    "overlay": "SIGNATURE WHISTLES",
+                    "duration": 4.6,
+                    "narration": "Dolphins hit back harder. Each one has a whistle that works like a name."
+                },
+                {
+                    "kind": "scene",
+                    "start": 29.71,
+                    "overlay": "CHIMP OR DOLPHIN?",
+                    "duration": 5.05,
+                    "narration": "Scientists rarely even try to separate them. So who really wins?"
+                },
+                {
+                    "kind": "end",
+                    "start": 34.76,
+                    "overlay": "TEAM CHIMP OR DOLPHIN?",
+                    "duration": 4.72,
+                    "narration": "Team Chimp or Team Dolphin? Full ranking on AnimalDex."
+                }
+            ],
+            "publishedAt": "2026-10-10T10:18:32.366+00:00"
+        },
+        "comparison:tiger-vs-lion": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/tiger-vs-lion/b23ba4ff-b724-45e1-80b7-8a73c9bc6d88-mv2d1nqh.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/tiger-vs-lion/b23ba4ff-b724-45e1-80b7-8a73c9bc6d88-mv2d1nqh.jpg",
+            "durationSeconds": 24.09,
+            "title": "Tiger vs Lion: The King Loses His Crown",
+            "hookText": "THE KING LOSES ALONE",
+            "timeline": [
+                {
+                    "card": {
+                        "kind": "vs",
+                        "left": {
+                            "name": "Tiger",
+                            "slug": "tiger",
+                            "image": 1
+                        },
+                        "right": {
+                            "name": "Lion",
+                            "slug": "lion",
+                            "image": 2
+                        },
+                        "stats": [
+                            {
+                                "a": "Solo fighter",
+                                "b": "Blunt force",
+                                "label": "Explosive power",
+                                "advantage": "a"
+                            },
+                            {
+                                "a": "Cover expert",
+                                "b": "Less special",
+                                "label": "Ambush control",
+                                "advantage": "a"
+                            },
+                            {
+                                "a": "Strong neck",
+                                "b": "Thick mane",
+                                "label": "Durability",
+                                "advantage": "even"
+                            },
+                            {
+                                "a": "Fights alone",
+                                "b": "Pride power",
+                                "label": "Coalition",
+                                "advantage": "b"
+                            }
+                        ]
+                    },
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "THE KING LOSES ALONE",
+                    "duration": 3.4,
+                    "narration": "The lion is called king. One-on-one, he's not."
+                },
+                {
+                    "kind": "scene",
+                    "start": 3.4,
+                    "overlay": "",
+                    "duration": 5,
+                    "narration": "The stripes sink low. The king roars. Nobody blinks first."
+                },
+                {
+                    "kind": "scene",
+                    "start": 8.4,
+                    "overlay": "",
+                    "duration": 5.64,
+                    "narration": "They rear up! Massive forelimbs collide, both cats grappling chest to chest!"
+                },
+                {
+                    "kind": "scene",
+                    "start": 14.04,
+                    "overlay": "WINNER: Tiger",
+                    "duration": 5,
+                    "narration": "Tiger twists, drives him down, pins him. The solo fighter takes the crown!",
+                    "overlayStyle": "winner"
+                },
+                {
+                    "kind": "end",
+                    "start": 19.04,
+                    "overlay": "TEAM TIGER OR LION?",
+                    "duration": 5.05,
+                    "narration": "But give the lion his pride, and it flips. Team Tiger or Team Lion?"
+                }
+            ],
+            "publishedAt": "2026-10-10T07:04:24+00:00"
+        },
+        "hybrid:shark-tiger-hybrid": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/shark-tiger-hybrid/a313b8f0-7b3a-4020-81fa-20988c3b4c95-mv2ciuku.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/shark-tiger-hybrid/a313b8f0-7b3a-4020-81fa-20988c3b4c95-mv2ciuku.jpg",
+            "durationSeconds": 20.94,
+            "title": "Reefstripe Hunter: When a Great White Meets a Tiger",
+            "hookText": "OCEAN'S TWO APEX KILLERS. ONE BODY.",
+            "timeline": [
+                {
+                    "card": {
+                        "kind": "pair",
+                        "left": {
+                            "name": "Great White Shark",
+                            "slug": "great-white-shark",
+                            "image": 1
+                        },
+                        "right": {
+                            "name": "Tiger",
+                            "slug": "tiger",
+                            "image": 2
+                        },
+                        "title": "+"
+                    },
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "OCEAN'S TWO APEX KILLERS. ONE BODY.",
+                    "duration": 6.03,
+                    "narration": "Two apex predators. One body. This should never exist."
+                },
+                {
+                    "kind": "scene",
+                    "start": 6.03,
+                    "overlay": "Reefstripe Hunter",
+                    "duration": 9.99,
+                    "narration": "At the reef's edge, the Reefstripe Hunter waits in shadow, stripes melting into the coral. It patrols like a shark, stalks like a tiger, then erupts upward, an apex breach.",
+                    "overlayStyle": "title"
+                },
+                {
+                    "kind": "end",
+                    "start": 16.02,
+                    "overlay": "WHICH HALF WINS?",
+                    "duration": 4.92,
+                    "narration": "Shark or tiger: which half wins? Tell me below."
+                }
+            ],
+            "publishedAt": "2026-10-10T07:04:24+00:00"
+        },
+        "location:bali": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/bali/1f86058c-4463-4212-a5df-26b7077a8e1b-mv2b4wm7.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/bali/1f86058c-4463-4212-a5df-26b7077a8e1b-mv2b4wm7.jpg",
+            "durationSeconds": 46.57,
+            "title": "Animals in Bali: What You Can Actually Spot",
+            "hookText": "GIANT PYTHONS NEAR VILLAGES",
+            "timeline": [
+                {
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "GIANT PYTHONS NEAR VILLAGES",
+                    "duration": 4.34,
+                    "narration": "Bali's largest snake lurks by villages, not deep jungle."
+                },
+                {
+                    "kind": "scene",
+                    "start": 4.34,
+                    "overlay": "Water Monitor",
+                    "duration": 6.09,
+                    "narration": "Rarely seen, best left alone. Water monitors patrol West Bali mangroves and river mouths."
+                },
+                {
+                    "kind": "scene",
+                    "start": 10.43,
+                    "overlay": "Crested Serpent Eagle",
+                    "duration": 5.12,
+                    "narration": "Look up in West Bali National Park. The crested serpent eagle's whistle carries a kilometre."
+                },
+                {
+                    "kind": "scene",
+                    "start": 15.55,
+                    "overlay": "Oriental Pied Hornbill",
+                    "duration": 5.77,
+                    "narration": "Hear heavy wingbeats? That's the oriental pied hornbill, a fig specialist in the western forest."
+                },
+                {
+                    "kind": "scene",
+                    "start": 21.32,
+                    "overlay": "Black Giant Squirrel",
+                    "duration": 4.79,
+                    "narration": "A crash high in the canopy means a black giant squirrel. Listen before you look."
+                },
+                {
+                    "kind": "scene",
+                    "start": 26.11,
+                    "overlay": "Wild Boar",
+                    "duration": 5.44,
+                    "narration": "Wild boar are common but shy. Look for churned ground on dry trail edges."
+                },
+                {
+                    "kind": "scene",
+                    "start": 31.55,
+                    "overlay": "Bali Myna",
+                    "duration": 6.03,
+                    "narration": "And the rarest: the Bali myna, the island's only endemic bird, rebuilt from a handful of wild birds."
+                },
+                {
+                    "kind": "scene",
+                    "start": 37.58,
+                    "overlay": "Bali Bird Park",
+                    "duration": 4.79,
+                    "narration": "Try the park's release areas, or near-certain at Bali Bird Park. Go early."
+                },
+                {
+                    "kind": "end",
+                    "start": 42.37,
+                    "overlay": "Full Bali Guide",
+                    "duration": 4.2,
+                    "narration": "Which would you spot first? Full Bali guide on AnimalDex."
+                }
+            ],
+            "publishedAt": "2026-10-10T07:04:24+00:00"
+        },
+        "ranking:fastest-animals": {
+            "videoUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/fastest-animals/51d54bb3-ea1f-4151-a073-14b4415e4269-mv2c2r5l.mp4",
+            "posterUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/content-videos/blog/fastest-animals/51d54bb3-ea1f-4151-a073-14b4415e4269-mv2c2r5l.jpg",
+            "durationSeconds": 43.6,
+            "title": "Top 5 Fastest Animals: The Winner Doesn't Run",
+            "hookText": "240 MPH. NO ENGINE.",
+            "timeline": [
+                {
+                    "kind": "hook",
+                    "start": 0,
+                    "overlay": "240 MPH. NO ENGINE.",
+                    "duration": 3.49,
+                    "narration": "The fastest animal on Earth doesn't run. It falls."
+                },
+                {
+                    "kind": "scene",
+                    "start": 3.49,
+                    "overlay": "#5 BLUEFIN TUNA",
+                    "duration": 6.68,
+                    "narration": "Number five: bluefin tuna. It keeps its muscles warm and powers through open water at 43 miles per hour."
+                },
+                {
+                    "kind": "scene",
+                    "start": 10.17,
+                    "overlay": "#4 OSTRICH",
+                    "duration": 6.22,
+                    "narration": "Number four can't even fly. The ostrich hits over 45 miles per hour on giant strides."
+                },
+                {
+                    "kind": "scene",
+                    "start": 16.39,
+                    "overlay": "#3 SAILFISH",
+                    "duration": 5.64,
+                    "narration": "Number three: the sailfish. Claimed bursts of 68 miles per hour through the open ocean."
+                },
+                {
+                    "kind": "scene",
+                    "start": 22.03,
+                    "overlay": "#2 CHEETAH",
+                    "duration": 4.53,
+                    "narration": "Number two rules the land. The cheetah explodes to 70 miles per hour."
+                },
+                {
+                    "kind": "scene",
+                    "start": 26.56,
+                    "overlay": "#1 PEREGRINE FALCON",
+                    "duration": 6.22,
+                    "narration": "Number one: the peregrine falcon. In its hunting dive, it blasts past 240 miles per hour."
+                },
+                {
+                    "kind": "scene",
+                    "start": 32.78,
+                    "overlay": "3X THE CHEETAH",
+                    "duration": 6.29,
+                    "narration": "That's more than triple the cheetah. Air, land and water are different races, and the sky wins."
+                },
+                {
+                    "kind": "end",
+                    "start": 39.07,
+                    "overlay": "ALL 100 ON ANIMALDEX",
+                    "duration": 4.53,
+                    "narration": "Which one surprised you? See all 100 on AnimalDex."
+                }
+            ],
+            "publishedAt": "2026-10-10T07:04:24+00:00"
+        }
+    }
 }

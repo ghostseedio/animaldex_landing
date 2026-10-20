@@ -17,6 +17,8 @@ type Video = {
     kind: "story_video" | "hook" | "trial_scene" | "still" | "blog_video";
     locale: string | null;
     stableUrl: string;
+    /** A still of the species, so the card is not a black box until played. */
+    posterUrl?: string | null;
     durationSeconds: number | null;
     hasAudio: boolean;
     script: string | null;
@@ -342,7 +344,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                             const shares = postsByVideo.get(video.mediaPath) ?? [];
                             return (
                                 <article key={video.mediaPath} className="flex flex-col overflow-hidden border border-line-300 bg-surface-900">
-                                    <video src={video.stableUrl} controls playsInline preload="none" className="aspect-[9/16] w-full bg-black object-cover" />
+                                    <video src={video.stableUrl} poster={video.posterUrl ?? undefined} controls playsInline preload={video.posterUrl ? "none" : "metadata"} className="aspect-[9/16] w-full bg-black object-cover" />
                                     <div className="flex flex-1 flex-col gap-2 p-3">
                                         <div className="flex items-start justify-between gap-2">
                                             <a href={`${siteUrl}/animals/${video.pageSlug}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-white hover:text-primary-100">{video.speciesName}</a>
@@ -599,7 +601,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                 </div>
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-[10rem_1fr]">
-                    <video src={video.stableUrl} controls playsInline preload="metadata" className="aspect-[9/16] w-40 bg-black object-cover" />
+                    <video src={video.stableUrl} poster={video.posterUrl ?? undefined} controls playsInline preload="metadata" className="aspect-[9/16] w-40 bg-black object-cover" />
                     <div className="flex flex-col gap-4">
                         {!video.hasAudio && (
                             <Alert tone="warn" className="text-xs">This clip is silent. Short-video feeds favour audio.</Alert>

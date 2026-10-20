@@ -2,6 +2,7 @@ import {spawn} from "child_process";
 import {mkdtemp, readFile, rm, writeFile} from "fs/promises";
 import {tmpdir} from "os";
 import path from "path";
+import {childProcessEnv} from "@/lib/child-process-env";
 import {needsFrameRateFix, readMp4VideoInfo} from "@/lib/social/mp4-info";
 
 // Story videos first shipped at 15 fps, which TikTok and Instagram/Facebook
@@ -21,7 +22,7 @@ export const FRAME_RATE_FIX_ARGS = [
 
 function runFfmpeg(args: string[]) {
     return new Promise<void>((resolve, reject) => {
-        const child = spawn(process.env.FFMPEG_PATH?.trim() || "ffmpeg", args, {stdio: ["ignore", "ignore", "pipe"]});
+        const child = spawn(process.env.FFMPEG_PATH?.trim() || "ffmpeg", args, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         const timer = setTimeout(() => child.kill("SIGKILL"), FFMPEG_TIMEOUT_MS);
         child.stderr.on("data", (chunk) => {

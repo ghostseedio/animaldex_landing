@@ -59,6 +59,8 @@ async function publishYouTube(connection: SocialConnection, request: PublishRequ
     return {externalId: video.id, externalUrl: `https://www.youtube.com/shorts/${video.id}`};
 }
 
+const INSTAGRAM_ATTEMPTS = 2;
+
 // ── Instagram: Reels via the Instagram Login content publishing API. Instagram
 // fetches the video from a public URL when the container is created.
 async function publishInstagram(connection: SocialConnection, request: PublishRequest): Promise<PublishResult> {
@@ -67,16 +69,27 @@ async function publishInstagram(connection: SocialConnection, request: PublishRe
     if (request.mode === "draft") throw new Error("Instagram has no drafts via the API; use Post");
     const base = `https://graph.instagram.com/v23.0`;
     const token = connection.accessToken;
-    const container = await readJson(await fetch(`${base}/${connection.accountId}/media`, {
-        method: "POST",
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: new URLSearchParams({media_type: "REELS", video_url: request.videoUrl, caption: request.caption.slice(0, 2200), share_to_feed: "true", access_token: token}).toString()
-    }), "Instagram container");
-    await poll("Instagram processing", async () => {
-        const status = await readJson(await fetch(`${base}/${container.id}?fields=status_code,status&access_token=${encodeURIComponent(token)}`), "Instagram status");
-        if (status.status_code === "ERROR" || status.status_code === "EXPIRED") throw new Error(`Instagram could not process the video: ${status.status ?? status.status_code}`);
-        return status.status_code === "FINISHED" ? true : null;
-    });
+    // Instagram fetches and transcodes the file itself and sometimes answers a
+    // valid Reel with a bare status "ERROR" (Oct 20 2026: a 21 s 1080x1920 H.264
+    // that YouTube, TikTok, Facebook and X all took); a fresh container usually works.
+    let container: {id: string} | null = null;
+    for (let attempt = 1; !container; attempt += 1) {
+        const created = await readJson(await fetch(`${base}/${connection.accountId}/media`, {
+            method: "POST",
+            headers: {"Content-Type": "application/x-www-form-urlencoded"},
+            body: new URLSearchParams({media_type: "REELS", video_url: request.videoUrl, caption: request.caption.slice(0, 2200), share_to_feed: "true", access_token: token}).toString()
+        }), "Instagram container");
+        const finished = await poll("Instagram processing", async () => {
+            const status = await readJson(await fetch(`${base}/${created.id}?fields=status_code,status&access_token=${encodeURIComponent(token)}`), "Instagram status");
+            if (status.status_code === "ERROR" || status.status_code === "EXPIRED") {
+                if (attempt < INSTAGRAM_ATTEMPTS) return false;
+                throw new Error(`Instagram could not process the video: ${status.status ?? status.status_code} (after ${attempt} attempts)`);
+            }
+            return status.status_code === "FINISHED" ? true : null;
+        });
+        if (finished) container = created;
+        else await sleep(30_000);
+    }
     const published = await readJson(await fetch(`${base}/${connection.accountId}/media_publish`, {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},

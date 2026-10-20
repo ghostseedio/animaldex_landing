@@ -2,6 +2,7 @@ import {spawn} from "node:child_process";
 import {readFile, writeFile} from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import {childProcessEnv} from "@/lib/child-process-env";
 import {AI_CLIP_SECONDS, type CardSpec, VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH, type TimelineEntry} from "@/lib/content-video/plan";
 
 // The edit, in ffmpeg (installed in the Docker runner stage): one silent
@@ -41,7 +42,7 @@ export function runFfmpeg(args: string[], timeoutMs = 10 * 60_000): Promise<void
         const useNice = process.platform !== "win32" && process.env.CONTENT_VIDEO_NICE !== "0";
         const command = useNice ? "nice" : ffmpegBinary();
         const fullArgs = useNice ? ["-n", "15", ffmpegBinary(), "-hide_banner", "-loglevel", "error", "-y", ...args] : ["-hide_banner", "-loglevel", "error", "-y", ...args];
-        const child = spawn(command, fullArgs, {stdio: ["ignore", "ignore", "pipe"]});
+        const child = spawn(command, fullArgs, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
         child.stderr.on("data", (chunk) => {
@@ -334,7 +335,7 @@ const VOICE_COMPRESSOR = "acompressor=threshold=0.1:ratio=3:attack=5:release=120
  */
 function measureLoudness(file: string): Promise<Record<string, string> | null> {
     return new Promise((resolve) => {
-        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-af", `loudnorm=I=${LOUDNESS.I}:TP=${LOUDNESS.TP}:LRA=${LOUDNESS.LRA}:print_format=json`, "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"]});
+        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-af", `loudnorm=I=${LOUDNESS.I}:TP=${LOUDNESS.TP}:LRA=${LOUDNESS.LRA}:print_format=json`, "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         child.stderr.on("data", (chunk) => {
             stderr = (stderr + chunk.toString()).slice(-8000);
@@ -405,7 +406,7 @@ async function buildMix(voice: string, music: string | null | undefined, seconds
 /** Seconds of audio actually in a file (decoded sample count / rate), or null if it cannot be read. */
 function audioSeconds(file: string): Promise<number | null> {
     return new Promise((resolve) => {
-        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-map", "0:a", "-af", "aresample=48000,astats=measure_perchannel=none", "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"]});
+        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-map", "0:a", "-af", "aresample=48000,astats=measure_perchannel=none", "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         child.stderr.on("data", (chunk) => {
             stderr = (stderr + chunk.toString()).slice(-6000);
