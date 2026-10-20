@@ -1,0 +1,9 @@
+[Unit]
+Description=Refresh and check AnimalDex social platform tokens
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/animaldex/shared/app.env
+ExecStart=/usr/local/bin/animaldex-social-token-health.sh

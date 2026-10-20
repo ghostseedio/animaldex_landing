@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily AnimalDex social platform token refresh and check
+
+[Timer]
+OnCalendar=*-*-* 04:10:00 UTC
+Persistent=true
+Unit=animaldex-social-token-health.service
+
+[Install]
+WantedBy=timers.target

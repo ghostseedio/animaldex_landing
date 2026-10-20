@@ -253,7 +253,9 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                             <article key={platform} className="flex flex-col gap-3 border border-line-300 bg-surface-900 p-4">
                                 <div className="flex items-center justify-between gap-2">
                                     <p className="font-bold text-white">{SOCIAL_PLATFORM_LABELS[platform]}</p>
-                                    {connection?.connected
+                                    {connection?.error
+                                        ? <Badge tone="bad">Needs attention</Badge>
+                                        : connection?.connected
                                         ? <Badge tone="good"><CheckCircle size={12} iconStyle="Bold" />Connected</Badge>
                                         : connection ? <Badge>{connection.configured ? "Not connected" : "Not set up"}</Badge> : <Skeleton className="h-4 w-20" />}
                                 </div>
@@ -280,9 +282,21 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                             <a href={connection.manageUrl} target="_blank" rel="noreferrer" className={cn(buttonVariants({size: "sm"}), "mt-auto")}>Manage in Zernio ↗</a>
                                         ) : null}
                                     </>
+                                ) : connection.error ? (
+                                    <>
+                                        <p className="text-xs leading-5 text-red-200">{connection.error}</p>
+                                        <a href={`/api/admin/social/connect/${platform}`} className={cn(buttonVariants({variant: "primary", size: "sm"}), "mt-auto")}>Reconnect account</a>
+                                    </>
                                 ) : connection.connected ? (
                                     <>
                                         <p className="text-sm text-ink-300">{connection.accountName ?? "Account connected"}</p>
+                                        <p className="text-xs leading-5 text-ink-500">
+                                            {platform === "instagram"
+                                                ? "Access token refreshes automatically before its 60-day expiry."
+                                                : platform === "facebook"
+                                                    ? "No scheduled expiry; Facebook can still revoke access."
+                                                    : "Access token refreshes automatically; the provider can still revoke access."}
+                                        </p>
                                         <div className="mt-auto flex gap-2">
                                             <a href={`/api/admin/social/connect/${platform}`} className={cn(buttonVariants({size: "sm"}), "flex-1")}>Reconnect</a>
                                             <Button size="sm" variant="danger" onClick={() => disconnect(platform)}>Disconnect</Button>

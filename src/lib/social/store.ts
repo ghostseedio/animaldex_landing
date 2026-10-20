@@ -1,5 +1,5 @@
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
-import {decryptToken, encryptToken} from "@/lib/social/token-crypto";
+import {decryptTokenWithKeyInfo, encryptToken} from "@/lib/social/token-crypto";
 import type {SocialConnection, SocialPlatform, SocialPostRow, SocialPostStatus} from "@/lib/social/types";
 
 // Service-role REST access to admin_social_connections / admin_social_posts
@@ -41,15 +41,19 @@ export async function getConnection(platform: SocialPlatform): Promise<SocialCon
     const response = await expectOk(await rest(`admin_social_connections?platform=eq.${platform}&select=*`), "Loading social connection");
     const [row] = await response.json() as ConnectionRow[];
     if (!row) return null;
-    return {
+    const access = decryptTokenWithKeyInfo(row.access_token_enc);
+    const refresh = row.refresh_token_enc ? decryptTokenWithKeyInfo(row.refresh_token_enc) : null;
+    const connection = {
         platform: row.platform,
         accountId: row.account_id,
         accountName: row.account_name,
-        accessToken: decryptToken(row.access_token_enc),
-        refreshToken: row.refresh_token_enc ? decryptToken(row.refresh_token_enc) : null,
+        accessToken: access.token,
+        refreshToken: refresh?.token ?? null,
         expiresAt: row.expires_at ? new Date(row.expires_at) : null,
         scopes: row.scopes
     };
+    if (access.needsReencryption || refresh?.needsReencryption) await saveConnection(connection);
+    return connection;
 }
 
 export async function saveConnection(connection: SocialConnection) {

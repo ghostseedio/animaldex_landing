@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {getProviderEnvNames, getRedirectUri, isOAuthPlatform, isProviderConfigured} from "@/lib/social/oauth";
+import {checkOAuthConnection} from "@/lib/social/connection-health";
 import {deleteConnection, listConnectionRows} from "@/lib/social/store";
 import {isSocialPlatform, SOCIAL_PLATFORMS} from "@/lib/social/types";
 import {describeZernioError, getTikTokAccount, isZernioConfigured, ZERNIO_ENV, ZernioError} from "@/lib/social/zernio";
@@ -50,17 +51,38 @@ export async function GET(request: NextRequest) {
         const connections = await Promise.all(SOCIAL_PLATFORMS.map(async (platform) => {
             if (!isOAuthPlatform(platform)) return tiktokConnection();
             const row = rows.find((candidate) => candidate.platform === platform);
+            if (!row) {
+                return {
+                    platform,
+                    provider: "oauth" as const,
+                    configured: isProviderConfigured(platform),
+                    connected: false,
+                    accountName: null,
+                    expiresAt: null,
+                    envNames: getProviderEnvNames(platform),
+                    redirectUri: getRedirectUri(platform),
+                    manageUrl: null,
+                    error: null
+                };
+            }
+            let error: string | null = null;
+            let expiresAt = row.expires_at;
+            try {
+                expiresAt = (await checkOAuthConnection(platform)).expiresAt?.toISOString() ?? null;
+            } catch (cause) {
+                error = cause instanceof Error ? cause.message : "Unable to verify this connection.";
+            }
             return {
                 platform,
                 provider: "oauth" as const,
                 configured: isProviderConfigured(platform),
-                connected: Boolean(row),
+                connected: error === null,
                 accountName: row?.account_name ?? null,
-                expiresAt: row?.expires_at ?? null,
+                expiresAt,
                 envNames: getProviderEnvNames(platform),
                 redirectUri: getRedirectUri(platform),
                 manageUrl: null,
-                error: null
+                error
             };
         }));
         return NextResponse.json({ok: true, connections});
