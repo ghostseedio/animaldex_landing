@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {
     GUIDE_BAND,
     GUIDE_NEON,
@@ -53,6 +53,10 @@ const STATUS_LABEL_KEYS = {
 /** The owner's Wildlife Guides, first in the Shop tab (iOS `ProfileWildlifeGuidesSection.ownerContent`). */
 export function OwnerShopGuides({initial, labels, locale}: {initial: MyWildlifeGuides | null; labels: ProfileShopLabels; locale: string}) {
     const [mine, setMine] = useState(initial);
+    // A refreshed server render (after Ask AnimalDex changed guides) replaces the list.
+    useEffect(() => {
+        setMine(initial);
+    }, [initial]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 

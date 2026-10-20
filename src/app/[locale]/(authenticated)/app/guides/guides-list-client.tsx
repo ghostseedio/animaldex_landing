@@ -1,5 +1,8 @@
 "use client";
 
+import {useState} from "react";
+import {useRouter} from "next/navigation";
+import GuideAgentPanel, {GuideAgentEntry} from "@/components/wildlife-guides/guide-agent-panel";
 import {AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {OwnerShopGuides} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-guides";
 import Link from "@/app/[locale]/_components/link";
@@ -9,6 +12,9 @@ import {guideAuthorName, type GuideBought, type MyWildlifeGuides} from "@/lib/vi
 import {guideEarnSteps} from "@/data/earn-economy";
 
 export default function GuidesListClient({initial, bought, labels}: {initial: MyWildlifeGuides | null; bought: GuideBought[]; labels: ProfileShopLabels}) {
+    const router = useRouter();
+    const [askOpen, setAskOpen] = useState(false);
+    const hasGuides = (initial?.guides.length ?? 0) > 0;
     return (
         <AppPage narrow>
             <div className="px-[18px] pt-6">
@@ -19,6 +25,17 @@ export default function GuidesListClient({initial, bought, labels}: {initial: My
                 />
             </div>
             <div className="flex flex-col">
+                {hasGuides ? (
+                    askOpen ? (
+                        <GuideAgentPanel onChange={() => router.refresh()} onClose={() => setAskOpen(false)} />
+                    ) : (
+                        <GuideAgentEntry
+                            title="Ask AnimalDex to edit your guides"
+                            detail="Change titles, prices, animals or notes by asking."
+                            onOpen={() => setAskOpen(true)}
+                        />
+                    )
+                ) : null}
                 <OwnerShopGuides initial={initial} labels={labels} locale="en" />
                 {bought.length > 0 ? (
                     <>

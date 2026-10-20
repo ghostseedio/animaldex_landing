@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import GuideAgentPanel from "@/components/wildlife-guides/guide-agent-panel";
 import {
     GUIDE_BAND,
     GUIDE_NEON,
@@ -76,6 +77,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
     const [editingNote, setEditingNote] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [askOpen, setAskOpen] = useState(false);
 
     const currentForm = useMemo<GuideForm>(() => ({...form, contacts: contacts.map(({name, role, contact, note}) => ({name, role, contact, note}))}), [form, contacts]);
     const problem = guideValidationProblem(currentForm);
@@ -97,6 +99,30 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
         setMessage(null);
         setForm((current) => ({...current, [key]: value}));
     };
+
+    /** After Ask AnimalDex changed guides: reload this one, keeping any unsaved edits. */
+    async function reloadFromServer() {
+        try {
+            const response = await fetch(`/api/app/wildlife-guides/${encodeURIComponent(guide.id)}?owner=1`, {cache: "no-store"});
+            const payload = await response.json().catch(() => ({}));
+            // Deleted from the chat: back to the list.
+            if (response.status === 404 || /no longer available/i.test(payload.error ?? "")) {
+                router.push("/app/guides");
+                router.refresh();
+                return;
+            }
+            if (!response.ok || !payload.guide) return;
+            const fresh = payload.guide as GuideDetail;
+            setGuide(fresh);
+            if (!dirty) {
+                const nextForm = guideFormFrom(fresh);
+                setForm(nextForm);
+                setContacts(nextForm.contacts.map(withKey));
+            }
+        } catch {
+            // The editor keeps what it has; the next save reports any problem.
+        }
+    }
 
     async function save() {
         if (problem) {
@@ -173,12 +199,23 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                         ? "AnimalDex is writing this guide from your sightings. Check back in a few minutes."
                         : guideSalesLine(guide.owner?.salesCount)}
                 </p>
-                {guide.owner?.publiclyVisible ? (
-                    <Link href={guidePath(guide)} className="mt-2 inline-block text-xs font-semibold hover:underline" style={{color: GUIDE_NEON}}>
-                        View public page ›
-                    </Link>
-                ) : null}
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    {guide.owner?.generationStatus !== "pending" && !askOpen ? (
+                        <button type="button" onClick={() => setAskOpen(true)} className="flex items-center gap-1.5 text-xs font-semibold hover:underline" style={{color: GUIDE_NEON}}>
+                            <GuideGlyph name="sparkles" className="h-3.5 w-3.5" />
+                            Ask AnimalDex to change this guide
+                        </button>
+                    ) : null}
+                    {guide.owner?.publiclyVisible ? (
+                        <Link href={guidePath(guide)} className="inline-block text-xs font-semibold hover:underline" style={{color: GUIDE_NEON}}>
+                            View public page ›
+                        </Link>
+                    ) : null}
+                </div>
             </div>
+            {askOpen ? (
+                <GuideAgentPanel guideTitle={guide.title} onChange={() => void reloadFromServer()} onClose={() => setAskOpen(false)} />
+            ) : null}
 
             <GuideBandHeader title="Sharing" />
             <label className={`${GUIDE_BAND} flex cursor-pointer items-center gap-3 px-[18px] py-3.5`}>
