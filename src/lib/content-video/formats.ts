@@ -4,10 +4,11 @@ import type {ShareCopy} from "@/lib/social/share-copy";
 
 // The two fully generated formats. A comparison becomes a Pokémon-style
 // battle: a VS card with the page's stats, then a 15-second AI fight in three
-// chained clips (stand-off, clash, finish) with health bars, ending on the
-// page's winner. A hybrid or fusion becomes a reveal: the two parents, then a
-// 10-second photoreal clip of the imagined animal moving through its habitat
-// under a documentary voiceover. Both come back as an ordinary VideoPlan.
+// shots (charge, clash, finish), each drawn mid-action from its own keyframe,
+// cut with punch-in zooms, hit flashes, move callouts and health bars, ending
+// on the page's winner. A hybrid or fusion becomes a reveal: the two parents,
+// then a 10-second photoreal clip of the imagined animal moving through its
+// habitat under a documentary voiceover. Both come back as an ordinary VideoPlan.
 
 const SHARE_RULES = `Share copy (share), from the same facts:
 - youtube.title: max 100 chars, the hook in the first 40, then the search phrase people type (e.g. "Tiger vs Grizzly Bear: Who Would Win?"). No hashtags, never "AnimalDex".
@@ -34,18 +35,30 @@ const shareSchema = {
 
 // ---------------------------------------------------------------- battle
 
-export const BATTLE_SYSTEM_PROMPT = `You direct AnimalDex's "Who would win?" battle shorts. A vertical 20–25 second video: a VS card with the two animals' stats, then a 15-second fight in three AI-generated 5-second clips, ending on a definite winner.
+export const BATTLE_SYSTEM_PROMPT = `You direct AnimalDex's "Who would win?" battle shorts. A vertical 20–25 second video: a VS card with the two animals' stats, then a 15-second fight in three AI-generated 5-second shots, ending on a definite winner. It has to feel like a blockbuster fight scene crossed with a Pokémon battle, never two animals politely facing each other.
 
 ${HOOK_RULES}
 
-The battle is staged like a Pokémon battle with REAL animals: a stylised battle arena (a flat field with a painted white circle and centre line, stadium floodlights, a blurred crowd), set in the page's matchup scenario. Each animal starts on its own side, they stare each other down, then fight. No super powers, no magic, no blood, no wounds, no gore — real animal behaviour and physics only: charging, circling, lunging, grappling, shoving, pinning. The loser ends retreating, pinned or submitting; the winner stands over the field.
+THE LOOK: REAL animals, photoreal, in a stylised battle arena (a flat field with a painted white circle and centre line, stadium floodlights, a blurred crowd), set in the page's matchup scenario. Shot like an action film: dramatic angles, motion blur, dust and debris exploding on every impact, sweat-and-breath detail, rim light from the floodlights.
+
+THE ACTION: every shot is ONE big, clear, physical move, already happening in its first frame. Use real animal behaviour, pushed to its most dramatic: charging full speed, leaping or pouncing onto the other, rearing up and crashing together, ramming heads or horns, tackling, swiping, wrestling, flipping the other over, pinning, dodging, chasing, fleeing, tumbling across the arena, roaring in its face. Show FACES: bared teeth, snarls, flattened ears, wide furious eyes, flared nostrils, then exhaustion and panting, a cowering retreat, a triumphant roar.
+Allowed: force, speed, collisions, pins, escapes, intimidation. Not allowed (the AI video model refuses it and it is not who we are): blood, open wounds, bites that break skin, gore, injury close-ups, dead or dying animals, super powers, magic, weapons, people.
 
 - intro_narration: the spoken hook over the VS card (max 12 words). Extreme and polarising, e.g. "Everyone says the lion wins. Everyone is wrong."
 - hook_text: on-screen over the VS card, 2–6 words.
 - stats: the 3–4 most dramatic stat lines FROM THE PAGE, values shortened to fit (max 14 characters each, e.g. "1,050 PSI", "65 km/h", "220 kg"); advantage "a", "b" or "even" as the page says.
 - arena: one line, the battlefield's setting (e.g. "a misty bamboo-forest arena at dusk").
-- keyframe_prompt: a photoreal description of the stand-off frame — animal A on the LEFT, animal B on the RIGHT, facing each other across the arena, full bodies visible, each species exactly right (size, colour, markings). Vertical 9:16.
-- beats: exactly 3, each { narration, motion_prompt }: (1) the stand-off and first move, (2) the clash, (3) the finish and the winner. narration is a hype battle commentator: 6–14 words per beat, present tense, punchy. motion_prompt describes believable motion for that 5 seconds, continuing from the previous clip.
+- look_a / look_b: one precise line each describing that animal's appearance (size, build, colour, markings, horns or mane), reused word for word in every shot so both animals look the same from shot to shot. Species-accurate and life-size relative to each other.
+- beats: exactly 3 shots, in order:
+  (1) CHARGE: the first attack, both animals in motion (a full-speed charge, a pounce, a sprint across the arena). Wide or tracking shot.
+  (2) CLASH: the impact: they collide, grapple, ram, flip or tumble. Close and violent-looking, faces filling the frame.
+  (3) FINISH: the decisive move and the result: the loser pinned, flipped, fleeing or cowering, exhausted; the winner roaring over the field. Low hero angle.
+  Each beat is { narration, attacker, move, shot, motion_prompt }:
+  - narration: a hype battle commentator, 6–14 words, present tense, punchy, matching what we see.
+  - attacker: "a" or "b", whose move this shot is.
+  - move: the Pokémon-style move name, 1–3 words, max 18 characters, e.g. "HORN CHARGE", "LEAP ATTACK", "BODY SLAM", "ESCAPE".
+  - shot: the photoreal first frame of the shot, frozen MID-ACTION: camera angle and lens, where each animal is and what its body is doing, its facial expression, the dust and debris. Refer to them as "the <animal name>"; do not describe their looks (look_a/look_b are added). Vertical 9:16.
+  - motion_prompt: 1–2 sentences for the 5 seconds: the camera move first ("Fast tracking shot…", "Crash zoom…", "Slow-motion low angle…"), then the ONE action with strong verbs and its result, then the expressions. No lists of moves, no negations.
 - winner: "a" or "b". It MUST be the page's verdict (given below when the page names one); the fight must make that outcome believable.
 - cta_narration: one line that splits the audience, e.g. "Agree? Tell me who you'd bet on."; cta_text 2–5 words.
 - ${MUSIC_RULES} Battles are usually intense or epic.
@@ -57,7 +70,7 @@ Return only the JSON object.`;
 export const BATTLE_JSON_SCHEMA = {
     type: "object",
     additionalProperties: false,
-    required: ["title", "hook_text", "intro_narration", "stats", "arena", "keyframe_prompt", "beats", "winner", "cta_narration", "cta_text", "music_mood", "share"],
+    required: ["title", "hook_text", "intro_narration", "stats", "arena", "look_a", "look_b", "beats", "winner", "cta_narration", "cta_text", "music_mood", "share"],
     properties: {
         title: {type: "string"},
         hook_text: {type: "string"},
@@ -70,10 +83,14 @@ export const BATTLE_JSON_SCHEMA = {
             }
         },
         arena: {type: "string"},
-        keyframe_prompt: {type: "string"},
+        look_a: {type: "string"},
+        look_b: {type: "string"},
         beats: {
             type: "array",
-            items: {type: "object", additionalProperties: false, required: ["narration", "motion_prompt"], properties: {narration: {type: "string"}, motion_prompt: {type: "string"}}}
+            items: {
+                type: "object", additionalProperties: false, required: ["narration", "attacker", "move", "shot", "motion_prompt"],
+                properties: {narration: {type: "string"}, attacker: {type: "string", enum: ["a", "b"]}, move: {type: "string"}, shot: {type: "string"}, motion_prompt: {type: "string"}}
+            }
         },
         winner: {type: "string", enum: ["a", "b"]},
         cta_narration: {type: "string"},
@@ -103,10 +120,14 @@ export function buildBattleUserPrompt(source: VideoSource) {
 }
 
 const BATTLE_KEYFRAME_SUFFIX =
-    "Photorealistic wildlife photography, cinematic lighting, a stylised Pokémon-style battle arena: flat ground with a painted white circle and centre line, stadium floodlights, blurred crowd in the background. " +
-    "Both animals anatomically accurate and life-size relative to each other, full bodies in frame, tense stand-off. Vertical 9:16. No text, no letters, no logos, no people in the arena.";
+    "Photorealistic cinematic action still, like a frame from a blockbuster nature fight scene: frozen mid-action, motion blur on limbs, dust and debris exploding, dramatic floodlight rim lighting, " +
+    "a stylised Pokémon-style battle arena (flat ground, painted white circle and centre line, stadium floodlights, blurred crowd). Both animals anatomically accurate and life-size relative to each other, faces and expressions clearly visible. Vertical 9:16. No text, no letters, no logos, no people in the arena.";
 const BATTLE_MOTION_SUFFIX =
-    "Realistic animal behaviour and physics, intense but bloodless: no blood, no wounds, no gore. Keep both animals' species, size and markings exactly as in the frame, and the arena unchanged. Dynamic handheld sports-broadcast camera. No text.";
+    "Fast, powerful, realistic animal motion with real weight and momentum; cinematic VFX: dust bursts and flying debris on every impact, motion blur, camera shake. Keep both animals' species, size and markings exactly as in the frame. No text.";
+/** Kling's negative prompt for fight shots: the bloodless rules live here, plus anything that reads as a still. */
+export const BATTLE_NEGATIVE_PROMPT =
+    "blood, wounds, gore, injury, dead animal, bite marks, people, weapons, text, watermark, logo, distorted anatomy, extra limbs, extra heads, morphing, melting, flicker, cartoon, static shot, motionless, standing still, frozen pose";
+const BATTLE_FX = ["charge", "clash", "finish"] as const;
 
 function clean(value: unknown, max: number) {
     return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -133,11 +154,19 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
     if (!facts || !record || typeof record !== "object") return null;
     const share = parseShare(record.share);
     const beats = (Array.isArray(record.beats) ? record.beats : [])
-        .map((beat) => ({narration: clean((beat as Record<string, unknown>).narration, 200), motion: clean((beat as Record<string, unknown>).motion_prompt, 600)}))
-        .filter((beat) => beat.narration && beat.motion)
+        .map((beat) => {
+            const entry = beat as Record<string, unknown>;
+            return {
+                narration: clean(entry.narration, 200),
+                motion: clean(entry.motion_prompt, 600),
+                shot: clean(entry.shot, 900),
+                move: clean(entry.move, 18).replace(/[!.]+$/, ""),
+                attacker: entry.attacker === "b" ? "b" as const : "a" as const
+            };
+        })
+        .filter((beat) => beat.narration && beat.motion && beat.shot)
         .slice(0, 3);
-    const keyframe = clean(record.keyframe_prompt, 1200);
-    if (beats.length < 3 || !keyframe || !share) return null;
+    if (beats.length < 3 || !share) return null;
 
     const modelWinner = record.winner === "b" ? "b" : "a";
     const winner = facts.winner ?? modelWinner;
@@ -152,6 +181,7 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
         .slice(0, 4);
     const fallbackStats = facts.stats.slice(0, 4).map((stat) => ({...stat, label: stat.label.slice(0, 22), a: stat.a.slice(0, 16), b: stat.b.slice(0, 16)}));
     const arena = clean(record.arena, 200);
+    const looks = `The ${facts.a.name}: ${clean(record.look_a, 300) || `an adult ${facts.a.name}`}. The ${facts.b.name}: ${clean(record.look_b, 300) || `an adult ${facts.b.name}`}.`;
 
     const scenes: PlanScene[] = [
         {
@@ -164,19 +194,22 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
             minSeconds: 3.4,
             card: {kind: "vs", left: facts.a, right: facts.b, stats: stats.length >= 2 ? stats : fallbackStats}
         },
+        // Every shot is drawn mid-action from its own keyframe rather than chained from
+        // the last frame of the one before: a real fight edit cuts between angles, the
+        // model starts moving immediately, and one failed clip no longer sinks the rest.
         ...beats.map((beat, index): PlanScene => ({
             narration: beat.narration,
             overlay: index === 2 ? `WINNER: ${winnerName}` : "",
             overlayStyle: index === 2 ? "winner" : undefined,
             visual: "ai_clip",
-            image: index === 2 ? (winner === "a" ? facts.a.image : facts.b.image) : facts.a.image,
+            image: index === 2 ? (winner === "a" ? facts.a.image : facts.b.image) : (beat.attacker === "a" ? facts.a.image : facts.b.image),
             focusX: 0.5,
             motionPrompt: `${beat.motion}${index === 2 ? ` The ${winnerName} wins clearly and ends standing over the field.` : ""} ${BATTLE_MOTION_SUFFIX}`,
+            keyframePrompt: `${beat.shot} ${looks}${arena ? ` Setting: ${arena}.` : ""} ${BATTLE_KEYFRAME_SUFFIX}`,
             clipSeconds: 5,
             minSeconds: 5,
-            ...(index === 0
-                ? {keyframePrompt: `${keyframe}${arena ? ` Setting: ${arena}.` : ""} A ${facts.a.name} on the left, a ${facts.b.name} on the right. ${BATTLE_KEYFRAME_SUFFIX}`}
-                : {chain: true})
+            fx: BATTLE_FX[index],
+            ...(beat.move ? {move: `${beat.attacker === "a" ? facts.a.name : facts.b.name} used ${beat.move}!`} : {})
         }))
     ];
 

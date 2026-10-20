@@ -69,6 +69,7 @@ Every story must pull at least one of these levers, hard:
 - COOLNESS: superpowers, biomimicry that changed technology, animals smarter than they look.
 - CONTROVERSY: real fights among scientists, myths that turn out to be true (or false), uncomfortable truths about familiar animals, ethical debates like de-extinction, with both sides given fairly.
 - CRAZINESS: bizarre behaviour, weird mating, gross-out facts told with a grin, never with cruelty.
+- STAKES: animals in real trouble right now: wildfires, floods, droughts and heatwaves hitting wildlife, habitat being cleared, poaching and trafficking busts, disease outbreaks, mass die-offs, daring rescues and comebacks. The pull is urgency and scale: how many animals, how much habitat, how fast, why it is happening, and what is being done. Told with facts and respect, never as misery for its own sake.
 
 Test: if a smart 16-year-old would scroll past it, or it reads like an encyclopedia entry ("The habitat and diet of the red fox"), reject it. If a reader would screenshot a line and send it to a friend with "wait, WHAT?", that's the bar.
 
@@ -200,12 +201,14 @@ ${BRAND_CONTEXT}
 
 ${VIRAL_STANDARD}
 
+Conservation news counts: a crisis unfolding now (fires burning orangutan forest, a coral bleaching event, a species pushed toward extinction) is a strong pick when it is current, large in scale and well sourced; the article explains what is happening, why, what it means for the animals, and what is being done.
+
 A good pick has (1) a lever from the list above, pulled hard, (2) real search demand or a clear news peg, (3) enough verifiable facts for 1,200+ words, (4) natural links into AnimalDex pages (species, comparisons, tier lists, locations, hybrids). Avoid topics already covered by an existing post title, pet-care advice, and anything medical or legal.
 
-Brainstorm at least 12 candidates, score each honestly, and return only the 6 strongest. A routine news item (a survey count, a policy update, "new reserve opens") only makes the cut if you can find the genuinely wild angle in it.`;
+Brainstorm at least 12 candidates, score each honestly, and return only the 6 strongest. A routine news item (a survey count, a policy update, "new reserve opens") only makes the cut if you can find the genuinely wild angle or real stakes in it.`;
 
 const IDEAS_FORMAT = `Reply with only a JSON object in a \`\`\`json fence:
-{"ideas":[{"title":"working headline, max 60 characters","angle":"the specific story and what makes it different","hook":"the one surprising fact or question that sells it","shareLine":"the exact sentence a reader would text a friend","viralLever":"curiosity | strangeness | wildness | danger | coolness | controversy | craziness","viralScore":8,"primaryKeyword":"the search phrase it targets","format":"news | explainer | listicle | comparison | guide | myth-buster","whyNow":"news peg or search demand","sources":[{"label":"publisher: headline","url":"https://..."}]}]}
+{"ideas":[{"title":"working headline, max 60 characters","angle":"the specific story and what makes it different","hook":"the one surprising fact or question that sells it","shareLine":"the exact sentence a reader would text a friend","viralLever":"curiosity | strangeness | wildness | danger | coolness | controversy | craziness | stakes","viralScore":8,"primaryKeyword":"the search phrase it targets","format":"news | explainer | listicle | comparison | guide | myth-buster","whyNow":"news peg or search demand","sources":[{"label":"publisher: headline","url":"https://..."}]}]}
 viralScore is 1–10 for how irresistible it is to click and share; only return ideas scoring 7 or more, best first. Only list source URLs that appeared in your search results.`;
 
 export async function suggestTopics(mode: Exclude<GeneratorMode, "custom">, focus: string, catalog: SiteCatalog, log: Log): Promise<TopicIdea[]> {
@@ -213,7 +216,7 @@ export async function suggestTopics(mode: Exclude<GeneratorMode, "custom">, focu
     const today = new Date().toISOString().slice(0, 10);
     const focusLine = focus.trim() ? `\nThe editor asked to focus on: ${focus.trim()}` : "";
     const prompt = mode === "news"
-        ? `Today is ${today}. Use web search to find the wildest, strangest, most shareable wildlife and animal stories from the last 14 days: bizarre new species, behaviour studies with jaw-dropping results, record-breaking animals, scientific fights, myths overturned, animals doing things nobody thought they could, viral animal moments with a real science angle, and biomimicry breakthroughs. Skip routine stories unless they hide a wild angle. Prefer primary or reputable outlets (journals, universities, Mongabay, BBC, Smithsonian, ScienceDaily, Phys.org, New Scientist).${focusLine}
+        ? `Today is ${today}. Use web search to find the wildest, strangest, most shareable wildlife and animal stories from the last 14 days: bizarre new species, behaviour studies with jaw-dropping results, record-breaking animals, scientific fights, myths overturned, animals doing things nobody thought they could, viral animal moments with a real science angle, biomimicry breakthroughs, and conservation crises unfolding now (wildfires, floods, droughts and heatwaves hitting wildlife, habitat clearing, poaching and trafficking busts, disease outbreaks, mass die-offs, rescues and comebacks). Skip routine stories unless they hide a wild angle or real stakes. Prefer primary or reputable outlets (journals, universities, IUCN, conservation groups, Mongabay, BBC, Reuters, AP, Smithsonian, ScienceDaily, Phys.org, New Scientist).${focusLine}
 
 Propose 6 distinct article ideas. Each must be about a real, dated development you found, explained for curious non-experts, and linkable to animals we cover (use search_site to check).
 

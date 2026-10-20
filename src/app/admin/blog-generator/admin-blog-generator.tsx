@@ -4,6 +4,7 @@ import Link from "next/link";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {CheckCircle, CloseCircle, DangerTriangle, MagicStick3, Paperclip, Pen, Refresh} from "solar-icon-set";
 import {ACCEPTED_MATERIAL_EXTENSIONS, MATERIAL_LIMITS, materialBatchProblem} from "@/lib/blog-generator/material-types";
+import BlogAutomation from "@/app/admin/blog-generator/blog-automation";
 import BlogEditPanel from "@/app/admin/blog-generator/blog-edit-panel";
 import DepthPicker, {type ResearchDepth} from "@/app/admin/blog-generator/depth-picker";
 import {AdminPage, Alert, Badge, Button, Card, CardContent, CardHeader, cn, EmptyState, fieldClass, PageHeader, Skeleton, Spinner} from "@/components/admin/ui";
@@ -549,6 +550,7 @@ export default function AdminBlogGenerator() {
                     </CardContent>
                 </Card>
             </section>
+            <BlogAutomation />
         </AdminPage>
     );
 }

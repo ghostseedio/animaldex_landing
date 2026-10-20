@@ -194,7 +194,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                         pageTitle={challenge.title}
                         pageDescription={challenge.description}
                         pageUrl={pageUrl}
-                        copy={{kicker: "Watch the battle", blurb: `${animalA.name} vs ${animalB.name} in 20 seconds: an AI-simulated stand-off built from the stats and verdict on this page.`, footnote: "AI-generated simulation for entertainment, staged without blood or injury. The real analysis is below."}}
+                        copy={{kicker: "Watch the battle", blurb: `${animalA.name} vs ${animalB.name} in 20 seconds: the fight, played out from the stats and verdict on this page.`, footnote: "AI-generated battle. The full stats and analysis are below."}}
                     />
                 </div>
             ) : null}

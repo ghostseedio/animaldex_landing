@@ -82,7 +82,7 @@ function logger(job: Job) {
     };
 }
 
-function run(job: Job, work: (log: (line: string) => void) => Promise<void>) {
+function run(job: Job, work: (log: (line: string) => void) => Promise<void>, onSettled?: (job: Job) => void | Promise<void>) {
     const log = logger(job);
     const meter = new CostMeter();
     withCostMeter(meter, () => work(log))
@@ -101,6 +101,7 @@ function run(job: Job, work: (log: (line: string) => void) => Promise<void>) {
                 log(`Cost: ${formatCost(job.cost)}`);
             }
             job.finishedAt = new Date().toISOString();
+            Promise.resolve(onSettled?.(job)).catch((error) => console.error("[blog-generator] onSettled failed", error));
         });
 }
 
@@ -123,7 +124,12 @@ export function startTopicsJob(mode: Exclude<GeneratorMode, "custom">, focus: st
     return job;
 }
 
-export function startGenerateJob(input: GenerateInput) {
+/** Is an article being written right now (by the admin or the auto-generator)? */
+export function generateJobRunning() {
+    return Array.from(store.values()).some((job) => job.kind === "generate" && job.status === "running");
+}
+
+export function startGenerateJob(input: GenerateInput, onSettled?: (job: Job) => void | Promise<void>) {
     const job = createJob("generate");
     run(job, async (log) => {
         try {
@@ -132,7 +138,7 @@ export function startGenerateJob(input: GenerateInput) {
             // Uploaded references are only needed for this run.
             await deleteMaterials(input.materials ?? []);
         }
-    });
+    }, onSettled);
     return job;
 }
 

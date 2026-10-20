@@ -14,6 +14,7 @@ type SharePreview = {connected: SocialPlatform[]; queueLength: number; next: {me
 type Payload = {
     share: {runs: AutomationRun[]; nextRunAt: string; disabled: boolean; preview: SharePreview};
     generate: {runs: AutomationRun[]; nextRunAt: string; disabled: boolean; busy: boolean};
+    blog: {runs: AutomationRun[]; nextRunAt: string; disabled: boolean; busy: boolean};
 };
 
 const OUTCOME: Record<AutomationRun["outcome"], {label: string; tone: "good" | "neutral" | "bad"}> = {
@@ -26,7 +27,7 @@ function when(iso: string) {
     return new Date(iso).toLocaleString(undefined, {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"});
 }
 
-function RunList({runs}: {runs: AutomationRun[]}) {
+export function RunList({runs}: {runs: AutomationRun[]}) {
     if (!runs.length) return <p className="text-xs text-ink-500">No runs yet. The first one shows up here after the timer fires.</p>;
     return (
         <ul className="flex flex-col divide-y divide-line-300/60 border border-line-300/60">
@@ -41,7 +42,7 @@ function RunList({runs}: {runs: AutomationRun[]}) {
     );
 }
 
-function Panel({title, schedule, nextRunAt, disabled, running, onRun, children}: {title: string; schedule: string; nextRunAt: string; disabled: boolean; running: boolean; onRun: () => void; children: React.ReactNode}) {
+export function Panel({title, schedule, nextRunAt, disabled, running, onRun, children}: {title: string; schedule: string; nextRunAt: string; disabled: boolean; running: boolean; onRun: () => void; children: React.ReactNode}) {
     return (
         <article className="flex flex-col gap-3 border border-line-300 bg-surface-900 p-4">
             <div className="flex flex-wrap items-center gap-2">

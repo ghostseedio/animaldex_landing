@@ -16,6 +16,7 @@ import {
     textToImagePath,
     uploadImage
 } from "@/lib/content-video/higgsfield";
+import {BATTLE_NEGATIVE_PROMPT} from "@/lib/content-video/formats";
 import {generateVideoPlan} from "@/lib/content-video/llm";
 import {AI_CLIP_SECONDS, applyStatCards, buildAss, buildTimeline, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
 import {portraitCrop, renderVideo, runFfmpeg, type SceneVisual} from "@/lib/content-video/render";
@@ -194,8 +195,9 @@ export async function generateClips(row: ContentVideoRow, source: VideoSource, s
             payload: {
                 prompt: `${scene.motionPrompt} ${suffix}`.trim().slice(0, 2400),
                 duration: scene.clipSeconds ?? AI_CLIP_SECONDS,
-                cfg_scale: 0.5,
-                negative_prompt: MOTION_NEGATIVE_PROMPT,
+                // Fight shots hold closer to their action prompt; the bloodless rules ride in the negative prompt.
+                cfg_scale: plan.format === "battle" ? 0.7 : 0.5,
+                negative_prompt: plan.format === "battle" ? BATTLE_NEGATIVE_PROMPT : MOTION_NEGATIVE_PROMPT,
                 image_url: imageUrl
             }
         };

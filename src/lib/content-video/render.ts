@@ -3,7 +3,7 @@ import {readFile, writeFile} from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import {childProcessEnv} from "@/lib/child-process-env";
-import {AI_CLIP_SECONDS, type CardSpec, VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH, type TimelineEntry} from "@/lib/content-video/plan";
+import {AI_CLIP_SECONDS, type BattleFx, battleHitOffsets, type CardSpec, VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH, type TimelineEntry} from "@/lib/content-video/plan";
 
 // The edit, in ffmpeg (installed in the Docker runner stage): one silent
 // segment per scene — a slow push-in/out across a photo, or an AI clip
@@ -207,7 +207,43 @@ async function renderImageScene(source: string, focusX: number, seconds: number,
     return [`${base}a.mp4`, `${base}b.mp4`];
 }
 
-async function renderClipScene(source: string, seconds: number, out: string, clipSeconds = AI_CLIP_SECONDS, hook = false) {
+/**
+ * The battle edit on a fight clip: the camera pushes in on the charge, punches
+ * in with a shake and a white flash on every hit of the clash and the finish,
+ * then creeps in on the winner. Hit times come from battleHitOffsets, shared
+ * with the impact sounds and the health bars.
+ */
+export function battleFxFilters(fx: BattleFx, seconds: number) {
+    const n = frames(seconds);
+    const hits = battleHitOffsets(fx, seconds).map((offset) => Math.round(offset * VIDEO_FPS));
+    // 1 at the hit frame, fading to 0 over `width` frames either side.
+    const near = (frame: number, width: number) => `max(0,1-abs(on-${frame})/${width})`;
+    const punch = hits.map((frame) => `0.24*${near(frame, 7)}`).join("+");
+    const shake = (axis: "x" | "y") => hits.map((frame) => `${axis === "x" ? 22 : 14}*sin(on*${axis === "x" ? 2.3 : 2.9})*${near(frame, 9)}`).join("+");
+    const base = fx === "charge"
+        ? `1.02+0.16*on/${n}`
+        : fx === "finish"
+            ? `1.04+0.20*on/${n}`
+            : "1.06";
+    const zoom = punch ? `${base}+${punch}` : base;
+    // The charge also drifts sideways, like a camera tracking the run.
+    const panX = fx === "charge" ? `+(on/${n}-0.5)*70` : "";
+    const shakeX = hits.length ? `+${shake("x")}` : "";
+    const shakeY = hits.length ? `+${shake("y")}` : "";
+    const flashes = hits.flatMap((frame) => {
+        const at = frame / VIDEO_FPS;
+        return [
+            `drawbox=x=0:y=0:w=iw:h=ih:color=white@0.7:t=fill:enable='between(t,${at.toFixed(3)},${(at + 1 / VIDEO_FPS).toFixed(3)})'`,
+            `drawbox=x=0:y=0:w=iw:h=ih:color=white@0.25:t=fill:enable='between(t,${(at + 1 / VIDEO_FPS).toFixed(3)},${(at + 3 / VIDEO_FPS).toFixed(3)})'`
+        ];
+    });
+    return [
+        `zoompan=z='${zoom}':x='iw/2-(iw/zoom/2)${panX}${shakeX}':y='ih/2-(ih/zoom/2)${shakeY}':d=1:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS}`,
+        ...flashes
+    ];
+}
+
+async function renderClipScene(source: string, seconds: number, out: string, clipSeconds = AI_CLIP_SECONDS, hook = false, fx?: BattleFx) {
     // A line longer than the clip slows it a little (up to 30%), then holds its last frame.
     const stretch = Math.min(Math.max(seconds / clipSeconds, 1), 1.3);
     const hold = Math.max(seconds - clipSeconds * stretch, 0) + 0.2;
@@ -220,10 +256,11 @@ async function renderClipScene(source: string, seconds: number, out: string, cli
             `fps=${VIDEO_FPS}`,
             `tpad=stop_mode=clone:stop_duration=${hold.toFixed(2)}`,
             // The hook clip punches in from 128% with a shake, behind a white flash.
-            ...(hook ? [`zoompan=z='if(lt(on,10),1.28-0.028*on,1)':x='iw/2-(iw/zoom/2)${SHAKE_X}':y='ih/2-(ih/zoom/2)${SHAKE_Y}':d=1:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS}`] : []),
+            ...(hook && !fx ? [`zoompan=z='if(lt(on,10),1.28-0.028*on,1)':x='iw/2-(iw/zoom/2)${SHAKE_X}':y='ih/2-(ih/zoom/2)${SHAKE_Y}':d=1:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS}`] : []),
+            ...(fx ? battleFxFilters(fx, seconds) : []),
             "setsar=1",
             "format=yuv420p",
-            ...(hook ? [HOOK_FLASH] : [])
+            ...(hook && !fx ? [HOOK_FLASH] : [])
         ].join(","),
         "-frames:v", String(frames(seconds)),
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "2", "-an", out
@@ -374,6 +411,7 @@ export function soundEffectsFor(timeline: TimelineEntry[]): SoundEffects {
         if (index > 0) whooshes.push(Math.max(entry.start - 0.3, 0));
         if (entry.card?.kind === "vs") impacts.push(entry.start + 0.15);
         if (entry.overlayStyle === "winner") impacts.push(Math.max(entry.start + 0.5, entry.start + entry.duration - 2.4));
+        for (const offset of battleHitOffsets(entry.fx, entry.duration)) impacts.push(entry.start + offset);
     });
     return {impacts: Array.from(new Set(impacts.map((value) => Math.round(value * 100) / 100))), whooshes};
 }
@@ -440,7 +478,7 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
         if (visual.type === "card") {
             segments.push(...await renderCardScene(visual, entry.duration, index, dir));
         } else if (visual.type === "clip") {
-            await renderClipScene(visual.path, entry.duration, out, visual.seconds, index === 0);
+            await renderClipScene(visual.path, entry.duration, out, visual.seconds, index === 0, entry.fx);
             segments.push(out);
         } else {
             segments.push(...await renderImageScene(visual.path, visual.focusX, entry.duration, index, dir));

@@ -116,7 +116,24 @@ export type PlanScene = {
     statCard?: StatCard;
     /** Slug of the one species (from the source's list) this scene is about, chosen by the planner. */
     species?: string;
+    /** Battle fight shot: drives the edit's camera moves, hit flashes, impact sounds and HUD drops. */
+    fx?: BattleFx;
+    /** Pokémon-style callout shown as the shot starts, e.g. "BONGO used HORN CHARGE!". */
+    move?: string;
 };
+
+export type BattleFx = "charge" | "clash" | "finish";
+
+/**
+ * When the hits land inside a fight shot (seconds from its start): the edit
+ * flashes and shakes there, the mix drops an impact, and the health bars take
+ * a chunk. One table, so picture, sound and HUD stay in sync.
+ */
+export function battleHitOffsets(fx: BattleFx | undefined, duration: number): number[] {
+    if (fx === "clash") return [0.12, Math.max(0.9, Math.min(2.4, duration - 1.2))];
+    if (fx === "finish") return [0.12];
+    return [];
+}
 
 /** A designed still: the battle's VS card, or the two parents of an imagined animal. */
 export type CardSpec =
@@ -149,6 +166,8 @@ export type TimelineEntry = {
     overlayStyle?: PlanScene["overlayStyle"];
     card?: CardSpec;
     statCard?: StatCard;
+    fx?: BattleFx;
+    move?: string;
 };
 
 export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for tens of millions of views; a calm opener is a dead video.
@@ -411,7 +430,9 @@ export function buildTimeline(plan: VideoPlan, sceneSeconds: number[], ctaSecond
             kind: index === 0 ? "hook" : "scene",
             ...(scene.overlayStyle ? {overlayStyle: scene.overlayStyle} : {}),
             ...(scene.card ? {card: scene.card} : {}),
-            ...(scene.statCard ? {statCard: scene.statCard} : {})
+            ...(scene.statCard ? {statCard: scene.statCard} : {}),
+            ...(scene.fx ? {fx: scene.fx} : {}),
+            ...(scene.move ? {move: scene.move} : {})
         });
         cursor += duration;
     });
@@ -630,6 +651,7 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
         `Style: CreatureTitle,${FONT},110,${WHITE},${WHITE},${INK},${SHADOW},0,0,0,0,100,100,4,0,1,7,4,5,60,60,0,1`,
         `Style: HudName,${FONT},44,${WHITE},${WHITE},${INK},&H00000000,0,0,0,0,100,100,2,0,1,4,0,7,0,0,0,1`,
         `Style: HudBar,${FONT},20,${LIME},${LIME},${INK},&H00000000,0,0,0,0,100,100,0,0,1,3,0,7,0,0,0,1`,
+        `Style: Move,${FONT},56,${WHITE},${WHITE},${INK},&H00000000,0,0,0,0,100,100,1,0,3,14,0,8,60,60,0,1`,
         `Style: StatAxis,${FONT},28,&H00E6E6E6,&H00E6E6E6,${INK},&H00000000,0,0,0,0,100,100,1,0,1,3,0,5,0,0,0,1`,
         `Style: StatName,${FONT},58,${WHITE},${WHITE},${INK},${SHADOW},0,0,0,0,100,100,1,0,1,5,2,7,0,0,0,1`,
         `Style: TierBadge,${FONT},58,${INK},${INK},${LIME},&H00000000,0,0,0,0,100,100,2,0,3,14,0,7,0,0,0,1`,
@@ -681,6 +703,12 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
             return;
         }
         if (entry.statCard) statCardEvents(event, entry.statCard, entry.start + 0.25, entry.start + entry.duration - 0.05);
+        if (entry.move) {
+            // "BONGO used HORN CHARGE!": the attacker's name in lime, under the health bars.
+            const [attacker, ...rest] = entry.move.split(" used ");
+            const body = rest.length ? `{\\c${LIME}&}${assEscape(attacker.toUpperCase())}{\\c${WHITE}&} USED ${assEscape(rest.join(" used ").toUpperCase())}` : assEscape(entry.move.toUpperCase());
+            event(6, entry.start + 0.05, Math.min(sceneEnd - 0.05, entry.start + 1.9), "Move", `{\\pos(540,300)\\fscx125\\fscy125\\t(0,140,\\fscx100\\fscy100)\\fad(0,160)}${body}`);
+        }
         if (entry.overlay && entry.overlayStyle === "winner") {
             // Slams in for the last stretch of the finishing clip.
             const at = Math.max(entry.start + 0.5, sceneEnd - 2.4);
@@ -725,11 +753,21 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
             const clash = scenes[1] ?? scenes[0];
             const finish = scenes.at(-1)!;
             const finishAt = Math.max(finish.start + 0.4, finish.start + finish.duration - 2.6);
-            // Both bars drain through the clash; the loser's empties (and turns red) as the finish lands.
-            const drain = (winner: boolean) => [
-                `\\t(${ms(clash.start)},${ms(clash.start + clash.duration)},\\fscx${winner ? 72 : 52})`,
-                `\\t(${ms(finish.start)},${ms(finishAt)},\\fscx${winner ? 46 : 0}${winner ? "" : `\\1c${RED}&`})`
-            ].join("");
+            const hits = scenes.flatMap((scene) => battleHitOffsets(scene.fx, scene.duration).map((offset) => scene.start + offset));
+            // With hit times the bars drop a chunk on each hit, flashing white; the loser's
+            // empties (and turns red) as the finish lands. Older plans drain smoothly.
+            const drain = (winner: boolean) => hits.length
+                ? [
+                    ...hits.map((at, index) => {
+                        const width = winner ? [88, 72, 60][index] ?? 60 : [76, 50, 22][index] ?? 22;
+                        return `\\t(${ms(at)},${ms(at) + 120},\\fscx${width}\\1c&HFFFFFF&)\\t(${ms(at) + 120},${ms(at) + 260},\\1c${LIME}&)`;
+                    }),
+                    `\\t(${ms(finishAt)},${ms(finishAt) + 220},\\fscx${winner ? 46 : 0}${winner ? "" : `\\1c${RED}&`})`
+                ].join("")
+                : [
+                    `\\t(${ms(clash.start)},${ms(clash.start + clash.duration)},\\fscx${winner ? 72 : 52})`,
+                    `\\t(${ms(finish.start)},${ms(finishAt)},\\fscx${winner ? 46 : 0}${winner ? "" : `\\1c${RED}&`})`
+                ].join("");
             const bar = (x: number, align: 7 | 9, winner: boolean) =>
                 `{\\an${align}\\pos(${x},236)\\bord3\\shad0\\1c${LIME}&\\3c${INK}&${drain(winner)}\\p1}${rect(420, 30)}{\\p0}`;
             const track = (x: number, align: 7 | 9) => `{\\an${align}\\pos(${x},236)\\bord3\\shad0\\1c&H50000000&\\3c${INK}&\\p1}${rect(420, 30)}{\\p0}`;
