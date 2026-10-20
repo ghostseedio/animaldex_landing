@@ -62,7 +62,11 @@ export type BattleFacts = {
     verdict: string;
     /** The page's winner when it names one; the plan must agree with it. */
     winner: "a" | "b" | null;
+    /** Each fighter's AnimalDex Animal Power, when the species has one. */
+    powers?: {a: BattlePower | null; b: BattlePower | null};
 };
+
+export type BattlePower = {name: string; basis: string};
 
 export type CreatureFacts = {
     kind: "hybrid" | "fusion";
@@ -120,6 +124,8 @@ export type PlanScene = {
     fx?: BattleFx;
     /** Pokémon-style callout shown as the shot starts, e.g. "BONGO used HORN CHARGE!". */
     move?: string;
+    /** Whose move the fight shot is: its hits drain the other side's health bar. */
+    attacker?: "left" | "right";
 };
 
 export type BattleFx = "charge" | "clash" | "finish";
@@ -168,6 +174,7 @@ export type TimelineEntry = {
     statCard?: StatCard;
     fx?: BattleFx;
     move?: string;
+    attacker?: PlanScene["attacker"];
 };
 
 export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for tens of millions of views; a calm opener is a dead video.
@@ -432,7 +439,8 @@ export function buildTimeline(plan: VideoPlan, sceneSeconds: number[], ctaSecond
             ...(scene.card ? {card: scene.card} : {}),
             ...(scene.statCard ? {statCard: scene.statCard} : {}),
             ...(scene.fx ? {fx: scene.fx} : {}),
-            ...(scene.move ? {move: scene.move} : {})
+            ...(scene.move ? {move: scene.move} : {}),
+            ...(scene.attacker ? {attacker: scene.attacker} : {})
         });
         cursor += duration;
     });
@@ -753,28 +761,41 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
             const clash = scenes[1] ?? scenes[0];
             const finish = scenes.at(-1)!;
             const finishAt = Math.max(finish.start + 0.4, finish.start + finish.duration - 2.6);
-            const hits = scenes.flatMap((scene) => battleHitOffsets(scene.fx, scene.duration).map((offset) => scene.start + offset));
+            const loserSide = hud.winner === "left" ? "right" : "left";
+            // Each hit lands on the side the shot's attacker is fighting (the loser's
+            // shots hurt the winner too). Older plans without attackers hit the loser.
+            const hits = scenes.flatMap((scene) => battleHitOffsets(scene.fx, scene.duration).map((offset) => ({
+                at: scene.start + offset,
+                side: scene.attacker === "left" ? "right" : scene.attacker === "right" ? "left" : loserSide
+            })));
             // With hit times the bars drop a chunk on each hit, flashing white; the loser's
             // empties (and turns red) as the finish lands. Older plans drain smoothly.
-            const drain = (winner: boolean) => hits.length
-                ? [
-                    ...hits.map((at, index) => {
-                        const width = winner ? [88, 72, 60][index] ?? 60 : [76, 50, 22][index] ?? 22;
-                        return `\\t(${ms(at)},${ms(at) + 120},\\fscx${width}\\1c&HFFFFFF&)\\t(${ms(at) + 120},${ms(at) + 260},\\1c${LIME}&)`;
+            const drain = (side: "left" | "right") => {
+                const winner = side === hud.winner;
+                if (!hits.length) {
+                    return [
+                        `\\t(${ms(clash.start)},${ms(clash.start + clash.duration)},\\fscx${winner ? 72 : 52})`,
+                        `\\t(${ms(finish.start)},${ms(finishAt)},\\fscx${winner ? 46 : 0}${winner ? "" : `\\1c${RED}&`})`
+                    ].join("");
+                }
+                const taken = hits.filter((hit) => hit.side === side);
+                // The loser is worn down to ~18% before the knockout; the winner never drops below ~40%.
+                const chunk = winner ? Math.min(14, 58 / Math.max(taken.length, 1)) : 82 / Math.max(taken.length, 1);
+                return [
+                    ...taken.map((hit, index) => {
+                        const width = Math.round(100 - chunk * (index + 1));
+                        return `\\t(${ms(hit.at)},${ms(hit.at) + 120},\\fscx${width}\\1c&HFFFFFF&)\\t(${ms(hit.at) + 120},${ms(hit.at) + 260},\\1c${LIME}&)`;
                     }),
-                    `\\t(${ms(finishAt)},${ms(finishAt) + 220},\\fscx${winner ? 46 : 0}${winner ? "" : `\\1c${RED}&`})`
-                ].join("")
-                : [
-                    `\\t(${ms(clash.start)},${ms(clash.start + clash.duration)},\\fscx${winner ? 72 : 52})`,
-                    `\\t(${ms(finish.start)},${ms(finishAt)},\\fscx${winner ? 46 : 0}${winner ? "" : `\\1c${RED}&`})`
+                    winner ? "" : `\\t(${ms(finishAt)},${ms(finishAt) + 220},\\fscx0\\1c${RED}&)`
                 ].join("");
-            const bar = (x: number, align: 7 | 9, winner: boolean) =>
-                `{\\an${align}\\pos(${x},236)\\bord3\\shad0\\1c${LIME}&\\3c${INK}&${drain(winner)}\\p1}${rect(420, 30)}{\\p0}`;
+            };
+            const bar = (x: number, align: 7 | 9, side: "left" | "right") =>
+                `{\\an${align}\\pos(${x},236)\\bord3\\shad0\\1c${LIME}&\\3c${INK}&${drain(side)}\\p1}${rect(420, 30)}{\\p0}`;
             const track = (x: number, align: 7 | 9) => `{\\an${align}\\pos(${x},236)\\bord3\\shad0\\1c&H50000000&\\3c${INK}&\\p1}${rect(420, 30)}{\\p0}`;
             event(6, start, stop, "HudBar", track(50, 7));
             event(6, start, stop, "HudBar", track(1030, 9));
-            event(7, start, stop, "HudBar", bar(50, 7, hud.winner === "left"));
-            event(7, start, stop, "HudBar", bar(1030, 9, hud.winner === "right"));
+            event(7, start, stop, "HudBar", bar(50, 7, "left"));
+            event(7, start, stop, "HudBar", bar(1030, 9, "right"));
             event(7, start, stop, "HudName", `{\\an1\\pos(50,226)}${assEscape(hud.left.toUpperCase())}`);
             event(7, start, stop, "HudName", `{\\an3\\pos(1030,226)}${assEscape(hud.right.toUpperCase())}`);
         }

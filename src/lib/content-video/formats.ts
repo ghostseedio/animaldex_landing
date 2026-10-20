@@ -3,10 +3,11 @@ import {HOOK_RULES, type PlanScene, type StatLine, type VideoPlan, type VideoSou
 import type {ShareCopy} from "@/lib/social/share-copy";
 
 // The two fully generated formats. A comparison becomes a Pokémon-style
-// battle: a VS card with the page's stats, then a 15-second AI fight in three
-// shots (charge, clash, finish), each drawn mid-action from its own keyframe,
-// cut with punch-in zooms, hit flashes, move callouts and health bars, ending
-// on the page's winner. A hybrid or fusion becomes a reveal: the two parents,
+// battle: a VS card with the page's stats, then a 25-second AI fight in five
+// shots (opener, counter, clash, turn, finish), each built around one of the
+// animals' signature powers and drawn mid-action from its own keyframe, cut
+// with punch-in zooms, hit flashes, move callouts and health bars, ending on
+// the page's winner winning with its power. A hybrid or fusion becomes a reveal: the two parents,
 // then a 10-second photoreal clip of the imagined animal moving through its
 // habitat under a documentary voiceover. Both come back as an ordinary VideoPlan.
 
@@ -35,31 +36,35 @@ const shareSchema = {
 
 // ---------------------------------------------------------------- battle
 
-export const BATTLE_SYSTEM_PROMPT = `You direct AnimalDex's "Who would win?" battle shorts. A vertical 20–25 second video: a VS card with the two animals' stats, then a 15-second fight in three AI-generated 5-second shots, ending on a definite winner. It has to feel like a blockbuster fight scene crossed with a Pokémon battle, never two animals politely facing each other.
+export const BATTLE_SYSTEM_PROMPT = `You direct AnimalDex's "Who would win?" battle shorts. A vertical 30–35 second video: a VS card with the two animals' stats, then a 25-second fight in five AI-generated 5-second shots, ending on a definite winner. It has to feel like a blockbuster fight scene crossed with a Pokémon battle, never two animals politely facing each other.
 
 ${HOOK_RULES}
 
-THE LOOK: REAL animals, photoreal, in a stylised battle arena (a flat field with a painted white circle and centre line, stadium floodlights, a blurred crowd), set in the page's matchup scenario. Shot like an action film: dramatic angles, motion blur, dust and debris exploding on every impact, sweat-and-breath detail, rim light from the floodlights.
+THE STORY IS THE POWERS. Before writing, pick 2–3 SIGNATURE POWERS for each animal: the real abilities that make it dangerous or hard to beat, drawn from the page's stats and text and from real biology (crushing bite force, explosive sprint speed, horns built for ramming, camouflage that makes it vanish, a leap of several body lengths, an armoured hide, a deafening roar, a venomous strike, a death roll). When an animal has an ANIMALDEX POWER (given below), it MUST be one of its powers, by that exact name. Every shot shows one power in action, and the viewer should finish knowing exactly WHICH power won the fight and why that power beats the other animal. The winner's best power decides the finish; the loser gets to land its own power once, so the fight is close.
 
-THE ACTION: every shot is ONE big, clear, physical move, already happening in its first frame. Use real animal behaviour, pushed to its most dramatic: charging full speed, leaping or pouncing onto the other, rearing up and crashing together, ramming heads or horns, tackling, swiping, wrestling, flipping the other over, pinning, dodging, chasing, fleeing, tumbling across the arena, roaring in its face. Show FACES: bared teeth, snarls, flattened ears, wide furious eyes, flared nostrils, then exhaustion and panting, a cowering retreat, a triumphant roar.
-Allowed: force, speed, collisions, pins, escapes, intimidation. Not allowed (the AI video model refuses it and it is not who we are): blood, open wounds, bites that break skin, gore, injury close-ups, dead or dying animals, super powers, magic, weapons, people.
+THE LOOK: REAL animals, photoreal, in a stylised battle arena (a flat field with a painted white circle and centre line, stadium floodlights, a blurred crowd), set in the page's matchup scenario. Shot like an action film: dramatic angles, motion blur, dust and debris exploding on every impact, sweat-and-breath detail, rim light from the floodlights. Powers get cinematic VFX that EXAGGERATE REAL BIOLOGY without becoming magic: speed streaks and afterimages behind a sprint, a shockwave of dust rippling out from a roar or a stomp, ground cracking under a slam, a heat-haze shimmer as camouflage melts an animal into the scenery, sound-wave rings from a song or call, debris frozen in the air for a slow-motion strike.
+
+THE ACTION: every shot is ONE big, clear, physical move, already happening in its first frame: charging full speed, leaping or pouncing onto the other, rearing up and crashing together, ramming heads or horns, tackling, swiping, wrestling, flipping the other over, pinning, dodging, chasing, fleeing, tumbling across the arena, roaring in its face. Show FACES: bared teeth, snarls, flattened ears, wide furious eyes, flared nostrils, then exhaustion and panting, a cowering retreat, a triumphant roar.
+Allowed: force, speed, collisions, pins, escapes, intimidation. Not allowed (the AI video model refuses it and it is not who we are): blood, open wounds, bites that break skin, gore, injury close-ups, dead or dying animals, fire or lasers or any power the real animal does not have, weapons, people.
 
 - intro_narration: the spoken hook over the VS card (max 12 words). Extreme and polarising, e.g. "Everyone says the lion wins. Everyone is wrong."
 - hook_text: on-screen over the VS card, 2–6 words.
 - stats: the 3–4 most dramatic stat lines FROM THE PAGE, values shortened to fit (max 14 characters each, e.g. "1,050 PSI", "65 km/h", "220 kg"); advantage "a", "b" or "even" as the page says.
 - arena: one line, the battlefield's setting (e.g. "a misty bamboo-forest arena at dusk").
 - look_a / look_b: one precise line each describing that animal's appearance (size, build, colour, markings, horns or mane), reused word for word in every shot so both animals look the same from shot to shot. Species-accurate and life-size relative to each other.
-- beats: exactly 3 shots, in order:
-  (1) CHARGE: the first attack, both animals in motion (a full-speed charge, a pounce, a sprint across the arena). Wide or tracking shot.
-  (2) CLASH: the impact: they collide, grapple, ram, flip or tumble. Close and violent-looking, faces filling the frame.
-  (3) FINISH: the decisive move and the result: the loser pinned, flipped, fleeing or cowering, exhausted; the winner roaring over the field. Low hero angle.
-  Each beat is { narration, attacker, move, shot, motion_prompt }:
-  - narration: a hype battle commentator, 6–14 words, present tense, punchy, matching what we see.
-  - attacker: "a" or "b", whose move this shot is.
-  - move: the Pokémon-style move name, 1–3 words, max 18 characters, e.g. "HORN CHARGE", "LEAP ATTACK", "BODY SLAM", "ESCAPE".
-  - shot: the photoreal first frame of the shot, frozen MID-ACTION: camera angle and lens, where each animal is and what its body is doing, its facial expression, the dust and debris. Refer to them as "the <animal name>"; do not describe their looks (look_a/look_b are added). Vertical 9:16.
-  - motion_prompt: 1–2 sentences for the 5 seconds: the camera move first ("Fast tracking shot…", "Crash zoom…", "Slow-motion low angle…"), then the ONE action with strong verbs and its result, then the expressions. No lists of moves, no negations.
-- winner: "a" or "b". It MUST be the page's verdict (given below when the page names one); the fight must make that outcome believable.
+- beats: exactly 5 shots, in order:
+  (1) OPENER: the winner-to-be or the aggressor attacks first with a power, both animals in motion. Wide or tracking shot.
+  (2) COUNTER: the other animal answers with ITS best power and lands it: the fight swings. Close and fast.
+  (3) CLASH: full collision, both powers meeting: grappling, ramming, tumbling. Faces filling the frame.
+  (4) TURN: the winner adapts and uses the power that will decide it; the loser is visibly tiring.
+  (5) FINISH: the winner's decisive power lands: the loser pinned, flipped, fleeing or cowering, exhausted; the winner roaring over the field. Low hero angle.
+  Each beat is { narration, attacker, power, shot, motion_prompt }:
+  - narration: a hype battle commentator, 7–14 words, present tense, punchy. Name the power or the real fact behind it ("Nine hundred kilos of horn at fifty kilometres an hour!").
+  - attacker: "a" or "b", whose power this shot shows.
+  - power: the power's name as a Pokémon-style move, 1–3 words, max 18 characters, e.g. "HORN CHARGE", "BROKEN OUTLINE", "DEATH ROLL", "SONIC ROAR".
+  - shot: the photoreal first frame of the shot, frozen MID-ACTION with the power visible: camera angle and lens, where each animal is and what its body is doing, its facial expression, the power's VFX, the dust and debris. Refer to them as "the <animal name>"; do not describe their looks (look_a/look_b are added). Vertical 9:16.
+  - motion_prompt: 1–2 sentences for the 5 seconds: the camera move first ("Fast tracking shot…", "Crash zoom…", "Slow-motion low angle…"), then the ONE action using the power, with strong verbs, its VFX and its result, then the expressions. No lists of moves, no negations.
+- winner: "a" or "b". It MUST be the page's verdict (given below when the page names one); the fight must make that outcome believable through the winner's powers.
 - cta_narration: one line that splits the audience, e.g. "Agree? Tell me who you'd bet on."; cta_text 2–5 words.
 - ${MUSIC_RULES} Battles are usually intense or epic.
 
@@ -88,8 +93,8 @@ export const BATTLE_JSON_SCHEMA = {
         beats: {
             type: "array",
             items: {
-                type: "object", additionalProperties: false, required: ["narration", "attacker", "move", "shot", "motion_prompt"],
-                properties: {narration: {type: "string"}, attacker: {type: "string", enum: ["a", "b"]}, move: {type: "string"}, shot: {type: "string"}, motion_prompt: {type: "string"}}
+                type: "object", additionalProperties: false, required: ["narration", "attacker", "power", "shot", "motion_prompt"],
+                properties: {narration: {type: "string"}, attacker: {type: "string", enum: ["a", "b"]}, power: {type: "string"}, shot: {type: "string"}, motion_prompt: {type: "string"}}
             }
         },
         winner: {type: "string", enum: ["a", "b"]},
@@ -107,6 +112,12 @@ export function buildBattleUserPrompt(source: VideoSource) {
         `Page: ${source.title} — ${source.url}`,
         facts.winner ? `THE PAGE'S WINNER: ${facts.winner === "a" ? facts.a.name : facts.b.name} (winner "${facts.winner}"). Use it.` : "The page names no single winner: pick the one its verdict and scenarios favour.",
         `Verdict: ${facts.verdict}`,
+        "",
+        ...(["a", "b"] as const).map((side) => {
+            const power = facts.powers?.[side];
+            const name = facts[side].name;
+            return power ? `ANIMALDEX POWER of the ${name} (animal ${side.toUpperCase()}): "${power.name}". ${power.basis}` : `The ${name} has no AnimalDex Power: pick its signature powers from the page and real biology.`;
+        }),
         "",
         "Stats on the page:",
         ...facts.stats.map((stat) => `- ${stat.label}: A ${stat.a} | B ${stat.b} (advantage ${stat.advantage})`),
@@ -127,7 +138,9 @@ const BATTLE_MOTION_SUFFIX =
 /** Kling's negative prompt for fight shots: the bloodless rules live here, plus anything that reads as a still. */
 export const BATTLE_NEGATIVE_PROMPT =
     "blood, wounds, gore, injury, dead animal, bite marks, people, weapons, text, watermark, logo, distorted anatomy, extra limbs, extra heads, morphing, melting, flicker, cartoon, static shot, motionless, standing still, frozen pose";
-const BATTLE_FX = ["charge", "clash", "finish"] as const;
+/** The edit for each of the five shots: opener, counter, clash, turn, finish. */
+const BATTLE_FX = ["charge", "clash", "clash", "clash", "finish"] as const;
+export const BATTLE_SHOTS = BATTLE_FX.length;
 
 function clean(value: unknown, max: number) {
     return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -160,13 +173,13 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
                 narration: clean(entry.narration, 200),
                 motion: clean(entry.motion_prompt, 600),
                 shot: clean(entry.shot, 900),
-                move: clean(entry.move, 18).replace(/[!.]+$/, ""),
+                power: clean(entry.power ?? entry.move, 18).replace(/[!.]+$/, ""),
                 attacker: entry.attacker === "b" ? "b" as const : "a" as const
             };
         })
         .filter((beat) => beat.narration && beat.motion && beat.shot)
-        .slice(0, 3);
-    if (beats.length < 3 || !share) return null;
+        .slice(0, BATTLE_SHOTS);
+    if (beats.length < BATTLE_SHOTS || !share) return null;
 
     const modelWinner = record.winner === "b" ? "b" : "a";
     const winner = facts.winner ?? modelWinner;
@@ -197,20 +210,26 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
         // Every shot is drawn mid-action from its own keyframe rather than chained from
         // the last frame of the one before: a real fight edit cuts between angles, the
         // model starts moving immediately, and one failed clip no longer sinks the rest.
-        ...beats.map((beat, index): PlanScene => ({
-            narration: beat.narration,
-            overlay: index === 2 ? `WINNER: ${winnerName}` : "",
-            overlayStyle: index === 2 ? "winner" : undefined,
-            visual: "ai_clip",
-            image: index === 2 ? (winner === "a" ? facts.a.image : facts.b.image) : (beat.attacker === "a" ? facts.a.image : facts.b.image),
-            focusX: 0.5,
-            motionPrompt: `${beat.motion}${index === 2 ? ` The ${winnerName} wins clearly and ends standing over the field.` : ""} ${BATTLE_MOTION_SUFFIX}`,
-            keyframePrompt: `${beat.shot} ${looks}${arena ? ` Setting: ${arena}.` : ""} ${BATTLE_KEYFRAME_SUFFIX}`,
-            clipSeconds: 5,
-            minSeconds: 5,
-            fx: BATTLE_FX[index],
-            ...(beat.move ? {move: `${beat.attacker === "a" ? facts.a.name : facts.b.name} used ${beat.move}!`} : {})
-        }))
+        ...beats.map((beat, index): PlanScene => {
+            const last = index === BATTLE_SHOTS - 1;
+            // The finish is the winner's move, whatever the model wrote.
+            const attacker = last ? winner : beat.attacker;
+            return {
+                narration: beat.narration,
+                overlay: last ? `WINNER: ${winnerName}` : "",
+                overlayStyle: last ? "winner" : undefined,
+                visual: "ai_clip",
+                image: attacker === "a" ? facts.a.image : facts.b.image,
+                focusX: 0.5,
+                motionPrompt: `${beat.motion}${last ? ` The ${winnerName} wins clearly and ends standing over the field.` : ""} ${BATTLE_MOTION_SUFFIX}`,
+                keyframePrompt: `${beat.shot} ${looks}${arena ? ` Setting: ${arena}.` : ""} ${BATTLE_KEYFRAME_SUFFIX}`,
+                clipSeconds: 5,
+                minSeconds: 5,
+                fx: BATTLE_FX[index],
+                attacker: attacker === "a" ? "left" : "right",
+                ...(beat.power ? {move: `${attacker === "a" ? facts.a.name : facts.b.name} used ${beat.power}!`} : {})
+            };
+        })
     ];
 
     return {
@@ -222,7 +241,7 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
         ctaText: clean(record.cta_text, 40) || "Who would you bet on?",
         musicMood: isMusicMood(record.music_mood) ? record.music_mood : "intense",
         share,
-        hud: {left: facts.a.name, right: facts.b.name, winner: winner === "a" ? "left" : "right", fightScenes: [1, 2, 3]}
+        hud: {left: facts.a.name, right: facts.b.name, winner: winner === "a" ? "left" : "right", fightScenes: beats.map((_, index) => index + 1)}
     };
 }
 

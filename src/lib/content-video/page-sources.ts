@@ -11,6 +11,7 @@ import type {Fighter, SourceImage, SourceType, StatLine, VideoSource} from "@/li
 import {listVideoCandidates, loadVideoSource as loadBlogSource, type VideoCandidate} from "@/lib/content-video/source";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
 import {sourceSpecies} from "@/lib/content-video/stat-cards";
+import {battlePowerFor} from "@/lib/content-video/battle-powers";
 
 // Every page family a video can be made from, as a VideoSource: comparisons
 // (battle), hybrids and fusions (creature), rankings and locations
@@ -64,6 +65,7 @@ async function comparisonSource(slug: string): Promise<VideoSource | null> {
         b: stat.animalBValue,
         advantage: stat.advantage === "animalA" ? "a" : stat.advantage === "animalB" ? "b" : "even"
     }));
+    const [powerA, powerB] = await Promise.all([battlePowerFor(entry.animalASlug), battlePowerFor(entry.animalBSlug)]);
     return {
         type: "comparison",
         format: "battle",
@@ -75,7 +77,7 @@ async function comparisonSource(slug: string): Promise<VideoSource | null> {
         text: [entry.quickVerdict, ...entry.shortAnswer, ...entry.whyThisMatchupIsInteresting, ...entry.finalTake].join("\n"),
         images,
         species: await sourceSpecies([{slug: entry.animalASlug, name: nameA, image: 1}, {slug: entry.animalBSlug, name: nameB, image: 2}]),
-        battle: {a: fighter(entry.animalASlug, nameA, images, 1), b: fighter(entry.animalBSlug, nameB, images, 2), stats, scenarios, verdict: entry.quickVerdict, winner}
+        battle: {a: fighter(entry.animalASlug, nameA, images, 1), b: fighter(entry.animalBSlug, nameB, images, 2), stats, scenarios, verdict: entry.quickVerdict, winner, powers: {a: powerA, b: powerB}}
     };
 }
 
