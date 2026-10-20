@@ -11,7 +11,7 @@ import type {ProfileShopLabels} from "@/app/[locale]/(composited)/u/[handle]/pro
 import {guideAuthorName, type GuideBought, type MyWildlifeGuides} from "@/lib/virtual-wildlife-guides";
 import {guideEarnSteps} from "@/data/earn-economy";
 
-export default function GuidesListClient({initial, bought, labels}: {initial: MyWildlifeGuides | null; bought: GuideBought[]; labels: ProfileShopLabels}) {
+export default function GuidesListClient({initial, bought, labels, locale}: {initial: MyWildlifeGuides | null; bought: GuideBought[]; labels: ProfileShopLabels; locale: string}) {
     const router = useRouter();
     const [askOpen, setAskOpen] = useState(false);
     const hasGuides = (initial?.guides.length ?? 0) > 0;
@@ -36,7 +36,7 @@ export default function GuidesListClient({initial, bought, labels}: {initial: My
                         />
                     )
                 ) : null}
-                <OwnerShopGuides initial={initial} labels={labels} locale="en" />
+                <OwnerShopGuides initial={initial} labels={labels} locale={locale} />
                 {bought.length > 0 ? (
                     <>
                         <GuideBandHeader title="Guides you bought" />

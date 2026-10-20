@@ -15,6 +15,6 @@ export const PROFILE_SHOP_LABEL_KEYS = [
     "sealedPacks", "sealedPacksDetail", "packsForSale", "noActiveListings", "manage",
     "waysToEarn", "waysToEarnDetail", "nothingListedTitle", "nothingListedDetail",
     "termsTitle", "termsLine1", "termsLine2", "termsLine3", "termsLine4", "termsLine5",
-    "termsRead", "termsAge", "termsAccept", "termsFailed"
+    "termsRead", "termsAge", "termsAccept", "termsFailed", "boughtGuides", "refunded", "by"
 ] as const;
 

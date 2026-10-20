@@ -2216,7 +2216,10 @@
       "termsRead": "Read the Wildlife Guide Author Terms",
       "termsAge": "I'm 18 or older",
       "termsAccept": "Accept and sell my guides",
-      "termsFailed": "The terms could not be accepted. Try again."
+      "termsFailed": "The terms could not be accepted. Try again.",
+      "boughtGuides": "Guides you bought",
+      "refunded": "Refunded",
+      "by": "By"
     }
   },
   "errors": {

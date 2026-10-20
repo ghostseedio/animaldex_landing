@@ -19,7 +19,7 @@ import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {appStoreUrl} from "@/lib/store-links";
 import {animalLevel} from "@/lib/animal-level";
-import {getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
+import {getMyWildlifeGuidePurchases, getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
 
 function profilePath(handle: string) {
@@ -121,11 +121,13 @@ export async function ProfilePageBody({
 
     const listedPacksPromise = getMemberListedPacks(profile.userId);
     const virtualGuidesPromise = getVirtualGuideProfile(profile.userId, viewer.isOwner);
-    const [listedPacks, social, virtualGuides] = await Promise.all([
+    const boughtGuidesPromise = viewer.isOwner ? getMyWildlifeGuidePurchases().catch(() => []) : Promise.resolve([]);
+    const [listedPacks, social, virtualGuides, boughtGuides] = await Promise.all([
         listedPacksPromise,
         // Also records this visit as a profile view for a signed-in non-owner.
         getProfileSocialState(profile.userId),
-        virtualGuidesPromise
+        virtualGuidesPromise,
+        boughtGuidesPromise
     ]);
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
@@ -275,6 +277,7 @@ export async function ProfilePageBody({
                 ownerExtras={ownerExtras}
                 listedPacks={listedPacks}
                 virtualGuides={virtualGuides}
+                boughtGuides={boughtGuides}
                 shopLabels={Object.fromEntries(PROFILE_SHOP_LABEL_KEYS.map((key) => [key, t(`shop.${key}`)]))}
                 social={social}
                 signInHref={`/account?next=${encodeURIComponent(profilePath(profile.username))}`}

@@ -48,6 +48,7 @@ import ProfileSocialControls from "@/app/[locale]/(composited)/u/[handle]/profil
 import {formatAppInteger} from "@/lib/format-numbers";
 import {OwnerShopGuides, PublicShopGuides, type ProfileShopLabels} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-guides";
 import {GUIDE_BAND, GuideBandHeader} from "@/components/wildlife-guides/guide-ui";
+import type {GuideBought} from "@/lib/virtual-wildlife-guides";
 import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 
 export type ProfileTab = "history" | "stats" | "shop" | "locations";
@@ -194,6 +195,7 @@ type ProfileContentProps = {
     } | null;
     listedPacks: ProfileListedPack[];
     virtualGuides?: VirtualGuideProfile;
+    boughtGuides?: GuideBought[];
     /** profile.shop.* strings for the Shop tab. */
     shopLabels: ProfileShopLabels;
     social?: ProfileSocialState | null;
@@ -517,6 +519,7 @@ export default function ProfileContent({
     ownerExtras,
     listedPacks,
     virtualGuides,
+    boughtGuides = [],
     shopLabels,
     social = null,
     signInHref = "/account",
@@ -936,6 +939,8 @@ export default function ProfileContent({
                             initial={virtualGuides?.kind === "owner" ? virtualGuides.mine : null}
                             labels={shopLabels}
                             locale={locale}
+                            boughtGuides={boughtGuides}
+                            localePrefix={localePrefix}
                         />
                         <GuideBandHeader title={shopLabels.sealedPacks} />
                         <ShopDestinationRow

@@ -63,6 +63,10 @@ export function convertAmount(
   const source = currency.toUpperCase();
   if (source === target.toUpperCase()) return amount;
   if (!rates || rates.base.toUpperCase() !== target.toUpperCase()) return null;
-  const rate = rates.rates[fxKey(source, fxDate(date))];
+  // The payload may be intentionally historical (or cached after a failed
+  // refresh). Clamp a future source date to the newest date this payload can
+  // actually serve, not the machine's wall clock.
+  const latestRateDate = fxDate(rates.fetchedAt, new Date().toISOString().slice(0, 10));
+  const rate = rates.rates[fxKey(source, fxDate(date, latestRateDate))];
   return typeof rate === "number" && rate > 0 ? amount * rate : null;
 }

@@ -2205,7 +2205,10 @@
       "termsRead": "Baca Ketentuan Penulis Wildlife Guide",
       "termsAge": "Saya berusia 18 tahun atau lebih",
       "termsAccept": "Setujui dan jual panduanku",
-      "termsFailed": "Ketentuan tidak bisa disetujui. Coba lagi."
+      "termsFailed": "Ketentuan tidak bisa disetujui. Coba lagi.",
+      "boughtGuides": "Panduan yang kamu beli",
+      "refunded": "Dana dikembalikan",
+      "by": "Oleh"
     }
   },
   "errors": {

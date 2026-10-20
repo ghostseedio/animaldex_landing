@@ -5,6 +5,7 @@ import {
     GUIDE_BAND,
     GUIDE_NEON,
     GuideBandHeader,
+    GuideCoverTiles,
     GuideGlyph,
     GuideMessageBand,
     GuideRow,
@@ -15,12 +16,14 @@ import {
     guidePath,
     locationIsPublic,
     ownerGuideStatus,
+    type GuideBought,
     type GuideCard,
     type GuideGrowingPlace,
     type MyWildlifeGuides
 } from "@/lib/virtual-wildlife-guides";
 
 import type {ProfileShopLabels} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
+import Link from "@/app/[locale]/_components/link";
 
 export type {ProfileShopLabels};
 
@@ -52,7 +55,7 @@ const STATUS_LABEL_KEYS = {
 } as const;
 
 /** The owner's Wildlife Guides, first in the Shop tab (iOS `ProfileWildlifeGuidesSection.ownerContent`). */
-export function OwnerShopGuides({initial, labels, locale}: {initial: MyWildlifeGuides | null; labels: ProfileShopLabels; locale: string}) {
+export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], localePrefix = ""}: {initial: MyWildlifeGuides | null; labels: ProfileShopLabels; locale: string; boughtGuides?: GuideBought[]; localePrefix?: string}) {
     const [mine, setMine] = useState(initial);
     // A refreshed server render (after Ask AnimalDex changed guides) replaces the list.
     useEffect(() => {
@@ -241,6 +244,21 @@ export function OwnerShopGuides({initial, labels, locale}: {initial: MyWildlifeG
                                 <span className="mt-0.5 block text-xs text-white/45">{growingLine(labels, place)}</span>
                             </span>
                         </div>
+                    ))}
+                </>
+            ) : null}
+            {boughtGuides.length > 0 ? (
+                <>
+                    <GuideBandHeader title={labels.boughtGuides || "Guides you bought"} />
+                    {boughtGuides.map((item) => (
+                        <Link key={item.purchaseId} href={`${localePrefix}/app/guides/bought/${item.guide.id}`} className={`${GUIDE_BAND} flex items-start gap-3.5 px-[18px] py-3 transition hover:bg-[#262626]`}>
+                            <GuideCoverTiles media={item.guide.coverMedia} size={64} />
+                            <span className="min-w-0 flex-1">
+                                <span className="line-clamp-2 block text-sm font-semibold text-white">{item.guide.title}</span>
+                                <span className="mt-1 block truncate text-xs text-white/60">{item.guide.areaLabel}</span>
+                                {item.status === "refunded" ? <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-[0.06em] text-white/40">{labels.refunded || "Refunded"}</span> : item.seller ? <span className="mt-1 block truncate text-[11px] font-semibold text-white/40">{labels.by || "By"} {item.seller.displayName || item.seller.username}</span> : null}
+                            </span>
+                        </Link>
                     ))}
                 </>
             ) : null}
