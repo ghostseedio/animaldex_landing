@@ -5,7 +5,7 @@
 export type ProfileShopLabels = Record<string, string>;
 
 export const PROFILE_SHOP_LABEL_KEYS = [
-    "wildlifeGuides", "noticeTitle", "noticeDetail", "keepSharing", "dontShare",
+    "wildlifeGuides", "noticeTitle", "noticeDetail", "keepSharing", "dontShare", "closeNotice",
     "privateTitle", "privateDetail", "soonTitle", "soonDetail",
     "shareMine", "shareOnDetail", "shareOffDetail",
     "noGuidesTitle", "noGuidesOwnerDetail", "noGuidesVisitorDetail",

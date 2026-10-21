@@ -71,6 +71,8 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
     const [confirmsAge, setConfirmsAge] = useState(false);
     const [accepting, setAccepting] = useState(false);
     const [termsError, setTermsError] = useState("");
+    // Hides the notice as soon as it is closed; the server records it for good.
+    const [noticeDismissed, setNoticeDismissed] = useState(false);
 
     /** Accepts the terms version shown to the author; what they have earned moves to Earnings. */
     async function acceptTerms() {
@@ -133,9 +135,25 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
 
     return (
         <>
-            {!mine.settings.noticeAcknowledgedAt && hasGuides ? (
+            {!mine.settings.noticeAcknowledgedAt && hasGuides && !noticeDismissed ? (
                 <div className={`${GUIDE_BAND} px-[18px] py-[18px]`}>
-                    <p className="font-display text-base font-bold text-white">{labels.noticeTitle}</p>
+                    <div className="flex items-start gap-2.5">
+                        <p className="flex-1 font-display text-base font-bold text-white">{labels.noticeTitle}</p>
+                        {/* Closing is the same answer as Keep sharing: acknowledged everywhere, sharing unchanged. */}
+                        <button
+                            type="button"
+                            aria-label={labels.closeNotice}
+                            onClick={() => {
+                                setNoticeDismissed(true);
+                                void updateSettings(null, true);
+                            }}
+                            className="-mr-1.5 -mt-1 grid h-8 w-8 place-items-center rounded-full text-white/40 transition hover:bg-white/[0.06] hover:text-white/80"
+                        >
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                                <path d="M6 6l12 12M18 6L6 18" />
+                            </svg>
+                        </button>
+                    </div>
                     <p className="mt-2 text-xs leading-5 text-white/60">{labels.noticeDetail}</p>
                     <div className="mt-3 flex flex-wrap gap-2.5">
                         <button
