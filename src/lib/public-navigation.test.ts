@@ -19,7 +19,8 @@ import {
     moreNavGroups,
     productLinks,
     resourceLinks,
-    START_COLLECTION_HREF
+    START_COLLECTION_HREF,
+    WILDLIFE_GUIDES_HREF
 } from "@/data/public-navigation";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -42,7 +43,8 @@ test("public navigation keeps existing SEO routes", () => {
         "/comparisons",
         "/tier-list",
         "/animal-hybrids",
-        LOCATIONS_HREF
+        LOCATIONS_HREF,
+        WILDLIFE_GUIDES_HREF
     ]);
     assert.deepEqual(animalWisdomLinks.map((link) => link.href), [
         "/animal-wisdom",
@@ -64,15 +66,16 @@ test("public navigation keeps existing SEO routes", () => {
     assert.equal(START_COLLECTION_HREF, "/#download");
     assert.equal(INSTAGRAM_WILDLIFE_ARCHIVE_HREF, "/use-cases/import-instagram-wildlife-photos");
 
-    // Retired from public navigation by an explicit product decision: Wildlife
-    // Guides and Creator Rewards are reachable by URL and in-page links only.
-    // The in-person pages (/become-a-wildlife-guide, /wildlife-experiences) were
-    // removed and now redirect to /wildlife-guides.
+    // Retired from public navigation by an explicit product decision: Creator
+    // Rewards is reachable by URL and in-page links only. The in-person pages
+    // (/become-a-wildlife-guide, /wildlife-experiences) were removed and now
+    // redirect to /wildlife-guides, which returned to Explore Animals in Oct 2026
+    // once guides became virtual.
     const everyNavHref = [
         ...productLinks, ...exploreAnimalLinks, ...animalWisdomLinks, ...resourceLinks,
         ...headerDropdowns.flatMap((section) => section.links), ...moreNavGroups.flat()
     ].map((link) => link.href);
-    for (const retired of ["/wildlife-guides", "/become-a-wildlife-guide", "/wildlife-experiences", "/creator-rewards"]) {
+    for (const retired of ["/become-a-wildlife-guide", "/wildlife-experiences", "/creator-rewards"]) {
         assert.ok(!everyNavHref.includes(retired), `${retired} should not be in public navigation`);
     }
 });
@@ -113,6 +116,7 @@ test("nav labels match the published category names", () => {
     assert.equal(en.nav.animalSymbolism, "Animal Symbolism Articles");
     assert.equal(en.nav.support, "Help Center");
     assert.equal(en.nav.compareAnimals, "Compare Animals");
+    assert.equal(en.nav.wildlifeGuides, "Wildlife Guides");
     assert.equal(en.nav.startYourCollection, "Start Your Collection");
     assert.equal(en.nav.footerGroups.product, "AnimalDex");
     assert.notEqual(en.nav.animalWisdom, "Animal Guide");

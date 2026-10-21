@@ -33,6 +33,7 @@ export const INSTAGRAM_WILDLIFE_ARCHIVE_HREF = "/use-cases/import-instagram-wild
 export const EARN_ON_ANIMALDEX_HREF = "/earn-on-animaldex";
 export const ANIMAL_FREQUENCIES_HREF = "/animal-frequencies";
 export const ANIMAL_TRIALS_HREF = "/animal-trials";
+export const WILDLIFE_GUIDES_HREF = "/wildlife-guides";
 
 /** 01 — AnimalDex: what the product is, and the two ways in. */
 export const productLinks: PublicNavLink[] = [
@@ -50,7 +51,9 @@ export const exploreAnimalLinks: PublicNavLink[] = [
     {href: "/comparisons", labelKey: "compareAnimals", preview: "compare"},
     {href: "/tier-list", labelKey: "animalTierLists", preview: "tiers"},
     {href: "/animal-hybrids", labelKey: "animalHybrids", preview: "hybrid"},
-    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"}
+    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"},
+    // Oct 2026: back in navigation now that guides are virtual and the list page is public.
+    {href: WILDLIFE_GUIDES_HREF, labelKey: "wildlifeGuides", preview: "experiences"}
 ];
 
 /**
