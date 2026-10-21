@@ -10,6 +10,11 @@ export type AnswerPageFeature = {
     description: string;
 };
 
+/** A picture of the product in use, shown in the guide's "See it" gallery. */
+export type AnswerPageGalleryImage = ContentImage & {
+    title: string;
+};
+
 export type AnswerPageEntry = {
     slug: string;
     shortTitle: string;
@@ -30,6 +35,8 @@ export type AnswerPageEntry = {
     updatedAt: string;
     /** The guide's own hero photo, used on the page, the /blog hub card and as the social image. */
     featuredImage: ContentImage;
+    /** Optional product screenshots and photos, rendered between the workflow and the comparison. */
+    gallery?: AnswerPageGalleryImage[];
 };
 
 const answerPageData: AnswerPageEntry[] = [
@@ -524,6 +531,144 @@ const answerPageData: AnswerPageEntry[] = [
             height: 1050,
             caption: "Photo: Andreas Schwarzkopf, CC BY-SA 4.0, via Wikimedia Commons."
         }
+    },
+    {
+        slug: "talk-to-animals",
+        shortTitle: "Talk to Animals",
+        heroTitle: "Can you talk to animals with AI? How AnimalDex lets you speak to any animal",
+        metaTitle: "Talk to Any Animal with AI | AnimalDex",
+        metaDescription: "AnimalDex lets you talk to any animal: scan or pick a species and it answers as itself, from its real biology, behaviour and survival strategy. Free to try, in the app and on every animal page.",
+        intro: "AI cannot translate a bark or a birdsong. What it can do is answer as the animal, grounded in what is actually known about that species, so you understand how it lives and what its way of living can do for you.",
+        directAnswer: [
+            "No app can decode what an individual animal is saying, and anyone claiming to is selling a trick. Talking to animals with AI means something different and more useful: a conversation with an AI that speaks as a species, built from that species' real biology, behaviour, habitat, and survival strategy, so the answers are about how the animal actually lives.",
+            "AnimalDex does this for more than 2,500 animals. Scan one with your camera or open any animal in the app or on this site, tap Speak to the Cheetah, and the cheetah answers in the first person. Ask how it hunts, why it rests so much, or bring it something of yours, a decision, a habit, a problem at work, and it tells you what it would do and why its biology makes that the move.",
+            "Every answer comes from the animal's Power, the strategy it has evolved and the lesson AnimalDex reads from it, backed by its field guide, its operating states and failure modes, its stats, and its Trials. The biology is fact; the voice is AnimalDex's interpretation of it, and the animal says so rather than pretending to be a translator."
+        ],
+        howItWorks: [
+            "Scan an animal with the AnimalDex camera, or pick any species from the catalogue, and open the conversation from the floating button on its card. Suggested openers name the animal's real operating states and failure modes, or type anything you like.",
+            "The animal remembers what you tell it. Mention that you run a bakery to the Wolf and the Cheetah knows it next week, in a new chat, because the animals share what they learn about you. Free accounts get 30 messages a day in the app; Pro gets 100."
+        ],
+        comparisonTypical: [
+            "Pet-translator apps that turn a bark into a random phrase and call it communication.",
+            "A generic chatbot that answers 'as a lion' from whatever it half-remembers, with nothing checked.",
+            "One conversation at a time, forgotten the moment you close it."
+        ],
+        comparisonAnimalDex: [
+            "Honest framing: the animal speaks from its real biology and says what is fact and what is interpretation.",
+            "Every answer is grounded in the species' own field guide, Power, operating states, stats, and Trials, loaded by the server for that animal.",
+            "A memory that follows you across animals and chats, so the conversation builds instead of restarting."
+        ],
+        whoItsFor: [
+            "Anyone who has wanted to ask an animal why it does what it does",
+            "People who learn better from a conversation than from a fact sheet",
+            "Parents and teachers turning a sighting into a back-and-forth with the species",
+            "Readers using animal strategies on their own work, habits, and decisions",
+            "Collectors who want every card in their AnimalDex to talk back"
+        ],
+        features: [
+            {
+                title: "Speak to any animal",
+                description: "Every species in the catalogue answers as itself, in the first person, from the floating button on its card."
+            },
+            {
+                title: "Grounded in the species",
+                description: "Field guide, Animal Power, System Dynamics, stats, and Trials are loaded for that animal before it says a word."
+            },
+            {
+                title: "Advice from its Power",
+                description: "Bring a problem of yours and the animal answers from its survival strategy, and says where that strategy would fail you."
+            },
+            {
+                title: "Remembers you",
+                description: "What you tell one animal, every animal knows next time, across new chats and across species."
+            },
+            {
+                title: "Try it on this site",
+                description: "Every animal page has a Speak to button, a few messages a day without an account, more when you sign in."
+            }
+        ],
+        speciesSlugs: ["cheetah", "gray-wolf", "elephant"],
+        blogSlugs: ["what-if-every-animal-is-a-lesson", "how-to-identify-animals-in-the-wild-2026-guide"],
+        faq: [
+            {
+                question: "Can AI really communicate with animals?",
+                answer: "Not in the sense of translating what an individual animal is saying; no app can do that honestly. AI can speak as a species, grounded in what is known about its biology and behaviour, which is what AnimalDex does. You understand the animal through a conversation instead of a fact sheet, and the animal tells you which parts are fact and which are AnimalDex's interpretation."
+            },
+            {
+                question: "How do I talk to an animal in AnimalDex?",
+                answer: "Scan an animal with the camera or open any species in the catalogue, then tap the floating Speak to button on its card. It opens a chat where the animal answers in the first person. On this website, every animal page has the same button."
+            },
+            {
+                question: "What does the animal know about itself?",
+                answer: "Everything AnimalDex holds on the species: its field guide (habitat, diet, predators, lifespan, where to look), its Animal Power and the lesson behind it, its System Dynamics (operating states, triggers, failure modes, and where its pattern appears in business, relationships, and other domains), its stats, its Trials, and its qualities. That record is loaded for the animal before every answer."
+            },
+            {
+                question: "Does the animal remember me?",
+                answer: "Yes. The animals share what they learn about you, so something you told the Wolf is known to the Cheetah in a new chat next week. Memory is kept per account, holds short facts about you rather than transcripts, and skips sensitive categories such as health and finances."
+            },
+            {
+                question: "Is talking to animals free?",
+                answer: "Yes. Free accounts get 30 messages a day in the app and AnimalDex Pro gets 100. On the website you can send a few messages a day without an account and more when you sign in."
+            },
+            {
+                question: "Can I ask an animal for advice about my own life?",
+                answer: "Yes, that is the point. Bring it a decision, a habit, or a problem at work and it answers from its Power, the strategy it has evolved, and tells you what it would do and where that strategy would let you down. It will not diagnose you or play therapist, and it keeps the biology separate from the interpretation."
+            }
+        ],
+        searchIntents: [
+            "talk to animals",
+            "talk to any animal",
+            "communicate with animals using AI",
+            "understand animals using AI",
+            "AI animal chat",
+            "speak to animals app",
+            "learn from animals",
+            "animal wisdom",
+            "animal identifier app",
+            "educational animal app"
+        ],
+        updatedAt: "2026-10-21",
+        featuredImage: {
+            src: "/images/blog/tier-list-most-communicative-animals-in-the-wild/hero.webp",
+            alt: "A humpback whale lifting its tail flukes above the water near the coast",
+            width: 1400,
+            height: 933,
+            caption: "Photo: Gregory \"Slobirdr\" Smith, CC BY-SA 2.0, via Wikimedia Commons."
+        },
+        gallery: [
+            {
+                src: "/images/blog/answer-talk-to-animals/species-page-launcher.webp",
+                alt: "The AnimalDex Cheetah page on a phone with a floating Speak to the Cheetah button in the corner",
+                width: 780,
+                height: 1688,
+                title: "One tap from any animal.",
+                caption: "Every species page and every card in the app carries a Speak to button with the animal's own picture."
+            },
+            {
+                src: "/images/blog/answer-talk-to-animals/conversation-start.webp",
+                alt: "The conversation sheet opening with the Cheetah saying I'm the Cheetah, what's on your mind, above three suggested questions about its Burst-Speed Engine",
+                width: 780,
+                height: 1688,
+                title: "The animal opens, as itself.",
+                caption: "The suggested questions name the species' real operating system and states, drawn from its System Dynamics."
+            },
+            {
+                src: "/images/blog/answer-talk-to-animals/cheetah-answer.webp",
+                alt: "The Cheetah answering a question about never finishing projects with its Burst-Speed Engine: pick a target you can finish, get close, then commit all at once",
+                width: 780,
+                height: 1688,
+                title: "Advice from its own biology.",
+                caption: "Asked about unfinished projects, the Cheetah answers from how it hunts: pick a target it can finish, stalk close, then one all-out sprint. A real answer, unedited."
+            },
+            {
+                src: "/images/blog/tier-list-rarest-animals/hero.webp",
+                alt: "Close-up of a kakapo, the critically endangered flightless parrot of New Zealand",
+                width: 1400,
+                height: 933,
+                title: "Any of 2,500 animals.",
+                caption: "From the kakapo to the house cat, every species in the catalogue speaks from its own record. Photo: Kimberley Collins, CC BY 2.0, via Wikimedia Commons."
+            }
+        ]
     },
     {
         slug: "ai-animal-scanner",

@@ -117,10 +117,11 @@ function SectionShell({id, eyebrow, title, description, children, className = ""
     );
 }
 
-function getSectionNav(t: (key: string) => string) {
+function getSectionNav(t: (key: string) => string, hasGallery = false) {
     return [
         {href: "#answer", label: t("directAnswerTitle")},
         {href: "#workflow", label: t("howItWorksTitle")},
+        ...(hasGallery ? [{href: "#gallery", label: "See it"}] : []),
         {href: "#difference", label: t("differentTitle")},
         {href: "#features", label: t("featureTitle")},
         {href: "#explore", label: t("exploreTitle")},
@@ -297,7 +298,8 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
         }))
     };
     const visual = getAnswerVisual(entry.slug);
-    const sectionNav = getSectionNav(t);
+    const gallery = entry.gallery ?? [];
+    const sectionNav = getSectionNav(t, gallery.length > 0);
     const primaryFeatures = entry.features.slice(0, 4);
 
     return (
@@ -418,6 +420,32 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                             ))}
                         </div>
                     </SectionShell>
+
+                    {gallery.length > 0 ? (
+                        <SectionShell id="gallery" eyebrow="In the app" title="See it">
+                            <div className="grid gap-5 md:grid-cols-2">
+                                {gallery.map((image) => (
+                                    <figure key={image.src} className="flex flex-col gap-3">
+                                        <div className="overflow-hidden rounded-lg border border-line-300 bg-surface-900/70">
+                                            <Image
+                                                src={image.src}
+                                                alt={image.alt}
+                                                width={image.width}
+                                                height={image.height}
+                                                sizes="(min-width: 768px) 32rem, 100vw"
+                                                className="h-auto w-full"
+                                            />
+                                        </div>
+                                        <figcaption className="text-sm leading-6 text-ink-300">
+                                            <span className="font-semibold text-white">{image.title}</span>
+                                            {" "}
+                                            {image.caption ?? image.alt}
+                                        </figcaption>
+                                    </figure>
+                                ))}
+                            </div>
+                        </SectionShell>
+                    ) : null}
 
                     <SectionShell id="difference" eyebrow="Positioning" title={t("differentTitle")}>
                         <div className="overflow-hidden rounded-lg border border-line-300">

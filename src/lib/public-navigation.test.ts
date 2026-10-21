@@ -46,6 +46,7 @@ test("public navigation keeps existing SEO routes", () => {
     ]);
     assert.deepEqual(animalWisdomLinks.map((link) => link.href), [
         "/animal-wisdom",
+        "/talk-to-animals",
         "/animal-powers",
         "/qualities",
         ANIMAL_FREQUENCIES_HREF,

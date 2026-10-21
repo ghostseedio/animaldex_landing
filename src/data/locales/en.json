@@ -71,7 +71,8 @@
       "status": "Company",
       "statusValue": "GHOSTSEED LTD · No. 17287552"
     },
-    "webApp": "Web app"
+    "webApp": "Web app",
+    "talkToAnimals": "Talk to Any Animal"
   },
   "home": {
     "title": "AnimalDex",

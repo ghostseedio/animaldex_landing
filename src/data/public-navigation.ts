@@ -63,6 +63,7 @@ export const exploreAnimalLinks: PublicNavLink[] = [
  */
 export const animalWisdomLinks: PublicNavLink[] = [
     {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom", preview: "ask"},
+    {href: "/talk-to-animals", labelKey: "talkToAnimals", preview: "ask"},
     {href: "/animal-powers", labelKey: "animalPowers", preview: "lessons"},
     {href: "/qualities", labelKey: "animalQualities", preview: "powers"},
     {href: ANIMAL_FREQUENCIES_HREF, labelKey: "animalFrequencies", preview: "behaviours"},

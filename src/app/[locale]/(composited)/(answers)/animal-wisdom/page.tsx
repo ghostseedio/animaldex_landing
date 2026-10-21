@@ -90,6 +90,14 @@ const wisdomPaths: Array<{
         description: "Take on a strategy a real species uses, turned into a short trial you can run yourself in about ten minutes.",
         href: "/animal-trials",
         cta: "Take on an animal trial"
+    },
+    {
+        number: "06",
+        label: "Talk",
+        title: "Talk to Any Animal",
+        description: "Speak to any species and it answers as itself, from its real biology and its Power, and remembers you between chats.",
+        href: "/talk-to-animals",
+        cta: "Talk to an animal"
     }
 ];
 const latestWisdomPosts = blogPosts
