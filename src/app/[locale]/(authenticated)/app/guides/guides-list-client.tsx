@@ -46,7 +46,7 @@ export default function GuidesListClient({initial, bought, labels, locale}: {ini
                                 href={`/app/guides/bought/${item.guide.id}`}
                                 className={`${GUIDE_BAND} flex items-start gap-3.5 px-[18px] py-3 transition hover:bg-[#262626]`}
                             >
-                                <GuideCoverTiles media={item.guide.coverMedia} size={64} />
+                                <GuideCoverTiles media={item.guide.coverMedia} banner={item.guide.banner} size={64} />
                                 <span className="min-w-0 flex-1">
                                     <span className="line-clamp-2 block text-sm font-semibold text-white">{item.guide.title}</span>
                                     <span className="mt-1 block truncate text-xs text-white/60">{item.guide.areaLabel}</span>

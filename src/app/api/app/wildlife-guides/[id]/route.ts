@@ -57,7 +57,8 @@ export async function GET(request: Request, {params}: {params: {id: string}}) {
 }
 
 /**
- * One of three edits, by body shape:
+ * One of four edits, by body shape:
+ * - `{bannerMediaId}`: the banner (null goes back to the first photo);
  * - `{speciesProfileId, hidden?, note?}`: show/hide an animal, or set its note
  *   (`note: null` or "" clears it and brings back the draft);
  * - `{mediaId, hidden}`: show/hide a photo;
@@ -81,6 +82,15 @@ export async function PATCH(request: Request, {params}: {params: {id: string}}) 
             p_species_profile_id: speciesProfileId,
             p_patch: result.patch
         });
+        if (error) return failure(readableError(error.message));
+        return NextResponse.json({guide: data}, {headers: NO_STORE});
+    }
+
+    if (input.bannerMediaId !== undefined) {
+        // Any shown photo of the guide as its banner; null goes back to the first photo.
+        const mediaId = input.bannerMediaId;
+        if (mediaId !== null && (typeof mediaId !== "string" || !isUuid(mediaId))) return failure("Unknown photo.");
+        const {data, error} = await supabase.rpc("set_my_wildlife_guide_banner", {p_listing_id: params.id, p_media_id: mediaId});
         if (error) return failure(readableError(error.message));
         return NextResponse.json({guide: data}, {headers: NO_STORE});
     }

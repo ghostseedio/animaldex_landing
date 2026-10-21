@@ -57,6 +57,7 @@ export function normalizeMyGuides(payload: Record<string, unknown>): MyWildlifeG
         minSpecies: typeof payload.minSpecies === "number" ? payload.minSpecies : 3,
         guides: Array.isArray(payload.guides) ? payload.guides as GuideCard[] : [],
         growing: Array.isArray(payload.growing) ? payload.growing as MyWildlifeGuides["growing"] : [],
+        deleted: Array.isArray(payload.deleted) ? payload.deleted as MyWildlifeGuides["growing"] : [],
         sales: Array.isArray(payload.sales) ? payload.sales as GuideSale[] : [],
         ...(payload.earnings && typeof payload.earnings === "object" ? {earnings: payload.earnings as GuideEarnings} : {})
     };

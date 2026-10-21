@@ -105,7 +105,7 @@ export default function GuideBuyerSections({initial, locale = "en", viewerLoaded
         <>
             <GuideBandHeader
                 id="species"
-                title={`Animals here · ${species.length}`}
+                title={guide.hasPrivateAccess ? "The author's notes" : "What the author found"}
                 trailing={guide.hasPrivateAccess ? null : (
                     <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/45">
                         <GuideGlyph name="lock" className="h-3 w-3" />
@@ -192,7 +192,46 @@ export default function GuideBuyerSections({initial, locale = "en", viewerLoaded
             <p className={`${GUIDE_BAND} px-[18px] py-4 text-[11px] leading-5 text-white/45`} style={{backgroundColor: "rgba(31,31,31,0.5)"}}>
                 {GUIDE_DISCLAIMER}
             </p>
+            {!isAuthor && !purchaseIsActive(guide.purchase) && guide.forSale !== false ? <StickyBuyBar guide={guide} locale={locale} /> : null}
         </>
+    );
+}
+
+/**
+ * Pinned to the bottom of the screen until What you get (where buying
+ * happens) scrolls into view; tapping it goes there.
+ */
+function StickyBuyBar({guide, locale}: {guide: GuideDetail; locale: string}) {
+    const [hidden, setHidden] = useState(false);
+    useEffect(() => {
+        const target = document.getElementById("included");
+        if (!target || typeof IntersectionObserver === "undefined") return;
+        const observer = new IntersectionObserver(([entry]) => setHidden(entry.isIntersecting || entry.boundingClientRect.top < 0), {threshold: 0});
+        observer.observe(target);
+        return () => observer.disconnect();
+    }, []);
+    const dollars = formatGuidePrice(guide.amountMinor, guide.currencyCode, locale);
+    return (
+        <div
+            className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#121212]/90 backdrop-blur transition-transform duration-200 ${hidden ? "translate-y-full" : "translate-y-0"}`}
+            aria-hidden={hidden}
+        >
+            {/* Buy sits on the left: the site's Ask AnimalDex button floats bottom right. */}
+            <div className="mx-auto flex max-w-3xl items-center gap-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[18px] pr-[150px] sm:pr-[200px]">
+                <a
+                    href="#included"
+                    tabIndex={hidden ? -1 : 0}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full px-5 py-2.5 text-sm font-extrabold text-black transition hover:opacity-90"
+                    style={{backgroundColor: GUIDE_NEON}}
+                >
+                    Buy guide
+                </a>
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-base font-extrabold text-white sm:text-lg">{guide.creditsPrice ? `${dollars} or ${guide.creditsPrice} Credits` : dollars}</span>
+                    <span className="block truncate text-[11px] text-white/50">Notes for every animal · chat with the author · 7-day refund</span>
+                </span>
+            </div>
+        </div>
     );
 }
 

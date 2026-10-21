@@ -10,10 +10,16 @@
 
 export type GuideRarity = "common" | "uncommon" | "rare" | "very_rare";
 
+/**
+ * A capture photo or video, or (20261021170000) a photo the author uploaded:
+ * `uploaded` with a public `imageUrl` and no capture.
+ */
 export type GuideMedia = {
     id?: string;
     captureImageId?: string;
-    captureId: string;
+    captureId?: string;
+    uploaded?: boolean;
+    imageUrl?: string;
     kind?: string;
     width?: number;
     height?: number;
@@ -66,6 +72,8 @@ export type GuideCard = {
     /** Selling stopped after a buyer had no reply (migration 20261020160000); the guide stays public. */
     salesPausedAt?: string;
     salesPausedReason?: "no_reply" | string;
+    /** The author's banner (20261021170000); cards lead with it. */
+    banner?: GuideMedia;
 };
 
 export type GuideGrowingPlace = {
@@ -90,6 +98,8 @@ export type MyWildlifeGuides = {
     minSpecies: number;
     guides: GuideCard[];
     growing: GuideGrowingPlace[];
+    /** Places whose guide the author deleted; Add guide brings them back. */
+    deleted?: GuideGrowingPlace[];
     /** The author's sales still in play and the last 60 days (migration 20261020160000). */
     sales: GuideSale[];
     earnings?: GuideEarnings;
@@ -175,6 +185,9 @@ export type GuideOwnerState = {
     salesPausedReason?: "no_reply" | string;
     /** This guide's sales, as in MyWildlifeGuides.sales. */
     sales?: GuideSale[];
+    bannerMediaId?: string;
+    /** How many photos the author can upload to one guide. */
+    maxUploads?: number;
 };
 
 /** The viewer's own purchase of a guide (migration 20261020100000). */
@@ -197,7 +210,7 @@ export type GuideBought = {
     status: string;
     refundStatus?: string;
     paidAt?: string;
-    guide: Pick<GuideCard, "id" | "title" | "areaLabel" | "currencyCode" | "amountMinor" | "speciesCount" | "rareSpeciesCount" | "coverMedia">;
+    guide: Pick<GuideCard, "id" | "title" | "areaLabel" | "currencyCode" | "amountMinor" | "speciesCount" | "rareSpeciesCount" | "coverMedia" | "banner">;
     seller?: GuideSeller;
 };
 
@@ -280,7 +293,38 @@ export type GuideDetail = {
     hasPrivateAccess?: boolean;
     private?: {contacts?: GuideContact[]; notes?: string};
     owner?: GuideOwnerState;
+    /** The photo heading the page, chosen by the author (20261021170000). */
+    banner?: GuideMedia;
+    /** Photos the author uploaded: the place, trails, where to stay. */
+    uploads?: GuideMedia[];
 };
+
+/** Something a page can draw: a capture rendition or an uploaded photo. */
+export function guideMediaIsDrawable(media: GuideMedia | null | undefined) {
+    return Boolean(media && (media.imageUrl || media.captureId));
+}
+
+/** The banner, or the first shown photo when the author hasn't picked one. */
+export function guideHeroMedia(guide: Pick<GuideDetail, "banner" | "media">) {
+    if (guideMediaIsDrawable(guide.banner)) return guide.banner!;
+    return guide.media.find((item) => !item.hidden && guideMediaIsDrawable(item)) ?? null;
+}
+
+/** Every photo for the gallery: the hero first, then uploads, then capture photos. */
+export function guideGalleryMedia(guide: Pick<GuideDetail, "banner" | "media" | "uploads">) {
+    const all = [...(guide.uploads ?? []), ...guide.media].filter((item) => !item.hidden && guideMediaIsDrawable(item));
+    const hero = guideHeroMedia(guide);
+    if (!hero) return all;
+    return [hero, ...all.filter((item) => item.id !== hero.id)];
+}
+
+/** The month with the most sightings, as a short name. */
+export function guidePeakMonth(counts: number[] | null | undefined, locale = "en") {
+    if (!Array.isArray(counts) || counts.length !== 12) return null;
+    const peak = Math.max(...counts);
+    if (peak <= 0) return null;
+    return new Intl.DateTimeFormat(locale, {month: "short", timeZone: "UTC"}).format(new Date(Date.UTC(2026, counts.indexOf(peak), 1)));
+}
 
 /** Price steps the server accepts, in USD cents. Mirrors wildlife_guide_price_is_step. */
 export const GUIDE_PRICE_STEPS = [99, 199, 299, 499, 799, 999, 1499, 1999, 2999, 4999] as const;
@@ -595,6 +639,8 @@ function captureImageUrl(captureId: string, bucket: string, path: string) {
  * loops show their poster; nothing ever goes through next/image.
  */
 export function guideMediaSrc(media: GuideMedia | null | undefined, size: "thumb" | "card" | "hero" = "card") {
+    // Uploaded photos are already screened and public, at most 2048 px.
+    if (media?.imageUrl) return media.imageUrl;
     if (!media?.captureId) return null;
     const renditions: [string | undefined, string | undefined][] = size === "thumb"
         ? [[media.thumb320Bucket, media.thumb320Path], [media.card640Bucket, media.card640Path], [media.feed1200Bucket, media.feed1200Path]]

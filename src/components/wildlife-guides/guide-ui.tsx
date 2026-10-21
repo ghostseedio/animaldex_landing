@@ -98,9 +98,9 @@ export function GuidePhoto({media, size = "card", alt = "", className = ""}: {me
     return <img src={src} alt={alt} loading="lazy" decoding="async" className={`block object-cover ${className}`} />;
 }
 
-/** iOS `WildlifeGuideCoverThumbnail`: up to four photos tiled into one square. */
-export function GuideCoverTiles({media, size = 76}: {media?: GuideMedia[]; size?: number}) {
-    const items = (media ?? []).filter((item) => item?.captureId).slice(0, 4);
+/** iOS `WildlifeGuideCoverThumbnail`: the author's banner, or up to four photos tiled into one square. */
+export function GuideCoverTiles({media, banner, size = 76}: {media?: GuideMedia[]; banner?: GuideMedia; size?: number}) {
+    const items = banner?.imageUrl || banner?.captureId ? [banner] : (media ?? []).filter((item) => item?.captureId).slice(0, 4);
     const style = {width: size, height: size};
     if (items.length === 0) {
         return (
@@ -117,30 +117,32 @@ export function GuideCoverTiles({media, size = 76}: {media?: GuideMedia[]; size?
             <span style={style} className="grid shrink-0 grid-cols-2 gap-px overflow-hidden bg-white/10" aria-hidden="true">
                 <GuidePhoto media={items[0]} size="thumb" className="h-full w-full" />
                 <span className="grid gap-px" style={{gridTemplateRows: `repeat(${items.length - 1}, minmax(0, 1fr))`}}>
-                    {items.slice(1).map((item, index) => <GuidePhoto key={`${item.captureId}-${index}`} media={item} size="thumb" className="h-full w-full" />)}
+                    {items.slice(1).map((item, index) => <GuidePhoto key={`${item.id ?? item.captureId}-${index}`} media={item} size="thumb" className="h-full w-full" />)}
                 </span>
             </span>
         );
     }
     return (
         <span style={style} className="grid shrink-0 grid-cols-2 grid-rows-2 gap-px overflow-hidden bg-white/10" aria-hidden="true">
-            {items.map((item, index) => <GuidePhoto key={`${item.captureId}-${index}`} media={item} size="thumb" className="h-full w-full" />)}
+            {items.map((item, index) => <GuidePhoto key={`${item.id ?? item.captureId}-${index}`} media={item} size="thumb" className="h-full w-full" />)}
         </span>
     );
 }
 
 /** iOS `guideRow`: cover tiles, title, place, species line, status and price. */
-export function GuideRow({card, href, status, locale = "en", speciesLine}: {
+export function GuideRow({card, href, status, locale = "en", speciesLine, trailingSpace = false}: {
     card: GuideCard;
     href: string;
     status?: {label: string; tone: GuideStatusTone} | null;
     locale?: string;
     /** Translated "N species · N rare"; English by default. */
     speciesLine?: string;
+    /** Room on the right for the owner's options button. */
+    trailingSpace?: boolean;
 }) {
     return (
-        <Link href={href} className={`${GUIDE_BAND} flex items-start gap-3.5 px-[18px] py-3.5 transition hover:bg-[#262626]`}>
-            <GuideCoverTiles media={card.coverMedia} />
+        <Link href={href} className={`${GUIDE_BAND} flex items-start gap-3.5 py-3.5 pl-[18px] transition hover:bg-[#262626] ${trailingSpace ? "pr-12" : "pr-[18px]"}`}>
+            <GuideCoverTiles media={card.coverMedia} banner={card.banner} />
             <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 block text-sm font-semibold text-white">{card.title}</span>
                 <span className="mt-1 block truncate text-xs text-white/60">{card.areaLabel}</span>

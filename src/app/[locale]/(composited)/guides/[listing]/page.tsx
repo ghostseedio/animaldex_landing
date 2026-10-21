@@ -6,6 +6,7 @@ import {getPublicWildlifeGuide} from "@/data/virtual-wildlife-guides";
 import {earnBreadcrumbList} from "@/lib/earn-page-metadata";
 import {getAbsoluteUrl, getSiteUrl} from "@/lib/site";
 import {
+    guideHeroMedia,
     guideMediaSrc,
     guidePath,
     guideSeo,
@@ -24,12 +25,8 @@ async function resolve(params: Props["params"]) {
     return getPublicWildlifeGuide(route.listingId);
 }
 
-function visibleMedia(guide: GuideDetailData) {
-    return guide.media.filter((media) => !media.hidden && media.captureId);
-}
-
 function shareImage(guide: GuideDetailData) {
-    const src = guideMediaSrc(visibleMedia(guide)[0], "hero");
+    const src = guideMediaSrc(guideHeroMedia(guide), "hero");
     return src ? new URL(src, getSiteUrl()).toString() : null;
 }
 

@@ -21,6 +21,8 @@ import {
     buildGuidePatch,
     formatGuidePrice,
     guideFormFrom,
+    guideGalleryMedia,
+    guideHeroMedia,
     guidePath,
     guideSalesLine,
     guideStatsLine,
@@ -35,8 +37,9 @@ import {
 /**
  * Editing a guide AnimalDex built (iOS WildlifeGuideEditorView). Text, price,
  * sharing, contacts and notes are saved together, sending only what changed;
- * hiding an animal or a photo, and an animal's note, save straight away.
- * Anything the author writes is never overwritten by the generator again.
+ * the banner, uploaded photos, hiding an animal or a photo, and an animal's
+ * note save straight away. Anything the author writes is never overwritten
+ * by the generator again.
  */
 
 type ContactRow = GuideContact & {key: string};
@@ -55,6 +58,26 @@ async function patchGuide(id: string, body: Record<string, unknown>): Promise<Gu
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.guide) throw new Error(payload.error || "Could not save the guide.");
     return payload.guide as GuideDetail;
+}
+
+/** A picked photo as the JPEG the upload function takes: at most 2048 px, base64. */
+async function preparedJpeg(file: File): Promise<string> {
+    const bitmap = await createImageBitmap(file, {imageOrientation: "from-image"} as unknown as ImageBitmapOptions).catch(() => null);
+    if (!bitmap) throw new Error("Could not load that photo.");
+    const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not load that photo.");
+    context.fillStyle = "#000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.82, 0.7, 0.55]) {
+        const data = canvas.toDataURL("image/jpeg", quality).split(",")[1] ?? "";
+        if (data.length * 0.75 < 3_500_000) return data;
+    }
+    throw new Error("That photo is too large. Try a smaller one.");
 }
 
 function ownerStatusText(guide: GuideDetail) {
@@ -82,6 +105,11 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
     const [deleting, setDeleting] = useState(false);
     const [askOpen, setAskOpen] = useState(false);
     const [resuming, setResuming] = useState(false);
+    const [uploadsInFlight, setUploadsInFlight] = useState(0);
+    const [choosingBanner, setChoosingBanner] = useState(false);
+    const uploads = guide.uploads ?? [];
+    const maxUploads = guide.owner?.maxUploads ?? 20;
+    const hero = guideHeroMedia(guide);
 
     const currentForm = useMemo<GuideForm>(() => ({...form, contacts: contacts.map(({name, role, contact, note}) => ({name, role, contact, note}))}), [form, contacts]);
     const problem = guideValidationProblem(currentForm);
@@ -183,6 +211,56 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
         }
     }
 
+    /** Each photo is checked on the server before it is kept; refusals are gathered into one message. */
+    async function upload(files: File[], asBanner: boolean) {
+        if (files.length === 0) return;
+        setUploadsInFlight(files.length);
+        setMessage(null);
+        const refusals: string[] = [];
+        for (const file of files) {
+            try {
+                const image = await preparedJpeg(file);
+                const response = await fetch(`/api/app/wildlife-guides/${encodeURIComponent(guide.id)}/photos`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({image, asBanner})
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || "The photo didn't upload. Try again.");
+                if (payload.removed) refusals.push(payload.message || "This photo can't be used on a public guide. Pick another one.");
+                else if (payload.guide) setGuide(payload.guide as GuideDetail);
+            } catch (caught) {
+                refusals.push(caught instanceof Error ? caught.message : "The photo didn't upload. Try again.");
+                break;
+            } finally {
+                setUploadsInFlight((count) => Math.max(0, count - 1));
+            }
+        }
+        setUploadsInFlight(0);
+        if (refusals.length > 0) setMessage({tone: "error", text: Array.from(new Set(refusals)).join(" ")});
+        router.refresh();
+    }
+
+    async function removeUpload(media: GuideMedia) {
+        if (!media.id) return;
+        setBusyItem(media.id);
+        setMessage(null);
+        try {
+            const response = await fetch(`/api/app/wildlife-guides/${encodeURIComponent(guide.id)}/photos`, {
+                method: "DELETE",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({mediaId: media.id})
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.guide) throw new Error(payload.error || "Could not remove the photo.");
+            setGuide(payload.guide as GuideDetail);
+        } catch (caught) {
+            setMessage({tone: "error", text: caught instanceof Error ? caught.message : "Could not remove the photo."});
+        } finally {
+            setBusyItem(null);
+        }
+    }
+
     async function deleteGuide() {
         setDeleting(true);
         setMessage(null);
@@ -258,6 +336,117 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 <GuideAgentPanel guideTitle={guide.title} onChange={() => void reloadFromServer()} onClose={() => setAskOpen(false)} />
             ) : null}
 
+            <GuideBandHeader title="Name" />
+            <TextField label="Guide name" value={form.title} onChange={(value) => set("title", value)} limits={GUIDE_FIELD_LIMITS.title} />
+            <p className={`${GUIDE_BAND} -mt-px px-[18px] pb-3 text-xs leading-5 text-white/55`}>
+                Buyers see the name first, and Ask AnimalDex uses it to know which guide you mean. Say what makes this place worth the trip.
+            </p>
+
+            <GuideBandHeader title="Banner" />
+            <div className={`${GUIDE_BAND} px-[18px] py-3.5`}>
+                <div className="relative h-48 overflow-hidden rounded-lg bg-[#2A2A2A] md:h-64">
+                    {hero ? <GuidePhoto media={hero} size="hero" alt="Banner" className="h-full w-full" /> : null}
+                    {!guide.banner ? (
+                        <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">Using your first photo</span>
+                    ) : null}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                    <label className={`cursor-pointer rounded-full px-4 py-2 text-xs font-extrabold text-black transition hover:opacity-90 ${uploadsInFlight > 0 || uploads.length >= maxUploads ? "pointer-events-none opacity-50" : ""}`} style={{backgroundColor: GUIDE_NEON}}>
+                        Upload banner
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/heic"
+                            className="sr-only"
+                            onChange={(event) => {
+                                const files = Array.from(event.target.files ?? []).slice(0, 1);
+                                event.target.value = "";
+                                void upload(files, true);
+                            }}
+                        />
+                    </label>
+                    <button
+                        type="button"
+                        disabled={guideGalleryMedia(guide).length === 0}
+                        onClick={() => setChoosingBanner((value) => !value)}
+                        className="rounded-full border border-white/20 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-white/[0.06] disabled:opacity-50"
+                    >
+                        Choose a photo
+                    </button>
+                    {guide.banner ? (
+                        <button type="button" onClick={() => void saveNow("banner", {bannerMediaId: null})} className="px-2 py-2 text-xs font-semibold text-white/60 hover:text-white">
+                            Use first photo
+                        </button>
+                    ) : null}
+                </div>
+                {choosingBanner ? (
+                    <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-4">
+                        {guideGalleryMedia(guide).map((media, index) => (
+                            <button
+                                key={media.id ?? index}
+                                type="button"
+                                disabled={!media.id || busyItem === "banner"}
+                                onClick={async () => {
+                                    if (await saveNow("banner", {bannerMediaId: media.id})) setChoosingBanner(false);
+                                }}
+                                className="relative aspect-[4/3] overflow-hidden bg-[#2A2A2A] disabled:opacity-50"
+                                aria-label={`Use photo ${index + 1} as the banner`}
+                            >
+                                <GuidePhoto media={media} size="thumb" className="h-full w-full" />
+                                {media.id === hero?.id ? <span className="absolute right-1 top-1 rounded-full px-1.5 text-[10px] font-extrabold text-black" style={{backgroundColor: GUIDE_NEON}}>✓</span> : null}
+                            </button>
+                        ))}
+                    </div>
+                ) : null}
+                <p className="mt-2 text-xs leading-5 text-white/55">The big photo at the top of your guide and on its card. A wide photo of the place works best.</p>
+            </div>
+
+            <GuideBandHeader title="Your photos" trailing={<span className="text-[11px] text-white/40">{uploads.length}/{maxUploads}</span>} />
+            <div className={`${GUIDE_BAND} px-[18px] py-3.5`}>
+                <p className="text-xs leading-5 text-white/60">
+                    Show buyers the place: trails, viewpoints, the boat, where you stayed. Each photo is checked automatically; photos with contact details or close-ups of people can&rsquo;t be used.
+                </p>
+                {uploads.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+                        {uploads.map((media) => (
+                            <div key={media.id} className={`relative aspect-square overflow-hidden rounded-md bg-[#2A2A2A] ${media.hidden ? "opacity-40" : ""}`}>
+                                <GuidePhoto media={media} size="thumb" className="h-full w-full" />
+                                <button
+                                    type="button"
+                                    disabled={busyItem === media.id}
+                                    onClick={() => {
+                                        if (window.confirm("Remove this photo?")) void removeUpload(media);
+                                    }}
+                                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-black/65 text-white"
+                                    aria-label="Remove photo"
+                                >
+                                    ×
+                                </button>
+                                {media.id === guide.banner?.id ? (
+                                    <span className="absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold text-black" style={{backgroundColor: GUIDE_NEON}}>Banner</span>
+                                ) : null}
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
+                <div className="mt-3 flex items-center gap-3">
+                    <label className={`cursor-pointer text-sm font-semibold hover:underline ${uploadsInFlight > 0 || uploads.length >= maxUploads ? "pointer-events-none opacity-50" : ""}`} style={{color: GUIDE_NEON}}>
+                        + Add photos
+                        <input
+                            type="file"
+                            multiple
+                            accept="image/jpeg,image/png,image/webp,image/heic"
+                            className="sr-only"
+                            onChange={(event) => {
+                                const files = Array.from(event.target.files ?? []).slice(0, Math.max(0, Math.min(5, maxUploads - uploads.length)));
+                                event.target.value = "";
+                                void upload(files, false);
+                            }}
+                        />
+                    </label>
+                    {uploadsInFlight > 0 ? <span className="text-xs text-white/55">Checking photos…</span> : null}
+                </div>
+            </div>
+
             <GuideBandHeader title="Sharing" />
             <label className={`${GUIDE_BAND} flex cursor-pointer items-center gap-3 px-[18px] py-3.5`}>
                 <span className="min-w-0 flex-1">
@@ -297,7 +486,6 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
             </div>
 
             <GuideBandHeader title="Public page" />
-            <TextField label="Title" value={form.title} onChange={(value) => set("title", value)} limits={GUIDE_FIELD_LIMITS.title} />
             <TextField label="Place" value={form.areaLabel} onChange={(value) => set("areaLabel", value)} limits={GUIDE_FIELD_LIMITS.areaLabel} />
             <TextField label="Search summary" value={form.summary} onChange={(value) => set("summary", value)} limits={GUIDE_FIELD_LIMITS.summary} rows={3} />
             <TextField label="About this place" value={form.overview} onChange={(value) => set("overview", value)} limits={GUIDE_FIELD_LIMITS.overview} rows={9} />
@@ -320,7 +508,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 />
             ))}
 
-            <GuideBandHeader title="Photos and videos" trailing={<span className="text-[11px] text-white/40">Tap to hide or show</span>} />
+            <GuideBandHeader title="Photos from your captures" trailing={<span className="text-[11px] text-white/40">Tap to hide or show</span>} />
             {guide.media.length > 0 ? (
                 <div className={`${GUIDE_BAND} grid grid-cols-3 gap-px bg-white/10 sm:grid-cols-4 md:grid-cols-5`}>
                     {guide.media.map((media, index) => (
