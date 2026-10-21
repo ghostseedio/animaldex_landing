@@ -188,6 +188,8 @@ export type GuideOwnerState = {
     bannerMediaId?: string;
     /** How many photos the author can upload to one guide. */
     maxUploads?: number;
+    /** The longest promo video, in seconds. */
+    promoMaxSeconds?: number;
 };
 
 /** The viewer's own purchase of a guide (migration 20261020100000). */
@@ -297,7 +299,11 @@ export type GuideDetail = {
     banner?: GuideMedia;
     /** Photos the author uploaded: the place, trails, where to stay. */
     uploads?: GuideMedia[];
+    /** The author's showcase video (20261021190000): public, already screened. */
+    promoVideo?: GuidePromoVideo;
 };
+
+export type GuidePromoVideo = {url: string; posterUrl?: string; mimeType?: string; durationMs?: number; width?: number; height?: number};
 
 /** Something a page can draw: a capture rendition or an uploaded photo. */
 export function guideMediaIsDrawable(media: GuideMedia | null | undefined) {
@@ -423,9 +429,10 @@ export const GUIDE_DISCLAIMER =
     "This is a virtual guide: advice from someone who has been there, not a tour. The author is not with you. Wildlife is never guaranteed. Any local guide or operator the author introduces is independent of AnimalDex; agree terms with them directly. Respect wildlife and local rules.";
 
 export const GUIDE_INCLUDED = [
-    "The author's notes for every animal: where, when and how they found it",
-    "A direct chat with the author to ask anything",
-    "Introductions to local people the author met, where they can help"
+    "Introductions to the local guides and operators the author used",
+    "Real prices, where to stay, and where to look for each animal",
+    "A 1:1 chat with the author for personal advice",
+    "The author's notes for every animal: where, when and how they found it"
 ] as const;
 
 /* ------------------------------------------------------------------ *

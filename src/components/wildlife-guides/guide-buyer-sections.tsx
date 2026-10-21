@@ -165,7 +165,7 @@ export default function GuideBuyerSections({initial, locale = "en", viewerLoaded
                     {GUIDE_INCLUDED.map((line, index) => (
                         <li key={line} className="flex items-start gap-3 text-sm leading-6 text-white">
                             <span className="mt-0.5 shrink-0" style={{color: GUIDE_NEON}}>
-                                <GuideGlyph name={(["note", "chat", "people"] as const)[index]} className="h-5 w-5" />
+                                <GuideGlyph name={(["people", "pin", "chat", "note"] as const)[index]} className="h-5 w-5" />
                             </span>
                             {line}
                         </li>
@@ -228,7 +228,7 @@ function StickyBuyBar({guide, locale}: {guide: GuideDetail; locale: string}) {
                 </a>
                 <span className="min-w-0 flex-1">
                     <span className="block truncate font-display text-base font-extrabold text-white sm:text-lg">{guide.creditsPrice ? `${dollars} or ${guide.creditsPrice} Credits` : dollars}</span>
-                    <span className="block truncate text-[11px] text-white/50">Notes for every animal · chat with the author · 7-day refund</span>
+                    <span className="block truncate text-[11px] text-white/50">Local guide referrals · real prices · 1:1 chat · 7-day refund</span>
                 </span>
             </div>
         </div>

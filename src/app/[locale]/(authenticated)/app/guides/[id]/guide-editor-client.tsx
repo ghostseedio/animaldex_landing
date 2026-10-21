@@ -61,6 +61,38 @@ async function patchGuide(id: string, body: Record<string, unknown>): Promise<Gu
 }
 
 /** A picked photo as the JPEG the upload function takes: at most 2048 px, base64. */
+/** The video's length and a cover frame (JPEG base64, at most 1280 px), read in the browser. */
+async function videoDetails(file: File): Promise<{durationSeconds: number; poster: string}> {
+    const url = URL.createObjectURL(file);
+    try {
+        const video = document.createElement("video");
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.src = url;
+        await new Promise<void>((resolve, reject) => {
+            video.onloadedmetadata = () => resolve();
+            video.onerror = () => reject(new Error("That video can't be read. Use an MP4 or MOV file."));
+        });
+        const durationSeconds = video.duration;
+        video.currentTime = Math.min(1, durationSeconds / 2);
+        await new Promise<void>((resolve, reject) => {
+            video.onseeked = () => resolve();
+            video.onerror = () => reject(new Error("That video can't be read. Use an MP4 or MOV file."));
+        });
+        const scale = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+        canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const poster = canvas.toDataURL("image/jpeg", 0.82).split(",")[1] ?? "";
+        if (!poster) throw new Error("That video can't be read. Use an MP4 or MOV file.");
+        return {durationSeconds, poster};
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+}
+
 async function preparedJpeg(file: File): Promise<string> {
     const bitmap = await createImageBitmap(file, {imageOrientation: "from-image"} as unknown as ImageBitmapOptions).catch(() => null);
     if (!bitmap) throw new Error("Could not load that photo.");
@@ -110,6 +142,8 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
     const uploads = guide.uploads ?? [];
     const maxUploads = guide.owner?.maxUploads ?? 20;
     const hero = guideHeroMedia(guide);
+    const [videoStep, setVideoStep] = useState<string | null>(null);
+    const promoMaxSeconds = guide.owner?.promoMaxSeconds ?? 60;
 
     const currentForm = useMemo<GuideForm>(() => ({...form, contacts: contacts.map(({name, role, contact, note}) => ({name, role, contact, note}))}), [form, contacts]);
     const problem = guideValidationProblem(currentForm);
@@ -239,6 +273,64 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
         setUploadsInFlight(0);
         if (refusals.length > 0) setMessage({tone: "error", text: Array.from(new Set(refusals)).join(" ")});
         router.refresh();
+    }
+
+    /**
+     * The browser cannot re-encode, so the file goes up as it is: the server
+     * refuses one that still carries where it was filmed.
+     */
+    async function uploadPromoVideo(file: File) {
+        setMessage(null);
+        if (file.size > 50 * 1024 * 1024) {
+            setMessage({tone: "error", text: "That video is too large. Pick one under 50 MB."});
+            return;
+        }
+        setVideoStep("Preparing the video…");
+        try {
+            const {durationSeconds, poster} = await videoDetails(file);
+            if (durationSeconds > promoMaxSeconds + 1) throw new Error(`Promo videos can be up to ${promoMaxSeconds} seconds. Pick a shorter one.`);
+            const endpoint = `/api/app/wildlife-guides/${encodeURIComponent(guide.id)}/video`;
+            const started = await fetch(endpoint, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({step: "start"})});
+            const slot = await started.json().catch(() => ({}));
+            if (!started.ok || !slot.uploadUrl || !slot.uploadId) throw new Error(slot.error || "The video didn't upload. Try again.");
+            setVideoStep("Uploading the video…");
+            const put = await fetch(slot.uploadUrl, {
+                method: "PUT",
+                headers: {"Content-Type": file.type === "video/quicktime" ? "video/quicktime" : "video/mp4"},
+                body: file
+            });
+            if (!put.ok) throw new Error("The video didn't upload. Try again.");
+            setVideoStep("Checking the video…");
+            const finished = await fetch(endpoint, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({step: "finish", uploadId: slot.uploadId, poster})
+            });
+            const payload = await finished.json().catch(() => ({}));
+            if (!finished.ok) throw new Error(payload.error || "The video didn't upload. Try again.");
+            if (payload.removed) setMessage({tone: "error", text: payload.message || "This video can't be used on a public guide. Pick another one."});
+            else if (payload.guide) setGuide(payload.guide as GuideDetail);
+            router.refresh();
+        } catch (caught) {
+            setMessage({tone: "error", text: caught instanceof Error ? caught.message : "The video didn't upload. Try again."});
+        } finally {
+            setVideoStep(null);
+        }
+    }
+
+    async function removePromoVideo() {
+        if (!window.confirm("Remove the promo video?")) return;
+        setVideoStep("Removing…");
+        try {
+            const response = await fetch(`/api/app/wildlife-guides/${encodeURIComponent(guide.id)}/video`, {method: "DELETE"});
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.guide) throw new Error(payload.error || "Could not remove the video.");
+            setGuide(payload.guide as GuideDetail);
+        } catch (caught) {
+            setMessage({tone: "error", text: caught instanceof Error ? caught.message : "Could not remove the video."});
+        } finally {
+            setVideoStep(null);
+        }
     }
 
     async function removeUpload(media: GuideMedia) {
@@ -400,6 +492,49 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 <p className="mt-2 text-xs leading-5 text-white/55">The big photo at the top of your guide and on its card. A wide photo of the place works best.</p>
             </div>
 
+            <GuideBandHeader title="Promo video" />
+            <div className={`${GUIDE_BAND} px-[18px] py-3.5`}>
+                {guide.promoVideo ? (
+                    <video
+                        src={guide.promoVideo.url}
+                        poster={guide.promoVideo.posterUrl}
+                        controls
+                        playsInline
+                        preload="none"
+                        className="mb-3 block max-h-80 w-full rounded-lg bg-black"
+                    />
+                ) : null}
+                <p className="text-xs leading-5 text-white/60">
+                    A short showcase of the place, up to {promoMaxSeconds} seconds, shown near the top of your guide. Guides with a video sell better. It&rsquo;s checked automatically, sound included; no contact details or close-ups of people. Videos that still have their filming location saved are refused, so upload from the AnimalDex app or export without location.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                    {videoStep ? (
+                        <span className="text-xs text-white/60">{videoStep}</span>
+                    ) : (
+                        <>
+                            <label className="cursor-pointer rounded-full px-4 py-2 text-xs font-extrabold text-black transition hover:opacity-90" style={{backgroundColor: GUIDE_NEON}}>
+                                {guide.promoVideo ? "Replace video" : "Add a video"}
+                                <input
+                                    type="file"
+                                    accept="video/mp4,video/quicktime"
+                                    className="sr-only"
+                                    onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        event.target.value = "";
+                                        if (file) void uploadPromoVideo(file);
+                                    }}
+                                />
+                            </label>
+                            {guide.promoVideo ? (
+                                <button type="button" onClick={() => void removePromoVideo()} className="rounded-full border border-white/20 px-4 py-2 text-xs font-extrabold text-white hover:bg-white/[0.06]">
+                                    Remove
+                                </button>
+                            ) : null}
+                        </>
+                    )}
+                </div>
+            </div>
+
             <GuideBandHeader title="Your photos" trailing={<span className="text-[11px] text-white/40">{uploads.length}/{maxUploads}</span>} />
             <div className={`${GUIDE_BAND} px-[18px] py-3.5`}>
                 <p className="text-xs leading-5 text-white/60">
@@ -527,7 +662,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
             <GuideBandHeader title="For buyers only" />
             <div className={`${GUIDE_BAND} px-[18px] py-3.5`}>
                 <p className="text-xs leading-5 text-white/60">
-                    People you met who could help a buyer: a boat captain, a ranger, a guesthouse. Only add someone who is happy to be contacted.
+                    Local guides and operators you used, with what they charge: a boat captain, a ranger, a guesthouse. Buyers pay for these introductions, so add the people you&rsquo;d recommend. Only add someone who is happy to be contacted.
                 </p>
             </div>
             {contacts.map((contact, index) => (
@@ -555,7 +690,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                             Remove
                         </button>
                     </div>
-                    {([["role", "Role, e.g. boat captain"], ["contact", "How to reach them"], ["note", "Note"]] as const).map(([key, placeholder]) => (
+                    {([["role", "Role, e.g. boat captain"], ["contact", "How to reach them"], ["note", "Price and tips, e.g. $40 for a half-day boat"]] as const).map(([key, placeholder]) => (
                         <input
                             key={key}
                             aria-label={`Contact ${index + 1} ${key === "contact" ? "how to reach them" : key}`}
@@ -590,7 +725,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 onChange={(value) => set("privateNotes", value)}
                 limits={GUIDE_FIELD_LIMITS.privateNotes}
                 rows={5}
-                placeholder="Getting there, best spots to start, what to bring"
+                placeholder="Prices you paid, where you stayed, getting there, best spots to start"
             />
 
             <GuideBandHeader title="Delete" />

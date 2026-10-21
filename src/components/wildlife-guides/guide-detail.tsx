@@ -5,7 +5,6 @@ import {
     guideAuthorName,
     guideGalleryMedia,
     guideHeroMedia,
-    guideMonthRange,
     guidePeakMonth,
     type GuideDetail as GuideDetailData
 } from "@/lib/virtual-wildlife-guides";
@@ -23,12 +22,12 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
     const strip = photos.slice(1);
     const animals = guide.species.filter((animal) => !animal.hidden);
     const username = guide.seller?.username?.replace(/^@/, "");
+    const author = guide.seller ? (username ? `@${username}` : guideAuthorName(guide.seller)) : "the author";
     const months = guide.stats?.monthCounts;
     const hasMonths = Array.isArray(months) && months.length === 12 && months.some((count) => count > 0);
     const peak = guidePeakMonth(months, locale);
     const days = guide.stats?.visitDayCount ?? 0;
-    const range = guideMonthRange(guide.stats?.firstVisitMonth, guide.stats?.lastVisitMonth);
-    const highlights = [
+        const highlights = [
         {value: String(guide.speciesCount), label: "species"},
         guide.rareSpeciesCount > 0 ? {value: String(guide.rareSpeciesCount), label: "rare"} : null,
         peak ? {value: peak, label: "best month"} : null,
@@ -37,7 +36,7 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
 
     return (
         <article className="mx-auto w-full max-w-3xl bg-[#121212] pb-28 text-white">
-            <header className="relative h-[420px] w-full overflow-hidden bg-[#1F1F1F] md:h-[480px]">
+            <header className="relative h-[340px] w-full overflow-hidden bg-[#1F1F1F] md:h-[420px]">
                 {hero ? (
                     <GuidePhoto media={hero} size="hero" alt={`Wildlife at ${guide.areaLabel}`} className="absolute inset-0 h-full w-full" />
                 ) : (
@@ -60,6 +59,31 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
                 </div>
             </header>
 
+            {/* What buying gets you, before any long text. */}
+            <div className={`${GUIDE_BAND} grid gap-4 px-[18px] py-5`}>
+                {[
+                    {glyph: "people" as const, title: "Local guide referrals", detail: `Introductions to the local guides and operators ${author} used, so you can book them directly.`},
+                    {glyph: "pin" as const, title: "Real prices and places", detail: "What things actually cost, where to stay, and where to look for each animal."},
+                    {glyph: "chat" as const, title: `1:1 chat with ${author}`, detail: "Personal advice before and during your trip. No reply within 48 hours and you get your money back."}
+                ].map((item) => (
+                    <div key={item.glyph} className="flex items-start gap-3.5">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full" style={{backgroundColor: `${GUIDE_NEON}24`, color: GUIDE_NEON}}>
+                            {item.glyph === "chat" && guide.seller?.avatarUrl ? (
+                                <img src={guide.seller.avatarUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            ) : <GuideGlyph name={item.glyph} className="h-5 w-5" />}
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block text-[15px] font-bold text-white">
+                                {item.glyph === "chat" && username ? (
+                                    <>1:1 chat with <Link href={`/u/${encodeURIComponent(username)}`} className="hover:underline" style={{color: GUIDE_NEON}}>@{username}</Link></>
+                                ) : item.title}
+                            </span>
+                            <span className="mt-0.5 block text-[13px] leading-5 text-white/60">{item.detail}</span>
+                        </span>
+                    </div>
+                ))}
+            </div>
+
             <div className={`${GUIDE_BAND} grid px-2 py-3.5`} style={{gridTemplateColumns: `repeat(${highlights.length}, minmax(0, 1fr))`}}>
                 {highlights.map((item, index) => (
                     <div key={item.label} className={`text-center ${index > 0 ? "border-l border-white/10" : ""}`}>
@@ -69,27 +93,22 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
                 ))}
             </div>
 
-            <div className={`${GUIDE_BAND} px-[18px] py-4`}>
-                {guide.seller ? (
-                    <div className="flex items-center gap-2.5">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#2A2A2A] text-sm font-bold text-white/60">
-                            {guide.seller.avatarUrl ? (
-                                <img src={guide.seller.avatarUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (guide.seller.displayName || guide.seller.username || "?").slice(0, 1).toUpperCase()}
-                        </span>
-                        <span className="min-w-0">
-                            <span className="block text-sm font-semibold text-white">
-                                By{" "}
-                                {username ? (
-                                    <Link href={`/u/${encodeURIComponent(username)}`} className="hover:underline" style={{color: GUIDE_NEON}}>@{username}</Link>
-                                ) : guideAuthorName(guide.seller)}
-                            </span>
-                            <span className="block text-xs text-white/55">From their own sightings{range ? `, ${range}` : ""}</span>
-                        </span>
+            {guide.promoVideo ? (
+                <>
+                    <GuideBandHeader title="Watch the guide" />
+                    <div className="w-full border-b border-white/10 bg-black">
+                        <video
+                            src={guide.promoVideo.url}
+                            poster={guide.promoVideo.posterUrl}
+                            controls
+                            playsInline
+                            preload="none"
+                            className="mx-auto block max-h-[70vh] w-full"
+                            style={{aspectRatio: guide.promoVideo.width && guide.promoVideo.height ? `${guide.promoVideo.width} / ${guide.promoVideo.height}` : "16 / 9"}}
+                        />
                     </div>
-                ) : null}
-                {guide.summary ? <p className="mt-3 text-[15px] leading-7 text-white/90">{guide.summary}</p> : null}
-            </div>
+                </>
+            ) : null}
 
             {animals.length > 0 ? (
                 <>
@@ -149,7 +168,14 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
             {guide.overview ? (
                 <>
                     <GuideBandHeader title="About this place" />
-                    <div className={`${GUIDE_BAND} whitespace-pre-line px-[18px] py-4 text-[15px] leading-7 text-white/90`}>{guide.overview}</div>
+                    {/* Folded, but whole in the page for search engines. */}
+                    <details className={`${GUIDE_BAND} group px-[18px] py-4`}>
+                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                            <span className="line-clamp-4 whitespace-pre-line text-[15px] leading-7 text-white/90 group-open:hidden">{guide.overview}</span>
+                            <span className="mt-2 inline-block text-xs font-semibold group-open:hidden" style={{color: GUIDE_NEON}}>Read more</span>
+                        </summary>
+                        <div className="whitespace-pre-line text-[15px] leading-7 text-white/90">{guide.overview}</div>
+                    </details>
                 </>
             ) : null}
 
