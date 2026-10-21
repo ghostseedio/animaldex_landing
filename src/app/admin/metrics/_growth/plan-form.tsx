@@ -10,6 +10,7 @@ import {
 import {
   type GrowthPlan,
 } from "./types";
+import { errorFromBody, readJsonBody } from "@/lib/admin-fetch-json";
 import {
   growthMeta,
   defaultJobs,
@@ -109,9 +110,9 @@ export function PlanForm({
           weeklyActionPlans,
         }),
       });
-      const body = await response.json();
+      const body = await readJsonBody(response);
       if (!response.ok || !body.ok)
-        throw new Error(body.error || "Unable to save targets");
+        throw new Error(errorFromBody(body, "Unable to save targets"));
       await onSaved();
       onCancel?.();
     } catch (caught) {

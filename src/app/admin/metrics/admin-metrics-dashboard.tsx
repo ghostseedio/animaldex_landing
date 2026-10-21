@@ -57,6 +57,7 @@ import {
 } from "@/lib/growth-attribution";
 import { convertAmount, displayCurrencies, fxDate, fxKey, isDisplayCurrency, type DisplayCurrency, type FxRates } from "@/lib/fx-convert";
 import { format, GrowthCommandCenter, type GrowthData } from "./growth-plan-panel";
+import { errorFromBody, fetchJson } from "@/lib/admin-fetch-json";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -918,14 +919,13 @@ export default function AdminMetricsDashboard() {
   }
 
   const loadGrowth = useCallback(async (month: string) => {
-    const response = await fetch(`/api/admin/growth?month=${month}`, { cache: "no-store" });
+    const { response, body } = await fetchJson(`/api/admin/growth?month=${month}`, { cache: "no-store" });
     if (response.status === 401) {
       setAuthorized(false);
       return;
     }
-    const body = await response.json();
-    if (response.ok && body.ok) setGrowth(body);
-    else throw new Error(body.error || "Unable to load growth data");
+    if (response.ok && body.ok) setGrowth(body as unknown as Growth);
+    else throw new Error(errorFromBody(body, "Unable to load growth data"));
   }, []);
 
   const load = useCallback(
@@ -934,15 +934,14 @@ export default function AdminMetricsDashboard() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/admin/metrics?month=${month}`, { cache: "no-store" });
+        const { response, body } = await fetchJson(`/api/admin/metrics?month=${month}`, { cache: "no-store" });
         if (response.status === 401) {
           setAuthorized(false);
           return;
         }
-        const body = await response.json();
-        if (!response.ok || !body.ok) throw new Error(body.error || "Unable to load metrics");
+        if (!response.ok || !body.ok) throw new Error(errorFromBody(body, "Unable to load metrics"));
         if (requestId !== loadRequestId.current) return;
-        setData(body);
+        setData(body as unknown as Metrics);
         setAuthorized(true);
         await loadGrowth(month);
       } catch (caught) {
@@ -957,9 +956,9 @@ export default function AdminMetricsDashboard() {
   const syncSocial = useCallback(async (force: boolean) => {
     if (force) setSocialSyncing(true);
     try {
-      const response = await fetch("/api/admin/social-metrics", { method: force ? "POST" : "GET", cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok || !body.ok) return;
+      const { response, body: raw } = await fetchJson("/api/admin/social-metrics", { method: force ? "POST" : "GET", cache: "no-store" });
+      if (!response.ok || !raw.ok) return;
+      const body = raw as { metrics?: SocialMetric[]; lastSyncedAt?: string | null; errors?: string[]; notes?: string[] };
       setSocial(body.metrics ?? []);
       setSocialSyncedAt(body.lastSyncedAt ?? null);
       if (force) setSocialSyncIssues([...(body.errors ?? []), ...(body.notes ?? [])]);
@@ -975,14 +974,13 @@ export default function AdminMetricsDashboard() {
 
   async function login(event: FormEvent) {
     event.preventDefault();
-    const response = await fetch("/api/admin/support/login", {
+    const { response, body } = await fetchJson("/api/admin/support/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
-    const body = await response.json();
     if (!response.ok || !body.ok) {
-      setError(body.error || "Unable to sign in");
+      setError(errorFromBody(body, "Unable to sign in"));
       return;
     }
     setPassword("");
