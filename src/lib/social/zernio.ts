@@ -129,3 +129,28 @@ export async function deleteZernioPost(postId: string) {
     await zernioFetch(`/posts/${encodeURIComponent(postId)}`, {method: "DELETE", timeoutMs: 30_000});
 }
 
+
+// ── Analytics ────────────────────────────────────────────────────────────────
+// Needs Zernio's Analytics add-on. Zernio covers the TikTok account only.
+
+/** TikTok views received each UTC day (any post), from GET /v1/analytics/dashboard. */
+export async function getTikTokDailyViews(fromDate: string, toDate: string): Promise<Record<string, number>> {
+    const params = new URLSearchParams({platform: "tiktok", fromDate, toDate, topPosts: "0", recentPosts: "0"});
+    const {body} = await zernioFetch(`/analytics/dashboard?${params}`, {timeoutMs: 30_000});
+    const views: Record<string, number> = {};
+    // Days before Zernio's first sync come back as zeros, not as missing.
+    for (const day of body?.daily ?? []) if (typeof day?.date === "string" && Number(day.views) > 0) views[day.date] = Number(day.views);
+    return views;
+}
+
+/** When each published TikTok video went live, including ones posted outside Zernio. */
+export async function listTikTokPublishTimes(fromDate: string, toDate: string): Promise<string[]> {
+    const times: string[] = [];
+    for (let page = 1; page <= 10; page++) {
+        const params = new URLSearchParams({platform: "tiktok", fromDate, toDate, limit: "100", page: String(page)});
+        const {body} = await zernioFetch(`/analytics?${params}`, {timeoutMs: 30_000});
+        for (const post of body?.posts ?? []) if (post?.status === "published" && typeof post.publishedAt === "string") times.push(post.publishedAt);
+        if (page >= Number(body?.pagination?.pages ?? 1)) break;
+    }
+    return times;
+}

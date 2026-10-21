@@ -74,7 +74,7 @@ export function buildAuthorizeUrl(platform: OAuthPlatform): OAuthStart {
             client_id: env.id,
             redirect_uri: redirectUri,
             response_type: "code",
-            scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly",
+            scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly",
             access_type: "offline",
             prompt: "consent",
             include_granted_scopes: "true",
@@ -86,7 +86,7 @@ export function buildAuthorizeUrl(platform: OAuthPlatform): OAuthStart {
             client_id: env.id,
             redirect_uri: redirectUri,
             response_type: "code",
-            scope: "instagram_business_basic,instagram_business_content_publish",
+            scope: "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights",
             state
         }).toString();
     } else if (platform === "facebook") {
@@ -95,7 +95,7 @@ export function buildAuthorizeUrl(platform: OAuthPlatform): OAuthStart {
             client_id: env.id,
             redirect_uri: redirectUri,
             response_type: "code",
-            scope: "pages_show_list,pages_read_engagement,pages_manage_posts",
+            scope: "pages_show_list,pages_read_engagement,pages_manage_posts,read_insights",
             state
         }).toString();
     } else {
@@ -177,7 +177,7 @@ export async function exchangeCode(platform: OAuthPlatform, code: string, verifi
         return {
             platform, accountId: String(me.user_id ?? me.id ?? ""), accountName: me.username ?? null,
             accessToken: long.access_token, refreshToken: null,
-            expiresAt: expiresIn(long.expires_in), scopes: "instagram_business_basic,instagram_business_content_publish"
+            expiresAt: expiresIn(long.expires_in), scopes: "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights"
         };
     }
 
@@ -198,7 +198,7 @@ export async function exchangeCode(platform: OAuthPlatform, code: string, verifi
         return {
             platform, accountId: page.id, accountName: page.name ?? null,
             accessToken: page.access_token, refreshToken: null,
-            expiresAt: null, scopes: "pages_show_list,pages_read_engagement,pages_manage_posts"
+            expiresAt: null, scopes: "pages_show_list,pages_read_engagement,pages_manage_posts,read_insights"
         };
     }
 

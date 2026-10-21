@@ -43,9 +43,11 @@ import {
   progressFillClass,
   percentOf,
   rollingRequiredPerDay,
+  knownMarketing,
 } from "./_growth/format";
 import {
   MetricProgress,
+  MarketingCell,
   GrowthVelocityChart,
   MiniChart,
 } from "./_growth/charts";
@@ -132,7 +134,7 @@ export function GrowthCommandCenter({
     let shortsSoFar = 0;
     for (const row of growth?.daily ?? []) {
       if (row.day >= ideaDay) break;
-      if (row.hasMarketingEntry) shortsSoFar += row.marketing.shortVideos;
+      shortsSoFar += row.marketing.shortVideos;
     }
     return rollingRequiredPerDay(
       plan.targets.shortVideos,
@@ -154,7 +156,7 @@ export function GrowthCommandCenter({
       const future =
         isUpcoming || (growth?.today ? row.date > growth.today : false);
       const today = isCurrent && row.date === growth?.today;
-      const hasManualEntry = Boolean(row.hasMarketingEntry);
+      const known = knownMarketing(row);
       const status = statusForMetric(row.users, required, {
         future,
       });
@@ -195,15 +197,15 @@ export function GrowthCommandCenter({
       );
       usersSoFar += row.users;
       capturesSoFar += row.captures;
-      socialSoFar += row.hasMarketingEntry ? row.marketing.socialViews : 0;
-      clicksSoFar += row.hasMarketingEntry ? row.marketing.searchClicks : 0;
+      socialSoFar += row.marketing.socialViews;
+      clicksSoFar += row.marketing.searchClicks;
       spendSoFar += spendActual ?? 0;
-      shortsSoFar += row.hasMarketingEntry ? row.marketing.shortVideos : 0;
-      seoSoFar += row.hasMarketingEntry ? row.marketing.seoPages : 0;
+      shortsSoFar += row.marketing.shortVideos;
+      seoSoFar += row.marketing.seoPages;
       const manualStatus = manualStatusForDaily({
         date: row.date,
         today: growth?.today ?? row.date,
-        hasEntry: hasManualEntry,
+        hasEntry: known.socialViews,
         actual: row.marketing.socialViews,
         expected: socialTarget,
       });
@@ -242,49 +244,23 @@ export function GrowthCommandCenter({
             )}
           </td>
           <td className="px-2.5 py-1.5">
-            {future ? "—" : today && !hasManualEntry ? (
-              <MetricProgress actual="Pending" target={socialTarget} />
-            ) : hasManualEntry ? (
-              <MetricProgress actual={row.marketing.socialViews} target={socialTarget} />
+            <MarketingCell future={future} today={today} known={known.socialViews} actual={row.marketing.socialViews} target={socialTarget} />
+          </td>
+          <td className="px-2.5 py-1.5">
+            <MarketingCell future={future} today={today} known={known.searchClicks} actual={row.marketing.searchClicks} target={clicksTarget} />
+          </td>
+          <td className="px-2.5 py-1.5">
+            {!future && known.adSpend && spendActual == null && row.spendEntries?.length ? (
+              formatSpendEntries(row.spendEntries)
             ) : (
-              <MetricProgress actual="Not entered" target={socialTarget} />
+              <MarketingCell future={future} today={today} known={known.adSpend} actual={spendActual ?? 0} target={spendTarget} money currencyCode={plan.adSpendCurrency} />
             )}
           </td>
           <td className="px-2.5 py-1.5">
-            {future ? "—" : today && !hasManualEntry ? (
-              <MetricProgress actual="Pending" target={clicksTarget} />
-            ) : hasManualEntry ? (
-              <MetricProgress actual={row.marketing.searchClicks} target={clicksTarget} />
-            ) : (
-              <MetricProgress actual="Not entered" target={clicksTarget} />
-            )}
+            <MarketingCell future={future} today={today} known={known.shortVideos} actual={row.marketing.shortVideos} target={shortsTarget} />
           </td>
           <td className="px-2.5 py-1.5">
-            {future ? "—" : today && !hasManualEntry ? (
-              <MetricProgress actual="Pending" target={spendTarget} money currencyCode={plan.adSpendCurrency} />
-            ) : hasManualEntry ? spendActual == null ? formatSpendEntries(row.spendEntries) : (
-              <MetricProgress actual={spendActual} target={spendTarget} money currencyCode={plan.adSpendCurrency} />
-            ) : (
-              <MetricProgress actual="Not entered" target={spendTarget} money currencyCode={plan.adSpendCurrency} />
-            )}
-          </td>
-          <td className="px-2.5 py-1.5">
-            {future ? "—" : today && !hasManualEntry ? (
-              <MetricProgress actual="Pending" target={shortsTarget} />
-            ) : hasManualEntry ? (
-              <MetricProgress actual={row.marketing.shortVideos} target={shortsTarget} />
-            ) : (
-              <MetricProgress actual="Not entered" target={shortsTarget} />
-            )}
-          </td>
-          <td className="px-2.5 py-1.5">
-            {future ? "—" : today && !hasManualEntry ? (
-              <MetricProgress actual="Pending" target={seoTarget} />
-            ) : hasManualEntry ? (
-              <MetricProgress actual={row.marketing.seoPages} target={seoTarget} />
-            ) : (
-              <MetricProgress actual="Not entered" target={seoTarget} />
-            )}
+            <MarketingCell future={future} today={today} known={known.seoPages} actual={row.marketing.seoPages} target={seoTarget} />
           </td>
           <td className="px-2.5 py-1.5">
             <span
@@ -1084,7 +1060,8 @@ export function GrowthCommandCenter({
                 name="searchClicks"
                 type="number"
                 step="1"
-                defaultValue={editingDate.marketing.searchClicks || ""}
+                defaultValue={(editingDate.manualSearchClicks ?? editingDate.marketing.searchClicks) || ""}
+                placeholder={editingDate.autoSearchClicks ? `Auto ${format(editingDate.autoSearchClicks)} from Search Console` : undefined}
                 className={cn(fieldClass, "mt-1 font-normal")}
               />
             </label>
@@ -1094,7 +1071,8 @@ export function GrowthCommandCenter({
                 name="seoPages"
                 type="number"
                 step="1"
-                defaultValue={editingDate.marketing.seoPages || ""}
+                defaultValue={(editingDate.manualSeoPages ?? editingDate.marketing.seoPages) || ""}
+                placeholder={editingDate.autoSeoPages ? `Auto ${format(editingDate.autoSeoPages)} blog posts` : undefined}
                 className={cn(fieldClass, "mt-1 font-normal")}
               />
             </label>

@@ -17,7 +17,7 @@ function isPlatform(value: string): value is OrganicPlatform {
     return PLATFORMS.has(value as OrganicPlatform);
 }
 
-type DayCounts = Record<string, Partial<Record<OrganicPlatform, number>>>;
+export type DayCounts = Record<string, Partial<Record<OrganicPlatform, number>>>;
 
 function add(counts: DayCounts, date: string, platform: OrganicPlatform, value: number) {
     const day = (counts[date] ??= {});
@@ -31,6 +31,39 @@ export function countSharedPosts(rows: ShareLogRow[], dayKey: (date: Date) => st
         if (row.status !== "published" || row.mode !== "post" || !isPlatform(row.platform)) continue;
         add(counts, dayKey(new Date(row.updated_at)), row.platform, 1);
     }
+    return counts;
+}
+
+/** Posts per day for one platform from the times they went live. */
+export function countPublishTimes(platform: OrganicPlatform, times: string[], dayKey: (date: Date) => string): DayCounts {
+    const counts: DayCounts = {};
+    for (const time of times) {
+        const parsed = new Date(time);
+        if (!Number.isNaN(parsed.getTime())) add(counts, dayKey(parsed), platform, 1);
+    }
+    return counts;
+}
+
+/**
+ * Post counts from overlapping sources (the share log, and each platform's own
+ * list of everything published), so the larger count per day and platform wins
+ * rather than the two being added.
+ */
+export function maxPostCounts(...sources: DayCounts[]): DayCounts {
+    const counts: DayCounts = {};
+    for (const source of sources) {
+        for (const [date, platforms] of Object.entries(source)) {
+            const day = (counts[date] ??= {});
+            for (const [platform, value] of Object.entries(platforms) as Array<[OrganicPlatform, number]>) day[platform] = Math.max(day[platform] ?? 0, value);
+        }
+    }
+    return counts;
+}
+
+/** A platform's exact daily views ({date: views}) as day counts. */
+export function dailyViews(platform: OrganicPlatform, views: Record<string, number>): DayCounts {
+    const counts: DayCounts = {};
+    for (const [date, value] of Object.entries(views)) if (Number.isFinite(value) && value >= 0) add(counts, date, platform, value);
     return counts;
 }
 

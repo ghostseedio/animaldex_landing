@@ -230,12 +230,17 @@ export async function GET(request: NextRequest) {
       manualThroughDay > 0
         ? dateKeyForDay(selectedMonth, manualThroughDay)
         : null;
+    // Typed, or covered by the automatic sources (social views and clicks are
+    // the ones that can be missing).
     const hasYesterdayMarketingEntry = Boolean(
-      yesterdayDate && actualMonth.manualByDate[yesterdayDate],
+      yesterdayDate &&
+        (actualMonth.manualByDate[yesterdayDate] ||
+          (actualMonth.knownByDate[yesterdayDate]?.socialViews &&
+            actualMonth.knownByDate[yesterdayDate]?.searchClicks)),
     );
     if (plan && yesterdayDate && !hasYesterdayMarketingEntry)
       attention.unshift(
-        `Yesterday's marketing numbers haven't been entered yet.`,
+        `Yesterday's social views or Google clicks aren't in yet.`,
       );
 
     return NextResponse.json({
@@ -342,6 +347,11 @@ export async function GET(request: NextRequest) {
         manualOrganicEntries: actualMonth.manualOrganicByDate[date] ?? [],
         autoOrganicEntries: actualMonth.autoOrganicByDate[date] ?? [],
         manualSocialViews: actualMonth.manualByDate[date]?.socialViews ?? 0,
+        manualSearchClicks: actualMonth.manualByDate[date]?.searchClicks ?? 0,
+        manualSeoPages: actualMonth.manualByDate[date]?.seoPages ?? 0,
+        autoSearchClicks: actualMonth.autoSearchDaily[date] ?? 0,
+        autoSeoPages: actualMonth.autoSeoDaily[date] ?? 0,
+        known: actualMonth.knownByDate[date],
         marketing: {
           ...(actualMonth.manualByDate[date] ?? {
             date,
@@ -354,7 +364,9 @@ export async function GET(request: NextRequest) {
             notes: "",
           }),
           socialViews: actualMonth.socialDaily[date] ?? 0,
+          searchClicks: actualMonth.searchDaily[date] ?? 0,
           shortVideos: actualMonth.shortVideoDaily[date] ?? 0,
+          seoPages: actualMonth.seoDaily[date] ?? 0,
         },
       })),
       socialAutoLogNotes: actualMonth.autoOrganicNotes,

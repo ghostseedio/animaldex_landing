@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {buildAutoOrganic, countSharedPosts, mergeOrganicEntries, viewsFromSnapshots} from "./social/auto-log";
+import {buildAutoOrganic, countPublishTimes, countSharedPosts, dailyViews, maxPostCounts, mergeOrganicEntries, viewsFromSnapshots} from "./social/auto-log";
 import {todayKey} from "./growth-command-center";
 
 test("only published direct posts count, dated by the growth day they went live", () => {
@@ -45,4 +45,22 @@ test("hand-entered posts add to auto posts; hand-entered views replace auto view
         {platform: "reddit", posts: 2, views: 90},
         {platform: "x", posts: 1, views: 0}
     ]);
+});
+
+test("platform upload lists and the share log overlap, so the larger count wins", () => {
+    const shared = countSharedPosts([
+        {platform: "youtube", mode: "post", status: "published", updated_at: "2026-10-09T11:02:22Z"}
+    ], todayKey);
+    const uploads = countPublishTimes("youtube", ["2026-10-09T10:00:00Z", "2026-10-09T11:02:00Z", "not a date"], todayKey);
+    const tiktok = countPublishTimes("tiktok", ["2026-10-01T03:00:00Z"], todayKey);
+    assert.deepEqual(maxPostCounts(shared, uploads, tiktok), {"2026-10-09": {youtube: 2}, "2026-10-01": {tiktok: 1}});
+});
+
+test("exact daily views fill past days and win over snapshot deltas", () => {
+    const exact = dailyViews("youtube", {"2026-10-02": 120, "2026-10-03": 0});
+    const snapshots = viewsFromSnapshots([
+        {platform: "youtube", views: 1000, recorded_at: "2026-10-01T09:00:00Z"},
+        {platform: "youtube", views: 1500, recorded_at: "2026-10-02T09:00:00Z"}
+    ], todayKey);
+    assert.deepEqual(buildAutoOrganic({}, [exact, snapshots]), {"2026-10-02": [{platform: "youtube", posts: 0, views: 120}]});
 });

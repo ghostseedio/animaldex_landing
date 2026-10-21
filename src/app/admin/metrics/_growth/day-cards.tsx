@@ -16,6 +16,7 @@ import {
   shortDate,
   dateLabel,
   formatSpendEntries,
+  knownMarketing,
   targetValue,
 } from "./format";
 
@@ -36,8 +37,7 @@ export function TodayCard({
 }) {
   if (!row) return null;
   const remainingUsers = Math.max(0, requiredUsers - row.users);
-  // Social numbers can be known without a hand entry: the auto log.
-  const hasSocial = row.hasMarketingEntry || Boolean(row.autoOrganicEntries?.length);
+  const known = knownMarketing(row);
   return (
     <div className="border border-line-300 bg-surface-900 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -62,28 +62,27 @@ export function TodayCard({
         </p>
         <p>
           Social views{" "}
-          {hasSocial ? format(row.marketing.socialViews) : "—"}
+          {known.socialViews ? format(row.marketing.socialViews) : "—"}
           {targets.socialViews > 0
             ? ` / ${format(dailyPaceTarget(targets.socialViews, totalDays))}`
             : ""}
         </p>
         <p>
           Google clicks{" "}
-          {row.hasMarketingEntry ? format(row.marketing.searchClicks) : "—"}
+          {known.searchClicks ? format(row.marketing.searchClicks) : "—"}
           {targets.searchClicks > 0
             ? ` / ${format(dailyPaceTarget(targets.searchClicks, totalDays))}`
             : ""}
         </p>
         <p>
           Shorts{" "}
-          {hasSocial ? format(row.marketing.shortVideos) : "—"}
+          {known.shortVideos ? format(row.marketing.shortVideos) : "—"}
           {targets.shortVideos > 0
             ? ` / ${format(dailyPaceTarget(targets.shortVideos, totalDays))}`
             : ""}
         </p>
         <p>
-          SEO {row.hasMarketingEntry ? format(row.marketing.seoPages) : "—"}{" "}
-          this week
+          SEO {known.seoPages ? format(row.marketing.seoPages) : "—"} today
           {targets.seoPages > 0
             ? ` / ~${format(Math.max(1, Math.round(targets.seoPages / 4)))}`
             : ""}
@@ -95,8 +94,8 @@ export function TodayCard({
           : "Today’s user pace is covered."}
       </p>
       <p className="mt-2 text-xs text-ink-500">
-        Users, captures and Story videos posts are AUTO. Missing marketing is
-        shown as — , never as a fake zero miss.
+        Everything here fills in automatically. A number that isn&rsquo;t in yet
+        shows as —, never as a fake zero.
       </p>
     </div>
   );
@@ -125,9 +124,13 @@ export function YesterdayCard({
     adSpendCurrency,
   );
   const dailySpend = targets.adSpend / Math.max(1, totalDays);
-  const spendText = !row.hasMarketingEntry
+  const known = knownMarketing(row);
+  const missing = !known.socialViews || !known.searchClicks;
+  const spendText = !known.adSpend
     ? "Not entered"
-    : !adSpendCurrency
+    : !row.spendEntries?.length
+      ? `${formatMoney(0, adSpendCurrency)} / ${formatMoney(dailySpend, adSpendCurrency)}`
+      : !adSpendCurrency
       ? `${formatSpendEntries(row.spendEntries)} · budget currency not set`
       : comparableSpend == null
         ? `${formatSpendEntries(row.spendEntries)} · mixed currency, no budget comparison`
@@ -148,14 +151,18 @@ export function YesterdayCard({
           Edit {shortDate(row.date.slice(0, 7), row.day)}
         </Button>
       </div>
-      {!row.hasMarketingEntry ? (
+      {missing && !row.hasMarketingEntry ? (
         <div className="mt-3 border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
           <p className="font-black">
-            Yesterday’s marketing data hasn’t been entered yet.
+            Some of yesterday&rsquo;s numbers aren&rsquo;t in yet.
           </p>
           <p className="mt-1 text-xs text-amber-100/80">
-            Users and captures are automatic. External marketing is missing, not
-            zero.
+            {!known.socialViews && !known.searchClicks
+              ? "Social views and Google clicks are"
+              : !known.socialViews
+                ? "Social views are"
+                : "Google clicks are"}{" "}
+            missing, not zero. Search Console trails by a day or two.
           </p>
           {organic.posts > 0 || organic.views > 0 ? (
             <p className="mt-1 text-xs text-amber-100/80">
@@ -178,7 +185,7 @@ export function YesterdayCard({
               : ""}
           </p>
           <p>
-            Google {format(row.marketing.searchClicks)}
+            Google {known.searchClicks ? format(row.marketing.searchClicks) : "—"}
             {targets.searchClicks > 0
               ? ` / ${format(dailyPaceTarget(targets.searchClicks, totalDays))}`
               : ""}
@@ -189,6 +196,7 @@ export function YesterdayCard({
               ? ` / ${format(dailyPaceTarget(targets.shortVideos, totalDays))}`
               : ""}
           </p>
+          <p>SEO pages {format(row.marketing.seoPages)}</p>
           <p>Spend {spendText}</p>
         </div>
       )}

@@ -106,6 +106,26 @@ export function MetricProgress({
 }
 
 
+/** One day's marketing number: a value once it's known, else pending today or not entered. */
+export function MarketingCell({
+  future,
+  today,
+  known,
+  ...progress
+}: {
+  future: boolean;
+  today: boolean;
+  known: boolean;
+  actual: number;
+  target: number;
+  money?: boolean;
+  currencyCode?: string | null;
+}) {
+  if (future) return <>—</>;
+  if (known) return <MetricProgress {...progress} />;
+  return <MetricProgress {...progress} actual={today ? "Pending" : "Not entered"} />;
+}
+
 export function GrowthVelocityChart({ rows }: { rows: GrowthDaily[] }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   if (!rows.length) return null;
@@ -392,9 +412,7 @@ export function MiniChart({
         ? row.users
         : metric === "captures"
           ? row.captures
-          : row.hasMarketingEntry
-            ? row.marketing[metric]
-            : 0;
+          : row.marketing[metric];
     return running;
   });
   const max = Math.max(1, target, ...actualLine);

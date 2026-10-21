@@ -10,6 +10,7 @@ import {
 } from "@/lib/growth-command-center";
 import {
   type GrowthActionPlan,
+  type GrowthDaily,
   type GrowthPlan,
 } from "./types";
 
@@ -39,13 +40,13 @@ export const growthMeta: Record<
   socialViews: {
     label: "Social views",
     short: "Social",
-    kind: "MANUAL",
+    kind: "AUTO",
     role: "Operating target",
   },
   searchClicks: {
     label: "Google clicks",
     short: "Google",
-    kind: "MANUAL",
+    kind: "AUTO",
     role: "Operating target",
   },
   activePro: {
@@ -83,13 +84,13 @@ export const growthMeta: Record<
   shortVideos: {
     label: "Short videos",
     short: "Shorts",
-    kind: "MANUAL",
+    kind: "AUTO",
     role: "Execution target",
   },
   seoPages: {
     label: "SEO pages",
     short: "SEO",
-    kind: "MANUAL",
+    kind: "AUTO",
     role: "Execution target",
   },
 };
@@ -181,6 +182,17 @@ export function formatSpendEntries(entries: SpendEntry[] | undefined) {
       return `${spendNetworkLabels[entry.platform]}${os} ${formatMoney(entry.amount, entry.currencyCode)}${installs}`;
     })
     .join(" · ");
+}
+/**
+ * Which marketing numbers are real for a day. The API says so per day; rows
+ * from before it did fall back to "a hand entry exists", with social views and
+ * shorts also counting the auto log.
+ */
+export function knownMarketing(row: GrowthDaily): NonNullable<GrowthDaily["known"]> {
+  if (row.known) return row.known;
+  const manual = Boolean(row.hasMarketingEntry);
+  const social = manual || Boolean(row.autoOrganicEntries?.length);
+  return { socialViews: social, searchClicks: manual, shortVideos: social, seoPages: manual, adSpend: manual };
 }
 export function statusLabel(status: string) {
   return status === "on_target"

@@ -47,6 +47,19 @@ export type GrowthDaily = {
   autoOrganicEntries?: OrganicEntry[];
   /** The typed combined total, without auto views. */
   manualSocialViews?: number;
+  /** Typed numbers only (what the edit form saves), and the automatic ones. */
+  manualSearchClicks?: number;
+  manualSeoPages?: number;
+  autoSearchClicks?: number;
+  autoSeoPages?: number;
+  /** Which marketing numbers are real for the day, not just missing. */
+  known?: {
+    socialViews: boolean;
+    searchClicks: boolean;
+    shortVideos: boolean;
+    seoPages: boolean;
+    adSpend: boolean;
+  };
   marketing: {
     date: string;
     socialViews: number;

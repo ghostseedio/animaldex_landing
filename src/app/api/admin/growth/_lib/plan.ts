@@ -61,6 +61,8 @@ import {
   loadPurchaseLedger,
 } from "./queries";
 import { loadAutoOrganic, type AutoOrganic } from "./auto-organic";
+import { loadSearchClicks } from "./search-console";
+import { getManagedBlogPosts } from "@/lib/admin-content";
 import { mergeOrganicEntries } from "@/lib/social/auto-log";
 
 export function aggregateByDay(
@@ -271,6 +273,14 @@ export async function loadPlan(
   return loaded;
 }
 
+export type GrowthDailyKnown = {
+  socialViews: boolean;
+  searchClicks: boolean;
+  shortVideos: boolean;
+  seoPages: boolean;
+  adSpend: boolean;
+};
+
 export async function loadMonthActuals(
   selectedMonth: string,
   throughDay?: number,
@@ -296,6 +306,8 @@ export async function loadMonthActuals(
     organicRows,
     purchases,
     autoOrganic,
+    searchClicks,
+    blogPosts,
   ] = await Promise.all([
     fetchRows<DatedRow>(
       "profiles",
@@ -321,6 +333,8 @@ export async function loadMonthActuals(
         ],
       }),
     ),
+    loadSearchClicks(dates[0], dates[dates.length - 1]),
+    getManagedBlogPosts().catch(() => []),
   ]);
   const userDaily = aggregateByDay(profiles, "created_at", selectedMonth);
   const readyCaptures = captures.filter(
@@ -426,8 +440,15 @@ export async function loadMonthActuals(
         deriveOrganicTotals(autoOrganicByDate[date] ?? []).views,
     ]),
   );
+  // A hand-entered number wins; Search Console fills the rest.
+  const autoSearchDaily = Object.fromEntries(
+    dates.map((date) => [date, searchClicks.byDate[date] ?? 0]),
+  );
   const searchDaily = Object.fromEntries(
-    dates.map((date) => [date, manualByDate[date]?.searchClicks ?? 0]),
+    dates.map((date) => [
+      date,
+      manualByDate[date]?.searchClicks || autoSearchDaily[date],
+    ]),
   );
   const adSpendDaily = Object.fromEntries(
     dates.map((date) => [
@@ -447,9 +468,40 @@ export async function loadMonthActuals(
       ),
     ]),
   );
+  // SEO pages are the blog posts that went live that day (compiled and
+  // published from the admin), unless a number was typed.
+  const autoSeoDaily = Object.fromEntries(dates.map((date) => [date, 0]));
+  for (const post of blogPosts) {
+    const date = post.publishedAt?.slice(0, 10);
+    if (date && date in autoSeoDaily) autoSeoDaily[date] += 1;
+  }
   const seoDaily = Object.fromEntries(
-    dates.map((date) => [date, manualByDate[date]?.seoPages ?? 0]),
+    dates.map((date) => [
+      date,
+      manualByDate[date]?.seoPages || autoSeoDaily[date],
+    ]),
   );
+  // Which numbers are real for a day (typed, or from a source that covers
+  // it), so the dashboard can tell a zero from "not known yet". Posts, SEO
+  // pages and spend are always known: the sources list everything, and no ad
+  // account is connected, so an unlogged day spent nothing.
+  const knownByDate = Object.fromEntries(
+    dates.map((date) => [
+      date,
+      {
+        socialViews: Boolean(
+          manualByDate[date] || autoOrganicByDate[date]?.some((entry) => entry.views > 0),
+        ),
+        searchClicks: Boolean(
+          manualByDate[date] ||
+            (searchClicks.through && date <= searchClicks.through),
+        ),
+        shortVideos: true,
+        seoPages: true,
+        adSpend: true,
+      },
+    ]),
+  ) as Record<string, GrowthDailyKnown>;
   const collectorAnalytics = buildCollectorAnalytics({
     profiles: profiles.flatMap((profile) =>
       profile.id && profile.created_at
@@ -514,7 +566,13 @@ export async function loadMonthActuals(
     organicByDate,
     manualOrganicByDate,
     autoOrganicByDate,
-    autoOrganicNotes: autoOrganic.notes,
+    autoOrganicNotes: [
+      ...autoOrganic.notes,
+      ...(searchClicks.note ? [searchClicks.note] : []),
+    ],
+    autoSearchDaily,
+    autoSeoDaily,
+    knownByDate,
     spendByCurrency,
     manualDailyEntryCount: marketingRows.length,
     socialDaily,
