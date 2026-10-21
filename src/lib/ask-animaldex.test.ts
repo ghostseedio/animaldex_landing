@@ -126,6 +126,13 @@ test("the streaming prompt keeps the rules that make an answer readable", () => 
     assert.match(prompt, /This is a conversation, not a report/);
     assert.match(prompt, /Your first sentence answers the person/);
     assert.match(prompt, /If it reads/);
+    // "How does your Power translate to other domains?" goes to the dynamics
+    // record, and every answer ends on an offer in the animal's voice.
+    assert.match(prompt, /answer from\n?\s*cross_domain/);
+    assert.match(prompt, /answer from failure_modes by title/);
+    assert.match(prompt, /End with ONE short question/);
+    assert.match(prompt, /this plays out in Business\?/);
+    assert.match(prompt, /closing question of your answer is one offer already/);
     // The general assistant on non-species pages keeps the contract.
     assert.match(buildAskStreamingSystemPrompt({scope: "general"}), /HARD RULE/);
     assert.match(prompt, /animaldex-flow/);

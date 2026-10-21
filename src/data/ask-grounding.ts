@@ -60,9 +60,12 @@ function askSystemDynamics(dynamics: SpeciesSystemDynamics): AskSystemDynamics {
                 frequency: mode.frequency === "UNKNOWN" ? null : frequencyCompactLabel(mode.frequency)
             }))
         },
-        crossDomain: dynamics.crossDomainMatrix.slice(0, 8).map((mapping) => ({
+        // Every domain the record maps: an earlier cap of 8 silently dropped
+        // Strategy, Music, Art and the rest, so "where else does this apply?"
+        // could not reach them.
+        crossDomain: dynamics.crossDomainMatrix.slice(0, 24).map((mapping) => ({
             domain: domainDisplayTitle(mapping.domain),
-            entries: mapping.entries.slice(0, 3).map((entry) => ({
+            entries: mapping.entries.slice(0, 4).map((entry) => ({
                 equivalent: entry.equivalent,
                 reasoning: entry.reasoning
             }))

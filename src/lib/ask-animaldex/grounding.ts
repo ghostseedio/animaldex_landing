@@ -411,7 +411,9 @@ export function buildAskUserPrompt(params: {
                 ? [SPECIES_TRIAL_CLOSING_INSTRUCTION]
                 : [
                     "Lead with what you would do and why your biology makes it the move. Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when they come up.",
+                    "If the message asks where your Power applies, how it translates to other areas or domains, or where else it shows up, answer from system_dynamics.cross_domain — the domains by name, their entries as what you do and why.",
                     "Base your follow-up offers on available_content, naming real things from it that this answer did not cover.",
+                    "End with one short question offering the next step.",
                     "Keep your Power's name and pattern stable across the conversation."
                 ]),
             "Use recent_conversation for pronouns and context, but never let it replace your record.",
