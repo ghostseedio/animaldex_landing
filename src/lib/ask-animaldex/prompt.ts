@@ -65,8 +65,10 @@ const ROLE_RULES_SPECIES = [
 /** The assistant's voice rules with the self-reference ban inverted: the animal must say "I". */
 const VOICE_RULES_SPECIES = [
     "Voice — you have to earn your first line:",
-    "- Open on the most concrete thing about you that bears on their question: a specific behaviour, threshold, number",
-    "  or image from the record. Not a definition, not a restatement of what they asked.",
+    "- Your first sentence answers the person, not the topic: pick up the specific thing they told you, in your own",
+    "  words, so they know you heard it. Your second brings the most concrete thing about you that bears on it: a",
+    "  specific behaviour, threshold, number or image from the record. Not a definition, not a restatement of what they",
+    "  asked, never a heading.",
     "- Never open with filler. Banned openers: 'Great question', 'That's a great', 'Let's explore', 'In essence',",
     "  'Essentially', 'Fundamentally', 'It's important to note', 'When it comes to', 'Ah,', 'As a <animal>,', or",
     "  restating the question back.",
@@ -205,6 +207,24 @@ const FORMAT_RULES = [
 /// of the prompt: nuanced "use structure when it helps" guidance reliably
 /// produces three grey paragraphs instead, because every individual answer can
 /// be argued into being the simple case.
+/// How the animal's reply is laid out on species pages. This replaces the
+/// assistant's report formatting and its structure contract on purpose: a
+/// person talking to an animal should get talk back, not a briefing with
+/// headings. Kept in step with `_shared/animal-voice.ts` in the app backend.
+const FORMAT_RULES_SPECIES = [
+    "- This is a conversation, not a report. Write the way you would talk to one person sitting in front of you.",
+    "- Default to plain prose: one to three short paragraphs. Most replies need no structure at all.",
+    "- Use '- ' bullets or '1. ' steps only when the content really is a list — several options to choose between, or",
+    "  steps to do in order. Never turn an explanation into bullets, and never bullet a single idea.",
+    "- No '## ' headings unless the reply genuinely has distinct parts and runs past about 150 words; then at most two,",
+    "  and never as the first line. Never a top-level '#'.",
+    "- A markdown table only for a real side-by-side comparison the person asked for. Max 3 columns, 5 rows.",
+    "- Bold at most one or two phrases — the ones to remember. Never whole sentences, never the first sentence.",
+    "- No '> ' quotes, no mottos, no closing summary, no 'Move today' / 'Avoid today' blocks, no sign-off.",
+    "- Never a paragraph longer than about 60 words.",
+    "- Plain sentence case. No emoji."
+];
+
 const STRUCTURE_CONTRACT = [
     "HARD RULE — every answer longer than 40 words must contain at least ONE of:",
     "  a '## ' heading, a '- ' bullet list, a '1. ' numbered list, a markdown table, or a visual block.",
@@ -348,6 +368,19 @@ function promptSections(options: AskPromptOptions) {
         role: scope === "species" ? ROLE_RULES_SPECIES : ROLE_RULES_GENERAL,
         grounding: scope === "species" ? GROUNDING_RULES_SPECIES : GROUNDING_RULES_GENERAL,
         voice: scope === "species" ? VOICE_RULES_SPECIES : VOICE_RULES,
+        formattingLead:
+            scope === "species"
+                ? "Formatting — your reply is rendered as markdown, so markdown works, but keep it conversational:"
+                : "Formatting — your reply is rendered as markdown blocks (headings, lists, tables, quotes), so format it properly:",
+        format: scope === "species" ? FORMAT_RULES_SPECIES : FORMAT_RULES,
+        // The animal talks; only the general assistant is held to the structure contract.
+        structure:
+            scope === "species"
+                ? [
+                      "Last check before you finish: does this read like something you would say out loud to the person? If it reads",
+                      "like a report, cut the structure and say it plainly."
+                  ]
+                : STRUCTURE_CONTRACT,
         medium: mediumRules(options.supportedVisuals ?? []),
         // Memory only exists where the animal itself is speaking.
         memory: scope === "species" ? ASK_MEMORY_RULES : [],
@@ -373,8 +406,8 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
         "",
         ...sections.medium,
         "",
-        "Formatting — your reply is rendered as markdown blocks (headings, lists, tables, quotes), so format it properly:",
-        ...FORMAT_RULES,
+        sections.formattingLead,
+        ...sections.format,
         "",
         ...SAFETY_RULES,
         ...(sections.memory.length > 0 ? ["", ...sections.memory] : []),
@@ -387,7 +420,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
         ...followUpRules(options),
         `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,
         "",
-        ...STRUCTURE_CONTRACT
+        ...sections.structure
     ].join("\n");
 }
 
@@ -409,14 +442,14 @@ export function buildAskSystemPrompt(options: AskPromptOptions): string {
         "",
         ...sections.medium,
         "",
-        "Formatting — the answer is rendered as markdown blocks (headings, lists, tables, quotes), so format it properly:",
-        ...FORMAT_RULES,
+        sections.formattingLead.replace("your reply is", "the answer is"),
+        ...sections.format,
         "",
         ...SAFETY_RULES,
         ...(sections.memory.length > 0 ? ["", ...sections.memory] : []),
         ...(sections.locale.length > 0 ? ["", ...sections.locale] : []),
         "",
-        ...STRUCTURE_CONTRACT,
+        ...sections.structure,
         "",
         "Return JSON only:",
         '{"answer":"markdown answer","follow_up_prompts":["short offer","short offer"]}',

@@ -140,12 +140,18 @@ export type AskSuggestion = {
 /**
  * Openers for a blank thread.
  *
- * Ported from `LearnAskPromptLibrary.suggestions` on iOS: when the species has
- * System Dynamics, the openers name its real states and failure modes, because
- * a card that already holds that content asking "Why this Power?" is the less
- * informed surface.
+ * On a species page these are plain things a person would say to an animal
+ * they have just met — one about the animal, one bringing something of their
+ * own, one about its Power — the same three the apps open with. The System
+ * Dynamics openers below (real states, thresholds, failure modes) are kept for
+ * callers that ask for them with `{dynamicsFirst: true}`; they read as jargon
+ * at the top of a conversation, so the drawer no longer leads with them.
  */
-export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggestion[] {
+export function askSuggestions(
+    subject: AskSubject,
+    hints: AskHints,
+    options: {dynamicsFirst?: boolean} = {}
+): AskSuggestion[] {
     // A Trial thread opens on the Trial, whatever the page is about.
     if (subject.trialContext) return TRIAL_ASK_SUGGESTIONS;
     if (subject.scope !== "species") return generalSuggestions(subject);
@@ -153,24 +159,21 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
     const name = hints.animalName?.trim() || subject.name?.trim() || "this animal";
     const principleName = hints.principleName?.trim() || null;
 
-    if (!hints.hasDynamics) {
-        // The Animal Power defaults, in the order iOS offers them.
+    if (!hints.hasDynamics || !options.dynamicsFirst) {
         return [
             {
-                title: "Understand",
-                prompt: principleName ? `Why is your Power ${principleName}?` : `Why does AnimalDex read you this way?`
+                title: "Who are you?",
+                prompt: "Tell me about yourself. How do you actually live, day to day?"
             },
             {
-                title: "Apply",
-                prompt: principleName
-                    ? `How could I use your ${principleName} in my life?`
-                    : "How could I use your pattern in my life?"
+                title: "Help me decide",
+                prompt: "I've got a decision I keep putting off. How would you handle it?"
             },
             {
-                title: "Explore",
+                title: "Your Power",
                 prompt: principleName
-                    ? `What happens when your ${principleName} goes too far?`
-                    : "Where does your pattern go too far?"
+                    ? `What's your Power, ${principleName}, in plain words?`
+                    : "What's your Power, in plain words?"
             }
         ];
     }
@@ -180,13 +183,13 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
     const system = hints.archetypeName?.trim() || principleName || "your system";
     const simply: AskSuggestion = {
         title: "Explain this simply",
-        prompt: `Explain your system, ${system}, in simple terms.`
+        prompt: `Explain how you work — your ${system} — in simple terms.`
     };
     const failure: AskSuggestion = {
         title: "What's the failure mode?",
         prompt: hints.failureModes[0]
             ? `What happens when you hit “${hints.failureModes[0]}”?`
-            : `What is the failure mode of your ${system}?`
+            : `What goes wrong when your ${system} fails you?`
     };
     const apply: AskSuggestion = {
         title: "Apply",
@@ -206,8 +209,8 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
                 {
                     title: "Why does it change state?",
                     prompt: transition.fromFrequency && transition.toFrequency
-                        ? `Why do you shift from a ${transition.fromFrequency.toLowerCase()}-frequency pattern to a ${transition.toFrequency.toLowerCase()}-frequency pattern, and is it reversible?`
-                        : "Why do you change operating state, and is it reversible?"
+                        ? `Why do you go from a ${transition.fromFrequency.toLowerCase()}-frequency way of living to a ${transition.toFrequency.toLowerCase()}-frequency one, and can you go back?`
+                        : "Why do you change how you operate, and can you go back?"
                 },
                 apply
             ];
@@ -228,7 +231,7 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
                 simply,
                 {
                     title: "How do you switch states?",
-                    prompt: "How do you decide when to change your operating state?"
+                    prompt: "How do you decide when to change how you operate?"
                 },
                 apply
             ];
@@ -238,7 +241,7 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
                 simply,
                 {
                     title: "How do your modes work together?",
-                    prompt: "How do your operating modes work together?"
+                    prompt: "How do your different modes fit together?"
                 },
                 apply
             ];
@@ -251,8 +254,8 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
                 {
                     title: frequency ? `Why ${frequency} frequency?` : "Why this frequency?",
                     prompt: frequency
-                        ? `Why are you a ${frequency}-frequency system?`
-                        : "Why do you operate at this frequency?"
+                        ? `Why do you live at a ${frequency} frequency rather than faster or slower?`
+                        : "Why do you live at this pace rather than faster or slower?"
                 },
                 hints.domains[0]
                     ? {

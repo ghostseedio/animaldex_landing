@@ -2315,6 +2315,18 @@
     "limitBodySignedIn": "Kamu sudah memakai {limit} pesan hari ini. Pesan kembali besok, atau pilih Pro untuk 100 per hari.",
     "limitCtaSignedIn": "Lihat AnimalDex Pro",
     "limitHrefSignedIn": "/#download",
-    "limitBodyPro": "Kamu sudah memakai {limit} pesan hari ini. Pesan kembali besok."
+    "limitBodyPro": "Kamu sudah memakai {limit} pesan hari ini. Pesan kembali besok.",
+    "memoryOpen": "Yang saya ingat tentang Anda",
+    "memoryHint": "Apa pun yang Anda ceritakan ke satu hewan, semua hewan mengingatnya. Hanya Anda yang bisa melihat ini, dan Anda bisa menghapusnya kapan saja.",
+    "memoryEmptyTitle": "Saya belum tahu apa-apa tentang Anda.",
+    "memoryEmptyBody": "Ceritakan apa yang sedang Anda kerjakan, atau apa yang sering membuat Anda terhenti, dan saya akan mengingatnya lain kali — begitu juga semua hewan lain.",
+    "memoryLoading": "Mengingat kembali…",
+    "memoryFailed": "Tidak bisa mengambil ingatan saya saat ini.",
+    "memoryForget": "Lupakan",
+    "memoryForgetAll": "Lupakan semuanya",
+    "memoryForgetAllConfirm": "Lupakan semuanya?",
+    "memoryForgetAllBody": "Semua hewan akan melupakan apa yang Anda ceritakan. Percakapan Anda tetap seperti semula.",
+    "memoryToldTo": "Diceritakan ke {animal}",
+    "memoryBack": "Kembali ke percakapan"
   }
 }

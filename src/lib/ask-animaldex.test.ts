@@ -114,14 +114,20 @@ function packet(overrides: Partial<AskGroundingPacket> = {}): AskGroundingPacket
 test("the streaming prompt keeps the rules that make an answer readable", () => {
     const prompt = buildAskStreamingSystemPrompt({scope: "species", supportedVisuals: ["flow", "scale", "chart"]});
 
-    // Voice, register and the structure contract are the three things that
-    // separate this assistant from a generic chatbot. Losing any of them is a
-    // silent regression: the answers still arrive, they are just worse.
+    // Voice and register separate this from a generic chatbot. Losing either
+    // is a silent regression: the answers still arrive, they are just worse.
     assert.match(prompt, /Banned openers/);
     assert.match(prompt, /nine-year-old/);
-    assert.match(prompt, /HARD RULE/);
-    assert.match(prompt, /An answer of three plain paragraphs is a failed answer/);
     assert.match(prompt, /Never open with filler/);
+    // The animal talks back; the assistant's structure contract (a heading or
+    // list forced into every reply over 40 words) made it read like a report.
+    assert.doesNotMatch(prompt, /HARD RULE/);
+    assert.doesNotMatch(prompt, /three plain paragraphs is a failed answer/);
+    assert.match(prompt, /This is a conversation, not a report/);
+    assert.match(prompt, /Your first sentence answers the person/);
+    assert.match(prompt, /If it reads/);
+    // The general assistant on non-species pages keeps the contract.
+    assert.match(buildAskStreamingSystemPrompt({scope: "general"}), /HARD RULE/);
     assert.match(prompt, /animaldex-flow/);
     assert.match(prompt, /animaldex-scale/);
     assert.match(prompt, /animaldex-chart/);
@@ -165,7 +171,9 @@ test("the one-shot fallback prompt asks for JSON and nothing else changes", () =
     const prompt = buildAskSystemPrompt({scope: "species", supportedVisuals: ["flow"]});
     assert.match(prompt, /Return JSON only/);
     assert.match(prompt, /"answer"/);
-    assert.match(prompt, /HARD RULE/);
+    assert.match(prompt, /This is a conversation, not a report/);
+    assert.doesNotMatch(prompt, /HARD RULE/);
+    assert.match(buildAskSystemPrompt({scope: "general"}), /HARD RULE/);
     assert.doesNotMatch(prompt, new RegExp(ASK_FOLLOW_UP_SENTINEL));
 });
 
@@ -560,21 +568,32 @@ test("openers name the animal's real states when it has System Dynamics", () => 
         primaryFrequency: "HIGH",
         hasDynamics: true
     };
-    const prompts = askSuggestions(askSubjectFromPath("/animals/weaver-ant"), hints).map((item) => item.prompt);
+    const prompts = askSuggestions(askSubjectFromPath("/animals/weaver-ant"), hints, {dynamicsFirst: true})
+        .map((item) => item.prompt);
     assert.ok(prompts.some((prompt) => /patrol/i.test(prompt) && /cascade/i.test(prompt)));
     assert.ok(prompts.some((prompt) => /Recruitment Cascade/.test(prompt)));
+    // Named states, but none of the System Dynamics vocabulary.
+    for (const prompt of prompts) {
+        assert.doesNotMatch(prompt, /failure mode|operating state|-frequency system/, prompt);
+    }
 });
 
-test("openers fall back to the Animal Power defaults when there are no dynamics", () => {
-    const prompts = askSuggestions(
+test("a species thread opens with things a person would say, even when it has dynamics", () => {
+    const withDynamics = askSuggestions(
+        askSubjectFromPath("/animals/weaver-ant"),
+        {...EMPTY_ASK_HINTS, animalName: "Weaver Ant", principleName: "Collective Leverage", hasDynamics: true, archetypeName: "Recruitment Cascade"}
+    );
+    const withoutDynamics = askSuggestions(
         askSubjectFromPath("/animals/weaver-ant"),
         {...EMPTY_ASK_HINTS, animalName: "Weaver Ant", principleName: "Collective Leverage"}
     );
-    // The chat's own empty state on iOS, not the embedded Learn card's chips.
-    assert.deepEqual(prompts.map((item) => item.title), ["Understand", "Apply", "Explore"]);
-    assert.match(prompts[0].prompt, /Collective Leverage/);
-    // Addressed to the animal: it answers in the first person.
-    assert.equal(prompts[2].prompt, "What happens when your Collective Leverage goes too far?");
+    assert.deepEqual(withDynamics, withoutDynamics);
+    // The same three the apps open with.
+    assert.deepEqual(withDynamics.map((item) => item.title), ["Who are you?", "Help me decide", "Your Power"]);
+    assert.equal(withDynamics[2].prompt, "What's your Power, Collective Leverage, in plain words?");
+    for (const {prompt} of withDynamics) {
+        assert.doesNotMatch(prompt, /frequency|system/i, prompt);
+    }
 });
 
 test("a page that is not about one animal gets openers about that page", () => {

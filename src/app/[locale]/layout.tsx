@@ -81,7 +81,19 @@ export default async function RootLayout(
         limitCtaSignedIn: askT("limitCtaSignedIn"),
         limitHrefSignedIn: askT("limitHrefSignedIn"),
         limitBodyPro: askT("limitBodyPro"),
-        disclaimer: askT("disclaimer")
+        disclaimer: askT("disclaimer"),
+        memoryOpen: askT("memoryOpen"),
+        memoryHint: askT("memoryHint"),
+        memoryEmptyTitle: askT("memoryEmptyTitle"),
+        memoryEmptyBody: askT("memoryEmptyBody"),
+        memoryLoading: askT("memoryLoading"),
+        memoryFailed: askT("memoryFailed"),
+        memoryForget: askT("memoryForget"),
+        memoryForgetAll: askT("memoryForgetAll"),
+        memoryForgetAllConfirm: askT("memoryForgetAllConfirm"),
+        memoryForgetAllBody: askT("memoryForgetAllBody"),
+        memoryToldTo: askT("memoryToldTo"),
+        memoryBack: askT("memoryBack")
     };
 
     // noinspection HtmlRequiredTitleElement

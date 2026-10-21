@@ -83,7 +83,22 @@ export type AskDrawerLabels = {
     /** A Pro account: nothing to sell, just when the messages come back. */
     limitBodyPro: string;
     disclaimer: string;
+    /** "What I remember about you": the facts every animal shares, in the reader's hands. */
+    memoryOpen: string;
+    memoryHint: string;
+    memoryEmptyTitle: string;
+    memoryEmptyBody: string;
+    memoryLoading: string;
+    memoryFailed: string;
+    memoryForget: string;
+    memoryForgetAll: string;
+    memoryForgetAllConfirm: string;
+    memoryForgetAllBody: string;
+    memoryToldTo: string;
+    memoryBack: string;
 };
+
+type AskMemoryFact = {fact: string; animal: string | null; noted_at: string | null};
 
 type AskContextPayload = {
     subject: AskSubject;
@@ -104,6 +119,11 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const [composer, setComposer] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [confirmingClear, setConfirmingClear] = useState(false);
+    const [showingMemory, setShowingMemory] = useState(false);
+    const [memoryFacts, setMemoryFacts] = useState<AskMemoryFact[]>([]);
+    const [memoryState, setMemoryState] = useState<"loading" | "ready" | "failed">("loading");
+    const [forgettingFact, setForgettingFact] = useState<string | null>(null);
+    const [confirmingForgetAll, setConfirmingForgetAll] = useState(false);
 
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
@@ -236,8 +256,64 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             {species_slug: resolvedSubject.slug ?? "", source: `drawer_${source}`}
         );
         setComposer("");
+        setShowingMemory(false);
         void send(question);
     }, [close, isSending, locale, resolvedSubject.slug, send]);
+
+    const loadMemory = useCallback(async () => {
+        setMemoryState("loading");
+        try {
+            const response = await fetch("/api/ask/memory", {method: "GET"});
+            if (!response.ok) throw new Error(String(response.status));
+            const payload = await response.json() as {ok?: boolean; facts?: AskMemoryFact[]};
+            setMemoryFacts(Array.isArray(payload.facts) ? payload.facts : []);
+            setMemoryState("ready");
+        } catch {
+            setMemoryState("failed");
+        }
+    }, []);
+
+    const openMemory = useCallback(() => {
+        setConfirmingClear(false);
+        setConfirmingForgetAll(false);
+        setShowingMemory(true);
+        void loadMemory();
+    }, [loadMemory]);
+
+    const forgetFact = useCallback(async (fact: string) => {
+        setForgettingFact(fact);
+        try {
+            const response = await fetch("/api/ask/memory", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "forget", fact})
+            });
+            if (!response.ok) return;
+            const payload = await response.json() as {facts?: AskMemoryFact[]};
+            setMemoryFacts(Array.isArray(payload.facts) ? payload.facts : []);
+        } catch {
+            // The fact stays listed; the reader can try again.
+        } finally {
+            setForgettingFact(null);
+        }
+    }, []);
+
+    const forgetEverything = useCallback(async () => {
+        setConfirmingForgetAll(false);
+        setForgettingFact("*");
+        try {
+            const response = await fetch("/api/ask/memory", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "clear"})
+            });
+            if (response.ok) setMemoryFacts([]);
+        } catch {
+            // Nothing changed; the list stays as it was.
+        } finally {
+            setForgettingFact(null);
+        }
+    }, []);
 
     const animalName = hints.animalName ?? resolvedSubject.name ?? null;
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
@@ -317,6 +393,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             ) : null}
                         </div>
                     </div>
+                    {speaksAsAnimal && context?.signedIn ? (
+                        <button
+                            type="button"
+                            onClick={showingMemory ? () => setShowingMemory(false) : openMemory}
+                            aria-label={labels.memoryOpen}
+                            aria-pressed={showingMemory}
+                            title={labels.memoryOpen}
+                            className={`grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-white/8 hover:text-white ${showingMemory ? "bg-white/10 text-white" : "text-ink-300"}`}
+                        >
+                            <MemoryIcon />
+                        </button>
+                    ) : null}
                     <button
                         type="button"
                         onClick={() => setConfirmingClear(true)}
@@ -369,7 +457,21 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 ) : null}
 
                 <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-                    {!hasConversation ? (
+                    {showingMemory ? (
+                        <AskMemoryPanel
+                            labels={labels}
+                            facts={memoryFacts}
+                            state={memoryState}
+                            forgettingFact={forgettingFact}
+                            confirmingForgetAll={confirmingForgetAll}
+                            onRetry={() => void loadMemory()}
+                            onForget={(fact) => void forgetFact(fact)}
+                            onAskForgetAll={() => setConfirmingForgetAll(true)}
+                            onCancelForgetAll={() => setConfirmingForgetAll(false)}
+                            onForgetAll={() => void forgetEverything()}
+                            onBack={() => setShowingMemory(false)}
+                        />
+                    ) : !hasConversation ? (
                         <div className="flex flex-col gap-4">
                             <div>
                                 <h2 className="font-display text-xl font-bold leading-7 text-white">
@@ -451,7 +553,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         </div>
                     )}
 
-                    {quota.reached ? (
+                    {quota.reached && !showingMemory ? (
                         <div className="mt-5 border border-amber-300/25 bg-amber-400/[0.08] p-4">
                             <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
                             <p className="mt-1.5 text-sm leading-6 text-ink-100">
@@ -733,6 +835,149 @@ function ThinkingIndicator({phases, label}: {phases: string[]; label: string}) {
 
 // MARK: - Icons
 
+/**
+ * "What I remember about you". Anything told to one animal is known to all
+ * of them, so the list is the same whichever animal opened it; the reader can
+ * take any of it back, one fact at a time or all at once.
+ */
+function AskMemoryPanel({
+    labels,
+    facts,
+    state,
+    forgettingFact,
+    confirmingForgetAll,
+    onRetry,
+    onForget,
+    onAskForgetAll,
+    onCancelForgetAll,
+    onForgetAll,
+    onBack
+}: {
+    labels: AskDrawerLabels;
+    facts: AskMemoryFact[];
+    state: "loading" | "ready" | "failed";
+    forgettingFact: string | null;
+    confirmingForgetAll: boolean;
+    onRetry: () => void;
+    onForget: (fact: string) => void;
+    onAskForgetAll: () => void;
+    onCancelForgetAll: () => void;
+    onForgetAll: () => void;
+    onBack: () => void;
+}) {
+    const busy = forgettingFact !== null;
+    return (
+        <div className="flex flex-col gap-4" data-testid="ask-memory-panel">
+            <div>
+                <h2 className="font-display text-xl font-bold leading-7 text-white">{labels.memoryOpen}</h2>
+                <p className="mt-1.5 text-sm leading-6 text-ink-300">{labels.memoryHint}</p>
+            </div>
+
+            {state === "loading" ? (
+                <p className="text-sm text-ink-400">{labels.memoryLoading}</p>
+            ) : state === "failed" ? (
+                <div className="flex flex-col items-start gap-2">
+                    <p className="text-sm text-ink-300">{labels.memoryFailed}</p>
+                    <button
+                        type="button"
+                        onClick={onRetry}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-200 hover:text-primary-100"
+                    >
+                        <RefreshIcon />
+                        {labels.tryAgain}
+                    </button>
+                </div>
+            ) : facts.length === 0 ? (
+                <div>
+                    <p className="text-base font-semibold text-white">{labels.memoryEmptyTitle}</p>
+                    <p className="mt-1.5 text-sm leading-6 text-ink-300">{labels.memoryEmptyBody}</p>
+                </div>
+            ) : (
+                <>
+                    <ul className="flex flex-col gap-2">
+                        {facts.map((item) => (
+                            <li
+                                key={item.fact}
+                                className="flex items-start gap-3 border border-white/10 bg-white/[0.035] py-3 pl-3.5 pr-2"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm leading-6 text-white">{item.fact}</p>
+                                    {memorySourceLine(item, labels) ? (
+                                        <p className="mt-0.5 text-[11px] leading-4 text-ink-400">{memorySourceLine(item, labels)}</p>
+                                    ) : null}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onForget(item.fact)}
+                                    disabled={busy}
+                                    aria-label={`${labels.memoryForget}: ${item.fact}`}
+                                    title={labels.memoryForget}
+                                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                                >
+                                    {forgettingFact === item.fact ? <span className="text-[10px]">…</span> : <CloseIcon />}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                    {confirmingForgetAll ? (
+                        <div className="border border-white/10 bg-white/[0.03] px-3.5 py-3">
+                            <p className="text-sm font-semibold text-ink-100">{labels.memoryForgetAllConfirm}</p>
+                            <p className="mt-1 text-xs leading-5 text-ink-300">{labels.memoryForgetAllBody}</p>
+                            <div className="mt-2.5 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onForgetAll}
+                                    className="rounded-full bg-primary-400 px-3.5 py-1.5 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                >
+                                    {labels.memoryForgetAll}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onCancelForgetAll}
+                                    className="rounded-full border border-white/12 px-3.5 py-1.5 text-xs font-semibold text-ink-200 transition-colors hover:text-white"
+                                >
+                                    {labels.clearCancel}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={onAskForgetAll}
+                            disabled={busy}
+                            className="w-full border border-white/12 px-3.5 py-2.5 text-xs font-semibold text-ink-200 transition-colors hover:border-white/25 hover:text-white disabled:opacity-40"
+                        >
+                            {labels.memoryForgetAll}
+                        </button>
+                    )}
+                </>
+            )}
+
+            <button
+                type="button"
+                onClick={onBack}
+                className="self-start text-xs font-semibold text-primary-200 hover:text-primary-100"
+            >
+                {labels.memoryBack}
+            </button>
+        </div>
+    );
+}
+
+/** "Told to the Wolf, 2 Oct 2026" — who learned it and when. */
+function memorySourceLine(item: AskMemoryFact, labels: AskDrawerLabels): string | null {
+    const parts: string[] = [];
+    if (item.animal) parts.push(labels.memoryToldTo.replace("{animal}", item.animal));
+    const day = item.noted_at?.slice(0, 10);
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+        const date = new Date(`${day}T00:00:00Z`);
+        if (!Number.isNaN(date.getTime())) {
+            parts.push(date.toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric", timeZone: "UTC"}));
+        }
+    }
+    return parts.length > 0 ? parts.join(", ") : null;
+}
+
 function icon(path: React.ReactNode, strokeWidth = 2) {
     return (
         <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -744,6 +989,7 @@ function icon(path: React.ReactNode, strokeWidth = 2) {
 const SparkIcon = () => icon(<path d="M10 3.5 11.4 8 16 9.4 11.4 10.8 10 15.4 8.6 10.8 4 9.4 8.6 8Z" />);
 const CloseIcon = () => icon(<path d="M5.5 5.5l9 9m0-9l-9 9" />);
 const PencilIcon = () => icon(<path d="M4 16h3.5l8-8a2.1 2.1 0 0 0-3-3l-8 8V16Z" />);
+const MemoryIcon = () => icon(<path d="M10 3a4.5 4.5 0 0 0-4.5 4.5v1.2A3.3 3.3 0 0 0 7 14.6V17h6v-2.4a3.3 3.3 0 0 0 1.5-5.9V7.5A4.5 4.5 0 0 0 10 3Zm-2 14h4" />);
 const ArrowUpIcon = () => icon(<path d="M10 16V5m0 0-4.5 4.5M10 5l4.5 4.5" />, 2.4);
 const StopIcon = () => (
     <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor" aria-hidden="true">

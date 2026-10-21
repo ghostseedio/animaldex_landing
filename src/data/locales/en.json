@@ -2333,6 +2333,18 @@
     "limitBodySignedIn": "You’ve used today’s {limit} messages. They come back tomorrow, or go Pro for 100 a day.",
     "limitCtaSignedIn": "See AnimalDex Pro",
     "limitHrefSignedIn": "/#download",
-    "limitBodyPro": "You’ve used today’s {limit} messages. They come back tomorrow."
+    "limitBodyPro": "You’ve used today’s {limit} messages. They come back tomorrow.",
+    "memoryOpen": "What I remember about you",
+    "memoryHint": "Anything you tell one animal, every animal remembers. Only you can see this, and you can take any of it back.",
+    "memoryEmptyTitle": "I don’t know anything about you yet.",
+    "memoryEmptyBody": "Tell me what you’re working on, or what you keep getting stuck on, and I’ll keep it in mind next time — and so will every other animal.",
+    "memoryLoading": "Thinking back…",
+    "memoryFailed": "Couldn’t reach what I remember just now.",
+    "memoryForget": "Forget",
+    "memoryForgetAll": "Forget everything",
+    "memoryForgetAllConfirm": "Forget everything?",
+    "memoryForgetAllBody": "Every animal will forget what you have told them. Your conversations stay as they are.",
+    "memoryToldTo": "Told to the {animal}",
+    "memoryBack": "Back to the conversation"
   }
 }
