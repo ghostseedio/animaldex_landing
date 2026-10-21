@@ -11,6 +11,7 @@ import {
 } from "@/app/[locale]/(composited)/u/[handle]/profile-stats-panels";
 import type {ProfileBattleTierCounts} from "@/data/public-profiles";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 type ComparisonSide = {
     collectorScore: number;
@@ -184,9 +185,7 @@ export default function ProfileHeadToHeadSheet({
             <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden bg-black md: md:border md:border-white/10">
                 <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
                     <h2 className="text-[17px] font-semibold text-white">Head to Head</h2>
-                    <button type="button" onClick={onClose} className="text-[15px] font-semibold" style={{color: THEME.neon}}>
-                        Done
-                    </button>
+                    <CloseIconButton onClick={onClose} color={THEME.neon} />
                 </header>
 
                 <div className="min-h-0 flex-1 overflow-y-auto py-4">

@@ -2,6 +2,7 @@
 
 import {useEffect, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
+import {DoneIconButton} from "@/components/ui/icon-buttons";
 
 /**
  * Member-profile header controls, after iOS `header(user)` and
@@ -171,7 +172,7 @@ export default function ProfileSocialControls({
                     <div className="w-full max-w-md border border-white/10 bg-[#171717] p-5 light:bg-surface-900" onClick={(event) => event.stopPropagation()}>
                         <div className="flex items-center justify-between">
                             <h2 className="font-display text-xl font-bold text-white">Notifications</h2>
-                            <button type="button" onClick={() => setBellOpen(false)} className="text-sm font-bold" style={{color: NEON}}>Done</button>
+                            <DoneIconButton onClick={() => setBellOpen(false)} color={NEON} />
                         </div>
                         <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40">Notifications from {displayName}</p>
                         <div className="mt-2 border border-white/10">

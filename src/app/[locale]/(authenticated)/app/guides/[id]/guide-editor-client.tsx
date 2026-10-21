@@ -33,6 +33,7 @@ import {
     type GuideMedia,
     type GuideSpecies
 } from "@/lib/virtual-wildlife-guides";
+import {SaveGlyph} from "@/components/ui/icon-buttons";
 
 /**
  * Editing a guide AnimalDex built (iOS WildlifeGuideEditorView). Text, price,
@@ -778,7 +779,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                         className="shrink-0 rounded-full px-5 py-2.5 text-sm font-extrabold text-black transition hover:opacity-90 disabled:opacity-40"
                         style={{backgroundColor: GUIDE_NEON}}
                     >
-                        {saving ? "Saving…" : "Save"}
+                        <span className="inline-flex items-center gap-1.5"><SaveGlyph />{saving ? "Saving…" : "Save"}</span>
                     </button>
                 </div>
             </div>

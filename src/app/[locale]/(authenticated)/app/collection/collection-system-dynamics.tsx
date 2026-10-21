@@ -13,6 +13,7 @@ import {
     resolveVisualSignature,
     summaryFrequencyModes
 } from "@/lib/system-dynamics";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 /**
  * The Collection's "Systems Dynamics" browse mode, ported from iOS
@@ -221,7 +222,7 @@ export default function CollectionSystemDynamics({
                     <div className="max-h-[94vh] w-full max-w-xl overflow-y-auto border border-white/10 bg-black p-4 shadow-2xl">
                         <div className="mb-3 flex items-center justify-between gap-4">
                             <h2 className="text-lg font-bold text-white">{selected.animalName}</h2>
-                            <button type="button" onClick={() => setSelected(null)} className="text-sm font-semibold text-primary-200">Done</button>
+                            <CloseIconButton onClick={() => setSelected(null)} />
                         </div>
                         <SystemDynamicsPanel dynamics={selected.dynamics} animalName={selected.animalName} />
                     </div>

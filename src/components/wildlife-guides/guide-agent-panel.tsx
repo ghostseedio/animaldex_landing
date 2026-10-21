@@ -12,6 +12,7 @@ import {
     type AgentConfirmation,
     type AgentReply
 } from "@/lib/wildlife-guide-agent";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 /**
  * Ask AnimalDex for Wildlife Guides (iOS WildlifeGuideAgentView), as a panel
@@ -169,7 +170,7 @@ export default function GuideAgentPanel({guideTitle, onChange, onClose}: {
                     <GuideGlyph name="sparkles" className="h-4 w-4" />
                     Ask AnimalDex
                 </span>
-                <button type="button" onClick={onClose} className="text-xs font-semibold text-white/55 hover:text-white">Close</button>
+                <CloseIconButton onClick={onClose} color="rgba(255,255,255,0.7)" />
             </div>
 
             <div className={`${GUIDE_BAND} px-[18px] py-4`} style={{backgroundColor: "rgba(31,31,31,0.6)"}}>

@@ -37,6 +37,7 @@ import {
 import { getAbsoluteUrl } from "@/lib/site";
 import { formatAppShortDate } from "@/lib/app-dates";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
 let feedVideoSoundEnabled = false;
@@ -1902,7 +1903,7 @@ export function PostInformation({item, locale, onClose}: {item: DiscoverTimeline
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 md:items-center md:p-4" role="dialog" aria-modal="true" aria-label="Post information">
       <div className="max-h-[94vh] w-full max-w-xl overflow-y-auto border border-white/10 bg-black p-5 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between gap-4"><h2 className="text-lg font-bold text-white">Post information</h2><button type="button" onClick={onClose} className="text-sm font-semibold text-primary-400">Close</button></div>
+        <div className="mb-5 flex items-center justify-between gap-4"><h2 className="text-lg font-bold text-white">Post information</h2><CloseIconButton onClick={onClose} /></div>
 
         {item.kind === "capture" ? (
           <div className="space-y-4">

@@ -120,8 +120,9 @@ export default function SpeciesComparisonSheet({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="mt-2 border border-white/10 px-4 py-3 text-sm font-black text-white"
+                                className="mt-2 inline-flex items-center gap-2 border border-white/10 px-4 py-3 text-sm font-black text-white"
                             >
+                                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                                 Close
                             </button>
                         </div>

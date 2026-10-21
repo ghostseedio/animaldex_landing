@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
 import type {TrainAnimalPack, TrainPackCapture} from "@/data/train-modules";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 type PackReveal = {
     pack: TrainAnimalPack;
@@ -500,7 +501,7 @@ function PackBuilderSheet({
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md">
             <div className="mx-auto flex h-full max-w-2xl flex-col bg-[#090909]">
                 <header className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                    <button type="button" onClick={onClose} className="text-sm font-bold text-primary-200">Close</button>
+                    <CloseIconButton onClick={onClose} />
                     <div className="text-center">
                         <h2 className="font-display text-lg font-bold text-white">Build Pack</h2>
                         <p className="text-[0.68rem] font-bold text-white/45">{selected.length} of 10 selected</p>

@@ -29,6 +29,7 @@ import {
 
 import type {ProfileShopLabels} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
 import Link from "@/app/[locale]/_components/link";
+import {SaveGlyph} from "@/components/ui/icon-buttons";
 
 export type {ProfileShopLabels};
 
@@ -304,7 +305,7 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
                                 />
                                 <p className="mt-1.5 text-xs leading-5 text-white/55">Buyers see this name first, and Ask AnimalDex uses it to know which guide you mean.</p>
                                 <div className="mt-2.5 flex gap-2.5">
-                                    <button type="submit" disabled={busyGuideId === card.id} className="rounded-full px-4 py-2 text-xs font-extrabold text-black disabled:opacity-50" style={{backgroundColor: GUIDE_NEON}}>Save</button>
+                                    <button type="submit" disabled={busyGuideId === card.id} className="rounded-full px-4 py-2 text-xs font-extrabold text-black disabled:opacity-50" style={{backgroundColor: GUIDE_NEON}}><span className="inline-flex items-center gap-1.5"><SaveGlyph className="h-3.5 w-3.5" />Save</span></button>
                                     <button type="button" onClick={() => setRenaming(null)} className="rounded-full border border-white/20 px-4 py-2 text-xs font-extrabold text-white">Cancel</button>
                                 </div>
                             </form>

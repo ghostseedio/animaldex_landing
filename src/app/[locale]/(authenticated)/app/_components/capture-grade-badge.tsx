@@ -2,6 +2,7 @@
 
 import {useEffect, useId, useState} from "react";
 import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 function gradeTint(grade: number) {
   if (grade >= 9) return {chip: "bg-orange-400/90 text-black ring-orange-200/40", bar: "bg-orange-400", soft: "border-orange-400/35"};
@@ -60,9 +61,7 @@ function CaptureGradeExplanationSheet({
           <h2 id={titleId} className="text-lg font-bold text-white">
             Grade {breakdown.grade}
           </h2>
-          <button type="button" onClick={onClose} className="text-sm font-semibold text-primary-200">
-            Close
-          </button>
+          <CloseIconButton onClick={onClose} />
         </div>
 
         <div className="space-y-5">

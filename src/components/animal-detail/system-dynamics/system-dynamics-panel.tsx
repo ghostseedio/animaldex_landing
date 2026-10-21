@@ -18,6 +18,7 @@ import {commonNameInSentence} from "@/lib/animal-dream-reading";
 import SystemStateRow, {FrequencyStateChip} from "@/components/animal-detail/system-dynamics/frequency-chip";
 import SystemWaveform from "@/components/animal-detail/system-dynamics/system-waveform";
 import CrossDomainBrowser from "@/components/animal-detail/system-dynamics/cross-domain-browser";
+import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 /**
  * System Dynamics for the Learn tab, ported from iOS `SystemDynamicsHeroCard`
@@ -180,13 +181,7 @@ export default function SystemDynamicsPanel({
             <div className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-3">
                     <p className="text-xs font-semibold text-white/40">{animalName}</p>
-                    <button
-                        type="button"
-                        onClick={() => setIsOpen(false)}
-                        className="min-h-8 text-xs font-semibold text-white/50 hover:text-white"
-                    >
-                        Close
-                    </button>
+                    <CloseIconButton onClick={() => setIsOpen(false)} color="rgba(255,255,255,0.7)" />
                 </div>
                 {identity}
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{color: ACCENT}}>
