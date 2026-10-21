@@ -4,8 +4,15 @@ import {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "reac
 import {useRouter} from "next/navigation";
 import {getLocalePath} from "@/lib/site";
 import {applyWildProfileChip, suggestedWildProfileChips} from "@/lib/wild-profile-interview-chips";
+import {
+    isDeepWildProfileQuestion,
+    wildProfileAnswerInput,
+    wildProfileBirthDateAnswer,
+    wildProfileBirthDateBounds
+} from "@/lib/wild-profile-interview-answers";
 import type {
     WildProfileChatMessage,
+    WildProfileInterviewLabels,
     WildProfileInterviewPayload,
     WildProfileInterviewQuestion,
     WildProfileNextResponse,
@@ -14,23 +21,18 @@ import type {
 
 /**
  * Web port of the iOS Wild Profile interview (IdentityQuestionnaireView in
- * Views/IdentityProfileViews.swift). Copy, reveal timing and chip rules are
- * kept verbatim; the backend is the same identity-interview-next /
+ * Views/IdentityProfileViews.swift). Reveal timing and chip rules follow iOS;
+ * the copy is localized (wildProfile.interview) and speaks to the deep (v2)
+ * interview. The backend is the same identity-interview-next /
  * generate-identity-profile pair, reached through /api/app/wild-profile.
  */
 
+// What the server records for a skipped answer, in English.
 const SKIPPED_TEXT = "Skipped this question.";
-const GENERATION_STAGES = [
-    "Reading your animal clues",
-    "Matching habitats and instincts",
-    "Shortlisting catalog species",
-    "Choosing Origin, Apex, and Active",
-    "Writing your private report"
-];
 
 type DisplayMessage = WildProfileChatMessage & {renderDelay?: number | null};
 
-async function callWildProfile<T>(body: Record<string, unknown>): Promise<T> {
+async function callWildProfile<T>(body: Record<string, unknown>, fallbackError: string): Promise<T> {
     const response = await fetch("/api/app/wild-profile", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -38,7 +40,7 @@ async function callWildProfile<T>(body: Record<string, unknown>): Promise<T> {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(typeof payload?.error === "string" ? payload.error : "Identity Profile is unavailable right now.");
+        throw new Error(typeof payload?.error === "string" ? payload.error : fallbackError);
     }
     return payload as T;
 }
@@ -104,6 +106,7 @@ function shouldShowLabel(message: WildProfileChatMessage) {
 
 function readableDimension(value: string) {
     return value
+        .replace(/^(deep|identity)_/, "")
         .replace(/_/g, " ")
         .split(" ")
         .filter(Boolean)
@@ -111,9 +114,9 @@ function readableDimension(value: string) {
         .join(" ");
 }
 
-function TypingDots() {
+function TypingDots({label}: {label: string}) {
     return (
-        <span className="inline-flex gap-1" aria-label="Wild Guide is typing">
+        <span className="inline-flex gap-1" aria-label={label}>
             {[0, 1, 2].map((dot) => (
                 <span key={dot} className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/50" style={{animationDelay: `${dot * 150}ms`}} />
             ))}
@@ -121,28 +124,39 @@ function TypingDots() {
     );
 }
 
-function GuideLabel({isUser}: {isUser: boolean}) {
-    return <p className={`text-[0.62rem] font-black ${isUser ? "text-black/65" : "text-white/40"}`}>{isUser ? "You" : "Wild Guide"}</p>;
+function GuideLabel({isUser, labels}: {isUser: boolean; labels: WildProfileInterviewLabels}) {
+    return <p className={`text-[0.62rem] font-black ${isUser ? "text-black/65" : "text-white/40"}`}>{isUser ? labels.you : labels.guide}</p>;
 }
 
-function GenerationLoading() {
+/** "14 March 1998" for the bubble; the answer itself stays yyyy-MM-dd. */
+function readableBirthDate(iso: string, locale: string) {
+    const [year, month, day] = iso.split("-").map(Number);
+    try {
+        return new Date(year, month - 1, day).toLocaleDateString(locale, {day: "numeric", month: "long", year: "numeric"});
+    } catch {
+        return iso;
+    }
+}
+
+function GenerationLoading({labels}: {labels: WildProfileInterviewLabels}) {
+    const stages = [labels.stageReading, labels.stagePatterns, labels.stageCatalog, labels.stageRoles, labels.stageReport];
     const [stage, setStage] = useState(0);
     useEffect(() => {
-        const timer = setInterval(() => setStage((current) => Math.min(current + 1, GENERATION_STAGES.length - 1)), 4_000);
+        const timer = setInterval(() => setStage((current) => Math.min(current + 1, stages.length - 1)), 4_000);
         return () => clearInterval(timer);
-    }, []);
+    }, [stages.length]);
 
     return (
         <div className="flex min-h-[24rem] flex-col items-center justify-center gap-4 border border-white/10 bg-[#151515] p-8 text-center" role="status" aria-live="polite">
             <span className="text-4xl text-primary-300" aria-hidden="true">🐾</span>
-            <h2 className="font-display text-3xl font-bold text-white">Revealing Wild Profile</h2>
-            <p className="text-sm font-semibold text-primary-200">{GENERATION_STAGES[stage]}</p>
-            <p className="max-w-sm text-sm leading-6 text-white/50">Matching your habitat and instinct clues to real catalog animals.</p>
+            <h2 className="font-display text-3xl font-bold text-white">{labels.revealingTitle}</h2>
+            <p className="text-sm font-semibold text-primary-200">{stages[stage]}</p>
+            <p className="max-w-sm text-sm leading-6 text-white/50">{labels.revealingBody}</p>
         </div>
     );
 }
 
-export default function WildProfileInterview({locale}: {locale: string}) {
+export default function WildProfileInterview({locale, labels}: {locale: string; labels: WildProfileInterviewLabels}) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [session, setSession] = useState<WildProfileSession | null>(null);
@@ -158,17 +172,23 @@ export default function WildProfileInterview({locale}: {locale: string}) {
     const [showSignal, setShowSignal] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const dateInputRef = useRef<HTMLInputElement>(null);
 
     const question = response?.question ?? null;
     const state = response?.state ?? null;
     const signalPercent = state?.confidence_score != null ? Math.round(state.confidence_score * 100) : null;
     const resultPath = getLocalePath(locale, "/app/train/wild-profile");
+    const unavailable = labels.unavailable;
+    const answerInput = wildProfileAnswerInput(question);
+    const birthDateBounds = useMemo(() => wildProfileBirthDateBounds(), []);
+    const birthDateAnswer = answerInput === "birth_date" ? wildProfileBirthDateAnswer(answerText) : null;
+    const canSend = answerInput === "birth_date" ? birthDateAnswer !== null : Boolean(answerText.trim());
 
     const load = useCallback(async () => {
         setIsLoading(true);
         setErrorMessage(null);
         try {
-            const payload = await callWildProfile<WildProfileInterviewPayload>({action: "load"});
+            const payload = await callWildProfile<WildProfileInterviewPayload>({action: "load"}, unavailable);
             setSession(payload.session);
             setIsGenerating(payload.generating);
             setResponse(payload.generating ? null : payload.response);
@@ -177,7 +197,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
             setErrorMessage(error instanceof Error ? error.message : String(error));
         }
         setIsLoading(false);
-    }, []);
+    }, [unavailable]);
 
     useEffect(() => {
         void load();
@@ -193,7 +213,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                 await wait(3_000);
                 if (cancelled) return;
                 try {
-                    const {session: latest} = await callWildProfile<{session: WildProfileSession | null}>({action: "status"});
+                    const {session: latest} = await callWildProfile<{session: WildProfileSession | null}>({action: "status"}, unavailable);
                     if (!latest || latest.id !== session.id) {
                         router.push(resultPath);
                         return;
@@ -208,12 +228,12 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                     // Keep polling; a single failed check is not fatal.
                 }
             }
-            if (!cancelled) setErrorMessage("Wild Profile is still revealing. Close this and check again in a moment.");
+            if (!cancelled) setErrorMessage(labels.stillRevealing);
         })();
         return () => {
             cancelled = true;
         };
-    }, [session, load, router, resultPath]);
+    }, [session, load, router, resultPath, unavailable, labels.stillRevealing]);
 
     const messages = useMemo(
         () => (question ? displayMessages(chatMessages(response, question, pendingUserMessage)) : []),
@@ -265,11 +285,14 @@ export default function WildProfileInterview({locale}: {locale: string}) {
 
     async function submit(skipped: boolean) {
         if (!session || !question || isSaving) return;
-        const text = answerText.trim();
+        // A birth date goes in as free text, yyyy-MM-dd, like any other answer.
+        const text = answerInput === "birth_date" ? (birthDateAnswer ?? "") : answerText.trim();
         if (!skipped && !text) return;
         setIsSaving(true);
         setErrorMessage(null);
-        setPendingUserMessage(skipped ? SKIPPED_TEXT : text);
+        setPendingUserMessage(skipped
+            ? labels.skipped
+            : answerInput === "birth_date" ? readableBirthDate(text, locale) : text);
         try {
             const payload = await callWildProfile<{response: WildProfileNextResponse}>({
                 action: "answer",
@@ -277,7 +300,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                 questionId: question.id,
                 freeText: skipped ? null : text,
                 skipped
-            });
+            }, unavailable);
             setResponse(payload.response);
             setAnswerText("");
         } catch (error) {
@@ -294,7 +317,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
         setIsGenerating(true);
         setErrorMessage(null);
         try {
-            await callWildProfile({action: "generate", sessionId});
+            await callWildProfile({action: "generate", sessionId}, unavailable);
             router.push(resultPath);
             router.refresh();
             return;
@@ -314,13 +337,13 @@ export default function WildProfileInterview({locale}: {locale: string}) {
             type="button"
             onClick={() => setShowSignal((current) => !current)}
             aria-expanded={showSignal}
-            aria-label={`Open Wild Profile animal signal details, ${signalPercent} percent`}
+            aria-label={labels.signalAria.replace("{percent}", String(signalPercent))}
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5"
         >
             <span className="h-1.5 w-1.5 rounded-full bg-primary-300 shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
             <span className="flex flex-col items-start leading-none">
                 <span className="text-sm font-black text-white">{signalPercent}%</span>
-                <span className="mt-0.5 text-[0.5rem] font-extrabold tracking-[0.1em] text-white/40">SIGNAL</span>
+                <span className="mt-0.5 text-[0.5rem] font-extrabold tracking-[0.1em] text-white/40">{labels.signalShort}</span>
             </span>
         </button>
     ) : null;
@@ -328,7 +351,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
     if (isLoading) {
         return (
             <div className="flex min-h-[20rem] items-center justify-center border border-white/10 bg-[#151515] text-sm text-white/55" role="status">
-                Loading interview
+                {labels.loading}
             </div>
         );
     }
@@ -336,7 +359,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
     if (isGenerating) {
         return (
             <div className="space-y-3">
-                <GenerationLoading />
+                <GenerationLoading labels={labels} />
                 {errorMessage ? <p className="text-sm font-semibold text-red-400">{errorMessage}</p> : null}
             </div>
         );
@@ -346,9 +369,9 @@ export default function WildProfileInterview({locale}: {locale: string}) {
         if (!response) {
             return (
                 <div className="space-y-4 border border-white/10 bg-[#151515] p-6">
-                    <p className="text-sm font-semibold text-red-400">{errorMessage ?? "Identity Profile is unavailable right now."}</p>
+                    <p className="text-sm font-semibold text-red-400">{errorMessage ?? labels.unavailable}</p>
                     <button type="button" onClick={() => void load()} className="bg-primary-400 px-5 py-3 text-sm font-black text-black">
-                        Try again
+                        {labels.tryAgain}
                     </button>
                 </div>
             );
@@ -357,16 +380,14 @@ export default function WildProfileInterview({locale}: {locale: string}) {
         return (
             <section className="space-y-4 border border-white/10 bg-[#151515] p-6 md:p-8">
                 <span className="text-4xl text-primary-300" aria-hidden="true">✦</span>
-                <h2 className="font-display text-3xl font-bold text-white">Ready to reveal your animals</h2>
-                <p className="text-sm font-semibold leading-6 text-white/60">
-                    AnimalDex has enough habitat, instinct, and pressure clues to build your Wild Profile.
-                </p>
+                <h2 className="font-display text-3xl font-bold text-white">{labels.readyTitle}</h2>
+                <p className="text-sm font-semibold leading-6 text-white/60">{labels.readyBody}</p>
                 <button
                     type="button"
                     onClick={() => void generate()}
                     className="w-full bg-primary-400 px-5 py-3 text-sm font-black text-black transition hover:bg-primary-300"
                 >
-                    🐾 Reveal My Wild Profile
+                    🐾 {labels.revealCta}
                 </button>
                 {errorMessage ? <p className="text-sm font-semibold text-red-400">{errorMessage}</p> : null}
             </section>
@@ -375,21 +396,23 @@ export default function WildProfileInterview({locale}: {locale: string}) {
 
     const showIntro = !hasDismissedIntro && question.question_index <= 1 && (state?.answered_count ?? 0) === 0;
     const lastAssistant = [...visibleMessages].reverse().find((message) => message.role === "assistant");
-    const chips = suggestedWildProfileChips(`${question.question_text} ${lastAssistant?.content ?? ""}`);
+    const chips = isDeepWildProfileQuestion(question) || answerInput === "birth_date"
+        ? []
+        : suggestedWildProfileChips(`${question.question_text} ${lastAssistant?.content ?? ""}`);
     const busy = isSaving || isRevealing;
     const themes = (state?.recurring_themes ?? []).slice(0, 8);
     const covered = (state?.covered_dimensions ?? []).slice(0, 8);
     const sharedAnswers = (response?.messages ?? [])
-        .filter((message) => message.role === "user" && message.content && message.content !== SKIPPED_TEXT)
+        .filter((message) => message.role === "user" && message.content && message.content !== SKIPPED_TEXT && message.content !== labels.skipped)
         .map((message) => message.content)
         .slice(-8);
     const summary = state?.conversation_summary?.trim()
-        ? `Wild Guide is collecting animal clues for your profile. Recent clues include: ${state.conversation_summary.trim().slice(0, 220)}`
+        ? labels.summaryRecent.replace("{summary}", state.conversation_summary.trim().slice(0, 220))
         : (signalPercent ?? 0) < 25
-            ? "Still light. A few more habitat and instinct answers will make your animals less generic."
+            ? labels.summaryLight
             : (signalPercent ?? 0) < 60
-                ? "Early patterns showing. More habitat, social, or defense clues will sharpen the match."
-                : "Strong signal. AnimalDex has enough clues to build your Origin, Apex, and Active profile.";
+                ? labels.summaryEarly
+                : labels.summaryStrong;
 
     return (
         <section className="overflow-hidden border border-white/10 bg-[#101010]">
@@ -401,14 +424,14 @@ export default function WildProfileInterview({locale}: {locale: string}) {
             {showSignal ? (
                 <div className="space-y-4 border-b border-white/10 bg-[#151515] p-5">
                     <div>
-                        <p className="font-display text-2xl font-bold text-primary-300">{signalPercent ?? 0}% Animal Signal</p>
+                        <p className="font-display text-2xl font-bold text-primary-300">{labels.signalTitle.replace("{percent}", String(signalPercent ?? 0))}</p>
                         <p className="mt-2 text-sm font-semibold leading-6 text-white/60">{summary}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         {[
-                            ["Answers", state?.answered_count ?? 0],
-                            ["Skipped", state?.skipped_count ?? 0],
-                            ["Ready", `${Math.round((state?.readiness_score ?? 0) * 100)}%`]
+                            [labels.statAnswers, state?.answered_count ?? 0],
+                            [labels.statSkipped, state?.skipped_count ?? 0],
+                            [labels.statReady, `${Math.round((state?.readiness_score ?? 0) * 100)}%`]
                         ].map(([label, value]) => (
                             <div key={label} className="bg-black/40 p-2.5">
                                 <p className="text-sm font-black text-white">{value}</p>
@@ -417,9 +440,9 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                         ))}
                     </div>
                     {[
-                        ["Animal clues found", themes],
-                        ["Habitats explored", covered.map(readableDimension)],
-                        ["Still learning", (signalPercent ?? 0) < 60 && themes.length > 0 ? ["More habitat clues", "More instinct clues"] : []]
+                        [labels.themesTitle, themes],
+                        [labels.coveredTitle, covered.map(readableDimension)],
+                        [labels.stillLearningTitle, (signalPercent ?? 0) < 60 && themes.length > 0 ? [labels.stillLearningItem] : []]
                     ].map(([title, items]) => (items as string[]).length > 0 ? (
                         <div key={title as string}>
                             <p className="text-sm font-black text-white">{title as string}</p>
@@ -432,7 +455,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                     ) : null)}
                     {sharedAnswers.length > 0 ? (
                         <div>
-                            <p className="text-sm font-black text-white">Recent things you shared</p>
+                            <p className="text-sm font-black text-white">{labels.sharedTitle}</p>
                             <ul className="mt-2 space-y-2">
                                 {sharedAnswers.map((answer, index) => (
                                     <li key={`${index}-${answer}`} className="line-clamp-3 bg-black/40 p-2.5 text-xs font-semibold text-white/60">{answer}</li>
@@ -442,10 +465,10 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                     ) : null}
                     <div className="grid gap-2 sm:grid-cols-2">
                         <button type="button" onClick={() => void generate()} className="bg-primary-400 px-5 py-3 text-sm font-black text-black">
-                            🐾 Reveal My Wild Profile
+                            🐾 {labels.revealCta}
                         </button>
                         <button type="button" onClick={() => setShowSignal(false)} className="border border-white/15 px-5 py-3 text-sm font-bold text-white">
-                            Keep Answering
+                            {labels.keepAnswering}
                         </button>
                     </div>
                 </div>
@@ -454,31 +477,30 @@ export default function WildProfileInterview({locale}: {locale: string}) {
             <div className="max-h-[60vh] min-h-[22rem] space-y-3.5 overflow-y-auto p-5" aria-live="polite">
                 {showIntro ? (
                     <div className="space-y-3 border border-white/10 bg-[#151515] p-4">
-                        <h2 className="text-xl font-black text-white">Find your three animals</h2>
-                        <p className="text-sm leading-6 text-white/60">
-                            Answer a few animal-style questions. AnimalDex will match you to your Origin, Apex, and Active animals.
-                        </p>
+                        <h2 className="text-xl font-black text-white">{labels.introTitle}</h2>
+                        <p className="text-sm leading-6 text-white/60">{labels.introBody}</p>
                         <ul className="space-y-1.5 text-sm text-white/60">
-                            <li><span className="text-primary-300">•</span> Origin: your root pattern</li>
-                            <li><span className="text-primary-300">•</span> Apex: your pressure power</li>
-                            <li><span className="text-primary-300">•</span> Active: the animal showing up right now</li>
+                            <li><span className="text-primary-300">•</span> {labels.introOrigin}</li>
+                            <li><span className="text-primary-300">•</span> {labels.introApex}</li>
+                            <li><span className="text-primary-300">•</span> {labels.introActive}</li>
                         </ul>
                         <button
                             type="button"
                             onClick={() => {
                                 setHasDismissedIntro(true);
-                                inputRef.current?.focus();
+                                (answerInput === "birth_date" ? dateInputRef.current : inputRef.current)?.focus();
                             }}
                             className="w-full bg-primary-400 px-5 py-2.5 text-sm font-bold text-black"
                         >
-                            Start
+                            {labels.start}
                         </button>
-                        <p className="text-xs text-white/40">Private by default. Reflective, not a diagnosis.</p>
+                        <p className="text-xs text-white/40">{labels.introFootnote}</p>
+                        <p className="text-xs leading-5 text-white/40">{labels.privacyNote}</p>
                     </div>
                 ) : null}
 
                 <div className="flex items-center justify-between">
-                    <p className="text-[0.8rem] font-black text-white/60">Question {question.question_index}</p>
+                    <p className="text-[0.8rem] font-black text-white/60">{labels.question.replace("{number}", String(question.question_index))}</p>
                 </div>
 
                 {visibleMessages.map((message) => {
@@ -488,7 +510,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                     return (
                         <div key={message.id} className={`flex ${isUser ? "justify-end pl-10" : "justify-start pr-10"}`}>
                             <div className={`max-w-xl space-y-1 p-3 ${isUser ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1a1a1a] text-white"}`}>
-                                {shouldShowLabel(message) ? <GuideLabel isUser={isUser} /> : null}
+                                {shouldShowLabel(message) ? <GuideLabel isUser={isUser} labels={labels} /> : null}
                                 <p className="whitespace-pre-line text-[0.95rem] font-semibold leading-6">{message.content}</p>
                                 {canSkip ? (
                                     <button
@@ -497,7 +519,7 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                                         disabled={isSaving}
                                         className="mt-1 border border-white/20 px-2.5 py-1 text-xs font-black text-white/80 hover:border-white/40 disabled:opacity-50"
                                     >
-                                        ⏭ Skip
+                                        ⏭ {labels.skip}
                                     </button>
                                 ) : null}
                             </div>
@@ -508,8 +530,8 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                 {busy ? (
                     <div className="flex justify-start pr-10">
                         <div className="space-y-1.5 border border-white/10 bg-[#1a1a1a] p-3">
-                            <GuideLabel isUser={false} />
-                            <TypingDots />
+                            <GuideLabel isUser={false} labels={labels} />
+                            <TypingDots label={labels.typing} />
                         </div>
                     </div>
                 ) : null}
@@ -535,28 +557,47 @@ export default function WildProfileInterview({locale}: {locale: string}) {
                     </div>
                 ) : null}
                 <div className="flex items-end gap-2.5">
-                    <label htmlFor="wild-profile-answer" className="sr-only">Your answer</label>
-                    <textarea
-                        id="wild-profile-answer"
-                        ref={inputRef}
-                        value={answerText}
-                        onChange={(event) => setAnswerText(event.target.value)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Enter" && !event.shiftKey) {
-                                event.preventDefault();
-                                if (!busy) void submit(false);
-                            }
-                        }}
-                        placeholder="Type a short answer"
-                        rows={1}
-                        maxLength={1200}
-                        disabled={busy}
-                        className="max-h-32 min-h-[2.75rem] flex-1 resize-none border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-[0.95rem] font-medium text-white placeholder:text-white/35 focus:border-primary-300/60 focus:outline-none disabled:opacity-60"
-                    />
+                    {answerInput === "birth_date" ? (
+                        <>
+                            <label htmlFor="wild-profile-birth-date" className="sr-only">{labels.birthDateLabel}</label>
+                            <input
+                                id="wild-profile-birth-date"
+                                ref={dateInputRef}
+                                type="date"
+                                value={answerText}
+                                min={birthDateBounds.min}
+                                max={birthDateBounds.max}
+                                onChange={(event) => setAnswerText(event.target.value)}
+                                disabled={busy}
+                                className="min-h-[2.75rem] flex-1 border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-[0.95rem] font-medium text-white [color-scheme:dark] focus:border-primary-300/60 focus:outline-none disabled:opacity-60"
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <label htmlFor="wild-profile-answer" className="sr-only">{labels.answerLabel}</label>
+                            <textarea
+                                id="wild-profile-answer"
+                                ref={inputRef}
+                                value={answerText}
+                                onChange={(event) => setAnswerText(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter" && !event.shiftKey) {
+                                        event.preventDefault();
+                                        if (!busy) void submit(false);
+                                    }
+                                }}
+                                placeholder={labels.placeholder}
+                                rows={1}
+                                maxLength={1200}
+                                disabled={busy}
+                                className="max-h-32 min-h-[2.75rem] flex-1 resize-none border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-[0.95rem] font-medium text-white placeholder:text-white/35 focus:border-primary-300/60 focus:outline-none disabled:opacity-60"
+                            />
+                        </>
+                    )}
                     <button
                         type="submit"
-                        aria-label="Send"
-                        disabled={busy || !answerText.trim()}
+                        aria-label={labels.send}
+                        disabled={busy || !canSend}
                         className="grid h-11 w-11 shrink-0 place-items-center bg-primary-400 text-lg font-black text-black transition hover:bg-primary-300 disabled:opacity-40"
                     >
                         {isSaving ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" /> : "↑"}

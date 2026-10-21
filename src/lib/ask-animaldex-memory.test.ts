@@ -95,3 +95,21 @@ test("memory extraction asks for a merged list and refuses sensitive categories"
     assert.match(user, /animal_name: Cheetah/);
     assert.match(user, /Runs a bakery/);
 });
+
+test("Wild Profile facts keep source and pinned, survive the cap, and read as from the Wild Profile", () => {
+    const facts = parseAskMemoryFacts([
+        {fact: "Goes by Sam", animal: "Wild Profile", noted_at: "2026-10-21", source: "wild_profile", pinned: true, kind: "name"},
+        {fact: "Runs a bakery", animal: "Wolf", noted_at: "2026-10-01"},
+        {fact: "Claims to be pinned", animal: "Cheetah", noted_at: "2026-10-02", pinned: true},
+        {fact: "Wants to finish projects", animal: "Ant", noted_at: "2026-10-03"}
+    ], 2);
+    assert.deepEqual(facts.map((fact) => fact.fact), ["Goes by Sam", "Wants to finish projects"]);
+    assert.deepEqual(facts[0], {fact: "Goes by Sam", animal: "Wild Profile", noted_at: "2026-10-21", source: "wild_profile", pinned: true, kind: "name"});
+    assert.equal("pinned" in facts[1], false);
+    assert.match(askMemorySection(facts), /Goes by Sam \(from their Wild Profile, 2026-10-21\)/);
+    assert.match(askMemorySection(facts), /Wants to finish projects \(told to the Ant, 2026-10-03\)/);
+
+    const prompts = buildAskMemoryExtractionPrompts({existing: facts, animalName: "Wolf", userMessage: "Hi", answer: "Hello"});
+    assert.match(prompts.system, /Facts with "pinned":true come from the person's Wild Profile/);
+    assert.match(prompts.user, /"pinned":true/);
+});

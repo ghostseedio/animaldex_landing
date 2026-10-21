@@ -95,10 +95,15 @@ export type AskDrawerLabels = {
     memoryForgetAllConfirm: string;
     memoryForgetAllBody: string;
     memoryToldTo: string;
+    memoryFromWildProfile: string;
     memoryBack: string;
 };
 
-type AskMemoryFact = {fact: string; animal: string | null; noted_at: string | null};
+type AskMemoryFact = {fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
+
+function isWildProfileFact(item: AskMemoryFact) {
+    return item.source === "wild_profile" && item.pinned === true;
+}
 
 type AskContextPayload = {
     subject: AskSubject;
@@ -866,6 +871,8 @@ function AskMemoryPanel({
     onBack: () => void;
 }) {
     const busy = forgettingFact !== null;
+    // What the Wild Profile learned comes first; the rest keep their order.
+    const ordered = [...facts.filter(isWildProfileFact), ...facts.filter((item) => !isWildProfileFact(item))];
     return (
         <div className="flex flex-col gap-4" data-testid="ask-memory-panel">
             <div>
@@ -895,7 +902,7 @@ function AskMemoryPanel({
             ) : (
                 <>
                     <ul className="flex flex-col gap-2">
-                        {facts.map((item) => (
+                        {ordered.map((item) => (
                             <li
                                 key={item.fact}
                                 className="flex items-start gap-3 border border-white/10 bg-white/[0.035] py-3 pl-3.5 pr-2"
@@ -964,10 +971,11 @@ function AskMemoryPanel({
     );
 }
 
-/** "Told to the Wolf, 2 Oct 2026" — who learned it and when. */
+/** "Told to the Wolf, 2 Oct 2026" or "From your Wild Profile, …" — who learned it and when. */
 function memorySourceLine(item: AskMemoryFact, labels: AskDrawerLabels): string | null {
     const parts: string[] = [];
-    if (item.animal) parts.push(labels.memoryToldTo.replace("{animal}", item.animal));
+    if (isWildProfileFact(item)) parts.push(labels.memoryFromWildProfile);
+    else if (item.animal) parts.push(labels.memoryToldTo.replace("{animal}", item.animal));
     const day = item.noted_at?.slice(0, 10);
     if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
         const date = new Date(`${day}T00:00:00Z`);

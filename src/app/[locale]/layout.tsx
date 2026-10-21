@@ -93,6 +93,7 @@ export default async function RootLayout(
         memoryForgetAllConfirm: askT("memoryForgetAllConfirm"),
         memoryForgetAllBody: askT("memoryForgetAllBody"),
         memoryToldTo: askT("memoryToldTo"),
+        memoryFromWildProfile: askT("memoryFromWildProfile"),
         memoryBack: askT("memoryBack")
     };
 

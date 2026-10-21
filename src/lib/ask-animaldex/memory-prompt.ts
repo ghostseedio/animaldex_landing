@@ -13,6 +13,14 @@ export type AskMemoryFact = {
     animal: string;
     /** ISO date. */
     noted_at: string;
+    /**
+     * "wild_profile" when the Wild Profile wrote it. Those facts are pinned:
+     * chat never edits or drops them, only the person can forget them.
+     */
+    source?: "wild_profile";
+    pinned?: boolean;
+    /** What the Wild Profile learned (e.g. name, birthday), when it says. */
+    kind?: string;
 };
 
 export const ASK_MEMORY_MAX_FACTS = 40;
@@ -36,13 +44,27 @@ export function parseAskMemoryFacts(raw: unknown, maxFacts = ASK_MEMORY_MAX_FACT
         const key = fact.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
+        const pinned = row?.pinned === true && row?.source === "wild_profile";
+        const kind = pinned ? clean(row?.kind, 40) : null;
         facts.push({
             fact,
             animal: clean(row?.animal, 80) ?? "an animal",
-            noted_at: clean(row?.noted_at, 10) ?? new Date().toISOString().slice(0, 10)
+            noted_at: clean(row?.noted_at, 10) ?? new Date().toISOString().slice(0, 10),
+            ...(pinned ? {source: "wild_profile" as const, pinned: true, ...(kind ? {kind} : {})} : {})
         });
     }
-    return facts.slice(-maxFacts);
+    // Newest last; the oldest unpinned facts fall off past the cap.
+    const pinnedCount = facts.filter((fact) => fact.pinned).length;
+    let room = Math.max(0, maxFacts - pinnedCount);
+    const keep = new Set<AskMemoryFact>();
+    for (let index = facts.length - 1; index >= 0; index -= 1) {
+        if (facts[index].pinned) keep.add(facts[index]);
+        else if (room > 0) {
+            keep.add(facts[index]);
+            room -= 1;
+        }
+    }
+    return facts.filter((fact) => keep.has(fact));
 }
 
 /** The lines in the species system prompt that say how memory is used. */
@@ -60,7 +82,9 @@ export function askMemorySection(facts: AskMemoryFact[]): string {
     if (facts.length === 0) {
         return "what_you_remember_about_them: nothing yet — this is the first thing any animal has learned about them.";
     }
-    const lines = facts.map((fact) => `- ${fact.fact} (told to the ${fact.animal}, ${fact.noted_at})`);
+    const lines = facts.map((fact) => fact.pinned
+        ? `- ${fact.fact} (from their Wild Profile, ${fact.noted_at})`
+        : `- ${fact.fact} (told to the ${fact.animal}, ${fact.noted_at})`);
     return `what_you_remember_about_them — things they have told you and the other animals before:\n${lines.join("\n")}`;
 }
 
@@ -88,6 +112,8 @@ export function buildAskMemoryExtractionPrompts(params: {
             "- Merge: keep existing facts unless this exchange corrects, contradicts or supersedes them; then replace them.",
             "  Never duplicate. Prefer updating a fact over adding a near-copy.",
             "- New facts take the animal and today's date; kept facts keep their original animal and date.",
+            "- Facts with \"pinned\":true come from the person's Wild Profile. Return them exactly as they are, with their",
+            "  source and pinned fields; never edit, merge or drop them, and do not add a near-copy of one.",
             "- If this exchange taught nothing new about the person, return the existing facts unchanged."
         ].join("\n"),
         user: [

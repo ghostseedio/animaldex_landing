@@ -73,7 +73,15 @@ export async function startWildProfileSession(supabase: SupabaseClient, userId: 
 
     const {data, error} = await supabase
         .from("identity_questionnaire_sessions")
-        .insert({user_id: userId, status: "in_progress", schema_version: "identity_phase1_v1"})
+        // Same shape identity-interview-next gives the sessions it creates:
+        // name, birth date, a purpose reading and up to ten deep questions.
+        // A session without interview_style runs the older playful quiz.
+        .insert({
+            user_id: userId,
+            status: "in_progress",
+            schema_version: "identity_conversation_v2",
+            metadata: {interview_style: "deep_v2"}
+        })
         .select(SESSION_SELECT)
         .single();
     if (error || !data) throw new WildProfileInterviewError(error?.message ?? "We couldn't start your Wild Profile interview.");

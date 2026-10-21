@@ -5,6 +5,7 @@ import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-l
 import {getTrainWildProfileState} from "@/data/train-modules";
 import {formatAppLongDate} from "@/lib/app-dates";
 import {appStoreUrl} from "@/lib/store-links";
+import {getScopedTranslator} from "@/loaders/translation";
 
 const INTERVIEW_PATH = "/app/train/wild-profile/interview";
 const HERO_IMAGE = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/lion-identity-thumbnail.webp";
@@ -13,12 +14,14 @@ function RoleCard({
     label,
     name,
     speciesSlug,
-    confidence
+    confidence,
+    confidenceLabel
 }: {
     label: string;
     name: string;
     speciesSlug: string | null;
     confidence: number | null;
+    confidenceLabel: (percent: number) => string;
 }) {
     return (
         <div className="border border-white/10 bg-[#151515] p-4">
@@ -30,14 +33,26 @@ function RoleCard({
             ) : (
                 <p className="mt-2 font-display text-2xl font-bold text-white">{name}</p>
             )}
-            {confidence != null ? <p className="mt-2 text-xs text-white/40">{Math.round(confidence * 100)}% confidence</p> : null}
+            {confidence != null ? <p className="mt-2 text-xs text-white/40">{confidenceLabel(Math.round(confidence * 100))}</p> : null}
         </div>
     );
 }
 
 export default async function WildProfilePage({params}: {params: {locale: string}}) {
-    const profile = await getTrainWildProfileState();
+    const [profile, t] = await Promise.all([
+        getTrainWildProfileState(),
+        getScopedTranslator(params.locale, "wildProfile")
+    ]);
     const showConversion = !profile.hasProfile || profile.hasInProgressInterview;
+    const confidenceLabel = (percent: number) => t("confidence", {percent});
+    const roleLabels = {Origin: t("roleOrigin"), Apex: t("roleApex"), Active: t("roleActive")};
+    const roleCard = (role: NonNullable<typeof profile.origin>) => (
+        <RoleCard
+            {...role}
+            label={roleLabels[role.label as keyof typeof roleLabels] ?? role.label}
+            confidenceLabel={confidenceLabel}
+        />
+    );
 
     return (
         <div className="space-y-8">
@@ -45,9 +60,9 @@ export default async function WildProfilePage({params}: {params: {locale: string
                 <TrainBackLink />
                 <div className="mt-5">
                     <AppPageHeader
-                        eyebrow="Identity"
-                        title="Wild Profile"
-                        description="Origin, Apex, and Active animal roles from your AnimalDex interview."
+                        eyebrow={t("eyebrow")}
+                        title={t("title")}
+                        description={t("pageDescription")}
                     />
                 </div>
             </div>
@@ -57,13 +72,13 @@ export default async function WildProfilePage({params}: {params: {locale: string
                     <Image src={HERO_IMAGE} alt="" fill unoptimized className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-5">
-                        <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">Wild profile</p>
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">{t("heroEyebrow")}</p>
                         <h2 className="mt-1 font-display text-3xl font-bold text-white">
                             {profile.hasInProgressInterview
-                                ? "Continue your interview"
+                                ? t("heroContinue")
                                 : profile.hasProfile
                                     ? profile.headline
-                                    : "Discover your animals"}
+                                    : t("heroDiscover")}
                         </h2>
                     </div>
                 </div>
@@ -72,7 +87,7 @@ export default async function WildProfilePage({params}: {params: {locale: string
             {showConversion ? (
                 <section className="space-y-5 border border-white/10 bg-[#151515] p-6">
                     <div className="grid gap-3 sm:grid-cols-3">
-                        {["Origin", "Apex", "Active"].map((role) => (
+                        {[t("roleOrigin"), t("roleApex"), t("roleActive")].map((role) => (
                             <div key={role} className="border border-dashed border-white/10 bg-black/20 px-4 py-8 text-center">
                                 <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-white/35">{role}</p>
                                 <p className="mt-3 text-sm text-white/45">?</p>
@@ -80,36 +95,54 @@ export default async function WildProfilePage({params}: {params: {locale: string
                         ))}
                     </div>
                     <p className="text-sm leading-6 text-white/50">
-                        {profile.hasInProgressInterview
-                            ? "Your Wild Profile interview is in progress. Pick up where you left off here or in the AnimalDex app to reveal your Origin, Apex, and Active animals."
-                            : "Take the animal interview to unlock your Origin, Apex, and Active animals. It takes about five minutes, and your profile syncs with the AnimalDex app."}
+                        {profile.hasInProgressInterview ? t("inProgressBody") : t("introBody")}
                     </p>
                     <div className="flex flex-wrap items-center gap-3">
                         <Link href={INTERVIEW_PATH} className="inline-flex bg-primary-400 px-5 py-3 text-sm font-black text-black">
-                            {profile.hasInProgressInterview ? "Continue interview" : "Start interview"}
+                            {profile.hasInProgressInterview ? t("continueInterview") : t("startInterview")}
                         </Link>
                         <a href={appStoreUrl} className="inline-flex border border-white/15 px-5 py-3 text-sm font-bold text-white/80 hover:border-white/30 hover:text-white">
-                            {profile.hasInProgressInterview ? "Continue in app" : "Use the app instead"}
+                            {profile.hasInProgressInterview ? t("continueInApp") : t("useAppInstead")}
                         </a>
-                        <AppPrimaryLink href="/what-animal-am-i">Learn about Wild Profile</AppPrimaryLink>
+                        <AppPrimaryLink href="/what-animal-am-i">{t("learnMore")}</AppPrimaryLink>
                     </div>
+                    <p className="text-xs leading-5 text-white/35">{t("privacyNote")}</p>
                 </section>
             ) : (
                 <section className="space-y-5">
+                    {profile.lifePurpose ? (
+                        <div className="border border-white/10 bg-[#151515] p-5">
+                            <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">{t("lifePurposeTitle")}</p>
+                            <p className="mt-2 font-display text-2xl font-bold leading-snug text-white">{profile.lifePurpose.statement}</p>
+                            {profile.lifePurpose.explanation ? (
+                                <p className="mt-3 text-sm leading-7 text-white/55">{profile.lifePurpose.explanation}</p>
+                            ) : null}
+                        </div>
+                    ) : null}
                     {profile.summary ? <p className="text-sm leading-7 text-white/55">{profile.summary}</p> : null}
                     <div className="grid gap-3 md:grid-cols-3">
-                        {profile.origin ? <RoleCard {...profile.origin} /> : null}
-                        {profile.apex ? <RoleCard {...profile.apex} /> : null}
-                        {profile.active ? <RoleCard {...profile.active} /> : null}
+                        {profile.origin ? roleCard(profile.origin) : null}
+                        {profile.apex ? roleCard(profile.apex) : null}
+                        {profile.active ? roleCard(profile.active) : null}
                     </div>
+                    {profile.canGoDeeper ? (
+                        <div className="space-y-3 border border-primary-300/25 bg-[#151515] p-5">
+                            <p className="font-display text-xl font-bold text-white">{t("goDeeperTitle")}</p>
+                            <p className="text-sm leading-6 text-white/55">{t("goDeeperBody")}</p>
+                            <Link href={INTERVIEW_PATH} className="inline-flex bg-primary-400 px-5 py-3 text-sm font-black text-black">
+                                {t("goDeeperCta")}
+                            </Link>
+                            <p className="text-xs leading-5 text-white/35">{t("privacyNote")}</p>
+                        </div>
+                    ) : null}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         {profile.generatedAt ? (
                             <p className="text-xs text-white/35">
-                                Generated {formatAppLongDate(profile.generatedAt, params.locale)}
+                                {t("generated", {date: formatAppLongDate(profile.generatedAt, params.locale)})}
                             </p>
                         ) : <span />}
                         <Link href={INTERVIEW_PATH} underline className="text-sm font-bold text-primary-200 hover:text-primary-100">
-                            Retake interview
+                            {t("retake")}
                         </Link>
                     </div>
                 </section>

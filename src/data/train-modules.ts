@@ -75,6 +75,14 @@ export type TrainWildProfileState = {
     apex: TrainIdentityRole | null;
     active: TrainIdentityRole | null;
     generatedAt: string | null;
+    /** private_report.life_purpose, written by the deep (v2) interview. */
+    lifePurpose: {statement: string; explanation: string | null} | null;
+    /**
+     * A finished profile from the older playful interview, by someone who has
+     * not taken the deep one yet: they are invited to go deeper. Under-16s,
+     * whose v2 interview falls back to the playful quiz, are not.
+     */
+    canGoDeeper: boolean;
 };
 
 export type TrainAnimalPack = {
@@ -483,7 +491,9 @@ export async function getTrainWildProfileState(): Promise<TrainWildProfileState>
         origin: null,
         apex: null,
         active: null,
-        generatedAt: null
+        generatedAt: null,
+        lifePurpose: null,
+        canGoDeeper: false
     };
 
     if (!supabase) return empty;
@@ -494,7 +504,7 @@ export async function getTrainWildProfileState(): Promise<TrainWildProfileState>
     const [profileResult, sessionResult, speciesEntriesList] = await Promise.all([
         supabase
             .from("user_identity_profiles")
-            .select("origin_species_profile_id,apex_species_profile_id,active_species_profile_id,origin_confidence,apex_confidence,active_confidence,public_summary,generated_at,status")
+            .select("session_id,origin_species_profile_id,apex_species_profile_id,active_species_profile_id,origin_confidence,apex_confidence,active_confidence,public_summary,generated_at,status,model_version,life_purpose:private_report->life_purpose,interview_style:generation_metadata->>interview_style")
             .eq("user_id", user.id)
             .eq("status", "active")
             .order("generated_at", {ascending: false})
@@ -542,6 +552,25 @@ export async function getTrainWildProfileState(): Promise<TrainWildProfileState>
         role("Active", profile.active_species_profile_id, profile.active_confidence)
     ];
 
+    const rawPurpose = profile.life_purpose && typeof profile.life_purpose === "object" ? profile.life_purpose : null;
+    const statement = typeof rawPurpose?.statement === "string" ? rawPurpose.statement.trim() : "";
+    const explanation = typeof rawPurpose?.explanation === "string" ? rawPurpose.explanation.trim() : "";
+    const lifePurpose = statement ? {statement, explanation: explanation || null} : null;
+
+    const isDeep = profile.interview_style === "deep_v2"
+        || String(profile.model_version ?? "").includes("identity_profile_v8_deep_full_catalog");
+    let canGoDeeper = !isDeep && !hasInProgressInterview;
+    if (canGoDeeper && profile.session_id) {
+        // A deep_v2 session that produced a playful profile was an under-16
+        // fallback; asking them to go deeper would only loop.
+        const {data: sessionRow} = await supabase
+            .from("identity_questionnaire_sessions")
+            .select("interview_style:metadata->>interview_style")
+            .eq("id", profile.session_id)
+            .maybeSingle();
+        if ((sessionRow as QueryRow | null)?.interview_style === "deep_v2") canGoDeeper = false;
+    }
+
     return {
         hasProfile: true,
         hasInProgressInterview,
@@ -550,7 +579,9 @@ export async function getTrainWildProfileState(): Promise<TrainWildProfileState>
         origin,
         apex,
         active,
-        generatedAt: profile.generated_at ?? null
+        generatedAt: profile.generated_at ?? null,
+        lifePurpose,
+        canGoDeeper
     };
 }
 

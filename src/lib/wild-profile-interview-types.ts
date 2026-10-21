@@ -64,3 +64,57 @@ export type WildProfileInterviewPayload = {
     generating: boolean;
     response: WildProfileNextResponse | null;
 };
+
+/** The interview's copy, under `wildProfile.interview` in the locale files. */
+export const WILD_PROFILE_INTERVIEW_LABEL_KEYS = [
+    "loading",
+    "unavailable",
+    "tryAgain",
+    "stillRevealing",
+    "typing",
+    "you",
+    "guide",
+    "revealingTitle",
+    "stageReading",
+    "stagePatterns",
+    "stageCatalog",
+    "stageRoles",
+    "stageReport",
+    "revealingBody",
+    "readyTitle",
+    "readyBody",
+    "revealCta",
+    "signalAria",
+    "signalShort",
+    "signalTitle",
+    "summaryRecent",
+    "summaryLight",
+    "summaryEarly",
+    "summaryStrong",
+    "statAnswers",
+    "statSkipped",
+    "statReady",
+    "themesTitle",
+    "coveredTitle",
+    "stillLearningTitle",
+    "stillLearningItem",
+    "sharedTitle",
+    "keepAnswering",
+    "introTitle",
+    "introBody",
+    "introOrigin",
+    "introApex",
+    "introActive",
+    "start",
+    "introFootnote",
+    "question",
+    "skip",
+    "skipped",
+    "answerLabel",
+    "placeholder",
+    "send",
+    "birthDateLabel"
+] as const;
+
+/** Interview copy plus the shared privacy note (`wildProfile.privacyNote`). */
+export type WildProfileInterviewLabels = Record<(typeof WILD_PROFILE_INTERVIEW_LABEL_KEYS)[number] | "privacyNote", string>;
