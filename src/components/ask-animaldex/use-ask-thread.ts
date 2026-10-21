@@ -87,6 +87,7 @@ type StreamEvent = {
     remaining?: number;
     limit?: number;
     signed_in?: boolean;
+    is_pro?: boolean;
     has_wild_profile?: boolean;
     error?: string;
     detail?: string;
@@ -127,6 +128,9 @@ export type AskQuota = {
     remaining: number | null;
     limit: number | null;
     reached: boolean;
+    /** Who the budget belongs to, so the limit notice offers the right next step. */
+    signedIn?: boolean;
+    isPro?: boolean;
 };
 
 export function useAskThread(params: {
@@ -261,8 +265,16 @@ export function useAskThread(params: {
                 const payload = await response.json().catch(() => ({})) as {
                     retryAfterSeconds?: number;
                     limit?: number;
+                    signedIn?: boolean;
+                    isPro?: boolean;
                 };
-                setQuota({remaining: 0, limit: payload.limit ?? null, reached: true});
+                setQuota({
+                    remaining: 0,
+                    limit: payload.limit ?? null,
+                    reached: true,
+                    signedIn: payload.signedIn ?? callbacks.current.viewer?.signedIn ?? false,
+                    isPro: payload.isPro ?? false
+                });
                 throw new AskLimitError(payload.retryAfterSeconds ?? 0, payload.limit ?? 0);
             }
             if (!response.ok || !response.body) {
@@ -288,7 +300,9 @@ export function useAskThread(params: {
                         setQuota({
                             remaining: event.remaining,
                             limit: event.limit ?? null,
-                            reached: event.remaining <= 0
+                            reached: event.remaining <= 0,
+                            signedIn: event.signed_in ?? callbacks.current.viewer?.signedIn ?? false,
+                            isPro: event.is_pro ?? false
                         });
                     }
                     callbacks.current.onAnswered?.({question, followUps: offers.length});

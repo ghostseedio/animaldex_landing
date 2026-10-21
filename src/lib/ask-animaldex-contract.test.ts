@@ -65,8 +65,11 @@ test("the streaming route is the web's own endpoint, not a proxy to the app's ga
     assert.doesNotMatch(route, /pro_required/);
     assert.doesNotMatch(route, /premium_field_guide/);
 
-    // The entitlement is the shared daily allowance.
-    assert.match(route, /checkAskRateLimit/);
+    // The entitlement is the shared daily allowance: signed-in readers draw
+    // from the same Postgres budget as the apps, and a turn that produced
+    // nothing goes back.
+    assert.match(route, /takeAskTurn/);
+    assert.match(route, /refundAskTurn/);
     assert.match(route, /limit_reached/);
     // A conversation is private and must never be indexed; the header lives
     // with the other shared Ask response headers.

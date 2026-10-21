@@ -241,7 +241,8 @@ test("the species prompt carries the canonical profile, the dynamics and the ind
         conversationHistory: [{role: "user", content: "hello"}, {role: "assistant", content: "hi"}]
     });
     assert.match(prompt, /^animal_name: Weaver Ant/);
-    assert.match(prompt, /user_question: When does it switch\?/);
+    // The animal is the one being spoken to, so the turn is a message, not a query.
+    assert.match(prompt, /user_message: When does it switch\?/);
     assert.match(prompt, /canonical_animal_power_profile:/);
     assert.match(prompt, /Collective Leverage/);
     assert.match(prompt, /system_dynamics:/);
@@ -572,7 +573,8 @@ test("openers fall back to the Animal Power defaults when there are no dynamics"
     // The chat's own empty state on iOS, not the embedded Learn card's chips.
     assert.deepEqual(prompts.map((item) => item.title), ["Understand", "Apply", "Explore"]);
     assert.match(prompts[0].prompt, /Collective Leverage/);
-    assert.equal(prompts[2].prompt, "What happens when Collective Leverage goes too far?");
+    // Addressed to the animal: it answers in the first person.
+    assert.equal(prompts[2].prompt, "What happens when your Collective Leverage goes too far?");
 });
 
 test("a page that is not about one animal gets openers about that page", () => {

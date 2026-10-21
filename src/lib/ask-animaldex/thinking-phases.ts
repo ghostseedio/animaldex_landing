@@ -18,6 +18,8 @@ import {TRIAL_ASK_THINKING_PHASES} from "@/lib/animal-trial-ask";
 export type AskThinkingHints = {
     animalName: string | null;
     principleName: string | null;
+    /** The animal itself answers (species pages), so the wait reads as the animal thinking. */
+    speaksAsAnimal?: boolean;
     /** Cross-domain titles this species is actually mapped into. */
     domains: string[];
     /** Named failure modes, in the order the System Dynamics card shows them. */
@@ -60,20 +62,25 @@ function matchedDomain(question: string, domains: string[]): string | null {
 
 /** Ordered status lines for one question. At most three. */
 export function askThinkingPhases(question: string, hints: AskThinkingHints): string[] {
-    if (hints.aboutTrial) return [...TRIAL_ASK_THINKING_PHASES];
+    const animalName = hints.animalName?.trim() || null;
+    const principleName = hints.principleName?.trim() || null;
+    const asAnimal = Boolean(hints.speaksAsAnimal && animalName);
+    const thinking = asAnimal ? `${animalName} is thinking…` : null;
+    if (hints.aboutTrial) {
+        return thinking ? [thinking, ...TRIAL_ASK_THINKING_PHASES.slice(1)] : [...TRIAL_ASK_THINKING_PHASES];
+    }
     const normalized = question.toLowerCase();
-    const phases: string[] = [];
+    // The animal answers for itself, so the wait reads as the animal thinking,
+    // then as where in its own record it is looking.
+    const phases: string[] = thinking ? [thinking] : [];
     const add = (line: string) => {
         if (!phases.includes(line)) phases.push(line);
     };
 
-    const animalName = hints.animalName?.trim() || null;
-    const principleName = hints.principleName?.trim() || null;
-
     // A named domain wins over everything: the reader asked to go somewhere
     // specific, so say that place by its own name.
     const domain = matchedDomain(normalized, hints.domains);
-    if (domain) add(`Reading its ${domain.toLowerCase()} equivalent…`);
+    if (domain) add(asAnimal ? `Thinking about my ${domain.toLowerCase()} equivalent…` : `Reading its ${domain.toLowerCase()} equivalent…`);
 
     if (matches(normalized, ["fail", "break", "wrong", "risk", "danger", "collapse", "downside"])
         && hints.failureModes[0]) {
@@ -87,11 +94,11 @@ export function askThinkingPhases(question: string, hints: AskThinkingHints): st
 
     if (matches(normalized, ["too much", "too far", "shadow", "excess", "overdo", "dark side", "downside"])
         && principleName) {
-        add(`Reading the ${principleName} continuum…`);
+        add(asAnimal ? `Thinking about where my ${principleName} goes too far…` : `Reading the ${principleName} continuum…`);
     }
 
     if (matches(normalized, ["compare", "versus", " vs ", "difference", "unlike", "other animal"])) {
-        add("Lining it up against its contrasts…");
+        add(asAnimal ? "Lining myself up against my contrasts…" : "Lining it up against its contrasts…");
     }
 
     if (matches(normalized, ["my life", "my work", "apply", "use this", "how do i", "should i", "my "])) {
@@ -103,7 +110,7 @@ export function askThinkingPhases(question: string, hints: AskThinkingHints): st
     }
 
     if (matches(normalized, ["eat", "diet", "habitat", "live", "sleep", "predator", "lifespan", "hunt"])) {
-        add(animalName ? `Reading ${animalName}'s field guide…` : "Reading the field guides…");
+        add(asAnimal ? "Thinking about how I live…" : animalName ? `Reading ${animalName}'s field guide…` : "Reading the field guides…");
     }
 
     if (matches(normalized, ["where", "see them", "spot", "find one", "visit", "range", "travel"])) {
@@ -112,14 +119,16 @@ export function askThinkingPhases(question: string, hints: AskThinkingHints): st
 
     // Always end somewhere honest, and never show a single line that would sit
     // unchanged for the whole wait.
-    if (animalName && principleName) {
+    if (asAnimal && principleName) {
+        add(`Remembering my ${principleName}…`);
+    } else if (animalName && principleName) {
         add(`Reading ${animalName}'s ${principleName} profile…`);
     } else if (animalName) {
         add(`Reading ${animalName}'s field guide…`);
     } else {
         add("Searching the species catalogue…");
     }
-    if (hints.hasDynamics) add("Checking its system dynamics…");
+    if (hints.hasDynamics) add(asAnimal ? "Checking my system dynamics…" : "Checking its system dynamics…");
     add("Putting the answer together…");
 
     return phases.slice(0, 3);

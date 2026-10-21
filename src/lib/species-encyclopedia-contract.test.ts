@@ -43,7 +43,7 @@ test("species pages keep canonical knowledge server-rendered and treat Ask as an
     assert.match(understand, /AskWhyButton/);
     assert.match(askLib, /anonymous: 3/);
     assert.match(askLib, /signedIn: 10/);
-    assert.match(askLib, /pro: 30/);
+    assert.match(askLib, /pro: 100/);
     assert.match(askLib, /species_page_viewed/);
     assert.match(askLib, /species_ask_collect_clicked/);
 });

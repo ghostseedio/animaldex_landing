@@ -1343,6 +1343,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 name={entry.name}
                 title={entry.name}
                 summary={entry.analysis.summary}
+                avatarUrl={getSpeciesImageRoute(entry.slug)}
             />
 
             <SpeciesAskAnimalDex

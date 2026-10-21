@@ -26,6 +26,8 @@ export type AskSubjectDeclaration = {
     captureId?: string | null;
     /** The reader's own photo of this animal, so the photo medium can be offered. */
     photoUrl?: string | null;
+    /** The animal's own picture, shown as the face of the conversation when the animal speaks for itself. */
+    avatarUrl?: string | null;
     title?: string | null;
     summary?: string | null;
 };
@@ -46,6 +48,8 @@ type AskContextValue = {
     subject: AskSubject;
     /** The reader's own photo URL, for the photo medium. Never sent to the model. */
     photoUrl: string | null;
+    /** The animal's picture, for the launcher, the header and beside its replies. */
+    avatarUrl: string | null;
     locale: string;
     isOpen: boolean;
     open: (question?: string) => void;
@@ -110,12 +114,13 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     const value = useMemo<AskContextValue>(() => ({
         subject,
         photoUrl: declaration?.photoUrl ?? null,
+        avatarUrl: declaration?.avatarUrl ?? null,
         locale,
         isOpen,
         open,
         close,
         takePendingQuestion
-    }), [subject, declaration?.photoUrl, locale, isOpen, open, close, takePendingQuestion]);
+    }), [subject, declaration?.photoUrl, declaration?.avatarUrl, locale, isOpen, open, close, takePendingQuestion]);
 
     return (
         <AskContext.Provider value={value}>
@@ -163,6 +168,7 @@ export function useAskAnimalDex(): AskContextValue {
     return {
         subject: emptyAskSubject(),
         photoUrl: null,
+        avatarUrl: null,
         locale: "en",
         isOpen: false,
         open: () => undefined,

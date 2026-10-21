@@ -12,6 +12,7 @@
  */
 
 import type {AskConversationTurn, AskScope} from "@/lib/ask-animaldex/prompt";
+import {askMemorySection, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 
 export type AskPowerEvidence = {
     title: string;
@@ -199,6 +200,12 @@ export type AskGroundingPacket = {
      */
     wildProfile?: {summary: string | null};
     /**
+     * What the animals remember about a signed-in reader from earlier
+     * conversations, on any surface. Only read in `species` scope, where the
+     * animal itself is speaking.
+     */
+    memory?: AskMemoryFact[];
+    /**
      * The Animal Trial the person is looking at. Set, the answer is about that
      * Trial — what it means, how to do it, an example — and the content index
      * is withheld so the offers cannot wander off it.
@@ -208,6 +215,9 @@ export type AskGroundingPacket = {
 
 const TRIAL_GROUNDING_LEAD = "animal_trial — the person is looking at this Trial. Answer what it means, how to do it, and give concrete examples of this Trial. Do not replace it with a different task.";
 const TRIAL_CLOSING_INSTRUCTION = "The question is about animal_trial. Explain what this Trial means, how to do it, and give a concrete example of this Trial. Use the animal's Power only to explain that Trial. Follow-ups stay on this Trial: its meaning, an example, how to start, or what the evidence should show. Do not offer System Dynamics, the field guide, or the Power as the next question.";
+/** The species branch: the animal is the one being asked, and the one answering. */
+const SPECIES_TRIAL_GROUNDING_LEAD = "animal_trial — the reader is looking at this Trial of yours. Explain what it means, how to do it, and give a concrete example. Do not replace it with a different task.";
+const SPECIES_TRIAL_CLOSING_INSTRUCTION = "The message is about animal_trial. Explain what your Trial means, how to do it, and give a concrete example of it. Use your Power only to explain that Trial. Follow-ups stay on this Trial: its meaning, an example, how to start, or what the evidence should show.";
 
 const SITE_CONTEXT = [
     "AnimalDex is an animal identification and collection app. A reader photographs an animal, the app identifies it, and",
@@ -363,10 +373,13 @@ export function buildAskUserPrompt(params: {
         // In a Trial thread the index is withheld on purpose: the offers must
         // stay on the Trial, and an index is an invitation to leave it.
         const contentIndex = trialContext ? [] : buildAskContentIndex(species);
+        const speciesTrialBlock = trialContext ? `${SPECIES_TRIAL_GROUNDING_LEAD}\n${trialContext}` : "";
         return [
             `animal_name: ${species.name}`,
-            `user_question: ${params.userQuestion}`,
+            species.scientificName ? `scientific_name: ${species.scientificName}` : "",
+            `user_message: ${params.userQuestion}`,
             "",
+            "Everything below is AnimalDex's record of you — fixed truth about yourself:",
             species.power
                 ? `canonical_animal_power_profile:\n${JSON.stringify(species.power)}`
                 : "canonical_animal_power_profile: not_available",
@@ -378,31 +391,32 @@ export function buildAskUserPrompt(params: {
             trialContext
                 ? ""
                 : contentIndex.length > 0
-                    ? `available_content — everything AnimalDex holds on this animal, for your follow-up offers:\n${contentIndex.join("\n")}`
+                    ? `available_content — what you can offer to go into next, for your follow-up offers:\n${contentIndex.join("\n")}`
                     : "available_content: none",
             packet.hasReaderPhoto
-                ? "reader_photo: the reader has their own photo of this animal on screen"
+                ? "reader_photo: the reader has their own photo of you on screen"
                 : "reader_photo: none",
             packet.wildProfile
                 ? packet.wildProfile.summary
-                    ? `wild_profile_summary:\n${packet.wildProfile.summary}`
+                    ? `wild_profile_summary — the reader's own AnimalDex profile, for tailoring your advice:\n${packet.wildProfile.summary}`
                     : "wild_profile_summary: not_set"
                 : "",
-            trialBlock,
+            packet.wildProfile ? askMemorySection(packet.memory ?? []) : "",
+            speciesTrialBlock,
             pageLine,
             historyLine,
             "",
-            "Answer the reader's latest question in conversation.",
+            "Answer the reader's latest message, as yourself.",
             ...(trialContext
-                ? [TRIAL_CLOSING_INSTRUCTION]
+                ? [SPECIES_TRIAL_CLOSING_INSTRUCTION]
                 : [
-                    "Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when the question touches them.",
-                    "Base your follow-up offers on available_content, naming real destinations from it that this answer did not cover.",
-                    "Keep principle_name and core_pattern stable across follow-ups."
+                    "Lead with what you would do and why your biology makes it the move. Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when they come up.",
+                    "Base your follow-up offers on available_content, naming real things from it that this answer did not cover.",
+                    "Keep your Power's name and pattern stable across the conversation."
                 ]),
-            "Use recent_conversation for pronouns and follow-up context, but never replace canonical animal grounding.",
+            "Use recent_conversation for pronouns and context, but never let it replace your record.",
             packet.wildProfile
-                ? "If the question asks for personal life application and wild_profile_summary is not_set, explain briefly that setting up Wild Profile helps AnimalDex tailor application — then still offer a general pattern-based answer."
+                ? "If they ask for personal application and wild_profile_summary is not_set, mention once, in your own words, that setting up their Wild Profile lets you tailor it — then still answer."
                 : ""
         ].filter(Boolean).join("\n");
     }

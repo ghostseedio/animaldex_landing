@@ -16,10 +16,12 @@ import {NextResponse} from "next/server";
 
 import {buildAskPacket} from "@/data/ask-grounding";
 import {getAskWildProfile} from "@/data/ask-wild-profile";
+import {loadAskMemory, rememberAskTurn} from "@/lib/ask-animaldex/memory";
 import {
     ASK_RESPONSE_HEADERS,
     askLanguageName,
-    checkAskRateLimit,
+    refundAskTurn,
+    takeAskTurn,
     resolveAskHistory,
     resolveAskQuestion,
     resolveAskSubject,
@@ -69,7 +71,7 @@ export async function POST(request: Request) {
     if (!question) return askJson({error: "invalid_question"}, 400);
 
     const viewer = await resolveAskViewer(request);
-    const rate = checkAskRateLimit(request, viewer);
+    const rate = await takeAskTurn(request, viewer);
     if (!rate.allowed) {
         return askJson({
             error: "limit_reached",
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
             limit: rate.limit,
             retryAfterSeconds: rate.retryAfterSeconds,
             signedIn: viewer.signedIn,
-            isPro: viewer.isPro
+            isPro: rate.isPro
         }, 429);
     }
 
@@ -91,15 +93,29 @@ export async function POST(request: Request) {
 
     const subject = resolveAskSubject(body.subject);
     const history = resolveAskHistory(body.history);
-    const [basePacket, wildProfile] = await Promise.all([
+    const [basePacket, wildProfile, memory] = await Promise.all([
         buildAskPacket({subject, question}),
-        getAskWildProfile(viewer.userId)
+        getAskWildProfile(viewer.userId),
+        subject.scope === "species" ? loadAskMemory(viewer.userId) : Promise.resolve([])
     ]);
-    // A signed-in reader's Wild Profile personalises the answer. A signed-out
-    // one has none to have, so the packet says nothing about it either way.
+    // A signed-in reader's Wild Profile personalises the answer, and what the
+    // animals already remember about them rides along. A signed-out reader
+    // has neither, so the packet says nothing about them either way.
     const groundedPacket = viewer.signedIn
-        ? {...basePacket, wildProfile: {summary: wildProfile.summary}}
+        ? {...basePacket, wildProfile: {summary: wildProfile.summary}, memory}
         : basePacket;
+    // What this exchange taught about the person is learned after the answer
+    // has gone out, so the reply is never slowed by it.
+    const remember = (answer: string) => {
+        if (packet.scope !== "species" || !packet.species) return;
+        void rememberAskTurn({
+            userId: viewer.userId,
+            existing: memory,
+            animalName: packet.species.name,
+            userMessage: question,
+            answer
+        });
+    };
     // A Trial question is grounded on that Trial and kept there.
     const packet = subject.trialContext
         ? {...groundedPacket, trialContext: subject.trialContext}
@@ -113,7 +129,7 @@ export async function POST(request: Request) {
         remaining: rate.remaining,
         limit: rate.limit,
         signed_in: viewer.signedIn,
-        is_pro: viewer.isPro,
+        is_pro: rate.isPro,
         has_wild_profile: wildProfile.hasWildProfile
     };
 
@@ -129,11 +145,13 @@ export async function POST(request: Request) {
                 signal: request.signal
             });
             if (oneShot?.answer.trim()) {
+                remember(oneShot.answer);
                 return askJson({answer: oneShot.answer, follow_up_prompts: oneShot.followUps, ...closing});
             }
         } catch (error) {
             console.error("[ask-animaldex] one-piece answer failed", error instanceof Error ? error.message.slice(0, 200) : "unknown");
         }
+        await refundAskTurn(viewer);
         return askJson({error: "unavailable"}, 503);
     }
     const streamingSystemPrompt = buildAskStreamingSystemPrompt({
@@ -177,6 +195,7 @@ export async function POST(request: Request) {
                     send({delta: split.answer.slice(emitted)});
                 }
                 send({done: true, follow_up_prompts: split.followUps, ...closing});
+                if (split.answer.trim()) remember(split.answer);
             };
 
             const failures: string[] = [];
@@ -228,6 +247,7 @@ export async function POST(request: Request) {
                 if (oneShot) {
                     send({delta: oneShot.answer});
                     send({done: true, follow_up_prompts: oneShot.followUps, ...closing});
+                    remember(oneShot.answer);
                     controller.close();
                     return;
                 }
@@ -236,6 +256,8 @@ export async function POST(request: Request) {
             }
 
             console.error("[ask-animaldex] every provider failed", failures.join(" | "));
+            // Nothing was produced, so the message goes back to the budget.
+            await refundAskTurn(viewer);
             send({error: "stream_failed", detail: failures[0] ?? "unknown"});
             controller.close();
         }

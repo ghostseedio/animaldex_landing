@@ -39,14 +39,21 @@ import {SPECIES_ASK_FUNNEL_EVENTS} from "@/lib/species-ask";
 
 export type AskDrawerLabels = {
     title: string;
+    /** Launcher text on a species page, where the animal speaks for itself. */
+    speakLauncher: string;
+    /** Under the animal's name in the header: it answers as itself. */
+    inOwnWords: string;
     aboutAnimal: string;
     aboutSite: string;
     emptyTitleAnimal: string;
     emptyTitleGeneral: string;
     emptyHint: string;
+    /** The hint when the animal itself is speaking. */
+    emptyHintAnimal: string;
     placeholderAnimal: string;
     placeholderGeneral: string;
     placeholderFollowUp: string;
+    placeholderFollowUpAnimal: string;
     send: string;
     stop: string;
     close: string;
@@ -63,11 +70,18 @@ export type AskDrawerLabels = {
     tryAgain: string;
     youAsked: string;
     thinking: string;
+    thinkingAnimal: string;
     remaining: string;
     limitTitle: string;
     limitBody: string;
     limitCta: string;
     limitHref: string;
+    /** A signed-in free account: the next step is Pro, not a download. */
+    limitBodySignedIn: string;
+    limitCtaSignedIn: string;
+    limitHrefSignedIn: string;
+    /** A Pro account: nothing to sell, just when the messages come back. */
+    limitBodyPro: string;
     disclaimer: string;
 };
 
@@ -85,7 +99,7 @@ type AskContextPayload = {
 const THINKING_PHASE_MS = 2200;
 
 export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
-    const {subject, photoUrl, locale, close, takePendingQuestion} = useAskAnimalDex();
+    const {subject, photoUrl, avatarUrl, locale, close, takePendingQuestion} = useAskAnimalDex();
     const [context, setContext] = useState<AskContextPayload | null>(null);
     const [composer, setComposer] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -229,13 +243,22 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
 
     const aboutTrial = Boolean(resolvedSubject.trialContext);
+    // On a species page the animal answers as itself; everywhere else the
+    // site-wide assistant does.
+    const speaksAsAnimal = resolvedSubject.scope === "species" && Boolean(animalName);
+    const faceUrl = speaksAsAnimal ? (avatarUrl ?? photoUrl) : photoUrl;
     const placeholder = hasConversation
-        ? labels.placeholderFollowUp
+        ? (speaksAsAnimal && animalName
+            ? labels.placeholderFollowUpAnimal.replace("{animal}", animalName)
+            : labels.placeholderFollowUp)
         : aboutTrial
             ? TRIAL_ASK_PLACEHOLDER
             : animalName
                 ? labels.placeholderAnimal.replace("{animal}", animalName)
                 : labels.placeholderGeneral;
+    const thinkingLabel = speaksAsAnimal && animalName
+        ? labels.thinkingAnimal.replace("{animal}", animalName)
+        : labels.thinking;
 
     const lastMessageId = messages[messages.length - 1]?.id ?? null;
     const remainingCopy = quota.remaining !== null && quota.limit !== null
@@ -273,21 +296,26 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         className="absolute inset-x-0 top-1.5 mx-auto h-1 w-10 rounded-full bg-white/20 lg:hidden"
                     />
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                        {photoUrl ? (
-                            <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-white/15">
-                                <Image src={photoUrl} unoptimized alt="" fill sizes="28px" className="object-cover" />
+                        {faceUrl ? (
+                            <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/15">
+                                <Image src={faceUrl} unoptimized alt="" fill sizes="32px" className="object-cover" />
                             </span>
                         ) : (
                             <span
                                 aria-hidden="true"
-                                className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-400/14 text-primary-200"
+                                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-400/14 text-primary-200"
                             >
                                 <SparkIcon />
                             </span>
                         )}
-                        <p className="min-w-0 truncate text-sm font-semibold text-white">
-                            {animalName ?? labels.title}
-                        </p>
+                        <div className="min-w-0">
+                            <p className="min-w-0 truncate text-sm font-semibold text-white">
+                                {animalName ?? labels.title}
+                            </p>
+                            {speaksAsAnimal ? (
+                                <p className="truncate text-[11px] leading-4 text-ink-400">{labels.inOwnWords}</p>
+                            ) : null}
+                        </div>
                     </div>
                     <button
                         type="button"
@@ -351,7 +379,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             ? labels.emptyTitleAnimal.replace("{animal}", animalName)
                                             : labels.emptyTitleGeneral}
                                 </h2>
-                                <p className="mt-1.5 text-sm leading-6 text-ink-300">{labels.emptyHint}</p>
+                                <p className="mt-1.5 text-sm leading-6 text-ink-300">
+                                    {speaksAsAnimal && !aboutTrial ? labels.emptyHintAnimal : labels.emptyHint}
+                                </p>
                             </div>
                             <div className="flex flex-col gap-2">
                                 {suggestions.slice(0, aboutTrial ? suggestions.length : 3).map((suggestion) => (
@@ -387,9 +417,11 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     isSending={isSending}
                                     photoUrl={photoUrl}
                                     photoAlt={animalName ?? ""}
+                                    avatarUrl={speaksAsAnimal ? faceUrl : null}
+                                    thinkingLabel={thinkingLabel}
                                     thinkingPhases={askThinkingPhases(
                                         lastQuestion(messages),
-                                        {...hints, hasWildProfile: context?.hasWildProfile ?? false, aboutTrial}
+                                        {...hints, hasWildProfile: context?.hasWildProfile ?? false, aboutTrial, speaksAsAnimal}
                                     )}
                                     copied={copiedId === message.id}
                                     questionRef={message.id === trailingQuestionId ? trailingQuestionRef : undefined}
@@ -401,7 +433,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                         }, 1600);
                                     }}
                                     onShare={() => {
-                                        const body = shareText(messages, message, animalName);
+                                        const body = shareText(messages, message, animalName, speaksAsAnimal);
                                         if (navigator.share) {
                                             void navigator.share({text: body}).catch(() => undefined);
                                         } else {
@@ -422,19 +454,27 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     {quota.reached ? (
                         <div className="mt-5 border border-amber-300/25 bg-amber-400/[0.08] p-4">
                             <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
-                            <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.limitBody}</p>
-                            <Link
-                                href={labels.limitHref}
-                                onClick={() => {
-                                    trackEvent(SPECIES_ASK_FUNNEL_EVENTS.collectClicked, {
-                                        species_slug: resolvedSubject.slug ?? "",
-                                        source: "drawer_limit"
-                                    });
-                                }}
-                                className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
-                            >
-                                {labels.limitCta}
-                            </Link>
+                            <p className="mt-1.5 text-sm leading-6 text-ink-100">
+                                {(quota.isPro
+                                    ? labels.limitBodyPro
+                                    : quota.signedIn
+                                        ? labels.limitBodySignedIn
+                                        : labels.limitBody).replace("{limit}", String(quota.limit ?? ""))}
+                            </p>
+                            {quota.isPro ? null : (
+                                <Link
+                                    href={quota.signedIn ? labels.limitHrefSignedIn : labels.limitHref}
+                                    onClick={() => {
+                                        trackEvent(SPECIES_ASK_FUNNEL_EVENTS.collectClicked, {
+                                            species_slug: resolvedSubject.slug ?? "",
+                                            source: quota.signedIn ? "drawer_limit_pro" : "drawer_limit"
+                                        });
+                                    }}
+                                    className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                >
+                                    {quota.signedIn ? labels.limitCtaSignedIn : labels.limitCta}
+                                </Link>
+                            )}
                         </div>
                     ) : null}
                 </div>
@@ -502,11 +542,15 @@ function lastQuestion(messages: AskMessage[]): string {
 }
 
 /** Shared text reads as prose, not as markdown source. */
-function shareText(messages: AskMessage[], message: AskMessage, animalName: string | null): string {
+function shareText(messages: AskMessage[], message: AskMessage, animalName: string | null, asAnimal = false): string {
     const index = messages.findIndex((entry) => entry.id === message.id);
     const question = index > 0 && messages[index - 1].role === "user" ? messages[index - 1].text : null;
-    const heading = animalName ? `${animalName} — AnimalDex` : "AnimalDex";
     const body = askMarkdownPlainText(message.text);
+    if (asAnimal && animalName) {
+        const heading = `${animalName}, in its own words — AnimalDex`;
+        return question ? `${heading}\n\nMe: ${question}\n\n${animalName}: ${body}` : `${heading}\n\n${body}`;
+    }
+    const heading = animalName ? `${animalName} — AnimalDex` : "AnimalDex";
     return question ? `${heading}\n\nQ: ${question}\n\n${body}` : `${heading}\n\n${body}`;
 }
 
@@ -517,6 +561,8 @@ function MessageBlock({
     isSending,
     photoUrl,
     photoAlt,
+    avatarUrl = null,
+    thinkingLabel,
     thinkingPhases,
     copied,
     questionRef,
@@ -532,6 +578,9 @@ function MessageBlock({
     isSending: boolean;
     photoUrl: string | null;
     photoAlt: string;
+    /** The animal's face beside its replies, when the animal is the one answering. */
+    avatarUrl?: string | null;
+    thinkingLabel?: string;
     thinkingPhases: string[];
     copied: boolean;
     questionRef?: React.RefObject<HTMLDivElement>;
@@ -551,8 +600,21 @@ function MessageBlock({
         );
     }
 
+    // With the answer written in the first person, the reader needs to see
+    // who "I" is without looking back up at the header.
+    const face = avatarUrl ? (
+        <span className="relative mt-0.5 h-[26px] w-[26px] shrink-0 overflow-hidden rounded-full border border-white/15">
+            <Image src={avatarUrl} unoptimized alt="" fill sizes="26px" className="object-cover" />
+        </span>
+    ) : null;
+
     if (message.status === "thinking") {
-        return <ThinkingIndicator phases={thinkingPhases} label={labels.thinking} />;
+        return (
+            <div className="flex items-start gap-2.5">
+                {face}
+                <ThinkingIndicator phases={thinkingPhases} label={thinkingLabel ?? labels.thinking} />
+            </div>
+        );
     }
 
     if (message.status === "failed") {
@@ -572,7 +634,9 @@ function MessageBlock({
     }
 
     return (
-        <div className="flex flex-col gap-3.5">
+        <div className="flex items-start gap-2.5">
+        {face}
+        <div className="flex min-w-0 flex-1 flex-col gap-3.5">
             <AssistantMarkdown
                 text={message.text}
                 photoUrl={photoUrl}
@@ -610,6 +674,7 @@ function MessageBlock({
                     ))}
                 </div>
             ) : null}
+        </div>
         </div>
     );
 }

@@ -127,14 +127,15 @@ test("a signed-in reader's prompt carries their profile, or says it is not set",
         userQuestion: "How do I use this at work?",
         packet: packet({wildProfile: {summary: "Origin: The Patient Builder"}})
     });
-    assert.match(withProfile, /wild_profile_summary:\nOrigin: The Patient Builder/);
+    assert.match(withProfile, /wild_profile_summary[^\n]*:\nOrigin: The Patient Builder/);
 
     const without = buildAskUserPrompt({
         userQuestion: "How do I use this at work?",
         packet: packet({wildProfile: {summary: null}})
     });
     assert.match(without, /wild_profile_summary: not_set/);
-    assert.match(without, /setting up Wild Profile helps AnimalDex tailor application — then still offer a general pattern-based answer/);
+    // The animal says it in its own words, and still answers.
+    assert.match(without, /setting up their Wild Profile lets you tailor it — then still answer/);
 });
 
 test("a signed-out reader's prompt says nothing about a Wild Profile", () => {

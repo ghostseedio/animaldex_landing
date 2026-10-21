@@ -5,10 +5,12 @@ import "server-only";
  * how much of the subject they sent is allowed to reach the prompt.
  */
 
+import {createClient, type SupabaseClient} from "@supabase/supabase-js";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {hasAuthCookie} from "@/lib/viewer";
-import {askLimitForViewer, SPECIES_ASK_WINDOW_MS} from "@/lib/species-ask";
+import {askLimitForViewer, SPECIES_ASK_DAILY_LIMITS, SPECIES_ASK_WINDOW_MS} from "@/lib/species-ask";
 import {askPathWithoutLocale, askSubjectFromPath, type AskSubject} from "@/lib/ask-animaldex/subject";
 
 export const ASK_RESPONSE_HEADERS = {
@@ -18,24 +20,35 @@ export const ASK_RESPONSE_HEADERS = {
 
 export type AskViewer = {
     signedIn: boolean;
+    /**
+     * What the database decided from verified billing, once an allowance call
+     * has run; until then the profile's own flag, which is only a hint.
+     */
     isPro: boolean;
     userId: string | null;
+    /** A client acting as this reader, for the allowance RPCs. Null when signed out. */
+    client: SupabaseClient | null;
 };
 
+const SIGNED_OUT: AskViewer = {signedIn: false, isPro: false, userId: null, client: null};
+
 export async function resolveAskViewer(request: Request): Promise<AskViewer> {
-    if (!hasAuthCookie() && !request.headers.get("authorization")) {
-        return {signedIn: false, isPro: false, userId: null};
-    }
-
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return {signedIn: false, isPro: false, userId: null};
-
     const authHeader = request.headers.get("authorization");
     const jwt = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : null;
+    if (!hasAuthCookie() && !jwt) {
+        return SIGNED_OUT;
+    }
+
+    // A bearer token (the apps' web views) needs a client that sends it on
+    // every call, so the allowance RPCs run as that user; the cookie session
+    // already does.
+    const supabase = jwt ? bearerClient(jwt) : createSupabaseServerClient();
+    if (!supabase) return SIGNED_OUT;
+
     const {data: {user}} = jwt
         ? await supabase.auth.getUser(jwt)
         : await supabase.auth.getUser();
-    if (!user) return {signedIn: false, isPro: false, userId: null};
+    if (!user) return SIGNED_OUT;
 
     const {data: profile} = await supabase
         .from("profiles")
@@ -43,17 +56,108 @@ export async function resolveAskViewer(request: Request): Promise<AskViewer> {
         .eq("id", user.id)
         .maybeSingle();
 
-    return {signedIn: true, isPro: profile?.is_pro === true, userId: user.id};
+    return {signedIn: true, isPro: profile?.is_pro === true, userId: user.id, client: supabase};
+}
+
+function bearerClient(jwt: string): SupabaseClient | null {
+    const url = getSupabaseUrl();
+    const key = getSupabaseAuthKey();
+    if (!url || !key) return null;
+    return createClient(url, key, {
+        global: {headers: {Authorization: `Bearer ${jwt}`}},
+        auth: {persistSession: false, autoRefreshToken: false, detectSessionInUrl: false}
+    });
+}
+
+/** Today's budget, as the database reports it. */
+export type AskAllowance = {
+    allowed: boolean;
+    remaining: number;
+    limit: number;
+    isPro: boolean;
+    retryAfterSeconds: number;
+};
+
+type AllowanceRow = {
+    allowed?: boolean;
+    remaining?: number;
+    limit?: number;
+    is_pro?: boolean;
+    resets_at?: string | null;
+};
+
+function allowanceFromRow(row: AllowanceRow): AskAllowance {
+    const resetsAt = row.resets_at ? Date.parse(row.resets_at) : Number.NaN;
+    return {
+        allowed: row.allowed === true,
+        remaining: typeof row.remaining === "number" ? row.remaining : 0,
+        limit: typeof row.limit === "number" ? row.limit : 0,
+        isPro: row.is_pro === true,
+        retryAfterSeconds: Number.isFinite(resetsAt) ? Math.max(1, Math.ceil((resetsAt - Date.now()) / 1000)) : 0
+    };
 }
 
 /**
- * The daily window, shared with the species page's own Ask entitlements so a
- * reader has one allowance across the site rather than one per surface.
+ * The in-memory limiter: every anonymous reader, and a signed-in reader when
+ * the database budget cannot be reached (the migration not applied yet, or
+ * the RPC refusing the session). One allowance per reader across the site.
  */
-export function checkAskRateLimit(request: Request, viewer: AskViewer) {
+function localAllowance(request: Request, viewer: AskViewer, take: boolean): AskAllowance {
     const limit = askLimitForViewer(viewer);
     const key = `ask-animaldex:${viewer.userId ?? getRequestIdentifier(request)}`;
-    return {limit, ...checkRateLimit(key, limit, SPECIES_ASK_WINDOW_MS)};
+    if (!take) {
+        return {allowed: true, remaining: limit, limit, isPro: viewer.isPro, retryAfterSeconds: 0};
+    }
+    const result = checkRateLimit(key, limit, SPECIES_ASK_WINDOW_MS);
+    return {...result, limit, isPro: viewer.isPro};
+}
+
+/**
+ * Takes one message from today's budget.
+ *
+ * Signed-in readers draw from the website pool of their account's budget
+ * (`take_animal_chat_turn` with surface "web": free 10, Pro 100 a day, Pro
+ * decided from verified billing; the apps have their own, larger free pool).
+ * Anonymous readers have no account to key on, so they are metered per
+ * address here, at the anonymous limit.
+ */
+export async function takeAskTurn(request: Request, viewer: AskViewer): Promise<AskAllowance> {
+    if (!viewer.signedIn || !viewer.client) {
+        return localAllowance(request, viewer, true);
+    }
+    const {data, error} = await viewer.client.rpc("take_animal_chat_turn", {p_surface: "web"});
+    if (error || !data || typeof data !== "object") {
+        console.warn("[ask-animaldex] allowance RPC unavailable, metering locally", error?.message ?? "no row");
+        return localAllowance(request, viewer, true);
+    }
+    return allowanceFromRow(data as AllowanceRow);
+}
+
+/** Gives the message back when no answer was produced. Best effort. */
+export async function refundAskTurn(viewer: AskViewer): Promise<void> {
+    if (!viewer.signedIn || !viewer.client) return;
+    try {
+        await viewer.client.rpc("refund_animal_chat_turn", {p_surface: "web"});
+    } catch {
+        // The refund is a courtesy; the failure itself is what matters.
+    }
+}
+
+/** What is left today, without taking anything. */
+export async function peekAskAllowance(request: Request, viewer: AskViewer): Promise<AskAllowance> {
+    if (!viewer.signedIn || !viewer.client) {
+        return localAllowance(request, viewer, false);
+    }
+    const {data, error} = await viewer.client.rpc("animal_chat_allowance", {p_surface: "web"});
+    if (error || !data || typeof data !== "object") {
+        return localAllowance(request, viewer, false);
+    }
+    return allowanceFromRow(data as AllowanceRow);
+}
+
+/** Kept for callers that only need the number: the anonymous, signed-in or Pro ceiling. */
+export function askLimitFor(viewer: AskViewer): number {
+    return viewer.isPro ? SPECIES_ASK_DAILY_LIMITS.pro : askLimitForViewer(viewer);
 }
 
 function cappedText(value: unknown, max: number): string | null {

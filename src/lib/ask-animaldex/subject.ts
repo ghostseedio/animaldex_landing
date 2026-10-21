@@ -158,39 +158,41 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
         return [
             {
                 title: "Understand",
-                prompt: principleName ? `Why is its Power ${principleName}?` : `Why does AnimalDex read ${name} this way?`
+                prompt: principleName ? `Why is your Power ${principleName}?` : `Why does AnimalDex read you this way?`
             },
             {
                 title: "Apply",
                 prompt: principleName
-                    ? `How could I use ${principleName} in my life?`
-                    : `How could I use ${name}'s pattern in my life?`
+                    ? `How could I use your ${principleName} in my life?`
+                    : "How could I use your pattern in my life?"
             },
             {
                 title: "Explore",
                 prompt: principleName
-                    ? `What happens when ${principleName} goes too far?`
-                    : `Where does ${name}'s pattern go too far?`
+                    ? `What happens when your ${principleName} goes too far?`
+                    : "Where does your pattern go too far?"
             }
         ];
     }
 
-    const system = hints.archetypeName?.trim() || principleName || `${name}'s system`;
+    // Addressed to the animal: it answers in the first person, so "its
+    // system" would read as a question about somebody else.
+    const system = hints.archetypeName?.trim() || principleName || "your system";
     const simply: AskSuggestion = {
         title: "Explain this simply",
-        prompt: `Explain ${name}'s system, ${system}, in simple terms.`
+        prompt: `Explain your system, ${system}, in simple terms.`
     };
     const failure: AskSuggestion = {
         title: "What's the failure mode?",
         prompt: hints.failureModes[0]
-            ? `What happens when ${name} hits “${hints.failureModes[0]}”?`
-            : `What is the failure mode of ${system}?`
+            ? `What happens when you hit “${hints.failureModes[0]}”?`
+            : `What is the failure mode of your ${system}?`
     };
     const apply: AskSuggestion = {
         title: "Apply",
         prompt: principleName
-            ? `How could I use ${principleName} in my life?`
-            : `How could I use ${name}'s pattern in my life?`
+            ? `How could I use your ${principleName} in my life?`
+            : "How could I use your pattern in my life?"
     };
 
     const transition = hints.transition;
@@ -199,13 +201,13 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
             return [
                 {
                     title: "What triggers the phase change?",
-                    prompt: `What pushes ${name} from its ${transition.from.toLowerCase()} state into its ${transition.to.toLowerCase()} state?`
+                    prompt: `What pushes you from your ${transition.from.toLowerCase()} state into your ${transition.to.toLowerCase()} state?`
                 },
                 {
                     title: "Why does it change state?",
                     prompt: transition.fromFrequency && transition.toFrequency
-                        ? `Why does ${name} shift from a ${transition.fromFrequency.toLowerCase()}-frequency pattern to a ${transition.toFrequency.toLowerCase()}-frequency pattern, and is it reversible?`
-                        : `Why does ${name} change operating state, and is it reversible?`
+                        ? `Why do you shift from a ${transition.fromFrequency.toLowerCase()}-frequency pattern to a ${transition.toFrequency.toLowerCase()}-frequency pattern, and is it reversible?`
+                        : "Why do you change operating state, and is it reversible?"
                 },
                 apply
             ];
@@ -214,7 +216,7 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
             simply,
             {
                 title: "When does it switch?",
-                prompt: `When does ${name} switch from ${transition.from.toLowerCase()} into ${transition.to.toLowerCase()}, and what brings it back?`
+                prompt: `When do you switch from ${transition.from.toLowerCase()} into ${transition.to.toLowerCase()}, and what brings you back?`
             },
             apply
         ];
@@ -225,8 +227,8 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
             return [
                 simply,
                 {
-                    title: "How does it switch states?",
-                    prompt: `How does ${name} decide when to change its operating state?`
+                    title: "How do you switch states?",
+                    prompt: "How do you decide when to change your operating state?"
                 },
                 apply
             ];
@@ -235,8 +237,8 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
             return [
                 simply,
                 {
-                    title: "How do its modes work together?",
-                    prompt: `How do ${name}'s operating modes work together?`
+                    title: "How do your modes work together?",
+                    prompt: "How do your operating modes work together?"
                 },
                 apply
             ];
@@ -249,8 +251,8 @@ export function askSuggestions(subject: AskSubject, hints: AskHints): AskSuggest
                 {
                     title: frequency ? `Why ${frequency} frequency?` : "Why this frequency?",
                     prompt: frequency
-                        ? `Why is ${name} a ${frequency}-frequency system?`
-                        : `Why does ${name} operate at this frequency?`
+                        ? `Why are you a ${frequency}-frequency system?`
+                        : "Why do you operate at this frequency?"
                 },
                 hints.domains[0]
                     ? {

@@ -222,6 +222,38 @@ export async function requestAskAnswerJSON(params: {
         .catch(() => null);
 }
 
+/**
+ * One JSON object from whichever provider is configured, for work that is
+ * not an answer (memory extraction). Null when no provider could produce one.
+ */
+export async function requestAskJSONObject(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    signal?: AbortSignal;
+}): Promise<Record<string, unknown> | null> {
+    const parse = (raw: string | null | undefined): Record<string, unknown> | null => {
+        if (!raw) return null;
+        try {
+            const parsed = JSON.parse(raw) as unknown;
+            return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? parsed as Record<string, unknown>
+                : null;
+        } catch {
+            return null;
+        }
+    };
+    const geminiKey = geminiAskKey();
+    if (geminiKey) {
+        const raw = await requestGeminiRaw({...params, key: geminiKey, model: resolveGeminiAskModel()}).catch(() => null);
+        const parsed = parse(raw);
+        if (parsed) return parsed;
+    }
+    const openaiKey = openAIAskKey();
+    if (!openaiKey) return null;
+    const raw = await requestOpenAIRaw({...params, key: openaiKey, model: resolveOpenAIAskModel()}).catch(() => null);
+    return parse(raw);
+}
+
 function parseAnswerPayload(raw: string): {answer: string; followUps: string[]} | null {
     let parsed: unknown;
     try {
@@ -255,6 +287,16 @@ async function requestGeminiJSON(params: {
     model: string;
     signal?: AbortSignal;
 }) {
+    return parseAnswerPayload((await requestGeminiRaw(params)).trim());
+}
+
+async function requestGeminiRaw(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    key: string;
+    model: string;
+    signal?: AbortSignal;
+}): Promise<string> {
     const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(params.model)}`
         + `:generateContent?key=${encodeURIComponent(params.key)}`,
@@ -276,7 +318,7 @@ async function requestGeminiJSON(params: {
     );
     if (!response.ok) throw new Error(`gemini_${response.status}`);
     const payload = await response.json() as Record<string, unknown>;
-    return parseAnswerPayload(extractGeminiText(payload).trim());
+    return extractGeminiText(payload);
 }
 
 async function requestOpenAIJSON(params: {
@@ -286,6 +328,17 @@ async function requestOpenAIJSON(params: {
     model: string;
     signal?: AbortSignal;
 }) {
+    const raw = await requestOpenAIRaw(params);
+    return raw ? parseAnswerPayload(raw) : null;
+}
+
+async function requestOpenAIRaw(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    key: string;
+    model: string;
+    signal?: AbortSignal;
+}): Promise<string | null> {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -306,6 +359,5 @@ async function requestOpenAIJSON(params: {
     });
     if (!response.ok) throw new Error(`openai_${response.status}`);
     const payload = await response.json() as {choices?: Array<{message?: {content?: string}}>};
-    const raw = payload.choices?.[0]?.message?.content;
-    return raw ? parseAnswerPayload(raw) : null;
+    return payload.choices?.[0]?.message?.content ?? null;
 }

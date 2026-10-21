@@ -42,6 +42,8 @@ export default async function RootLayout(
     const askT = await getScopedTranslator(locale, "askAnimalDex");
     const askLabels = {
         launcher: askT("launcher"),
+        speakLauncher: askT("speakLauncher"),
+        inOwnWords: askT("inOwnWords"),
         title: askT("title"),
         aboutAnimal: askT("aboutAnimal"),
         aboutSite: askT("aboutSite"),
@@ -72,6 +74,13 @@ export default async function RootLayout(
         limitBody: askT("limitBody"),
         limitCta: askT("limitCta"),
         limitHref: askT("limitHref"),
+        emptyHintAnimal: askT("emptyHintAnimal"),
+        placeholderFollowUpAnimal: askT("placeholderFollowUpAnimal"),
+        thinkingAnimal: askT("thinkingAnimal"),
+        limitBodySignedIn: askT("limitBodySignedIn"),
+        limitCtaSignedIn: askT("limitCtaSignedIn"),
+        limitHrefSignedIn: askT("limitHrefSignedIn"),
+        limitBodyPro: askT("limitBodyPro"),
         disclaimer: askT("disclaimer")
     };
 

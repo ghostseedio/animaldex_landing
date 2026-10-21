@@ -15,11 +15,11 @@ import {buildAskHints, buildAskSubjectGrounding} from "@/data/ask-grounding";
 import {getAskWildProfile} from "@/data/ask-wild-profile";
 import {
     ASK_RESPONSE_HEADERS,
+    peekAskAllowance,
     resolveAskSubject,
     resolveAskViewer
 } from "@/lib/ask-animaldex/request";
 import {askSuggestions, EMPTY_ASK_HINTS} from "@/lib/ask-animaldex/subject";
-import {askLimitForViewer} from "@/lib/species-ask";
 import {availableAskProviders} from "@/lib/ask-animaldex/providers";
 
 export const runtime = "nodejs";
@@ -36,9 +36,10 @@ export async function POST(request: Request) {
     const subject = resolveAskSubject(body.subject ?? body);
     const viewer = await resolveAskViewer(request);
 
-    const [species, wildProfile] = await Promise.all([
+    const [species, wildProfile, allowance] = await Promise.all([
         buildAskSubjectGrounding(subject),
-        getAskWildProfile(viewer.userId)
+        getAskWildProfile(viewer.userId),
+        peekAskAllowance(request, viewer)
     ]);
     const hints = species ? buildAskHints(species) : EMPTY_ASK_HINTS;
 
@@ -54,9 +55,10 @@ export async function POST(request: Request) {
         subject: resolvedSubject,
         hints,
         suggestions: askSuggestions(resolvedSubject, hints),
-        limit: askLimitForViewer(viewer),
+        limit: allowance.limit,
+        remaining: allowance.remaining,
         signedIn: viewer.signedIn,
-        isPro: viewer.isPro,
+        isPro: allowance.isPro,
         hasWildProfile: wildProfile.hasWildProfile,
         available: availableAskProviders().length > 0
     }, {headers: ASK_RESPONSE_HEADERS});

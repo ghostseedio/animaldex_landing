@@ -120,10 +120,11 @@ test("fallback answers keep biology, why, and lesson in separate layers", () => 
 });
 
 test("anonymous, signed-in, and Pro Ask limits are deterministic", () => {
-    assert.deepEqual(SPECIES_ASK_DAILY_LIMITS, {anonymous: 3, signedIn: 10, pro: 30});
+    // Signed-in and Pro match the apps' budgets (animal_chat_config).
+    assert.deepEqual(SPECIES_ASK_DAILY_LIMITS, {anonymous: 3, signedIn: 10, pro: 100});
     assert.equal(askLimitForViewer({signedIn: false, isPro: false}), 3);
     assert.equal(askLimitForViewer({signedIn: true, isPro: false}), 10);
-    assert.equal(askLimitForViewer({signedIn: true, isPro: true}), 30);
+    assert.equal(askLimitForViewer({signedIn: true, isPro: true}), 100);
 });
 
 test("every answer includes product follow-ups instead of a dead-end chat", () => {

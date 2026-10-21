@@ -14,6 +14,7 @@
 
 import {useEffect, useState} from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {SPECIES_ASK_EVENT} from "@/lib/ask-animaldex/events";
 import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-drawer";
@@ -21,7 +22,7 @@ import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-drawer";
 const AskDrawer = dynamic(() => import("@/components/ask-animaldex/ask-drawer"), {ssr: false});
 
 export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels & {launcher: string}}) {
-    const {isOpen, open, subject} = useAskAnimalDex();
+    const {isOpen, open, subject, avatarUrl} = useAskAnimalDex();
     const [mounted, setMounted] = useState(false);
 
     // The launcher is client-only chrome. Rendering it during hydration of a
@@ -47,24 +48,45 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
     // top of it.
     const inAppShell = subject.kind === "capture" || subject.kind === "collection";
 
+    // On a species page the animal itself answers, so the launcher is the
+    // animal: its picture and its name, not the site-wide assistant.
+    const speaksAsAnimal = subject.scope === "species" && Boolean(subject.name);
+    const label = speaksAsAnimal
+        ? labels.speakLauncher.replace("{animal}", subject.name ?? "")
+        : labels.launcher;
+
     return (
         <button
             type="button"
             onClick={() => open()}
-            aria-label={labels.launcher}
-            className={`group fixed right-4 z-[55] flex items-center gap-2 rounded-full border border-primary-300/35 bg-canvas-950 py-2.5 pl-3 pr-4 text-sm font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-colors hover:border-primary-300/70 hover:bg-canvas-900 lg:right-6 ${
+            aria-label={label}
+            className={`group fixed right-4 z-[55] flex items-center gap-2 rounded-full border border-primary-300/35 bg-canvas-950 py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-colors hover:border-primary-300/70 hover:bg-canvas-900 lg:right-6 ${
                 inAppShell ? "bottom-[5.75rem] lg:bottom-6" : "bottom-5 lg:bottom-6"
             }`}
         >
-            <span
-                aria-hidden="true"
-                className="grid h-6 w-6 place-items-center rounded-full bg-primary-400/16 text-primary-200 transition-colors group-hover:bg-primary-400/24"
-            >
-                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10 3.5 11.4 8 16 9.4 11.4 10.8 10 15.4 8.6 10.8 4 9.4 8.6 8Z" />
-                </svg>
-            </span>
-            {labels.launcher}
+            {speaksAsAnimal && avatarUrl ? (
+                <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/15">
+                    <Image src={avatarUrl} unoptimized alt="" fill sizes="32px" className="object-cover" />
+                    <span
+                        aria-hidden="true"
+                        className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-primary-400 text-canvas-950"
+                    >
+                        <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor">
+                            <path d="M3 4h14v9H8l-4 3v-3H3z" />
+                        </svg>
+                    </span>
+                </span>
+            ) : (
+                <span
+                    aria-hidden="true"
+                    className="ml-1 grid h-6 w-6 place-items-center rounded-full bg-primary-400/16 text-primary-200 transition-colors group-hover:bg-primary-400/24"
+                >
+                    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10 3.5 11.4 8 16 9.4 11.4 10.8 10 15.4 8.6 10.8 4 9.4 8.6 8Z" />
+                    </svg>
+                </span>
+            )}
+            {label}
         </button>
     );
 }

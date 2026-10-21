@@ -2,10 +2,16 @@ import {buildComparisonSlug} from "@/lib/comparison-slug";
 import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
 
 /** Deterministic daily Ask entitlements. Do not invent extra tiers in UI copy. */
+/**
+ * Daily message budgets. Signed-in and Pro are the apps' budgets too: one
+ * allowance per account, metered by `take_animal_chat_turn` in Postgres, so
+ * the website and the apps draw from the same count. Anonymous readers are
+ * metered per address here, since there is no account to key on.
+ */
 export const SPECIES_ASK_DAILY_LIMITS = {
     anonymous: 3,
     signedIn: 10,
-    pro: 30
+    pro: 100
 } as const;
 
 export const SPECIES_ASK_ANONYMOUS_LIMIT = SPECIES_ASK_DAILY_LIMITS.anonymous;
@@ -138,56 +144,58 @@ export function buildSpeciesAskSuggestions(grounding: SpeciesAskGrounding): Spec
     const suggestions: SpeciesAskSuggestion[] = [];
 
     if (/(solitary|alone|independent|lone)/.test(blob)) {
-        suggestions.push({label: "Why so solitary?", prompt: `Why are ${name} so solitary?`});
+        // Addressed to the animal: the page's conversation is with the animal
+        // itself, answering in the first person.
+        suggestions.push({label: "Why so solitary?", prompt: "Why are you so solitary?"});
     } else if (/(pack|herd|troop|colony|pod|flock|social|group)/.test(blob)) {
-        suggestions.push({label: "Why live in groups?", prompt: `Why do ${name} live in groups?`});
+        suggestions.push({label: "Why live in groups?", prompt: "Why do you live in groups?"});
     }
 
     if (/(tree|canopy|arboreal|branch|climb)/.test(blob)) {
-        suggestions.push({label: "Why live in trees?", prompt: `Why do ${name} live in trees?`});
+        suggestions.push({label: "Why live in trees?", prompt: "Why do you live in trees?"});
     } else if (/(burrow|underground|den)/.test(blob)) {
-        suggestions.push({label: "Why underground?", prompt: `Why do ${name} live underground?`});
+        suggestions.push({label: "Why underground?", prompt: "Why do you live underground?"});
     } else if (/(water|ocean|reef|river|aquatic|marine)/.test(blob)) {
-        suggestions.push({label: "Why this water habitat?", prompt: `Why are ${name} adapted to water?`});
+        suggestions.push({label: "Why this water habitat?", prompt: "Why are you adapted to water?"});
     } else {
         suggestions.push({
             label: "Why this habitat?",
-            prompt: `Why do ${name} live in ${firstSentence(grounding.habitat, 60).replace(/\.$/, "")}?`
+            prompt: `Why do you live in ${firstSentence(grounding.habitat, 60).replace(/\.$/, "")}?`
         });
     }
 
     if (/(intelligent|intelligence|brain|learn|tool|problem)/.test(blob)) {
-        suggestions.push({label: "How intelligent?", prompt: `How intelligent are ${name}?`});
+        suggestions.push({label: "How intelligent?", prompt: "How intelligent are you?"});
     }
 
     if (/(bite|jaw|shell|armor|aggressive|venom|sting|hide)/.test(blob)) {
-        suggestions.push({label: "How does it defend itself?", prompt: `How do ${name} defend themselves?`});
+        suggestions.push({label: "How do you defend yourself?", prompt: "How do you defend yourself?"});
     }
 
     if (/(filter feed|plankton|krill|tiny prey)/.test(blob)) {
-        suggestions.push({label: "Why tiny prey?", prompt: `Why does such a large ${name} eat tiny prey?`});
+        suggestions.push({label: "Why tiny prey?", prompt: "Why does something as large as you eat tiny prey?"});
     } else if (grounding.diet) {
-        suggestions.push({label: "Why this diet?", prompt: `Why do ${name} eat this way?`});
+        suggestions.push({label: "Why this diet?", prompt: "Why do you eat this way?"});
     }
 
     suggestions.push({
-        label: grounding.principleName ? "What can they teach us?" : "What can we learn?",
+        label: grounding.principleName ? "What can you teach me?" : "What can I learn from you?",
         prompt: grounding.principleName
-            ? `What can ${name} teach us through ${grounding.principleName}?`
-            : `What can ${name} teach us?`
+            ? `What can you teach me through your ${grounding.principleName}?`
+            : "What can you teach me?"
     });
 
     const related = grounding.relatedSpecies[0];
     if (related) {
         suggestions.push({
-            label: `${name} vs ${related.name}`,
-            prompt: `${name} vs ${related.name}`
+            label: `You vs ${related.name}`,
+            prompt: `How are you different from the ${related.name}?`
         });
     }
 
     suggestions.push({
-        label: "Where can I see them?",
-        prompt: `Where can I see ${name}?`
+        label: "Where can I see you?",
+        prompt: "Where can I see you in the wild?"
     });
 
     return uniqueSuggestions(suggestions).slice(0, 6);
