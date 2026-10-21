@@ -5,11 +5,68 @@ import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/support-message-body";
 import {AppAvatar, AppPage, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import type {DirectMessage, DirectMessageProfile} from "@/data/direct-messages";
+import type {DirectMessage, DirectMessageAttachment, DirectMessageProfile} from "@/data/direct-messages";
 import {formatAppShortDateTime} from "@/lib/app-dates";
 
 function formatWhen(value: string, locale: string) {
     return formatAppShortDateTime(value, locale);
+}
+
+/** Width over height, held to the range the apps draw. */
+function photoAspect(attachment: Extract<DirectMessageAttachment, {kind: "image"}>) {
+    if (!attachment.width || !attachment.height) return 4 / 3;
+    return Math.min(1.9, Math.max(0.56, attachment.width / attachment.height));
+}
+
+function MessagePhoto({attachment, checking}: {attachment: Extract<DirectMessageAttachment, {kind: "image"}>; checking: boolean}) {
+    return (
+        <a
+            href={attachment.fullUrl ?? attachment.bubbleUrl ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            className="relative block w-[248px] max-w-full overflow-hidden bg-white/[0.04]"
+            style={{aspectRatio: photoAspect(attachment)}}
+        >
+            {attachment.bubbleUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={attachment.bubbleUrl} alt="Photo" className="h-full w-full object-cover" />
+            ) : null}
+            {checking ? (
+                <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[0.68rem] font-semibold text-white">
+                    Checking photo…
+                </span>
+            ) : null}
+        </a>
+    );
+}
+
+function MessageCard({attachment}: {attachment: Extract<DirectMessageAttachment, {kind: "capture"}>}) {
+    const subtitle = attachment.animalName && attachment.animalName.toLowerCase() !== attachment.title.toLowerCase()
+        ? attachment.animalName
+        : null;
+    return (
+        <Link
+            href={`/app/capture/${encodeURIComponent(attachment.captureId)}`}
+            className="block w-[248px] max-w-full overflow-hidden border border-white/10 bg-[#101a13] text-left text-white"
+        >
+            <div className="relative aspect-[4/3] w-full bg-white/[0.04]">
+                {attachment.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={attachment.imageUrl} alt={attachment.title} className="h-full w-full object-cover" />
+                ) : null}
+                {attachment.grade !== null ? (
+                    <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-0.5 text-[0.68rem] font-bold text-black">
+                        Grade {attachment.grade}
+                    </span>
+                ) : null}
+            </div>
+            <div className="space-y-0.5 px-3 py-2">
+                <p className="text-[0.62rem] font-black tracking-[0.12em] text-primary-400">ANIMAL CARD</p>
+                <p className="line-clamp-2 font-display text-base font-bold">{attachment.title}</p>
+                {subtitle ? <p className="truncate text-xs text-white/55">{subtitle}</p> : null}
+            </div>
+        </Link>
+    );
 }
 
 export default function ConversationClient({
@@ -95,14 +152,34 @@ export default function ConversationClient({
                         return (
                             <div key={message.id} className={`flex ${outgoing ? "justify-end" : "justify-start"}`}>
                                 <div className={`max-w-[85%] space-y-1 ${outgoing ? "text-right" : "text-left"}`}>
-                                    {message.body.includes("[[adex-article:") ? (
-                                        <div className={`inline-block max-w-full px-4 py-3 text-left ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
-                                            <SupportMessageBody body={message.body} />
+                                    {message.deletedAt ? (
+                                        <p className="inline-block border border-white/10 px-4 py-3 text-sm italic text-white/45">
+                                            {outgoing ? "You unsent this message" : "This message was deleted"}
+                                        </p>
+                                    ) : message.photoReview === "removed" ? (
+                                        <div className="inline-block border border-white/10 px-4 py-3 text-left">
+                                            <p className="text-sm font-semibold text-white/70">Photo not delivered</p>
+                                            <p className="text-xs text-white/45">It may break the community rules.</p>
                                         </div>
                                     ) : (
-                                        <p className={`inline-block px-4 py-3 text-sm leading-6 ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
-                                            {message.body}
-                                        </p>
+                                        <div className={`inline-flex max-w-full flex-col ${outgoing ? "items-end" : "items-start"} gap-1`}>
+                                            {message.attachment?.kind === "image" ? (
+                                                <MessagePhoto
+                                                    attachment={message.attachment}
+                                                    checking={outgoing && message.photoReview === "pending"}
+                                                />
+                                            ) : null}
+                                            {message.attachment?.kind === "capture" ? <MessageCard attachment={message.attachment} /> : null}
+                                            {!message.text ? null : message.text.includes("[[adex-article:") ? (
+                                                <div className={`inline-block max-w-full px-4 py-3 text-left ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
+                                                    <SupportMessageBody body={message.text} />
+                                                </div>
+                                            ) : (
+                                                <p className={`inline-block px-4 py-3 text-left text-sm leading-6 ${outgoing ? "bg-primary-400 text-black" : "border border-white/10 bg-[#1b1b1b] text-white"}`}>
+                                                    {message.text}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                     <p className="text-[0.68rem] font-bold text-white/25">{formatWhen(message.createdAt, locale)}</p>
                                 </div>
