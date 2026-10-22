@@ -1,21 +1,50 @@
 import "server-only";
 
 /**
- * The server half of memory: reading and writing `animal_chat_user_memory`
- * with the service role, and learning from a finished exchange. The prompt
- * text and parsing live in `memory-prompt.ts`, which has no server imports
- * so the prompt builders (and their tests) can use it.
+ * The server half of memory: reading `animal_chat_user_memory` and the
+ * reader's chat settings with the service role, and learning from a finished
+ * exchange. The prompt text and parsing live in `memory-prompt.ts` and
+ * `companion.ts`, which have no server imports so the prompt builders (and
+ * their tests) can use them.
+ *
+ * Writes go through `apply_animal_chat_memory_delta`, as the apps' do: the
+ * model returns only what changed and the database merges it under a row lock,
+ * so two surfaces learning at once never overwrite each other's facts.
  */
 
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {requestAskJSONObject} from "@/lib/ask-animaldex/providers";
-import {
-    buildAskMemoryExtractionPrompts,
-    parseAskMemoryFacts,
-    type AskMemoryFact
-} from "@/lib/ask-animaldex/memory-prompt";
+import {parseAskMemoryFacts, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
+import {buildAskMemoryDeltaPrompts, parseAskMemoryDelta} from "@/lib/ask-animaldex/companion";
 
 export type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
+
+/** The reader's standing choices about Speak to [Animal]. */
+export type AskChatSettings = {
+    /** False: no memory is read and nothing is learned. */
+    personalisationEnabled: boolean;
+};
+
+const DEFAULT_SETTINGS: AskChatSettings = {personalisationEnabled: true};
+
+/**
+ * `animal_chat_settings_for`, service role. A database without the companions
+ * migration has no such function; the defaults are what every reader had
+ * before it, so that is what they keep.
+ */
+export async function loadAskChatSettings(userId: string | null): Promise<AskChatSettings> {
+    if (!userId) return DEFAULT_SETTINGS;
+    const service = createSupabaseServiceClient();
+    if (!service) return DEFAULT_SETTINGS;
+    try {
+        const {data, error} = await service.rpc("animal_chat_settings_for", {p_user_id: userId});
+        if (error || !data || typeof data !== "object") return DEFAULT_SETTINGS;
+        const row = data as Record<string, unknown>;
+        return {personalisationEnabled: row.personalisation_enabled !== false};
+    } catch {
+        return DEFAULT_SETTINGS;
+    }
+}
 
 export async function loadAskMemory(userId: string | null): Promise<AskMemoryFact[]> {
     if (!userId) return [];
@@ -30,31 +59,51 @@ export async function loadAskMemory(userId: string | null): Promise<AskMemoryFac
 }
 
 /**
- * Learns what this exchange said about the person and saves it. Runs after
+ * Learns what this exchange said about the person and merges it. Runs after
  * the answer has gone out; a failure here never touches the conversation.
+ * The caller only calls it while personalisation is on.
  */
 export async function rememberAskTurn(params: {
     userId: string | null;
     existing: AskMemoryFact[];
     animalName: string;
+    /** The canonical species, stamped on new facts so that animal finds them first. */
+    speciesProfileId: string | null;
     userMessage: string;
     answer: string;
 }): Promise<void> {
     if (!params.userId || !params.answer.trim()) return;
+    // "ok", "yes", "thanks": nothing to learn, no call to make.
+    if (params.userMessage.trim().length < 20) return;
     const service = createSupabaseServiceClient();
     if (!service) return;
     try {
-        const prompts = buildAskMemoryExtractionPrompts(params);
+        const prompts = buildAskMemoryDeltaPrompts({
+            existing: params.existing,
+            animalName: params.animalName,
+            userMessage: params.userMessage,
+            answer: params.answer,
+            existingJourney: null,
+            allowFollowUp: false
+        });
         const raw = await requestAskJSONObject({systemPrompt: prompts.system, userPrompt: prompts.user});
         if (!raw) return;
-        const facts = parseAskMemoryFacts(raw.facts);
-        if (facts.length === 0 && params.existing.length === 0) return;
-        const unchanged = facts.length === params.existing.length
-            && facts.every((fact, index) => fact.fact === params.existing[index]?.fact);
-        if (unchanged) return;
-        await service
-            .from("animal_chat_user_memory")
-            .upsert({user_id: params.userId, facts, updated_at: new Date().toISOString()}, {onConflict: "user_id"});
+        const knownIds = new Set(params.existing.map((fact) => fact.id).filter((id): id is string => Boolean(id)));
+        const delta = parseAskMemoryDelta(raw, knownIds);
+        if (delta.add.length === 0 && delta.update.length === 0 && delta.retire.length === 0) return;
+        const today = new Date().toISOString().slice(0, 10);
+        const {error} = await service.rpc("apply_animal_chat_memory_delta", {
+            p_user_id: params.userId,
+            p_add: delta.add.map((item) => ({
+                ...item,
+                animal: params.animalName,
+                ...(params.speciesProfileId ? {species_profile_id: params.speciesProfileId} : {}),
+                noted_at: today
+            })),
+            p_update: delta.update,
+            p_retire: delta.retire
+        });
+        if (error) console.warn("[ask-animaldex] memory delta failed", error.message.slice(0, 200));
     } catch (error) {
         console.warn("[ask-animaldex] memory update failed", error instanceof Error ? error.message.slice(0, 200) : "unknown");
     }

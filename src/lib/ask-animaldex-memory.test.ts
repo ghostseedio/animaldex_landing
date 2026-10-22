@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {buildAskUserPrompt} from "@/lib/ask-animaldex/grounding";
-import {
-    askMemorySection,
-    buildAskMemoryExtractionPrompts,
-    parseAskMemoryFacts
-} from "@/lib/ask-animaldex/memory-prompt";
+import {askMemorySection, parseAskMemoryFacts} from "@/lib/ask-animaldex/memory-prompt";
+import {buildAskMemoryDeltaPrompts} from "@/lib/ask-animaldex/companion";
 import {buildAskStreamingSystemPrompt, buildAskSystemPrompt} from "@/lib/ask-animaldex/prompt";
 
 const species = {
@@ -82,18 +79,19 @@ test("only the animal's own voice carries the memory rules", () => {
     }
 });
 
-test("memory extraction asks for a merged list and refuses sensitive categories", () => {
-    const {system, user} = buildAskMemoryExtractionPrompts({
-        existing: [{fact: "Runs a bakery", animal: "Wolf", noted_at: "2026-10-02"}],
+test("memory extraction asks for a delta by id and refuses sensitive categories", () => {
+    const {system, user} = buildAskMemoryDeltaPrompts({
+        existing: [{id: "f1", fact: "Runs a bakery", animal: "Wolf", noted_at: "2026-10-02", kind: "context"}],
         animalName: "Cheetah",
         userMessage: "I'm moving the bakery to Leeds.",
         answer: "A move is a sprint for me too."
     });
-    assert.match(system, /"facts":\[/);
+    assert.match(system, /Return ONLY the changes/);
+    assert.match(system, /"retire":\[id\]/);
     assert.match(system, /mental-health conditions, sexuality, religion, politics/);
-    assert.match(system, /corrects, contradicts or supersedes/);
+    assert.match(system, /follow_up: always null/);
     assert.match(user, /animal_name: Cheetah/);
-    assert.match(user, /Runs a bakery/);
+    assert.match(user, /"id":"f1","fact":"Runs a bakery","kind":"context","pinned":false/);
 });
 
 test("Wild Profile facts keep source and pinned, survive the cap, and read as from the Wild Profile", () => {
@@ -109,7 +107,7 @@ test("Wild Profile facts keep source and pinned, survive the cap, and read as fr
     assert.match(askMemorySection(facts), /Goes by Sam \(from their Wild Profile, 2026-10-21\)/);
     assert.match(askMemorySection(facts), /Wants to finish projects \(told to the Ant, 2026-10-03\)/);
 
-    const prompts = buildAskMemoryExtractionPrompts({existing: facts, animalName: "Wolf", userMessage: "Hi", answer: "Hello"});
-    assert.match(prompts.system, /Facts with "pinned":true come from the person's Wild Profile/);
+    const prompts = buildAskMemoryDeltaPrompts({existing: facts, animalName: "Wolf", userMessage: "Hi", answer: "Hello"});
+    assert.match(prompts.system, /Never touch facts marked pinned/);
     assert.match(prompts.user, /"pinned":true/);
 });

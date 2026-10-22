@@ -129,7 +129,7 @@ test("the streaming prompt keeps the rules that make an answer readable", () => 
     // "How does your Power translate to other domains?" goes to the dynamics
     // record, and every answer ends on an offer in the animal's voice.
     assert.match(prompt, /answer from\n?\s*cross_domain/);
-    assert.match(prompt, /answer from failure_modes by title/);
+    assert.match(prompt, /answer from failure_modes by name/);
     assert.match(prompt, /End with ONE short question/);
     assert.match(prompt, /this plays out in Business\?/);
     assert.match(prompt, /closing question of your answer is one offer already/);

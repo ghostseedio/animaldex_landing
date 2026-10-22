@@ -82,6 +82,13 @@ export type AskDrawerLabels = {
     limitHrefSignedIn: string;
     /** A Pro account: nothing to sell, just when the messages come back. */
     limitBodyPro: string;
+    /** Past the allowance, a Pro reader with credits: "Keep talking for {cost} credit per message? Balance: {balance}". */
+    creditsOffer: string;
+    creditsContinue: string;
+    /** While paying: "{cost} credit per message · balance {balance}". */
+    creditsFooter: string;
+    /** Paying, and the balance cannot cover another message. */
+    creditsOut: string;
     disclaimer: string;
     /** "What I remember about you": the facts every animal shares, in the reader's hands. */
     memoryOpen: string;
@@ -99,7 +106,7 @@ export type AskDrawerLabels = {
     memoryBack: string;
 };
 
-type AskMemoryFact = {fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
+type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
 
 function isWildProfileFact(item: AskMemoryFact) {
     return item.source === "wild_profile" && item.pinned === true;
@@ -134,7 +141,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
     const resolvedSubject = context?.subject ?? subject;
 
-    const {messages, hasConversation, isSending, quota, send, stop, retry, regenerate, clear} = useAskThread({
+    const {messages, hasConversation, isSending, quota, send, stop, retry, regenerate, clear, continueWithCredits} = useAskThread({
         threadKey,
         subject: resolvedSubject,
         locale,
@@ -285,13 +292,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         void loadMemory();
     }, [loadMemory]);
 
-    const forgetFact = useCallback(async (fact: string) => {
-        setForgettingFact(fact);
+    const forgetFact = useCallback(async (item: AskMemoryFact) => {
+        setForgettingFact(item.fact);
         try {
+            // By id when the fact has one; facts saved before ids existed go by their text.
             const response = await fetch("/api/ask/memory", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({action: "forget", fact})
+                body: JSON.stringify(item.id ? {action: "forget", id: item.id} : {action: "forget", fact: item.fact})
             });
             if (!response.ok) return;
             const payload = await response.json() as {facts?: AskMemoryFact[]};
@@ -342,11 +350,19 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         : labels.thinking;
 
     const lastMessageId = messages[messages.length - 1]?.id ?? null;
-    const remainingCopy = quota.remaining !== null && quota.limit !== null
-        ? labels.remaining
-            .replace("{remaining}", String(quota.remaining))
-            .replace("{limit}", String(quota.limit))
-        : null;
+    // While paying with credits the footer says what a message costs instead.
+    const remainingCopy = quota.paying
+        ? labels.creditsFooter
+            .replace("{cost}", String(quota.creditCost ?? quota.creditOverflow?.cost ?? 1))
+            .replace("{balance}", String(quota.creditBalance ?? quota.creditOverflow?.balance ?? "…"))
+        : quota.remaining !== null && quota.limit !== null
+            ? labels.remaining
+                .replace("{remaining}", String(quota.remaining))
+                .replace("{limit}", String(quota.limit))
+            : null;
+    const creditOffer = quota.creditOverflow?.available ? quota.creditOverflow : null;
+    const outOfCredits = !creditOffer && (quota.reason === "insufficient_credits"
+        || (quota.isPro === true && quota.creditOverflow !== null && quota.creditOverflow !== undefined));
 
     return (
         <>
@@ -470,7 +486,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             forgettingFact={forgettingFact}
                             confirmingForgetAll={confirmingForgetAll}
                             onRetry={() => void loadMemory()}
-                            onForget={(fact) => void forgetFact(fact)}
+                            onForget={(item) => void forgetFact(item)}
                             onAskForgetAll={() => setConfirmingForgetAll(true)}
                             onCancelForgetAll={() => setConfirmingForgetAll(false)}
                             onForgetAll={() => void forgetEverything()}
@@ -568,7 +584,26 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                         ? labels.limitBodySignedIn
                                         : labels.limitBody).replace("{limit}", String(quota.limit ?? ""))}
                             </p>
-                            {quota.isPro ? null : (
+                            {creditOffer ? (
+                                <>
+                                    <p className="mt-1.5 text-sm leading-6 text-ink-100">
+                                        {labels.creditsOffer
+                                            .replace("{cost}", String(creditOffer.cost))
+                                            .replace("{balance}", String(creditOffer.balance))}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={continueWithCredits}
+                                        disabled={isSending}
+                                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 disabled:opacity-50"
+                                    >
+                                        {labels.creditsContinue}
+                                    </button>
+                                </>
+                            ) : outOfCredits ? (
+                                <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.creditsOut}</p>
+                            ) : null}
+                            {quota.isPro || creditOffer ? null : (
                                 <Link
                                     href={quota.signedIn ? labels.limitHrefSignedIn : labels.limitHref}
                                     onClick={() => {
@@ -864,7 +899,7 @@ function AskMemoryPanel({
     forgettingFact: string | null;
     confirmingForgetAll: boolean;
     onRetry: () => void;
-    onForget: (fact: string) => void;
+    onForget: (item: AskMemoryFact) => void;
     onAskForgetAll: () => void;
     onCancelForgetAll: () => void;
     onForgetAll: () => void;
@@ -904,7 +939,7 @@ function AskMemoryPanel({
                     <ul className="flex flex-col gap-2">
                         {ordered.map((item) => (
                             <li
-                                key={item.fact}
+                                key={item.id ?? item.fact}
                                 className="flex items-start gap-3 border border-white/10 bg-white/[0.035] py-3 pl-3.5 pr-2"
                             >
                                 <div className="min-w-0 flex-1">
@@ -915,7 +950,7 @@ function AskMemoryPanel({
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => onForget(item.fact)}
+                                    onClick={() => onForget(item)}
                                     disabled={busy}
                                     aria-label={`${labels.memoryForget}: ${item.fact}`}
                                     title={labels.memoryForget}

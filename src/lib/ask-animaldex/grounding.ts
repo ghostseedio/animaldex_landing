@@ -13,6 +13,7 @@
 
 import type {AskConversationTurn, AskScope} from "@/lib/ask-animaldex/prompt";
 import {askMemorySection, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
+import {ANIMAL_CHAT_CLOSING_INSTRUCTION, type AskConversationMode} from "@/lib/ask-animaldex/companion";
 
 export type AskPowerEvidence = {
     title: string;
@@ -71,6 +72,8 @@ export type AskSystemDynamics = {
 
 export type AskSpeciesGrounding = {
     slug: string;
+    /** The catalogue's species row, when the species is in the database. */
+    speciesProfileId?: string | null;
     name: string;
     scientificName: string | null;
     category: string | null;
@@ -205,6 +208,16 @@ export type AskGroundingPacket = {
      * animal itself is speaking.
      */
     memory?: AskMemoryFact[];
+    /**
+     * The canonical species the animal speaking is, so facts told to it are
+     * listed first and read as "told to you".
+     */
+    memorySpeciesProfileId?: string | null;
+    /**
+     * Species scope only. The website has no step cards, so the animal talks in
+     * chat mode; absent keeps the original advice-led closing instruction.
+     */
+    mode?: AskConversationMode;
     /**
      * The Animal Trial the person is looking at. Set, the answer is about that
      * Trial — what it means, how to do it, an example — and the content index
@@ -401,7 +414,7 @@ export function buildAskUserPrompt(params: {
                     ? `wild_profile_summary — the reader's own AnimalDex profile, for tailoring your advice:\n${packet.wildProfile.summary}`
                     : "wild_profile_summary: not_set"
                 : "",
-            packet.wildProfile ? askMemorySection(packet.memory ?? []) : "",
+            packet.wildProfile ? askMemorySection(packet.memory ?? [], packet.memorySpeciesProfileId ?? null) : "",
             speciesTrialBlock,
             pageLine,
             historyLine,
@@ -409,6 +422,8 @@ export function buildAskUserPrompt(params: {
             "Answer the reader's latest message, as yourself.",
             ...(trialContext
                 ? [SPECIES_TRIAL_CLOSING_INSTRUCTION]
+                : packet.mode === "chat"
+                ? ANIMAL_CHAT_CLOSING_INSTRUCTION
                 : [
                     "Lead with what you would do and why your biology makes it the move. Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when they come up.",
                     "If the message asks where your Power applies, how it translates to other areas or domains, or where else it shows up, answer from system_dynamics.cross_domain — the domains by name, their entries as what you do and why.",

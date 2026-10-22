@@ -7,7 +7,7 @@ import "server-only";
 
 import {createClient, type SupabaseClient} from "@supabase/supabase-js";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
-import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {createSupabaseServerClient, createSupabaseServiceClient} from "@/lib/supabase/server";
 import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {hasAuthCookie} from "@/lib/viewer";
 import {askLimitForViewer, SPECIES_ASK_DAILY_LIMITS, SPECIES_ASK_WINDOW_MS} from "@/lib/species-ask";
@@ -69,13 +69,27 @@ function bearerClient(jwt: string): SupabaseClient | null {
     });
 }
 
-/** Today's budget, as the database reports it. */
+/** Whether credits can carry the reader past today's allowance, and at what price. */
+export type AskCreditOverflow = {available: boolean; cost: number; balance: number};
+
+/** Today's budget, as the database reports it, and how this message was paid. */
 export type AskAllowance = {
     allowed: boolean;
     remaining: number;
     limit: number;
     isPro: boolean;
     retryAfterSeconds: number;
+    resetsAt: string | null;
+    /** Who metered the turn, so the refund goes back the same way. */
+    meter: "v2" | "v1" | "local";
+    /** The request id the database filed the turn under (v2 only). */
+    requestId: string | null;
+    paidWith: "allowance" | "credits" | null;
+    /** `daily_limit_reached` or `insufficient_credits` when not allowed (v2 only). */
+    reason: "daily_limit_reached" | "insufficient_credits" | null;
+    creditCost: number | null;
+    creditBalance: number | null;
+    creditOverflow: AskCreditOverflow | null;
 };
 
 type AllowanceRow = {
@@ -84,18 +98,53 @@ type AllowanceRow = {
     limit?: number;
     is_pro?: boolean;
     resets_at?: string | null;
+    request_id?: string;
+    paid_with?: string;
+    reason?: string;
+    credit_cost?: number;
+    credit_balance?: number | null;
+    credit_overflow?: {available?: boolean; cost?: number; balance?: number} | null;
 };
 
-function allowanceFromRow(row: AllowanceRow): AskAllowance {
+function allowanceFromRow(row: AllowanceRow, meter: AskAllowance["meter"]): AskAllowance {
     const resetsAt = row.resets_at ? Date.parse(row.resets_at) : Number.NaN;
+    const overflow = row.credit_overflow && typeof row.credit_overflow === "object" ? row.credit_overflow : null;
     return {
         allowed: row.allowed === true,
         remaining: typeof row.remaining === "number" ? row.remaining : 0,
         limit: typeof row.limit === "number" ? row.limit : 0,
         isPro: row.is_pro === true,
-        retryAfterSeconds: Number.isFinite(resetsAt) ? Math.max(1, Math.ceil((resetsAt - Date.now()) / 1000)) : 0
+        retryAfterSeconds: Number.isFinite(resetsAt) ? Math.max(1, Math.ceil((resetsAt - Date.now()) / 1000)) : 0,
+        resetsAt: typeof row.resets_at === "string" ? row.resets_at : null,
+        meter,
+        requestId: typeof row.request_id === "string" ? row.request_id : null,
+        paidWith: row.paid_with === "allowance" || row.paid_with === "credits" ? row.paid_with : null,
+        reason: row.reason === "insufficient_credits"
+            ? "insufficient_credits"
+            : row.reason === "daily_limit_reached" || (meter === "v2" && row.allowed !== true)
+                ? "daily_limit_reached"
+                : null,
+        creditCost: typeof row.credit_cost === "number" ? row.credit_cost : null,
+        creditBalance: typeof row.credit_balance === "number" ? row.credit_balance : null,
+        creditOverflow: overflow
+            ? {
+                available: overflow.available === true,
+                cost: typeof overflow.cost === "number" ? overflow.cost : 0,
+                balance: typeof overflow.balance === "number" ? overflow.balance : 0
+            }
+            : null
     };
 }
+
+const NO_PAYMENT = {
+    resetsAt: null,
+    requestId: null,
+    paidWith: null,
+    reason: null,
+    creditCost: null,
+    creditBalance: null,
+    creditOverflow: null
+} as const;
 
 /**
  * The in-memory limiter: every anonymous reader, and a signed-in reader when
@@ -106,41 +155,105 @@ function localAllowance(request: Request, viewer: AskViewer, take: boolean): Ask
     const limit = askLimitForViewer(viewer);
     const key = `ask-animaldex:${viewer.userId ?? getRequestIdentifier(request)}`;
     if (!take) {
-        return {allowed: true, remaining: limit, limit, isPro: viewer.isPro, retryAfterSeconds: 0};
+        return {allowed: true, remaining: limit, limit, isPro: viewer.isPro, retryAfterSeconds: 0, meter: "local", ...NO_PAYMENT};
     }
     const result = checkRateLimit(key, limit, SPECIES_ASK_WINDOW_MS);
-    return {...result, limit, isPro: viewer.isPro};
+    return {...result, limit, isPro: viewer.isPro, meter: "local", ...NO_PAYMENT};
+}
+
+/** PostgREST / Postgres saying the function is not there (migration not applied). */
+function isMissingFunction(error: {code?: string; message?: string} | null): boolean {
+    if (!error) return false;
+    if (error.code === "PGRST202" || error.code === "42883") return true;
+    return /could not find the function|function .* does not exist/i.test(error.message ?? "");
 }
 
 /**
- * Takes one message from today's budget.
+ * Takes one message from today's budget, or one credit past it.
  *
  * Signed-in readers draw from the website pool of their account's budget
- * (`take_animal_chat_turn` with surface "web": free 10, Pro 100 a day, Pro
- * decided from verified billing; the apps have their own, larger free pool).
- * Anonymous readers have no account to key on, so they are metered per
- * address here, at the anonymous limit.
+ * through `take_animal_chat_turn_v2` with the service role (free 10, Pro 100 a
+ * day, Pro decided from verified billing; the apps have their own, larger free
+ * pool). The request id makes a retry of the same message free, and
+ * `payWithCredits` — sent only after the reader chose "Continue with credits" —
+ * lets a Pro reader keep talking at one credit a message. A database without
+ * v2 falls back to the v1 take as the reader's own session. Anonymous readers
+ * have no account to key on, so they are metered per address here, at the
+ * anonymous limit.
  */
-export async function takeAskTurn(request: Request, viewer: AskViewer): Promise<AskAllowance> {
-    if (!viewer.signedIn || !viewer.client) {
+export async function takeAskTurn(
+    request: Request,
+    viewer: AskViewer,
+    options: {requestId?: string | null; payWithCredits?: boolean} = {}
+): Promise<AskAllowance> {
+    if (!viewer.signedIn || !viewer.client || !viewer.userId) {
         return localAllowance(request, viewer, true);
     }
+
+    const service = createSupabaseServiceClient();
+    if (service) {
+        const requestId = options.requestId ?? newRequestId();
+        const {data, error} = await service.rpc("take_animal_chat_turn_v2", {
+            p_user_id: viewer.userId,
+            p_surface: "web",
+            p_request_id: requestId,
+            p_allow_credits: options.payWithCredits === true
+        });
+        if (!error && data && typeof data === "object") {
+            const allowance = allowanceFromRow(data as AllowanceRow, "v2");
+            return {...allowance, requestId: allowance.requestId ?? requestId};
+        }
+        if (!isMissingFunction(error)) {
+            console.warn("[ask-animaldex] allowance v2 unavailable, metering locally", error?.message ?? "no row");
+            return localAllowance(request, viewer, true);
+        }
+    }
+
     const {data, error} = await viewer.client.rpc("take_animal_chat_turn", {p_surface: "web"});
     if (error || !data || typeof data !== "object") {
         console.warn("[ask-animaldex] allowance RPC unavailable, metering locally", error?.message ?? "no row");
         return localAllowance(request, viewer, true);
     }
-    return allowanceFromRow(data as AllowanceRow);
+    return allowanceFromRow(data as AllowanceRow, "v1");
 }
 
-/** Gives the message back when no answer was produced. Best effort. */
-export async function refundAskTurn(viewer: AskViewer): Promise<void> {
-    if (!viewer.signedIn || !viewer.client) return;
+function newRequestId(): string {
+    return globalThis.crypto?.randomUUID?.() ?? `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Gives the message (or the credit) back when no answer was produced. Best
+ * effort. A v2 turn is refunded by its request id with the service role; the
+ * v1 refund is only tried when the turn was taken through v1.
+ */
+export async function refundAskTurn(viewer: AskViewer, allowance: AskAllowance): Promise<void> {
+    if (!viewer.signedIn || !viewer.client || !viewer.userId) return;
     try {
-        await viewer.client.rpc("refund_animal_chat_turn", {p_surface: "web"});
+        if (allowance.meter === "v2" && allowance.requestId) {
+            const service = createSupabaseServiceClient();
+            if (!service) return;
+            await service.rpc("refund_animal_chat_turn_v2", {p_user_id: viewer.userId, p_request_id: allowance.requestId});
+            return;
+        }
+        if (allowance.meter === "v1") {
+            await viewer.client.rpc("refund_animal_chat_turn", {p_surface: "web"});
+        }
     } catch {
         // The refund is a courtesy; the failure itself is what matters.
     }
+}
+
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,119}$/;
+
+/**
+ * The client's id for one message, reused when that message is retried, so a
+ * retry is never charged twice. Uuid-ish, 8-120 characters (the ledger's
+ * bounds); anything else is ignored and the server mints its own.
+ */
+export function resolveAskRequestId(raw: unknown): string | null {
+    if (typeof raw !== "string") return null;
+    const value = raw.trim();
+    return REQUEST_ID_PATTERN.test(value) ? value : null;
 }
 
 /** What is left today, without taking anything. */
@@ -152,7 +265,7 @@ export async function peekAskAllowance(request: Request, viewer: AskViewer): Pro
     if (error || !data || typeof data !== "object") {
         return localAllowance(request, viewer, false);
     }
-    return allowanceFromRow(data as AllowanceRow);
+    return allowanceFromRow(data as AllowanceRow, "v1");
 }
 
 /** Kept for callers that only need the number: the anonymous, signed-in or Pro ceiling. */

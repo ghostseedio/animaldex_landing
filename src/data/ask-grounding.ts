@@ -141,6 +141,7 @@ export async function buildAskSpeciesGrounding(
 
     return {
         slug: resolved.slug,
+        speciesProfileId: resolved.speciesProfileId ?? null,
         name: resolved.name,
         scientificName: text(resolved.analysis.scientificName),
         category: text(resolved.analysis.category),

@@ -3,8 +3,10 @@ import {NextResponse} from "next/server";
 /**
  * What the animals remember about the signed-in reader, in their hands.
  *
- * GET lists the facts; POST {action: "forget", fact} drops one and POST
- * {action: "clear"} drops them all. Every call runs as the reader through the
+ * GET lists the facts; POST {action: "forget", id} drops one by its id (or
+ * {action: "forget", fact} by its text, for facts saved before ids existed),
+ * POST {action: "correct", id, text} rewrites one in the reader's own words,
+ * and POST {action: "clear"} drops them all. Every call runs as the reader through the
  * owner-only RPCs, so there is nothing here the service role has to vouch for.
  * Signed-out readers have no memory and get a 401.
  */
@@ -16,6 +18,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const FACT_MAX = 400;
+const ID_MAX = 64;
+
+function factId(raw: unknown): string {
+    return typeof raw === "string" ? raw.trim().slice(0, ID_MAX) : "";
+}
 
 export async function GET(request: Request) {
     const viewer = await resolveAskViewer(request);
@@ -42,7 +49,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ok: true, facts: []}, {headers: ASK_RESPONSE_HEADERS});
     }
 
+    if (body.action === "correct") {
+        const id = factId(body.id);
+        const text = typeof body.text === "string" ? body.text.replace(/\s+/g, " ").trim().slice(0, FACT_MAX) : "";
+        if (!id) {
+            return NextResponse.json({ok: false, error: "id_required"}, {status: 400, headers: ASK_RESPONSE_HEADERS});
+        }
+        // An empty correction forgets the fact; the RPC decides that.
+        const {data, error} = await viewer.client.rpc("correct_animal_chat_memory_fact", {p_id: id, p_text: text});
+        if (error) return failed(error.message);
+        return NextResponse.json({ok: true, facts: parseAskMemoryFacts(data)}, {headers: ASK_RESPONSE_HEADERS});
+    }
+
     if (body.action === "forget") {
+        const id = factId(body.id);
+        if (id) {
+            const {data, error} = await viewer.client.rpc("forget_animal_chat_memory_fact_by_id", {p_id: id});
+            if (error) return failed(error.message);
+            return NextResponse.json({ok: true, facts: parseAskMemoryFacts(data)}, {headers: ASK_RESPONSE_HEADERS});
+        }
         const fact = typeof body.fact === "string" ? body.fact.trim().slice(0, FACT_MAX) : "";
         if (!fact) {
             return NextResponse.json({ok: false, error: "fact_required"}, {status: 400, headers: ASK_RESPONSE_HEADERS});

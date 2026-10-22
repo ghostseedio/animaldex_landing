@@ -48,6 +48,9 @@ export function fallbackFollowUps(principleName: string | null, aboutTrial = fal
  */
 export function askErrorMessage(error: unknown): string {
     if (error instanceof AskLimitError) {
+        if (error.reason === "insufficient_credits") {
+            return "You don't have enough credits for another message. Your free messages come back tomorrow.";
+        }
         return error.retryAfterSeconds && error.retryAfterSeconds < 60 * 60 * 6
             ? "You've used today's questions. They reset within a few hours."
             : "You've used today's questions. Sign in for more, or come back tomorrow.";
@@ -73,8 +76,57 @@ export function askErrorMessage(error: unknown): string {
 }
 
 export class AskLimitError extends Error {
-    constructor(readonly retryAfterSeconds: number, readonly limit: number) {
+    constructor(
+        readonly retryAfterSeconds: number,
+        readonly limit: number,
+        readonly reason: string = "daily_limit_reached"
+    ) {
         super("limit_reached");
+    }
+}
+
+/** Whether credits can carry the reader past today's allowance, and at what price. */
+export type AskCreditOverflow = {available: boolean; cost: number; balance: number};
+
+function creditOverflowFrom(raw: unknown): AskCreditOverflow | null {
+    if (!raw || typeof raw !== "object") return null;
+    const row = raw as Record<string, unknown>;
+    return {
+        available: row.available === true,
+        cost: typeof row.cost === "number" ? row.cost : 1,
+        balance: typeof row.balance === "number" ? row.balance : 0
+    };
+}
+
+/**
+ * "Continue with credits" lasts until the day's allowance resets (the
+ * server's `resets_at`, the next UTC midnight). Kept per browser, so a
+ * reload the same day does not ask again; storage that throws only means the
+ * reader is asked again.
+ */
+const PAY_WITH_CREDITS_KEY = "animaldex:ask:pay-with-credits-until";
+
+function nextUtcMidnight(now = Date.now()): number {
+    const date = new Date(now);
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+}
+
+function readPayingUntil(): number | null {
+    try {
+        const raw = window.localStorage.getItem(PAY_WITH_CREDITS_KEY);
+        const until = raw ? Number(raw) : Number.NaN;
+        return Number.isFinite(until) && until > Date.now() ? until : null;
+    } catch {
+        return null;
+    }
+}
+
+function writePayingUntil(until: number | null) {
+    try {
+        if (until) window.localStorage.setItem(PAY_WITH_CREDITS_KEY, String(until));
+        else window.localStorage.removeItem(PAY_WITH_CREDITS_KEY);
+    } catch {
+        // Session-only, then.
     }
 }
 export class AskUnavailableError extends Error {}
@@ -89,6 +141,11 @@ type StreamEvent = {
     signed_in?: boolean;
     is_pro?: boolean;
     has_wild_profile?: boolean;
+    resets_at?: string;
+    paid_with?: "allowance" | "credits";
+    credit_cost?: number | null;
+    credit_balance?: number | null;
+    credit_overflow?: AskCreditOverflow;
     error?: string;
     detail?: string;
 };
@@ -131,6 +188,15 @@ export type AskQuota = {
     /** Who the budget belongs to, so the limit notice offers the right next step. */
     signedIn?: boolean;
     isPro?: boolean;
+    /** `daily_limit_reached` or `insufficient_credits`, when the server said which. */
+    reason?: string;
+    /** Present when the server can say whether credits can carry the reader on. */
+    creditOverflow?: AskCreditOverflow | null;
+    /** The reader chose "Continue with credits" and it still holds today. */
+    paying?: boolean;
+    /** From the last answer paid with credits. */
+    creditCost?: number | null;
+    creditBalance?: number | null;
 };
 
 export function useAskThread(params: {
@@ -158,6 +224,24 @@ export function useAskThread(params: {
     const [isSending, setIsSending] = useState(false);
     const [quota, setQuota] = useState<AskQuota>({remaining: null, limit: null, reached: false});
     const abortRef = useRef<AbortController | null>(null);
+    // Read through a ref so `send` keeps one identity; the state mirrors it
+    // for rendering the footer.
+    const payingUntilRef = useRef<number | null>(null);
+    const [payingUntil, setPayingUntil] = useState<number | null>(null);
+    useEffect(() => {
+        const stored = readPayingUntil();
+        payingUntilRef.current = stored;
+        setPayingUntil(stored);
+    }, []);
+    const isPaying = useCallback(() => {
+        const until = payingUntilRef.current;
+        return until !== null && until > Date.now();
+    }, []);
+    const stopPaying = useCallback(() => {
+        payingUntilRef.current = null;
+        setPayingUntil(null);
+        writePayingUntil(null);
+    }, []);
     // Callbacks are read through a ref so `send` keeps one identity across
     // renders; a changing identity re-runs every effect that opens with a
     // question and sends it twice.
@@ -170,17 +254,22 @@ export function useAskThread(params: {
         askSessionStore.replace(threadKey, next);
     }, [threadKey]);
 
-    const send = useCallback(async (rawQuestion: string) => {
+    const send = useCallback(async (rawQuestion: string, options: {requestId?: string} = {}) => {
         const question = rawQuestion.replace(/\s+/g, " ").trim();
         if (!question || abortRef.current) return;
 
         const current = askSessionStore.messages(threadKey);
-        const userMessage = createAskMessage("user", question);
+        // The question's own id is the request id: one per message, and the
+        // same one when that message is retried, so a retry is never charged
+        // twice.
+        const userMessage = createAskMessage("user", question, options.requestId ? {id: options.requestId} : {});
+        const requestId = userMessage.id;
         const placeholderId = newAskMessageId();
         const placeholder = createAskMessage("assistant", "", {id: placeholderId, status: "thinking"});
         replace([...current, userMessage, placeholder]);
 
-        const history = askConversationHistory([...current, userMessage]);
+        // Everything before this message; the question itself travels as `question`.
+        const history = askConversationHistory(current);
         const controller = new AbortController();
         abortRef.current = controller;
         setIsSending(true);
@@ -226,10 +315,13 @@ export function useAskThread(params: {
             replace(thread.filter((message) => message.id !== placeholderId));
         };
 
+        const payWithCredits = isPaying();
         const requestBody = {
             question,
             locale,
             history,
+            requestId,
+            ...(payWithCredits ? {payWithCredits: true} : {}),
             subject: {
                 scope: subject.scope,
                 slug: subject.slug,
@@ -267,15 +359,23 @@ export function useAskThread(params: {
                     limit?: number;
                     signedIn?: boolean;
                     isPro?: boolean;
+                    reason?: string;
+                    creditOverflow?: unknown;
                 };
+                // Paying and still refused: the balance ran out, so the
+                // offer goes away until the reader is offered it again.
+                if (payWithCredits) stopPaying();
                 setQuota({
                     remaining: 0,
                     limit: payload.limit ?? null,
                     reached: true,
                     signedIn: payload.signedIn ?? callbacks.current.viewer?.signedIn ?? false,
-                    isPro: payload.isPro ?? false
+                    isPro: payload.isPro ?? false,
+                    reason: payload.reason,
+                    creditOverflow: creditOverflowFrom(payload.creditOverflow),
+                    paying: false
                 });
-                throw new AskLimitError(payload.retryAfterSeconds ?? 0, payload.limit ?? 0);
+                throw new AskLimitError(payload.retryAfterSeconds ?? 0, payload.limit ?? 0, payload.reason);
             }
             if (!response.ok || !response.body) {
                 throw new AskUnavailableError();
@@ -297,12 +397,19 @@ export function useAskThread(params: {
                     );
                     settle(split.answer, offers, false);
                     if (typeof event.remaining === "number") {
+                        const paying = isPaying();
                         setQuota({
                             remaining: event.remaining,
                             limit: event.limit ?? null,
-                            reached: event.remaining <= 0,
+                            // While paying with credits the allowance is spent
+                            // by design; the footer says what each message costs.
+                            reached: event.remaining <= 0 && !paying,
                             signedIn: event.signed_in ?? callbacks.current.viewer?.signedIn ?? false,
-                            isPro: event.is_pro ?? false
+                            isPro: event.is_pro ?? false,
+                            creditOverflow: event.credit_overflow ?? null,
+                            paying,
+                            creditCost: event.credit_cost ?? null,
+                            creditBalance: event.credit_balance ?? null
                         });
                     }
                     callbacks.current.onAnswered?.({question, followUps: offers.length});
@@ -329,7 +436,7 @@ export function useAskThread(params: {
                             body: JSON.stringify({...requestBody, mode: "complete"})
                         });
                         if (retryResponse.status === 429) {
-                            setQuota((current) => ({...current, remaining: 0, reached: true}));
+                            setQuota((current) => ({...current, remaining: 0, reached: !isPaying()}));
                         } else if (retryResponse.ok) {
                             whole = await retryResponse.json() as CompleteAnswer;
                         }
@@ -342,7 +449,15 @@ export function useAskThread(params: {
                     const offers = offersFor(whole.follow_up_prompts ?? [], whole);
                     settle(whole.answer, offers, false);
                     if (typeof whole.remaining === "number") {
-                        setQuota({remaining: whole.remaining, limit: whole.limit ?? null, reached: whole.remaining <= 0});
+                        const paying = isPaying();
+                        setQuota({
+                            remaining: whole.remaining,
+                            limit: whole.limit ?? null,
+                            reached: whole.remaining <= 0 && !paying,
+                            paying,
+                            creditCost: whole.credit_cost ?? null,
+                            creditBalance: whole.credit_balance ?? null
+                        });
                     }
                     callbacks.current.onAnswered?.({question, followUps: offers.length});
                 } else if (partial.answer.trim()) {
@@ -368,22 +483,42 @@ export function useAskThread(params: {
             abortRef.current = null;
             setIsSending(false);
         }
-    }, [threadKey, subject, locale, principleName, replace]);
+    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying]);
 
     const stop = useCallback(() => {
         abortRef.current?.abort();
         abortRef.current = null;
     }, []);
 
-    /** Drops a failed answer and re-asks the question that produced it. */
+    /**
+     * Drops a failed answer and re-asks the question that produced it, as the
+     * same message: same id, so the server never charges it twice, and the
+     * question is re-added by `send` rather than left standing twice.
+     */
     const retry = useCallback((messageId: string) => {
         const thread = askSessionStore.messages(threadKey);
         const index = thread.findIndex((message) => message.id === messageId);
         if (index <= 0 || thread[index - 1].role !== "user") return;
-        const question = thread[index - 1].text;
-        replace(thread.filter((message) => message.id !== messageId));
-        void send(question);
+        const asked = thread[index - 1];
+        replace([...thread.slice(0, index - 1), ...thread.slice(index + 1)]);
+        void send(asked.text, {requestId: asked.id});
     }, [threadKey, replace, send]);
+
+    /**
+     * The reader chose "Continue with credits": every message pays one credit
+     * until the allowance resets, and the message the limit refused is sent
+     * again (same id) so they do not have to retype it.
+     */
+    const continueWithCredits = useCallback(() => {
+        const until = nextUtcMidnight();
+        payingUntilRef.current = until;
+        setPayingUntil(until);
+        writePayingUntil(until);
+        setQuota((current) => ({...current, reached: false, paying: true}));
+        const thread = askSessionStore.messages(threadKey);
+        const last = thread[thread.length - 1];
+        if (last && last.role === "assistant" && last.status === "failed") retry(last.id);
+    }, [threadKey, retry]);
 
     /** Drops a finished answer and asks again, so the thread keeps its shape. */
     const regenerate = useCallback((messageId: string) => {
@@ -405,7 +540,20 @@ export function useAskThread(params: {
         [messages]
     );
 
-    return {messages, hasConversation, isSending, quota, send, stop, retry, regenerate, clear};
+    const paying = payingUntil !== null && payingUntil > Date.now();
+
+    return {
+        messages,
+        hasConversation,
+        isSending,
+        quota: {...quota, paying},
+        send,
+        stop,
+        retry,
+        regenerate,
+        clear,
+        continueWithCredits
+    };
 }
 
 const EMPTY_MESSAGES: AskMessage[] = [];

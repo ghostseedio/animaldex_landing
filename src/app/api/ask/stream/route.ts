@@ -16,13 +16,16 @@ import {NextResponse} from "next/server";
 
 import {buildAskPacket} from "@/data/ask-grounding";
 import {getAskWildProfile} from "@/data/ask-wild-profile";
-import {loadAskMemory, rememberAskTurn} from "@/lib/ask-animaldex/memory";
+import {loadAskCompanion, type AskCompanion} from "@/data/ask-companion-voice";
+import {loadAskChatSettings, loadAskMemory, rememberAskTurn} from "@/lib/ask-animaldex/memory";
+import {dedupeCurrentQuestion} from "@/lib/ask-animaldex/companion";
 import {
     ASK_RESPONSE_HEADERS,
     askLanguageName,
     refundAskTurn,
     takeAskTurn,
     resolveAskHistory,
+    resolveAskRequestId,
     resolveAskQuestion,
     resolveAskSubject,
     resolveAskViewer
@@ -71,15 +74,25 @@ export async function POST(request: Request) {
     if (!question) return askJson({error: "invalid_question"}, 400);
 
     const viewer = await resolveAskViewer(request);
-    const rate = await takeAskTurn(request, viewer);
+    // One id per message, reused when that message is retried (and by the
+    // one-piece retry below), so the same message is never charged twice.
+    const rate = await takeAskTurn(request, viewer, {
+        requestId: resolveAskRequestId(body.requestId),
+        payWithCredits: body.payWithCredits === true
+    });
     if (!rate.allowed) {
         return askJson({
             error: "limit_reached",
+            // The apps' reasons: the day's allowance is used, or the reader
+            // chose to pay and the balance cannot cover a message.
+            reason: rate.reason ?? "daily_limit_reached",
             remaining: 0,
             limit: rate.limit,
             retryAfterSeconds: rate.retryAfterSeconds,
+            resetsAt: rate.resetsAt,
             signedIn: viewer.signedIn,
-            isPro: rate.isPro
+            isPro: rate.isPro,
+            ...(rate.creditOverflow ? {creditOverflow: rate.creditOverflow} : {})
         }, 429);
     }
 
@@ -88,49 +101,90 @@ export async function POST(request: Request) {
         // No key configured is an outage, not an empty answer. Returning a
         // cheerful fallback here is how a revoked key hides behind a 200.
         console.error("[ask-animaldex] no model provider configured");
+        await refundAskTurn(viewer, rate);
         return askJson({error: "unavailable"}, 503);
     }
 
     const subject = resolveAskSubject(body.subject);
-    const history = resolveAskHistory(body.history);
-    const [basePacket, wildProfile, memory] = await Promise.all([
+    // The history must not carry the message being sent; an older client
+    // still appends it, so a trailing copy of the question is dropped here.
+    const history = dedupeCurrentQuestion(resolveAskHistory(body.history), question);
+    const [basePacket, wildProfile, settings] = await Promise.all([
         buildAskPacket({subject, question}),
         getAskWildProfile(viewer.userId),
-        subject.scope === "species" ? loadAskMemory(viewer.userId) : Promise.resolve([])
+        loadAskChatSettings(viewer.userId)
     ]);
+    // Personalisation off: no memory is read and nothing is learned.
+    const personalise = viewer.signedIn && settings.personalisationEnabled;
+    const speaksAsAnimal = basePacket.scope === "species" && Boolean(basePacket.species);
+    const [memory, companion] = await Promise.all([
+        speaksAsAnimal && personalise ? loadAskMemory(viewer.userId) : Promise.resolve([]),
+        // How this animal talks: its voice card, or the record-derived fallback.
+        speaksAsAnimal && basePacket.species
+            ? loadAskCompanion(basePacket.species)
+            : Promise.resolve(null as AskCompanion | null)
+    ]);
+    // A Trial question is grounded on that Trial and kept there.
+    const aboutTrial = Boolean(subject.trialContext);
+    // The website has no step cards, so the animal talks in chat mode; a
+    // Trial thread is training, as the apps force it.
+    const mode = aboutTrial ? "training" as const : "chat" as const;
     // A signed-in reader's Wild Profile personalises the answer, and what the
     // animals already remember about them rides along. A signed-out reader
     // has neither, so the packet says nothing about them either way.
     const groundedPacket = viewer.signedIn
-        ? {...basePacket, wildProfile: {summary: wildProfile.summary}, memory}
+        ? {
+            ...basePacket,
+            // As the apps do, personalisation off also keeps the Wild Profile out.
+            wildProfile: {summary: personalise ? wildProfile.summary : null},
+            memory,
+            memorySpeciesProfileId: companion?.speciesProfileId ?? null
+        }
         : basePacket;
+    const packet = {
+        ...groundedPacket,
+        ...(groundedPacket.scope === "species" ? {mode} : {}),
+        ...(subject.trialContext ? {trialContext: subject.trialContext} : {})
+    };
     // What this exchange taught about the person is learned after the answer
     // has gone out, so the reply is never slowed by it.
     const remember = (answer: string) => {
-        if (packet.scope !== "species" || !packet.species) return;
+        if (!personalise || packet.scope !== "species" || !packet.species) return;
         void rememberAskTurn({
             userId: viewer.userId,
             existing: memory,
             animalName: packet.species.name,
+            speciesProfileId: companion?.speciesProfileId ?? null,
             userMessage: question,
             answer
         });
     };
-    // A Trial question is grounded on that Trial and kept there.
-    const packet = subject.trialContext
-        ? {...groundedPacket, trialContext: subject.trialContext}
-        : groundedPacket;
-    const aboutTrial = Boolean(subject.trialContext);
     const languageName = askLanguageName(body.locale);
 
     const supportedVisuals = askSupportedVisuals(packet.hasReaderPhoto);
     const userPrompt = buildAskUserPrompt({userQuestion: question, packet, conversationHistory: history});
+    const promptOptions = {
+        scope: packet.scope,
+        supportedVisuals,
+        languageName,
+        aboutTrial,
+        voice: companion?.voice ?? null,
+        animalName: packet.species?.name ?? null,
+        mode
+    };
     const closing = {
         remaining: rate.remaining,
         limit: rate.limit,
         signed_in: viewer.signedIn,
         is_pro: rate.isPro,
-        has_wild_profile: wildProfile.hasWildProfile
+        has_wild_profile: wildProfile.hasWildProfile,
+        ...(rate.resetsAt ? {resets_at: rate.resetsAt} : {}),
+        ...(rate.paidWith
+            ? {paid_with: rate.paidWith, credit_cost: rate.creditCost, credit_balance: rate.creditBalance}
+            : {}),
+        // Lets the client offer credits as soon as the last free message is
+        // spent, instead of after a refused one.
+        ...(rate.creditOverflow ? {credit_overflow: rate.creditOverflow} : {})
     };
 
     // The one-piece answer, asked for by a client whose stream was cut off
@@ -140,7 +194,7 @@ export async function POST(request: Request) {
     if (body.mode === "complete") {
         try {
             const oneShot = await requestAskAnswerJSON({
-                systemPrompt: buildAskSystemPrompt({scope: packet.scope, supportedVisuals, languageName, aboutTrial}),
+                systemPrompt: buildAskSystemPrompt(promptOptions),
                 userPrompt,
                 signal: request.signal
             });
@@ -151,15 +205,10 @@ export async function POST(request: Request) {
         } catch (error) {
             console.error("[ask-animaldex] one-piece answer failed", error instanceof Error ? error.message.slice(0, 200) : "unknown");
         }
-        await refundAskTurn(viewer);
+        await refundAskTurn(viewer, rate);
         return askJson({error: "unavailable"}, 503);
     }
-    const streamingSystemPrompt = buildAskStreamingSystemPrompt({
-        scope: packet.scope,
-        supportedVisuals,
-        languageName,
-        aboutTrial
-    });
+    const streamingSystemPrompt = buildAskStreamingSystemPrompt(promptOptions);
 
     const encoder = new TextEncoder();
     const responseStream = new ReadableStream<Uint8Array>({
@@ -236,11 +285,7 @@ export async function POST(request: Request) {
             // stream — a buffering proxy, an SSE-hostile network.
             try {
                 const oneShot = await requestAskAnswerJSON({
-                    systemPrompt: buildAskSystemPrompt({
-                        scope: packet.scope,
-                        supportedVisuals,
-                        languageName
-                    }),
+                    systemPrompt: buildAskSystemPrompt(promptOptions),
                     userPrompt,
                     signal: request.signal
                 });
@@ -257,7 +302,7 @@ export async function POST(request: Request) {
 
             console.error("[ask-animaldex] every provider failed", failures.join(" | "));
             // Nothing was produced, so the message goes back to the budget.
-            await refundAskTurn(viewer);
+            await refundAskTurn(viewer, rate);
             send({error: "stream_failed", detail: failures[0] ?? "unknown"});
             controller.close();
         }

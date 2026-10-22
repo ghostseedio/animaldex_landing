@@ -15,6 +15,13 @@
  */
 
 import {ASK_MEMORY_RULES} from "@/lib/ask-animaldex/memory-prompt";
+import {
+    ANIMAL_CHAT_MODE_RULES,
+    ANIMAL_RELATIONSHIP_RULES,
+    askCompanionVoiceLines,
+    type AskCompanionVoice,
+    type AskConversationMode
+} from "@/lib/ask-animaldex/companion";
 
 export const ASK_FOLLOW_UP_SENTINEL = "§§FOLLOW_UPS§§";
 
@@ -57,7 +64,7 @@ const ROLE_RULES_SPECIES = [
     "  cross_domain. Name the domain, give its equivalent as something you do, and its reasoning as why. Pick the",
     "  domains closest to what they brought; offer the rest. Never answer about other domains in general terms while",
     "  cross_domain has them.",
-    "- Asked what breaks you, where it goes wrong, your weak spot or too-much: answer from failure_modes by title.",
+    "- Asked what breaks you, where it goes wrong, your weak spot or too-much: answer from failure_modes by name.",
     "- Asked how you switch, when you change gear, your states or your rhythm: answer from your modes and transition.",
     "When your Power is the wrong tool for what they are asking, say so as yourself — what you would do, and where it",
     "would fail you — rather than turning into a generic coach. Your limits are part of who you are.",
@@ -364,6 +371,13 @@ export type AskPromptOptions = {
     supportedVisuals?: AskVisualMedium[];
     /// Reader's language, when the site is not being read in English.
     languageName?: string | null;
+    /// Species scope: how this animal talks (its voice card, or the record-derived fallback).
+    voice?: AskCompanionVoice | null;
+    /// Species scope: the animal's display name, for the voice section.
+    animalName?: string | null;
+    /// Species scope: the conversation mode. The website has no step cards, so
+    /// it is chat; a Trial thread is training, which here adds no loop rules.
+    mode?: AskConversationMode;
 };
 
 function localeRules(languageName: string | null | undefined): string[] {
@@ -377,10 +391,26 @@ function localeRules(languageName: string | null | undefined): string[] {
     ];
 }
 
+/**
+ * The apps' `loopRules` for an owner without step cards: the chat-mode rules
+ * (training has no loop rules on the web), then the relationship rules.
+ */
+function companionRules(options: AskPromptOptions): string[] {
+    if (options.scope !== "species") return [];
+    const mode = options.mode ?? (options.aboutTrial ? "training" : "chat");
+    if (mode === "training") return ANIMAL_RELATIONSHIP_RULES;
+    return [...(mode === "chat" ? ANIMAL_CHAT_MODE_RULES : []), "", ...ANIMAL_RELATIONSHIP_RULES];
+}
+
 function promptSections(options: AskPromptOptions) {
     const scope = options.scope;
+    const voiceCard = scope === "species" && options.voice
+        ? askCompanionVoiceLines({voice: options.voice, animalName: options.animalName ?? "animal"})
+        : [];
     return {
         role: scope === "species" ? ROLE_RULES_SPECIES : ROLE_RULES_GENERAL,
+        voiceCard,
+        companion: companionRules(options),
         grounding: scope === "species" ? GROUNDING_RULES_SPECIES : GROUNDING_RULES_GENERAL,
         voice: scope === "species" ? VOICE_RULES_SPECIES : VOICE_RULES,
         formattingLead:
@@ -413,6 +443,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
     return [
         ...sections.role,
         "",
+        ...(sections.voiceCard.length > 0 ? [...sections.voiceCard, ""] : []),
         ...sections.grounding,
         "",
         ...sections.voice,
@@ -426,6 +457,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
         "",
         ...SAFETY_RULES,
         ...(sections.memory.length > 0 ? ["", ...sections.memory] : []),
+        ...(sections.companion.length > 0 ? ["", ...sections.companion] : []),
         ...(sections.locale.length > 0 ? ["", ...sections.locale] : []),
         "",
         "Output shape — plain markdown, no JSON, no code fence around the whole reply:",
@@ -449,6 +481,7 @@ export function buildAskSystemPrompt(options: AskPromptOptions): string {
     return [
         ...sections.role,
         "",
+        ...(sections.voiceCard.length > 0 ? [...sections.voiceCard, ""] : []),
         ...sections.grounding,
         "",
         ...sections.voice,
@@ -462,6 +495,7 @@ export function buildAskSystemPrompt(options: AskPromptOptions): string {
         "",
         ...SAFETY_RULES,
         ...(sections.memory.length > 0 ? ["", ...sections.memory] : []),
+        ...(sections.companion.length > 0 ? ["", ...sections.companion] : []),
         ...(sections.locale.length > 0 ? ["", ...sections.locale] : []),
         "",
         ...sections.structure,
