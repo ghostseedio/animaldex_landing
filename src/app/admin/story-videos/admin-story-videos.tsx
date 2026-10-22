@@ -9,12 +9,13 @@ import type {TikTokAccountInfo} from "@/lib/social/zernio-core";
 import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions, type ZernioShareInfo} from "@/lib/social/types";
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
 import AdminAutomation from "@/app/admin/story-videos/admin-automation";
+import AdminUploadedVideos, {type UploadedVideo} from "@/app/admin/story-videos/admin-uploaded-videos";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
 type Video = {
     mediaPath: string;
-    kind: "story_video" | "hook" | "trial_scene" | "still" | "blog_video";
+    kind: "story_video" | "hook" | "trial_scene" | "still" | "blog_video" | "uploaded_video";
     locale: string | null;
     stableUrl: string;
     /** A still of the species, so the card is not a black box until played. */
@@ -31,6 +32,8 @@ type Video = {
     /** Set for blog videos: shared by id, linked to the post instead of an animal page. */
     contentVideoId?: string;
     pagePath?: string;
+    /** Set for uploaded videos: shared by id; real footage, so not labelled AI-made. */
+    uploadedVideoId?: string;
 };
 
 function blogVideoToShareable(video: BlogVideo): Video {
@@ -53,6 +56,26 @@ function blogVideoToShareable(video: BlogVideo): Video {
     };
 }
 
+function uploadedVideoToShareable(video: UploadedVideo): Video {
+    return {
+        mediaPath: video.video_path,
+        kind: "uploaded_video",
+        locale: "en",
+        stableUrl: video.videoUrl,
+        durationSeconds: video.duration_seconds,
+        hasAudio: true,
+        script: video.notes || null,
+        videoHook: null,
+        captureId: null,
+        createdAt: video.created_at,
+        speciesProfileId: "",
+        speciesName: video.title,
+        pageSlug: "",
+        uploadedVideoId: video.id,
+        pagePath: "/"
+    };
+}
+
 type Connection = {
     platform: SocialPlatform;
     /** "oauth" = our own app connection; "zernio" = posted through Zernio (TikTok). Missing = oauth. */
@@ -72,8 +95,14 @@ const KIND_LABELS: Record<Video["kind"], string> = {
     hook: "Animated capture",
     trial_scene: "Trial scene",
     still: "Still",
-    blog_video: "Page video"
+    blog_video: "Page video",
+    uploaded_video: "Uploaded video"
 };
+
+/** Longest video each platform takes through our share path (Facebook Reels API, X without Premium). */
+const MAX_SECONDS: Partial<Record<SocialPlatform, number>> = {facebook: 90, x: 140};
+/** YouTube posts longer videos as regular uploads rather than Shorts. */
+const YOUTUBE_SHORTS_MAX_SECONDS = 180;
 
 /** Not-yet-public options. TikTok drafts go to the account's inbox through Zernio. */
 const DRAFT_LABELS: Partial<Record<SocialPlatform, string>> = {
@@ -320,6 +349,8 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                 </div>
             </Section>
 
+            <AdminUploadedVideos shares={postsByVideo} onShare={(video) => setSharing(uploadedVideoToShareable(video))} onNotice={setNotice} />
+
             <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} />
 
             <Section title={<>App story videos {videos ? <span className="tabular-nums">({videos.length})</span> : ""}</>}>
@@ -471,7 +502,9 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const [modes, setModes] = useState<Record<SocialPlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", facebook: "post", x: "post"});
     // A draft and a direct post are separate shares; each can happen once.
     const blocked = (platform: SocialPlatform, mode: SocialPostMode = modes[platform]) => shares.some((post) => post.platform === platform && post.mode === mode && (post.status === "published" || inFlight(post)));
+    const overLength = (platform: SocialPlatform) => Boolean(video.durationSeconds && MAX_SECONDS[platform] && video.durationSeconds > MAX_SECONDS[platform]!);
     const available = (platform: SocialPlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected)
+        && !overLength(platform)
         && !(blocked(platform, "post") && (!DRAFT_LABELS[platform] || blocked(platform, "draft")));
     const [selected, setSelected] = useState<SocialPlatform[]>(() => SOCIAL_PLATFORMS.filter(available));
     const [submitting, setSubmitting] = useState(false);
@@ -480,7 +513,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const [tiktokAccount, setTiktokAccount] = useState<TikTokAccountInfo | null>(null);
     const [tiktokAccountError, setTiktokAccountError] = useState("");
     // TikTok's guidelines: no preset privacy level, every interaction off until the poster turns it on.
-    const [tiktok, setTiktok] = useState<TikTokPostOptions>(EMPTY_TIKTOK_OPTIONS);
+    const [tiktok, setTiktok] = useState<TikTokPostOptions>(() => video.uploadedVideoId ? {...EMPTY_TIKTOK_OPTIONS, madeWithAi: false} : EMPTY_TIKTOK_OPTIONS);
     const [tiktokDisclose, setTiktokDisclose] = useState(false);
     const [tiktokWhen, setTiktokWhen] = useState<TikTokWhen>("now");
     const [tiktokScheduleLocal, setTiktokScheduleLocal] = useState("");
@@ -513,7 +546,9 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
             const body = await api<{copy: ShareCopy; source: "claude" | "template"; error?: string}>("/api/admin/social/copy", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(video.contentVideoId
+                body: JSON.stringify(video.uploadedVideoId
+                    ? {uploadedVideoId: video.uploadedVideoId, regenerate}
+                    : video.contentVideoId
                     ? {contentVideoId: video.contentVideoId, regenerate}
                     : {speciesProfileId: video.speciesProfileId, mediaPath: video.mediaPath, pageSlug: video.pageSlug, speciesName: video.speciesName})
             });
@@ -562,7 +597,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    ...(video.contentVideoId ? {contentVideoId: video.contentVideoId} : {speciesProfileId: video.speciesProfileId, mediaPath: video.mediaPath}),
+                    ...(video.uploadedVideoId ? {uploadedVideoId: video.uploadedVideoId} : video.contentVideoId ? {contentVideoId: video.contentVideoId} : {speciesProfileId: video.speciesProfileId, mediaPath: video.mediaPath}),
                     title: copy.youtube.title,
                     targets: selected.map((platform) => ({
                         platform,
@@ -617,7 +652,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                         <label className={`flex flex-1 items-center gap-2 text-sm ${available(platform) ? "text-white" : "text-ink-500"}`}>
                                             <input type="checkbox" disabled={!available(platform)} checked={checked} onChange={(event) => setSelected((current) => event.target.checked ? [...current, platform] : current.filter((item) => item !== platform))} />
                                             {SOCIAL_PLATFORM_LABELS[platform]}
-                                            {!connected ? <span className="text-[11px]">(not connected)</span> : already ? <span className="text-[11px]">({modes[platform] === "draft" ? "draft already sent" : "already posted"})</span> : null}
+                                            {!connected ? <span className="text-[11px]">(not connected)</span> : overLength(platform) ? <span className="text-[11px]">(over its {MAX_SECONDS[platform]} s limit; share a shorter cut)</span> : platform === "youtube" && (video.durationSeconds ?? 0) > YOUTUBE_SHORTS_MAX_SECONDS ? <span className="text-[11px]">(over 3 min: posts as a regular video, not a Short)</span> : already ? <span className="text-[11px]">({modes[platform] === "draft" ? "draft already sent" : "already posted"})</span> : null}
                                         </label>
                                         {DRAFT_LABELS[platform] && checked ? (
                                             <label className="flex items-center gap-2 text-xs text-ink-300">
@@ -712,7 +747,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                 </label>
                                 <label className="mt-2 flex items-center gap-2 text-xs text-ink-300">
                                     <input type="checkbox" checked={xLink} onChange={(event) => setXLink(event.target.checked)} />
-                                    Add the {video.contentVideoId ? "article" : "animal page"} link (X shows posts with outside links to fewer people)
+                                    Add the {video.uploadedVideoId ? "app" : video.contentVideoId ? "article" : "animal page"} link (X shows posts with outside links to fewer people)
                                 </label>
                             </>
                         )}

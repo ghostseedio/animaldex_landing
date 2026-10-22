@@ -3,6 +3,7 @@ import {publishers} from "@/lib/social/publishers";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
 import {findShareableContentVideoByPath} from "@/lib/content-video/share";
 import {CONTENT_VIDEO_MEDIA_KIND} from "@/lib/content-video/store";
+import {findShareableUploadedVideoByPath, UPLOADED_VIDEO_MEDIA_KIND} from "@/lib/social/uploaded-videos";
 import {updatePost} from "@/lib/social/store";
 import {normalizeVideoForSocial} from "@/lib/social/video-normalize";
 import {EMPTY_TIKTOK_OPTIONS} from "@/lib/social/tiktok-options";
@@ -46,6 +47,10 @@ export async function runShareJob(rows: SocialPostRow[]) {
             // A blog video: still live (not archived) at the moment of sharing.
             const current = await findShareableContentVideoByPath(first.media_path);
             if (!current) throw new Error("The blog video was archived or removed");
+            videoUrl = current.stableUrl;
+        } else if (first.media_kind === UPLOADED_VIDEO_MEDIA_KIND) {
+            const current = await findShareableUploadedVideoByPath(first.media_path);
+            if (!current) throw new Error("The uploaded video was archived");
             videoUrl = current.stableUrl;
         } else {
             if (!first.species_profile_id) throw new Error("Share has no species");
