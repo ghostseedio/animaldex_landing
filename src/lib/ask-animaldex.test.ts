@@ -116,9 +116,9 @@ test("the streaming prompt keeps the rules that make an answer readable", () => 
 
     // Voice and register separate this from a generic chatbot. Losing either
     // is a silent regression: the answers still arrive, they are just worse.
-    assert.match(prompt, /Banned openers/);
+    assert.match(prompt, /Never sound like an assistant\. Banned: 'Great question'/);
     assert.match(prompt, /nine-year-old/);
-    assert.match(prompt, /Never open with filler/);
+    assert.match(prompt, /Never restate their question back/);
     // The animal talks back; the assistant's structure contract (a heading or
     // list forced into every reply over 40 words) made it read like a report.
     assert.doesNotMatch(prompt, /HARD RULE/);
@@ -130,9 +130,17 @@ test("the streaming prompt keeps the rules that make an answer readable", () => 
     // record, and every answer ends on an offer in the animal's voice.
     assert.match(prompt, /answer from\n?\s*cross_domain/);
     assert.match(prompt, /answer from failure_modes by name/);
-    assert.match(prompt, /End with ONE short question/);
-    assert.match(prompt, /this plays out in Business\?/);
+    // A species page talks in chat mode: replies end the way a person would,
+    // not on an offer. A Trial thread still ends on the next step.
+    assert.doesNotMatch(prompt, /End with ONE short question/);
+    assert.match(prompt, /End the way a person would/);
+    const trial = buildAskStreamingSystemPrompt({scope: "species", aboutTrial: true, supportedVisuals: []});
+    assert.match(trial, /End with ONE short question/);
+    assert.match(trial, /this plays out in Business\?/);
     assert.match(prompt, /closing question of your answer is one offer already/);
+    // Follow-ups are sent as the person's own message, so they are written as the person.
+    assert.match(prompt, /written AS THEM, to you/);
+    assert.doesNotMatch(prompt, /in YOUR voice as the animal/);
     // The general assistant on non-species pages keeps the contract.
     assert.match(buildAskStreamingSystemPrompt({scope: "general"}), /HARD RULE/);
     assert.match(prompt, /animaldex-flow/);
@@ -154,8 +162,9 @@ test("the photo medium is only described when the reader has a photo on screen",
 
 test("a prose-only surface is told to use prose and tables, not offered a medium it cannot draw", () => {
     const prompt = buildAskStreamingSystemPrompt({scope: "species", supportedVisuals: []});
-    assert.match(prompt, /Medium — prose and markdown tables only/);
+    assert.match(prompt, /Medium — words, and a markdown table for a real side-by-side comparison\./);
     assert.doesNotMatch(prompt, /animaldex-/);
+    assert.match(buildAskStreamingSystemPrompt({scope: "general", supportedVisuals: []}), /Medium — prose and markdown tables only/);
 });
 
 test("the general scope refuses to invent AnimalDex content for a species it was not given", () => {
@@ -258,9 +267,11 @@ test("the species prompt carries the canonical profile, the dynamics and the ind
     assert.match(prompt, /^animal_name: Weaver Ant/);
     // The animal is the one being spoken to, so the turn is a message, not a query.
     assert.match(prompt, /user_message: When does it switch\?/);
-    assert.match(prompt, /canonical_animal_power_profile:/);
-    assert.match(prompt, /Collective Leverage/);
-    assert.match(prompt, /system_dynamics:/);
+    // The record in the apps' shape, so the rules can name its fields.
+    assert.match(prompt, /animal_record — everything AnimalDex holds on you; fixed truth about yourself:/);
+    assert.match(prompt, /"principle_name":"Collective Leverage"/);
+    assert.match(prompt, /"system_dynamics":\{"archetype_name":"Recruitment Cascade"/);
+    assert.match(prompt, /"cross_domain":\[\{"domain_title":"Business & Career"/);
     assert.match(prompt, /available_content/);
     assert.match(prompt, /recent_conversation:/);
     assert.match(prompt, /reader_photo: none/);
@@ -287,8 +298,8 @@ test("a missing profile is declared rather than omitted, so the model cannot ass
         userQuestion: "What is it?",
         packet: packet({species: grounding({power: null, systemDynamics: null})})
     });
-    assert.match(prompt, /canonical_animal_power_profile: not_available/);
-    assert.match(prompt, /system_dynamics: not_available/);
+    assert.match(prompt, /"power":null/);
+    assert.match(prompt, /"system_dynamics":null/);
 });
 
 test("history is the last eight complete turns and nothing in flight", () => {

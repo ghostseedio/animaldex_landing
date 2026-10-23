@@ -134,8 +134,8 @@ test("a signed-in reader's prompt carries their profile, or says it is not set",
         packet: packet({wildProfile: {summary: null}})
     });
     assert.match(without, /wild_profile_summary: not_set/);
-    // The animal says it in its own words, and still answers.
-    assert.match(without, /setting up their Wild Profile lets you tailor it — then still answer/);
+    // Only when asked, once, in its own words — and it still answers.
+    assert.match(without, /say once, in a few words, that their Wild Profile would let you tailor it — then answer anyway\. Otherwise never bring the Wild Profile up\./);
 });
 
 test("a signed-out reader's prompt says nothing about a Wild Profile", () => {
@@ -143,9 +143,16 @@ test("a signed-out reader's prompt says nothing about a Wild Profile", () => {
     assert.doesNotMatch(prompt, /wild_profile|Wild Profile/);
 });
 
-test("the species system prompt carries the iOS Wild Profile grounding rule verbatim", () => {
+test("the species voice uses the Wild Profile as the apps do: for tailoring, never brought up unasked", () => {
+    // The apps' animal voice (2026-10-23) dropped the assistant's grounding
+    // rule; the profile rides in the turn, labelled for what it is for.
     const system = buildAskSystemPrompt({scope: "species", supportedVisuals: [], languageName: null});
-    assert.match(system, /- Wild Profile: when supplied, personalize application to the user's stated Origin\/Apex\/Active animals\./);
+    assert.doesNotMatch(system, /personalize application to the user's stated Origin/);
+    const withProfile = buildAskUserPrompt({
+        userQuestion: "How do I use this at work?",
+        packet: packet({wildProfile: {summary: "Origin: The Patient Builder"}})
+    });
+    assert.match(withProfile, /wild_profile_summary — the person's own AnimalDex profile, for tailoring your advice:/);
 });
 
 test("an application question is matched to the Wild Profile only when there is one", () => {

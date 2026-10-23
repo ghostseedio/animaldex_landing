@@ -14,6 +14,7 @@
 import type {AskConversationTurn, AskScope} from "@/lib/ask-animaldex/prompt";
 import {askMemorySection, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import {ANIMAL_CHAT_CLOSING_INSTRUCTION, type AskConversationMode} from "@/lib/ask-animaldex/companion";
+import type {AskPersonaStats} from "@/lib/ask-animaldex/persona";
 
 export type AskPowerEvidence = {
     title: string;
@@ -61,6 +62,10 @@ export type AskSystemDynamics = {
         primary: string;
         behavior: string;
         modes: Array<{name: string; frequency: string | null}>;
+        /** LOW / MID / HIGH the system idles at, when the record says. */
+        baseline?: string | null;
+        /** LOW / MID / HIGH it jumps to when triggered, when the record says. */
+        triggered?: string | null;
     };
     crossDomain: Array<{
         domain: string;
@@ -219,6 +224,11 @@ export type AskGroundingPacket = {
      */
     mode?: AskConversationMode;
     /**
+     * Species scope: the five game stats from the species' canonical row,
+     * when the catalogue has them. Part of the animal's record, as in the apps.
+     */
+    stats?: AskPersonaStats | null;
+    /**
      * The Animal Trial the person is looking at. Set, the answer is about that
      * Trial — what it means, how to do it, an example — and the content index
      * is withheld so the offers cannot wander off it.
@@ -357,18 +367,146 @@ function candidateSummary(species: AskSpeciesGrounding) {
     };
 }
 
-export function buildAskUserPrompt(params: {
-    userQuestion: string;
-    packet: AskGroundingPacket;
-    conversationHistory?: AskConversationTurn[];
-}): string {
-    const {packet} = params;
-    const history = (params.conversationHistory ?? [])
-        .map((turn) => ({role: turn.role, content: String(turn.content ?? "").trim()}))
-        .filter((turn) => turn.content.length > 0)
-        .slice(-8);
+/** The Power in the apps' record shape (snake_case), so the rules can name its fields. */
+function recordPower(power: AskAnimalPower) {
+    return {
+        principle_name: power.principleName,
+        principle_expression: power.principleExpression,
+        core_lesson: power.coreLesson,
+        short_motto: power.shortMotto,
+        core_pattern: power.corePattern,
+        biological_basis: power.biologicalBasis,
+        application_example: power.applicationExample,
+        behavioral_evidence: power.behavioralEvidence.map((item) => ({
+            title: item.title,
+            observation: item.observation,
+            biological_function: item.biologicalFunction,
+            interpretation: item.interpretation
+        })),
+        power_continuum: power.powerContinuum
+            ? {
+                deficient_expression: power.powerContinuum.deficientExpression,
+                balanced_expression: power.powerContinuum.balancedExpression,
+                excess_expression: power.powerContinuum.excessExpression
+            }
+            : null,
+        embodiment_practices: power.embodimentPractices.map((item) => ({
+            title: item.title,
+            instruction: item.instruction,
+            animal_connection: item.animalConnection,
+            timeframe: item.timeframe
+        })),
+        reflection_questions: power.reflectionQuestions,
+        related_powers: power.relatedPowers
+    };
+}
 
-    const pageLine = packet.pageContext
+/** System Dynamics in the apps' record shape: modes, transition, cross_domain by domain_title, failure_modes. */
+function recordDynamics(dynamics: AskSystemDynamics) {
+    return {
+        archetype_name: dynamics.archetypeName,
+        mechanism: dynamics.mechanism,
+        system_behavior: dynamics.frequency.behavior,
+        primary_frequency: dynamics.frequency.primary,
+        baseline_frequency: dynamics.frequency.baseline ?? null,
+        triggered_frequency: dynamics.frequency.triggered ?? null,
+        modes: dynamics.frequency.modes,
+        transition: dynamics.transition
+            ? {from_state: dynamics.transition.fromState, to_state: dynamics.transition.toState, trigger: dynamics.transition.trigger}
+            : null,
+        cross_domain: dynamics.crossDomain.map((mapping) => ({domain_title: mapping.domain, entries: mapping.entries})),
+        failure_modes: dynamics.failureModes
+    };
+}
+
+/**
+ * The animal's whole record as one JSON object, shaped like the apps'
+ * `animalRecordJSON`: power, field guide, System Dynamics and stats. The
+ * website holds no Trials or Qualities for the prompt, so those are absent
+ * rather than empty.
+ */
+export function askAnimalRecordJSON(species: AskSpeciesGrounding, stats: AskPersonaStats | null = null): string {
+    return JSON.stringify({
+        power: species.power ? recordPower(species.power) : null,
+        field_guide: fieldGuideContext(species),
+        system_dynamics: species.systemDynamics ? recordDynamics(species.systemDynamics) : null,
+        stats: stats ? {...stats, scale: "0-100, relative to every animal in AnimalDex"} : null
+    });
+}
+
+/**
+ * The record as the model reads it: who it is, the whole record, and what it
+ * can offer to go into next. Mirrors the apps' `animalRecordLines`; this is
+ * the part of a species request that is identical turn after turn, so it goes
+ * at the END of the system prompt, where a provider can cache it. In a Trial
+ * thread the index is withheld on purpose: the offers must stay on the Trial,
+ * and an index is an invitation to leave it.
+ */
+export function askAnimalRecordLines(
+    species: AskSpeciesGrounding,
+    options: {stats?: AskPersonaStats | null; withIndex?: boolean} = {}
+): string[] {
+    const contentIndex = options.withIndex === false ? null : buildAskContentIndex(species);
+    return [
+        `animal_name: ${species.name}`,
+        ...(species.scientificName ? [`scientific_name: ${species.scientificName}`] : []),
+        "animal_record — everything AnimalDex holds on you; fixed truth about yourself:",
+        askAnimalRecordJSON(species, options.stats ?? null),
+        ...(contentIndex === null
+            ? []
+            : [contentIndex.length > 0
+                ? `available_content — what you can offer to go into next, for your follow-up offers:\n${contentIndex.join("\n")}`
+                : "available_content: none"])
+    ];
+}
+
+type AskSpeciesPromptParams = {
+    packet: AskGroundingPacket;
+    /** The record already sits at the end of the system prompt. */
+    recordInSystem?: boolean;
+};
+
+/**
+ * Everything about the reader and this moment: the parts of a species turn
+ * that change, so they go after the cached system prompt. The apps'
+ * `contextLines`, with the website's own reader_photo and page_context.
+ */
+function speciesContextLines(params: AskSpeciesPromptParams & {pageLine: string}): string[] {
+    const {packet} = params;
+    const species = packet.species as AskSpeciesGrounding;
+    const trialContext = packet.trialContext?.trim() || null;
+    const contentIndex = trialContext ? [] : buildAskContentIndex(species);
+    return [
+        ...(params.recordInSystem
+            ? []
+            : [
+                "animal_record — everything AnimalDex holds on you; fixed truth about yourself:",
+                askAnimalRecordJSON(species, packet.stats ?? null),
+                ""
+            ]),
+        params.recordInSystem || trialContext
+            ? ""
+            : contentIndex.length > 0
+                ? `available_content — what you can offer to go into next, for your follow-up offers:\n${contentIndex.join("\n")}`
+                : "available_content: none",
+        packet.hasReaderPhoto
+            ? "reader_photo: the reader has their own photo of you on screen"
+            : "reader_photo: none",
+        // A signed-out reader cannot have a Wild Profile or a memory, and is
+        // not told to go and make one.
+        packet.wildProfile
+            ? packet.wildProfile.summary
+                ? `wild_profile_summary — the person's own AnimalDex profile, for tailoring your advice:\n${packet.wildProfile.summary}`
+                : "wild_profile_summary: not_set"
+            : "",
+        packet.wildProfile ? askMemorySection(packet.memory ?? [], packet.memorySpeciesProfileId ?? null) : "",
+        trialContext ? `${SPECIES_TRIAL_GROUNDING_LEAD}\n${trialContext}` : "",
+        params.pageLine
+    ];
+}
+
+function pageContextLine(packet: AskGroundingPacket): string {
+    return packet.pageContext
         ? `page_context:\n${JSON.stringify({
             kind: packet.pageContext.kind,
             path: packet.pageContext.path,
@@ -376,6 +514,61 @@ export function buildAskUserPrompt(params: {
             summary: clean(packet.pageContext.summary, 400)
         })}`
         : "";
+}
+
+/**
+ * The first thing the animal says, before the person has said anything.
+ * Verbatim from the apps' `ANIMAL_GREETING_RULES`, less the lines about a
+ * card's owner and where the person met the animal: the website never knows
+ * either.
+ */
+export const ANIMAL_GREETING_RULES = [
+    "greeting_request — the person has just opened a conversation with you. Nobody has said anything yet. Speak first.",
+    "- One to three short sentences, under 45 words. Say hello the way only you would — your rhythm, your world, your",
+    "  temperament. This first line is how they will know you are not any other animal.",
+    "- If you have not met (relationship is missing or 'met', and nothing in what_you_remember_about_them was told to",
+    "  you): introduce yourself in one line only you could say, then ask them one thing in the spirit of the kind of",
+    "  question you ask.",
+    "- If you know them (things they told you): greet them like you know them. Pick up one remembered thing that",
+    "  matters, lightly. Never 'I missed you', never how long it has been.",
+    "- If animal_trial is given, greet them about that Trial.",
+    "- No Training, Trial or battle offers, no drawings, no 'How can I help you today?', no list of what you can do.",
+    "- Then the follow-ups line, and 3 short replies the person might send back, each under 40 characters, written AS",
+    "  THEM, to you: one answering what you asked, one asking about you, one bringing something of theirs ('I need help",
+    "  with a decision')."
+];
+
+/**
+ * The greeting turn. Built for the same system prompt as the turns that
+ * follow, so the greeting's request warms the cache the first real reply reads.
+ */
+export function buildAskGreetingUserPrompt(params: AskSpeciesPromptParams): string {
+    const {packet} = params;
+    if (packet.scope !== "species" || !packet.species) throw new Error("greeting_needs_species");
+    return [
+        ...(params.recordInSystem ? [] : [`animal_name: ${packet.species.name}`]),
+        ...speciesContextLines({...params, pageLine: pageContextLine(packet)}),
+        "",
+        ...ANIMAL_GREETING_RULES
+    ].filter(Boolean).join("\n");
+}
+
+export function buildAskUserPrompt(params: {
+    userQuestion: string;
+    packet: AskGroundingPacket;
+    conversationHistory?: AskConversationTurn[];
+    /** Species scope: the record already sits at the end of the system prompt. */
+    recordInSystem?: boolean;
+    /** Species scope: the history goes to the model as real turns; leave it out of this text. */
+    historyAsTurns?: boolean;
+}): string {
+    const {packet} = params;
+    const history = (params.conversationHistory ?? [])
+        .map((turn) => ({role: turn.role, content: String(turn.content ?? "").trim()}))
+        .filter((turn) => turn.content.length > 0)
+        .slice(-8);
+
+    const pageLine = pageContextLine(packet);
 
     const historyLine = history.length > 0 ? `recent_conversation:\n${JSON.stringify(history)}` : "";
     const trialContext = packet.trialContext?.trim() || null;
@@ -383,57 +576,30 @@ export function buildAskUserPrompt(params: {
 
     if (packet.scope === "species" && packet.species) {
         const species = packet.species;
-        // In a Trial thread the index is withheld on purpose: the offers must
-        // stay on the Trial, and an index is an invitation to leave it.
-        const contentIndex = trialContext ? [] : buildAskContentIndex(species);
-        const speciesTrialBlock = trialContext ? `${SPECIES_TRIAL_GROUNDING_LEAD}\n${trialContext}` : "";
         return [
-            `animal_name: ${species.name}`,
-            species.scientificName ? `scientific_name: ${species.scientificName}` : "",
+            ...(params.recordInSystem
+                ? []
+                : [`animal_name: ${species.name}`, species.scientificName ? `scientific_name: ${species.scientificName}` : ""]),
             `user_message: ${params.userQuestion}`,
             "",
-            "Everything below is AnimalDex's record of you — fixed truth about yourself:",
-            species.power
-                ? `canonical_animal_power_profile:\n${JSON.stringify(species.power)}`
-                : "canonical_animal_power_profile: not_available",
+            ...speciesContextLines({packet, recordInSystem: params.recordInSystem, pageLine}),
+            params.historyAsTurns ? "" : historyLine,
             "",
-            `field_guide_context:\n${JSON.stringify(fieldGuideContext(species))}`,
-            species.systemDynamics
-                ? `system_dynamics:\n${JSON.stringify(species.systemDynamics)}`
-                : "system_dynamics: not_available",
-            trialContext
-                ? ""
-                : contentIndex.length > 0
-                    ? `available_content — what you can offer to go into next, for your follow-up offers:\n${contentIndex.join("\n")}`
-                    : "available_content: none",
-            packet.hasReaderPhoto
-                ? "reader_photo: the reader has their own photo of you on screen"
-                : "reader_photo: none",
-            packet.wildProfile
-                ? packet.wildProfile.summary
-                    ? `wild_profile_summary — the reader's own AnimalDex profile, for tailoring your advice:\n${packet.wildProfile.summary}`
-                    : "wild_profile_summary: not_set"
-                : "",
-            packet.wildProfile ? askMemorySection(packet.memory ?? [], packet.memorySpeciesProfileId ?? null) : "",
-            speciesTrialBlock,
-            pageLine,
-            historyLine,
-            "",
-            "Answer the reader's latest message, as yourself.",
+            "Answer the person's latest message, as yourself.",
             ...(trialContext
                 ? [SPECIES_TRIAL_CLOSING_INSTRUCTION]
                 : packet.mode === "chat"
                 ? ANIMAL_CHAT_CLOSING_INSTRUCTION
                 : [
                     "Lead with what you would do and why your biology makes it the move. Prefer system_dynamics wording for states, triggers, failure modes and cross-domain equivalents when they come up.",
-                    "If the message asks where your Power applies, how it translates to other areas or domains, or where else it shows up, answer from system_dynamics.cross_domain — the domains by name, their entries as what you do and why.",
+                    "If the message asks where your Power applies, how it translates to other areas or domains, or where else it shows up, answer from animal_record.system_dynamics.cross_domain — the domains by domain_title, their entries as what you do and why.",
                     "Base your follow-up offers on available_content, naming real things from it that this answer did not cover.",
                     "End with one short question offering the next step.",
                     "Keep your Power's name and pattern stable across the conversation."
                 ]),
-            "Use recent_conversation for pronouns and context, but never let it replace your record.",
+            "Use the earlier conversation for pronouns and context, but never let it replace animal_record.",
             packet.wildProfile
-                ? "If they ask for personal application and wild_profile_summary is not_set, mention once, in your own words, that setting up their Wild Profile lets you tailor it — then still answer."
+                ? "Only if they explicitly ask you to fit advice to them personally, wild_profile_summary is not_set, and you have not mentioned it earlier in this conversation: say once, in a few words, that their Wild Profile would let you tailor it — then answer anyway. Otherwise never bring the Wild Profile up."
                 : ""
         ].filter(Boolean).join("\n");
     }

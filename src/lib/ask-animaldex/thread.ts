@@ -31,6 +31,8 @@ export type AskMessage = {
     followUpPrompts: string[];
     /** ISO 8601, so the stored form survives a JSON round trip. */
     createdAt: string;
+    /** The animal's opening line, said before the reader said anything. */
+    isGreeting?: boolean;
 };
 
 export type AskThreads = Record<string, AskMessage[]>;
@@ -71,7 +73,8 @@ export function createAskMessage(
         text,
         status: overrides.status ?? "complete",
         followUpPrompts: overrides.followUpPrompts ?? [],
-        createdAt: overrides.createdAt ?? new Date().toISOString()
+        createdAt: overrides.createdAt ?? new Date().toISOString(),
+        ...(overrides.isGreeting ? {isGreeting: true} : {})
     };
 }
 
@@ -137,7 +140,8 @@ function normalizeMessage(value: unknown): AskMessage | null {
         followUpPrompts: Array.isArray(row.followUpPrompts)
             ? row.followUpPrompts.filter((item): item is string => typeof item === "string").slice(0, 3)
             : [],
-        createdAt: typeof row.createdAt === "string" ? row.createdAt : new Date().toISOString()
+        createdAt: typeof row.createdAt === "string" ? row.createdAt : new Date().toISOString(),
+        ...(row.isGreeting === true ? {isGreeting: true} : {})
     };
 }
 

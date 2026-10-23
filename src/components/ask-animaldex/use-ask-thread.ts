@@ -21,7 +21,18 @@ import {
 } from "@/lib/ask-animaldex/thread";
 import type {AskSubject} from "@/lib/ask-animaldex/subject";
 import {decorateFollowUps} from "@/lib/ask-animaldex/wild-profile";
+import {parseAskPersonaFrame, type AskPersonaFrame} from "@/lib/ask-animaldex/persona";
 import {TRIAL_ASK_FALLBACK_FOLLOW_UPS} from "@/lib/animal-trial-ask";
+
+/**
+ * The animal's pace and tagline per thread, for the life of the tab: the
+ * drawer unmounts when it closes, and a reopened thread should still know who
+ * it is talking to before the next reply's frame arrives.
+ */
+const personaByThread = new Map<string, AskPersonaFrame>();
+
+/** Threads the animal has already tried to open this page view, so a failed greeting is not retried in a loop. */
+const greetedThreads = new Set<string>();
 
 /** Offered when the model returns none, so the thread never dead-ends. */
 export function fallbackFollowUps(principleName: string | null, aboutTrial = false): string[] {
@@ -133,6 +144,10 @@ export class AskUnavailableError extends Error {}
 export class AskEmptyError extends Error {}
 
 type StreamEvent = {
+    /** The animal's pace, first in every species reply and again on `done`. */
+    persona?: unknown;
+    /** The reply is the animal's opening line. */
+    greeting?: boolean;
     delta?: string;
     done?: boolean;
     follow_up_prompts?: string[];
@@ -224,6 +239,24 @@ export function useAskThread(params: {
     const [isSending, setIsSending] = useState(false);
     const [quota, setQuota] = useState<AskQuota>({remaining: null, limit: null, reached: false});
     const abortRef = useRef<AbortController | null>(null);
+    // Set while the request in flight is the animal's greeting, which a
+    // reader's own message may interrupt.
+    const greetingRef = useRef<AbortController | null>(null);
+    // What to keep when the reader stops a reply part-way: what they saw.
+    const keepOnStopRef = useRef<string | null>(null);
+
+    const [persona, setPersonaState] = useState<AskPersonaFrame | null>(() => personaByThread.get(threadKey) ?? null);
+    const [greetingState, setGreetingState] = useState<"idle" | "loading" | "done" | "failed">("idle");
+    useEffect(() => {
+        setPersonaState(personaByThread.get(threadKey) ?? null);
+        setGreetingState("idle");
+    }, [threadKey]);
+    const takePersona = useCallback((raw: unknown) => {
+        const frame = parseAskPersonaFrame(raw);
+        if (!frame) return;
+        personaByThread.set(threadKey, frame);
+        setPersonaState(frame);
+    }, [threadKey]);
     // Read through a ref so `send` keeps one identity; the state mirrors it
     // for rendering the footer.
     const payingUntilRef = useRef<number | null>(null);
@@ -256,7 +289,14 @@ export function useAskThread(params: {
 
     const send = useCallback(async (rawQuestion: string, options: {requestId?: string} = {}) => {
         const question = rawQuestion.replace(/\s+/g, " ").trim();
-        if (!question || abortRef.current) return;
+        if (!question) return;
+        // A reader who starts talking while the animal is still saying hello
+        // goes first; the greeting keeps whatever of it had arrived.
+        if (abortRef.current && abortRef.current === greetingRef.current) {
+            abortRef.current.abort();
+            abortRef.current = null;
+        }
+        if (abortRef.current) return;
 
         const current = askSessionStore.messages(threadKey);
         // The question's own id is the request id: one per message, and the
@@ -383,6 +423,7 @@ export function useAskThread(params: {
 
             let streamError: string | null = null;
             await consumeAskStream(response.body, (event) => {
+                if (event.persona) takePersona(event.persona);
                 if (typeof event.delta === "string") {
                     answer += event.delta;
                     flush(false);
@@ -471,21 +512,142 @@ export function useAskThread(params: {
             }
         } catch (error) {
             if (controller.signal.aborted) {
-                // Stopping is a reader action, not a failure: drop the
-                // placeholder and leave the question standing so it can be
-                // sent again.
-                drop();
+                // Stopping is a reader action, not a failure. What the reader
+                // already saw of the reply is theirs to keep, as in the app;
+                // with nothing shown, the placeholder goes and the question
+                // stays standing so it can be sent again.
+                const kept = keepOnStopRef.current;
+                keepOnStopRef.current = null;
+                if (kept) settle(kept, [], false);
+                else drop();
             } else {
                 settle(askErrorMessage(error), [], true);
                 callbacks.current.onFailed?.(error instanceof Error ? error.message : "unknown");
             }
         } finally {
-            abortRef.current = null;
-            setIsSending(false);
+            if (abortRef.current === controller || abortRef.current === null) {
+                abortRef.current = null;
+                setIsSending(false);
+            }
         }
-    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying]);
+    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying, takePersona]);
 
-    const stop = useCallback(() => {
+    /**
+     * The animal speaks first: an empty species thread opens on its greeting,
+     * free and capped per day by the server. Said once per thread per page
+     * view; when it cannot be had, the placeholder goes and the drawer shows
+     * its static openers instead.
+     */
+    const greet = useCallback(async () => {
+        if (abortRef.current || askSessionStore.messages(threadKey).length > 0) return;
+        if (greetedThreads.has(threadKey)) {
+            // Already tried this page view and nothing came of it: the openers.
+            setGreetingState("failed");
+            return;
+        }
+        greetedThreads.add(threadKey);
+
+        const placeholderId = newAskMessageId();
+        replace([createAskMessage("assistant", "", {id: placeholderId, status: "thinking", isGreeting: true})]);
+        const controller = new AbortController();
+        abortRef.current = controller;
+        greetingRef.current = controller;
+        setIsSending(true);
+        setGreetingState("loading");
+
+        let answer = "";
+        let lastFlush = 0;
+        let settled = false;
+        const update = (patch: Partial<AskMessage>) => {
+            const thread = askSessionStore.messages(threadKey);
+            const index = thread.findIndex((message) => message.id === placeholderId);
+            if (index < 0) return;
+            const next = [...thread];
+            next[index] = {...next[index], ...patch};
+            replace(next);
+        };
+        const drop = () => {
+            replace(askSessionStore.messages(threadKey).filter((message) => message.id !== placeholderId));
+        };
+
+        try {
+            const response = await fetch("/api/ask/stream", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                signal: controller.signal,
+                body: JSON.stringify({
+                    greeting: true,
+                    locale,
+                    history: [],
+                    subject: {
+                        scope: subject.scope,
+                        slug: subject.slug,
+                        name: subject.name,
+                        captureId: subject.captureId,
+                        hasReaderPhoto: subject.hasReaderPhoto,
+                        title: subject.title,
+                        summary: subject.summary,
+                        path: subject.path,
+                        trialContext: subject.trialContext,
+                        trialKey: subject.trialKey
+                    }
+                })
+            });
+            if (!response.ok || !response.body) throw new AskUnavailableError();
+            await consumeAskStream(response.body, (event) => {
+                if (event.persona) takePersona(event.persona);
+                if (typeof event.delta === "string") {
+                    answer += event.delta;
+                    const now = Date.now();
+                    if (now - lastFlush >= 50) {
+                        lastFlush = now;
+                        update({text: visibleAnswerSoFar(answer), status: "streaming"});
+                    }
+                    return;
+                }
+                if (event.done) {
+                    const split = splitStreamedReply(answer);
+                    if (!split.answer.trim()) return;
+                    settled = true;
+                    update({
+                        text: split.answer,
+                        status: "complete",
+                        followUpPrompts: (event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps).slice(0, 3)
+                    });
+                }
+            });
+            if (!settled) {
+                const partial = splitStreamedReply(answer);
+                if (!partial.answer.trim()) throw new AskEmptyError();
+                settled = true;
+                update({text: partial.answer, status: "complete", followUpPrompts: partial.followUps});
+            }
+            setGreetingState("done");
+        } catch {
+            const kept = keepOnStopRef.current ?? (controller.signal.aborted ? splitStreamedReply(answer).answer : "");
+            keepOnStopRef.current = null;
+            if (!settled && kept.trim()) {
+                update({text: kept, status: "complete", followUpPrompts: []});
+                setGreetingState("done");
+            } else if (!settled) {
+                drop();
+                setGreetingState("failed");
+            }
+        } finally {
+            if (greetingRef.current === controller) greetingRef.current = null;
+            if (abortRef.current === controller || abortRef.current === null) {
+                abortRef.current = null;
+                setIsSending(false);
+            }
+        }
+    }, [threadKey, subject, locale, replace, takePersona]);
+
+    /**
+     * Stops the reply in flight. `keepText` is what the reader already saw of
+     * it; that much stays in the thread as the animal's answer.
+     */
+    const stop = useCallback((keepText?: string) => {
+        keepOnStopRef.current = keepText?.trim() ? keepText : null;
         abortRef.current?.abort();
         abortRef.current = null;
     }, []);
@@ -533,6 +695,9 @@ export function useAskThread(params: {
     const clear = useCallback(() => {
         stop();
         askSessionStore.clear(threadKey);
+        // A new conversation opens on a new greeting.
+        greetedThreads.delete(threadKey);
+        setGreetingState("idle");
     }, [stop, threadKey]);
 
     const hasConversation = useMemo(
@@ -547,6 +712,9 @@ export function useAskThread(params: {
         hasConversation,
         isSending,
         quota: {...quota, paying},
+        persona,
+        greetingState,
+        greet,
         send,
         stop,
         retry,

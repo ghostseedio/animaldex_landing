@@ -256,6 +256,43 @@ export function resolveAskRequestId(raw: unknown): string | null {
     return REQUEST_ID_PATTERN.test(value) ? value : null;
 }
 
+/**
+ * Greetings a reader without an account gets from the model per day, per
+ * address; past it the animal opens with its card's own question instead.
+ * `ASK_GREETING_ANON_DAILY_LIMIT=0` keeps every anonymous greeting off the
+ * model.
+ */
+export const ASK_GREETING_ANON_DAILY_LIMIT_DEFAULT = 3;
+/** The app's `greeting_daily_limit`, for when the database cap cannot be reached. */
+const ASK_GREETING_SIGNED_IN_FALLBACK_LIMIT = 40;
+
+function anonymousGreetingLimit(): number {
+    const raw = Number(process.env.ASK_GREETING_ANON_DAILY_LIMIT);
+    return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : ASK_GREETING_ANON_DAILY_LIMIT_DEFAULT;
+}
+
+/**
+ * Whether the animal's opening line may come from the model. Greetings are
+ * free — they never touch the message allowance or credits — but capped, as
+ * in the apps: a signed-in reader through `take_animal_chat_greeting` (the
+ * same per-account count the apps draw on, 40 a day), an anonymous one per
+ * address here. False means the fixed greeting from the voice card.
+ */
+export async function takeAskGreeting(request: Request, viewer: AskViewer): Promise<boolean> {
+    if (viewer.signedIn && viewer.userId) {
+        const service = createSupabaseServiceClient();
+        if (service) {
+            const {data, error} = await service.rpc("take_animal_chat_greeting", {p_user_id: viewer.userId});
+            if (!error) return data === true;
+            console.warn("[ask-animaldex] greeting cap unavailable, metering locally", error.message);
+        }
+        return checkRateLimit(`ask-greeting:${viewer.userId}`, ASK_GREETING_SIGNED_IN_FALLBACK_LIMIT, SPECIES_ASK_WINDOW_MS).allowed;
+    }
+    const limit = anonymousGreetingLimit();
+    if (limit <= 0) return false;
+    return checkRateLimit(`ask-greeting:${getRequestIdentifier(request)}`, limit, SPECIES_ASK_WINDOW_MS).allowed;
+}
+
 /** What is left today, without taking anything. */
 export async function peekAskAllowance(request: Request, viewer: AskViewer): Promise<AskAllowance> {
     if (!viewer.signedIn || !viewer.client) {

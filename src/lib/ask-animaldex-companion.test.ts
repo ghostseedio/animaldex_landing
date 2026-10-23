@@ -97,9 +97,12 @@ test("species scope carries the voice card, chat mode and the relationship rules
     const voice = usableAskCompanionVoice({voice: card, power_name: "Burst Commitment"}, "Burst Commitment");
     for (const build of [buildAskSystemPrompt, buildAskStreamingSystemPrompt]) {
         const prompt = build({scope: "species", supportedVisuals: [], voice, animalName: "Cheetah", mode: "chat"});
-        assert.match(prompt, /Who you are — your manner as the Cheetah/);
-        assert.match(prompt, /- Pace: quick\. Quick, short sentences/);
-        assert.match(prompt, /The kind of question you ask first: "How far away is the thing you want\?"/);
+        // The character leads, in the apps' 2026-10-23 wording.
+        assert.match(prompt, /Who you are — the Cheetah\. This is how YOU talk\./);
+        assert.match(prompt, /- Rhythm: You speak fast\. Short, punchy sentences/);
+        assert.match(prompt, /- Speech habits — use them in every reply: counts in seconds\./);
+        assert.match(prompt, /The kind of question you ask: "How far away is the thing you want\?"/);
+        assert.ok(prompt.indexOf("Who you are") < prompt.indexOf("How you talk:"), "the character comes before the rules");
         assert.match(prompt, /Conversation mode: chat\./);
         assert.match(prompt, /Never say you missed them, waited for them, worried about them, need them or love them\./);
         assert.match(prompt, /answer from failure_modes by name\./);

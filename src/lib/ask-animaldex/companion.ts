@@ -22,8 +22,9 @@ export type AskConversationMode = "chat" | "guidance" | "training";
 export const ANIMAL_CHAT_MODE_RULES = [
     "Conversation mode: chat. The person wants to talk — about you, their day, an idea, anything. Talk with them.",
     "- Do not bring up your Training, Trials, Apply It Your Way or battles, and send no cards, unless they ask about them.",
+    "  That goes for follow-ups too: no Training, Trial or battle chips in this mode.",
     "- The closing question is optional here: ask one only when you genuinely want to know something, never as a sales line.",
-    "- Keep it lighter and shorter than advice: one or two short paragraphs."
+    "- Keep it lighter than advice: conversation, not a briefing. Your natural length (in who you are) holds."
 ];
 
 export const ANIMAL_RELATIONSHIP_RULES = [
@@ -42,7 +43,6 @@ export const ANIMAL_RELATIONSHIP_RULES = [
 /** The closing instruction of the user prompt in chat mode (the apps' `mode === "chat"` branch). */
 export const ANIMAL_CHAT_CLOSING_INSTRUCTION = [
     "Talk with them as yourself, in your own manner. Prefer system_dynamics wording for states, triggers and failure modes when they come up.",
-    "Base your follow-up offers on available_content, naming real things from it that this answer did not cover.",
     "Keep your Power's name and pattern stable across the conversation."
 ];
 
@@ -160,27 +160,101 @@ export function fallbackAskCompanionVoice(params: {
     };
 }
 
-/** The "who you are" section of the species system prompt. */
-export function askCompanionVoiceLines(params: {voice: AskCompanionVoice; animalName: string}): string[] {
+/**
+ * The animal's world, as the images it reaches for: where it lives, what it
+ * eats, how it sleeps, what it is known for. From the field guide, as the
+ * apps' `companionWorldFrom` takes it.
+ */
+export type AskCompanionWorld = {
+    habitat?: string | null;
+    diet?: string | null;
+    sleep?: string | null;
+    traits?: string[];
+};
+
+export function askCompanionWorldFrom(
+    species: Pick<AskSpeciesGrounding, "habitat" | "diet" | "sleepPattern" | "identification"> | null | undefined
+): AskCompanionWorld | null {
+    if (!species) return null;
+    const traits = (species.identification ?? [])
+        .map((item) => clean(item, 120))
+        .filter((item): item is string => item !== null)
+        .slice(0, 3);
+    const world: AskCompanionWorld = {
+        habitat: clean(species.habitat, 220),
+        diet: clean(species.diet, 200),
+        sleep: clean(species.sleepPattern, 160),
+        traits
+    };
+    return world.habitat || world.diet || world.sleep || traits.length > 0 ? world : null;
+}
+
+const PACE_LINES: Record<AskCompanionVoice["pace"], string> = {
+    slow:
+        "You speak slowly. Unhurried, loose sentences with room in them. You never rush to fill a silence, and one thought at a time is enough.",
+    quick: "You speak fast. Short, punchy sentences, sometimes fragments. You get to the point and move on.",
+    measured: "You speak at an even pace: plain, steady sentences with nothing wasted."
+};
+
+/**
+ * The "who you are" section of the species system prompt: the character
+ * first, so every rule after it is read as how THIS animal does things.
+ * Mirrors the apps' `companionVoiceLines`; the website has no nickname (it
+ * never knows which of the reader's cards they mean), so that part is left out.
+ */
+export function askCompanionVoiceLines(params: {
+    voice: AskCompanionVoice;
+    animalName: string;
+    /** Field-guide images: what the animal compares things to. */
+    world?: AskCompanionWorld | null;
+    /** Lines from the stats and System Dynamics rhythm (`persona.ts`). */
+    personaLines?: string[];
+}): string[] {
     const {voice} = params;
     const lines = [
-        `Who you are — your manner as the ${params.animalName}. This is how YOU talk; another animal would sound different:`,
+        `Who you are — the ${params.animalName}. This is how YOU talk. Every animal in AnimalDex sounds different: someone who`,
+        "has just talked to another animal should know within one line that this is you — from your rhythm, the images you",
+        "reach for, what you notice first and what you care about. Never fall back to a neutral, helpful-assistant voice.",
         `- Temperament: ${voice.temperament.map((item) => item.trait).join("; ")}.`,
-        `- Pace: ${voice.pace}. ${
-            voice.pace === "slow"
-                ? "Unhurried sentences; you leave room."
-                : voice.pace === "quick"
-                    ? "Quick, short sentences; you get to the move."
-                    : "Even, steady sentences."
-        }`,
+        `- Rhythm: ${PACE_LINES[voice.pace] ?? PACE_LINES.measured}`,
         `- How you engage: ${voice.stance}.`,
-        `- How you advise: ${voice.advice_style}`
+        `- What you would tell anyone: ${voice.advice_style}`
     ];
-    if (voice.first_question) lines.push(`- The kind of question you ask first: "${voice.first_question}"`);
-    if (voice.blind_spot) lines.push(`- Your blind spot (own it when it matters): ${voice.blind_spot}`);
-    if (voice.speech_habits.length > 0) lines.push(`- Speech habits: ${voice.speech_habits.join("; ")}.`);
-    lines.push("Let this shape every reply's rhythm, word choice and what you notice first — not by announcing it.");
+    if (voice.speech_habits.length > 0) lines.push(`- Speech habits — use them in every reply: ${voice.speech_habits.join("; ")}.`);
+    if (voice.first_question) lines.push(`- The kind of question you ask: "${voice.first_question}"`);
+    if (voice.blind_spot) lines.push(`- Your blind spot, which you own when it matters: ${voice.blind_spot}`);
+    const world = params.world;
+    if (world) {
+        const plain = (value: string) => value.replace(/\.$/, "").replace(/^\w/, (c) => c.toLowerCase());
+        const parts = [
+            world.habitat ? `where you live: ${plain(world.habitat)}` : null,
+            world.diet ? `what you eat: ${plain(world.diet)}` : null,
+            world.sleep ? `how you rest: ${plain(world.sleep)}` : null
+        ].filter(Boolean);
+        if (parts.length > 0) lines.push(`- Your world — ${parts.join("; ")}. Your images and comparisons come from here, not from offices and textbooks.`);
+        if (world.traits && world.traits.length > 0) lines.push(`- What you are known for: ${world.traits.join("; ")}.`);
+    }
+    if (params.personaLines && params.personaLines.length > 0) lines.push(...params.personaLines);
+    lines.push("Let all of this shape every reply — its rhythm, its words, its length — without ever announcing it.");
     return lines;
+}
+
+/**
+ * The greeting used when no model is reachable (or the day's greetings are
+ * used up): the card's own question, so even the fallback sounds like this
+ * animal and not like a template. Mirrors the apps' `fallbackGreeting`.
+ */
+export function fallbackAskGreeting(params: {
+    animalName: string;
+    voice?: AskCompanionVoice | null;
+}): {text: string; followUps: string[]} {
+    const intro = `I'm the ${params.animalName}.`;
+    // Only an authored card's question; the record-derived card has none.
+    const question = params.voice?.origin === "card" ? params.voice.first_question?.trim() : null;
+    return {
+        text: question ? `${intro} ${question}` : `${intro} What's on your mind?`,
+        followUps: ["Tell me about yourself", "I need help with something", "What's your Power?"]
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,6 +277,34 @@ export function dedupeCurrentQuestion<T extends ChatTurn>(history: T[], question
         return history.slice(0, -1);
     }
     return history;
+}
+
+/**
+ * Stands in for the person when the animal spoke first (its greeting), so
+ * the turns still start with the person and the greeting is not lost.
+ * Verbatim from the apps' `OPENED_CHAT_TURN`.
+ */
+export const OPENED_CHAT_TURN = "(I open the conversation with you.)";
+
+/**
+ * Turns as a chat model wants them: starting with the person, alternating,
+ * consecutive same-role turns merged. A thread that opens on the animal's
+ * greeting gets a stand-in first turn. Mirrors the apps' `historyAsTurns`.
+ */
+export function askHistoryAsTurns(history: ChatTurn[]): ChatTurn[] {
+    const out: ChatTurn[] = [];
+    for (const turn of history) {
+        const content = turn.content.trim();
+        if (!content) continue;
+        if (out.length === 0 && turn.role === "assistant") out.push({role: "user", content: OPENED_CHAT_TURN});
+        const previous = out[out.length - 1];
+        if (previous && previous.role === turn.role) {
+            previous.content = `${previous.content}\n\n${content}`;
+        } else {
+            out.push({role: turn.role, content});
+        }
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------------

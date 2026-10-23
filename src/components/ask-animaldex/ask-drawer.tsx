@@ -13,6 +13,12 @@
  *   - follow-up chips appear under the newest answer only — chips under every
  *     answer turn the scrollback into a wall of buttons;
  *   - stop is a real action with a real outcome, not a disabled send button.
+ *
+ * On a species page the animal itself talks (Speak to [Animal]), as in the
+ * apps since 2026-10-23: it greets an empty thread first, its replies are
+ * typed out at its own pace (`useReplyPacer`), a click on a reply shows the
+ * rest at once, Stop keeps what was already said, and the header carries its
+ * temperament.
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
@@ -21,6 +27,7 @@ import Link from "@/app/[locale]/_components/link";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
+import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex/use-reply-pacer";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {askThreadKey, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
@@ -141,7 +148,21 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
     const resolvedSubject = context?.subject ?? subject;
 
-    const {messages, hasConversation, isSending, quota, send, stop, retry, regenerate, clear, continueWithCredits} = useAskThread({
+    const {
+        messages,
+        hasConversation,
+        isSending,
+        quota,
+        persona,
+        greetingState,
+        greet,
+        send,
+        stop,
+        retry,
+        regenerate,
+        clear,
+        continueWithCredits
+    } = useAskThread({
         threadKey,
         subject: resolvedSubject,
         locale,
@@ -205,6 +226,51 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (pending) void send(pending);
     }, [context, takePendingQuestion, send]);
 
+    // The animal speaks first: an empty species thread opens on its greeting.
+    // Runs after the pending question above, which takes precedence.
+    const canGreet = Boolean(context?.available && context.subject.scope === "species" && (context.hints.animalName ?? context.subject.name));
+    useEffect(() => {
+        if (!canGreet || messages.length > 0 || greetingState !== "idle" || isSending) return;
+        void greet();
+    }, [canGreet, messages.length, greetingState, isSending, greet]);
+
+    /**
+     * The reply being typed out: the newest animal reply that arrived while
+     * the drawer was open. A reply restored from an earlier visit is not
+     * paced; it is simply there.
+     */
+    const reducedMotion = usePrefersReducedMotion();
+    const [pacedId, setPacedId] = useState<string | null>(null);
+    const inFlightId = useMemo(() => {
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+            const message = messages[index];
+            if (message.role === "assistant" && (message.status === "thinking" || message.status === "streaming")) return message.id;
+        }
+        return null;
+    }, [messages]);
+    useEffect(() => {
+        if (inFlightId) setPacedId(inFlightId);
+    }, [inFlightId]);
+    const pacedMessage = pacedId ? messages.find((message) => message.id === pacedId) ?? null : null;
+    const pacer = useReplyPacer({
+        messageId: pacedMessage && pacedMessage.status !== "failed" ? pacedMessage.id : null,
+        text: pacedMessage?.text ?? "",
+        sourceDone: pacedMessage?.status === "complete",
+        persona,
+        instant: reducedMotion
+    });
+    // Typing counts as talking: Stop stays until the last word is shown.
+    const animalTalking = isSending || pacer.revealing;
+    // With something typed the button sends, over a greeting or a reply that
+    // is only still typing out; a reply still arriving is stopped first.
+    const showStop = (isSending && greetingState !== "loading") || (animalTalking && composer.trim().length === 0);
+    const stopTalking = useCallback(() => {
+        // Still arriving: stop it, keeping what the reader saw. All here:
+        // show the rest.
+        if (isSending) stop(pacer.messageId ? pacer.visibleText : undefined);
+        else pacer.skipToEnd();
+    }, [isSending, stop, pacer]);
+
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
@@ -220,8 +286,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, [close, confirmingClear]);
 
     useEffect(() => {
-        if (!hasConversation) composerRef.current?.focus();
-    }, [hasConversation]);
+        if (hasConversation) return;
+        // On a phone the keyboard would cover the animal's greeting, as the
+        // app found: there the reader taps in when they are ready.
+        const coarse = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+        if (coarse && subject.scope === "species") return;
+        composerRef.current?.focus();
+    }, [hasConversation, subject.scope]);
 
     /**
      * Pins the newest question to the top of the panel.
@@ -251,7 +322,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, [trailingQuestionId]);
 
     const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
-        if (!question.trim() || isSending) return;
+        // The reader may talk over the animal's greeting (it keeps what it
+        // had said); any other reply in flight has to finish or be stopped.
+        if (!question.trim() || (isSending && greetingState !== "loading")) return;
         // The one chip that is a destination rather than a question: it opens
         // the questionnaire instead of asking the model about it.
         if (source === "followup" && isWildProfileFollowUp(question)) {
@@ -270,7 +343,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         setComposer("");
         setShowingMemory(false);
         void send(question);
-    }, [close, isSending, locale, resolvedSubject.slug, send]);
+    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send]);
 
     const loadMemory = useCallback(async () => {
         setMemoryState("loading");
@@ -350,6 +423,28 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         : labels.thinking;
 
     const lastMessageId = messages[messages.length - 1]?.id ?? null;
+    // Before the context arrives, a species thread is about to be greeted:
+    // show the animal typing rather than flashing the static openers first.
+    const awaitingGreeting = messages.length === 0
+        && greetingState !== "failed"
+        && (context === null ? subject.scope === "species" : canGreet);
+
+    const copyMessage = (message: AskMessage) => {
+        void navigator.clipboard?.writeText(askMarkdownPlainText(message.text));
+        setCopiedId(message.id);
+        setTimeout(() => {
+            setCopiedId((current) => (current === message.id ? null : current));
+        }, 1600);
+    };
+    const shareMessage = (message: AskMessage) => {
+        const body = shareText(messages, message, animalName, speaksAsAnimal);
+        if (navigator.share) {
+            void navigator.share({text: body}).catch(() => undefined);
+        } else {
+            void navigator.clipboard?.writeText(body);
+            setCopiedId(message.id);
+        }
+    };
     // While paying with credits the footer says what a message costs instead.
     const remainingCopy = quota.paying
         ? labels.creditsFooter
@@ -410,7 +505,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 {animalName ?? labels.title}
                             </p>
                             {speaksAsAnimal ? (
-                                <p className="truncate text-[11px] leading-4 text-ink-400">{labels.inOwnWords}</p>
+                                // The animal's temperament once it has spoken, as in the app's header.
+                                <p className="truncate text-[11px] leading-4 text-ink-400">{persona?.tagline ?? labels.inOwnWords}</p>
                             ) : null}
                         </div>
                     </div>
@@ -492,6 +588,37 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             onForgetAll={() => void forgetEverything()}
                             onBack={() => setShowingMemory(false)}
                         />
+                    ) : !hasConversation && (messages.length > 0 || awaitingGreeting) ? (
+                        // The animal's greeting opens the thread, in place of the static openers.
+                        <div className="flex flex-col gap-6">
+                            {messages.length === 0 ? (
+                                <div className="flex items-start gap-2.5">
+                                    {faceUrl ? <MessageFace url={faceUrl} /> : null}
+                                    <ThinkingIndicator phases={[thinkingLabel]} label={thinkingLabel} />
+                                </div>
+                            ) : messages.map((message) => (
+                                <MessageBlock
+                                    key={message.id}
+                                    message={message}
+                                    labels={labels}
+                                    isLast={message.id === lastMessageId}
+                                    isSending={isSending}
+                                    photoUrl={photoUrl}
+                                    photoAlt={animalName ?? ""}
+                                    avatarUrl={speaksAsAnimal ? faceUrl : null}
+                                    thinkingLabel={thinkingLabel}
+                                    thinkingPhases={[thinkingLabel]}
+                                    paced={pacer.messageId === message.id && pacer.revealing ? pacer.visibleText : null}
+                                    onSkip={pacer.skipToEnd}
+                                    copied={copiedId === message.id}
+                                    onCopy={() => copyMessage(message)}
+                                    onShare={() => shareMessage(message)}
+                                    onRegenerate={() => regenerate(message.id)}
+                                    onRetry={() => retry(message.id)}
+                                    onFollowUp={(prompt) => submit(prompt, "followup")}
+                                />
+                            ))}
+                        </div>
                     ) : !hasConversation ? (
                         <div className="flex flex-col gap-4">
                             <div>
@@ -546,24 +673,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                         lastQuestion(messages),
                                         {...hints, hasWildProfile: context?.hasWildProfile ?? false, aboutTrial, speaksAsAnimal}
                                     )}
+                                    paced={pacer.messageId === message.id && pacer.revealing ? pacer.visibleText : null}
+                                    onSkip={pacer.skipToEnd}
                                     copied={copiedId === message.id}
                                     questionRef={message.id === trailingQuestionId ? trailingQuestionRef : undefined}
-                                    onCopy={() => {
-                                        void navigator.clipboard?.writeText(askMarkdownPlainText(message.text));
-                                        setCopiedId(message.id);
-                                        setTimeout(() => {
-                                            setCopiedId((current) => (current === message.id ? null : current));
-                                        }, 1600);
-                                    }}
-                                    onShare={() => {
-                                        const body = shareText(messages, message, animalName, speaksAsAnimal);
-                                        if (navigator.share) {
-                                            void navigator.share({text: body}).catch(() => undefined);
-                                        } else {
-                                            void navigator.clipboard?.writeText(body);
-                                            setCopiedId(message.id);
-                                        }
-                                    }}
+                                    onCopy={() => copyMessage(message)}
+                                    onShare={() => shareMessage(message)}
                                     onRegenerate={() => regenerate(message.id)}
                                     onRetry={() => retry(message.id)}
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
@@ -653,17 +768,17 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
                         />
                         <button
-                            type={isSending ? "button" : "submit"}
-                            onClick={isSending ? stop : undefined}
-                            disabled={!isSending && composer.trim().length === 0}
-                            aria-label={isSending ? labels.stop : labels.send}
+                            type={showStop ? "button" : "submit"}
+                            onClick={showStop ? stopTalking : undefined}
+                            disabled={!showStop && composer.trim().length === 0}
+                            aria-label={showStop ? labels.stop : labels.send}
                             className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
-                                isSending || composer.trim()
+                                showStop || composer.trim()
                                     ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
                                     : "bg-white/8 text-ink-400"
                             }`}
                         >
-                            {isSending ? <StopIcon /> : <ArrowUpIcon />}
+                            {showStop ? <StopIcon /> : <ArrowUpIcon />}
                         </button>
                     </form>
                     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-ink-400">
@@ -706,6 +821,8 @@ function MessageBlock({
     avatarUrl = null,
     thinkingLabel,
     thinkingPhases,
+    paced = null,
+    onSkip,
     copied,
     questionRef,
     onCopy,
@@ -724,6 +841,13 @@ function MessageBlock({
     avatarUrl?: string | null;
     thinkingLabel?: string;
     thinkingPhases: string[];
+    /**
+     * While this reply is being typed out, what of it is on screen; null
+     * once it is all shown (or when it is not paced at all).
+     */
+    paced?: string | null;
+    /** Shows the rest of a reply being typed out. */
+    onSkip?: () => void;
     copied: boolean;
     questionRef?: React.RefObject<HTMLDivElement>;
     onCopy: () => void;
@@ -744,13 +868,11 @@ function MessageBlock({
 
     // With the answer written in the first person, the reader needs to see
     // who "I" is without looking back up at the header.
-    const face = avatarUrl ? (
-        <span className="relative mt-0.5 h-[26px] w-[26px] shrink-0 overflow-hidden rounded-full border border-white/15">
-            <Image src={avatarUrl} unoptimized alt="" fill sizes="26px" className="object-cover" />
-        </span>
-    ) : null;
+    const face = avatarUrl ? <MessageFace url={avatarUrl} /> : null;
+    const typing = paced !== null;
 
-    if (message.status === "thinking") {
+    // Nothing on screen yet: the animal is still finding its first word.
+    if (message.status === "thinking" || (typing && paced.length === 0)) {
         return (
             <div className="flex items-start gap-2.5">
                 {face}
@@ -775,18 +897,32 @@ function MessageBlock({
         );
     }
 
+    // Actions and next questions wait until the animal has finished talking.
+    const finished = message.status === "complete" && !typing;
+
     return (
         <div className="flex items-start gap-2.5">
         {face}
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
-            <AssistantMarkdown
-                text={message.text}
-                photoUrl={photoUrl}
-                photoAlt={photoAlt}
-                streaming={message.status === "streaming"}
-            />
+            {typing ? (
+                <>
+                    {/* Screen readers get the reply as it arrives, not a word at a time. */}
+                    <p className="sr-only">{askMarkdownPlainText(message.text)}</p>
+                    {/* A click shows the rest now; Stop does the same from the keyboard. */}
+                    <div aria-hidden="true" onClick={onSkip} className="cursor-text">
+                        <AssistantMarkdown text={paced} photoUrl={photoUrl} photoAlt={photoAlt} streaming />
+                    </div>
+                </>
+            ) : (
+                <AssistantMarkdown
+                    text={message.text}
+                    photoUrl={photoUrl}
+                    photoAlt={photoAlt}
+                    streaming={message.status === "streaming"}
+                />
+            )}
 
-            {message.status === "complete" && isLast ? (
+            {finished && isLast ? (
                 <div className="flex flex-wrap items-center gap-1.5">
                     <ActionButton onClick={onCopy} label={copied ? labels.copied : labels.copy}>
                         {copied ? <CheckIcon /> : <CopyIcon />}
@@ -794,14 +930,17 @@ function MessageBlock({
                     <ActionButton onClick={onShare} label={labels.share}>
                         <ShareIcon />
                     </ActionButton>
-                    <ActionButton onClick={onRegenerate} label={labels.retry} disabled={isSending}>
-                        <RefreshIcon />
-                    </ActionButton>
+                    {/* A greeting answers no question, so there is nothing to ask again. */}
+                    {message.isGreeting ? null : (
+                        <ActionButton onClick={onRegenerate} label={labels.retry} disabled={isSending}>
+                            <RefreshIcon />
+                        </ActionButton>
+                    )}
                 </div>
             ) : null}
 
             {/* Only the newest answer offers next questions. */}
-            {message.status === "complete" && isLast && message.followUpPrompts.length > 0 ? (
+            {finished && isLast && message.followUpPrompts.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                     {message.followUpPrompts.slice(0, 3).map((prompt) => (
                         <button
@@ -818,6 +957,15 @@ function MessageBlock({
             ) : null}
         </div>
         </div>
+    );
+}
+
+/** The animal's face beside what it says. */
+function MessageFace({url}: {url: string}) {
+    return (
+        <span className="relative mt-0.5 h-[26px] w-[26px] shrink-0 overflow-hidden rounded-full border border-white/15">
+            <Image src={url} unoptimized alt="" fill sizes="26px" className="object-cover" />
+        </span>
     );
 }
 

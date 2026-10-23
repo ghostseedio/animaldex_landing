@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         signedIn: viewer.signedIn,
         isPro: allowance.isPro,
         hasWildProfile: wildProfile.hasWildProfile,
-        available: availableAskProviders().length > 0
+        // Claude counts on a species page, where the animal itself speaks.
+        available: availableAskProviders({animalVoice: resolvedSubject.scope === "species"}).length > 0
     }, {headers: ASK_RESPONSE_HEADERS});
 }

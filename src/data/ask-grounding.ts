@@ -47,6 +47,10 @@ function text(value: string | null | undefined): string | null {
     return trimmed ? trimmed : null;
 }
 
+function knownFrequency(frequency: SpeciesSystemDynamics["frequencyProfile"]["baselineFrequency"]): string | null {
+    return frequency && frequency !== "UNKNOWN" ? frequencyCompactLabel(frequency) : null;
+}
+
 function askSystemDynamics(dynamics: SpeciesSystemDynamics): AskSystemDynamics {
     const signature = resolveVisualSignature(dynamics);
     return {
@@ -58,7 +62,11 @@ function askSystemDynamics(dynamics: SpeciesSystemDynamics): AskSystemDynamics {
             modes: dynamics.frequencyProfile.modes.map((mode) => ({
                 name: modeStateName(mode),
                 frequency: mode.frequency === "UNKNOWN" ? null : frequencyCompactLabel(mode.frequency)
-            }))
+            })),
+            // The rhythm the animal talks in (calm, bursty, calm-until-
+            // triggered) is read from these as well as from the modes.
+            baseline: knownFrequency(dynamics.frequencyProfile.baselineFrequency),
+            triggered: knownFrequency(dynamics.frequencyProfile.triggeredFrequency)
         },
         // Every domain the record maps: an earlier cap of 8 silently dropped
         // Strategy, Music, Art and the rest, so "where else does this apply?"

@@ -17,11 +17,17 @@ import {
     type AskCompanionVoice
 } from "@/lib/ask-animaldex/companion";
 import type {AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
+import {askPersonaStatsFrom, type AskPersonaStats} from "@/lib/ask-animaldex/persona";
 
 export type AskCompanion = {
     voice: AskCompanionVoice;
     /** The canonical species id, for memory ordering and new facts. Null when unknown. */
     speciesProfileId: string | null;
+    /**
+     * The five game stats from the canonical row, which set how the animal
+     * behaves (`persona.ts`) and sit in its record. Null when unknown.
+     */
+    stats: AskPersonaStats | null;
 };
 
 function statSpeed(raw: unknown): number | null {
@@ -34,7 +40,7 @@ export async function loadAskCompanion(species: AskSpeciesGrounding): Promise<As
     const service = createSupabaseServiceClient();
     const id = species.speciesProfileId ?? null;
     if (!service || !id) {
-        return {voice: fallbackAskCompanionVoice({species}), speciesProfileId: id};
+        return {voice: fallbackAskCompanionVoice({species}), speciesProfileId: id, stats: null};
     }
 
     try {
@@ -69,7 +75,8 @@ export async function loadAskCompanion(species: AskSpeciesGrounding): Promise<As
         const card = voiceRes.error
             ? null
             : usableAskCompanionVoice(voiceRes.data, species.power?.principleName ?? null);
-        if (card) return {voice: card, speciesProfileId: canonicalId};
+        const stats = askPersonaStatsFrom(statsRes.data?.canonical_game_stats);
+        if (card) return {voice: card, speciesProfileId: canonicalId, stats};
 
         const qualities = ((qualitiesRes.data ?? []) as Array<Record<string, unknown>>)
             .map((row) => {
@@ -87,10 +94,11 @@ export async function loadAskCompanion(species: AskSpeciesGrounding): Promise<As
                 qualities,
                 speed: statSpeed(statsRes.data?.canonical_game_stats)
             }),
-            speciesProfileId: canonicalId
+            speciesProfileId: canonicalId,
+            stats
         };
     } catch (error) {
         console.warn("[ask-animaldex] companion voice unavailable", error instanceof Error ? error.message.slice(0, 200) : "unknown");
-        return {voice: fallbackAskCompanionVoice({species}), speciesProfileId: id};
+        return {voice: fallbackAskCompanionVoice({species}), speciesProfileId: id, stats: null};
     }
 }

@@ -97,8 +97,24 @@ test("the grounding packet is assembled server-side from canonical rows", () => 
     assert.match(request, /cappedText/);
 });
 
-test("both providers are wired, Gemini first, exactly as the app does it", () => {
+test("the animal is Claude first, then Gemini, then OpenAI, exactly as the app does it", () => {
     const providers = readRepo("src/lib/ask-animaldex/providers.ts");
+    const code = readCode("src/lib/ask-animaldex/providers.ts");
+    // Claude Opus 5.5 speaks as the animal, through the official SDK, with the
+    // system prompt cached, effort as the only dial and server-side fallbacks.
+    assert.match(providers, /from "@anthropic-ai\/sdk"/);
+    assert.match(providers, /"claude-opus-5-5"/);
+    assert.match(code, /betas: \["server-side-fallback-2026-07-01"\]/);
+    assert.match(code, /fallbacks: "default"/);
+    assert.match(code, /output_config: \{effort: params\.effort\}/);
+    assert.match(code, /cache_control: \{type: "ephemeral"\}/);
+    assert.doesNotMatch(code, /client\.beta\.messages\.(stream|create)\(\{[^}]*temperature/);
+    // Claude only where the animal itself is speaking, and only when a key is set.
+    assert.match(code, /if \(options\.animalVoice && claudeAskKey\(\)\) providers\.push\("claude"\)/);
+    assert.ok(code.indexOf('providers.push("claude")') < code.indexOf('providers.push("gemini")'));
+    assert.ok(code.indexOf('providers.push("gemini")') < code.indexOf('providers.push("openai")'));
+    assert.match(code, /CLAUDE_API_KEY/);
+    assert.match(code, /ANIMAL_CHAT_PROVIDER/);
     assert.match(providers, /gemini-2\.5-flash/);
     assert.match(providers, /streamGenerateContent\?alt=sse/);
     assert.match(providers, /thinkingBudget: 0/);
@@ -138,6 +154,10 @@ test("the drawer keeps the page readable under it and never traps the reader", (
     assert.match(drawer, /bg-canvas-950/);
     assert.doesNotMatch(drawer, /ask-panel[^"]*backdrop-blur/);
 
-    // Stop is a real action with a real outcome, not a disabled send button.
-    assert.match(drawer, /onClick=\{isSending \? stop : undefined\}/);
+    // Stop is a real action with a real outcome, not a disabled send button:
+    // while the reply is still arriving it stops it and keeps what the reader
+    // saw; once it has all arrived it shows the rest of the typing at once.
+    assert.match(drawer, /onClick=\{showStop \? stopTalking : undefined\}/);
+    assert.match(drawer, /stop\(pacer\.messageId \? pacer\.visibleText : undefined\)/);
+    assert.match(drawer, /pacer\.skipToEnd\(\)/);
 });
