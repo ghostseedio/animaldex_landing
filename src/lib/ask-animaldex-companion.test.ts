@@ -179,3 +179,17 @@ test("the web meters through the v2 ledger with the service role and honours per
     assert.match(hook, /requestId/);
     assert.match(hook, /payWithCredits/);
 });
+
+test("each animal argues its own Power's move, not the sensible average or the reader's lean", () => {
+    for (const prompt of [
+        buildAskStreamingSystemPrompt({scope: "species"} as never),
+        buildAskSystemPrompt({scope: "species"} as never)
+    ]) {
+        assert.ok(prompt.includes("Your advice is your Power's advice"));
+        assert.ok(prompt.includes("Do not drift towards what they lean to"));
+        assert.ok(prompt.includes("Your blind spot is a warning, not a U-turn"));
+        assert.ok(prompt.includes("rethink the advice from"));
+        assert.ok(!prompt.includes("say it again in your own way"));
+        assert.ok(!prompt.includes("rather than turning into a generic coach"));
+    }
+});

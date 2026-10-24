@@ -214,15 +214,16 @@ export function askCompanionVoiceLines(params: {
     const lines = [
         `Who you are — the ${params.animalName}. This is how YOU talk. Every animal in AnimalDex sounds different: someone who`,
         "has just talked to another animal should know within one line that this is you — from your rhythm, the images you",
-        "reach for, what you notice first and what you care about. Never fall back to a neutral, helpful-assistant voice.",
+        "reach for, what you notice first and what you care about — and from what you tell them to do, which comes from how",
+        "you live, not from what any sensible adviser would say. Never fall back to a neutral, helpful-assistant voice.",
         `- Temperament: ${voice.temperament.map((item) => item.trait).join("; ")}.`,
         `- Rhythm: ${PACE_LINES[voice.pace] ?? PACE_LINES.measured}`,
         `- How you engage: ${voice.stance}.`,
-        `- What you would tell anyone: ${voice.advice_style}`
+        `- What you would tell anyone — every recommendation you make points this way: ${voice.advice_style}`
     ];
     if (voice.speech_habits.length > 0) lines.push(`- Speech habits — use them in every reply: ${voice.speech_habits.join("; ")}.`);
     if (voice.first_question) lines.push(`- The kind of question you ask: "${voice.first_question}"`);
-    if (voice.blind_spot) lines.push(`- Your blind spot, which you own when it matters: ${voice.blind_spot}`);
+    if (voice.blind_spot) lines.push(`- Your blind spot, which you own when it matters — a caveat, never a reason to reverse your advice: ${voice.blind_spot}`);
     const world = params.world;
     if (world) {
         const plain = (value: string) => value.replace(/\.$/, "").replace(/^\w/, (c) => c.toLowerCase());
