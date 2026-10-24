@@ -1,5 +1,5 @@
 ## AnimalDex Privacy Policy
-#### Effective April 29, 2026
+#### Effective October 24, 2026
 
 AnimalDex ("AnimalDex," "we," "our," or "the app") is operated by GHOSTSEED LTD for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
 
@@ -38,11 +38,20 @@ AnimalDex uses third-party service providers to operate the app. These providers
 1. **Supabase**: Authentication, database, storage, Edge Functions, and backend infrastructure.
 2. **Apple**: Sign in with Apple, App Store purchases, subscriptions, receipts, and Apple ID subscription management.
 3. **OpenAI or another AI analysis provider**: Animal identification and related AI analysis. AnimalDex sends analysis requests through backend services rather than exposing provider access directly from the app.
+4. **Anthropic, Google (Gemini) and OpenAI**: AI models that write the animals' replies in conversations and the short notes and summaries described below, through AnimalDex's backend.
+5. **ElevenLabs**: Spoken versions of animal replies, when a user plays one.
 
 ## Public Content and Community Disclosure
 Some AnimalDex features are public or shared by design. Public captures, shared animal photos or videos, profile fields, usernames, avatars, bios, Instagram URLs, pack activity, trade activity, challenge activity, reactions, and related community activity may be visible to other users.
 
 Direct messages are intended for the participants in the conversation, but may be reviewed or retained when needed for reports, safety, abuse prevention, support, legal compliance, or service integrity.
+
+## Conversations with Animals
+Users can talk with the animals in their collection. Messages and replies are processed by the AI providers listed above to write each reply. AnimalDex's servers do not keep full conversation transcripts; they keep the notes and summaries described here, messages that animals send on their own, and the usage counts needed for daily limits.
+
+1. **What animals remember**: To keep conversations personal, AnimalDex keeps short notes about what a user has told their animals, such as what they are working on. Users can see, correct or delete these notes in the app under "What I remember about you", or turn personalisation off.
+2. **What visitors see**: When another user talks with an animal on someone's card, the animal can share a short summary of what its owner has worked on with it, and the Play records the owner lets that viewer see. Owners can turn this summary off under "What I remember about you". The owner's own conversations and notes are never shown to visitors.
+3. **What owners hear about visits**: When a user talks with an animal on someone else's card, the animal tells its owner who visited and a short summary of what they asked about the owner or the animal. Visitors are told this in the conversation before anything they say is passed on. Summaries never include the visitor's exact words, insulting content, or anything the visitor asked the animal to keep between them, and nothing is passed on between users who have blocked each other. These summaries are deleted after 30 days.
 
 ## User Choices and Controls
 Users can:
