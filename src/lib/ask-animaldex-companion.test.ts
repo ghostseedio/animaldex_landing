@@ -193,3 +193,10 @@ test("each animal argues its own Power's move, not the sensible average or the r
         assert.ok(!prompt.includes("rather than turning into a generic coach"));
     }
 });
+
+test("an animal doesn't always have an answer on the web either", () => {
+    const prompt = buildAskStreamingSystemPrompt({scope: "species"} as never);
+    assert.ok(prompt.includes("What you know, and what you don't"));
+    assert.ok(prompt.includes("as the nearest thing"));
+    assert.ok(!prompt.includes("still bring it"));
+});
