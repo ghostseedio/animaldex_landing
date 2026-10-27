@@ -96,7 +96,7 @@ test("unusable model replies are rejected", () => {
     assert.equal(parseShareCopy(JSON.stringify({youtube: {title: "t", description: "d"}, tiktok: {caption: "c"}, instagram: {caption: "c"}, x: {text: "x"}})), null);
 });
 
-import {pickFacebookPage} from "./social/facebook-page";
+import {describeFacebookPages, pickFacebookPage} from "./social/facebook-page";
 
 test("Facebook picks the configured Page, else the AnimalDex one, and never a Page it cannot post to", () => {
     const pages = [
@@ -109,6 +109,8 @@ test("Facebook picks the configured Page, else the AnimalDex one, and never a Pa
     assert.equal(pickFacebookPage(pages, "3")?.id, "2");
     assert.equal(pickFacebookPage([pages[0], pages[2]], null)?.id, "1");
     assert.equal(pickFacebookPage([], null), null);
+    assert.equal(describeFacebookPages([], null), "Facebook shared these Pages: none.");
+    assert.match(describeFacebookPages(pages, "no posting access"), /Read only \(3, no posting access\).*Direct lookup of the configured Page: no posting access/);
 });
 
 test("the template gives Facebook a clickable guide link", () => {

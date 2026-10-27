@@ -1,6 +1,6 @@
 import {createHash, randomBytes} from "crypto";
 import {getSiteUrl} from "@/lib/site";
-import {pickFacebookPage} from "@/lib/social/facebook-page";
+import {describeFacebookPages, pickFacebookPage, type FacebookPage} from "@/lib/social/facebook-page";
 import {needsRefresh} from "@/lib/social/refresh-policy";
 import {getConnection, saveConnection} from "@/lib/social/store";
 import {isSocialPlatform, type SocialConnection, type SocialPlatform} from "@/lib/social/types";
@@ -193,8 +193,24 @@ export async function exchangeCode(platform: OAuthPlatform, code: string, verifi
         const pages = await readJson(await fetch(`${graph}/me/accounts?${new URLSearchParams({
             fields: "id,name,access_token,tasks", limit: "100", access_token: long.access_token
         })}`), "Facebook Page lookup");
-        const page = pickFacebookPage(pages.data ?? [], process.env.FACEBOOK_PAGE_ID?.trim() || null);
-        if (!page) throw new Error("No Facebook Page found for that login; pick the AnimalDex Page when Facebook asks which Pages to allow");
+        const preferredId = process.env.FACEBOOK_PAGE_ID?.trim() || null;
+        const listed: FacebookPage[] = pages.data ?? [];
+        let page = pickFacebookPage(listed, preferredId);
+        let directLookup: string | null = null;
+        // Pages reached through a business portfolio can be missing from me/accounts; ask for the configured one by id.
+        if (preferredId && page?.id !== preferredId) {
+            try {
+                const direct = await readJson(await fetch(`${graph}/${encodeURIComponent(preferredId)}?${new URLSearchParams({
+                    // tasks lives only on the me/accounts edge; a Page token here already means a role on the Page.
+                    fields: "id,name,access_token", access_token: long.access_token
+                })}`), "Facebook Page lookup");
+                page = pickFacebookPage([direct as FacebookPage], preferredId) ?? page;
+                if (page?.id !== preferredId) directLookup = direct.access_token ? "no posting access" : "no Page token returned";
+            } catch (error) {
+                directLookup = error instanceof Error ? error.message.slice(0, 160) : "failed";
+            }
+        }
+        if (!page) throw new Error(`No Facebook Page found for that login; pick the AnimalDex Page when Facebook asks which Pages to allow. ${describeFacebookPages(listed, directLookup)}`);
         return {
             platform, accountId: page.id, accountName: page.name ?? null,
             accessToken: page.access_token, refreshToken: null,
