@@ -120,6 +120,27 @@ export function resolveClosedSeoNamespacePath(pathname: string): ClosedSeoNamesp
     return {action: "block", reason: "unknown-slug", family: closedFamily, slug};
 }
 
+/**
+ * Where a blocked closed-namespace URL that Google still has should go instead
+ * of a 404 (Oct 2026 Search Console: 1,322 404s, mostly these):
+ * - /qualities/<retired or catalog-only quality> → the /qualities hub;
+ * - /animals/<slug>-<catalog number> and /animal-powers/<slug>-<number> → the
+ *   published base slug (old lesson URLs carried the catalog number).
+ * Null when the URL should stay a 404.
+ */
+export function closedSeoRedirectPath(pathname: string): string | null {
+    const resolution = resolveClosedSeoNamespacePath(pathname);
+    if (resolution?.action !== "block" || resolution.reason !== "unknown-slug" || !resolution.slug) return null;
+    const {locale} = splitLocalePath(pathname);
+    const prefix = locale && pathname.startsWith(`/${locale}/`) ? `/${locale}` : "";
+    if (resolution.family === "qualities") return `${prefix}/qualities`;
+    if (resolution.family === "animals" || resolution.family === "animal-powers") {
+        const base = resolution.slug.replace(/-\d+$/, "");
+        if (base !== resolution.slug && isPublishedClosedSeoSlug(resolution.family, base)) return `/${resolution.family}/${base}`;
+    }
+    return null;
+}
+
 export function closedSeoNamespaceNotFoundResponse() {
     return new NextResponse(CLOSED_SEO_404_HTML, {
         status: 404,

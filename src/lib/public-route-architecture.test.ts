@@ -23,7 +23,10 @@ const DYNAMIC_ALLOWLIST = [
     // reads the generated row fresh so a just-generated pair shows at once.
     "app/[locale]/(composited)/compare/[slug]/page.tsx",
     "app/[locale]/(composited)/blog/feed.xml/route.ts",
-    "app/blog/feed.xml/route.ts"
+    "app/blog/feed.xml/route.ts",
+    // Built per request with an in-process cache: a build-time copy (no database
+    // at build) served Google an empty video sitemap after every deploy.
+    "app/video-sitemap.xml/route.ts"
 ];
 
 const CATALOG_WALK_ALLOWLIST: string[] = [];

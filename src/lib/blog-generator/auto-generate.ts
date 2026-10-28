@@ -4,6 +4,7 @@ import {pickAutoFocus} from "@/lib/blog-generator/auto-generate-plan";
 import {isClaudeConfigured} from "@/lib/blog-generator/claude-client";
 import {formatCost} from "@/lib/blog-generator/cost-meter";
 import {generateJobRunning, startGenerateJob, type Job} from "@/lib/blog-generator/jobs";
+import {nextSeoTopic, type SeoTopic} from "@/lib/blog-generator/seo-topics";
 
 // Unattended news articles, run twice a day by the VM timer (POST /api/cron/blog-auto-generate):
 // each run is exactly "Latest news" → "Auto-pick and write" in
@@ -23,7 +24,7 @@ async function recentFocuses() {
     return Array.from(new Set(runs.map((run) => run.detail?.focus).filter((focus): focus is string => typeof focus === "string")));
 }
 
-async function recordFinished(job: Job, focus: string) {
+async function recordFinished(job: Job, focus: string, seoTopic?: string) {
     const result = job.result;
     if (job.status === "done" && result) {
         await recordAutomationRun({
@@ -33,7 +34,7 @@ async function recordFinished(job: Job, focus: string) {
                 ? `Published “${result.title}” (${result.path}), editor ${result.editorScore ?? "?"}/10, ${formatCost(result.cost)}`
                 : `Saved “${result.title}” as a draft (editor ${result.editorScore ?? "?"}/10 is below the bar), ${formatCost(result.cost)}`,
             ref: result.path,
-            detail: {focus, jobId: job.id, published: result.published, editorScore: result.editorScore, wordCount: result.wordCount, usd: result.cost.totalUsd}
+            detail: {focus, jobId: job.id, published: result.published, editorScore: result.editorScore, wordCount: result.wordCount, usd: result.cost.totalUsd, ...(seoTopic ? {seoTopic} : {})}
         });
         return;
     }
@@ -42,8 +43,16 @@ async function recordFinished(job: Job, focus: string) {
         outcome: "failed",
         summary: `Article on “${focus}” failed: ${job.error ?? "unknown error"}`,
         ref: job.id,
-        detail: {focus, jobId: job.id, lastLog: job.log.slice(-5)}
+        detail: {focus, jobId: job.id, lastLog: job.log.slice(-5), ...(seoTopic ? {seoTopic} : {})}
     });
+}
+
+/** Search-led topics already written (published, or saved as a draft); a failed one is tried again. */
+async function writtenSeoTopics() {
+    const runs = await listAutomationRuns(BLOG_AUTO_JOB, 200).catch(() => []);
+    return new Set(runs
+        .filter((run) => typeof run.detail?.seoTopic === "string" && (run.summary.startsWith("Published") || run.summary.startsWith("Saved")))
+        .map((run) => run.detail!.seoTopic as string));
 }
 
 function numberEnv(name: string, fallback: number) {
@@ -72,6 +81,15 @@ async function run(): Promise<BlogAutoGenerateResult> {
     const today = await todaysRuns();
     if (today.started >= perDay) return {ok: true, acted: false, summary: `Already started ${today.started} of ${perDay} articles today (BLOG_AUTO_PER_DAY)`};
     if (today.usd >= budget) return {ok: true, acted: false, summary: `Today's articles cost $${today.usd.toFixed(2)} of the $${budget} budget (BLOG_AUTO_DAILY_BUDGET_USD)`};
+
+    // The day's second article is search-led (seo-topics.ts) while topics remain; the first stays on news.
+    const seo: SeoTopic | null = today.started % 2 === 1 && process.env.BLOG_AUTO_SEO_TOPICS_DISABLED?.trim() !== "1"
+        ? nextSeoTopic(await writtenSeoTopics())
+        : null;
+    if (seo) {
+        const job = startGenerateJob({mode: "catalog", idea: seo.idea, publish: true, depth: "standard"}, (finished) => recordFinished(finished, `seo: ${seo.idea.primaryKeyword}`, seo.id));
+        return {ok: true, acted: true, summary: `Writing a search-led article: “${seo.idea.title}” (${seo.idea.primaryKeyword})`, ref: job.id, detail: {focus: `seo: ${seo.idea.primaryKeyword}`, seoTopic: seo.id, jobId: job.id}};
+    }
 
     const focus = pickAutoFocus(await recentFocuses());
     const job = startGenerateJob({mode: "news", focus, publish: true, depth: "standard"}, (finished) => recordFinished(finished, focus));

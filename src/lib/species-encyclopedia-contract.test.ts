@@ -22,7 +22,7 @@ test("species pages keep canonical knowledge server-rendered and treat Ask as an
     assert.match(page, /SpeciesAnimalPowerGuide/);
     assert.match(page, /SpeciesAskAnimalDex/);
     assert.match(page, /SpeciesAtAGlanceCard/);
-    assert.match(page, /speciesHasSubstantiveFieldGuide/);
+    assert.match(page, /isSpeciesPageIndexable/);
     assert.match(page, /id="where"/);
     assert.match(page, /id="compare"/);
     assert.doesNotMatch(page, /visible condition/i);

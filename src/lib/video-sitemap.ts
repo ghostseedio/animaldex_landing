@@ -3,10 +3,10 @@ import {sourcePath} from "@/lib/content-video/source-paths";
 import type {PublishedContentVideoListing} from "@/lib/content-video/store";
 
 // Google video sitemap (https://developers.google.com/search/docs/appearance/video#sitemaps)
-// for the page videos in admin_content_videos. Static pages (comparisons,
-// hybrids, tier lists, locations) only carry a video's markup in their HTML
-// when it was in the build snapshot; this lists every published one, so a
-// video published after a build is still discoverable.
+// for the page videos in admin_content_videos. Each video is listed on its
+// watch page (/videos/<type>/<slug>), where it is the main content: Google
+// skipped videos listed on their articles as "Video isn't on a watch page"
+// (Oct 2026). The article keeps its own VideoObject markup too.
 
 const MAX_TEXT = 2000;
 
@@ -24,12 +24,21 @@ export function videoPageUrl(siteUrl: string, type: SourceType, slug: string) {
     return new URL(sourcePath(type, slug), siteUrl).toString();
 }
 
+/** The video's own watch page path. */
+export function videoWatchPath(type: SourceType, slug: string) {
+    return `/videos/${type}/${slug}`;
+}
+
+export function videoWatchUrl(siteUrl: string, type: SourceType, slug: string) {
+    return new URL(videoWatchPath(type, slug), siteUrl).toString();
+}
+
 export function serializeVideoSitemapXml(siteUrl: string, videos: PublishedContentVideoListing[]) {
     // A thumbnail is required by Google; a video without a poster is left out.
     const byPage = new Map<string, PublishedContentVideoListing>();
     for (const video of videos) {
         if (!video.posterUrl) continue;
-        const page = videoPageUrl(siteUrl, video.type, video.slug);
+        const page = videoWatchUrl(siteUrl, video.type, video.slug);
         if (!byPage.has(page)) byPage.set(page, video);
     }
     const urls = Array.from(byPage).map(([page, video]) => {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
+import {speciesEntries as staticSpeciesEntries} from "@/data/species";
 import {resolveCollectionArchetype} from "@/lib/collection-archetype";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-setting-label";
@@ -837,13 +838,19 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
     ] = await Promise.all([
         fetchRows<PublicCaptureRow>("discover_feed_v1", topCaptureParams),
         fetchRows<PublicCaptureRow>("discover_feed_v1", recentCaptureParams),
-        getUnifiedSpeciesEntries(),
+        // The full catalog is the heaviest read here; when it fails the profile still
+        // renders from the hand-coded species (Oct 2026: /u/ pages were 5xx in Search Console).
+        getUnifiedSpeciesEntries().catch((error) => {
+            console.error("[public-profile] species catalog unavailable; using the static species list", error);
+            return staticSpeciesEntries;
+        }),
         fetchPublicProfileSummary(profile.id),
-        fetchRows<BestForTagRow>("public_profile_best_for_tag_scores_v1", bestForParams),
-        fetchRows<PowerSetRow>("public_profile_power_set_completions_v1", powerSetParams),
-        fetchRows<IdentityRow>("public_identity_profiles_v1", identityParams),
-        fetchRows<ProfileInsightIdRow>("profile_insight_capture_ids_v1", insightParams),
-        fetchRows<TierSampleRow>("discover_feed_v1", tierSampleParams)
+        // Optional panels: an empty panel beats a 500.
+        fetchRows<BestForTagRow>("public_profile_best_for_tag_scores_v1", bestForParams).catch((): BestForTagRow[] => []),
+        fetchRows<PowerSetRow>("public_profile_power_set_completions_v1", powerSetParams).catch((): PowerSetRow[] => []),
+        fetchRows<IdentityRow>("public_identity_profiles_v1", identityParams).catch((): IdentityRow[] => []),
+        fetchRows<ProfileInsightIdRow>("profile_insight_capture_ids_v1", insightParams).catch((): ProfileInsightIdRow[] => []),
+        fetchRows<TierSampleRow>("discover_feed_v1", tierSampleParams).catch((): TierSampleRow[] => [])
     ]);
 
     const speciesByIdentity = new Map<string, string>();

@@ -155,14 +155,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Fastest Animals in the World",
-        seoTitle: "Fastest Animals in the World — Top 100 Ranked",
+        seoTitle: "Fastest Animals in the World: Top 100 Ranked (240 mph #1)",
         immediateQuestion: "What is the fastest animal in the world?",
         rankingFactors: [
             "AnimalDex speed profile score",
             "Air, land, and water movement treated as different questions",
             "Peak performance context, not one interchangeable number"
         ],
-        description: "Ranked list of the fastest animals in the world, with land, flying, and marine speed kept separate so a diving falcon is not treated as the same kind of fast as a cheetah.",
+        description: "The peregrine falcon dives at 240+ mph, the cheetah rules land and the sailfish and bluefin tuna lead at sea. All 100 fastest animals, ranked by real speed.",
         category: "speed",
         statRankingKey: "speed",
         statRankingLimit: MIN_RANKING_TABLE_ENTRIES,
@@ -234,14 +234,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Strongest Animals in the World",
-        seoTitle: "Top 100 Strongest Animals in the World, Ranked",
+        seoTitle: "Strongest Animal in the World: Top 100 Ranked by Real Power",
         immediateQuestion: "What is the strongest animal in the world?",
         rankingFactors: [
             "Total body power and mass",
             "Ability to impose force on the environment or another large animal",
             "AnimalDex size, dominance, and speed profiles for the rest of the top 100"
         ],
-        description: "Top 100 strongest animals in the world, ranked by biological power: body scale first, then how that force is used on land and in water.",
+        description: "The blue whale is the strongest animal on Earth and the elephant rules on land. See where the rhino, hippo, orca, gorilla and big cats land in the top 100.",
         category: "strength",
         searchIntents: [
             "strongest animals",
@@ -360,14 +360,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Smartest Animals Ranked",
-        seoTitle: "Top 100 Smartest Animals — Animal Intelligence Ranked",
+        seoTitle: "Smartest Animals in the World: Top 100 Ranked by Intelligence",
         immediateQuestion: "What are the smartest animals?",
         rankingFactors: [
             "AnimalDex intelligence profile score",
             "Social learning and communication",
             "Problem solving, memory, and tool-linked behavior"
         ],
-        description: "Animal intelligence ranking of 100 smartest animals, using AnimalDex intelligence profiles and a clear note that social skill, tool use, and solitary problem solving are different jobs.",
+        description: "Dolphins, chimpanzees, orcas, octopuses and ravens lead the 100 smartest animals. See how each one solves problems, uses tools and communicates.",
         category: "intelligence",
         statRankingKey: "intelligence",
         statRankingLimit: MIN_RANKING_TABLE_ENTRIES,
@@ -435,14 +435,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Most Dangerous Animals in the World",
-        seoTitle: "Top 100 Most Dangerous Animals in the World, Ranked",
+        seoTitle: "Most Dangerous Animals in the World: Top 100 Ranked",
         immediateQuestion: "What are the most dangerous animals?",
         rankingFactors: [
             "Lethal capability and encounter risk",
             "Willingness to use force",
             "AnimalDex dominance, size, and speed profiles, plus predator and venom signals"
         ],
-        description: "Dangerous animals list ranking 100 species by lethal capability, aggression, and encounter risk — not a jump-scare trivia page and not a disease-vector list.",
+        description: "Crocodiles, hippos, elephants, king cobras and black mambas top the 100 most dangerous animals to meet in the wild, ranked by real attack risk.",
         category: "danger",
         searchIntents: [
             "dangerous animals list",
@@ -564,14 +564,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Most Agile Animals",
-        seoTitle: "Most Agile Animals — Top 100 Ranked",
+        seoTitle: "Most Agile Animals in the World: Top 100 Ranked",
         immediateQuestion: "What is the most agile animal?",
         rankingFactors: [
             "Directional change and body control",
             "AnimalDex speed and intelligence profiles",
             "Whether agility helps hunting, escape, or close-contact movement"
         ],
-        description: "Most agile animals ranked: turning, braking, and body control across land, air, and water — not a recycled fastest-animals list.",
+        description: "The octopus is the most agile animal on Earth, ahead of the peregrine falcon, dragonfly, dolphin and cheetah. All 100 ranked by turning, braking and control.",
         category: "agility",
         searchIntents: [
             "most agile animal",
@@ -747,14 +747,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Most Resilient Animals",
-        seoTitle: "Most Resilient Animals — Top 100 Ranked",
+        seoTitle: "Most Resilient Animals in the World: Top 100 Ranked",
         immediateQuestion: "What is the most resilient animal?",
         rankingFactors: [
             "Environmental stress tolerance and recovery",
             "Physical toughness without treating this as a combat list",
             "AnimalDex rarity and dominance profiles plus habitat-stress signals"
         ],
-        description: "Most resilient animals ranked by recovery, climate toughness, and staying functional under stress — not a copy of the strongest or most dangerous lists.",
+        description: "Crocodiles top the most resilient animals; polar bears and wolverines rule harsh climates and axolotls regrow body parts. All 100 ranked, with why.",
         category: "resilience",
         searchIntents: [
             "most resilient animals",
@@ -811,14 +811,14 @@ const rankingPagesData: RankingPage[] = [
         slug: "animals-with-strongest-armor",
         title: "Animals with the Strongest Armor: Top 10 Ranked",
         headline: "100 Animals with the Strongest Armor",
-        seoTitle: "Animals with the Strongest Armor — Top 100 Ranked",
+        seoTitle: "Animals with the Strongest Armor: Top 100 Ranked",
         immediateQuestion: "Which animal has the strongest natural armor?",
         rankingFactors: [
             "Coverage and resistance to crushing or penetration",
             "Whether the armor helps in real encounters",
             "AnimalDex dominance and size profiles plus shell, scale, and exoskeleton signals"
         ],
-        description: "Animals with the strongest natural armor, ranked by shells, scales, hide, and exoskeletons that actually protect — not just look impressive.",
+        description: "Crocodiles wear the toughest armor in nature, with pangolins and sea turtles close behind. All 100 armored animals ranked: shells, scales, hide and plates.",
         category: "armor",
         searchIntents: [
             "animals with the strongest armor",
@@ -931,14 +931,14 @@ const rankingPagesData: RankingPage[] = [
         slug: "animals-with-best-teamwork",
         title: "Animals with the Best Teamwork: Top 10 Ranked",
         headline: "100 Animals with the Best Teamwork",
-        seoTitle: "Animals with the Best Teamwork — Top 100 Ranked",
+        seoTitle: "Animals with the Best Teamwork: Top 100 Ranked",
         immediateQuestion: "Which animals have the best teamwork?",
         rankingFactors: [
             "Group hunting, shared labor, and role coordination",
             "AnimalDex intelligence and dominance profiles",
             "Pack, pod, colony, and cooperation signals from species guides"
         ],
-        description: "Animals with the best teamwork, ranked by coordinated hunting, shared labor, and group problem solving — including pack hunters and social insects.",
+        description: "Orcas are nature's best team players, ahead of wolves, African wild dogs, leafcutter ants and honey bees. All 100 ranked by how they hunt and build together.",
         category: "teamwork",
         searchIntents: [
             "animals with the best teamwork",
@@ -1002,14 +1002,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Most Adaptable Animals",
-        seoTitle: "Most Adaptable Animals — Top 100 Ranked",
+        seoTitle: "Most Adaptable Animals in the World: Top 100 Ranked",
         immediateQuestion: "What is the most adaptable animal?",
         rankingFactors: [
             "Habitat and diet flexibility",
             "Behavioral adjustment in changing conditions",
             "AnimalDex intelligence and dominance profiles plus generalist and urban signals"
         ],
-        description: "Most adaptable animals ranked by habitat flexibility, behavioral range, and success in changing conditions — including the current AnimalDex number one.",
+        description: "The red fox is the most adaptable animal in our ranking, ahead of crows, wolves, peregrine falcons and leopards: the generalists that thrive anywhere.",
         category: "adaptability",
         searchIntents: [
             "most adaptable animals",

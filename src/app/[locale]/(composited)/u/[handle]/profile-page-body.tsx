@@ -1,4 +1,4 @@
-import {notFound, redirect} from "next/navigation";
+import {notFound, permanentRedirect} from "next/navigation";
 import ProfileContent from "@/app/[locale]/(composited)/u/[handle]/profile-content";
 import ShareProfileButton from "@/app/[locale]/(composited)/u/[handle]/share-profile-button";
 import {getCurrencyPreference} from "@/data/account-settings";
@@ -73,7 +73,7 @@ export async function ProfilePageBody({
     if (!profile) notFound();
 
     if (profile.username.toLowerCase() !== requestedHandle) {
-        redirect(getLocalePath(locale, profilePath(profile.username)));
+        permanentRedirect(getLocalePath(locale, profilePath(profile.username)));
     }
 
     const viewer = await getProfileViewerState(profile.userId);

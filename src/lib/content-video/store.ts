@@ -191,7 +191,7 @@ export async function getPublishedContentVideo(slug: string, type: SourceType = 
     }
 }
 
-export type PublishedContentVideoListing = PublishedContentVideo & {type: SourceType; slug: string};
+export type PublishedContentVideoListing = PublishedContentVideo & {type: SourceType; slug: string; sourceTitle: string};
 
 /** Every published page video, newest first, for the video sitemap. Empty when the database is unreachable. */
 export async function listPublishedContentVideos(): Promise<PublishedContentVideoListing[]> {
@@ -212,9 +212,38 @@ export async function listPublishedContentVideos(): Promise<PublishedContentVide
             title: row.plan?.title || row.source_title,
             hookText: row.plan?.hookText ?? "",
             timeline: [],
-            publishedAt: row.published_at!
+            publishedAt: row.published_at!,
+            sourceTitle: row.source_title
         }));
     } catch {
         return [];
+    }
+}
+
+/** One published video with its source page and timeline: what a /videos watch page shows. */
+export async function getPublishedVideoForWatch(type: SourceType, slug: string): Promise<PublishedContentVideoListing | null> {
+    if (!getSupabaseUrl() || !getSupabaseServiceKey()) return null;
+    try {
+        const response = await rest(
+            `admin_content_videos?source_type=eq.${type}&source_slug=eq.${encodeURIComponent(slug)}&archived_at=is.null&published_at=not.is.null&video_path=not.is.null&select=source_title,video_path,poster_path,duration_seconds,plan,timeline,published_at&order=published_at.desc&limit=1`,
+            {next: {revalidate: 900, tags: [CONTENT_VIDEO_CACHE_TAG]}}
+        );
+        if (!response.ok) return null;
+        const [row] = await response.json() as Array<Pick<ContentVideoRow, "source_title" | "video_path" | "poster_path" | "duration_seconds" | "plan" | "timeline" | "published_at">>;
+        if (!row?.video_path || !row.published_at) return null;
+        return {
+            type,
+            slug,
+            sourceTitle: row.source_title,
+            videoUrl: publicStorageUrl(row.video_path),
+            posterUrl: row.poster_path ? publicStorageUrl(row.poster_path) : null,
+            durationSeconds: row.duration_seconds === null ? null : Number(row.duration_seconds),
+            title: row.plan?.title || row.source_title,
+            hookText: row.plan?.hookText ?? "",
+            timeline: Array.isArray(row.timeline) ? row.timeline : [],
+            publishedAt: row.published_at
+        };
+    } catch {
+        return null;
     }
 }

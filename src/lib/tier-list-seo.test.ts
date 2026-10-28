@@ -33,18 +33,18 @@ test("canonical ranking path stays /tier-list and is not revived as /rankings", 
     assert.doesNotMatch(hub, /"\/en/);
 });
 
-test("optimized ranking pages have Top 100 SEO titles, headlines, and questions", () => {
+test("optimized ranking pages have answer-first Top 100 SEO titles, headlines, and questions", () => {
     const rankings = readRepo("src/data/rankings.ts");
     const expected: Array<[string, string, string]> = [
-        ["most-dangerous-animals", "Top 100 Most Dangerous Animals in the World, Ranked", "100 Most Dangerous Animals in the World"],
-        ["strongest-animals", "Top 100 Strongest Animals in the World, Ranked", "100 Strongest Animals in the World"],
-        ["smartest-animals", "Top 100 Smartest Animals — Animal Intelligence Ranked", "100 Smartest Animals Ranked"],
-        ["most-adaptable-animals", "Most Adaptable Animals — Top 100 Ranked", "100 Most Adaptable Animals"],
-        ["most-agile-animals", "Most Agile Animals — Top 100 Ranked", "100 Most Agile Animals"],
-        ["fastest-animals", "Fastest Animals in the World — Top 100 Ranked", "100 Fastest Animals in the World"],
-        ["animals-with-strongest-armor", "Animals with the Strongest Armor — Top 100 Ranked", "100 Animals with the Strongest Armor"],
-        ["animals-with-best-teamwork", "Animals with the Best Teamwork — Top 100 Ranked", "100 Animals with the Best Teamwork"],
-        ["most-resilient-animals", "Most Resilient Animals — Top 100 Ranked", "100 Most Resilient Animals"]
+        ["most-dangerous-animals", "Most Dangerous Animals in the World: Top 100 Ranked", "100 Most Dangerous Animals in the World"],
+        ["strongest-animals", "Strongest Animal in the World: Top 100 Ranked by Real Power", "100 Strongest Animals in the World"],
+        ["smartest-animals", "Smartest Animals in the World: Top 100 Ranked by Intelligence", "100 Smartest Animals Ranked"],
+        ["most-adaptable-animals", "Most Adaptable Animals in the World: Top 100 Ranked", "100 Most Adaptable Animals"],
+        ["most-agile-animals", "Most Agile Animals in the World: Top 100 Ranked", "100 Most Agile Animals"],
+        ["fastest-animals", "Fastest Animals in the World: Top 100 Ranked (240 mph #1)", "100 Fastest Animals in the World"],
+        ["animals-with-strongest-armor", "Animals with the Strongest Armor: Top 100 Ranked", "100 Animals with the Strongest Armor"],
+        ["animals-with-best-teamwork", "Animals with the Best Teamwork: Top 100 Ranked", "100 Animals with the Best Teamwork"],
+        ["most-resilient-animals", "Most Resilient Animals in the World: Top 100 Ranked", "100 Most Resilient Animals"]
     ];
 
     for (const [slug, seoTitle, headline] of expected) {

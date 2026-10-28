@@ -6,6 +6,8 @@ import {contentVideoBusy, resumeStatus, startContentVideoJob} from "@/lib/conten
 import {getContentVideo, insertContentVideo, listContentVideos, spentTodayUSD, updateContentVideo, usedSourceSlugs} from "@/lib/content-video/store";
 import {isSocialUploadRunning} from "@/lib/social/auto-share";
 import {listPosts} from "@/lib/social/store";
+import {submitIndexNow} from "@/lib/indexnow";
+import {videoWatchPath} from "@/lib/video-sitemap";
 
 // Unattended page videos, run by the VM timer (POST /api/cron/video-auto-generate):
 // each run makes one video from a random page family and a random page of it
@@ -24,6 +26,7 @@ async function publishIfReady(id: string) {
     const row = await getContentVideo(id);
     if (!row || row.status !== "ready" || row.published_at || row.archived_at) return false;
     await updateContentVideo(id, {published_at: new Date().toISOString()});
+    void submitIndexNow([videoWatchPath(row.source_type, row.source_slug), "/videos"]);
     console.info(`[video-auto-generate] published ${row.source_type}/${row.source_slug}`);
     return true;
 }

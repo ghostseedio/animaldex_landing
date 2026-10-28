@@ -14,6 +14,7 @@ import {traceRequestAmplification} from "@/lib/request-trace";
 import {
     applyEnglishOnlyDetailLinkHeader,
     closedSeoNamespaceNotFoundResponse,
+    closedSeoRedirectPath,
     resolveClosedSeoNamespacePath
 } from "@/lib/closed-seo-namespaces";
 import {matchCollapsedIdDetailPath} from "@/lib/english-detail-routes";
@@ -161,6 +162,12 @@ export async function middleware(request: NextRequest) {
 
         const closedNamespace = resolveClosedSeoNamespacePath(request.nextUrl.pathname);
         if (closedNamespace?.action === "block") {
+            const moved = closedSeoRedirectPath(request.nextUrl.pathname);
+            if (moved) {
+                const destination = request.nextUrl.clone();
+                destination.pathname = moved;
+                return NextResponse.redirect(destination, 308);
+            }
             return closedSeoNamespaceNotFoundResponse();
         }
 

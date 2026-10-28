@@ -32,7 +32,28 @@ export function trackPageView(url: string): void {
     });
 }
 
+/**
+ * GA4 reads event parameters named source / medium / campaign as traffic-source
+ * attribution, so UI labels like "drawer" or "chip" showed up as session sources
+ * (Oct 2026 audit). They are sent as ui_source / ui_medium / ui_campaign instead.
+ */
+export function analyticsEventParameters(parameters: Record<string, string | number | boolean | undefined>) {
+    const renamed: Record<string, string | number | boolean | undefined> = {};
+    for (const [key, value] of Object.entries(parameters)) {
+        renamed[key === "source" || key === "medium" || key === "campaign" ? `ui_${key}` : key] = value;
+    }
+    return renamed;
+}
+
 export function trackEvent(name: string, parameters: Record<string, string | number | boolean | undefined> = {}): void {
     if (!isGoogleAnalyticsEnabled() || typeof window === "undefined" || !window.gtag) return;
-    window.gtag("event", name, parameters);
+    window.gtag("event", name, analyticsEventParameters(parameters));
+}
+
+/** Which app store an outbound link goes to, or null: the "store_click" key event (GA4 had no conversion events, Oct 2026). */
+export function storeForHref(href: string | null | undefined): "app_store" | "google_play" | null {
+    if (!href) return null;
+    if (/^https?:\/\/(apps|itunes)\.apple\.com\//i.test(href)) return "app_store";
+    if (/^https?:\/\/play\.google\.com\/store\//i.test(href)) return "google_play";
+    return null;
 }

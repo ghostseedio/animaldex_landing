@@ -1,4 +1,5 @@
 import "server-only";
+import {submitIndexNow} from "@/lib/indexnow";
 import {randomUUID} from "crypto";
 import type {BlogPost} from "@/data/blog/types";
 import {saveContentEntry} from "@/lib/admin-content";
@@ -234,6 +235,7 @@ async function generateMetered(input: GenerateInput, log: (line: string) => void
     else {
         await saveContentEntry("blog", slug, assembled.post, publish);
         log(publish ? `Published at /blog/${slug}` : `Saved draft /blog/${slug}`);
+        if (publish) void submitIndexNow([`/blog/${slug}`]);
     }
 
     return {

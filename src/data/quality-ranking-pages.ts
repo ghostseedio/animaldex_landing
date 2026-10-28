@@ -155,8 +155,8 @@ export const qualityRankingPages: RankingPage[] = [
         qualities: ["Loyalty"],
         title: "Most Loyal Animals: Top 10 Ranked",
         headline: "Most Loyal Animals",
-        seoTitle: "Most Loyal Animals: 10 Animals That Bond for Life",
-        description: "The most loyal animals, from wolves and dogs to albatrosses, swans and geese that pair for life, ranked from AnimalDex loyalty trait data.",
+        seoTitle: "Most Loyal Animals in the World: 10 That Bond for Life",
+        description: "The gray wolf tops the most loyal animals, with dogs, albatrosses, swans and geese that pair for life close behind. See all 10 and what makes them stay.",
         immediateQuestion: "What is the most loyal animal?",
         searchIntents: [
             "most loyal animals",

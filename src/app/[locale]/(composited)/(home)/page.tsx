@@ -91,7 +91,7 @@ export default async function Home({params}: HomePageProps) {
     const rootSiteUrl = getSiteUrl();
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
-    const appSchemaDescription = "Discover what animals can teach you. Every encounter is a chance to learn how they succeed.";
+    const appSchemaDescription = "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Identify, collect and battle the animals you meet.";
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)

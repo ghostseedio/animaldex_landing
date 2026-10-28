@@ -57,6 +57,24 @@ function buildVerdictMetaDescription(quickVerdict: string | undefined, fallback:
     return `${trimmed}…`;
 }
 
+/**
+ * The verdict's first sentence (relevance), then a reason to click instead of a
+ * full answer: Oct 2026 Search Console had dozens of these pages at position 7–9
+ * with near-zero CTR, because the snippet already said who wins. When the loser
+ * takes some of the page's scenarios, the description says so.
+ */
+function buildComparisonMetaDescription(quickVerdict: string | undefined, fallback: string, scenarios: Array<{winner: string}>, nameA: string, nameB: string) {
+    const lead = buildVerdictMetaDescription((quickVerdict ?? "").replace(/\s+/g, " ").trim().match(/^.+?[.!?](?=\s|$)/)?.[0] ?? quickVerdict, fallback);
+    const winsA = scenarios.filter((scenario) => scenario.winner === "animalA").length;
+    const winsB = scenarios.filter((scenario) => scenario.winner === "animalB").length;
+    const underdog = winsA >= winsB ? (winsB ? {name: nameB, wins: winsB} : null) : (winsA ? {name: nameA, wins: winsA} : null);
+    const tease = underdog
+        ? ` But the ${underdog.name.toLowerCase()} wins ${underdog.wins} of ${scenarios.length} fight scenarios. See where.`
+        : scenarios.length ? ` ${scenarios.length} fight scenarios, the stats and the deciding edge.` : " The stats, size and the deciding edge, side by side.";
+    const text = `${lead}${tease}`;
+    return text.length <= 165 ? text : lead;
+}
+
 export async function generateMetadata({params}: Props): Promise<Metadata> {
     redirectPublishedReverse(params.locale, params.slug);
     const data = await getComparisonPageData(params.slug);
@@ -83,7 +101,7 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
         locale: params.locale,
         pathname: `/comparisons/${challenge.slug}`,
         title: challenge.title,
-        description: buildVerdictMetaDescription(challenge.quickVerdict, challenge.description),
+        description: buildComparisonMetaDescription(challenge.quickVerdict, challenge.description, challenge.scenarioBreakdown ?? [], animalA.name, animalB.name),
         keywords: [...challenge.searchIntents, challenge.comparisonType, animalA.name, animalB.name],
         featuredImage: challenge.featuredImage,
         publishedAt: challenge.publishedAt,

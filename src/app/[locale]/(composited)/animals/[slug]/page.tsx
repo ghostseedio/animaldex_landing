@@ -1,6 +1,6 @@
 import {Metadata} from "next";
 import Image from "next/image";
-import {notFound, redirect} from "next/navigation";
+import {notFound, permanentRedirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
@@ -23,7 +23,8 @@ import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/re
 import {type EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
 import {buildSpeciesAskSuggestions, SPECIES_ASK_DAILY_LIMITS, type SpeciesAskGrounding} from "@/lib/species-ask";
-import {buildSpeciesAtAGlance, speciesHasSubstantiveFieldGuide} from "@/lib/species-field-guide";
+import {buildSpeciesAtAGlance} from "@/lib/species-field-guide";
+import {isSpeciesPageIndexable} from "@/lib/species-indexability";
 import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
 import {comparisonPairHref} from "@/data/species-comparisons";
 import {getSpeciesBattles} from "@/data/comparison-battles";
@@ -65,7 +66,6 @@ import {getSpeciesSubtitleStoryBySlug} from "@/data/species-subtitle-stories";
 import {getLegendaryEarthBeastSubtitle} from "@/data/legendary-earth-beasts-species";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
-import {shouldNoindexLifeStageAliasSlug} from "@/lib/species-life-stage-policy";
 import {
     getLegendaryEarthBeast,
     getRelatedLegendaryEarthBeasts,
@@ -101,15 +101,43 @@ type SpeciesTextLink = {
     slug: string;
 };
 
-/** "Gray Wolf Meaning & Symbolism: Cooperation" (≤ 60 chars), else without the principle. */
-function buildSpeciesMeaningTitle(name: string, principle: string | null) {
-    const withPrinciple = principle ? `${name} Meaning & Symbolism: ${principle}` : null;
-    if (withPrinciple && withPrinciple.length <= 60) return withPrinciple;
-    const plain = `${name} Meaning, Symbolism & Life Lessons`;
-    return plain.length <= 60 ? plain : `${name} Meaning & Symbolism`;
+/**
+ * "Gray Wolf: Facts, Meaning & Symbolism" (≤ 60 chars), shorter when the name is long.
+ * Searches name the animal ("xeme", "tenkile", "bobcat") far more than its meaning,
+ * so the facts come first and the meaning stays (Oct 2026: the meaning-only titles
+ * drew impressions at position ~7 but almost no clicks).
+ */
+function buildSpeciesTitle(name: string) {
+    for (const title of [`${name}: Facts, Meaning & Symbolism`, `${name}: Facts & Meaning`]) {
+        if (title.length <= 60) return title;
+    }
+    return name;
 }
 
-/** Leads with the meaning; trimmed to 155 at a word boundary. */
+function firstSentence(text: string) {
+    const clean = text.replace(/\s+/g, " ").trim();
+    const match = clean.match(/^.+?[.!?](?=\s|$)/);
+    return (match ? match[0] : clean).trim();
+}
+
+/**
+ * What the animal is (the field guide's first sentence), then its meaning and the
+ * chat: "Ask the Cheetah anything". ≤ 155 characters, cut at a word boundary.
+ */
+function buildSpeciesDescription(name: string, scientificName: string, summary: string, principle: string | null) {
+    const tail = `${principle ? ` Symbol of ${principle.toLowerCase()}.` : ""} Ask the ${name} anything: it answers as itself.`;
+    const named = scientificName && scientificName.toLowerCase() !== name.toLowerCase() ? `${name} (${scientificName})` : name;
+    let lead = firstSentence(summary);
+    lead = lead.toLowerCase().startsWith(name.toLowerCase()) ? `${named}${lead.slice(name.length)}` : `${named}: ${lead}`;
+    const room = 155 - tail.length;
+    if (lead.length > room) {
+        const cut = lead.slice(0, Math.max(room - 1, 40));
+        lead = `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
+    }
+    return `${lead}${tail}`.slice(0, 160);
+}
+
+/** Leads with the meaning (for animals with no field-guide summary); trimmed to 155 at a word boundary. */
 function buildSpeciesMeaningDescription(name: string, principle: string, coreLesson: string, bestFor: string[]) {
     const qualities = bestFor.slice(0, 3).map((quality) => quality.toLowerCase());
     const helps = qualities.length ? ` What it teaches about ${qualities.join(", ")}, spirit animal and dream meaning.` : " Spirit animal and dream meaning.";
@@ -332,14 +360,15 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         return {};
     }
 
-    // AnimalDex is not an animal wiki: species pages target meaning, symbolism,
-    // spirit-animal and "what it teaches" searches, answered from the principle
-    // data. Facts stay on the page; /animal-powers owns "what can we learn".
+    // People search the animal itself first, then its meaning; the page answers
+    // both and lets them talk to it. /animal-powers owns "what can we learn".
     const metaPrinciple = resolveSpeciesBehaviorProfileForPage(entry.slug);
-    const title = buildSpeciesMeaningTitle(entry.name, metaPrinciple?.principle ?? null);
-    const description = metaPrinciple
-        ? buildSpeciesMeaningDescription(entry.name, metaPrinciple.principle, metaPrinciple.coreLesson, metaPrinciple.bestFor)
-        : buildSpeciesMetaDescription(entry.name, entry.analysis.summary);
+    const title = buildSpeciesTitle(entry.name);
+    const description = entry.analysis.summary?.trim()
+        ? buildSpeciesDescription(entry.name, entry.analysis.scientificName?.trim() ?? "", entry.analysis.summary, metaPrinciple?.principle ?? null)
+        : metaPrinciple
+            ? buildSpeciesMeaningDescription(entry.name, metaPrinciple.principle, metaPrinciple.coreLesson, metaPrinciple.bestFor)
+            : buildSpeciesMetaDescription(entry.name, entry.analysis.summary);
 
     const metadata = buildContentMetadata({
         locale,
@@ -366,20 +395,7 @@ export async function generateMetadata({params}: SpeciesPageProps): Promise<Meta
         tags: entry.searchIntents
     });
 
-    const indexable = speciesHasSubstantiveFieldGuide({
-        name: entry.name,
-        summary: entry.analysis.summary,
-        habitat: entry.analysis.habitat,
-        nativeRange: entry.analysis.nativeRange,
-        identification: entry.analysis.identification,
-        behaviorTraits: entry.premiumDetails.behaviorTraits,
-        interestingFacts: entry.premiumDetails.whyInteresting,
-        diet: entry.databaseSource?.fieldGuide.dietSummary ?? null,
-        predators: entry.databaseSource?.fieldGuide.predatorsSummary ?? null,
-        sleepPattern: entry.databaseSource?.fieldGuide.sleepPattern ?? null,
-        lifespan: entry.databaseSource?.fieldGuide.lifespanEstimate ?? null
-    }) && !(entry.databaseSource && !entry.databaseSource.seoIndexable)
-        && !shouldNoindexLifeStageAliasSlug(slug, entry.slug);
+    const indexable = isSpeciesPageIndexable(entry, slug);
 
     // Surface the story videos to social scrapers (og:video). The underlying
     // fetch is deduped with the page body's own getSpeciesStoryMedia call.
@@ -402,7 +418,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     }
 
     if (entry.slug !== slug.trim().toLowerCase()) {
-        redirect(getLocalePath(locale, `/animals/${entry.slug}`));
+        permanentRedirect(getLocalePath(locale, `/animals/${entry.slug}`));
     }
 
     // Daily ISR: these fetches' revalidate lowers the route's `revalidate = false`.

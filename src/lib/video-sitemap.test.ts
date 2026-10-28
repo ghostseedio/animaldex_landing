@@ -4,7 +4,7 @@ import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import type {PublishedContentVideoListing} from "@/lib/content-video/store";
-import {serializeVideoSitemapXml, videoPageUrl} from "@/lib/video-sitemap";
+import {serializeVideoSitemapXml, videoPageUrl, videoWatchUrl} from "@/lib/video-sitemap";
 
 const site = "https://animaldex.app";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -19,6 +19,7 @@ const video = (overrides: Partial<PublishedContentVideoListing>): PublishedConte
     hookText: "Who wins & why",
     timeline: [],
     publishedAt: "2026-10-10T07:04:24Z",
+    sourceTitle: "Tiger vs Lion: Who Would Win?",
     ...overrides
 });
 
@@ -26,6 +27,7 @@ test("video pages use canonical paths, rankings under /tier-list", () => {
     assert.match(videoPageUrl(site, "comparison", "tiger-vs-lion"), /\/comparisons\/tiger-vs-lion$/);
     assert.match(videoPageUrl(site, "ranking", "fastest-animals"), /\/tier-list\/fastest-animals$/);
     assert.match(videoPageUrl(site, "location", "bali"), /\/locations\/bali$/);
+    assert.equal(videoWatchUrl(site, "ranking", "fastest-animals"), "https://animaldex.app/videos/ranking/fastest-animals");
 });
 
 test("video sitemap lists one escaped video per page and skips videos without a thumbnail", () => {
@@ -39,7 +41,8 @@ test("video sitemap lists one escaped video per page and skips videos without a 
     assert.match(xml, /<video:title>Tiger vs Lion<\/video:title>/);
     assert.match(xml, /Who wins &amp; why/);
     assert.match(xml, /<video:duration>42<\/video:duration>/);
-    assert.doesNotMatch(xml, /older\.mp4|locations\/bali/);
+    assert.match(xml, /<loc>https:\/\/animaldex\.app\/videos\/comparison\/tiger-vs-lion<\/loc>/);
+    assert.doesNotMatch(xml, /older\.mp4|bali/);
 });
 
 test("robots.txt advertises the video sitemap", () => {

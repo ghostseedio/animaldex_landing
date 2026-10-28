@@ -22,6 +22,11 @@ import {publishedAnimalFusions} from "@/data/animal-fusions";
 import {ANIMAL_HYBRID_CANONICAL_BASE_PATH, animalHybridEntries} from "@/data/animal-hybrids";
 import {getBehaviorLessonIndex, getLocalPrincipleSlugs, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {getSitemapSpeciesEntries} from "@/data/database-species-pages";
+import {listPublishedContentVideos} from "@/lib/content-video/store";
+import {videoWatchPath} from "@/lib/video-sitemap";
+import publishedSeoSlugs from "@/data/published-seo-slugs.json";
+import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
+import {isSpeciesPageIndexable} from "@/lib/species-indexability";
 import {getDiscoverCapturePostsForSitemap} from "@/data/discover-timeline";
 import {discoverPostPath} from "@/lib/discover-post";
 import {speciesEntries} from "@/data/species";
@@ -109,6 +114,17 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             return [];
         })
     ]);
+    // Species pages: exactly the slugs the route serves (its static params, the
+    // Oct snapshot), and only those whose page is indexable. The live catalog
+    // listed newer species the route 404s and thin ones it noindexes.
+    const speciesUpdatedAt = new Map(sitemapSpeciesEntries.map((entry) => [entry.slug, entry.updatedAt]));
+    const indexableSpeciesSlugs = Array.from(new Set(publishedSeoSlugs.animals)).filter((slug) => {
+        const entry = getPublishedSpeciesForContent(slug);
+        return entry !== null && entry.slug === slug && isSpeciesPageIndexable(entry, slug);
+    });
+    const servedLessonSlugs = new Set(publishedSeoSlugs.lessons);
+    // Each page video's watch page (/videos/<type>/<slug>) and the /videos hub; English only.
+    const watchPages = (await listPublishedContentVideos().catch(() => [])).filter((video) => video.posterUrl);
 
     const localizedEntries = localeConfig.locales.flatMap((locale) => {
         // Keep /id in the sitemap as a real Indonesian homepage. Do not request
@@ -167,9 +183,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(entry.updatedAt)
         }));
 
-        const speciesPages = sitemapSpeciesEntries.map((entry) => ({
-            url: getAbsoluteUrl(locale, `/animals/${entry.slug}`),
-            lastModified: new Date(entry.updatedAt)
+        const speciesPages = indexableSpeciesSlugs.map((slug) => ({
+            url: getAbsoluteUrl(locale, `/animals/${slug}`),
+            ...(speciesUpdatedAt.has(slug) ? {lastModified: new Date(speciesUpdatedAt.get(slug)!)} : {})
         }));
 
         const collectorLandingPages = collectorPages.map((entry) => ({
@@ -223,7 +239,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             .map((item) => ({
                 url: getAbsoluteUrl(locale, `/qualities/${item.principleSlug}`)
             }));
-        const behaviorLessonPageEntries = behaviorLessons.map((lesson) => ({
+        // Only lesson pages the route serves (its static params); catalog-only
+        // lessons 404 (e.g. /animal-powers/asian-fairy-bluebird, Oct 2026).
+        const behaviorLessonPageEntries = behaviorLessons.filter((lesson) => servedLessonSlugs.has(lesson.slug)).map((lesson) => ({
             url: getAbsoluteUrl(locale, `/animal-powers/${lesson.slug}`)
         }));
         const pokemonAnimalGenerationEntries = pokemonAnimalGenerations.map((generation) => ({
@@ -296,7 +314,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ...legendaryEarthBeastPageEntries,
             ...discoverPostEntries,
             ...supportArticleEntries,
-            ...guideListingEntries
+            ...guideListingEntries,
+            ...(watchPages.length ? [{url: getAbsoluteUrl(locale, "/videos")}] : []),
+            ...watchPages.map((video) => ({url: getAbsoluteUrl(locale, videoWatchPath(video.type, video.slug)), lastModified: new Date(video.publishedAt)}))
         ];
     });
 
