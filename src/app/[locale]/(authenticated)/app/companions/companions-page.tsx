@@ -28,6 +28,51 @@ import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 const NEON = "#A7F432";
 
+/** The group chat row says what it is for until it has been tried (iOS `ProMoments.secondCompanion`). */
+const GROUP_CHAT_INTRO_SEEN_KEY = "animaldex:companions:group-chat-intro-seen";
+
+function readIntroSeen(): boolean {
+    try {
+        return window.localStorage.getItem(GROUP_CHAT_INTRO_SEEN_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * "Talk to several animals": the group chat's own picker, then the chat.
+ * Once a second animal is yours, the row says what it is for, until tried.
+ */
+function GroupChatRow({isNew}: {isNew: boolean}) {
+    return (
+        <Link
+            href="/app/companions/group"
+            onClick={() => {
+                try {
+                    window.localStorage.setItem(GROUP_CHAT_INTRO_SEEN_KEY, "1");
+                } catch {
+                    // Shown again next time, then.
+                }
+            }}
+            className="flex min-h-14 items-center gap-3.5 border-b border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:bg-white/[0.05] md:px-5"
+        >
+            <span aria-hidden="true" className="grid h-14 w-14 shrink-0 place-items-center" style={{color: NEON}}>
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor">
+                    <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h8A2.5 2.5 0 0 1 16 6.5v5a2.5 2.5 0 0 1-2.5 2.5H8l-3.5 3v-3.2A2.5 2.5 0 0 1 3 11.5v-5Zm15 2.5h.5A2.5 2.5 0 0 1 21 11.5v5a2.5 2.5 0 0 1-1.5 2.3V22L16 19h-4.5a2.5 2.5 0 0 1-2.3-1.5H13.5A4.5 4.5 0 0 0 18 13V9Z" />
+                </svg>
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                    <span className="truncate text-base font-bold text-white">{COMPANIONS_COPY.talkToSeveral}</span>
+                    {isNew ? <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{backgroundColor: NEON}} /> : null}
+                </span>
+                {isNew ? <span className="mt-0.5 block text-sm leading-5 text-white/60">{COMPANIONS_COPY.talkToSeveralIntro}</span> : null}
+            </span>
+            <AppIcon name="chevron" className="h-4 w-4 shrink-0 text-white/35" />
+        </Link>
+    );
+}
+
 function CompanionArt({slug}: {slug: string | null}) {
     const [failed, setFailed] = useState(false);
     if (!slug || failed) return <span aria-hidden="true" className="h-14 w-14 shrink-0" />;
@@ -72,6 +117,8 @@ function CompanionRow({row}: {row: CompanionSummary}) {
 
 export default function CompanionsPage() {
     const {rows, didLoad, available, reload} = useCompanions();
+    const [groupIntroSeen, setGroupIntroSeen] = useState(true);
+    useEffect(() => setGroupIntroSeen(readIntroSeen()), []);
 
     useEffect(() => {
         void reload();
@@ -115,6 +162,7 @@ export default function CompanionsPage() {
                 </div>
             ) : (
                 <div className="-mx-4 border-t border-white/[0.08] md:mx-0">
+                    <GroupChatRow isNew={rows.length >= 2 && !groupIntroSeen} />
                     {rows.map((row) => <CompanionRow key={row.speciesProfileId} row={row} />)}
                 </div>
             )}
