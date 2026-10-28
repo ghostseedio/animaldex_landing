@@ -1,17 +1,34 @@
 "use client";
 
-export type AnimalDetailTab = "learn" | "stats" | "play";
+/**
+ * `learn | stats | play` on a species page; `about | bond | battle` on a card
+ * (docs/companion-loop/SPEC.md, phase 3: About · Bond · Battle on your own
+ * card, About · Battle on anyone else's).
+ */
+export type AnimalDetailTab = "learn" | "stats" | "play" | "about" | "bond" | "battle";
 
 export type AnimalDetailLayout = "compact" | "wide";
 
-const TABS: Array<{id: AnimalDetailTab; label: string}> = [
-    {id: "learn", label: "Learn"},
-    {id: "stats", label: "Stats"},
-    {id: "play", label: "Play"}
-];
+const LABELS: Record<AnimalDetailTab, string> = {
+    learn: "Learn",
+    stats: "Stats",
+    play: "Play",
+    about: "About",
+    bond: "Bond",
+    battle: "Battle"
+};
+
+const DEFAULT_TABS: AnimalDetailTab[] = ["learn", "stats", "play"];
 
 function TabIcon({tab, className}: {tab: AnimalDetailTab; className: string}) {
-    if (tab === "learn") {
+    if (tab === "bond") {
+        return (
+            <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" strokeLinejoin="round" />
+            </svg>
+        );
+    }
+    if (tab === "learn" || tab === "about") {
         return (
             <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M6 3.5h8l4 4V21H6z" strokeLinejoin="round" />
@@ -38,11 +55,14 @@ export default function AnimalDetailTabBar({
     value,
     onChange,
     labels,
+    tabs = DEFAULT_TABS,
     layout = "compact"
 }: {
     value: AnimalDetailTab;
     onChange: (value: AnimalDetailTab) => void;
     labels?: Partial<Record<AnimalDetailTab, string>>;
+    /** Which tabs, in order. */
+    tabs?: AnimalDetailTab[];
     layout?: AnimalDetailLayout;
 }) {
     const wide = layout === "wide";
@@ -51,11 +71,12 @@ export default function AnimalDetailTabBar({
         <div
             role="tablist"
             aria-label="Animal details"
-            className={`grid grid-cols-3 gap-px border border-line-300 bg-line-300 ${
+            className={`grid ${tabs.length === 2 ? "grid-cols-2" : "grid-cols-3"} gap-px border border-line-300 bg-line-300 ${
                 wide ? "lg:w-fit" : ""
             }`}
         >
-            {TABS.map((tab) => {
+            {tabs.map((id) => {
+                const tab = {id, label: LABELS[id]};
                 const active = value === tab.id;
                 return (
                     <button

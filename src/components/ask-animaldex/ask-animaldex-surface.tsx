@@ -43,6 +43,10 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
 
     if (isOpen) return <AskDrawer labels={labels} />;
 
+    // A card has its own Talk to it button in its action bar, which replaces
+    // this one there (docs/companion-loop/SPEC.md, phase 3).
+    if (subject.kind === "capture") return null;
+
     // The authenticated app carries a floating tab bar at the bottom of the
     // screen on mobile, so the launcher clears it there rather than sitting on
     // top of it.

@@ -29,7 +29,7 @@ export default function SpeciesDetailTabs({
     play
 }: SpeciesDetailTabsProps) {
     const [activeTab, setActiveTab] = useState<SpeciesDetailTab>(defaultTab);
-    const panels: Record<SpeciesDetailTab, ReactNode> = {learn, stats, play};
+    const panels: Partial<Record<SpeciesDetailTab, ReactNode>> = {learn, stats, play};
 
     return (
         // The same panel as the Animal Power guide above it: full green-tinted

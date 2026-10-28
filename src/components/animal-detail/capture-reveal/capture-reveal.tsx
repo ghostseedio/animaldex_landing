@@ -1,12 +1,12 @@
 "use client";
 
 import {useEffect, useState} from "react";
-import Link from "@/app/[locale]/_components/link";
-import {CONTINUATION_NOTE, type RewardShowcaseItem, newSpeciesMessage} from "@/lib/capture-reveal";
+import {type RewardShowcaseItem, newSpeciesMessage} from "@/lib/capture-reveal";
+import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 /**
  * What a newly identified capture opens with: the discovery, the reward, and
- * where to go next. Ported from iOS `ScanResultView.newSpeciesCard`, the reward
+ * the animal itself. Ported from iOS `ScanResultView.newSpeciesCard`, the reward
  * showcase and `ScanResultActionBar`'s continuation actions.
  */
 
@@ -101,35 +101,65 @@ export function RewardShowcase({items, onFinished}: {items: RewardShowcaseItem[]
 }
 
 /**
- * The closing beat of the reveal: saved, then where next. The capture is
- * already in the collection — the pipeline saved it — so this offers where to
- * go, never another save.
+ * The reveal's last beat (docs/companion-loop/SPEC.md, phase 3): the animal
+ * you just met, its Power, and its lesson in a line, in its own voice. The
+ * capture is already saved, so the way on is to talk to it, or to see the
+ * card. The animal is its icon art, never the capture photo.
  */
-export function CaptureContinuationBar() {
+export function CaptureMeetBeat({
+    slug,
+    animalName,
+    powerName,
+    lesson,
+    onTalk,
+    onSeeCard
+}: {
+    slug: string;
+    animalName: string;
+    powerName: string | null;
+    /** The Power's motto, else the first sentence of its lesson. */
+    lesson: string | null;
+    onTalk: () => void;
+    onSeeCard: () => void;
+}) {
+    const [artFailed, setArtFailed] = useState(false);
     return (
-        // Above the floating Ask AnimalDex pill, which on a capture card sits
-        // just over the tab bar and would otherwise cover "Scan Another".
-        <div className="pointer-events-none fixed inset-x-0 bottom-[9.5rem] z-30 flex justify-center px-4 font-sans lg:bottom-6">
-            <div className="pointer-events-auto flex w-full max-w-md flex-col gap-3 border border-white/10 bg-black/85 p-4 shadow-2xl backdrop-blur">
-                <p className="flex items-center gap-2 text-sm text-white">
-                    <span aria-hidden="true" className="text-[13px] font-bold" style={{color: NEON}}>✓</span>
-                    {CONTINUATION_NOTE}
-                </p>
+        <div className="pointer-events-none fixed inset-x-0 bottom-[5.5rem] z-30 flex justify-center px-4 font-sans lg:bottom-6">
+            <div className="pointer-events-auto flex w-full max-w-md flex-col gap-3 border border-white/10 bg-black/90 p-5 shadow-2xl backdrop-blur" role="dialog" aria-label={animalName}>
+                <div className="flex items-center gap-3.5">
+                    {!artFailed ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={getSpeciesImageRoute(slug)}
+                            alt=""
+                            className="h-14 w-14 shrink-0 object-contain"
+                            onError={() => setArtFailed(true)}
+                        />
+                    ) : null}
+                    <div className="min-w-0">
+                        <p className="truncate font-display text-xl font-black text-white">{animalName}</p>
+                        {powerName ? (
+                            <p className="truncate text-sm font-bold" style={{color: NEON}}>{powerName}</p>
+                        ) : null}
+                    </div>
+                </div>
+                {lesson ? <p className="text-[15px] leading-6 text-white/80">{lesson}</p> : null}
                 <div className="flex gap-2">
-                    <Link
-                        href="/app/collection"
+                    <button
+                        type="button"
+                        onClick={onTalk}
                         className="flex min-h-12 flex-1 items-center justify-center text-sm font-black text-black/90"
                         style={{backgroundColor: NEON}}
                     >
-                        View in My Dex
-                    </Link>
-                    <Link
-                        href="/app/capture"
-                        className="flex min-h-12 flex-1 items-center justify-center gap-2 border border-white/10 bg-white/[0.06] text-sm font-black"
-                        style={{color: NEON}}
+                        Talk to it
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onSeeCard}
+                        className="flex min-h-12 flex-1 items-center justify-center border border-white/10 bg-white/[0.06] text-sm font-black text-white"
                     >
-                        Scan Another
-                    </Link>
+                        See your card
+                    </button>
                 </div>
             </div>
         </div>
