@@ -99,7 +99,7 @@ test("Training crossing a level shows a chip and a rise line", () => {
 test("Prove it current once Training is done; the preview starts from the card's XP", () => {
     const loop = powerLoop(input({xp: 100, training: {...TRAINING, completed: true}}));
     assert.deepEqual(loop.steps.map((step) => step.status), ["done", "current", "upcoming"]);
-    assert.deepEqual(loop.steps[0].caption, ["Training complete"]);
+    assert.deepEqual(loop.steps[0].caption, ["Lesson check passed"]);
     assert.equal(loop.next.step, "prove");
     assert.equal(loop.next.action, "proveIt");
     assert.equal(loop.next.title, "Next: Prove it");

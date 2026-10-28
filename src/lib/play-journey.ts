@@ -34,8 +34,8 @@ export const PLAY_JOURNEY_STEP_NUMBER: Record<Exclude<PlayJourneyStep, "locked">
 };
 
 export const PLAY_JOURNEY_STEP_TITLE: Record<Exclude<PlayJourneyStep, "locked">, string> = {
-    train: "Train",
-    proveIt: "Prove it",
+    train: "Lesson check",
+    proveIt: "Animal Trial",
     battleAndFuse: "Battle & Fuse"
 };
 
@@ -371,11 +371,11 @@ export const PLAY_JOURNEY_COPY = {
     fused: "FUSED",
     trialRunning: "Trial running",
     proofUnderReview: "Proof under review",
-    trainingMissed: "Training missed",
+    trainingMissed: "Lesson check missed",
     proofNotAccepted: "Proof not accepted",
     emptyTitle: "Catch an animal to start",
-    emptyDetail: "Every animal you catch has a Power to earn. Train, prove it, then battle and fuse.",
-    rowHint: "Opens this animal's Play tab"
+    emptyDetail: "Every animal you catch has a Power to earn. Pass its lesson check, complete a Trial with it, then battle and fuse.",
+    rowHint: "Opens this animal's Battle tab"
 } as const;
 
 export const lockedSummaryLine = (count: number) => `${count} locked · try again tomorrow`;

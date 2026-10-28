@@ -4,7 +4,6 @@ import {useEffect, useMemo, useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
-import {apexGrowthMatchTitle, apexGrowthPresentation} from "@/data/apex-growth";
 import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-growth";
 import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
 import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
@@ -65,23 +64,6 @@ type SpeciesGrowthInteractiveProps = {
     labels: GrowthLabels;
 };
 
-function challengeStatusLabel(status: string) {
-    switch (status) {
-        case "approved":
-            return "Challenge approved";
-        case "rejected":
-            return "Try proof again";
-        case "accepted":
-            return "In progress";
-        case "proof_submitted":
-            return "Checking proof";
-        case "generated":
-            return "Challenge ready";
-        default:
-            return "Challenge ended";
-    }
-}
-
 type ComparisonTier = "E" | "D" | "C" | "B" | "A" | "S";
 
 const COMPARISON_STAKE_BY_TIER: Record<ComparisonTier, number> = {
@@ -115,111 +97,6 @@ function inferredTierStake(stake: number) {
     if (stake <= 15) return 15;
     if (stake <= 20) return 20;
     return 25;
-}
-
-function ApexMatchCard({growth, labels}: {growth: SpeciesGrowthContext; labels: GrowthLabels}) {
-    const match = growth.match;
-    const isPublicPower = !growth.hasCapture;
-
-    if (!match) {
-        return null;
-    }
-
-    const accent = match.strength === "strong" || match.strength === "apexReached"
-        ? "text-primary-400"
-        : match.strength === "partial"
-            ? "text-cyan-300"
-            : match.strength === "offPath"
-                ? "text-orange-300"
-                : "text-white/40";
-    const title = isPublicPower
-        ? match.strength === "strong"
-            ? "A power for your Apex Path"
-            : match.strength === "partial"
-                ? "A possible Apex power"
-                : match.strength === "powerUnavailable"
-                    ? "Reading this Animal Power"
-                    : "Explore this Animal Power"
-        : apexGrowthMatchTitle(match);
-    const explanation = isPublicPower
-        ? match.strength === "strong" || match.strength === "partial"
-            ? "This public capture shows a power that could support qualities on your path. Challenges use animals in your own collection."
-            : match.strength === "offPath"
-                ? "This public capture has a useful Animal Power, even though it is not one of the powers your path needs most right now."
-                : match.strength === "powerUnavailable"
-                    ? "This public capture's Animal Power is still loading."
-                    : match.strength === "apexReached"
-                        ? "Explore how this public capture's Animal Power works in the real world."
-                        : "This is a public capture, so you can explore its Animal Power here. Personal Apex matches and challenges use your Wild Profile and animals you own."
-        : match.reason;
-
-    return (
-        <section className={`  border bg-[#1f1f1f] p-4 font-sans ${
-            match.strength === "partial"
-                ? "border-cyan-300/20"
-                : match.strength === "offPath"
-                    ? "border-orange-300/20"
-                    : match.strength === "strong" || match.strength === "apexReached"
-                        ? "border-primary-400/20"
-                        : "border-white/10"
-        }`}>
-            <div className="flex items-center gap-2">
-                <svg aria-hidden="true" viewBox="0 0 24 24" className={`h-4 w-4 ${accent}`} fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <circle cx="12" cy="12" r="7" />
-                    <circle cx="12" cy="12" r="2.5" />
-                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeLinecap="round" />
-                </svg>
-                <p className="text-[11px] font-semibold uppercase text-white/40">
-                    {isPublicPower ? "Public Animal Power" : labels.apexPathEyebrow}
-                </p>
-            </div>
-            {!isPublicPower && growth.wildProfile?.apexAnimalName ? (
-                <p className="mt-3 text-xs font-medium text-white">
-                    You are training toward: {growth.wildProfile.apexAnimalName}
-                </p>
-            ) : null}
-            <div className="mt-3 space-y-1.5">
-                <h3 className="text-[17px] font-semibold text-white">{title}</h3>
-                <p className="text-xs font-medium leading-5 text-white/60">{explanation}</p>
-            </div>
-
-            {match.matchedQualities.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                    <p className="text-[11px] font-semibold text-white/40">This power can train</p>
-                    <div className="grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-2">
-                        {match.matchedQualities.map((quality) => (
-                            <span key={quality.key} className="rounded-full border border-primary-400/20 bg-black/15 px-2.5 py-2 text-[11px] font-semibold text-white">
-                                {quality.label}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            ) : null}
-
-            {!isPublicPower && match.neededQualities.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                    <p className="text-[11px] font-semibold text-white/40">Needed powers</p>
-                    <div className="grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-2">
-                        {match.neededQualities.slice(0, 3).map((quality) => (
-                            <span key={quality.key} className="rounded-full border border-white/10 bg-black/15 px-2.5 py-2 text-[11px] font-semibold text-white">
-                                {quality.label}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            ) : null}
-
-            {isPublicPower ? (
-                <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold leading-5 text-white/40">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <rect x="5" y="10" width="14" height="10" rx="2" />
-                        <path d="M9 10V7a4 4 0 0 1 7.3-2.3" strokeLinecap="round" />
-                    </svg>
-                    Own an animal with this power to use it in Growth challenges.
-                </p>
-            ) : null}
-        </section>
-    );
 }
 
 function PrincipleFusionModal({
@@ -467,9 +344,7 @@ export default function SpeciesGrowthInteractive({
 }: SpeciesGrowthInteractiveProps) {
     const router = useRouter();
     const [fusionOpen, setFusionOpen] = useState(false);
-    const [challengeError, setChallengeError] = useState<string | null>(null);
     const [comparisonError, setComparisonError] = useState<string | null>(null);
-    const [isPending, startTransition] = useTransition();
     const [isComparisonPending, startComparisonTransition] = useTransition();
     const [clientSignedIn, setClientSignedIn] = useState(false);
     // Comparison tools start folded. Opened state is per-visit, which is right:
@@ -496,10 +371,8 @@ export default function SpeciesGrowthInteractive({
         if (fusionOpen && receiverLocked) powerGateAnalytics.lockedFusionImpression(receiverSpeciesProfileId);
     }, [fusionOpen, receiverLocked, receiverSpeciesProfileId]);
 
-    const presentation = growth.match ? apexGrowthPresentation(growth.match) : null;
     const powerName = growth.principle?.principle ?? speciesName;
     const canFuse = Boolean(growth.primaryCaptureId && growth.principle && growth.fusionDonors.length > 0);
-    const canChallenge = Boolean(growth.challengeRequest);
 
     // Under the Power Loop bar the comparison tools and Fusion carry on step 3,
     // "Battle & Fuse" (its eyebrow is drawn above them, over the unlock rows),
@@ -519,64 +392,8 @@ export default function SpeciesGrowthInteractive({
     const compareCardClass = `  border p-3.5 ${wide ? "lg:h-full lg:  lg:p-6" : ""}`;
     const refresh = () => router.refresh();
 
-    const startChallenge = () => {
-        if (!growth.challengeRequest) {
-            return;
-        }
-
-        setChallengeError(null);
-        startTransition(() => {
-            void (async () => {
-                const response = await fetch("/api/app/apex-growth-challenge", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({action: "generate", ...growth.challengeRequest})
-                });
-                const payload = await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-                    setChallengeError(typeof payload.error === "string"
-                        ? payload.error
-                        : "Today's challenge could not be prepared. Check your connection and try again.");
-                    return;
-                }
-
-                refresh();
-            })();
-        });
-    };
-
-    const acceptChallenge = () => {
-        if (!growth.challenge?.id) {
-            return;
-        }
-
-        setChallengeError(null);
-        startTransition(() => {
-            void (async () => {
-                const response = await fetch("/api/app/apex-growth-challenge", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({action: "accept", challengeId: growth.challenge?.id})
-                });
-                const payload = await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-                    setChallengeError(typeof payload.error === "string"
-                        ? payload.error
-                        : "That update did not go through. Check your connection and try again.");
-                    return;
-                }
-
-                refresh();
-            })();
-        });
-    };
-
-    const cardClass = "  border border-white/10 bg-[#1f1f1f] p-4 font-sans";
     const microClass = "text-[11px] font-semibold text-white/40";
     const capsuleButtonClass = "flex w-full items-center justify-center rounded-full bg-primary-400 px-4 py-3 text-[15px] font-medium text-black disabled:opacity-50";
-    const targetQuality = growth.match?.matchedQualities[0]?.label ?? growth.challenge?.targetQualityTag.replace(/-/g, " ");
     const comparison = growth.comparison;
     const normalizedSetting = settingTag?.trim().toLowerCase();
     const fusionTint = normalizedSetting === "wild"
@@ -693,135 +510,8 @@ export default function SpeciesGrowthInteractive({
 
     return (
         <div className={`mx-auto flex w-full max-w-[720px] flex-col gap-3 font-sans ${wide ? "lg:max-w-none lg:gap-5" : ""}`}>
-            {!compareOnly && growth.match && (!growth.hasCapture || (presentation !== "profileRequired" && presentation !== "pathUnavailable")) ? (
-                <ApexMatchCard growth={growth} labels={labels} />
-            ) : null}
-
             {growth.isAuthenticated && growth.hasCapture ? (
                 <>
-                    {!compareOnly && presentation === "profileRequired" ? (
-                        <section className={`${cardClass} border-primary-400/20`}>
-                            <p className={`${microClass} uppercase`}>⌾ &nbsp; Apex Insight</p>
-                            <h3 className="mt-3 text-[17px] font-semibold text-white">Find your Apex Animal</h3>
-                            <p className="mt-2 text-xs font-medium leading-5 text-white/60">Take the Wild Profile to unlock animal-powered challenges based on your growth path.</p>
-                            <Link href={growth.wildProfileHref} className={`${capsuleButtonClass} mt-3`}>
-                                Start Wild Profile
-                            </Link>
-                        </section>
-                    ) : null}
-
-                    {!compareOnly && presentation === "pathUnavailable" ? (
-                        <section className={`${cardClass} border-primary-400/20`}>
-                            <p className={`${microClass} uppercase`}>⌾ &nbsp; Apex Insight</p>
-                            <h3 className="mt-3 text-[17px] font-semibold text-white">Refresh your Apex Path</h3>
-                            <p className="mt-2 text-xs font-medium leading-5 text-white/60">Your profile needs quality targets before this animal can train your path.</p>
-                            <Link href={growth.wildProfileHref} className={`${capsuleButtonClass} mt-3`}>
-                                Refresh Profile
-                            </Link>
-                        </section>
-                    ) : null}
-
-                    {!compareOnly && presentation === "offPath" && growth.match ? (
-                        <section className={`${cardClass} border-orange-400/20`}>
-                            <p className={`${microClass} uppercase`}>◉ &nbsp; Find the right power</p>
-                            <p className="mt-3 text-xs font-medium leading-5 text-white/60">This animal teaches useful lessons, but your Apex path needs different powers right now.</p>
-                            {growth.match.neededQualities.length > 0 ? (
-                                <>
-                                    <p className={`${microClass} mt-3`}>Needed powers</p>
-                                    <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-2">
-                                        {growth.match.neededQualities.slice(0, 4).map((quality) => (
-                                            <span key={quality.key} className="rounded-full border border-primary-400/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold text-white">{quality.label}</span>
-                                        ))}
-                                    </div>
-                                    <p className="mt-3 text-xs font-medium text-white/40">Try capturing or training animals with these powers.</p>
-                                </>
-                            ) : null}
-                        </section>
-                    ) : null}
-
-                    {!compareOnly && canChallenge && !growth.challenge ? (
-                        <section className={`${cardClass} border-primary-400/20`}>
-                            <p className={`${microClass} uppercase`}>⚡ &nbsp; Apex Insight</p>
-                            <h3 className="mt-3 text-[17px] font-semibold text-white">Use This Power</h3>
-                            {growth.match?.matchedQualities.length ? (
-                                <p className="mt-3 text-xs font-medium text-white/60">Powers this animal can train: {growth.match.matchedQualities.map((quality) => quality.label).join(" · ")}</p>
-                            ) : null}
-                            {targetQuality ? (
-                                <div className="mt-3 flex items-center gap-2">
-                                    <span className={microClass}>Train this quality</span>
-                                    <span className="rounded-full border border-primary-400/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold capitalize text-white">{targetQuality}</span>
-                                </div>
-                            ) : null}
-                            <p className="mt-3 text-xs font-medium leading-5 text-white/60">Turn {powerName} into one real-world move that helps your Apex path today.</p>
-                            <button type="button" onClick={startChallenge} disabled={isPending} className={`${capsuleButtonClass} mt-3`}>
-                                {isPending ? "Preparing Today's Challenge…" : "⌾  Start Apex Challenge"}
-                            </button>
-                            {challengeError ? <p className="mt-3 text-xs font-medium text-orange-300">{challengeError}</p> : null}
-                        </section>
-                    ) : null}
-
-                    {!compareOnly && growth.challenge ? (
-                        <section className={`${cardClass} ${growth.challenge.status === "approved" ? "border-primary-400/20" : "border-cyan-300/20"}`}>
-                            <div className="flex items-center justify-between gap-3">
-                                <p className={`${microClass} uppercase`}>⌾ &nbsp; Today&apos;s training</p>
-                                <span className={`rounded-full bg-black/20 px-2 py-1 text-[11px] font-semibold uppercase ${growth.challenge.status === "approved" ? "text-primary-400" : "text-white/60"}`}>
-                                    {challengeStatusLabel(growth.challenge.status)}
-                                </span>
-                            </div>
-                            <h3 className="mt-4 text-[17px] font-semibold text-white">{growth.challenge.challengeTitle}</h3>
-                            {targetQuality ? (
-                                <div className="mt-3 flex items-center gap-2">
-                                    <span className={`${microClass} uppercase`}>Target quality</span>
-                                    <span className="rounded-full border border-primary-400/20 bg-black/20 px-2.5 py-1.5 text-[11px] font-semibold capitalize text-white">{targetQuality}</span>
-                                </div>
-                            ) : null}
-                            {growth.challenge.whyThisHelps ? (
-                                <div className="mt-3 space-y-1.5">
-                                    <p className={microClass}>Why this helps</p>
-                                    <p className="text-xs font-medium leading-5 text-white/60">{growth.challenge.whyThisHelps}</p>
-                                </div>
-                            ) : null}
-                            <div className="mt-3 flex items-start justify-between gap-4">
-                                <span className={microClass}>Animal Power</span>
-                                <span className="text-right text-xs font-medium text-white">{powerName}</span>
-                            </div>
-                            <div className="mt-3  border border-primary-400/15 bg-black/15 p-3">
-                                <p className="text-[11px] font-semibold uppercase text-primary-400">➜ &nbsp; Your task</p>
-                                <p className="mt-2 text-base leading-6 text-white">{growth.challenge.challengeInstruction}</p>
-                            </div>
-                            <div className="mt-3  border border-cyan-300/15 bg-black/15 p-3">
-                                <p className="text-[11px] font-semibold uppercase text-cyan-300">▣ &nbsp; Proof needed</p>
-                                <p className="mt-2 text-xs font-medium leading-5 text-white/60">Capture a live photo showing you did the task. Camera-roll uploads are disabled. An optional note can add context, but your photo is the main proof.</p>
-                            </div>
-                            {growth.challenge.proofValidationReason ? (
-                                <p className="mt-3  bg-orange-400/[0.08] p-3 text-xs font-medium leading-5 text-orange-300">{growth.challenge.proofValidationReason}</p>
-                            ) : null}
-                            <div className={`mt-3  p-3 ${growth.challenge.status === "approved" ? "bg-primary-400/10" : "bg-primary-400/5"}`}>
-                                <p className="text-[11px] font-semibold uppercase text-primary-400">✦ &nbsp; {growth.challenge.status === "approved" ? "Rewards earned" : "Reward"}</p>
-                                {(growth.challenge.status === "approved" ? growth.challenge.captureXPAward : growth.challenge.rewardXP) > 0 ? (
-                                    <p className="mt-2 text-xs font-medium text-white">⊕ &nbsp; +{growth.challenge.status === "approved" ? growth.challenge.captureXPAward : growth.challenge.rewardXP} XP</p>
-                                ) : null}
-                                {growth.challenge.rewardStat ? <p className="mt-2 text-xs font-medium capitalize text-white">⊕ &nbsp; {growth.challenge.rewardStat} boost</p> : null}
-                                {growth.challenge.status === "approved" && growth.challenge.qualityProgressAward > 0 ? (
-                                    <p className="mt-2 text-xs font-medium capitalize text-white">⊕ &nbsp; +{growth.challenge.qualityProgressAward} {targetQuality} progress</p>
-                                ) : growth.challenge.status !== "approved" ? (
-                                    <p className="mt-2 text-xs font-medium text-white">⊕ &nbsp; Apex path progress</p>
-                                ) : null}
-                            </div>
-                            {growth.challenge.status === "generated" ? (
-                                <button type="button" onClick={acceptChallenge} disabled={isPending} className={`${capsuleButtonClass} mt-3`}>
-                                    {isPending ? "Working…" : "✓  Accept Challenge"}
-                                </button>
-                            ) : null}
-                            {growth.challenge.status === "accepted" || growth.challenge.status === "rejected" ? (
-                                <p className="mt-3 rounded-full border border-primary-400/30 px-4 py-3 text-center text-[15px] font-medium text-primary-400">Open AnimalDex to take live proof</p>
-                            ) : null}
-                            {growth.challenge.status === "proof_submitted" ? <p className="mt-3 text-xs font-medium text-white/60">Checking your proof…</p> : null}
-                            {growth.challenge.status === "approved" ? <p className="mt-3 text-xs font-medium text-primary-400">✓ You trained {speciesName}.</p> : null}
-                            {challengeError ? <p className="mt-3 text-xs font-medium text-orange-300">{challengeError}</p> : null}
-                        </section>
-                    ) : null}
-
                     {growth.principle && compareOnly ? (
                         // Power Fusion as one row, for the foot of the Play tab.
                         // The full card is the right shape on a surface about

@@ -23,7 +23,7 @@ export const FUSED_COPY = {
     training: "Training",
     trial: "Trial",
     earned: "Earned",
-    preparing: "Writing this Power's Training…",
+    preparing: "Writing this Power's lesson check…",
     doTheTrial: "Do the Trial",
     applyItYourWay: "Apply It Your Way",
     earnedLine: "Power earned · Boost on",
@@ -33,7 +33,7 @@ export const FUSED_COPY = {
     repeatLine: "Battles repeat as often as you like. Each fused Power brings its own Training and Trial, so the loop starts again.",
     fusionResultLine: "Its boost switches on after its Training and Trial.",
     notReady: "This Power isn't ready yet. Try again in a minute.",
-    trainingRequired: "Complete this Power's Training first.",
+    trainingRequired: "Pass this Power's lesson check first.",
     continue: "Continue"
 } as const;
 

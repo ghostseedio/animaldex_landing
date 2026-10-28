@@ -143,7 +143,7 @@ test("a missed Training locks until a newer card", () => {
     const locked = journey({cards: [card(FOX_CARD)], failures: [miss]});
     assert.equal(locked.locked[0]?.lockedStep, "train");
     assert.equal(locked.train.length, 0);
-    assert.equal(journeyStatusLine(locked.locked[0])?.text, "Training missed");
+    assert.equal(journeyStatusLine(locked.locked[0])?.text, "Lesson check missed");
 
     const reopened = journey({cards: [card(FOX_CARD), card(FOX_CARD_NEWER, {at: T0 + 2 * DAY})], failures: [miss]});
     assert.equal(reopened.locked.length, 0);

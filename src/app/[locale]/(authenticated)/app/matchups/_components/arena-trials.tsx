@@ -3,13 +3,9 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {AppEmpty} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import {TrialCard} from "@/components/animal-detail/animal-trials/animal-trials-section";
 import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
-import ApplyItYourWay from "@/components/animal-detail/animal-powers/apply-it-your-way";
-import type {AnimalPower} from "@/lib/animal-powers";
 import {
     type AnimalTrial,
-    arenaTrialGroups,
     completedTrialHistory,
     earnedPowerName,
     earnedQualities,
@@ -27,7 +23,7 @@ import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-pow
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 
 /**
- * Trials in the Play hub. Ported from iOS `MatchupsHubView` after Trials became
+ * Trials in the Battles hub. Ported from iOS `MatchupsHubView` after Trials became
  * a first-class segment beside Comparisons.
  *
  * The Trials page lists every open Trial for an animal the person has caught,
@@ -82,103 +78,6 @@ export function useArenaTrials(enabled: boolean) {
     }, [history, openTrials]);
 
     return {openTrials, history, postIds, didLoad, refresh, note};
-}
-
-export function ArenaTrialsTab({
-    openTrials,
-    didLoad,
-    onNote,
-    onRefresh
-}: {
-    openTrials: AnimalTrial[];
-    didLoad: boolean;
-    onNote: (trial: AnimalTrial) => void;
-    onRefresh: () => Promise<void>;
-}) {
-    const [selectedTrial, setSelectedTrial] = useState<AnimalTrial | null>(null);
-    const [applyRoute, setApplyRoute] = useState<{trial: AnimalTrial; power: AnimalPower} | null>(null);
-    const [applyLoadingTrialId, setApplyLoadingTrialId] = useState<string | null>(null);
-
-    const groups = useMemo(() => arenaTrialGroups(openTrials), [openTrials]);
-
-    /** The written route beside the Trial: the Power it stands in for is read first. */
-    const presentApply = useCallback(async (trial: AnimalTrial) => {
-        if (applyLoadingTrialId) return;
-        setApplyLoadingTrialId(trialId(trial));
-        try {
-            const response = await fetch(`/api/app/animal-powers?speciesProfileId=${encodeURIComponent(trial.speciesProfileId)}`, {cache: "no-store"});
-            const payload = response.ok ? await response.json() as {power?: AnimalPower | null} : null;
-            if (payload?.power) setApplyRoute({trial, power: payload.power});
-        } catch {
-            // Without the Power there is nothing to apply; the Trial stays.
-        } finally {
-            setApplyLoadingTrialId(null);
-        }
-    }, [applyLoadingTrialId]);
-
-    if (didLoad && groups.length === 0) {
-        return (
-            <AppEmpty
-                icon="spark"
-                title="No Trials left"
-                detail="Trials for animals you've caught show up here, including ones you haven't started. An animal leaves once every one of its Trials is finished."
-            />
-        );
-    }
-
-    return (
-        <>
-            <div className="-mx-4 flex flex-col md:mx-0 md:overflow-hidden md:border md:border-white/[0.08]">
-                {groups.map((group) => (
-                    <section key={group.id}>
-                        <header className="flex items-center gap-3 px-5 pb-2 pt-[18px]">
-                            <span aria-hidden="true" className="grid h-8 w-8 place-items-center bg-white/[0.06] text-sm">🐾</span>
-                            <h3 className="min-w-0 flex-1 truncate text-base font-bold text-white">{group.name}</h3>
-                            {group.trials.length > 1 ? (
-                                <span className="text-[10px] font-bold text-white/40">{group.completedCount}/{group.trials.length} complete</span>
-                            ) : null}
-                        </header>
-                        {group.remaining.map((trial) => (
-                            <TrialCard
-                                key={trialId(trial)}
-                                trial={trial}
-                                canAttempt
-                                onOpen={() => setSelectedTrial(trial)}
-                                onApplyYourWay={() => void presentApply(trial)}
-                                isApplying={applyLoadingTrialId === trialId(trial)}
-                            />
-                        ))}
-                    </section>
-                ))}
-            </div>
-
-            {selectedTrial ? (
-                <AnimalTrialDetail
-                    trial={selectedTrial}
-                    canAttempt
-                    onChange={(updated) => {
-                        setSelectedTrial(updated);
-                        onNote(updated);
-                    }}
-                    onClose={() => {
-                        setSelectedTrial(null);
-                        void onRefresh();
-                    }}
-                />
-            ) : null}
-
-            {applyRoute ? (
-                <ApplyItYourWay
-                    power={applyRoute.power}
-                    trial={applyRoute.trial}
-                    onFinished={(result) => {
-                        if (result.verdict === "approved") void onRefresh();
-                    }}
-                    onClose={() => setApplyRoute(null)}
-                />
-            ) : null}
-        </>
-    );
 }
 
 /** iOS `TrialHistoryRow`. */
@@ -310,25 +209,5 @@ export function TrialHistoryList({
                 />
             ) : null}
         </>
-    );
-}
-
-/** The two figures over the Trial history: how many finished, how many did not. */
-export function TrialStatsRow({history}: {history: AnimalTrial[]}) {
-    const completed = completedTrialHistory(history).length;
-    const failed = failedTrialHistory(history).length;
-    return (
-        <div className="grid grid-cols-2 gap-2.5">
-            {[
-                {label: "Completed", value: completed, tint: NEON},
-                {label: "Failed", value: failed, tint: FAIL}
-            ].map((metric) => (
-                <div key={metric.label} className="min-w-0 border border-white/[0.06] bg-white/[0.04] p-3">
-                    <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.08em] text-white/30">{metric.label}</p>
-                    <p className="mt-1.5 truncate font-display text-xl font-black tabular-nums text-white">{metric.value}</p>
-                    <div className="mt-2 h-[3px] rounded-full" style={{backgroundColor: metric.tint}} />
-                </div>
-            ))}
-        </div>
     );
 }

@@ -104,11 +104,12 @@ export function trialId(trial: AnimalTrial) {
 
 // MARK: - Frequency vocabulary
 
+/** LOW / MID / HIGH read as Easy / Medium / Hard (docs/companion-loop/SPEC.md, "Words"). */
 export function frequencyBadge(frequency: AnimalTrialFrequency) {
     switch (frequency) {
-        case "LOW": return "🔴 LOW TRIAL";
-        case "MID": return "🟡 MID TRIAL";
-        case "HIGH": return "⚡ HIGH TRIAL";
+        case "LOW": return "🔴 EASY TRIAL";
+        case "MID": return "🟡 MEDIUM TRIAL";
+        case "HIGH": return "⚡ HARD TRIAL";
     }
 }
 

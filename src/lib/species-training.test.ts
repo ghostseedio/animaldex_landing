@@ -165,21 +165,21 @@ test("Try again restarts with no answers chosen", () => {
 });
 
 test("copy matches the shared spec word for word", () => {
-    assert.equal(TRAINING_COPY.title, "Training");
-    assert.equal(TRAINING_COPY.start, "Start Training");
-    assert.equal(TRAINING_COPY.complete, "Training complete");
+    assert.equal(TRAINING_COPY.title, "Lesson check");
+    assert.equal(TRAINING_COPY.start, "Take the lesson check");
+    assert.equal(TRAINING_COPY.complete, "Lesson check passed");
     assert.equal(TRAINING_COPY.readPowerAgain, "Read the Power again");
     assert.equal(TRAINING_COPY.tryAgain, "Try again");
     assert.equal(TRAINING_COPY.continue, "Continue");
-    assert.equal(TRAINING_COPY.lockedLine, "Complete Training to unlock");
-    assert.equal(TRAINING_COPY.required, "Complete this animal's Training first.");
+    assert.equal(TRAINING_COPY.lockedLine, "Pass the lesson check to unlock");
+    assert.equal(TRAINING_COPY.required, "Pass this animal's lesson check first.");
     assert.equal(trainingIntroText(1), "Answer 1 quick question about this animal's Power.");
     assert.equal(trainingIntroText(3), "Answer 3 quick questions about this animal's Power.");
     assert.equal(trainingQuestionProgress(1, 3), "Question 1 of 3");
 });
 
 test("training_required maps to the same message everywhere", () => {
-    const message = "Complete this animal's Training first.";
+    const message = "Pass this animal's lesson check first.";
     assert.equal(trialStartErrorMessage("training_required", "fallback"), message);
     assert.equal(verifierRefusalMessage("training_required"), message);
     assert.equal(isRetryableRefusal("training_required"), false);

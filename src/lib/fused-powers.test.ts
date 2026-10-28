@@ -199,7 +199,7 @@ test("submit results and refusals", () => {
         {verdict: "approved", reason: "Nice rota.", earned: true, rewardXP: 10, rewardCredits: 3, rejectionsRemaining: 3}
     );
     assert.equal(decodeFusedSubmitResult({error: "training_required"}), null);
-    assert.equal(fusedRefusalMessage("training_required"), "Complete this Power's Training first.");
+    assert.equal(fusedRefusalMessage("training_required"), "Pass this Power's lesson check first.");
     assert.equal(fusedRefusalMessage("attempts_exhausted_today"), FUSED_COPY.attemptsExhausted);
     assert.equal(fusedRefusalMessage("fused_power_not_ready"), "This Power isn't ready yet. Try again in a minute.");
     assert.equal(fusedRefusalMessage("already_earned"), "You have already earned this Power.");

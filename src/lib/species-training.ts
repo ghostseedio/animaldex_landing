@@ -10,17 +10,21 @@
 
 // MARK: - Copy (identical on iOS, Android and web)
 
+/**
+ * The quiz is the animal's lesson check (docs/companion-loop/SPEC.md, "Words":
+ * Lesson check, not Training). Identifiers keep the old name.
+ */
 export const TRAINING_COPY = {
-    title: "Training",
-    start: "Start Training",
+    title: "Lesson check",
+    start: "Take the lesson check",
     /** Web only: iOS has no signed-out reader. */
-    signInToStart: "Sign in to start Training",
-    complete: "Training complete",
+    signInToStart: "Sign in to take the lesson check",
+    complete: "Lesson check passed",
     readPowerAgain: "Read the Power again",
     tryAgain: "Try again",
     continue: "Continue",
-    lockedLine: "Complete Training to unlock",
-    required: "Complete this animal's Training first."
+    lockedLine: "Pass the lesson check to unlock",
+    required: "Pass this animal's lesson check first."
 } as const;
 
 /**
@@ -245,8 +249,8 @@ export function trainingRefusalMessage(code: string) {
     if (/training_required/i.test(code)) return TRAINING_COPY.required;
     if (/training_locked/i.test(code)) return LOCKOUT_COPY.trainingLockedBody;
     if (/species_not_unlocked/i.test(code)) return "You don't own this index yet. Capture this animal first.";
-    if (/not_authenticated/i.test(code)) return "Sign in to take this animal's Training.";
-    if (/training_not_found|species_not_found/i.test(code)) return "This animal has no Training yet.";
+    if (/not_authenticated/i.test(code)) return "Sign in to take this animal's lesson check.";
+    if (/training_not_found|species_not_found/i.test(code)) return "This animal has no lesson check yet.";
     if (/answers_mismatch/i.test(code)) return "Those answers did not match the questions. Try again.";
     return "Could not check your answers right now. Try again in a moment.";
 }
