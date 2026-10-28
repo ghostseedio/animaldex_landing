@@ -57,7 +57,12 @@ export type AskMessage = {
     followUpResolution?: AskFollowUpResolution;
     /** A message the animal wrote by itself (`animal_messages`), by its server id. */
     animalMessageId?: string;
+    /** On a failed reply only: why, so the drawer says it in the reader's language. */
+    failureKind?: AskFailureKind;
 };
+
+/** Why a reply failed, when it was not the day's limit. */
+export type AskFailureKind = "unavailable" | "empty" | "offline" | "timeout" | "network" | "generic";
 
 /** The three answers to a check-in: done, not now, or stop asking. */
 export type AskFollowUpResolution = "done" | "not_now" | "stopped";

@@ -38,7 +38,6 @@ import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
-import {TRIAL_ASK_EMPTY_HEADING, TRIAL_ASK_PLACEHOLDER} from "@/lib/animal-trial-ask";
 import {WILD_PROFILE_PATH, isWildProfileFollowUp} from "@/lib/ask-animaldex/wild-profile";
 import {getLocalePath} from "@/lib/site";
 import {
@@ -52,14 +51,13 @@ import {trackEvent} from "@/lib/analytics";
 import {rememberStorePlacement} from "@/lib/store-links";
 import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/species-ask";
 import {
-    COMPANION_COPY,
     EMPTY_COMPANION_LOOP,
     companionDisplayName,
     referralCapturePath,
     type AskCompanionEvent,
     type AskCompanionLoop
 } from "@/lib/ask-animaldex/companion-loop";
-import {bondChipText, decodeChatBond, type ChatBond} from "@/lib/companion-bond";
+import {decodeChatBond, type ChatBond} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond} from "@/components/companions/use-companions";
 import {
@@ -164,6 +162,25 @@ export type AskDrawerLabels = {
     memoryToldTo: string;
     memoryFromWildProfile: string;
     memoryBack: string;
+    /** The companion loop on the owner's chat, under the animal's name. */
+    workingOn: string;
+    notThisAnyMore: string;
+    doneTogether: string;
+    powerYours: string;
+    powerWaitsForTraining: string;
+    talkTo: string;
+    talkToHint: string;
+    /** A Trial's own thread. */
+    trialPlaceholder: string;
+    trialEmptyHeading: string;
+    bondLevel: string;
+    /** Why a reply failed, in the reader's language. */
+    errorUnavailable: string;
+    errorEmpty: string;
+    errorOffline: string;
+    errorTimeout: string;
+    errorNetwork: string;
+    errorGeneric: string;
     /** A check-in the animal raised: done, not now, stop asking. */
     checkInDone: string;
     checkInNotNow: string;
@@ -895,7 +912,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             ? labels.placeholderFollowUpAnimal.replace("{animal}", animalName)
             : labels.placeholderFollowUp)
         : aboutTrial
-            ? TRIAL_ASK_PLACEHOLDER
+            ? labels.trialPlaceholder
             : animalName
                 ? labels.placeholderAnimal.replace("{animal}", animalName)
                 : labels.placeholderGeneral;
@@ -1212,7 +1229,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             showingBond ? "border-primary-300/50 bg-primary-400/14 text-white" : "border-white/12 text-ink-200 hover:text-white"
                                         }`}
                                     >
-                                        {bondChipText(chipBond)}
+                                        {bondChip(chipBond, labels)}
                                     </button>
                                 ) : null}
                             </div>
@@ -1222,14 +1239,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 // What the two of you are working on, once the animal has found it.
                                 <div className="flex min-w-0 items-baseline gap-2">
                                     <p className="min-w-0 truncate text-[11px] leading-4 text-ink-300" title={companionLoop.focus}>
-                                        {COMPANION_COPY.workingOn.replace("{focus}", companionLoop.focus)}
+                                        {labels.workingOn.replace("{focus}", companionLoop.focus)}
                                     </p>
                                     <button
                                         type="button"
                                         onClick={clearCompanionFocus}
                                         className="shrink-0 text-[11px] font-semibold leading-4 text-ink-400 underline-offset-2 transition-colors hover:text-white hover:underline"
                                     >
-                                        {COMPANION_COPY.notThisAnyMore}
+                                        {labels.notThisAnyMore}
                                     </button>
                                 </div>
                             ) : speaksAsAnimal ? (
@@ -1392,7 +1409,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 subtitle={heroSubtitle}
                                 avatarUrl={faceUrl}
                                 popularity={popularity}
-                                bondLabel={ownerChat && chipBond ? bondChipText(chipBond) : null}
+                                bondLabel={ownerChat && chipBond ? bondChip(chipBond, labels) : null}
                                 onBond={() => {
                                     setShowingMemory(false);
                                     setShowingBond(true);
@@ -1502,7 +1519,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <div>
                                 <h2 className="font-display text-xl font-bold leading-7 text-white">
                                     {aboutTrial
-                                        ? TRIAL_ASK_EMPTY_HEADING
+                                        ? labels.trialEmptyHeading
                                         : animalName
                                             ? labels.emptyTitleAnimal.replace("{animal}", animalName)
                                             : labels.emptyTitleGeneral}
@@ -1704,6 +1721,31 @@ function shareText(messages: AskMessage[], message: AskMessage, animalName: stri
     return question ? `${heading}\n\nQ: ${question}\n\n${body}` : `${heading}\n\n${body}`;
 }
 
+/** Why a reply failed, in the reader's language (the stored English is the fallback). */
+function failureText(message: AskMessage, labels: AskDrawerLabels): string {
+    switch (message.failureKind) {
+        case "unavailable":
+            return labels.errorUnavailable;
+        case "empty":
+            return labels.errorEmpty;
+        case "offline":
+            return labels.errorOffline;
+        case "timeout":
+            return labels.errorTimeout;
+        case "network":
+            return labels.errorNetwork;
+        case "generic":
+            return labels.errorGeneric;
+        default:
+            return message.text;
+    }
+}
+
+/** "Level 4 · Getting to know you", with "Level" in the reader's language. */
+function bondChip(bond: ChatBond | {level: number | null; stageLabel: string}, labels: AskDrawerLabels): string {
+    return bond.level === null ? bond.stageLabel : `${labels.bondLevel.replace("{level}", String(bond.level))} · ${bond.stageLabel}`;
+}
+
 /** A reply refused at the day's limit: what to say, in the reader's language, and their next step. */
 function limitFailure(notice: AskLimitNotice, labels: AskDrawerLabels, signInHref: string) {
     switch (notice) {
@@ -1799,7 +1841,7 @@ function AnimalMessageRow({
                     className="min-w-0 border px-3.5 py-2.5"
                     style={{borderColor: ASK_BUBBLE_INCOMING, borderRadius: "19px"}}
                 >
-                    <p className="text-sm leading-6 text-ink-200">{limit?.text ?? message.text}</p>
+                    <p className="text-sm leading-6 text-ink-200">{limit?.text ?? failureText(message, labels)}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
                         {limit?.link ? (
                             <Link href={limit.link.href} className="text-xs font-semibold text-primary-200 underline underline-offset-2 transition-colors hover:text-primary-100">
@@ -1852,7 +1894,7 @@ function AnimalMessageRow({
     const checkIn = !isLive && message.followUp && onResolveFollowUp
         ? <AskCheckInChips topic={message.followUp.topic} labels={labels} onResolve={onResolveFollowUp} />
         : null;
-    const event = !isLive && companionEvent ? <CompanionEventBlock event={companionEvent} principleName={principleName} /> : null;
+    const event = !isLive && companionEvent ? <CompanionEventBlock event={companionEvent} principleName={principleName} labels={labels} /> : null;
     return (
         <div className="group/reply">
             {/* Screen readers get the reply as it arrives, not a word at a time. */}
@@ -2103,7 +2145,7 @@ function MessageBlock({
         const limit = message.limitNotice ? limitFailure(message.limitNotice, labels, signInHref) : null;
         return (
             <div className="border border-white/10 bg-white/[0.035] p-3.5">
-                <p className="text-sm leading-6 text-ink-200">{limit?.text ?? message.text}</p>
+                <p className="text-sm leading-6 text-ink-200">{limit?.text ?? failureText(message, labels)}</p>
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
                     {limit?.link ? (
                         <Link
@@ -2169,7 +2211,7 @@ function MessageBlock({
             ) : null}
 
             {finished && companionEvent ? (
-                <CompanionEventBlock event={companionEvent} principleName={principleName} />
+                <CompanionEventBlock event={companionEvent} principleName={principleName} labels={labels} />
             ) : null}
 
             {/* Only the newest answer offers next questions. */}
@@ -2198,7 +2240,7 @@ function MessageBlock({
  * another of their animals: the moment, marked in the thread. The animal has
  * already said well done in its own words; this is the game's part.
  */
-function CompanionEventBlock({event, principleName}: {event: AskCompanionEvent; principleName: string | null}) {
+function CompanionEventBlock({event, principleName, labels}: {event: AskCompanionEvent; principleName: string | null; labels: AskDrawerLabels}) {
     const done = event.stepDone;
     const referral = event.referral;
     const referralHref = referral ? referralCapturePath(referral) : null;
@@ -2208,26 +2250,26 @@ function CompanionEventBlock({event, principleName}: {event: AskCompanionEvent; 
                 <div className="flex flex-col gap-1">
                     <p className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-300">
                         <SealIcon />
-                        {COMPANION_COPY.doneTogether}
+                        {labels.doneTogether}
                     </p>
                     <p className="text-[11px] leading-4 text-ink-300">{done.step}</p>
                     {done.powerEarned && principleName ? (
                         <p className="text-[11px] font-semibold leading-4 text-white">
-                            {COMPANION_COPY.powerYours.replace("{power}", principleName)}
+                            {labels.powerYours.replace("{power}", principleName)}
                         </p>
                     ) : !done.powerEarned && done.powerWaitsForTraining ? (
-                        <p className="text-[11px] font-semibold leading-4 text-white">{COMPANION_COPY.powerWaitsForTraining}</p>
+                        <p className="text-[11px] font-semibold leading-4 text-white">{labels.powerWaitsForTraining}</p>
                     ) : null}
                 </div>
             ) : null}
             {referral && referralHref ? (
                 <Link
                     href={referralHref}
-                    title={COMPANION_COPY.talkToHint}
+                    title={labels.talkToHint}
                     className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40"
                 >
                     <ReferralIcon />
-                    {COMPANION_COPY.talkTo.replace("{name}", companionDisplayName(referral.nickname, referral.animal))}
+                    {labels.talkTo.replace("{name}", companionDisplayName(referral.nickname, referral.animal))}
                 </Link>
             ) : null}
         </div>

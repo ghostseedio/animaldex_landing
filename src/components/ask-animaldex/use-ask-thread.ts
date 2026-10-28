@@ -17,6 +17,7 @@ import {splitStreamedReply, visibleAnswerSoFar} from "@/lib/ask-animaldex/prompt
 import {
     createAskMessage,
     newAskMessageId,
+    type AskFailureKind,
     type AskLimitNotice,
     type AskMessage
 } from "@/lib/ask-animaldex/thread";
@@ -100,6 +101,16 @@ export function askErrorMessage(error: unknown): string {
         return "Couldn't reach AnimalDex. Check your connection and try again.";
     }
     return "AnimalDex couldn't answer that just now. Try asking again.";
+}
+
+/** Which of `askErrorMessage`'s reasons it was, so the drawer can say it in the reader's language. */
+export function askFailureKind(error: unknown): AskFailureKind {
+    if (error instanceof AskUnavailableError) return "unavailable";
+    if (error instanceof AskEmptyError) return "empty";
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+    if (error instanceof DOMException && error.name === "TimeoutError") return "timeout";
+    if (error instanceof TypeError) return "network";
+    return "generic";
 }
 
 export class AskLimitError extends Error {
@@ -418,7 +429,8 @@ export function useAskThread(params: {
             failed: boolean,
             companionEvent?: AskCompanionEvent,
             limitNotice?: AskLimitNotice,
-            followUp?: AskMessage["followUp"]
+            followUp?: AskMessage["followUp"],
+            failureKind?: AskFailureKind
         ) => {
             const thread = askSessionStore.messages(threadKey);
             const index = thread.findIndex((message) => message.id === placeholderId);
@@ -432,7 +444,8 @@ export function useAskThread(params: {
                 // Kept with the reply it happened in, through reloads.
                 ...(!failed && companionEvent ? {companionEvent} : {}),
                 ...(!failed && followUp ? {followUp} : {}),
-                ...(failed && limitNotice ? {limitNotice} : {})
+                ...(failed && limitNotice ? {limitNotice} : {}),
+                ...(failed && failureKind && !limitNotice ? {failureKind} : {})
             };
             replace(next);
         };
@@ -617,7 +630,9 @@ export function useAskThread(params: {
                     [],
                     true,
                     undefined,
-                    error instanceof AskLimitError ? askLimitNotice(error) : undefined
+                    error instanceof AskLimitError ? askLimitNotice(error) : undefined,
+                    undefined,
+                    error instanceof AskLimitError ? undefined : askFailureKind(error)
                 );
                 callbacks.current.onFailed?.(error instanceof Error ? error.message : "unknown");
             }
