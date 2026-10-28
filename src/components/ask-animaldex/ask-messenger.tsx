@@ -26,6 +26,7 @@ import AssistantMarkdown, {AskInline, AskInlineSegmentView} from "@/components/a
 import {parseAskInline} from "@/lib/ask-animaldex/markdown";
 import {askWordRanges} from "@/lib/ask-animaldex/spoken-words";
 import {askPlainBubbleText, askReplyPieces, type AskReplyPiece} from "@/lib/ask-animaldex/thread-layout";
+import {ASK_REPORT_CHOICES, type AskReportChoice} from "@/lib/ask-animaldex/report";
 
 /**
  * The app's Messages colours (`DirectMessageBubbleStyle`): the person's green,
@@ -359,6 +360,88 @@ export function AskSuggestionBar({
                     {prompt}
                 </button>
             ))}
+        </div>
+    );
+}
+
+/**
+ * "Report this reply": the three reasons and Cancel, over the bottom of the
+ * drawer as an edge-to-edge band. It stays up while it sends, then thanks
+ * them, or says it failed with the choices still there. Shared by the
+ * one-to-one chat and the group (Android 8649e5a: every animal reply).
+ */
+export type AskReportLabels = {
+    /** The menu item that opens it. */
+    report: string;
+    title: string;
+    offensive: string;
+    inaccurate: string;
+    other: string;
+    thanks: string;
+    failed: string;
+    sending: string;
+    done: string;
+    cancel: string;
+};
+
+export function AskReportSheet({
+    labels,
+    state,
+    onChoose,
+    onClose
+}: {
+    labels: AskReportLabels;
+    state: "idle" | "sending" | "sent" | "failed";
+    onChoose: (choice: AskReportChoice) => void;
+    onClose: () => void;
+}) {
+    const titles: Record<AskReportChoice, string> = {
+        "Offensive or harmful": labels.offensive,
+        "Inaccurate or misleading": labels.inaccurate,
+        "Something else": labels.other
+    };
+    return (
+        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-canvas-950/70" onClick={onClose}>
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={labels.title}
+                className="border-t border-white/12 bg-canvas-900 pb-4"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <p className="px-4 pb-2 pt-4 text-sm font-semibold text-white">{labels.title}</p>
+                {state === "sent" ? (
+                    <div className="px-4 pb-1">
+                        <p className="text-sm leading-6 text-ink-200">{labels.thanks}</p>
+                        <button type="button" onClick={onClose} className="mt-3 rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950">
+                            {labels.done}
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {state === "failed" ? <p className="px-4 pb-2 text-xs text-ink-300">{labels.failed}</p> : null}
+                        {state === "sending" ? <p className="px-4 pb-2 text-xs text-ink-300">{labels.sending}</p> : null}
+                        {ASK_REPORT_CHOICES.map((choice) => (
+                            <button
+                                key={choice}
+                                type="button"
+                                disabled={state === "sending"}
+                                onClick={() => onChoose(choice)}
+                                className="block w-full border-t border-white/[0.06] px-4 py-3 text-left text-sm text-white transition-colors hover:bg-white/[0.05] disabled:opacity-50"
+                            >
+                                {titles[choice]}
+                            </button>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="block w-full border-t border-white/[0.06] px-4 py-3 text-left text-sm font-semibold text-ink-300 transition-colors hover:bg-white/[0.05]"
+                        >
+                            {labels.cancel}
+                        </button>
+                    </>
+                )}
+            </div>
         </div>
     );
 }

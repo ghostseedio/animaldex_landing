@@ -72,12 +72,13 @@ import {
     AskTypingBubble,
     AskUserBubble,
     ASK_BUBBLE_INCOMING,
+    AskReportSheet,
     MoreIcon,
     type AskMenuItem
 } from "@/components/ask-animaldex/ask-messenger";
 import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askReplyPieces, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
 import {mergeAskAnimalMessages, parseAskAnimalMessages} from "@/lib/ask-animaldex/animal-messages";
-import {ASK_REPORT_CHOICES, type AskReportChoice} from "@/lib/ask-animaldex/report";
+import type {AskReportChoice} from "@/lib/ask-animaldex/report";
 import {createAskMessage, type AskFollowUpResolution} from "@/lib/ask-animaldex/thread";
 import {AskLitPlainText} from "@/components/ask-animaldex/ask-messenger";
 import {askReplyWords} from "@/lib/ask-animaldex/spoken-words";
@@ -1652,7 +1653,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 </div>
                 {reportTarget ? (
                     <AskReportSheet
-                        labels={labels}
+                        labels={{
+                            report: labels.report,
+                            title: labels.reportTitle,
+                            offensive: labels.reportOffensive,
+                            inaccurate: labels.reportInaccurate,
+                            other: labels.reportOther,
+                            thanks: labels.reportThanks,
+                            failed: labels.reportFailed,
+                            sending: labels.sending,
+                            done: labels.checkInDone,
+                            cancel: labels.clearCancel
+                        }}
                         state={reportState}
                         onChoose={(choice) => void sendReport(choice)}
                         onClose={() => setReportTarget(null)}
@@ -2003,73 +2015,6 @@ function AskProIntroBand({
                 <button type="button" onClick={onDismiss} className="text-xs font-semibold text-ink-400 transition-colors hover:text-white">
                     {labels.notNow}
                 </button>
-            </div>
-        </div>
-    );
-}
-
-/**
- * "Report this reply": the three reasons and Cancel, over the bottom of the
- * drawer as an edge-to-edge band. It stays up while it sends, then thanks
- * them, or says it failed with the choices still there.
- */
-function AskReportSheet({
-    labels,
-    state,
-    onChoose,
-    onClose
-}: {
-    labels: AskDrawerLabels;
-    state: "idle" | "sending" | "sent" | "failed";
-    onChoose: (choice: AskReportChoice) => void;
-    onClose: () => void;
-}) {
-    const titles: Record<AskReportChoice, string> = {
-        "Offensive or harmful": labels.reportOffensive,
-        "Inaccurate or misleading": labels.reportInaccurate,
-        "Something else": labels.reportOther
-    };
-    return (
-        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-canvas-950/70" onClick={onClose}>
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-label={labels.reportTitle}
-                className="border-t border-white/12 bg-canvas-900 pb-4"
-                onClick={(event) => event.stopPropagation()}
-            >
-                <p className="px-4 pb-2 pt-4 text-sm font-semibold text-white">{labels.reportTitle}</p>
-                {state === "sent" ? (
-                    <div className="px-4 pb-1">
-                        <p className="text-sm leading-6 text-ink-200">{labels.reportThanks}</p>
-                        <button type="button" onClick={onClose} className="mt-3 rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950">
-                            {labels.checkInDone}
-                        </button>
-                    </div>
-                ) : (
-                    <>
-                        {state === "failed" ? <p className="px-4 pb-2 text-xs text-ink-300">{labels.reportFailed}</p> : null}
-                        {state === "sending" ? <p className="px-4 pb-2 text-xs text-ink-300">{labels.sending}</p> : null}
-                        {ASK_REPORT_CHOICES.map((choice) => (
-                            <button
-                                key={choice}
-                                type="button"
-                                disabled={state === "sending"}
-                                onClick={() => onChoose(choice)}
-                                className="block w-full border-t border-white/[0.06] px-4 py-3 text-left text-sm text-white transition-colors hover:bg-white/[0.05] disabled:opacity-50"
-                            >
-                                {titles[choice]}
-                            </button>
-                        ))}
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="block w-full border-t border-white/[0.06] px-4 py-3 text-left text-sm font-semibold text-ink-300 transition-colors hover:bg-white/[0.05]"
-                        >
-                            {labels.clearCancel}
-                        </button>
-                    </>
-                )}
             </div>
         </div>
     );

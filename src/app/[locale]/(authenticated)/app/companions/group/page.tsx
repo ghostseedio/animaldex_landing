@@ -3,6 +3,7 @@ import AnimalGroupChat, {
     type AnimalGroupBudgetLabels,
     type AnimalGroupChatLabels
 } from "@/components/animal-group-chat/animal-group-chat";
+import type {AskReportLabels} from "@/components/ask-animaldex/ask-messenger";
 import {getScopedTranslator} from "@/loaders/translation";
 
 /** The group chat's words, in the reader's language. */
@@ -32,9 +33,22 @@ export default async function AnimalGroupChatPage({params}: {params: {locale: st
     ]);
     const labels = Object.fromEntries(GROUP_KEYS.map((key) => [key, groupT(key)])) as AnimalGroupChatLabels;
     const budget = Object.fromEntries(BUDGET_KEYS.map((key) => [key, askT(key)])) as AnimalGroupBudgetLabels;
+    // Report this reply, in the one-to-one chat's words.
+    const report: AskReportLabels = {
+        report: askT("report"),
+        title: askT("reportTitle"),
+        offensive: askT("reportOffensive"),
+        inaccurate: askT("reportInaccurate"),
+        other: askT("reportOther"),
+        thanks: askT("reportThanks"),
+        failed: askT("reportFailed"),
+        sending: askT("sending"),
+        done: askT("checkInDone"),
+        cancel: askT("clearCancel")
+    };
     return (
         <Suspense>
-            <AnimalGroupChat labels={labels} budget={budget} locale={params.locale} />
+            <AnimalGroupChat labels={labels} budget={budget} report={report} locale={params.locale} />
         </Suspense>
     );
 }

@@ -26,8 +26,12 @@ import {
     AskSparkle,
     AskUserBubble,
     ASK_BUBBLE_INCOMING,
-    MoreIcon
+    AskReportSheet,
+    MoreIcon,
+    type AskReportLabels
 } from "@/components/ask-animaldex/ask-messenger";
+import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
+import type {AskReportChoice} from "@/lib/ask-animaldex/report";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pacer";
 import {useAskGroupDirector} from "@/components/animal-group-chat/use-group-director";
@@ -113,10 +117,13 @@ function faceUrl(row: CompanionSummary | undefined): string | null {
 export default function AnimalGroupChat({
     labels,
     budget,
+    report,
     locale
 }: {
     labels: AnimalGroupChatLabels;
     budget: AnimalGroupBudgetLabels;
+    /** Report this reply, in the one-to-one chat's words. */
+    report: AskReportLabels;
     locale: string;
 }) {
     const {rows, didLoad} = useCompanions();
@@ -158,6 +165,7 @@ export default function AnimalGroupChat({
             key={askGroupThreadKey(chosen.map((row) => String(row.captureId)))}
             labels={labels}
             budget={budget}
+            report={report}
             locale={locale}
             members={chosen}
             onChangeAnimals={() => choose(null)}
@@ -168,7 +176,7 @@ export default function AnimalGroupChat({
 /** The group page sits in the app's column, full height, flush bands top to bottom. */
 function GroupFrame({children}: {children: React.ReactNode}) {
     return (
-        <div className="-mx-4 -my-7 flex h-[calc(100dvh-11.75rem)] min-h-[30rem] flex-col border-white/[0.08] sm:-mx-7 md:mx-auto md:my-0 md:max-w-3xl md:border-x lg:-my-10 lg:h-[100dvh]">
+        <div className="relative -mx-4 -my-7 flex h-[calc(100dvh-11.75rem)] min-h-[30rem] flex-col border-white/[0.08] sm:-mx-7 md:mx-auto md:my-0 md:max-w-3xl md:border-x lg:-my-10 lg:h-[100dvh]">
             {children}
         </div>
     );
@@ -279,12 +287,14 @@ type LimitNotice =
 function GroupConversation({
     labels,
     budget,
+    report,
     locale,
     members,
     onChangeAnimals
 }: {
     labels: AnimalGroupChatLabels;
     budget: AnimalGroupBudgetLabels;
+    report: AskReportLabels;
     locale: string;
     members: CompanionSummary[];
     onChangeAnimals: () => void;
@@ -323,6 +333,11 @@ function GroupConversation({
     );
     const [confirmingClear, setConfirmingClear] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    // Report this reply (Android 8649e5a: a group bubble too), filed against the speaking animal's card.
+    const [reportTarget, setReportTarget] = useState<AskGroupMessage | null>(null);
+    const [reportState, setReportState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+    /** Each animal's sounds, by its card, registered by the `MemberSounds` below. */
+    const soundsRef = useRef(new Map<string, MemberSoundControls>());
     const abortRef = useRef<AbortController | null>(null);
     const roundRef = useRef(0);
     const followUpsRef = useRef<string[]>([]);
@@ -346,9 +361,14 @@ function GroupConversation({
                 return next;
             });
         },
-        // The animals' own recorded sounds hook in here, per speaker, once
-        // they exist on the web (the one-to-one chat's soundscape, one per animal).
-        onWordShown: undefined
+        // Each animal makes its own recorded sounds as its words appear
+        // (AnimalDex de78fe74): the one-to-one chat's soundscape, one per animal.
+        onWordShown: (captureId, word) => {
+            const sounds = soundsRef.current.get(captureId);
+            if (!sounds) return;
+            if (word.isFirst) sounds.replyBegan();
+            else sounds.wordShown(word.endsSentence);
+        }
     });
     const isTalking = isSending || director.active;
     const hasConversation = messages.some((message) => message.role === "user");
@@ -568,6 +588,27 @@ function GroupConversation({
         if (navigator.share) void navigator.share({text: body}).catch(() => undefined);
         else void navigator.clipboard?.writeText(body);
     };
+    const sendReport = async (choice: AskReportChoice) => {
+        if (!reportTarget) return;
+        setReportState("sending");
+        const speaker = reportTarget.speakerCaptureId ?? null;
+        const row = speaker ? byCapture.get(speaker) : undefined;
+        try {
+            const response = await fetch("/api/ask/report", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    choice,
+                    text: askMarkdownPlainText(reportTarget.text),
+                    animalName: row?.animal ?? nameFor(speaker),
+                    captureId: speaker
+                })
+            });
+            setReportState(response.ok ? "sent" : "failed");
+        } catch {
+            setReportState("failed");
+        }
+    };
 
     const lastAssistantId = [...messages].reverse().find((message) => message.role === "assistant")?.id ?? null;
     const placeholder = addressedId
@@ -740,7 +781,11 @@ function GroupConversation({
                                             align="right"
                                             items={[
                                                 {label: copiedId === message.id ? labels.copied : labels.copy, onSelect: () => copy(message)},
-                                                {label: labels.share, onSelect: () => share(message)}
+                                                {label: labels.share, onSelect: () => share(message)},
+                                                {label: report.report, onSelect: () => {
+                                                    setReportState("idle");
+                                                    setReportTarget(message);
+                                                }}
                                             ]}
                                         >
                                             <MoreIcon />
@@ -877,8 +922,43 @@ function GroupConversation({
                     </p>
                 ) : null}
             </div>
+            {members.map((row) => (
+                <MemberSounds
+                    key={String(row.captureId)}
+                    captureId={String(row.captureId).toLowerCase()}
+                    speciesProfileId={row.speciesProfileId}
+                    registry={soundsRef.current}
+                />
+            ))}
+            {reportTarget ? (
+                <AskReportSheet
+                    labels={report}
+                    state={reportState}
+                    onChoose={(choice) => void sendReport(choice)}
+                    onClose={() => setReportTarget(null)}
+                />
+            ) : null}
         </GroupFrame>
     );
+}
+
+type MemberSoundControls = {replyBegan: () => void; wordShown: (endsSentence: boolean) => void};
+
+/** One animal's recorded sounds in the group, under its card; renders nothing. */
+function MemberSounds({captureId, speciesProfileId, registry}: {
+    captureId: string;
+    speciesProfileId: string | null;
+    registry: Map<string, MemberSoundControls>;
+}) {
+    const sounds = useAnimalSounds({speciesProfileId, pace: null, held: false});
+    const {replyBegan, wordShown} = sounds;
+    useEffect(() => {
+        registry.set(captureId, {replyBegan, wordShown});
+        return () => {
+            registry.delete(captureId);
+        };
+    }, [registry, captureId, replyBegan, wordShown]);
+    return null;
 }
 
 /** One animal's line in the thread: its face (tap to talk to it alone), its name in its colour, then what it said. */
