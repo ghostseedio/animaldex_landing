@@ -340,6 +340,18 @@ export function parseZernioAccounts(body: any): ZernioAccount[] {
     });
 }
 
+export type PinterestBoard = {id: string; name: string | null};
+
+/** From GET /accounts/{id}/pinterest-boards: a board with "animal" in its name, else the default board, else the first. */
+export function choosePinterestBoard(body: any): PinterestBoard | null {
+    const boards: any[] = Array.isArray(body?.boards) ? body.boards : Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+    const id = (board: any): string | null => typeof board?.id === "string" ? board.id : typeof board?._id === "string" ? board._id : null;
+    const chosen = boards.find((board) => id(board) && /animal/i.test(String(board?.name ?? "")))
+        ?? boards.find((board) => id(board) && (board?.isDefault === true || (body?.defaultBoardId && id(board) === body.defaultBoardId)))
+        ?? boards.find((board) => id(board));
+    return chosen ? {id: id(chosen)!, name: typeof chosen.name === "string" ? chosen.name : null} : null;
+}
+
 /** True when `signature` is the hex HMAC-SHA256 of `rawBody` under `secret`. */
 export function verifyZernioWebhookSignature(rawBody: string, signature: string | null, secret: string) {
     if (!signature || !secret) return false;

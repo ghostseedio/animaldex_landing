@@ -85,6 +85,8 @@ type Connection = {
     configured: boolean;
     connected: boolean;
     accountName: string | null;
+    /** Pinterest: the board pins go to. */
+    board?: string | null;
     expiresAt: string | null;
     envNames: {id: string; secret: string};
     redirectUri: string | null;
@@ -311,13 +313,18 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                         {connection.connected ? (
                                             <>
                                                 <p className="text-sm text-ink-300">Posting through Zernio{connection.accountName ? <> as <span className="text-white">{connection.accountName}</span></> : null}</p>
+                                                {connection.board ? (
+                                                    <p className={`text-xs leading-5 ${/animal/i.test(connection.board) ? "text-ink-400" : "text-amber-200"}`}>
+                                                        Pins go to the board <span className="text-white">{connection.board}</span>{/animal/i.test(connection.board) ? null : <>. Make a board with &ldquo;animal&rdquo; in its name on Pinterest and pins switch to it within five minutes.</>}
+                                                    </p>
+                                                ) : null}
                                                 {connection.error ? <p className="text-xs leading-5 text-amber-200">{connection.error}</p> : null}
                                             </>
                                         ) : connection.configured ? (
                                             <p className={`text-xs leading-5 ${platform === "tiktok" ? "text-red-200" : "text-ink-400"}`}>
                                                 {platform === "tiktok"
                                                     ? connection.error || "Zernio has no connected TikTok account for this id."
-                                                    : `Connect the ${SOCIAL_PLATFORM_LABELS[platform]} account in the Zernio dashboard; it is picked up here automatically and the auto-share starts posting to it.`}
+                                                    : connection.error || `Connect the ${SOCIAL_PLATFORM_LABELS[platform]} account in the Zernio dashboard; it is picked up here automatically and the auto-share starts posting to it.`}
                                             </p>
                                         ) : (
                                             <p className="text-xs leading-5 text-ink-500">

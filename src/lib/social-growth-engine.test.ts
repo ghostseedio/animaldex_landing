@@ -7,7 +7,7 @@ import {contentKindOf, dailyCaps, dayStartMs, pickLightKind, platformsWithRoom, 
 import {blueskyCaption, captionFits, captionForPlatform, pinterestCopy, threadsCaption, visibleLength} from "./social/platform-copy";
 import type {ShareCopy} from "./social/share-copy";
 import type {SocialPostRow} from "./social/types";
-import {buildZernioPostBody, parseZernioAccounts, parseZernioPost, rowStateFromZernio} from "./social/zernio-core";
+import {buildZernioPostBody, choosePinterestBoard, parseZernioAccounts, parseZernioPost, rowStateFromZernio} from "./social/zernio-core";
 import {normalizeCarousel, normalizeTextPosts, textShareCopy} from "./social-content/plan";
 import {contentIdFromMediaPath, contentMediaPath} from "./social-content/types";
 import {buildTimeline, type VideoPlan} from "./content-video/plan";
@@ -158,6 +158,15 @@ test("Zernio accounts and per-platform post states", () => {
     ]);
     const snapshot = parseZernioPost({_id: "p", status: "failed", platforms: [{platform: "threads", status: "failed", errorMessage: "Too long"}]}, "threads")!;
     assert.deepEqual(rowStateFromZernio(snapshot, "threads"), {status: "failed", external_url: null, error: "Threads: Too long"});
+});
+
+test("pins go to an animal board, else the default board, else the first", () => {
+    // Zernio's shape for the AnimalDex account on Oct 28 2026: one unrelated board.
+    assert.deepEqual(choosePinterestBoard({boards: [{id: "447", name: "Beds", privacy: "PUBLIC"}], defaultBoardId: "447"}), {id: "447", name: "Beds"});
+    assert.deepEqual(choosePinterestBoard({boards: [{id: "447", name: "Beds"}, {id: "9", name: "Wild Animal Facts"}], defaultBoardId: "447"}), {id: "9", name: "Wild Animal Facts"});
+    assert.deepEqual(choosePinterestBoard({boards: [{id: "1", name: "Ideas"}, {id: "2", name: "Pins"}], defaultBoardId: "2"}), {id: "2", name: "Pins"});
+    assert.deepEqual(choosePinterestBoard({data: [{_id: "x", name: "Ideas"}]}), {id: "x", name: "Ideas"});
+    assert.equal(choosePinterestBoard({boards: []}), null);
 });
 
 test("a carousel reply is repaired: cover first, cta last, unknown photos dropped, bare items become text", () => {

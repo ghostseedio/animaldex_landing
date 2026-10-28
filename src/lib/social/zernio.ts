@@ -2,9 +2,11 @@ import "server-only";
 import {
     buildTikTokPostBody,
     buildZernioPostBody,
+    choosePinterestBoard,
     parseTikTokAccountInfo,
     parseZernioAccounts,
     parseZernioPost,
+    type PinterestBoard,
     type PostToTikTokInput,
     type ZernioAccount,
     type ZernioPostInput,
@@ -190,20 +192,23 @@ export async function zernioAccountFor(platform: ZernioPlatform): Promise<Zernio
     throw new ZernioError(`No ${SOCIAL_PLATFORM_LABELS[platform]} account is connected in Zernio; connect one in the Zernio dashboard`, {kind: "not_found"});
 }
 
-const boardCache = new Map<string, string | null>();
+// Expires like the account list, so a board made after the first pin is picked up.
+const boardCache = new Map<string, {at: number; board: PinterestBoard | null}>();
 
-/** The board pins go to: ZERNIO_PINTEREST_BOARD_ID, else a board with "animal" in its name, else the first one. */
-export async function pinterestBoardId(accountId: string): Promise<string | null> {
+/** The board pins go to: ZERNIO_PINTEREST_BOARD_ID, else choosePinterestBoard. */
+export async function pinterestBoard(accountId: string, force = false): Promise<PinterestBoard | null> {
     const pinned = env("ZERNIO_PINTEREST_BOARD_ID");
-    if (pinned) return pinned;
-    if (boardCache.has(accountId)) return boardCache.get(accountId) ?? null;
+    if (pinned) return {id: pinned, name: null};
+    const cached = boardCache.get(accountId);
+    if (!force && cached && Date.now() - cached.at < ACCOUNT_CACHE_MS) return cached.board;
     const {body} = await zernioFetch(`/accounts/${encodeURIComponent(accountId)}/pinterest-boards`, {timeoutMs: 30_000});
-    const boards: any[] = Array.isArray(body?.boards) ? body.boards : Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
-    const id = (board: any) => typeof board?.id === "string" ? board.id : typeof board?._id === "string" ? board._id : null;
-    const chosen = boards.find((board) => board?.isDefault) ?? boards.find((board) => /animal/i.test(String(board?.name ?? ""))) ?? boards[0];
-    const boardId = chosen ? id(chosen) : null;
-    boardCache.set(accountId, boardId);
-    return boardId;
+    const board = choosePinterestBoard(body);
+    boardCache.set(accountId, {at: Date.now(), board});
+    return board;
+}
+
+export async function pinterestBoardId(accountId: string) {
+    return (await pinterestBoard(accountId))?.id ?? null;
 }
 
 /** Uploads any file (a slide JPEG, a video) through Zernio's presigned storage; the URL is public for 7 days. */
