@@ -4,13 +4,21 @@ import {useState} from "react";
 import {trackEvent} from "@/lib/analytics";
 import {openPaddleCheckout, type PaddleRuntimeEnvironment} from "@/lib/paddle-checkout";
 import {
+    billingReturnHref,
+    localizedBillingReturnPath,
     recommendCreditPack,
     WEB_STORE_PRODUCTS,
     WEB_STORE_PRO_BENEFITS,
     type WebStoreProductCode
 } from "@/lib/web-store-catalog";
 
-export async function startWebCheckout(productCode: WebStoreProductCode, returnPath: string, source: string) {
+/**
+ * Opens Paddle for one product. `appReturnPath` is the page that started it
+ * (`/app/credits`, the import page): the buyer comes back there, in the
+ * language they were reading, once the webhook has added the purchase.
+ */
+export async function startWebCheckout(productCode: WebStoreProductCode, appReturnPath: string, source: string) {
+    const returnPath = localizedBillingReturnPath(appReturnPath, window.location.pathname);
     trackEvent(productCode === "pro_upgrade" ? "web_pro_checkout_started" : "web_checkout_started", {
         product: productCode,
         source,
@@ -46,8 +54,7 @@ export async function startWebCheckout(productCode: WebStoreProductCode, returnP
             customerEmail: payload.customerEmail,
             onCompleted() {
                 trackEvent("web_checkout_payment_ui_completed", {product: productCode, source, provider: "paddle"});
-                const params = new URLSearchParams({status: "success", purchase_id: payload.purchaseId!});
-                window.location.assign(`/app/billing/return?${params.toString()}`);
+                window.location.assign(billingReturnHref(payload.purchaseId!, returnPath));
             },
             onClosed() {
                 trackEvent("web_checkout_cancelled", {product: productCode, source, provider: "paddle"});

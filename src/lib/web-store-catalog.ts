@@ -1,3 +1,5 @@
+import {splitLocalePath} from "@/lib/request-routing";
+
 export const WEB_STORE_PRODUCT_CODES = ["purchase_25", "purchase_100", "pro_upgrade"] as const;
 export type WebStoreProductCode = (typeof WEB_STORE_PRODUCT_CODES)[number];
 
@@ -65,13 +67,44 @@ const ALLOWED_RETURN_PREFIXES = [
     "/app"
 ];
 
+/**
+ * "/id" on an Indonesian page, "" on an English one: the prefix the app's own
+ * links carry (`localePrefix: "as-needed"`).
+ */
+export function localePrefixForPath(pathname: string | null | undefined) {
+    const path = pathname ?? "";
+    const {locale} = splitLocalePath(path);
+    const prefixed = path === `/${locale}` || path.startsWith(`/${locale}/`);
+    return prefixed && locale !== "en" ? `/${locale}` : "";
+}
+
+/**
+ * Where a buyer goes back to after checkout: one of the pages that can start
+ * one, same-origin and relative, in the page's own language. Anything else
+ * (another site, a query string, an unknown page) becomes the fallback.
+ */
 export function sanitizeBillingReturnPath(value: string | null | undefined, localePrefix = "") {
     const fallback = `${localePrefix}/app/import/instagram`;
     const raw = (value ?? "").trim();
-    if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) return fallback;
+    if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("://") || raw.includes("\\")) return fallback;
     const path = raw.split("?")[0]?.split("#")[0] ?? "";
-    const allowed = ALLOWED_RETURN_PREFIXES.flatMap((prefix) => [prefix, `${localePrefix}${prefix}`].filter(Boolean));
-    return allowed.includes(path) ? path : fallback;
+    const prefix = localePrefixForPath(path);
+    const appPath = prefix ? path.slice(prefix.length) : (path.startsWith("/en/") ? path.slice(3) : path);
+    if (!ALLOWED_RETURN_PREFIXES.includes(appPath)) return fallback;
+    return `${prefix}${appPath}`;
+}
+
+/** The return path for a page that starts checkout, in the language of the page the buyer is on. */
+export function localizedBillingReturnPath(appPath: string, currentPathname: string | null | undefined) {
+    const prefix = localePrefixForPath(currentPathname);
+    return sanitizeBillingReturnPath(`${prefix}${splitLocalePath(appPath).appPath}`, prefix);
+}
+
+/** The page that waits for the webhook after Paddle says the payment went through. */
+export function billingReturnHref(purchaseId: string, returnPath: string) {
+    const prefix = localePrefixForPath(returnPath);
+    const params = new URLSearchParams({status: "success", purchase_id: purchaseId, return: returnPath});
+    return `${prefix}/app/billing/return?${params.toString()}`;
 }
 
 export function billingSuccessHref(returnPath: string, purchaseId: string) {

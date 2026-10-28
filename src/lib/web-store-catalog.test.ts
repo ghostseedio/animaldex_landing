@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+    billingReturnHref,
     billingStatusIsServerFulfilled,
     creditDeltaForProduct,
+    localePrefixForPath,
+    localizedBillingReturnPath,
     recommendCreditPack,
     sanitizeBillingReturnPath,
     validateCheckoutRequestBody
@@ -42,4 +45,28 @@ test("billing return paths reject open redirects", () => {
     assert.equal(sanitizeBillingReturnPath("//evil.example"), "/app/import/instagram");
     assert.equal(sanitizeBillingReturnPath("/account"), "/app/import/instagram");
     assert.equal(sanitizeBillingReturnPath("/app/import/instagram?token=secret"), "/app/import/instagram");
+});
+
+test("billing return paths keep the page's language and nothing else", () => {
+    assert.equal(sanitizeBillingReturnPath("/id/app/credits"), "/id/app/credits");
+    assert.equal(sanitizeBillingReturnPath("/en/app/credits"), "/app/credits");
+    assert.equal(sanitizeBillingReturnPath("/id/account"), "/app/import/instagram");
+    assert.equal(sanitizeBillingReturnPath("/\\evil.example"), "/app/import/instagram");
+    assert.equal(sanitizeBillingReturnPath(null, "/id"), "/id/app/import/instagram");
+    assert.equal(localePrefixForPath("/id/app/credits"), "/id");
+    assert.equal(localePrefixForPath("/identity"), "");
+    assert.equal(localePrefixForPath("/app/credits"), "");
+});
+
+test("checkout returns to the page that started it, in its language", () => {
+    assert.equal(localizedBillingReturnPath("/app/credits", "/id/app/credits"), "/id/app/credits");
+    assert.equal(localizedBillingReturnPath("/app/import/instagram", "/app/import/instagram"), "/app/import/instagram");
+    assert.equal(
+        billingReturnHref("p1", "/app/credits"),
+        "/app/billing/return?status=success&purchase_id=p1&return=%2Fapp%2Fcredits"
+    );
+    assert.equal(
+        billingReturnHref("p1", "/id/app/credits"),
+        "/id/app/billing/return?status=success&purchase_id=p1&return=%2Fid%2Fapp%2Fcredits"
+    );
 });
