@@ -83,6 +83,7 @@ import {askReplyWords} from "@/lib/ask-animaldex/spoken-words";
 import {AskChatOptions, AskSoundCreditsPanel, AskVoiceIcon} from "@/components/ask-animaldex/ask-chat-audio";
 import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type AskSpeechPhase} from "@/components/ask-animaldex/use-animal-speech";
 import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
+import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
 
 export type AskDrawerLabels = {
     title: string;
@@ -633,10 +634,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     });
     // Its own recorded sounds as it types, quiet once its voice is speaking
     // (not while the voice loads, so its opening call is not cut short).
+    // On a call the animal's voice is the call's; the thread stays quiet.
+    const [onCall, setOnCall] = useState(false);
     const sounds = useAnimalSounds({
         speciesProfileId: messenger ? context?.speciesProfileId ?? null : null,
         pace: persona?.pace ?? null,
-        held: speech.isPlaying
+        held: speech.isPlaying || onCall
     });
     const [showingSoundCredits, setShowingSoundCredits] = useState(false);
     useEffect(() => {
@@ -657,8 +660,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     useEffect(() => {
         if (!pacedComplete || spokenIdRef.current === pacedComplete.id || !pacedComplete.text.trim()) return;
         spokenIdRef.current = pacedComplete.id;
+        // A call's replies were heard on the call.
+        if (onCall) return;
         speech.speakAutomatically(pacedComplete.id, pacedComplete.text);
-    }, [pacedComplete, speech]);
+    }, [pacedComplete, speech, onCall]);
     // Typing counts as talking: Stop stays until the last word is shown.
     const animalTalking = isSending || pacer.revealing;
     // With something typed the button sends, over a greeting or a reply that
@@ -1262,7 +1267,24 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             ) : null}
                         </div>
                     </div>
-                    {speaksAsAnimal && context?.signedIn ? (
+                    {messenger && animalName ? (
+                        // A voice call with its talking 3D model, when it has one (voice-call/).
+                        <AskVoiceCallButton
+                            threadKey={threadKey}
+                            animalName={animalName}
+                            names={[hints.animalName, resolvedSubject.name, resolvedSubject.slug]}
+                            locale={locale}
+                            disabled={isSending}
+                            send={send}
+                            stop={stop}
+                            onOpen={() => {
+                                speech.stop();
+                                sounds.stop();
+                            }}
+                            onCallChange={setOnCall}
+                        />
+                    ) : null}
+                    {speaksAsAnimal && context?.signedIn && !messenger ? (
                         <button
                             type="button"
                             onClick={showingMemory ? () => setShowingMemory(false) : openMemory}
@@ -1274,18 +1296,16 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <MemoryIcon />
                         </button>
                     ) : null}
-                    <button
+                    {messenger ? null : <button
                         type="button"
                         onClick={() => setConfirmingClear(true)}
-                        // A chat holding only the hello can start over too, and the
-                        // fresh hello brings the animal's call again (AnimalDex 46809a93).
-                        disabled={messenger ? messages.length === 0 : !hasConversation}
+                        disabled={!hasConversation}
                         aria-label={labels.newConversation}
                         title={labels.newConversation}
                         className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-35"
                     >
                         <PencilIcon />
-                    </button>
+                    </button>}
                     {messenger ? (
                         <AskChatOptions
                             labels={labels}
@@ -1305,12 +1325,29 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 setShowingSoundCredits(true);
                             }}
                             // "Mute messages from Luna" / "Let Luna message you" (AnimalDex 51293f02).
-                            extraItems={animalMuted === null ? [] : [{
-                                label: (animalMuted ? labels.unmuteAnimal : labels.muteAnimal)
-                                    .replace("{name}", nickname ?? labels.theAnimal.replace("{animal}", animalName ?? "")),
-                                icon: <BellIcon />,
-                                onSelect: toggleAnimalMuted
-                            }]}
+                            extraItems={[
+                                ...(animalMuted === null ? [] : [{
+                                    label: (animalMuted ? labels.unmuteAnimal : labels.muteAnimal)
+                                        .replace("{name}", nickname ?? labels.theAnimal.replace("{animal}", animalName ?? "")),
+                                    icon: <BellIcon />,
+                                    onSelect: toggleAnimalMuted
+                                }]),
+                                // In the menu, as on iOS, so the header has room for the call.
+                                {
+                                    label: labels.newConversation,
+                                    icon: <PencilIcon />,
+                                    // A chat holding only the hello can start over too, and the
+                                    // fresh hello brings the animal's call again (AnimalDex 46809a93).
+                                    disabled: messages.length === 0,
+                                    onSelect: () => setConfirmingClear(true)
+                                },
+                                ...(context?.signedIn ? [{
+                                    label: labels.memoryOpen,
+                                    icon: <MemoryIcon />,
+                                    checked: showingMemory,
+                                    onSelect: showingMemory ? () => setShowingMemory(false) : openMemory
+                                }] : [])
+                            ]}
                         />
                     ) : null}
                     <button

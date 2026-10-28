@@ -24,6 +24,7 @@ import {
 import type {AskSubject} from "@/lib/ask-animaldex/subject";
 import {decorateFollowUps} from "@/lib/ask-animaldex/wild-profile";
 import {parseAskPersonaFrame, type AskPersonaFrame} from "@/lib/ask-animaldex/persona";
+import {isCallFrame} from "@/lib/ask-animaldex/call-events";
 import {TRIAL_ASK_FALLBACK_FOLLOW_UPS} from "@/lib/animal-trial-ask";
 import {
     isEmptyCompanionEvent,
@@ -374,16 +375,24 @@ export function useAskThread(params: {
         askSessionStore.replace(threadKey, next);
     }, [threadKey]);
 
-    const send = useCallback(async (rawQuestion: string, options: {requestId?: string} = {}) => {
+    /**
+     * `onCallEvent`: a voice call turn (`call: true`). Its voice frames go
+     * there as they arrive, never into the thread, and the finished answer's
+     * text comes back, or null when there was none.
+     */
+    const send = useCallback(async (
+        rawQuestion: string,
+        options: {requestId?: string; onCallEvent?: (frame: Record<string, unknown>) => void} = {}
+    ): Promise<string | null> => {
         const question = rawQuestion.replace(/\s+/g, " ").trim();
-        if (!question) return;
+        if (!question) return null;
         // A reader who starts talking while the animal is still saying hello
         // goes first; the greeting keeps whatever of it had arrived.
         if (abortRef.current && abortRef.current === greetingRef.current) {
             abortRef.current.abort();
             abortRef.current = null;
         }
-        if (abortRef.current) return;
+        if (abortRef.current) return null;
 
         const current = askSessionStore.messages(threadKey);
         // The question's own id is the request id: one per message, and the
@@ -404,6 +413,7 @@ export function useAskThread(params: {
         let answer = "";
         let lastFlush = 0;
         let didFinish = false;
+        let answered: string | null = null;
 
         const flush = (force: boolean) => {
             const now = Date.now();
@@ -436,6 +446,7 @@ export function useAskThread(params: {
             const index = thread.findIndex((message) => message.id === placeholderId);
             if (index < 0) return;
             const next = [...thread];
+            if (!failed) answered = text;
             next[index] = {
                 ...next[index],
                 text,
@@ -464,6 +475,7 @@ export function useAskThread(params: {
             // The reader's clock, for the animal's sense of its day.
             utc_offset_minutes: readerUtcOffset(),
             ...(payWithCredits ? {payWithCredits: true} : {}),
+            ...(options.onCallEvent ? {call: true} : {}),
             subject: {
                 scope: subject.scope,
                 slug: subject.slug,
@@ -527,6 +539,10 @@ export function useAskThread(params: {
 
             let streamError: string | null = null;
             await consumeAskStream(response.body, (event) => {
+                if (options.onCallEvent && isCallFrame(event as Record<string, unknown>)) {
+                    options.onCallEvent(event as Record<string, unknown>);
+                    return;
+                }
                 if (event.persona) takePersona(event.persona);
                 if (typeof event.delta === "string") {
                     answer += event.delta;
@@ -642,6 +658,7 @@ export function useAskThread(params: {
                 setIsSending(false);
             }
         }
+        return controller.signal.aborted ? null : answered;
     }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying, takePersona, takeCompanion, takeFollowUp]);
 
     /**
