@@ -173,7 +173,8 @@ test("the persona frame is the apps' frame, and the client drops a malformed one
     assert.deepEqual(parseAskPersonaFrame(JSON.parse(JSON.stringify(frame))), frame);
     assert.equal(parseAskPersonaFrame({pace: "slow"}), null);
     assert.equal(parseAskPersonaFrame("fast"), null);
-    assert.equal(parseAskPersonaFrame({typing_cps: 900, pace: "warp"})?.typing_cps, 40);
+    assert.equal(parseAskPersonaFrame({typing_cps: 900, pace: "warp"})?.typing_cps, 30);
+    assert.equal(parseAskPersonaFrame({typing_cps: 1, pace: "slow"})?.typing_cps, 6);
     assert.equal(parseAskPersonaFrame({typing_cps: 12, pace: "warp"})?.pace, "measured");
 });
 

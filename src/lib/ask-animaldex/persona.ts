@@ -360,7 +360,8 @@ export function parseAskPersonaFrame(raw: unknown): AskPersonaFrame | null {
     const tagline = typeof row.tagline === "string" && row.tagline.trim() ? row.tagline.trim().slice(0, 120) : null;
     return {
         pace,
-        typing_cps: Math.max(4, Math.min(40, cps)),
+        // A bad value must never stall or race the reply (the apps clamp to 6...30).
+        typing_cps: Math.max(6, Math.min(30, cps)),
         build: (["tiny", "small", "medium", "large", "huge"] as const).find((value) => value === row.build) ?? "medium",
         presence: (["yielding", "steady", "assertive", "commanding"] as const).find((value) => value === row.presence) ?? "steady",
         intellect: (["instinct", "practical", "sharp", "brilliant"] as const).find((value) => value === row.intellect) ?? "practical",
