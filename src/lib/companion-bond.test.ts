@@ -8,6 +8,7 @@ import {
     bondPowerLine,
     bondStageLabel,
     companionLevelsBySpecies,
+    companionRowHref,
     ownCardLevel,
     companionStatusLine,
     companionSummaryName,
@@ -116,6 +117,25 @@ test("your own cards show their animal's bond level, by species id then slug, el
     assert.equal(ownCardLevel(rows, {speciesSlug: "Meerkat"}, 9), 3);
     assert.equal(ownCardLevel(rows, {speciesProfileId: "unknown", speciesSlug: "okapi"}, 4), 4);
     assert.equal(ownCardLevel([], {speciesProfileId: SPECIES}, 5), 5);
+});
+
+test("a row with a referral waiting opens its chat on the referral", () => {
+    const REFERRAL = "8a3c4c55-1d9e-4f3a-9c41-2f1d2b3c4d5e";
+    const CAPTURE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+    const [waiting, plain, malformed, noCard] = decodeCompanionSummaries([
+        {species_profile_id: SPECIES, capture_id: CAPTURE, animal: "Meerkat", referral_waiting: true, referral_id: REFERRAL.toUpperCase()},
+        {species_profile_id: "s2", capture_id: CAPTURE, animal: "Lion", referral_waiting: false, referral_id: null},
+        {species_profile_id: "s3", capture_id: CAPTURE, animal: "Okapi", referral_waiting: true, referral_id: 42},
+        {species_profile_id: "s4", animal: "Tapir", referral_waiting: true, referral_id: REFERRAL}
+    ]);
+    assert.equal(waiting.referralId, REFERRAL);
+    assert.equal(companionRowHref(waiting), `/app/capture/${CAPTURE}?referral=${REFERRAL}`);
+    assert.equal(plain.referralId, null);
+    assert.equal(companionRowHref(plain), `/app/capture/${CAPTURE}?talk=1`);
+    // A malformed id is no referral: the row still opens the chat.
+    assert.equal(malformed.referralId, null);
+    assert.equal(companionRowHref(malformed), `/app/capture/${CAPTURE}?talk=1`);
+    assert.equal(companionRowHref(noCard), null);
 });
 
 test("frequencies read as difficulty", () => {

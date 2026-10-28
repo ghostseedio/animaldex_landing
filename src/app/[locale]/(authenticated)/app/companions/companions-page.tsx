@@ -19,6 +19,7 @@ import {useCompanions} from "@/components/companions/use-companions";
 import {
     COMPANIONS_COPY,
     bondChipText,
+    companionRowHref,
     companionStatusLine,
     companionSummaryName,
     type CompanionSummary
@@ -62,9 +63,10 @@ function CompanionRow({row}: {row: CompanionSummary}) {
         </>
     );
     const className = "flex items-center gap-3.5 border-b border-white/[0.08] px-4 py-3.5 transition hover:bg-white/[0.03] md:px-5";
-    // Its chat, on its newest card.
-    return row.captureId
-        ? <Link href={`/app/capture/${encodeURIComponent(row.captureId)}?talk=1`} className={className}>{body}</Link>
+    // Its chat, on its newest card; on the referral, when one is waiting.
+    const href = companionRowHref(row);
+    return href
+        ? <Link href={href} className={className}>{body}</Link>
         : <div className={className}>{body}</div>;
 }
 

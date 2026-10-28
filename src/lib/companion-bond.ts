@@ -55,6 +55,8 @@ export type CompanionSummary = {
     openTrial: string | null;
     unread: number;
     referralWaiting: boolean;
+    /** The waiting referral's id (iOS 80684c5b), when there is one: the row opens the chat on it. */
+    referralId: string | null;
     lastActivity: string | null;
 };
 
@@ -128,6 +130,13 @@ function object(value: unknown): Record<string, unknown> | null {
 
 function str(value: unknown): string | null {
     return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uuid(value: unknown): string | null {
+    const candidate = str(value);
+    return candidate && UUID_PATTERN.test(candidate) ? candidate.toLowerCase() : null;
 }
 
 function int(value: unknown, fallback: number): number {
@@ -210,6 +219,7 @@ export function decodeCompanionSummaries(raw: unknown): CompanionSummary[] {
             openTrial: str(row.open_trial),
             unread: Math.max(0, int(row.unread, 0)),
             referralWaiting: row.referral_waiting === true,
+            referralId: uuid(row.referral_id),
             lastActivity: str(row.last_activity)
         }];
     });
@@ -271,6 +281,19 @@ export function companionStatusLine(
     if (row.openTrial) return {text: COMPANIONS_COPY.yourStep.replace("{step}", row.openTrial), unread: false};
     if (row.focus) return {text: COMPANIONS_COPY.workingOn.replace("{focus}", row.focus), unread: false};
     return {text: COMPANIONS_COPY.sayHello, unread: false};
+}
+
+/**
+ * Where a Companions row goes: that animal's chat on its newest card. With a
+ * referral waiting it opens on the referral (`?referral=`), so the animal
+ * speaks first about the problem it was sent; otherwise `?talk=1`.
+ */
+export function companionRowHref(row: Pick<CompanionSummary, "captureId" | "referralWaiting" | "referralId">): string | null {
+    if (!row.captureId) return null;
+    const base = `/app/capture/${encodeURIComponent(row.captureId)}`;
+    return row.referralWaiting && row.referralId
+        ? `${base}?referral=${encodeURIComponent(row.referralId)}`
+        : `${base}?talk=1`;
 }
 
 /** Level by species, for every card of your own animals. */
