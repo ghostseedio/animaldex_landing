@@ -9,7 +9,10 @@ export type WebStoreProduct = {
     credits: number;
     label: string;
     detail: string;
+    /** Shown until Paddle's localized price is known; also the analytics value of last resort. */
     fallbackPrice: string;
+    fallbackAmount: number;
+    fallbackCurrency: "USD";
 };
 
 export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = {
@@ -19,7 +22,9 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         credits: 25,
         label: "25 Credits",
         detail: "Enough for a small import of photo-equivalent animals.",
-        fallbackPrice: "$2.99"
+        fallbackPrice: "$2.99",
+        fallbackAmount: 2.99,
+        fallbackCurrency: "USD"
     },
     purchase_100: {
         code: "purchase_100",
@@ -27,7 +32,9 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         credits: 100,
         label: "100 Credits",
         detail: "For a larger archive import or mixed photo and video.",
-        fallbackPrice: "$7.99"
+        fallbackPrice: "$7.99",
+        fallbackAmount: 7.99,
+        fallbackCurrency: "USD"
     },
     pro_upgrade: {
         code: "pro_upgrade",
@@ -35,7 +42,9 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         credits: 0,
         label: "AnimalDex Pro",
         detail: "Unlimited captures, 100 messages a day with any animal, and 42 Credits every month.",
-        fallbackPrice: "$9.99/month"
+        fallbackPrice: "$9.99/month",
+        fallbackAmount: 9.99,
+        fallbackCurrency: "USD"
     }
 };
 

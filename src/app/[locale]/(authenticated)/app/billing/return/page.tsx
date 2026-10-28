@@ -5,7 +5,8 @@ import {usePathname, useRouter, useSearchParams} from "next/navigation";
 import {AppPage, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {useAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import {billingStatusIsServerFulfilled, localePrefixForPath, sanitizeBillingReturnPath} from "@/lib/web-store-catalog";
-import {trackEvent} from "@/lib/analytics";
+import {trackEcommerceEvent, trackEvent} from "@/lib/analytics";
+import {checkoutStorage, takeConfirmedPurchase} from "@/lib/web-checkout-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -58,16 +59,23 @@ function BillingReturnInner() {
                     fulfilled?: boolean;
                     balance?: number;
                     is_pro?: boolean;
+                    product_code?: string;
                     return_path?: string;
                 };
                 if (stopped) return;
                 if (typeof payload.balance === "number") setBalance(payload.balance);
                 if (billingStatusIsServerFulfilled(payload)) {
+                    // Null on a reload of this page: the purchase was already reported.
+                    const purchase = takeConfirmedPurchase(checkoutStorage(), purchaseId, payload.product_code);
                     trackEvent(payload.is_pro ? "web_pro_activated" : "web_checkout_completed_server_confirmed", {
                         source: "billing_return",
                         pro: Boolean(payload.is_pro),
-                        provider: "paddle"
+                        provider: "paddle",
+                        product: payload.product_code,
+                        value: purchase?.value,
+                        currency: purchase?.currency
                     });
+                    if (purchase) trackEcommerceEvent("purchase", purchase);
                     const next = sanitizeBillingReturnPath(payload.return_path || returnPath, localePrefix);
                     const confirmed = new URLSearchParams({billing: "success", purchase_id: purchaseId});
                     router.replace(`${next}?${confirmed.toString()}`);

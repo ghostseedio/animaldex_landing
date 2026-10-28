@@ -1,6 +1,17 @@
 export type PaddleRuntimeEnvironment = "production" | "sandbox";
 
-export type PaddleCheckoutEvent = {name?: string; data?: {transaction_id?: string}};
+/**
+ * The checkout as Paddle.js reports it on its events (checkout.loaded,
+ * checkout.completed): amounts are numbers in the currency's major unit,
+ * localized to the buyer.
+ */
+export type PaddleCheckoutData = {
+    transaction_id?: string;
+    currency_code?: string;
+    totals?: {subtotal?: number; discount?: number; tax?: number; total?: number};
+};
+
+export type PaddleCheckoutEvent = {name?: string; data?: PaddleCheckoutData};
 
 export function assertPaddleBrowserCheckout(
     environment: PaddleRuntimeEnvironment,
@@ -118,7 +129,9 @@ export async function openPaddleCheckout(options: {
     customerEmail?: string;
     /** The page's locale; mapped to one Paddle supports. */
     locale?: string;
-    onCompleted(): void;
+    /** The overlay has its price, localized for the buyer. */
+    onLoaded?(data: PaddleCheckoutData | undefined): void;
+    onCompleted(data: PaddleCheckoutData | undefined): void;
     onClosed(): void;
 }) {
     const configError = assertPaddleBrowserCheckout(options.environment, options.clientToken, options.priceId);
@@ -128,11 +141,15 @@ export async function openPaddleCheckout(options: {
         clientToken: options.clientToken
     });
 
+    let loaded = false;
     const listener = (rawEvent: Event) => {
         const event = (rawEvent as CustomEvent<PaddleCheckoutEvent>).detail;
-        if (event.name === "checkout.completed") {
+        if (event.name === "checkout.loaded" && !loaded) {
+            loaded = true;
+            options.onLoaded?.(event.data);
+        } else if (event.name === "checkout.completed") {
             window.removeEventListener("animaldex:paddle", listener);
-            options.onCompleted();
+            options.onCompleted(event.data);
         } else if (event.name === "checkout.closed") {
             window.removeEventListener("animaldex:paddle", listener);
             options.onClosed();

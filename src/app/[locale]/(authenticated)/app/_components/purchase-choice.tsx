@@ -1,7 +1,8 @@
 "use client";
 
 import {useState} from "react";
-import {trackEvent} from "@/lib/analytics";
+import {trackEcommerceEvent, trackEvent} from "@/lib/analytics";
+import {beginCheckoutParameters, checkoutStorage, rememberCompletedCheckout} from "@/lib/web-checkout-analytics";
 import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
 import {openPaddleCheckout, type PaddleRuntimeEnvironment} from "@/lib/paddle-checkout";
 import {splitLocalePath} from "@/lib/request-routing";
@@ -54,8 +55,13 @@ export async function startWebCheckout(productCode: WebStoreProductCode, appRetu
             userId: payload.userId,
             customerEmail: payload.customerEmail,
             locale: splitLocalePath(window.location.pathname).locale,
-            onCompleted() {
+            onLoaded(data) {
+                trackEcommerceEvent("begin_checkout", {...beginCheckoutParameters(productCode, data), source});
+            },
+            onCompleted(data) {
                 trackEvent("web_checkout_payment_ui_completed", {product: productCode, source, provider: "paddle"});
+                // Kept for the return page, which reports the purchase once the webhook confirms it.
+                rememberCompletedCheckout(checkoutStorage(), payload.purchaseId!, productCode, data);
                 window.location.assign(billingReturnHref(payload.purchaseId!, returnPath));
             },
             onClosed() {
