@@ -150,7 +150,24 @@ export default async function RootLayout(
         ownersAnimal: askT("ownersAnimal"),
         latestMessages: askT("latestMessages"),
         trialHero: askT("trialHero"),
-        chatOptions: askT("chatOptions")
+        chatOptions: askT("chatOptions"),
+        hearIt: askT("hearIt"),
+        voiceStop: askT("voiceStop"),
+        voiceLeftToday: askT("voiceLeftToday"),
+        hearReply: askT("hearReply"),
+        stopVoice: askT("stopVoice"),
+        voiceOff: askT("voiceOff"),
+        voiceOn: askT("voiceOn"),
+        voiceLimitPro: askT("voiceLimitPro"),
+        voiceLimitFree: askT("voiceLimitFree"),
+        voiceFailed: askT("voiceFailed"),
+        seePro: askT("seePro"),
+        hearCall: askT("hearCall"),
+        animalSounds: askT("animalSounds"),
+        soundCredits: askT("soundCredits"),
+        soundCreditsSpecies: askT("soundCreditsSpecies"),
+        soundCreditsHabitat: askT("soundCreditsHabitat"),
+        soundOriginal: askT("soundOriginal")
     };
 
     // noinspection HtmlRequiredTitleElement

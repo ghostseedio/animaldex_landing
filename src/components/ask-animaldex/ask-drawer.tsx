@@ -75,10 +75,15 @@ import {
     MoreIcon,
     type AskMenuItem
 } from "@/components/ask-animaldex/ask-messenger";
-import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
+import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askReplyPieces, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
 import {mergeAskAnimalMessages, parseAskAnimalMessages} from "@/lib/ask-animaldex/animal-messages";
 import {ASK_REPORT_CHOICES, type AskReportChoice} from "@/lib/ask-animaldex/report";
 import {createAskMessage, type AskFollowUpResolution} from "@/lib/ask-animaldex/thread";
+import {AskLitPlainText} from "@/components/ask-animaldex/ask-messenger";
+import {askReplyWords} from "@/lib/ask-animaldex/spoken-words";
+import {AskChatOptions, AskSoundCreditsPanel, AskVoiceIcon} from "@/components/ask-animaldex/ask-chat-audio";
+import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type AskSpeechPhase} from "@/components/ask-animaldex/use-animal-speech";
+import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 
 export type AskDrawerLabels = {
     title: string;
@@ -217,6 +222,29 @@ export type AskDrawerLabels = {
     trialHero: string;
     /** The chat's ••• menu. */
     chatOptions: string;
+    /** A reply's menu: play it in the animal's voice. */
+    hearIt: string;
+    voiceStop: string;
+    /** Spoken replies left today, for a free account. */
+    voiceLeftToday: string;
+    /** The voice icon beside a reply, for screen readers. */
+    hearReply: string;
+    stopVoice: string;
+    /** The header's speaker: replies speak by themselves while it is on. */
+    voiceOff: string;
+    voiceOn: string;
+    voiceLimitPro: string;
+    voiceLimitFree: string;
+    voiceFailed: string;
+    seePro: string;
+    /** The chat's menu: one of the animal's recorded calls, now. */
+    hearCall: string;
+    /** The chat's menu: the animal's recorded sounds as it types. */
+    animalSounds: string;
+    soundCredits: string;
+    soundCreditsSpecies: string;
+    soundCreditsHabitat: string;
+    soundOriginal: string;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -577,13 +605,42 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (inFlightId) setPacedId(inFlightId);
     }, [inFlightId]);
     const pacedMessage = pacedId ? messages.find((message) => message.id === pacedId) ?? null : null;
+    // The animal's voice: replies spoken on request, or by themselves while
+    // the header's speaker is on, with the word being said lit. The speech
+    // allowance is an account's, so a signed-in reader's only.
+    const speech = useAnimalSpeech({
+        available: messenger && Boolean(context?.signedIn),
+        captureId: resolvedSubject.captureId ?? null,
+        speciesProfileId: context?.speciesProfileId ?? null
+    });
+    // Its own recorded sounds as it types, quiet once its voice is speaking
+    // (not while the voice loads, so its opening call is not cut short).
+    const sounds = useAnimalSounds({
+        speciesProfileId: messenger ? context?.speciesProfileId ?? null : null,
+        pace: persona?.pace ?? null,
+        held: speech.isPlaying
+    });
+    const [showingSoundCredits, setShowingSoundCredits] = useState(false);
+    useEffect(() => {
+        if (showingMemory || showingBond) setShowingSoundCredits(false);
+    }, [showingMemory, showingBond]);
     const pacer = useReplyPacer({
         messageId: pacedMessage && pacedMessage.status !== "failed" ? pacedMessage.id : null,
         text: pacedMessage?.text ?? "",
         sourceDone: pacedMessage?.status === "complete",
         persona,
-        instant: reducedMotion
+        instant: reducedMotion,
+        onWordShown: ({isFirst, endsSentence}) => (isFirst ? sounds.replyBegan() : sounds.wordShown(endsSentence))
     });
+    // A reply (or the hello) that has just arrived speaks by itself, once; one
+    // the reader stopped does not.
+    const spokenIdRef = useRef<string | null>(null);
+    const pacedComplete = pacedMessage?.status === "complete" ? pacedMessage : null;
+    useEffect(() => {
+        if (!pacedComplete || spokenIdRef.current === pacedComplete.id || !pacedComplete.text.trim()) return;
+        spokenIdRef.current = pacedComplete.id;
+        speech.speakAutomatically(pacedComplete.id, pacedComplete.text);
+    }, [pacedComplete, speech]);
     // Typing counts as talking: Stop stays until the last word is shown.
     const animalTalking = isSending || pacer.revealing;
     // With something typed the button sends, over a greeting or a reply that
@@ -592,9 +649,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const stopTalking = useCallback(() => {
         // Still arriving: stop it, keeping what the reader saw. All here:
         // show the rest.
-        if (isSending) stop(pacer.messageId ? pacer.visibleText : undefined);
-        else pacer.skipToEnd();
-    }, [isSending, stop, pacer]);
+        if (isSending) {
+            spokenIdRef.current = pacedId;
+            stop(pacer.messageId ? pacer.visibleText : undefined);
+        } else {
+            pacer.skipToEnd();
+        }
+    }, [isSending, stop, pacer, pacedId]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -674,7 +735,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         setShowsLatest(distance > 160);
     }, [messenger]);
     useLayoutEffect(() => {
-        if (!messenger || showingMemory || showingBond || !sticksToBottom.current) return;
+        if (!messenger || showingMemory || showingBond || showingSoundCredits || !sticksToBottom.current) return;
         const scroller = scrollRef.current;
         if (scroller) scroller.scrollTop = scroller.scrollHeight;
     });
@@ -705,8 +766,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         // The composer shrinks back to one line with what it held.
         if (composerRef.current) composerRef.current.style.height = "";
         setShowingMemory(false);
+        // The reader speaks: the animal stops talking. Inside their own click
+        // or key press, the browser then lets the reply speak by itself.
+        speech.stop();
+        speech.prime();
         void send(question);
-    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send]);
+    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech]);
 
     const loadMemory = useCallback(async () => {
         setMemoryState("loading");
@@ -1196,6 +1261,33 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     >
                         <PencilIcon />
                     </button>
+                    {messenger ? (
+                        <AskChatOptions
+                            labels={labels}
+                            voiceAvailable={Boolean(context?.signedIn)}
+                            autoplay={speech.autoplay}
+                            onAutoplay={speech.setAutoplay}
+                            bank={sounds.bank}
+                            soundsOn={sounds.soundsOn}
+                            onSounds={sounds.setSoundsOn}
+                            onHearCall={() => {
+                                speech.stop();
+                                sounds.playCall();
+                            }}
+                            onCredits={() => {
+                                setShowingMemory(false);
+                                setShowingBond(false);
+                                setShowingSoundCredits(true);
+                            }}
+                            // "Mute messages from Luna" / "Let Luna message you" (AnimalDex 51293f02).
+                            extraItems={animalMuted === null ? [] : [{
+                                label: (animalMuted ? labels.unmuteAnimal : labels.muteAnimal)
+                                    .replace("{name}", nickname ?? labels.theAnimal.replace("{animal}", animalName ?? "")),
+                                icon: <BellIcon />,
+                                onSelect: toggleAnimalMuted
+                            }]}
+                        />
+                    ) : null}
                     <button
                         type="button"
                         onClick={close}
@@ -1218,6 +1310,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <button
                                 type="button"
                                 onClick={() => {
+                                    speech.stop();
+                                    sounds.stop();
                                     clear();
                                     setConfirmingClear(false);
                                     composerRef.current?.focus();
@@ -1281,11 +1375,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             savingPreference={savingPreference}
                             preferenceFailed={preferenceFailed}
                             onSetPreference={(patch) => void setPreference(patch)}
-                            mute={animalMuted === null ? null : {
-                                muted: animalMuted,
-                                name: nickname ?? labels.theAnimal.replace("{animal}", animalName ?? ""),
-                                onToggle: toggleAnimalMuted
-                            }}
+                        />
+                    ) : showingSoundCredits && sounds.bank ? (
+                        <AskSoundCreditsPanel
+                            bank={sounds.bank}
+                            animalName={animalName ?? labels.title}
+                            labels={labels}
+                            onBack={() => setShowingSoundCredits(false)}
                         />
                     ) : messenger ? (
                         // The animal's card at the top, the messages resting on the composer.
@@ -1339,6 +1435,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             onResolveFollowUp={ownerChat && message.followUp && !message.followUpResolution
                                                 ? (resolution) => resolveFollowUp(message, resolution)
                                                 : undefined}
+                                            voice={context?.signedIn ? {
+                                                phase: speech.phase,
+                                                allowance: speech.allowance,
+                                                notice: speech.notice?.messageId === message.id ? speech.notice : null,
+                                                onToggle: () => speech.toggle(message.id, message.text)
+                                            } : null}
+                                            spokenWord={speech.cursor?.messageId === message.id ? speech.cursor.word : null}
                                         />
                                     </div>
                                 ))}
@@ -1484,7 +1587,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <ArrowDownIcon />
                         </button>
                     ) : null}
-                    {messenger && !showingMemory && !showingBond ? (
+                    {messenger && !showingMemory && !showingBond && !showingSoundCredits ? (
                         <AskSuggestionBar
                             suggestions={dockedSuggestions}
                             onPick={(prompt) => submit(prompt, "followup")}
@@ -1609,6 +1712,8 @@ function limitFailure(notice: AskLimitNotice, labels: AskDrawerLabels, signInHre
  * reply it could not give, with a way to ask again.
  */
 function AnimalMessageRow({
+    voice = null,
+    spokenWord = null,
     message,
     labels,
     isLast,
@@ -1656,6 +1761,15 @@ function AnimalMessageRow({
     companionEvent?: AskCompanionEvent;
     principleName: string | null;
     signInHref: string;
+    /** The animal's voice, for a signed-in reader: this reply played, stopped, or why it could not be. */
+    voice?: {
+        phase: AskSpeechPhase;
+        allowance: AskSpeechAllowance | null;
+        notice: AskSpeechNotice | null;
+        onToggle: () => void;
+    } | null;
+    /** The word its voice is saying, among the reply's words on screen; null when it is not speaking. */
+    spokenWord?: number | null;
 }) {
     if (message.role === "user") return <AskUserBubble text={message.text} label={labels.youAsked} />;
 
@@ -1696,10 +1810,27 @@ function AnimalMessageRow({
 
     const typing = paced !== null;
     const isLive = typing || message.status === "streaming";
-    // Press-and-hold on the apps: Copy, Share and, on the newest reply, Ask again.
+    const shownText = typing ? paced : message.text;
+    const speaking = voice !== null && voice.phase.kind !== "idle" && voice.phase.messageId === message.id;
+    const loadingVoice = speaking && voice?.phase.kind === "loading";
+    const playingVoice = speaking && voice?.phase.kind === "playing";
+    // Where each bubble's words start among the reply's words, so the voice lights the right one.
+    const wordStarts = spokenWord !== null ? askReplyWords(askReplyPieces(shownText, !isLive)).pieceStarts : null;
+    const freeVoiceLeft = voice?.allowance && !voice.allowance.isPro
+        ? labels.voiceLeftToday.replace("{count}", String(voice.allowance.remaining))
+        : null;
+    // Press-and-hold on the apps: Copy, Share, Hear it and, on the newest reply, Ask again.
     const menuItems: AskMenuItem[] = [
         {label: copied ? labels.copied : labels.copy, icon: copied ? <CheckIcon /> : <CopyIcon />, onSelect: onCopy},
         {label: labels.share, icon: <ShareIcon />, onSelect: onShare},
+        ...(voice
+            ? [{
+                label: speaking ? labels.voiceStop : labels.hearIt,
+                detail: speaking ? null : freeVoiceLeft,
+                icon: <SpeakerSmallIcon />,
+                onSelect: voice.onToggle
+            }]
+            : []),
         ...(isLast && !message.isGreeting && !message.animalMessageId && !animalTalking
             ? [{label: labels.askAgain, icon: <RefreshIcon />, onSelect: onRegenerate, disabled: isSending}]
             : []),
@@ -1716,21 +1847,57 @@ function AnimalMessageRow({
             {typing ? <p className="sr-only">{askMarkdownPlainText(message.text)}</p> : null}
             <div aria-hidden={typing ? true : undefined}>
                 <AskReplyBubbles
-                    text={typing ? paced : message.text}
+                    text={shownText}
                     isLive={isLive}
                     avatarUrl={faceUrl}
                     speakerName={speakerName}
                     photoUrl={photoUrl}
                     photoAlt={photoAlt}
                     onSkip={onSkip}
+                    renderPlain={spokenWord !== null && wordStarts
+                        ? ({text, sparkle, pieceIndex}) => (
+                            <AskLitPlainText text={text} sparkle={sparkle} word={spokenWord - (wordStarts[pieceIndex] ?? 0)} />
+                        )
+                        : undefined}
                     trailing={
-                        <span className={`transition-opacity ${isLast ? "" : "opacity-0 focus-within:opacity-100 group-hover/reply:opacity-100 [@media(pointer:coarse)]:opacity-100"}`}>
-                            <AskMenu label={labels.more} items={menuItems} align="right">
-                                <MoreIcon />
-                            </AskMenu>
-                        </span>
+                        <>
+                            {voice ? (
+                                <AskVoiceIcon
+                                    loading={loadingVoice}
+                                    playing={playingVoice}
+                                    onClick={voice.onToggle}
+                                    label={speaking ? labels.stopVoice : labels.hearReply}
+                                />
+                            ) : null}
+                            <span className={`transition-opacity ${isLast ? "" : "opacity-0 focus-within:opacity-100 group-hover/reply:opacity-100 [@media(pointer:coarse)]:opacity-100"}`}>
+                                <AskMenu label={labels.more} items={menuItems} align="right">
+                                    <MoreIcon />
+                                </AskMenu>
+                            </span>
+                        </>
                     }
-                    after={checkIn || event ? <div className="flex flex-col gap-2.5">{checkIn}{event}</div> : null}
+                    after={!isLive && (checkIn || event || voice?.notice) ? (
+                        <div className="flex flex-col items-start gap-2.5">
+                            {voice?.notice ? (
+                                // Why its voice could not play, under the reply it was for.
+                                <p className="text-[11px] leading-4 text-ink-300">
+                                    {voice.notice.kind === "failed"
+                                        ? labels.voiceFailed
+                                        : voice.notice.offersPro ? labels.voiceLimitFree : labels.voiceLimitPro}
+                                    {voice.notice.offersPro ? (
+                                        <>
+                                            {" "}
+                                            <Link href={labels.limitHrefSignedIn} className="font-bold text-primary-300 transition-colors hover:text-primary-200">
+                                                {labels.seePro}
+                                            </Link>
+                                        </>
+                                    ) : null}
+                                </p>
+                            ) : null}
+                            {checkIn}
+                            {event}
+                        </div>
+                    ) : null}
                 />
             </div>
         </div>
@@ -2206,8 +2373,7 @@ function AskMemoryPanel({
     settings,
     savingPreference,
     preferenceFailed,
-    onSetPreference,
-    mute
+    onSetPreference
 }: {
     labels: AskDrawerLabels;
     facts: AskMemoryFact[];
@@ -2226,8 +2392,6 @@ function AskMemoryPanel({
     savingPreference: boolean;
     preferenceFailed: boolean;
     onSetPreference: (patch: Partial<AskMemorySettings>) => void;
-    /** On the owner's chat: whether this animal may write to them by itself. */
-    mute: {muted: boolean; name: string; onToggle: () => void} | null;
 }) {
     const [editing, setEditing] = useState<string | null>(null);
     const [editText, setEditText] = useState("");
@@ -2368,7 +2532,7 @@ function AskMemoryPanel({
                 </>
             )}
 
-            {settings || mute ? (
+            {settings ? (
                 // How the animals talk with them: edge to edge, like the list above.
                 <div className="-mx-4 border-y border-white/10">
                     {settings?.personalisationEnabled !== null && settings?.personalisationEnabled !== undefined ? (
@@ -2405,15 +2569,6 @@ function AskMemoryPanel({
                             value={settings.animalMessagesEnabled}
                             disabled={savingPreference}
                             onChange={(value) => onSetPreference({animalMessagesEnabled: value})}
-                        />
-                    ) : null}
-                    {mute ? (
-                        <PreferenceRow
-                            title={labels.unmuteAnimal.replace("{name}", mute.name)}
-                            detail={null}
-                            value={!mute.muted}
-                            disabled={false}
-                            onChange={() => mute.onToggle()}
                         />
                     ) : null}
                     {settings?.shareJourney !== null && settings?.shareJourney !== undefined ? (
@@ -2513,5 +2668,7 @@ const ShareIcon = () => icon(<path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5M4.5 12v2
 const SealIcon = () => icon(<path d="M10 2.8l1.8 1.3 2.2-.1.7 2.1 1.8 1.3-.7 2.1.7 2.1-1.8 1.3-.7 2.1-2.2-.1L10 17.2l-1.8-1.3-2.2.1-.7-2.1-1.8-1.3.7-2.1-.7-2.1 1.8-1.3.7-2.1 2.2.1Zm-2.6 7.4 1.8 1.8 3.6-3.8" />);
 const ReferralIcon = () => icon(<path d="M5 15V9.5A3.5 3.5 0 0 1 8.5 6H15m0 0-3-3m3 3-3 3" />);
 const RefreshIcon = () => icon(<path d="M15.5 10a5.5 5.5 0 1 1-1.9-4.2M15.5 4v3h-3" />);
+const BellIcon = () => icon(<path d="M6 13.5V9a4 4 0 0 1 8 0v4.5l1.3 1.5H4.7ZM8.5 16.5a1.6 1.6 0 0 0 3 0" />);
 const FlagIcon = () => icon(<path d="M5 17V3.8m0 0h8.5l-1.6 3.1 1.6 3.1H5" />);
 const CalendarIcon = () => icon(<path d="M4.5 6h11v9.5h-11Zm0 3h11M8 4v3m4-3v3" />);
+const SpeakerSmallIcon = () => icon(<path d="M3.5 8v4h3l4 3.5v-11l-4 3.5Zm10-1.5a4.5 4.5 0 0 1 0 7" />);

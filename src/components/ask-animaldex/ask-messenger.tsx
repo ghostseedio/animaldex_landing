@@ -22,7 +22,9 @@
 
 import {useEffect, useRef, useState, type ReactNode} from "react";
 import Image from "next/image";
-import AssistantMarkdown, {AskInline} from "@/components/ask-animaldex/assistant-markdown";
+import AssistantMarkdown, {AskInline, AskInlineSegmentView} from "@/components/ask-animaldex/assistant-markdown";
+import {parseAskInline} from "@/lib/ask-animaldex/markdown";
+import {askWordRanges} from "@/lib/ask-animaldex/spoken-words";
 import {askPlainBubbleText, askReplyPieces, type AskReplyPiece} from "@/lib/ask-animaldex/thread-layout";
 
 /**
@@ -184,6 +186,46 @@ export function AskPlainBubbleText({text, sparkle}: AskPlainBubbleProps) {
 }
 
 /**
+ * A plain bubble with the word the animal's voice is saying lit: brighter and
+ * softly backed, a change of colour only, so the lines never reflow as the
+ * voice moves on (iOS `AnimalChatSpokenWords.highlighting`). `word` counts
+ * this bubble's own words; out of range, nothing is lit.
+ */
+export function AskLitPlainText({text, sparkle, word}: AskPlainBubbleProps & {word: number}) {
+    const segments = parseAskInline(askPlainBubbleText(text));
+    const plain = segments.map((segment) => segment.text).join("");
+    const lit = askWordRanges(plain)[word];
+    if (!lit) return <AskPlainBubbleText text={text} sparkle={sparkle} />;
+    let offset = 0;
+    return (
+        <>
+            {segments.map((segment, index) => {
+                const from = offset;
+                offset += segment.text.length;
+                const start = Math.max(lit[0], from);
+                const end = Math.min(lit[1], offset);
+                if (start >= end) return <AskInlineSegmentView key={index} segment={segment} />;
+                const parts = [
+                    segment.text.slice(0, start - from),
+                    segment.text.slice(start - from, end - from),
+                    segment.text.slice(end - from)
+                ];
+                return (
+                    <span key={index}>
+                        {parts[0] ? <AskInlineSegmentView segment={{...segment, text: parts[0]}} /> : null}
+                        <span className="bg-primary-400/[0.16] text-primary-300">
+                            <AskInlineSegmentView segment={{...segment, text: parts[1]}} />
+                        </span>
+                        {parts[2] ? <AskInlineSegmentView segment={{...segment, text: parts[2]}} /> : null}
+                    </span>
+                );
+            })}
+            {sparkle ? <AskSparkle /> : null}
+        </>
+    );
+}
+
+/**
  * The animal's reply: one bubble per thought, typed out at its pace while it
  * is the newest, with any drawing set beside the bubbles. A click while it
  * types shows the rest at once.
@@ -209,8 +251,11 @@ export function AskReplyBubbles({
     photoUrl: string | null;
     photoAlt: string;
     onSkip?: () => void;
-    /** How a plain bubble's words are drawn; `AskPlainBubbleText` when absent. */
-    renderPlain?: (bubble: AskPlainBubbleProps & {index: number}) => ReactNode;
+    /**
+     * How a plain bubble's words are drawn; `AskPlainBubbleText` when absent.
+     * `index` counts plain bubbles, `pieceIndex` every piece of the reply.
+     */
+    renderPlain?: (bubble: AskPlainBubbleProps & {index: number; pieceIndex: number}) => ReactNode;
     /** Beside the last bubble of a finished reply: its voice, its menu. */
     trailing?: ReactNode;
     /** Under the bubbles: a check-in, a step done together, a referral. */
@@ -246,7 +291,7 @@ export function AskReplyBubbles({
                             >
                                 {piece.isPlain
                                     ? (renderPlain
-                                        ? renderPlain({text: piece.text, sparkle, index: plainIndex})
+                                        ? renderPlain({text: piece.text, sparkle, index: plainIndex, pieceIndex: index})
                                         : <AskPlainBubbleText text={piece.text} sparkle={sparkle} />)
                                     : (
                                         <>
@@ -259,8 +304,9 @@ export function AskReplyBubbles({
                         return (
                             <div key={`b-${index}`} className="flex items-end">
                                 <div className="flex min-w-0 flex-col items-start">{bubble}</div>
-                                {/* Room beside every bubble for the reply's controls, so their far edges line up. */}
-                                <div className="flex w-9 shrink-0 justify-center">
+                                {/* Room beside every bubble for the reply's controls (its voice, its
+                                    menu), so their far edges line up. */}
+                                <div className="flex w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1">
                                     {!isLive && index === lastBubble ? trailing : null}
                                 </div>
                             </div>
@@ -347,6 +393,8 @@ export function AskMenu({
     children: ReactNode;
 }) {
     const [open, setOpen] = useState(false);
+    // Low in the panel, the menu opens upwards, so the thread's edge never cuts it off.
+    const [upwards, setUpwards] = useState(false);
     const rootRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
         if (!open) return;
@@ -378,6 +426,8 @@ export function AskMenu({
                 aria-expanded={open}
                 onClick={(event) => {
                     event.stopPropagation();
+                    const rect = rootRef.current?.getBoundingClientRect();
+                    setUpwards(Boolean(rect && rect.bottom > window.innerHeight * 0.55));
                     setOpen((current) => !current);
                 }}
                 className={buttonClassName ?? "grid h-7 w-7 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white"}
@@ -387,7 +437,7 @@ export function AskMenu({
             {open ? (
                 <div
                     role="menu"
-                    className={`absolute z-10 mt-1 min-w-[12.5rem] border border-white/12 bg-canvas-900 py-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)] ${align === "right" ? "right-0" : "left-0"}`}
+                    className={`absolute z-10 min-w-[15rem] border border-white/12 bg-canvas-900 py-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)] ${align === "right" ? "right-0" : "left-0"} ${upwards ? "bottom-full mb-1" : "top-full mt-1"}`}
                 >
                     {visible.map((item) => (
                         <button

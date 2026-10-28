@@ -28,6 +28,11 @@ export function AskInline({text}: {text: string}) {
     return <Inline text={text} />;
 }
 
+/** One inline segment as the answer renders it, for a bubble that lights one of its words. */
+export function AskInlineSegmentView({segment}: {segment: AskInlineSegment}) {
+    return <InlineSegment segment={segment} />;
+}
+
 function Inline({text}: {text: string}) {
     return (
         <>
