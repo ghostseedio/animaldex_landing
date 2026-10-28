@@ -99,6 +99,8 @@ import {
     withAskVisitorNotice
 } from "@/lib/ask-animaldex/visitor-notes";
 import {askSupportedVisuals} from "@/lib/ask-animaldex/visuals";
+import {askCallTurn, resolveAskCallQuestion} from "@/lib/ask-animaldex/call-voice";
+import {CALL_REPLY_LINE} from "@/lib/ask-animaldex/call-speech";
 import {
     bondForClient,
     companionPromptLines,
@@ -160,7 +162,7 @@ export async function POST(request: Request) {
 
     // The animal's opening line: it speaks before the reader has said anything.
     const isGreeting = body.greeting === true;
-    const question = isGreeting ? "" : resolveAskQuestion(body.question);
+    const question = isGreeting ? "" : body.call === true ? resolveAskCallQuestion(body.question) : resolveAskQuestion(body.question);
     if (!isGreeting && !question) return askJson({error: "invalid_question"}, 400);
 
     const viewer = await resolveAskViewer(request);
@@ -221,6 +223,9 @@ export async function POST(request: Request) {
     // Personalisation off: no memory is read and nothing is learned.
     const personalise = viewer.signedIn && settings.personalisationEnabled;
     const speaksAsAnimal = basePacket.scope === "species" && Boolean(basePacket.species);
+    // A live voice call (`call-voice.ts`): a fast model, a short spoken reply,
+    // and its voice streamed back in this stream with the words.
+    const isCall = !isGreeting && body.call === true && speaksAsAnimal;
     if (isGreeting && !speaksAsAnimal) {
         // Only an animal speaks first; the site-wide assistant waits to be asked.
         return askJson({error: "greeting_unavailable"}, 400);
@@ -330,7 +335,11 @@ export async function POST(request: Request) {
     // animal matches the size of what was said; a short reply has no room
     // for a story.
     const lengthTier = askReplyLengthFor({message: question ?? "", mode, history});
-    const thisReply = isGreeting || !nature
+    const thisReply = isGreeting
+        ? null
+        : isCall
+        ? [CALL_REPLY_LINE]
+        : !nature
         ? null
         : [
             askReplyLengthLine(lengthTier),
@@ -447,6 +456,17 @@ export async function POST(request: Request) {
     // Greetings think at low effort, as in the apps; replies at the animal's own,
     // capped (medium unless ANIMAL_CHAT_MAX_EFFORT says otherwise).
     const effort: AskChatEffort = isGreeting ? "low" : capAskEffort(persona?.effort ?? "low", askChatMaxEffort());
+    const call = isCall
+        ? askCallTurn({
+            viewer,
+            speciesProfileId: companion?.speciesProfileId ?? null,
+            animalName: packet.species?.name ?? "",
+            stats: companion?.stats ?? null,
+            dials: persona,
+            pace: companion?.voice.pace ?? null,
+            signal: request.signal
+        })
+        : null;
 
     const supportedVisuals = askSupportedVisuals(packet.hasReaderPhoto);
     const promptOptions = {
@@ -577,13 +597,8 @@ export async function POST(request: Request) {
         : null;
     const streamingSystemPrompt = buildAskStreamingSystemPrompt(promptOptions);
     const sourceFor = (provider: AskProviderName): AnswerDeltaSource | null => {
-        const source = askAnswerSource(provider, {
-            systemPrompt: streamingSystemPrompt,
-            userPrompt,
-            history: historyTurns,
-            effort,
-            signal: request.signal
-        });
+        const params = {systemPrompt: streamingSystemPrompt, userPrompt, history: historyTurns, effort, signal: request.signal};
+        const source = call ? call.source(provider, params) : askAnswerSource(provider, params);
         if (!source || !visitorNotice) return source;
         // The visitor is told once: at the end of a hello, at the start of a reply.
         return withAskVisitorNotice(source, visitorNotice, isGreeting ? "tail" : "lead");
@@ -605,6 +620,8 @@ export async function POST(request: Request) {
             // The animal's pace comes first, so the drawer can type the very
             // first word at it.
             if (personaFrame.persona) send(personaFrame);
+            // A call speaks the answer as it arrives, in this stream.
+            const speaker = call?.speaker(send) ?? null;
 
             let full = "";
             // Everything up to the sentinel is answer text; once it appears,
@@ -617,6 +634,7 @@ export async function POST(request: Request) {
                 const visible = visibleAnswerSoFar(full);
                 if (visible.length > emitted) {
                     send({delta: visible.slice(emitted)});
+                    speaker?.hear(visible.slice(emitted));
                     emitted = visible.length;
                 }
             });
@@ -630,10 +648,13 @@ export async function POST(request: Request) {
                 const split = splitStreamedReply(hidden.raw);
                 if (split.answer.length > emitted) {
                     send({delta: split.answer.slice(emitted)});
+                    speaker?.hear(split.answer.slice(emitted));
                 }
                 const companionFields = split.answer.trim() && onCompanion
                     ? await onCompanion(hidden.lines).catch(() => ({}))
                     : {};
+                // On a call, `done` waits until all of it has been spoken.
+                await speaker?.finish();
                 send({done: true, follow_up_prompts: split.followUps, ...closing, ...companionFields});
                 if (split.answer.trim()) {
                     afterAnswer(split.answer);
@@ -699,6 +720,8 @@ export async function POST(request: Request) {
                 const whole = await oneShot();
                 if (whole) {
                     send({delta: shownWhole(whole.answer)});
+                    speaker?.hear(shownWhole(whole.answer));
+                    await speaker?.finish();
                     send({done: true, follow_up_prompts: whole.followUps, ...closing});
                     afterAnswer(whole.answer);
                     rememberStory(cleanAskOwnStory(whole.ownStory));
@@ -712,6 +735,7 @@ export async function POST(request: Request) {
             console.error("[ask-animaldex] every provider failed", failures.join(" | "));
             // Nothing was produced, so the message goes back to the budget.
             await refund();
+            speaker?.stop();
             send({error: "stream_failed", detail: failures[0] ?? "unknown"});
             controller.close();
         }
