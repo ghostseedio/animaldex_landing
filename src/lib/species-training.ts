@@ -23,6 +23,26 @@ export const TRAINING_COPY = {
     required: "Complete this animal's Training first."
 } as const;
 
+/**
+ * One attempt a day. A missed Training or a rejected proof locks until the
+ * next day or a new card of the animal, whichever is first (AnimalDex
+ * 20261028120000; it used to need a new card). Word for word with iOS
+ * `SpeciesTrainingCopy`.
+ */
+export const LOCKOUT_COPY = {
+    attemptUsedLine: "That was today's attempt. Try again tomorrow, or capture this animal again.",
+    trainingWarning: "One attempt a day. Get any answer wrong and you can try again tomorrow.",
+    proofWarning: "One attempt a day. A rejected proof means trying again tomorrow.",
+    trainingLockedBody: "You missed one. Try again tomorrow, or capture this animal again.",
+    proofLockedBody: "Your proof wasn't accepted. Try again tomorrow, or capture this animal again.",
+    lockedButton: "Try again tomorrow"
+} as const;
+
+/** "You missed one. Try again tomorrow, or capture a Meerkat again." */
+export function fusedLockedBody(animalName: string) {
+    return `You missed one. Try again tomorrow, or capture a ${animalName} again.`;
+}
+
 /** "Answer 1 quick question about this animal's Power." / "Answer 3 quick questions …" */
 export function trainingIntroText(questionCount: number) {
     return questionCount === 1
@@ -223,6 +243,7 @@ export function isTrainingRequiredRefusal(error: unknown) {
 /** What to show for a Training RPC refusal. Never a raw code. */
 export function trainingRefusalMessage(code: string) {
     if (/training_required/i.test(code)) return TRAINING_COPY.required;
+    if (/training_locked/i.test(code)) return LOCKOUT_COPY.trainingLockedBody;
     if (/species_not_unlocked/i.test(code)) return "You don't own this index yet. Capture this animal first.";
     if (/not_authenticated/i.test(code)) return "Sign in to take this animal's Training.";
     if (/training_not_found|species_not_found/i.test(code)) return "This animal has no Training yet.";

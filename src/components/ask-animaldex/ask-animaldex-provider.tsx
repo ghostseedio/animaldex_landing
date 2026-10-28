@@ -30,6 +30,13 @@ export type AskSubjectDeclaration = {
     avatarUrl?: string | null;
     title?: string | null;
     summary?: string | null;
+    /**
+     * The reader's own card only: the species its companion loop is kept
+     * under ("Working on: …"). Never set on a visit; never sent to the model.
+     */
+    companionSpeciesProfileId?: string | null;
+    /** Opened from another of their animals' referral: this one speaks first about it. */
+    referralId?: string | null;
 };
 
 /**
@@ -50,6 +57,10 @@ type AskContextValue = {
     photoUrl: string | null;
     /** The animal's picture, for the launcher, the header and beside its replies. */
     avatarUrl: string | null;
+    /** Set on the reader's own card: the owner's one-to-one chat, with its companion loop. */
+    companionSpeciesProfileId: string | null;
+    /** The referral this chat was opened from, if any. */
+    referralId: string | null;
     locale: string;
     isOpen: boolean;
     open: (question?: string) => void;
@@ -115,12 +126,25 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         subject,
         photoUrl: declaration?.photoUrl ?? null,
         avatarUrl: declaration?.avatarUrl ?? null,
+        companionSpeciesProfileId: declaration?.companionSpeciesProfileId ?? null,
+        referralId: declaration?.referralId ?? null,
         locale,
         isOpen,
         open,
         close,
         takePendingQuestion
-    }), [subject, declaration?.photoUrl, declaration?.avatarUrl, locale, isOpen, open, close, takePendingQuestion]);
+    }), [
+        subject,
+        declaration?.photoUrl,
+        declaration?.avatarUrl,
+        declaration?.companionSpeciesProfileId,
+        declaration?.referralId,
+        locale,
+        isOpen,
+        open,
+        close,
+        takePendingQuestion
+    ]);
 
     return (
         <AskContext.Provider value={value}>
@@ -169,6 +193,8 @@ export function useAskAnimalDex(): AskContextValue {
         subject: emptyAskSubject(),
         photoUrl: null,
         avatarUrl: null,
+        companionSpeciesProfileId: null,
+        referralId: null,
         locale: "en",
         isOpen: false,
         open: () => undefined,

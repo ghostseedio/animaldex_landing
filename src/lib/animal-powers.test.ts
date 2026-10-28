@@ -9,6 +9,7 @@ import {
     applicationDomainShortlist,
     decodeAnimalPower,
     decodeCapturePlayEligibility,
+    earnedLabel,
     gateIsLocked,
     gatePermitsPlay,
     powerRefusalMessage
@@ -104,6 +105,14 @@ test("a Power row decodes retired domains onto their successor and drops unknown
     assert.equal(decoded.earnedVia, "application");
     assert.equal(decoded.hasTrial, false);
     assert.equal(decoded.speciesDisplayName, "This animal");
+});
+
+test("a Power earned in the person's own life keeps its route and says so", () => {
+    const decoded = decodeAnimalPower({species_profile_id: SPECIES, principle_name: "Hidden Strategy", earned_via: "your_trial"});
+    assert.equal(decoded?.earnedVia, "your_trial");
+    assert.equal(earnedLabel("your_trial"), "Earned in your own life");
+    assert.equal(decodeAnimalPower({species_profile_id: SPECIES, principle_name: "Hidden Strategy", earned_via: "legacy"})?.earnedVia, null);
+    assert.equal(earnedLabel(null), "Earned");
 });
 
 test("a row that names no Power is not a Power", () => {

@@ -19,6 +19,12 @@
  * typed out at its own pace (`useReplyPacer`), a click on a reply shows the
  * rest at once, Stop keeps what was already said, and the header carries its
  * temperament.
+ *
+ * On the reader's own card it is their one-to-one chat, with the companion
+ * loop (AnimalDex 2026-10-28): "Working on: …" under the name once the animal
+ * has found what it is helping them with, "Not this any more" to let it go,
+ * and under the reply where it happened, a step done together or another of
+ * their animals it sent them to.
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
@@ -43,6 +49,15 @@ import {
 } from "@/lib/ask-animaldex/subject";
 import {trackEvent} from "@/lib/analytics";
 import {SPECIES_ASK_FUNNEL_EVENTS} from "@/lib/species-ask";
+import {
+    COMPANION_COPY,
+    EMPTY_COMPANION_LOOP,
+    companionDisplayName,
+    parseCompanionFocus,
+    referralCapturePath,
+    type AskCompanionEvent,
+    type AskCompanionLoop
+} from "@/lib/ask-animaldex/companion-loop";
 
 export type AskDrawerLabels = {
     title: string;
@@ -133,7 +148,16 @@ type AskContextPayload = {
 const THINKING_PHASE_MS = 2200;
 
 export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
-    const {subject, photoUrl, avatarUrl, locale, close, takePendingQuestion} = useAskAnimalDex();
+    const {
+        subject,
+        photoUrl,
+        avatarUrl,
+        companionSpeciesProfileId,
+        referralId,
+        locale,
+        close,
+        takePendingQuestion
+    } = useAskAnimalDex();
     const [context, setContext] = useState<AskContextPayload | null>(null);
     const [composer, setComposer] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -147,6 +171,17 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
     const resolvedSubject = context?.subject ?? subject;
+
+    // The owner's own one-to-one chat: their card, signed in, not a Trial
+    // thread. Only there does the animal work on their life with them.
+    const ownerChat = Boolean(
+        companionSpeciesProfileId
+        && context?.signedIn
+        && resolvedSubject.scope === "species"
+        && !resolvedSubject.trialContext
+    );
+    // What the animal is helping them with, and the step it set.
+    const [companionLoop, setCompanionLoop] = useState<AskCompanionLoop | null>(null);
 
     const {
         messages,
@@ -168,6 +203,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         locale,
         principleName: hints.principleName,
         viewer: {signedIn: context?.signedIn ?? false, hasWildProfile: context?.hasWildProfile ?? false},
+        ownerChat,
+        onCompanion: (update) => setCompanionLoop(update.loop),
         onAnswered: ({followUps}) => {
             trackEvent(SPECIES_ASK_FUNNEL_EVENTS.answered, {
                 species_slug: resolvedSubject.slug ?? "",
@@ -227,12 +264,53 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, [context, takePendingQuestion, send]);
 
     // The animal speaks first: an empty species thread opens on its greeting.
-    // Runs after the pending question above, which takes precedence.
+    // Runs after the pending question above, which takes precedence. Opened
+    // from another animal's referral, it speaks first about that instead,
+    // history or not (once per referral; `greet` keeps count).
     const canGreet = Boolean(context?.available && context.subject.scope === "species" && (context.hints.animalName ?? context.subject.name));
+    const greetsForReferral = ownerChat && Boolean(referralId);
     useEffect(() => {
-        if (!canGreet || messages.length > 0 || greetingState !== "idle" || isSending) return;
+        if (!canGreet || isSending) return;
+        if (greetsForReferral) {
+            void greet({referralId});
+            return;
+        }
+        if (messages.length > 0 || greetingState !== "idle") return;
         void greet();
-    }, [canGreet, messages.length, greetingState, isSending, greet]);
+    }, [canGreet, greetsForReferral, referralId, messages.length, greetingState, isSending, greet]);
+
+    // The loop as it stands when the chat opens; replies keep it current.
+    useEffect(() => {
+        setCompanionLoop(null);
+        if (!ownerChat || !companionSpeciesProfileId) return;
+        let cancelled = false;
+        void fetch(`/api/ask/companion?speciesProfileId=${encodeURIComponent(companionSpeciesProfileId)}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload: {loop?: unknown} | null) => {
+                const loop = payload ? parseCompanionFocus(payload.loop) : null;
+                if (!cancelled && loop) setCompanionLoop(loop);
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [ownerChat, companionSpeciesProfileId]);
+
+    /** "Not this any more": the animal lets the focus go, and the step on it. Back as it was if that fails. */
+    const clearCompanionFocus = useCallback(() => {
+        if (!companionSpeciesProfileId) return;
+        const previous = companionLoop;
+        setCompanionLoop({...EMPTY_COMPANION_LOOP, yourTrialsDone: previous?.yourTrialsDone ?? 0});
+        void fetch("/api/ask/companion", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({action: "clear", speciesProfileId: companionSpeciesProfileId})
+        })
+            .then((response) => {
+                if (!response.ok) throw new Error(String(response.status));
+            })
+            .catch(() => setCompanionLoop(previous));
+    }, [companionLoop, companionSpeciesProfileId]);
 
     /**
      * The reply being typed out: the newest animal reply that arrived while
@@ -504,7 +582,21 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <p className="min-w-0 truncate text-sm font-semibold text-white">
                                 {animalName ?? labels.title}
                             </p>
-                            {speaksAsAnimal ? (
+                            {ownerChat && companionLoop?.focus ? (
+                                // What the two of you are working on, once the animal has found it.
+                                <div className="flex min-w-0 items-baseline gap-2">
+                                    <p className="min-w-0 truncate text-[11px] leading-4 text-ink-300" title={companionLoop.focus}>
+                                        {COMPANION_COPY.workingOn.replace("{focus}", companionLoop.focus)}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={clearCompanionFocus}
+                                        className="shrink-0 text-[11px] font-semibold leading-4 text-ink-400 underline-offset-2 transition-colors hover:text-white hover:underline"
+                                    >
+                                        {COMPANION_COPY.notThisAnyMore}
+                                    </button>
+                                </div>
+                            ) : speaksAsAnimal ? (
                                 // The animal's temperament once it has spoken, as in the app's header.
                                 <p className="truncate text-[11px] leading-4 text-ink-400">{persona?.tagline ?? labels.inOwnWords}</p>
                             ) : null}
@@ -616,6 +708,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     onRegenerate={() => regenerate(message.id)}
                                     onRetry={() => retry(message.id)}
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
+                                    companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
+                                    principleName={hints.principleName}
                                 />
                             ))}
                         </div>
@@ -682,6 +776,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     onRegenerate={() => regenerate(message.id)}
                                     onRetry={() => retry(message.id)}
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
+                                    companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
+                                    principleName={hints.principleName}
                                 />
                             ))}
                             {/* Room below the newest exchange, so the question can sit at the top. */}
@@ -829,7 +925,9 @@ function MessageBlock({
     onShare,
     onRegenerate,
     onRetry,
-    onFollowUp
+    onFollowUp,
+    companionEvent,
+    principleName = null
 }: {
     message: AskMessage;
     labels: AskDrawerLabels;
@@ -855,6 +953,10 @@ function MessageBlock({
     onRegenerate: () => void;
     onRetry: () => void;
     onFollowUp: (prompt: string) => void;
+    /** What the animal did in this reply in the companion loop; the owner's own chat only. */
+    companionEvent?: AskCompanionEvent;
+    /** The animal's Power, named when a step earned it. */
+    principleName?: string | null;
 }) {
     if (message.role === "user") {
         return (
@@ -939,6 +1041,10 @@ function MessageBlock({
                 </div>
             ) : null}
 
+            {finished && companionEvent ? (
+                <CompanionEventBlock event={companionEvent} principleName={principleName} />
+            ) : null}
+
             {/* Only the newest answer offers next questions. */}
             {finished && isLast && message.followUpPrompts.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -956,6 +1062,47 @@ function MessageBlock({
                 </div>
             ) : null}
         </div>
+        </div>
+    );
+}
+
+/**
+ * Under the reply where the animal saw a step of theirs done, or sent them to
+ * another of their animals: the moment, marked in the thread. The animal has
+ * already said well done in its own words; this is the game's part.
+ */
+function CompanionEventBlock({event, principleName}: {event: AskCompanionEvent; principleName: string | null}) {
+    const done = event.stepDone;
+    const referral = event.referral;
+    const referralHref = referral ? referralCapturePath(referral) : null;
+    return (
+        <div className="flex flex-col items-start gap-2.5">
+            {done ? (
+                <div className="flex flex-col gap-1">
+                    <p className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-300">
+                        <SealIcon />
+                        {COMPANION_COPY.doneTogether}
+                    </p>
+                    <p className="text-[11px] leading-4 text-ink-300">{done.step}</p>
+                    {done.powerEarned && principleName ? (
+                        <p className="text-[11px] font-semibold leading-4 text-white">
+                            {COMPANION_COPY.powerEarned.replace("{power}", principleName)}
+                        </p>
+                    ) : !done.powerEarned && done.powerWaitsForTraining ? (
+                        <p className="text-[11px] font-semibold leading-4 text-white">{COMPANION_COPY.powerWaitsForTraining}</p>
+                    ) : null}
+                </div>
+            ) : null}
+            {referral && referralHref ? (
+                <Link
+                    href={referralHref}
+                    title={COMPANION_COPY.talkToHint}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40"
+                >
+                    <ReferralIcon />
+                    {COMPANION_COPY.talkTo.replace("{name}", companionDisplayName(referral.nickname, referral.animal))}
+                </Link>
+            ) : null}
         </div>
     );
 }
@@ -1191,4 +1338,6 @@ const ArrowUpRightIcon = () => icon(<path d="M6.5 13.5l7-7m0 0h-5m5 0v5" />, 2.2
 const CopyIcon = () => icon(<path d="M7.5 7.5V5.2A1.2 1.2 0 0 1 8.7 4h6.1A1.2 1.2 0 0 1 16 5.2v6.1a1.2 1.2 0 0 1-1.2 1.2H12.5M5.2 7.5h6.1A1.2 1.2 0 0 1 12.5 8.7v6.1A1.2 1.2 0 0 1 11.3 16H5.2A1.2 1.2 0 0 1 4 14.8V8.7A1.2 1.2 0 0 1 5.2 7.5Z" />);
 const CheckIcon = () => icon(<path d="M4.5 10.5l3.5 3.5 7.5-8" />, 2.4);
 const ShareIcon = () => icon(<path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5M4.5 12v2.8A1.2 1.2 0 0 0 5.7 16h8.6a1.2 1.2 0 0 0 1.2-1.2V12" />);
+const SealIcon = () => icon(<path d="M10 2.8l1.8 1.3 2.2-.1.7 2.1 1.8 1.3-.7 2.1.7 2.1-1.8 1.3-.7 2.1-2.2-.1L10 17.2l-1.8-1.3-2.2.1-.7-2.1-1.8-1.3.7-2.1-.7-2.1 1.8-1.3.7-2.1 2.2.1Zm-2.6 7.4 1.8 1.8 3.6-3.8" />);
+const ReferralIcon = () => icon(<path d="M5 15V9.5A3.5 3.5 0 0 1 8.5 6H15m0 0-3-3m3 3-3 3" />);
 const RefreshIcon = () => icon(<path d="M15.5 10a5.5 5.5 0 1 1-1.9-4.2M15.5 4v3h-3" />);

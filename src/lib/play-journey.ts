@@ -365,7 +365,9 @@ export const PLAY_JOURNEY_COPY = {
     findBattle: "Find a battle",
     showLess: "Show less",
     locked: "LOCKED",
-    catchAgainToRetry: "CATCH AGAIN TO RETRY",
+    // A miss locks until the next day, or a new card of the animal, whichever
+    // is first (AnimalDex 20261028120000; it used to need a new card).
+    tryAgainTomorrow: "TRY AGAIN TOMORROW",
     fused: "FUSED",
     trialRunning: "Trial running",
     proofUnderReview: "Proof under review",
@@ -376,7 +378,7 @@ export const PLAY_JOURNEY_COPY = {
     rowHint: "Opens this animal's Play tab"
 } as const;
 
-export const lockedSummaryLine = (count: number) => `${count} locked · catch again to retry`;
+export const lockedSummaryLine = (count: number) => `${count} locked · try again tomorrow`;
 export const showAllLine = (count: number) => `Show all ${count}`;
 export const trialRunningLine = (left: string) => `Trial running · ${left} left`;
 

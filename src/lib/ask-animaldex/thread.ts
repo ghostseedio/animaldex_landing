@@ -13,6 +13,8 @@
  * in-memory thread instead of breaking the drawer.
  */
 
+import {normalizeCompanionEvent, type AskCompanionEvent} from "@/lib/ask-animaldex/companion-loop";
+
 export type AskMessageRole = "user" | "assistant";
 
 export type AskMessageStatus =
@@ -33,6 +35,11 @@ export type AskMessage = {
     createdAt: string;
     /** The animal's opening line, said before the reader said anything. */
     isGreeting?: boolean;
+    /**
+     * What the animal did in this reply in the companion loop: a step of
+     * theirs completed, or another of their animals it sent them to.
+     */
+    companionEvent?: AskCompanionEvent;
 };
 
 export type AskThreads = Record<string, AskMessage[]>;
@@ -74,7 +81,8 @@ export function createAskMessage(
         status: overrides.status ?? "complete",
         followUpPrompts: overrides.followUpPrompts ?? [],
         createdAt: overrides.createdAt ?? new Date().toISOString(),
-        ...(overrides.isGreeting ? {isGreeting: true} : {})
+        ...(overrides.isGreeting ? {isGreeting: true} : {}),
+        ...(overrides.companionEvent ? {companionEvent: overrides.companionEvent} : {})
     };
 }
 
@@ -141,8 +149,14 @@ function normalizeMessage(value: unknown): AskMessage | null {
             ? row.followUpPrompts.filter((item): item is string => typeof item === "string").slice(0, 3)
             : [],
         createdAt: typeof row.createdAt === "string" ? row.createdAt : new Date().toISOString(),
-        ...(row.isGreeting === true ? {isGreeting: true} : {})
+        ...(row.isGreeting === true ? {isGreeting: true} : {}),
+        ...companionEventField(row.companionEvent)
     };
+}
+
+function companionEventField(raw: unknown): {companionEvent?: AskCompanionEvent} {
+    const event = normalizeCompanionEvent(raw);
+    return event ? {companionEvent: event} : {};
 }
 
 export type AskThreadStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;

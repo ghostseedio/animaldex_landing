@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+    LOCKOUT_COPY,
     TRAINING_COPY,
     chooseTrainingAnswer,
+    fusedLockedBody,
     decodeSpeciesTraining,
     decodeSpeciesTrainingResult,
     isTrainingQuizReady,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/species-training";
 import {powerRefusalMessage} from "@/lib/animal-powers";
 import {isRetryableRefusal, trialStartErrorMessage, verifierRefusalMessage} from "@/lib/animal-trials";
+import {fusedRefusalMessage} from "@/lib/fused-powers";
 
 const SPECIES = "742b057b-47c4-447a-a61c-53d0b28c5e00";
 
@@ -183,4 +186,21 @@ test("training_required maps to the same message everywhere", () => {
     assert.equal(powerRefusalMessage("training_required"), message);
     assert.equal(trainingRefusalMessage("training_required"), message);
     assert.equal(trialStartErrorMessage("something else", "fallback"), "fallback");
+});
+
+test("a miss locks until tomorrow, word for word with iOS", () => {
+    assert.equal(LOCKOUT_COPY.attemptUsedLine, "That was today's attempt. Try again tomorrow, or capture this animal again.");
+    assert.equal(LOCKOUT_COPY.trainingWarning, "One attempt a day. Get any answer wrong and you can try again tomorrow.");
+    assert.equal(LOCKOUT_COPY.proofWarning, "One attempt a day. A rejected proof means trying again tomorrow.");
+    assert.equal(LOCKOUT_COPY.lockedButton, "Try again tomorrow");
+    assert.equal(fusedLockedBody("Meerkat"), "You missed one. Try again tomorrow, or capture a Meerkat again.");
+
+    const missed = "You missed one. Try again tomorrow, or capture this animal again.";
+    const rejected = "Your proof wasn't accepted. Try again tomorrow, or capture this animal again.";
+    assert.equal(trainingRefusalMessage("training_locked"), missed);
+    assert.equal(powerRefusalMessage("training_locked"), missed);
+    assert.equal(fusedRefusalMessage("fused_training_locked"), missed);
+    assert.equal(powerRefusalMessage("proof_locked"), rejected);
+    assert.equal(verifierRefusalMessage("proof_locked"), rejected);
+    assert.equal(isRetryableRefusal("proof_locked"), false);
 });

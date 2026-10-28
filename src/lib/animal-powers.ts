@@ -11,20 +11,27 @@
  */
 
 import {trackEvent} from "@/lib/analytics";
-import {TRAINING_COPY} from "@/lib/species-training";
+import {LOCKOUT_COPY, TRAINING_COPY} from "@/lib/species-training";
 import {
     DOMAIN_PREFERRED_ORDER,
     type SystemDynamicsDomain,
     normalizeDomain
 } from "@/lib/system-dynamics";
 
-/** How a Power was earned. Both routes grant the same Power; neither is lesser. */
-export type AnimalPowerRoute = "trial" | "application";
+/**
+ * How a Power was earned. Every route grants the same Power; none is lesser.
+ * `your_trial` is a step the animal set on the person's own life, done (the
+ * companion loop, AnimalDex 20261028120000).
+ */
+export type AnimalPowerRoute = "trial" | "application" | "your_trial";
+
+const ANIMAL_POWER_ROUTES: readonly AnimalPowerRoute[] = ["trial", "application", "your_trial"];
 
 export function earnedLabel(route: AnimalPowerRoute | null) {
     switch (route) {
         case "trial": return "Earned by Trial";
         case "application": return "Earned by applying it";
+        case "your_trial": return "Earned in your own life";
         default: return "Earned";
     }
 }
@@ -203,6 +210,10 @@ export function powerRefusalMessage(code: string, serverMessage?: string | null)
             return "You don't own this index yet. Capture this animal first.";
         case "training_required":
             return TRAINING_COPY.required;
+        case "training_locked":
+            return LOCKOUT_COPY.trainingLockedBody;
+        case "proof_locked":
+            return LOCKOUT_COPY.proofLockedBody;
         case "grading_unavailable":
             // Explicitly NOT phrased as a refusal. Nothing was graded and no
             // attempt was spent, so the copy must not imply otherwise.
@@ -295,7 +306,7 @@ export function decodeAnimalPower(row: any): AnimalPower | null {
         shortMotto: str(row?.short_motto),
         isEarned: row?.is_earned === true,
         earnedAt: str(row?.earned_at),
-        earnedVia: earnedVia === "trial" || earnedVia === "application" ? earnedVia : null,
+        earnedVia: ANIMAL_POWER_ROUTES.find((route) => route === earnedVia) ?? null,
         sourceDomain: str(row?.source_domain),
         sourceTrialFrequency: str(row?.source_trial_frequency),
         principleNameAtEarning: str(row?.principle_name_at_earning),

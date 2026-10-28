@@ -18,7 +18,7 @@ export const runtime = "nodejs";
  */
 
 function errorCode(message: string) {
-    const match = /(not_authenticated|fused_power_not_found|fused_training_not_ready|answers_mismatch)/i.exec(message);
+    const match = /(not_authenticated|fused_power_not_found|fused_training_not_ready|answers_mismatch|fused_training_locked)/i.exec(message);
     return match ? match[1].toLowerCase() : "fused_failed";
 }
 

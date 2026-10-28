@@ -1,7 +1,7 @@
 "use client";
 
 import {type ReactNode, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {AskSubjectBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
 import Image from "next/image";
 import {useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -29,6 +29,7 @@ import type {AppCaptureDetail} from "@/data/authenticated-app";
 import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from "@/data/discover-timeline";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {allChallengersPowerLocked} from "@/lib/animal-powers";
+import {resolveReferralId} from "@/lib/ask-animaldex/companion-loop";
 import type {AnimalTrial} from "@/lib/animal-trials";
 import {loopTraining, powerLoop} from "@/lib/power-loop";
 import {pendingFusedSummary} from "@/lib/fused-powers";
@@ -154,8 +155,16 @@ export default function CaptureDetailClient({
     fusion = null
 }: CaptureDetailClientProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     // `?tab=play` opens the card on its Play tab, as the Play hub's Powers rows do (iOS `initialDetailTab`).
-    const requestedTab = useSearchParams()?.get("tab");
+    const requestedTab = searchParams?.get("tab");
+    // `?referral=` is "Talk to …" from another of the owner's animals: this
+    // one's chat opens and it speaks first about the problem it was sent.
+    const referralId = viewer.isOwner ? resolveReferralId(searchParams?.get("referral")) : null;
+    const {open: openAsk} = useAskAnimalDex();
+    useEffect(() => {
+        if (referralId) openAsk();
+    }, [referralId, openAsk]);
     const [tab, setTab] = useState<AnimalDetailTab>(requestedTab === "play" || requestedTab === "stats" ? requestedTab : "learn");
     // The one earning destination for this screen. The Learn Power band's "Earn
     // this Power" opens it; on close the earned state is re-read so a Power
@@ -434,6 +443,8 @@ export default function CaptureDetailClient({
                     photoUrl={capture.imageSrc}
                     title={capture.animalName}
                     summary={descriptor ?? null}
+                    companionSpeciesProfileId={viewer.isOwner ? speciesProfileId : null}
+                    referralId={referralId}
                 />
 
                 <section

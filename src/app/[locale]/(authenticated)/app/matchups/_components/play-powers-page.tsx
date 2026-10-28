@@ -226,7 +226,7 @@ function JourneySection({step, entries, onFindBattle}: {step: PlayJourneyStep; e
             <section id={playJourneyAnchorId(step)} className="-mx-4 scroll-mt-36 border-b border-white/[0.08] bg-[#141414] md:mx-0">
                 <div className="flex items-center gap-2 bg-white/[0.08] px-5 py-2 text-[11px] font-black tracking-[0.1em] text-white/60">
                     <span><span aria-hidden="true">🔒 </span>{PLAY_JOURNEY_COPY.locked}</span>
-                    <span className="ml-auto truncate">{PLAY_JOURNEY_COPY.catchAgainToRetry}</span>
+                    <span className="ml-auto truncate">{PLAY_JOURNEY_COPY.tryAgainTomorrow}</span>
                 </div>
                 {body}
             </section>

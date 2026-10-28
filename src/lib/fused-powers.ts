@@ -12,7 +12,7 @@
  */
 
 import {POWER_APPLICATION_LIMITS, powerRefusalMessage} from "@/lib/animal-powers";
-import {type SpeciesTraining, type SpeciesTrainingQuestion, trainingRewardLine} from "@/lib/species-training";
+import {LOCKOUT_COPY, type SpeciesTraining, type SpeciesTrainingQuestion, trainingRewardLine} from "@/lib/species-training";
 
 // MARK: - Copy (identical on iOS, Android and web)
 
@@ -405,6 +405,8 @@ export function fusedTrainingForQuiz(item: FusedPower): SpeciesTraining | null {
 /** What to show for a `fused-power` or `submit_fused_training` refusal. Never a raw code. */
 export function fusedRefusalMessage(code: string, serverMessage?: string | null) {
     if (/training_required/i.test(code)) return FUSED_COPY.trainingRequired;
+    // The refusal does not name the animal to capture again.
+    if (/fused_training_locked/i.test(code)) return LOCKOUT_COPY.trainingLockedBody;
     if (/attempts_exhausted_today/i.test(code)) return FUSED_COPY.attemptsExhausted;
     if (/fused_power_not_ready|fused_training_not_ready|preparing_failed/i.test(code)) return FUSED_COPY.notReady;
     if (/fused_power_not_found/i.test(code)) return "This Power is no longer on this card.";

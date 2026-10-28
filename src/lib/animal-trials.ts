@@ -8,7 +8,7 @@
  * the server picks. Every Trial is one action, and missing one costs nothing.
  */
 
-import {TRAINING_COPY} from "@/lib/species-training";
+import {LOCKOUT_COPY, TRAINING_COPY} from "@/lib/species-training";
 import {parseTrialStoryboard, type TrialStoryboard} from "@/lib/trial-motion/storyboard";
 
 export type AnimalTrialFrequency = "LOW" | "MID" | "HIGH";
@@ -488,6 +488,8 @@ export function verifierRefusalMessage(code: string, serverMessage?: string | nu
             return "Capture this animal before taking its Trials.";
         case "training_required":
             return TRAINING_COPY.required;
+        case "proof_locked":
+            return LOCKOUT_COPY.proofLockedBody;
         case "verification_failed":
             return "The check could not be completed. Try again in a moment.";
         case "server_configuration":
@@ -506,7 +508,8 @@ const NON_RETRYABLE_CODES = [
     "trial_not_active",
     "proof_type_not_allowed",
     "species_not_unlocked",
-    "training_required"
+    "training_required",
+    "proof_locked"
 ];
 
 export function isRetryableRefusal(code: string) {

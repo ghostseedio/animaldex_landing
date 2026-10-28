@@ -23,6 +23,12 @@ import type {AskSubject} from "@/lib/ask-animaldex/subject";
 import {decorateFollowUps} from "@/lib/ask-animaldex/wild-profile";
 import {parseAskPersonaFrame, type AskPersonaFrame} from "@/lib/ask-animaldex/persona";
 import {TRIAL_ASK_FALLBACK_FOLLOW_UPS} from "@/lib/animal-trial-ask";
+import {
+    isEmptyCompanionEvent,
+    parseCompanionUpdate,
+    type AskCompanionEvent,
+    type AskCompanionUpdate
+} from "@/lib/ask-animaldex/companion-loop";
 
 /**
  * The animal's pace and tagline per thread, for the life of the tab: the
@@ -33,6 +39,9 @@ const personaByThread = new Map<string, AskPersonaFrame>();
 
 /** Threads the animal has already tried to open this page view, so a failed greeting is not retried in a loop. */
 const greetedThreads = new Set<string>();
+
+/** Referrals already opened on this page view: the animal speaks first about one only once. */
+const greetedReferrals = new Set<string>();
 
 /** Offered when the model returns none, so the thread never dead-ends. */
 export function fallbackFollowUps(principleName: string | null, aboutTrial = false): string[] {
@@ -161,6 +170,8 @@ type StreamEvent = {
     credit_cost?: number | null;
     credit_balance?: number | null;
     credit_overflow?: AskCreditOverflow;
+    /** The companion loop after this reply, on the owner's own chat (decoded tolerantly). */
+    companion?: unknown;
     error?: string;
     detail?: string;
 };
@@ -225,6 +236,13 @@ export function useAskThread(params: {
      * next answer rather than never.
      */
     viewer?: {signedIn: boolean; hasWildProfile: boolean};
+    /**
+     * The owner's own one-to-one chat (not a visit, not a Trial thread): what
+     * the animal did in a reply is kept with it, and the loop is reported.
+     */
+    ownerChat?: boolean;
+    /** The companion loop after a reply or a greeting. */
+    onCompanion?: (update: AskCompanionUpdate) => void;
     onAnswered?: (info: {question: string; followUps: number}) => void;
     onFailed?: (reason: string) => void;
 }) {
@@ -281,6 +299,19 @@ export function useAskThread(params: {
     const callbacks = useRef(params);
     callbacks.current = params;
 
+    /**
+     * Reports the loop and returns what the animal did in this reply, on the
+     * owner's own chat only. A malformed `companion` is nothing, never a
+     * failed answer.
+     */
+    const takeCompanion = useCallback((raw: unknown): AskCompanionEvent | undefined => {
+        if (!callbacks.current.ownerChat) return undefined;
+        const update = parseCompanionUpdate(raw);
+        if (!update) return undefined;
+        callbacks.current.onCompanion?.(update);
+        return isEmptyCompanionEvent(update.event) ? undefined : update.event;
+    }, []);
+
     useEffect(() => () => abortRef.current?.abort(), []);
 
     const replace = useCallback((next: AskMessage[]) => {
@@ -336,7 +367,7 @@ export function useAskThread(params: {
             replace(next);
         };
 
-        const settle = (text: string, followUps: string[], failed: boolean) => {
+        const settle = (text: string, followUps: string[], failed: boolean, companionEvent?: AskCompanionEvent) => {
             const thread = askSessionStore.messages(threadKey);
             const index = thread.findIndex((message) => message.id === placeholderId);
             if (index < 0) return;
@@ -345,7 +376,9 @@ export function useAskThread(params: {
                 ...next[index],
                 text,
                 status: failed ? "failed" : "complete",
-                followUpPrompts: failed ? [] : followUps
+                followUpPrompts: failed ? [] : followUps,
+                // Kept with the reply it happened in, through reloads.
+                ...(!failed && companionEvent ? {companionEvent} : {})
             };
             replace(next);
         };
@@ -436,7 +469,7 @@ export function useAskThread(params: {
                         event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps,
                         event
                     );
-                    settle(split.answer, offers, false);
+                    settle(split.answer, offers, false, takeCompanion(event.companion));
                     if (typeof event.remaining === "number") {
                         const paying = isPaying();
                         setQuota({
@@ -488,7 +521,7 @@ export function useAskThread(params: {
 
                 if (whole?.answer?.trim()) {
                     const offers = offersFor(whole.follow_up_prompts ?? [], whole);
-                    settle(whole.answer, offers, false);
+                    settle(whole.answer, offers, false, takeCompanion(whole.companion));
                     if (typeof whole.remaining === "number") {
                         const paying = isPaying();
                         setQuota({
@@ -530,25 +563,38 @@ export function useAskThread(params: {
                 setIsSending(false);
             }
         }
-    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying, takePersona]);
+    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying, takePersona, takeCompanion]);
 
     /**
      * The animal speaks first: an empty species thread opens on its greeting,
      * free and capped per day by the server. Said once per thread per page
      * view; when it cannot be had, the placeholder goes and the drawer shows
      * its static openers instead.
+     *
+     * Opened from another of their animals' referral (`referralId`), it speaks
+     * first about that problem even when the thread has history, once per
+     * referral. A referral already taken comes back empty: no hello, then.
      */
-    const greet = useCallback(async () => {
-        if (abortRef.current || askSessionStore.messages(threadKey).length > 0) return;
-        if (greetedThreads.has(threadKey)) {
-            // Already tried this page view and nothing came of it: the openers.
-            setGreetingState("failed");
-            return;
+    const greet = useCallback(async (options: {referralId?: string | null} = {}) => {
+        const referralId = options.referralId ?? null;
+        const existing = askSessionStore.messages(threadKey);
+        if (abortRef.current) return;
+        if (referralId) {
+            if (greetedReferrals.has(referralId)) return;
+            greetedReferrals.add(referralId);
+            greetedThreads.add(threadKey);
+        } else {
+            if (existing.length > 0) return;
+            if (greetedThreads.has(threadKey)) {
+                // Already tried this page view and nothing came of it: the openers.
+                setGreetingState("failed");
+                return;
+            }
+            greetedThreads.add(threadKey);
         }
-        greetedThreads.add(threadKey);
 
         const placeholderId = newAskMessageId();
-        replace([createAskMessage("assistant", "", {id: placeholderId, status: "thinking", isGreeting: true})]);
+        replace([...existing, createAskMessage("assistant", "", {id: placeholderId, status: "thinking", isGreeting: true})]);
         const controller = new AbortController();
         abortRef.current = controller;
         greetingRef.current = controller;
@@ -577,6 +623,7 @@ export function useAskThread(params: {
                 signal: controller.signal,
                 body: JSON.stringify({
                     greeting: true,
+                    ...(referralId ? {referral_id: referralId} : {}),
                     locale,
                     history: [],
                     subject: {
@@ -606,13 +653,15 @@ export function useAskThread(params: {
                     return;
                 }
                 if (event.done) {
+                    const companionEvent = takeCompanion(event.companion);
                     const split = splitStreamedReply(answer);
                     if (!split.answer.trim()) return;
                     settled = true;
                     update({
                         text: split.answer,
                         status: "complete",
-                        followUpPrompts: (event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps).slice(0, 3)
+                        followUpPrompts: (event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps).slice(0, 3),
+                        ...(companionEvent ? {companionEvent} : {})
                     });
                 }
             });
@@ -640,7 +689,7 @@ export function useAskThread(params: {
                 setIsSending(false);
             }
         }
-    }, [threadKey, subject, locale, replace, takePersona]);
+    }, [threadKey, subject, locale, replace, takePersona, takeCompanion]);
 
     /**
      * Stops the reply in flight. `keepText` is what the reader already saw of

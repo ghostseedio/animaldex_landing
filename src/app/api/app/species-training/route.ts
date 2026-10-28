@@ -65,7 +65,7 @@ async function signedOutPreview(speciesProfileId: string): Promise<SpeciesTraini
 }
 
 function errorCode(message: string) {
-    const match = /(not_authenticated|species_not_found|training_not_found|species_not_unlocked|answers_mismatch)/i.exec(message);
+    const match = /(not_authenticated|species_not_found|training_not_found|species_not_unlocked|answers_mismatch|training_locked)/i.exec(message);
     return match ? match[1].toLowerCase() : "training_failed";
 }
 

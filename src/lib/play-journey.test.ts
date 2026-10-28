@@ -3,6 +3,7 @@ import test from "node:test";
 import type {PowerGateStatus} from "@/lib/animal-powers";
 import {type AnimalTrial, decodeAnimalTrial} from "@/lib/animal-trials";
 import {
+    PLAY_JOURNEY_COPY,
     PLAY_JOURNEY_TRAINING_REWARD_XP,
     type PlayJourneyCard,
     type PlayJourneyFused,
@@ -13,6 +14,7 @@ import {
     journeyPowersEarned,
     journeyStatusLine,
     journeyTimeLeft,
+    lockedSummaryLine,
     visibleEntries
 } from "@/lib/play-journey";
 
@@ -204,4 +206,9 @@ test("more than five rows fold to four behind Show all", () => {
     assert.equal(visibleEntries(rows, false).length, 4);
     assert.equal(visibleEntries(rows, true).length, 6);
     assert.equal(visibleEntries(rows.slice(0, 5), false).length, 5);
+});
+
+test("a locked step says when it can be tried again", () => {
+    assert.equal(lockedSummaryLine(2), "2 locked · try again tomorrow");
+    assert.equal(PLAY_JOURNEY_COPY.tryAgainTomorrow, "TRY AGAIN TOMORROW");
 });
