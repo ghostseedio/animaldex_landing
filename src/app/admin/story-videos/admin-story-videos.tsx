@@ -10,6 +10,7 @@ import {MANUAL_SHARE_PLATFORMS, type ManualSharePlatform, SOCIAL_PLATFORM_LABELS
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
 import AdminAutomation from "@/app/admin/story-videos/admin-automation";
 import {AdminHookLab, AdminSocialContent} from "@/app/admin/story-videos/admin-growth-lab";
+import AdminTrendRadar from "@/app/admin/story-videos/admin-trend-radar";
 import AdminUploadedVideos, {type UploadedVideo} from "@/app/admin/story-videos/admin-uploaded-videos";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
@@ -278,6 +279,8 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
             ) : null}
 
             <AdminAutomation onChanged={() => void loadAll()} />
+
+            <AdminTrendRadar />
 
             <AdminHookLab />
 

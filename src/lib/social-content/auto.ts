@@ -2,12 +2,13 @@ import "server-only";
 import {recordAutomationRun} from "@/lib/automation-runs";
 import {listPosts} from "@/lib/social/store";
 import {isClaudeReady} from "@/lib/social-content/claude";
-import {generateCarousel, generateTextPosts} from "@/lib/social-content/generate";
+import {freshArticleNeeds, generateCarousel, generateTextPosts} from "@/lib/social-content/generate";
 import {listSocialContent, socialContentSpentToday} from "@/lib/social-content/store";
 import {contentIdFromMediaPath, type SocialContentRow} from "@/lib/social-content/types";
 
 // Keeps a small stock of carousels and text posts that have not gone out yet,
-// so the auto-share always has something besides videos. Run from the video
+// so the auto-share always has something besides videos, and makes them for a
+// freshly published article at once (news is worth most in its first days). Run from the video
 // auto-generate timer (every 3 hours); each run tops up at most one carousel
 // and one batch of text posts. Cheap: a carousel is one Claude call (~$0.10–0.20)
 // plus Satori rendering, a text batch one smaller call.
@@ -42,9 +43,11 @@ async function run(): Promise<ContentGenerateResult> {
     const stock = await unsharedContent();
     const carousels = stock.filter((row) => row.kind === "carousel").length;
     const texts = stock.filter((row) => row.kind === "text").length;
+    // A fresh article gets its carousel and text posts even when the stock is full.
+    const fresh = await freshArticleNeeds().catch(() => ({carousel: false, text: false}));
     const made: string[] = [];
     const errors: string[] = [];
-    if (carousels < CAROUSEL_STOCK) {
+    if (carousels < CAROUSEL_STOCK || fresh.carousel) {
         try {
             const row = await generateCarousel();
             made.push(`carousel “${row.source_title}”`);
@@ -52,7 +55,7 @@ async function run(): Promise<ContentGenerateResult> {
             errors.push(`carousel: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-    if (texts < TEXT_STOCK) {
+    if (texts < TEXT_STOCK || fresh.text) {
         try {
             const rows = await generateTextPosts(TEXT_BATCH);
             made.push(`${rows.length} text posts from “${rows[0]?.source_title ?? "?"}”`);

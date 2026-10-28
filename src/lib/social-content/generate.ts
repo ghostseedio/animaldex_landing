@@ -9,7 +9,7 @@ import {nextExperiment} from "@/lib/social-lab/experiments";
 import {structuredClaude} from "@/lib/social-content/claude";
 import {buildCarouselUserPrompt, buildTextUserPrompt, CAROUSEL_SYSTEM_PROMPT, carouselJsonSchema, normalizeCarousel, normalizeTextPosts, TEXT_JSON_SCHEMA, TEXT_SYSTEM_PROMPT, textShareCopy} from "@/lib/social-content/plan";
 import {type Picture, pictureFromBytes, renderSlide, type SlideSize} from "@/lib/social-content/render";
-import {carouselSourceSlugs, insertSocialContent} from "@/lib/social-content/store";
+import {carouselSourceSlugs, insertSocialContent, listSocialContent} from "@/lib/social-content/store";
 import {type CarouselImages, type SocialContentRow, TEMPLATES_FOR_SOURCE} from "@/lib/social-content/types";
 
 // Makes one carousel, or a batch of text posts, from one of our pages:
@@ -32,16 +32,38 @@ function shuffle<T>(list: T[], random = Math.random) {
     return copy;
 }
 
-/** Random pages from the families a carousel can be made of, skipping pages that already have one. */
+/** Articles this new go first: news is worth most in its first days. */
+const FRESH_ARTICLE_MS = 72 * 3_600_000;
+
+async function freshArticles() {
+    return (await listPageCandidates("blog"))
+        .filter((page) => Date.now() - Date.parse(page.publishedAt) < FRESH_ARTICLE_MS)
+        .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+}
+
+/** Whether a fresh article still lacks a carousel / text posts: the stock limit does not hold those back. */
+export async function freshArticleNeeds() {
+    const fresh = await freshArticles();
+    if (!fresh.length) return {carousel: false, text: false};
+    const [carousels, texts] = await Promise.all([carouselSourceSlugs().catch(() => new Set<string>()), listSocialContent("text", 200).catch(() => [])]);
+    const textSlugs = new Set(texts.map((row) => `${row.source_type}:${row.source_slug}`));
+    return {
+        carousel: fresh.some((page) => page.imageCount >= MIN_CAROUSEL_IMAGES && !carousels.has(`blog:${page.slug}`)),
+        text: fresh.some((page) => !textSlugs.has(`blog:${page.slug}`))
+    };
+}
+
+/** Fresh articles first, then random pages from the families a carousel can be made of; never a page that already has one. */
 async function carouselCandidates(): Promise<Pick[]> {
     const used = await carouselSourceSlugs().catch(() => new Set<string>());
+    const fresh: Pick[] = (await freshArticles()).filter((page) => !used.has(`blog:${page.slug}`) && page.imageCount >= MIN_CAROUSEL_IMAGES).map((page) => ({type: "blog", slug: page.slug}));
     const types = shuffle(Object.keys(TEMPLATES_FOR_SOURCE) as SourceType[]);
     const picks: Pick[] = [];
     for (const type of types) {
         const pages = shuffle(await listPageCandidates(type)).filter((page) => !used.has(`${type}:${page.slug}`) && page.imageCount >= MIN_CAROUSEL_IMAGES);
         picks.push(...pages.slice(0, 2).map((page) => ({type, slug: page.slug})));
     }
-    return shuffle(picks).slice(0, PICKS_PER_RUN);
+    return [...fresh.slice(0, 2), ...shuffle(picks)].slice(0, PICKS_PER_RUN);
 }
 
 async function loadPictures(images: SourceImage[]) {
@@ -120,6 +142,15 @@ export async function generateCarousel(pick?: Pick): Promise<SocialContentRow> {
 export async function generateTextPosts(count = 4, pick?: Pick): Promise<SocialContentRow[]> {
     let source: VideoSource | null = null;
     let chosen: Pick | null = pick ?? null;
+    // A fresh article no text post has come from yet goes first.
+    if (!pick) {
+        const written = new Set((await listSocialContent("text", 200).catch(() => [])).map((row) => `${row.source_type}:${row.source_slug}`));
+        const fresh = (await freshArticles()).find((page) => !written.has(`blog:${page.slug}`));
+        if (fresh) {
+            source = await loadPageSource("blog", fresh.slug).catch(() => null);
+            if (source) chosen = {type: "blog", slug: fresh.slug};
+        }
+    }
     for (let attempt = 0; attempt < 5 && !source; attempt += 1) {
         if (!pick) {
             const type = SOURCE_TYPES[Math.floor(Math.random() * SOURCE_TYPES.length)];

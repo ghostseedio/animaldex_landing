@@ -84,3 +84,35 @@ export async function loadSearchClicks(startDate: string, endDate: string): Prom
         return {byDate: {}, through: null, note: `Google clicks: ${error instanceof Error ? error.message : "Search Console unavailable"}`};
     }
 }
+
+export type RisingQuery = {query: string; impressions: number; previous: number; position: number; clicks: number};
+
+async function queryRows(account: ServiceAccount, startDate: string, endDate: string) {
+    const site = env("GOOGLE_SEARCH_CONSOLE_SITE") || "sc-domain:animaldex.app";
+    const response = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(site)}/searchAnalytics/query`, {
+        method: "POST",
+        headers: {Authorization: `Bearer ${await accessToken(account)}`, "Content-Type": "application/json"},
+        body: JSON.stringify({startDate, endDate, dimensions: ["query"], dataState: "all", rowLimit: 2000}),
+        cache: "no-store"
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error?.message ?? `Search Console returned ${response.status}`);
+    return (body.rows ?? []) as Array<{keys: string[]; clicks: number; impressions: number; position: number}>;
+}
+
+/**
+ * Queries the site is gaining impressions on (last 7 days vs the 7 before),
+ * still below the top 3: what searchers want from us now. For the trend radar.
+ */
+export async function loadRisingQueries(limit = 40): Promise<RisingQuery[]> {
+    const account = credentials();
+    if (!account) return [];
+    const day = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+    const [recent, before] = await Promise.all([queryRows(account, day(8), day(2)), queryRows(account, day(15), day(9))]);
+    const previous = new Map(before.map((row) => [row.keys[0], row.impressions]));
+    return recent
+        .map((row) => ({query: row.keys[0], impressions: row.impressions, previous: previous.get(row.keys[0]) ?? 0, position: Math.round(row.position * 10) / 10, clicks: row.clicks}))
+        .filter((row) => row.impressions >= 30 && row.position > 3 && row.position <= 30 && row.impressions >= row.previous * 1.5)
+        .sort((a, b) => (b.impressions - b.previous) - (a.impressions - a.previous))
+        .slice(0, limit);
+}

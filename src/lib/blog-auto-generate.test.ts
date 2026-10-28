@@ -26,7 +26,9 @@ test("the focus list covers conservation crises", () => {
 
 test("blog auto-generate runs the manual news flow at standard depth and publishes", () => {
     const source = read("src/lib/blog-generator/auto-generate.ts");
-    assert.match(source, /startGenerateJob\(\{mode: "news", focus, publish: true, depth: "standard"\}/);
+    // The radar's best story when there is one, else Claude searches a random focus.
+    assert.match(source, /start\(\{mode: "news", focus, publish: true, depth: "standard"\}/);
+    assert.match(source, /mode: topic\.kind === "news" \? "news" : "catalog", idea: topic\.idea, publish: true, depth: "standard"/);
     assert.match(source, /generateJobRunning\(\)/);
 });
 
@@ -39,7 +41,7 @@ test("the admin panel's schedule matches the timer installer", () => {
 });
 
 test("the run log's job constraint allows every automation job", () => {
-    const migration = read("supabase/migrations/20261028120000_social_growth_engine.sql");
+    const migration = read("supabase/migrations/20261028180000_trend_radar.sql");
     for (const job of AUTOMATION_JOBS) assert.match(migration, new RegExp(`'${job}'`));
 });
 
