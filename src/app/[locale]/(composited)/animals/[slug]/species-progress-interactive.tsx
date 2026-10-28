@@ -138,7 +138,7 @@ export function SpeciesLevelProgress({progress}: {progress: CaptureProgressState
     return (
         <section className="  border border-white/10 bg-[#1f1f1f] p-3.5 font-sans">
             <div className="flex items-baseline gap-2.5">
-                <span className="rounded-full border border-primary-400/25 bg-primary-400/10 px-2.5 py-1.5 text-[11px] font-extrabold text-primary-400">{level.level >= 100 ? "Lvl 100 MAX" : `Lvl ${level.level}`}</span>
+                <span className="rounded-full border border-primary-400/25 bg-primary-400/10 px-2.5 py-1.5 text-[11px] font-extrabold text-primary-400">{level.level >= 100 ? "Level 100 MAX" : `Level ${level.level}`}</span>
                 <span className="text-xs font-medium text-white">{level.xp} XP</span>
                 <span className="ml-auto text-[11px] font-semibold text-white/40">{level.level >= 100 ? "MAX" : `${level.needed} XP to next`}</span>
             </div>

@@ -106,7 +106,7 @@ export default function PickAnimalStep({
                                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/45">
                                     <span>Tier {capture.battleTier}</span>
                                     <span aria-hidden="true">·</span>
-                                    <span>Lvl {capture.level}</span>
+                                    <span>Level {capture.level}</span>
                                     <span aria-hidden="true">·</span>
                                     <ChallengeHearts challengeHealth={capture.challengeHealth} />
                                     <span aria-hidden="true">·</span>

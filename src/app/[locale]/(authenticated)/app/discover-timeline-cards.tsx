@@ -797,7 +797,7 @@ function CaptureChip({
 
 /** iOS `capturePostChipRow`: one HStack of Level · Tier · Grade — never wraps. */
 function CapturePostChipRow({item}: {item: DiscoverCaptureItem}) {
-  const levelLabel = item.level >= 100 ? "Lvl 100 MAX" : `Lvl ${item.level}`;
+  const levelLabel = item.level >= 100 ? "Level 100 MAX" : `Level ${item.level}`;
   return (
     <div className="flex flex-nowrap items-center gap-2">
       <CaptureChip tone="green">{levelLabel}</CaptureChip>
@@ -1924,7 +1924,7 @@ export function PostInformation({item, locale, onClose}: {item: DiscoverTimeline
                 />
               ) : null}
               {item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}
-              <FeedPill tone="green">Lvl {item.level}</FeedPill>
+              <FeedPill tone="green">Level {item.level}</FeedPill>
               <FeedPill tone="cyan">Tier {item.battleTier}</FeedPill>
               <FeedPill tone="violet">Rarity {item.rarity}</FeedPill>
               {item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}

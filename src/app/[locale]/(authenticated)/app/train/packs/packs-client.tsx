@@ -601,7 +601,7 @@ function BuilderCaptureRow({capture, selected, onToggle}: {capture: TrainPackCap
             <div className="min-w-0 flex-1">
                 <h3 className="truncate text-base font-bold text-white">{capture.animalName}</h3>
                 <div className="mt-1 flex flex-wrap gap-1.5 text-[0.62rem] font-black uppercase tracking-[0.06em]">
-                    <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">Lvl 1</span>
+                    <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">Level 1</span>
                     <span className="rounded-full bg-orange-400/15 px-2 py-1 text-orange-200">Tier {capture.battleTier}</span>
                     {capture.contextLabel ? <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">{capture.contextLabel}</span> : null}
                 </div>
@@ -704,7 +704,7 @@ function RevealHero({capture, final}: {capture: TrainPackCapture; final: boolean
                 {final ? <span className="rounded-full bg-orange-300 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.12em] text-black">Final</span> : null}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-                <Chip>Lvl 1</Chip>
+                <Chip>Level 1</Chip>
                 <Chip>Tier {capture.battleTier}</Chip>
                 <Chip>Power {capture.battlePower}</Chip>
                 {capture.speciesSlug ? <Chip>#{capture.speciesSlug.slice(0, 6).toUpperCase()}</Chip> : null}

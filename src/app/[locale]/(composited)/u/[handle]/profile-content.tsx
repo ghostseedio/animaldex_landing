@@ -462,7 +462,7 @@ function ProfileGridCell({item}: {item: ProfileGridItem<PublicProfileCapture>}) 
                     aria-label={`Level ${item.level}`}
                     className="absolute bottom-[7px] left-[7px] rounded-full bg-black/55 px-[7px] py-1 text-[10px] font-extrabold leading-none tabular-nums text-white"
                 >
-                    Lv {item.level}
+                    Level {item.level}
                 </span>
             ) : null}
             {item.isMovingMedia ? (
