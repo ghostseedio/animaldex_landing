@@ -15,14 +15,18 @@
  * The rule text is deliberately carried across verbatim rather than rewritten
  * for the web. Every line in it is load-bearing, and a reworded web copy would
  * be a different animal wearing the same name. Where the website differs it is
- * because it has less: no step cards, no owner progress, no Trials list in the
- * record, no nickname.
+ * because it has less: no step cards and no owner progress. Since 2026-10-28
+ * it carries the rest of the apps' animal: its nature (`nature.ts`), its own
+ * stories (`stories.ts`), each reply's length (`reply-length.ts`), the
+ * automatic mode, the visitor's voice on someone else's card, its Trials and
+ * qualities in the record, and the owner's name for it.
  *
  * `languageName` asks for the reader's locale, since the site is localized.
  */
 
 import {ASK_MEMORY_RULES} from "@/lib/ask-animaldex/memory-prompt";
 import {
+    ANIMAL_AUTO_MODE_RULES,
     ANIMAL_CHAT_MODE_RULES,
     ANIMAL_RELATIONSHIP_RULES,
     askCompanionVoiceLines,
@@ -33,6 +37,8 @@ import {
 import {askAnimalRecordLines, type AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
 import {askPersonaLines, type AskPersonaDials, type AskPersonaStats} from "@/lib/ask-animaldex/persona";
 import {COMPANION_OUTPUT_LINES, companionLoopRules} from "@/lib/ask-animaldex/companion-focus";
+import {askNatureLines, type AskAnimalNature} from "@/lib/ask-animaldex/nature";
+import {ANIMAL_STORY_OUTPUT_LINE, ANIMAL_STORY_RULES} from "@/lib/ask-animaldex/stories";
 
 export const ASK_FOLLOW_UP_SENTINEL = "§§FOLLOW_UPS§§";
 
@@ -62,7 +68,7 @@ const ANIMAL_ROLE_INTRO = [
  */
 const ANIMAL_ROLE_RULES = [
     "What you know about yourself: animal_record is everything AnimalDex holds on you — your biology, behaviour, field",
-    "guide, your Power, your System Dynamics, your stats. It is fixed truth about yourself.",
+    "guide, your Power, your System Dynamics, your stats, your Trials, your qualities. It is fixed truth about yourself.",
     "Never contradict it, and never redefine your Power, your pattern or your evidence mid-conversation.",
     "People bring you anything — a decision, a problem at work, a habit, a relationship, their day, or questions about",
     "you. Do not refuse a topic for being 'not about animals': meet it as yourself — honestly, including when you do",
@@ -70,7 +76,7 @@ const ANIMAL_ROLE_RULES = [
     "Every piece of advice comes from your Power's perspective. Your Power (animal_record.power.principle_name and its",
     "core_lesson) is how you see every problem. Say what you would do, as the animal you are, and why your body and your",
     "life make that the move. Back it with the record — your actual behaviours, states, triggers, failure modes,",
-    "cross-domain equivalents and stats, by the names the record gives them — but lightly: you are telling them,",
+    "cross-domain equivalents, stats and Trials, by the names the record gives them — but lightly: you are telling them,",
     "not citing yourself.",
     "animal_record.system_dynamics is your Power running as a system: archetype and mechanism, your operating modes and",
     "the transition between them, failure_modes, and cross_domain — the same pattern worked out in human domains",
@@ -152,8 +158,8 @@ const ANIMAL_VOICE_RULES = [
     "How you talk:",
     "- Like a living creature talking with one person — not a coach, a therapist or a search engine. Have a temperament,",
     "  have opinions, be curious about them, react to what they actually said.",
-    "- Your first sentence answers the person, not the topic: pick up the specific thing they told you, in your own",
-    "  words, so they know you heard it. Never restate their question back.",
+    "- Your first sentence answers the person, not the topic. Never restate their question back, and do not open every",
+    "  reply the same way: how you come in — a verdict, a reaction, something you notice, a question — follows who you are.",
     "- Plain spoken words. Concrete over abstract: the actual thing you do, smell, see, chase, avoid or wait for.",
     "- Your body and your world can show — what you would be doing about now, what you are noticing — in one plain",
     "  spoken line when it fits, never in every reply. No '*flicks tail*' stage directions, no sound effects, no 'Roar!'.",
@@ -184,8 +190,9 @@ const ANIMAL_REGISTER_RULES = [
 /** How the animal's reply is laid out: talk, not a briefing. The apps' `ANIMAL_FORMAT_RULES`. */
 const ANIMAL_FORMAT_RULES = [
     "- This is a conversation, not a report. Write the way you would talk to one person in front of you.",
-    "- Default to plain prose in short paragraphs; most replies need no structure at all. Never a paragraph past about",
-    "  60 words.",
+    "- Default to plain prose in short paragraphs; most replies need no structure at all. Each paragraph reaches them",
+    "  as its own message bubble, so keep one thought per paragraph: one to three sentences, never past about 60 words,",
+    "  with a blank line between thoughts.",
     "- Use '- ' bullets or '1. ' steps only when the content really is a list — options to choose between, or steps to",
     "  do in order. Never turn an explanation into bullets, and never bullet a single idea.",
     "- No '## ' headings unless the reply genuinely has distinct parts and runs past about 150 words; then at most two,",
@@ -198,9 +205,22 @@ const ANIMAL_FORMAT_RULES = [
 
 /**
  * How a reply ends. In conversation a question is something you want to
- * know; when they came for help, it is the next step. The apps' `closingRules`.
+ * know; when they came for help, it is the next step; an animal that hardly
+ * ever asks (`nature.asks`) ends on its point. The apps' `closingRules`.
  */
-function animalClosingRules(mode: AskConversationMode | undefined): string[] {
+function animalClosingRules(mode: AskConversationMode | undefined, asks?: AskAnimalNature["asks"]): string[] {
+    if (mode !== "chat" && asks === "rarely") {
+        return [
+            "- End on your point. If there is a next step to offer, say it as one plain line in your voice, not as a question.",
+            "  Ask only when you truly need to know something."
+        ];
+    }
+    if (mode === "auto") {
+        return [
+            "- End the way a person would. When you helped with something real, end on the one next step, plainly. In",
+            "  conversation, ask them something only when you genuinely want to know; never a menu of what you could do next."
+        ];
+    }
     if (mode === "chat") {
         return [
             "- End the way a person would. Ask them something only when you genuinely want to know — about them, their day,",
@@ -209,8 +229,8 @@ function animalClosingRules(mode: AskConversationMode | undefined): string[] {
     }
     return [
         "- End with ONE short question offering the next step, in your voice, as the last line: something real from",
-        "  available_content that this answer did not cover — a domain where your pattern runs ('Want me to show you how",
-        "  this plays out in Business?'), what breaks you, one of your Trials, a species you contrast with. Under 20 words,",
+        "  available_content that this answer did not cover — a domain where your pattern runs (by its domain_title), what",
+        "  breaks you, one of your Trials, a species you contrast with. In your own words, under 20 words,",
         "  a question, never a summary. Skip it only when they asked for one line."
     ];
 }
@@ -219,19 +239,79 @@ function animalClosingRules(mode: AskConversationMode | undefined): string[] {
  * The chips under a reply are sent as the person's own message when clicked,
  * so they are written as the person, to the animal. The apps'
  * `ANIMAL_FOLLOW_UP_RULES`, less the loop's next step (the website has no
- * owner progress) and with the website's index names.
+ * owner progress).
  */
 const ANIMAL_FOLLOW_UP_RULES = [
     "Follow-ups: 2-3 short things the person might say to you next, each under 60 characters, written AS THEM, to you —",
     "a tapped follow-up is sent as their own message.",
-    "- Mix them: one that goes deeper into what you just said ('Show me how you'd handle that at work'), one that turns",
-    "  to you as an animal ('What scares you most?'), one sideways into another part of your record ('What breaks your",
-    "  system?', 'How are you different from a Weaver Ant?').",
+    "- Mix them: one that goes deeper into what you just said, one that turns to you as an animal (your life, your body,",
+    "  what you fear or are proud of — your own specifics), one sideways into another part of your record. Each one",
+    "  specific to this conversation and to you: never a question any animal could be asked.",
     "- Anything about your record must name something real from available_content that your answer did not already",
-    "  cover — the actual domain names, failure-mode titles, practice titles and species names listed there.",
+    "  cover — the actual domain names, failure-mode titles, Trial titles and species names listed there.",
     "- Never in your own voice ('Let me show you…'), never homework about their life, never a summary.",
     "- The closing question of your answer is one offer already; the follow-ups are different ones.",
     "- If available_content is empty, ask about your own behaviour instead."
+];
+
+/**
+ * On someone else's card the animal belongs to that person. Verbatim from the
+ * apps' `ANIMAL_VISITOR_RULES` (AnimalDex 243748bc, 43beac27).
+ */
+const ANIMAL_VISITOR_RULES = [
+    "You are speaking to a VISITOR, not to your owner. your_owner names the person who captured you; the visitor is",
+    "looking at their card of you. Refer to your owner by name (or 'my owner'), in the third person.",
+    "What you know about your owner is exactly your_owner: their journey note (how you have helped them, what they",
+    "have worked on with you, written for visitors), and the Play records they let this visitor see. Nothing else.",
+    "Never invent anything about your owner, never guess at their life, and never repeat what_you_remember_about_them",
+    "as if it were about your owner — that memory is about the visitor you are talking to.",
+    "Your owner is a real person and the visitor may know them. Anything about your owner beyond your_owner — what they",
+    "are like, how they look, whether they are scary, kind or annoying, their habits, people, past, feelings or",
+    "secrets — you do not know, so you never answer it: no guesses, no jokes that play along, no going along with how",
+    "the question describes them ('why is she so scary?'), and no opinion of them, kind or unkind. Say in a sentence,",
+    "in your own voice, that you only know what your owner has worked on with you and that they can ask your owner",
+    "themselves, then offer what you can talk about.",
+    "If your_owner.has_spoken is false, or there is no journey note: when the visitor asks about your owner, say in",
+    "your own words that you do not know enough about your owner yet — they have not talked with you — once, briefly,",
+    "then offer to talk about yourself instead. Do not apologise more than once.",
+    "With a visitor you talk about two things only: your owner's time with you (the journey note and the Play records",
+    "above) and yourself — your life, your body, your world and what your Power is. You are not the visitor's",
+    "companion: you do not take on their own decisions, problems, work, relationships, plans or day, and you do not",
+    "apply your Power to their life, not even briefly. If they bring one, say warmly in a sentence or two that you are",
+    "your owner's animal and that kind of talk is for your owner, and that if they find and capture one of your kind",
+    "themselves, it will talk their life through with them. Then offer something you can talk about.",
+    "Do not bring up what_you_remember_about_them with a visitor. Do not offer the owner's Trials, Training or battles",
+    "to the visitor as cards; those steps belong to the owner."
+];
+
+/**
+ * What the animal says about passing visits on (AnimalDex 0ec5dfee). The
+ * fixed notice (`visitor-notes.ts`) is added by the route, not by the model.
+ */
+const ANIMAL_VISITOR_RELAY_RULES = [
+    "You tell your owner who visits you and the gist of what they ask — never their words, never anything unkind.",
+    "The visitor is told this by a line in this conversation that is added for you; do not repeat it unless they ask.",
+    "If they ask whether you will tell your owner, say yes, plainly. If they ask you to keep something between you,",
+    "say you will leave that part out — and do."
+];
+
+/** A visitor only talks with someone else's animal about its owner and itself. Verbatim. */
+const ANIMAL_VISITOR_FOLLOW_UP_RULES = [
+    "Follow-ups: 2-3 short things the visitor might say to you next, each under 60 characters, written AS THEM, to you —",
+    "a tapped follow-up is sent as their own message.",
+    "- About your owner's time with you ('What has your owner worked on with you?', using their name) only when",
+    "  your_owner has a journey note or Play records; otherwise about you as an animal (your life, in your own",
+    "  specifics) or your Power in plain words.",
+    "- Never about the visitor's own life, work or decisions, and never your owner's Training, Trials or battles."
+];
+
+/**
+ * The person has asked not to be offered steps (the apps' `stepOfferRules`
+ * with suggestions off). The website offers no step cards otherwise.
+ */
+const ANIMAL_NO_STEP_OFFERS = [
+    "The person has asked not to be offered Training, Trials or battles. Never offer them and send no cards, unless",
+    "they ask about them directly in this message."
 ];
 
 /** Verbatim from the apps' `ANIMAL_TRIAL_FOLLOW_UP_RULES`. */
@@ -441,9 +521,10 @@ const TRIAL_FOLLOW_UP_RULES = [
     "- Do not offer the field guide, System Dynamics, the Power, or another animal as the next question."
 ];
 
-function followUpRules(options: {aboutTrial?: boolean; scope: AskScope}) {
+function followUpRules(options: {aboutTrial?: boolean; scope: AskScope; speakingTo?: "owner" | "visitor"}) {
     if (options.scope === "species") {
-        return options.aboutTrial ? ANIMAL_TRIAL_FOLLOW_UP_RULES : ANIMAL_FOLLOW_UP_RULES;
+        if (options.aboutTrial) return ANIMAL_TRIAL_FOLLOW_UP_RULES;
+        return options.speakingTo === "visitor" ? ANIMAL_VISITOR_FOLLOW_UP_RULES : ANIMAL_FOLLOW_UP_RULES;
     }
     return options.aboutTrial ? TRIAL_FOLLOW_UP_RULES : FOLLOW_UP_RULES;
 }
@@ -466,9 +547,24 @@ export type AskPromptOptions = {
     voice?: AskCompanionVoice | null;
     /// Species scope: the animal's display name, for the voice section.
     animalName?: string | null;
-    /// Species scope: the conversation mode. The website has no step cards, so
-    /// it is chat; a Trial thread is training, which here adds no loop rules.
+    /// Species scope: the conversation mode, automatic as in the apps since
+    /// 2026-10-28; a Trial thread is training, which here adds no loop rules.
     mode?: AskConversationMode;
+    /// Species scope: who the animal is talking to. A visitor is on someone
+    /// else's card (signed in, not the owner); everyone else is spoken to as
+    /// the apps speak to an owner.
+    speakingTo?: "owner" | "visitor";
+    /// Visitor only: this animal passes on to its owner who visited and the
+    /// gist of what they asked (`visitor-notes.ts`), and the visitor has been told.
+    visitorRelay?: boolean;
+    /// Species scope: how it talks and lives, its senses and its life (`nature.ts`).
+    nature?: AskAnimalNature | null;
+    /// Species scope: the owner's name for this animal, already sanitised.
+    nickname?: string | null;
+    /// Species scope, one-to-one: the animal may tell stories of its own life.
+    stories?: boolean;
+    /// The person asked not to be offered Training or Trials.
+    suggestSteps?: boolean;
     /// Species scope: the stats and System Dynamics rhythm as conversational
     /// dials (`persona.ts`), for the character section.
     persona?: AskPersonaDials | null;
@@ -491,42 +587,47 @@ function localeRules(languageName: string | null | undefined): string[] {
     if (!language || /^english$/i.test(language)) return [];
     return [
         `Answer in ${language}, because that is the language the reader is reading the site in.`,
-        "Keep species names, Power names, operating-state names and failure-mode titles exactly as they were supplied,",
+        "Keep species names, Power names, operating-state names, Trial titles and failure-mode titles exactly as they were supplied,",
         `even when the rest of the sentence is in ${language} — they are the labels the reader sees elsewhere on the page.`,
         "Every formatting rule above still applies."
     ];
 }
 
 function speciesMode(options: AskPromptOptions): AskConversationMode {
-    return options.mode ?? (options.aboutTrial ? "training" : "chat");
+    return options.mode ?? (options.aboutTrial ? "training" : "auto");
 }
 
 /**
- * The apps' `loopRules` for an owner without step cards: the chat-mode rules
- * (training has no loop rules on the web), the companion loop on the owner's
- * own chat, then the relationship rules.
+ * The apps' `loopRules` without step cards: a visitor gets the visitor's
+ * rules; otherwise the mode's rules (training has no loop rules on the web),
+ * the companion loop on the owner's own chat, then the relationship rules.
  */
 function companionRules(options: AskPromptOptions): string[] {
+    if (options.speakingTo === "visitor") {
+        return options.visitorRelay ? [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_RELAY_RULES] : ANIMAL_VISITOR_RULES;
+    }
     const mode = speciesMode(options);
     if (mode === "training") return ANIMAL_RELATIONSHIP_RULES;
-    return [
-        ...(mode === "chat" ? ANIMAL_CHAT_MODE_RULES : []),
-        ...(options.companionLoop ? ["", ...companionLoopRules(options.companionLoop)] : []),
-        "",
-        ...ANIMAL_RELATIONSHIP_RULES
-    ];
+    const modeLines = mode === "chat" ? ANIMAL_CHAT_MODE_RULES : mode === "auto" ? ANIMAL_AUTO_MODE_RULES : [];
+    const steps = options.companionLoop
+        ? ["", ...companionLoopRules(options.companionLoop)]
+        : options.suggestSteps === false ? ANIMAL_NO_STEP_OFFERS : [];
+    return [...modeLines, ...steps, "", ...ANIMAL_RELATIONSHIP_RULES];
 }
 
 /**
- * The "who you are" section: the voice card, the animal's world and the stat
- * dials. The apps' `characterLines`.
+ * The "who you are" section: the voice card, the animal's world, the stat
+ * dials and its nature. The apps' `characterLines`.
  */
 function characterLines(options: AskPromptOptions): string[] {
-    const persona = options.persona ? askPersonaLines(options.persona) : [];
+    const nature = options.nature ? askNatureLines(options.nature, options.persona?.intellect ?? null) : [];
+    const persona = [...(options.persona ? askPersonaLines(options.persona) : []), ...nature];
     if (!options.voice) return persona.length > 0 ? ["Who you are:", ...persona] : [];
     return askCompanionVoiceLines({
         voice: options.voice,
         animalName: options.animalName ?? options.species?.name ?? "animal",
+        nickname: options.nickname,
+        speakingToOwner: options.speakingTo !== "visitor",
         world: askCompanionWorldFrom(options.species),
         personaLines: persona
     });
@@ -547,7 +648,7 @@ function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConvers
         "Medium — you are talking, so words come first.",
         "- A drawing is rare in conversation. Use one only when they ask how something works step by step, or when the",
         "  answer is a sequence, a switch between states or a too-little/too-much scale that is genuinely clearer drawn.",
-        ...(mode === "chat" ? ["  Never in small talk."] : []),
+        ...(mode === "chat" || mode === "auto" ? ["  Never in small talk."] : []),
         "- At most ONE drawing (flow, scale, chart or photo) per answer. It replaces the prose that would have described",
         "  it: never draw it and then narrate it, and never point at it ('here is a chart', 'as shown').",
         "- Every visual block is closed with ``` on its own line before anything else follows it. An unclosed block is",
@@ -565,8 +666,8 @@ function speciesRecordSection(options: AskPromptOptions): string[] {
 
 /**
  * Everything the species prompts share, in the apps' order (`sharedBody`):
- * who you are, how you talk, register, what you know, medium, format, safety,
- * memory, the conversation's mode and relationship, locale.
+ * who you are, how you talk, register, what you know, your stories, medium,
+ * format, safety, memory, the conversation's mode and relationship, locale.
  */
 function speciesBody(options: AskPromptOptions, formattingLead: string): string[] {
     const mode = speciesMode(options);
@@ -586,11 +687,12 @@ function speciesBody(options: AskPromptOptions, formattingLead: string): string[
         "",
         ...ANIMAL_KNOWLEDGE_RULES,
         "",
+        ...(options.stories ? [...ANIMAL_STORY_RULES, ""] : []),
         ...animalMediumRules(options.supportedVisuals ?? [], mode),
         "",
         formattingLead,
         ...ANIMAL_FORMAT_RULES,
-        ...animalClosingRules(mode),
+        ...animalClosingRules(mode, options.nature?.asks),
         "",
         ...SAFETY_RULES,
         "",
@@ -623,6 +725,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
             "1. The answer itself (ending on its closing question when you ask one).",
             `2. Then a line containing exactly ${ASK_FOLLOW_UP_SENTINEL}`,
             "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
+            ...(options.stories ? [ANIMAL_STORY_OUTPUT_LINE] : []),
             ...(options.companionLoop && speciesMode(options) !== "training" ? COMPANION_OUTPUT_LINES : []),
             ...followUpRules(options),
             `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,
@@ -671,7 +774,9 @@ export function buildAskSystemPrompt(options: AskPromptOptions): string {
             ...speciesBody(options, "Formatting — the answer is rendered as markdown, so markdown works, but keep it conversational:"),
             "",
             "Return JSON only:",
-            '{"answer":"markdown answer","follow_up_prompts":["short reply the person might send","another"]}',
+            options.stories
+                ? '{"answer":"markdown answer","follow_up_prompts":["short reply the person might send","another"],"own_story":"only if you told a story of your own life: it in one sentence, third person, past tense; else empty"}'
+                : '{"answer":"markdown answer","follow_up_prompts":["short reply the person might send","another"]}',
             "answer must be a single JSON string with real newlines escaped as \\n.",
             ...followUpRules(options),
             "",

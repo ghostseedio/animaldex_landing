@@ -165,6 +165,11 @@ function writePayingUntil(until: number | null) {
         // Session-only, then.
     }
 }
+/** Minutes ahead of UTC where the reader is (the apps send the same). */
+function readerUtcOffset(): number {
+    return -new Date().getTimezoneOffset();
+}
+
 export class AskUnavailableError extends Error {}
 export class AskEmptyError extends Error {}
 
@@ -432,6 +437,8 @@ export function useAskThread(params: {
             locale,
             history,
             requestId,
+            // The reader's clock, for the animal's sense of its day.
+            utc_offset_minutes: readerUtcOffset(),
             ...(payWithCredits ? {payWithCredits: true} : {}),
             subject: {
                 scope: subject.scope,
@@ -671,6 +678,7 @@ export function useAskThread(params: {
                     greeting: true,
                     ...(referralId ? {referral_id: referralId} : {}),
                     locale,
+                    utc_offset_minutes: readerUtcOffset(),
                     history: [],
                     subject: {
                         scope: subject.scope,

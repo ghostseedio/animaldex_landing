@@ -130,13 +130,15 @@ test("the streaming prompt keeps the rules that make an answer readable", () => 
     // record, and every answer ends on an offer in the animal's voice.
     assert.match(prompt, /answer from\n?\s*cross_domain/);
     assert.match(prompt, /answer from failure_modes by name/);
-    // A species page talks in chat mode: replies end the way a person would,
-    // not on an offer. A Trial thread still ends on the next step.
+    // A species page reads how to talk from each message (the apps' automatic
+    // mode): replies end the way a person would, not on an offer. A Trial
+    // thread still ends on the next step.
     assert.doesNotMatch(prompt, /End with ONE short question/);
-    assert.match(prompt, /End the way a person would/);
+    assert.match(prompt, /End the way a person would\. When you helped with something real/);
+    assert.match(prompt, /read what they need from what they say, message by message/);
     const trial = buildAskStreamingSystemPrompt({scope: "species", aboutTrial: true, supportedVisuals: []});
     assert.match(trial, /End with ONE short question/);
-    assert.match(trial, /this plays out in Business\?/);
+    assert.match(trial, /a domain where your pattern runs \(by its domain_title\)/);
     assert.match(prompt, /closing question of your answer is one offer already/);
     // Follow-ups are sent as the person's own message, so they are written as the person.
     assert.match(prompt, /written AS THEM, to you/);

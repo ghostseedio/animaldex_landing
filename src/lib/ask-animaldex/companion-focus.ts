@@ -233,11 +233,11 @@ export function companionLoopRules(params: {offersSteps: boolean}): string[] {
 }
 
 /**
- * The hidden lines, in the streamed output shape after the follow-ups. Step 4
- * here: the website's output shape has no story line (the apps' step 4).
+ * The hidden lines, in the streamed output shape after the follow-ups: step
+ * 5, after the animal's own story line (step 4), as in the apps.
  */
 export const COMPANION_OUTPUT_LINES = [
-    "4. Then, only for what this reply actually did, one hidden line each (never shown to anyone):",
+    "5. Then, only for what this reply actually did, one hidden line each (never shown to anyone):",
     "   FOCUS: <what you are helping them with, a few words from their side, e.g. 'Speaking up first in meetings'>",
     "   TRIAL: <the step you just set them, one plain sentence> | <days before you would check how it went, 1-14>",
     "   DONE: <what they did on companion.open_trial, one sentence, third person>",

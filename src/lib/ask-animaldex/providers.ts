@@ -329,7 +329,7 @@ export async function requestAskAnswerJSON(params: {
     animalVoice?: boolean;
     effort?: AskChatEffort;
     signal?: AbortSignal;
-}): Promise<{answer: string; followUps: string[]} | null> {
+}): Promise<AskWholeAnswer | null> {
     const claudeKey = params.animalVoice ? claudeAskKey() : null;
     if (claudeKey) {
         const parsed = await requestClaudeJSON({
@@ -390,7 +390,13 @@ export async function requestAskJSONObject(params: {
     return parse(raw);
 }
 
-function parseAnswerPayload(raw: string): {answer: string; followUps: string[]} | null {
+/**
+ * A whole answer: the text, its follow-ups and, when the animal told a story
+ * of its own life in it, that story in one line (never shown).
+ */
+export type AskWholeAnswer = {answer: string; followUps: string[]; ownStory?: string | null};
+
+function parseAnswerPayload(raw: string): AskWholeAnswer | null {
     let parsed: unknown;
     try {
         parsed = JSON.parse(raw);
@@ -413,14 +419,16 @@ function parseAnswerPayload(raw: string): {answer: string; followUps: string[]} 
             .filter((item) => item.length > 0 && item.length <= 120)
             .slice(0, 3)
         : [];
-    return {answer, followUps};
+    const ownStory = typeof record.own_story === "string" && record.own_story.trim() ? record.own_story.trim() : null;
+    return {answer, followUps, ...(ownStory ? {ownStory} : {})};
 }
 
 const ANSWER_JSON_SCHEMA = {
     type: "object",
     properties: {
         answer: {type: "string"},
-        follow_up_prompts: {type: "array", items: {type: "string"}}
+        follow_up_prompts: {type: "array", items: {type: "string"}},
+        own_story: {type: "string"}
     },
     required: ["answer", "follow_up_prompts"],
     additionalProperties: false
@@ -439,7 +447,7 @@ async function requestClaudeJSON(params: {
     model: string;
     effort: AskChatEffort;
     signal?: AbortSignal;
-}): Promise<{answer: string; followUps: string[]} | null> {
+}): Promise<AskWholeAnswer | null> {
     // One retry: this is already the last resort for a reader whose stream
     // died, and a dropped connection (seen once on a cold dev server) is
     // worth one more try before the answer comes from another model.

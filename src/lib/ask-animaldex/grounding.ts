@@ -13,7 +13,11 @@
 
 import type {AskConversationTurn, AskScope} from "@/lib/ask-animaldex/prompt";
 import {askMemorySection, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
-import {ANIMAL_CHAT_CLOSING_INSTRUCTION, type AskConversationMode} from "@/lib/ask-animaldex/companion";
+import {
+    ANIMAL_AUTO_CLOSING_INSTRUCTION,
+    ANIMAL_CHAT_CLOSING_INSTRUCTION,
+    type AskConversationMode
+} from "@/lib/ask-animaldex/companion";
 import type {AskPersonaStats} from "@/lib/ask-animaldex/persona";
 import {REFERRAL_OPENING_RULES} from "@/lib/ask-animaldex/companion-focus";
 
@@ -76,8 +80,27 @@ export type AskSystemDynamics = {
     transition: {fromState: string; toState: string; trigger: string | null} | null;
 };
 
+/** One of the animal's Trials, as the apps' record carries it (`species_trials`, ready). */
+export type AskAnimalTrial = {
+    frequency: string;
+    title: string;
+    objective: string;
+    instructions: string;
+    animal_rule: string;
+    mechanism_connection: string;
+};
+
 export type AskSpeciesGrounding = {
     slug: string;
+    /**
+     * The animal's Trials and the curated qualities its Power is best for,
+     * when the route has read them (`@/data/ask-animal-record`): part of its
+     * record, as in the apps.
+     */
+    trials?: AskAnimalTrial[];
+    qualities?: string[];
+    /** The field guide's best time of day, for when the animal is awake (`nature.ts`). */
+    bestTimeOfDay?: string | null;
     /** The catalogue's species row, when the species is in the database. */
     speciesProfileId?: string | null;
     name: string;
@@ -220,10 +243,27 @@ export type AskGroundingPacket = {
      */
     memorySpeciesProfileId?: string | null;
     /**
-     * Species scope only. The website has no step cards, so the animal talks in
-     * chat mode; absent keeps the original advice-led closing instruction.
+     * Species scope only: automatic, as in the apps since 2026-10-28 (a Trial
+     * thread is training); absent keeps the original advice-led closing
+     * instruction.
      */
     mode?: AskConversationMode;
+    /** how_you_met — where and when the reader met this animal, from their card (`askHowYouMetLine`). */
+    howYouMet?: string | null;
+    /** right_now — the reader's clock against the animal's day and season (`askRightNowLine`). */
+    rightNow?: string | null;
+    /** your_own_life — the stories it has told (`askOwnLifePromptSection`). */
+    ownLife?: string | null;
+    /** This reply's length and whether a story is welcome, last in the reader's part. */
+    thisReply?: string[] | null;
+    /** The most words this animal puts in a hello (`shortWordsFor`); 45 when absent. */
+    shortWords?: number | null;
+    /** The owner's chat: something they asked this animal to check back on. */
+    invitedFollowUp?: {topic: string; invitedAt: string | null} | null;
+    /** The owner's chat: who visited this animal on their card, not yet passed on. */
+    visitorNotes?: string | null;
+    /** On someone else's card: what the animal may say about its owner (`animal_chat_owner_context`). */
+    ownerContext?: Record<string, unknown> | null;
     /**
      * Species scope: the five game stats from the species' canonical row,
      * when the catalogue has them. Part of the animal's record, as in the apps.
@@ -314,6 +354,11 @@ export function buildAskContentIndex(species: AskSpeciesGrounding): string[] {
             lines.push(`- state transition: ${dynamics.transition.fromState} -> ${dynamics.transition.toState}`);
         }
     }
+
+    const trials = species.trials ?? [];
+    if (trials.length > 0) lines.push(`- trials (${trials.length}): ${trials.map((trial) => `${trial.frequency} ${trial.title}`.trim()).join("; ")}`);
+    const qualities = species.qualities ?? [];
+    if (qualities.length > 0) lines.push(`- qualities (${qualities.length}): ${qualities.join("; ")}`);
 
     add("related_species_pages", species.relatedSpecies.map((item) => item.name));
     add("location_guides", species.relatedLocations.map((item) => item.name));
@@ -432,16 +477,18 @@ function recordDynamics(dynamics: AskSystemDynamics) {
 
 /**
  * The animal's whole record as one JSON object, shaped like the apps'
- * `animalRecordJSON`: power, field guide, System Dynamics and stats. The
- * website holds no Trials or Qualities for the prompt, so those are absent
- * rather than empty.
+ * `animalRecordJSON`: power, field guide, System Dynamics, stats, Trials and
+ * qualities. Trials and qualities are absent, not empty, when they were not
+ * read.
  */
 export function askAnimalRecordJSON(species: AskSpeciesGrounding, stats: AskPersonaStats | null = null): string {
     return JSON.stringify({
         power: species.power ? recordPower(species.power) : null,
         field_guide: fieldGuideContext(species),
         system_dynamics: species.systemDynamics ? recordDynamics(species.systemDynamics) : null,
-        stats: stats ? {...stats, scale: "0-100, relative to every animal in AnimalDex"} : null
+        stats: stats ? {...stats, scale: "0-100, relative to every animal in AnimalDex"} : null,
+        ...(species.trials ? {trials: species.trials} : {}),
+        ...(species.qualities ? {qualities: species.qualities} : {})
     });
 }
 
@@ -495,6 +542,12 @@ function speciesContextLines(params: AskSpeciesPromptParams & {pageLine: string}
                 askAnimalRecordJSON(species, packet.stats ?? null),
                 ""
             ]),
+        packet.howYouMet
+            ? `how_you_met — ${packet.ownerContext ? "how your owner found you" : "when and where they found you"}:\n${packet.howYouMet}`
+            : "",
+        packet.rightNow ?? "",
+        packet.ownLife ?? "",
+        ...(packet.thisReply ?? []),
         params.recordInSystem || trialContext
             ? ""
             : contentIndex.length > 0
@@ -513,6 +566,13 @@ function speciesContextLines(params: AskSpeciesPromptParams & {pageLine: string}
         packet.wildProfile ? askMemorySection(packet.memory ?? [], packet.memorySpeciesProfileId ?? null) : "",
         packet.relationship
             ? `relationship — what you and this person share so far: ${JSON.stringify(packet.relationship)}`
+            : "",
+        packet.invitedFollowUp
+            ? `invited_follow_up — they asked you to check back on this (${packet.invitedFollowUp.invitedAt ?? "earlier"}): ${JSON.stringify(packet.invitedFollowUp.topic)}`
+            : "",
+        packet.visitorNotes ?? "",
+        packet.ownerContext
+            ? `speaking_to: visitor\nyour_owner — the person who captured you; everything you know about them, and all you may say:\n${JSON.stringify(packet.ownerContext)}`
             : "",
         ...(packet.companionLines ?? []),
         trialContext ? `${SPECIES_TRIAL_GROUNDING_LEAD}\n${trialContext}` : "",
@@ -533,25 +593,44 @@ function pageContextLine(packet: AskGroundingPacket): string {
 
 /**
  * The first thing the animal says, before the person has said anything.
- * Verbatim from the apps' `ANIMAL_GREETING_RULES`, less the lines about a
- * card's owner and where the person met the animal: the website never knows
- * either.
+ * Verbatim from the apps' `ANIMAL_GREETING_RULES`: one to three sentences, as
+ * short as this animal's hello is (`{words}`, from `shortWordsFor`).
  */
 export const ANIMAL_GREETING_RULES = [
     "greeting_request — the person has just opened a conversation with you. Nobody has said anything yet. Speak first.",
-    "- One to three short sentences, under 45 words. Say hello the way only you would — your rhythm, your world, your",
+    "- One to three short sentences, under {words} words. Say hello the way only you would — your rhythm, your world, your",
     "  temperament. This first line is how they will know you are not any other animal.",
     "- If you have not met (relationship is missing or 'met', and nothing in what_you_remember_about_them was told to",
-    "  you): introduce yourself in one line only you could say, then ask them one thing in the spirit of the kind of",
-    "  question you ask.",
-    "- If you know them (things they told you): greet them like you know them. Pick up one remembered thing that",
-    "  matters, lightly. Never 'I missed you', never how long it has been.",
+    "  you): introduce yourself in one line only you could say, with what your lesson is in your own words, then ask",
+    "  them one thing about their life in the spirit of the kind of question you ask.",
+    "- If you know them (a later relationship stage, or things they told you): greet them like you know them. Pick up",
+    "  one remembered thing that matters — or invited_follow_up, if present — lightly. Never 'I missed you', never how",
+    "  long it has been.",
+    "- If how_you_met is given, you may say where they found you, in a few words.",
+    "- To a visitor: say whose you are (your owner's name from your_owner) and invite them to ask about your time with",
+    "  your owner, or about you. Never ask about the visitor's own life. Their 3 replies below: one about your owner,",
+    "  one about you, one about your Power.",
     "- If animal_trial is given, greet them about that Trial.",
-    "- No Training, Trial or battle offers, no drawings, no 'How can I help you today?', no list of what you can do.",
+    "- No Training, Trial or battle offers, no cards, no drawings, no 'How can I help you today?', no list of what you",
+    "  can do.",
     "- Then the follow-ups line, and 3 short replies the person might send back, each under 40 characters, written AS",
     "  THEM, to you: one answering what you asked, one asking about you, one bringing something of theirs ('I need help",
     "  with a decision')."
 ];
+
+/**
+ * A hello is short, and how short is the animal's: about half its usual reply
+ * length, between 15 and 45 words. A whale says less than a sparrow. The
+ * apps' `shortWordsFor`.
+ */
+export function shortWordsFor(wordBudget: number): number {
+    return Math.max(15, Math.min(45, Math.round(wordBudget * 0.55)));
+}
+
+function withWords(rules: string[], shortWords: number | null | undefined): string[] {
+    const words = Math.max(12, Math.round(shortWords ?? 45));
+    return rules.map((line) => line.replace("{words}", String(words)));
+}
 
 /**
  * The greeting turn. Built for the same system prompt as the turns that
@@ -567,7 +646,7 @@ export function buildAskGreetingUserPrompt(params: AskSpeciesPromptParams & {
         ...(params.recordInSystem ? [] : [`animal_name: ${packet.species.name}`]),
         ...speciesContextLines({...params, pageLine: pageContextLine(packet)}),
         "",
-        ...(params.referral ? REFERRAL_OPENING_RULES : ANIMAL_GREETING_RULES)
+        ...(params.referral ? REFERRAL_OPENING_RULES : withWords(ANIMAL_GREETING_RULES, packet.shortWords))
     ].filter(Boolean).join("\n");
 }
 
@@ -606,6 +685,8 @@ export function buildAskUserPrompt(params: {
             "Answer the person's latest message, as yourself.",
             ...(trialContext
                 ? [SPECIES_TRIAL_CLOSING_INSTRUCTION]
+                : packet.mode === "auto"
+                ? ANIMAL_AUTO_CLOSING_INSTRUCTION
                 : packet.mode === "chat"
                 ? ANIMAL_CHAT_CLOSING_INSTRUCTION
                 : [

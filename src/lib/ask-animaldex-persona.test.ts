@@ -330,7 +330,10 @@ test("the greeting speaks first and offers replies in the person's voice", () =>
     assert.ok(greeting.includes("written AS"));
     assert.equal(greeting.includes("user_message"), false);
     assert.equal(greeting.includes("animal_record —"), false);
-    assert.equal(greeting.includes("your_owner"), false);
+    // Not on someone else's card: nothing about an owner is in the turn.
+    assert.equal(greeting.includes("your_owner —"), false);
+    // A hello is as short as this animal's: the words come from its size.
+    assert.ok(buildAskGreetingUserPrompt({packet: mantaPacket({shortWords: 24}), recordInSystem: true}).includes("under 24 words"));
     // A signed-in reader's memory rides along, so a known reader is greeted as known.
     const known = buildAskGreetingUserPrompt({
         packet: mantaPacket({

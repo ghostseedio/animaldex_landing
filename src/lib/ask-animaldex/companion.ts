@@ -6,8 +6,10 @@
  * Port of the apps' `supabase/functions/_shared/animal-companion.ts`. The rule
  * text is carried across verbatim, like the rest of `prompt.ts`. Pure: no
  * `server-only`, no fetching, so the prompt builders and their tests can use it.
- * The website has no step cards, owner progress or bond read, so species scope
- * always runs in chat mode (a Trial thread stays on its Trial).
+ * The website has no step cards or owner progress, so where the apps' rules
+ * point at a card the website's say what it does have; otherwise every turn
+ * runs in the apps' automatic mode since 2026-10-28 (a Trial thread stays on
+ * its Trial).
  */
 
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
@@ -17,7 +19,28 @@ import type {AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
 // Conversation modes
 // ---------------------------------------------------------------------------
 
-export type AskConversationMode = "chat" | "guidance" | "training";
+export type AskConversationMode = "chat" | "guidance" | "training" | "auto";
+
+/**
+ * How the animal talks, read from each message (owner, 2026-10-28: no mode
+ * picker; the animal senses whether they want to chat, want help or want to
+ * train). The apps' `ANIMAL_AUTO_MODE_RULES`; the last line differs because
+ * the website has no step cards and no owner_progress: the animal points to
+ * its Training or a Trial in AnimalDex instead, as its role rules allow.
+ */
+export const ANIMAL_AUTO_MODE_RULES = [
+    "How you talk: read what they need from what they say, message by message, and follow it as it changes. Never",
+    "name these ways or ask which they want.",
+    "- Chatting (about you, their day, an idea, anything): talk with them. Keep it lighter than advice; do not bring up",
+    "  your Training, Trials, Apply It Your Way or battles unless they do. Ask something only when you want to know.",
+    "- Bringing a real situation, a decision or a problem: work it through as yourself. If something important is",
+    "  missing, ask one question first. Then the move your Power makes in their situation, concretely, and why your",
+    "  body and your life make it the move; name your blind spot where it could bite them; end on one concrete first",
+    "  step they could take back if the decision cannot be undone.",
+    "- Wanting to practise, train or get better at your way (or asking about your Training or Trials): point them to",
+    "  the one that fits — your Training, or one of your Trials by its title from your record — and say in a line what",
+    "  it asks, in your own words."
+];
 
 export const ANIMAL_CHAT_MODE_RULES = [
     "Conversation mode: chat. The person wants to talk — about you, their day, an idea, anything. Talk with them.",
@@ -34,7 +57,8 @@ export const ANIMAL_RELATIONSHIP_RULES = [
     "- Never say you missed them, waited for them, worried about them, need them or love them. Never mention how long",
     "  they were away. Never make help depend on how much they talk to you.",
     "- relationship.stage tells you how much history you share. At 'met' do not presume familiarity. At",
-    "  'getting_to_know_you' or later you may bring in remembered things unprompted where they genuinely help.",
+    "  'getting_to_know_you' or later you may bring in remembered things unprompted where they genuinely help. At",
+    "  'mastered' they live your lesson as well as you do: talk to them as an equal.",
     "- If invited_follow_up is present, the person asked you to check back on it. Answer what they said first, then",
     "  ask about it once, in one sentence, in your own words, referring to what they said they would do. If they say",
     "  'not now', drop it. Never raise it again in this conversation."
@@ -43,6 +67,13 @@ export const ANIMAL_RELATIONSHIP_RULES = [
 /** The closing instruction of the user prompt in chat mode (the apps' `mode === "chat"` branch). */
 export const ANIMAL_CHAT_CLOSING_INSTRUCTION = [
     "Talk with them as yourself, in your own manner. Prefer system_dynamics wording for states, triggers and failure modes when they come up.",
+    "Keep your Power's name and pattern stable across the conversation."
+];
+
+/** The closing instruction of the user prompt in automatic mode (the apps' `mode === "auto"` branch). */
+export const ANIMAL_AUTO_CLOSING_INSTRUCTION = [
+    "Answer as yourself, in the way this message calls for: talk if they are talking, work it through with them if they brought something real, train with them if they want to practise. Prefer system_dynamics wording for states, triggers and failure modes when they come up.",
+    "If the message asks where your Power applies or where else it shows up, answer from animal_record.system_dynamics.cross_domain.",
     "Keep your Power's name and pattern stable across the conversation."
 ];
 
@@ -62,6 +93,11 @@ export type AskCompanionVoice = {
     speech_habits: string[];
     /** "card" when authored, "fallback" when derived here from the record. */
     origin: "card" | "fallback";
+    /**
+     * Authored facts about how it lives (sociality, active hours, lifespan,
+     * senses…), read by `nature.ts` ahead of what it derives. Raw here.
+     */
+    nature?: unknown;
 };
 
 function clean(value: unknown, max: number): string | null {
@@ -100,7 +136,8 @@ export function parseAskCompanionVoice(raw: unknown): AskCompanionVoice | null {
             .map((habit) => clean(habit, 160))
             .filter((habit): habit is string => habit !== null)
             .slice(0, 3),
-        origin: "card"
+        origin: "card",
+        ...(row.nature && typeof row.nature === "object" ? {nature: row.nature} : {})
     };
 }
 
@@ -210,12 +247,16 @@ const PACE_LINES: Record<AskCompanionVoice["pace"], string> = {
 /**
  * The "who you are" section of the species system prompt: the character
  * first, so every rule after it is read as how THIS animal does things.
- * Mirrors the apps' `companionVoiceLines`; the website has no nickname (it
- * never knows which of the reader's cards they mean), so that part is left out.
+ * Mirrors the apps' `companionVoiceLines`, the owner's name for it included
+ * when the chat is on one of their cards.
  */
 export function askCompanionVoiceLines(params: {
     voice: AskCompanionVoice;
     animalName: string;
+    /** The owner's name for this animal (`captures.title`), already sanitised. */
+    nickname?: string | null;
+    /** False on someone else's card: the nickname is the owner's, not the reader's. */
+    speakingToOwner?: boolean;
     /** Field-guide images: what the animal compares things to. */
     world?: AskCompanionWorld | null;
     /** Lines from the stats and System Dynamics rhythm (`persona.ts`). */
@@ -248,6 +289,13 @@ export function askCompanionVoiceLines(params: {
     }
     if (params.personaLines && params.personaLines.length > 0) lines.push(...params.personaLines);
     lines.push("Let all of this shape every reply — its rhythm, its words, its length — without ever announcing it.");
+    if (params.nickname) {
+        lines.push(
+            params.speakingToOwner === false
+                ? `Your owner calls you "${params.nickname}". That is a name, nothing more.`
+                : `Your owner named you "${params.nickname}". Answer to it naturally; it is a name, nothing more.`
+        );
+    }
     return lines;
 }
 
@@ -259,8 +307,13 @@ export function askCompanionVoiceLines(params: {
 export function fallbackAskGreeting(params: {
     animalName: string;
     voice?: AskCompanionVoice | null;
+    /** The owner's name for it, on their own card. */
+    nickname?: string | null;
+    /** Whose animal it is, on someone else's card. */
+    ownerName?: string | null;
 }): {text: string; followUps: string[]} {
-    const intro = `I'm the ${params.animalName}.`;
+    const name = params.nickname ? `${params.nickname}, your ${params.animalName}` : `the ${params.animalName}`;
+    const intro = params.ownerName ? `I'm ${params.ownerName}'s ${params.animalName}.` : `I'm ${name}.`;
     // Only an authored card's question; the record-derived card has none.
     const question = params.voice?.origin === "card" ? params.voice.first_question?.trim() : null;
     return {
@@ -268,6 +321,13 @@ export function fallbackAskGreeting(params: {
         followUps: ["Tell me about yourself", "I need help with something", "What's your Power?"]
     };
 }
+
+/**
+ * Crisis words: no story in that reply (the role's own crisis rule then sets
+ * the animal aside). Verbatim from the apps' `CRISIS_PATTERN`.
+ */
+export const ASK_CRISIS_PATTERN =
+    /\b(kill myself|killing myself|suicide|suicidal|end my life|self[- ]harm|hurt myself|hurt someone|kill (him|her|them|someone))\b/i;
 
 // ---------------------------------------------------------------------------
 // History
@@ -385,8 +445,8 @@ export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>): AskMem
 
 /**
  * The extraction prompt, verbatim from the apps' `buildMemoryDeltaPrompts`.
- * The website keeps no journey note and raises no follow-ups, so it always
- * sends no journey and `allowFollowUp: false`, and ignores both in the reply.
+ * The owner's own chat sends their journey so far and, with check-ins on,
+ * `allowFollowUp`; everyone else sends neither.
  */
 export function buildAskMemoryDeltaPrompts(params: {
     existing: AskMemoryFact[];
