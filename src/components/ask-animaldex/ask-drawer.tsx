@@ -58,6 +58,9 @@ import {
     type AskCompanionEvent,
     type AskCompanionLoop
 } from "@/lib/ask-animaldex/companion-loop";
+import {bondChipText, decodeChatBond, type ChatBond} from "@/lib/companion-bond";
+import BondPanel from "@/components/companions/bond-panel";
+import {reloadCompanions, useAnimalBond} from "@/components/companions/use-companions";
 
 export type AskDrawerLabels = {
     title: string;
@@ -182,6 +185,16 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     );
     // What the animal is helping them with, and the step it set.
     const [companionLoop, setCompanionLoop] = useState<AskCompanionLoop | null>(null);
+    // The bond: the header chip, and the sheet it opens (SPEC phase 2). The
+    // chip follows `done.bond`; the sheet reads `animal_bond_v1`.
+    const animalBond = useAnimalBond(ownerChat ? companionSpeciesProfileId : null);
+    const [chatBond, setChatBond] = useState<ChatBond | null>(null);
+    const [showingBond, setShowingBond] = useState(false);
+    useEffect(() => {
+        setChatBond(null);
+        setShowingBond(false);
+    }, [companionSpeciesProfileId]);
+    const chipBond = chatBond ?? animalBond.bond;
 
     const {
         messages,
@@ -205,6 +218,15 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         viewer: {signedIn: context?.signedIn ?? false, hasWildProfile: context?.hasWildProfile ?? false},
         ownerChat,
         onCompanion: (update) => setCompanionLoop(update.loop),
+        onBond: (raw) => {
+            const next = decodeChatBond(raw);
+            if (!next) return;
+            // A new level shows on every card of this animal.
+            setChatBond((current) => {
+                if (current && current.level !== next.level) void reloadCompanions();
+                return next;
+            });
+        },
         onAnswered: ({followUps}) => {
             trackEvent(SPECIES_ASK_FUNNEL_EVENTS.answered, {
                 species_slug: resolvedSubject.slug ?? "",
@@ -437,6 +459,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, []);
 
     const openMemory = useCallback(() => {
+        setShowingBond(false);
         setConfirmingClear(false);
         setConfirmingForgetAll(false);
         setShowingMemory(true);
@@ -486,7 +509,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     // On a species page the animal answers as itself; everywhere else the
     // site-wide assistant does.
     const speaksAsAnimal = resolvedSubject.scope === "species" && Boolean(animalName);
-    const faceUrl = speaksAsAnimal ? (avatarUrl ?? photoUrl) : photoUrl;
+    // The animal's face is its icon art, never a capture photo.
+    const faceUrl = speaksAsAnimal ? avatarUrl : photoUrl;
     const placeholder = hasConversation
         ? (speaksAsAnimal && animalName
             ? labels.placeholderFollowUpAnimal.replace("{animal}", animalName)
@@ -579,9 +603,28 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             </span>
                         )}
                         <div className="min-w-0">
-                            <p className="min-w-0 truncate text-sm font-semibold text-white">
-                                {animalName ?? labels.title}
-                            </p>
+                            <div className="flex min-w-0 items-center gap-2">
+                                <p className="min-w-0 truncate text-sm font-semibold text-white">
+                                    {animalName ?? labels.title}
+                                </p>
+                                {ownerChat && chipBond ? (
+                                    // The bond chip: the level and the stage. It opens the bond.
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowingMemory(false);
+                                            setShowingBond((current) => !current);
+                                            if (!showingBond) void animalBond.reload();
+                                        }}
+                                        aria-pressed={showingBond}
+                                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                                            showingBond ? "border-primary-300/50 bg-primary-400/14 text-white" : "border-white/12 text-ink-200 hover:text-white"
+                                        }`}
+                                    >
+                                        {bondChipText(chipBond)}
+                                    </button>
+                                ) : null}
+                            </div>
                             {ownerChat && companionLoop?.focus ? (
                                 // What the two of you are working on, once the animal has found it.
                                 <div className="flex min-w-0 items-baseline gap-2">
@@ -666,7 +709,31 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 ) : null}
 
                 <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-                    {showingMemory ? (
+                    {showingBond && ownerChat ? (
+                        <div className="-mx-4 -my-4">
+                            <BondPanel
+                                bond={animalBond.bond}
+                                didLoad={animalBond.didLoad}
+                                speciesProfileId={companionSpeciesProfileId}
+                                slug={resolvedSubject.slug}
+                                name={animalName ?? labels.title}
+                                powerName={hints.principleName}
+                                onTalk={() => setShowingBond(false)}
+                                onAsk={(message) => {
+                                    setShowingBond(false);
+                                    submit(message, "chip");
+                                }}
+                                // The website's chat has no lesson-check card; the
+                                // card's Bond tab holds the lesson check.
+                                onLessonCheck={null}
+                                onBondChanged={(next) => {
+                                    animalBond.setBond(next);
+                                    if (next) setCompanionLoop((current) => ({...(current ?? EMPTY_COMPANION_LOOP), focus: next.focus, openTrial: next.openTrial}));
+                                }}
+                                onRefresh={() => void animalBond.reload()}
+                            />
+                        </div>
+                    ) : showingMemory ? (
                         <AskMemoryPanel
                             labels={labels}
                             facts={memoryFacts}

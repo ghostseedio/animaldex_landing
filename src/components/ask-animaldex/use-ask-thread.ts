@@ -172,6 +172,8 @@ type StreamEvent = {
     credit_overflow?: AskCreditOverflow;
     /** The companion loop after this reply, on the owner's own chat (decoded tolerantly). */
     companion?: unknown;
+    /** The bond on the owner's own chat: the stage, the level, its strands. */
+    bond?: unknown;
     error?: string;
     detail?: string;
 };
@@ -243,6 +245,8 @@ export function useAskThread(params: {
     ownerChat?: boolean;
     /** The companion loop after a reply or a greeting. */
     onCompanion?: (update: AskCompanionUpdate) => void;
+    /** `done.bond` on the owner's own chat, raw (the drawer decodes it). */
+    onBond?: (raw: unknown) => void;
     onAnswered?: (info: {question: string; followUps: number}) => void;
     onFailed?: (reason: string) => void;
 }) {
@@ -304,8 +308,9 @@ export function useAskThread(params: {
      * owner's own chat only. A malformed `companion` is nothing, never a
      * failed answer.
      */
-    const takeCompanion = useCallback((raw: unknown): AskCompanionEvent | undefined => {
+    const takeCompanion = useCallback((raw: unknown, bond?: unknown): AskCompanionEvent | undefined => {
         if (!callbacks.current.ownerChat) return undefined;
+        if (bond !== undefined) callbacks.current.onBond?.(bond);
         const update = parseCompanionUpdate(raw);
         if (!update) return undefined;
         callbacks.current.onCompanion?.(update);
@@ -469,7 +474,7 @@ export function useAskThread(params: {
                         event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps,
                         event
                     );
-                    settle(split.answer, offers, false, takeCompanion(event.companion));
+                    settle(split.answer, offers, false, takeCompanion(event.companion, event.bond));
                     if (typeof event.remaining === "number") {
                         const paying = isPaying();
                         setQuota({
@@ -521,7 +526,7 @@ export function useAskThread(params: {
 
                 if (whole?.answer?.trim()) {
                     const offers = offersFor(whole.follow_up_prompts ?? [], whole);
-                    settle(whole.answer, offers, false, takeCompanion(whole.companion));
+                    settle(whole.answer, offers, false, takeCompanion(whole.companion, whole.bond));
                     if (typeof whole.remaining === "number") {
                         const paying = isPaying();
                         setQuota({
@@ -653,7 +658,7 @@ export function useAskThread(params: {
                     return;
                 }
                 if (event.done) {
-                    const companionEvent = takeCompanion(event.companion);
+                    const companionEvent = takeCompanion(event.companion, event.bond);
                     const split = splitStreamedReply(answer);
                     if (!split.answer.trim()) return;
                     settled = true;

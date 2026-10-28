@@ -155,13 +155,25 @@ function LevelProgress({totalXP, recentSource, wide = false}: {totalXP: number; 
     return (
         <div className={`space-y-2.5 px-4 py-3.5 ${wide ? "lg:px-0 lg:py-0" : ""}`}>
             <div className="flex items-baseline gap-2.5">
-                <span className="rounded-full border border-primary-400/[0.24] bg-primary-400/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-primary-400/95">{progress.level === 100 ? "Lvl 100 MAX" : `Lvl ${progress.level}`}</span>
+                <span className="rounded-full border border-primary-400/[0.24] bg-primary-400/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-primary-400/95">{progress.level === 100 ? "Level 100 MAX" : `Level ${progress.level}`}</span>
                 <span className="text-xs font-medium text-white">{progress.xp} XP</span>
                 <span className="ml-auto text-[11px] font-semibold text-white/[0.42]">{progress.level === 100 ? "MAX" : `${progress.needed} XP to next`}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-primary-400/[0.82]" style={{width: `${progress.fraction * 100}%`}} /></div>
             {progress.level < 100 ? <p className="text-[11px] font-semibold text-white/[0.62]">{progress.progressXP}/{progress.span} XP toward Level {progress.level + 1}</p> : null}
             {recentSource ? <p className="text-[11px] font-semibold text-primary-400/90">{recentSource}</p> : null}
+        </div>
+    );
+}
+
+/**
+ * Your own card: the bond's level, the one every card of this animal shows
+ * (docs/companion-loop/SPEC.md, phase 2), in place of the card's own.
+ */
+function BondLevel({chip, wide = false}: {chip: string; wide?: boolean}) {
+    return (
+        <div className={`px-4 py-3.5 ${wide ? "lg:px-0 lg:py-0" : ""}`}>
+            <span className="rounded-full border border-primary-400/[0.24] bg-primary-400/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-primary-400/95">{chip}</span>
         </div>
     );
 }
@@ -239,6 +251,7 @@ export default function AnimalStatsPanel({
     captureGrade,
     settingTag,
     conservationTier,
+    bondChip = null,
     layout = "compact"
 }: {
     speciesName: string;
@@ -250,6 +263,8 @@ export default function AnimalStatsPanel({
     captureGrade?: number | null;
     settingTag?: string | null;
     conservationTier?: string | null;
+    /** Your own card: "Level 4 · Working together", the bond's level in place of the card's. */
+    bondChip?: string | null;
     layout?: "compact" | "wide";
 }) {
     const tier = getBattleTier(effectiveStats);
@@ -265,8 +280,10 @@ export default function AnimalStatsPanel({
                     <div className="flex items-center gap-1.5"><TierChip tier={tier} />{captureGrade != null ? <GradeChip grade={captureGrade} /> : null}</div>
                     <ClassificationChips settingTag={settingTag} conservationTier={conservationTier} baseRarity={baseStats.rarity} />
                 </div>
-                {totalProgressionXP != null ? <LevelProgress totalXP={totalProgressionXP} recentSource={recentProgressionSource} wide={wide} /> : null}
-                {totalProgressionXP != null ? <div className={`h-px bg-white/[0.09] ${wide ? "lg:hidden" : ""}`} /> : null}
+                {bondChip
+                    ? <BondLevel chip={bondChip} wide={wide} />
+                    : totalProgressionXP != null ? <LevelProgress totalXP={totalProgressionXP} recentSource={recentProgressionSource} wide={wide} /> : null}
+                {bondChip || totalProgressionXP != null ? <div className={`h-px bg-white/[0.09] ${wide ? "lg:hidden" : ""}`} /> : null}
                 <div className={`py-3.5 ${wide ? "lg:py-0" : ""}`}>
                     <h2 className={`px-4 text-[22px] font-bold leading-[1.25] text-white ${wide ? "lg:px-0 lg:text-2xl" : ""}`}>AnimalDex stats</h2>
                     <div className="mt-3">
