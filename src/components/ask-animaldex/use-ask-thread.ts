@@ -17,6 +17,7 @@ import {splitStreamedReply, visibleAnswerSoFar} from "@/lib/ask-animaldex/prompt
 import {
     createAskMessage,
     newAskMessageId,
+    type AskLimitNotice,
     type AskMessage
 } from "@/lib/ask-animaldex/thread";
 import type {AskSubject} from "@/lib/ask-animaldex/subject";
@@ -68,12 +69,18 @@ export function fallbackFollowUps(principleName: string | null, aboutTrial = fal
  */
 export function askErrorMessage(error: unknown): string {
     if (error instanceof AskLimitError) {
-        if (error.reason === "insufficient_credits") {
-            return "You don't have enough credits for another message. Your free messages come back tomorrow.";
+        // The drawer shows the same in the reader's language, with the next
+        // step as a link (`limitNotice`); this English is the stored text.
+        switch (askLimitNotice(error)) {
+            case "credits":
+                return "You don't have enough credits for another message. Your free messages come back tomorrow.";
+            case "pro":
+                return "You've used today's messages. They come back tomorrow.";
+            case "free":
+                return "You've used today's messages. They come back tomorrow, or go Pro for 100 a day.";
+            default:
+                return "You've used today's questions. Sign in for more, or come back tomorrow.";
         }
-        return error.retryAfterSeconds && error.retryAfterSeconds < 60 * 60 * 6
-            ? "You've used today's questions. They reset within a few hours."
-            : "You've used today's questions. Sign in for more, or come back tomorrow.";
     }
     if (error instanceof AskUnavailableError) {
         return "Ask AnimalDex is unavailable right now. Try again in a moment.";
@@ -99,10 +106,19 @@ export class AskLimitError extends Error {
     constructor(
         readonly retryAfterSeconds: number,
         readonly limit: number,
-        readonly reason: string = "daily_limit_reached"
+        readonly reason: string = "daily_limit_reached",
+        /** Whose allowance it was, from the server's 429. */
+        readonly viewer: {signedIn: boolean; isPro: boolean} = {signedIn: false, isPro: false}
     ) {
         super("limit_reached");
     }
+}
+
+/** Which limit a refused message ran into, and so which next step to offer. */
+export function askLimitNotice(error: AskLimitError): AskLimitNotice {
+    if (error.reason === "insufficient_credits") return "credits";
+    if (error.viewer.isPro) return "pro";
+    return error.viewer.signedIn ? "free" : "anon";
 }
 
 /** Whether credits can carry the reader past today's allowance, and at what price. */
@@ -372,7 +388,13 @@ export function useAskThread(params: {
             replace(next);
         };
 
-        const settle = (text: string, followUps: string[], failed: boolean, companionEvent?: AskCompanionEvent) => {
+        const settle = (
+            text: string,
+            followUps: string[],
+            failed: boolean,
+            companionEvent?: AskCompanionEvent,
+            limitNotice?: AskLimitNotice
+        ) => {
             const thread = askSessionStore.messages(threadKey);
             const index = thread.findIndex((message) => message.id === placeholderId);
             if (index < 0) return;
@@ -383,7 +405,8 @@ export function useAskThread(params: {
                 status: failed ? "failed" : "complete",
                 followUpPrompts: failed ? [] : followUps,
                 // Kept with the reply it happened in, through reloads.
-                ...(!failed && companionEvent ? {companionEvent} : {})
+                ...(!failed && companionEvent ? {companionEvent} : {}),
+                ...(failed && limitNotice ? {limitNotice} : {})
             };
             replace(next);
         };
@@ -443,17 +466,19 @@ export function useAskThread(params: {
                 // Paying and still refused: the balance ran out, so the
                 // offer goes away until the reader is offered it again.
                 if (payWithCredits) stopPaying();
+                const signedIn = payload.signedIn ?? callbacks.current.viewer?.signedIn ?? false;
+                const isPro = payload.isPro ?? false;
                 setQuota({
                     remaining: 0,
                     limit: payload.limit ?? null,
                     reached: true,
-                    signedIn: payload.signedIn ?? callbacks.current.viewer?.signedIn ?? false,
-                    isPro: payload.isPro ?? false,
+                    signedIn,
+                    isPro,
                     reason: payload.reason,
                     creditOverflow: creditOverflowFrom(payload.creditOverflow),
                     paying: false
                 });
-                throw new AskLimitError(payload.retryAfterSeconds ?? 0, payload.limit ?? 0, payload.reason);
+                throw new AskLimitError(payload.retryAfterSeconds ?? 0, payload.limit ?? 0, payload.reason, {signedIn, isPro});
             }
             if (!response.ok || !response.body) {
                 throw new AskUnavailableError();
@@ -559,7 +584,13 @@ export function useAskThread(params: {
                 if (kept) settle(kept, [], false);
                 else drop();
             } else {
-                settle(askErrorMessage(error), [], true);
+                settle(
+                    askErrorMessage(error),
+                    [],
+                    true,
+                    undefined,
+                    error instanceof AskLimitError ? askLimitNotice(error) : undefined
+                );
                 callbacks.current.onFailed?.(error instanceof Error ? error.message : "unknown");
             }
         } finally {

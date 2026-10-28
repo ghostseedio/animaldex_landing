@@ -25,6 +25,13 @@ export type AskMessageStatus =
     | "streaming"
     | "failed";
 
+/**
+ * Why a reply failed at the day's limit, so the drawer can say it in the
+ * reader's language and offer their next step: sign in (anon), Pro (a free
+ * account), nothing (Pro), or Credits (not enough for another message).
+ */
+export type AskLimitNotice = "anon" | "free" | "pro" | "credits";
+
 export type AskMessage = {
     id: string;
     role: AskMessageRole;
@@ -40,6 +47,8 @@ export type AskMessage = {
      * theirs completed, or another of their animals it sent them to.
      */
     companionEvent?: AskCompanionEvent;
+    /** On a failed reply only, which are never stored: the limit it ran into. */
+    limitNotice?: AskLimitNotice;
 };
 
 export type AskThreads = Record<string, AskMessage[]>;

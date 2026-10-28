@@ -29,13 +29,14 @@
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import Image from "next/image";
+import {usePathname} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex/use-reply-pacer";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
-import {askThreadKey, type AskMessage} from "@/lib/ask-animaldex/thread";
+import {askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
 import {TRIAL_ASK_EMPTY_HEADING, TRIAL_ASK_PLACEHOLDER} from "@/lib/animal-trial-ask";
 import {WILD_PROFILE_PATH, isWildProfileFollowUp} from "@/lib/ask-animaldex/wild-profile";
@@ -48,7 +49,7 @@ import {
     type AskSuggestion
 } from "@/lib/ask-animaldex/subject";
 import {trackEvent} from "@/lib/analytics";
-import {SPECIES_ASK_FUNNEL_EVENTS} from "@/lib/species-ask";
+import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/species-ask";
 import {
     COMPANION_COPY,
     EMPTY_COMPANION_LOOP,
@@ -98,8 +99,12 @@ export type AskDrawerLabels = {
     thinkingAnimal: string;
     remaining: string;
     limitTitle: string;
+    /** Signed out: "Sign in for {signedInLimit} messages a day, free — or keep going in the app." */
     limitBody: string;
+    /** Signed out, the primary step: sign in, back to this page. */
     limitCta: string;
+    /** Signed out, the secondary step: the app. */
+    limitAppCta: string;
     limitHref: string;
     /** A signed-in free account: the next step is Pro, not a download. */
     limitBodySignedIn: string;
@@ -114,6 +119,13 @@ export type AskDrawerLabels = {
     creditsFooter: string;
     /** Paying, and the balance cannot cover another message. */
     creditsOut: string;
+    /** To the website's Credits page. */
+    creditsGet: string;
+    /** The failed reply when the day's messages are gone, by who the reader is. */
+    failedLimitAnon: string;
+    failedLimitSignedIn: string;
+    failedLimitPro: string;
+    failedNoCredits: string;
     disclaimer: string;
     /** "What I remember about you": the facts every animal shares, in the reader's hands. */
     memoryOpen: string;
@@ -150,6 +162,14 @@ type AskContextPayload = {
 
 const THINKING_PHASE_MS = 2200;
 
+/** The website's Credits page, at the packs. */
+const CREDITS_HREF = "/app/credits#credits";
+
+/** Sign in, then back to the page the reader was on (`Link` adds the locale). */
+function signInHrefFor(pathname: string | null) {
+    return `/account?next=${encodeURIComponent(pathname || "/")}`;
+}
+
 export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const {
         subject,
@@ -162,6 +182,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         takePendingQuestion,
         questionRequest
     } = useAskAnimalDex();
+    const signInHref = signInHrefFor(usePathname());
     const [context, setContext] = useState<AskContextPayload | null>(null);
     const [composer, setComposer] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -562,6 +583,31 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const creditOffer = quota.creditOverflow?.available ? quota.creditOverflow : null;
     const outOfCredits = !creditOffer && (quota.reason === "insufficient_credits"
         || (quota.isPro === true && quota.creditOverflow !== null && quota.creditOverflow !== undefined));
+    const limitTier = quota.isPro ? "pro" : quota.signedIn ? "free" : "anon";
+    const limitBody = limitTier === "pro"
+        ? labels.limitBodyPro
+        : limitTier === "free"
+            ? labels.limitBodySignedIn
+            : labels.limitBody.replace("{signedInLimit}", String(SPECIES_ASK_SIGNED_IN_LIMIT));
+    const trackLimitStep = (source: string) => {
+        trackEvent(SPECIES_ASK_FUNNEL_EVENTS.collectClicked, {species_slug: resolvedSubject.slug ?? "", source});
+    };
+    // Once each time the limit card comes up, with whose allowance ran out.
+    const limitShown = quota.reached && !showingMemory;
+    const limitReported = useRef(false);
+    useEffect(() => {
+        if (!quota.reached) {
+            limitReported.current = false;
+            return;
+        }
+        if (!limitShown || limitReported.current) return;
+        limitReported.current = true;
+        trackEvent(SPECIES_ASK_FUNNEL_EVENTS.limitReached, {
+            species_slug: resolvedSubject.slug ?? "",
+            source: "drawer",
+            tier: limitTier
+        });
+    }, [quota.reached, limitShown, limitTier, resolvedSubject.slug]);
 
     return (
         <>
@@ -780,6 +826,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
                                     companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
                                     principleName={hints.principleName}
+                                    signInHref={signInHref}
                                 />
                             ))}
                         </div>
@@ -848,6 +895,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
                                     companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
                                     principleName={hints.principleName}
+                                    signInHref={signInHref}
                                 />
                             ))}
                             {/* Room below the newest exchange, so the question can sit at the top. */}
@@ -859,11 +907,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <div className="mt-5 border border-amber-300/25 bg-amber-400/[0.08] p-4">
                             <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
                             <p className="mt-1.5 text-sm leading-6 text-ink-100">
-                                {(quota.isPro
-                                    ? labels.limitBodyPro
-                                    : quota.signedIn
-                                        ? labels.limitBodySignedIn
-                                        : labels.limitBody).replace("{limit}", String(quota.limit ?? ""))}
+                                {limitBody.replace("{limit}", String(quota.limit ?? ""))}
                             </p>
                             {creditOffer ? (
                                 <>
@@ -882,21 +926,42 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     </button>
                                 </>
                             ) : outOfCredits ? (
-                                <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.creditsOut}</p>
+                                <>
+                                    <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.creditsOut}</p>
+                                    <Link
+                                        href={CREDITS_HREF}
+                                        onClick={() => trackLimitStep("drawer_limit_credits")}
+                                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                    >
+                                        {labels.creditsGet}
+                                    </Link>
+                                </>
                             ) : null}
-                            {quota.isPro || creditOffer ? null : (
+                            {limitTier === "pro" || creditOffer ? null : limitTier === "free" ? (
                                 <Link
-                                    href={quota.signedIn ? labels.limitHrefSignedIn : labels.limitHref}
-                                    onClick={() => {
-                                        trackEvent(SPECIES_ASK_FUNNEL_EVENTS.collectClicked, {
-                                            species_slug: resolvedSubject.slug ?? "",
-                                            source: quota.signedIn ? "drawer_limit_pro" : "drawer_limit"
-                                        });
-                                    }}
-                                    className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                    href={labels.limitHrefSignedIn}
+                                    onClick={() => trackLimitStep("drawer_limit_pro")}
+                                    className={`${outOfCredits ? "ml-2 " : ""}mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300`}
                                 >
-                                    {quota.signedIn ? labels.limitCtaSignedIn : labels.limitCta}
+                                    {labels.limitCtaSignedIn}
                                 </Link>
+                            ) : (
+                                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                                    <Link
+                                        href={signInHref}
+                                        onClick={() => trackLimitStep("drawer_limit_sign_in")}
+                                        className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                    >
+                                        {labels.limitCta}
+                                    </Link>
+                                    <Link
+                                        href={labels.limitHref}
+                                        onClick={() => trackLimitStep("drawer_limit_app")}
+                                        className="text-xs font-semibold text-primary-200 underline-offset-2 transition-colors hover:text-primary-100 hover:underline"
+                                    >
+                                        {labels.limitAppCta}
+                                    </Link>
+                                </div>
                             )}
                         </div>
                     ) : null}
@@ -977,6 +1042,20 @@ function shareText(messages: AskMessage[], message: AskMessage, animalName: stri
     return question ? `${heading}\n\nQ: ${question}\n\n${body}` : `${heading}\n\n${body}`;
 }
 
+/** A reply refused at the day's limit: what to say, in the reader's language, and their next step. */
+function limitFailure(notice: AskLimitNotice, labels: AskDrawerLabels, signInHref: string) {
+    switch (notice) {
+        case "anon":
+            return {text: labels.failedLimitAnon, link: {href: signInHref, label: labels.limitCta}};
+        case "free":
+            return {text: labels.failedLimitSignedIn, link: {href: labels.limitHrefSignedIn, label: labels.limitCtaSignedIn}};
+        case "credits":
+            return {text: labels.failedNoCredits, link: {href: CREDITS_HREF, label: labels.creditsGet}};
+        default:
+            return {text: labels.failedLimitPro, link: null};
+    }
+}
+
 function MessageBlock({
     message,
     labels,
@@ -997,7 +1076,8 @@ function MessageBlock({
     onRetry,
     onFollowUp,
     companionEvent,
-    principleName = null
+    principleName = null,
+    signInHref
 }: {
     message: AskMessage;
     labels: AskDrawerLabels;
@@ -1027,6 +1107,8 @@ function MessageBlock({
     companionEvent?: AskCompanionEvent;
     /** The animal's Power, named when a step earned it. */
     principleName?: string | null;
+    /** Where "Sign in" goes from a reply refused at the signed-out limit. */
+    signInHref: string;
 }) {
     if (message.role === "user") {
         return (
@@ -1054,17 +1136,28 @@ function MessageBlock({
     }
 
     if (message.status === "failed") {
+        const limit = message.limitNotice ? limitFailure(message.limitNotice, labels, signInHref) : null;
         return (
             <div className="border border-white/10 bg-white/[0.035] p-3.5">
-                <p className="text-sm leading-6 text-ink-200">{message.text}</p>
-                <button
-                    type="button"
-                    onClick={onRetry}
-                    className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-200 transition-colors hover:text-primary-100"
-                >
-                    <RefreshIcon />
-                    {labels.tryAgain}
-                </button>
+                <p className="text-sm leading-6 text-ink-200">{limit?.text ?? message.text}</p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {limit?.link ? (
+                        <Link
+                            href={limit.link.href}
+                            className="text-xs font-semibold text-primary-200 underline underline-offset-2 transition-colors hover:text-primary-100"
+                        >
+                            {limit.link.label}
+                        </Link>
+                    ) : null}
+                    <button
+                        type="button"
+                        onClick={onRetry}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-200 transition-colors hover:text-primary-100"
+                    >
+                        <RefreshIcon />
+                        {labels.tryAgain}
+                    </button>
+                </div>
             </div>
         );
     }
