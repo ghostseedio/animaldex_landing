@@ -9,6 +9,12 @@
 # and restart policy, health-checks the new image on a side port before the
 # swap, and prints the rollback command. Run it as a script, never `source`
 # it: `set -e` in an interactive login shell closes the SSH session on error.
+#
+# Zero downtime: once nginx has the :3002 backup (scripts/install-nginx-zero-downtime.sh,
+# run once), the health-checked new image keeps running on :3002 while the
+# prod container is swapped, and nginx serves visitors from it until :3001
+# answers again. A new prod container that never comes up is rolled back to
+# the old image. The health-check watchdog is paused for the swap.
 set -euo pipefail
 
 SHA="${1:-}"
@@ -21,10 +27,33 @@ CONTAINER="animaldex-app"
 NEW_IMAGE="ghcr.io/ghostseedio/animaldex_landing:sha-${SHA}"
 PROD_BIND="127.0.0.1:3001:3000"
 SIDE_PORT=3002
+WATCHDOG="animaldex-healthcheck.timer"
 ENV_FILE="$(mktemp /tmp/animaldex.env.XXXXXX)"
-trap 'rm -f "$ENV_FILE"; docker rm -f animaldex-next >/dev/null 2>&1 || true' EXIT
+PROBE_LOG="$(mktemp /tmp/animaldex-probe.XXXXXX)"
+probe_pid=""
+watchdog_paused=0
+keep_side=0
+cleanup() {
+    [ -n "$probe_pid" ] && kill "$probe_pid" 2>/dev/null
+    [ "$watchdog_paused" = 1 ] && systemctl start "$WATCHDOG" 2>/dev/null
+    [ "$keep_side" = 1 ] || docker rm -f animaldex-next >/dev/null 2>&1
+    rm -f "$ENV_FILE" "$PROBE_LOG"
+    return 0
+}
+trap cleanup EXIT
 
 PROXY=(-H 'Host: animaldex.app' -H 'X-Forwarded-Host: animaldex.app' -H 'X-Forwarded-Proto: https')
+
+# Polls / on 127.0.0.1:<port> every 2 s, up to <tries> times; leaves the last status in $code.
+code=000
+wait_healthy() {
+    for _ in $(seq 1 "$2"); do
+        code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:$1/" || true)"
+        [ "$code" = "200" ] && return 0
+        sleep 2
+    done
+    return 1
+}
 
 # A pull needs several GB. If the disk is tight, drop stale image tags first
 # (the daily animaldex-cleanup timer does the same); abort if it is still tight
@@ -88,12 +117,7 @@ echo "== booting new image on 127.0.0.1:${SIDE_PORT} for a health check"
 docker rm -f animaldex-next >/dev/null 2>&1 || true
 docker run -d --name animaldex-next --env-file "$ENV_FILE" "${BIND_ARGS[@]}" "${ENTRYPOINT_ARGS[@]}" \
     -p "127.0.0.1:${SIDE_PORT}:3000" "$NEW_IMAGE" "${CMD_ARGS[@]}" >/dev/null
-code=000
-for _ in $(seq 1 45); do
-    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:${SIDE_PORT}/" || true)"
-    [ "$code" = "200" ] && break
-    sleep 2
-done
+wait_healthy "$SIDE_PORT" 45 || true
 echo "new image / -> $code"
 if [ "$code" != "200" ]; then
     echo "NEW IMAGE UNHEALTHY, aborting before touching prod" >&2
@@ -102,15 +126,58 @@ if [ "$code" != "200" ]; then
 fi
 curl -sS -o /dev/null -w 'new image /comparisons/cheetah-vs-leopard -> %{http_code} %{redirect_url}\n' \
     --max-redirs 0 "${PROXY[@]}" "http://127.0.0.1:${SIDE_PORT}/comparisons/cheetah-vs-leopard"
-docker rm -f animaldex-next >/dev/null
 
-echo "== swapping ${CONTAINER} (a few seconds of downtime)"
-docker rm -f "$CONTAINER"
-docker run -d --name "$CONTAINER" --restart "$RESTART" --env-file "$ENV_FILE" "${BIND_ARGS[@]}" "${ENTRYPOINT_ARGS[@]}" \
-    -p "$PROD_BIND" "$NEW_IMAGE" "${CMD_ARGS[@]}" >/dev/null
-sleep 5
+backup_ready=0
+grep -RqsE "^[[:space:]]*server[[:space:]]+127\.0\.0\.1:${SIDE_PORT}[[:space:]]+backup" /etc/nginx/ && backup_ready=1
+if [ "$backup_ready" = 1 ]; then
+    echo "== swapping ${CONTAINER}; nginx serves the new image from :${SIDE_PORT} meanwhile"
+else
+    docker rm -f animaldex-next >/dev/null
+    echo "== swapping ${CONTAINER} (down until it boots: nginx has no :${SIDE_PORT} backup; run scripts/install-nginx-zero-downtime.sh once)"
+fi
+if systemctl is-active --quiet "$WATCHDOG" 2>/dev/null; then
+    systemctl stop "$WATCHDOG"
+    watchdog_paused=1
+fi
+# What visitors get through Cloudflare during the swap, once a second (the
+# query string misses any edge cache).
+( while :; do
+    curl -s -o /dev/null --max-time 5 -w '%{http_code}\n' "https://animaldex.app/?deploy-probe=$(date +%s%N)" >> "$PROBE_LOG" 2>/dev/null || true
+    sleep 1
+done ) &
+probe_pid=$!
+
+run_prod() {
+    docker run -d --name "$CONTAINER" --restart "$RESTART" --env-file "$ENV_FILE" "${BIND_ARGS[@]}" "${ENTRYPOINT_ARGS[@]}" \
+        -p "$PROD_BIND" "$1" "${CMD_ARGS[@]}" >/dev/null
+}
+docker stop -t 10 "$CONTAINER" >/dev/null 2>&1 || true
+docker rm -f "$CONTAINER" >/dev/null
+run_prod "$NEW_IMAGE"
+if ! wait_healthy 3001 45; then
+    echo "NEW PROD CONTAINER UNHEALTHY (/ -> $code); rolling back to $OLD_IMAGE" >&2
+    docker logs --tail 50 "$CONTAINER" >&2 || true
+    docker rm -f "$CONTAINER" >/dev/null
+    run_prod "$OLD_IMAGE"
+    if wait_healthy 3001 45; then
+        echo "rolled back: prod is on $OLD_IMAGE again" >&2
+    elif [ "$backup_ready" = 1 ]; then
+        keep_side=1
+        echo "ROLLBACK UNHEALTHY TOO: left animaldex-next ($NEW_IMAGE) on :${SIDE_PORT}, which nginx serves from. Fix :3001 before removing it." >&2
+    fi
+    exit 1
+fi
+kill "$probe_pid" 2>/dev/null || true
+wait "$probe_pid" 2>/dev/null || true
+probe_pid=""
+docker rm -f animaldex-next >/dev/null 2>&1 || true
+if [ "$watchdog_paused" = 1 ]; then
+    systemctl start "$WATCHDOG"
+    watchdog_paused=0
+fi
 docker ps --filter "name=${CONTAINER}" --format 'running   : {{.Image}} ({{.Status}})'
-curl -sS -o /dev/null -w 'prod / -> HTTP %{http_code}\n' "http://127.0.0.1:3001/"
+echo "visitors  : $(sort "$PROBE_LOG" | uniq -c | awk '{printf "%s HTTP %s, ", $1, $2}' | sed 's/, $//') during the swap"
+curl -sS -o /dev/null -w 'prod / -> HTTP %{http_code}\n' "${PROXY[@]}" "http://127.0.0.1:3001/"
 curl -sS -o /dev/null -w 'prod /blog/capture-animals-app -> HTTP %{http_code}\n' "${PROXY[@]}" "http://127.0.0.1:3001/blog/capture-animals-app"
 
 echo
