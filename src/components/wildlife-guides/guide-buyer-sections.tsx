@@ -445,6 +445,7 @@ function BuyState({guide, viewer, locale, onChange}: {
                 clientToken: payload.clientToken,
                 transactionId: payload.transactionId,
                 customerEmail: payload.customerEmail,
+                locale,
                 onCompleted() {
                     completed = true;
                     if (viewer) void unlockAfterPayment();

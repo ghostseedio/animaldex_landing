@@ -4,6 +4,7 @@ import {useState} from "react";
 import {trackEvent} from "@/lib/analytics";
 import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
 import {openPaddleCheckout, type PaddleRuntimeEnvironment} from "@/lib/paddle-checkout";
+import {splitLocalePath} from "@/lib/request-routing";
 import {
     billingReturnHref,
     localizedBillingReturnPath,
@@ -52,6 +53,7 @@ export async function startWebCheckout(productCode: WebStoreProductCode, appRetu
             purchaseId: payload.purchaseId!,
             userId: payload.userId,
             customerEmail: payload.customerEmail,
+            locale: splitLocalePath(window.location.pathname).locale,
             onCompleted() {
                 trackEvent("web_checkout_payment_ui_completed", {product: productCode, source, provider: "paddle"});
                 window.location.assign(billingReturnHref(payload.purchaseId!, returnPath));

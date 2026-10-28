@@ -16,6 +16,33 @@ export function assertPaddleBrowserCheckout(
     return null;
 }
 
+/**
+ * The languages Paddle Checkout is translated into (Paddle.js v2
+ * `settings.locale`, per developer.paddle.com Paddle.Checkout.open()).
+ */
+export const PADDLE_CHECKOUT_LOCALES = [
+    "ar", "zh-Hans", "zh-TW", "da", "nl", "en", "fr", "de", "it", "ja",
+    "ko", "no", "pl", "pt", "pt-BR", "tr", "ru", "es", "sv"
+] as const;
+export type PaddleCheckoutLocale = (typeof PADDLE_CHECKOUT_LOCALES)[number];
+
+/**
+ * The page's language as a Paddle Checkout locale: an exact match, else the
+ * language alone ("de-AT" is "de"), else English. Indonesian, which the site
+ * has, is not one of Paddle's, so it is English.
+ */
+export function paddleCheckoutLocale(locale: string | null | undefined): PaddleCheckoutLocale {
+    const raw = (locale ?? "").trim().replace(/_/g, "-");
+    if (!raw) return "en";
+    const lower = raw.toLowerCase();
+    const exact = PADDLE_CHECKOUT_LOCALES.find((candidate) => candidate.toLowerCase() === lower);
+    if (exact) return exact;
+    const language = lower.split("-")[0];
+    if (language === "zh") return /-(tw|hk|mo|hant)\b/.test(lower) ? "zh-TW" : "zh-Hans";
+    if (language === "nb" || language === "nn") return "no";
+    return PADDLE_CHECKOUT_LOCALES.find((candidate) => candidate === language) ?? "en";
+}
+
 type PaddleBrowser = {
     Environment: {set(environment: "sandbox" | "production"): void};
     Initialize(options: {token: string; eventCallback(event: PaddleCheckoutEvent): void}): void;
@@ -25,7 +52,7 @@ type PaddleBrowser = {
             transactionId?: string;
             customer?: {email: string};
             customData?: Record<string, string>;
-            settings: {displayMode: "overlay"; theme: "dark"; locale: "en"; variant?: "one-page"};
+            settings: {displayMode: "overlay"; theme: "dark"; locale: PaddleCheckoutLocale; variant?: "one-page"};
         }): void;
     };
 };
@@ -89,6 +116,8 @@ export async function openPaddleCheckout(options: {
     purchaseId: string;
     userId?: string;
     customerEmail?: string;
+    /** The page's locale; mapped to one Paddle supports. */
+    locale?: string;
     onCompleted(): void;
     onClosed(): void;
 }) {
@@ -117,7 +146,7 @@ export async function openPaddleCheckout(options: {
             animaldex_purchase_id: options.purchaseId,
             ...(options.userId ? {animaldex_user_id: options.userId} : {})
         },
-        settings: {displayMode: "overlay", theme: "dark", locale: "en"}
+        settings: {displayMode: "overlay", theme: "dark", locale: paddleCheckoutLocale(options.locale)}
     });
 }
 
@@ -126,6 +155,8 @@ export async function openPaddleTransactionCheckout(options: {
     clientToken: string;
     transactionId: string;
     customerEmail?: string;
+    /** The page's locale; mapped to one Paddle supports. */
+    locale?: string;
     onCompleted(): void;
     onClosed(): void;
 }) {
@@ -155,6 +186,6 @@ export async function openPaddleTransactionCheckout(options: {
     paddle.Checkout.open({
         transactionId: options.transactionId,
         ...(options.customerEmail ? {customer: {email: options.customerEmail}} : {}),
-        settings: {displayMode: "overlay", theme: "dark", locale: "en", variant: "one-page"}
+        settings: {displayMode: "overlay", theme: "dark", locale: paddleCheckoutLocale(options.locale), variant: "one-page"}
     });
 }
