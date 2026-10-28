@@ -60,14 +60,6 @@ export function trackEvent(name: string, parameters: Record<string, string | num
     window.gtag("event", name, analyticsEventParameters(parameters));
 }
 
-/** Which app store an outbound link goes to, or null: the "store_click" key event (GA4 had no conversion events, Oct 2026). */
-export function storeForHref(href: string | null | undefined): "app_store" | "google_play" | null {
-    if (!href) return null;
-    if (/^https?:\/\/(apps|itunes)\.apple\.com\//i.test(href)) return "app_store";
-    if (/^https?:\/\/play\.google\.com\/store\//i.test(href)) return "google_play";
-    return null;
-}
-
 /**
  * A GA4 recommended ecommerce event, with the value in the checkout's own
  * currency (Paddle's localized price where it is known).

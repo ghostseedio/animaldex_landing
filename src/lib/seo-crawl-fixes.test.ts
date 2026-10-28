@@ -2,7 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {closedSeoRedirectPath} from "./closed-seo-namespaces";
 import publishedSeoSlugs from "../data/published-seo-slugs.json";
-import {analyticsEventParameters, storeForHref} from "./analytics";
+import {analyticsEventParameters} from "./analytics";
 
 // Oct 2026 Search Console: 1,322 404s, mostly retired /qualities slugs and
 // lesson URLs that kept their catalog number. They now 308 to a live page.
@@ -18,12 +18,6 @@ test("retired qualities go to the hub, numbered animal and lesson slugs to their
     assert.equal(closedSeoRedirectPath(`/animals/${animal}`), null);
 });
 
-test("store clicks are recognised for both stores and nothing else", () => {
-    assert.equal(storeForHref("https://apps.apple.com/app/6761607780"), "app_store");
-    assert.equal(storeForHref("https://play.google.com/store/apps/details?id=app.animaldex"), "google_play");
-    assert.equal(storeForHref("https://animaldex.app/talk-to-animals"), null);
-    assert.equal(storeForHref(null), null);
-});
 
 test("UI labels never reach GA4 as traffic-source parameters", () => {
     assert.deepEqual(analyticsEventParameters({source: "drawer", species: "cheetah", medium: "x"}), {ui_source: "drawer", species: "cheetah", ui_medium: "x"});
