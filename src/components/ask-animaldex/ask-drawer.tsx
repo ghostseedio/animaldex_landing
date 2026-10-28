@@ -55,7 +55,6 @@ import {
     COMPANION_COPY,
     EMPTY_COMPANION_LOOP,
     companionDisplayName,
-    parseCompanionFocus,
     referralCapturePath,
     type AskCompanionEvent,
     type AskCompanionLoop
@@ -77,6 +76,9 @@ import {
     type AskMenuItem
 } from "@/components/ask-animaldex/ask-messenger";
 import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
+import {mergeAskAnimalMessages, parseAskAnimalMessages} from "@/lib/ask-animaldex/animal-messages";
+import {ASK_REPORT_CHOICES, type AskReportChoice} from "@/lib/ask-animaldex/report";
+import {createAskMessage, type AskFollowUpResolution} from "@/lib/ask-animaldex/thread";
 
 export type AskDrawerLabels = {
     title: string;
@@ -156,6 +158,45 @@ export type AskDrawerLabels = {
     memoryToldTo: string;
     memoryFromWildProfile: string;
     memoryBack: string;
+    /** A check-in the animal raised: done, not now, stop asking. */
+    checkInDone: string;
+    checkInNotNow: string;
+    checkInStop: string;
+    checkInFailed: string;
+    /** Done on the check-in for the step the animal set: sent to the animal as the reader's message. */
+    checkInDidIt: string;
+    report: string;
+    reportTitle: string;
+    reportOffensive: string;
+    reportInaccurate: string;
+    reportOther: string;
+    reportThanks: string;
+    reportFailed: string;
+    sending: string;
+    /** An animal without a nickname, inside a sentence. */
+    theAnimal: string;
+    muteAnimal: string;
+    unmuteAnimal: string;
+    /** How the animals talk with the reader, in the memory panel. */
+    prefPersonalise: string;
+    prefPersonaliseDetail: string;
+    prefSteps: string;
+    prefStepsDetail: string;
+    prefCheckBack: string;
+    prefCheckBackDetail: string;
+    prefAnimalMessages: string;
+    prefAnimalMessagesDetail: string;
+    prefVisitors: string;
+    prefVisitorsDetail: string;
+    prefFailed: string;
+    memoryCorrect: string;
+    memoryCorrectHint: string;
+    memorySave: string;
+    /** After a free account's third finished reply on its own card, once. */
+    proIntroEyebrow: string;
+    proIntroBody: string;
+    proIntroCta: string;
+    notNow: string;
     /** Under the animal's name while it answers. */
     typing: string;
     /** Time labels between sittings: "Today 14:02". */
@@ -179,6 +220,37 @@ export type AskDrawerLabels = {
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
+
+/** How the animals talk with the reader: each switch the server answered, null when it could not. */
+type AskMemorySettings = {
+    personalisationEnabled: boolean | null;
+    suggestSteps: boolean | null;
+    followUpsEnabled: boolean | null;
+    shareJourney: boolean | null;
+    animalMessagesEnabled: boolean | null;
+};
+
+/** What Pro adds to the chat, as the apps' introduction says it (`CreditStoreCatalog`). */
+const PRO_DAILY_MESSAGES = 100;
+const PRO_DAILY_VOICE_REPLIES = 30;
+/** The Pro introduction shows once per browser, as the apps show it once per account. */
+const PRO_INTRO_SHOWN_KEY = "animaldex:ask:pro-intro-shown";
+
+function readFlag(key: string): boolean {
+    try {
+        return window.localStorage.getItem(key) === "1";
+    } catch {
+        return false;
+    }
+}
+
+function writeFlag(key: string) {
+    try {
+        window.localStorage.setItem(key, "1");
+    } catch {
+        // Session-only, then.
+    }
+}
 
 function isWildProfileFact(item: AskMemoryFact) {
     return item.source === "wild_profile" && item.pinned === true;
@@ -235,6 +307,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const [memoryState, setMemoryState] = useState<"loading" | "ready" | "failed">("loading");
     const [forgettingFact, setForgettingFact] = useState<string | null>(null);
     const [confirmingForgetAll, setConfirmingForgetAll] = useState(false);
+    const [memorySettings, setMemorySettings] = useState<AskMemorySettings | null>(null);
+    const [savingPreference, setSavingPreference] = useState(false);
+    const [preferenceFailed, setPreferenceFailed] = useState(false);
+    // Report this reply: which reply, and how the report is going.
+    const [reportTarget, setReportTarget] = useState<AskMessage | null>(null);
+    const [reportState, setReportState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
 
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
@@ -278,7 +356,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         retry,
         regenerate,
         clear,
-        continueWithCredits
+        continueWithCredits,
+        updateMessage,
+        transformThread
     } = useAskThread({
         threadKey,
         subject: resolvedSubject,
@@ -361,15 +441,81 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     // history or not (once per referral; `greet` keeps count).
     const canGreet = Boolean(context?.available && context.subject.scope === "species" && (context.hints.animalName ?? context.subject.name));
     const greetsForReferral = ownerChat && Boolean(referralId);
+
+    /**
+     * What the animal wrote to the owner while they were away joins their
+     * chat first, each as its own reply in time order, and is marked read
+     * (AnimalDex 51293f02). It has spoken, so then there is no hello as well;
+     * the hello waits on this read, three seconds at most.
+     */
+    const animalSpeciesId = ownerChat ? companionSpeciesProfileId : null;
+    const [animalMessagesSettled, setAnimalMessagesSettled] = useState(false);
+    const [animalMuted, setAnimalMuted] = useState<boolean | null>(null);
+    useEffect(() => {
+        setAnimalMessagesSettled(false);
+        setAnimalMuted(null);
+        if (!animalSpeciesId) return;
+        let cancelled = false;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3000);
+        void fetch(`/api/ask/animal-messages?speciesProfileId=${encodeURIComponent(animalSpeciesId)}`, {signal: controller.signal})
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload: {messages?: unknown; muted?: boolean} | null) => {
+                if (cancelled || !payload) return;
+                setAnimalMuted(payload.muted === true);
+                const incoming = parseAskAnimalMessages(payload.messages);
+                transformThread((current) => {
+                    const merged = mergeAskAnimalMessages(incoming, current, (message) =>
+                        createAskMessage("assistant", message.body, {animalMessageId: message.id, createdAt: message.createdAt})
+                    );
+                    return merged.merged.length > 0 ? merged.messages : current;
+                });
+                // Not tied to this drawer: closing it a moment later must not
+                // leave them unread behind a thread that already shows them.
+                void fetch("/api/ask/animal-messages", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({action: "read", speciesProfileId: animalSpeciesId}),
+                    keepalive: true
+                }).then(() => reloadCompanions()).catch(() => undefined);
+            })
+            .catch(() => undefined)
+            .finally(() => {
+                clearTimeout(timer);
+                if (!cancelled) setAnimalMessagesSettled(true);
+            });
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [animalSpeciesId, transformThread]);
+
+    /** "Mute messages from Luna" / "Let Luna message you", back as it was if that fails. */
+    const toggleAnimalMuted = useCallback(() => {
+        if (!animalSpeciesId || animalMuted === null) return;
+        const muted = !animalMuted;
+        setAnimalMuted(muted);
+        void fetch("/api/ask/animal-messages", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({action: "mute", speciesProfileId: animalSpeciesId, muted})
+        })
+            .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+            .then((payload: {muted?: boolean}) => setAnimalMuted(payload.muted === true))
+            .catch(() => setAnimalMuted(!muted));
+    }, [animalSpeciesId, animalMuted]);
+
     useEffect(() => {
         if (!canGreet || isSending) return;
+        if (animalSpeciesId && !animalMessagesSettled) return;
         if (greetsForReferral) {
             void greet({referralId});
             return;
         }
         if (messages.length > 0 || greetingState !== "idle") return;
         void greet();
-    }, [canGreet, greetsForReferral, referralId, messages.length, greetingState, isSending, greet]);
+    }, [canGreet, greetsForReferral, referralId, messages.length, greetingState, isSending, greet, animalSpeciesId, animalMessagesSettled]);
 
     // The loop as it stands when the chat opens; replies keep it current.
     useEffect(() => {
@@ -379,7 +525,16 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         void fetch(`/api/ask/companion?speciesProfileId=${encodeURIComponent(companionSpeciesProfileId)}`)
             .then((response) => (response.ok ? response.json() : null))
             .then((payload: {loop?: unknown} | null) => {
-                const loop = payload ? parseCompanionFocus(payload.loop) : null;
+                // The route answers the loop already read (`parseCompanionFocus`
+                // on the RPC's row); reading it a second time lost the focus.
+                const raw = payload?.loop && typeof payload.loop === "object" ? payload.loop as Partial<AskCompanionLoop> : null;
+                const loop: AskCompanionLoop | null = raw
+                    ? {
+                        focus: typeof raw.focus === "string" && raw.focus ? raw.focus : null,
+                        openTrial: typeof raw.openTrial === "string" && raw.openTrial ? raw.openTrial : null,
+                        yourTrialsDone: typeof raw.yourTrialsDone === "number" ? raw.yourTrialsDone : 0
+                    }
+                    : null;
                 if (!cancelled && loop) setCompanionLoop(loop);
             })
             .catch(() => undefined);
@@ -444,6 +599,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
+                if (reportTarget) {
+                    setReportTarget(null);
+                    return;
+                }
                 if (confirmingClear) {
                     setConfirmingClear(false);
                     return;
@@ -453,7 +612,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [close, confirmingClear]);
+    }, [close, confirmingClear, reportTarget]);
 
     useEffect(() => {
         if (hasConversation) return;
@@ -554,8 +713,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         try {
             const response = await fetch("/api/ask/memory", {method: "GET"});
             if (!response.ok) throw new Error(String(response.status));
-            const payload = await response.json() as {ok?: boolean; facts?: AskMemoryFact[]};
+            const payload = await response.json() as {ok?: boolean; facts?: AskMemoryFact[]; settings?: AskMemorySettings};
             setMemoryFacts(Array.isArray(payload.facts) ? payload.facts : []);
+            setMemorySettings(payload.settings ?? null);
             setMemoryState("ready");
         } catch {
             setMemoryState("failed");
@@ -586,6 +746,47 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             // The fact stays listed; the reader can try again.
         } finally {
             setForgettingFact(null);
+        }
+    }, []);
+
+    /** "Correct this": the reader's own words for a fact (an empty one forgets it). */
+    const correctFact = useCallback(async (item: AskMemoryFact, text: string) => {
+        if (!item.id) return false;
+        setForgettingFact(item.fact);
+        try {
+            const response = await fetch("/api/ask/memory", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "correct", id: item.id, text})
+            });
+            if (!response.ok) return false;
+            const payload = await response.json() as {facts?: AskMemoryFact[]};
+            setMemoryFacts(Array.isArray(payload.facts) ? payload.facts : []);
+            return true;
+        } catch {
+            return false;
+        } finally {
+            setForgettingFact(null);
+        }
+    }, []);
+
+    /** One of the switches for how the animals talk with them; the server's answer is what shows. */
+    const setPreference = useCallback(async (patch: Partial<AskMemorySettings>) => {
+        setSavingPreference(true);
+        setPreferenceFailed(false);
+        try {
+            const response = await fetch("/api/ask/memory", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "preferences", ...patch})
+            });
+            if (!response.ok) throw new Error(String(response.status));
+            const payload = await response.json() as {settings?: AskMemorySettings};
+            if (payload.settings) setMemorySettings(payload.settings);
+        } catch {
+            setPreferenceFailed(true);
+        } finally {
+            setSavingPreference(false);
         }
     }, []);
 
@@ -734,6 +935,80 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (!hasConversation && newest.followUpPrompts.length === 0) return openers;
         return newest.followUpPrompts.slice(0, 3);
     }, [messenger, animalTalking, quota.reached, composer, suggestions, messages, awaitingGreeting, hasConversation]);
+
+    /**
+     * One of the three chips under a check-in the animal raised. "Done" on
+     * the check-in for the step the animal set tells the animal instead,
+     * which asks how it went and counts it (AnimalDex e84e88e2); the
+     * check-in closes with the step.
+     */
+    const resolveFollowUp = useCallback(async (message: AskMessage, resolution: AskFollowUpResolution): Promise<boolean> => {
+        const followUp = message.followUp;
+        if (!followUp) return false;
+        const step = companionLoop?.openTrial?.trim().toLowerCase() ?? "";
+        const topic = followUp.topic.trim().toLowerCase();
+        if (resolution === "done" && !isSending && step && topic && step.startsWith(topic)) {
+            updateMessage(message.id, {followUpResolution: "done"});
+            submit(labels.checkInDidIt.replace("{step}", followUp.topic), "chip");
+            return true;
+        }
+        try {
+            const response = await fetch("/api/ask/followup", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id: followUp.id, action: resolution})
+            });
+            if (!response.ok) return false;
+        } catch {
+            return false;
+        }
+        updateMessage(message.id, {followUpResolution: resolution});
+        return true;
+    }, [companionLoop, isSending, updateMessage, submit, labels.checkInDidIt]);
+
+    /** Report this reply: files it for review, as the reader. */
+    const sendReport = useCallback(async (choice: AskReportChoice) => {
+        if (!reportTarget) return;
+        setReportState("sending");
+        try {
+            const response = await fetch("/api/ask/report", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    choice,
+                    text: askMarkdownPlainText(reportTarget.text),
+                    animalName: animalName ?? "",
+                    captureId: resolvedSubject.captureId
+                })
+            });
+            setReportState(response.ok ? "sent" : "failed");
+        } catch {
+            setReportState("failed");
+        }
+    }, [reportTarget, animalName, resolvedSubject.captureId]);
+    const openReport = useCallback((message: AskMessage) => {
+        setReportState("idle");
+        setReportTarget(message);
+    }, []);
+
+    /**
+     * Once, after the third finished reply of a free account's own
+     * conversation: never in someone else's chat or a Trial, never over the
+     * limit notice. Whether the account is free is the server's allowance,
+     * never a client Pro flag (AnimalDex d8a1c61c).
+     */
+    const finishedReplies = useMemo(
+        () => messages.filter((message) => message.role === "assistant" && message.status === "complete" && !message.isGreeting && !message.animalMessageId).length,
+        [messages]
+    );
+    const [showsProIntro, setShowsProIntro] = useState(false);
+    useEffect(() => {
+        if (showsProIntro || finishedReplies < 3 || quota.isPro !== false || quota.remaining === null) return;
+        if (!ownerChat || aboutTrial || quota.reached || animalTalking || readFlag(PRO_INTRO_SHOWN_KEY)) return;
+        writeFlag(PRO_INTRO_SHOWN_KEY);
+        trackEvent("pro_intro_shown", {moment: "first_chat", surface: "web"});
+        setShowsProIntro(true);
+    }, [showsProIntro, finishedReplies, quota.isPro, quota.remaining, quota.reached, ownerChat, aboutTrial, animalTalking]);
 
     // Today's messages are spent: what to say and the reader's next step. A
     // card under the site-wide assistant's answers; in the animal's thread it
@@ -1001,6 +1276,16 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             onCancelForgetAll={() => setConfirmingForgetAll(false)}
                             onForgetAll={() => void forgetEverything()}
                             onBack={() => setShowingMemory(false)}
+                            onCorrect={correctFact}
+                            settings={memorySettings}
+                            savingPreference={savingPreference}
+                            preferenceFailed={preferenceFailed}
+                            onSetPreference={(patch) => void setPreference(patch)}
+                            mute={animalMuted === null ? null : {
+                                muted: animalMuted,
+                                name: nickname ?? labels.theAnimal.replace("{animal}", animalName ?? ""),
+                                onToggle: toggleAnimalMuted
+                            }}
                         />
                     ) : messenger ? (
                         // The animal's card at the top, the messages resting on the composer.
@@ -1050,11 +1335,27 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
                                             principleName={hints.principleName}
                                             signInHref={signInHref}
+                                            onReport={context?.signedIn ? () => openReport(message) : undefined}
+                                            onResolveFollowUp={ownerChat && message.followUp && !message.followUpResolution
+                                                ? (resolution) => resolveFollowUp(message, resolution)
+                                                : undefined}
                                         />
                                     </div>
                                 ))}
                                 {messages.length === 0 && awaitingGreeting ? (
                                     <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />
+                                ) : null}
+                                {showsProIntro ? (
+                                    <AskProIntroBand
+                                        labels={labels}
+                                        animalName={speakerName}
+                                        href={labels.limitHrefSignedIn}
+                                        onSeePro={() => trackEvent("pro_intro_tapped", {moment: "first_chat", surface: "web"})}
+                                        onDismiss={() => {
+                                            trackEvent("pro_intro_dismissed", {moment: "first_chat", surface: "web"});
+                                            setShowsProIntro(false);
+                                        }}
+                                    />
                                 ) : null}
                             </div>
                         </div>
@@ -1246,6 +1547,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <span className="min-w-0">{labels.disclaimer}</span>
                     </p>
                 </div>
+                {reportTarget ? (
+                    <AskReportSheet
+                        labels={labels}
+                        state={reportState}
+                        onChoose={(choice) => void sendReport(choice)}
+                        onClose={() => setReportTarget(null)}
+                    />
+                ) : null}
             </div>
         </>
     );
@@ -1318,7 +1627,9 @@ function AnimalMessageRow({
     onRetry,
     companionEvent,
     principleName,
-    signInHref
+    signInHref,
+    onReport,
+    onResolveFollowUp
 }: {
     message: AskMessage;
     labels: AskDrawerLabels;
@@ -1326,6 +1637,10 @@ function AnimalMessageRow({
     isSending: boolean;
     /** Waiting for the animal, or watching it type. */
     animalTalking: boolean;
+    /** Report this reply; signed-in readers only. */
+    onReport?: () => void;
+    /** The check-in this reply raised, while it is unanswered. */
+    onResolveFollowUp?: (resolution: AskFollowUpResolution) => Promise<boolean>;
     faceUrl: string | null;
     speakerName: string;
     photoUrl: string | null;
@@ -1385,10 +1700,16 @@ function AnimalMessageRow({
     const menuItems: AskMenuItem[] = [
         {label: copied ? labels.copied : labels.copy, icon: copied ? <CheckIcon /> : <CopyIcon />, onSelect: onCopy},
         {label: labels.share, icon: <ShareIcon />, onSelect: onShare},
-        ...(isLast && !message.isGreeting && !animalTalking
+        ...(isLast && !message.isGreeting && !message.animalMessageId && !animalTalking
             ? [{label: labels.askAgain, icon: <RefreshIcon />, onSelect: onRegenerate, disabled: isSending}]
-            : [])
+            : []),
+        // Every animal reply can be flagged for review (Android 8649e5a).
+        ...(onReport ? [{label: labels.report, icon: <FlagIcon />, onSelect: onReport}] : [])
     ];
+    const checkIn = !isLive && message.followUp && onResolveFollowUp
+        ? <AskCheckInChips topic={message.followUp.topic} labels={labels} onResolve={onResolveFollowUp} />
+        : null;
+    const event = !isLive && companionEvent ? <CompanionEventBlock event={companionEvent} principleName={principleName} /> : null;
     return (
         <div className="group/reply">
             {/* Screen readers get the reply as it arrives, not a word at a time. */}
@@ -1409,8 +1730,179 @@ function AnimalMessageRow({
                             </AskMenu>
                         </span>
                     }
-                    after={!isLive && companionEvent ? <CompanionEventBlock event={companionEvent} principleName={principleName} /> : null}
+                    after={checkIn || event ? <div className="flex flex-col gap-2.5">{checkIn}{event}</div> : null}
                 />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * A check-in the animal raised, under its reply: what it is about, and Done,
+ * Not now or Stop asking. On failure the chips stay, with a line saying so.
+ */
+function AskCheckInChips({
+    topic,
+    labels,
+    onResolve
+}: {
+    topic: string;
+    labels: AskDrawerLabels;
+    onResolve: (resolution: AskFollowUpResolution) => Promise<boolean>;
+}) {
+    const [working, setWorking] = useState<AskFollowUpResolution | null>(null);
+    const [failed, setFailed] = useState(false);
+    const choose = (resolution: AskFollowUpResolution) => {
+        setWorking(resolution);
+        setFailed(false);
+        void onResolve(resolution).then((ok) => {
+            setWorking(null);
+            setFailed(!ok);
+        });
+    };
+    const chips: Array<[AskFollowUpResolution, string]> = [
+        ["done", labels.checkInDone],
+        ["not_now", labels.checkInNotNow],
+        ["stopped", labels.checkInStop]
+    ];
+    return (
+        <div className="flex flex-col items-start gap-2">
+            <p className="inline-flex items-start gap-1.5 text-[11px] font-semibold leading-4 text-ink-300">
+                <CalendarIcon />
+                <span>{topic}</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+                {chips.map(([resolution, title]) => (
+                    <button
+                        key={resolution}
+                        type="button"
+                        disabled={working !== null}
+                        onClick={() => choose(resolution)}
+                        className="rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40 disabled:opacity-50"
+                    >
+                        {working === resolution ? "…" : title}
+                    </button>
+                ))}
+            </div>
+            {failed ? <p className="text-[11px] text-ink-400">{labels.checkInFailed}</p> : null}
+        </div>
+    );
+}
+
+/**
+ * The Pro introduction, once, in the thread of a free account's own chat
+ * after its third finished reply: a flush band, not a card.
+ */
+function AskProIntroBand({
+    labels,
+    animalName,
+    href,
+    onSeePro,
+    onDismiss
+}: {
+    labels: AskDrawerLabels;
+    animalName: string;
+    href: string;
+    onSeePro: () => void;
+    onDismiss: () => void;
+}) {
+    return (
+        <div className="-mx-4 mt-3.5 border-y border-primary-400/20 bg-white/[0.03] px-4 py-4">
+            <div className="flex items-center gap-2">
+                <p className="flex-1 text-[10px] font-black tracking-[0.14em] text-primary-300">{labels.proIntroEyebrow}</p>
+                <button
+                    type="button"
+                    onClick={onDismiss}
+                    aria-label={labels.notNow}
+                    className="grid h-7 w-7 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white"
+                >
+                    <CloseIcon />
+                </button>
+            </div>
+            <p className="mt-1 text-sm leading-6 text-ink-200">
+                {labels.proIntroBody
+                    .replace("{animal}", animalName)
+                    .replace("{messages}", String(PRO_DAILY_MESSAGES))
+                    .replace("{voices}", String(PRO_DAILY_VOICE_REPLIES))}
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+                <Link
+                    href={href}
+                    onClick={onSeePro}
+                    className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                >
+                    {labels.proIntroCta}
+                </Link>
+                <button type="button" onClick={onDismiss} className="text-xs font-semibold text-ink-400 transition-colors hover:text-white">
+                    {labels.notNow}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * "Report this reply": the three reasons and Cancel, over the bottom of the
+ * drawer as an edge-to-edge band. It stays up while it sends, then thanks
+ * them, or says it failed with the choices still there.
+ */
+function AskReportSheet({
+    labels,
+    state,
+    onChoose,
+    onClose
+}: {
+    labels: AskDrawerLabels;
+    state: "idle" | "sending" | "sent" | "failed";
+    onChoose: (choice: AskReportChoice) => void;
+    onClose: () => void;
+}) {
+    const titles: Record<AskReportChoice, string> = {
+        "Offensive or harmful": labels.reportOffensive,
+        "Inaccurate or misleading": labels.reportInaccurate,
+        "Something else": labels.reportOther
+    };
+    return (
+        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-canvas-950/70" onClick={onClose}>
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={labels.reportTitle}
+                className="border-t border-white/12 bg-canvas-900 pb-4"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <p className="px-4 pb-2 pt-4 text-sm font-semibold text-white">{labels.reportTitle}</p>
+                {state === "sent" ? (
+                    <div className="px-4 pb-1">
+                        <p className="text-sm leading-6 text-ink-200">{labels.reportThanks}</p>
+                        <button type="button" onClick={onClose} className="mt-3 rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950">
+                            {labels.checkInDone}
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {state === "failed" ? <p className="px-4 pb-2 text-xs text-ink-300">{labels.reportFailed}</p> : null}
+                        {state === "sending" ? <p className="px-4 pb-2 text-xs text-ink-300">{labels.sending}</p> : null}
+                        {ASK_REPORT_CHOICES.map((choice) => (
+                            <button
+                                key={choice}
+                                type="button"
+                                disabled={state === "sending"}
+                                onClick={() => onChoose(choice)}
+                                className="block w-full border-t border-white/[0.06] px-4 py-3 text-left text-sm text-white transition-colors hover:bg-white/[0.05] disabled:opacity-50"
+                            >
+                                {titles[choice]}
+                            </button>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="block w-full border-t border-white/[0.06] px-4 py-3 text-left text-sm font-semibold text-ink-300 transition-colors hover:bg-white/[0.05]"
+                        >
+                            {labels.clearCancel}
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -1709,7 +2201,13 @@ function AskMemoryPanel({
     onAskForgetAll,
     onCancelForgetAll,
     onForgetAll,
-    onBack
+    onBack,
+    onCorrect,
+    settings,
+    savingPreference,
+    preferenceFailed,
+    onSetPreference,
+    mute
 }: {
     labels: AskDrawerLabels;
     facts: AskMemoryFact[];
@@ -1722,7 +2220,17 @@ function AskMemoryPanel({
     onCancelForgetAll: () => void;
     onForgetAll: () => void;
     onBack: () => void;
+    /** "Correct this": true once saved. */
+    onCorrect: (item: AskMemoryFact, text: string) => Promise<boolean>;
+    settings: AskMemorySettings | null;
+    savingPreference: boolean;
+    preferenceFailed: boolean;
+    onSetPreference: (patch: Partial<AskMemorySettings>) => void;
+    /** On the owner's chat: whether this animal may write to them by itself. */
+    mute: {muted: boolean; name: string; onToggle: () => void} | null;
 }) {
+    const [editing, setEditing] = useState<string | null>(null);
+    const [editText, setEditText] = useState("");
     const busy = forgettingFact !== null;
     // What the Wild Profile learned comes first; the rest keep their order.
     const ordered = [...facts.filter(isWildProfileFact), ...facts.filter((item) => !isWildProfileFact(item))];
@@ -1761,11 +2269,58 @@ function AskMemoryPanel({
                                 className="flex items-start gap-3 border border-white/10 bg-white/[0.035] py-3 pl-3.5 pr-2"
                             >
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm leading-6 text-white">{item.fact}</p>
-                                    {memorySourceLine(item, labels) ? (
-                                        <p className="mt-0.5 text-[11px] leading-4 text-ink-400">{memorySourceLine(item, labels)}</p>
-                                    ) : null}
+                                    {editing === (item.id ?? item.fact) ? (
+                                        <form
+                                            onSubmit={(event) => {
+                                                event.preventDefault();
+                                                void onCorrect(item, editText).then((ok) => {
+                                                    if (ok) setEditing(null);
+                                                });
+                                            }}
+                                        >
+                                            <label className="sr-only" htmlFor={`ask-memory-correct-${item.id}`}>{labels.memoryCorrect}</label>
+                                            <input
+                                                id={`ask-memory-correct-${item.id}`}
+                                                value={editText}
+                                                maxLength={400}
+                                                autoFocus
+                                                onChange={(event) => setEditText(event.target.value)}
+                                                className="w-full border border-white/12 bg-white/[0.05] px-2.5 py-1.5 text-sm text-white outline-none focus:border-primary-300/45"
+                                            />
+                                            <p className="mt-1 text-[11px] leading-4 text-ink-400">{labels.memoryCorrectHint}</p>
+                                            <div className="mt-2 flex gap-3">
+                                                <button type="submit" disabled={busy} className="text-xs font-bold text-primary-200 hover:text-primary-100 disabled:opacity-40">
+                                                    {labels.memorySave}
+                                                </button>
+                                                <button type="button" onClick={() => setEditing(null)} className="text-xs font-semibold text-ink-300 hover:text-white">
+                                                    {labels.clearCancel}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    ) : (
+                                        <>
+                                            <p className="text-sm leading-6 text-white">{item.fact}</p>
+                                            {memorySourceLine(item, labels) ? (
+                                                <p className="mt-0.5 text-[11px] leading-4 text-ink-400">{memorySourceLine(item, labels)}</p>
+                                            ) : null}
+                                        </>
+                                    )}
                                 </div>
+                                {item.id && !isWildProfileFact(item) && editing !== (item.id ?? item.fact) ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditing(item.id ?? item.fact);
+                                            setEditText(item.fact);
+                                        }}
+                                        disabled={busy}
+                                        aria-label={`${labels.memoryCorrect}: ${item.fact}`}
+                                        title={labels.memoryCorrect}
+                                        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                                    >
+                                        <PencilIcon />
+                                    </button>
+                                ) : null}
                                 <button
                                     type="button"
                                     onClick={() => onForget(item)}
@@ -1813,6 +2368,67 @@ function AskMemoryPanel({
                 </>
             )}
 
+            {settings || mute ? (
+                // How the animals talk with them: edge to edge, like the list above.
+                <div className="-mx-4 border-y border-white/10">
+                    {settings?.personalisationEnabled !== null && settings?.personalisationEnabled !== undefined ? (
+                        <PreferenceRow
+                            title={labels.prefPersonalise}
+                            detail={labels.prefPersonaliseDetail}
+                            value={settings.personalisationEnabled}
+                            disabled={savingPreference}
+                            onChange={(value) => onSetPreference({personalisationEnabled: value})}
+                        />
+                    ) : null}
+                    {settings?.suggestSteps !== null && settings?.suggestSteps !== undefined ? (
+                        <PreferenceRow
+                            title={labels.prefSteps}
+                            detail={labels.prefStepsDetail}
+                            value={settings.suggestSteps}
+                            disabled={savingPreference}
+                            onChange={(value) => onSetPreference({suggestSteps: value})}
+                        />
+                    ) : null}
+                    {settings?.followUpsEnabled !== null && settings?.followUpsEnabled !== undefined ? (
+                        <PreferenceRow
+                            title={labels.prefCheckBack}
+                            detail={labels.prefCheckBackDetail}
+                            value={settings.followUpsEnabled}
+                            disabled={savingPreference}
+                            onChange={(value) => onSetPreference({followUpsEnabled: value})}
+                        />
+                    ) : null}
+                    {settings?.animalMessagesEnabled !== null && settings?.animalMessagesEnabled !== undefined ? (
+                        <PreferenceRow
+                            title={labels.prefAnimalMessages}
+                            detail={labels.prefAnimalMessagesDetail}
+                            value={settings.animalMessagesEnabled}
+                            disabled={savingPreference}
+                            onChange={(value) => onSetPreference({animalMessagesEnabled: value})}
+                        />
+                    ) : null}
+                    {mute ? (
+                        <PreferenceRow
+                            title={labels.unmuteAnimal.replace("{name}", mute.name)}
+                            detail={null}
+                            value={!mute.muted}
+                            disabled={false}
+                            onChange={() => mute.onToggle()}
+                        />
+                    ) : null}
+                    {settings?.shareJourney !== null && settings?.shareJourney !== undefined ? (
+                        <PreferenceRow
+                            title={labels.prefVisitors}
+                            detail={labels.prefVisitorsDetail}
+                            value={settings.shareJourney}
+                            disabled={savingPreference}
+                            onChange={(value) => onSetPreference({shareJourney: value})}
+                        />
+                    ) : null}
+                    {preferenceFailed ? <p className="px-4 pb-3 text-[11px] text-ink-400">{labels.prefFailed}</p> : null}
+                </div>
+            ) : null}
+
             <button
                 type="button"
                 onClick={onBack}
@@ -1821,6 +2437,38 @@ function AskMemoryPanel({
                 {labels.memoryBack}
             </button>
         </div>
+    );
+}
+
+/** One switch for how the animals talk with them. */
+function PreferenceRow({title, detail, value, disabled, onChange}: {
+    title: string;
+    detail: string | null;
+    value: boolean;
+    disabled: boolean;
+    onChange: (value: boolean) => void;
+}) {
+    return (
+        <label className="flex cursor-pointer items-start gap-3 border-b border-white/[0.06] px-4 py-3 last:border-b-0">
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-white">{title}</span>
+                {detail ? <span className="mt-0.5 block text-[11px] leading-4 text-ink-400">{detail}</span> : null}
+            </span>
+            <input
+                type="checkbox"
+                role="switch"
+                checked={value}
+                disabled={disabled}
+                onChange={(event) => onChange(event.target.checked)}
+                className="peer sr-only"
+            />
+            <span
+                aria-hidden="true"
+                className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-300 ${value ? "bg-primary-400" : "bg-white/15"} ${disabled ? "opacity-50" : ""}`}
+            >
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${value ? "left-[18px]" : "left-0.5"}`} />
+            </span>
+        </label>
     );
 }
 
@@ -1865,3 +2513,5 @@ const ShareIcon = () => icon(<path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5M4.5 12v2
 const SealIcon = () => icon(<path d="M10 2.8l1.8 1.3 2.2-.1.7 2.1 1.8 1.3-.7 2.1.7 2.1-1.8 1.3-.7 2.1-2.2-.1L10 17.2l-1.8-1.3-2.2.1-.7-2.1-1.8-1.3.7-2.1-.7-2.1 1.8-1.3.7-2.1 2.2.1Zm-2.6 7.4 1.8 1.8 3.6-3.8" />);
 const ReferralIcon = () => icon(<path d="M5 15V9.5A3.5 3.5 0 0 1 8.5 6H15m0 0-3-3m3 3-3 3" />);
 const RefreshIcon = () => icon(<path d="M15.5 10a5.5 5.5 0 1 1-1.9-4.2M15.5 4v3h-3" />);
+const FlagIcon = () => icon(<path d="M5 17V3.8m0 0h8.5l-1.6 3.1 1.6 3.1H5" />);
+const CalendarIcon = () => icon(<path d="M4.5 6h11v9.5h-11Zm0 3h11M8 4v3m4-3v3" />);

@@ -195,6 +195,8 @@ type StreamEvent = {
     companion?: unknown;
     /** The bond on the owner's own chat: the stage, the level, its strands. */
     bond?: unknown;
+    /** A check-in this reply raised, on the owner's own chat. */
+    follow_up?: {id?: unknown; topic?: unknown};
     error?: string;
     detail?: string;
 };
@@ -329,6 +331,13 @@ export function useAskThread(params: {
      * owner's own chat only. A malformed `companion` is nothing, never a
      * failed answer.
      */
+    /** A check-in raised in this reply: the owner's own chat only. */
+    const takeFollowUp = useCallback((raw: StreamEvent["follow_up"]): AskMessage["followUp"] => {
+        if (!callbacks.current.ownerChat || !raw) return undefined;
+        const topic = typeof raw.topic === "string" ? raw.topic.trim().slice(0, 200) : "";
+        return typeof raw.id === "string" && topic ? {id: raw.id, topic} : undefined;
+    }, []);
+
     const takeCompanion = useCallback((raw: unknown, bond?: unknown): AskCompanionEvent | undefined => {
         if (!callbacks.current.ownerChat) return undefined;
         if (bond !== undefined) callbacks.current.onBond?.(bond);
@@ -408,7 +417,8 @@ export function useAskThread(params: {
             followUps: string[],
             failed: boolean,
             companionEvent?: AskCompanionEvent,
-            limitNotice?: AskLimitNotice
+            limitNotice?: AskLimitNotice,
+            followUp?: AskMessage["followUp"]
         ) => {
             const thread = askSessionStore.messages(threadKey);
             const index = thread.findIndex((message) => message.id === placeholderId);
@@ -421,6 +431,7 @@ export function useAskThread(params: {
                 followUpPrompts: failed ? [] : followUps,
                 // Kept with the reply it happened in, through reloads.
                 ...(!failed && companionEvent ? {companionEvent} : {}),
+                ...(!failed && followUp ? {followUp} : {}),
                 ...(failed && limitNotice ? {limitNotice} : {})
             };
             replace(next);
@@ -516,7 +527,7 @@ export function useAskThread(params: {
                         event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps,
                         event
                     );
-                    settle(split.answer, offers, false, takeCompanion(event.companion, event.bond));
+                    settle(split.answer, offers, false, takeCompanion(event.companion, event.bond), undefined, takeFollowUp(event.follow_up));
                     if (typeof event.remaining === "number") {
                         const paying = isPaying();
                         setQuota({
@@ -568,7 +579,7 @@ export function useAskThread(params: {
 
                 if (whole?.answer?.trim()) {
                     const offers = offersFor(whole.follow_up_prompts ?? [], whole);
-                    settle(whole.answer, offers, false, takeCompanion(whole.companion, whole.bond));
+                    settle(whole.answer, offers, false, takeCompanion(whole.companion, whole.bond), undefined, takeFollowUp(whole.follow_up));
                     if (typeof whole.remaining === "number") {
                         const paying = isPaying();
                         setQuota({
@@ -616,7 +627,7 @@ export function useAskThread(params: {
                 setIsSending(false);
             }
         }
-    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying, takePersona, takeCompanion]);
+    }, [threadKey, subject, locale, principleName, replace, isPaying, stopPaying, takePersona, takeCompanion, takeFollowUp]);
 
     /**
      * The animal speaks first: an empty species thread opens on its greeting,
@@ -811,6 +822,23 @@ export function useAskThread(params: {
         setGreetingState("idle");
     }, [stop, threadKey]);
 
+    /** Changes one message in place: a check-in answered, say. */
+    const updateMessage = useCallback((messageId: string, patch: Partial<AskMessage>) => {
+        const thread = askSessionStore.messages(threadKey);
+        const index = thread.findIndex((message) => message.id === messageId);
+        if (index < 0) return;
+        const next = [...thread];
+        next[index] = {...next[index], ...patch};
+        replace(next);
+    }, [threadKey, replace]);
+
+    /** Rewrites the thread from what it holds now: the animal's own messages joining it. */
+    const transformThread = useCallback((transform: (current: AskMessage[]) => AskMessage[]) => {
+        const current = askSessionStore.messages(threadKey);
+        const next = transform(current);
+        if (next !== current) replace(next);
+    }, [threadKey, replace]);
+
     const hasConversation = useMemo(
         () => messages.some((message) => message.role === "user"),
         [messages]
@@ -831,7 +859,9 @@ export function useAskThread(params: {
         retry,
         regenerate,
         clear,
-        continueWithCredits
+        continueWithCredits,
+        updateMessage,
+        transformThread
     };
 }
 

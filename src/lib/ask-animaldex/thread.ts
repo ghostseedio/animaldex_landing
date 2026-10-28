@@ -49,7 +49,18 @@ export type AskMessage = {
     companionEvent?: AskCompanionEvent;
     /** On a failed reply only, which are never stored: the limit it ran into. */
     limitNotice?: AskLimitNotice;
+    /**
+     * A check-in the animal raised in this reply, something the owner asked it
+     * to check back on, and what they answered it with once they did.
+     */
+    followUp?: {id: string; topic: string};
+    followUpResolution?: AskFollowUpResolution;
+    /** A message the animal wrote by itself (`animal_messages`), by its server id. */
+    animalMessageId?: string;
 };
+
+/** The three answers to a check-in: done, not now, or stop asking. */
+export type AskFollowUpResolution = "done" | "not_now" | "stopped";
 
 export type AskThreads = Record<string, AskMessage[]>;
 
@@ -91,7 +102,9 @@ export function createAskMessage(
         followUpPrompts: overrides.followUpPrompts ?? [],
         createdAt: overrides.createdAt ?? new Date().toISOString(),
         ...(overrides.isGreeting ? {isGreeting: true} : {}),
-        ...(overrides.companionEvent ? {companionEvent: overrides.companionEvent} : {})
+        ...(overrides.companionEvent ? {companionEvent: overrides.companionEvent} : {}),
+        ...(overrides.followUp ? {followUp: overrides.followUp} : {}),
+        ...(overrides.animalMessageId ? {animalMessageId: overrides.animalMessageId} : {})
     };
 }
 
@@ -159,8 +172,19 @@ function normalizeMessage(value: unknown): AskMessage | null {
             : [],
         createdAt: typeof row.createdAt === "string" ? row.createdAt : new Date().toISOString(),
         ...(row.isGreeting === true ? {isGreeting: true} : {}),
-        ...companionEventField(row.companionEvent)
+        ...companionEventField(row.companionEvent),
+        ...followUpFields(row),
+        ...(typeof row.animalMessageId === "string" && row.animalMessageId ? {animalMessageId: row.animalMessageId} : {})
     };
+}
+
+function followUpFields(row: Record<string, unknown>): Pick<AskMessage, "followUp" | "followUpResolution"> {
+    const raw = row.followUp && typeof row.followUp === "object" ? row.followUp as Record<string, unknown> : null;
+    if (!raw || typeof raw.id !== "string" || typeof raw.topic !== "string" || !raw.topic.trim()) return {};
+    const resolution = row.followUpResolution === "done" || row.followUpResolution === "not_now" || row.followUpResolution === "stopped"
+        ? row.followUpResolution
+        : null;
+    return {followUp: {id: raw.id, topic: raw.topic.trim().slice(0, 200)}, ...(resolution ? {followUpResolution: resolution} : {})};
 }
 
 function companionEventField(raw: unknown): {companionEvent?: AskCompanionEvent} {
