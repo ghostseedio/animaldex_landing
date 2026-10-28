@@ -125,11 +125,23 @@ function firstSentence(text: string) {
  * What the animal is (the field guide's first sentence), then its meaning and the
  * chat: "Ask the Cheetah anything". ≤ 155 characters, cut at a word boundary.
  */
+/** "Lions are…" → "Lions (Panthera leo) are…"; a sentence that does not open on the name gets "Lion (Panthera leo): " in front. */
+function nameLead(name: string, scientificName: string, sentence: string) {
+    const science = scientificName && scientificName.toLowerCase() !== name.toLowerCase() ? ` (${scientificName})` : "";
+    const article = sentence.match(/^(?:(?:the|an?) )?/i)![0].length;
+    if (sentence.slice(article, article + name.length).toLowerCase() === name.toLowerCase()) {
+        const plural = sentence.slice(article + name.length).match(/^(?:e?s)?(?![a-z])/i);
+        if (plural) {
+            const end = article + name.length + plural[0].length;
+            return `${sentence.slice(0, end)}${science}${sentence.slice(end)}`;
+        }
+    }
+    return `${name}${science}: ${sentence}`;
+}
+
 function buildSpeciesDescription(name: string, scientificName: string, summary: string, principle: string | null) {
     const tail = `${principle ? ` Symbol of ${principle.toLowerCase()}.` : ""} Ask the ${name} anything: it answers as itself.`;
-    const named = scientificName && scientificName.toLowerCase() !== name.toLowerCase() ? `${name} (${scientificName})` : name;
-    let lead = firstSentence(summary);
-    lead = lead.toLowerCase().startsWith(name.toLowerCase()) ? `${named}${lead.slice(name.length)}` : `${named}: ${lead}`;
+    let lead = nameLead(name, scientificName, firstSentence(summary));
     const room = 155 - tail.length;
     if (lead.length > room) {
         const cut = lead.slice(0, Math.max(room - 1, 40));

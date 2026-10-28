@@ -9,6 +9,7 @@ import {
     getLocalRelatedBehaviorLessons,
     resolveLocalSpeciesBehaviorProfile
 } from "@/data/species-behavior-lessons";
+import {isPublishedClosedSeoSlug} from "@/lib/closed-seo-namespaces";
 import {getSpeciesBySlug} from "@/data/species";
 import {getSpeciesImageAltText} from "@/data/species-images";
 import {buildContentMetadata} from "@/lib/content-metadata";
@@ -100,11 +101,13 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
             imageFile: null
         }
         : null;
-    const preferredPrincipleSlug = toPrincipleSlug(
+    const principleSlug = toPrincipleSlug(
         lesson.bestUseCases[0]
         ?? behaviorProfile?.bestFor[0]
         ?? lesson.principleName
     );
+    // A catalog lesson's quality can have no /qualities page (it 308s to the hub).
+    const preferredPrincipleSlug = principleSlug && isPublishedClosedSeoSlug("qualities", principleSlug) ? principleSlug : null;
     const symbolismPost = getBlogPost(`${lesson.slug}-symbolism`);
     const pageUrl = getAbsoluteUrl(params.locale, `/animal-powers/${lesson.slug}`);
     const faqItems = [

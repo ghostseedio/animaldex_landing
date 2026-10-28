@@ -51,7 +51,7 @@ export async function generateMetadata({params}: WatchPageProps): Promise<Metada
             type: "video.other",
             title,
             description,
-            url: getAbsoluteUrl(path),
+            url: getAbsoluteUrl("en", path),
             images: video.posterUrl ? [{url: video.posterUrl, width: 1080, height: 1920, alt: video.title}] : undefined,
             videos: [{url: video.videoUrl, type: "video/mp4", width: 1080, height: 1920}]
         },
@@ -71,7 +71,7 @@ export default async function VideoWatchPage({params}: WatchPageProps) {
     const schema = {
         "@context": "https://schema.org",
         "@type": "VideoObject",
-        "@id": `${getAbsoluteUrl(path)}#video`,
+        "@id": `${getAbsoluteUrl("en", path)}#video`,
         name: video.title,
         description: describe(video),
         thumbnailUrl: video.posterUrl ? [video.posterUrl] : undefined,
@@ -81,16 +81,16 @@ export default async function VideoWatchPage({params}: WatchPageProps) {
         inLanguage: "en",
         isFamilyFriendly: true,
         ...(transcript ? {transcript} : {}),
-        isPartOf: {"@type": "WebPage", "@id": getAbsoluteUrl(articlePath), name: video.sourceTitle},
+        isPartOf: {"@type": "WebPage", "@id": getAbsoluteUrl("en", articlePath), name: video.sourceTitle},
         publisher: {"@type": "Organization", name: "AnimalDex", logo: {"@type": "ImageObject", url: getAbsoluteAssetUrl("/images/logo.webp")}}
     };
     const breadcrumbs = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         itemListElement: [
-            {"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl("/")},
-            {"@type": "ListItem", position: 2, name: "Videos", item: getAbsoluteUrl("/videos")},
-            {"@type": "ListItem", position: 3, name: video.title, item: getAbsoluteUrl(path)}
+            {"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl("en", "/")},
+            {"@type": "ListItem", position: 2, name: "Videos", item: getAbsoluteUrl("en", "/videos")},
+            {"@type": "ListItem", position: 3, name: video.title, item: getAbsoluteUrl("en", path)}
         ]
     };
 

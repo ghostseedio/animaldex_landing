@@ -6,7 +6,7 @@ import QualitiesLibraryClient, {
     PrincipleLibraryItem
 } from "@/app/[locale]/(composited)/qualities/qualities-library-client";
 import {getSpeciesBySlug} from "@/data/species";
-import {getPrincipleHubIndex} from "@/data/species-behavior-lessons";
+import {getLocalPrincipleSlugs, getPrincipleHubIndex} from "@/data/species-behavior-lessons";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {ogContentImage} from "@/lib/og/og-image";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -79,9 +79,14 @@ export async function generateMetadata({params}: PrinciplesIndexPageProps): Prom
 
 export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageProps) {
     const t = await getScopedTranslator(params.locale, "qualities");
-    const principles = await getPrincipleHubIndex();
+    const allPrinciples = await getPrincipleHubIndex();
+    // Link only the qualities that have a page: /qualities/<slug> serves
+    // getLocalPrincipleSlugs(), so a catalog-only quality 308s back to this hub
+    // (11 of the 18 cards rendered here did, Oct 28 2026).
+    const servedSlugs = new Set(getLocalPrincipleSlugs());
+    const principles = allPrinciples.filter((principle) => servedSlugs.has(principle.principleSlug));
     const uniqueLessons = Array.from(new Map(
-        principles.flatMap((principle) => principle.lessons).map((lesson) => [lesson.slug, lesson] as const)
+        allPrinciples.flatMap((principle) => principle.lessons).map((lesson) => [lesson.slug, lesson] as const)
     ).values());
     const linkedAnimalCount = uniqueLessons.length;
     const catalogLessonCount = uniqueLessons.filter((lesson) => lesson.source === "catalog").length;

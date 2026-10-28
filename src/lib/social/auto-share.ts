@@ -74,7 +74,7 @@ async function candidates(): Promise<Candidate[]> {
             speciesProfileId: video.speciesProfileId,
             speciesName: video.speciesName,
             pageSlug: video.pageSlug,
-            pageUrl: getAbsoluteUrl(`/animals/${video.pageSlug}`),
+            pageUrl: getAbsoluteUrl("en", `/animals/${video.pageSlug}`),
             captureId: video.captureId,
             durationSeconds: video.durationSeconds,
             contentVideoId: null,
@@ -88,7 +88,7 @@ async function candidates(): Promise<Candidate[]> {
             speciesProfileId: null,
             speciesName: row.source_title,
             pageSlug: row.source_slug,
-            pageUrl: getAbsoluteUrl(sourcePath(row.source_type, row.source_slug)),
+            pageUrl: getAbsoluteUrl("en", sourcePath(row.source_type, row.source_slug)),
             captureId: null,
             durationSeconds: row.duration_seconds,
             contentVideoId: row.id,
@@ -294,7 +294,7 @@ async function shareLight(dryRun: boolean, posts: SocialPostRow[], ready: Ready,
     const next = nextLightItem(items, kind, posts, withRoom, now);
     if (!next) return {kind: null, reason: `No ${kind === "carousel" ? "carousel" : "text post"} waiting for a platform with room today`};
     const {item} = next.video;
-    const link = getAbsoluteUrl(sourcePath(item.source_type, item.source_slug));
+    const link = getAbsoluteUrl("en", sourcePath(item.source_type, item.source_slug));
     const {targets, tooLong} = autoShareTargets(item.share as ShareCopy, next.platforms, link);
     const skipped: Record<string, string> = {};
     for (const platform of tooLong) skipped[platform] = "Copy is over the platform's limit";
@@ -336,7 +336,7 @@ export async function shareContentNow(item: SocialContentRow): Promise<{queued: 
     const takers = ready.platforms.filter((platform) => caps[platform][kind] > 0);
     const next = nextLightItem([item], kind, posts, takers, now);
     if (!next) return {queued: [], skipped: {...ready.skipped, all: "Already on every ready platform that takes it"}};
-    const link = getAbsoluteUrl(sourcePath(item.source_type, item.source_slug));
+    const link = getAbsoluteUrl("en", sourcePath(item.source_type, item.source_slug));
     const {targets, tooLong} = autoShareTargets(item.share as ShareCopy, next.platforms, link);
     const skipped: Record<string, string> = {...ready.skipped};
     for (const platform of tooLong) skipped[platform] = "Copy is over the platform's limit";
