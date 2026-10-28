@@ -315,7 +315,7 @@ export default function MatchupsHub({
         <AppPage narrow>
             <div className="sticky top-16 z-20 -mx-4 space-y-4 bg-black px-4 pb-3 pt-1.5 lg:top-0 md:mx-0 md:px-0">
                 <div className="flex items-center gap-3">
-                    <div role="tablist" aria-label="Play" className="flex min-w-0 flex-1 border border-white/10 bg-white/[0.04] p-[3px]">
+                    <div role="tablist" aria-label="Battles" className="flex min-w-0 flex-1 border border-white/10 bg-white/[0.04] p-[3px]">
                         {SEGMENTS.map((item) => {
                             const isOn = segment === item.id;
                             return (

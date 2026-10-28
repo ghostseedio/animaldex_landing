@@ -127,6 +127,10 @@ function DiscoverTopBar({
                         </svg>
                     )}
                 </button>
+                {/* Explore's Battles: the hub that was the Play tab. */}
+                <Link href="/app/arena" aria-label="Battles" className="grid h-11 w-11 place-items-center text-white">
+                    <AppIcon name="arena" className="h-[1.3rem] w-[1.3rem]" />
+                </Link>
                 <Link href="/challenges" aria-label="Challenges" className="grid h-11 w-11 place-items-center text-white">
                     <svg viewBox="0 0 24 24" className="h-[1.3rem] w-[1.3rem]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M5 21V4" />
@@ -136,7 +140,7 @@ function DiscoverTopBar({
                 <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className="h-11 w-11" />
             </div>
 
-            <Link href="/app" aria-label="AnimalDex" className="flex h-7 min-w-0 flex-1 justify-center overflow-hidden">
+            <Link href="/app/explore" aria-label="AnimalDex" className="flex h-7 min-w-0 flex-1 justify-center overflow-hidden">
                 <img src={DISCOVER_WORDMARK_URL} alt="AnimalDex" className="h-7 w-auto min-w-0 max-w-full object-contain" />
             </Link>
 
@@ -472,14 +476,19 @@ export default function DiscoverHome({
         });
     }, [seenOutbox]);
 
-    function handleSegmentChange(next: DiscoverSegment) {
+    function handleSegmentChange(next: DiscoverSegment | "battles") {
+        // Explore's middle segment is the Battles hub, a page of its own.
+        if (next === "battles") {
+            router.push(getLocalePath(locale, "/app/arena"));
+            return;
+        }
         setSegment(next);
         if (next === "collectors") {
-            router.replace(getLocalePath(locale, "/app?view=collectors"));
+            router.replace(getLocalePath(locale, "/app/explore?view=collectors"));
             return;
         }
         const activePostId = activePostIdRef.current ?? timelineItems[0]?.id ?? null;
-        router.replace(getLocalePath(locale, activePostId ? discoverPostPath(activePostId) : "/app"));
+        router.replace(getLocalePath(locale, activePostId ? discoverPostPath(activePostId) : "/app/explore"));
     }
 
     const syncUrlToPost = useCallback((postId: string) => {
@@ -841,10 +850,12 @@ export default function DiscoverHome({
             {/* Desktop keeps the floating segment toggle beside the feed column. */}
             <div className="pointer-events-none fixed left-[calc(17rem+2.5rem)] top-6 z-40 hidden lg:flex lg:items-center lg:gap-2">
                 <div className="pointer-events-auto border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-                    <AppSegmentedControl
+                    {/* Explore: Feed · Battles · Collectors (docs/companion-loop/SPEC.md, phase 4). */}
+                    <AppSegmentedControl<DiscoverSegment | "battles">
                         value={segment}
                         options={[
-                            {id: "discover", label: "Discover"},
+                            {id: "discover", label: "Feed"},
+                            {id: "battles", label: "Battles"},
                             {id: "collectors", label: "Collectors"}
                         ]}
                         onChange={handleSegmentChange}

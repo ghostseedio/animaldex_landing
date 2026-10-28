@@ -1,6 +1,7 @@
 "use client";
 
-import {useEffect, useMemo, useRef, useState} from "react";
+import {type ReactNode, useEffect, useMemo, useRef, useState} from "react";
+import {useCompanions} from "@/components/companions/use-companions";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
@@ -37,7 +38,8 @@ export type CatalogSpecies = {
     legendaryTier: "S" | null;
 };
 
-type ContentMode = "animals" | "powers" | "lessons" | "systemDynamics";
+/** `binders`: the binders, folded into the Catalog as a filter (docs/companion-loop/SPEC.md, phase 4). */
+export type ContentMode = "animals" | "powers" | "lessons" | "systemDynamics" | "binders";
 type Ownership = "all" | "discovered" | "undiscovered";
 type Indexing = "all" | "indexed" | "unindexed";
 type SpeciesFilter = "allSpecies" | "breedsOnly";
@@ -92,7 +94,8 @@ const CONTENT_MODE_OPTIONS: Array<{id: ContentMode; label: string}> = [
     {id: "animals", label: "Animals"},
     {id: "powers", label: "Powers"},
     {id: "lessons", label: "Lessons"},
-    {id: "systemDynamics", label: "Systems Dynamics"}
+    {id: "systemDynamics", label: "Systems Dynamics"},
+    {id: "binders", label: "Binders"}
 ];
 
 const ANIMAL_SORT_OPTIONS: Array<{id: AnimalSort; title: string; detail: string}> = [
@@ -112,7 +115,7 @@ const POWER_SORT_OPTIONS: Array<{id: PowerSort; title: string; detail: string}> 
 ];
 
 const LESSON_SORT_OPTIONS: Array<{id: LessonSort; title: string; detail: string}> = [
-    {id: "alphabetical", title: "Alphabetical", detail: "Sorts principle names from A to Z"},
+    {id: "alphabetical", title: "Alphabetical", detail: "Sorts lesson names from A to Z"},
     {id: "indexNumber", title: "Index number", detail: "Uses the lowest linked AnimalDex index"}
 ];
 
@@ -294,15 +297,32 @@ function SortOption<T extends string>({id, title, detail, selected, onSelect}: {
 
 export default function CollectionCatalog({
     species,
-    discoveryStats
+    discoveryStats,
+    bindersPanel = null,
+    initialContentMode = "animals",
+    onContentModeChange
 }: {
     species: CatalogSpecies[];
     discoveryStats: CollectionDiscoveryStats;
+    /** The binders, shown when the Binders filter is on. Absent hides the filter. */
+    bindersPanel?: ReactNode;
+    initialContentMode?: ContentMode;
+    onContentModeChange?: (mode: ContentMode) => void;
 }) {
     const [query, setQuery] = useState("");
     const [appliedQuery, setAppliedQuery] = useState("");
-    const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
-    const [pendingFilters, setPendingFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
+    const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>(() => ({...DEFAULT_FILTERS, contentMode: initialContentMode}));
+    const [pendingFilters, setPendingFilters] = useState<CatalogFilters>(() => ({...DEFAULT_FILTERS, contentMode: initialContentMode}));
+    useEffect(() => {
+        setAppliedFilters((current) => current.contentMode === initialContentMode ? current : {...current, contentMode: initialContentMode});
+    }, [initialContentMode]);
+    // Each caught animal shows its bond level: one level per animal.
+    const companions = useCompanions();
+    const levelBySlug = useMemo(
+        () => new Map(companions.rows.flatMap((row) => (row.slug ? [[row.slug, row.level] as [string, number]] : []))),
+        [companions.rows]
+    );
+    const contentModeOptions = bindersPanel ? CONTENT_MODE_OPTIONS : CONTENT_MODE_OPTIONS.filter((option) => option.id !== "binders");
     const [layout, setLayout] = useState<Layout>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [visibleAnimalCount, setVisibleAnimalCount] = useState(ANIMAL_BATCH_SIZE);
@@ -409,7 +429,7 @@ export default function CollectionCatalog({
             ? "Search powers"
             : appliedFilters.contentMode === "systemDynamics"
                 ? "Search systems"
-                : "Search principles";
+                : "Search lessons";
 
     const matchedSummary = appliedFilters.contentMode === "animals"
         ? appliedFilters.indexing === "all"
@@ -419,7 +439,9 @@ export default function CollectionCatalog({
             ? `Matched results total: ${powerFacets.length} powers · ${species.length} animals`
             : appliedFilters.contentMode === "systemDynamics"
                 ? `Matched results total: ${systemDynamicsCount} systems`
-                : `Matched results total: ${lessonFacets.length} lessons · ${species.length} animals`;
+                : appliedFilters.contentMode === "binders"
+                    ? ""
+                    : `Matched results total: ${lessonFacets.length} lessons · ${species.length} animals`;
 
     function openFilters() {
         setPendingFilters(appliedFilters);
@@ -429,6 +451,7 @@ export default function CollectionCatalog({
 
     function applyPendingFilters() {
         setAppliedFilters(pendingFilters);
+        if (pendingFilters.contentMode !== appliedFilters.contentMode) onContentModeChange?.(pendingFilters.contentMode);
         setAppliedQuery(query.trim());
         setFiltersOpen(false);
     }
@@ -503,7 +526,9 @@ export default function CollectionCatalog({
                             ? `${powerFacets.length} powers`
                             : appliedFilters.contentMode === "systemDynamics"
                                 ? `${systemDynamicsCount} systems`
-                                : `${lessonFacets.length} lessons`}
+                                : appliedFilters.contentMode === "binders"
+                                    ? "Binders"
+                                    : `${lessonFacets.length} lessons`}
                 </span>
             </div>
 
@@ -583,7 +608,7 @@ export default function CollectionCatalog({
                             <div className="mt-5 space-y-2">
                                 <p className="text-xs font-black uppercase tracking-wider text-white/35">Show</p>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {CONTENT_MODE_OPTIONS.map((option) => (
+                                    {contentModeOptions.map((option) => (
                                         <FilterChip
                                             key={option.id}
                                             title={option.label}
@@ -684,7 +709,7 @@ export default function CollectionCatalog({
                                         ))}
                                     </div>
                                 </div>
-                            ) : (
+                            ) : pendingFilters.contentMode === "binders" ? null : (
                                 <div className="mt-5 space-y-2">
                                     <p className="text-xs font-black uppercase tracking-wider text-white/35">Sort lessons by</p>
                                     <div className="space-y-2">
@@ -716,7 +741,9 @@ export default function CollectionCatalog({
                 </div>
             ) : null}
 
-            {appliedFilters.contentMode === "animals" ? (
+            {appliedFilters.contentMode === "binders" ? (
+                bindersPanel
+            ) : appliedFilters.contentMode === "animals" ? (
                 <>
                     <div className={layout === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "space-y-3"}>
                         {visibleAnimals.map((item) => (
@@ -735,6 +762,15 @@ export default function CollectionCatalog({
                                         </span>
                                     ) : null}
                                     {item.score !== null ? <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">{item.score}</span> : null}
+                                    {item.captured && levelBySlug.get(item.slug) ? (
+                                        // Its bond level: a small number, read out as "Level {n}".
+                                        <span
+                                            aria-label={`Level ${levelBySlug.get(item.slug)}`}
+                                            className="absolute bottom-2 right-2 grid h-6 min-w-6 place-items-center rounded-full border border-primary-400/40 bg-black/75 px-1.5 text-[0.65rem] font-black tabular-nums text-primary-200"
+                                        >
+                                            {levelBySlug.get(item.slug)}
+                                        </span>
+                                    ) : null}
                                 </div>
                                 <div className="min-w-0 p-3.5">
                                     <h2 className="truncate font-display text-lg font-bold text-white">{item.name}</h2>

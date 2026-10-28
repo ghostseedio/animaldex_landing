@@ -30,5 +30,5 @@ export function useAppShellChrome() {
 
 /** Routes whose phone layout is a fixed-height surface (snap feed) rather than a scrolling page. */
 export function isDiscoverShellRoute(pathname: string) {
-    return pathname === "/app" || pathname.startsWith("/p/");
+    return pathname === "/app/explore" || pathname.startsWith("/p/");
 }

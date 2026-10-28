@@ -10,7 +10,8 @@ import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profi
 import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
 import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
-import MyAnimalPowersSection from "@/components/animal-detail/animal-powers/my-animal-powers-section";
+import MyCompanionsSection from "@/components/companions/my-companions-section";
+import {useSearchParams} from "next/navigation";
 import {
     AverageTraitsCard,
     BestForTagsChartCard,
@@ -526,7 +527,16 @@ export default function ProfileContent({
     surface = "marketing",
     displayCurrency = "USD"
 }: ProfileContentProps) {
-    const [activeTab, setActiveTab] = useState<ProfileTab>("history");
+    // Shop and Locations open from the app's drawer on your own profile
+    // (docs/companion-loop/SPEC.md, phase 4): `?tab=shop` / `?tab=locations`.
+    const requestedTab = useSearchParams()?.get("tab");
+    const drawerTab: ProfileTab | null = surface === "app" && viewer.isOwner && (requestedTab === "shop" || requestedTab === "locations")
+        ? requestedTab
+        : null;
+    const [activeTab, setActiveTab] = useState<ProfileTab>(drawerTab ?? "history");
+    useEffect(() => {
+        if (drawerTab) setActiveTab(drawerTab);
+    }, [drawerTab]);
     const activeChromePreset = profile.chromePreset;
     const [chromeCollapsed, setChromeCollapsed] = useState(false);
     const [isWildInsightScope, setIsWildInsightScope] = useState(false);
@@ -551,10 +561,13 @@ export default function ProfileContent({
     const inset = surface === "app" ? "px-[18px]" : "px-[18px] md:px-0";
 
     const tabs = useMemo<ProfileTab[]>(
-        () => (profile.canViewLocations || viewer.isOwner
-            ? ["history", "stats", "shop", "locations"]
-            : ["history", "stats", "shop"]),
-        [profile.canViewLocations, viewer.isOwner]
+        () => surface === "app" && viewer.isOwner
+            // Your own profile in the app: Shop and Locations live in the drawer.
+            ? drawerTab ? ["history", "stats", drawerTab] : ["history", "stats"]
+            : profile.canViewLocations || viewer.isOwner
+                ? ["history", "stats", "shop", "locations"]
+                : ["history", "stats", "shop"],
+        [drawerTab, profile.canViewLocations, surface, viewer.isOwner]
     );
     const tabLabel = (tab: ProfileTab) => {
         if (tab === "history") return labels.tabHistory;
@@ -917,10 +930,10 @@ export default function ProfileContent({
                         isWildScope={isWildInsightScope}
                         onToggleWildScope={setIsWildInsightScope}
                     />
-                    {/* What this person has been taught, above what they have
-                        found. Earned Powers are read for the signed-in viewer
-                        only, so this is the owner's own profile. */}
-                    {viewer.isOwner ? <MyAnimalPowersSection animalsMet={profile.speciesCount} /> : null}
+                    {/* Your companions and their levels, above what you have
+                        found. Read for the signed-in viewer only, so this is
+                        the owner's own profile. */}
+                    {viewer.isOwner ? <MyCompanionsSection /> : null}
                     {binders ? <CompletedBindersSection binders={binders} /> : null}
                     {!viewer.isOwner ? (
                         <StatsPanel className="px-[18px] py-4">

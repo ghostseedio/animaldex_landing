@@ -17,25 +17,40 @@ type AppShellProps = {
     hydrateFromSession?: boolean;
 };
 
+/**
+ * The tabs (docs/companion-loop/SPEC.md, phase 4): Companions · Collection ·
+ * Capture · Explore · Profile. Capture is the round button between them on a
+ * phone and the "Add capture" button on a desktop.
+ */
 const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
-    {href: "/app", label: "Home", icon: "home"},
+    {href: "/app", label: "Companions", icon: "companions"},
     {href: "/app/collection", label: "Collection", icon: "collection"},
-    {href: "/app/arena", label: "Play", icon: "arena"},
-    {href: "/app/profile", label: "Profile", icon: "profile"},
-    // iOS opens Settings & Activity as a drawer from the profile's ☰; on the
-    // web it is a tab of its own.
-    {href: "/app/settings", label: "Settings", icon: "settings"}
+    {href: "/app/explore", label: "Explore", icon: "explore"},
+    {href: "/app/profile", label: "Profile", icon: "profile"}
 ];
 
-const utilityLinks: {href: string; label: string; icon: AppIconName}[] = [
+/**
+ * The drawer: everything that is not a tab. The web has no Widgets, Rulebook
+ * or Healing Station pages, and gifts and credit offers live on the cards and
+ * the Credits page.
+ */
+const drawerLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app/missions", label: "Missions", icon: "mission"},
-    {href: "/app/trades", label: "Trades", icon: "trade"}
+    {href: "/app/credits", label: "Credits", icon: "spark"},
+    {href: "/app/earnings", label: "Earnings", icon: "boltShield"},
+    {href: "/app/profile?tab=shop", label: "Shop", icon: "sets"},
+    {href: "/app/profile?tab=locations", label: "Locations", icon: "location"},
+    {href: "/app/guides", label: "Wildlife Guides", icon: "search"},
+    {href: "/app/trades", label: "Trades", icon: "trade"},
+    {href: "/challenges", label: "Sponsored challenges", icon: "matchup"},
+    {href: "/app/import/instagram", label: "Instagram import", icon: "camera"},
+    {href: "/app/settings", label: "Settings", icon: "settings"}
 ];
 
 const PREFETCH_ROUTES = [
     "/app",
     "/app/collection",
-    "/app/arena",
+    "/app/explore",
     "/app/profile",
     "/app/settings",
     "/app/missions",
@@ -50,8 +65,10 @@ function localePrefix(pathname: string) {
     return pathname.startsWith("/id/") ? "/id" : "";
 }
 
-function isArenaRoute(pathname: string) {
-    return ["/app/arena", "/app/train", "/app/matchups", "/app/missions"].some(
+/** Explore: the feed (and its posts), Battles and Collectors. */
+function isExploreRoute(pathname: string) {
+    if (pathname.startsWith("/p/")) return true;
+    return ["/app/explore", "/app/arena", "/app/train", "/app/matchups"].some(
         (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );
 }
@@ -86,11 +103,13 @@ export default function AppShell({
     // document scrolling underneath — so the shell becomes a fixed column.
     const isDiscoverRoute = isDiscoverShellRoute(pathname);
     const isActive = (href: string) => {
-        if (href === "/app") return pathname === href || pathname.startsWith("/p/");
-        if (href === "/app/arena") return isArenaRoute(pathname);
-        return pathname.startsWith(href);
+        if (href === "/app") return pathname === href || pathname.startsWith("/app/companions");
+        if (href === "/app/explore") return isExploreRoute(pathname);
+        const path = href.split("?")[0];
+        return pathname.startsWith(path) && !href.includes("?");
     };
-    const navHref = (href: string) => resolvedAuthenticated || href === "/app" ? href : accountHref;
+    // The feed and public challenges are open signed out; everything else asks to sign in first.
+    const navHref = (href: string) => resolvedAuthenticated || href === "/app/explore" || href === "/challenges" ? href : accountHref;
 
     useEffect(() => {
         setMenuOpen(false);
@@ -163,7 +182,7 @@ export default function AppShell({
             : `${base} text-white/50 hover:bg-white/5 hover:text-white`;
     };
 
-    const navLink = (item: typeof mainLinks[number], mobile = false) => (
+    const navLink = (item: (typeof mainLinks)[number], mobile = false) => (
         <Link key={item.href} href={navHref(item.href)} prefetch className={navClass(isActive(item.href), mobile)}>
             <AppIcon name={item.icon} className={mobile ? "h-5 w-5" : "h-[1.15rem] w-[1.15rem]"} />
             <span>{item.label}</span>
@@ -202,14 +221,14 @@ export default function AppShell({
 
                 <nav className="mt-8 space-y-1">{mainLinks.map((item) => navLink(item))}</nav>
 
-                <p className="mb-2 mt-8 px-3 text-[0.62rem] font-black uppercase tracking-[0.18em] text-white/25">Progress & community</p>
-                <nav className="space-y-1">
-                    {utilityLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
+                <p className="mb-2 mt-8 px-3 text-[0.62rem] font-black uppercase tracking-[0.18em] text-white/25">More</p>
+                <nav className="min-h-0 space-y-1 overflow-y-auto">
                     {utilityLink("/app/messages", "Messages", "message", unreadMessageCount)}
                     {utilityLink("/app/notifications", "Notifications", "bell", unreadCount)}
+                    {drawerLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
                 </nav>
 
-                <div className="mt-auto space-y-4">
+                <div className="mt-auto space-y-4 pt-4">
                     {resolvedAuthenticated ? <CreditBalanceChip className="w-full justify-center px-4 py-2.5" /> : null}
                     <Link href={navHref("/app/capture")} className="flex min-h-11 items-center justify-center gap-2 bg-gradient-to-r from-primary-400 to-violet-500 px-4 py-3.5 text-sm font-black text-black shadow-[0_16px_40px_-24px_rgba(139,92,246,0.9)] transition hover:brightness-105">
                         <AppIcon name="camera" />
@@ -283,9 +302,9 @@ export default function AppShell({
                         </Link>
                         )}
                         <p className="px-3 py-2 text-[0.62rem] font-black uppercase tracking-[0.18em] text-white/25">More</p>
-                        {utilityLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
                         {utilityLink("/app/messages", "Messages", "message", unreadMessageCount)}
                         {utilityLink("/app/notifications", "Notifications", "bell", unreadCount)}
+                        {drawerLinks.map((item) => utilityLink(item.href, item.label, item.icon))}
                         {resolvedAuthenticated ? (
                             <button onClick={signOut} className="mt-2 w-full border border-white/10 px-3 py-3 text-left text-sm font-bold text-white/50 transition hover:text-white">Sign out</button>
                         ) : null}
