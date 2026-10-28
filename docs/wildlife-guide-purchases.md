@@ -36,7 +36,7 @@ Server side: migrations `20261020100000_wildlife_guide_purchases.sql` and `20261
 
 | Variable | Used for |
 | --- | --- |
-| `PADDLE_ENVIRONMENT`, `PADDLE_API_KEY`, `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `PADDLE_WEBHOOK_SECRET`, the three `PADDLE_PRICE_*` | Already required for web billing; card checkout uses the same configuration checks |
+| `PADDLE_ENVIRONMENT`, `PADDLE_API_KEY`, `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `PADDLE_WEBHOOK_SECRET` | Card checkout (Paddle.js, the API and the webhook). No `PADDLE_PRICE_*` is needed: a guide is a custom price on one transaction |
 | `SUPABASE_SERVICE_ROLE_KEY` (and the Supabase URL/anon key) | Purchase rows, buyer accounts, sign-in links |
 | `RESEND_API_KEY` | The guest's sign-in email |
 | `SUPPORT_FROM_EMAIL` (optional, default `support@animaldex.app`) | Sender address, shown as "AnimalDex" |

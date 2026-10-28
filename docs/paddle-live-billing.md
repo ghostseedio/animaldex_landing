@@ -1,8 +1,62 @@
 # AnimalDex web billing: Paddle live
 
-Status: live implementation is ready in code. Checkout stays fail-closed until live Paddle account approval, `animaldex.app` checkout-domain approval, live catalog, live env, and production billing/import migrations are in place. Do not enable `NEXT_PUBLIC_INSTAGRAM_WEB_IMPORT_LIVE` until controlled live Credit and Pro purchases pass.
+Status (2026-10-28): billing is **off** in production. `GET https://animaldex.app/api/webhooks/paddle` answers `PADDLE_ENVIRONMENT must be production.` and `/checkout` says web billing is not enabled. The code is ready; turning it on is the owner checklist below (Paddle dashboard + VM env). Do not enable `NEXT_PUBLIC_INSTAGRAM_WEB_IMPORT_LIVE` until controlled live Credit and Pro purchases pass.
 
 Sandbox credentials must never be substituted into production.
+
+## Go-live checklist (owner)
+
+Nothing here happens in a deploy by itself. Do it in order; every value must come from the **live** Paddle dashboard (`vendors.paddle.com`), never `sandbox-vendors.paddle.com`.
+
+**1. Paddle dashboard (live)**
+
+1. Live account approved, and `animaldex.app` approved under Checkout → Website approval. If Paddle has not approved it, stop: **BLOCKED BY PADDLE APPROVAL**.
+2. Checkout → Checkout settings → default payment link `https://animaldex.app/checkout`.
+3. Catalog: the three live prices in [Catalog](#catalog). Copy each **Price ID** (`pri_…`), not the Product ID (`pro_…`).
+4. Developer tools → Authentication: a live API key (`pdl_live_apikey_…`) and a live client-side token (`live_…`). If the key is scoped, it needs what the server calls: create transactions (`POST /transactions`, Wildlife Guide card checkout), list and create adjustments (`GET`/`POST /adjustments`, guide refunds) and customer portal sessions (`POST /customers/{id}/portal-sessions`, Manage subscription).
+5. Developer tools → Notifications → new destination, URL `https://animaldex.app/api/webhooks/paddle`, with these events:
+   - `transaction.completed`
+   - `transaction.canceled` (Wildlife Guide card checkouts: marks the purchase failed)
+   - `subscription.created`, `subscription.activated`, `subscription.updated`, `subscription.trialing`, `subscription.past_due`, `subscription.paused`, `subscription.resumed`, `subscription.canceled`
+   - `adjustment.created`, `adjustment.updated`
+
+   `transaction.payment_failed` is optional (handled as a no-op). Copy the destination's secret key (`pdl_ntfset_…`).
+
+**2. VM environment** — `/opt/animaldex/shared/app.env` (`KEY=value` lines, no quotes, `chmod 600`; `scripts/deploy-selfhost.sh` merges it over the running container's env):
+
+```dotenv
+PADDLE_ENVIRONMENT=production
+PADDLE_API_KEY=pdl_live_apikey_...
+NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=live_...
+PADDLE_WEBHOOK_SECRET=pdl_ntfset_...
+PADDLE_PRICE_PRO_MONTHLY=pri_...
+PADDLE_PRICE_CREDITS_25=pri_...
+PADDLE_PRICE_CREDITS_100=pri_...
+```
+
+- All seven are read at runtime, so an env change needs only a redeploy, not a rebuild. On animaldex.app a `pdl_sdbx_` key or `test_` token is refused. A sandbox `pri_` ID looks the same as a live one and is **not** caught by the format check: it fails only when Paddle opens checkout, so copy Price IDs from the live dashboard.
+- Each product is on sale on its own Price ID. Leaving a pack's Price ID empty takes only that pack off sale; Pro, the other pack, the webhook and Wildlife Guide card checkout keep working. A value that is not a `pri_` ID, or one Price ID used for two products, takes the whole catalog off sale.
+- A product is on sale only when the webhook is configured too (API key + secret), so nothing is sold that could not be fulfilled.
+- `NEXT_PUBLIC_SITE_URL` / `SITE_URL` stay `https://animaldex.app` (that is what makes the production guard refuse sandbox values). The Supabase service role key is already set for other features and is what the webhook writes with.
+- Images built before the per-product availability change ("Web billing: each Paddle product is on sale on its own Price ID") sent Paddle.js the client token baked in at build time, which is empty unless the GitHub secret `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` was set. Deploy an image that contains that change.
+
+Apply: on the VM run `scripts/deploy-selfhost.sh <sha>` (the same sha redeploys with the new env). Its output lists the keys it took from `app.env`; all seven `PADDLE_*` must be there.
+
+**3. Database** — confirm (read-only) that the [production migrations](#production-migrations) are applied, and that `instagram_import_billing_rollout.enforcement_mode` is still `off`.
+
+**4. Check it before any purchase**
+
+1. `curl -s https://animaldex.app/api/webhooks/paddle` answers `{"ok":true,"service":"paddle-webhook","environment":"production"}`. Any `error` names the first missing or wrong value.
+2. `https://animaldex.app/checkout` says "Use this page to complete an AnimalDex Credits or Pro purchase." and then "AnimalDex checkout is ready."
+3. Signed in, `/app/credits` shows "Signed in as …", Pro first, and a buy button for every product that has a Price ID; any product without one reads "Not available right now".
+4. Paddle → Notifications → the destination → send a simulated `transaction.completed`. It is **expected to be refused with 400** (`paddle_transaction_mismatch` or `paddle_line_item_mismatch`: a simulation belongs to no registered purchase) and is recorded as a failed event; nothing is granted. A 400 with one of those proves the signature verified; `invalid_webhook_signature` means the secret is wrong, a 503 means the env is incomplete.
+5. The VM clock is NTP-synced (`timedatectl`: "System clock synchronized: yes"): signatures older than 5 seconds are refused.
+
+**5. Controlled live proof** — then the purchases in [Controlled live proof](#controlled-live-proof).
+
+**Turning it off again:** remove `PADDLE_ENVIRONMENT` from `app.env` and redeploy. Checkout and the webhook answer 503; Paddle keeps retrying undelivered notifications, so purchases already paid are fulfilled once it is back.
+
+**Not billing, same release:** store-link attribution reads `NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN` (App Store Connect → App Analytics → Campaigns provider token) at **build** time: set it as a GitHub Actions variable, then rebuild. Until then App Store links carry `ct=` without `pt=`, which Apple does not attribute. Revenue reaches GA4 as `begin_checkout` and `purchase` only when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set at build.
 
 ## Architecture
 
@@ -28,25 +82,18 @@ Do not add annual Pro, discounts, bundles, other pack sizes, or regional packs. 
 
 ## Required environment
 
-```dotenv
-PADDLE_ENVIRONMENT=production
-PADDLE_API_KEY=pdl_live_apikey_...
-NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=live_...
-PADDLE_WEBHOOK_SECRET=pdl_ntfset_...
-PADDLE_PRICE_CREDITS_25=pri_...
-PADDLE_PRICE_CREDITS_100=pri_...
-PADDLE_PRICE_PRO_MONTHLY=pri_...
-```
+The seven variables in the [go-live checklist](#go-live-checklist-owner). `PADDLE_API_KEY` and `PADDLE_WEBHOOK_SECRET` are server-only. Only the limited client-side token is exposed, and the server reads it at runtime.
 
-`PADDLE_API_KEY` and `PADDLE_WEBHOOK_SECRET` are server-only. Only the limited client-side token is exposed.
-
-Runtime guards:
+Runtime guards (`src/lib/paddle-server.ts`):
 
 - `animaldex.app` / Vercel production require `PADDLE_ENVIRONMENT=production`
 - live API key must start `pdl_live_`
 - live client token must start `live_`
 - sandbox keys/tokens are rejected on the production host
-- missing or mismatched config returns 503 and does not open checkout
+- per product (`assertPaddleProductCheckoutConfigured`): Paddle.js, API key and webhook secret configured, the catalog well formed, and that product's own Price ID set; otherwise its checkout returns 503 `product_unavailable` and the UI shows it unavailable (`paddleProductAvailability`)
+- the catalog is well formed when every Price ID that is set starts `pri_` and no two products share one
+- the webhook (`assertPaddleWebhookConfigured`) needs the environment, API key and secret, no Price ID; each Credits or Pro event's own Price ID must be one of the configured products (a subscription, Pro), or the event is refused (`paddle_unknown_price`) and Paddle retries it. Do not replace a Price ID while subscribers are on the old one: their events would be refused.
+- Wildlife Guide card checkout and the `/checkout` payment-link page need no catalog Price ID
 
 API host for production is `https://api.paddle.com`.
 
@@ -62,7 +109,7 @@ API host for production is `https://api.paddle.com`.
 5. Copy each live `pri_...` value into its matching environment variable. Do not use a Product ID as a Price ID.
 6. Under Developer tools → Authentication, create a live API key and a live client-side token.
 7. Under Developer tools → Notifications, add `https://animaldex.app/api/webhooks/paddle`. Subscribe to:
-   - `transaction.completed`
+   - `transaction.completed`, `transaction.canceled`
    - `subscription.created`, `subscription.activated`, `subscription.updated`, `subscription.trialing`
    - `subscription.past_due`, `subscription.paused`, `subscription.resumed`, `subscription.canceled`
    - `adjustment.created`, `adjustment.updated`
@@ -72,7 +119,8 @@ API host for production is `https://api.paddle.com`.
 
 | Paddle event | AnimalDex action |
 | --- | --- |
-| `transaction.completed` | Resolve registered purchase; validate one item, quantity, Price ID, purchase/user binding; fulfill once |
+| `transaction.completed` | Resolve registered purchase; validate one item, quantity, Price ID (a configured catalog price, and the one registered with the purchase), purchase/user binding; fulfill once. A Wildlife Guide transaction (`custom_data.kind = wildlife_guide`) is fulfilled as a guide purchase instead |
+| `transaction.canceled` | Wildlife Guide card checkout only: the purchase is marked failed |
 | `subscription.created` / `updated` | Sync the complete Paddle state if the event is not older than stored state |
 | `subscription.activated` / `resumed` | `active` |
 | `subscription.trialing` | `trialing` |
@@ -137,8 +185,8 @@ Keep `instagram_import_billing_rollout.enforcement_mode = off` during live Paddl
 
 After live approval, domain approval, catalog, env, webhook destination, and production migrations:
 
-1. One controlled 25-Credit real purchase.
-2. Confirm checkout, payment, signed webhook, one ledger grant of +25, fulfilled-only return, same import resume if started from import.
+1. One controlled 25-Credit real purchase from `/app/credits`.
+2. Confirm checkout, payment, signed webhook, one ledger grant of +25, the return page ("Payment received — your account is updating…") landing back on `/app/credits`, and the same import resume if started from import. GA4 DebugView shows `begin_checkout` and one `purchase` with the checkout's currency.
 3. Replay the notification; expect no second grant.
 4. One controlled Pro purchase; confirm Paddle source, `profiles.is_pro`, Instagram quote 0, management URL.
 5. Mobile Safari / Android Chrome / desktop smoke.
