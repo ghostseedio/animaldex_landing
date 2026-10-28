@@ -2357,7 +2357,19 @@
     "memoryForgetAllBody": "Every animal will forget what you have told them. Your conversations stay as they are.",
     "memoryToldTo": "Told to the {animal}",
     "memoryFromWildProfile": "From your Wild Profile",
-    "memoryBack": "Back to the conversation"
+    "memoryBack": "Back to the conversation",
+    "typing": "typing…",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "say": "Say: {text}",
+    "more": "More",
+    "askAgain": "Ask again",
+    "talkCount": "{count} people have talked to me",
+    "placeholderNamed": "Message {name}…",
+    "ownersAnimal": "{owner}'s {animal}",
+    "latestMessages": "Latest messages",
+    "trialHero": "Ask me about this Trial.",
+    "chatOptions": "Chat options"
   },
   "wildProfile": {
     "eyebrow": "Identity",

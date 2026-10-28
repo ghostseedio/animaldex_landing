@@ -161,6 +161,17 @@ export function fallbackAskCompanionVoice(params: {
 }
 
 /**
+ * Nicknames are the person's own words; keep them short, single-line and
+ * clearly quoted so they read as a name, never as instructions. Verbatim from
+ * the apps' `sanitizeNickname`.
+ */
+export function sanitizeAskNickname(raw: unknown): string | null {
+    if (typeof raw !== "string") return null;
+    const name = raw.replace(/[\r\n\t`"<>{}\[\]]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40).trim();
+    return name.length > 0 ? name : null;
+}
+
+/**
  * The animal's world, as the images it reaches for: where it lives, what it
  * eats, how it sleeps, what it is known for. From the field guide, as the
  * apps' `companionWorldFrom` takes it.

@@ -2339,7 +2339,19 @@
     "memoryForgetAllBody": "Semua hewan akan melupakan apa yang Anda ceritakan. Percakapan Anda tetap seperti semula.",
     "memoryToldTo": "Diceritakan ke {animal}",
     "memoryFromWildProfile": "Dari Wild Profile Anda",
-    "memoryBack": "Kembali ke percakapan"
+    "memoryBack": "Kembali ke percakapan",
+    "typing": "mengetik…",
+    "today": "Hari ini",
+    "yesterday": "Kemarin",
+    "say": "Ucapkan: {text}",
+    "more": "Lainnya",
+    "askAgain": "Tanya lagi",
+    "talkCount": "{count} orang sudah berbicara denganku",
+    "placeholderNamed": "Kirim pesan ke {name}…",
+    "ownersAnimal": "{animal} milik {owner}",
+    "latestMessages": "Pesan terbaru",
+    "trialHero": "Tanyakan kepadaku tentang Uji Coba ini.",
+    "chatOptions": "Pilihan obrolan"
   },
   "wildProfile": {
     "eyebrow": "Identitas",

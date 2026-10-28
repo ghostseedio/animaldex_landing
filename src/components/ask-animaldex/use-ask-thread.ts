@@ -333,7 +333,17 @@ export function useAskThread(params: {
         return isEmptyCompanionEvent(update.event) ? undefined : update.event;
     }, []);
 
-    useEffect(() => () => abortRef.current?.abort(), []);
+    // Set as the drawer closes, so a hello still on its way when it does is
+    // taken back whole: the chat opened again is greeted again (AnimalDex
+    // 5f0e752b), rather than left with nothing.
+    const closingRef = useRef(false);
+    useEffect(() => {
+        closingRef.current = false;
+        return () => {
+            closingRef.current = true;
+            abortRef.current?.abort();
+        };
+    }, []);
 
     const replace = useCallback((next: AskMessage[]) => {
         askSessionStore.replace(threadKey, next);
@@ -709,6 +719,14 @@ export function useAskThread(params: {
             }
             setGreetingState("done");
         } catch {
+            if (closingRef.current && !settled && !referralId) {
+                // Closed while the hello was on its way: none of it stays, and
+                // the chat opened again is greeted whole (AnimalDex 5f0e752b).
+                keepOnStopRef.current = null;
+                drop();
+                greetedThreads.delete(threadKey);
+                return;
+            }
             const kept = keepOnStopRef.current ?? (controller.signal.aborted ? splitStreamedReply(answer).answer : "");
             keepOnStopRef.current = null;
             if (!settled && kept.trim()) {

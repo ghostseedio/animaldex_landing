@@ -63,6 +63,20 @@ import {
 import {bondChipText, decodeChatBond, type ChatBond} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond} from "@/components/companions/use-companions";
+import {
+    AskAnimalFace,
+    AskAnimalHero,
+    AskMenu,
+    AskReplyBubbles,
+    AskSuggestionBar,
+    AskTimeLabel,
+    AskTypingBubble,
+    AskUserBubble,
+    ASK_BUBBLE_INCOMING,
+    MoreIcon,
+    type AskMenuItem
+} from "@/components/ask-animaldex/ask-messenger";
+import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
 
 export type AskDrawerLabels = {
     title: string;
@@ -142,6 +156,26 @@ export type AskDrawerLabels = {
     memoryToldTo: string;
     memoryFromWildProfile: string;
     memoryBack: string;
+    /** Under the animal's name while it answers. */
+    typing: string;
+    /** Time labels between sittings: "Today 14:02". */
+    today: string;
+    yesterday: string;
+    /** A suggested reply, for screen readers. */
+    say: string;
+    /** A reply's menu. */
+    more: string;
+    askAgain: string;
+    /** Under the animal's name on its card, once enough people have. */
+    talkCount: string;
+    /** The composer on the owner's chat with an animal they named. */
+    placeholderNamed: string;
+    /** Whose animal it is, on someone else's card. */
+    ownersAnimal: string;
+    latestMessages: string;
+    trialHero: string;
+    /** The chat's ••• menu. */
+    chatOptions: string;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -159,6 +193,14 @@ type AskContextPayload = {
     isPro: boolean;
     hasWildProfile?: boolean;
     available: boolean;
+    /** The canonical species: its recorded sounds and its voice are filed under it. */
+    speciesProfileId?: string | null;
+    /** How many people have talked to it, once enough have. */
+    talkCount?: {people: number; peopleThisWeek: number} | null;
+    /** The owner's own name for it, on their own card. */
+    nickname?: string | null;
+    /** Whose animal it is, on someone else's card. */
+    ownerName?: string | null;
 };
 
 const THINKING_PHASE_MS = 2200;
@@ -197,6 +239,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
     const resolvedSubject = context?.subject ?? subject;
+    // The animal itself talks here, and its thread is a messenger (the apps'
+    // one-to-one chat since AnimalDex bdfaccde). The site-wide assistant keeps
+    // its answers pinned under the question instead.
+    const messenger = resolvedSubject.scope === "species" && Boolean(hints.animalName ?? resolvedSubject.name);
 
     // The owner's own one-to-one chat: their card, signed in, not a Trial
     // thread. Only there does the animal work on their life with them.
@@ -434,6 +480,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, [messages]);
 
     useLayoutEffect(() => {
+        if (messenger) return;
         if (!trailingQuestionId || trailingQuestionId === lastPinnedId.current) return;
         lastPinnedId.current = trailingQuestionId;
         const node = trailingQuestionRef.current;
@@ -443,7 +490,38 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             top: node.offsetTop - scroller.offsetTop - 12,
             behavior: "smooth"
         });
-    }, [trailingQuestionId]);
+    }, [trailingQuestionId, messenger]);
+
+    /**
+     * The messenger rests on the composer, as a message thread does: it
+     * follows the animal's words to the bottom while the reader is there, and
+     * leaves them alone once they scroll back ("Latest messages" brings them
+     * down again). A message the reader sends always goes to the bottom.
+     */
+    const sticksToBottom = useRef(true);
+    const [showsLatest, setShowsLatest] = useState(false);
+    const scrollToLatest = useCallback((behavior: ScrollBehavior = "auto") => {
+        const scroller = scrollRef.current;
+        if (!scroller) return;
+        sticksToBottom.current = true;
+        setShowsLatest(false);
+        scroller.scrollTo({top: scroller.scrollHeight, behavior});
+    }, []);
+    const onThreadScroll = useCallback(() => {
+        const scroller = scrollRef.current;
+        if (!scroller || !messenger) return;
+        const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+        sticksToBottom.current = distance < 72;
+        setShowsLatest(distance > 160);
+    }, [messenger]);
+    useLayoutEffect(() => {
+        if (!messenger || showingMemory || showingBond || !sticksToBottom.current) return;
+        const scroller = scrollRef.current;
+        if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    });
+    useEffect(() => {
+        if (messenger && trailingQuestionId) scrollToLatest();
+    }, [messenger, trailingQuestionId, scrollToLatest]);
 
     const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
         // The reader may talk over the animal's greeting (it keeps what it
@@ -465,6 +543,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             {species_slug: resolvedSubject.slug ?? "", source: `drawer_${source}`}
         );
         setComposer("");
+        // The composer shrinks back to one line with what it held.
+        if (composerRef.current) composerRef.current.style.height = "";
         setShowingMemory(false);
         void send(question);
     }, [close, isSending, greetingState, locale, resolvedSubject.slug, send]);
@@ -527,6 +607,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, []);
 
     const animalName = hints.animalName ?? resolvedSubject.name ?? null;
+    // On someone else's card the animal is theirs; on the owner's, the name they gave it.
+    const ownerName = context?.ownerName ?? null;
+    const nickname = ownerName ? null : context?.nickname ?? null;
+    const speakerName = nickname ?? animalName ?? labels.title;
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
 
     const aboutTrial = Boolean(resolvedSubject.trialContext);
@@ -535,7 +619,11 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const speaksAsAnimal = resolvedSubject.scope === "species" && Boolean(animalName);
     // The animal's face is its icon art, never a capture photo.
     const faceUrl = speaksAsAnimal ? avatarUrl : photoUrl;
-    const placeholder = hasConversation
+    const placeholder = messenger && animalName && !(aboutTrial && !hasConversation)
+        ? (nickname
+            ? labels.placeholderNamed.replace("{name}", nickname)
+            : labels.placeholderFollowUpAnimal.replace("{animal}", animalName))
+        : hasConversation
         ? (speaksAsAnimal && animalName
             ? labels.placeholderFollowUpAnimal.replace("{animal}", animalName)
             : labels.placeholderFollowUp)
@@ -610,6 +698,113 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         });
     }, [quota.reached, limitShown, limitTier, resolvedSubject.slug]);
 
+    // MARK: The messenger's own parts
+
+    // Under the name on the animal's card: the Trial it is about, whose it is,
+    // or its temperament once it has spoken.
+    const heroSubtitle = aboutTrial
+        ? labels.trialHero
+        : ownerName && animalName
+            ? labels.ownersAnimal.replace("{owner}", ownerName).replace("{animal}", animalName)
+            : persona?.tagline ?? (nickname ? animalName : labels.inOwnWords);
+    const popularity = context?.talkCount
+        ? labels.talkCount.replace("{count}", shortCount(context.talkCount.people, locale))
+        : null;
+    // Under the name in the header: typing while it answers, else how it is.
+    const headerStatus = ownerName && animalName
+        ? labels.ownersAnimal.replace("{owner}", ownerName).replace("{animal}", animalName)
+        : persona?.tagline ?? (nickname ? animalName : labels.inOwnWords);
+    const labelledIndices = useMemo(
+        () => askLabelledIndices(messages.map((message) => new Date(message.createdAt))),
+        [messages]
+    );
+    /**
+     * What the reader might say next, docked above the composer: the newest
+     * reply's own suggestions, or the openers while the thread is empty and
+     * the animal could not say hello. Hidden while it talks, once the reader
+     * starts typing, and when the suggestions are stale.
+     */
+    const dockedSuggestions = useMemo(() => {
+        if (!messenger || animalTalking || quota.reached || composer.trim()) return [] as string[];
+        const openers = suggestions.slice(0, 3).map((item) => item.prompt);
+        const newest = messages[messages.length - 1];
+        if (!newest) return awaitingGreeting ? [] : openers;
+        if (newest.role !== "assistant" || newest.status !== "complete") return [];
+        if (Date.now() - Date.parse(newest.createdAt) >= ASK_SUGGESTION_FRESHNESS_MS) return [];
+        if (!hasConversation && newest.followUpPrompts.length === 0) return openers;
+        return newest.followUpPrompts.slice(0, 3);
+    }, [messenger, animalTalking, quota.reached, composer, suggestions, messages, awaitingGreeting, hasConversation]);
+
+    // Today's messages are spent: what to say and the reader's next step. A
+    // card under the site-wide assistant's answers; in the animal's thread it
+    // takes the composer's place, flush in its band, as in the apps.
+    const limitNoticeContent = (
+        <>
+            <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
+            <p className="mt-1.5 text-sm leading-6 text-ink-100">
+                {limitBody.replace("{limit}", String(quota.limit ?? ""))}
+            </p>
+            {creditOffer ? (
+                <>
+                    <p className="mt-1.5 text-sm leading-6 text-ink-100">
+                        {labels.creditsOffer
+                            .replace("{cost}", String(creditOffer.cost))
+                            .replace("{balance}", String(creditOffer.balance))}
+                    </p>
+                    <button
+                        type="button"
+                        onClick={continueWithCredits}
+                        disabled={isSending}
+                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 disabled:opacity-50"
+                    >
+                        {labels.creditsContinue}
+                    </button>
+                </>
+            ) : outOfCredits ? (
+                <>
+                    <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.creditsOut}</p>
+                    <Link
+                        href={CREDITS_HREF}
+                        onClick={() => trackLimitStep("drawer_limit_credits")}
+                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                    >
+                        {labels.creditsGet}
+                    </Link>
+                </>
+            ) : null}
+            {limitTier === "pro" || creditOffer ? null : limitTier === "free" ? (
+                <Link
+                    href={labels.limitHrefSignedIn}
+                    onClick={() => trackLimitStep("drawer_limit_pro")}
+                    className={`${outOfCredits ? "ml-2 " : ""}mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300`}
+                >
+                    {labels.limitCtaSignedIn}
+                </Link>
+            ) : (
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <Link
+                        href={signInHref}
+                        onClick={() => trackLimitStep("drawer_limit_sign_in")}
+                        className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                    >
+                        {labels.limitCta}
+                    </Link>
+                    <Link
+                        href={labels.limitHref}
+                        onClick={() => {
+                            trackLimitStep("drawer_limit_app");
+                            // The store button on /#download credits the chat.
+                            rememberStorePlacement("chat_limit");
+                        }}
+                        className="text-xs font-semibold text-primary-200 underline-offset-2 transition-colors hover:text-primary-100 hover:underline"
+                    >
+                        {labels.limitAppCta}
+                    </Link>
+                </div>
+            )}
+        </>
+    );
+
     return (
         <>
             {/* Mobile only: the sheet covers the page, so it gets a way out by tapping past it. */}
@@ -639,7 +834,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         className="absolute inset-x-0 top-1.5 mx-auto h-1 w-10 rounded-full bg-white/20 lg:hidden"
                     />
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                        {faceUrl ? (
+                        {messenger ? (
+                            // Present, the way a contact shows as online.
+                            <span className="relative shrink-0">
+                                <AskAnimalFace url={faceUrl} size={32} />
+                                <span aria-hidden="true" className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-2 border-canvas-950 bg-primary-400" />
+                            </span>
+                        ) : faceUrl ? (
                             <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/15">
                                 <Image src={faceUrl} unoptimized alt="" fill sizes="32px" className="object-cover" />
                             </span>
@@ -654,7 +855,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <div className="min-w-0">
                             <div className="flex min-w-0 items-center gap-2">
                                 <p className="min-w-0 truncate text-sm font-semibold text-white">
-                                    {animalName ?? labels.title}
+                                    {messenger ? speakerName : animalName ?? labels.title}
                                 </p>
                                 {ownerChat && chipBond ? (
                                     // The bond chip: the level and the stage. It opens the bond.
@@ -674,7 +875,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     </button>
                                 ) : null}
                             </div>
-                            {ownerChat && companionLoop?.focus ? (
+                            {messenger && animalTalking ? (
+                                <p className="truncate text-[11px] leading-4 text-primary-300" aria-live="polite">{labels.typing}</p>
+                            ) : ownerChat && companionLoop?.focus ? (
                                 // What the two of you are working on, once the animal has found it.
                                 <div className="flex min-w-0 items-baseline gap-2">
                                     <p className="min-w-0 truncate text-[11px] leading-4 text-ink-300" title={companionLoop.focus}>
@@ -689,8 +892,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     </button>
                                 </div>
                             ) : speaksAsAnimal ? (
-                                // The animal's temperament once it has spoken, as in the app's header.
-                                <p className="truncate text-[11px] leading-4 text-ink-400">{persona?.tagline ?? labels.inOwnWords}</p>
+                                // Whose it is, or its temperament once it has spoken, as in the app's header.
+                                <p className="truncate text-[11px] leading-4 text-ink-400">{headerStatus}</p>
                             ) : null}
                         </div>
                     </div>
@@ -709,7 +912,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     <button
                         type="button"
                         onClick={() => setConfirmingClear(true)}
-                        disabled={!hasConversation}
+                        // A chat holding only the hello can start over too, and the
+                        // fresh hello brings the animal's call again (AnimalDex 46809a93).
+                        disabled={messenger ? messages.length === 0 : !hasConversation}
                         aria-label={labels.newConversation}
                         title={labels.newConversation}
                         className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-35"
@@ -757,7 +962,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     </div>
                 ) : null}
 
-                <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+                <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
                     {showingBond && ownerChat ? (
                         <div className="-mx-4 -my-4">
                             <BondPanel
@@ -797,6 +1002,62 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             onForgetAll={() => void forgetEverything()}
                             onBack={() => setShowingMemory(false)}
                         />
+                    ) : messenger ? (
+                        // The animal's card at the top, the messages resting on the composer.
+                        <div className="flex min-h-full flex-col">
+                            <AskAnimalHero
+                                name={speakerName}
+                                subtitle={heroSubtitle}
+                                avatarUrl={faceUrl}
+                                popularity={popularity}
+                                bondLabel={ownerChat && chipBond ? bondChipText(chipBond) : null}
+                                onBond={() => {
+                                    setShowingMemory(false);
+                                    setShowingBond(true);
+                                    void animalBond.reload();
+                                }}
+                            />
+                            <div aria-hidden="true" className="min-h-7 flex-1" />
+                            <div className="flex flex-col">
+                                {messages.map((message, index) => (
+                                    <div
+                                        key={message.id}
+                                        // Tight between two messages from one side, wider when the other speaks.
+                                        className={index === 0 ? "" : messages[index - 1].role === message.role ? "pt-1.5" : "pt-3.5"}
+                                    >
+                                        {labelledIndices.has(index) ? (
+                                            <AskTimeLabel
+                                                text={askTimeLabel(new Date(message.createdAt), {locale, today: labels.today, yesterday: labels.yesterday})}
+                                            />
+                                        ) : null}
+                                        <AnimalMessageRow
+                                            message={message}
+                                            labels={labels}
+                                            isLast={message.id === lastMessageId}
+                                            isSending={isSending}
+                                            animalTalking={animalTalking}
+                                            faceUrl={faceUrl}
+                                            speakerName={speakerName}
+                                            photoUrl={photoUrl}
+                                            photoAlt={animalName ?? ""}
+                                            paced={pacer.messageId === message.id && pacer.revealing ? pacer.visibleText : null}
+                                            onSkip={pacer.skipToEnd}
+                                            copied={copiedId === message.id}
+                                            onCopy={() => copyMessage(message)}
+                                            onShare={() => shareMessage(message)}
+                                            onRegenerate={() => regenerate(message.id)}
+                                            onRetry={() => retry(message.id)}
+                                            companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
+                                            principleName={hints.principleName}
+                                            signInHref={signInHref}
+                                        />
+                                    </div>
+                                ))}
+                                {messages.length === 0 && awaitingGreeting ? (
+                                    <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />
+                                ) : null}
+                            </div>
+                        </div>
                     ) : !hasConversation && (messages.length > 0 || awaitingGreeting) ? (
                         // The animal's greeting opens the thread, in place of the static openers.
                         <div className="flex flex-col gap-6">
@@ -904,127 +1165,99 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         </div>
                     )}
 
-                    {quota.reached && !showingMemory ? (
+                    {quota.reached && !showingMemory && !messenger ? (
                         <div className="mt-5 border border-amber-300/25 bg-amber-400/[0.08] p-4">
-                            <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
-                            <p className="mt-1.5 text-sm leading-6 text-ink-100">
-                                {limitBody.replace("{limit}", String(quota.limit ?? ""))}
-                            </p>
-                            {creditOffer ? (
-                                <>
-                                    <p className="mt-1.5 text-sm leading-6 text-ink-100">
-                                        {labels.creditsOffer
-                                            .replace("{cost}", String(creditOffer.cost))
-                                            .replace("{balance}", String(creditOffer.balance))}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={continueWithCredits}
-                                        disabled={isSending}
-                                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 disabled:opacity-50"
-                                    >
-                                        {labels.creditsContinue}
-                                    </button>
-                                </>
-                            ) : outOfCredits ? (
-                                <>
-                                    <p className="mt-1.5 text-sm leading-6 text-ink-100">{labels.creditsOut}</p>
-                                    <Link
-                                        href={CREDITS_HREF}
-                                        onClick={() => trackLimitStep("drawer_limit_credits")}
-                                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
-                                    >
-                                        {labels.creditsGet}
-                                    </Link>
-                                </>
-                            ) : null}
-                            {limitTier === "pro" || creditOffer ? null : limitTier === "free" ? (
-                                <Link
-                                    href={labels.limitHrefSignedIn}
-                                    onClick={() => trackLimitStep("drawer_limit_pro")}
-                                    className={`${outOfCredits ? "ml-2 " : ""}mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300`}
-                                >
-                                    {labels.limitCtaSignedIn}
-                                </Link>
-                            ) : (
-                                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                                    <Link
-                                        href={signInHref}
-                                        onClick={() => trackLimitStep("drawer_limit_sign_in")}
-                                        className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
-                                    >
-                                        {labels.limitCta}
-                                    </Link>
-                                    <Link
-                                        href={labels.limitHref}
-                                        onClick={() => {
-                                            trackLimitStep("drawer_limit_app");
-                                            // The store button on /#download credits the chat.
-                                            rememberStorePlacement("chat_limit");
-                                        }}
-                                        className="text-xs font-semibold text-primary-200 underline-offset-2 transition-colors hover:text-primary-100 hover:underline"
-                                    >
-                                        {labels.limitAppCta}
-                                    </Link>
-                                </div>
-                            )}
+                            {limitNoticeContent}
                         </div>
                     ) : null}
                 </div>
 
-                <div className="shrink-0 border-t border-white/10 px-4 pb-4 pt-3">
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            submit(composer, "form");
-                        }}
-                        className="flex items-end gap-2 border border-white/12 bg-white/[0.05] pl-4 pr-1.5 py-1.5 focus-within:border-primary-300/45"
-                    >
-                        <label className="sr-only" htmlFor="ask-animaldex-composer">{placeholder}</label>
-                        <textarea
-                            id="ask-animaldex-composer"
-                            ref={composerRef}
-                            value={composer}
-                            rows={1}
-                            maxLength={900}
-                            placeholder={placeholder}
-                            onChange={(event) => {
-                                setComposer(event.target.value);
-                                const node = event.target;
-                                node.style.height = "auto";
-                                // One to six lines, as the app's composer does.
-                                node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
-                            }}
-                            onKeyDown={(event) => {
-                                if (event.key === "Enter" && !event.shiftKey) {
-                                    event.preventDefault();
-                                    submit(composer, "form");
-                                }
-                            }}
-                            className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
-                        />
+                <div className="relative shrink-0 border-t border-white/10 px-4 pb-4 pt-3">
+                    {messenger && showsLatest && !showingMemory && !showingBond ? (
                         <button
-                            type={showStop ? "button" : "submit"}
-                            onClick={showStop ? stopTalking : undefined}
-                            disabled={!showStop && composer.trim().length === 0}
-                            aria-label={showStop ? labels.stop : labels.send}
-                            className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
-                                showStop || composer.trim()
-                                    ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
-                                    : "bg-white/8 text-ink-400"
-                            }`}
+                            type="button"
+                            onClick={() => scrollToLatest("smooth")}
+                            className="absolute -top-11 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/12 bg-canvas-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.4)] transition-colors hover:bg-canvas-850"
                         >
-                            {showStop ? <StopIcon /> : <ArrowUpIcon />}
+                            {labels.latestMessages}
+                            <ArrowDownIcon />
                         </button>
-                    </form>
+                    ) : null}
+                    {messenger && !showingMemory && !showingBond ? (
+                        <AskSuggestionBar
+                            suggestions={dockedSuggestions}
+                            onPick={(prompt) => submit(prompt, "followup")}
+                            disabled={isSending && greetingState !== "loading"}
+                            sayLabel={labels.say}
+                        />
+                    ) : null}
+                    {messenger && quota.reached && !showingMemory ? (
+                        <div className="pb-1">{limitNoticeContent}</div>
+                    ) : (
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                submit(composer, "form");
+                            }}
+                            className="flex items-end gap-2 border border-white/12 bg-white/[0.05] pl-4 pr-1.5 py-1.5 focus-within:border-primary-300/45"
+                        >
+                            <label className="sr-only" htmlFor="ask-animaldex-composer">{placeholder}</label>
+                            <textarea
+                                id="ask-animaldex-composer"
+                                ref={composerRef}
+                                value={composer}
+                                rows={1}
+                                maxLength={900}
+                                placeholder={placeholder}
+                                onChange={(event) => {
+                                    setComposer(event.target.value);
+                                    const node = event.target;
+                                    node.style.height = "auto";
+                                    // One to six lines, as the app's composer does.
+                                    node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter" && !event.shiftKey) {
+                                        event.preventDefault();
+                                        submit(composer, "form");
+                                    }
+                                }}
+                                className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
+                            />
+                            <button
+                                type={showStop ? "button" : "submit"}
+                                onClick={showStop ? stopTalking : undefined}
+                                disabled={!showStop && composer.trim().length === 0}
+                                aria-label={showStop ? labels.stop : labels.send}
+                                className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
+                                    showStop || composer.trim()
+                                        ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
+                                        : "bg-white/8 text-ink-400"
+                                }`}
+                            >
+                                {showStop ? <StopIcon /> : <ArrowUpIcon />}
+                            </button>
+                        </form>
+                    )}
                     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-ink-400">
-                        {remainingCopy ? <span>{remainingCopy}</span> : null}
+                        {/* Only a free budget is counted down: a Pro one is large
+                            enough that a meter reads as stingy (as in the apps). */}
+                        {remainingCopy && (quota.paying || !quota.isPro) ? <span>{remainingCopy}</span> : null}
                         <span className="min-w-0">{labels.disclaimer}</span>
                     </p>
                 </div>
             </div>
         </>
     );
+}
+
+/** "8", "1,240", "12K": a count that reads at a glance, as the apps show it. */
+function shortCount(count: number, locale: string): string {
+    try {
+        return new Intl.NumberFormat(locale, count >= 10_000 ? {notation: "compact", maximumFractionDigits: 1} : {}).format(count);
+    } catch {
+        return String(count);
+    }
 }
 
 function lastQuestion(messages: AskMessage[]): string {
@@ -1059,6 +1292,128 @@ function limitFailure(notice: AskLimitNotice, labels: AskDrawerLabels, signInHre
         default:
             return {text: labels.failedLimitPro, link: null};
     }
+}
+
+/**
+ * One message in the animal's messenger thread: the person's bubble, the
+ * animal typing, its reply as bubbles (with its menu beside the last), or the
+ * reply it could not give, with a way to ask again.
+ */
+function AnimalMessageRow({
+    message,
+    labels,
+    isLast,
+    isSending,
+    animalTalking,
+    faceUrl,
+    speakerName,
+    photoUrl,
+    photoAlt,
+    paced,
+    onSkip,
+    copied,
+    onCopy,
+    onShare,
+    onRegenerate,
+    onRetry,
+    companionEvent,
+    principleName,
+    signInHref
+}: {
+    message: AskMessage;
+    labels: AskDrawerLabels;
+    isLast: boolean;
+    isSending: boolean;
+    /** Waiting for the animal, or watching it type. */
+    animalTalking: boolean;
+    faceUrl: string | null;
+    speakerName: string;
+    photoUrl: string | null;
+    photoAlt: string;
+    /** While this reply is being typed out, what of it is on screen; null once it is all shown. */
+    paced: string | null;
+    onSkip: () => void;
+    copied: boolean;
+    onCopy: () => void;
+    onShare: () => void;
+    onRegenerate: () => void;
+    onRetry: () => void;
+    companionEvent?: AskCompanionEvent;
+    principleName: string | null;
+    signInHref: string;
+}) {
+    if (message.role === "user") return <AskUserBubble text={message.text} label={labels.youAsked} />;
+
+    // Nothing on screen yet: the animal is still finding its first word.
+    if (message.status === "thinking" || (paced !== null && paced.length === 0)) {
+        return <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />;
+    }
+
+    if (message.status === "failed") {
+        const limit = message.limitNotice ? limitFailure(message.limitNotice, labels, signInHref) : null;
+        return (
+            <div className="flex items-end gap-2 pr-11">
+                <AskAnimalFace url={faceUrl} size={28} className="opacity-55" />
+                <div
+                    className="min-w-0 border px-3.5 py-2.5"
+                    style={{borderColor: ASK_BUBBLE_INCOMING, borderRadius: "19px"}}
+                >
+                    <p className="text-sm leading-6 text-ink-200">{limit?.text ?? message.text}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        {limit?.link ? (
+                            <Link href={limit.link.href} className="text-xs font-semibold text-primary-200 underline underline-offset-2 transition-colors hover:text-primary-100">
+                                {limit.link.label}
+                            </Link>
+                        ) : null}
+                        <button
+                            type="button"
+                            onClick={onRetry}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-200 transition-colors hover:text-primary-100"
+                        >
+                            <RefreshIcon />
+                            {labels.tryAgain}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const typing = paced !== null;
+    const isLive = typing || message.status === "streaming";
+    // Press-and-hold on the apps: Copy, Share and, on the newest reply, Ask again.
+    const menuItems: AskMenuItem[] = [
+        {label: copied ? labels.copied : labels.copy, icon: copied ? <CheckIcon /> : <CopyIcon />, onSelect: onCopy},
+        {label: labels.share, icon: <ShareIcon />, onSelect: onShare},
+        ...(isLast && !message.isGreeting && !animalTalking
+            ? [{label: labels.askAgain, icon: <RefreshIcon />, onSelect: onRegenerate, disabled: isSending}]
+            : [])
+    ];
+    return (
+        <div className="group/reply">
+            {/* Screen readers get the reply as it arrives, not a word at a time. */}
+            {typing ? <p className="sr-only">{askMarkdownPlainText(message.text)}</p> : null}
+            <div aria-hidden={typing ? true : undefined}>
+                <AskReplyBubbles
+                    text={typing ? paced : message.text}
+                    isLive={isLive}
+                    avatarUrl={faceUrl}
+                    speakerName={speakerName}
+                    photoUrl={photoUrl}
+                    photoAlt={photoAlt}
+                    onSkip={onSkip}
+                    trailing={
+                        <span className={`transition-opacity ${isLast ? "" : "opacity-0 focus-within:opacity-100 group-hover/reply:opacity-100 [@media(pointer:coarse)]:opacity-100"}`}>
+                            <AskMenu label={labels.more} items={menuItems} align="right">
+                                <MoreIcon />
+                            </AskMenu>
+                        </span>
+                    }
+                    after={!isLive && companionEvent ? <CompanionEventBlock event={companionEvent} principleName={principleName} /> : null}
+                />
+            </div>
+        </div>
+    );
 }
 
 function MessageBlock({
@@ -1497,6 +1852,7 @@ const CloseIcon = () => icon(<path d="M5.5 5.5l9 9m0-9l-9 9" />);
 const PencilIcon = () => icon(<path d="M4 16h3.5l8-8a2.1 2.1 0 0 0-3-3l-8 8V16Z" />);
 const MemoryIcon = () => icon(<path d="M10 3a4.5 4.5 0 0 0-4.5 4.5v1.2A3.3 3.3 0 0 0 7 14.6V17h6v-2.4a3.3 3.3 0 0 0 1.5-5.9V7.5A4.5 4.5 0 0 0 10 3Zm-2 14h4" />);
 const ArrowUpIcon = () => icon(<path d="M10 16V5m0 0-4.5 4.5M10 5l4.5 4.5" />, 2.4);
+const ArrowDownIcon = () => icon(<path d="M10 4v11m0 0-4.5-4.5M10 15l4.5-4.5" />, 2.4);
 const StopIcon = () => (
     <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor" aria-hidden="true">
         <rect x="5.5" y="5.5" width="9" height="9" rx="1.6" />

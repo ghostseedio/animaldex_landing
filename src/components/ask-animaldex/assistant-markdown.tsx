@@ -23,6 +23,11 @@ import AskVisualView from "@/components/ask-animaldex/ask-visual";
 
 const DEPTH_INDENT = ["", "pl-4", "pl-8"] as const;
 
+/** One line of markdown inline text (bold, italic, code, links), as the answer renders it. */
+export function AskInline({text}: {text: string}) {
+    return <Inline text={text} />;
+}
+
 function Inline({text}: {text: string}) {
     return (
         <>
@@ -178,6 +183,8 @@ function Block({block, photoUrl, photoAlt}: {
 
 export type AssistantMarkdownProps = {
     text: string;
+    /** No lede caret, tighter gaps: a bubble in the animal's messenger thread. */
+    compact?: boolean;
     /** The reader's own photo of this animal, for the photo medium. */
     photoUrl?: string | null;
     photoAlt?: string;
@@ -185,13 +192,13 @@ export type AssistantMarkdownProps = {
     streaming?: boolean;
 };
 
-function AssistantMarkdown({text, photoUrl = null, photoAlt = "", streaming = false}: AssistantMarkdownProps) {
+function AssistantMarkdown({text, compact = false, photoUrl = null, photoAlt = "", streaming = false}: AssistantMarkdownProps) {
     // The caret is part of the text so it always sits at the end of whatever
     // block is currently being written, rather than under the whole answer.
-    const blocks = parseAskMarkdown(streaming ? `${text}▌` : text);
+    const blocks = parseAskMarkdown(streaming && !compact ? `${text}▌` : text);
 
     return (
-        <div className="flex flex-col gap-3.5">
+        <div className={`flex flex-col ${compact ? "gap-2" : "gap-3.5"}`}>
             {blocks.map((block, index) => (
                 <Block
                     key={blockKey(block, index)}

@@ -104,7 +104,19 @@ export default async function RootLayout(
         memoryForgetAllBody: askT("memoryForgetAllBody"),
         memoryToldTo: askT("memoryToldTo"),
         memoryFromWildProfile: askT("memoryFromWildProfile"),
-        memoryBack: askT("memoryBack")
+        memoryBack: askT("memoryBack"),
+        typing: askT("typing"),
+        today: askT("today"),
+        yesterday: askT("yesterday"),
+        say: askT("say"),
+        more: askT("more"),
+        askAgain: askT("askAgain"),
+        talkCount: askT("talkCount"),
+        placeholderNamed: askT("placeholderNamed"),
+        ownersAnimal: askT("ownersAnimal"),
+        latestMessages: askT("latestMessages"),
+        trialHero: askT("trialHero"),
+        chatOptions: askT("chatOptions")
     };
 
     // noinspection HtmlRequiredTitleElement

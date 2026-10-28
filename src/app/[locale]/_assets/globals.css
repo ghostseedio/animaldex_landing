@@ -620,6 +620,60 @@ button {
     .ask-thinking-dot { animation: none; opacity: 0.7; }
 }
 
+/* The animal's messenger thread in the app's Messages colours
+   (DirectMessageBubbleStyle): the person's green, the animal's dark; in the
+   light theme, the same pair lifted to the page. */
+:root,
+.theme-dark {
+    --ask-bubble-out: #1F5A35;
+    --ask-bubble-out-soft: rgba(31, 90, 53, 0.45);
+    --ask-bubble-in: #1A2520;
+}
+
+:root[data-theme="light"] {
+    --ask-bubble-out: #CDEBC4;
+    --ask-bubble-out-soft: rgba(205, 235, 196, 0.6);
+    --ask-bubble-in: #E3EBE0;
+}
+
+/* The animal is typing: three soft dots in its own bubble (iOS AnimalTypingBubble). */
+@keyframes askTypingBob {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-2.5px); opacity: 0.85; }
+}
+
+.ask-typing-dot { animation: askTypingBob 1000ms ease-in-out infinite; }
+
+/* The sparkle at the end of the words while the animal types: brightness
+   breathing and the colour drifting lime, white, mint. Colour and opacity
+   only, so the line ending never jumps (iOS AnimalChatSparkle). */
+@keyframes askSparkleGlow {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+}
+
+@keyframes askSparkleHue {
+    0%, 100% { color: #A7F432; }
+    50% { color: #FFFFFF; }
+    75% { color: #5ED6CC; }
+}
+
+.ask-sparkle { color: #A7F432; animation: askSparkleGlow 625ms ease-in-out infinite, askSparkleHue 2.2s ease-in-out infinite; }
+
+/* The animal's face on its chat card, breathing in its glow. */
+@keyframes askHeroBreathe {
+    0%, 100% { transform: scale(0.94); }
+    50% { transform: scale(1.06); }
+}
+
+.ask-hero-glow { animation: askHeroBreathe 6.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ask-typing-dot { animation: none; opacity: 0.7; }
+    .ask-sparkle { animation: none; opacity: 0.85; }
+    .ask-hero-glow { animation: none; }
+}
+
 /* Signed in on a narrow phone, the header's avatar needs the wordmark's room:
    the logo mark stays and the bar still fits beside the menu button. */
 @media (max-width: 429px) {
