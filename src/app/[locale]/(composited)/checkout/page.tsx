@@ -1,6 +1,6 @@
 import {Metadata} from "next";
 import {
-    assertPaddleCheckoutConfigured,
+    assertPaddleClientConfigured,
     getPaddleClientToken,
     resolvePaddleEnvironment
 } from "@/lib/paddle-server";
@@ -16,7 +16,9 @@ export const metadata: Metadata = {
 };
 
 export default function CheckoutPaymentLinkPage() {
-    const configError = assertPaddleCheckoutConfigured();
+    // Paddle's default payment link: it opens any transaction Paddle links to
+    // (`?_ptxn=`), so it needs Paddle.js only, not the Credits/Pro catalog.
+    const configError = assertPaddleClientConfigured();
     const environment = configError ? null : resolvePaddleEnvironment();
     const clientToken = configError ? "" : getPaddleClientToken();
 

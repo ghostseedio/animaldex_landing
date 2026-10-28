@@ -1,10 +1,10 @@
 import crypto from "crypto";
 import type {WebStoreProductCode} from "@/lib/web-store-catalog";
-import {isWebStoreProductCode} from "@/lib/web-store-catalog";
+import {isWebStoreProductCode, WEB_STORE_PRODUCT_CODES} from "@/lib/web-store-catalog";
 
 export type PaddleRuntimeEnvironment = "production" | "sandbox";
 
-const PRICE_ENV: Record<WebStoreProductCode, string> = {
+export const PADDLE_PRICE_ENV: Record<WebStoreProductCode, string> = {
     purchase_25: "PADDLE_PRICE_CREDITS_25",
     purchase_100: "PADDLE_PRICE_CREDITS_100",
     pro_upgrade: "PADDLE_PRICE_PRO_MONTHLY"
@@ -13,12 +13,31 @@ const PRICE_ENV: Record<WebStoreProductCode, string> = {
 const PRODUCTION_HOSTS = new Set(["animaldex.app", "www.animaldex.app"]);
 
 export function paddlePriceIdForProduct(code: WebStoreProductCode, env: NodeJS.ProcessEnv = process.env) {
-    return env[PRICE_ENV[code]]?.trim() || "";
+    return env[PADDLE_PRICE_ENV[code]]?.trim() || "";
+}
+
+/**
+ * Whether the configured catalog Price IDs can be trusted. Each product stands
+ * on its own: a Price ID that is not set only makes that product unavailable.
+ * A value that is set but is not a Paddle Price ID, or one Price ID shared by
+ * two products, closes the whole catalog, because a Price ID that maps to the
+ * wrong product could fulfil the wrong product.
+ */
+export function paddleCatalogError(env: NodeJS.ProcessEnv = process.env) {
+    const configured = WEB_STORE_PRODUCT_CODES
+        .map((code) => ({code, priceId: paddlePriceIdForProduct(code, env)}))
+        .filter((entry) => entry.priceId);
+    const malformed = configured.find((entry) => !entry.priceId.startsWith("pri_"));
+    if (malformed) return `${PADDLE_PRICE_ENV[malformed.code]} must be a Paddle Price ID (pri_…).`;
+    if (new Set(configured.map((entry) => entry.priceId)).size !== configured.length) {
+        return "Each configured Paddle Price ID must be distinct.";
+    }
+    return null;
 }
 
 export function productCodeForPaddlePriceId(priceId: string, env: NodeJS.ProcessEnv = process.env): WebStoreProductCode | null {
-    return (Object.keys(PRICE_ENV) as WebStoreProductCode[])
-        .find((code) => paddlePriceIdForProduct(code, env) === priceId) ?? null;
+    if (!priceId || paddleCatalogError(env)) return null;
+    return WEB_STORE_PRODUCT_CODES.find((code) => paddlePriceIdForProduct(code, env) === priceId) ?? null;
 }
 
 export function getPaddleApiKey(env: NodeJS.ProcessEnv = process.env) {
@@ -62,39 +81,34 @@ export function isAnimalDexProductionDeployment(env: NodeJS.ProcessEnv = process
     return hosts.some((host) => PRODUCTION_HOSTS.has(host));
 }
 
-function catalogError(env: NodeJS.ProcessEnv) {
-    const prices = (Object.keys(PRICE_ENV) as WebStoreProductCode[]).map((code) => paddlePriceIdForProduct(code, env));
-    if (prices.some((priceId) => !priceId.startsWith("pri_")) || new Set(prices).size !== prices.length) {
-        return "Three distinct live Paddle Price IDs are required.";
-    }
-    return null;
-}
-
-export function assertPaddleCheckoutConfigured(env: NodeJS.ProcessEnv = process.env) {
+function environmentError(env: NodeJS.ProcessEnv) {
     const environment = resolvePaddleEnvironment(env);
     if (!environment) return "PADDLE_ENVIRONMENT must be production.";
     if (isAnimalDexProductionDeployment(env) && environment !== "production") {
         return "Production animaldex.app cannot use Paddle sandbox credentials.";
     }
+    return null;
+}
+
+/** Paddle.js can start: the environment and its client-side token agree. */
+export function assertPaddleClientConfigured(env: NodeJS.ProcessEnv = process.env) {
+    const environmentProblem = environmentError(env);
+    if (environmentProblem) return environmentProblem;
     const token = getPaddleClientToken(env);
-    if (environment === "production") {
+    if (resolvePaddleEnvironment(env) === "production") {
         if (!token.startsWith("live_")) return "A Paddle live client-side token is required.";
     } else if (!token.startsWith("test_")) {
         return "A Paddle sandbox client-side token is required.";
     }
-    const prices = catalogError(env);
-    if (prices) return environment === "production"
-        ? "Three distinct live Paddle Price IDs are required."
-        : "Three distinct Paddle sandbox Price IDs are required.";
     return null;
 }
 
+/** The server can call Paddle: the environment and its API key agree. No catalog Price ID is needed. */
 export function assertPaddleApiConfigured(env: NodeJS.ProcessEnv = process.env) {
-    const checkoutError = assertPaddleCheckoutConfigured(env);
-    if (checkoutError) return checkoutError;
-    const environment = resolvePaddleEnvironment(env);
+    const environmentProblem = environmentError(env);
+    if (environmentProblem) return environmentProblem;
     const apiKey = getPaddleApiKey(env);
-    if (environment === "production") {
+    if (resolvePaddleEnvironment(env) === "production") {
         if (!apiKey.startsWith("pdl_live_")) return "A Paddle live API key is required.";
     } else if (!apiKey.startsWith("pdl_sdbx_")) {
         return "A Paddle sandbox API key is required.";
@@ -102,11 +116,42 @@ export function assertPaddleApiConfigured(env: NodeJS.ProcessEnv = process.env) 
     return null;
 }
 
+/**
+ * Notifications can be verified and processed. A missing catalog Price ID never
+ * stops the webhook: each event's Price ID is checked against the catalog when
+ * the event is handled (src/lib/paddle-webhook.ts).
+ */
 export function assertPaddleWebhookConfigured(env: NodeJS.ProcessEnv = process.env) {
     const apiError = assertPaddleApiConfigured(env);
     if (apiError) return apiError;
     if (!getPaddleWebhookSecret(env)) return "A Paddle webhook secret is required.";
     return null;
+}
+
+/**
+ * One catalog product can be sold: Paddle.js can open, the webhook that
+ * fulfils the purchase is configured, the catalog is well formed and this
+ * product has its own Price ID. Another product's missing Price ID does not
+ * matter.
+ */
+export function assertPaddleProductCheckoutConfigured(code: WebStoreProductCode, env: NodeJS.ProcessEnv = process.env) {
+    const clientError = assertPaddleClientConfigured(env);
+    if (clientError) return clientError;
+    const webhookError = assertPaddleWebhookConfigured(env);
+    if (webhookError) return webhookError;
+    const catalogError = paddleCatalogError(env);
+    if (catalogError) return catalogError;
+    if (!paddlePriceIdForProduct(code, env)) return `${PADDLE_PRICE_ENV[code]} is not set, so this product is not on sale.`;
+    return null;
+}
+
+/** Which catalog products the website can sell right now. */
+export function paddleProductAvailability(env: NodeJS.ProcessEnv = process.env): Record<WebStoreProductCode, boolean> {
+    return {
+        purchase_25: assertPaddleProductCheckoutConfigured("purchase_25", env) === null,
+        purchase_100: assertPaddleProductCheckoutConfigured("purchase_100", env) === null,
+        pro_upgrade: assertPaddleProductCheckoutConfigured("pro_upgrade", env) === null
+    };
 }
 
 export function parseProductCode(value: unknown): WebStoreProductCode | null {

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type {SupabaseClient} from "@supabase/supabase-js";
-import type {PaddleEvent} from "@/lib/paddle-server";
+import {productCodeForPaddlePriceId, type PaddleEvent} from "@/lib/paddle-server";
+import type {WebStoreProductCode} from "@/lib/web-store-catalog";
 
 export type PaddleWebhookResult = {ok: true; skipped?: boolean; reason?: string};
 
@@ -55,6 +56,21 @@ function priceFromItems(object: Record<string, unknown>) {
     return {priceId: asString(price.id), productId: asString(price.product_id) || asString(product.id)};
 }
 
+/** Which catalog product a Paddle Price ID sells, or null when it is none of ours. */
+export type PaddleCatalogLookup = (priceId: string) => WebStoreProductCode | null;
+
+const catalogFromEnvironment: PaddleCatalogLookup = (priceId) => productCodeForPaddlePriceId(priceId);
+
+/**
+ * A Credits or Pro event must carry one of the configured catalog Price IDs
+ * (a subscription, the Pro one). Only the event's own Price ID is checked: a
+ * product whose Price ID is not configured never stops an event for another.
+ */
+function requireCatalogPrice(priceId: string | null, catalog: PaddleCatalogLookup, only?: WebStoreProductCode) {
+    const product = priceId ? catalog(priceId) : null;
+    if (!product || (only && product !== only)) throw new Error("paddle_unknown_price");
+}
+
 function isWildlifeGuideEvent(event: PaddleEvent) {
     return asString(customData(event.data).kind) === WILDLIFE_GUIDE_CHECKOUT_KIND;
 }
@@ -63,7 +79,8 @@ export async function handlePaddleEvent(
     supabase: SupabaseClient,
     event: PaddleEvent,
     rawBody = JSON.stringify(event),
-    guides: WildlifeGuideFulfillment | null = null
+    guides: WildlifeGuideFulfillment | null = null,
+    catalog: PaddleCatalogLookup = catalogFromEnvironment
 ): Promise<PaddleWebhookResult> {
     const digest = crypto.createHash("sha256").update(rawBody).digest("hex");
     const {data: claimed, error: claimError} = await supabase.rpc("claim_web_purchase_event", {
@@ -90,9 +107,9 @@ export async function handlePaddleEvent(
             // transaction, so the purchase stays pending until completed or canceled.
             result = {ok: true, skipped: true, reason: "wildlife_guide_transaction_pending"};
         } else if (event.event_type === "transaction.completed") {
-            result = await fulfillTransaction(supabase, event);
+            result = await fulfillTransaction(supabase, event, catalog);
         } else if (event.event_type.startsWith("subscription.")) {
-            result = await syncSubscription(supabase, event);
+            result = await syncSubscription(supabase, event, catalog);
         } else if (event.event_type === "adjustment.created" || event.event_type === "adjustment.updated") {
             result = await recordAdjustment(supabase, event);
         } else {
@@ -173,7 +190,7 @@ async function failWildlifeGuide(supabase: SupabaseClient, event: PaddleEvent): 
     return {ok: true};
 }
 
-async function fulfillTransaction(supabase: SupabaseClient, event: PaddleEvent): Promise<PaddleWebhookResult> {
+async function fulfillTransaction(supabase: SupabaseClient, event: PaddleEvent, catalog: PaddleCatalogLookup): Promise<PaddleWebhookResult> {
     const object = event.data;
     const transactionId = asString(object.id);
     const status = asString(object.status);
@@ -184,6 +201,7 @@ async function fulfillTransaction(supabase: SupabaseClient, event: PaddleEvent):
     if (!transactionId || status !== "completed" || !purchaseId || !priceId) {
         throw new Error("paddle_transaction_mismatch");
     }
+    requireCatalogPrice(priceId, catalog);
     const {data, error} = await supabase.rpc("fulfill_web_purchase", {
         p_purchase_id: purchaseId,
         p_provider: "paddle",
@@ -206,7 +224,7 @@ const SUBSCRIPTION_EVENTS = new Set([
     "subscription.past_due", "subscription.paused", "subscription.resumed", "subscription.canceled"
 ]);
 
-async function syncSubscription(supabase: SupabaseClient, event: PaddleEvent): Promise<PaddleWebhookResult> {
+async function syncSubscription(supabase: SupabaseClient, event: PaddleEvent, catalog: PaddleCatalogLookup): Promise<PaddleWebhookResult> {
     if (!SUBSCRIPTION_EVENTS.has(event.event_type)) return {ok: true, skipped: true, reason: "unhandled_subscription_event"};
     const object = event.data;
     const custom = customData(object);
@@ -221,6 +239,7 @@ async function syncSubscription(supabase: SupabaseClient, event: PaddleEvent): P
     const status = statusOverride[event.event_type] || asString(object.status);
     const {priceId, productId} = priceFromItems(object);
     if (!asString(object.id) || !status || !priceId) throw new Error("paddle_subscription_mismatch");
+    requireCatalogPrice(priceId, catalog, "pro_upgrade");
     const period = asObject(object.current_billing_period);
     const scheduledChange = asObject(object.scheduled_change);
     const {error} = await supabase.rpc("sync_paddle_subscription_state", {

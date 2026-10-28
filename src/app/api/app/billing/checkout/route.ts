@@ -1,7 +1,9 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient, createSupabaseServiceClient} from "@/lib/supabase/server";
 import {
-    assertPaddleCheckoutConfigured,
+    assertPaddleClientConfigured,
+    assertPaddleProductCheckoutConfigured,
+    getPaddleClientToken,
     paddlePriceIdForProduct,
     resolvePaddleEnvironment
 } from "@/lib/paddle-server";
@@ -14,7 +16,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-    const configError = assertPaddleCheckoutConfigured();
+    const configError = assertPaddleClientConfigured();
     if (configError) {
         return NextResponse.json({error: configError, code: "paddle_not_configured"}, {status: 503});
     }
@@ -34,6 +36,12 @@ export async function POST(request: Request) {
         return NextResponse.json({error: validated.error}, {status: validated.status});
     }
     const productCode = validated.productCode;
+    // Each product is on sale on its own Price ID: a missing Credit pack
+    // Price ID closes that pack only, never Pro or the other pack.
+    const productError = assertPaddleProductCheckoutConfigured(productCode);
+    if (productError) {
+        return NextResponse.json({error: "This purchase is not available on the website right now.", code: "product_unavailable"}, {status: 503});
+    }
 
     const returnPath = sanitizeBillingReturnPath(typeof body.returnPath === "string" ? body.returnPath : undefined);
     const {data: status} = await supabase.rpc("get_my_web_billing_status");
@@ -64,7 +72,10 @@ export async function POST(request: Request) {
         ok: true,
         provider: "paddle",
         environment,
-        clientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+        // Read at runtime, like the check above: a literal
+        // process.env.NEXT_PUBLIC_* is inlined at build time, and the image is
+        // built without the token.
+        clientToken: getPaddleClientToken(),
         purchaseId,
         priceId,
         productCode,

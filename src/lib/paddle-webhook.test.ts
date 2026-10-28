@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {handlePaddleEvent, type WildlifeGuideFulfillment, type WildlifeGuideWebPurchase} from "./paddle-webhook";
-import type {PaddleEvent} from "./paddle-server";
+import {productCodeForPaddlePriceId, type PaddleEvent} from "./paddle-server";
+
+// The catalog each Credits and Pro event's Price ID is checked against.
+process.env.PADDLE_PRICE_CREDITS_25 = "pri_25";
+process.env.PADDLE_PRICE_CREDITS_100 = "pri_100";
+process.env.PADDLE_PRICE_PRO_MONTHLY = "pri_pro";
 
 type RpcCall = {name: string; args: Record<string, unknown>};
 
@@ -76,6 +81,37 @@ test("foreign user metadata is passed to SQL for server-authoritative mismatch r
         }
     })), /purchase_user_mismatch/);
     assert.equal(mock.calls.at(-1)?.name, "fail_web_purchase_event");
+});
+
+test("a Credits or Pro event with a Price ID that is not ours fails closed", async () => {
+    const foreign = mockSupabase();
+    await assert.rejects(() => handlePaddleEvent(foreign.client as never, transactionEvent({
+        items: [{quantity: 1, price: {id: "pri_foreign"}}]
+    })), /paddle_unknown_price/);
+    assert.equal(foreign.calls.some((call) => call.name === "fulfill_web_purchase"), false);
+    assert.equal(foreign.calls.at(-1)?.name, "fail_web_purchase_event");
+
+    // A Credit pack's Price ID never keeps a subscription alive.
+    const packSubscription = mockSupabase();
+    await assert.rejects(() => handlePaddleEvent(packSubscription.client as never, {
+        event_id: "evt_sub_pack",
+        event_type: "subscription.activated",
+        occurred_at: "2026-08-31T09:00:00Z",
+        data: {id: "sub_1", status: "active", items: [{quantity: 1, price: {id: "pri_25"}}]}
+    }), /paddle_unknown_price/);
+    assert.equal(packSubscription.calls.some((call) => call.name === "sync_paddle_subscription_state"), false);
+});
+
+test("a Credit pack without a Price ID never stops Pro events", async () => {
+    const proOnly = {PADDLE_PRICE_PRO_MONTHLY: "pri_pro"} as unknown as NodeJS.ProcessEnv;
+    const mock = mockSupabase();
+    await handlePaddleEvent(mock.client as never, {
+        event_id: "evt_pro_only",
+        event_type: "subscription.activated",
+        occurred_at: "2026-08-31T09:00:00Z",
+        data: {id: "sub_1", status: "active", items: [{quantity: 1, price: {id: "pri_pro"}}]}
+    }, undefined, null, (priceId) => productCodeForPaddlePriceId(priceId, proOnly));
+    assert.equal(mock.calls.some((call) => call.name === "sync_paddle_subscription_state"), true);
 });
 
 test("subscription lifecycle maps Paddle states and carries event time for out-of-order protection", async () => {

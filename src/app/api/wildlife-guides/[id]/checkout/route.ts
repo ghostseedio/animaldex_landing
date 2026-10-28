@@ -1,7 +1,13 @@
 import {NextResponse} from "next/server";
 import {getPublicWildlifeGuide} from "@/data/virtual-wildlife-guides";
 import {WILDLIFE_GUIDE_CHECKOUT_KIND} from "@/lib/paddle-webhook";
-import {assertPaddleApiConfigured, getPaddleClientToken, paddleApiRequest, resolvePaddleEnvironment} from "@/lib/paddle-server";
+import {
+    assertPaddleClientConfigured,
+    assertPaddleWebhookConfigured,
+    getPaddleClientToken,
+    paddleApiRequest,
+    resolvePaddleEnvironment
+} from "@/lib/paddle-server";
 import {createSupabaseServerClient, createSupabaseServiceClient} from "@/lib/supabase/server";
 import {
     formatGuidePrice,
@@ -40,7 +46,11 @@ function jsonError(message: string, status = 400, code?: string) {
  */
 export async function POST(request: Request, {params}: {params: {id: string}}) {
     if (!isUuid(params.id)) return jsonError("Guide not found.", 404);
-    if (assertPaddleApiConfigured()) return jsonError("Card payment is not available right now.", 503);
+    // A guide is a custom price on one transaction: no catalog Price ID is
+    // involved, only Paddle.js and the API and webhook that fulfil it.
+    if (assertPaddleClientConfigured() || assertPaddleWebhookConfigured()) {
+        return jsonError("Card payment is not available right now.", 503);
+    }
     const environment = resolvePaddleEnvironment();
     const clientToken = getPaddleClientToken();
     if (!environment || !clientToken) return jsonError("Card payment is not available right now.", 503);
