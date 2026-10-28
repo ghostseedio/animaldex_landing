@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07",
+  "generatedAt": "2026-10-28",
   "source": "operator refresh from production catalog + species_field_guide for hand-coded species",
   "note": "Merged into static species entries at build time (src/lib/static-species-overlay.ts). The build never fetches Supabase.",
   "entries": {
@@ -4244,7 +4244,7 @@
         "dominance": 20,
         "intelligence": 8
       },
-      "spotlight": "Bombardier Beetle teaches Chemical Boundary through a tiny body enforcing the line instantly. Hot spray, controlled reaction chambers, audible bursts, and rear-aimed defense make safety a practiced chemistry.",
+      "spotlight": "Bombardier Beetle teaches Boiling-Spray Boundary through a tiny body enforcing the line instantly. Hot spray, controlled reaction chambers, audible bursts, and rear-aimed defense make safety a practiced chemistry.",
       "typicalHabitat": "Native range keys: europe. Fields, woodland edges, leaf litter, stones, and ground cover.",
       "signatureTraits": [
         "Hot defensive chemical spray ejected from the abdomen.",
@@ -4263,7 +4263,7 @@
         "dietSummary": "Small insects, larvae, and ground-dwelling prey.",
         "predatorsSummary": "Frogs, spiders, birds, ants, and larger insects may attack them. The hot spray makes the predator learn that crossing the line has a cost.",
         "sleepPattern": "Mainly nocturnal, hunting over the ground at night and hiding by day under stones, sometimes several together.",
-        "lifespanEstimate": "Bombardier Beetles live through larval and adult stages where small size brings constant risk. Chemical Boundary matters because one reliable defense can preserve many ordinary foraging moments.",
+        "lifespanEstimate": "Bombardier Beetles live through larval and adult stages where small size brings constant risk. Boiling-Spray Boundary matters because one reliable defense can preserve many ordinary foraging moments.",
         "femaleOffspringNotes": "Eggs are laid in the soil. The larva seeks out the pupa of another beetle there and feeds on it as an external parasite, completing its growth on that single host before pupating.",
         "sexDifferenceNotes": "Males and females are not usually separated by dramatic field marks."
       }
@@ -9941,40 +9941,6 @@
         "sexDifferenceNotes": "Sexes are broadly similar, though males may be larger."
       }
     },
-    "giant-clam": {
-      "animalDexNumber": 800,
-      "identityKind": "species",
-      "canonicalGameStats": {
-        "size": 46,
-        "speed": 2,
-        "rarity": 64,
-        "dominance": 13,
-        "intelligence": 2
-      },
-      "spotlight": "Giant Clam teaches Solar Partnership through a massive still animal hosting light inside living tissue. Open mantle, symbiotic algae, reef water, and patient filtering show that abundance can come from cooperation with the sun.",
-      "typicalHabitat": "Native range keys: south_asia, southeast_asia, east_asia, australia_oceania, indian_ocean, north_pacific, south_pacific, coral_triangle, red_sea, australia_coastal. Shallow coral reefs, clear lagoons, reef flats, and sunlit tropical waters fit Giant Clams because Solar Partnership needs light strong enough for algae and water rich enough for filtering. The habitat makes stillness productive.",
-      "signatureTraits": [
-        "Large shell anchored in shallow sunlit reef habitat",
-        "Bright mantle tissue hosting photosynthetic symbiotic algae",
-        "Filter feeding combined with solar energy partnership",
-        "Long-lived reef presence that becomes microhabitat for others"
-      ],
-      "interestingFacts": [
-        "Giant Clams host algae that provide energy through photosynthesis.",
-        "Their colorful mantles help expose symbionts to sunlight.",
-        "They also filter feed from seawater, adding plankton to the sugars supplied by their algae.",
-        "They are among the largest living bivalves, with shells that can exceed a metre across."
-      ],
-      "fieldGuideVersion": "where_to_look_v1_20260731",
-      "fieldGuide": {
-        "dietSummary": "Photosynthetic sugars from symbiotic algae plus plankton and dissolved nutrients from filter feeding.",
-        "predatorsSummary": "Predatory snails, fishes, rays, octopuses, humans, and reef degradation threaten Giant Clams. Shell closure, size, and reef placement protect the partnership that must stay open to light yet safe from harm.",
-        "sleepPattern": "Giant Clams remain mostly stationary, opening by day to light and closing when disturbed.",
-        "lifespanEstimate": "Giant Clams can live for many decades.",
-        "femaleOffspringNotes": "Spawning clams release sperm first and eggs afterwards, a large adult shedding hundreds of millions of eggs, often after sensing spawn from neighbours. Larvae drift for about one to two weeks before settling, and each young clam takes up its algae from the surrounding water rather than inheriting them.",
-        "sexDifferenceNotes": "Giant Clams are functional hermaphrodites, producing eggs and sperm at different phases."
-      }
-    },
     "giant-eland": {
       "animalDexNumber": 676,
       "identityKind": "species",
@@ -13318,7 +13284,7 @@
         "sleepPattern": "Horned Puffins are active by day around colonies and feeding waters, resting on sea or cliff ledges.",
         "lifespanEstimate": "Horned Puffins can live for decades if they survive early risks.",
         "femaleOffspringNotes": "Females lay a single egg in a crevice or burrow-like shelter, and both parents bring fish to the chick.",
-        "sexDifferenceNotes": "Males and females look broadly similar, with males sometimes slightly larger. The shared body plan matters most: both sexes dive, carry food, and return to the cliff community."
+        "sexDifferenceNotes": "Males and females look broadly similar, with males sometimes slightly larger. The shared body plan matters most: both sexes dive, carry fish crosswise in the bill, and nest in the same cliff colony."
       }
     },
     "horned-screamer": {
@@ -20076,7 +20042,7 @@
         "dominance": 60,
         "intelligence": 58
       },
-      "spotlight": "Peregrine Falcon teaches Gravity through high-speed hunting stoop. Its pointed wings, height, and gravity-powered dives show why this animal cannot be reduced to a generic creature: the lesson is built into its body, timing, habitat, and risks.",
+      "spotlight": "Peregrine Falcon teaches Altitude through high-speed hunting stoop. Its pointed wings, height, and height-powered dives show why this animal cannot be reduced to a generic creature: the lesson is built into its body, timing, habitat, and risks.",
       "typicalHabitat": "Native range keys: north_america, south_america, europe, north_africa_middle_east, sub_saharan_africa, central_asia, south_asia, southeast_asia, east_asia, australia_oceania, arctic_antarctic. Cliffs, coasts, mountains, cities, towers, and open airspace fit Peregrines because height creates the stoop.",
       "signatureTraits": [
         "Dark slate-grey upperparts on adults",
@@ -21464,7 +21430,7 @@
         "dominance": 31,
         "intelligence": 42
       },
-      "spotlight": "Rainbow Bee-eater teaches Refinement through a hunter that catches danger and removes the sting. Bright feathers, aerial pursuit, perch handling, and bee-safe preparation show skill as more than capture: it is making the prize safe to use.",
+      "spotlight": "Rainbow Bee-eater teaches Perch-Side De-Stinging through a hunter that catches danger and removes the sting. Bright feathers, aerial pursuit, perch handling, and bee-safe preparation show skill as more than capture: it is making the prize safe to use.",
       "typicalHabitat": "Native range keys: australia_oceania. Open woodland, grasslands, riverbanks, dunes, farms, and sandy nesting banks fit Rainbow Bee-eaters because they need flying insects and soft banks for burrows.",
       "signatureTraits": [
         "Sting removal: prey is handled before being swallowed.",
@@ -21481,7 +21447,7 @@
         "dietSummary": "Bees, wasps, dragonflies, beetles, flies and other flying insects, caught in flight from an open perch. Stinging prey is carried back to the perch and beaten against it, then rubbed to squeeze out the venom and sting before swallowing.",
         "predatorsSummary": "Raptors, snakes, monitor lizards, foxes, cats, and burrow predators threaten bee-eaters or nests. Colony nesting and burrow placement help reduce risk.",
         "sleepPattern": "Rainbow Bee-eaters are diurnal, hunting insects in bright air and returning to perches to process prey.",
-        "lifespanEstimate": "Rainbow Bee-eaters can live several years, with survival depending on migration, insect supply, and safe nesting banks. Refinement improves as the bird repeats catch, handle, and swallow.",
+        "lifespanEstimate": "Rainbow Bee-eaters can live several years, with survival depending on migration, insect supply, and safe nesting banks. Its Perch-Side De-Stinging improves as the bird repeats catch, handle, and swallow.",
         "femaleOffspringNotes": "Females lay eggs inside burrow nests, and pairs may receive help from other birds in some groups. Offspring are raised in the protected tunnel before entering the risky air.",
         "sexDifferenceNotes": "Males and females look similar, though males may have slightly longer tail streamers in some cases. The important difference is not dramatic color but shared handling skill."
       }
@@ -21720,7 +21686,7 @@
         "dietSummary": "Aquatic plants, seeds, roots, algae, insects, mollusks, and small aquatic animals.",
         "predatorsSummary": "Foxes, gulls, crows, raptors, large fish for ducklings, humans, and wetland loss threaten nests or young. Skill and cover matter more than style alone.",
         "sleepPattern": "Red-crested Pochards are diurnal, feeding and resting on open water.",
-        "lifespanEstimate": "Red-crested Pochards can live for many years. Styled Competence becomes a seasonal balance of bright courtship, practical feeding, migration, and survival.",
+        "lifespanEstimate": "Most wild birds probably live only a few years, as is usual for diving ducks, but ringed individuals have survived for well over a decade.",
         "femaleOffspringNotes": "Nests are hidden in reeds or thick waterside vegetation, with a clutch of usually 8 to 10 eggs incubated by the female for about four weeks. She leads the ducklings to open water, where they feed themselves and fly at about six to seven weeks.",
         "sexDifferenceNotes": "Males are brightly colored with the red crest, while females are browner and more camouflaged."
       }
@@ -29264,42 +29230,6 @@
         "lifespanEstimate": "White-nosed Coatis often live around 7 to 10 years in the wild, with longer lives possible under protection. A long-lived coati can learn fruiting trees, trails, and safe sleeping places.",
         "femaleOffspringNotes": "Females usually leave the troop to give birth in a tree nest or protected den, then return with young when they are ready. Offspring rejoin curiosity as a social path.",
         "sexDifferenceNotes": "Adult males are larger and often solitary, while females and young form troops."
-      }
-    },
-    "white-rhinoceros": {
-      "animalDexNumber": 636,
-      "identityKind": "species",
-      "canonicalGameStats": {
-        "size": 84,
-        "speed": 42,
-        "rarity": 62,
-        "dominance": 90,
-        "intelligence": 42
-      },
-      "spotlight": "Bulls can weigh more than two tonnes, which makes this the largest rhinoceros and one of the heaviest land animals after the elephants. All of that bulk is built on grass. A long head hangs from a muscular hump on the neck, keeping the mouth at ground level as the animal walks slowly forward, feeding as it goes.",
-      "typicalHabitat": "Native range keys: sub_saharan_africa. Short-grass savanna and open grassy woodland on flat or gently rolling ground, with water for drinking and mud wallows within reach and patches of bush for shade. It favours closely grazed lawns of short grass and avoids dense thicket and steep slopes.",
-      "signatureTraits": [
-        "Square mouth and massive calm grazing",
-        "Adapted to African grasslands and savannas with water and grazing",
-        "Two horns rise from the snout, the front one usually longer.",
-        "Long, tube-shaped ears swivel independently.",
-        "Skin is slate grey to yellowish brown, often coloured by mud."
-      ],
-      "interestingFacts": [
-        "Their food is mainly short grasses cropped by a square lip.",
-        "The name probably has nothing to do with colour; a popular explanation traces it to a Dutch word for wide, though this is disputed.",
-        "Southern white rhinos were reduced to fewer than a hundred animals in one corner of South Africa around 1900 and have since recovered to many thousands.",
-        "Only two northern white rhinos, both females, were known to survive after the last male died in Kenya in 2018.",
-        "Territorial bulls mark their boundaries with dung heaps, scattered by kicking, and with sprays of urine."
-      ],
-      "fieldGuideVersion": "where_to_look_v1_20260731",
-      "fieldGuide": {
-        "dietSummary": "They feed on short grasses cropped by a square lip.",
-        "predatorsSummary": "Healthy adults have no regular natural predators. Lions and spotted hyenas occasionally take calves, which run ahead of the mother where she can see them; a threatened group may stand rump to rump, horns outward. Poaching for horn causes far more deaths.",
-        "sleepPattern": "Grazing is concentrated in the early morning, late afternoon and evening and continues after dark. The hottest hours are spent lying in shade or wallowing in mud, and sleep comes in bouts by day and night.",
-        "lifespanEstimate": "Typically 35 to 45 years in the wild. Captive animals have reached about 50.",
-        "femaleOffspringNotes": "A single calf is born after a gestation of about 16 months, weighing roughly 40 to 65 kilograms. It stands within hours, begins to graze at about two months and suckles for a year or more. The mother drives it off shortly before her next calf arrives.",
-        "sexDifferenceNotes": "Males are larger with heavier horns and territorial behavior."
       }
     },
     "white-stork": {

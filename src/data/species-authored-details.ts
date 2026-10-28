@@ -669,6 +669,31 @@ export const speciesAuthoredDetails: Record<string, SpeciesAuthoredDetails> = {
             "Smaller mayfly species often have three tails or much shorter bodies."
         ]
     },
+    "giant-clam": {
+        summary: "The giant clam (Tridacna gigas) is the largest living bivalve mollusc, a reef clam of the shallow Indo-Pacific whose shell can exceed 1.2 m across and whose body can weigh more than 200 kg. It lives with its hinge down and its shell open to the sun, feeding largely on sugars made by microscopic algae farmed inside its mantle.",
+        identification: [
+            "Massive, heavy shell with four or five deep, curved folds and a wavy, interlocking edge where the two valves meet.",
+            "A thick fleshy mantle spills over the open shell, mottled in brown, green, blue or gold with iridescent spots.",
+            "Two siphons show in the mantle: a large inhalant opening and a smaller exhalant tube.",
+            "Adults sit loose on sand or rubble on the reef flat rather than boring into coral as smaller Tridacna species do."
+        ],
+        behaviorTraits: [
+            "Symbiotic algae (zooxanthellae) live in the mantle tissue and supply most of the clam's food through photosynthesis; filter feeding through the siphons provides the rest.",
+            "Adults never move. The young attach with byssal threads, and the byssal gland shrinks as the clam grows too heavy to be shifted by currents.",
+            "Hundreds of tiny light-sensing eyes along the mantle edge detect a passing shadow, and the clam withdraws its mantle and slowly narrows its shell.",
+            "Each clam matures first as a male and later releases both sperm and eggs, spawning into the water column in synchrony with neighbours."
+        ],
+        whyInteresting: [
+            "Reflective cells called iridocytes in the mantle scatter sunlight deeper into the tissue, spreading the light evenly across the algae.",
+            "A single large giant clam can release hundreds of millions of eggs in one spawning.",
+            "Overharvesting for meat and shells wiped out giant clams on many reefs, and every species in the subfamily Tridacninae is listed on CITES Appendix II."
+        ],
+        lookalikes: [
+            "Fluted giant clam (Tridacna squamosa) is smaller, rarely above 40 cm, with large leaf-like flutes on its shell ribs.",
+            "Maxima clam (Tridacna maxima) reaches about 35 cm, sits partly embedded in coral and shows a vividly coloured mantle.",
+            "Horse's hoof clam (Hippopus hippopus) has a heavy shell streaked with red and a dull, narrow mantle that barely shows past the shell edge."
+        ]
+    },
     "giant-stick-insect": {
         summary: "The Lord Howe Island stick insect (Dryococelus australis) is a large, flightless stick insect of Lord Howe Island off eastern Australia. Adults reach about 15 cm long. Thought extinct for decades, it was rediscovered in 2001 on Ball's Pyramid, a sea stack 23 km from the main island.",
         identification: [

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10",
+  "generatedAt": "2026-10-28",
   "source": "completed discover_challenge_history_v2 battles matched to published species_comparisons by capture species pair",
   "note": "battles: /comparisons tiles and pages. bySpecies (canonical species_profile_id): the Compare section on /animals pages, every pair. Refresh with yarn refresh:published-seo.",
   "battles": {
@@ -711,6 +711,54 @@
         "stake": 2
       }
     ],
+    "domestic-chicken-vs-pea-moth": [
+      {
+        "id": "f19e251b-d14b-4207-b88c-578f462e41ed",
+        "date": "2026-10-06T13:35:54.276962+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "TiméoCC",
+          "username": "timocc",
+          "avatarUrl": null,
+          "animalName": "Domestic Chicken",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Camille Pinchard",
+          "username": "camillepinchard",
+          "avatarUrl": null,
+          "animalName": "Pea Moth",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 3,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Unclear next step",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "1 vote",
+            "winner": "attacker"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5
+      }
+    ],
     "domestic-dog-vs-black-rat": [
       {
         "id": "49fdacf0-292d-4122-a011-08a710f039d4",
@@ -1265,6 +1313,54 @@
         "stake": 5
       }
     ],
+    "house-fly-vs-african-pygmy-hedgehog": [
+      {
+        "id": "ecf92454-7991-4705-b7fc-ef884ab008f5",
+        "date": "2026-10-19T02:46:12.860139+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "House Fly",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "defender",
+        "roundsWon": {
+          "attacker": 0,
+          "defender": 2
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Fog or heavy rain",
+            "winner": "defender"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "defender"
+          }
+        ],
+        "payout": 9,
+        "stake": 5
+      }
+    ],
     "northern-mockingbird-vs-black-ant": [
       {
         "id": "44503720-c4c0-48d8-83b2-476621676f0b",
@@ -1402,6 +1498,146 @@
             "number": 3,
             "label": "Species stats",
             "detail": "Tiebreak: Round 1 winner",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5
+      }
+    ],
+    "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog": [
+      {
+        "id": "8df4d24a-6f77-4e10-9257-5652b08b18e4",
+        "date": "2026-10-19T02:46:33.753751+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Income reset",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5
+      },
+      {
+        "id": "33856e5c-84b0-44ba-bb78-e329c5fbe0a0",
+        "date": "2026-10-19T02:29:02.037861+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Water before rivals",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5
+      },
+      {
+        "id": "10cfccc1-cafc-4621-a606-fa2a21b86ec7",
+        "date": "2026-10-19T01:34:24.710771+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Moving target track",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
             "winner": "attacker"
           }
         ],
@@ -2105,7 +2341,7 @@
         "stake": 5,
         "side": "defender",
         "opponentSpeciesName": "Domestic Chicken",
-        "comparisonSlug": null
+        "comparisonSlug": "domestic-chicken-vs-pea-moth"
       },
       {
         "id": "9b1d264c-0d60-4016-ad8a-be9584525778",
@@ -4599,7 +4835,7 @@
         "payout": 9,
         "stake": 5,
         "side": "attacker",
-        "opponentSpeciesName": "Brown Moth",
+        "opponentSpeciesName": "Moth",
         "comparisonSlug": "hemithea-tritonaria-vs-moth"
       }
     ],
@@ -4677,6 +4913,155 @@
         "side": "defender",
         "opponentSpeciesName": "Domestic Cat",
         "comparisonSlug": "domestic-cat-vs-eastern-gray-squirrel"
+      }
+    ],
+    "367736ad-0cff-4a70-8d32-f94e299cdd15": [
+      {
+        "id": "8df4d24a-6f77-4e10-9257-5652b08b18e4",
+        "date": "2026-10-19T02:46:33.753751+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Income reset",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "attacker",
+        "opponentSpeciesName": "African Pygmy Hedgehog",
+        "comparisonSlug": "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog"
+      },
+      {
+        "id": "33856e5c-84b0-44ba-bb78-e329c5fbe0a0",
+        "date": "2026-10-19T02:29:02.037861+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Water before rivals",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "attacker",
+        "opponentSpeciesName": "African Pygmy Hedgehog",
+        "comparisonSlug": "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog"
+      },
+      {
+        "id": "10cfccc1-cafc-4621-a606-fa2a21b86ec7",
+        "date": "2026-10-19T01:34:24.710771+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Moving target track",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "attacker",
+        "opponentSpeciesName": "African Pygmy Hedgehog",
+        "comparisonSlug": "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog"
       }
     ],
     "388ba305-d222-4846-ba68-d63c478eb071": [
@@ -8193,7 +8578,7 @@
         "payout": 9,
         "stake": 5,
         "side": "attacker",
-        "opponentSpeciesName": "Insect",
+        "opponentSpeciesName": "Insecta",
         "comparisonSlug": null
       },
       {
@@ -9297,6 +9682,204 @@
         "side": "defender",
         "opponentSpeciesName": "Pied Cuckoo",
         "comparisonSlug": null
+      }
+    ],
+    "88596d0f-3609-4ed7-a737-a0aaedbd7ac6": [
+      {
+        "id": "8df4d24a-6f77-4e10-9257-5652b08b18e4",
+        "date": "2026-10-19T02:46:33.753751+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Income reset",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "defender",
+        "opponentSpeciesName": "Western Fence Lizard",
+        "comparisonSlug": "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog"
+      },
+      {
+        "id": "ecf92454-7991-4705-b7fc-ef884ab008f5",
+        "date": "2026-10-19T02:46:12.860139+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "House Fly",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "defender",
+        "roundsWon": {
+          "attacker": 0,
+          "defender": 2
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Fog or heavy rain",
+            "winner": "defender"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "defender"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "defender",
+        "opponentSpeciesName": "House Fly",
+        "comparisonSlug": "house-fly-vs-african-pygmy-hedgehog"
+      },
+      {
+        "id": "33856e5c-84b0-44ba-bb78-e329c5fbe0a0",
+        "date": "2026-10-19T02:29:02.037861+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Water before rivals",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "defender",
+        "opponentSpeciesName": "Western Fence Lizard",
+        "comparisonSlug": "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog"
+      },
+      {
+        "id": "10cfccc1-cafc-4621-a606-fa2a21b86ec7",
+        "date": "2026-10-19T01:34:24.710771+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "Western Fence Lizard",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "attacker",
+        "roundsWon": {
+          "attacker": 2,
+          "defender": 0
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Moving target track",
+            "winner": "attacker"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "attacker"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "defender",
+        "opponentSpeciesName": "Western Fence Lizard",
+        "comparisonSlug": "pacific-blue-bellied-lizard-vs-african-pygmy-hedgehog"
       }
     ],
     "890ed018-b005-489b-a42d-6b1257ba039d": [
@@ -11551,6 +12134,55 @@
     ],
     "adfa18d0-3389-4138-a047-fe3cec529386": [
       {
+        "id": "ecf92454-7991-4705-b7fc-ef884ab008f5",
+        "date": "2026-10-19T02:46:12.860139+00:00",
+        "format": "best_of_3",
+        "attacker": {
+          "displayName": "Gatoradezero",
+          "username": "milesjohnforrestold",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/c7d6263c-9a1f-40f0-aee3-53fb6e6f3fba/avatar.jpg?v=1792291538",
+          "animalName": "House Fly",
+          "comparisonSide": "animalA"
+        },
+        "defender": {
+          "displayName": "Lenny",
+          "username": "lendawg",
+          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/138bd2bc-af58-4e51-ac92-3df6161d53db/avatar.jpg",
+          "animalName": "Hedgehog",
+          "comparisonSide": "animalB"
+        },
+        "winner": "defender",
+        "roundsWon": {
+          "attacker": 0,
+          "defender": 2
+        },
+        "rounds": [
+          {
+            "number": 1,
+            "label": "Scenario",
+            "detail": "Fog or heavy rain",
+            "winner": "defender"
+          },
+          {
+            "number": 2,
+            "label": "Community vote",
+            "detail": "Tied vote",
+            "winner": "draw"
+          },
+          {
+            "number": 3,
+            "label": "Species stats",
+            "detail": "Overall species stats",
+            "winner": "defender"
+          }
+        ],
+        "payout": 9,
+        "stake": 5,
+        "side": "attacker",
+        "opponentSpeciesName": "African Pygmy Hedgehog",
+        "comparisonSlug": "house-fly-vs-african-pygmy-hedgehog"
+      },
+      {
         "id": "46d07b6e-3d1f-4bb6-9e3d-f680e0339d3f",
         "date": "2026-09-19T23:37:19.106026+00:00",
         "format": "best_of_3",
@@ -12075,43 +12707,6 @@
         "stake": 5,
         "side": "defender",
         "opponentSpeciesName": "Giant Asian Mantis",
-        "comparisonSlug": null
-      },
-      {
-        "id": "ce548052-d327-4b91-9a80-cb4495b264e7",
-        "date": "2026-08-18T11:50:06.59781+00:00",
-        "format": "single_round",
-        "attacker": {
-          "displayName": "Yellow",
-          "username": "yellow",
-          "avatarUrl": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/avatars/ccf8a674-81e1-4ec3-9950-c791c318e38d/avatar.jpg?v=1786878569",
-          "animalName": "Yellow-banded Millipede",
-          "comparisonSide": "animalA"
-        },
-        "defender": {
-          "displayName": "steve",
-          "username": "cuko8724",
-          "avatarUrl": null,
-          "animalName": "House Fly",
-          "comparisonSide": "animalB"
-        },
-        "winner": "defender",
-        "roundsWon": {
-          "attacker": 0,
-          "defender": 1
-        },
-        "rounds": [
-          {
-            "number": 1,
-            "label": "Scenario",
-            "detail": "Fleeing the Rising Tide",
-            "winner": "defender"
-          }
-        ],
-        "payout": 9,
-        "stake": 5,
-        "side": "defender",
-        "opponentSpeciesName": "Yellow-banded Millipede",
         "comparisonSlug": null
       }
     ],
@@ -13958,7 +14553,7 @@
         "stake": 5,
         "side": "attacker",
         "opponentSpeciesName": "Pea Moth",
-        "comparisonSlug": null
+        "comparisonSlug": "domestic-chicken-vs-pea-moth"
       },
       {
         "id": "f9d028ac-58ef-49bc-bd70-2ea83ba80bf9",
@@ -15014,7 +15609,7 @@
         "payout": 9,
         "stake": 5,
         "side": "attacker",
-        "opponentSpeciesName": "Brown Moth",
+        "opponentSpeciesName": "Moth",
         "comparisonSlug": "common-house-gecko-vs-moth"
       },
       {

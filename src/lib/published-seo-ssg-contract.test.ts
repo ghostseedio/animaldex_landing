@@ -9,6 +9,7 @@ import animalSnapshot from "@/data/published-seo-animal-pages.json";
 import lessonSnapshot from "@/data/published-seo-lesson-pages.json";
 import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
+import renamedSpeciesSlugs from "@/data/renamed-species-slugs.json";
 import {
     isCollapsedEnglishDetailPath,
     matchCollapsedIdDetailPath
@@ -27,9 +28,9 @@ test("published EN animal and lesson static params cover the slug index", () => 
 
     assert.ok(publishedSeoSlugs.animals.length >= 2300);
     assert.ok(publishedSeoSlugs.lessons.length >= 2400);
-    // Pinned to the last operator refresh (2026-10-07); bump when re-running refresh:published-seo.
-    assert.equal(animalSnapshot.entries.length, 1529);
-    assert.equal(lessonSnapshot.entries.length, 1564);
+    // Pinned to the last operator refresh (2026-10-28); bump when re-running refresh:published-seo.
+    assert.equal(animalSnapshot.entries.length, 1583);
+    assert.equal(lessonSnapshot.entries.length, 1747);
     assert.deepEqual(
         animalSnapshot.entries.map((entry) => entry.slug),
         [...animalSnapshot.entries.map((entry) => entry.slug)].sort((a, b) => a.localeCompare(b))
@@ -56,6 +57,23 @@ test("published EN animal and lesson static params cover the slug index", () => 
     assert.equal(isPublishedAnimalSlug("definitely-not-a-real-animaldex-slug"), false);
     assert.equal(isPublishedLessonSlug("osprey"), true);
     assert.equal(isPublishedLessonSlug("definitely-not-a-real-animaldex-slug"), false);
+});
+
+test("renamed species slugs redirect from an unserved URL to a served page", () => {
+    // /animals is closed SSG, so a slug a refresh renamed would 404 without
+    // these (89 indexed URLs on 2026-10-28, e.g. lutra-lutra → european-otter).
+    const redirects = Object.entries(renamedSpeciesSlugs.redirects);
+    const config = readFileSync(join(root, "..", "next.config.js"), "utf8");
+
+    assert.ok(redirects.length >= 89);
+    assert.equal(renamedSpeciesSlugs.redirects["lutra-lutra"], "european-otter");
+    for (const [from, to] of redirects) {
+        assert.equal(isPublishedAnimalSlug(from), false, `${from} is published again; drop its redirect`);
+        assert.equal(isPublishedAnimalSlug(to), true, `${from} redirects to ${to}, which is not published`);
+    }
+    assert.match(config, /require\("\.\/src\/data\/renamed-species-slugs\.json"\)/);
+    assert.match(config, /Object\.entries\(renamedSpeciesSlugs\.redirects/);
+    assert.match(read("../package.json"), /"refresh:published-seo": "[^"]*refreshRenamedSpeciesSlugs\.mts"/);
 });
 
 test("stable SEO detail pages are static English SSG with dynamicParams=false", () => {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-20",
+  "generatedAt": "2026-10-28",
   "source": "local challengeEntries plus ready species_comparisons rows not already editorial",
   "note": "Used for English comparison SSG. Refresh with yarn refresh:published-seo. Do not add to prebuild.",
   "entries": [
@@ -149737,6 +149737,183 @@
       "featuredImage": {
         "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/yacare-caiman-vs-yellow-anaconda.webp",
         "alt": "yacare-caiman-vs-yellow-anaconda comparison image on AnimalDex",
+        "width": 1672,
+        "height": 941,
+        "caption": "Comparison image source: AnimalDex CDN."
+      }
+    },
+    {
+      "slug": "yak-vs-common-harvestman",
+      "animalASlug": "yak",
+      "animalBSlug": "common-harvestman",
+      "animalADisplayName": "Yak",
+      "animalBDisplayName": "Harvestman",
+      "comparisonType": "battle",
+      "title": "Yak vs Harvestman: Who Actually Wins?",
+      "description": "Yak vs harvestman: a 300–1,000 kg Himalayan bovid against a fingertip-sized arachnid. See who wins, why it is not close, and how the harvestman still survives.",
+      "quickVerdict": "The yak wins decisively. This is one of the largest size mismatches in any AnimalDex matchup. A wild yak can weigh close to a tonne, carries curved horns and a dense shaggy coat, and has a body built to shove through snow and fend off wolves. A harvestman (order Opiliones) usually has a body only a few millimetres long. It has no venom glands and no silk, and its small chelicerae are built to tear soft food, not to pierce hide. The harvestman cannot injure a yak in any meaningful way. Its real talents are defensive: it can shed legs (autotomy), release foul-smelling chemicals from its scent glands, freeze motionless, and slip into crevices. Those tricks can make it hard to find and hard to pin down. They cannot beat a yak. If the two ever meet, the yak wins by stepping on it, grazing past it, or never noticing it was there.",
+      "shortAnswer": [
+        "Yak wins overwhelmingly. It outweighs the harvestman by roughly a hundred million to one.",
+        "Harvestmen have no venom and no silk, and they cannot pierce yak skin or wool.",
+        "The harvestman's best plays are escape plays: dropping legs, chemical secretions, and hiding in cover.",
+        "The only thing the harvestman can 'win' is not being found, never a real fight."
+      ],
+      "whyThisMatchupIsInteresting": [
+        "Many people confuse harvestmen with spiders and repeat the myth that 'daddy longlegs' are deadly venomous. Harvestmen are not spiders and have no venom glands.",
+        "Some readers treat 'winning' as survival. In a crevice, a harvestman can outlast a yak's interest indefinitely.",
+        "The yak is often pictured as a docile pack animal. Wild yaks are formidable, and even domestic ones are powerful and quick to defend themselves."
+      ],
+      "statCategories": [
+        {
+          "key": "explosive_power",
+          "label": "Explosive power",
+          "animalAValue": "Near-tonne charge with horn hooks",
+          "animalBValue": "Negligible; a twitch-and-scuttle burst",
+          "advantage": "animalA",
+          "takeaway": "In a mismatch this large, mass alone ends the encounter. The yak does not need technique."
+        },
+        {
+          "key": "close_range_durability",
+          "label": "Close-range durability",
+          "animalAValue": "Thick hide, dense wool, massive frame",
+          "animalBValue": "Fragile body and detachable legs",
+          "advantage": "animalA",
+          "takeaway": "Nothing the harvestman has can get through the yak's insulation, let alone injure tissue."
+        },
+        {
+          "key": "weaponry",
+          "label": "Offensive weaponry",
+          "animalAValue": "Curved horns, hooves, body weight",
+          "animalBValue": "Tiny chelicerae for soft prey; no venom",
+          "advantage": "animalA",
+          "takeaway": "The harvestman's mouthparts are built for eating small invertebrates and decaying matter, not for fighting."
+        },
+        {
+          "key": "escape_tricks",
+          "label": "Escape toolkit",
+          "animalAValue": "Herd defence and the ability to run off",
+          "animalBValue": "Leg autotomy, defensive secretions, freezing, hiding in crevices",
+          "advantage": "animalB",
+          "takeaway": "This is the harvestman's specialty. It explains why the species survives, but it does not win fights."
+        },
+        {
+          "key": "ambush_control",
+          "label": "Concealment and ambush control",
+          "animalAValue": "Conspicuous; cannot hide",
+          "animalBValue": "Blends into leaf litter, bark, and rock seams",
+          "advantage": "animalB",
+          "takeaway": "Being small and hidden lets the harvestman avoid encounters it could never win."
+        },
+        {
+          "key": "environmental_toughness",
+          "label": "Environmental toughness",
+          "animalAValue": "Thrives above 4,000 m in brutal cold",
+          "animalBValue": "Needs humid microhabitats and dries out easily",
+          "advantage": "animalA",
+          "takeaway": "The yak's home terrain would stress the harvestman even before any contact."
+        }
+      ],
+      "scenarioBreakdown": [
+        {
+          "slug": "open-ground",
+          "title": "Open ground",
+          "winner": "animalA",
+          "verdict": "The yak wins without trying.",
+          "explanation": "On an open alpine meadow the harvestman has nowhere to hide. A single hoof placement or the yak simply grazing through ends it. The yak may never register the encounter at all."
+        },
+        {
+          "slug": "one-on-one-cover",
+          "title": "Cover duel (rock crevice)",
+          "winner": "animalB",
+          "verdict": "The harvestman 'wins' by being unreachable.",
+          "explanation": "If the harvestman is tucked in a rock seam or under bark, the yak cannot detect it or reach it, and has no reason to try. This is a survival win, not a combat win. It shows how cryptic invertebrates persist alongside giants."
+        },
+        {
+          "slug": "contested-resource",
+          "title": "Contested resource (shared grazing patch)",
+          "winner": "animalA",
+          "verdict": "The yak takes the patch.",
+          "explanation": "The yak dominates the space by trampling and grazing. The harvestman gets displaced or crushed and has no way to contest anything."
+        },
+        {
+          "slug": "forced-contact",
+          "title": "Forced direct contact",
+          "winner": "animalA",
+          "verdict": "The harvestman's defences cannot save it.",
+          "explanation": "Its defensive secretions might be mildly unpleasant to a sensitive nose. Shedding a leg might let it scramble a few centimetres away. Against an animal this large, neither changes the outcome."
+        }
+      ],
+      "finalTake": [
+        "The yak is the overall winner, and it is not close. This matchup is less a duel than a lesson in scale. A cold-adapted bovid built to face wolves and blizzards is simply operating on a different physical level than an arachnid weighing a fraction of a gram.",
+        "The harvestman deserves respect for a different reason. Its whole survival strategy is avoiding fights: shedding legs, releasing chemicals, staying still, and living in seams of the world that big animals never touch. That strategy keeps it alive. It just cannot beat a yak."
+      ],
+      "faq": [
+        {
+          "question": "Would a yak beat a harvestman in a fight?",
+          "answer": "Yes, overwhelmingly. The yak can crush it instantly, and the harvestman has no weapon that can hurt a yak."
+        },
+        {
+          "question": "Which is stronger, a yak or a harvestman?",
+          "answer": "The yak, by an enormous margin. A yak can haul heavy loads at high altitude, while a harvestman can barely move anything beyond its own tiny body. Relative to its size, the harvestman is nimble, but absolute strength is no contest."
+        },
+        {
+          "question": "Are harvestmen venomous?",
+          "answer": "No. Harvestmen are not spiders, have no venom glands, and pose no meaningful threat to large mammals. The idea that 'daddy longlegs are the most venomous' is a myth."
+        },
+        {
+          "question": "Why is the harvestman still 'dangerous' or hard to beat?",
+          "answer": "Not because it can hurt a yak. It is hard to eliminate. It can shed legs to escape, release foul defensive secretions that deter small predators, freeze in place, and hide in tiny crevices. Its danger is to small prey and its own predators, not to a yak."
+        },
+        {
+          "question": "Could a harvestman ever win?",
+          "answer": "Only in the sense of surviving unnoticed in cover. In any direct contact, the yak wins."
+        }
+      ],
+      "searchIntents": [
+        "yak vs harvestman who wins",
+        "yak vs daddy longlegs",
+        "who would win yak or harvestman",
+        "are harvestmen venomous",
+        "yak strength vs arachnid"
+      ],
+      "speciesSlugs": [
+        "yak",
+        "common-harvestman"
+      ],
+      "systemsSpeciesSlugs": [
+        "yak",
+        "common-harvestman"
+      ],
+      "relatedChallengeSlugs": [
+        "kiang-vs-yak",
+        "wild-yak-vs-yak",
+        "common-harvestman-vs-ogre-faced-spider"
+      ],
+      "systemsIntelligenceEntries": [
+        {
+          "slug": "yak",
+          "entry": {
+            "roleTitle": "The High-Altitude Bulk Insurer",
+            "specializedHardware": "Dense undercoat and long guard hair, large lungs and heart suited to thin air, curved horns, and a heavy frame for breaking snow and repelling predators.",
+            "systemsScript": "A large grazer of the Tibetan Plateau. It shapes alpine grasslands through grazing, recycles nutrients through its dung, and serves as prey for wolves and snow leopards.",
+            "strategicInsight": "Over-investing in resilience can make whole categories of threats irrelevant. Robustness beats cleverness when the environment is harsh."
+          }
+        },
+        {
+          "slug": "common-harvestman",
+          "entry": {
+            "roleTitle": "The Leaf-Litter Escape Artist",
+            "specializedHardware": "Long sensory legs that can be shed and that keep twitching after detaching, defensive scent glands, a compact fused body, and small chelicerae for soft food.",
+            "systemsScript": "A generalist feeder and scavenger in moist microhabitats. It eats small invertebrates and decaying matter and in turn feeds birds, spiders, and other small predators.",
+            "strategicInsight": "When you cannot win a fight, design to avoid it. Cheap sacrifices and good hiding places can buy long-term survival."
+          }
+        }
+      ],
+      "publishedAt": "2026-10-20T21:47:05.646+00:00",
+      "updatedAt": "2026-10-20T21:47:05.846805+00:00",
+      "featuredImage": {
+        "src": "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/comparisons/yak-vs-common-harvestman.webp",
+        "alt": "yak-vs-common-harvestman comparison image on AnimalDex",
         "width": 1672,
         "height": 941,
         "caption": "Comparison image source: AnimalDex CDN."

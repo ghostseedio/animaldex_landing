@@ -1,6 +1,7 @@
 const path = require("path");
 const withNextIntl = require('next-intl/plugin')();
 const closedSeoNamespaceSlugs = require("./src/data/closed-seo-namespace-slugs.json");
+const renamedSpeciesSlugs = require("./src/data/renamed-species-slugs.json");
 
 // Mirrors src/lib/comparison-slug.ts, which next.config.js cannot import.
 const COMPARISON_TYPE_SUFFIXES = ["speed", "strength", "intelligence", "stealth", "durability", "agility"];
@@ -131,10 +132,14 @@ module.exports = withNextIntl({
                 permanent: true
             })),
             // Indexed catalog species the collection alias table folds into a
-            // parent species: they share its page instead of 404ing.
+            // parent species: they share its page instead of 404ing. Plus
+            // species whose published slug was renamed or merged in a snapshot
+            // refresh (lutra-lutra → european-otter), kept by
+            // scripts/refreshRenamedSpeciesSlugs.mts.
             ...[
                 ["african-lion", "lion"],
-                ["egyptian-spiny-tailed-lizard", "spiny-tailed-lizard"]
+                ["egyptian-spiny-tailed-lizard", "spiny-tailed-lizard"],
+                ...Object.entries(renamedSpeciesSlugs.redirects ?? {})
             ].flatMap(([from, to]) => ["", "/id"].map((prefix) => ({
                 source: `${prefix}/animals/${from}`,
                 destination: `/animals/${to}`,

@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-09",
+ "generatedAt": "2026-10-28",
  "source": "species_profiles + species_behavior_principles + species_principle_fusion_recipes",
  "note": "Build-time fusion snapshot. Pairs fused after this date render from the DB as noindex until the next `npm run refresh:published-seo`.",
  "species": {
@@ -17,6 +17,11 @@
    "id": "8f33007f-2c6f-4e81-a8ce-72d944e489d7",
    "name": "Abyssinian Ground Hornbill",
    "principle": "Grounded Power"
+  },
+  "accipiter-cooperii": {
+   "id": "dffb2a17-4e5e-4962-841d-76a3d0a9892c",
+   "name": "Cooper's Hawk",
+   "principle": "Hedge-line Dash"
   },
   "ackie-monitor": {
    "id": "f4e699d9-16a8-4c4e-a9c1-8821177f4908",
@@ -37,11 +42,6 @@
    "id": "a754bbee-d307-477c-83b2-26c8f716a1d9",
    "name": "Acorn Woodpecker",
    "principle": "Granary Drummer"
-  },
-  "actitis-hypoleucos": {
-   "id": "3c5e665b-d4fc-4c98-9063-c0052015071b",
-   "name": "Common Sandpiper",
-   "principle": "Riverbank Patrol"
   },
   "addax": {
    "id": "2f19f32d-ac21-4518-ab61-40a07e1d2d3f",
@@ -173,6 +173,11 @@
    "name": "Alderfly",
    "principle": "Quiet Strategy Pattern"
   },
+  "algerian-millipede": {
+   "id": "4616e774-d1a4-486c-abfa-f382feec4765",
+   "name": "Algerian Millipede",
+   "principle": "Segmented Resilience"
+  },
   "alligator-gar": {
    "id": "677c2d28-8cab-47c0-bb8c-4f7a5ff9b899",
    "name": "Alligator Gar",
@@ -242,6 +247,11 @@
    "id": "12778ca4-31d0-4851-9978-9eadb9826764",
    "name": "Amazon Sailfin Catfish",
    "principle": "Endurance Claim"
+  },
+  "amazonian-giant-centipede": {
+   "id": "30b957f9-8bf7-4e15-b9b0-a5ee8f4f6858",
+   "name": "Amazonian Giant Centipede",
+   "principle": "Ceiling-Hung Ambush"
   },
   "amazonian-manatee": {
    "id": "cfca7a72-5d95-4981-84a9-5b7d68945fd5",
@@ -313,6 +323,11 @@
    "name": "American Giant Millipede",
    "principle": "Slow Progress"
   },
+  "american-green-tree-frog": {
+   "id": "8b6fd8f9-2480-4e0c-9bc1-3e435f44a358",
+   "name": "American Green Tree Frog",
+   "principle": "Weather Bark"
+  },
   "american-kestrel": {
    "id": "e97e131c-17a3-4617-8a2f-6c95cf01e53a",
    "name": "American Kestrel",
@@ -368,21 +383,6 @@
    "name": "Amur Leopard",
    "principle": "Frost Stealth"
   },
-  "anacridium-aegyptium": {
-   "id": "b8e6121d-1626-4acb-9765-e7c2c0fb0112",
-   "name": "Egyptian Grasshopper",
-   "principle": "Hind-Leg Catapult"
-  },
-  "anas-fulvigula": {
-   "id": "9c82bac7-ecbf-496b-90ff-3016b454efb0",
-   "name": "Mottled Duck",
-   "principle": "Cordgrass Cloak"
-  },
-  "anaxyrus-fowleri": {
-   "id": "271c4e7c-64eb-4f7f-b911-b6ec5bbee8ff",
-   "name": "Fowler's Toad",
-   "principle": "Dune-Speckle Skin"
-  },
   "andean-cock-of-the-rock": {
    "id": "6123ef85-fe6b-4464-8a7a-f31fca5f5a5e",
    "name": "Andean Cock-of-the-rock",
@@ -423,6 +423,11 @@
    "name": "Freshwater Angelfish",
    "principle": "Vertical Grace"
   },
+  "angoumois-grain-moth": {
+   "id": "27a0160d-044d-4e58-a9f7-e34d2f7d8e58",
+   "name": "Angoumois Grain Moth",
+   "principle": "Adaptive Survival"
+  },
   "angulate-tortoise": {
    "id": "5d8ace9f-0845-43f2-a14c-368a431c8601",
    "name": "Angulate Tortoise",
@@ -443,10 +448,10 @@
    "name": "Annam Pond Turtle",
    "principle": "Patient Browsing"
   },
-  "anniella-pulchra": {
-   "id": "8349ce06-432b-4fed-96aa-4e9e6afb1d28",
-   "name": "California Legless Lizard",
-   "principle": "Sand Slip"
+  "ant-mimic-mantis": {
+   "id": "d3469b62-56e1-43d0-b344-7ed483ddbcd8",
+   "name": "Ant Mimic Mantis",
+   "principle": "Trail-Worker Disguise"
   },
   "ant-mimicking-spider": {
    "id": "2cb09cb5-1581-4a50-9f0f-60e4b8ea6910",
@@ -458,15 +463,10 @@
    "name": "Antarctic Petrel",
    "principle": "Frostwing"
   },
-  "anthrenus-scrophulariae": {
-   "id": "80d36117-20d3-400f-afe6-6ab2b1eeb894",
-   "name": "Common Carpet Beetle",
-   "principle": "Wool-And-Feather Fare"
-  },
-  "anthreptes-malacensis": {
-   "id": "98a7bde2-d8ff-4de9-acf3-252f5272c49a",
-   "name": "Brown-throated Sunbird",
-   "principle": "Nectar Navigation Strategy"
+  "anthus-novaeseelandiae": {
+   "id": "f2dbd206-efb9-4524-a3ea-d07eadbd63df",
+   "name": "Australasian Pipit",
+   "principle": "Vigilant Scan"
   },
   "apostlebird": {
    "id": "3953c641-21b8-4099-93d6-b75dcbdb11c6",
@@ -478,11 +478,6 @@
    "name": "Apple Snail",
    "principle": "Steady Shell Progress"
   },
-  "ara-militaris": {
-   "id": "cbf5e5c0-4d55-41bc-9278-58a9a5132652",
-   "name": "Military Macaw",
-   "principle": "Traded Preening"
-  },
   "arabian-oryx": {
    "id": "49389464-e472-4708-a399-7bf2136279fb",
    "name": "Arabian Oryx",
@@ -493,20 +488,10 @@
    "name": "Arabian Sand Boa",
    "principle": "Sand Concealment"
   },
-  "aramus-guarauna": {
-   "id": "41c0f831-57be-4efa-ba04-c4c804ab49d7",
-   "name": "Limpkin",
-   "principle": "Focused Foraging"
-  },
   "arapaima": {
    "id": "76ddb4b4-2908-4737-9d7e-d3fd30864637",
    "name": "Arapaima",
    "principle": "Air Access"
-  },
-  "araschnia-levana": {
-   "id": "1948c375-8667-4714-b1eb-051f85f0930b",
-   "name": "Map Butterfly",
-   "principle": "Season-Switched Wings"
   },
   "archerfish": {
    "id": "180adbb0-b186-4cbd-aa32-e637fd78ceef",
@@ -537,6 +522,11 @@
    "id": "004fb4f2-fa2f-4f28-ae43-6eb8ecfb6276",
    "name": "Arctic Tern",
    "principle": "Great Passage"
+  },
+  "ardea-cinerea": {
+   "id": "18bed140-4543-4a6f-b741-d32f764b75ce",
+   "name": "Grey Heron",
+   "principle": "Patient Stalk"
   },
   "argali": {
    "id": "8e06aeab-d8e0-4bb7-a305-826aa1d91a21",
@@ -582,6 +572,11 @@
    "id": "191f2749-42e2-4209-a400-3bc9d2b49b00",
    "name": "Asian Elephant",
    "principle": "Gentle Weight"
+  },
+  "asian-fairy-bluebird": {
+   "id": "310391ac-7463-431c-9556-6d4941fe6acb",
+   "name": "Asian Fairy-bluebird",
+   "principle": "Cobalt Canopy Flash"
   },
   "asian-forest-tortoise": {
    "id": "bd15c76f-7658-4014-a93f-b692f4955400",
@@ -653,6 +648,11 @@
    "name": "Asiatic Black Bear",
    "principle": "Mountain Strength"
   },
+  "asiatic-garden-beetle": {
+   "id": "5a737f1c-c8c7-4f8f-a166-30a79d8c089a",
+   "name": "Asiatic Garden Beetle",
+   "principle": "Nocturnal Forager"
+  },
   "asiatic-rhinoceros-beetle": {
    "id": "3d9681ee-e4cf-4a96-8b1e-51960eb24b42",
    "name": "Asiatic Rhinoceros Beetle",
@@ -662,6 +662,11 @@
    "id": "b1879049-aa49-40ae-b6a0-afef43d6acd4",
    "name": "Assassin Spider",
    "principle": "Precision Ambush"
+  },
+  "atherina-boyeri": {
+   "id": "17bd0482-e66b-423a-acb3-943cfeef7d9f",
+   "name": "Mediterranean Sand Smelt",
+   "principle": "Schooling Shift"
   },
   "atlantic-blue-marlin": {
    "id": "ce225b5b-6053-41b3-bbce-e08321f8c6de",
@@ -773,6 +778,21 @@
    "name": "Australian Sea Lion",
    "principle": "Sea-Lion Practice"
   },
+  "australian-stingless-bee": {
+   "id": "8f60ca54-0b35-4ed6-ac56-287ebf6f5f8e",
+   "name": "Australian Stingless Bee",
+   "principle": "Spiral Hive"
+  },
+  "australian-wood-duck": {
+   "id": "573fd013-27a2-4559-851a-2760d63bdd51",
+   "name": "Australian Wood Duck",
+   "principle": "Creekside Nest"
+  },
+  "autumn-leaf": {
+   "id": "7609d944-f5e6-4c50-9155-439bb3694ac2",
+   "name": "Autumn Leaf",
+   "principle": "Winged Disguise"
+  },
   "axolotl": {
    "id": "9f99b80f-8643-4a43-b568-773bcececf05",
    "name": "Axolotl",
@@ -803,7 +823,7 @@
    "name": "Baird's Tapir",
    "principle": "Dual Passage"
   },
-  "balantiocheilos-melanopterus": {
+  "bala-shark": {
    "id": "eb4dd2a5-3ff3-4131-acd3-23bc83684a18",
    "name": "Bala Shark",
    "principle": "Group Harmony"
@@ -827,6 +847,11 @@
    "id": "b3da7a72-5ca5-446d-8b58-076ff78d595b",
    "name": "Bali Myna",
    "principle": "Protected Beauty"
+  },
+  "balistoides-viridescens": {
+   "id": "657929d4-ac9c-406d-8e0c-b8908e2c8582",
+   "name": "Titan Triggerfish",
+   "principle": "Coral Excavation"
   },
   "balkan-pond-turtle": {
    "id": "22184b05-6912-41b3-b543-aaef62c8bc98",
@@ -852,6 +877,11 @@
    "id": "856d8b70-84fd-47fc-943e-6211412fc1fd",
    "name": "Banana Slug",
    "principle": "Moisture Wisdom"
+  },
+  "banana-stalk-fly": {
+   "id": "ebf7a8ea-1930-454e-b18c-7d9b04f41d1c",
+   "name": "Banana Stalk Fly",
+   "principle": "Tiptoe High-Step"
   },
   "band-eyed-drone-fly": {
    "id": "cf3c75e5-4fd0-46eb-8a0c-8562e3b049b4",
@@ -1116,7 +1146,7 @@
   "black-and-yellow-garden-spider": {
    "id": "7944dae5-f764-42dd-b327-cf6bb834dd8e",
    "name": "Black-and-yellow Garden Spider",
-   "principle": "Signed Web"
+   "principle": "Zigzag Web Banner"
   },
   "black-and-yellow-mud-dauber": {
    "id": "9c82630b-1de8-4952-964f-1466594587f2",
@@ -1127,6 +1157,11 @@
    "id": "a1b2c3d4-e5f6-4789-a012-3456789abcde",
    "name": "Black Ant",
    "principle": "Quiet Trail Persistence"
+  },
+  "black-bellied-whistling-duck": {
+   "id": "f64b4a3a-4bb1-4d69-aebc-84b4203f2756",
+   "name": "Black-bellied Whistling Duck",
+   "principle": "Community Bonds"
   },
   "black-billed-magpie": {
    "id": "ddf29082-be9b-449a-9007-dbc34818102f",
@@ -1288,6 +1323,11 @@
    "name": "Black Sea Bass",
    "principle": "Wreck-Shade Shift"
   },
+  "black-sea-cucumber": {
+   "id": "7ae26f5b-6ce2-4ff4-9182-512b3f384635",
+   "name": "Black Sea Cucumber",
+   "principle": "Carried Shade"
+  },
   "black-shouldered-kite": {
    "id": "758e232d-f654-441a-8891-896076e4f58c",
    "name": "Black-shouldered Kite",
@@ -1312,6 +1352,11 @@
    "id": "6d509af8-b23f-493c-bd17-80cba75e363f",
    "name": "Black Swallower",
    "principle": "Impossible Capacity"
+  },
+  "black-swallowtail": {
+   "id": "92cc6b1e-2b18-48b2-8125-ddc9bb35ed05",
+   "name": "Black Swallowtail",
+   "principle": "Silk-Girdled Chrysalis"
   },
   "black-swan": {
    "id": "4937286b-da9e-4b66-ba50-c372f16f4e66",
@@ -1438,10 +1483,20 @@
    "name": "Blue Glaucus",
    "principle": "Alchemy"
   },
+  "blue-green-chromis": {
+   "id": "e5fe3103-57aa-40ea-8d45-32a63a641c32",
+   "name": "Blue Green Chromis",
+   "principle": "Branch Cover"
+  },
   "blue-headed-macaw": {
    "id": "fc3b0384-8fd4-4d7f-b84e-0a2a5e6a968e",
    "name": "Blue-headed Macaw",
    "principle": "Social Intelligence"
+  },
+  "blue-linckia-sea-star": {
+   "id": "1c3847f6-7252-412b-bdcf-7f15c6cd34e2",
+   "name": "Blue Linckia Sea Star",
+   "principle": "Comet Arm"
   },
   "blue-morpho": {
    "id": "4fa1c39c-e766-4eb4-a94c-70c551125a4a",
@@ -1573,6 +1628,11 @@
    "name": "Boelen's Python",
    "principle": "Black Sheen"
   },
+  "boesemans-rainbowfish": {
+   "id": "5891927d-e9de-4ae2-889b-afe4e06d064e",
+   "name": "Boeseman's Rainbowfish",
+   "principle": "Two-Tone Courtship Flare"
+  },
   "bog-turtle": {
    "id": "4fff89da-956a-4b10-bbd3-647db1f6b18d",
    "name": "Bog Turtle",
@@ -1588,10 +1648,15 @@
    "name": "Bold Jumper",
    "principle": "Strategic Leap"
   },
+  "bolivian-squirrel-monkey": {
+   "id": "48dde8d5-aa75-4b8b-89f2-4a96268ec8e4",
+   "name": "Bolivian Squirrel Monkey",
+   "principle": "Canopy Network"
+  },
   "bombardier-beetle": {
    "id": "b8feb368-6f6b-474b-bcb9-e4d65c36d355",
    "name": "Bombardier Beetle",
-   "principle": "Chemical Boundary"
+   "principle": "Boiling-Spray Boundary"
   },
   "bongo": {
    "id": "36ff0d47-a8c5-4299-8d47-71a38ce4b0c5",
@@ -1653,11 +1718,6 @@
    "name": "Bornean Slow Loris",
    "principle": "Slow Venom Caution"
   },
-  "bos-taurus-indicus": {
-   "id": "dacdfb27-9885-4f2a-97b9-17fb296c3a8a",
-   "name": "Zebu",
-   "principle": "Adaptive Endurance"
-  },
   "bowfin": {
    "id": "bebe250b-6ad2-4db1-98eb-e76368700e66",
    "name": "Bowfin",
@@ -1677,6 +1737,11 @@
    "id": "a9c7853d-34e4-45b1-9f20-db996a31d91d",
    "name": "Boxer Crab",
    "principle": "Borrowed Defense"
+  },
+  "bradysia-impatiens": {
+   "id": "cb57d35b-7b51-4732-b597-6c935d9c68fb",
+   "name": "Dark-winged Fungus Gnat",
+   "principle": "Short-lived Impact"
   },
   "brahminy-kite": {
    "id": "6b6eaf35-6c6d-4297-a2d4-5aef0213d91d",
@@ -1703,6 +1768,11 @@
    "name": "Brill",
    "principle": "Seabed Subtlety"
   },
+  "brilliant-blue": {
+   "id": "e121ad7b-ca84-460e-b6f1-055041e85192",
+   "name": "Brilliant Blue",
+   "principle": "Sunlit Perch"
+  },
   "brimstone-butterfly": {
    "id": "19101fde-fae0-4d25-923c-f88357278de6",
    "name": "Brimstone Butterfly",
@@ -1727,6 +1797,11 @@
    "id": "7182143e-0b1d-4fb2-b3de-16cd56eb14b5",
    "name": "Brolga",
    "principle": "Wetland Dance Bond"
+  },
+  "bronze-corydoras": {
+   "id": "4debecc1-4ac0-480b-970a-fc49d022244a",
+   "name": "Bronze Corydoras",
+   "principle": "Bottom-feeder Cleanup"
   },
   "bronze-ground-beetle": {
    "id": "bbcc52f8-6055-4ffd-a76f-24cc0ee325b0",
@@ -1778,6 +1853,11 @@
    "name": "Brown Roofed Turtle",
    "principle": "Low Keel"
   },
+  "brown-shrike": {
+   "id": "8039c366-0db4-4e77-ba33-43f189da7e7a",
+   "name": "Brown Shrike",
+   "principle": "Strategic Hunting Strategy"
+  },
   "brown-shrimp": {
    "id": "a22f3e88-036f-4322-b6d3-9de9ea6bc044",
    "name": "Brown Shrimp",
@@ -1787,6 +1867,11 @@
    "id": "c4ddfae4-8512-4eb6-9812-022dbd4758cd",
    "name": "Brown Sicklebill",
    "principle": "Hidden Flourish"
+  },
+  "brown-throated-sunbird": {
+   "id": "98a7bde2-d8ff-4de9-acf3-252f5272c49a",
+   "name": "Brown-throated Sunbird",
+   "principle": "Nectar Navigation Strategy"
   },
   "brown-widow-spider": {
    "id": "15981527-9f32-4b3e-8706-a30255587161",
@@ -1808,11 +1893,6 @@
    "name": "Brush-tailed Mulgara",
    "principle": "Night-Heat Economy"
   },
-  "bucephala-albeola": {
-   "id": "99fd1ff4-4c8d-4058-a991-2e60ff44c027",
-   "name": "Bufflehead",
-   "principle": "Nest Cavity Return"
-  },
   "budgerigar": {
    "id": "0460706f-157c-4a90-a963-108f3e8b2668",
    "name": "Budgerigar",
@@ -1833,10 +1913,15 @@
    "name": "Buff-tip Moth",
    "principle": "Snapped-Birch Twig"
   },
+  "bufflehead": {
+   "id": "99fd1ff4-4c8d-4058-a991-2e60ff44c027",
+   "name": "Bufflehead",
+   "principle": "Nest Cavity Return"
+  },
   "buffy-fish-owl": {
    "id": "fcfda570-6a9c-4203-b782-b6aa2b0ff480",
    "name": "Buffy Fish Owl",
-   "principle": "Waterside Listening"
+   "principle": "Waterside Watch"
   },
   "bull-shark": {
    "id": "9fbfb9ff-2eb2-43d1-af5e-bd61356876b7",
@@ -1878,6 +1963,11 @@
    "name": "Burrowing Parakeet",
    "principle": "Colonial Home"
   },
+  "buru-babirusa": {
+   "id": "bb33ab4f-a8d5-4ece-a1d3-a5f54e4b4010",
+   "name": "Buru Babirusa",
+   "principle": "Mud Wallow"
+  },
   "bush-dog": {
    "id": "8e49a1b4-645e-4d4b-9765-b0f2118a201a",
    "name": "Bush Dog",
@@ -1902,6 +1992,11 @@
    "id": "3d6dcad5-a23f-4324-912c-f7776fc2b697",
    "name": "Bushy-tailed Mongoose",
    "principle": "Rough Utility"
+  },
+  "butterfly-peacock-bass": {
+   "id": "5b9693a3-6b55-41c9-b977-84ecb284548e",
+   "name": "Butterfly Peacock Bass",
+   "principle": "Predatory Focus"
   },
   "by-the-wind-sailor": {
    "id": "3f717249-3baa-431d-bdeb-1dac0de21b2b",
@@ -1948,10 +2043,20 @@
    "name": "Cairo Spiny Mouse",
    "principle": "Mend"
   },
+  "calidris-alpina": {
+   "id": "3aa2ae01-ebdd-479d-b664-1f8ca1be7789",
+   "name": "Dunlin",
+   "principle": "Tidal Foraging"
+  },
   "california-condor": {
    "id": "1bbfaae7-62df-4301-bd0e-8587beffbfd7",
    "name": "California Condor",
    "principle": "Restoration Flight"
+  },
+  "california-legless-lizard": {
+   "id": "8349ce06-432b-4fed-96aa-4e9e6afb1d28",
+   "name": "California Legless Lizard",
+   "principle": "Sand Slip"
   },
   "california-quail": {
    "id": "03e3ee4a-e041-405b-a61a-03ad1255ebc7",
@@ -1977,11 +2082,6 @@
    "id": "e9b237af-c4e3-4f22-9c23-fd8e073f61f0",
    "name": "Camel Spider",
    "principle": "Desert Pursuit"
-  },
-  "campaea-perlata": {
-   "id": "c1cb25ea-cec1-46d1-8602-32fdca725e05",
-   "name": "Pale Beauty Moth",
-   "principle": "Lichen-Bark Ghost"
   },
   "campbells-dwarf-hamster": {
    "id": "ca0944d9-0492-42bf-a66a-091cd6b4c82c",
@@ -2068,6 +2168,11 @@
    "name": "Carmine Bee-eater",
    "principle": "Swarm Skill"
   },
+  "carolina-wren": {
+   "id": "a8250652-834c-4254-982b-873480be7b42",
+   "name": "Carolina Wren",
+   "principle": "Hidden Nest"
+  },
   "carp": {
    "id": "f027bea1-ed69-4559-9f67-497d088e0047",
    "name": "Carp",
@@ -2098,10 +2203,10 @@
    "name": "Carrion Crow",
    "principle": "Tool Cache"
   },
-  "cataglyphis-bicolor": {
-   "id": "1aa3c41c-7f6a-4870-9cfc-c2502da27fae",
-   "name": "Sahara Desert Ant",
-   "principle": "Heat Navigation"
+  "cat-flea": {
+   "id": "92159faf-213d-4eae-b2cf-24d595bc2264",
+   "name": "Cat Flea",
+   "principle": "Leap Courage Strategy"
   },
   "cattle-egret": {
    "id": "a9343eac-404d-458a-9c7c-037b99f79026",
@@ -2153,16 +2258,6 @@
    "name": "Central Bearded Dragon",
    "principle": "Calibration"
   },
-  "cepaea-nemoralis": {
-   "id": "fc7ea048-2197-4946-865d-0a2b96c395d2",
-   "name": "Grovesnail",
-   "principle": "Shell Retreat"
-  },
-  "cephonodes-hylas": {
-   "id": "2c35810b-b507-4011-b05d-b6c189a46616",
-   "name": "Coffee hawk-moth",
-   "principle": "Nectar Hover"
-  },
   "cettis-warbler": {
    "id": "0799e144-7787-4d03-8577-9d867c307efc",
    "name": "Cetti's Warbler",
@@ -2182,16 +2277,6 @@
    "id": "3b0a0942-37cd-47f8-be2d-d35c123bd61a",
    "name": "Chain Pickerel",
    "principle": "Ambush Strategy"
-  },
-  "chalcidoseps-thwaitesi": {
-   "id": "c899f1ae-098d-4061-9d15-9f859e7af637",
-   "name": "Sri Lankan Skink",
-   "principle": "Burrow Retreat"
-  },
-  "chamaeleo-calyptratus": {
-   "id": "2cc8587a-8d10-418f-8bdf-560f1ea6a2d5",
-   "name": "Veiled Chameleon",
-   "principle": "Branch Sway"
   },
   "chambered-limpet": {
    "id": "ebe7163c-4a61-44b8-833c-ded69b0564b0",
@@ -2232,6 +2317,11 @@
    "id": "d78ff3db-e27d-4dd0-a6f7-aa55857f71d8",
    "name": "Chihuahuan Raven",
    "principle": "Desert Raven Experiment"
+  },
+  "chilean-swallow": {
+   "id": "18d419cc-031f-47f5-b63c-5a59af6c66cf",
+   "name": "Chilean Swallow",
+   "principle": "Twisting Air Hawking"
   },
   "chimpanzee": {
    "id": "56169946-7f4c-4aa1-89d6-bc2512abd7b4",
@@ -2318,6 +2408,11 @@
    "name": "Christmas Tree Worm",
    "principle": "Reef Feather Withdrawal"
   },
+  "churchyard-beetle": {
+   "id": "cc2dabc5-bf5c-49f3-b682-979495a3afe7",
+   "name": "Churchyard Beetle",
+   "principle": "Nocturnal Forage"
+  },
   "cicada": {
    "id": "345709d8-1c8e-4bfa-ad81-51efb3bdbf9a",
    "name": "Cicada",
@@ -2327,11 +2422,6 @@
    "id": "00b0bcc2-cc5b-48d9-8b9d-1d68979875c7",
    "name": "Cicada Killer Wasp",
    "principle": "Provision"
-  },
-  "cichla-ocellaris": {
-   "id": "5b9693a3-6b55-41c9-b977-84ecb284548e",
-   "name": "Butterfly Peacock Bass",
-   "principle": "Predatory Focus"
   },
   "cichlid": {
    "id": "070f16df-108f-4943-af6c-56f632d58e64",
@@ -2443,15 +2533,15 @@
    "name": "Coelacanth",
    "principle": "Living Relic"
   },
+  "coffee-hawk-moth": {
+   "id": "2c35810b-b507-4011-b05d-b6c189a46616",
+   "name": "Coffee hawk-moth",
+   "principle": "Nectar Hover"
+  },
   "coho-salmon": {
    "id": "d6efece9-5f57-42c5-877a-4b4f29c0ee97",
    "name": "Coho Salmon",
    "principle": "Silver Return Timing"
-  },
-  "colias-eurytheme": {
-   "id": "35d03fc7-81ad-4ffa-95dd-1da66a4f49f3",
-   "name": "Orange Sulphur",
-   "principle": "Wing Flash Display"
   },
   "collared-falconet": {
    "id": "43572880-a436-48fe-8cdc-a9bd99322cb6",
@@ -2533,6 +2623,11 @@
    "name": "Spectacled Caiman",
    "principle": "Night Ambush"
   },
+  "common-carpet-beetle": {
+   "id": "80d36117-20d3-400f-afe6-6ab2b1eeb894",
+   "name": "Common Carpet Beetle",
+   "principle": "Wool-And-Feather Fare"
+  },
   "common-carpet-moth": {
    "id": "8aca0903-3607-48ce-ad5d-00c1c04200da",
    "name": "Common Carpet Moth",
@@ -2588,6 +2683,11 @@
    "name": "Common European Harvestman",
    "principle": "Adaptable Movement"
   },
+  "common-european-toad": {
+   "id": "298d81b3-1a0e-48a4-b55d-6df6f465983d",
+   "name": "Common Toad",
+   "principle": "Threat-Matched Stance"
+  },
   "common-evening-brown": {
    "id": "ec0d534a-d1a5-41f1-90b4-a84df6da0490",
    "name": "Common Evening Brown",
@@ -2602,6 +2702,16 @@
    "id": "bc30ba0c-9be5-4823-b101-15c119cb2d5c",
    "name": "Common Field Grasshopper",
    "principle": "Sward-Matched Gait"
+  },
+  "common-flameback": {
+   "id": "666d94a6-4e86-4522-9fd4-47c6de367f5a",
+   "name": "Common Flameback",
+   "principle": "Precision Pecking"
+  },
+  "common-flangetail": {
+   "id": "071166e6-d8de-460f-8c0b-ab264257943b",
+   "name": "Common Flangetail",
+   "principle": "Waterside Lookout"
   },
   "common-flesh-fly": {
    "id": "722feb8e-4d1e-4218-abb4-efad5820abbc",
@@ -2631,7 +2741,7 @@
   "common-grass-blue": {
    "id": "1713cc44-7d1e-4fc4-b518-ddd608cd48e1",
    "name": "Common Grass Blue",
-   "principle": "Adaptive Mimicry"
+   "principle": "Waste-Ground Broods"
   },
   "common-green-darner": {
    "id": "4ed60226-acfe-46f4-affd-24adbcffc863",
@@ -2692,6 +2802,11 @@
    "id": "b3090597-8fdd-4783-9876-239dd44553b8",
    "name": "Common Hydra",
    "principle": "Hydra Renewal"
+  },
+  "common-kestrel": {
+   "id": "9b02dbbd-dfdc-4dd2-89cd-9c8706dcb91f",
+   "name": "Common Kestrel",
+   "principle": "Hovering Hunt"
   },
   "common-kingfisher": {
    "id": "0d991095-9587-402c-892c-a2cbea1750cf",
@@ -2763,6 +2878,11 @@
    "name": "Common Octopus",
    "principle": "Flexible Intelligence"
   },
+  "common-pheasant": {
+   "id": "4aac5c1e-be69-4c81-812a-04ac8b717d90",
+   "name": "Common Pheasant",
+   "principle": "Stubble-Brown Crouch"
+  },
   "common-pill-woodlouse": {
    "id": "89950403-4a81-4fcc-8aa9-d2e57d906519",
    "name": "Common Pill Woodlouse",
@@ -2823,6 +2943,11 @@
    "name": "Common Sand Dollar",
    "principle": "Buried Dollar"
   },
+  "common-sandpiper": {
+   "id": "3c5e665b-d4fc-4c98-9063-c0052015071b",
+   "name": "Common Sandpiper",
+   "principle": "Riverbank Patrol"
+  },
   "common-sawshark": {
    "id": "d01495ff-b68f-481b-a259-986f1a1ba839",
    "name": "Common Sawshark",
@@ -2873,6 +2998,11 @@
    "name": "Common Treeshrew",
    "principle": "Small-Branch Curiosity"
   },
+  "common-true-katydid": {
+   "id": "6e8a492f-fb2d-46f6-93d5-1905c91ff79b",
+   "name": "Common True Katydid",
+   "principle": "Night Chorus"
+  },
   "common-vampire-bat": {
    "id": "18cf4bd0-d889-4e54-a2ef-f3f4676adb57",
    "name": "Common Vampire Bat",
@@ -2918,11 +3048,6 @@
    "name": "Common Wood Pigeon",
    "principle": "Woodland Commute"
   },
-  "condylostylus-longicornis": {
-   "id": "b8288695-abe0-4104-81cd-4713d6e89460",
-   "name": "Long-legged Fly",
-   "principle": "Precision Flight"
-  },
   "cone-headed-grasshopper": {
    "id": "85e6e1a5-4ef0-450b-95da-2b3e65955894",
    "name": "Cone-headed Grasshopper",
@@ -2933,10 +3058,10 @@
    "name": "Convict Tang",
    "principle": "Stripe Cohesion"
   },
-  "copsychus-malabaricus": {
-   "id": "63edc0e9-74fa-4baf-b8e1-a426a249de0f",
-   "name": "White-rumped Shama",
-   "principle": "Fluted Territory Song"
+  "coppery-titi-monkey": {
+   "id": "48892b54-2665-4f2e-b9f1-7eaca91e30f0",
+   "name": "Coppery Titi Monkey",
+   "principle": "Tail Tangle"
   },
   "coquerels-sifaka": {
    "id": "8d5fd4a2-5570-4701-bbe0-19ffb4e4b4f5",
@@ -2957,16 +3082,6 @@
    "id": "244c3056-c79d-4fb1-a47d-2413815e5b1b",
    "name": "Corsac Fox",
    "principle": "Steppe Fit"
-  },
-  "corydoras-aeneus": {
-   "id": "4debecc1-4ac0-480b-970a-fc49d022244a",
-   "name": "Bronze Corydoras",
-   "principle": "Bottom-feeder Cleanup"
-  },
-  "corydoras-panda": {
-   "id": "0813799c-7fac-4ac8-97e1-4628e30af0a8",
-   "name": "Panda Corydoras",
-   "principle": "Gravel Sifter"
   },
   "coscoroba-swan": {
    "id": "836f5d8e-4efc-4ac0-ad55-9f7a600b37ce",
@@ -3037,6 +3152,11 @@
    "id": "2a5d32a3-141e-4ef6-b15c-72fa6b26d3e0",
    "name": "Crane Fly",
    "principle": "Delicate Navigation"
+  },
+  "creophilus-maxillosus": {
+   "id": "3d44a31f-303c-479f-a944-167977cd0a30",
+   "name": "Hairy Rove Beetle",
+   "principle": "Carcass Patrol"
   },
   "crest-tailed-mulgara": {
    "id": "5bf5c745-e93e-40fe-934c-267d8ecd26aa",
@@ -3136,12 +3256,7 @@
   "crystal-red-shrimp": {
    "id": "fda49e28-832f-4fa4-94b1-e1d5c80f50da",
    "name": "Crystal Red Shrimp",
-   "principle": "Adaptive Camouflage Strategy"
-  },
-  "ctenocephalides-felis": {
-   "id": "92159faf-213d-4eae-b2cf-24d595bc2264",
-   "name": "Cat Flea",
-   "principle": "Leap Courage Strategy"
+   "principle": "Bred for Beauty"
   },
   "cuban-crocodile": {
    "id": "78cfe0cb-01a6-4f0a-9ec5-fe9d9252165d",
@@ -3206,17 +3321,12 @@
   "cuttlefish": {
    "id": "5f6d2a90-e672-41d1-a4ff-c0591ef80137",
    "name": "Cuttlefish",
-   "principle": "Transformation"
+   "principle": "Skin-Shift Language"
   },
   "cyclodes-moth": {
    "id": "b1cf654d-cfca-4a64-99ab-9d8bdb4db767",
    "name": "Cyclodes Moth",
    "principle": "Understory-Shade Wings"
-  },
-  "cydia-nigricana": {
-   "id": "0f4004e5-f082-4319-8c8c-5f42e9b01e84",
-   "name": "Pea Moth",
-   "principle": "Timed Hatch"
   },
   "dall-sheep": {
    "id": "65af4fb2-3ffc-47e4-8352-5932dc7c29b1",
@@ -3313,11 +3423,6 @@
    "name": "Demoiselle Crane",
    "principle": "Light Strength"
   },
-  "dendrocygna-autumnalis": {
-   "id": "f64b4a3a-4bb1-4d69-aebc-84b4203f2756",
-   "name": "Black-bellied Whistling Duck",
-   "principle": "Community Bonds"
-  },
   "denison-barb": {
    "id": "6ca4d2fa-c376-4c21-9356-ae731432eba2",
    "name": "Denison Barb",
@@ -3373,6 +3478,11 @@
    "name": "Desert Woodrat",
    "principle": "Desert Midden Builder"
   },
+  "devils-coach-horse-beetle": {
+   "id": "4f942b24-17d3-4fa5-9863-bbb86106ddcc",
+   "name": "Devil's Coach Horse Beetle",
+   "principle": "Defensive Posture"
+  },
   "devils-flower-mantis": {
    "id": "f420c4d3-563e-4806-b7a2-ba074b5674fa",
    "name": "Devil's Flower Mantis",
@@ -3403,11 +3513,6 @@
    "name": "Dibbler",
    "principle": "Last Sparks"
   },
-  "dicaeum-erythrorhynchos": {
-   "id": "872c7976-d89c-4050-aeb8-cc39bcba147f",
-   "name": "Pale-billed Flowerpecker",
-   "principle": "Nectar Navigation Pattern"
-  },
   "dice-snake": {
    "id": "8a3758a8-a10d-4075-a728-5d078ad95763",
    "name": "Dice Snake",
@@ -3422,16 +3527,6 @@
    "id": "cd0a0e4b-86c7-470a-969e-103f6b7c0877",
    "name": "Dingy Bushbrown",
    "principle": "Low Shade"
-  },
-  "dinopium-javanense": {
-   "id": "666d94a6-4e86-4522-9fd4-47c6de367f5a",
-   "name": "Common Flameback",
-   "principle": "Precision Pecking"
-  },
-  "dionaea-muscipula": {
-   "id": "721af43e-dfd9-40bb-be67-039ade37e11b",
-   "name": "Venus Flytrap",
-   "principle": "Snap Trap"
   },
   "dione-ratsnake": {
    "id": "c8659b1d-7002-435e-b965-cd239226da71",
@@ -3452,11 +3547,6 @@
    "id": "25c16649-4cf2-4135-8d83-6b993a2b87d3",
    "name": "Dobsonfly",
    "principle": "Hidden Power"
-  },
-  "doleschallia-bisaltide": {
-   "id": "7609d944-f5e6-4c50-9155-439bb3694ac2",
-   "name": "Autumn Leaf",
-   "principle": "Winged Disguise"
   },
   "domestic-canary": {
    "id": "f9e08065-8a52-4c71-a6b9-1fefb7af17f1",
@@ -3633,6 +3723,16 @@
    "name": "Dwarf Cassowary",
    "principle": "Hidden Seedwork"
   },
+  "dysdercus-cingulatus": {
+   "id": "9a9dcb16-7cf1-4ab5-8ba9-59ebd5d11edb",
+   "name": "Red Cotton Stainer Bug",
+   "principle": "Targeted Impact"
+  },
+  "eared-dove": {
+   "id": "060bfa61-7ecd-42f6-917c-36265b53a195",
+   "name": "Eared Dove",
+   "principle": "Vast-Flock Roost"
+  },
   "earless-monitor-lizard": {
    "id": "59a1749b-2397-4210-a8f0-0bb081a65e74",
    "name": "Earless Monitor Lizard",
@@ -3768,16 +3868,6 @@
    "name": "Edible-nest Swiftlet",
    "principle": "Cavecraft"
   },
-  "egretta-caerulea": {
-   "id": "be03b0da-67af-46e4-9d72-f0a570ee1e5e",
-   "name": "Little Blue Heron",
-   "principle": "Slow Peering Wade"
-  },
-  "egretta-tricolor": {
-   "id": "7bb8f65f-dbbf-4fba-916e-e56580877c74",
-   "name": "Tricolored Heron",
-   "principle": "Belly-Deep Wait"
-  },
   "egyptian-cobra": {
    "id": "4057dcb8-9052-4bc9-998e-4b354fe34abe",
    "name": "Egyptian Cobra",
@@ -3792,6 +3882,11 @@
    "id": "d70db621-83cf-4375-9549-d3daa0746d76",
    "name": "Egyptian Goose",
    "principle": "Bold Defense"
+  },
+  "egyptian-grasshopper": {
+   "id": "b8e6121d-1626-4acb-9765-e7c2c0fb0112",
+   "name": "Egyptian Grasshopper",
+   "principle": "Hind-Leg Catapult"
   },
   "egyptian-mongoose": {
    "id": "bcd0c5e2-8484-4d67-b94d-d935bb049dfb",
@@ -3853,6 +3948,11 @@
    "name": "Emerald Cockroach Wasp",
    "principle": "Precision Control"
   },
+  "emerald-moth": {
+   "id": "327477ee-c2e8-494b-9b19-e03e99d35381",
+   "name": "Emerald Moth",
+   "principle": "Camouflage Mastery"
+  },
   "emerald-toucanet": {
    "id": "965f1d03-195f-4538-9991-a3d719ef6912",
    "name": "Emerald Toucanet",
@@ -3903,6 +4003,11 @@
    "name": "Epaulette Shark",
    "principle": "Improvisation"
   },
+  "eratigena-atrica": {
+   "id": "bbe4385b-89aa-4a5e-954f-a3332b28239b",
+   "name": "Giant House Spider",
+   "principle": "Funnel Doorway"
+  },
   "espanola-lava-lizard": {
    "id": "dcf41ab6-628b-4043-9a54-66e265b96d9a",
    "name": "Española Lava Lizard",
@@ -3942,6 +4047,11 @@
    "id": "9384ab45-04f6-4c2f-b16d-165eb62ac9e4",
    "name": "Eurasian Collared Dove",
    "principle": "Urban Adaptation"
+  },
+  "eurasian-coot": {
+   "id": "62f0e4bc-a7ff-43f3-a475-d3f006647161",
+   "name": "Eurasian Coot",
+   "principle": "Floating Nest"
   },
   "eurasian-eagle-owl": {
    "id": "922c27e8-94a2-41c2-81b0-95571a14adaf",
@@ -4002,6 +4112,11 @@
    "id": "e25b1be5-f609-4112-bdac-69dfa5f035b0",
    "name": "Eurasian Woodcock",
    "principle": "Hidden Probe"
+  },
+  "european-anchovy": {
+   "id": "174978d8-9370-480b-bf24-87f627375c6c",
+   "name": "European Anchovy",
+   "principle": "Schooling Swarm"
   },
   "european-badger": {
    "id": "132cdf8f-9f86-4c1f-bdeb-33715fcf3a6f",
@@ -4078,6 +4193,11 @@
    "name": "European Nightjar",
    "principle": "Leaf-Litter Stillness"
   },
+  "european-otter": {
+   "id": "0b577f88-55a7-4ff3-abbc-5e7d3916cfab",
+   "name": "European Otter",
+   "principle": "Riverbank Holts"
+  },
   "european-perch": {
    "id": "5552fa2a-8b92-489e-b075-93d7513eb218",
    "name": "European Perch",
@@ -4141,7 +4261,7 @@
   "european-sturgeon": {
    "id": "b3cab09c-bbf3-438f-9975-f9131aaaa70f",
    "name": "European Sturgeon",
-   "principle": "Ancient Resilience Pattern"
+   "principle": "One River Left"
   },
   "european-wasp-german-wasp": {
    "id": "c14433ce-2088-4b8e-85ea-6abeb4c90e13",
@@ -4161,17 +4281,12 @@
   "evergreen-bagworm-moth": {
    "id": "b85681d4-5a8a-4e9a-b536-c5b244144827",
    "name": "Evergreen Bagworm Moth",
-   "principle": "Case-Worn Patience"
+   "principle": "Case-worn Patience"
   },
   "eyelash-viper": {
    "id": "7be6ba8b-2c7f-410a-97ea-284f4ca8b147",
    "name": "Eyelash Viper",
    "principle": "Eyelash Disguise"
-  },
-  "falco-tinnunculus": {
-   "id": "9b02dbbd-dfdc-4dd2-89cd-9c8706dcb91f",
-   "name": "Common Kestrel",
-   "principle": "Hovering Hunt"
   },
   "fallow-deer": {
    "id": "00840e62-5e2a-4253-96de-cb347568875f",
@@ -4192,6 +4307,16 @@
    "id": "2e3bfa2c-289f-4a18-959f-94851ae2d249",
    "name": "False Water Cobra",
    "principle": "Hood Bluff"
+  },
+  "false-widow-spider": {
+   "id": "8cbf06b2-3ed0-4959-b3e1-aee4b5299a28",
+   "name": "False Widow Spider",
+   "principle": "Silent Web"
+  },
+  "false-wolf-spider": {
+   "id": "2953e7f4-88e0-4062-bec5-7a8bf5182f5c",
+   "name": "False Wolf Spider",
+   "principle": "Silent Stalk"
   },
   "fan-horned-beetle": {
    "id": "3c379e02-1d6e-48c9-b2a6-d9acc132584c",
@@ -4277,6 +4402,11 @@
    "id": "b72142d5-6b20-445f-a431-4ec752390957",
    "name": "Fire Salamander",
    "principle": "Warning Beauty"
+  },
+  "fire-tufted-barbet": {
+   "id": "aa1ce37a-04f9-426c-b78e-c6cf75779c95",
+   "name": "Fire-tufted Barbet",
+   "principle": "Vocal Signals"
   },
   "firebug": {
    "id": "a8a6fe0f-8cab-4410-b726-b9cc057ecc1e",
@@ -4383,11 +4513,6 @@
    "name": "Flowerhorn Cichlid",
    "principle": "Nuchal Claim Glow"
   },
-  "fluvicola-nengeta": {
-   "id": "27bac634-3526-4c5e-875f-3b8261d3294f",
-   "name": "Masked Water Tyrant",
-   "principle": "Shallow-water Foray"
-  },
   "flying-dragon": {
    "id": "94f9f4f4-627e-473e-b613-954ac2c0f323",
    "name": "Flying Dragon",
@@ -4427,6 +4552,11 @@
    "id": "55ef7584-cd74-4854-bac1-9b8148a07723",
    "name": "Four-lined Whiptail Lizard",
    "principle": "Stop-Start Dash"
+  },
+  "fowlers-toad": {
+   "id": "271c4e7c-64eb-4f7f-b911-b6ec5bbee8ff",
+   "name": "Fowler's Toad",
+   "principle": "Dune-Speckle Skin"
   },
   "fox-moth": {
    "id": "9ca23245-3bbd-4f6b-83f4-69cb75ce4551",
@@ -4491,22 +4621,12 @@
   "fruit-bat": {
    "id": "b7dd1950-b88c-4d5d-99a1-747352549359",
    "name": "Fruit Bat",
-   "principle": "Renewal"
+   "principle": "Night Seed Courier"
   },
   "fruit-fly": {
    "id": "8e64e098-9d5d-4f1c-8d96-cd81db317041",
    "name": "Fruit Fly",
    "principle": "Rapid Adaptation Strategy"
-  },
-  "fulica-atra": {
-   "id": "62f0e4bc-a7ff-43f3-a475-d3f006647161",
-   "name": "Eurasian Coot",
-   "principle": "Floating Nest"
-  },
-  "furnarius-rufus": {
-   "id": "afd2fcee-ef96-41f1-955e-a67f207245e1",
-   "name": "Rufous Hornero",
-   "principle": "Home Building"
   },
   "gaboon-viper": {
    "id": "52d90ccf-844e-432a-b05f-91cb9ed5bcca",
@@ -4553,15 +4673,10 @@
    "name": "Garibaldi Fish",
    "principle": "Territorial Brightness"
   },
-  "garrulax-leucolophus": {
-   "id": "c8ca22b9-6e38-4082-8a84-68915cfb6ec0",
-   "name": "White-crested Laughingthrush",
-   "principle": "Cackle Chorus"
-  },
   "gau-banded-iguana": {
    "id": "1a9ac90f-3228-4d20-bc8e-221cc8ceb524",
    "name": "Gau Banded Iguana",
-   "principle": "One Island"
+   "principle": "Gau-Only Range"
   },
   "gaur": {
    "id": "52e205fe-5135-4bc3-9f84-5d8ddfb5e28f",
@@ -4608,6 +4723,16 @@
    "name": "Geometric Tortoise",
    "principle": "Geometric Armor"
   },
+  "geopelia-placida": {
+   "id": "6219966d-391d-498d-91d6-47c6a85bc07d",
+   "name": "Peaceful Dove",
+   "principle": "Grounded Nest"
+  },
+  "geophilus-vittatus": {
+   "id": "e43bcff8-d1ca-4f1d-930b-1c703eb5441d",
+   "name": "common soil centipede",
+   "principle": "Hidden Pathways"
+  },
   "gerenuk": {
    "id": "2c99067a-e5c4-4105-ab1c-3b27fa13bdcb",
    "name": "Gerenuk",
@@ -4616,7 +4741,7 @@
   "gharial": {
    "id": "b8b1fa64-dd33-4be5-9273-14656236131e",
    "name": "Gharial",
-   "principle": "Narrow Precision"
+   "principle": "Needle-Jaw Fishing"
   },
   "ghost-ant": {
    "id": "a34b06af-7ee7-4b07-8b5b-850313206e1c",
@@ -4672,11 +4797,6 @@
    "id": "b0ce3ab2-4890-4871-8ad7-9d118d00f7c1",
    "name": "Giant Chameleon",
    "principle": "High Casque"
-  },
-  "giant-clam": {
-   "id": "8702e808-a8ae-4ed9-91ba-14277c2fa43e",
-   "name": "Giant Clam",
-   "principle": "Solar Partnership"
   },
   "giant-day-gecko": {
    "id": "1839a4c1-704b-48e3-8e02-6fc7fceb86d3",
@@ -4762,6 +4882,11 @@
    "id": "b4d2059b-d53f-400f-aee5-37e3a33159dd",
    "name": "Giant Malaysian Katydid",
    "principle": "Leaf-Sized Presence"
+  },
+  "giant-mud-crab": {
+   "id": "f55b35b7-190e-4350-8eb7-83c2e0e99818",
+   "name": "Giant Mud Crab",
+   "principle": "Night-Tide Burrower"
   },
   "giant-otter": {
    "id": "4cf06aaf-29b1-453f-838f-5c66e7b33063",
@@ -4902,11 +5027,6 @@
    "id": "5e45587f-01e8-4000-9370-988f9813159f",
    "name": "Black Skirt Tetra",
    "principle": "Torn-skin Alarm"
-  },
-  "glomeris-marginata": {
-   "id": "747a91e4-7a5c-48f8-a4e0-ae6be1126dcc",
-   "name": "Pill Millipede",
-   "principle": "Compact Shield"
   },
   "glossy-ibis": {
    "id": "cd0ab10c-90f2-4021-8e2e-8df102b2c992",
@@ -5058,6 +5178,11 @@
    "name": "Grass Moth",
    "principle": "Stem Shelter"
   },
+  "grass-veneer-moth": {
+   "id": "adaa5acc-9de1-4ba8-b8da-f81a66facca6",
+   "name": "Grass-veneer Moth",
+   "principle": "Grass Alignment"
+  },
   "grasshopper-and-locust": {
    "id": "ec23c4bb-39ed-427a-aef5-e83faeb390f8",
    "name": "Grasshopper & Locust",
@@ -5092,6 +5217,11 @@
    "id": "2a448373-5305-480a-b3c9-9a59b9e0e0ec",
    "name": "Grayling",
    "principle": "Dorsal Elegance"
+  },
+  "grays-leaf-insect": {
+   "id": "e7403fe9-0488-4211-87c5-8c2546a74461",
+   "name": "Gray's Leaf Insect",
+   "principle": "Nibbled-Edge Veining"
   },
   "great-argus": {
    "id": "7c9be723-4598-4ab8-a4c5-1109205cfd87",
@@ -5188,6 +5318,11 @@
    "name": "Great Skua",
    "principle": "Kleptoparasitism"
   },
+  "great-spangled-fritillary": {
+   "id": "3d6581b7-8dde-4275-819f-c5ee551d2662",
+   "name": "Great Spangled Fritillary",
+   "principle": "Violet Nesting"
+  },
   "great-tailed-grackle": {
    "id": "6cce2ef8-46f7-4cef-86eb-9436ee4027f0",
    "name": "Great-tailed Grackle",
@@ -5211,7 +5346,7 @@
   "great-white-shark": {
    "id": "951cf99f-fbaf-4148-8607-243d0886fc6e",
    "name": "Great White Shark",
-   "principle": "Apex Signal"
+   "principle": "Unseen Approach"
   },
   "greater-adjutant": {
    "id": "49fd96c3-ad6c-42de-a408-e70efb29fbb9",
@@ -5222,6 +5357,11 @@
    "id": "25792a73-5ea6-463c-a057-d795bd5d101d",
    "name": "Greater Amberjack",
    "principle": "Strategic Hunting"
+  },
+  "greater-antillean-grackle": {
+   "id": "b1c6c98c-2769-4e90-b07e-6a7a263daca3",
+   "name": "Greater Antillean Grackle",
+   "principle": "Streetlight Forager"
   },
   "greater-bamboo-lemur": {
    "id": "d93b1523-3ec7-4db1-96cb-74f57bd48fa7",
@@ -5403,6 +5543,11 @@
    "name": "Green Moray",
    "principle": "Reef-Crack Strike"
   },
+  "green-peach-aphid": {
+   "id": "e1cce964-e4d5-497d-a891-ee8364c37618",
+   "name": "Green Peach Aphid",
+   "principle": "Adaptive Reproduction"
+  },
   "green-peafowl": {
    "id": "e24a55c4-6f42-4bf3-9914-3eb74d149ddb",
    "name": "Green Peafowl",
@@ -5468,6 +5613,11 @@
    "name": "Grey Seal",
    "principle": "Reserve"
   },
+  "grey-wagtail": {
+   "id": "556cf04e-41c0-455b-ad59-679f22536999",
+   "name": "Grey Wagtail",
+   "principle": "Streamside Foraging"
+  },
   "greylag-goose": {
    "id": "53582e40-dcc8-4621-a272-476b00dcbf4a",
    "name": "Greylag Goose",
@@ -5482,6 +5632,11 @@
    "id": "8eb33a11-4588-462c-82ee-af3cd214741c",
    "name": "Groundhog",
    "principle": "Winter Budget"
+  },
+  "grovesnail": {
+   "id": "fc7ea048-2197-4946-865d-0a2b96c395d2",
+   "name": "Grovesnail",
+   "principle": "Shell Retreat"
   },
   "guanaco": {
    "id": "96d60ddf-9baf-409f-a8ec-156cc31b67ab",
@@ -5657,11 +5812,6 @@
    "id": "722e77bf-da76-42f1-9460-162c7b27c55a",
    "name": "Long-eared Hedgehog",
    "principle": "Big-Ear Night Forager"
-  },
-  "hemithea-tritonaria": {
-   "id": "327477ee-c2e8-494b-9b19-e03e99d35381",
-   "name": "Emerald Moth",
-   "principle": "Camouflage Mastery"
   },
   "hercules-beetle": {
    "id": "b766c19f-7f83-41aa-93c1-7c2b1cf60713",
@@ -5938,16 +6088,6 @@
    "name": "Hyacinth Macaw",
    "principle": "Blue Devotion"
   },
-  "hypena-indicatalis": {
-   "id": "1983d295-3fd4-44eb-9c8f-b5884c06a22b",
-   "name": "Snout Moth",
-   "principle": "Dead-Leaf Delta"
-  },
-  "hypsipetes-philippinus": {
-   "id": "1e730a6a-68d5-4ff3-b08f-a408f7d0a22a",
-   "name": "Philippine Bulbul",
-   "principle": "Adaptive Song"
-  },
   "iberian-lynx": {
    "id": "e39e8681-b14e-4f14-b2a6-fd86c5d2cad7",
    "name": "Iberian Lynx",
@@ -5957,11 +6097,6 @@
    "id": "df4a7b03-65a4-4061-9a2b-cd987ff05c86",
    "name": "Ibisbill",
    "principle": "River Precision"
-  },
-  "ictinogomphus-decoratus": {
-   "id": "071166e6-d8de-460f-8c0b-ab264257943b",
-   "name": "Common Flangetail",
-   "principle": "Streamside Hover"
   },
   "ili-pika": {
    "id": "43071965-3e66-4d08-854a-af7181a76d5c",
@@ -5973,7 +6108,7 @@
    "name": "Impala",
    "principle": "Elastic Escape"
   },
-  "imperial-moth": {
+  "imperial-fruit-sucking-moth": {
    "id": "061e0d38-75ed-4232-a553-181dbb1beb82",
    "name": "Imperial Fruit-sucking Moth",
    "principle": "Leaf-Wrapped Pupation"
@@ -6058,11 +6193,6 @@
    "name": "Io Moth",
    "principle": "Illusion Defense"
   },
-  "irena-puella": {
-   "id": "310391ac-7463-431c-9556-6d4941fe6acb",
-   "name": "Asian Fairy-bluebird",
-   "principle": "Cobalt Canopy Flash"
-  },
   "iridescent-shark": {
    "id": "7e2b6cdc-6357-4526-81a2-ede0459030bb",
    "name": "Iridescent Shark",
@@ -6138,6 +6268,11 @@
    "name": "Japanese Quail",
    "principle": "Grounded Resilience"
   },
+  "japanese-rice-fish": {
+   "id": "855282e6-1efc-469f-8714-9e518c8aed6a",
+   "name": "Japanese Rice Fish",
+   "principle": "Surface Skimmer"
+  },
   "japanese-sea-nettle": {
    "id": "0c4c4805-380d-418a-ae4d-ee3c7a2efa38",
    "name": "Japanese Sea Nettle",
@@ -6157,6 +6292,16 @@
    "id": "7189d9eb-3a0d-4379-a7b5-6c25b8c26241",
    "name": "Java Mouse-deer",
    "principle": "Mouse-Deer Small Stealth"
+  },
+  "javan-ferret-badger": {
+   "id": "91995844-65fb-4673-be34-980b6821bbf5",
+   "name": "Javan Ferret-Badger",
+   "principle": "Snout-Led Dig"
+  },
+  "javan-munia": {
+   "id": "9a7b9c33-0590-4527-bd11-84141f369659",
+   "name": "Javan Munia",
+   "principle": "Grass Blade Weaving"
   },
   "javan-myna": {
    "id": "e022e97e-f9de-48d6-9b33-58a649723f91",
@@ -6192,6 +6337,11 @@
    "id": "39045829-03ec-4160-aa3e-b927859d36eb",
    "name": "Javanese Grasshopper",
    "principle": "Shrub-Stem Blotching"
+  },
+  "javanese-mud-dauber": {
+   "id": "a1a1e65c-7d82-4e2d-ae27-e963c460ba2e",
+   "name": "Javanese Mud Dauber",
+   "principle": "Mud Chamber"
   },
   "jellyfish": {
    "id": "5c69e7fb-716e-4868-b968-9d343a92a5ce",
@@ -6393,6 +6543,11 @@
    "name": "Labyrinth Funnel Weaver",
    "principle": "Strategic Architecture"
   },
+  "lace-bug": {
+   "id": "8fd29789-46bb-429c-808d-cc50a027a04b",
+   "name": "Lace Bug",
+   "principle": "Lace Roof"
+  },
   "lace-monitor": {
    "id": "a8a74aef-407c-45ef-bf04-eeed9304f248",
    "name": "Lace Monitor",
@@ -6432,11 +6587,6 @@
    "id": "d3e1d97c-7be8-4eb3-b385-127a15a698f3",
    "name": "Sea Lamprey",
    "principle": "Ancient Attachment"
-  },
-  "lanius-cristatus": {
-   "id": "8039c366-0db4-4e77-ba33-43f189da7e7a",
-   "name": "Brown Shrike",
-   "principle": "Strategic Hunting Strategy"
   },
   "lantern-bug": {
    "id": "5770f59e-aaf9-4fde-9041-915a5e2de386",
@@ -6488,6 +6638,11 @@
    "name": "Leaf Beetle",
    "principle": "Host-Plant Specialist"
   },
+  "leaf-eating-slug": {
+   "id": "68f6b445-e11e-4b8d-ac21-445ee82dd119",
+   "name": "Leaf-eating Slug",
+   "principle": "Slow Power"
+  },
   "leaf-scorpionfish": {
    "id": "17f320f5-35aa-40c0-bd4f-df1c47f7d8cc",
    "name": "Leaf Scorpionfish",
@@ -6522,6 +6677,11 @@
    "id": "f8de28f7-83a4-4f60-9b91-3a6774a51076",
    "name": "Leatherback Sea Turtle",
    "principle": "Soft Might"
+  },
+  "leopard-cat": {
+   "id": "f3976df7-d03b-413a-ad4b-010ed84142c9",
+   "name": "Leopard Cat",
+   "principle": "Stealth Navigation Strategy"
   },
   "leopard-gecko": {
    "id": "c4e069d5-8807-427e-bf5c-655c2a845b55",
@@ -6618,6 +6778,16 @@
    "name": "Lilac-breasted Roller",
    "principle": "Flourish"
   },
+  "limnephilus-lunatus": {
+   "id": "d68fb92a-cd77-4881-bdb0-67289ae83240",
+   "name": "Caddisfly",
+   "principle": "Pebble Armor"
+  },
+  "limpkin": {
+   "id": "41c0f831-57be-4efa-ba04-c4c804ab49d7",
+   "name": "Limpkin",
+   "principle": "Focused Foraging"
+  },
   "lined-day-gecko": {
    "id": "3a3c7a70-c681-4886-90fa-0efb11086c73",
    "name": "Lined Day Gecko",
@@ -6642,6 +6812,16 @@
    "id": "0dc5fdac-ff61-4ba1-b8f7-4ac10e88e8a3",
    "name": "Little Auk",
    "principle": "Smallsea"
+  },
+  "little-black-cormorant": {
+   "id": "1aae18ed-39f4-4109-a3b4-c5528c7024e6",
+   "name": "Little Black Cormorant",
+   "principle": "Cooperative Fishing"
+  },
+  "little-blue-heron": {
+   "id": "be03b0da-67af-46e4-9d72-f0a570ee1e5e",
+   "name": "Little Blue Heron",
+   "principle": "Slow Peering Wade"
   },
   "little-dragonfish": {
    "id": "5d3691a6-0516-4318-be81-d8fadfffea0f",
@@ -6668,10 +6848,10 @@
    "name": "Llama",
    "principle": "Service"
   },
-  "locusta-migratoria": {
-   "id": "c4a7a8b5-0079-4351-a219-b36e420c16bd",
-   "name": "Migratory Locust",
-   "principle": "Swarm-Phase Shift"
+  "loggerhead-musk-turtle": {
+   "id": "56c7c3ab-c8a8-497e-8b10-9cd7f169c854",
+   "name": "Loggerhead Musk Turtle",
+   "principle": "Crevice Retreat"
   },
   "loggerhead-sea-turtle": {
    "id": "bf1c746d-9e43-4408-87cb-f3377da6e970",
@@ -6682,11 +6862,6 @@
    "id": "bacf33a9-6b21-4eec-aad4-47880be31d2e",
    "name": "Loggerhead Shrike",
    "principle": "Watchpost Warning"
-  },
-  "lonchura-leucogastroides": {
-   "id": "9a7b9c33-0590-4527-bd11-84141f369659",
-   "name": "Javan Munia",
-   "principle": "Grass Blade Weaving"
   },
   "long-eared-jerboa": {
    "id": "991cfec4-7919-42fc-895d-884031e48c67",
@@ -6818,11 +6993,6 @@
    "name": "Luna Moth",
    "principle": "Soft Impression"
   },
-  "lutra-lutra": {
-   "id": "0b577f88-55a7-4ff3-abbc-5e7d3916cfab",
-   "name": "European Otter",
-   "principle": "Riverbank Cache"
-  },
   "luzon-garden-spider": {
    "id": "409f672e-a5aa-420a-afae-e531c98e598c",
    "name": "Luzon Garden Spider",
@@ -6832,11 +7002,6 @@
    "id": "22894902-d419-46f5-9bc0-822bac123690",
    "name": "Lycaenid Butterfly",
    "principle": "Subtlety"
-  },
-  "macaca-arctoides": {
-   "id": "4d4640e6-a545-42af-a9c8-c9cb68748adb",
-   "name": "Stump-tailed Macaque",
-   "principle": "Forest Forager"
   },
   "macaroni-penguin": {
    "id": "33b655c5-6ae8-452d-9551-798dc337a3f5",
@@ -6848,15 +7013,10 @@
    "name": "Madagascar Day Gecko",
    "principle": "Toe-Pad Adhesion"
   },
-  "madagascar-diadem": {
-   "id": "e121ad7b-ca84-460e-b6f1-055041e85192",
-   "name": "Brilliant Blue",
-   "principle": "Sunlit Perch"
-  },
   "madagascar-ground-boa": {
    "id": "1900be23-7b80-4f31-8f92-f0af5e709942",
    "name": "Madagascar Ground Boa",
-   "principle": "Grounded Force"
+   "principle": "Leaf-Litter Constrictor"
   },
   "madagascar-hognose-snake": {
    "id": "57507079-7d7b-4eaa-b451-424a52b3d95b",
@@ -6998,6 +7158,11 @@
    "name": "Maned Wolf",
    "principle": "Heighted Vision"
   },
+  "mangrove-crab": {
+   "id": "b1fc1e26-8460-435f-8289-37c892a4356a",
+   "name": "Mangrove Crab",
+   "principle": "Mud Fortress"
+  },
   "mangrove-horseshoe-crab": {
    "id": "014d407a-e17b-4070-b7d4-4fdd2cceb5c6",
    "name": "Mangrove Horseshoe Crab",
@@ -7043,6 +7208,11 @@
    "name": "Manx Shearwater",
    "principle": "Windread"
   },
+  "map-butterfly": {
+   "id": "1948c375-8667-4714-b1eb-051f85f0930b",
+   "name": "Map Butterfly",
+   "principle": "Season-Switched Wings"
+  },
   "marabou-stork": {
    "id": "399a7192-9ee2-496c-b26c-1ee73acefd30",
    "name": "Marabou Stork",
@@ -7057,6 +7227,11 @@
    "id": "5575b711-d895-4cc7-a0cc-64c74bbd3316",
    "name": "Marbled Godwit",
    "principle": "Deep Probing"
+  },
+  "marbled-locust": {
+   "id": "33dc1396-0189-495c-81f8-08e63c3a04cd",
+   "name": "Marbled Locust",
+   "principle": "Rapid Leap"
   },
   "marbled-newt": {
    "id": "7884a1bb-88d0-4f8a-b5fb-b1e47f7d5f30",
@@ -7138,6 +7313,11 @@
    "name": "Mary River Turtle",
    "principle": "Aquatic Oddity"
   },
+  "masked-lapwing": {
+   "id": "1a22503b-7a72-4e6c-bb55-3f69e7c2f596",
+   "name": "Masked Lapwing",
+   "principle": "Alarm Call"
+  },
   "masked-lovebird": {
    "id": "66a9f7cf-b3e6-4698-8591-7f344dafbda6",
    "name": "Masked Lovebird",
@@ -7148,6 +7328,11 @@
    "name": "Masked Owl",
    "principle": "Reception"
   },
+  "masked-water-tyrant": {
+   "id": "27bac634-3526-4c5e-875f-3b8261d3294f",
+   "name": "Masked Water Tyrant",
+   "principle": "Shallow-water Foray"
+  },
   "mata-mata": {
    "id": "ec3815b3-f3c4-4392-a2f1-1419a46a60e3",
    "name": "Mata Mata",
@@ -7157,11 +7342,6 @@
    "id": "9d0730c8-5b68-4317-95f8-b4e5671d1339",
    "name": "Matschie's Tree Kangaroo",
    "principle": "Body Reimagined"
-  },
-  "mauremys-reevesii": {
-   "id": "712f5dcf-2eaf-443a-9275-e26d3e5db23b",
-   "name": "Reeves' Turtle",
-   "principle": "Streamside Pause"
   },
   "may-beetle": {
    "id": "280df967-998c-4fba-900e-b520377987ea",
@@ -7193,6 +7373,11 @@
    "name": "Mediterranean Feather Star",
    "principle": "Feathered Current"
   },
+  "mediterranean-hermit-crab": {
+   "id": "3864fbed-7317-4b38-ac5f-1d1e39dd8537",
+   "name": "Mediterranean Hermit Crab",
+   "principle": "Shell Swap"
+  },
   "mediterranean-house-gecko": {
    "id": "5c8bb13f-7496-4912-b0ec-01750b4881ae",
    "name": "Mediterranean House Gecko",
@@ -7208,30 +7393,15 @@
    "name": "Meerkat",
    "principle": "Vigilance"
   },
-  "melanotaenia-boesemani": {
-   "id": "5891927d-e9de-4ae2-889b-afe4e06d064e",
-   "name": "Boeseman's Rainbowfish",
-   "principle": "Two-Tone Courtship Flare"
-  },
   "melipona": {
    "id": "16835e93-f1a1-497f-b682-cad63d7b798b",
    "name": "Melipona Stingless Bee",
    "principle": "Resin Gate"
   },
-  "melogale-orientalis": {
-   "id": "91995844-65fb-4673-be34-980b6821bbf5",
-   "name": "Javan Ferret-Badger",
-   "principle": "Snout-Led Dig"
-  },
   "merriams-kangaroo-rat": {
    "id": "96881be2-3d80-4eb8-a005-99914435948e",
    "name": "Merriam's Kangaroo Rat",
    "principle": "Desert Seed Vault"
-  },
-  "metopograpsus-messor": {
-   "id": "b1fc1e26-8460-435f-8289-37c892a4356a",
-   "name": "Mangrove Crab",
-   "principle": "Mud Fortress"
   },
   "mexican-beaded-lizard": {
    "id": "28203c18-f117-41c6-99b7-a1709c7ac791",
@@ -7252,6 +7422,16 @@
    "id": "eb72c01b-3573-4e99-9408-78d9e029ab7e",
    "name": "Middle East Blind Mole-rat",
    "principle": "Burrowcraft"
+  },
+  "migratory-locust": {
+   "id": "c4a7a8b5-0079-4351-a219-b36e420c16bd",
+   "name": "Migratory Locust",
+   "principle": "Swarm-Phase Shift"
+  },
+  "military-macaw": {
+   "id": "cbf5e5c0-4d55-41bc-9278-58a9a5132652",
+   "name": "Military Macaw",
+   "principle": "Traded Preening"
   },
   "milk-snake": {
    "id": "015be230-2acc-45d0-8018-d4013a7057e2",
@@ -7277,6 +7457,11 @@
    "id": "8c9f5c2c-83a9-4003-bd83-ec09e9b2ad4e",
    "name": "Mint Moth",
    "principle": "Detail"
+  },
+  "minute-pirate-bug": {
+   "id": "46cc9430-75e3-4106-a98c-9a809d3fb2d4",
+   "name": "minute pirate bug",
+   "principle": "Ambush Strike"
   },
   "mirror-spider": {
    "id": "a5795b47-f766-4305-94a1-83e90b9b521d",
@@ -7368,6 +7553,11 @@
    "name": "Moon Rat",
    "principle": "Nocturnal Scent"
   },
+  "moon-wrasse": {
+   "id": "f328c784-cd06-47ab-a7c6-82d07250a512",
+   "name": "Moon Wrasse",
+   "principle": "Coral Patrol"
+  },
   "moorish-idol": {
    "id": "abba435a-0d88-43d1-bf97-169a664e3271",
    "name": "Moorish Idol",
@@ -7403,15 +7593,10 @@
    "name": "Moss Mimic Stick Insect",
    "principle": "Texture Disguise"
   },
-  "motacilla-cinerea": {
-   "id": "556cf04e-41c0-455b-ad59-679f22536999",
-   "name": "Grey Wagtail",
-   "principle": "Streamside Foraging"
-  },
-  "motacilla-flava": {
-   "id": "9187d87d-ec83-43f2-985a-bc09b0af1554",
-   "name": "Western Yellow Wagtail",
-   "principle": "Trans-Sahara Stopover"
+  "mottled-duck": {
+   "id": "9c82bac7-ecbf-496b-90ff-3016b454efb0",
+   "name": "Mottled Duck",
+   "principle": "Cordgrass Cloak"
   },
   "mouflon": {
    "id": "1db2ad71-ef3d-43dc-b7a2-f341f9dff8c7",
@@ -7508,11 +7693,6 @@
    "name": "Mute Swan",
    "principle": "Silent Grace"
   },
-  "myzus-persicae": {
-   "id": "e1cce964-e4d5-497d-a891-ee8364c37618",
-   "name": "Green Peach Aphid",
-   "principle": "Adaptive Reproduction"
-  },
   "nacunda-nighthawk": {
    "id": "eac6f24d-d6ee-44e2-ae4d-e7a14e1ddc8d",
    "name": "Nacunda Nighthawk",
@@ -7552,6 +7732,11 @@
    "id": "538977eb-e1e4-4869-ab83-18e977a6f5d4",
    "name": "Nene",
    "principle": "Landscape Shaping"
+  },
+  "neon-tetra": {
+   "id": "0bfd0e8d-5b0a-467f-a050-f86b6524f74e",
+   "name": "Neon Tetra",
+   "principle": "Flash Schooling"
   },
   "neotropic-cormorant": {
    "id": "677ed09d-bc0c-4d05-b869-ee168f6ec6ed",
@@ -7612,6 +7797,11 @@
    "id": "88a8dbad-28d6-4516-a2a2-04abe454baf2",
    "name": "Nine-banded Armadillo",
    "principle": "Armoring"
+  },
+  "nomascus-leucogenys": {
+   "id": "431a2c56-925d-4f51-bedb-4444f92821c6",
+   "name": "Northern white-cheeked gibbon",
+   "principle": "Arboreal Pathways"
   },
   "north-american-beaver": {
    "id": "552fe522-889f-43d6-a131-023fff7d0659",
@@ -7798,16 +7988,6 @@
    "name": "Ocelot",
    "principle": "Rosette Camouflage"
   },
-  "ocypus-olens": {
-   "id": "4f942b24-17d3-4fa5-9863-bbb86106ddcc",
-   "name": "Devil's Coach Horse Beetle",
-   "principle": "Defensive Posture"
-  },
-  "odontomantis-planiceps": {
-   "id": "d3469b62-56e1-43d0-b344-7ed483ddbcd8",
-   "name": "Ant Mimic Mantis",
-   "principle": "Trail-Worker Disguise"
-  },
   "oertzens-lizard": {
    "id": "647609e3-c85e-4c23-9483-02a873a3cace",
    "name": "Oertzen's Lizard",
@@ -7863,11 +8043,6 @@
    "name": "Olm",
    "principle": "Cave Adaptation"
   },
-  "ommatoiulus-moreleti": {
-   "id": "4616e774-d1a4-486c-abfa-f382feec4765",
-   "name": "Algerian Millipede",
-   "principle": "Segmented Resilience"
-  },
   "onager": {
    "id": "3350602e-1833-4f94-a030-d984d203f3f4",
    "name": "Onager",
@@ -7913,6 +8088,11 @@
    "name": "Orange Sea Pen",
    "principle": "Soft Colony Anchor"
   },
+  "orange-sulphur": {
+   "id": "35d03fc7-81ad-4ffa-95dd-1da66a4f49f3",
+   "name": "Orange Sulphur",
+   "principle": "Wing Flash Display"
+  },
   "orangutan": {
    "id": "a2b2741b-acf4-4142-9fae-7a0212ed10b8",
    "name": "Orangutan",
@@ -7943,6 +8123,11 @@
    "name": "Ord's Kangaroo Rat",
    "principle": "Pouch-Filled Return"
   },
+  "orgyia-antiqua": {
+   "id": "2cc6dfe5-5f8f-49ff-b42e-a07b3f9b3329",
+   "name": "Vapourer Moth",
+   "principle": "Silk Egg Cradle"
+  },
   "oribi": {
    "id": "8ea1a3ce-9f77-4b6b-be31-b872175138d9",
    "name": "Oribi",
@@ -7956,12 +8141,17 @@
   "oriental-fire-bellied-toad": {
    "id": "a3eafc21-b1ce-4ebc-888d-353cdea43f56",
    "name": "Oriental Fire-bellied Toad",
-   "principle": "Warning Flash"
+   "principle": "Hidden Red Belly"
   },
   "oriental-garden-lizard": {
    "id": "5210be41-ce32-4528-a064-cfda090d3d32",
    "name": "Oriental Garden Lizard",
    "principle": "Signal Shift"
+  },
+  "oriental-honey-buzzard": {
+   "id": "eb1ea238-e349-4793-842a-bf60a7477d20",
+   "name": "Oriental Honey Buzzard",
+   "principle": "Hive Raider"
   },
   "oriental-latrine-fly": {
    "id": "ea740db6-e2a9-404e-83c0-d1019bb51296",
@@ -7983,15 +8173,15 @@
    "name": "Oriental Pied Hornbill",
    "principle": "Sealing"
   },
+  "oriental-white-eye": {
+   "id": "d75c35e7-7935-488b-b9e5-18e3d36b98d6",
+   "name": "Oriental White-eye",
+   "principle": "Leaf-Gleaning Party"
+  },
   "orinoco-mata-mata-turtle": {
    "id": "e4966a14-4273-4e3d-ae84-bd903e5093d4",
    "name": "Orinoco Mata Mata Turtle",
    "principle": "Sunken-Leaf Guise"
-  },
-  "orius-insidiosus": {
-   "id": "46cc9430-75e3-4106-a98c-9a809d3fb2d4",
-   "name": "minute pirate bug",
-   "principle": "Ambush Strike"
   },
   "ornate-box-turtle": {
    "id": "f988550f-543e-4443-9909-961cf506a9a6",
@@ -8017,11 +8207,6 @@
    "id": "b50cbae9-fda5-4af6-8ff8-653aaaf0d73b",
    "name": "Ornate Spiny-tailed Lizard",
    "principle": "Sun Budget"
-  },
-  "oryzias-latipes": {
-   "id": "855282e6-1efc-469f-8714-9e518c8aed6a",
-   "name": "Japanese Rice Fish",
-   "principle": "Surface Skimmer"
   },
   "oscar-fish": {
    "id": "13408301-20ac-4183-9cec-cb334f265d2d",
@@ -8072,6 +8257,11 @@
    "id": "b1116290-b83e-48fc-9cd8-f410ea3688ae",
    "name": "Pacific Black Duck",
    "principle": "Adaptive Foraging"
+  },
+  "pacific-blue-bellied-lizard": {
+   "id": "367736ad-0cff-4a70-8d32-f94e299cdd15",
+   "name": "Western Fence Lizard",
+   "principle": "Sunlit Vigil"
   },
   "pacific-herring": {
    "id": "abe30c78-dd03-4d24-a249-f6e6023bea69",
@@ -8133,6 +8323,16 @@
    "name": "Pajama Cardinalfish",
    "principle": "Patterned Calm"
   },
+  "pale-beauty-moth": {
+   "id": "c1cb25ea-cec1-46d1-8602-32fdca725e05",
+   "name": "Pale Beauty Moth",
+   "principle": "Lichen-Bark Ghost"
+  },
+  "pale-billed-flowerpecker": {
+   "id": "872c7976-d89c-4050-aeb8-cc39bcba147f",
+   "name": "Pale-billed Flowerpecker",
+   "principle": "Mistletoe Seed Delivery"
+  },
   "pallass-cat": {
    "id": "faed7b8d-9e6a-401c-94e1-6b030b15399a",
    "name": "Pallas's Cat",
@@ -8168,6 +8368,11 @@
    "name": "Panda Ant",
    "principle": "Cute Warning"
   },
+  "panda-corydoras": {
+   "id": "0813799c-7fac-4ac8-97e1-4628e30af0a8",
+   "name": "Panda Corydoras",
+   "principle": "Gravel Sifter"
+  },
   "panther-chameleon": {
    "id": "3bb77594-9e2b-4902-967f-3643fa591336",
    "name": "Panther Chameleon",
@@ -8193,16 +8398,6 @@
    "name": "Paper Wasp",
    "principle": "Paper Order"
   },
-  "papilio-polyxenes": {
-   "id": "92cc6b1e-2b18-48b2-8125-ddc9bb35ed05",
-   "name": "Black Swallowtail",
-   "principle": "Silk-Girdled Chrysalis"
-  },
-  "paracheirodon-innesi": {
-   "id": "0bfd0e8d-5b0a-467f-a050-f86b6524f74e",
-   "name": "Neon Tetra",
-   "principle": "Flash Schooling"
-  },
   "paradise-flying-snake": {
    "id": "1882a32d-d9de-4644-bbde-090b2afc8b23",
    "name": "Paradise Flying Snake",
@@ -8226,7 +8421,7 @@
   "parasitic-wasp": {
    "id": "e5d7d97f-f3dc-4b26-8260-1766b0a19aac",
    "name": "Parasitic Wasp",
-   "principle": "Field Focus"
+   "principle": "Tap-and-Read Search"
   },
   "parma-wallaby": {
    "id": "8c1b4081-657c-4201-8083-f0428c13f9fb",
@@ -8252,6 +8447,11 @@
    "id": "c3bc359b-fd51-4e93-b6ff-16354b2c5816",
    "name": "Pea Aphid",
    "principle": "Small Colony Pressure"
+  },
+  "pea-moth": {
+   "id": "0f4004e5-f082-4319-8c8c-5f42e9b01e84",
+   "name": "Pea Moth",
+   "principle": "Timed Hatch"
   },
   "peach-faced-lovebird": {
    "id": "ccf0132c-4320-4493-82bd-b3cbe370e696",
@@ -8303,6 +8503,16 @@
    "name": "Pelican Eel",
    "principle": "Wide-Mouth Opportunity"
   },
+  "pemphigus-populitransversus": {
+   "id": "5fb9e40b-a4cf-4fb7-b3bf-736a87d5ff01",
+   "name": "Poplar-gall aphid",
+   "principle": "Gall Fortress"
+  },
+  "pennsylvania-ground-beetle": {
+   "id": "90b9ac2c-57eb-4617-98ed-12c7975852b0",
+   "name": "Pennsylvania Ground Beetle",
+   "principle": "Seed Cache"
+  },
   "pere-davids-deer": {
    "id": "12587e3c-bb45-469e-ba7b-af886eee911f",
    "name": "Pere David's Deer",
@@ -8311,7 +8521,7 @@
   "peregrine-falcon": {
    "id": "d1ee13c5-c5a4-462c-8535-0a97831517aa",
    "name": "Peregrine Falcon",
-   "principle": "Gravity"
+   "principle": "Altitude"
   },
   "perentie": {
    "id": "faeae090-40fd-45ea-904b-5b8ff52c9699",
@@ -8323,11 +8533,6 @@
    "name": "Periwinkle",
    "principle": "Tidal Resilience"
   },
-  "pernis-orientalis": {
-   "id": "eb1ea238-e349-4793-842a-bf60a7477d20",
-   "name": "Oriental Honey Buzzard",
-   "principle": "Hive Raider"
-  },
   "persian-leopard": {
    "id": "00a8518d-883e-4d6f-a07b-522d328f35a8",
    "name": "Persian Leopard",
@@ -8338,10 +8543,10 @@
    "name": "Pesquet's Parrot",
    "principle": "Stark Distinction"
   },
-  "phasianus-colchicus": {
-   "id": "4aac5c1e-be69-4c81-812a-04ac8b717d90",
-   "name": "Common Pheasant",
-   "principle": "Stubble-Brown Crouch"
+  "philippine-bulbul": {
+   "id": "1e730a6a-68d5-4ff3-b08f-a408f7d0a22a",
+   "name": "Philippine Bulbul",
+   "principle": "Adaptive Song"
   },
   "philippine-crocodile": {
    "id": "eea5409e-a36e-4685-846a-4c112de0a4e7",
@@ -8362,11 +8567,6 @@
    "id": "9e1d10cb-4a6b-4488-b3b3-5b48ba06a63c",
    "name": "Philippine Tarsier",
    "principle": "Tarsier Focus"
-  },
-  "phyllium-bioculatum": {
-   "id": "e7403fe9-0488-4211-87c5-8c2546a74461",
-   "name": "Gray's Leaf Insect",
-   "principle": "Nibbled-Edge Veining"
   },
   "phyllium-giganteum": {
    "id": "8c023b05-3caf-4c5c-89ff-9879e21eb4e5",
@@ -8442,6 +8642,11 @@
    "id": "56aee282-0caf-4b59-96ea-63edbe59e64f",
    "name": "Pileated Woodpecker",
    "principle": "Excavation"
+  },
+  "pill-millipede": {
+   "id": "747a91e4-7a5c-48f8-a4e0-ae6be1126dcc",
+   "name": "Pill Millipede",
+   "principle": "Compact Shield"
   },
   "pin-tailed-whydah": {
    "id": "023d50f3-c75b-43ca-94d5-6245c69ab00b",
@@ -8537,11 +8742,6 @@
    "id": "58eddabe-6de4-4256-ba34-c9866b4feea3",
    "name": "Platypus",
    "principle": "Integration"
-  },
-  "plecturocebus-cupreus": {
-   "id": "48892b54-2665-4f2e-b9f1-7eaca91e30f0",
-   "name": "Coppery Titi Monkey",
-   "principle": "Tail Tangle"
   },
   "ploughshare-tortoise": {
    "id": "a20aacbb-d96e-449e-9639-a8c9e64f6cb1",
@@ -8668,10 +8868,10 @@
    "name": "Prevost's Squirrel",
    "principle": "River-Split Colour Races"
   },
-  "prionailurus-bengalensis": {
-   "id": "f3976df7-d03b-413a-ad4b-010ed84142c9",
-   "name": "Leopard Cat",
-   "principle": "Stealth Navigation Strategy"
+  "privet-hawk-moth": {
+   "id": "8150f96a-b76f-43dc-91a9-d95dfcbe9d02",
+   "name": "Privet Hawk-moth",
+   "principle": "Nocturnal Navigation"
   },
   "proboscis-monkey": {
    "id": "4848471d-2654-4627-b583-51776b70edd6",
@@ -8683,20 +8883,10 @@
    "name": "Pronghorn",
    "principle": "Open-Plain Speed"
   },
-  "psilopogon-pyrolophus": {
-   "id": "aa1ce37a-04f9-426c-b78e-c6cf75779c95",
-   "name": "Fire-tufted Barbet",
-   "principle": "Vocal Signals"
-  },
   "psychedelic-frogfish": {
    "id": "6438df7f-6a9b-492f-a71b-6f38d12617e5",
    "name": "Psychedelic Frogfish",
    "principle": "Hidden Lure"
-  },
-  "pterophylla-camellifolia": {
-   "id": "6e8a492f-fb2d-46f6-93d5-1905c91ff79b",
-   "name": "Common True Katydid",
-   "principle": "Night Chorus"
   },
   "pufferfish": {
    "id": "5e0e864f-68a9-4be8-ac96-cc2dd17c0d6e",
@@ -8707,11 +8897,6 @@
    "id": "c18ae943-8b6b-44fa-85c5-fc29731d72cf",
    "name": "Puku",
    "principle": "Wetland Alertness"
-  },
-  "puntius-binotatus": {
-   "id": "113e04b3-88bb-4c05-b37e-83a9448c4a1b",
-   "name": "Spotted Barb",
-   "principle": "Riffle And Backwater"
   },
   "purple-crowned-fairywren": {
    "id": "b674a1ac-0965-4b84-ae9d-e4252225be7b",
@@ -8811,7 +8996,7 @@
   "rainbow-bee-eater": {
    "id": "31209a35-b390-410f-ae45-3c598f5c17cc",
    "name": "Rainbow Bee-eater",
-   "principle": "Refinement"
+   "principle": "Perch-Side De-Stinging"
   },
   "rainbow-crab": {
    "id": "eb72cd74-e761-400b-b712-452f11be9d15",
@@ -8913,6 +9098,11 @@
    "name": "Red-bellied Titi",
    "principle": "Pairing"
   },
+  "red-bellied-woodpecker": {
+   "id": "014795bb-031f-48ea-afb2-c5c7ad380446",
+   "name": "Red-bellied Woodpecker",
+   "principle": "Tree Drum Signal"
+  },
   "red-billed-oxpecker": {
    "id": "845c0632-dd7f-4173-8ba4-ca31cb2f60ec",
    "name": "Red-billed Oxpecker",
@@ -8962,6 +9152,11 @@
    "id": "4641397e-9e18-486e-a087-d36c4e2b6555",
    "name": "Red-crowned Crane",
    "principle": "Lifelong Pairing"
+  },
+  "red-crowned-parrot": {
+   "id": "4608d7f5-7ccd-486d-80b5-cd49865e38e0",
+   "name": "Red-crowned Parrot",
+   "principle": "Vocal Mimicry"
   },
   "red-deer": {
    "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
@@ -9218,6 +9413,11 @@
    "name": "Reef Stonefish",
    "principle": "Venomous Stillness"
   },
+  "reeves-turtle": {
+   "id": "712f5dcf-2eaf-443a-9275-e26d3e5db23b",
+   "name": "Reeves' Turtle",
+   "principle": "Streamside Pause"
+  },
   "reevess-muntjac": {
    "id": "8280ba6f-70b5-4748-aa83-a93655cd7a8b",
    "name": "Reeves's Muntjac",
@@ -9246,7 +9446,7 @@
   "reticulated-python": {
    "id": "52b5d5ea-4f03-470d-ad65-55a40fb3b624",
    "name": "Reticulated Python",
-   "principle": "Radiant Difference"
+   "principle": "Hidden Strength"
   },
   "reticulated-river-stingray": {
    "id": "e33659d9-706d-464b-81d2-3f66a460020b",
@@ -9488,10 +9688,20 @@
    "name": "Ruffed Grouse",
    "principle": "Signal"
   },
+  "rufous-bellied-thrush": {
+   "id": "8d339594-726e-45c4-a735-0d6fb0e9c93e",
+   "name": "Rufous-bellied Thrush",
+   "principle": "Rain-Cued Nesting"
+  },
   "rufous-elephant-shrew": {
    "id": "eae67c12-e71e-4f52-b8ed-a8f9fe539aa1",
    "name": "Rufous Elephant Shrew",
    "principle": "Pathway Sprint"
+  },
+  "rufous-hornero": {
+   "id": "afd2fcee-ef96-41f1-955e-a67f207245e1",
+   "name": "Rufous Hornero",
+   "principle": "Home Building"
   },
   "rufous-potoo": {
    "id": "256b0017-eaff-4b89-b126-fccb80fd1b28",
@@ -9558,6 +9768,11 @@
    "name": "Saddle-billed Stork",
    "principle": "Striking Work"
   },
+  "sahara-desert-ant": {
+   "id": "1aa3c41c-7f6a-4870-9cfc-c2502da27fae",
+   "name": "Sahara Desert Ant",
+   "principle": "Heat Navigation"
+  },
   "sahara-spiny-tailed-lizard": {
    "id": "65cf60a2-a9d2-4ccc-96b1-27543d11b6d5",
    "name": "Sahara Spiny-tailed Lizard",
@@ -9582,11 +9797,6 @@
    "id": "a134f7a5-0bf2-4cc8-9f53-b81eff7889f2",
    "name": "Saimaa Ringed Seal",
    "principle": "Breathing Openings"
-  },
-  "saimiri-boliviensis": {
-   "id": "48dde8d5-aa75-4b8b-89f2-4a96268ec8e4",
-   "name": "Bolivian Squirrel Monkey",
-   "principle": "Canopy Network"
   },
   "sally-lightfoot-crab": {
    "id": "a253b918-8ca8-406a-a229-7063ab194a62",
@@ -9628,6 +9838,11 @@
    "name": "Sand Goby",
    "principle": "Tiny Territory"
   },
+  "sand-lizard": {
+   "id": "69fd4062-72d6-4367-8464-5bc4fda4da44",
+   "name": "Sand Lizard",
+   "principle": "Seasonal Green"
+  },
   "sanderling": {
    "id": "9eaae4e6-fef1-4e2c-bd3c-e4e659812b40",
    "name": "Sanderling",
@@ -9643,15 +9858,15 @@
    "name": "Saola",
    "principle": "Whisper Rarity"
   },
-  "sarasinula-linguaeformis": {
-   "id": "68f6b445-e11e-4b8d-ac21-445ee82dd119",
-   "name": "Leaf-eating Slug",
-   "principle": "Slow Power"
-  },
   "sarcastic-fringehead": {
    "id": "16646ac7-e9ca-4be3-a4c9-bf9537811e08",
    "name": "Sarcastic Fringehead",
    "principle": "Territorial Bluff"
+  },
+  "sardina-pilchardus": {
+   "id": "63d6c711-f995-44b5-8260-74570d657d8e",
+   "name": "European Pilchard",
+   "principle": "Schooling Swirl"
   },
   "sargassum-fish": {
    "id": "d851a1df-1445-48ec-90cb-a12d115d33be",
@@ -9677,6 +9892,11 @@
    "id": "660e10cf-f720-473b-8d7a-d2cda8c6fe38",
    "name": "Satin Flycatcher",
    "principle": "Quick Perch Turn"
+  },
+  "savannah-monitor": {
+   "id": "decda091-d63b-4af4-be0d-7407bed3115f",
+   "name": "Savannah Monitor",
+   "principle": "Burrow Refuge"
   },
   "scalloped-hammerhead": {
    "id": "6efe574c-77a5-4b9f-9c19-ce25a360d673",
@@ -9722,11 +9942,6 @@
    "id": "0291b4fd-f662-4a40-a90c-be6ead0b919c",
    "name": "Scimitar-horned Oryx",
    "principle": "Oryx Return"
-  },
-  "scolopendra-gigantea": {
-   "id": "30b957f9-8bf7-4e15-b9b0-a5ee8f4f6858",
-   "name": "Amazonian Giant Centipede",
-   "principle": "Ceiling-Hung Ambush"
   },
   "scorpionfly": {
    "id": "db46d14f-d3af-45ca-a96f-380e0bf4cfec",
@@ -9983,6 +10198,11 @@
    "name": "Silver Dollar Fish",
    "principle": "Mirror-Disc Shoal"
   },
+  "silver-gull": {
+   "id": "fc00b392-5433-4b0e-8d16-493ab93d4256",
+   "name": "Silver Gull",
+   "principle": "Scrap Route"
+  },
   "silver-pheasant": {
    "id": "6b16cc1c-94af-4ca5-b0ac-73c38fdb8c10",
    "name": "Silver Pheasant",
@@ -10007,11 +10227,6 @@
    "id": "a83717ca-02b3-493c-85a1-0e4c798ef052",
    "name": "Sitatunga",
    "principle": "Marsh Footing"
-  },
-  "sitotroga-cerealella": {
-   "id": "27a0160d-044d-4e58-a9f7-e34d2f7d8e58",
-   "name": "Angoumois Grain Moth",
-   "principle": "Adaptive Survival"
   },
   "six-spotted-tiger-beetle": {
    "id": "7e28e462-a51b-4426-8836-c15b96b4c393",
@@ -10113,6 +10328,11 @@
    "name": "Snakefly",
    "principle": "Raised Watch"
   },
+  "snout-moth": {
+   "id": "1983d295-3fd4-44eb-9c8f-b5884c06a22b",
+   "name": "Snout Moth",
+   "principle": "Dead-Leaf Delta"
+  },
   "snow-bunting": {
    "id": "9d97ff92-246c-4a92-8792-78fb5e8a0e76",
    "name": "Snow Bunting",
@@ -10182,11 +10402,6 @@
    "id": "892718a2-07ba-4063-814c-71ae5d5eb046",
    "name": "Socorro Dove",
    "principle": "Lost-Island Gentleness"
-  },
-  "sogatella-furcifera": {
-   "id": "7d63b13d-d274-4a5d-983c-1d5aa9647583",
-   "name": "White-backed Planthopper",
-   "principle": "Rice-Stem Cling"
   },
   "song-sparrow": {
    "id": "c4f343ba-f174-4f86-b2c1-f4b9ed9f0b91",
@@ -10358,11 +10573,6 @@
    "name": "Sperm Whale",
    "principle": "Deep Signal"
   },
-  "sphinx-ligustri": {
-   "id": "8150f96a-b76f-43dc-91a9-d95dfcbe9d02",
-   "name": "Privet Hawk-moth",
-   "principle": "Nocturnal Navigation"
-  },
   "spider-crab": {
    "id": "b5ca14c0-6400-4b3b-b0ca-0f82d0b6fa22",
    "name": "European Spider Crab",
@@ -10443,6 +10653,11 @@
    "name": "Spoon-billed Sandpiper",
    "principle": "Spoon Precision"
   },
+  "spotted-barb": {
+   "id": "113e04b3-88bb-4c05-b37e-83a9448c4a1b",
+   "name": "Spotted Barb",
+   "principle": "Riffle And Backwater"
+  },
   "spotted-cuscus": {
    "id": "77224cee-14c5-46bb-9296-586c6665e4d3",
    "name": "Spotted Cuscus",
@@ -10482,6 +10697,11 @@
    "id": "6147570e-16e4-4ebf-86a8-26cf350c8b27",
    "name": "Spotted Jellyfish",
    "principle": "Drifting Filter"
+  },
+  "spotted-lady-beetle": {
+   "id": "5db67f3b-f963-4068-ace3-3555449e944d",
+   "name": "Spotted Lady Beetle",
+   "principle": "Aphid Patrol"
   },
   "spotted-lanternfish": {
    "id": "a8042c15-d3e9-4f67-8388-7475c6549639",
@@ -10583,6 +10803,11 @@
    "name": "Sri Lankan Elephant",
    "principle": "Gentle Strength Pattern"
   },
+  "sri-lankan-skink": {
+   "id": "c899f1ae-098d-4061-9d15-9f859e7af637",
+   "name": "Sri Lankan Skink",
+   "principle": "Burrow Retreat"
+  },
   "st-marks-fly": {
    "id": "dc34a07d-82bc-4c88-8422-a2f82ae00422",
    "name": "St Mark's Fly",
@@ -10593,6 +10818,11 @@
    "name": "Stag Beetle",
    "principle": "Ritual Combat"
   },
+  "staghorn-coral": {
+   "id": "03bccf24-2c8a-4a2a-b7c1-a70da27f1b91",
+   "name": "Staghorn Coral",
+   "principle": "Open Branches"
+  },
   "stalk-eyed-fly": {
    "id": "9bc7d088-d61e-42e6-bf89-58d8fc8472cd",
    "name": "Stalk-eyed Fly",
@@ -10602,6 +10832,11 @@
    "id": "c8c4ff66-1923-4132-99a4-fafbf59641c8",
    "name": "Standardwing Bird-of-paradise",
    "principle": "Framed Performance"
+  },
+  "star-barnacle": {
+   "id": "29b49118-31f8-44da-b8ae-6f24c7890084",
+   "name": "Star Barnacle",
+   "principle": "Rock Anchor"
   },
   "star-nosed-mole": {
    "id": "ddb76140-1078-47a6-a3b4-48059b25ba94",
@@ -10658,6 +10893,11 @@
    "name": "Stoat",
    "principle": "Seasonal Shift"
   },
+  "stone-centipede": {
+   "id": "997a9232-177a-4fbc-be36-0922b3f41107",
+   "name": "Stone Centipede",
+   "principle": "Segmented Escape"
+  },
   "stoplight-loosejaw": {
    "id": "3fc71da2-c952-421d-9273-b2ff2d91953d",
    "name": "Stoplight Loosejaw",
@@ -10712,6 +10952,11 @@
    "id": "b18bf604-2901-4fea-913e-792021df04dd",
    "name": "Striped Snakehead",
    "principle": "Dry-Season Air Gulp"
+  },
+  "stump-tailed-macaque": {
+   "id": "4d4640e6-a545-42af-a9c8-c9cb68748adb",
+   "name": "Stump-tailed Macaque",
+   "principle": "Forest Forager"
   },
   "sugar-glider": {
    "id": "0272f88c-d14c-45ec-8351-2c60ba4dedeb",
@@ -10863,6 +11108,11 @@
    "name": "Swift Fox",
    "principle": "Shortgrass-Tan Coat"
   },
+  "swimming-crab": {
+   "id": "6b198ce7-d17c-4df4-9883-1a5df68e3049",
+   "name": "Swimming Crab",
+   "principle": "Rear Paddle"
+  },
   "swinhoes-pheasant": {
    "id": "900a833b-2ae7-46a1-abde-ddb4230ee488",
    "name": "Swinhoe's Pheasant",
@@ -10877,11 +11127,6 @@
    "id": "8b73d72b-cd5a-44c0-8b17-6326aa37092a",
    "name": "Swordfish",
    "principle": "Focused Strike"
-  },
-  "tachycineta-meyeni": {
-   "id": "18d419cc-031f-47f5-b63c-5a59af6c66cf",
-   "name": "Chilean Swallow",
-   "principle": "Aerial Agility"
   },
   "tadpole-shrimp": {
    "id": "761e678c-7b94-4a20-b626-a8e6dd223105",
@@ -10973,11 +11218,6 @@
    "name": "Tayra",
    "principle": "Restless Curiosity"
   },
-  "telostylinus-lineolatus": {
-   "id": "ebf7a8ea-1930-454e-b18c-7d9b04f41d1c",
-   "name": "Banana Stalk Fly",
-   "principle": "Tiptoe High-Step"
-  },
   "tench": {
    "id": "4d5b9e12-b9d5-4845-a412-e10a1b0a9076",
    "name": "Tench",
@@ -11023,11 +11263,6 @@
    "name": "Texas Unicorn Mantis",
    "principle": "Thorned Disguise"
   },
-  "theretra-nessus": {
-   "id": "75a2d48b-0d4d-460b-8c2d-446e396658a2",
-   "name": "Yam Hawk-moth",
-   "principle": "Green-streak Rest"
-  },
   "thick-billed-murre": {
    "id": "c83e0f26-dd2a-49d8-947b-a91c2c43fb6a",
    "name": "Thick-billed Murre",
@@ -11046,7 +11281,7 @@
   "thorny-oyster": {
    "id": "c4f90b08-d839-4207-b1be-db003728ebc9",
    "name": "Thorny Oyster",
-   "principle": "Spined Display"
+   "principle": "Overgrown Spines"
   },
   "thorny-stick-insect": {
    "id": "9be91dbf-bef6-4e4d-bcab-1f054328bff5",
@@ -11078,11 +11313,6 @@
    "name": "Thresher Shark",
    "principle": "Tail Extension"
   },
-  "thryothorus-ludovicianus": {
-   "id": "a8250652-834c-4254-982b-873480be7b42",
-   "name": "Carolina Wren",
-   "principle": "Hidden Nest"
-  },
   "tibetan-fox": {
    "id": "eded5962-f6db-4b04-990e-5afa3a23c57b",
    "name": "Tibetan Fox",
@@ -11101,7 +11331,7 @@
   "tiger-moth": {
    "id": "c6b6d935-cc6b-4cbe-bb98-07cdc0c10a1e",
    "name": "Tiger Moth",
-   "principle": "Strategic Camouflage"
+   "principle": "Bold Warning"
   },
   "tiger-salamander": {
    "id": "1efe3c95-33e6-4de5-beac-c8126301a5c8",
@@ -11208,6 +11438,11 @@
    "name": "Triangulate Combfoot",
    "principle": "Strategic Webbing"
   },
+  "tricolored-heron": {
+   "id": "7bb8f65f-dbbf-4fba-916e-e56580877c74",
+   "name": "Tricolored Heron",
+   "principle": "Flush the Shallows"
+  },
   "trilobite-beetle": {
    "id": "664cce21-1b63-44cf-9835-82098c134369",
    "name": "Trilobite Beetle",
@@ -11288,10 +11523,10 @@
    "name": "Turbot",
    "principle": "Hidden Broadness"
   },
-  "turdus-rufiventris": {
-   "id": "8d339594-726e-45c4-a735-0d6fb0e9c93e",
-   "name": "Rufous-bellied Thrush",
-   "principle": "Rain-Cued Nesting"
+  "turdus-philomelos": {
+   "id": "83c23040-6ba9-43bd-b2f1-fc9a07b6cf20",
+   "name": "Song Thrush",
+   "principle": "Anvil Rock"
   },
   "turkey-vulture": {
    "id": "d6a681ca-5928-4ac3-8ccc-3d7ac1584b23",
@@ -11318,7 +11553,7 @@
    "name": "Twelve-wired Bird-of-paradise",
    "principle": "Tactile Persuasion"
   },
-  "two-spotted-spider": {
+  "two-spotted-spider-mite": {
    "id": "7b2bb109-f113-4976-8adf-c0c79fa36dfb",
    "name": "Two-spotted Spider Mite",
    "principle": "Spray-proof Generations"
@@ -11326,7 +11561,7 @@
   "two-striped-telamonia": {
    "id": "ba040f8c-207b-4a6b-aa8e-1de850cde0e5",
    "name": "Two-striped Telamonia",
-   "principle": "Web Ambush"
+   "principle": "Stalk and Pounce"
   },
   "two-tailed-pasha": {
    "id": "9e833bf7-54b3-431a-98e1-4327684edd5e",
@@ -11383,11 +11618,6 @@
    "name": "Vaquita",
    "principle": "Fragility"
   },
-  "varanus-exanthematicus": {
-   "id": "decda091-d63b-4af4-be0d-7407bed3115f",
-   "name": "Savannah Monitor",
-   "principle": "Burrow Refuge"
-  },
   "variable-hawk": {
    "id": "d97cc3c8-d70c-4f67-8bc9-c9816701a8b1",
    "name": "Variable Hawk",
@@ -11407,6 +11637,11 @@
    "id": "4679c672-1e4b-4fc1-ac96-6875923e03ec",
    "name": "Variegated Meadowhawk",
    "principle": "Cold-Front Riding"
+  },
+  "veiled-chameleon": {
+   "id": "2cc8587a-8d10-418f-8bdf-560f1ea6a2d5",
+   "name": "Veiled Chameleon",
+   "principle": "Branch Sway"
   },
   "velvet-ant": {
    "id": "72c8e5dc-0649-46f7-a0e6-6fdffd8c4399",
@@ -11432,6 +11667,11 @@
    "id": "9fbbdfdb-4b12-4907-9bae-4947679ef2c7",
    "name": "Venus' Flower Basket",
    "principle": "Glass Architecture"
+  },
+  "venus-flytrap": {
+   "id": "721af43e-dfd9-40bb-be67-039ade37e11b",
+   "name": "Venus Flytrap",
+   "principle": "Snap Trap"
   },
   "verdin": {
    "id": "9a6131c4-6e72-46b1-9e17-b6472c3c2112",
@@ -11467,6 +11707,11 @@
    "id": "62c540dc-f438-4819-beae-946ce36a2b91",
    "name": "Vicuna",
    "principle": "Altitude Gentle Endurance"
+  },
+  "vine-weevil": {
+   "id": "f6b9f397-6b3a-4452-918a-a61531a42f0e",
+   "name": "Vine Weevil",
+   "principle": "Leaf Edge Feeding"
   },
   "vinegaroon": {
    "id": "b71ba753-abf6-4708-803a-7006d1caa511",
@@ -11704,9 +11949,9 @@
    "principle": "Death-Feigning Theater"
   },
   "western-honey-bee": {
-   "id": "bc504fff-8875-43d8-ac40-90407219562a",
-   "name": "Giant Honey Bee",
-   "principle": "Collective Industry"
+   "id": "a90f96dd-ce3b-4b93-b8e6-74a5837858d8",
+   "name": "Western Honey Bee",
+   "principle": "Colony Teamwork Strategy"
   },
   "western-lowland-gorilla": {
    "id": "a9878375-f941-476f-b560-4a6385da5f8e",
@@ -11718,10 +11963,15 @@
    "name": "Western Meadowlark",
    "principle": "Open-Field Song"
   },
+  "western-yellow-wagtail": {
+   "id": "9187d87d-ec83-43f2-985a-bc09b0af1554",
+   "name": "Western Yellow Wagtail",
+   "principle": "Trans-Sahara Stopover"
+  },
   "whale-shark": {
    "id": "4031b3f1-b319-4ac0-9fec-35c4276f4b9f",
    "name": "Whale Shark",
-   "principle": "Gentle Scale"
+   "principle": "Gentle Giant Cruising"
   },
   "wheel-bug": {
    "id": "aa73e13b-87f8-40f4-b535-dd5b430f2266",
@@ -11737,6 +11987,11 @@
    "id": "95116ee6-d90b-43d3-a00f-1642d985efcc",
    "name": "Whirligig Beetle",
    "principle": "Dual Sight"
+  },
+  "white-backed-planthopper": {
+   "id": "7d63b13d-d274-4a5d-983c-1d5aa9647583",
+   "name": "White-backed Planthopper",
+   "principle": "Rice-Stem Cling"
   },
   "white-backed-vulture": {
    "id": "4663291e-d13a-4706-89fa-f0f158e5a352",
@@ -11757,6 +12012,11 @@
    "id": "74b279a8-eddb-4e7f-baa6-69783b9e808c",
    "name": "White-browed Fantail",
    "principle": "Agile Perspective"
+  },
+  "white-crested-laughingthrush": {
+   "id": "c8ca22b9-6e38-4082-8a84-68915cfb6ec0",
+   "name": "White-crested Laughingthrush",
+   "principle": "Cackle Chorus"
   },
   "white-faced-capuchin": {
    "id": "0df9d5f9-9a50-477e-834f-65f24c58ca8c",
@@ -11798,10 +12058,10 @@
    "name": "White Peacock Butterfly",
    "principle": "Sunlit Camouflage"
   },
-  "white-rhinoceros": {
-   "id": "1d47ff56-57dc-4f5e-ba16-fcb98a78d82a",
-   "name": "White Rhinoceros",
-   "principle": "Gentle Mass"
+  "white-rumped-shama": {
+   "id": "63edc0e9-74fa-4baf-b8e1-a426a249de0f",
+   "name": "White-rumped Shama",
+   "principle": "Fluted Territory Song"
   },
   "white-rumped-vulture": {
    "id": "c02fd754-53c8-4f50-b9fd-d7b9371c9f55",
@@ -12033,6 +12293,11 @@
    "name": "Yak",
    "principle": "Highland Load"
   },
+  "yam-hawk-moth": {
+   "id": "75a2d48b-0d4d-460b-8c2d-446e396658a2",
+   "name": "Yam Hawk-moth",
+   "principle": "Green-streak Rest"
+  },
   "yangtze-finless-porpoise": {
    "id": "f2f2c627-dd0d-46c8-94b8-a168c8d30eff",
    "name": "Yangtze Finless Porpoise",
@@ -12121,7 +12386,7 @@
   "yellow-tang": {
    "id": "0eea43af-3257-46c5-8e6c-76a2cbe64f94",
    "name": "Yellow Tang",
-   "principle": "Reef Current Flow"
+   "principle": "Reef Lawn Grazing"
   },
   "yellow-throated-marten": {
    "id": "22c59315-8a37-4387-a683-0cc396aab729",
@@ -12131,7 +12396,7 @@
   "yellow-vented-bulbul": {
    "id": "611cbd15-33f1-462b-962c-b549496c1eb4",
    "name": "Yellow-vented Bulbul",
-   "principle": "Garden-Edge Menu"
+   "principle": "Garden-edge Menu"
   },
   "yellowbelly-damselfish": {
    "id": "3cff0863-a79f-43f7-8ac9-5416f1a05e43",
@@ -12208,10 +12473,10 @@
    "name": "Zebra Swallowtail",
    "principle": "Lightness"
   },
-  "zenaida-auriculata": {
-   "id": "060bfa61-7ecd-42f6-917c-36265b53a195",
-   "name": "Eared Dove",
-   "principle": "Vast-Flock Roost"
+  "zebu": {
+   "id": "dacdfb27-9885-4f2a-97b9-17fb296c3a8a",
+   "name": "Zebu",
+   "principle": "Adaptive Endurance"
   },
   "zoanthid": {
    "id": "61e4e14c-6e9c-4fd2-83d0-17eae6404395",
@@ -12232,11 +12497,6 @@
    "id": "99b13cc5-130f-42f2-84b3-2698e48e64e0",
    "name": "Zorilla",
    "principle": "Warning"
-  },
-  "zosterops-palpebrosus": {
-   "id": "d75c35e7-7935-488b-b9e5-18e3d36b98d6",
-   "name": "Oriental White-eye",
-   "principle": "Leaf-Gleaning Party"
   }
  },
  "fusions": [
@@ -12301,9 +12561,9 @@
    "updatedAt": "2026-06-27"
   },
   {
-   "slug": "betta-learns-from-balantiocheilos-melanopterus",
+   "slug": "betta-learns-from-bala-shark",
    "receiverSlug": "betta",
-   "donorSlug": "balantiocheilos-melanopterus",
+   "donorSlug": "bala-shark",
    "receiverPrinciple": "Territorial Display",
    "donorPrinciple": "Group Harmony",
    "name": "Community Defense",
@@ -12480,6 +12740,26 @@
    "updatedAt": "2026-06-22"
   },
   {
+   "slug": "gorilla-learns-from-polar-bear",
+   "receiverSlug": "gorilla",
+   "donorSlug": "polar-bear",
+   "receiverPrinciple": "Quiet Authority",
+   "donorPrinciple": "Endurance",
+   "name": "Rationed Presence",
+   "expression": "Quiet Authority learns from Endurance to hold the group through lean, cold stretches by spending strength sparingly, leading steadily across distance instead of in bursts.",
+   "scenarioTags": [
+    "scarcity",
+    "long_haul",
+    "harsh_conditions",
+    "group_stability"
+   ],
+   "primaryStat": "dominance",
+   "secondaryStat": "intelligence",
+   "boostPrimary": 1,
+   "boostSecondary": 1,
+   "updatedAt": "2026-10-12"
+  },
+  {
    "slug": "human-learns-from-amazon-sailfin-catfish",
    "receiverSlug": "human",
    "donorSlug": "amazon-sailfin-catfish",
@@ -12520,9 +12800,9 @@
    "updatedAt": "2026-08-24"
   },
   {
-   "slug": "human-learns-from-locusta-migratoria",
+   "slug": "human-learns-from-migratory-locust",
    "receiverSlug": "human",
-   "donorSlug": "locusta-migratoria",
+   "donorSlug": "migratory-locust",
    "receiverPrinciple": "Social Bonding",
    "donorPrinciple": "Adaptive Movement",
    "name": "Purposeful Adaptation",
@@ -12538,6 +12818,46 @@
    "boostPrimary": 1,
    "boostSecondary": 0,
    "updatedAt": "2026-08-24"
+  },
+  {
+   "slug": "lion-learns-from-bengal-tiger",
+   "receiverSlug": "lion",
+   "donorSlug": "bengal-tiger",
+   "receiverPrinciple": "Pride Command",
+   "donorPrinciple": "Silent Ascent",
+   "name": "Cover Before Charge",
+   "expression": "Pride Command learns the tiger's patient stalk: hold the group silent in cover and close distance unseen, so the coordinated rush begins only when the moment is theirs.",
+   "scenarioTags": [
+    "ambush",
+    "stealth",
+    "dense_cover",
+    "coordinated_hunt"
+   ],
+   "primaryStat": "intelligence",
+   "secondaryStat": "speed",
+   "boostPrimary": 1,
+   "boostSecondary": 1,
+   "updatedAt": "2026-10-13"
+  },
+  {
+   "slug": "lion-tailed-macaque-learns-from-mandrill",
+   "receiverSlug": "lion-tailed-macaque",
+   "donorSlug": "mandrill",
+   "receiverPrinciple": "Canopy Intelligence",
+   "donorPrinciple": "Dominant Color",
+   "name": "Read the Rank",
+   "expression": "Canopy Intelligence learns from Facial Status Display to read rivals' visible rank signals and sidestep contests with stronger kin, keeping foraging access intact.",
+   "scenarioTags": [
+    "social_hierarchy",
+    "rivalry",
+    "group_foraging",
+    "signal_reading"
+   ],
+   "primaryStat": "intelligence",
+   "secondaryStat": "dominance",
+   "boostPrimary": 1,
+   "boostSecondary": 0,
+   "updatedAt": "2026-10-13"
   },
   {
    "slug": "meerkat-learns-from-donkey",
@@ -12600,24 +12920,24 @@
    "updatedAt": "2026-06-26"
   },
   {
-   "slug": "wheel-bug-learns-from-western-honey-bee",
-   "receiverSlug": "wheel-bug",
-   "donorSlug": "western-honey-bee",
-   "receiverPrinciple": "Piercing",
-   "donorPrinciple": "Collective Industry",
-   "name": "Ambush Coordination",
-   "expression": "Piercing learns to synchronize attacks on prey-rich areas, using a networked approach to maximize feeding efficiency.",
+   "slug": "polar-bear-learns-from-gorilla",
+   "receiverSlug": "polar-bear",
+   "donorSlug": "gorilla",
+   "receiverPrinciple": "Endurance",
+   "donorPrinciple": "Quiet Authority",
+   "name": "Silent Presence",
+   "expression": "Endurance learns from Quiet Authority to hold ground at contested seal holes by calm presence, not costly fights, saving strength for the long haul.",
    "scenarioTags": [
-    "ambush",
-    "coordination",
-    "resource_exploitation",
-    "prey_rich_areas"
+    "standoff",
+    "contested_resource",
+    "energy_saving",
+    "deterrence"
    ],
-   "primaryStat": "intelligence",
-   "secondaryStat": "speed",
+   "primaryStat": "dominance",
+   "secondaryStat": null,
    "boostPrimary": 1,
-   "boostSecondary": 1,
-   "updatedAt": "2026-06-30"
+   "boostSecondary": 0,
+   "updatedAt": "2026-10-12"
   }
  ]
 }

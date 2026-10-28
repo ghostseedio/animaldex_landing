@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10",
+  "generatedAt": "2026-10-28",
   "note": "Hand-coded /animals pages linked to the catalog: their own indexed species_profile_id, a folded duplicate's canonical profile, or, for group pages with no indexed group profile, the indexed species they cover. Written by scripts/refreshStaticSpeciesProfiles.mts; the build never queries Supabase.",
   "entries": {
     "aardvark": {
@@ -707,6 +707,11 @@
           "animalDexNumber": 1983
         },
         {
+          "slug": "veiled-chameleon",
+          "name": "Veiled Chameleon",
+          "animalDexNumber": 2293
+        },
+        {
           "slug": "cape-dwarf-chameleon",
           "name": "Cape Dwarf Chameleon",
           "animalDexNumber": 2383
@@ -899,6 +904,11 @@
           "slug": "great-cormorant",
           "name": "Great Cormorant",
           "animalDexNumber": 115
+        },
+        {
+          "slug": "little-black-cormorant",
+          "name": "Little Black Cormorant",
+          "animalDexNumber": 2426
         }
       ]
     },
@@ -1044,9 +1054,29 @@
           "animalDexNumber": 2221
         },
         {
+          "slug": "mangrove-crab",
+          "name": "Mangrove Crab",
+          "animalDexNumber": 2322
+        },
+        {
           "slug": "swamp-forest-crab",
           "name": "Swamp Forest Crab",
           "animalDexNumber": 2398
+        },
+        {
+          "slug": "mediterranean-hermit-crab",
+          "name": "Mediterranean Hermit Crab",
+          "animalDexNumber": 2425
+        },
+        {
+          "slug": "giant-mud-crab",
+          "name": "Giant Mud Crab",
+          "animalDexNumber": 2430
+        },
+        {
+          "slug": "swimming-crab",
+          "name": "Swimming Crab",
+          "animalDexNumber": 2447
         }
       ]
     },
@@ -1821,10 +1851,6 @@
       "speciesProfileId": "1f6a9d36-2385-44e7-9f69-7b89408bbd66",
       "source": "own"
     },
-    "giant-clam": {
-      "speciesProfileId": "8702e808-a8ae-4ed9-91ba-14277c2fa43e",
-      "source": "own"
-    },
     "giant-eland": {
       "speciesProfileId": "92f3b2ca-08f2-43fa-ab82-4b5073951894",
       "source": "own"
@@ -2068,6 +2094,11 @@
           "slug": "differential-grasshopper",
           "name": "Differential Grasshopper",
           "animalDexNumber": 1061
+        },
+        {
+          "slug": "egyptian-grasshopper",
+          "name": "Egyptian Grasshopper",
+          "animalDexNumber": 1701
         },
         {
           "slug": "slant-faced-grasshopper",
@@ -2372,6 +2403,11 @@
     },
     "honey-bee": {
       "members": [
+        {
+          "slug": "giant-honey-bee",
+          "name": "Giant Honey Bee",
+          "animalDexNumber": 100
+        },
         {
           "slug": "asian-honey-bee",
           "name": "Asian Honey Bee",
@@ -2869,6 +2905,21 @@
           "slug": "san-cristobal-lava-lizard",
           "name": "San Cristobal Lava Lizard",
           "animalDexNumber": 2400
+        },
+        {
+          "slug": "california-legless-lizard",
+          "name": "California Legless Lizard",
+          "animalDexNumber": 2412
+        },
+        {
+          "slug": "sand-lizard",
+          "name": "Sand Lizard",
+          "animalDexNumber": 2434
+        },
+        {
+          "slug": "pacific-blue-bellied-lizard",
+          "name": "Western Fence Lizard",
+          "animalDexNumber": 2451
         }
       ]
     },
@@ -3456,6 +3507,11 @@
           "slug": "north-american-river-otter",
           "name": "North American River Otter",
           "animalDexNumber": 1490
+        },
+        {
+          "slug": "european-otter",
+          "name": "European Otter",
+          "animalDexNumber": 2413
         }
       ]
     },
@@ -4278,6 +4334,15 @@
       "speciesProfileId": "1d1b99a7-fb6e-43b2-b674-e5b4065a98b3",
       "source": "own"
     },
+    "sea-cucumber": {
+      "members": [
+        {
+          "slug": "black-sea-cucumber",
+          "name": "Black Sea Cucumber",
+          "animalDexNumber": 2439
+        }
+      ]
+    },
     "sea-krait": {
       "speciesProfileId": "ddbc5e18-9d6c-4fe4-838c-2b655e812ece",
       "source": "own"
@@ -4494,6 +4559,11 @@
           "slug": "salmon-shark",
           "name": "Salmon Shark",
           "animalDexNumber": 1607
+        },
+        {
+          "slug": "bala-shark",
+          "name": "Bala Shark",
+          "animalDexNumber": 1938
         },
         {
           "slug": "brownbanded-bamboo-shark",
@@ -5266,10 +5336,6 @@
     },
     "white-nosed-coati": {
       "speciesProfileId": "1aa1a67f-07b9-4193-9a43-183c0b7c7f3a",
-      "source": "own"
-    },
-    "white-rhinoceros": {
-      "speciesProfileId": "1d47ff56-57dc-4f5e-ba16-fcb98a78d82a",
       "source": "own"
     },
     "white-stork": {
