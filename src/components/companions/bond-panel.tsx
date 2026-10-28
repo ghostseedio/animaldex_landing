@@ -18,6 +18,7 @@ import {
     bondChipText,
     bondLevelProgress,
     bondPowerLine,
+    bondXpText,
     trialDifficulty,
     type AnimalBond
 } from "@/lib/companion-bond";
@@ -77,7 +78,8 @@ export default function BondPanel({
     onLessonCheck,
     onBondChanged,
     onRefresh,
-    canAttemptTrials = true
+    canAttemptTrials = true,
+    locale = null
 }: {
     bond: AnimalBond | null;
     didLoad: boolean;
@@ -98,6 +100,8 @@ export default function BondPanel({
     /** A Trial moved (and may have earned the Power): re-read the bond. */
     onRefresh: () => void;
     canAttemptTrials?: boolean;
+    /** The site's locale, for grouping thousands in the XP. */
+    locale?: string | null;
 }) {
     const [trials, setTrials] = useState<AnimalTrial[]>([]);
     const [openTrialId, setOpenTrialId] = useState<string | null>(null);
@@ -156,7 +160,7 @@ export default function BondPanel({
                             <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
                                 <div className="h-full rounded-full" style={{width: `${bondLevelProgress(bond) * 100}%`, backgroundColor: NEON}} />
                             </div>
-                            <p className="mt-1.5 text-[11px] font-semibold text-white/45">{BOND_COPY.xp.replace("{xp}", String(bond.xp))}</p>
+                            <p className="mt-1.5 text-[11px] font-semibold text-white/45">{bondXpText(bond.xp, locale)}</p>
                         </>
                     ) : !didLoad ? (
                         <p className="mt-1 text-sm text-white/40">…</p>

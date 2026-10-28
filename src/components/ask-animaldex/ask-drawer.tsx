@@ -733,6 +733,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     if (next) setCompanionLoop((current) => ({...(current ?? EMPTY_COMPANION_LOOP), focus: next.focus, openTrial: next.openTrial}));
                                 }}
                                 onRefresh={() => void animalBond.reload()}
+                                locale={locale}
                             />
                         </div>
                     ) : showingMemory ? (
@@ -1155,7 +1156,7 @@ function CompanionEventBlock({event, principleName}: {event: AskCompanionEvent; 
                     <p className="text-[11px] leading-4 text-ink-300">{done.step}</p>
                     {done.powerEarned && principleName ? (
                         <p className="text-[11px] font-semibold leading-4 text-white">
-                            {COMPANION_COPY.powerEarned.replace("{power}", principleName)}
+                            {COMPANION_COPY.powerYours.replace("{power}", principleName)}
                         </p>
                     ) : !done.powerEarned && done.powerWaitsForTraining ? (
                         <p className="text-[11px] font-semibold leading-4 text-white">{COMPANION_COPY.powerWaitsForTraining}</p>

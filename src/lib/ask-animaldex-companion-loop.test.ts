@@ -104,7 +104,7 @@ test("companion copy matches iOS word for word", () => {
     assert.equal(COMPANION_COPY.workingOn.replace("{focus}", "Sleep"), "Working on: Sleep");
     assert.equal(COMPANION_COPY.notThisAnyMore, "Not this any more");
     assert.equal(COMPANION_COPY.doneTogether, "Done together");
-    assert.equal(COMPANION_COPY.powerEarned.replace("{power}", "Sentinel Shift"), "Power earned: Sentinel Shift");
+    assert.equal(COMPANION_COPY.powerYours.replace("{power}", "Sentinel Shift"), "Sentinel Shift is yours now");
     assert.equal(COMPANION_COPY.powerWaitsForTraining, "Pass its lesson check to earn its Power.");
     assert.equal(COMPANION_COPY.talkTo.replace("{name}", "Leo the African Lion"), "Talk to Leo the African Lion");
 });

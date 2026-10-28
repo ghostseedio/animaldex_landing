@@ -239,6 +239,17 @@ export function decodeChatBond(raw: unknown): ChatBond | null {
     };
 }
 
+/** "2,480 XP", grouped the way the reader's locale groups thousands. */
+export function bondXpText(xp: number, locale?: string | null): string {
+    let grouped: string;
+    try {
+        grouped = new Intl.NumberFormat(locale ?? undefined).format(xp);
+    } catch {
+        grouped = new Intl.NumberFormat().format(xp);
+    }
+    return BOND_COPY.xp.replace("{xp}", grouped);
+}
+
 /** "Level 4 · Working together", or the stage alone before levels (the card hero and chat chip). */
 export function bondChipText(bond: {level: number | null; stageLabel: string}): string {
     return bond.level === null ? bond.stageLabel : `Level ${bond.level} · ${bond.stageLabel}`;

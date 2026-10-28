@@ -50,7 +50,8 @@ export const COMPANION_COPY = {
     workingOn: "Working on: {focus}",
     notThisAnyMore: "Not this any more",
     doneTogether: "Done together",
-    powerEarned: "Power earned: {power}",
+    /** The SPEC's words: the Power is theirs, not "earned". */
+    powerYours: "{power} is yours now",
     powerWaitsForTraining: "Pass its lesson check to earn its Power.",
     talkTo: "Talk to {name}",
     talkToHint: "It already knows what you talked about."

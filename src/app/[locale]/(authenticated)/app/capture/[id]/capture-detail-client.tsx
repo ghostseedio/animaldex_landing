@@ -3,7 +3,7 @@
 import {type ReactNode, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AskSubjectBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
 import Image from "next/image";
-import {useRouter, useSearchParams} from "next/navigation";
+import {useParams, useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
@@ -158,6 +158,7 @@ export default function CaptureDetailClient({
 }: CaptureDetailClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const locale = useParams<{locale?: string}>()?.locale ?? null;
     // About · Bond · Battle on your own card, About · Battle on anyone else's
     // (docs/companion-loop/SPEC.md, phase 3). Older links still land: `?tab=play`
     // and `?tab=stats` open Battle, `?tab=learn` About.
@@ -594,6 +595,7 @@ export default function CaptureDetailClient({
                                     void animalPower.reload();
                                 }}
                                 canAttemptTrials={trialUnlock.canAttempt}
+                                locale={locale}
                             />
                         </div>
                     ) : null}

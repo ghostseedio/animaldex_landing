@@ -6,6 +6,7 @@ import {
     bondChipText,
     bondLevelProgress,
     bondPowerLine,
+    bondXpText,
     bondStageLabel,
     companionLevelsBySpecies,
     companionRowHref,
@@ -136,6 +137,14 @@ test("a row with a referral waiting opens its chat on the referral", () => {
     assert.equal(malformed.referralId, null);
     assert.equal(companionRowHref(malformed), `/app/capture/${CAPTURE}?talk=1`);
     assert.equal(companionRowHref(noCard), null);
+});
+
+test("bond XP is grouped the way the locale groups thousands", () => {
+    assert.equal(bondXpText(2480, "en"), "2,480 XP");
+    assert.equal(bondXpText(2480, "id"), "2.480 XP");
+    assert.equal(bondXpText(12, "en"), "12 XP");
+    // A locale the runtime does not know still formats.
+    assert.equal(bondXpText(2480, "not a locale").endsWith(" XP"), true);
 });
 
 test("frequencies read as difficulty", () => {
