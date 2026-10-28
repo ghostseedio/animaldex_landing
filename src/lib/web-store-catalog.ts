@@ -34,16 +34,27 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         kind: "pro",
         credits: 0,
         label: "AnimalDex Pro",
-        detail: "Instagram Import included, plus unlimited scans and field-guide unlocks.",
+        detail: "Unlimited captures, 100 messages a day with any animal, and 42 Credits every month.",
         fallbackPrice: "$9.99/month"
     }
 };
 
-export const WEB_STORE_PRO_BENEFITS = [
-    "Instagram Import included with Pro",
-    "Unlimited photo and video scans",
-    "Field-guide unlocks included"
-] as const;
+export type WebStoreBenefit = {title: string; detail?: string};
+
+/**
+ * What Pro bought on the website includes. Every line is implemented for an
+ * account whose Pro comes from Paddle: spoken replies (animal_chat_speech_limit,
+ * Pro 30 a day) and story videos (hasVerifiedPro) are app features, so they
+ * say so; the web chat has no voice. Field-guide unlocks are not listed.
+ */
+export const WEB_STORE_PRO_BENEFITS: readonly WebStoreBenefit[] = [
+    {title: "Hear every animal’s voice", detail: "30 spoken replies a day, in the app."},
+    {title: "Story videos of your animals", detail: "Made from your own captures, in the app."},
+    {title: "Unlimited captures", detail: "Photo and video captures don’t use Credits."},
+    {title: "100 messages a day with any animal"},
+    {title: "42 Credits every month", detail: "Added each time Pro renews. Unused Credits carry over."},
+    {title: "Instagram Import included", detail: "Checking your Instagram archive doesn’t use Credits."}
+];
 
 export function isWebStoreProductCode(value: unknown): value is WebStoreProductCode {
     return typeof value === "string" && (WEB_STORE_PRODUCT_CODES as readonly string[]).includes(value);

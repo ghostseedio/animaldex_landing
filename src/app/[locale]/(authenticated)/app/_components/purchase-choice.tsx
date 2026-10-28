@@ -2,13 +2,13 @@
 
 import {useState} from "react";
 import {trackEvent} from "@/lib/analytics";
+import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
 import {openPaddleCheckout, type PaddleRuntimeEnvironment} from "@/lib/paddle-checkout";
 import {
     billingReturnHref,
     localizedBillingReturnPath,
     recommendCreditPack,
     WEB_STORE_PRODUCTS,
-    WEB_STORE_PRO_BENEFITS,
     type WebStoreProductCode
 } from "@/lib/web-store-catalog";
 
@@ -78,7 +78,12 @@ export function PurchaseChoice({
     onRefresh: () => void;
 }) {
     const deficit = Math.max(0, needed - balance);
-    const recommended = recommendCreditPack(deficit);
+    const availability = useWebStoreAvailability();
+    // The pack that covers the shortfall, or the other one when only it is on sale.
+    const packs = (["purchase_25", "purchase_100"] as const).filter((code) => availability[code]);
+    const preferred = recommendCreditPack(deficit);
+    const recommended: WebStoreProductCode | null = availability[preferred] ? preferred : packs[0] ?? null;
+    const proOnSale = availability.pro_upgrade;
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState<WebStoreProductCode | null>(null);
 
@@ -101,29 +106,41 @@ export function PurchaseChoice({
                 Balance: {balance === 1 ? "1 Credit" : `${balance} Credits`}
                 {deficit > 0 ? ` · ${deficit} more needed` : ""}.
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => void buy(recommended)}
-                    className="inline-flex min-h-11 items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50"
-                >
-                    {busy === recommended ? "Opening checkout…" : `Buy ${WEB_STORE_PRODUCTS[recommended].label}`}
-                </button>
-                <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => void buy("pro_upgrade")}
-                    className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
-                >
-                    {busy === "pro_upgrade" ? "Opening checkout…" : "Go Pro"}
-                </button>
-            </div>
-            <p className="text-xs leading-5 text-white/45">
-                Instagram Import is included with Pro. {WEB_STORE_PRO_BENEFITS.filter((item) => item !== WEB_STORE_PRO_BENEFITS[0]).join(". ")}.
-            </p>
+            {recommended || proOnSale ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {recommended ? (
+                        <button
+                            type="button"
+                            disabled={Boolean(busy)}
+                            onClick={() => void buy(recommended)}
+                            className="inline-flex min-h-11 items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50"
+                        >
+                            {busy === recommended ? "Opening checkout…" : `Buy ${WEB_STORE_PRODUCTS[recommended].label}`}
+                        </button>
+                    ) : null}
+                    {proOnSale ? (
+                        <button
+                            type="button"
+                            disabled={Boolean(busy)}
+                            onClick={() => void buy("pro_upgrade")}
+                            className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
+                        >
+                            {busy === "pro_upgrade" ? "Opening checkout…" : "Go Pro"}
+                        </button>
+                    ) : null}
+                </div>
+            ) : (
+                <p className="text-sm leading-6 text-white/55">
+                    Credits and Pro aren’t on sale on the website right now. You can get them in the AnimalDex app.
+                </p>
+            )}
+            {proOnSale ? (
+                <p className="text-xs leading-5 text-white/45">
+                    Instagram Import is included with Pro, along with unlimited captures and 42 Credits every month.
+                </p>
+            ) : null}
             <div className="flex flex-wrap gap-3 text-sm font-bold">
-                {(Object.keys(WEB_STORE_PRODUCTS) as WebStoreProductCode[]).filter((code) => code !== "pro_upgrade" && code !== recommended).map((code) => (
+                {packs.filter((code) => code !== recommended).map((code) => (
                     <button
                         key={code}
                         type="button"

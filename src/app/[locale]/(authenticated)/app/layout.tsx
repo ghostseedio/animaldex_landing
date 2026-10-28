@@ -1,5 +1,7 @@
 import AppShell from "@/app/[locale]/(authenticated)/app/_components/app-shell";
 import {AppCreditsProvider} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
+import {WebStoreAvailabilityProvider} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
+import {paddleProductAvailability} from "@/lib/paddle-server";
 import {getAuthenticatedAppShellData} from "@/data/authenticated-app";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 
@@ -16,14 +18,16 @@ export default async function AuthenticatedAppLayout({children}: {children: Reac
 
     return (
         <AppCreditsProvider initialBalance={creditBalance}>
-            <AppShell
-                profile={context ? {displayName: context.profile.displayName ?? context.profile.username ?? "Collector", username: context.profile.username, avatarUrl: context.profile.avatarUrl} : null}
-                isAuthenticated={Boolean(context)}
-                unreadCount={notifications.filter((item) => !item.readAt).length}
-                unreadMessageCount={unreadMessageCount}
-            >
-                {children}
-            </AppShell>
+            <WebStoreAvailabilityProvider availability={paddleProductAvailability()}>
+                <AppShell
+                    profile={context ? {displayName: context.profile.displayName ?? context.profile.username ?? "Collector", username: context.profile.username, avatarUrl: context.profile.avatarUrl} : null}
+                    isAuthenticated={Boolean(context)}
+                    unreadCount={notifications.filter((item) => !item.readAt).length}
+                    unreadMessageCount={unreadMessageCount}
+                >
+                    {children}
+                </AppShell>
+            </WebStoreAvailabilityProvider>
         </AppCreditsProvider>
     );
 }
