@@ -84,6 +84,7 @@ import {AskChatOptions, AskSoundCreditsPanel, AskVoiceIcon} from "@/components/a
 import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type AskSpeechPhase} from "@/components/ask-animaldex/use-animal-speech";
 import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
+import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
 
 export type AskDrawerLabels = {
     title: string;
@@ -1267,7 +1268,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             ) : null}
                         </div>
                     </div>
-                    {messenger && animalName ? (
+                    {messenger && animalName && askCallsOffered(context?.signedIn === true) ? (
                         // A voice call with its talking 3D model, when it has one (voice-call/).
                         <AskVoiceCallButton
                             threadKey={threadKey}

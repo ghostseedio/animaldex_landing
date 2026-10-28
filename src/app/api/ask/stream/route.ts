@@ -101,6 +101,7 @@ import {
 import {askSupportedVisuals} from "@/lib/ask-animaldex/visuals";
 import {askCallTurn, resolveAskCallQuestion} from "@/lib/ask-animaldex/call-voice";
 import {CALL_REPLY_LINE} from "@/lib/ask-animaldex/call-speech";
+import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
 import {
     bondForClient,
     companionPromptLines,
@@ -225,7 +226,7 @@ export async function POST(request: Request) {
     const speaksAsAnimal = basePacket.scope === "species" && Boolean(basePacket.species);
     // A live voice call (`call-voice.ts`): a fast model, a short spoken reply,
     // and its voice streamed back in this stream with the words.
-    const isCall = !isGreeting && body.call === true && speaksAsAnimal;
+    const isCall = !isGreeting && body.call === true && speaksAsAnimal && askCallsOffered(viewer.signedIn);
     if (isGreeting && !speaksAsAnimal) {
         // Only an animal speaks first; the site-wide assistant waits to be asked.
         return askJson({error: "greeting_unavailable"}, 400);
