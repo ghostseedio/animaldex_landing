@@ -31,10 +31,13 @@ export default function RankingEntryCard({
                     aria-label={speciesName}
                 >
                     <Image
+                        // iconSrc is the /api/species-artwork route, which answers
+                        // with a redirect; the image optimizer rejects redirects.
                         src={iconSrc}
                         alt={`${speciesName} AnimalDex icon`}
                         width={96}
                         height={96}
+                        unoptimized
                         className="h-full w-full object-contain"
                     />
                 </Link>

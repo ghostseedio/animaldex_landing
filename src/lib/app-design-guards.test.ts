@@ -39,17 +39,18 @@ test("the web app has no rounded containers, as in the iOS app", () => {
     assert.deepEqual(offenders, []);
 });
 
-test("capture photos never go through the Next image optimizer", () => {
-    // /api/capture-images and /api/species-images redirect to signed storage
-    // URLs, which the optimizer can't follow ("Unable to optimize image"), so
-    // the image shows broken. Every <Image> fed a capture photo is unoptimized.
+test("capture photos and species artwork never go through the Next image optimizer", () => {
+    // /api/capture-images, /api/species-images and /api/species-artwork redirect
+    // to storage URLs, which the optimizer can't follow ("Unable to optimize
+    // image"), so the image shows broken (the tier-list highlight cards, Oct
+    // 2026). Every <Image> fed a capture photo or an artwork route is unoptimized.
     const files = sourceFiles((path) => path.startsWith("src/"));
     const offenders: string[] = [];
     for (const path of files) {
         const source = readFileSync(path, "utf8");
         for (const tag of source.match(/<Image\b[\s\S]*?\/>/g) ?? []) {
             const src = /src=\{([^}]*)\}/.exec(tag)?.[1] ?? "";
-            const isCapturePhoto = /capture\.imageSrc|receiverImageSrc|donor\.imageSrc|photoUrl/.test(src);
+            const isCapturePhoto = /capture\.imageSrc|receiverImageSrc|donor\.imageSrc|photoUrl|iconSrc|getSpeciesArtworkRoute|buildSpeciesArtworkSrc/.test(src);
             if (isCapturePhoto && !/\bunoptimized\b/.test(tag)) offenders.push(`${path}: src={${src}}`);
         }
     }
