@@ -159,7 +159,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         referralId,
         locale,
         close,
-        takePendingQuestion
+        takePendingQuestion,
+        questionRequest
     } = useAskAnimalDex();
     const [context, setContext] = useState<AskContextPayload | null>(null);
     const [composer, setComposer] = useState("");
@@ -283,7 +284,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (!context) return;
         const pending = takePendingQuestion();
         if (pending) void send(pending);
-    }, [context, takePendingQuestion, send]);
+        // `questionRequest`: a question asked while the drawer is already open.
+    }, [context, questionRequest, takePendingQuestion, send]);
 
     // The animal speaks first: an empty species thread opens on its greeting.
     // Runs after the pending question above, which takes precedence. Opened

@@ -67,6 +67,8 @@ type AskContextValue = {
     close: () => void;
     /** A question the launcher was opened with, consumed once by the drawer. */
     takePendingQuestion: () => string | null;
+    /** Bumped with every question `open` is given, so an open drawer sends it too. */
+    questionRequest: number;
 };
 
 const AskContext = createContext<AskContextValue | null>(null);
@@ -77,6 +79,7 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     const [trial, setTrial] = useState<AskTrialDeclaration | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const pendingQuestion = useRef<string | null>(null);
+    const [questionRequest, setQuestionRequest] = useState(0);
 
     // A page's declaration belongs to that page. Navigating away without the
     // next page declaring anything would otherwise leave the assistant claiming
@@ -107,7 +110,10 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     }, [pathname, declaration, trial]);
 
     const open = useCallback((question?: string) => {
-        if (question && question.trim()) pendingQuestion.current = question.trim();
+        if (question && question.trim()) {
+            pendingQuestion.current = question.trim();
+            setQuestionRequest((current) => current + 1);
+        }
         setIsOpen(true);
     }, []);
 
@@ -132,7 +138,8 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         isOpen,
         open,
         close,
-        takePendingQuestion
+        takePendingQuestion,
+        questionRequest
     }), [
         subject,
         declaration?.photoUrl,
@@ -143,7 +150,8 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         isOpen,
         open,
         close,
-        takePendingQuestion
+        takePendingQuestion,
+        questionRequest
     ]);
 
     return (
@@ -199,7 +207,8 @@ export function useAskAnimalDex(): AskContextValue {
         isOpen: false,
         open: () => undefined,
         close: () => undefined,
-        takePendingQuestion: () => null
+        takePendingQuestion: () => null,
+        questionRequest: 0
     };
 }
 
