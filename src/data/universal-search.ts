@@ -331,6 +331,49 @@ export async function fetchTrendingSearches(limit = 8): Promise<TrendingSearch[]
     }
 }
 
+/** An animal many different people have talked to (Speak to [Animal]). */
+export type MostTalkedToAnimal = {
+    name: string;
+    slug: string | null;
+    /** Different people who have ever talked to it. */
+    people: number;
+};
+
+/**
+ * The animals the most people have talked to (`species_most_talked_to_v1`,
+ * AnimalDex 47548e8f), for the Most talked-to section beside Trending, as the
+ * apps' search shows it. Only animals enough different people have talked to
+ * that no one person's chats can be picked out; empty before the migration.
+ */
+export async function fetchMostTalkedTo(limit = 6): Promise<MostTalkedToAnimal[]> {
+    const config = getConfig();
+    if (!config) return [];
+    try {
+        const response = await fetch(`${config.supabaseUrl}/rest/v1/rpc/species_most_talked_to_v1`, {
+            method: "POST",
+            headers: {
+                ...getSupabaseHeaders(config.serviceKey),
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({p_limit: Math.max(1, Math.min(12, limit)), p_window: "all"}),
+            // The sums are refreshed hourly.
+            next: {revalidate: 3600}
+        });
+        if (!response.ok) return [];
+        const rows = (await response.json()) as Array<Record<string, unknown>>;
+        if (!Array.isArray(rows)) return [];
+        return rows.flatMap((row): MostTalkedToAnimal[] => {
+            const name = String(row.display_name ?? "").trim();
+            const people = Number(row.people);
+            if (!name || !Number.isFinite(people) || people <= 0) return [];
+            const slug = typeof row.landing_page_slug === "string" && row.landing_page_slug.trim() ? row.landing_page_slug.trim() : null;
+            return [{name, slug, people}];
+        });
+    } catch {
+        return [];
+    }
+}
+
 /** Feeds the trending rail. Best-effort: never blocks or fails a search. */
 export async function recordCatalogSearch(query: string) {
     const config = getConfig();

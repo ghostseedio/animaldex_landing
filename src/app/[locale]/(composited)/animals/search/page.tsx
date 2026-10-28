@@ -7,7 +7,7 @@ import {
     getStarterComparableAnimals,
     searchComparableAnimals
 } from "@/data/comparison-animals";
-import {fetchTrendingSearches, normalizeSearchQuery} from "@/data/universal-search";
+import {fetchMostTalkedTo, fetchTrendingSearches, normalizeSearchQuery} from "@/data/universal-search";
 import {getLocalePath} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
@@ -38,10 +38,11 @@ export default async function AnimalSearchPage({params, searchParams}: Props) {
     const t = await getScopedTranslator(locale, "animalSearch");
     const query = getQuery(searchParams);
 
-    const [suggestionCatalog, previewMatches, trending] = await Promise.all([
+    const [suggestionCatalog, previewMatches, trending, mostTalkedTo] = await Promise.all([
         getStarterComparableAnimals(40).catch(() => []),
         query ? searchComparableAnimals(query, 6).catch(() => []) : Promise.resolve([]),
-        fetchTrendingSearches(8).catch(() => [])
+        fetchTrendingSearches(8).catch(() => []),
+        fetchMostTalkedTo(6).catch(() => [])
     ]);
 
     const catalogEntries = suggestionCatalog.map((animal) => ({
@@ -76,6 +77,7 @@ export default async function AnimalSearchPage({params, searchParams}: Props) {
                     initialQuery={query}
                     catalogEntries={catalogEntries}
                     trending={trending.map((item) => ({query: item.query, isPopular: item.isPopular}))}
+                    mostTalkedTo={mostTalkedTo}
                     copy={{
                         placeholder: t("placeholder"),
                         searchLabel: t("searchLabel"),
@@ -87,6 +89,8 @@ export default async function AnimalSearchPage({params, searchParams}: Props) {
                         seeMore: t("seeMore"),
                         trendingTitle: t("trendingTitle"),
                         popularBadge: t("popularBadge"),
+                        mostTalkedToTitle: t("mostTalkedToTitle"),
+                        peopleBadge: t("peopleBadge"),
                         suggestionsTitle: t("suggestionsTitle"),
                         submit: t("submit"),
                         filterDirectory: t("filterDirectory")

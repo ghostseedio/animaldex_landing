@@ -1647,7 +1647,9 @@
     "emptyBody": "Coba nama spesies, sifat seperti “tercepat”, sebuah tempat, atau matchup seperti “harimau vs singa”.",
     "emptyQueryPrompt": "Ketik pertanyaan atau nama hewan di atas untuk mencari katalog.",
     "retry": "Coba lagi",
-    "poweredNote": "Hasil berasal dari pencarian katalog AnimalDex yang sama dengan aplikasi."
+    "poweredNote": "Hasil berasal dari pencarian katalog AnimalDex yang sama dengan aplikasi.",
+    "mostTalkedToTitle": "Paling sering diajak bicara",
+    "peopleBadge": "{count} orang"
   },
   "nearbyWildlife": {
     "eyebrow": "Satwa liar di dekatmu",

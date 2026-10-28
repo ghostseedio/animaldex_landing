@@ -1657,7 +1657,9 @@
     "emptyBody": "Try a species name, a trait like “fastest”, a place, or a matchup like “tiger vs lion”.",
     "emptyQueryPrompt": "Type a question or an animal name above to search the catalog.",
     "retry": "Try again",
-    "poweredNote": "Results come from the same AnimalDex catalog search the app uses."
+    "poweredNote": "Results come from the same AnimalDex catalog search the app uses.",
+    "mostTalkedToTitle": "Most talked-to",
+    "peopleBadge": "{count} people"
   },
   "nearbyWildlife": {
     "eyebrow": "Wildlife near you",

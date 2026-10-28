@@ -16,6 +16,7 @@ import SpeciesImage from "./species-image";
 import AnimalsSearch, {type AnimalsSearchSuggestion} from "./animals-search";
 import UniversalSearchField from "@/app/[locale]/(composited)/animals/_components/universal-search-field";
 import {getScopedTranslator} from "@/loaders/translation";
+import {fetchMostTalkedTo} from "@/data/universal-search";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {getSpeciesArtworkDirectUrls} from "@/data/species-artwork-index";
@@ -319,6 +320,8 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
     const order = getDefaultSpeciesDirectorySortOrder(sort);
     const tier = "all" as const;
     const ts = await getScopedTranslator(locale, "animalSearch");
+    // Beside the hub's trending searches, as in the apps' search (AnimalDex 47548e8f).
+    const mostTalkedTo = await fetchMostTalkedTo(6).catch(() => []);
     const directoryPage = getSpeciesDirectoryPage({
         query,
         letter,
@@ -399,6 +402,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                             animalDexNumber: getAnimalDexNumberFromEntry(entry)
                         }))}
                     trending={hubTrendingSearches}
+                    mostTalkedTo={mostTalkedTo}
                     copy={{
                         placeholder: ts("placeholder"),
                         searchLabel: ts("searchLabel"),
@@ -410,6 +414,8 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         seeMore: ts("seeMore"),
                         trendingTitle: ts("trendingTitle"),
                         popularBadge: ts("popularBadge"),
+                        mostTalkedToTitle: ts("mostTalkedToTitle"),
+                        peopleBadge: ts("peopleBadge"),
                         suggestionsTitle: ts("suggestionsTitle"),
                         submit: ts("submit"),
                         filterDirectory: ts("filterDirectory")

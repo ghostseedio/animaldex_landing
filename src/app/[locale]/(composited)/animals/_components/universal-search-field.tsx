@@ -20,6 +20,9 @@ export type UniversalSearchFieldCopy = {
     seeMore: string;
     trendingTitle: string;
     popularBadge: string;
+    /** "Most talked-to" (Speak to [Animal]), and "{count} people" beside each. */
+    mostTalkedToTitle: string;
+    peopleBadge: string;
     suggestionsTitle: string;
     submit: string;
     filterDirectory: string;
@@ -31,6 +34,8 @@ type UniversalSearchFieldProps = {
     initialQuery?: string;
     catalogEntries: SuggestionCatalogEntry[];
     trending: Array<{query: string; isPopular: boolean}>;
+    /** The animals the most people have talked to; a click searches for one. */
+    mostTalkedTo?: Array<{name: string; people: number}>;
     copy: UniversalSearchFieldCopy;
     autoFocus?: boolean;
     /** Keeps the directory's in-page name filter reachable from the same field. */
@@ -64,6 +69,15 @@ type SpeechRecognitionLike = {
     onend: (() => void) | null;
 };
 
+/** "8", "1,240", "12K": a count that reads at a glance. */
+function formatPeople(count: number, locale: string): string {
+    try {
+        return new Intl.NumberFormat(locale, count >= 10_000 ? {notation: "compact", maximumFractionDigits: 1} : {}).format(count);
+    } catch {
+        return String(count);
+    }
+}
+
 function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
     if (typeof window === "undefined") return null;
     const candidate = window as unknown as {
@@ -79,6 +93,7 @@ export default function UniversalSearchField({
     initialQuery = "",
     catalogEntries,
     trending,
+    mostTalkedTo = [],
     copy,
     autoFocus = false,
     directoryFilterPath
@@ -371,6 +386,26 @@ export default function UniversalSearchField({
                                             {copy.popularBadge}
                                         </span>
                                     ) : null}
+                                </button>
+                            ))}
+                        </>
+                    ) : null}
+
+                    {showDiscovery && mostTalkedTo.length ? (
+                        <>
+                            <p className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-[0.16em] text-ink-400">{copy.mostTalkedToTitle}</p>
+                            {mostTalkedTo.slice(0, 6).map((item) => (
+                                <button
+                                    key={`talked:${item.name}`}
+                                    type="button"
+                                    onClick={() => submit(item.name)}
+                                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/5"
+                                >
+                                    <span className="text-ink-500" aria-hidden="true">❝</span>
+                                    <span className="min-w-0 flex-1 truncate text-sm text-white">{item.name}</span>
+                                    <span className="shrink-0 text-[0.7rem] font-bold text-ink-400">
+                                        {copy.peopleBadge.replace("{count}", formatPeople(item.people, locale))}
+                                    </span>
                                 </button>
                             ))}
                         </>
