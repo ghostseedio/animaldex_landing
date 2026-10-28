@@ -5,6 +5,7 @@ import Link from "@/app/[locale]/_components/link";
 import AnimalDexNumberBadge from "@/app/[locale]/(composited)/animals/animaldex-number-badge";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-card";
+import {AppDownloadLink} from "@/components/store/store-link";
 import NativeRangeMapCard from "@/app/[locale]/(composited)/animals/[slug]/native-range-map-card";
 import SpeciesDetailTabs from "@/app/[locale]/(composited)/animals/[slug]/species-detail-tabs";
 import SpeciesGroupMembers from "@/app/[locale]/(composited)/animals/[slug]/species-group-members";
@@ -957,9 +958,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
             <h2 className="mt-3 font-display text-3xl font-bold text-white">{t("unlockCardTitle")}</h2>
             <p className="mt-3 max-w-sm text-base leading-7 text-ink-200">{t("unlockCardDescription")}</p>
-            <Link href="/#download" className="mt-7 rounded-2xl border border-primary-400/35 px-5 py-3 font-semibold text-primary-100 hover:border-primary-300 hover:text-white">
+            <AppDownloadLink placement="species_card" className="mt-7 rounded-2xl border border-primary-400/35 px-5 py-3 font-semibold text-primary-100 hover:border-primary-300 hover:text-white">
                 {t("getAnimalDex")}
-            </Link>
+            </AppDownloadLink>
         </div>
     );
 
@@ -1022,9 +1023,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <p className="max-w-2xl text-lg leading-8 text-ink-200 md:text-xl">{entry.analysis.summary}</p>
                         </div>
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-                            <Link href="/#download" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
+                            <AppDownloadLink placement="species_hero" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
                                 {t("collectCta", {animal: entry.name})}
-                            </Link>
+                            </AppDownloadLink>
                             <Link href="/animals" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl border border-white/15 px-7 font-bold text-white transition-colors hover:border-primary-400 hover:text-primary-100">
                                 {t("browseAnimals")}
                             </Link>
@@ -1595,6 +1596,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 description={t("ctaDescription")}
                 buttonLabel={t("ctaButton")}
                 supportItems={ctaSupportItems}
+                placement="species_footer"
             />
 
             {relatedBlogPosts.length > 0 && (

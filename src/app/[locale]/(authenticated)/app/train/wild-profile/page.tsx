@@ -4,7 +4,7 @@ import {AppPageHeader, AppPrimaryLink} from "@/app/[locale]/(authenticated)/app/
 import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
 import {getTrainWildProfileState} from "@/data/train-modules";
 import {formatAppLongDate} from "@/lib/app-dates";
-import {appStoreUrl} from "@/lib/store-links";
+import StoreLink from "@/components/store/store-link";
 import {getScopedTranslator} from "@/loaders/translation";
 
 const INTERVIEW_PATH = "/app/train/wild-profile/interview";
@@ -101,9 +101,9 @@ export default async function WildProfilePage({params}: {params: {locale: string
                         <Link href={INTERVIEW_PATH} className="inline-flex bg-primary-400 px-5 py-3 text-sm font-black text-black">
                             {profile.hasInProgressInterview ? t("continueInterview") : t("startInterview")}
                         </Link>
-                        <a href={appStoreUrl} className="inline-flex border border-white/15 px-5 py-3 text-sm font-bold text-white/80 hover:border-white/30 hover:text-white">
+                        <StoreLink store="app_store" placement="wild_profile" className="inline-flex border border-white/15 px-5 py-3 text-sm font-bold text-white/80 hover:border-white/30 hover:text-white">
                             {profile.hasInProgressInterview ? t("continueInApp") : t("useAppInstead")}
-                        </a>
+                        </StoreLink>
                         <AppPrimaryLink href="/what-animal-am-i">{t("learnMore")}</AppPrimaryLink>
                     </div>
                     <p className="text-xs leading-5 text-white/35">{t("privacyNote")}</p>

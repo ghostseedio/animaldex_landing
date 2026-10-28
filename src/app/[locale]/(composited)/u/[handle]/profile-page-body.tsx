@@ -17,7 +17,6 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {appStoreUrl} from "@/lib/store-links";
 import {animalLevel} from "@/lib/animal-level";
 import {getMyWildlifeGuidePurchases, getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
@@ -283,7 +282,6 @@ export async function ProfilePageBody({
                 signInHref={`/account?next=${encodeURIComponent(profilePath(profile.username))}`}
                 surface={surface}
                 displayCurrency={displayCurrency}
-                appStoreUrl={appStoreUrl}
                 shareButton={
                     <ShareProfileButton
                         url={pageUrl}

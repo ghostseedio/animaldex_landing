@@ -1,6 +1,6 @@
 "use client";
 
-import {appStoreUrl} from "@/lib/store-links";
+import StoreLink from "@/components/store/store-link";
 import {useEffect, useId, useState} from "react";
 import {createPortal} from "react-dom";
 
@@ -329,14 +329,15 @@ export default function ShareSheet({
                             >
                                 Copy link
                             </button>
-                            <a
-                                href={appStoreUrl}
+                            <StoreLink
+                                store="app_store"
+                                placement="share_sheet"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex min-h-[3rem] flex-1 items-center justify-center border border-white/15 px-5 text-sm font-bold text-white transition hover:border-primary-300 hover:text-primary-100"
                             >
                                 Open App Store
-                            </a>
+                            </StoreLink>
                         </div>
                     </div>
                 ) : null}

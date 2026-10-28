@@ -49,6 +49,7 @@ import {
     type AskSuggestion
 } from "@/lib/ask-animaldex/subject";
 import {trackEvent} from "@/lib/analytics";
+import {rememberStorePlacement} from "@/lib/store-links";
 import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/species-ask";
 import {
     COMPANION_COPY,
@@ -956,7 +957,11 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     </Link>
                                     <Link
                                         href={labels.limitHref}
-                                        onClick={() => trackLimitStep("drawer_limit_app")}
+                                        onClick={() => {
+                                            trackLimitStep("drawer_limit_app");
+                                            // The store button on /#download credits the chat.
+                                            rememberStorePlacement("chat_limit");
+                                        }}
                                         className="text-xs font-semibold text-primary-200 underline-offset-2 transition-colors hover:text-primary-100 hover:underline"
                                     >
                                         {labels.limitAppCta}

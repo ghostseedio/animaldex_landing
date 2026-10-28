@@ -1,6 +1,7 @@
 import Button from "@/app/[locale]/_components/button";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
+import type {StorePlacement} from "@/lib/store-links";
 
 type IntentCtaCardProps = {
     title: string;
@@ -8,6 +9,8 @@ type IntentCtaCardProps = {
     buttonLabel: string;
     buttonHref?: string;
     supportItems?: string[];
+    /** Install attribution for the store buttons, when the card shows them. */
+    placement?: StorePlacement;
     secondaryLinks?: Array<{
         href: string;
         label: string;
@@ -20,6 +23,7 @@ export default function IntentCtaCard({
     buttonLabel,
     buttonHref,
     supportItems = [],
+    placement,
     secondaryLinks = []
 }: IntentCtaCardProps) {
     const useStoreLinks = !buttonHref;
@@ -30,7 +34,7 @@ export default function IntentCtaCard({
             <p className="text-ink-200 text-lg md:text-xl">{description}</p>
             <div className="flex justify-center flex-wrap gap-3">
                 {useStoreLinks ? (
-                    <StoreLinks />
+                    <StoreLinks placement={placement} />
                 ) : (
                     <Link href={buttonHref}>
                         <Button as="span">{buttonLabel}</Button>

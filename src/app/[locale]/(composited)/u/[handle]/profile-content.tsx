@@ -52,6 +52,7 @@ import {OwnerShopGuides, PublicShopGuides, type ProfileShopLabels} from "@/app/[
 import {GUIDE_BAND, GuideBandHeader} from "@/components/wildlife-guides/guide-ui";
 import type {GuideBought} from "@/lib/virtual-wildlife-guides";
 import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
+import StoreLink from "@/components/store/store-link";
 
 export type ProfileTab = "history" | "stats" | "shop" | "locations";
 
@@ -180,7 +181,6 @@ type ProfileContentProps = {
     };
     labels: ProfileContentLabels;
     locale: string;
-    appStoreUrl: string;
     shareButton: React.ReactNode;
     localePrefix: string;
     viewer: ProfileViewerState;
@@ -515,7 +515,6 @@ export default function ProfileContent({
     profile,
     labels,
     locale,
-    appStoreUrl,
     shareButton,
     localePrefix,
     viewer,
@@ -997,12 +996,13 @@ export default function ProfileContent({
                                             <p className="mt-2 text-xs text-white/35">{pack.guaranteesSummary}</p>
                                         ) : null}
                                     </div>
-                                    <a
-                                        href={appStoreUrl}
+                                    <StoreLink
+                                        store="app_store"
+                                        placement="profile_pack"
                                         className="shrink-0 bg-primary-400 px-3 py-2 text-xs font-black text-black"
                                     >
                                         {labels.packBuyInApp}
-                                    </a>
+                                    </StoreLink>
                                 </div>
                                 <p className="mt-3 text-xs text-white/35">
                                     {labels.packListedBy.replace("{name}", profile.displayName)}

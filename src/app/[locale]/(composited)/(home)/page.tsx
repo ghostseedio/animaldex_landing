@@ -23,6 +23,7 @@ import {unsafelyLoadSVG} from "@/loaders/svg";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
+import StoreLink from "@/components/store/store-link";
 import {ArrowSquareDownIcon} from "@/app/[locale]/_components/icons";
 import {socialProfileUrlList} from "@/lib/social-links";
 import {localeConfig} from "@/i18n";
@@ -332,12 +333,13 @@ export default async function Home({params}: HomePageProps) {
                         {t("description")}
                     </p>
                     <div className="mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                        {downloadStoreLinks.map(({name, href}) => {
+                        {downloadStoreLinks.map(({name}) => {
                             const isAppStore = name === "App Store";
                             return (
-                                <a
+                                <StoreLink
                                     key={name}
-                                    href={href}
+                                    store={isAppStore ? "app_store" : "google_play"}
+                                    placement="home_hero"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={
@@ -368,7 +370,7 @@ export default async function Home({params}: HomePageProps) {
                                     <span className="text-2xl transition-transform duration-300 group-hover/store:translate-x-1">
                                         →
                                     </span>
-                                </a>
+                                </StoreLink>
                             );
                         })}
                     </div>
@@ -597,10 +599,11 @@ export default async function Home({params}: HomePageProps) {
                                 </p>
                             </div>
                             <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[28rem]">
-                                {downloadStoreLinks.map(({name, href}) => (
-                                    <a
+                                {downloadStoreLinks.map(({name}) => (
+                                    <StoreLink
                                         key={name}
-                                        href={href}
+                                        store={name === "App Store" ? "app_store" : "google_play"}
+                                        placement="home_more"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="group/store relative flex min-h-[4.75rem] items-center gap-3 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-white/[0.045] px-4 py-3 text-left text-white transition-[transform,border-color,background-color,color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-primary-200/55 hover:bg-primary-400 hover:text-canvas-950 hover:shadow-[0_18px_50px_rgba(167,244,50,0.16)]"
@@ -625,7 +628,7 @@ export default async function Home({params}: HomePageProps) {
                                                 {name}
                                             </span>
                                         </span>
-                                    </a>
+                                    </StoreLink>
                                 ))}
                             </div>
                         </div>
@@ -735,10 +738,12 @@ export default async function Home({params}: HomePageProps) {
                                 </div>
                             </div>
                             <div className="flex flex-col gap-3">
-                                {downloadStoreLinks.map(({name, href}) => (
-                                    <a
+                                {downloadStoreLinks.map(({name}) => (
+                                    <StoreLink
                                         key={name}
-                                        href={href}
+                                        store={name === "App Store" ? "app_store" : "google_play"}
+                                        placement="home_download"
+                                        inheritPlacement
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="group/store flex min-h-[5.25rem] items-center gap-4 rounded-[1.45rem] border border-white/10 bg-[#07100B]/88 light:bg-surface-800 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[transform,border-color,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-200/45 hover:bg-[#0D2A16] light:hover:bg-surface-700 hover:shadow-[0_22px_70px_rgba(33,192,94,0.12),inset_0_1px_0_rgba(255,255,255,0.10)]"
@@ -768,7 +773,7 @@ export default async function Home({params}: HomePageProps) {
                                         <span className="text-2xl text-primary-200 transition-transform duration-300 group-hover/store:translate-x-1">
                                             →
                                         </span>
-                                    </a>
+                                    </StoreLink>
                                 ))}
                             </div>
                         </div>

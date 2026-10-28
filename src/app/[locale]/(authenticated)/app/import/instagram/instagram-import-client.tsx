@@ -5,7 +5,7 @@ import {usePathname, useSearchParams} from "next/navigation";
 import {AppEmpty, AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {trackEvent} from "@/lib/analytics";
-import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
+import StoreLink from "@/components/store/store-link";
 import {
     canImportSelection,
     candidateNeedsRescreen,
@@ -968,9 +968,9 @@ function InstagramImportClientInner() {
                     {imported > 0 ? (
                         <p className="mt-8 max-w-md text-sm leading-6 text-white/45">
                             Get the app to capture new animals in the field.{" "}
-                            <a href={appStoreUrl} className="font-bold text-primary-200" onClick={() => trackEvent("mobile_download_clicked", {store: "app_store", source: "import_result"})}>App Store</a>
+                            <StoreLink store="app_store" placement="import_result" className="font-bold text-primary-200" onClick={() => trackEvent("mobile_download_clicked", {store: "app_store", source: "import_result"})}>App Store</StoreLink>
                             {" · "}
-                            <a href={googlePlayUrl} className="font-bold text-primary-200" onClick={() => trackEvent("mobile_download_clicked", {store: "google_play", source: "import_result"})}>Google Play</a>
+                            <StoreLink store="google_play" placement="import_result" className="font-bold text-primary-200" onClick={() => trackEvent("mobile_download_clicked", {store: "google_play", source: "import_result"})}>Google Play</StoreLink>
                         </p>
                     ) : null}
                 </AppSurface>

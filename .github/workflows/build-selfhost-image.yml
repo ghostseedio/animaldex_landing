@@ -66,6 +66,7 @@ jobs:
           VAR_NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
           VAR_NEXT_PUBLIC_INSTAGRAM_WEB_IMPORT_LIVE: ${{ vars.NEXT_PUBLIC_INSTAGRAM_WEB_IMPORT_LIVE }}
           VAR_GOOGLE_ANALYTICS_ID: ${{ vars.GOOGLE_ANALYTICS_ID }}
+          VAR_NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN: ${{ vars.NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN }}
         run: |
           set_default() {
             local name="$1"
@@ -86,6 +87,7 @@ jobs:
             echo "next_public_ga_measurement_id=${VAR_NEXT_PUBLIC_GA_MEASUREMENT_ID}"
             echo "next_public_instagram_web_import_live=${VAR_NEXT_PUBLIC_INSTAGRAM_WEB_IMPORT_LIVE}"
             echo "google_analytics_id=${VAR_GOOGLE_ANALYTICS_ID}"
+            echo "next_public_app_store_provider_token=${VAR_NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
@@ -113,6 +115,7 @@ jobs:
             NEXT_PUBLIC_GA_MEASUREMENT_ID=${{ steps.buildargs.outputs.next_public_ga_measurement_id }}
             NEXT_PUBLIC_INSTAGRAM_WEB_IMPORT_LIVE=${{ steps.buildargs.outputs.next_public_instagram_web_import_live }}
             GOOGLE_ANALYTICS_ID=${{ steps.buildargs.outputs.google_analytics_id }}
+            NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN=${{ steps.buildargs.outputs.next_public_app_store_provider_token }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
