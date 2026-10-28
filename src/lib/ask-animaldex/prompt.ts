@@ -32,6 +32,7 @@ import {
 } from "@/lib/ask-animaldex/companion";
 import {askAnimalRecordLines, type AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
 import {askPersonaLines, type AskPersonaDials, type AskPersonaStats} from "@/lib/ask-animaldex/persona";
+import {COMPANION_OUTPUT_LINES, companionLoopRules} from "@/lib/ask-animaldex/companion-focus";
 
 export const ASK_FOLLOW_UP_SENTINEL = "§§FOLLOW_UPS§§";
 
@@ -479,6 +480,10 @@ export type AskPromptOptions = {
     species?: AskSpeciesGrounding | null;
     /// Species scope: the game stats that go in the record.
     stats?: AskPersonaStats | null;
+    /// The companion loop (`companion-focus.ts`): the owner's one-to-one chat,
+    /// personalisation on, not a Trial. `offersSteps` false: they asked not to
+    /// be offered steps.
+    companionLoop?: {offersSteps: boolean} | null;
 };
 
 function localeRules(languageName: string | null | undefined): string[] {
@@ -498,12 +503,18 @@ function speciesMode(options: AskPromptOptions): AskConversationMode {
 
 /**
  * The apps' `loopRules` for an owner without step cards: the chat-mode rules
- * (training has no loop rules on the web), then the relationship rules.
+ * (training has no loop rules on the web), the companion loop on the owner's
+ * own chat, then the relationship rules.
  */
 function companionRules(options: AskPromptOptions): string[] {
     const mode = speciesMode(options);
     if (mode === "training") return ANIMAL_RELATIONSHIP_RULES;
-    return [...(mode === "chat" ? ANIMAL_CHAT_MODE_RULES : []), "", ...ANIMAL_RELATIONSHIP_RULES];
+    return [
+        ...(mode === "chat" ? ANIMAL_CHAT_MODE_RULES : []),
+        ...(options.companionLoop ? ["", ...companionLoopRules(options.companionLoop)] : []),
+        "",
+        ...ANIMAL_RELATIONSHIP_RULES
+    ];
 }
 
 /**
@@ -612,6 +623,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
             "1. The answer itself (ending on its closing question when you ask one).",
             `2. Then a line containing exactly ${ASK_FOLLOW_UP_SENTINEL}`,
             "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
+            ...(options.companionLoop && speciesMode(options) !== "training" ? COMPANION_OUTPUT_LINES : []),
             ...followUpRules(options),
             `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,
             "",

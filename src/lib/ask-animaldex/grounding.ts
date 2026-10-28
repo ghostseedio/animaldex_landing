@@ -15,6 +15,7 @@ import type {AskConversationTurn, AskScope} from "@/lib/ask-animaldex/prompt";
 import {askMemorySection, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import {ANIMAL_CHAT_CLOSING_INSTRUCTION, type AskConversationMode} from "@/lib/ask-animaldex/companion";
 import type {AskPersonaStats} from "@/lib/ask-animaldex/persona";
+import {REFERRAL_OPENING_RULES} from "@/lib/ask-animaldex/companion-focus";
 
 export type AskPowerEvidence = {
     title: string;
@@ -234,6 +235,16 @@ export type AskGroundingPacket = {
      * is withheld so the offers cannot wander off it.
      */
     trialContext?: string | null;
+    /**
+     * The owner's own chat: what the two of them share so far (the bond's
+     * stage and what counted), as the apps' `relationship` line.
+     */
+    relationship?: {stage: string; counted: Record<string, unknown>} | null;
+    /**
+     * The owner's own chat with the companion loop on: the loop as it stands
+     * and their other animals (`companionPromptLines`).
+     */
+    companionLines?: string[] | null;
 };
 
 const TRIAL_GROUNDING_LEAD = "animal_trial — the person is looking at this Trial. Answer what it means, how to do it, and give concrete examples of this Trial. Do not replace it with a different task.";
@@ -500,6 +511,10 @@ function speciesContextLines(params: AskSpeciesPromptParams & {pageLine: string}
                 : "wild_profile_summary: not_set"
             : "",
         packet.wildProfile ? askMemorySection(packet.memory ?? [], packet.memorySpeciesProfileId ?? null) : "",
+        packet.relationship
+            ? `relationship — what you and this person share so far: ${JSON.stringify(packet.relationship)}`
+            : "",
+        ...(packet.companionLines ?? []),
         trialContext ? `${SPECIES_TRIAL_GROUNDING_LEAD}\n${trialContext}` : "",
         params.pageLine
     ];
@@ -542,14 +557,17 @@ export const ANIMAL_GREETING_RULES = [
  * The greeting turn. Built for the same system prompt as the turns that
  * follow, so the greeting's request warms the cache the first real reply reads.
  */
-export function buildAskGreetingUserPrompt(params: AskSpeciesPromptParams): string {
+export function buildAskGreetingUserPrompt(params: AskSpeciesPromptParams & {
+    /** Another of their animals sent them here (companion.referral): it opens with the problem. */
+    referral?: boolean;
+}): string {
     const {packet} = params;
     if (packet.scope !== "species" || !packet.species) throw new Error("greeting_needs_species");
     return [
         ...(params.recordInSystem ? [] : [`animal_name: ${packet.species.name}`]),
         ...speciesContextLines({...params, pageLine: pageContextLine(packet)}),
         "",
-        ...ANIMAL_GREETING_RULES
+        ...(params.referral ? REFERRAL_OPENING_RULES : ANIMAL_GREETING_RULES)
     ].filter(Boolean).join("\n");
 }
 

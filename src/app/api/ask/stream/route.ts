@@ -17,6 +17,14 @@ import {NextResponse} from "next/server";
  * account and a capture or species id, and an anonymous reader on a species
  * page has neither. The web's entitlement is the daily Ask allowance instead,
  * which is also what keeps the public species page out of a paywall.
+ *
+ * On the reader's own card the animal works on their life with them (the
+ * companion loop, `companion-focus.ts`): its focus, the step it set, a step
+ * done, another of their animals it sends them to. It records what it did in
+ * hidden lines after the follow-ups, which are taken out here, written with
+ * the service role, and reported as `companion` (and the new `bond`) in
+ * `done`, in the edge function's shape. A `referral_id` greeting opens on the
+ * referred problem, or says nothing once it has been taken up.
  */
 
 import {buildAskPacket} from "@/data/ask-grounding";
@@ -61,9 +69,24 @@ import {
     type AskPersonaFrame
 } from "@/lib/ask-animaldex/persona";
 import {askSupportedVisuals} from "@/lib/ask-animaldex/visuals";
+import {
+    bondForClient,
+    companionPromptLines,
+    extractCompanionLines,
+    type CompanionLines
+} from "@/lib/ask-animaldex/companion-focus";
+import {
+    applyCompanionLines,
+    loadOwnerCompanion,
+    readerOwnsCapture,
+    takeAnimalReferral,
+    type OwnerCompanion
+} from "@/lib/ask-animaldex/companion-loop-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function askJson(body: unknown, status = 200) {
     return NextResponse.json(body, {status, headers: ASK_RESPONSE_HEADERS});
@@ -135,10 +158,12 @@ export async function POST(request: Request) {
     // The history must not carry the message being sent; an older client
     // still appends it, so a trailing copy of the question is dropped here.
     const history = dedupeCurrentQuestion(resolveAskHistory(body.history), question ?? "");
-    const [basePacket, wildProfile, settings] = await Promise.all([
+    const [basePacket, wildProfile, settings, ownsCapture] = await Promise.all([
         buildAskPacket({subject, question: question ?? ""}),
         getAskWildProfile(viewer.userId),
-        loadAskChatSettings(viewer.userId)
+        loadAskChatSettings(viewer.userId),
+        // The reader's own card: their one-to-one chat with this animal.
+        viewer.signedIn ? readerOwnsCapture(viewer.userId, subject.captureId) : Promise.resolve(false)
     ]);
     // Personalisation off: no memory is read and nothing is learned.
     const personalise = viewer.signedIn && settings.personalisationEnabled;
@@ -156,6 +181,16 @@ export async function POST(request: Request) {
     ]);
     // A Trial question is grounded on that Trial and kept there.
     const aboutTrial = Boolean(subject.trialContext);
+    // The owner's turn: the bond, and (personalisation on, not a Trial) the
+    // companion loop. Anything that fails leaves the animal without it.
+    const ownerSpeciesId = speaksAsAnimal && ownsCapture && viewer.userId ? companion?.speciesProfileId ?? null : null;
+    const owner: OwnerCompanion | null = ownerSpeciesId && viewer.userId
+        ? await loadOwnerCompanion({userId: viewer.userId, speciesProfileId: ownerSpeciesId, loopOn: personalise && !aboutTrial})
+            .catch(() => null)
+        : null;
+    const loop = owner?.loop ?? null;
+    // Another of their animals sent them here about something not yet taken up.
+    const referral = loop?.state?.referral ?? null;
     // The website has no step cards, so the animal talks in chat mode; a
     // Trial thread is training, as the apps force it.
     const mode = aboutTrial ? "training" as const : "chat" as const;
@@ -174,7 +209,21 @@ export async function POST(request: Request) {
     const packet = {
         ...groundedPacket,
         ...(groundedPacket.scope === "species" ? {mode, stats: companion?.stats ?? null} : {}),
-        ...(subject.trialContext ? {trialContext: subject.trialContext} : {})
+        ...(subject.trialContext ? {trialContext: subject.trialContext} : {}),
+        ...(owner?.bond?.stage
+            ? {relationship: {stage: owner.bond.stage, counted: owner.bond.counted ?? {}}}
+            : {}),
+        ...(loop
+            ? {
+                companionLines: companionPromptLines({
+                    state: loop.state,
+                    roster: loop.roster,
+                    powerJustEarned: loop.powerJustEarned,
+                    powerEarned: owner?.powerEarned ?? false,
+                    lessonCheckPassed: owner?.lessonCheckPassed ?? true
+                })
+            }
+            : {})
     };
     // What this exchange taught about the person is learned after the answer
     // has gone out, so the reply is never slowed by it.
@@ -220,13 +269,14 @@ export async function POST(request: Request) {
         // the system prompt where it is cached turn after turn.
         persona,
         species: speaksAsAnimal ? packet.species : null,
-        stats: companion?.stats ?? null
+        stats: companion?.stats ?? null,
+        companionLoop: loop ? {offersSteps: settings.suggestSteps} : null
     };
     // The animal sees the conversation as real turns (its own replies as its
     // own), as in the apps; the site-wide assistant keeps it in the text.
     const historyTurns: AskConversationTurn[] | undefined = speaksAsAnimal ? askHistoryAsTurns(history) : undefined;
     const userPrompt = isGreeting
-        ? buildAskGreetingUserPrompt({packet, recordInSystem: true})
+        ? buildAskGreetingUserPrompt({packet, recordInSystem: true, referral: Boolean(referral)})
         : buildAskUserPrompt({
             userQuestion: question ?? "",
             packet,
@@ -236,8 +286,10 @@ export async function POST(request: Request) {
         });
     const providers = availableAskProviders({animalVoice: speaksAsAnimal});
 
+    // The owner's bond, as the apps get it on every turn.
+    const bondFrame: {bond?: Record<string, unknown>} = owner?.bond?.stage ? {bond: bondForClient(owner.bond)} : {};
     const closing = isGreeting
-        ? {greeting: true, signed_in: viewer.signedIn, has_wild_profile: wildProfile.hasWildProfile, ...personaFrame}
+        ? {greeting: true, signed_in: viewer.signedIn, has_wild_profile: wildProfile.hasWildProfile, ...personaFrame, ...bondFrame}
         : {
             remaining: rate?.remaining,
             limit: rate?.limit,
@@ -251,7 +303,8 @@ export async function POST(request: Request) {
             // Lets the client offer credits as soon as the last free message is
             // spent, instead of after a refused one.
             ...(rate?.creditOverflow ? {credit_overflow: rate.creditOverflow} : {}),
-            ...personaFrame
+            ...personaFrame,
+            ...bondFrame
         };
 
     const oneShot = () => requestAskAnswerJSON({
@@ -281,11 +334,30 @@ export async function POST(request: Request) {
         return askJson({error: "unavailable"}, 503);
     }
 
+    // Opened from a referral that has been taken up already: nothing to open with.
+    const referralId = typeof body.referral_id === "string" && UUID_PATTERN.test(body.referral_id.trim())
+        ? body.referral_id.trim()
+        : null;
+    const staleReferral = isGreeting && Boolean(referralId) && !referral;
     // Free but capped: past the cap (or with no model answering) the animal
-    // opens with its card's own question, in the streamed shape.
-    const greetingFromModel = isGreeting ? await takeAskGreeting(request, viewer) : false;
-    const fixedGreeting = isGreeting && packet.species
+    // opens with its card's own question, in the streamed shape. Sent here by
+    // another animal, it always opens with the problem.
+    const greetingFromModel = isGreeting && !staleReferral
+        ? Boolean(referral) || await takeAskGreeting(request, viewer)
+        : false;
+    const fixedGreeting = isGreeting && packet.species && !staleReferral
         ? fallbackAskGreeting({animalName: packet.species.name, voice: companion?.voice ?? null})
+        : null;
+    // The loop's hidden lines, written before `done`; what comes back is merged into it.
+    const onCompanion = loop && owner && ownerSpeciesId && viewer.userId
+        ? (lines: CompanionLines) => applyCompanionLines({
+            service: owner.service,
+            userId: viewer.userId as string,
+            speciesProfileId: ownerSpeciesId,
+            state: loop.state,
+            roster: loop.roster,
+            lines
+        })
         : null;
     const streamingSystemPrompt = buildAskStreamingSystemPrompt(promptOptions);
     const sourceFor = (provider: AskProviderName) => askAnswerSource(provider, {
@@ -328,14 +400,34 @@ export async function POST(request: Request) {
                 }
             });
 
-            const finish = () => {
-                const split = splitStreamedReply(full);
+            const finish = async () => {
+                // The companion lines come out before the follow-ups are read,
+                // so they are never shown and never become chips.
+                const hidden = extractCompanionLines(full);
+                const split = splitStreamedReply(hidden.raw);
                 if (split.answer.length > emitted) {
                     send({delta: split.answer.slice(emitted)});
                 }
-                send({done: true, follow_up_prompts: split.followUps, ...closing});
-                if (split.answer.trim()) remember(split.answer);
+                const companionFields = split.answer.trim() && onCompanion
+                    ? await onCompanion(hidden.lines).catch(() => ({}))
+                    : {};
+                send({done: true, follow_up_prompts: split.followUps, ...closing, ...companionFields});
+                if (split.answer.trim()) {
+                    remember(split.answer);
+                    // The animal it was sent to has now taken the problem up.
+                    if (isGreeting && referral && owner && viewer.userId) {
+                        void takeAnimalReferral(owner.service, viewer.userId, referral.id);
+                    }
+                }
             };
+
+            // A referral already taken up: an empty greeting, which the
+            // client takes as no hello.
+            if (staleReferral) {
+                send({done: true, follow_up_prompts: [], ...closing});
+                controller.close();
+                return;
+            }
 
             const failures: string[] = [];
             const modelProviders = isGreeting && !greetingFromModel ? [] : providers;
@@ -344,7 +436,7 @@ export async function POST(request: Request) {
                 if (!source) continue;
                 try {
                     await pump(source);
-                    finish();
+                    await finish();
                     controller.close();
                     return;
                 } catch (error) {
@@ -360,7 +452,7 @@ export async function POST(request: Request) {
                     // retried with a second one: the reader would watch the
                     // answer restart mid-sentence.
                     if (emitted > 0) {
-                        finish();
+                        await finish();
                         controller.close();
                         return;
                     }
@@ -370,7 +462,7 @@ export async function POST(request: Request) {
             if (fixedGreeting) {
                 if (failures.length > 0) console.warn("[ask-animaldex] greeting fell back to the card", failures.join(" | "));
                 full = `${fixedGreeting.text}\n${ASK_FOLLOW_UP_SENTINEL}\n${fixedGreeting.followUps.join("\n")}`;
-                finish();
+                await finish();
                 controller.close();
                 return;
             }

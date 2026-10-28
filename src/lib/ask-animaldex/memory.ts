@@ -23,9 +23,11 @@ export type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 export type AskChatSettings = {
     /** False: no memory is read and nothing is learned. */
     personalisationEnabled: boolean;
+    /** False: the animal sets no steps unless asked (the companion loop's opt-out). */
+    suggestSteps: boolean;
 };
 
-const DEFAULT_SETTINGS: AskChatSettings = {personalisationEnabled: true};
+const DEFAULT_SETTINGS: AskChatSettings = {personalisationEnabled: true, suggestSteps: true};
 
 /**
  * `animal_chat_settings_for`, service role. A database without the companions
@@ -40,7 +42,10 @@ export async function loadAskChatSettings(userId: string | null): Promise<AskCha
         const {data, error} = await service.rpc("animal_chat_settings_for", {p_user_id: userId});
         if (error || !data || typeof data !== "object") return DEFAULT_SETTINGS;
         const row = data as Record<string, unknown>;
-        return {personalisationEnabled: row.personalisation_enabled !== false};
+        return {
+            personalisationEnabled: row.personalisation_enabled !== false,
+            suggestSteps: row.suggest_steps !== false
+        };
     } catch {
         return DEFAULT_SETTINGS;
     }
