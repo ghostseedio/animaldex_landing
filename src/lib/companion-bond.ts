@@ -278,6 +278,29 @@ export function companionLevelsBySpecies(rows: CompanionSummary[]): Map<string, 
     return new Map(rows.map((row) => [row.speciesProfileId.toLowerCase(), row]));
 }
 
+/** A card's species, as the surfaces that print its level know it. */
+export type CardSpeciesKey = {speciesProfileId?: string | null; speciesSlug?: string | null};
+
+/** The icon-art slug form: lower case, hyphens (identity keys use underscores). */
+function slugKey(slug: string | null | undefined): string | null {
+    const key = slug?.trim().toLowerCase().replace(/_/g, "-");
+    return key ? key : null;
+}
+
+/**
+ * The level one of your own cards shows (SPEC phase 2): its animal's bond
+ * level, found by species id and then by slug (a card's species may be a
+ * profile that folds into the canonical one the bond is kept under), else the
+ * card's own level. Only for your own cards; the caller decides that.
+ */
+export function ownCardLevel(rows: CompanionSummary[], card: CardSpeciesKey, cardLevel: number): number {
+    const id = card.speciesProfileId?.trim().toLowerCase();
+    const slug = slugKey(card.speciesSlug);
+    const row = (id ? rows.find((entry) => entry.speciesProfileId.toLowerCase() === id) : undefined)
+        ?? (slug ? rows.find((entry) => slugKey(entry.slug) === slug) : undefined);
+    return row ? row.level : cardLevel;
+}
+
 /** Low/Mid/High frequency → Easy / Medium / Hard (SPEC "Words"). */
 export function trialDifficulty(frequency: string | null | undefined): "Easy" | "Medium" | "Hard" | null {
     switch ((frequency ?? "").trim().toUpperCase()) {

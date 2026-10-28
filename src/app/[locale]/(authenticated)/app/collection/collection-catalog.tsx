@@ -2,6 +2,7 @@
 
 import {type ReactNode, useEffect, useMemo, useRef, useState} from "react";
 import {useCompanions} from "@/components/companions/use-companions";
+import {ownCardLevel} from "@/lib/companion-bond";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
@@ -318,10 +319,8 @@ export default function CollectionCatalog({
     }, [initialContentMode]);
     // Each caught animal shows its bond level: one level per animal.
     const companions = useCompanions();
-    const levelBySlug = useMemo(
-        () => new Map(companions.rows.flatMap((row) => (row.slug ? [[row.slug, row.level] as [string, number]] : []))),
-        [companions.rows]
-    );
+    // 0 when the bond is not known: the tile then shows no level.
+    const levelFor = (slug: string) => ownCardLevel(companions.rows, {speciesSlug: slug}, 0);
     const contentModeOptions = bindersPanel ? CONTENT_MODE_OPTIONS : CONTENT_MODE_OPTIONS.filter((option) => option.id !== "binders");
     const [layout, setLayout] = useState<Layout>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -762,13 +761,13 @@ export default function CollectionCatalog({
                                         </span>
                                     ) : null}
                                     {item.score !== null ? <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">{item.score}</span> : null}
-                                    {item.captured && levelBySlug.get(item.slug) ? (
+                                    {item.captured && levelFor(item.slug) > 0 ? (
                                         // Its bond level: a small number, read out as "Level {n}".
                                         <span
-                                            aria-label={`Level ${levelBySlug.get(item.slug)}`}
+                                            aria-label={`Level ${levelFor(item.slug)}`}
                                             className="absolute bottom-2 right-2 grid h-6 min-w-6 place-items-center rounded-full border border-primary-400/40 bg-black/75 px-1.5 text-[0.65rem] font-black tabular-nums text-primary-200"
                                         >
-                                            {levelBySlug.get(item.slug)}
+                                            {levelFor(item.slug)}
                                         </span>
                                     ) : null}
                                 </div>

@@ -15,6 +15,8 @@ import {
     companionLevelsBySpecies,
     decodeAnimalBond,
     decodeCompanionSummaries,
+    ownCardLevel,
+    type CardSpeciesKey,
     type AnimalBond,
     type CompanionSummary
 } from "@/lib/companion-bond";
@@ -71,6 +73,15 @@ export function useCompanionLevel(speciesProfileId: string | null | undefined, e
     const {rows} = useCompanions(enabled && Boolean(speciesProfileId));
     if (!enabled || !speciesProfileId) return null;
     return companionLevelsBySpecies(rows).get(speciesProfileId.toLowerCase()) ?? null;
+}
+
+/**
+ * The level a card shows: on one of your own cards (`isOwn`), its animal's
+ * bond level, else the card's own. Other people's cards read nothing.
+ */
+export function useOwnCardLevel(card: CardSpeciesKey, cardLevel: number, isOwn: boolean): number {
+    const {rows} = useCompanions(isOwn);
+    return isOwn ? ownCardLevel(rows, card, cardLevel) : cardLevel;
 }
 
 /** `animal_bond_v1` for one animal: the bond screen. */

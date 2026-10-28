@@ -11,6 +11,7 @@ import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
 import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
 import MyCompanionsSection from "@/components/companions/my-companions-section";
+import {useOwnCardLevel} from "@/components/companions/use-companions";
 import {useSearchParams} from "next/navigation";
 import {
     AverageTraitsCard,
@@ -425,7 +426,9 @@ function ProfileViewsCard({stats}: {stats: ProfileViewStats}) {
 }
 
 /** iOS `ProfileHistoryGridCell`: square photo, index chip, sightings pill, level chip, video marker. */
-function ProfileGridCell({item}: {item: ProfileGridItem<PublicProfileCapture>}) {
+function ProfileGridCell({item, isOwn = false}: {item: ProfileGridItem<PublicProfileCapture>; isOwn?: boolean}) {
+    // Your own grid shows each animal's bond level: one level per animal.
+    const level = useOwnCardLevel(item.representative, item.level, isOwn);
     const capture = item.representative;
     return (
         <Link href={capture.href} className="group relative aspect-square overflow-hidden bg-black">
@@ -457,12 +460,12 @@ function ProfileGridCell({item}: {item: ProfileGridItem<PublicProfileCapture>}) 
                 </span>
             ) : null}
             {/* Level 1 is every new capture; iOS shows no chip for it. */}
-            {item.level > 1 ? (
+            {level > 1 ? (
                 <span
-                    aria-label={`Level ${item.level}`}
+                    aria-label={`Level ${level}`}
                     className="absolute bottom-[7px] left-[7px] rounded-full bg-black/55 px-[7px] py-1 text-[10px] font-extrabold leading-none tabular-nums text-white"
                 >
-                    Level {item.level}
+                    Level {level}
                 </span>
             ) : null}
             {item.isMovingMedia ? (
@@ -1056,7 +1059,7 @@ export default function ProfileContent({
                     ) : (
                         <div className={`mt-2 grid grid-cols-3 gap-0.5 ${bleed}`}>
                             {gridItems.slice(0, historyLimit).map((item) => (
-                                <ProfileGridCell key={item.id} item={item} />
+                                <ProfileGridCell key={item.id} item={item} isOwn={viewer.isOwner} />
                             ))}
                         </div>
                     )}

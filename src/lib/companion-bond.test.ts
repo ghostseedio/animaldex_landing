@@ -8,6 +8,7 @@ import {
     bondPowerLine,
     bondStageLabel,
     companionLevelsBySpecies,
+    ownCardLevel,
     companionStatusLine,
     companionSummaryName,
     decodeAnimalBond,
@@ -102,6 +103,19 @@ test("the chat's bond carries the level", () => {
     assert.equal(bondChipText({level: null, stageLabel: "Met"}), "Met");
     assert.equal(decodeChatBond({level: 2}), null);
     assert.equal(bondStageLabel("long_standing"), "Long-standing");
+});
+
+test("your own cards show their animal's bond level, by species id then slug, else their own", () => {
+    const rows = decodeCompanionSummaries([
+        {species_profile_id: SPECIES, slug: "african-lion", animal: "African Lion", level: 6},
+        {species_profile_id: "s2", slug: "meerkat", animal: "Meerkat", level: 3}
+    ]);
+    assert.equal(ownCardLevel(rows, {speciesProfileId: SPECIES.toUpperCase()}, 1), 6);
+    // A folded profile id still finds its animal by slug, in either spelling.
+    assert.equal(ownCardLevel(rows, {speciesProfileId: "folded-id", speciesSlug: "african_lion"}, 2), 6);
+    assert.equal(ownCardLevel(rows, {speciesSlug: "Meerkat"}, 9), 3);
+    assert.equal(ownCardLevel(rows, {speciesProfileId: "unknown", speciesSlug: "okapi"}, 4), 4);
+    assert.equal(ownCardLevel([], {speciesProfileId: SPECIES}, 5), 5);
 });
 
 test("frequencies read as difficulty", () => {

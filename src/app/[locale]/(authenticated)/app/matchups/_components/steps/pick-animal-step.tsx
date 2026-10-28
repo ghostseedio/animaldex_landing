@@ -4,6 +4,8 @@ import type {MatchupOpponent, MatchupRosterCapture} from "@/data/matchups-types"
 import ChallengeHearts from "@/app/[locale]/(authenticated)/app/matchups/_components/challenge-hearts";
 import {type CapturePlayEligibilityMap, gateIsLocked} from "@/lib/animal-powers";
 import {allowsMatchup, tierRank} from "@/lib/matchup-stats";
+import {useCompanions} from "@/components/companions/use-companions";
+import {ownCardLevel} from "@/lib/companion-bond";
 
 function powerLock(capture: MatchupRosterCapture, eligibility: CapturePlayEligibilityMap | null) {
     const gate = eligibility?.[capture.captureId.toLowerCase()];
@@ -51,6 +53,8 @@ export default function PickAnimalStep({
     /** Opens the earning flow for a Power-locked capture, keeping the picker underneath. */
     onEarnPower?: (capture: MatchupRosterCapture, speciesProfileId: string | null) => void;
 }) {
+    // These are the reader's own animals: each shows its bond level, one level per animal.
+    const companions = useCompanions();
     const ranked = [...roster].sort((left, right) => {
         const leftEligible = !eligibilityReason(left, opponent, eligibility);
         const rightEligible = !eligibilityReason(right, opponent, eligibility);
@@ -106,7 +110,7 @@ export default function PickAnimalStep({
                                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/45">
                                     <span>Tier {capture.battleTier}</span>
                                     <span aria-hidden="true">·</span>
-                                    <span>Level {capture.level}</span>
+                                    <span>Level {ownCardLevel(companions.rows, capture, capture.level)}</span>
                                     <span aria-hidden="true">·</span>
                                     <ChallengeHearts challengeHealth={capture.challengeHealth} />
                                     <span aria-hidden="true">·</span>

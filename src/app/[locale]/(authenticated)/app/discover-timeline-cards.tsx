@@ -38,6 +38,7 @@ import { getAbsoluteUrl } from "@/lib/site";
 import { formatAppShortDate } from "@/lib/app-dates";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import {CloseIconButton} from "@/components/ui/icon-buttons";
+import {useOwnCardLevel} from "@/components/companions/use-companions";
 
 const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
 let feedVideoSoundEnabled = false;
@@ -795,9 +796,13 @@ function CaptureChip({
   );
 }
 
-/** iOS `capturePostChipRow`: one HStack of Level · Tier · Grade — never wraps. */
-function CapturePostChipRow({item}: {item: DiscoverCaptureItem}) {
-  const levelLabel = item.level >= 100 ? "Level 100 MAX" : `Level ${item.level}`;
+/**
+ * iOS `capturePostChipRow`: one HStack of Level · Tier · Grade — never wraps.
+ * On the reader's own post the level is its animal's bond level.
+ */
+function CapturePostChipRow({item, isOwn = false}: {item: DiscoverCaptureItem; isOwn?: boolean}) {
+  const level = useOwnCardLevel(item, item.level, isOwn);
+  const levelLabel = level >= 100 ? "Level 100 MAX" : `Level ${level}`;
   return (
     <div className="flex flex-nowrap items-center gap-2">
       <CaptureChip tone="green">{levelLabel}</CaptureChip>
@@ -949,14 +954,14 @@ function FeedTopOverlay({
 }
 
 /** iOS `bottomOverlay`. */
-function FeedBottomOverlay({item}: {item: DiscoverCaptureItem}) {
+function FeedBottomOverlay({item, isOwn = false}: {item: DiscoverCaptureItem; isOwn?: boolean}) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2 [filter:drop-shadow(0_1px_4px_rgba(0,0,0,0.65))]">
       {item.isUncertain ? <span className="pointer-events-auto self-start"><UncertainBadge /></span> : null}
       {/* iOS `onOpenCapture`: the title block opens the capture detail, not the species page. */}
       <Link href={`/app/capture/${encodeURIComponent(item.captureId)}`} className="pointer-events-auto flex flex-col gap-1.5">
         <h3 className="line-clamp-2 text-[17px] font-semibold leading-tight text-white">{item.animalName}</h3>
-        <CapturePostChipRow item={item} />
+        <CapturePostChipRow item={item} isOwn={isOwn} />
       </Link>
       {item.learnedPrinciple ? (
         <p className="flex items-center gap-1.5 text-xs font-medium text-white/90">
@@ -1252,7 +1257,7 @@ function CaptureCard({
         <div className="min-h-5 flex-1 [@media(max-height:760px)]:min-h-2" />
 
         <div className="flex items-end gap-3.5 [@media(max-height:760px)]:gap-2">
-          <FeedBottomOverlay item={activeItem} />
+          <FeedBottomOverlay item={activeItem} isOwn={isOwnPost} />
           {/* iOS `actionRail` order: Gift, Offer, Compare, Share, Info. */}
           <div className="flex w-[46px] shrink-0 flex-col items-center gap-1 [@media(max-height:760px)]:w-10 [@media(max-height:760px)]:gap-0.5">
             {viewerUserId ? (
@@ -1299,7 +1304,7 @@ function CaptureCard({
         </div>
       </div>
     </article>
-    {showsInfo ? <PostInformation item={activeItem} locale={locale} onClose={() => setShowsInfo(false)} /> : null}
+    {showsInfo ? <PostInformation item={activeItem} locale={locale} isOwn={isOwnPost} onClose={() => setShowsInfo(false)} /> : null}
     </>
   );
 }
@@ -1897,8 +1902,16 @@ function BoostRows({label, boosts}: {label: string; boosts: Record<string, numbe
   );
 }
 
-export function PostInformation({item, locale, onClose}: {item: DiscoverTimelineItem; locale: string; onClose: () => void}) {
+export function PostInformation({item, locale, onClose, isOwn = false}: {
+  item: DiscoverTimelineItem;
+  locale: string;
+  onClose: () => void;
+  /** The reader's own capture post: its level is the animal's bond level. */
+  isOwn?: boolean;
+}) {
   const date = formatAppShortDate(item.date, locale);
+  const capture = item.kind === "capture" ? item : null;
+  const captureLevel = useOwnCardLevel(capture ?? {}, capture?.level ?? 1, Boolean(capture) && isOwn);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 md:items-center md:p-4" role="dialog" aria-modal="true" aria-label="Post information">
@@ -1924,7 +1937,7 @@ export function PostInformation({item, locale, onClose}: {item: DiscoverTimeline
                 />
               ) : null}
               {item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}
-              <FeedPill tone="green">Level {item.level}</FeedPill>
+              <FeedPill tone="green">Level {captureLevel}</FeedPill>
               <FeedPill tone="cyan">Tier {item.battleTier}</FeedPill>
               <FeedPill tone="violet">Rarity {item.rarity}</FeedPill>
               {item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}
