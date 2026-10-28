@@ -28,6 +28,7 @@ import {ASK_MEMORY_RULES} from "@/lib/ask-animaldex/memory-prompt";
 import {
     ANIMAL_AUTO_MODE_RULES,
     ANIMAL_CHAT_MODE_RULES,
+    ANIMAL_NO_STEP_OFFER_RULES,
     ANIMAL_RELATIONSHIP_RULES,
     askCompanionVoiceLines,
     askCompanionWorldFrom,
@@ -39,6 +40,7 @@ import {askPersonaLines, type AskPersonaDials, type AskPersonaStats} from "@/lib
 import {COMPANION_OUTPUT_LINES, companionLoopRules} from "@/lib/ask-animaldex/companion-focus";
 import {askNatureLines, type AskAnimalNature} from "@/lib/ask-animaldex/nature";
 import {ANIMAL_STORY_OUTPUT_LINE, ANIMAL_STORY_RULES} from "@/lib/ask-animaldex/stories";
+import {askGroupLoopRules} from "@/lib/ask-animaldex/group-rules";
 
 export const ASK_FOLLOW_UP_SENTINEL = "§§FOLLOW_UPS§§";
 
@@ -303,15 +305,6 @@ const ANIMAL_VISITOR_FOLLOW_UP_RULES = [
     "  your_owner has a journey note or Play records; otherwise about you as an animal (your life, in your own",
     "  specifics) or your Power in plain words.",
     "- Never about the visitor's own life, work or decisions, and never your owner's Training, Trials or battles."
-];
-
-/**
- * The person has asked not to be offered steps (the apps' `stepOfferRules`
- * with suggestions off). The website offers no step cards otherwise.
- */
-const ANIMAL_NO_STEP_OFFERS = [
-    "The person has asked not to be offered Training, Trials or battles. Never offer them and send no cards, unless",
-    "they ask about them directly in this message."
 ];
 
 /** Verbatim from the apps' `ANIMAL_TRIAL_FOLLOW_UP_RULES`. */
@@ -580,6 +573,8 @@ export type AskPromptOptions = {
     /// personalisation on, not a Trial. `offersSteps` false: they asked not to
     /// be offered steps.
     companionLoop?: {offersSteps: boolean} | null;
+    /** A group conversation (`group-rules.ts`): these replace the loop and relationship rules. */
+    groupLines?: string[] | null;
 };
 
 function localeRules(languageName: string | null | undefined): string[] {
@@ -606,12 +601,13 @@ function companionRules(options: AskPromptOptions): string[] {
     if (options.speakingTo === "visitor") {
         return options.visitorRelay ? [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_RELAY_RULES] : ANIMAL_VISITOR_RULES;
     }
+    if (options.groupLines?.length) return askGroupLoopRules(options.groupLines);
     const mode = speciesMode(options);
     if (mode === "training") return ANIMAL_RELATIONSHIP_RULES;
     const modeLines = mode === "chat" ? ANIMAL_CHAT_MODE_RULES : mode === "auto" ? ANIMAL_AUTO_MODE_RULES : [];
     const steps = options.companionLoop
         ? ["", ...companionLoopRules(options.companionLoop)]
-        : options.suggestSteps === false ? ANIMAL_NO_STEP_OFFERS : [];
+        : options.suggestSteps === false ? ANIMAL_NO_STEP_OFFER_RULES : [];
     return [...modeLines, ...steps, "", ...ANIMAL_RELATIONSHIP_RULES];
 }
 
@@ -621,7 +617,10 @@ function companionRules(options: AskPromptOptions): string[] {
  */
 function characterLines(options: AskPromptOptions): string[] {
     const nature = options.nature ? askNatureLines(options.nature, options.persona?.intellect ?? null) : [];
-    const persona = [...(options.persona ? askPersonaLines(options.persona) : []), ...nature];
+    const persona = [
+        ...(options.persona ? askPersonaLines(options.persona, {group: Boolean(options.groupLines?.length)}) : []),
+        ...nature
+    ];
     if (!options.voice) return persona.length > 0 ? ["Who you are:", ...persona] : [];
     return askCompanionVoiceLines({
         voice: options.voice,
@@ -692,7 +691,8 @@ function speciesBody(options: AskPromptOptions, formattingLead: string): string[
         "",
         formattingLead,
         ...ANIMAL_FORMAT_RULES,
-        ...animalClosingRules(mode, options.nature?.asks),
+        // A group talks it over: its turns end the way a person's would.
+        ...animalClosingRules(options.groupLines?.length ? "chat" : mode, options.nature?.asks),
         "",
         ...SAFETY_RULES,
         "",

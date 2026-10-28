@@ -64,6 +64,15 @@ export const ANIMAL_RELATIONSHIP_RULES = [
     "  'not now', drop it. Never raise it again in this conversation."
 ];
 
+/**
+ * The person has asked not to be offered steps, and in a group none are
+ * offered: the apps' `stepOfferRules(false, …)`, verbatim.
+ */
+export const ANIMAL_NO_STEP_OFFER_RULES = [
+    "The person has asked not to be offered Training, Trials or battles. Never offer them and send no cards, unless",
+    "they ask about them directly in this message."
+];
+
 /** The closing instruction of the user prompt in chat mode (the apps' `mode === "chat"` branch). */
 export const ANIMAL_CHAT_CLOSING_INSTRUCTION = [
     "Talk with them as yourself, in your own manner. Prefer system_dynamics wording for states, triggers and failure modes when they come up.",
