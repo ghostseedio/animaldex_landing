@@ -66,11 +66,13 @@
     "solar-icon-set": "^1.0.0",
     "standardwebhooks": "^1.0.0",
     "tailwind-merge": "^2.6.1",
+    "three": "^0.170.0",
     "typescript": "4.9.5"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",
     "@types/leaflet": "^1.9.22",
+    "@types/three": "^0.170.0",
     "autoprefixer": "^10.4.13",
     "postcss": "^8.4.21",
     "tailwindcss": "^3.2.7",
