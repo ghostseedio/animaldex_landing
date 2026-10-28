@@ -50,7 +50,7 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
     // The authenticated app carries a floating tab bar at the bottom of the
     // screen on mobile, so the launcher clears it there rather than sitting on
     // top of it.
-    const inAppShell = subject.kind === "capture" || subject.kind === "collection";
+    const inAppShell = subject.kind === "collection";
 
     // On a species page the animal itself answers, so the launcher is the
     // animal: its picture and its name, not the site-wide assistant.
