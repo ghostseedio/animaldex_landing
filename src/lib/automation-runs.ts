@@ -1,10 +1,11 @@
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 // The run log of the VM-timer automations (social auto-share, page-video
-// auto-generate, blog auto-generate):
-// supabase/migrations/20261020120000_admin_automation_runs.sql and 20261020200000.
+// auto-generate, blog auto-generate, carousel/text generation, the per-post
+// metrics sync): supabase/migrations/20261020120000_admin_automation_runs.sql,
+// 20261020200000 and 20261028120000.
 
-export const AUTOMATION_JOBS = ["social-auto-share", "video-auto-generate", "blog-auto-generate"] as const;
+export const AUTOMATION_JOBS = ["social-auto-share", "video-auto-generate", "blog-auto-generate", "social-content-generate", "social-metrics-sync"] as const;
 export type AutomationJob = (typeof AUTOMATION_JOBS)[number];
 export type AutomationOutcome = "acted" | "skipped" | "failed";
 

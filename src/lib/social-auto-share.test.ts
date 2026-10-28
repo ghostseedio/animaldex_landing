@@ -66,6 +66,6 @@ test("targets take each platform's field and drop copy over its limit", () => {
         x: {text: "X text"}
     };
     const {targets, tooLong} = autoShareTargets(copy, ["youtube", "tiktok", "instagram", "facebook", "x"]);
-    assert.deepEqual(targets, [{platform: "youtube", caption: "YT desc"}, {platform: "tiktok", caption: "TT"}, {platform: "facebook", caption: "FB"}, {platform: "x", caption: "X text"}]);
+    assert.deepEqual(targets, [{platform: "youtube", caption: "YT desc", title: "T"}, {platform: "tiktok", caption: "TT", title: null}, {platform: "facebook", caption: "FB", title: null}, {platform: "x", caption: "X text", title: null}]);
     assert.deepEqual(tooLong, ["instagram"]);
 });

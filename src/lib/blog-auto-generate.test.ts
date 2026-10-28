@@ -32,13 +32,14 @@ test("blog auto-generate runs the manual news flow at standard depth and publish
 
 test("the admin panel's schedule matches the timer installer", () => {
     const installer = read("scripts/install-blog-auto-generate-timer.sh");
-    assert.match(installer, /OnCalendar=\*-\*-\* 07:40:00/);
+    assert.match(installer, /OnCalendar=\*-\*-\* 07,19:40:00/);
     assert.equal(nextTimerRun("blog-auto-generate", new Date("2026-10-20T07:00:00Z")).toISOString(), "2026-10-20T07:40:00.000Z");
-    assert.equal(nextTimerRun("blog-auto-generate", new Date("2026-10-20T08:00:00Z")).toISOString(), "2026-10-21T07:40:00.000Z");
+    assert.equal(nextTimerRun("blog-auto-generate", new Date("2026-10-20T08:00:00Z")).toISOString(), "2026-10-20T19:40:00.000Z");
+    assert.equal(nextTimerRun("blog-auto-generate", new Date("2026-10-20T20:00:00Z")).toISOString(), "2026-10-21T07:40:00.000Z");
 });
 
 test("the run log's job constraint allows every automation job", () => {
-    const migration = read("supabase/migrations/20261020200000_admin_automation_runs_blog_job.sql");
+    const migration = read("supabase/migrations/20261028120000_social_growth_engine.sql");
     for (const job of AUTOMATION_JOBS) assert.match(migration, new RegExp(`'${job}'`));
 });
 

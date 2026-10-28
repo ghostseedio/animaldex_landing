@@ -1,5 +1,5 @@
 import {getFreshConnection, isOAuthPlatform} from "@/lib/social/oauth";
-import {publishers} from "@/lib/social/publishers";
+import {imagePublishers, publishers, textPublishers} from "@/lib/social/publishers";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
 import {findShareableContentVideoByPath} from "@/lib/content-video/share";
 import {CONTENT_VIDEO_MEDIA_KIND} from "@/lib/content-video/store";
@@ -7,9 +7,11 @@ import {findShareableUploadedVideoByPath, UPLOADED_VIDEO_MEDIA_KIND} from "@/lib
 import {updatePost} from "@/lib/social/store";
 import {normalizeVideoForSocial} from "@/lib/social/video-normalize";
 import {EMPTY_TIKTOK_OPTIONS} from "@/lib/social/tiktok-options";
-import {describeZernioError, getTikTokAccount, postToTikTok, uploadVideoToZernio, ZernioError, type ZernioPostSnapshot} from "@/lib/social/zernio";
+import {describeZernioError, getTikTokAccount, pinterestBoardId, postToTikTok, postToZernio, uploadToZernio, uploadVideoToZernio, zernioAccountFor, ZernioError, type ZernioMediaItem, type ZernioPostInput, type ZernioPostSnapshot} from "@/lib/social/zernio";
 import {rateLimitRetryDelaySeconds, zernioPatchForRow} from "@/lib/social/zernio-sync";
-import type {SocialPostRow, TikTokPostOptions} from "@/lib/social/types";
+import {isZernioPlatform, type PublishImage, type SocialPostRow, type TikTokPostOptions} from "@/lib/social/types";
+import {publicStorageUrl} from "@/lib/content-video/store";
+import type {CarouselSpec, SocialContentRow, TextSpec} from "@/lib/social-content/types";
 
 // Runs queued shares in the background of the (long-lived, self-hosted) Node
 // server: the request that queued them returns at once and the admin page
@@ -73,6 +75,14 @@ export async function runShareJob(rows: SocialPostRow[]) {
     await Promise.all(rows.map(async (row) => {
         if (row.platform === "tiktok") {
             await shareToTikTok(row, video);
+            return;
+        }
+        if (isZernioPlatform(row.platform)) {
+            await shareViaZernio(row, async (input) => {
+                const filename = row.media_path.split("/").pop()?.replace(/\.[^.]+$/, "") || "animaldex";
+                const {publicUrl} = await uploadVideoToZernio(video, `${filename}.mp4`);
+                return {...input, media: [{type: "video", url: publicUrl}]};
+            });
             return;
         }
         if (!isOAuthPlatform(row.platform)) return;
@@ -165,4 +175,139 @@ async function createTikTokPostWithRetry(row: SocialPostRow, videoUrl: string): 
         await sleep(wait * 1000);
         return await create();
     }
+}
+
+
+// ── Pinterest, Threads, Bluesky, and TikTok photo carousels (all through Zernio) ──
+
+/** The post Zernio gets for `row` before its media: account, caption, and Pinterest's board/title/link. */
+async function zernioBase(row: SocialPostRow): Promise<ZernioPostInput> {
+    if (!isZernioPlatform(row.platform)) throw new Error(`${row.platform} does not post through Zernio`);
+    const account = await zernioAccountFor(row.platform);
+    return {
+        platform: row.platform,
+        accountId: account.id,
+        content: row.caption,
+        media: [],
+        ...(row.platform === "pinterest" ? {pinterest: {boardId: await pinterestBoardId(account.id), title: row.title, link: row.options?.link ?? null}} : {}),
+        metadata: {source: "animaldex-admin", mediaPath: row.media_path, rowId: row.id}
+    };
+}
+
+/** Creates the Zernio post for one row (media added by `withMedia`) and records its id, like the TikTok path. */
+async function shareViaZernio(row: SocialPostRow, withMedia: (input: ZernioPostInput) => Promise<ZernioPostInput>) {
+    let snapshot: ZernioPostSnapshot;
+    let stage: "upload" | "create" = "upload";
+    try {
+        const input = await withMedia(await zernioBase(row));
+        stage = "create";
+        try {
+            snapshot = await postToZernio(input, row.id);
+        } catch (error) {
+            const wait = rateLimitRetryDelaySeconds(error);
+            if (wait === null) throw error;
+            await sleep(wait * 1000);
+            snapshot = await postToZernio(input, row.id);
+        }
+    } catch (error) {
+        const message = (error instanceof ZernioError ? describeZernioError(error) : errorText(error)).slice(0, 900);
+        if (stage === "create" && error instanceof ZernioError && error.kind === "unavailable") {
+            await updatePost(row.id, {status: "processing", error: `Zernio did not answer while creating the post; check the Zernio dashboard before retrying. ${message}`}).catch(() => undefined);
+            return;
+        }
+        await updatePost(row.id, {status: "failed", error: message}).catch(() => undefined);
+        return;
+    }
+    const patch = zernioPatchForRow(row, snapshot);
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            await updatePost(row.id, patch);
+            return;
+        } catch (error) {
+            if (attempt >= 3) {
+                console.error(`[social-share] row ${row.id} is Zernio post ${snapshot.postId} but the share log could not be updated`, error);
+                return;
+            }
+            await sleep(2_000 * attempt);
+        }
+    }
+}
+
+async function downloadImage(path: string): Promise<PublishImage & {path: string}> {
+    const url = publicStorageUrl(path);
+    const response = await fetch(url, {cache: "no-store", signal: AbortSignal.timeout(60_000)});
+    if (!response.ok) throw new Error(`Downloading slide ${path} failed (${response.status})`);
+    return {path, url, bytes: Buffer.from(await response.arrayBuffer()), alt: ""};
+}
+
+/** Publishes one carousel or text post to every platform in `rows` (all the same item). */
+export async function runContentShareJob(rows: SocialPostRow[], content: SocialContentRow) {
+    if (!rows.length) return;
+    await Promise.all(rows.map((row) => updatePost(row.id, {status: "processing"}).catch(() => undefined)));
+    let feed: PublishImage[] = [];
+    let tall: PublishImage[] = [];
+    let pin: PublishImage | null = null;
+    if (content.kind === "carousel") {
+        try {
+            const slides = (content.spec as CarouselSpec).slides;
+            const alt = (index: number) => [slides[index]?.title, slides[index]?.body].filter(Boolean).join(". ").slice(0, 400);
+            const platforms = new Set(rows.map((row) => row.platform));
+            const needFeed = rows.some((row) => row.platform !== "tiktok" && row.platform !== "pinterest");
+            feed = needFeed ? (await Promise.all((content.images.feed ?? []).map(downloadImage))).map((image, index) => ({...image, alt: alt(index)})) : [];
+            tall = platforms.has("tiktok") ? (await Promise.all((content.images.tall ?? []).map(downloadImage))).map((image, index) => ({...image, alt: alt(index)})) : [];
+            pin = platforms.has("pinterest") && content.images.pin ? {...await downloadImage(content.images.pin), alt: alt(0)} : null;
+        } catch (error) {
+            const message = errorText(error);
+            await Promise.all(rows.map((row) => updatePost(row.id, {status: "failed", error: message}).catch(() => undefined)));
+            return;
+        }
+    }
+    const zernioImages = async (images: PublishImage[]): Promise<ZernioMediaItem[]> => {
+        const items: ZernioMediaItem[] = [];
+        for (let index = 0; index < images.length; index += 1) {
+            const {publicUrl} = await uploadToZernio(images[index].bytes, `${content.id}-${index + 1}.jpg`, "image/jpeg");
+            items.push({type: "image", url: publicUrl});
+        }
+        return items;
+    };
+
+    await Promise.all(rows.map(async (row) => {
+        try {
+            if (content.kind === "carousel") {
+                if (isZernioPlatform(row.platform)) {
+                    await shareViaZernio(row, async (input) => {
+                        if (row.platform === "tiktok") {
+                            const options = row.options?.tiktok;
+                            if (!options) throw new Error("TikTok options missing");
+                            // A photo carousel's caption is its description; its title is the hook (first line).
+                            return {...input, content: (content.share as {tiktok?: {caption: string}}).tiktok?.caption.split("\n")[0] ?? row.caption, media: await zernioImages(tall), tiktokPhoto: {description: row.caption, options}};
+                        }
+                        if (row.platform === "pinterest") return {...input, media: await zernioImages(pin ? [pin] : feed.slice(0, 1))};
+                        return {...input, media: await zernioImages(feed.slice(0, row.platform === "bluesky" ? 4 : 10))};
+                    });
+                    return;
+                }
+                const publish = isOAuthPlatform(row.platform) ? imagePublishers[row.platform] : undefined;
+                if (!publish || !isOAuthPlatform(row.platform)) throw new Error(`${row.platform} cannot post carousels`);
+                const result = await publish(await getFreshConnection(row.platform), {images: feed, caption: row.caption, title: row.title ?? "", link: row.options?.link ?? null});
+                await updatePost(row.id, {status: "published", external_id: result.externalId, external_url: result.externalUrl, error: null});
+                return;
+            }
+            const spec = content.spec as TextSpec;
+            if (isZernioPlatform(row.platform)) {
+                await shareViaZernio(row, async (input) => input);
+                return;
+            }
+            const publish = isOAuthPlatform(row.platform) ? textPublishers[row.platform] : undefined;
+            if (!publish || !isOAuthPlatform(row.platform)) throw new Error(`${row.platform} cannot post text`);
+            const result = await publish(await getFreshConnection(row.platform), {
+                text: row.caption,
+                poll: row.platform === "x" && spec.poll ? {options: spec.poll, minutes: 24 * 60} : null,
+                link: row.options?.link ?? null
+            });
+            await updatePost(row.id, {status: "published", external_id: result.externalId, external_url: result.externalUrl, error: null});
+        } catch (error) {
+            await updatePost(row.id, {status: "failed", error: errorText(error)}).catch(() => undefined);
+        }
+    }));
 }

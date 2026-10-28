@@ -5,6 +5,7 @@ import {SOURCE_TYPES, type SourceType} from "@/lib/content-video/plan";
 import {contentVideoBusy, resumeStatus, startContentVideoJob} from "@/lib/content-video/runner";
 import {getContentVideo, insertContentVideo, listContentVideos, spentTodayUSD, updateContentVideo, usedSourceSlugs} from "@/lib/content-video/store";
 import {isSocialUploadRunning} from "@/lib/social/auto-share";
+import {listPosts} from "@/lib/social/store";
 
 // Unattended page videos, run by the VM timer (POST /api/cron/video-auto-generate):
 // each run makes one video from a random page family and a random page of it
@@ -29,6 +30,15 @@ async function publishIfReady(id: string) {
 
 export type AutoGenerateResult = {ok: true; acted: boolean; summary: string; ref?: string; detail?: Record<string, unknown>};
 
+/** Published page videos from the last two days that no platform has had yet (a failed attempt does not count). */
+async function unpostedRecentVideos() {
+    const since = Date.now() - 48 * 3_600_000;
+    const [videos, posts] = await Promise.all([listContentVideos(200), listPosts(1000)]);
+    const shared = new Set(posts.filter((post) => post.status !== "failed").map((post) => post.media_path));
+    return videos.filter((video) => video.status === "ready" && video.published_at && !video.archived_at && video.video_path
+        && Date.parse(video.published_at) >= since && !shared.has(video.video_path)).length;
+}
+
 async function run(): Promise<AutoGenerateResult> {
     if (process.env.CONTENT_VIDEO_AUTO_DISABLED?.trim() === "1") return {ok: true, acted: false, summary: "CONTENT_VIDEO_AUTO_DISABLED=1"};
     if (contentVideoBusy()) return {ok: true, acted: false, summary: "A video is still being made"};
@@ -47,6 +57,14 @@ async function run(): Promise<AutoGenerateResult> {
             await publishIfReady(interrupted.id);
         });
         return {ok: true, acted: true, summary: `Resumed the interrupted video for “${interrupted.source_title}”`, ref: interrupted.id, detail: {resumed: true, published}};
+    }
+
+    // Make videos only as fast as the daily caps post them: a pile of unposted
+    // videos is money spent on nothing. Older ones age out of the count.
+    const backlogMax = numberEnv("CONTENT_VIDEO_BACKLOG_MAX", 4);
+    const backlog = await unpostedRecentVideos();
+    if (backlog >= backlogMax) {
+        return {ok: true, acted: false, summary: `${backlog} recent videos are still waiting for their first post (CONTENT_VIDEO_BACKLOG_MAX ${backlogMax}); waiting`, detail: {published}};
     }
 
     const maxVideoUSD = numberEnv("CONTENT_VIDEO_MAX_USD", 1.5);

@@ -3,8 +3,8 @@ import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {getProviderEnvNames, getRedirectUri, isOAuthPlatform, isProviderConfigured} from "@/lib/social/oauth";
 import {checkOAuthConnection} from "@/lib/social/connection-health";
 import {deleteConnection, listConnectionRows} from "@/lib/social/store";
-import {isSocialPlatform, SOCIAL_PLATFORMS} from "@/lib/social/types";
-import {describeZernioError, getTikTokAccount, isZernioConfigured, ZERNIO_ENV, ZernioError} from "@/lib/social/zernio";
+import {isSocialPlatform, SOCIAL_PLATFORMS, type ZernioPlatform} from "@/lib/social/types";
+import {describeZernioError, getTikTokAccount, isZernioApiConfigured, isZernioConfigured, ZERNIO_ENV, zernioAccountFor, ZernioError} from "@/lib/social/zernio";
 
 const ZERNIO_DASHBOARD = "https://zernio.com/dashboard";
 
@@ -38,6 +38,32 @@ async function tiktokConnection() {
     };
 }
 
+/** Pinterest, Threads and Bluesky: connected in Zernio; we only need its API key and an account there. */
+async function zernioConnection(platform: Exclude<ZernioPlatform, "tiktok">) {
+    const configured = isZernioApiConfigured();
+    let accountName: string | null = null;
+    let error: string | null = null;
+    if (configured) {
+        try {
+            accountName = (await zernioAccountFor(platform)).username;
+        } catch (cause) {
+            error = describeZernioError(cause);
+        }
+    }
+    return {
+        platform,
+        provider: "zernio" as const,
+        configured,
+        connected: configured && error === null,
+        accountName,
+        expiresAt: null,
+        envNames: {id: ZERNIO_ENV.apiKey, secret: `ZERNIO_${platform.toUpperCase()}_ACCOUNT_ID (optional)`},
+        redirectUri: null,
+        manageUrl: ZERNIO_DASHBOARD,
+        error
+    };
+}
+
 /** Which official accounts are connected; never returns tokens. */
 export async function GET(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
@@ -49,7 +75,8 @@ export async function GET(request: NextRequest) {
             console.info("[social-share] removed the stored TikTok OAuth tokens; TikTok now posts through Zernio");
         }
         const connections = await Promise.all(SOCIAL_PLATFORMS.map(async (platform) => {
-            if (!isOAuthPlatform(platform)) return tiktokConnection();
+            if (platform === "tiktok") return tiktokConnection();
+            if (!isOAuthPlatform(platform)) return zernioConnection(platform);
             const row = rows.find((candidate) => candidate.platform === platform);
             if (!row) {
                 return {
@@ -95,7 +122,7 @@ export async function DELETE(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
     const platform = request.nextUrl.searchParams.get("platform");
     if (!isSocialPlatform(platform)) return NextResponse.json({error: "Unknown platform"}, {status: 400});
-    if (!isOAuthPlatform(platform)) return NextResponse.json({error: "TikTok is managed in Zernio"}, {status: 400});
+    if (!isOAuthPlatform(platform)) return NextResponse.json({error: "This platform is managed in Zernio"}, {status: 400});
     try {
         await deleteConnection(platform);
         return NextResponse.json({ok: true});

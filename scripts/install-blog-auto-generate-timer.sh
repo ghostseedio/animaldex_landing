@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the daily blog auto-generate (news articles) on the production VM.
+# Installs the twice-daily blog auto-generate (news articles) on the production VM.
 #
 #   bash install-blog-auto-generate-timer.sh
 #
@@ -8,7 +8,7 @@
 #    merges app.env into the new container's env.
 # 2. Writes /usr/local/bin/animaldex-blog-auto-generate.sh, which POSTs to
 #    /api/cron/blog-auto-generate on 127.0.0.1:3001.
-# 3. Installs animaldex-blog-auto-generate.{service,timer}: 07:40 UTC daily,
+# 3. Installs animaldex-blog-auto-generate.{service,timer}: 07:40 and 19:40 UTC,
 #    with a random delay, off the auto-share's :25 and the video timer's :50.
 #
 # Each run is "Latest news" → "Auto-pick and write" in /admin/blog-generator
@@ -56,10 +56,10 @@ SERVICE_EOF
 
 sudo tee /etc/systemd/system/animaldex-blog-auto-generate.timer > /dev/null <<'TIMER_EOF'
 [Unit]
-Description=Daily AnimalDex blog auto-generate
+Description=Twice-daily AnimalDex blog auto-generate
 
 [Timer]
-OnCalendar=*-*-* 07:40:00
+OnCalendar=*-*-* 07,19:40:00
 RandomizedDelaySec=300
 Persistent=true
 

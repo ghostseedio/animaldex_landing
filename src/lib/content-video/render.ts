@@ -157,8 +157,9 @@ async function prepareCard(visual: Extract<SceneVisual, {type: "card"}>, out: st
 /** Longer than this on one photo and the shot cuts to a tighter framing halfway (retention). */
 const PUNCH_IN_AFTER_SECONDS = 4.5;
 
-/** The hook's opening hit: a white flash and a short camera shake (with the punch-in zoom in the shot itself). */
-const HOOK_FLASH = "fade=t=in:st=0:d=0.22:color=white";
+// The hook's opening hit is a punch-in zoom and a short camera shake. It used to
+// fade in from white too, which made the first frame (what the feed shows while
+// scrolling) a blank white card; the video now opens on the picture itself.
 const SHAKE_X = "+if(lt(on,14),18*sin(on*2.1),0)";
 const SHAKE_Y = "+if(lt(on,14),12*cos(on*2.7),0)";
 
@@ -166,7 +167,7 @@ async function zoomShot(prepared: string, n: number, zoom: string, out: string, 
     const shake = hook ? {x: SHAKE_X, y: SHAKE_Y} : {x: "", y: ""};
     await runFfmpeg([
         "-loop", "1", "-framerate", String(VIDEO_FPS), "-i", prepared,
-        "-vf", `zoompan=z='${zoom}':x='iw/2-(iw/zoom/2)${shake.x}':y='ih/2-(ih/zoom/2)${shake.y}':d=${n}:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS},setsar=1,format=yuv420p${hook ? `,${HOOK_FLASH}` : ""}`,
+        "-vf", `zoompan=z='${zoom}':x='iw/2-(iw/zoom/2)${shake.x}':y='ih/2-(ih/zoom/2)${shake.y}':d=${n}:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS},setsar=1,format=yuv420p`,
         "-frames:v", String(n),
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "2", "-an", out
     ]);
@@ -255,12 +256,11 @@ async function renderClipScene(source: string, seconds: number, out: string, cli
             `crop=${VIDEO_WIDTH}:${VIDEO_HEIGHT}`,
             `fps=${VIDEO_FPS}`,
             `tpad=stop_mode=clone:stop_duration=${hold.toFixed(2)}`,
-            // The hook clip punches in from 128% with a shake, behind a white flash.
+            // The hook clip punches in from 128% with a shake.
             ...(hook && !fx ? [`zoompan=z='if(lt(on,10),1.28-0.028*on,1)':x='iw/2-(iw/zoom/2)${SHAKE_X}':y='ih/2-(ih/zoom/2)${SHAKE_Y}':d=1:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS}`] : []),
             ...(fx ? battleFxFilters(fx, seconds) : []),
             "setsar=1",
-            "format=yuv420p",
-            ...(hook && !fx ? [HOOK_FLASH] : [])
+            "format=yuv420p"
         ].join(","),
         "-frames:v", String(frames(seconds)),
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "2", "-an", out
@@ -499,7 +499,8 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
         : "");
     const end = timeline.at(-1)!;
     const total = end.start + end.duration;
-    // The logo rides along the top until the end card, which carries its own.
+    // The logo rides along the top until the end card, which carries its own (a looping video has none).
+    const logoUntil = timeline.find((entry) => entry.kind === "end")?.start ?? total;
     const logo = path.join(dir, "logo-small.png");
     await sharp(input.logoPath).resize({width: 300}).ensureAlpha(0.88).png().toFile(logo);
     // The audio is mastered on its own, sample-exact. Normalised inside the video
@@ -516,7 +517,7 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
         "-loop", "1", "-framerate", String(VIDEO_FPS), "-i", logo,
         "-filter_complex", [
             `[2:v]format=rgba,colorchannelmixer=aa=0.85[logo]`,
-            `[0:v][logo]overlay=x=(W-w)/2:y=110:shortest=1:enable='lt(t,${end.start.toFixed(2)})'[branded]`,
+            `[0:v][logo]overlay=x=(W-w)/2:y=110:shortest=1:enable='lt(t,${logoUntil.toFixed(2)})'[branded]`,
             `[branded]ass='${filterPath(input.assPath)}':fontsdir='${filterPath(input.fontsDir)}',format=yuv420p[v]`
         ].join(";"),
         "-map", "[v]", "-map", "1:a",

@@ -1,7 +1,7 @@
 import {rowStateFromZernio, ZernioError, type ZernioPostSnapshot} from "@/lib/social/zernio-core";
-import type {SocialPostOptions, SocialPostRow, ZernioShareInfo} from "@/lib/social/types";
+import {isZernioPlatform, type SocialPostOptions, type SocialPostRow, type ZernioPlatform, type ZernioShareInfo} from "@/lib/social/types";
 
-// Keeps TikTok share-log rows in step with their Zernio post. One
+// Keeps Zernio share-log rows (TikTok, Pinterest, Threads, Bluesky) in step with their Zernio post. One
 // implementation for the share-log GET (pull: GET /v1/posts/{id} for rows that
 // are still waiting) and the webhook (push: Zernio tells us). The pure helpers
 // are importable from node:test; the network and DB calls are loaded lazily so
@@ -31,7 +31,7 @@ export function rateLimitRetryDelaySeconds(error: unknown, maxSeconds = MAX_RATE
  */
 export function rowsNeedingSync(rows: SocialPostRow[], now = Date.now()): SocialPostRow[] {
     return rows.filter((row) => {
-        if (row.platform !== "tiktok") return false;
+        if (!isZernioPlatform(row.platform)) return false;
         const info = row.options?.zernio;
         if (!info?.postId) return false;
         const waiting = row.status === "queued" || row.status === "processing";
@@ -60,9 +60,9 @@ export function zernioInfoAfter(existing: ZernioShareInfo | undefined, snapshot:
 export type ZernioRowPatch = ReturnType<typeof rowStateFromZernio> & {external_id: string; options: SocialPostOptions};
 
 /** Everything the share-log row gets from a Zernio post state. Pure, for tests. */
-export function zernioPatchForRow(row: Pick<SocialPostRow, "options">, snapshot: ZernioPostSnapshot, now = new Date()): ZernioRowPatch {
+export function zernioPatchForRow(row: Pick<SocialPostRow, "options"> & {platform?: SocialPostRow["platform"]}, snapshot: ZernioPostSnapshot, now = new Date()): ZernioRowPatch {
     return {
-        ...rowStateFromZernio(snapshot),
+        ...rowStateFromZernio(snapshot, isZernioPlatform(row.platform) ? row.platform : "tiktok"),
         external_id: snapshot.postId,
         options: {...(row.options ?? {}), zernio: zernioInfoAfter(row.options?.zernio, snapshot, now)}
     };
@@ -74,7 +74,7 @@ export function applyPatch(row: SocialPostRow, patch: ZernioRowPatch, now = new 
 }
 
 type SyncDeps = {
-    getZernioPost: (postId: string) => Promise<ZernioPostSnapshot>;
+    getZernioPost: (postId: string, platform?: ZernioPlatform) => Promise<ZernioPostSnapshot>;
     updatePost: (id: string, patch: ZernioRowPatch | TerminalPatch) => Promise<void>;
 };
 
@@ -115,7 +115,7 @@ export async function reconcileZernioRows(rows: SocialPostRow[], deps?: SyncDeps
         const updated = new Map<string, SocialPostRow>();
         for (const row of pending) {
             try {
-                const snapshot = await getZernioPost(row.options!.zernio!.postId);
+                const snapshot = await getZernioPost(row.options!.zernio!.postId, isZernioPlatform(row.platform) ? row.platform : "tiktok");
                 const patch = zernioPatchForRow(row, snapshot, now);
                 await updatePost(row.id, patch);
                 updated.set(row.id, applyPatch(row, patch, now));

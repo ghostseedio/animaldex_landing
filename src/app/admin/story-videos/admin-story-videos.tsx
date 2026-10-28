@@ -6,9 +6,10 @@ import {X_POST_LIMIT, xLength} from "@/lib/social/captions";
 import {COPY_LIMITS, type ShareCopy, VISIBLE_CHARS} from "@/lib/social/share-copy";
 import {EMPTY_TIKTOK_OPTIONS, TIKTOK_PRIVACY_LABELS, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import type {TikTokAccountInfo} from "@/lib/social/zernio-core";
-import {SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions, type ZernioShareInfo} from "@/lib/social/types";
+import {MANUAL_SHARE_PLATFORMS, type ManualSharePlatform, SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions, type ZernioShareInfo} from "@/lib/social/types";
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
 import AdminAutomation from "@/app/admin/story-videos/admin-automation";
+import {AdminHookLab, AdminSocialContent} from "@/app/admin/story-videos/admin-growth-lab";
 import AdminUploadedVideos, {type UploadedVideo} from "@/app/admin/story-videos/admin-uploaded-videos";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
@@ -278,8 +279,12 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
 
             <AdminAutomation onChanged={() => void loadAll()} />
 
+            <AdminHookLab />
+
+            <AdminSocialContent />
+
             <Section title="Official accounts">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {SOCIAL_PLATFORMS.map((platform) => {
                         const connection = connections.find((candidate) => candidate.platform === platform);
                         const viaZernio = connection?.provider === "zernio";
@@ -306,10 +311,14 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                                 {connection.error ? <p className="text-xs leading-5 text-amber-200">{connection.error}</p> : null}
                                             </>
                                         ) : connection.configured ? (
-                                            <p className="text-xs leading-5 text-red-200">{connection.error || "Zernio has no connected TikTok account for this id."}</p>
+                                            <p className={`text-xs leading-5 ${platform === "tiktok" ? "text-red-200" : "text-ink-400"}`}>
+                                                {platform === "tiktok"
+                                                    ? connection.error || "Zernio has no connected TikTok account for this id."
+                                                    : `Connect the ${SOCIAL_PLATFORM_LABELS[platform]} account in the Zernio dashboard; it is picked up here automatically and the auto-share starts posting to it.`}
+                                            </p>
                                         ) : (
                                             <p className="text-xs leading-5 text-ink-500">
-                                                Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server. Zernio holds the TikTok connection; this app keeps no TikTok credentials.
+                                                Set <code className="text-ink-300">{connection.envNames.id}</code>{platform === "tiktok" ? <> and <code className="text-ink-300">{connection.envNames.secret}</code></> : null} on the server. Zernio holds the {SOCIAL_PLATFORM_LABELS[platform]} connection; this app keeps no credentials for it.
                                             </p>
                                         )}
                                         {connection.manageUrl ? (
@@ -497,16 +506,16 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const [copySource, setCopySource] = useState<"claude" | "template" | null>(null);
     const [copyError, setCopyError] = useState("");
     const [drafting, setDrafting] = useState(false);
-    const [tab, setTab] = useState<SocialPlatform>("youtube");
+    const [tab, setTab] = useState<ManualSharePlatform>("youtube");
     const [xLink, setXLink] = useState(false);
-    const [modes, setModes] = useState<Record<SocialPlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", facebook: "post", x: "post"});
+    const [modes, setModes] = useState<Record<ManualSharePlatform, SocialPostMode>>({youtube: "post", tiktok: "post", instagram: "post", facebook: "post", x: "post"});
     // A draft and a direct post are separate shares; each can happen once.
-    const blocked = (platform: SocialPlatform, mode: SocialPostMode = modes[platform]) => shares.some((post) => post.platform === platform && post.mode === mode && (post.status === "published" || inFlight(post)));
+    const blocked = (platform: ManualSharePlatform, mode: SocialPostMode = modes[platform]) => shares.some((post) => post.platform === platform && post.mode === mode && (post.status === "published" || inFlight(post)));
     const overLength = (platform: SocialPlatform) => Boolean(video.durationSeconds && MAX_SECONDS[platform] && video.durationSeconds > MAX_SECONDS[platform]!);
-    const available = (platform: SocialPlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected)
+    const available = (platform: ManualSharePlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected)
         && !overLength(platform)
         && !(blocked(platform, "post") && (!DRAFT_LABELS[platform] || blocked(platform, "draft")));
-    const [selected, setSelected] = useState<SocialPlatform[]>(() => SOCIAL_PLATFORMS.filter(available));
+    const [selected, setSelected] = useState<ManualSharePlatform[]>(() => MANUAL_SHARE_PLATFORMS.filter(available));
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const tiktokConnected = Boolean(connections.find((candidate) => candidate.platform === "tiktok")?.connected);
@@ -583,7 +592,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
         if (!copy) return;
         setSubmitting(true);
         setError("");
-        const captionFor: Record<SocialPlatform, string> = {
+        const captionFor: Record<ManualSharePlatform, string> = {
             youtube: copy.youtube.description,
             tiktok: copy.tiktok.caption,
             instagram: copy.instagram.caption,
@@ -643,7 +652,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                         )}
                         <fieldset className="flex flex-col gap-2">
                             <legend className="mb-1.5 text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Post to</legend>
-                            {SOCIAL_PLATFORMS.map((platform) => {
+                            {MANUAL_SHARE_PLATFORMS.map((platform) => {
                                 const connected = Boolean(connections.find((candidate) => candidate.platform === platform)?.connected);
                                 const already = blocked(platform);
                                 const checked = selected.includes(platform);
@@ -669,7 +678,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap gap-0.5 border border-line-300 bg-canvas-900 p-0.5" role="tablist">
-                        {SOCIAL_PLATFORMS.map((platform) => (
+                        {MANUAL_SHARE_PLATFORMS.map((platform) => (
                             <button key={platform} role="tab" aria-selected={tab === platform} onClick={() => setTab(platform)} className={`min-h-8 px-3 text-xs font-black transition ${tab === platform ? "bg-primary-400 text-canvas-950" : "text-ink-400 hover:text-white"}`}>{SOCIAL_PLATFORM_LABELS[platform]}</button>
                         ))}
                     </div>

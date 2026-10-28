@@ -4,16 +4,20 @@ import type {AutomationJob} from "@/lib/automation-runs";
 // can say when the next run is. Keep in step with the OnCalendar lines:
 //   social-auto-share    OnCalendar=*-*-* 00/2:25:00  (+ up to 5 min random delay)
 //   video-auto-generate  OnCalendar=*-*-* 01/3:50:00  (+ up to 5 min random delay)
-//   blog-auto-generate   OnCalendar=*-*-* 07:40:00    (+ up to 5 min random delay)
+//   blog-auto-generate   OnCalendar=*-*-* 07,19:40:00 (+ up to 5 min random delay)
+// The carousel/text generation rides on the video timer and the metrics sync
+// on the auto-share timer, so they have no calendar of their own.
 
-export const AUTOMATION_TIMERS: Record<AutomationJob, {firstHour: number; everyHours: number; minute: number}> = {
+type TimedJob = Extract<AutomationJob, "social-auto-share" | "video-auto-generate" | "blog-auto-generate">;
+
+export const AUTOMATION_TIMERS: Record<TimedJob, {firstHour: number; everyHours: number; minute: number}> = {
     "social-auto-share": {firstHour: 0, everyHours: 2, minute: 25},
     "video-auto-generate": {firstHour: 1, everyHours: 3, minute: 50},
-    "blog-auto-generate": {firstHour: 7, everyHours: 24, minute: 40}
+    "blog-auto-generate": {firstHour: 7, everyHours: 12, minute: 40}
 };
 
 /** The next scheduled start (UTC) after `now`, before the timer's random delay. */
-export function nextTimerRun(job: AutomationJob, now: Date) {
+export function nextTimerRun(job: TimedJob, now: Date) {
     const {firstHour, everyHours, minute} = AUTOMATION_TIMERS[job];
     const day = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
     for (let dayOffset = 0; dayOffset < 2; dayOffset += 1) {

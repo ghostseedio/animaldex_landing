@@ -3,7 +3,7 @@ import {getSiteUrl} from "@/lib/site";
 import {describeFacebookPages, pickFacebookPage, type FacebookPage} from "@/lib/social/facebook-page";
 import {needsRefresh} from "@/lib/social/refresh-policy";
 import {getConnection, saveConnection} from "@/lib/social/store";
-import {isSocialPlatform, type SocialConnection, type SocialPlatform} from "@/lib/social/types";
+import {isSocialPlatform, isZernioPlatform, type SocialConnection, type SocialPlatform, type ZernioPlatform} from "@/lib/social/types";
 
 // One OAuth app per platform, connected once by an admin to the official
 // AnimalDex account. Each app must list this redirect URI:
@@ -13,11 +13,11 @@ import {isSocialPlatform, type SocialConnection, type SocialPlatform} from "@/li
 
 type ProviderEnv = {id: string; secret: string};
 
-/** The platforms this app connects itself (everything but TikTok). */
-export type OAuthPlatform = Exclude<SocialPlatform, "tiktok">;
+/** The platforms this app connects itself (everything Zernio does not post to). */
+export type OAuthPlatform = Exclude<SocialPlatform, ZernioPlatform>;
 
 export function isOAuthPlatform(platform: unknown): platform is OAuthPlatform {
-    return isSocialPlatform(platform) && platform !== "tiktok";
+    return isSocialPlatform(platform) && !isZernioPlatform(platform);
 }
 
 const ENV_NAMES: Record<OAuthPlatform, {id: string; secret: string}> = {

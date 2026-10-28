@@ -1,9 +1,13 @@
 import "server-only";
 import {
     buildTikTokPostBody,
+    buildZernioPostBody,
     parseTikTokAccountInfo,
+    parseZernioAccounts,
     parseZernioPost,
     type PostToTikTokInput,
+    type ZernioAccount,
+    type ZernioPostInput,
     type TikTokAccountInfo,
     ZERNIO_BASE_URL,
     ZERNIO_ENV,
@@ -13,6 +17,7 @@ import {
     zernioErrorFromResponse,
     type ZernioPostSnapshot
 } from "@/lib/social/zernio-core";
+import {SOCIAL_PLATFORM_LABELS, type ZernioPlatform} from "@/lib/social/types";
 
 // Server-only half of the Zernio client: every call that sends the API key.
 // Shapes, error mapping, webhook verification and schedule rules are in
@@ -117,9 +122,9 @@ export async function postToTikTok(input: PostToTikTokInput): Promise<ZernioPost
 }
 
 /** Current state of a Zernio post (GET /v1/posts/{postId}). */
-export async function getZernioPost(postId: string): Promise<ZernioPostSnapshot> {
+export async function getZernioPost(postId: string, platform: ZernioPlatform = "tiktok"): Promise<ZernioPostSnapshot> {
     const {body} = await zernioFetch(`/posts/${encodeURIComponent(postId)}`, {timeoutMs: 30_000});
-    const snapshot = parseZernioPost(body?.post ?? body);
+    const snapshot = parseZernioPost(body?.post ?? body, platform);
     if (!snapshot) throw new ZernioError("Zernio returned no post", {kind: "unknown", details: body});
     return snapshot;
 }
@@ -153,4 +158,90 @@ export async function listTikTokPublishTimes(fromDate: string, toDate: string): 
         if (page >= Number(body?.pagination?.pages ?? 1)) break;
     }
     return times;
+}
+
+
+// ── Pinterest, Threads, Bluesky, and TikTok photo carousels ─────────────────
+
+/** The API key alone: enough for every Zernio platform but video TikTok (which also pins its account id). */
+export function isZernioApiConfigured() {
+    return Boolean(env(ZERNIO_ENV.apiKey));
+}
+
+const ACCOUNT_CACHE_MS = 5 * 60_000;
+let accountCache: {at: number; accounts: ZernioAccount[]} | null = null;
+
+/** The accounts connected in Zernio (cached five minutes). */
+export async function listZernioAccounts(force = false): Promise<ZernioAccount[]> {
+    if (!force && accountCache && Date.now() - accountCache.at < ACCOUNT_CACHE_MS) return accountCache.accounts;
+    if (!isZernioApiConfigured()) throw new ZernioError(`${ZERNIO_ENV.apiKey} is not set on the server`, {kind: "config"});
+    const {body} = await zernioFetch("/accounts", {timeoutMs: 30_000});
+    accountCache = {at: Date.now(), accounts: parseZernioAccounts(body)};
+    return accountCache.accounts;
+}
+
+/** ZERNIO_PINTEREST_ACCOUNT_ID etc. pin an account; otherwise the active one Zernio lists for the platform. */
+export async function zernioAccountFor(platform: ZernioPlatform): Promise<ZernioAccount> {
+    const pinned = platform === "tiktok" ? env(ZERNIO_ENV.accountId) : env(`ZERNIO_${platform.toUpperCase()}_ACCOUNT_ID`);
+    const accounts = await listZernioAccounts();
+    const match = pinned ? accounts.find((account) => account.id === pinned) : accounts.find((account) => account.platform === platform && account.active);
+    if (match) return match;
+    if (pinned) return {id: pinned, platform, username: null, active: true};
+    throw new ZernioError(`No ${SOCIAL_PLATFORM_LABELS[platform]} account is connected in Zernio; connect one in the Zernio dashboard`, {kind: "not_found"});
+}
+
+const boardCache = new Map<string, string | null>();
+
+/** The board pins go to: ZERNIO_PINTEREST_BOARD_ID, else a board with "animal" in its name, else the first one. */
+export async function pinterestBoardId(accountId: string): Promise<string | null> {
+    const pinned = env("ZERNIO_PINTEREST_BOARD_ID");
+    if (pinned) return pinned;
+    if (boardCache.has(accountId)) return boardCache.get(accountId) ?? null;
+    const {body} = await zernioFetch(`/accounts/${encodeURIComponent(accountId)}/pinterest-boards`, {timeoutMs: 30_000});
+    const boards: any[] = Array.isArray(body?.boards) ? body.boards : Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+    const id = (board: any) => typeof board?.id === "string" ? board.id : typeof board?._id === "string" ? board._id : null;
+    const chosen = boards.find((board) => board?.isDefault) ?? boards.find((board) => /animal/i.test(String(board?.name ?? ""))) ?? boards[0];
+    const boardId = chosen ? id(chosen) : null;
+    boardCache.set(accountId, boardId);
+    return boardId;
+}
+
+/** Uploads any file (a slide JPEG, a video) through Zernio's presigned storage; the URL is public for 7 days. */
+export async function uploadToZernio(bytes: Buffer, filename: string, contentType: string) {
+    return uploadVideoToZernio(bytes, filename, contentType);
+}
+
+/**
+ * Creates and publishes one post on one Zernio platform. A post the platform
+ * refused inside the request (HTTP 207, status failed) rejects with a
+ * ZernioError "platform"; "scheduled" after a 207 means Zernio retries itself.
+ */
+export async function postToZernio(input: ZernioPostInput, requestId?: string): Promise<ZernioPostSnapshot> {
+    const {status, body: result} = await zernioFetch("/posts", {
+        method: "POST",
+        headers: requestId ? {"x-request-id": requestId} : undefined,
+        body: JSON.stringify(buildZernioPostBody(input)),
+        timeoutMs: 5 * 60_000
+    });
+    const snapshot = parseZernioPost(result?.post, input.platform);
+    if (!snapshot) throw new ZernioError("Zernio did not return the created post", {kind: "unknown", status, details: result});
+    if (status === 207 && (snapshot.status === "failed" || snapshot.status === "partial")) {
+        const label = SOCIAL_PLATFORM_LABELS[input.platform];
+        const reason = snapshot.tiktok?.errorMessage ?? (Array.isArray(result?.platformResults) ? result.platformResults[0]?.error : null) ?? result?.error ?? `${label} rejected the post`;
+        const kind: ZernioErrorKind = /too many posts|capacity|limit/i.test(reason) ? "rate_limited" : "platform";
+        throw new ZernioError(`${label}: ${reason}`, {kind, status, details: {postId: snapshot.postId, category: snapshot.tiktok?.errorCategory}});
+    }
+    return snapshot;
+}
+
+/** Every post Zernio has analytics for on one platform between two dates (YYYY-MM-DD), raw. Needs Zernio's Analytics add-on. */
+export async function listZernioAnalytics(platform: ZernioPlatform, fromDate: string, toDate: string): Promise<any[]> {
+    const posts: any[] = [];
+    for (let page = 1; page <= 20; page++) {
+        const params = new URLSearchParams({platform, fromDate, toDate, limit: "100", page: String(page)});
+        const {body} = await zernioFetch(`/analytics?${params}`, {timeoutMs: 30_000});
+        posts.push(...(Array.isArray(body?.posts) ? body.posts : []));
+        if (page >= Number(body?.pagination?.pages ?? 1)) break;
+    }
+    return posts;
 }

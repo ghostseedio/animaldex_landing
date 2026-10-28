@@ -5,7 +5,7 @@ import {isClaudeConfigured} from "@/lib/blog-generator/claude-client";
 import {formatCost} from "@/lib/blog-generator/cost-meter";
 import {generateJobRunning, startGenerateJob, type Job} from "@/lib/blog-generator/jobs";
 
-// Unattended news articles, run by the VM timer (POST /api/cron/blog-auto-generate):
+// Unattended news articles, run twice a day by the VM timer (POST /api/cron/blog-auto-generate):
 // each run is exactly "Latest news" → "Auto-pick and write" in
 // /admin/blog-generator, with a random Focus, standard research depth, and
 // publishing on. The editor's draft rule still applies: a post scoring below
@@ -46,10 +46,32 @@ async function recordFinished(job: Job, focus: string) {
     });
 }
 
+function numberEnv(name: string, fallback: number) {
+    const value = Number(process.env[name]);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Articles started today (UTC) and what today's finished ones cost, from the run log. */
+async function todaysRuns() {
+    const runs = await listAutomationRuns(BLOG_AUTO_JOB, 30).catch(() => []);
+    const today = new Date().toISOString().slice(0, 10);
+    const mine = runs.filter((run) => run.created_at.slice(0, 10) === today && run.outcome === "acted");
+    return {
+        started: mine.filter((run) => run.summary.startsWith("Writing")).length,
+        usd: mine.reduce((sum, run) => sum + (typeof run.detail?.usd === "number" ? run.detail.usd : 0), 0)
+    };
+}
+
 async function run(): Promise<BlogAutoGenerateResult> {
     if (process.env.BLOG_AUTO_GENERATE_DISABLED?.trim() === "1") return {ok: true, acted: false, summary: "BLOG_AUTO_GENERATE_DISABLED=1"};
     if (!isClaudeConfigured()) return {ok: true, acted: false, summary: "CLAUDE_API_KEY is not set on the server"};
     if (generateJobRunning()) return {ok: true, acted: false, summary: "An article is already being written"};
+    // Twice a day by default (the timer fires at 07:40 and 19:40 UTC); the caps hold even if it fires more.
+    const perDay = numberEnv("BLOG_AUTO_PER_DAY", 2);
+    const budget = numberEnv("BLOG_AUTO_DAILY_BUDGET_USD", 8);
+    const today = await todaysRuns();
+    if (today.started >= perDay) return {ok: true, acted: false, summary: `Already started ${today.started} of ${perDay} articles today (BLOG_AUTO_PER_DAY)`};
+    if (today.usd >= budget) return {ok: true, acted: false, summary: `Today's articles cost $${today.usd.toFixed(2)} of the $${budget} budget (BLOG_AUTO_DAILY_BUDGET_USD)`};
 
     const focus = pickAutoFocus(await recentFocuses());
     const job = startGenerateJob({mode: "news", focus, publish: true, depth: "standard"}, (finished) => recordFinished(finished, focus));

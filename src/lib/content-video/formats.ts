@@ -1,5 +1,6 @@
 import {isMusicMood, MUSIC_MOOD_GUIDE, MUSIC_MOODS} from "@/lib/content-video/music";
 import {HOOK_RULES, type PlanScene, type StatLine, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
+import type {Experiment} from "@/lib/social-lab/arms";
 import type {ShareCopy} from "@/lib/social/share-copy";
 
 // The two fully generated formats. A comparison becomes a Pokémon-style
@@ -160,8 +161,15 @@ function parseShare(value: unknown): ShareCopy | null {
     return copy.youtube.title ? copy : null;
 }
 
-/** The model's battle, held to the page: its winner, its stats, three beats. */
-export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoPlan | null {
+/** How long the VS / parents card holds after a cold open (it only has to land the matchup). */
+const COLD_OPEN_CARD_SECONDS = 2.2;
+
+/**
+ * The model's battle, held to the page: its winner, its stats, three beats.
+ * With the "cold_open" opener the clash shot plays first under the spoken hook,
+ * then a short VS card, then the fight.
+ */
+export function normalizeBattlePlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
     const facts = source.battle;
     const record = value as Record<string, unknown> | null;
     if (!facts || !record || typeof record !== "object") return null;
@@ -196,17 +204,23 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
     const arena = clean(record.arena, 200);
     const looks = `The ${facts.a.name}: ${clean(record.look_a, 300) || `an adult ${facts.a.name}`}. The ${facts.b.name}: ${clean(record.look_b, 300) || `an adult ${facts.b.name}`}.`;
 
+    const coldOpen = experiment?.opener === "cold_open";
+    const hookLine = clean(record.intro_narration, 160) || `${facts.a.name} versus ${facts.b.name}. Only one walks away.`;
+    const vsCard: PlanScene = {
+        narration: coldOpen ? `${facts.a.name} versus ${facts.b.name}.` : hookLine,
+        overlay: "",
+        visual: "card",
+        image: facts.a.image,
+        focusX: 0.5,
+        motionPrompt: "",
+        minSeconds: coldOpen ? COLD_OPEN_CARD_SECONDS : 3.4,
+        card: {kind: "vs", left: facts.a, right: facts.b, stats: stats.length >= 2 ? stats : fallbackStats}
+    };
+    // The beats start after the card (and after the cold open when there is one); the clash is the third beat.
+    const firstBeat = coldOpen ? 2 : 1;
     const scenes: PlanScene[] = [
-        {
-            narration: clean(record.intro_narration, 160) || `${facts.a.name} versus ${facts.b.name}. Only one walks away.`,
-            overlay: "",
-            visual: "card",
-            image: facts.a.image,
-            focusX: 0.5,
-            motionPrompt: "",
-            minSeconds: 3.4,
-            card: {kind: "vs", left: facts.a, right: facts.b, stats: stats.length >= 2 ? stats : fallbackStats}
-        },
+        ...(coldOpen ? [{narration: hookLine, overlay: "", visual: "image" as const, image: facts.a.image, focusX: 0.5, motionPrompt: "", minSeconds: 2.2, reuseClip: firstBeat + 2}] : []),
+        vsCard,
         // Every shot is drawn mid-action from its own keyframe rather than chained from
         // the last frame of the one before: a real fight edit cuts between angles, the
         // model starts moving immediately, and one failed clip no longer sinks the rest.
@@ -241,7 +255,7 @@ export function normalizeBattlePlan(value: unknown, source: VideoSource): VideoP
         ctaText: clean(record.cta_text, 40) || "Who would you bet on?",
         musicMood: isMusicMood(record.music_mood) ? record.music_mood : "intense",
         share,
-        hud: {left: facts.a.name, right: facts.b.name, winner: winner === "a" ? "left" : "right", fightScenes: beats.map((_, index) => index + 1)}
+        hud: {left: facts.a.name, right: facts.b.name, winner: winner === "a" ? "left" : "right", fightScenes: beats.map((_, index) => index + firstBeat)}
     };
 }
 
@@ -304,7 +318,8 @@ const CREATURE_KEYFRAME_SUFFIX =
 const CREATURE_MOTION_SUFFIX =
     "Natural, believable animal motion and physics; slow tracking documentary camera. Keep the creature's anatomy, colours and markings exactly as in the frame. No text, no added animals or people.";
 
-export function normalizeCreaturePlan(value: unknown, source: VideoSource): VideoPlan | null {
+/** With the "cold_open" opener the creature itself opens the video under the hook, then the parents card, then the full clip. */
+export function normalizeCreaturePlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
     const facts = source.creature;
     const record = value as Record<string, unknown> | null;
     if (!facts || !record || typeof record !== "object") return null;
@@ -315,22 +330,26 @@ export function normalizeCreaturePlan(value: unknown, source: VideoSource): Vide
     if (!share || !keyframe || !motion || !narration) return null;
     const name = clean(record.creature_name, 40) || facts.name;
     const [first, second] = facts.parents;
+    const coldOpen = experiment?.opener === "cold_open";
+    const hookLine = clean(record.intro_narration, 140) || `What if a ${first.name} and a ${second.name} had a baby?`;
+    const pairCard: PlanScene = {
+        narration: coldOpen ? `${first.name}${facts.kind === "hybrid" ? " plus " : " learns from "}${second.name}.` : hookLine,
+        overlay: "",
+        visual: "card",
+        image: first.image,
+        focusX: 0.5,
+        motionPrompt: "",
+        minSeconds: coldOpen ? COLD_OPEN_CARD_SECONDS : 2.6,
+        card: {kind: "pair", left: first, right: second, title: facts.kind === "hybrid" ? "+" : "learns from"}
+    };
 
     return {
         format: "creature",
         title: clean(record.title, 120) || source.title,
         hookText: clean(record.hook_text, 50) || `${first.name} + ${second.name} = ?`.toUpperCase(),
         scenes: [
-            {
-                narration: clean(record.intro_narration, 140) || `What if a ${first.name} and a ${second.name} had a baby?`,
-                overlay: "",
-                visual: "card",
-                image: first.image,
-                focusX: 0.5,
-                motionPrompt: "",
-                minSeconds: 2.6,
-                card: {kind: "pair", left: first, right: second, title: facts.kind === "hybrid" ? "+" : "learns from"}
-            },
+            ...(coldOpen ? [{narration: hookLine, overlay: "", visual: "image" as const, image: first.image, focusX: 0.5, motionPrompt: "", minSeconds: 2.4, reuseClip: 2}] : []),
+            pairCard,
             {
                 narration,
                 overlay: name,

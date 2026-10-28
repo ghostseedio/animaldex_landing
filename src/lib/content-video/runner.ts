@@ -33,6 +33,7 @@ import {
 import {alignLine, speakLine, wavPcm} from "@/lib/content-video/tts";
 import {speechSpans, timeLineWords} from "@/lib/content-video/word-timing";
 import {musicTrackPath, pickMusicTrack} from "@/lib/content-video/music";
+import {nextExperiment} from "@/lib/social-lab/experiments";
 import {existsSync} from "node:fs";
 
 // Runs one page video from script to finished file in the background of the
@@ -100,7 +101,9 @@ async function runJob(id: string) {
 
         if (row.status === "scripting" || !row.plan) {
             await save({status: "scripting", progress: "Writing the script and shot list", error: null});
-            const {plan, provider, failures} = await generateVideoPlan(source);
+            // The hook lab picks this video's hook style, length / opener and ending from what has worked.
+            const experiment = await nextExperiment(source.format === "battle" || source.format === "creature" ? source.format : "editorial");
+            const {plan, provider, failures} = await generateVideoPlan(source, experiment);
             if (failures.length) console.warn(`[content-video] ${id} plan fallbacks: ${failures.join("; ")}`);
             await save({plan, llm_provider: provider, status: "generating", progress: "Script ready"});
         }
@@ -299,13 +302,15 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
     const plan = applyStatCards(planned, source);
     await progress("Recording the voiceover");
     const voiceState = {skip: new Set<string>(), failures: [] as string[]};
+    // A looping video has no end card, so no call-to-action line to say.
+    const loops = plan.ending === "loop";
+    const narrations = [...plan.scenes.map((scene) => scene.narration), ...(loops ? [] : [plan.ctaNarration])];
     const lines = [];
-    for (const narration of [...plan.scenes.map((scene) => scene.narration), plan.ctaNarration]) {
+    for (const narration of narrations) {
         lines.push(await speakLine(narration, voiceState));
     }
     // When each word is said: measured by the aligner when it is available, else pinned to the recording's pauses.
     await progress("Timing the captions to the voice");
-    const narrations = [...plan.scenes.map((scene) => scene.narration), plan.ctaNarration];
     const alignState = {disabled: false, failure: null as string | null};
     const lineWords = [];
     for (let index = 0; index < lines.length; index += 1) {
@@ -315,8 +320,8 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
         lineWords.push(timeLineWords(narrations[index], lines[index].seconds, {aligned, spans}));
     }
     if (alignState.failure) console.warn(`[content-video] caption alignment fell back to the pause-based estimate: ${alignState.failure}`);
-    const sceneSeconds = lines.slice(0, -1).map((line) => line.seconds);
-    const ctaSeconds = lines.at(-1)!.seconds;
+    const sceneSeconds = lines.slice(0, plan.scenes.length).map((line) => line.seconds);
+    const ctaSeconds = loops ? 0 : lines.at(-1)!.seconds;
     const timeline = buildTimeline(plan, sceneSeconds, ctaSeconds);
 
     await progress("Gathering photos and clips");
@@ -337,12 +342,14 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
             visuals.push({type: "card", card: scene.card, left: await imagePath(scene.card.left.image), right: await imagePath(scene.card.right.image)});
             continue;
         }
-        const clip = clips.find((candidate) => candidate.scene === index);
+        // A cold open plays another scene's clip (the fight's clash, the creature's reveal).
+        const clipScene = scene.reuseClip ?? index;
+        const clip = clips.find((candidate) => candidate.scene === clipScene);
         if (clip?.status === "completed" && clip.videoUrl) {
             const out = path.join(dir, `clip-${index}.mp4`);
             try {
                 await download(clip.videoUrl, out);
-                visuals.push({type: "clip", path: out, seconds: scene.clipSeconds ?? AI_CLIP_SECONDS});
+                visuals.push({type: "clip", path: out, seconds: plan.scenes[clipScene]?.clipSeconds ?? AI_CLIP_SECONDS});
                 continue;
             } catch (error) {
                 console.warn(`[content-video] clip ${index} unavailable, using a still`, error);

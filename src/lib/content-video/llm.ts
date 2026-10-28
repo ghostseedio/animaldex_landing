@@ -20,6 +20,7 @@ import {
     normalizeCreaturePlan
 } from "@/lib/content-video/formats";
 import {loadImageBytes} from "@/lib/content-video/source";
+import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
 
 // Writes the script and shot plan: Claude first, then OpenAI, then Gemini.
 // Each one SEES the photos, so the shots and motion prompts describe what is
@@ -151,17 +152,19 @@ function providers(): Provider[] {
 export type GeneratedPlan = {plan: VideoPlan; provider: Provider["name"]; failures: string[]};
 
 /** The planner for the source's format: its prompt, its schema and the check that holds the reply to it. */
-function plannerFor(source: VideoSource): {prompt: Prompt; user: string; normalize: (value: unknown) => VideoPlan | null} {
+function plannerFor(source: VideoSource, experiment: Experiment | null): {prompt: Prompt; user: string; normalize: (value: unknown) => VideoPlan | null} {
+    const brief = experiment ? `\n\n${experimentBrief(experiment)}` : "";
     if (source.format === "battle") {
-        return {prompt: {system: BATTLE_SYSTEM_PROMPT, schema: BATTLE_JSON_SCHEMA}, user: buildBattleUserPrompt(source), normalize: (value) => normalizeBattlePlan(value, source)};
+        return {prompt: {system: BATTLE_SYSTEM_PROMPT, schema: BATTLE_JSON_SCHEMA}, user: buildBattleUserPrompt(source) + brief, normalize: (value) => normalizeBattlePlan(value, source, experiment)};
     }
     if (source.format === "creature") {
-        return {prompt: {system: CREATURE_SYSTEM_PROMPT, schema: CREATURE_JSON_SCHEMA}, user: buildCreatureUserPrompt(source), normalize: (value) => normalizeCreaturePlan(value, source)};
+        return {prompt: {system: CREATURE_SYSTEM_PROMPT, schema: CREATURE_JSON_SCHEMA}, user: buildCreatureUserPrompt(source) + brief, normalize: (value) => normalizeCreaturePlan(value, source, experiment)};
     }
-    return {prompt: {system: PLAN_SYSTEM_PROMPT, schema: PLAN_JSON_SCHEMA}, user: buildPlanUserPrompt(source), normalize: (value) => normalizePlan(value, source.images.length)};
+    return {prompt: {system: PLAN_SYSTEM_PROMPT, schema: PLAN_JSON_SCHEMA}, user: buildPlanUserPrompt(source, experiment), normalize: (value) => normalizePlan(value, source.images.length)};
 }
 
-export async function generateVideoPlan(source: VideoSource): Promise<GeneratedPlan> {
+/** Writes the plan; with an experiment, its arms steer the prompt and are recorded on the plan for the hook lab. */
+export async function generateVideoPlan(source: VideoSource, experiment: Experiment | null = null): Promise<GeneratedPlan> {
     const list = providers();
     if (!list.length) throw new Error("No AI provider is configured (CLAUDE_API_KEY, OPENAI_API_KEY or GEMINI_API_KEY)");
     const images = await prepareImages(source);
@@ -169,7 +172,7 @@ export async function generateVideoPlan(source: VideoSource): Promise<GeneratedP
     // List only the photos that loaded; each keeps its number, labelled the same in the prompt and the attachments.
     const loaded = new Set(images.map((image) => image.index));
     const visible: VideoSource = {...source, images: source.images.filter((image) => loaded.has(image.index))};
-    const planner = plannerFor(visible);
+    const planner = plannerFor(visible, experiment);
 
     const failures: string[] = [];
     for (const provider of list) {
@@ -180,6 +183,10 @@ export async function generateVideoPlan(source: VideoSource): Promise<GeneratedP
             // A photo number the model used must be one it was shown.
             for (const scene of plan.scenes) {
                 if (!loaded.has(scene.image)) scene.image = images[0].index;
+            }
+            if (experiment) {
+                plan.experiment = experiment;
+                plan.ending = experiment.ending === "loop" ? "loop" : "cta_card";
             }
             return {plan, provider: provider.name, failures};
         } catch (error) {

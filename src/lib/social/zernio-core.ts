@@ -1,5 +1,5 @@
 import {createHmac, timingSafeEqual} from "crypto";
-import type {SocialPostStatus, TikTokPostOptions} from "@/lib/social/types";
+import {SOCIAL_PLATFORM_LABELS, type SocialPostStatus, type TikTokPostOptions, type ZernioPlatform} from "@/lib/social/types";
 
 // Pure half of the Zernio client: request/response shapes, error mapping, webhook
 // signatures and schedule rules. No fetch and no API key here, so tests can import
@@ -180,12 +180,16 @@ export type ZernioPostSnapshot = {
     } | null;
 };
 
-/** Reads a post object (from POST/GET /v1/posts or a webhook's `post`) defensively. */
-export function parseZernioPost(post: any): ZernioPostSnapshot | null {
+/**
+ * Reads a post object (from POST/GET /v1/posts or a webhook's `post`) defensively.
+ * Every post we create targets one platform; `tiktok` holds that target's
+ * outcome (the field kept its name from when TikTok was the only one).
+ */
+export function parseZernioPost(post: any, platform: ZernioPlatform = "tiktok"): ZernioPostSnapshot | null {
     const postId = typeof post?._id === "string" ? post._id : typeof post?.id === "string" ? post.id : null;
     if (!postId) return null;
     const platforms: any[] = Array.isArray(post?.platforms) ? post.platforms : [];
-    const entry = platforms.find((item) => item?.platform === "tiktok") ?? platforms[0] ?? null;
+    const entry = platforms.find((item) => item?.platform === platform) ?? platforms[0] ?? null;
     const str = (value: unknown) => typeof value === "string" && value ? value : null;
     return {
         postId,
@@ -203,14 +207,15 @@ export function parseZernioPost(post: any): ZernioPostSnapshot | null {
 }
 
 /** The share-log row fields a Zernio post state maps to. */
-export function rowStateFromZernio(snapshot: ZernioPostSnapshot): {status: SocialPostStatus; external_url: string | null; error: string | null} {
+export function rowStateFromZernio(snapshot: ZernioPostSnapshot, platform: ZernioPlatform = "tiktok"): {status: SocialPostStatus; external_url: string | null; error: string | null} {
     const target = snapshot.tiktok;
+    const label = SOCIAL_PLATFORM_LABELS[platform];
     if (snapshot.status === "published" || target?.status === "published") {
         return {status: "published", external_url: target?.platformPostUrl ?? null, error: null};
     }
     if (snapshot.status === "failed" || snapshot.status === "partial" || snapshot.status === "cancelled" || target?.status === "failed") {
-        const reason = target?.errorMessage ?? (snapshot.status === "cancelled" ? "Cancelled in Zernio" : "TikTok rejected the post");
-        return {status: "failed", external_url: null, error: `TikTok: ${reason}`.slice(0, 1000)};
+        const reason = target?.errorMessage ?? (snapshot.status === "cancelled" ? "Cancelled in Zernio" : `${label} rejected the post`);
+        return {status: "failed", external_url: null, error: `${label}: ${reason}`.slice(0, 1000)};
     }
     if (snapshot.status === "publishing") return {status: "processing", external_url: null, error: null};
     // draft / scheduled / pending: waiting for its time.
@@ -264,6 +269,76 @@ export function buildTikTokPostBody(input: PostToTikTokInput, accountId: string)
 }
 
 
+
+// ── Any platform: Pinterest, Threads, Bluesky, and TikTok photo carousels ──────
+
+export type ZernioMediaItem = {type: "image" | "video"; url: string};
+
+export type ZernioPostInput = {
+    platform: ZernioPlatform;
+    accountId: string;
+    /** The post text: caption, Threads/Bluesky text, Pinterest description, TikTok photo title. */
+    content: string;
+    media: ZernioMediaItem[];
+    /** Pinterest: board, title and destination link. */
+    pinterest?: {boardId: string | null; title: string | null; link: string | null};
+    /** TikTok photo carousel: the long caption and the toggles (TikTok's required consent included). */
+    tiktokPhoto?: {description: string; options: TikTokPostOptions};
+    metadata?: Record<string, string | number | boolean | null>;
+};
+
+/** TikTok photo titles are capped at 90 characters (hashtags are stripped from them). */
+export const TIKTOK_PHOTO_TITLE_LIMIT = 90;
+export const TIKTOK_PHOTO_DESCRIPTION_LIMIT = 4000;
+
+/** The body POST /v1/posts gets for one post on one non-video-TikTok target. Exported for tests. */
+export function buildZernioPostBody(input: ZernioPostInput) {
+    const platformSpecificData: Record<string, unknown> = {};
+    if (input.platform === "pinterest" && input.pinterest) {
+        if (input.pinterest.boardId) platformSpecificData.boardId = input.pinterest.boardId;
+        if (input.pinterest.title) platformSpecificData.title = Array.from(input.pinterest.title).slice(0, 100).join("");
+        if (input.pinterest.link) platformSpecificData.link = input.pinterest.link;
+    }
+    const photo = input.platform === "tiktok" && input.tiktokPhoto ? input.tiktokPhoto : null;
+    const content = photo
+        ? Array.from(input.content.replace(/#[\p{L}\p{N}_]+/gu, "").replace(/\s+/g, " ").trim()).slice(0, TIKTOK_PHOTO_TITLE_LIMIT).join("")
+        : input.content;
+    return {
+        content,
+        mediaItems: input.media.map((item) => ({type: item.type, url: item.url})),
+        platforms: [{platform: input.platform, accountId: input.accountId, ...(Object.keys(platformSpecificData).length ? {platformSpecificData} : {})}],
+        ...(photo ? {
+            tiktokSettings: {
+                privacyLevel: photo.options.privacyLevel,
+                allowComment: photo.options.allowComment,
+                commercialContentType: "none",
+                contentPreviewConfirmed: photo.options.previewConfirmed,
+                expressConsentGiven: photo.options.previewConfirmed,
+                mediaType: "photo",
+                photoCoverIndex: 0,
+                autoAddMusic: true,
+                description: photo.description.slice(0, TIKTOK_PHOTO_DESCRIPTION_LIMIT)
+            }
+        } : {}),
+        publishNow: true,
+        ...(input.metadata ? {metadata: input.metadata} : {})
+    };
+}
+
+export type ZernioAccount = {id: string; platform: string; username: string | null; active: boolean};
+
+/** GET /v1/accounts, read defensively: the accounts connected in Zernio. */
+export function parseZernioAccounts(body: any): ZernioAccount[] {
+    const list: any[] = Array.isArray(body?.accounts) ? body.accounts : Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+    return list.flatMap((account) => {
+        const id = typeof account?._id === "string" ? account._id : typeof account?.id === "string" ? account.id : null;
+        const platform = typeof account?.platform === "string" ? account.platform.toLowerCase() : null;
+        if (!id || !platform) return [];
+        const username = typeof account.username === "string" ? account.username : typeof account.displayName === "string" ? account.displayName : null;
+        const active = account.isActive !== false && account.enabled !== false && account.needsReconnection !== true;
+        return [{id, platform, username, active}];
+    });
+}
 
 /** True when `signature` is the hex HMAC-SHA256 of `rawBody` under `secret`. */
 export function verifyZernioWebhookSignature(rawBody: string, signature: string | null, secret: string) {

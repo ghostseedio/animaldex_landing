@@ -1,5 +1,6 @@
 import type {ShareCopy} from "@/lib/social/share-copy";
 import {isMusicMood, MUSIC_MOOD_GUIDE, MUSIC_MOODS, type MusicMood} from "@/lib/content-video/music";
+import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
 
 // The script and shot plan of a page video, and everything derived from it
 // that is pure: the editorial prompt and schema (blog, ranking and location
@@ -17,7 +18,8 @@ export const MAX_AI_CLIPS = 5;
 export const AI_CLIP_SECONDS = 5;
 /** The most photos sent to the model (each is a few hundred tokens). */
 export const MAX_PLAN_IMAGES = 12;
-const MIN_SCENES = 5;
+/** A 12-second cut has three beats; anything shorter is not a story. */
+const MIN_SCENES = 3;
 const MAX_SCENES = 12;
 
 export type SourceImage = {
@@ -122,6 +124,8 @@ export type PlanScene = {
     species?: string;
     /** Battle fight shot: drives the edit's camera moves, hit flashes, impact sounds and HUD drops. */
     fx?: BattleFx;
+    /** Plays the AI clip of that scene (by index) here too: a cold open previews the best shot before the card. */
+    reuseClip?: number;
     /** Pokémon-style callout shown as the shot starts, e.g. "BONGO used HORN CHARGE!". */
     move?: string;
     /** Whose move the fight shot is: its hits drain the other side's health bar. */
@@ -151,6 +155,10 @@ export type BattleHud = {left: string; right: string; winner: "left" | "right"; 
 
 export type VideoPlan = {
     format?: VideoFormat;
+    /** The hook-lab arms this video tests (src/lib/social-lab/arms.ts); absent on videos made before the lab. */
+    experiment?: Experiment;
+    /** "loop": no end card, the last beat runs straight back into the first. Absent = the CTA end card. */
+    ending?: "loop" | "cta_card";
     title: string;
     hookText: string;
     scenes: PlanScene[];
@@ -177,7 +185,10 @@ export type TimelineEntry = {
     attacker?: PlanScene["attacker"];
 };
 
-export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for tens of millions of views; a calm opener is a dead video.
+export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for tens of millions of views; a calm opener is a dead video. Our numbers: a quarter of viewers leave in the first second and two thirds by the third, so the opening beat is the whole game.
+- The FIRST WORDS spoken are the hook: no warm-up, no scene-setting, no name of the animal before the hook lands.
+- The first frame is already moving: the opening shot shows the animal mid-action (a lunge, a turn of the head, a strike, wings opening), never a slow drift over a still landscape.
+- Talk like a creator to camera, not a documentary narrator: casual, second person, contractions, short sentences a 19-year-old would say out loud.
 - Brainstorm at least five hooks silently, then use the most extreme one. Pick from: a shocking number ("610,000 people a year"), a contrarian claim ("Sharks are harmless. This isn't."), a taboo or controversial angle, a "you've been lied to" reveal, a wild comparison of scale or power, an impossible-sounding true fact, a direct challenge to the viewer ("You couldn't survive 10 seconds here").
 - Open a loop the viewer cannot close without watching to the end (the Zeigarnik effect): tease the payoff ("…and number one isn't even a predator"), then pay it off last.
 - Spoken hook: at most 10 words, punchy, no setup, no greeting, no "in this video", no channel name, no question answerable with "no".
@@ -186,20 +197,20 @@ export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for ten
 
 DEBATES: when the source presents a debate, controversy or two camps, take the UNDERDOG side to provoke comments: open on the contrarian position, argue its strongest honest case, and end with a question that splits the audience ("Team Pasteur or Team Béchamp? Tell me in the comments."). On health or medical topics, put the underdog side as a provocative QUESTION ("What if Béchamp was half right?"), never as a claim that contradicts the evidence — no medical misinformation.`;
 
-export const PLAN_SYSTEM_PROMPT = `You are the editor of AnimalDex's short-form channel (YouTube Shorts, TikTok, Reels). You turn one of our pages into a 30–50 second vertical video built to go viral and be watched to the end. You are given the page text and its photos (numbered, in order).
+export const PLAN_SYSTEM_PROMPT = `You are the editor of AnimalDex's short-form channel (YouTube Shorts, TikTok, Reels). You turn one of our pages into a short vertical video built to go viral and be watched to the end (its length is set by THIS ITEM'S EXPERIMENT when one is given; otherwise 30–45 seconds). You are given the page text and its photos (numbered, in order).
 
 ${HOOK_RULES}
 
 Then:
 - Fast retention beats: each scene is one idea, 1–2 short spoken sentences (about 6–18 words, 2–5 seconds). Escalate: each beat should top the last. Written for the ear: short sentences, plain words, second person, no lists read aloud, no emoji, no hashtags.
-- Total narration across all scenes (not counting the CTA): 75–120 words. 6–10 scenes.
+- Total narration across all scenes (not counting the CTA) and the number of scenes: as the experiment's LENGTH says (when none is given: 75–110 words, 6–9 scenes). Shorter is not lazier: every beat still escalates.
 - If the source hedges, the facts stay hedged — but the framing can still be bold.
 - overlay: a 1–5 word on-screen label that adds to the narration (a number, a name, a contrast), or "" for none. Use one on most scenes, never the same words as the narration.
-- cta_narration: one short line that sends people to the full page on AnimalDex or asks them to comment (e.g. "Which side are you on? Full story on AnimalDex."). cta_text: 2–5 words for the end card.
+- cta_narration: one short line that sends people to the full page on AnimalDex or asks them to comment (e.g. "Which side are you on? Full story on AnimalDex."). cta_text: 2–5 words for the end card. When the experiment's ENDING is a loop, both are "" and the last scene's line leads back into the first.
 
 Shots:
 - Every scene uses one of the photos (image = its number). Spread them: do not use the same photo twice in a row, and use as many different photos as fit.
-- visual "ai_clip" brings that photo to life with an AI image-to-video model. Scene 1 MUST be an ai_clip of the most striking photo of a real animal or landscape. Use exactly ${MAX_AI_CLIPS} ai_clips in total (the hook plus ${MAX_AI_CLIPS - 1} more, on the strongest beats); a photo may be animated in more than one scene. Use fewer only when there are not enough suitable photos. Only real photographs of animals, people outdoors or nature can be ai_clips — never a screenshot, app render, diagram, chart, map or anything with text in it. Prefer photos whose license is not "BY-SA" for ai_clips when a comparable one exists.
+- visual "ai_clip" brings that photo to life with an AI image-to-video model. Scene 1 MUST be an ai_clip of the most striking photo of a real ANIMAL (not a landscape). Use an ai_clip on the hook and on the strongest beats, at most ${MAX_AI_CLIPS} in total (a short video can animate every scene); a photo may be animated in more than one scene. Use fewer only when there are not enough suitable photos. Only real photographs of animals, people outdoors or nature can be ai_clips — never a screenshot, app render, diagram, chart, map or anything with text in it. Prefer photos whose license is not "BY-SA" for ai_clips when a comparable one exists.
 - motion_prompt (ai_clip only, else ""): one or two sentences of believable motion for exactly what is in THAT photo — the animal's natural movement, wind, water, light, a slow camera move. Never add animals, people or text; never change the species.
 - keyframe_prompt: "" for real photographs. When the photos are cut-out species ARTWORK on a plain background (the source says so), every ai_clip needs a keyframe_prompt instead: a photoreal, cinematic description of that exact species in its natural habitat doing something striking, vertical 9:16, no text — the clip is drawn from that, not from the cut-out.
 - species: when a SPECIES list is given and this scene is about exactly ONE of those animals, its slug (its stats card is shown); otherwise "".
@@ -218,7 +229,7 @@ Share copy (share): titles and captions for posting this video, from the same fa
 
 Return only the JSON object.`;
 
-export function buildPlanUserPrompt(source: VideoSource) {
+export function buildPlanUserPrompt(source: VideoSource, experiment: Experiment | null = null) {
     const images = source.images.map((image) => {
         const license = image.license ? `, license ${image.license}` : "";
         return `${image.index}. ${image.alt || "(no description)"} (${image.width}x${image.height}${license})`;
@@ -230,6 +241,7 @@ export function buildPlanUserPrompt(source: VideoSource) {
         `Summary: ${source.description}`,
         source.brief ? `\nFORMAT FOR THIS VIDEO:\n${source.brief}` : null,
         source.species?.length ? `\nSPECIES (slug: name): ${source.species.map((entry) => `${entry.slug}: ${entry.name}`).join("; ")}` : null,
+        experiment ? `\n${experimentBrief(experiment)}` : null,
         "",
         `Photos (attached in this order):`,
         ...images,
@@ -423,7 +435,7 @@ export function licenseFromCaption(caption: string | null | undefined) {
 const SCENE_GAP_SECONDS = 0.12;
 const END_CARD_MIN_SECONDS = 2.8;
 
-/** Lays the scenes end to end by their spoken length; the end card closes it. */
+/** Lays the scenes end to end by their spoken length; the end card closes it, unless the video loops. */
 export function buildTimeline(plan: VideoPlan, sceneSeconds: number[], ctaSeconds: number): TimelineEntry[] {
     const entries: TimelineEntry[] = [];
     let cursor = 0;
@@ -444,6 +456,7 @@ export function buildTimeline(plan: VideoPlan, sceneSeconds: number[], ctaSecond
         });
         cursor += duration;
     });
+    if (plan.ending === "loop") return entries;
     entries.push({start: round2(cursor), duration: round2(Math.max(ctaSeconds + 0.7, END_CARD_MIN_SECONDS)), narration: plan.ctaNarration, overlay: plan.ctaText, kind: "end"});
     return entries;
 }
@@ -751,6 +764,9 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
             });
         }
     });
+
+    // A looping video has no end card; its photo credits ride along the bottom of the last seconds instead.
+    if (credit && end && end.kind !== "end") event(2, Math.max(0, total - 2.5), total, "EndCredit", `{\\fad(200,0)}${assEscape(credit)}`);
 
     if (hud && hud.fightScenes.length) {
         const scenes = hud.fightScenes.map((index) => timeline[index]).filter(Boolean);

@@ -5,9 +5,9 @@ import type {AutomationJob, AutomationRun} from "@/lib/automation-runs";
 import {SOCIAL_PLATFORM_LABELS, type SocialPlatform} from "@/lib/social/types";
 import {Alert, Badge, Button, Section, Skeleton} from "@/components/admin/ui";
 
-// The two VM-timer automations (social auto-share every 2 hours, page-video
-// auto-generate every 3 hours): last runs with their reasons, the next run,
-// what is next in line, and a button to run either one now.
+// The VM-timer automations (social auto-share every 2 hours, page-video and
+// carousel/text generation every 3 hours): last runs with their reasons, the
+// next run, what is next in line, and a button to run either one now.
 
 type SharePreview = {connected: SocialPlatform[]; queueLength: number; next: {mediaPath: string; name: string; kind: string; platforms: SocialPlatform[]} | null} | {error: string};
 
@@ -98,7 +98,7 @@ export default function AdminAutomation({onChanged}: {onChanged: () => void}) {
                 <div className="grid gap-3 lg:grid-cols-2"><Skeleton className="h-48" /><Skeleton className="h-48" /></div>
             ) : (
                 <div className="grid gap-3 lg:grid-cols-2">
-                    <Panel title="Auto-share" schedule="Every 2 hours, one video to every connected platform" nextRunAt={data.share.nextRunAt} disabled={data.share.disabled} running={running === "social-auto-share"} onRun={() => runNow("social-auto-share")}>
+                    <Panel title="Auto-share" schedule="Every 2 hours: one video, plus one carousel or text post, within each platform's daily caps" nextRunAt={data.share.nextRunAt} disabled={data.share.disabled} running={running === "social-auto-share"} onRun={() => runNow("social-auto-share")}>
                         {preview && "error" in preview ? <p className="text-xs text-red-200">{preview.error}</p> : preview ? (
                             <p className="text-xs text-ink-300">
                                 {preview.next
@@ -108,7 +108,7 @@ export default function AdminAutomation({onChanged}: {onChanged: () => void}) {
                         ) : null}
                         <RunList runs={data.share.runs} />
                     </Panel>
-                    <Panel title="Auto-generate" schedule="Every 3 hours, one page video from a random page; published when done" nextRunAt={data.generate.nextRunAt} disabled={data.generate.disabled} running={running === "video-auto-generate"} onRun={() => runNow("video-auto-generate")}>
+                    <Panel title="Auto-generate" schedule="Every 3 hours: one page video from a random page (published when done), and a top-up of carousels and text posts" nextRunAt={data.generate.nextRunAt} disabled={data.generate.disabled} running={running === "video-auto-generate"} onRun={() => runNow("video-auto-generate")}>
                         <p className="text-xs text-ink-300">{data.generate.busy ? "A video is being made right now (5–20 minutes); progress shows under Page videos." : "No video is being made right now."}</p>
                         <RunList runs={data.generate.runs} />
                     </Panel>

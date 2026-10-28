@@ -1,4 +1,4 @@
-export const SOCIAL_PLATFORMS = ["youtube", "tiktok", "instagram", "facebook", "x"] as const;
+export const SOCIAL_PLATFORMS = ["youtube", "tiktok", "instagram", "facebook", "x", "pinterest", "threads", "bluesky"] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 
 export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
@@ -6,12 +6,27 @@ export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
     tiktok: "TikTok",
     instagram: "Instagram Reels",
     facebook: "Facebook Reels",
-    x: "X"
+    x: "X",
+    pinterest: "Pinterest",
+    threads: "Threads",
+    bluesky: "Bluesky"
 };
 
 export function isSocialPlatform(value: unknown): value is SocialPlatform {
     return typeof value === "string" && (SOCIAL_PLATFORMS as readonly string[]).includes(value);
 }
+
+/** Posted through Zernio, which holds the account connection: no OAuth row of ours. */
+export const ZERNIO_PLATFORMS = ["tiktok", "pinterest", "threads", "bluesky"] as const;
+export type ZernioPlatform = (typeof ZERNIO_PLATFORMS)[number];
+
+export function isZernioPlatform(value: unknown): value is ZernioPlatform {
+    return typeof value === "string" && (ZERNIO_PLATFORMS as readonly string[]).includes(value);
+}
+
+/** What the per-video share dialog offers. Pinterest, Threads and Bluesky are auto-share only. */
+export const MANUAL_SHARE_PLATFORMS = ["youtube", "tiktok", "instagram", "facebook", "x"] as const;
+export type ManualSharePlatform = (typeof MANUAL_SHARE_PLATFORMS)[number];
 
 /** Decrypted connection, server-side only. */
 export type SocialConnection = {
@@ -73,8 +88,12 @@ export type ZernioShareInfo = {
     syncedAt?: string | null;
 };
 
-/** `auto`: queued by the scheduled auto-share rather than from the admin page. */
-export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo; auto?: boolean};
+/**
+ * `auto`: queued by the scheduled auto-share rather than from the admin page.
+ * `content`: the carousel or text post (admin_social_content.id) a row shares.
+ * `link`: the page the post points at (Pinterest's destination, Facebook's link card).
+ */
+export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo; auto?: boolean; content?: string; link?: string | null};
 
 export type SocialPostRow = {
     id: string;
@@ -112,3 +131,12 @@ export type PublishResult = {
     externalId: string;
     externalUrl: string | null;
 };
+
+/** One slide of a carousel: a public JPEG the platform can fetch, and the same bytes for platforms that take uploads. */
+export type PublishImage = {url: string; bytes: Buffer; alt: string};
+
+/** A carousel (or a single image) with its caption. */
+export type ImagePublishRequest = {images: PublishImage[]; caption: string; title: string; link: string | null};
+
+/** A text-only post, optionally a poll (X only; elsewhere the question is posted as text). */
+export type TextPublishRequest = {text: string; poll: {options: string[]; minutes: number} | null; link: string | null};
