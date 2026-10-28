@@ -7,7 +7,7 @@
  * frame), with a breath after each sentence and a longer one between
  * paragraphs, so a slow animal reads slow and a quick one quick.
  *
- * The rules, all from the app:
+ * The rules, all from the app (with its faster typing of 2026-10-23):
  *   - never a half word: a word appears only once whatever follows it has
  *     arrived (or the reply is complete);
  *   - a card or drawing (a ``` fence) appears whole, once its closing fence
@@ -39,8 +39,8 @@ export type AskPacerInput = {
 /** Where the next step ends, and how long to wait after it, in seconds. */
 export type AskPacerStep = {next: number; pause: number};
 
-/** Pace when no persona frame has arrived: the app's `AnimalChatPersona.standard`. */
-export const ASK_PACER_DEFAULT = {typingCps: 13.5, pace: "measured" as AskPacerPace};
+/** Pace when no persona frame has arrived: the app's `AnimalChatPersona.standard` (21 since 2026-10-23). */
+export const ASK_PACER_DEFAULT = {typingCps: 21, pace: "measured" as AskPacerPace};
 
 /** How long to look again while waiting for more of the reply. */
 export const ASK_PACER_WAIT_SECONDS = 0.06;
@@ -116,17 +116,33 @@ export function askPacerStep(input: AskPacerInput): AskPacerStep {
 
     const chunk = target.slice(shown, index);
     const scale = input.pace === "slow" ? 1.35 : input.pace === "quick" ? 0.75 : 1;
-    let pause = chunk.length / Math.max(input.typingCps, 6);
+    // A long reply settles into reading speed after its opening, so the first
+    // lines feel like talking and the reader is not kept waiting.
+    const settling = shown > 520 ? 1.6 : shown > 260 ? 1.3 : 1;
+    let pause = chunk.length / (Math.max(input.typingCps, 6) * settling);
     const last = lastNonSpace(chunk);
+    // About half as long as before 2026-10-23 (owner: "speed up the stream").
     if (last && SENTENCE_END.includes(last)) {
-        pause += 0.34 * scale;
+        pause += 0.2 * scale;
     } else if (last && CLAUSE_END.includes(last)) {
-        pause += 0.12 * scale;
+        pause += 0.06 * scale;
     }
     if (index + 1 < target.length && target[index] === "\n" && target[index + 1] === "\n") {
-        pause += 0.3 * scale;
+        pause += 0.16 * scale;
     }
-    return {next: index, pause: Math.min(pause, 1.4)};
+    return {next: index, pause: Math.min(pause, 0.9)};
+}
+
+/**
+ * Whether the words a step just put on screen are worth a sound: some letters,
+ * not a card, and whether they end a sentence. The animal's own sounds follow
+ * this (the apps' `onWordShown(isFirst, endsSentence)`). Null for a step that
+ * showed no word.
+ */
+export function askPacerWordShown(chunk: string): {endsSentence: boolean} | null {
+    if (!/\p{L}/u.test(chunk) || chunk.includes("```")) return null;
+    const last = lastNonSpace(chunk);
+    return {endsSentence: last !== null && SENTENCE_END.includes(last)};
 }
 
 /**

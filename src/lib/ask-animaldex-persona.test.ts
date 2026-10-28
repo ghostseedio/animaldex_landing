@@ -8,7 +8,9 @@ import {
     askPersonaStatsFrom,
     askRhythmFromDynamics,
     capAskEffort,
-    parseAskPersonaFrame
+    chooseAskChatVoiceKey,
+    parseAskPersonaFrame,
+    parseAskStatQuantiles
 } from "@/lib/ask-animaldex/persona";
 import {
     askHistoryAsTurns,
@@ -44,7 +46,8 @@ test("stats become dials on the live catalogue's percentiles", () => {
     // Big animals say less.
     assert.ok(big.wordBudget < small.wordBudget);
     assert.equal(big.wordBudget, 55);
-    assert.equal(small.wordBudget, 85);
+    // On the size curve, not a step: a size-1 ant sits just under the top.
+    assert.equal(small.wordBudget, 84);
     // A median animal is neither, and a species with no stats is the median.
     const median = askPersonaDials({stats: {dominance: 30, speed: 38, size: 16, intelligence: 32, rarity: 45}, dynamics: null, voice: null});
     assert.equal(median.intellect, "practical");
@@ -69,11 +72,12 @@ test("the bands cut where the apps cut them", () => {
 test("the card's pace sets typing speed and the speed stat nudges it", () => {
     const slow = askPersonaDials({stats: {...ant, speed: 5}, dynamics: null, voice: {pace: "slow"}});
     const quick = askPersonaDials({stats: {...ant, speed: 90}, dynamics: null, voice: {pace: "quick"}});
-    assert.equal(slow.typingCharsPerSecond, 10);
-    assert.equal(quick.typingCharsPerSecond, 17);
+    // Faster than speech since 2026-10-23, each animal still at its own tempo.
+    assert.equal(slow.typingCharsPerSecond, 15.5);
+    assert.equal(quick.typingCharsPerSecond, 27.5);
     // No card: the speed stat alone picks the pace.
-    assert.equal(askPersonaDials({stats: {...ant, speed: 40}, dynamics: null, voice: null}).typingCharsPerSecond, 13.5);
-    assert.equal(askPersonaDials({stats: {...ant, speed: 60}, dynamics: null, voice: null}).typingCharsPerSecond, 17);
+    assert.equal(askPersonaDials({stats: {...ant, speed: 40}, dynamics: null, voice: null}).typingCharsPerSecond, 21);
+    assert.equal(askPersonaDials({stats: {...ant, speed: 60}, dynamics: null, voice: null}).typingCharsPerSecond, 27.5);
 });
 
 test("System Dynamics mode frequencies become a rhythm", () => {
@@ -88,19 +92,54 @@ test("System Dynamics mode frequencies become a rhythm", () => {
 
 test("persona lines say how big, how sharp and how in-charge the animal is", () => {
     const big = askPersonaLines(askPersonaDials({stats: elephant, dynamics: {modes: [{frequency: "LOW"}]}, voice: null})).join("\n");
-    assert.ok(big.includes("big animals do not waste words"));
+    assert.ok(big.includes("you speak sparingly"));
     assert.ok(big.includes("you stay in charge of this conversation"));
     assert.ok(big.includes("one of the sharpest animals there is"));
     assert.ok(big.includes("Nothing is urgent to you"));
-    assert.ok(big.includes("Length: about 55 words, even for a real problem."));
+    // No word counts: the moment sets the length, size the manner.
+    assert.ok(big.includes("Length: like texting a friend, never a quota."));
+    assert.equal(/about \d+ words/.test(big), false);
     const small = askPersonaLines(askPersonaDials({stats: ant, dynamics: null, voice: null})).join("\n");
     assert.ok(small.includes("instinct and senses"));
     assert.ok(small.includes("let them lead"));
     assert.ok(small.includes("tiny and busy"));
     assert.ok(small.includes("familiar, unfussy"));
-    assert.ok(small.includes("Length: about 85 words is your natural reply"));
+    assert.ok(small.includes("Length: like texting a friend"));
+    const group = askPersonaLines(askPersonaDials({stats: elephant, dynamics: null, voice: null}), {group: true}).join("\n");
+    assert.ok(group.includes("In a group you set the direction"));
+    assert.equal(group.includes("Length:"), false);
     // Every line is a bullet in the character section.
     assert.ok(askPersonaLines(askPersonaDials({stats: ant, dynamics: null, voice: null})).every((line) => line.startsWith("- ")));
+});
+
+test("the live catalogue's spread moves the bands, and a broken grid falls back to the measured cuts", () => {
+    // Every value at 0..100 in step: the cuts land on the shares themselves.
+    const linear = Array.from({length: 101}, (_, index) => index);
+    const quantiles = {intelligence: linear, dominance: linear, speed: linear, rarity: linear};
+    const at = (intelligence: number) => askPersonaDials({stats: {...ant, intelligence}, dynamics: null, voice: null, quantiles}).intellect;
+    assert.equal(at(22), "instinct");
+    assert.equal(at(23), "practical");
+    assert.equal(at(79), "sharp");
+    assert.equal(at(95), "brilliant");
+    assert.equal(parseAskStatQuantiles({intelligence: linear, dominance: linear, speed: linear, rarity: linear.slice(1)}), null);
+    assert.deepEqual(parseAskStatQuantiles({intelligence: linear, dominance: linear, speed: linear, rarity: linear}), quantiles);
+    const broken = askPersonaDials({stats: {...ant, intelligence: 15}, dynamics: null, voice: null, quantiles: null});
+    assert.equal(broken.intellect, "practical");
+});
+
+test("voices follow taxonomy, names and size, as the apps choose them", () => {
+    const pick = (animalName: string, taxonomy: Record<string, string> | null, size = 20, speed = 40) =>
+        chooseAskChatVoiceKey({animalName, taxonomy, stats: {dominance: 30, speed, size, intelligence: 30, rarity: 40}});
+    assert.equal(pick("Giant Oceanic Manta Ray", {class_name: "Elasmobranchii", order_name: "Myliobatiformes"}), "ocean_glider");
+    assert.equal(pick("Lion", {class_name: "Mammalia", order_name: "Carnivora", family_name: "Felidae"}, 60), "apex_big_cat");
+    assert.equal(pick("Gray Wolf", {class_name: "Mammalia", order_name: "Carnivora", family_name: "Canidae"}), "pack_canine");
+    assert.equal(pick("Red Fox", {class_name: "Mammalia", order_name: "Carnivora", family_name: "Canidae"}), "trickster");
+    assert.equal(pick("Koala", {class_name: "Mammalia", order_name: "Diprotodontia", family_name: "Phascolarctidae"}), "sleepy");
+    assert.equal(pick("Barn Owl", {class_name: "Aves", order_name: "Strigiformes"}), "night_owl");
+    assert.equal(pick("King Cobra", {class_name: "Squamata", family_name: "Elapidae"}), "serpent");
+    assert.equal(pick("Clownfish", {order_name: "Perciformes"}), "playful_marine");
+    assert.notEqual(pick("Gray Wolf", null), "ocean_glider");
+    assert.equal(pick("Mystery Animal", null, 90), "gentle_giant");
 });
 
 test("effort is capped by configuration, medium by default", () => {
@@ -125,7 +164,7 @@ test("the persona frame is the apps' frame, and the client drops a malformed one
     const frame = askPersonaFrame({pace: "slow", temperament: [{trait: "unhurried"}, {trait: "protective"}, {trait: "old"}]}, dials);
     assert.deepEqual(frame, {
         pace: "slow",
-        typing_cps: 11,
+        typing_cps: 17,
         build: "huge",
         presence: "commanding",
         intellect: "brilliant",

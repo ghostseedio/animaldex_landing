@@ -12,7 +12,7 @@
  */
 
 import {useCallback, useEffect, useRef, useState} from "react";
-import {ASK_PACER_DEFAULT, ASK_PACER_WAIT_SECONDS, askPacerStep} from "@/lib/ask-animaldex/pacer";
+import {ASK_PACER_DEFAULT, ASK_PACER_WAIT_SECONDS, askPacerStep, askPacerWordShown} from "@/lib/ask-animaldex/pacer";
 import type {AskPersonaFrame} from "@/lib/ask-animaldex/persona";
 
 export function usePrefersReducedMotion(): boolean {
@@ -49,6 +49,13 @@ export function useReplyPacer(params: {
     persona: AskPersonaFrame | null;
     /** Reduced motion: no pacing at all. */
     instant: boolean;
+    /**
+     * Words just appeared while typing: whether they open the reply and
+     * whether they end a sentence. The animal's sounds follow this. Not called
+     * when the rest appears at once (a click, Stop, reduced motion), nor for a
+     * card or drawing.
+     */
+    onWordShown?: (word: {isFirst: boolean; endsSentence: boolean}) => void;
 }): AskReplyPacer {
     const [visibleText, setVisibleText] = useState("");
     const [revealing, setRevealing] = useState(false);
@@ -56,6 +63,7 @@ export function useReplyPacer(params: {
 
     const shownRef = useRef(0);
     const skipRef = useRef(false);
+    const wordsShownRef = useRef(0);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // The loop reads the latest of these on every step.
     const latest = useRef(params);
@@ -87,6 +95,11 @@ export function useReplyPacer(params: {
         if (advanced) {
             shownRef.current = step.next;
             setVisibleText(text.slice(0, step.next));
+            const word = instant || skipRef.current ? null : askPacerWordShown(text.slice(shown, step.next));
+            if (word) {
+                latest.current.onWordShown?.({isFirst: wordsShownRef.current === 0, endsSentence: word.endsSentence});
+                wordsShownRef.current += 1;
+            }
         }
         const wait = advanced ? step.pause : Math.max(step.pause, ASK_PACER_WAIT_SECONDS);
         timerRef.current = setTimeout(tick, Math.round(wait * 1000));
@@ -97,6 +110,7 @@ export function useReplyPacer(params: {
         clearTimer();
         shownRef.current = 0;
         skipRef.current = false;
+        wordsShownRef.current = 0;
         setVisibleText("");
         setActiveId(params.messageId);
         if (!params.messageId) {

@@ -17,10 +17,14 @@
  *
  * Port of the apps' `supabase/functions/_shared/animal-persona.ts`. The bands,
  * numbers and prompt lines are carried across verbatim so an animal behaves
- * the same on the website as in the app. Left out on purpose: the spoken voice
- * (archetype choice and ElevenLabs settings) — the website does not speak —
- * and group ordering, since the website has no group chat. Pure: no
- * `server-only`, so the prompt builders, the drawer and the tests can use it.
+ * the same on the website as in the app: the live catalogue's percentiles
+ * (`animal_stat_quantiles`, read by `@/data/ask-stat-quantiles`), the size
+ * curve, typing about as fast as the apps since 2026-10-23, and size as a
+ * manner rather than a word count since 2026-10-28. The archetype choice
+ * (`chooseAskChatVoiceKey`) is here because the nature layer reads it; the
+ * ElevenLabs settings stay on the server, which speaks for the website too.
+ * Pure: no `server-only`, so the prompt builders, the drawer and the tests can
+ * use it.
  */
 
 import type {AskCompanionVoice} from "@/lib/ask-animaldex/companion";
@@ -54,6 +58,8 @@ export type AskPersonaDials = {
     wordBudget: number;
     /** How fast the drawer types the reply out, in characters per second. */
     typingCharsPerSecond: number;
+    /** Group conversations: higher speaks earlier. The dominance stat. */
+    groupPriority: number;
 };
 
 /** The catalogue's median animal, for a species whose stats are missing. */
@@ -125,27 +131,105 @@ export function capAskEffort(effort: AskChatEffort, cap: string | null | undefin
     return EFFORT_ORDER[Math.min(EFFORT_ORDER.indexOf(effort), limit)];
 }
 
+/**
+ * The live catalogue's spread of each relative stat: 101 values, the 0th to
+ * 100th percentile (`animal_stat_quantiles()`, migration 20261025120000).
+ */
+export type AskStatQuantiles = Record<"intelligence" | "dominance" | "speed" | "rarity", number[]>;
+
+/**
+ * Where each band starts, as a share of the catalogue. Measured 2026-10-25
+ * from the value cuts the bands used before (15/42/60 intelligence and so
+ * on), so today's animals keep their dials; as the catalogue grows, the
+ * values move with it instead of drifting off the percentiles.
+ */
+const PERCENTILE_CUTS = {
+    intelligence: [0.23, 0.79, 0.95],
+    dominance: [0.31, 0.8, 0.91],
+    speed: [0.24, 0.77],
+    rarity: [0.33, 0.79, 0.91]
+} as const;
+
+/** The same cuts as values, for when the live spread cannot be read. */
+const FALLBACK_CUTS = {
+    intelligence: [15, 42, 60],
+    dominance: [14, 44, 58],
+    speed: [20, 52],
+    rarity: [22, 64, 78]
+} as const;
+
+/** The value at a share of the catalogue, from the 101-value grid. */
+function quantileAt(grid: number[], share: number): number {
+    const at = Math.max(0, Math.min(100, share * 100));
+    const lower = Math.floor(at);
+    const upper = Math.min(100, lower + 1);
+    return grid[lower] + (grid[upper] - grid[lower]) * (at - lower);
+}
+
+function cutsFor(stat: keyof typeof PERCENTILE_CUTS, quantiles: AskStatQuantiles | null | undefined): number[] {
+    const grid = quantiles?.[stat];
+    if (!Array.isArray(grid) || grid.length !== 101 || grid.some((value) => typeof value !== "number")) {
+        return [...FALLBACK_CUTS[stat]];
+    }
+    return PERCENTILE_CUTS[stat].map((share) => quantileAt(grid, share));
+}
+
+/** The quantile grids from `animal_stat_quantiles`, or null unless every one is whole. */
+export function parseAskStatQuantiles(raw: unknown): AskStatQuantiles | null {
+    const row = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
+    const grid = (key: string) => (Array.isArray(row?.[key]) ? (row?.[key] as unknown[]).map(Number) : []);
+    const candidate = {intelligence: grid("intelligence"), dominance: grid("dominance"), speed: grid("speed"), rarity: grid("rarity")};
+    return Object.values(candidate).every((values) => values.length === 101 && values.every(Number.isFinite)) ? candidate : null;
+}
+
+/**
+ * Words a reply may run to, from absolute size (a cheetah is not "huge" just
+ * because the catalogue is mostly insects): a smooth curve through the old
+ * steps' middles, so animals either side of a step no longer differ by 15.
+ */
+const BUDGET_CURVE: Array<[number, number]> = [[0, 95], [14, 85], [34, 75], [58, 60], [85, 45], [100, 45]];
+
+export function askWordBudgetForSize(size: number): number {
+    const s = Math.max(0, Math.min(100, size));
+    for (let index = 1; index < BUDGET_CURVE.length; index += 1) {
+        const [x1, y1] = BUDGET_CURVE[index];
+        const [x0, y0] = BUDGET_CURVE[index - 1];
+        if (s <= x1) return y0 + ((y1 - y0) * (s - x0)) / (x1 - x0);
+    }
+    return 45;
+}
+
 export function askPersonaDials(params: {
     stats: AskPersonaStats | null;
     dynamics: AskRhythmSource | null;
     voice: Pick<AskCompanionVoice, "pace"> | null;
+    /** The live catalogue's spread; without it the measured value cuts apply. */
+    quantiles?: AskStatQuantiles | null;
 }): AskPersonaDials {
     const stats = params.stats ?? ASK_MEDIAN_STATS;
-    const intellect = band<AskIntellect>(stats.intelligence, [[15, "instinct"], [42, "practical"], [60, "sharp"]], "brilliant");
-    const presence = band<AskPresence>(stats.dominance, [[14, "yielding"], [44, "steady"], [58, "assertive"]], "commanding");
-    // Size bands are wider than the percentiles: the catalogue is mostly insects
-    // and birds, so its 90th percentile (46) is a cheetah, not a giant.
+    const cut = (stat: keyof typeof PERCENTILE_CUTS) => cutsFor(stat, params.quantiles);
+    const [i1, i2, i3] = cut("intelligence");
+    const [d1, d2, d3] = cut("dominance");
+    const [s1, s2] = cut("speed");
+    const [r1, r2, r3] = cut("rarity");
+    const intellect = band<AskIntellect>(stats.intelligence, [[i1, "instinct"], [i2, "practical"], [i3, "sharp"]], "brilliant");
+    const presence = band<AskPresence>(stats.dominance, [[d1, "yielding"], [d2, "steady"], [d3, "assertive"]], "commanding");
+    // Size is physical, so its bands are absolute, not percentiles: the
+    // catalogue is mostly insects and birds, and its 90th percentile (46) is a
+    // cheetah, not a giant.
     const build = band<AskBuild>(stats.size, [[6, "tiny"], [22, "small"], [46, "medium"], [70, "large"]], "huge");
-    const tempo = band<AskTempo>(stats.speed, [[20, "slow"], [52, "steady"]], "fast");
-    const rarity = band<AskRarity>(stats.rarity, [[22, "common"], [64, "uncommon"], [78, "rare"]], "legendary");
+    const tempo = band<AskTempo>(stats.speed, [[s1, "slow"], [s2, "steady"]], "fast");
+    const rarity = band<AskRarity>(stats.rarity, [[r1, "common"], [r2, "uncommon"], [r3, "rare"]], "legendary");
 
     // The authored card's pace wins for typing speed; the speed stat nudges it.
     const pace = params.voice?.pace ?? (tempo === "fast" ? "quick" : tempo === "slow" ? "slow" : "measured");
-    const baseCps = pace === "slow" ? 11 : pace === "quick" ? 16 : 13.5;
-    const typingCharsPerSecond = Math.round((baseCps + (tempo === "fast" ? 1 : tempo === "slow" ? -1 : 0)) * 10) / 10;
+    // Faster than speech (owner, 2026-10-23: "speed up the stream"), but each
+    // animal still keeps its own tempo: a koala types noticeably slower than a sparrow.
+    const baseCps = pace === "slow" ? 17 : pace === "quick" ? 26 : 21;
+    const typingCharsPerSecond = Math.round((baseCps + (tempo === "fast" ? 1.5 : tempo === "slow" ? -1.5 : 0)) * 10) / 10;
 
-    const wordBudget = {tiny: 95, small: 85, medium: 75, large: 60, huge: 45}[build]
-        + (intellect === "brilliant" ? 10 : intellect === "instinct" ? -10 : 0);
+    const wordBudget = Math.round(askWordBudgetForSize(stats.size)
+        + (intellect === "brilliant" ? 10 : intellect === "instinct" ? -10 : 0));
 
     return {
         intellect,
@@ -156,7 +240,8 @@ export function askPersonaDials(params: {
         rhythm: askRhythmFromDynamics(params.dynamics),
         effort: intellect === "brilliant" ? "high" : intellect === "sharp" ? "medium" : "low",
         wordBudget,
-        typingCharsPerSecond
+        typingCharsPerSecond,
+        groupPriority: Math.max(0, Math.min(100, Math.round(stats.dominance)))
     };
 }
 
@@ -178,14 +263,20 @@ const PRESENCE_LINES: Record<AskPresence, string | null> = {
         "Your presence: you are not one to take charge. Ask before you advise, offer your view gently, and let them lead. Not timid — careful."
 };
 
+/**
+ * How the animal talks for its size: a manner, never a length. Small animals
+ * chatter and add little asides; big ones are spare and weigh each word, so
+ * even a long answer from a whale is lean (owner, 2026-10-28: no character
+ * limits; size is about how concisely it speaks).
+ */
 const BUILD_LINES: Record<AskBuild, string | null> = {
     huge:
-        "Your size: you are enormous, and big animals do not waste words. Say what matters and stop — two or three sentences, even when you are helping with something real. Silence does not bother you.",
-    large: "Your size: you are big, and you keep things short and weighty — a few sentences, not paragraphs.",
-    medium: null,
-    small: "Your size: you are small, so you notice the small things everyone else walks past.",
+        "Your size: you are enormous, and you speak sparingly. Every word is weighed; no padding, no asides, and silence does not bother you. When something needs a long answer you give it, plainly, with nothing extra.",
+    large: "Your size: you are big, and you speak plainly and with weight. You get to the point and leave out the fluff.",
+    medium: "Your size: middling, and you talk in an even, natural way: not terse, not chatty.",
+    small: "Your size: you are small, so you notice the small things everyone else walks past, and you like to mention them.",
     tiny:
-        "Your size: you are tiny and busy. You chatter a little, with quick asides about your small world, but every reply still answers them."
+        "Your size: you are tiny and busy. You chatter, with quick asides and little flourishes about your small world, but every reply still answers them."
 };
 
 const RARITY_LINES: Record<AskRarity, string | null> = {
@@ -205,7 +296,7 @@ const RHYTHM_LINES: Record<AskRhythm, string | null> = {
 };
 
 /** The prompt lines for these dials, for the "who you are" section. */
-export function askPersonaLines(dials: AskPersonaDials): string[] {
+export function askPersonaLines(dials: AskPersonaDials, options: {group?: boolean} = {}): string[] {
     const lines = [
         INTELLECT_LINES[dials.intellect],
         PRESENCE_LINES[dials.presence],
@@ -213,11 +304,23 @@ export function askPersonaLines(dials: AskPersonaDials): string[] {
         RARITY_LINES[dials.rarity],
         RHYTHM_LINES[dials.rhythm]
     ].filter((line): line is string => Boolean(line));
-    lines.push(
-        dials.build === "huge" || dials.build === "large"
-            ? `Length: about ${dials.wordBudget} words, even for a real problem. Go longer only when they ask you to explain more.`
-            : `Length: about ${dials.wordBudget} words is your natural reply in conversation. Go longer only when they ask you to explain something or work through a real problem with them.`
-    );
+    if (options.group) {
+        if (dials.presence === "commanding" || dials.presence === "assertive") {
+            lines.push("In a group you set the direction: you can go first and disagree with the others by name.");
+        } else if (dials.presence === "yielding") {
+            lines.push("In a group you let the others lead and add what they missed, briefly.");
+        }
+    } else {
+        // No word counts (owner, 2026-10-28): how much to say comes from the
+        // moment (this_reply, `reply-length.ts`), how to say it from who the
+        // animal is (its size line above).
+        lines.push(
+            "Length: like texting a friend, never a quota. Most replies are a few sentences and many are a single line: "
+                + "answer what they asked and stop, the way a person does, rather than telling them everything you know. Go "
+                + "long only when they ask for a full, detailed or long answer, or to go deeper; then give them a thorough one, "
+                + "however long it takes, in your own manner."
+        );
+    }
     return lines.map((line) => `- ${line}`);
 }
 
@@ -263,4 +366,194 @@ export function parseAskPersonaFrame(raw: unknown): AskPersonaFrame | null {
         intellect: (["instinct", "practical", "sharp", "brilliant"] as const).find((value) => value === row.intellect) ?? "practical",
         tagline
     };
+}
+
+// ---------------------------------------------------------------------------
+// Voice archetype
+// ---------------------------------------------------------------------------
+
+// The 24 archetype voices of `animal_chat_voices`, chosen from taxonomy, name
+// and size. The server speaks with them (animal-chat-speech); the website
+// reads the choice for the nature layer (`nature.ts`), whose conversational
+// shape follows the same archetype. Verbatim from the apps' `chooseChatVoiceKey`.
+
+export const ASK_CHAT_VOICE_KEYS = [
+    "ocean_giant", "apex_big_cat", "swift_hunter", "pack_canine", "trickster", "ocean_glider",
+    "playful_marine", "songbird", "raptor", "night_owl", "great_ape", "gentle_giant", "bear",
+    "ancient_reptile", "serpent", "tiny_worker", "delicate_flutter", "small_forager", "cool_cat",
+    "hooved_grazer", "sleepy", "cool_shark", "waterbird", "quirky_amphibian"
+] as const;
+export type AskChatVoiceKey = typeof ASK_CHAT_VOICE_KEYS[number];
+
+export type AskSpeciesTaxonomy = {
+    class_name?: string | null;
+    order_name?: string | null;
+    family_name?: string | null;
+};
+
+function nameHas(name: string, ...words: string[]): boolean {
+    return words.some((word) => new RegExp(`(^|[^a-z])${word}([^a-z]|$)`).test(name));
+}
+
+// Ray-finned fish orders. The catalogue files many fish with an order and no
+// class, which used to drop them through to the size fallback ("great_ape").
+export const ASK_FISH_ORDERS = new Set([
+    "perciformes", "cypriniformes", "tetraodontiformes", "siluriformes", "lophiiformes", "syngnathiformes",
+    "scorpaeniformes", "anguilliformes", "characiformes", "salmoniformes", "clupeiformes", "gadiformes",
+    "pleuronectiformes", "beloniformes", "cyprinodontiformes", "acanthuriformes", "labriformes", "blenniiformes",
+    "gobiiformes", "osteoglossiformes", "esociformes", "scombriformes", "carangiformes", "cichliformes",
+    "atheriniformes", "lepisosteiformes", "acipenseriformes", "beryciformes", "zeiformes", "lampriformes",
+    "mugiliformes", "spariformes", "centrarchiformes", "holocentriformes", "eupercaria", "ovalentaria"
+]);
+
+// Names first for the cases taxonomy gets wrong or too coarse, then class,
+// order and family, then size.
+export function chooseAskChatVoiceKey(params: {
+    animalName: string;
+    taxonomy: AskSpeciesTaxonomy | null;
+    stats: AskPersonaStats | null;
+}): AskChatVoiceKey {
+    const name = params.animalName.toLowerCase();
+    const order0 = (params.taxonomy?.order_name ?? "").toLowerCase();
+    // A classless "-iformes" order is a fish here: birds always carry Aves.
+    const cls = (params.taxonomy?.class_name ?? (ASK_FISH_ORDERS.has(order0) || /iformes$/.test(order0) ? "actinopterygii" : "")).toLowerCase();
+    const order = (params.taxonomy?.order_name ?? "").toLowerCase();
+    const family = (params.taxonomy?.family_name ?? "").toLowerCase();
+    const size = params.stats?.size ?? 16;
+    const speed = params.stats?.speed ?? 38;
+
+    // Names that decide it whatever the taxonomy says.
+    if (nameHas(name, "whale shark")) return "ocean_giant";
+    if (nameHas(name, "manta", "stingray", "ray", "skate", "jellyfish", "sea turtle")) return "ocean_glider";
+    if (nameHas(name, "shark")) return "cool_shark";
+    if (nameHas(name, "sea lion", "seal", "otter", "dolphin", "porpoise", "penguin")) return "playful_marine";
+    if (nameHas(name, "whale", "orca")) return "ocean_giant";
+    if (nameHas(name, "cheetah")) return "swift_hunter";
+    if (nameHas(name, "fox", "raccoon", "crow", "raven", "magpie", "jay", "parrot", "macaw", "cockatoo", "octopus", "squid", "cuttlefish")) {
+        return "trickster";
+    }
+    if (nameHas(name, "owl", "bat", "nightjar", "potoo", "pangolin", "aardvark")) return "night_owl";
+    if (nameHas(name, "koala", "sloth", "wombat", "manatee", "dugong", "capybara")) return "sleepy";
+    if (nameHas(name, "elephant", "rhinoceros", "rhino", "hippopotamus", "hippo", "giraffe")) return "gentle_giant";
+    if (nameHas(name, "tortoise", "crocodile", "alligator", "caiman", "komodo", "monitor", "iguana")) return "ancient_reptile";
+    if (nameHas(name, "butterfly", "moth")) return "delicate_flutter";
+    if (nameHas(name, "dragonfly", "falcon")) return "swift_hunter";
+
+    switch (cls) {
+        case "mammalia":
+            if (family === "felidae") return size >= 30 ? "apex_big_cat" : "cool_cat";
+            if (family === "canidae" || family === "hyaenidae") return "pack_canine";
+            if (family === "ursidae") return "bear";
+            if (["mustelidae", "procyonidae", "mephitidae", "herpestidae", "viverridae", "ailuridae"].includes(family)) return "trickster";
+            if (["phocidae", "otariidae", "odobenidae"].includes(family)) return size >= 46 ? "bear" : "playful_marine";
+            if (order === "cetacea") return size >= 46 ? "ocean_giant" : "playful_marine";
+            if (order === "sirenia" || order === "pilosa") return "sleepy";
+            if (order === "proboscidea") return "gentle_giant";
+            if (order === "primates") return family === "hominidae" ? "great_ape" : "trickster";
+            if (order === "chiroptera" || order === "pholidota" || order === "tubulidentata") return "night_owl";
+            if (order === "dasyuromorphia") return "trickster";
+            if (order === "monotremata" || order === "cingulata") return "quirky_amphibian";
+            if (order === "diprotodontia") {
+                if (family === "phascolarctidae" || family === "vombatidae") return "sleepy";
+                return family === "macropodidae" ? "hooved_grazer" : "small_forager";
+            }
+            if (order === "perissodactyla") return family === "rhinocerotidae" ? "gentle_giant" : "hooved_grazer";
+            if (order === "artiodactyla") {
+                if (family === "hippopotamidae" || family === "giraffidae" || size >= 46) return "gentle_giant";
+                return "hooved_grazer";
+            }
+            if (["rodentia", "lagomorpha", "erinaceomorpha", "soricomorpha", "eulipotyphla", "macroscelidea", "scandentia", "afrosoricida", "didelphimorphia", "peramelemorphia", "notoryctemorphia", "microbiotheria", "dermoptera", "hyracoidea"].includes(order)) {
+                return size >= 30 ? "sleepy" : "small_forager";
+            }
+            return size >= 46 ? "gentle_giant" : size >= 16 ? "hooved_grazer" : "small_forager";
+        case "aves":
+            if (["accipitriformes", "falconiformes", "cathartiformes"].includes(order)) {
+                return speed >= 58 ? "swift_hunter" : "raptor";
+            }
+            if (["strigiformes", "caprimulgiformes", "nyctibiiformes", "steatornithiformes"].includes(order)) return "night_owl";
+            if (order === "psittaciformes" || family === "corvidae") return "trickster";
+            if (order === "sphenisciformes") return "playful_marine";
+            if (["struthioniformes", "rheiformes", "casuariiformes", "apterygiformes", "tinamiformes"].includes(order)) return "hooved_grazer";
+            if (["anseriformes", "charadriiformes", "pelecaniformes", "ciconiiformes", "gruiformes", "suliformes", "procellariiformes", "podicipediformes", "gaviiformes", "phoenicopteriformes", "phaethontiformes", "eurypygiformes", "galliformes", "bucerotiformes"].includes(order)) {
+                return "waterbird";
+            }
+            return "songbird";
+        case "reptilia":
+        case "squamata":
+        case "testudines":
+        case "crocodylia":
+        case "sphenodontia":
+            if (cls === "crocodylia" || order === "crocodylia" || cls === "testudines" || order === "testudines") {
+                return family === "cheloniidae" || family === "dermochelyidae" ? "ocean_glider" : "ancient_reptile";
+            }
+            if (["colubridae", "elapidae", "viperidae", "pythonidae", "boidae", "typhlopidae", "natricidae", "lamprophiidae", "homalopsidae", "dipsadidae"].includes(family) ||
+                nameHas(name, "snake", "python", "cobra", "viper", "boa", "mamba", "adder", "rattlesnake", "krait", "taipan")) {
+                return "serpent";
+            }
+            if (family === "varanidae" || family === "iguanidae" || size >= 30) return "ancient_reptile";
+            return "quirky_amphibian";
+        case "amphibia":
+            return "quirky_amphibian";
+        case "elasmobranchii":
+        case "chondrichthyes":
+            return /iformes$/.test(order) && /(myliobat|rajiform|torpedin|rhinopristi)/.test(order) ? "ocean_glider" : "cool_shark";
+        case "actinopterygii":
+        case "sarcopterygii":
+        case "dipneusti":
+        case "holocephali":
+            if (speed >= 58) return "swift_hunter";
+            return size >= 30 ? "ocean_glider" : "playful_marine";
+        case "cephalopoda":
+            return "trickster";
+        case "insecta":
+            if (order === "lepidoptera") return "delicate_flutter";
+            if (order === "odonata") return "swift_hunter";
+            if (order === "mantodea") return "serpent";
+            if (order === "phasmida" || order === "phasmatodea") return "sleepy";
+            return "tiny_worker";
+        case "arachnida":
+            return "serpent";
+        case "malacostraca":
+        case "branchiopoda":
+        case "maxillopoda":
+        case "hexanauplia":
+            return "quirky_amphibian";
+        case "merostomata":
+            return "ancient_reptile";
+        case "gastropoda":
+        case "bivalvia":
+        case "echinoidea":
+        case "asteroidea":
+        case "holothuroidea":
+        case "ophiuroidea":
+        case "crinoidea":
+        case "demospongiae":
+            return "sleepy";
+        case "anthozoa":
+        case "hydrozoa":
+        case "scyphozoa":
+        case "cubozoa":
+            return "ocean_glider";
+        case "diplopoda":
+        case "chilopoda":
+        case "polychaeta":
+        case "clitellata":
+        case "eutardigrada":
+            return "tiny_worker";
+    }
+
+    // Unknown taxonomy: names of the common cases, then size.
+    if (nameHas(name, "wolf", "dog", "jackal", "coyote", "dingo", "hyena")) return "pack_canine";
+    if (nameHas(name, "lion", "tiger", "leopard", "jaguar", "puma", "cougar", "panther", "lynx")) return "apex_big_cat";
+    if (nameHas(name, "cat", "kitten")) return "cool_cat";
+    if (nameHas(name, "bear")) return "bear";
+    if (nameHas(name, "snake", "spider", "scorpion")) return "serpent";
+    if (nameHas(name, "bee", "ant", "wasp", "beetle", "fly", "bug", "cricket", "grasshopper")) return "tiny_worker";
+    if (nameHas(name, "frog", "toad", "newt", "salamander", "crab", "lobster", "shrimp")) return "quirky_amphibian";
+    if (nameHas(name, "eagle", "hawk", "kite", "vulture", "buzzard")) return "raptor";
+    if (nameHas(name, "duck", "goose", "swan", "heron", "gull", "egret", "stork", "crane", "pelican")) return "waterbird";
+    if (nameHas(name, "monkey", "macaque", "baboon", "lemur")) return "trickster";
+    if (nameHas(name, "gorilla", "chimpanzee", "orangutan", "bonobo")) return "great_ape";
+    if (nameHas(name, "fish", "coral", "anemone")) return size >= 30 ? "ocean_glider" : "playful_marine";
+    return size >= 46 ? "gentle_giant" : size <= 6 ? "tiny_worker" : "great_ape";
 }

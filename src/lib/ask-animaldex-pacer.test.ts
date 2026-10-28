@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {askPacerStep, askPacerTimeline, type AskPacerInput} from "@/lib/ask-animaldex/pacer";
+import {ASK_PACER_DEFAULT, askPacerStep, askPacerTimeline, askPacerWordShown, type AskPacerInput} from "@/lib/ask-animaldex/pacer";
 
 const measured = {typingCps: 13.5, pace: "measured" as const};
 
@@ -27,8 +27,10 @@ test("words come at the animal's typing speed", () => {
     assert.equal(slow.next, 6);
     assert.ok(Math.abs(slow.pause - 6 / 10) < 1e-9);
     assert.ok(Math.abs(quick.pause - 6 / 17) < 1e-9);
-    // A floor of 6 cps, so a broken frame cannot stall the reply.
-    assert.ok(Math.abs(step("Gently now", 0, {typingCps: 0.5}).pause - 1) < 1e-9);
+    // A floor of 6 cps, so a broken frame cannot stall the reply (and no
+    // pause runs past 0.9 s).
+    assert.ok(Math.abs(step("Gently now", 0, {typingCps: 0.5}).pause - 0.9) < 1e-9);
+    assert.ok(Math.abs(step("Go now", 0, {typingCps: 0.5}).pause - 2 / 6) < 1e-9);
 });
 
 test("a sentence ends on a breath, a clause on a shorter one, a paragraph on a longer one", () => {
@@ -36,15 +38,15 @@ test("a sentence ends on a breath, a clause on a shorter one, a paragraph on a l
     const clause = step("Hi, there friend", 0).pause;
     const sentence = step("Hi. There friend", 0).pause;
     assert.ok(clause > plain && sentence > clause);
-    assert.ok(Math.abs(sentence - (3 / 13.5 + 0.34)) < 1e-9);
+    assert.ok(Math.abs(sentence - (3 / 13.5 + 0.2)) < 1e-9);
     const paragraph = step("Hi.\n\nThere", 0).pause;
-    assert.ok(Math.abs(paragraph - (3 / 13.5 + 0.34 + 0.3)) < 1e-9);
+    assert.ok(Math.abs(paragraph - (3 / 13.5 + 0.2 + 0.16)) < 1e-9);
     // A slow animal lingers longer at the same full stop, a quick one less.
     const slowStop = step("Hi. There", 0, {pace: "slow"}).pause;
     const quickStop = step("Hi. There", 0, {pace: "quick"}).pause;
     assert.ok(slowStop > sentence && quickStop < sentence);
-    // No pause runs past 1.4 s.
-    assert.ok(step(`${"x".repeat(60)}.\n\nNext`, 0).pause <= 1.4);
+    // No pause runs past 0.9 s.
+    assert.ok(step(`${"x".repeat(60)}.\n\nNext`, 0).pause <= 0.9);
 });
 
 test("a card or drawing appears whole, once its closing fence has arrived", () => {
@@ -87,4 +89,27 @@ test("a whole reply types out in order, and a slow animal takes longer than a qu
     for (let index = 1; index < slow.length; index += 1) assert.ok(slow[index].next > slow[index - 1].next);
     const total = (steps: Array<{pause: number}>) => steps.reduce((sum, item) => sum + item.pause, 0);
     assert.ok(total(slow) > total(quick) * 1.5);
+});
+
+test("a long reply settles into reading speed after its opening", () => {
+    const text = `${"word ".repeat(120)}end`;
+    const opening = step(text, 0).pause;
+    const later = step(text, 300).pause;
+    const deep = step(text, 550).pause;
+    assert.ok(Math.abs(later - opening / 1.3) < 1e-9);
+    assert.ok(Math.abs(deep - opening / 1.6) < 1e-9);
+});
+
+test("the default pace is the apps' 21 characters a second", () => {
+    assert.equal(ASK_PACER_DEFAULT.typingCps, 21);
+    assert.equal(ASK_PACER_DEFAULT.pace, "measured");
+});
+
+test("a sound follows a word, not a card or a space, and knows when a sentence ends", () => {
+    assert.deepEqual(askPacerWordShown(" there"), {endsSentence: false});
+    assert.deepEqual(askPacerWordShown(" there."), {endsSentence: true});
+    assert.deepEqual(askPacerWordShown(" go!"), {endsSentence: true});
+    assert.equal(askPacerWordShown("   "), null);
+    assert.equal(askPacerWordShown(" 42"), null);
+    assert.equal(askPacerWordShown("\n```animaldex-flow\n{\"title\":\"Trail\"}\n```"), null);
 });

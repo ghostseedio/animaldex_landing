@@ -30,6 +30,7 @@ import {NextResponse} from "next/server";
 import {buildAskPacket} from "@/data/ask-grounding";
 import {getAskWildProfile} from "@/data/ask-wild-profile";
 import {loadAskCompanion, type AskCompanion} from "@/data/ask-companion-voice";
+import {loadAskStatQuantiles} from "@/data/ask-stat-quantiles";
 import {loadAskChatSettings, loadAskMemory, rememberAskTurn} from "@/lib/ask-animaldex/memory";
 import {askHistoryAsTurns, dedupeCurrentQuestion, fallbackAskGreeting} from "@/lib/ask-animaldex/companion";
 import {
@@ -172,12 +173,14 @@ export async function POST(request: Request) {
         // Only an animal speaks first; the site-wide assistant waits to be asked.
         return askJson({error: "greeting_unavailable"}, 400);
     }
-    const [memory, companion] = await Promise.all([
+    const [memory, companion, quantiles] = await Promise.all([
         speaksAsAnimal && personalise ? loadAskMemory(viewer.userId) : Promise.resolve([]),
         // How this animal talks: its voice card, or the record-derived fallback.
         speaksAsAnimal && basePacket.species
             ? loadAskCompanion(basePacket.species)
-            : Promise.resolve(null as AskCompanion | null)
+            : Promise.resolve(null as AskCompanion | null),
+        // The persona's bands are cut on the live catalogue's spread.
+        speaksAsAnimal ? loadAskStatQuantiles() : Promise.resolve(null)
     ]);
     // A Trial question is grounded on that Trial and kept there.
     const aboutTrial = Boolean(subject.trialContext);
@@ -246,7 +249,8 @@ export async function POST(request: Request) {
         ? askPersonaDials({
             stats: companion.stats,
             dynamics: packet.species?.systemDynamics?.frequency ?? null,
-            voice: companion.voice
+            voice: companion.voice,
+            quantiles
         })
         : null;
     const personaFrame: {persona?: AskPersonaFrame} = persona && companion
