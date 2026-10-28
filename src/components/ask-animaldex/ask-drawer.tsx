@@ -1225,11 +1225,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             if (!showingBond) void animalBond.reload();
                                         }}
                                         aria-pressed={showingBond}
+                                        aria-label={bondChip(chipBond, labels)}
+                                        title={bondChip(chipBond, labels)}
                                         className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-colors ${
                                             showingBond ? "border-primary-300/50 bg-primary-400/14 text-white" : "border-white/12 text-ink-200 hover:text-white"
                                         }`}
                                     >
-                                        {bondChip(chipBond, labels)}
+                                        {/* Beside the header's buttons the stage runs out of room:
+                                            the level alone, never "Level 4 · Worki…" (AnimalDex
+                                            3a603746); the animal's card shows it whole. */}
+                                        {chipBond.level !== null
+                                            ? labels.bondLevel.replace("{level}", String(chipBond.level))
+                                            : chipBond.stageLabel}
                                     </button>
                                 ) : null}
                             </div>
