@@ -437,7 +437,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
 
             <GuideBandHeader title="Banner" />
             <div className={`${GUIDE_BAND} px-[18px] py-3.5`}>
-                <div className="relative h-48 overflow-hidden rounded-lg bg-[#2A2A2A] md:h-64">
+                <div className="relative h-48 overflow-hidden bg-[#2A2A2A] md:h-64">
                     {hero ? <GuidePhoto media={hero} size="hero" alt="Banner" className="h-full w-full" /> : null}
                     {!guide.banner ? (
                         <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">Using your first photo</span>
@@ -502,7 +502,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                         controls
                         playsInline
                         preload="none"
-                        className="mb-3 block max-h-80 w-full rounded-lg bg-black"
+                        className="mb-3 block max-h-80 w-full bg-black"
                     />
                 ) : null}
                 <p className="text-xs leading-5 text-white/60">
@@ -544,7 +544,7 @@ export default function GuideEditorClient({initial}: {initial: GuideDetail}) {
                 {uploads.length > 0 ? (
                     <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
                         {uploads.map((media) => (
-                            <div key={media.id} className={`relative aspect-square overflow-hidden rounded-md bg-[#2A2A2A] ${media.hidden ? "opacity-40" : ""}`}>
+                            <div key={media.id} className={`relative aspect-square overflow-hidden bg-[#2A2A2A] ${media.hidden ? "opacity-40" : ""}`}>
                                 <GuidePhoto media={media} size="thumb" className="h-full w-full" />
                                 <button
                                     type="button"

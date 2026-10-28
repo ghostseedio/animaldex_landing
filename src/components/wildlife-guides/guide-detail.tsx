@@ -117,7 +117,7 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
                         {animals.map((animal) => {
                             const card = (
                                 <>
-                                    <span className="block h-40 w-[132px] overflow-hidden rounded-lg bg-[#2A2A2A]">
+                                    <span className="block h-40 w-[132px] overflow-hidden bg-[#2A2A2A]">
                                         {animal.photo ? <GuidePhoto media={animal.photo} size="card" alt={animal.name} className="h-full w-full" /> : (
                                             <span className="grid h-full w-full place-items-center text-white/35"><GuideGlyph name="paw" className="h-6 w-6" /></span>
                                         )}
@@ -146,7 +146,7 @@ export default function GuideDetail({guide, locale, viewerLoaded = false}: {guid
                                 href={item.imageUrl ?? undefined}
                                 target={item.imageUrl ? "_blank" : undefined}
                                 rel="noopener noreferrer"
-                                className="block h-[150px] w-[220px] shrink-0 snap-start overflow-hidden rounded-lg bg-[#2A2A2A]"
+                                className="block h-[150px] w-[220px] shrink-0 snap-start overflow-hidden bg-[#2A2A2A]"
                             >
                                 <GuidePhoto media={item} size="card" alt={`Photo ${index + 2} of ${photos.length} from ${guide.areaLabel}`} className="h-full w-full" />
                             </a>

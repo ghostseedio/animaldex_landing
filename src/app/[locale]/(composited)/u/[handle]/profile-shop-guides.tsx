@@ -443,7 +443,7 @@ function GuideRowMenu({title, disabled, onRename, editHref, onDelete}: {
             {open ? (
                 <>
                     <button type="button" aria-hidden="true" tabIndex={-1} className="fixed inset-0 cursor-default" onClick={() => setOpen(false)} />
-                    <div role="menu" className="absolute right-0 top-10 w-44 overflow-hidden rounded-lg border border-white/10 bg-[#262626] py-1 shadow-xl">
+                    <div role="menu" className="absolute right-0 top-10 w-44 overflow-hidden border border-white/10 bg-[#262626] py-1 shadow-xl">
                         <button role="menuitem" type="button" onClick={() => { setOpen(false); onRename(); }} className="block w-full px-4 py-2.5 text-left text-sm text-white hover:bg-white/[0.06]">Rename</button>
                         <Link role="menuitem" href={editHref} className="block px-4 py-2.5 text-sm text-white hover:bg-white/[0.06]">Edit guide</Link>
                         <button role="menuitem" type="button" onClick={() => { setOpen(false); onDelete(); }} className="block w-full px-4 py-2.5 text-left text-sm text-red-300 hover:bg-white/[0.06]">Delete guide</button>
