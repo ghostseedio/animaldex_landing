@@ -402,7 +402,12 @@ export async function loadUserGrowthRows(): Promise<UserGrowthRow[] | null> {
   }
 }
 
-/** Every purchase from the credit ledger, plus fulfilled web purchases the ledger doesn't cover. */
+/**
+ * Every purchase from the credit ledger, plus Google Play Pro subscriptions and
+ * fulfilled web purchases the ledger doesn't cover. Play credit packs land as
+ * reason "grant" with action "google_play_purchase" (credit_balance_grant), and
+ * their test_purchase flag is the string "true".
+ */
 export async function loadPurchaseLedger(): Promise<PurchaseLedgerRow[]> {
   const ledger = await fetchRows<{
     user_id: string;
@@ -410,7 +415,7 @@ export async function loadPurchaseLedger(): Promise<PurchaseLedgerRow[]> {
     metadata: Record<string, unknown> | null;
   }>(
     "credit_transactions",
-    "select=user_id,created_at,metadata&reason=eq.purchase&order=created_at.asc",
+    "select=user_id,created_at,metadata&or=(reason.eq.purchase,metadata->>action.eq.google_play_purchase)&order=created_at.asc",
   );
   const text = (value: unknown) => (typeof value === "string" ? value : null);
   const rows: PurchaseLedgerRow[] = ledger.map((row) => ({
@@ -419,8 +424,28 @@ export async function loadPurchaseLedger(): Promise<PurchaseLedgerRow[]> {
     source: text(row.metadata?.source),
     productCode: text(row.metadata?.product_code),
     environment: text(row.metadata?.environment),
-    testPurchase: row.metadata?.test_purchase === true,
+    testPurchase: row.metadata?.test_purchase === true || row.metadata?.test_purchase === "true",
   }));
+  let playPro: Array<{ user_id: string; created_at: string; is_test_purchase: boolean | null; superseded_by_token: string | null }> = [];
+  try {
+    playPro = await fetchRows(
+      "google_play_subscriptions",
+      "select=user_id,created_at,is_test_purchase,superseded_by_token&user_id=not.is.null",
+    );
+  } catch {
+    playPro = [];
+  }
+  // A resubscribe or plan change supersedes the old token; count each chain once.
+  for (const row of playPro.filter((sub) => !sub.superseded_by_token)) {
+    rows.push({
+      userId: String(row.user_id),
+      createdAt: row.created_at,
+      source: "google_play",
+      productCode: "pro_upgrade",
+      environment: null,
+      testPurchase: row.is_test_purchase === true,
+    });
+  }
   if (rows.some((row) => classifyPurchaseStore(row) === "web")) return rows;
   let web: Array<{
     user_id: string;
