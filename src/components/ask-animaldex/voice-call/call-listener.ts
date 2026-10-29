@@ -2,7 +2,7 @@
  * Hears one thing said: resolves once they stop talking for a moment, or
  * with null if nothing is said for a while. The web counterpart of the iOS
  * `AnimalCallListener`, over the Web Speech API (Chrome, Edge and Safari
- * have it; Firefox does not, and there the call is not offered).
+ * have it; Firefox does not, and there `CallServerListener` hears instead).
  *
  * The same rules as iOS: a pause after a finished sentence ends the turn
  * (1.3 s), a pause mid-sentence is thinking (2.4 s); if the microphone still
@@ -17,7 +17,8 @@
 import {
     CALL_NOTHING_SAID_TIMEOUT_MS,
     CALL_STILL_TALKING_DECIBELS,
-    callPauseAfter
+    callPauseAfter,
+    heardWordCount
 } from "@/lib/ask-animaldex/call-events";
 import type {CallMicrophone} from "@/components/ask-animaldex/voice-call/call-audio";
 
@@ -45,11 +46,38 @@ function recognitionConstructor(): RecognitionConstructor | null {
     return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/** Whether this browser can hold a call: speech recognition, a microphone and Web Audio. */
-export function browserCanCall(): boolean {
+/** The browser has its own speech recognizer (the Web Speech API). */
+export function browserRecognizesSpeech(): boolean {
+    return recognitionConstructor() !== null;
+}
+
+/**
+ * Whether this browser can hold a call: a microphone, Web Audio, and
+ * something to hear with: its own recognizer, or (`serverHearing`, a
+ * signed-in reader) the call's recognizer on the server.
+ */
+export function browserCanCall(options: {serverHearing?: boolean} = {}): boolean {
     if (typeof window === "undefined") return false;
     const w = window as unknown as {AudioContext?: unknown; webkitAudioContext?: unknown};
-    return Boolean(recognitionConstructor() && typeof navigator.mediaDevices?.getUserMedia === "function" && (w.AudioContext || w.webkitAudioContext));
+    const hears = browserRecognizesSpeech() || options.serverHearing === true;
+    return Boolean(hears && typeof navigator.mediaDevices?.getUserMedia === "function" && (w.AudioContext || w.webkitAudioContext));
+}
+
+/** What the call hears a turn with: the browser's recognizer (`CallListener`) or the server's (`CallServerListener`). */
+export interface CallHearing {
+    hints: string[];
+    listen(language: string, onPartial: (heard: string) => void): Promise<string | null>;
+    finishNow(): void;
+    cancelTurn(): void;
+    stop(): void;
+    /** Someone has begun talking in the listen under way. */
+    readonly hearsSomeone: boolean;
+    /** How many of the words heard over the animal are theirs. */
+    wordsOverAnimal(heard: string, animalWords: string[]): number;
+    /** What it hears while the animal talks may be the animal's own voice: shown only once it is theirs. */
+    readonly mayHearTheAnimal: boolean;
+    /** The animal is speaking now. */
+    setAnimalTalking(on: boolean): void;
 }
 
 /** The recognizer can be handed a track (the newer Web Speech API, which also has on-device recognition). */
@@ -62,9 +90,11 @@ const FATAL = new Set(["not-allowed", "service-not-allowed", "audio-capture", "l
 
 export class CallListenError extends Error {}
 
-export class CallListener {
+export class CallListener implements CallHearing {
     /** Names it should expect to hear (the animal's). */
     hints: string[] = [];
+    /** Given the echo-cancelled track, the recognizer does not hear the animal. */
+    readonly mayHearTheAnimal = false;
     private recognition: Recognition | null = null;
     private finishing = false;
     private dropping = false;
@@ -92,6 +122,18 @@ export class CallListener {
     /** How loud they are now, in dBFS. */
     decibels(): number {
         return this.microphone.decibels();
+    }
+
+    get hearsSomeone(): boolean {
+        return this.transcript.length > 0;
+    }
+
+    wordsOverAnimal(heard: string): number {
+        return heardWordCount(heard);
+    }
+
+    setAnimalTalking() {
+        // The recognizer hears the echo-cancelled track either way.
     }
 
     /** They tapped to say they are done: send what was heard now. */

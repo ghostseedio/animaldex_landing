@@ -17,6 +17,7 @@
 
 import {StreamingTimeStretch} from "@/lib/ask-animaldex/call-time-stretch";
 import {loudness} from "@/lib/ask-animaldex/call-events";
+import {CALL_HEARING, CallDownsampler} from "@/lib/ask-animaldex/call-hearing";
 
 type AudioContextConstructor = typeof AudioContext;
 
@@ -61,12 +62,53 @@ function decibelsOf(samples: Float32Array): number {
     return 10 * Math.log10(Math.max(sum / Math.max(samples.length, 1), 1e-9));
 }
 
+/**
+ * Hands on what the microphone hears, unchanged, a block at a time (2048
+ * samples at the context's rate), off the main thread.
+ */
+const TAP_WORKLET = `
+class AnimalDexCallTap extends AudioWorkletProcessor {
+    constructor() {
+        super();
+        this.block = new Float32Array(2048);
+        this.filled = 0;
+    }
+    process(inputs) {
+        const input = inputs[0] && inputs[0][0];
+        if (input) {
+            let at = 0;
+            while (at < input.length) {
+                const take = Math.min(input.length - at, this.block.length - this.filled);
+                this.block.set(input.subarray(at, at + take), this.filled);
+                this.filled += take;
+                at += take;
+                if (this.filled === this.block.length) {
+                    this.port.postMessage(this.block.slice(0));
+                    this.filled = 0;
+                }
+            }
+        }
+        return true;
+    }
+}
+registerProcessor("animaldex-call-tap", AnimalDexCallTap);
+`;
+
+const tapModules = new WeakMap<BaseAudioContext, Promise<void>>();
+
 /** The microphone for the whole call. */
 export class CallMicrophone {
     private stream: MediaStream | null = null;
     private source: MediaStreamAudioSourceNode | null = null;
     private analyser: AnalyserNode | null = null;
     private readonly samples = new Float32Array(1024);
+    /** The 16 kHz tap, for a recognizer on the server: made once, on first use. */
+    private tap: {node: AudioNode; silent: GainNode} | null = null;
+    private tapping: Promise<void> | null = null;
+    private pcmSink: ((frame: Int16Array) => void) | null = null;
+    private downsampler: CallDownsampler | null = null;
+    private pcmFrame = new Int16Array(CALL_HEARING.sampleRate * CALL_HEARING.frameMs / 1000);
+    private pcmFilled = 0;
     /** Echo cancellation is on: the microphone does not hear the animal. */
     cancelsEcho = false;
 
@@ -99,7 +141,82 @@ export class CallMicrophone {
         return decibelsOf(this.samples);
     }
 
+    /**
+     * From now on hands `sink` what the microphone hears as 16 kHz 16-bit
+     * mono, 20 ms at a time (null: to no one). The same echo-cancelled
+     * microphone the call already holds.
+     */
+    async listenPcm(sink: ((frame: Int16Array) => void) | null): Promise<void> {
+        this.pcmSink = sink;
+        this.pcmFilled = 0;
+        if (!sink) return;
+        this.downsampler = new CallDownsampler(this.context.sampleRate);
+        if (this.tap) return;
+        this.tapping ??= this.makeTap().finally(() => {
+            this.tapping = null;
+        });
+        await this.tapping;
+    }
+
+    private async makeTap() {
+        const source = this.source;
+        if (!source) throw new Error("microphone_off");
+        const silent = this.context.createGain();
+        silent.gain.value = 0;
+        // Pulled through a silent output, as the browser only runs nodes that lead somewhere.
+        silent.connect(this.context.destination);
+        let node: AudioNode;
+        if (typeof AudioWorkletNode !== "undefined" && this.context.audioWorklet) {
+            let loading = tapModules.get(this.context);
+            if (!loading) {
+                const url = URL.createObjectURL(new Blob([TAP_WORKLET], {type: "application/javascript"}));
+                loading = this.context.audioWorklet.addModule(url).finally(() => URL.revokeObjectURL(url));
+                tapModules.set(this.context, loading);
+            }
+            await loading;
+            const worklet = new AudioWorkletNode(this.context, "animaldex-call-tap", {numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1, channelCountMode: "explicit"});
+            worklet.port.onmessage = (event: MessageEvent<Float32Array>) => this.takePcm(event.data);
+            node = worklet;
+        } else {
+            // Older browsers: the deprecated processor, on the main thread.
+            const processor = this.context.createScriptProcessor(2048, 1, 1);
+            processor.onaudioprocess = (event) => this.takePcm(new Float32Array(event.inputBuffer.getChannelData(0)));
+            node = processor;
+        }
+        if (this.source !== source) {
+            silent.disconnect();
+            return;
+        }
+        source.connect(node);
+        node.connect(silent);
+        this.tap = {node, silent};
+    }
+
+    private takePcm(block: Float32Array) {
+        const sink = this.pcmSink;
+        const downsampler = this.downsampler;
+        if (!sink || !downsampler) return;
+        const samples = downsampler.push(block);
+        for (let i = 0; i < samples.length; i++) {
+            this.pcmFrame[this.pcmFilled++] = samples[i];
+            if (this.pcmFilled === this.pcmFrame.length) {
+                sink(this.pcmFrame);
+                this.pcmFrame = new Int16Array(this.pcmFrame.length);
+                this.pcmFilled = 0;
+            }
+        }
+    }
+
     stop() {
+        this.pcmSink = null;
+        if (this.tap) {
+            const node = this.tap.node as AudioNode & {port?: MessagePort; onaudioprocess?: unknown};
+            if (node.port) node.port.onmessage = null;
+            if ("onaudioprocess" in node) node.onaudioprocess = null;
+            node.disconnect();
+            this.tap.silent.disconnect();
+            this.tap = null;
+        }
         this.source?.disconnect();
         this.analyser?.disconnect();
         this.stream?.getTracks().forEach((track) => track.stop());

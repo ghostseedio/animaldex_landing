@@ -13,8 +13,13 @@
  *   - While the animal thinks and talks it listens for their next turn; once
  *     it has heard two words from them (not a noise) the animal stops, that
  *     reply is cancelled (what it said stays in the chat), and listening goes
- *     on as their turn. Talking over it needs echo cancellation on what the
- *     recognizer hears; without it, only a tap interrupts.
+ *     on as their turn. Talking over it needs echo cancellation on what is
+ *     heard: the browser's recognizer where it can be handed the call's
+ *     echo-cancelled microphone (newer Chrome), or the server's recognizer on
+ *     that same microphone where it hears every turn, counting only words
+ *     that are not the animal's own. Without either, a tap interrupts.
+ *   - Without the browser's own recognizer (Firefox), every turn is heard by
+ *     the server's (`CallServerListener`), with the same pause rules.
  *   - Carrying on before the animal has said anything was a pause, not the
  *     end: its reply is dropped and the rest joins what was said before.
  *   - A voice that did not stream (none offered, or it failed) is the whole
@@ -22,10 +27,11 @@
  *     `speakWhole`; today's spoken replies used up ends the voice.
  */
 
-import {CALL_TALKING_OVER_WORDS, callEventFrom, heardWordCount, type CallSpokenWord, type CallVoiceInfo} from "@/lib/ask-animaldex/call-events";
+import {CALL_TALKING_OVER_WORDS, callEventFrom, type CallSpokenWord, type CallVoiceInfo} from "@/lib/ask-animaldex/call-events";
 import {askReplyWordsOf} from "@/lib/ask-animaldex/spoken-words";
 import {CallMicrophone, CallVoicePlayer} from "@/components/ask-animaldex/voice-call/call-audio";
-import {CallListener} from "@/components/ask-animaldex/voice-call/call-listener";
+import {browserRecognizesSpeech, CallListener, CallListenError, type CallHearing} from "@/components/ask-animaldex/voice-call/call-listener";
+import {CallServerListener, type CallTranscribe} from "@/components/ask-animaldex/voice-call/call-server-listener";
 import type {CallCopy} from "@/lib/ask-animaldex/call-copy";
 import type {CallClip} from "@/lib/ask-animaldex/call-events";
 
@@ -61,7 +67,18 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export class VoiceCallController {
     readonly voice: CallVoicePlayer;
     readonly microphone: CallMicrophone;
-    private readonly listener: CallListener;
+    /** The browser's own recognizer, where it has one. */
+    private readonly browserHearing: CallListener | null;
+    /** The server's, for a signed-in reader: every turn without the browser's, and talking over the animal where the browser's cannot. */
+    private readonly serverHearing: CallServerListener | null;
+    /** What hears their turns. */
+    private readonly hearing: CallHearing | null;
+    /** What is listening now (a turn, or the next one while the animal answers). */
+    private listening: CallHearing | null = null;
+    /** What hears the next turn while the animal answers. */
+    private nextHearing: CallHearing | null = null;
+    /** The animal's words in this answer, so its own voice is not taken for theirs. */
+    private animalWords: string[] = [];
     private state: CallState = {
         phase: "starting",
         failure: null,
@@ -102,6 +119,8 @@ export class VoiceCallController {
         cancelAsk: () => void;
         /** The whole reply's clip, when its voice did not stream; without it the answer stands as text. */
         speak?: CallSpeak;
+        /** The server's recognizer (a signed-in reader); without it only the browser's own hears. */
+        transcribe?: CallTranscribe | null;
         /**
          * Development only (iOS `ANIMALDEX_CALL_SCRIPT`): these are "said"
          * instead of listening, as a headless browser cannot speak; then the
@@ -111,8 +130,18 @@ export class VoiceCallController {
     }) {
         this.voice = new CallVoicePlayer(params.context);
         this.microphone = new CallMicrophone(params.context);
-        this.listener = new CallListener(this.microphone);
-        this.listener.hints = params.hints;
+        this.browserHearing = browserRecognizesSpeech() ? new CallListener(this.microphone) : null;
+        this.serverHearing = params.transcribe ? new CallServerListener(this.microphone, params.transcribe) : null;
+        this.hearing = this.browserHearing ?? this.serverHearing;
+        for (const hearing of [this.browserHearing, this.serverHearing]) {
+            if (hearing) hearing.hints = params.hints;
+        }
+    }
+
+    /** What can hear them over the animal: only a recognizer on the echo-cancelled microphone. */
+    private talkOverHearing(): CallHearing | null {
+        if (this.browserHearing) return this.browserHearing.cancelsEcho ? this.browserHearing : null;
+        return this.serverHearing && this.microphone.cancelsEcho ? this.serverHearing : null;
     }
 
     subscribe = (listener: () => void) => {
@@ -126,6 +155,8 @@ export class VoiceCallController {
 
     private set(patch: Partial<CallState>) {
         this.state = {...this.state, ...patch};
+        // Someone talking over the animal has to be clearer than its voice's echo.
+        if (patch.phase) this.serverHearing?.setAnimalTalking(patch.phase === "speaking");
         this.subscribers.forEach((listener) => listener());
     }
 
@@ -147,8 +178,10 @@ export class VoiceCallController {
         this.running = false;
         this.nextTurn = null;
         // A listen in progress gives up (with nothing), so the loop can see it has ended.
-        this.listener.cancelTurn();
-        this.listener.stop();
+        for (const hearing of [this.browserHearing, this.serverHearing]) {
+            hearing?.cancelTurn();
+            hearing?.stop();
+        }
         this.clipRequest?.abort();
         this.voice.stop();
         // Hung up mid-answer: the reply stops (what it said stays in the chat) and so does its voice.
@@ -166,7 +199,7 @@ export class VoiceCallController {
 
     /** The microphone button: while they talk it sends what was said now; while the animal talks it interrupts. */
     tapMicrophone() {
-        if (this.state.phase === "listening") this.listener.finishNow();
+        if (this.state.phase === "listening") this.listening?.finishNow();
         else if (this.state.phase === "speaking") this.voice.stop();
     }
 
@@ -174,7 +207,7 @@ export class VoiceCallController {
         const isMuted = !this.state.isMuted;
         this.set({isMuted});
         // What was half said is dropped, not sent.
-        if (isMuted && this.state.phase === "listening") this.listener.cancelTurn();
+        if (isMuted && this.state.phase === "listening") this.listening?.cancelTurn();
     }
 
     /** How loud whoever is talking is now (dBFS), for the waves. */
@@ -185,7 +218,7 @@ export class VoiceCallController {
                 const time = performance.now() / 1000;
                 return -24 + 9 * Math.sin(time * 11) * Math.sin(time * 3.1);
             }
-            return this.listener.decibels();
+            return this.microphone.decibels();
         }
         return -120;
     }
@@ -208,6 +241,11 @@ export class VoiceCallController {
             this.microphone.stop();
             return;
         }
+        const hearing = this.hearing;
+        if (!hearing) {
+            this.fail(copy.recognitionStopped);
+            return;
+        }
         while (!this.cancelled) {
             this.set({phase: "listening"});
             // A turn they began over the animal keeps what was heard so far.
@@ -220,15 +258,18 @@ export class VoiceCallController {
                 const early = this.nextTurn;
                 if (early) {
                     this.nextTurn = null;
+                    this.nextHearing = null;
                     const rest = await early;
                     // Carried on before the animal spoke: one message, whole.
                     utterance = this.carriesOn && rest ? `${this.lastUtterance} ${rest}` : rest;
                     this.carriesOn = false;
                 } else {
-                    utterance = await this.listener.listen(this.params.language, (partial) => this.set({heard: partial}));
+                    this.listening = hearing;
+                    utterance = await hearing.listen(this.params.language, (partial) => this.set({heard: partial}));
                 }
-            } catch {
+            } catch (error) {
                 if (this.cancelled) return;
+                if (error instanceof CallListenError) console.warn("[voice-call] hearing stopped:", error.message);
                 this.fail(copy.recognitionStopped);
                 return;
             }
@@ -265,6 +306,7 @@ export class VoiceCallController {
 
     /** Sends what they said and speaks the animal's answer as it streams in, until it ends, is interrupted, or they talk over it. */
     private async answer(utterance: string) {
+        this.animalWords = [];
         this.set({phase: "thinking", spokenWords: []});
         this.turn = {firstSound: null, reply: 0};
         this.turnVoice = null;
@@ -282,6 +324,7 @@ export class VoiceCallController {
                     if (event.info.available) this.voice.beginStream(event.info.sampleRate ?? 24_000, event.info.rate ?? 1);
                     break;
                 case "words":
+                    this.animalWords.push(...event.words.map((word) => word.text));
                     this.set({spokenWords: [...this.state.spokenWords, ...event.words]});
                     break;
                 case "audio":
@@ -349,6 +392,7 @@ export class VoiceCallController {
             return;
         }
         if (clip.kind !== "audio") return;
+        this.animalWords = askReplyWordsOf(reply);
         this.turn = {...this.turn, firstSound: (performance.now() - sent) / 1000};
         this.set({timings: this.turn, phase: "speaking"});
         await this.voice.playClip(clip.audio);
@@ -362,11 +406,19 @@ export class VoiceCallController {
      * the animal itself.
      */
     private listenWhileAnswering() {
-        if (this.state.isMuted || !this.listener.cancelsEcho || this.nextTurn) return;
-        const turn = this.listener.listen(this.params.language, (partial) => {
-            this.set({heard: partial});
+        if (this.state.isMuted || this.nextTurn) return;
+        const hearing = this.talkOverHearing();
+        if (!hearing) return;
+        this.listening = hearing;
+        this.nextHearing = hearing;
+        const turn = hearing.listen(this.params.language, (partial) => {
             const phase = this.state.phase;
-            if (this.talkedOver || heardWordCount(partial) < CALL_TALKING_OVER_WORDS || (phase !== "thinking" && phase !== "speaking")) return;
+            const answering = !this.talkedOver && (phase === "thinking" || phase === "speaking");
+            const theirs = hearing.wordsOverAnimal(partial, this.animalWords);
+            // Heard over the animal and maybe its own voice: neither shown nor stopping it.
+            if (answering && hearing.mayHearTheAnimal && theirs < CALL_TALKING_OVER_WORDS) return;
+            this.set({heard: partial});
+            if (!answering || theirs < CALL_TALKING_OVER_WORDS) return;
             // Before the animal said anything, and while its answer was still coming: a pause, not the end.
             // (An answer already whole stands in the thread, spoken or not.)
             this.carriesOn = phase === "thinking" && !this.turnHeard && !this.replyDone;

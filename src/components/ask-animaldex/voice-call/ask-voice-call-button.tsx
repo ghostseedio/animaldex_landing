@@ -3,9 +3,10 @@
 /**
  * The microphone in the chat header that starts a voice call with the animal
  * (the iOS chat's `speakToAnimalCall`). Shown only when the animal has a
- * talking model published as glTF and this browser can hold a call (speech
- * recognition, a microphone, Web Audio: not Firefox). The call screen, and
- * three.js with it, load only when it is pressed.
+ * talking model published as glTF and this browser can hold a call: a
+ * microphone, Web Audio, and a recognizer, its own or (a signed-in reader:
+ * Firefox has no Web Speech API) the call's on the server. The call screen,
+ * and three.js with it, load only when it is pressed.
  *
  * Each call turn is a turn of this chat: what they said lands in the thread
  * like a typed message and the animal's answer comes back into it, so the
@@ -39,6 +40,7 @@ export default function AskVoiceCallButton({
     animalName,
     captureId,
     speciesProfileId,
+    serverHearing,
     names,
     locale,
     disabled,
@@ -52,6 +54,8 @@ export default function AskVoiceCallButton({
     /** Whose voice a whole clip is in: the card, or the species (as the chat's own voice). */
     captureId: string | null;
     speciesProfileId: string | null;
+    /** The server's recognizer may hear this reader (signed in): where the browser has none, and over the animal. */
+    serverHearing: boolean;
     /** The names its model may be published under, best first (a breed, the species, its slug). */
     names: Array<string | null | undefined>;
     locale: string;
@@ -75,7 +79,7 @@ export default function AskVoiceCallButton({
     const nameKey = names.filter(Boolean).join("|");
 
     useEffect(() => {
-        if (!browserCanCall()) return;
+        if (!browserCanCall({serverHearing})) return;
         let cancelled = false;
         void loadTalkingModelManifest().then((manifest) => {
             if (cancelled) return;
@@ -84,7 +88,7 @@ export default function AskVoiceCallButton({
         return () => {
             cancelled = true;
         };
-    }, [nameKey]);
+    }, [nameKey, serverHearing]);
 
     /**
      * One turn of a call: what they said goes in the thread like a typed
@@ -163,6 +167,7 @@ export default function AskVoiceCallButton({
                         ask={ask}
                         cancelAsk={cancelAsk}
                         speak={speak}
+                        serverHearing={serverHearing}
                         onClose={() => setOpen(false)}
                     />,
                     document.body

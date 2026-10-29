@@ -1308,6 +1308,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             animalName={animalName}
                             captureId={resolvedSubject.captureId ?? null}
                             speciesProfileId={context?.speciesProfileId ?? null}
+                            serverHearing={context?.signedIn === true}
                             names={[hints.animalName, resolvedSubject.name, resolvedSubject.slug]}
                             locale={locale}
                             disabled={isSending}

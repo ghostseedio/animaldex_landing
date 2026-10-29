@@ -15,6 +15,7 @@ import {useCallback, useEffect, useRef, useState, useSyncExternalStore} from "re
 import TalkingModelView from "@/components/ask-animaldex/voice-call/talking-model-view";
 import {VoiceCallController, type CallAsk, type CallSpeak, type CallState} from "@/components/ask-animaldex/voice-call/voice-call-controller";
 import {callAudioContext} from "@/components/ask-animaldex/voice-call/call-audio";
+import {transcribeOnServer} from "@/components/ask-animaldex/voice-call/call-server-listener";
 import {CaptionsIcon, ChevronDownIcon, EllipsisIcon, HandIcon, MicIcon, MicSlashIcon, XMarkIcon} from "@/components/ask-animaldex/voice-call/call-icons";
 import {callClock, callSpokenIndex, type CallSpokenWord} from "@/lib/ask-animaldex/call-events";
 import {callCopy, callSpeechLanguage} from "@/lib/ask-animaldex/call-copy";
@@ -54,6 +55,7 @@ export default function VoiceCallScreen({
     ask,
     cancelAsk,
     speak,
+    serverHearing = false,
     onClose
 }: {
     animalName: string;
@@ -64,6 +66,8 @@ export default function VoiceCallScreen({
     cancelAsk: () => void;
     /** The whole reply's clip, for a turn whose voice did not stream. */
     speak?: CallSpeak;
+    /** The server's recognizer may hear them (a signed-in reader): Firefox's turns, and talking over the animal where the browser's recognizer cannot. */
+    serverHearing?: boolean;
     onClose: () => void;
 }) {
     const copy = callCopy(locale);
@@ -90,12 +94,13 @@ export default function VoiceCallScreen({
             ask: (said, onEvent) => askRef.current(said, onEvent),
             cancelAsk: () => cancelRef.current(),
             speak: (reply, signal) => speakRef.current?.(reply, signal) ?? Promise.resolve({kind: "none"}),
+            transcribe: serverHearing ? transcribeOnServer : null,
             script: developmentCallScript()
         });
         setController(call);
         call.start();
         return () => call.end();
-    }, [animalName, locale]);
+    }, [animalName, locale, serverHearing]);
 
     const state = useSyncExternalStore(
         controller?.subscribe ?? noSubscription,
