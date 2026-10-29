@@ -165,9 +165,10 @@ function CompanionRow({
             {row.hasConversation ? null : <AppIcon name="chevron" className="h-4 w-4 shrink-0 text-white/35" />}
         </>
     );
-    const className = "flex min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 transition hover:bg-white/[0.03] md:pl-5";
+    const className = "flex min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 md:pl-5";
     return (
-        <div className="flex items-center border-b border-white/[0.08]">
+        // The whole band lights under the pointer, its menu included.
+        <div className="flex items-center border-b border-white/[0.08] transition hover:bg-white/[0.03]">
             {href
                 ? <Link href={href} className={`${className} ${row.hasConversation ? "pr-1" : "pr-4 md:pr-5"}`}>{body}</Link>
                 : <div className={`${className} ${row.hasConversation ? "pr-1" : "pr-4 md:pr-5"}`}>{body}</div>}
