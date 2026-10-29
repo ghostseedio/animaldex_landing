@@ -149,6 +149,16 @@ export const COMPANION_WORDS_EN = {
         notStarted: "Not started"
     },
     difficulty: {Easy: "Easy", Medium: "Medium", Hard: "Hard"},
+    /** The Companions tab's own parts: an animal's messages, muted or not. */
+    tab: {
+        unread: "{n} unread",
+        muted: "Muted",
+        mute: "Mute",
+        unmute: "Unmute",
+        muteFailed: "That didn't go through. Try again in a moment.",
+        options: "More",
+        collection: "Collection"
+    },
     /** Your own card's tabs: About · Bond · Battle. */
     card: {about: "About", bond: "Bond", battle: "Battle"},
     /** "Luna the Gray Wolf" (iOS "%@ the %@"). */

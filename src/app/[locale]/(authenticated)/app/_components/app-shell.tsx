@@ -7,6 +7,7 @@ import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_componen
 import {CreditBalanceChip} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import {AppShellChromeContext, isDiscoverShellRoute} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
+import {useUnreadAnimalMessages} from "@/components/companions/use-animal-conversations";
 
 type AppShellProps = {
     children: React.ReactNode;
@@ -98,6 +99,8 @@ export default function AppShell({
     const accountHref = "/account";
     const resolvedProfile = sessionProfile ?? profile;
     const resolvedAuthenticated = isAuthenticated || sessionAuthenticated;
+    // The animals' unread messages, on the Companions tab (iOS MainTabBar).
+    const unreadAnimalMessages = useUnreadAnimalMessages(resolvedAuthenticated);
     // The Discover tab owns its top bar on phones (iOS DiscoverTopBar) and the
     // snap feed must fill the space between it and the tab bar without the
     // document scrolling underneath — so the shell becomes a fixed column.
@@ -182,12 +185,27 @@ export default function AppShell({
             : `${base} text-white/50 hover:bg-white/5 hover:text-white`;
     };
 
-    const navLink = (item: (typeof mainLinks)[number], mobile = false) => (
-        <Link key={item.href} href={navHref(item.href)} prefetch className={navClass(isActive(item.href), mobile)}>
-            <AppIcon name={item.icon} className={mobile ? "h-5 w-5" : "h-[1.15rem] w-[1.15rem]"} />
-            <span>{item.label}</span>
-        </Link>
-    );
+    const navLink = (item: (typeof mainLinks)[number], mobile = false) => {
+        const badge = item.href === "/app" ? unreadAnimalMessages : 0;
+        return (
+            <Link key={item.href} href={navHref(item.href)} prefetch className={navClass(isActive(item.href), mobile)}>
+                {mobile ? (
+                    <span className="relative">
+                        <AppIcon name={item.icon} className="h-5 w-5" />
+                        {badge ? (
+                            <span className="absolute -right-3 -top-1.5 min-w-[1.05rem] rounded-full bg-primary-400 px-1 text-center text-[0.55rem] font-black leading-[1.05rem] tabular-nums text-black">
+                                {badge > 99 ? "99+" : badge}
+                            </span>
+                        ) : null}
+                    </span>
+                ) : (
+                    <AppIcon name={item.icon} className="h-[1.15rem] w-[1.15rem]" />
+                )}
+                <span>{item.label}</span>
+                {!mobile && badge ? <NavBadge count={badge} /> : null}
+            </Link>
+        );
+    };
 
     const utilityLink = (href: string, label: string, icon: AppIconName, badge = 0) => (
         <Link key={href} href={navHref(href)} prefetch className={navClass(isActive(href))}>

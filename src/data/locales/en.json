@@ -2637,6 +2637,15 @@
       "about": "About",
       "bond": "Bond",
       "battle": "Battle"
+    },
+    "tab": {
+      "unread": "{n} unread",
+      "muted": "Muted",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "muteFailed": "That didn't go through. Try again in a moment.",
+      "options": "More",
+      "collection": "Collection"
     }
   }
 }

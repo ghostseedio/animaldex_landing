@@ -60,6 +60,7 @@ import {
 import {bondChipText, bondStageText, decodeChatBond, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
+import {noteAnimalMessagesMuted, noteAnimalMessagesRead} from "@/components/companions/use-animal-conversations";
 import {
     AskAnimalFace,
     AskAnimalHero,
@@ -527,7 +528,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     headers: {"Content-Type": "application/json"},
                     body: JSON.stringify({action: "read", speciesProfileId: animalSpeciesId}),
                     keepalive: true
-                }).then(() => reloadCompanions()).catch(() => undefined);
+                })
+                    .then((response) => (response.ok ? response.json() as Promise<{unread?: unknown}> : null))
+                    .then((read) => {
+                        // The Companions row and the tab's count drop at once.
+                        if (read) noteAnimalMessagesRead(animalSpeciesId, typeof read.unread === "number" ? read.unread : null);
+                        return reloadCompanions();
+                    })
+                    .catch(() => undefined);
             })
             .catch(() => undefined)
             .finally(() => {
@@ -552,7 +560,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             body: JSON.stringify({action: "mute", speciesProfileId: animalSpeciesId, muted})
         })
             .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
-            .then((payload: {muted?: boolean}) => setAnimalMuted(payload.muted === true))
+            .then((payload: {muted?: boolean}) => {
+                setAnimalMuted(payload.muted === true);
+                noteAnimalMessagesMuted(animalSpeciesId, payload.muted === true);
+            })
             .catch(() => setAnimalMuted(!muted));
     }, [animalSpeciesId, animalMuted]);
 

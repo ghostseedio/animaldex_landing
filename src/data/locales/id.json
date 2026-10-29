@@ -2619,6 +2619,15 @@
       "about": "Tentang",
       "bond": "Ikatan",
       "battle": "Pertarungan"
+    },
+    "tab": {
+      "unread": "{n} belum dibaca",
+      "muted": "Dibisukan",
+      "mute": "Bisukan",
+      "unmute": "Bunyikan",
+      "muteFailed": "Gagal terkirim. Coba lagi sebentar lagi.",
+      "options": "Lainnya",
+      "collection": "Koleksi"
     }
   }
 }

@@ -6,7 +6,11 @@ import {NextResponse} from "next/server";
  * and marks them read, as the apps do.
  *
  * GET ?speciesProfileId= lists its newest messages (`animal_messages_for`) and
- * whether it is muted; POST {action: "read", speciesProfileId} marks them read
+ * whether it is muted. GET alone lists every animal you talk with or that
+ * wrote to you (`animal_conversations`: the Companions tab's unread lines,
+ * dots and mutes); GET ?view=unread counts what is unread across them all
+ * (`unread_animal_message_count`, the tab's badge). POST {action: "read",
+ * speciesProfileId} marks them read
  * (`mark_animal_messages_read`, which answers what is left unread across every
  * animal); POST {action: "mute", speciesProfileId, muted} mutes or unmutes it
  * (`set_animal_messages_muted`). All as the reader. A database without the
@@ -31,7 +35,20 @@ function signedOut() {
 export async function GET(request: Request) {
     const viewer = await resolveAskViewer(request);
     if (!viewer.signedIn || !viewer.client) return signedOut();
-    const speciesProfileId = speciesFrom(new URL(request.url).searchParams.get("speciesProfileId"));
+    const params = new URL(request.url).searchParams;
+    if (params.get("view") === "unread") {
+        const {data, error} = await viewer.client.rpc("unread_animal_message_count");
+        return NextResponse.json({ok: true, unread: !error && typeof data === "number" ? data : null}, {headers: ASK_RESPONSE_HEADERS});
+    }
+    if (!params.has("speciesProfileId")) {
+        const {data, error} = await viewer.client.rpc("animal_conversations", {p_limit: 60});
+        if (error) {
+            console.warn("[ask-animaldex] animal conversations unavailable", error.message.slice(0, 200));
+            return NextResponse.json({ok: true, conversations: [], available: false}, {headers: ASK_RESPONSE_HEADERS});
+        }
+        return NextResponse.json({ok: true, conversations: Array.isArray(data) ? data : [], available: true}, {headers: ASK_RESPONSE_HEADERS});
+    }
+    const speciesProfileId = speciesFrom(params.get("speciesProfileId"));
     if (!speciesProfileId) {
         return NextResponse.json({ok: false, error: "species_required"}, {status: 400, headers: ASK_RESPONSE_HEADERS});
     }
