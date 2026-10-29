@@ -1,5 +1,6 @@
 import type {Metadata} from "next";
 import {ProfilePageBody} from "@/app/[locale]/(composited)/u/[handle]/profile-page-body";
+import ShareReferralCapture from "@/components/store/share-referral-capture";
 import {getPublicProfileCard, normalizePublicHandle} from "@/data/public-profiles";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
@@ -55,6 +56,13 @@ export async function generateMetadata({params}: PublicProfilePageProps): Promis
 }
 
 export default async function PublicProfilePage({params}: PublicProfilePageProps) {
-    return ProfilePageBody({locale: params.locale, handle: params.handle, surface: "marketing"});
+    const body = await ProfilePageBody({locale: params.locale, handle: params.handle, surface: "marketing"});
+    return (
+        <>
+            {/* A profile shared from the app may carry the sharer's `?ref=`. */}
+            <ShareReferralCapture />
+            {body}
+        </>
+    );
 }
 

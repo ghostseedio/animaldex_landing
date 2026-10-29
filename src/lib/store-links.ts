@@ -54,14 +54,66 @@ export function appStoreLink(placement: StorePlacement, providerToken: string = 
     return url.toString();
 }
 
-export function googlePlayLink(placement: StorePlacement) {
+/**
+ * `referral` is the sharer's code from a shared link's `?ref=`. Play hands the
+ * whole referrer to the app on first launch, where it is stored raw, so the
+ * code travels with the install. The App Store has no such channel, so its
+ * link stays the placement alone.
+ */
+export function googlePlayLink(placement: StorePlacement, referral: string | null = null) {
     const url = new URL(googlePlayUrl);
-    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}`);
+    const ref = referral ? `&ref=${referral}` : "";
+    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}${ref}`);
     return url.toString();
 }
 
-export function storeHref(store: AppStoreName, placement: StorePlacement) {
-    return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement);
+export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null) {
+    return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement, referral);
+}
+
+/** A referral code as the app's share links carry it: letters, digits, `-` and `_`. */
+const REFERRAL_CODE_PATTERN = /^[A-Za-z0-9_-]{4,40}$/;
+
+/** The `ref` of a query string ("?ref=abc123"), when it is a plausible referral code. */
+export function shareReferralCode(search: string | null | undefined): string | null {
+    if (!search) return null;
+    let value: string | null = null;
+    try {
+        value = new URLSearchParams(search).get("ref");
+    } catch {
+        return null;
+    }
+    const code = value?.trim() ?? "";
+    return REFERRAL_CODE_PATTERN.test(code) ? code : null;
+}
+
+/**
+ * A shared post or profile opened with `?ref=` keeps the code for the rest of
+ * the tab, so a store button clicked later (after the feed has rewritten the
+ * URL, or on another page) still carries it.
+ */
+const SHARE_REFERRAL_KEY = "animaldex.share_ref";
+
+export function rememberShareReferral(search: string | null | undefined) {
+    const code = shareReferralCode(search);
+    if (!code) return;
+    try {
+        window.sessionStorage.setItem(SHARE_REFERRAL_KEY, code);
+    } catch {
+        // Without storage the code still works while it is in the URL.
+    }
+}
+
+/** The code in the current URL, else the one this tab arrived with. */
+export function referringShareReferral(): string | null {
+    try {
+        const fromUrl = shareReferralCode(window.location.search);
+        if (fromUrl) return fromUrl;
+        const stored = window.sessionStorage.getItem(SHARE_REFERRAL_KEY);
+        return stored && REFERRAL_CODE_PATTERN.test(stored) ? stored : null;
+    } catch {
+        return null;
+    }
 }
 
 /** `page_<first path segment>`, for a store button that does not name its own placement. */

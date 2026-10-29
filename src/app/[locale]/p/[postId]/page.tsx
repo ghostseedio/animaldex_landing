@@ -3,6 +3,7 @@ import {notFound, redirect} from "next/navigation";
 import AppShell from "@/app/[locale]/(authenticated)/app/_components/app-shell";
 import {AppCreditsProvider} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
+import ShareReferralCapture from "@/components/store/share-referral-capture";
 import {getDiscoverPostById, type DiscoverTimelineItem} from "@/data/discover-timeline";
 import {
     discoverPostPath,
@@ -268,6 +269,8 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
                 unreadMessageCount={0}
                 hydrateFromSession
             >
+                {/* The feed rewrites the URL as it scrolls, so a shared `?ref=` is kept now. */}
+                <ShareReferralCapture />
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd.length === 1 ? jsonLd[0] : jsonLd)}}

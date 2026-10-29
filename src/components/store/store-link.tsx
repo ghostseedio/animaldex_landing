@@ -4,6 +4,7 @@ import type {AnchorHTMLAttributes, ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {trackEvent} from "@/lib/analytics";
 import {
+    referringShareReferral,
     referringStorePlacement,
     rememberStorePlacement,
     storeHref,
@@ -31,7 +32,9 @@ export default function StoreLink({store, placement, inheritPlacement = false, o
             onClick={(event) => {
                 onClick?.(event);
                 const effective = (inheritPlacement ? referringStorePlacement() : null) ?? placement;
-                if (effective !== placement) event.currentTarget.href = storeHref(store, effective);
+                // A shared link's `?ref=`, kept for the tab: Play carries it to the app.
+                const href = storeHref(store, effective, referringShareReferral());
+                if (event.currentTarget.href !== href) event.currentTarget.href = href;
                 trackEvent("store_link_clicked", {
                     store,
                     placement: effective,
