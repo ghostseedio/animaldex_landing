@@ -38,6 +38,7 @@ export type StorePlacement =
     | "wild_profile"
     | "import_result"
     | "post"
+    | "not_found"
     | `page_${string}`;
 
 /**

@@ -8,6 +8,9 @@ import {animalSilhouetteImages} from "@/data/animal-silhouettes";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Link from "@/app/[locale]/_components/link";
 import Button from "@/app/[locale]/_components/button";
+import StoreGlyph from "@/components/store/store-glyph";
+import StoreLink from "@/components/store/store-link";
+import {storeLinks} from "@/lib/store-links";
 
 const notFoundCopy = {
     en: {
@@ -15,6 +18,8 @@ const notFoundCopy = {
         title: "This page wandered off",
         description: "We tracked it as far as we could, but the trail goes cold here. It may have moved, or it never lived in this habitat.",
         button: "Back home",
+        // Every 404 shares this page, so it only allows for a shared post or profile.
+        shared: "If someone shared this with you, its owner may have made it private or removed it.",
         explore: "Or pick up a fresh trail",
         links: [
             {href: "/animals", label: "Browse animals"},
@@ -27,6 +32,7 @@ const notFoundCopy = {
         title: "Halaman ini tersesat",
         description: "Kami sudah melacaknya sejauh mungkin, tetapi jejaknya hilang di sini. Mungkin sudah pindah, atau memang tidak pernah ada di habitat ini.",
         button: "Kembali ke beranda",
+        shared: "Jika seseorang membagikan ini kepada Anda, pemiliknya mungkin telah menjadikannya privat atau menghapusnya.",
         explore: "Atau ikuti jejak baru",
         links: [
             {href: "/animals", label: "Jelajahi hewan"},
@@ -77,6 +83,24 @@ export default function NotFoundBody() {
                         {t.button}
                     </Button>
                 </Link>
+                <div className="flex max-w-md flex-col items-center gap-3 md:max-w-xl">
+                    <p className="text-sm text-ink-400 md:text-base">{t.shared}</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {storeLinks.map((link) => (
+                            <StoreLink
+                                key={link.store}
+                                store={link.store}
+                                placement="not_found"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 rounded-full border border-line-400 px-4 py-2 text-sm font-semibold text-ink-200 transition-colors hover:border-primary-300 hover:text-primary-200"
+                            >
+                                <StoreGlyph store={link.store} className="h-4 w-4" />
+                                {link.name}
+                            </StoreLink>
+                        ))}
+                    </div>
+                </div>
                 <nav aria-label={t.explore} className="mt-4 flex flex-col items-center gap-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-400">{t.explore}</p>
                     <ul className="flex flex-wrap justify-center gap-2">
