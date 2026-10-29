@@ -26,6 +26,8 @@ test("random source: only families with pages left, any page of the family", () 
     assert.deepEqual(pickRandomSource(available, () => 0), {type: "comparison", page: {slug: "a"}});
     assert.deepEqual(pickRandomSource(available, () => 0.99), {type: "location", page: {slug: "c"}});
     assert.equal(pickRandomSource({blog: []}), null);
+    // The hook lab's ranking wins when its family has pages; an empty family is skipped.
+    assert.deepEqual(pickRandomSource(available, () => 0, ["blog", "location", "comparison"]), {type: "location", page: {slug: "c"}});
 });
 
 test("budget: a run waits unless one more capped video fits", () => {

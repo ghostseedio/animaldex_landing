@@ -9,7 +9,9 @@ import type {Slide} from "@/lib/social-content/types";
 
 // Carousel slides as JPEGs, drawn with Satori in the house video style:
 // Barlow Condensed ExtraBold headlines in capitals, the punchline word in
-// AnimalDex lime, photos full-bleed under a dark gradient. Three sizes:
+// AnimalDex lime, photos full-bleed under a dark gradient. Picture first: a
+// photo fills every slide that has one, the words sit low and short, and a
+// words-only slide sits on a blurred photo rather than flat black. Three sizes:
 //   feed 1080×1350 (4:5)  Instagram, Facebook, Threads, X, Bluesky
 //   tall 1080×1920 (9:16) TikTok photo mode, text kept out of its side and bottom UI
 //   pin  1000×1500 (2:3)  the Pinterest cover
@@ -107,12 +109,12 @@ function Kicker({text}: {text: string}) {
     );
 }
 
-function Stat({stat}: {stat: Slide["stat"]}) {
+function Stat({stat, size = 64}: {stat: Slide["stat"]; size?: number}) {
     if (!stat) return null;
     return (
-        <div style={{display: "flex", flexDirection: "column", alignSelf: "flex-start", border: `4px solid ${LIME}`, padding: "10px 20px", marginTop: 8}}>
+        <div style={{display: "flex", flexDirection: "column", alignSelf: "flex-start", background: "rgba(14,15,14,0.72)", border: `4px solid ${LIME}`, padding: "10px 22px", marginTop: 8}}>
             <div style={{display: "flex", fontFamily: "Barlow", fontWeight: 600, fontSize: 28, color: "#c8ccc8", letterSpacing: 2}}>{stat.label.toUpperCase()}</div>
-            <div style={{display: "flex", fontFamily: "Barlow", fontWeight: 800, fontSize: 64, color: "#ffffff", lineHeight: 1}}>{stat.value.toUpperCase()}</div>
+            <div style={{display: "flex", fontFamily: "Barlow", fontWeight: 800, fontSize: stat.value.length > 14 ? Math.round(size * 0.75) : size, color: "#ffffff", lineHeight: 1}}>{stat.value.toUpperCase()}</div>
         </div>
     );
 }
@@ -151,7 +153,7 @@ function Body({text, size = 40}: {text: string; size?: number}) {
     return <div style={{display: "flex", fontSize: size, fontWeight: 500, lineHeight: 1.3, color: "rgba(255,255,255,0.9)"}}>{text}</div>;
 }
 
-async function slideElement(slide: Slide, picture: Picture | null, frame: Frame, isLast: boolean) {
+async function slideElement(slide: Slide, picture: Picture | null, frame: Frame) {
     const {width, height} = frame;
     const pad = 72;
     const bottom = frame.safeBottom + 64;
@@ -184,8 +186,26 @@ async function slideElement(slide: Slide, picture: Picture | null, frame: Frame,
         );
     }
 
+    if (slide.layout === "item" && picture && !picture.cutout) {
+        return (
+            <Chrome frame={frame} background={(
+                <div style={{position: "absolute", top: 0, left: 0, width, height, display: "flex"}}>
+                    <img alt="" src={await fitted(picture, width, height)} width={width} height={height} style={{position: "absolute", top: 0, left: 0}} />
+                    <div style={{position: "absolute", top: 0, left: 0, width, height, display: "flex", background: "linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.82) 76%, rgba(0,0,0,0.94) 100%)"}} />
+                </div>
+            )}>
+                <div style={{position: "absolute", left: pad, right, bottom, display: "flex", flexDirection: "column", gap: 16}}>
+                    <Rank kicker={slide.kicker} />
+                    <Headline text={slide.title} size={headlineSize(slide.title, 112)} />
+                    <Body text={slide.body} size={40} />
+                    <Stat stat={slide.stat} size={84} />
+                </div>
+            </Chrome>
+        );
+    }
+
     if (slide.layout === "item" && picture) {
-        const photoHeight = Math.round(height * (frame.safeBottom ? 0.5 : 0.56));
+        const photoHeight = Math.round(height * (frame.safeBottom ? 0.56 : 0.62));
         return (
             <Chrome frame={frame} background={(
                 <div style={{position: "absolute", top: 0, left: 0, width, height, display: "flex", flexDirection: "column"}}>
@@ -205,8 +225,8 @@ async function slideElement(slide: Slide, picture: Picture | null, frame: Frame,
         );
     }
 
-    // "text", "cta", and an "item" whose photo could not be loaded.
-    const backdrop = picture && isLast && !picture.cutout ? await blurred(picture, width, height) : null;
+    // "text", "cta", and an "item" whose photo could not be loaded: a photo, when given, is the blurred backdrop.
+    const backdrop = picture && !picture.cutout ? await blurred(picture, width, height) : null;
     const center = slide.layout === "cta";
     return (
         <Chrome frame={frame} background={(
@@ -227,7 +247,7 @@ async function slideElement(slide: Slide, picture: Picture | null, frame: Frame,
     );
 }
 
-/** One slide as a JPEG. */
+/** One slide as a JPEG. On a "text" or "cta" slide, `picture` is the blurred backdrop. */
 export async function renderSlide(slide: Slide, picture: Picture | null, size: SlideSize, position: {index: number; total: number}) {
     const {width, height} = SLIDE_SIZES[size];
     const frame: Frame = {
@@ -239,6 +259,6 @@ export async function renderSlide(slide: Slide, picture: Picture | null, size: S
         logo: await loadLogo(),
         counter: size === "pin" || position.index === 0 ? null : `${position.index + 1}/${position.total}`
     };
-    const svg = await satori(await slideElement(slide, picture, frame, position.index === position.total - 1), {width, height, fonts: await loadFonts()});
+    const svg = await satori(await slideElement(slide, picture, frame), {width, height, fonts: await loadFonts()});
     return sharp(Buffer.from(svg)).jpeg({quality: 86, mozjpeg: true}).toBuffer();
 }

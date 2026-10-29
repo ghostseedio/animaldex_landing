@@ -8,32 +8,38 @@ import {type CarouselSpec, type CarouselTemplate, SLIDE_LAYOUTS, type Slide, typ
 // repaired or rejected here, never rendered).
 
 export const MIN_SLIDES = 5;
-export const MAX_SLIDES = 9;
+export const MAX_SLIDES = 8;
+/** Slide text caps: a feed is looked at, not read (Oct 29 2026: slides had ~25-word paragraphs). */
+export const SLIDE_TITLE_CHARS = 60;
+export const SLIDE_BODY_CHARS = 80;
 export const TEXT_LIMIT = 270;
 export const LONG_TEXT_LIMIT = 480;
 export const POLL_OPTION_LIMIT = 25;
 
-const VOICE = `Audience: 16–28, scrolling fast, allergic to anything that reads like a textbook or an ad. Write like a sharp friend who knows wild animal facts: short, punchy, concrete, second person, contractions. Exaggerate the ANGLE, never the facts: every number and claim must come from the source. No invented facts, no emoji in slide text, no hashtags in slide text, no "Did you know".`;
+const VOICE = `Audience: 16–28, scrolling fast, allergic to anything that reads like a textbook or an ad. Write like a sharp friend who knows wild animal facts: short, punchy, concrete, second person, contractions, in words a 5-year-old knows (no jargon, no wordplay to decode). Exaggerate the ANGLE, never the facts: every number and claim must come from the source. No invented facts, no emoji in slide text, no hashtags in slide text, no "Did you know".`;
 
 const TEMPLATE_GUIDES: Record<CarouselTemplate, string> = {
-    countdown: `countdown: cover (the hook) → one "item" slide per entry counting DOWN to #1 (kicker "#5"… "#1", title = the animal or thing, body = why it ranks, the most surprising detail; stat when the source has a number) → cta. #1 must be the biggest payoff.`,
-    versus: `versus: cover ("A vs B" framed by the hook) → 3–4 "item" slides, one round each (kicker "ROUND 1: SPEED", title = who takes the round, body = the deciding fact, stat = the two numbers, e.g. label "TOP SPEED", value "65 vs 80 KM/H") → a verdict slide (kicker "VERDICT") → cta that splits the audience.`,
-    facts: `facts: cover → 4–6 "item" slides, one jaw-dropping fact each (kicker "FACT 1"…), escalating, the wildest last → cta.`,
-    myth_fact: `myth_fact: cover → 3–5 slides, each a myth people believe (kicker "MYTH", title = the myth in quotes-free plain words, body = "Actually: …" the truth from the source; use "text" layout when no photo fits) → cta.`,
+    countdown: `countdown: cover (the hook) → one "item" slide per entry a photo shows, counting DOWN to #1 (kicker "#5"… "#1", title = the animal, body = its one surprising detail; stat when the source has a number) → cta. #1 must be the biggest payoff and must have a photo.`,
+    versus: `versus: cover ("A vs B" framed by the hook) → 3–4 "item" slides, one round each (kicker "ROUND 1: SPEED", title = who takes the round, stat = the two numbers, e.g. label "TOP SPEED", value "65 vs 80 KM/H", body "" or a few words) → a verdict slide (kicker "VERDICT") → cta that splits the audience.`,
+    facts: `facts: cover → 3–5 "item" slides, one jaw-dropping fact each (kicker "FACT 1"…), escalating, the wildest last → cta.`,
+    myth_fact: `myth_fact: cover → 3–4 slides, each a myth people believe (kicker "MYTH", title = the myth in plain words, body = "Actually: …" the truth in a few words; use "text" layout when no photo fits) → cta.`,
     guess: `guess: cover ("Guess the animal from 3 clues" in the hook style) → 3 "text" slides of clues getting easier (kicker "CLUE 1"…) → a reveal "item" slide with its photo (kicker "IT'S THE…", title = the animal) → cta asking how many clues they needed.`
 };
 
-export const CAROUSEL_SYSTEM_PROMPT = `You make AnimalDex's swipeable carousels (Instagram, TikTok photo mode, Threads, X, Facebook, Bluesky, Pinterest) from one of our pages. A carousel lives or dies on two things: a cover that makes swiping to slide 2 irresistible, and every next slide paying something off.
+export const CAROUSEL_SYSTEM_PROMPT = `You make AnimalDex's swipeable carousels (Instagram, TikTok photo mode, Threads, X, Facebook, Bluesky, Pinterest) from one of our pages. A carousel lives or dies on three things: a cover a 5-year-old understands at a glance, PICTURES that carry every slide, and every next slide paying something off. Nobody reads a paragraph in a feed: if a slide needs a sentence to make sense, it is the wrong slide.
 
 ${VOICE}
 
+THIS ITEM'S EXPERIMENT gives the carousel one JOB (be shared, saved or commented on): pick the shape and the angle that does that job.
+
 Slides (${MIN_SLIDES}–${MAX_SLIDES} in total):
-- Slide 1 is the "cover": title = the hook (max 8 words), body = a tease of the payoff that opens a loop (max 14 words), kicker = 1–3 words naming the format ("TIER LIST", "WHO WINS?", "GUESS IT").
-- Middle slides: one idea each. title max 7 words, body max 26 words with the concrete fact or number. Escalate.
-- The last slide is "cta": title = a question that splits the audience or begs a comment (max 9 words), body = "Full story on animaldex.app" or a similar one-liner pointing at the page, kicker "YOUR CALL" or similar.
+- Slide 1 is the "cover": title = the whole idea in at most 7 plain words, understood without any other slide ("THIS FROG FREEZES SOLID AND LIVES"); body = at most 8 words that tease the payoff, or ""; kicker = 1–3 words naming the format ("TIER LIST", "WHO WINS?", "GUESS IT").
+- Middle slides: the PHOTO is the slide. title = at most 5 words; body = at most 10 words (one short line) or "". Put the slide's number in stat_label / stat_value, not in the body. One idea each; escalate.
+- Make a middle slide only for an animal or thing one of the photos shows, and show it. Leave out the rest rather than making a bare slide: fewer slides is fine. Only a "guess" clue or a "myth" may be a words-only "text" slide.
+- The last slide is "cta": title = the JOB's ask in at most 8 words (a two-option question, "Save this for your next zoo trip", "Send this to your shark-obsessed friend"); body = "Full story on animaldex.app"; kicker "YOUR CALL" or similar.
 - layout: "cover" first, "cta" last, "item" for slides with a photo, "text" for words-only slides (clues, myths).
-- image: the number of the photo that fits the slide (use each photo at most once where you can; the cover gets the most striking one); 0 for none. A slide about an animal that one of the photos shows MUST use that photo: photos stop the scroll, bare text slides are for clues, myths and questions. "text" and "cta" slides may use 0.
-- stat_label / stat_value: one striking number for the slide, e.g. "BITE FORCE" / "1,800 PSI"; "" for none.
+- image: the number of the photo of exactly what the slide is about (use each photo at most once where you can; the cover gets the most striking one); 0 for none. "text" and "cta" slides may use 0.
+- stat_label / stat_value: one striking number a child can feel, e.g. "WEIGHS" / "AS MUCH AS A CAR", "TOP SPEED" / "110 KM/H"; "" for none.
 
 Share copy (share), written for a carousel (say "swipe" where it fits):
 - youtube.title: max 100 chars, the hook then a search phrase people type (used as the Pinterest title). youtube.description: 2–4 short lines on what the carousel covers, then 3–4 hashtags starting "#AnimalDex" (used as the Pinterest description).
@@ -141,13 +147,13 @@ export function normalizeCarousel(value: unknown, imageNumbers: number[], templa
     const known = new Set(imageNumbers);
     const slides: Slide[] = (Array.isArray(record.slides) ? record.slides : []).flatMap((entry): Slide[] => {
         const slide = entry as Record<string, unknown>;
-        const title = clean(slide.title, 90);
+        const title = fitChars(clean(slide.title, 200), SLIDE_TITLE_CHARS);
         if (!title) return [];
         const image = Number.isInteger(slide.image) && known.has(slide.image as number) ? slide.image as number : null;
         const label = clean(slide.stat_label, 24);
         const statValue = clean(slide.stat_value, 24);
         const layout = SLIDE_LAYOUTS.includes(slide.layout as SlideLayout) ? slide.layout as SlideLayout : "item";
-        return [{layout, kicker: clean(slide.kicker, 28), title, body: clean(slide.body, 190), image, stat: label && statValue ? {label, value: statValue} : null}];
+        return [{layout, kicker: clean(slide.kicker, 28), title, body: fitChars(clean(slide.body, 400), SLIDE_BODY_CHARS), image, stat: label && statValue ? {label, value: statValue} : null}];
     }).slice(0, MAX_SLIDES);
     if (slides.length < MIN_SLIDES || !share) return null;
     slides.forEach((slide, index) => {

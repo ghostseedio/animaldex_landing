@@ -91,6 +91,7 @@ export function toVideoSource(post: BlogPost): VideoSource {
         url: blogPostUrl(post.slug),
         tags: post.tags,
         text: postText(post),
+        publishedAt: post.publishedAt,
         images: collectPostImages(post)
     };
 }

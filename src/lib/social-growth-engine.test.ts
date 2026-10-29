@@ -1,17 +1,18 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {experimentBrief, EXPERIMENT_VERSION, HOOK_STYLES, KIND_DIMENSIONS} from "./social-lab/arms";
-import {armStats, chooseExperiment, itemScores, percentile, pickArm, scoreShares, type ScoredShare} from "./social-lab/bandit";
+import {experimentBrief, EXPERIMENT_VERSION, HOOK_STYLES, intentsFor, KIND_DIMENSIONS, VIDEO_LENGTHS} from "./social-lab/arms";
+import {armStats, chooseExperiment, itemScores, percentile, pickArm, rankArms, scoreShares, type ScoredShare, sourceTypeStats} from "./social-lab/bandit";
+import {betterReview, normalizeReview, PASS_SCORE, rewriteBrief, scriptForReview} from "./social-lab/review";
 import {fromZernioAnalytics, metricsRow, ratio, zernioAnalyticsKeys} from "./social-lab/metrics-core";
 import {contentKindOf, dailyCaps, dayStartMs, pickLightKind, platformsWithRoom, postedToday} from "./social/auto-share-plan";
 import {blueskyCaption, captionFits, captionForPlatform, pinterestCopy, threadsCaption, visibleLength} from "./social/platform-copy";
 import type {ShareCopy} from "./social/share-copy";
 import type {SocialPostRow} from "./social/types";
 import {buildZernioPostBody, choosePinterestBoard, parseZernioAccounts, parseZernioPost, rowStateFromZernio} from "./social/zernio-core";
-import {normalizeCarousel, normalizeTextPosts, textShareCopy} from "./social-content/plan";
+import {CAROUSEL_SYSTEM_PROMPT, normalizeCarousel, normalizeTextPosts, SLIDE_BODY_CHARS, textShareCopy} from "./social-content/plan";
 import {contentIdFromMediaPath, contentMediaPath} from "./social-content/types";
-import {buildTimeline, type VideoPlan} from "./content-video/plan";
-import {normalizeBattlePlan, normalizeCreaturePlan} from "./content-video/formats";
+import {buildTimeline, PLAN_SYSTEM_PROMPT, type VideoPlan} from "./content-video/plan";
+import {BATTLE_SYSTEM_PROMPT, CREATURE_SYSTEM_PROMPT, normalizeBattlePlan, normalizeCreaturePlan} from "./content-video/formats";
 
 // The growth engine's pure parts: per-platform copy for Pinterest, Threads and
 // Bluesky; the daily caps; the hook lab's scoring and picking; Zernio post
@@ -87,7 +88,7 @@ test("the light kind with more room left goes next; none when both are spent", (
 });
 
 function share(overrides: Partial<ScoredShare> & {itemId: string}): ScoredShare {
-    return {itemKind: "editorial", family: "video", platform: "tiktok", experiment: {version: EXPERIMENT_VERSION, hookStyle: "question"}, ageHours: 48, metrics: {views: 100, likes: 1, comments: 0, shares: 0, saves: 0, hold_3s: 0.3, completion: 0.02, avg_view_pct: null}, ...overrides};
+    return {itemKind: "editorial", family: "video", platform: "tiktok", sourceType: null, experiment: {version: EXPERIMENT_VERSION, hookStyle: "question"}, ageHours: 48, metrics: {views: 100, likes: 1, comments: 0, shares: 0, saves: 0, hold_3s: 0.3, completion: 0.02, avg_view_pct: null}, ...overrides};
 }
 
 test("scores are percentiles within platform and family; young posts are not judged", () => {
@@ -118,11 +119,82 @@ test("picking: exploration takes a random arm; otherwise the clearly better arm 
     assert.ok(picks.filter((arm) => arm === "good").length > 190);
     assert.equal(pickArm(stats, () => 0.01, 0.15), "good");
     const experiment = chooseExperiment("editorial", [], random);
-    assert.deepEqual(Object.keys(experiment).sort(), ["ending", "hookStyle", "length", "version"]);
+    assert.deepEqual(Object.keys(experiment).sort(), ["ending", "hookStyle", "intent", "length", "version"]);
     assert.ok(Object.hasOwn(HOOK_STYLES, experiment.hookStyle!));
     assert.deepEqual(KIND_DIMENSIONS.text, ["textFormat"]);
     assert.match(experimentBrief({version: 1, hookStyle: "pov", ending: "loop"}), /HOOK STYLE — POV[\s\S]*ENDING — No call-to-action card/);
     assert.equal(experimentBrief(null), "");
+});
+
+test("every item has one job the page fits: news is watched, battles argued, guides saved", () => {
+    assert.deepEqual(intentsFor("editorial", "blog", true), ["stay"]);
+    assert.deepEqual(intentsFor("battle", "comparison", false), ["comment", "share"]);
+    assert.ok(!intentsFor("carousel", "blog", true).includes("stay"));
+    assert.deepEqual(intentsFor("editorial", "location", false), ["save", "share"]);
+    for (let round = 0; round < 30; round += 1) {
+        const experiment = chooseExperiment("battle", [], Math.random, {intent: intentsFor("battle", "comparison", false)});
+        assert.ok(["comment", "share"].includes(experiment.intent!));
+    }
+    assert.match(experimentBrief({version: EXPERIMENT_VERSION, intent: "save"}), /JOB — Save \(useful\)[\s\S]*Would a viewer save this/);
+});
+
+test("a job is judged half on reach, half on its own reaction per view", () => {
+    const sharer = (itemId: string, views: number, shares: number) => share({itemId, experiment: {version: EXPERIMENT_VERSION, intent: "share"}, metrics: {views, likes: 0, comments: 0, shares, saves: 0, hold_3s: 0.3, completion: 0.02, avg_view_pct: null}});
+    // Same reach and retention; "a" got 10 shares per 100 views, "c" none.
+    const scored = scoreShares([sharer("a", 100, 10), sharer("b", 100, 5), sharer("c", 100, 0)]);
+    const byId = Object.fromEntries(scored.map((entry) => [entry.itemId, entry.score]));
+    assert.equal(byId.a, (0.5 + 1) / 2);
+    assert.equal(byId.c, (0.5 + 0) / 2);
+    // Per view: 20 shares on 1,000 views is not better than 10 on 100.
+    const rated = Object.fromEntries(scoreShares([sharer("big", 1000, 20), sharer("small", 100, 10), sharer("none", 100, 0)]).map((entry) => [entry.itemId, entry.score]));
+    assert.ok(rated.small > rated.none);
+});
+
+test("page families are ranked from every item's score; empty families still get tried", () => {
+    const scored = [
+        {...share({itemId: "1", sourceType: "hybrid"}), score: 0.9},
+        {...share({itemId: "1", sourceType: "hybrid", platform: "youtube"}), score: 0.7},
+        {...share({itemId: "2", sourceType: "location"}), score: 0.1},
+        {...share({itemId: "3", sourceType: "location", family: "carousel"}), score: 1}
+    ];
+    const stats = sourceTypeStats(scored, "video", ["blog", "hybrid", "location"]);
+    assert.deepEqual(stats.map((entry) => [entry.arm, entry.items, entry.mean === null ? null : Math.round(entry.mean * 100)]), [["blog", 0, null], ["hybrid", 1, 80], ["location", 1, 10]]);
+    const order = rankArms(stats);
+    assert.deepEqual([...order].sort(), ["blog", "hybrid", "location"]);
+});
+
+test("the test audience: a script passes on the 5-year-old test and its job's score", () => {
+    const reply = (passes: boolean, share: number) => ({
+        five_year_old: {passes, would_say: "a shark that glows", hard_words: passes ? [] : ["bioluminescence"]},
+        scores: {share: {score: share, reason: "send to a friend who loves sharks"}, save: {score: 3, reason: ""}, comment: {score: 5, reason: ""}, stay: {score: 14, reason: "clamped"}},
+        fixes: ["Say 'glows' not 'bioluminescent'"]
+    });
+    const good = normalizeReview(reply(true, PASS_SCORE), "share")!;
+    assert.equal(good.passes, true);
+    assert.equal(good.scores.stay.score, 10);
+    const unclear = normalizeReview(reply(false, 9), "share")!;
+    assert.equal(unclear.passes, false);
+    const weak = normalizeReview(reply(true, 5), "share")!;
+    assert.equal(weak.passes, false);
+    assert.equal(betterReview(weak, good), good);
+    assert.equal(betterReview(unclear, weak), unclear);
+    assert.match(rewriteBrief(unclear), /FAILS the 5-year-old test[\s\S]*bioluminescence/);
+    assert.match(rewriteBrief(weak), /scores 5\/10/);
+    assert.equal(normalizeReview({scores: {}}, "share"), null);
+    const plan = {title: "t", hookText: "THIS SHARK GLOWS", scenes: [{narration: "This shark glows in the dark.", overlay: "GLOWS", visual: "ai_clip", image: 1, focusX: 0.5, motionPrompt: "swims"}], ctaNarration: "Send this to a shark fan.", ctaText: "SEND IT", musicMood: "wonder", share: copy} as unknown as VideoPlan;
+    const script = scriptForReview(plan, {title: "Glowing sharks", images: [{index: 1, src: "", alt: "a lantern shark", width: 1, height: 1, caption: null}] as any}, "share");
+    assert.match(script, /JOB: Share \(relatable\)/);
+    assert.match(script, /hook text over the first seconds: "THIS SHARK GLOWS"/);
+    assert.match(script, /1\. \[0\.0–2\.2 s\] shows: the photo, moving: a lantern shark \| on screen: "GLOWS" \| says: "This shark glows in the dark\."/);
+});
+
+test("every video prompt carries the 5-year-old test; carousels are picture-first", () => {
+    for (const prompt of [PLAN_SYSTEM_PROMPT, BATTLE_SYSTEM_PROMPT, CREATURE_SYSTEM_PROMPT]) {
+        assert.match(prompt, /THE 5-YEAR-OLD TEST/);
+        assert.doesNotMatch(prompt, /no name of the animal before the hook/);
+    }
+    assert.match(CAROUSEL_SYSTEM_PROMPT, /the PHOTO is the slide/);
+    assert.deepEqual(Object.keys(VIDEO_LENGTHS), ["short", "medium"]);
 });
 
 test("Zernio analytics map to one metrics row: hold at 1 s / 3 s from the curve, ratios held to 0–1, matched by any id", () => {
@@ -179,6 +251,9 @@ test("a carousel reply is repaired: cover first, cta last, unknown photos droppe
     const result = normalizeCarousel(reply, [1, 2, 3], ["countdown"])!;
     assert.deepEqual(result.spec.slides.map((entry) => [entry.layout, entry.image]), [["cover", 1], ["item", 2], ["text", null], ["item", 3], ["text", null], ["cta", null]]);
     assert.equal(normalizeCarousel({...reply, slides: reply.slides.slice(0, 3)}, [1], ["countdown"]), null);
+    // A paragraph is cut to one short line.
+    const wordy = normalizeCarousel({...reply, slides: reply.slides.map((entry) => ({...entry, body: "word ".repeat(40)}))}, [1, 2, 3], ["countdown"])!;
+    assert.ok(wordy.spec.slides.every((entry) => Array.from(entry.body).length <= SLIDE_BODY_CHARS));
     assert.equal(normalizeCarousel({...reply, share: null}, [1], ["countdown"]), null);
 });
 

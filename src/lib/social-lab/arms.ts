@@ -6,7 +6,8 @@
 // Why these: on TikTok our videos lost a quarter of viewers in the first
 // second and two thirds by 3 seconds (Oct 2026), so every arm is about the
 // opening beat, the length and the ending — the parts that decide whether a
-// feed keeps pushing a post.
+// feed keeps pushing a post — plus the one reaction (share, save, comment,
+// watch to the end) the item is built to get.
 
 export type ArmSpec = {label: string; instruction: string};
 
@@ -17,7 +18,7 @@ export const HOOK_STYLES = {
     },
     shock_number: {
         label: "Shocking number",
-        instruction: `Open on ONE jaw-dropping number or record from the source, said first: "1,800 PSI." / "It ate 80% of its body weight." On-screen hook = the number plus 1–3 words, e.g. "1,800 PSI BITE".`
+        instruction: `Open on ONE jaw-dropping number or record from the source, made easy to feel: "It eats its own weight in one night." / "It weighs as much as a car." On-screen hook = the number in plain words, e.g. "EATS ITS WEIGHT DAILY", never units a child doesn't know (no "PSI").`
     },
     contrarian: {
         label: "Contrarian",
@@ -46,11 +47,14 @@ export const HOOK_STYLES = {
 } as const satisfies Record<string, ArmSpec>;
 export type HookStyle = keyof typeof HOOK_STYLES;
 
-/** Target length of an editorial (narrated photo) video. Battles and creature reveals keep their own length. */
+/**
+ * Target length of an editorial (narrated photo) video. Battles and creature
+ * reveals keep their own length. No long arm: by Oct 28 2026 our 43–46 s
+ * videos were watched to the end by 1–2% on TikTok, the 18 s ones by 4.5%.
+ */
 export const VIDEO_LENGTHS = {
     short: {label: "12–18 s", instruction: "12–18 seconds: 3–4 scenes, 30–45 narrated words in total. One idea, one payoff.", scenes: [3, 4], words: [30, 45]},
-    medium: {label: "20–28 s", instruction: "20–28 seconds: 5–6 scenes, 50–70 narrated words in total.", scenes: [5, 6], words: [50, 70]},
-    long: {label: "32–45 s", instruction: "32–45 seconds: 7–9 scenes, 80–110 narrated words in total.", scenes: [7, 9], words: [80, 110]}
+    medium: {label: "20–28 s", instruction: "20–28 seconds: 5–6 scenes, 50–70 narrated words in total.", scenes: [5, 6], words: [50, 70]}
 } as const satisfies Record<string, ArmSpec & {scenes: readonly [number, number]; words: readonly [number, number]}>;
 export type VideoLength = keyof typeof VIDEO_LENGTHS;
 
@@ -79,6 +83,55 @@ export const OPENERS = {
 } as const satisfies Record<string, ArmSpec>;
 export type Opener = keyof typeof OPENERS;
 
+/**
+ * The one reaction a video or carousel is built to get. The writer follows the
+ * recipe, the reviewer (review.ts) asks the question before anything is
+ * rendered, and the lab judges the item on that reaction's own number.
+ */
+export const INTENTS = {
+    share: {
+        label: "Share (relatable)",
+        question: "Would a viewer send this to one specific friend? Who, and with what message?",
+        instruction: `Built to be SENT to a friend. Make it relatable: tie the animal to everyday life, a kind of person, a friendship, a pet owner's moment or a feeling everyone has ("This is you and your best friend.", "Every cat owner has seen this."). The viewer should think of one person within 3 seconds. End with a line that asks them to send it ("Send this to the friend who…"), never a generic "follow".`
+    },
+    save: {
+        label: "Save (useful)",
+        question: "Would a viewer save this to come back to? What would they use it for?",
+        instruction: `Built to be SAVED. Make it useful later: a short list, how to tell two animals apart, what to do if you meet one, where and when to see it. Promise the payoff in the first line ("3 ways to tell a crow from a raven."), deliver it as numbered, easy beats, and end with "Save this for…" naming the moment they will need it.`
+    },
+    comment: {
+        label: "Comment (debate)",
+        question: "Would a viewer feel they have to comment? What exactly would they type?",
+        instruction: `Built to make people COMMENT. Take a side people will argue with (a verdict, a ranking, an underdog pick), say it flatly in the first line and back it with true facts. Leave one honest point for the other side. End with a two-option question answerable in one word ("Lion or tiger? One word."), never "let me know your thoughts".`
+    },
+    stay: {
+        label: "Watch to the end (news)",
+        question: "Would a viewer watch to the very end? What stops them scrolling?",
+        instruction: `Built so nobody scrolls away: this is NEWS. Say in the first line what just happened or is happening right now, in plain words ("Right now, bears are…"). Ask the question everyone has in the first 3 seconds and answer it only in the last beat; each beat adds one new thing, no recap.`
+    }
+} as const satisfies Record<string, ArmSpec & {question: string}>;
+export type Intent = keyof typeof INTENTS;
+
+/** Articles younger than this are news: their videos are built to be watched now. */
+export const FRESH_ARTICLE_HOURS = 72;
+
+/**
+ * The reactions a page can honestly be built for: a battle invites comments,
+ * a guide gets saved, today's news holds. Fresh news videos are always "stay".
+ */
+export function intentsFor(kind: ExperimentKind, sourceType: string | null, fresh = false): Intent[] {
+    if (fresh && kind !== "carousel" && kind !== "text") return ["stay"];
+    const fits: Record<string, Intent[]> = {
+        blog: ["share", "save", "comment"],
+        comparison: ["comment", "share"],
+        hybrid: ["share", "comment"],
+        fusion: ["share", "comment"],
+        ranking: ["comment", "save"],
+        location: ["save", "share"]
+    };
+    return (sourceType ? fits[sourceType] : undefined) ?? ["share", "save", "comment"];
+}
+
 export const TEXT_FORMATS = {
     hot_take: {label: "Hot take", instruction: `A debatable, underdog take grounded in the page ("Hot take: hyenas are better hunters than lions."), then the one fact that backs it, then a question that splits people.`},
     poll: {label: "Poll", instruction: "A poll: a sharp question and 2–4 short options (max 25 characters each) that people will argue about."},
@@ -93,7 +146,8 @@ export const DIMENSIONS = {
     length: VIDEO_LENGTHS,
     ending: ENDINGS,
     opener: OPENERS,
-    textFormat: TEXT_FORMATS
+    textFormat: TEXT_FORMATS,
+    intent: INTENTS
 } as const;
 export type Dimension = keyof typeof DIMENSIONS;
 
@@ -105,16 +159,18 @@ export type Experiment = {
     ending?: Ending;
     opener?: Opener;
     textFormat?: TextFormat;
+    intent?: Intent;
 };
 
-export const EXPERIMENT_VERSION = 1;
+/** 2 (Oct 29 2026): the 5-year-old hook rule, the intent arm, no long videos, picture-first carousels. */
+export const EXPERIMENT_VERSION = 2;
 
 /** Which dimensions each kind of item tests. */
 export const KIND_DIMENSIONS = {
-    editorial: ["hookStyle", "length", "ending"],
-    battle: ["hookStyle", "opener", "ending"],
-    creature: ["hookStyle", "opener", "ending"],
-    carousel: ["hookStyle"],
+    editorial: ["intent", "hookStyle", "length", "ending"],
+    battle: ["intent", "hookStyle", "opener", "ending"],
+    creature: ["intent", "hookStyle", "opener", "ending"],
+    carousel: ["intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;
 export type ExperimentKind = keyof typeof KIND_DIMENSIONS;
@@ -132,6 +188,7 @@ export function isArm(dimension: Dimension, value: unknown): boolean {
 export function experimentBrief(experiment: Experiment | null | undefined) {
     if (!experiment) return "";
     const lines: string[] = [];
+    if (experiment.intent) lines.push(`JOB — ${INTENTS[experiment.intent].label}: ${INTENTS[experiment.intent].instruction} Every choice below serves this job; the test before posting is: ${INTENTS[experiment.intent].question}`);
     if (experiment.hookStyle) lines.push(`HOOK STYLE — ${HOOK_STYLES[experiment.hookStyle].label}: ${HOOK_STYLES[experiment.hookStyle].instruction}`);
     if (experiment.length) lines.push(`LENGTH — ${VIDEO_LENGTHS[experiment.length].instruction}`);
     if (experiment.opener) lines.push(`OPENER — ${OPENERS[experiment.opener].instruction}`);

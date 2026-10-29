@@ -1,6 +1,7 @@
 import type {ShareCopy} from "@/lib/social/share-copy";
 import {isMusicMood, MUSIC_MOOD_GUIDE, MUSIC_MOODS, type MusicMood} from "@/lib/content-video/music";
 import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
+import type {VideoReview} from "@/lib/social-lab/review";
 
 // The script and shot plan of a page video, and everything derived from it
 // that is pure: the editorial prompt and schema (blog, ranking and location
@@ -89,6 +90,8 @@ export type VideoSource = {
     tags: string[];
     /** Article text, headings and paragraphs, already trimmed for the prompt. */
     text: string;
+    /** Blog posts: when it was published (news is "fresh" for 72 hours). */
+    publishedAt?: string;
     images: SourceImage[];
     /** Format-specific instructions for the editorial planner (a countdown, a location guide). */
     brief?: string;
@@ -159,6 +162,8 @@ export type VideoPlan = {
     experiment?: Experiment;
     /** "loop": no end card, the last beat runs straight back into the first. Absent = the CTA end card. */
     ending?: "loop" | "cta_card";
+    /** The test audience's verdict before the clips were made (social-lab/review.ts). */
+    review?: VideoReview;
     title: string;
     hookText: string;
     scenes: PlanScene[];
@@ -185,28 +190,35 @@ export type TimelineEntry = {
     attacker?: PlanScene["attacker"];
 };
 
-export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. We aim for tens of millions of views; a calm opener is a dead video. Our numbers: a quarter of viewers leave in the first second and two thirds by the third, so the opening beat is the whole game.
-- The FIRST WORDS spoken are the hook: no warm-up, no scene-setting, no name of the animal before the hook lands.
-- The first frame is already moving: the opening shot shows the animal mid-action (a lunge, a turn of the head, a strike, wings opening), never a slow drift over a still landscape.
-- Talk like a creator to camera, not a documentary narrator: casual, second person, contractions, short sentences a 19-year-old would say out loud.
-- Brainstorm at least five hooks silently, then use the most extreme one. Pick from: a shocking number ("610,000 people a year"), a contrarian claim ("Sharks are harmless. This isn't."), a taboo or controversial angle, a "you've been lied to" reveal, a wild comparison of scale or power, an impossible-sounding true fact, a direct challenge to the viewer ("You couldn't survive 10 seconds here").
-- Open a loop the viewer cannot close without watching to the end (the Zeigarnik effect): tease the payoff ("…and number one isn't even a predator"), then pay it off last.
-- Spoken hook: at most 10 words, punchy, no setup, no greeting, no "in this video", no channel name, no question answerable with "no".
-- hook_text (on-screen, over the first seconds): 2–6 words, ALL-CAPS energy, the most provocative phrasing of the hook — not a copy of the narration.
+export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. A calm or clever opener is a dead video. Our numbers: a quarter of viewers leave in the first second and two thirds by the third, so the opening beat is the whole game.
+
+THE 5-YEAR-OLD TEST (a test audience checks every script before it is made, and a script that fails is rewritten): after 3 seconds, sound on or off, a 5-year-old could say what this video is about: which animal, and what is amazing about it.
+- Name or clearly show the animal in the first line and the first shot, the way a child would say it ("this shark", "a tiny frog"). Never a Latin name, never a riddle about what we are looking at.
+- ONE idea. Words a 5-year-old knows: short, concrete, physical (big, fast, eats, bites, hides, sleeps, fights, babies, poop). No jargon, no wordplay, no metaphors to decode, no abstract nouns.
+- A number only when a child can feel it: one round number, or a comparison to something they know ("as heavy as a car", "faster than a car on the motorway").
+- hook_text (on-screen, over the first seconds): 2–6 words that say the WHOLE idea on their own ("THIS SHARK GLOWS IN THE DARK", "THIS BIRD NEVER LANDS"), never a fragment that needs the narration ("BOUGHT WITH HEIGHT", "THE TWIST"), never a copy of the spoken line.
+- The first frame is already moving: the animal big in frame, mid-action (a lunge, a turn of the head, a strike, wings opening), so the picture alone tells the story. Never a slow drift over a still landscape.
+
+THE HOOK:
+- The FIRST WORDS spoken are the hook: no warm-up, no greeting, no "in this video", no channel name.
+- Spoken hook: at most 10 words, no question answerable with "no".
+- Talk like a fun older sibling, not a documentary narrator: second person, contractions, short sentences, the plainest words that are still exciting.
+- Brainstorm at least five hooks silently, then use the clearest surprising one (clear beats clever). Pick from: an impossible-sounding true fact, a "you've been lied to" reveal, a size or power comparison, a contrarian claim ("Sharks aren't the scariest thing in the sea."), a direct challenge to the viewer ("You couldn't survive 10 seconds here").
+- Open a loop the viewer cannot close without watching to the end: tease the payoff ("…and number one isn't even a predator"), then pay it off last.
 - Extreme framing, TRUE substance: exaggerate the angle, never the facts. Every number, record and claim must be defensible from the source. No invented facts.
 
 DEBATES: when the source presents a debate, controversy or two camps, take the UNDERDOG side to provoke comments: open on the contrarian position, argue its strongest honest case, and end with a question that splits the audience ("Team Pasteur or Team Béchamp? Tell me in the comments."). On health or medical topics, put the underdog side as a provocative QUESTION ("What if Béchamp was half right?"), never as a claim that contradicts the evidence — no medical misinformation.`;
 
-export const PLAN_SYSTEM_PROMPT = `You are the editor of AnimalDex's short-form channel (YouTube Shorts, TikTok, Reels). You turn one of our pages into a short vertical video built to go viral and be watched to the end (its length is set by THIS ITEM'S EXPERIMENT when one is given; otherwise 30–45 seconds). You are given the page text and its photos (numbered, in order).
+export const PLAN_SYSTEM_PROMPT = `You are the editor of AnimalDex's short-form channel (YouTube Shorts, TikTok, Reels). You turn one of our pages into a short vertical video built to go viral and be watched to the end (its length is set by THIS ITEM'S EXPERIMENT when one is given; otherwise 15–25 seconds). THIS ITEM'S EXPERIMENT also gives the video one JOB (be shared, saved, commented on, or watched to the end): choose the angle of the page that does that job best. You are given the page text and its photos (numbered, in order).
 
 ${HOOK_RULES}
 
 Then:
 - Fast retention beats: each scene is one idea, 1–2 short spoken sentences (about 6–18 words, 2–5 seconds). Escalate: each beat should top the last. Written for the ear: short sentences, plain words, second person, no lists read aloud, no emoji, no hashtags.
-- Total narration across all scenes (not counting the CTA) and the number of scenes: as the experiment's LENGTH says (when none is given: 75–110 words, 6–9 scenes). Shorter is not lazier: every beat still escalates.
+- Total narration across all scenes (not counting the CTA) and the number of scenes: as the experiment's LENGTH says (when none is given: 40–60 words, 4–6 scenes). Shorter is not lazier: every beat still escalates.
 - If the source hedges, the facts stay hedged — but the framing can still be bold.
-- overlay: a 1–5 word on-screen label that adds to the narration (a number, a name, a contrast), or "" for none. Use one on most scenes, never the same words as the narration.
-- cta_narration: one short line that sends people to the full page on AnimalDex or asks them to comment (e.g. "Which side are you on? Full story on AnimalDex."). cta_text: 2–5 words for the end card. When the experiment's ENDING is a loop, both are "" and the last scene's line leads back into the first.
+- overlay: a 1–5 word on-screen label a child can read at a glance (a number, a name, a contrast), or "" for none. Use one on most scenes, never the same words as the narration.
+- cta_narration: one short line that asks for the video's JOB (send it to a friend, save it, answer a two-option question, or the last payoff for a news video), e.g. "Lion or tiger? One word.". cta_text: 2–5 words for the end card. When the experiment's ENDING is a loop, both are "" and the last scene's line leads back into the first.
 
 Shots:
 - Every scene uses one of the photos (image = its number). Spread them: do not use the same photo twice in a row, and use as many different photos as fit.

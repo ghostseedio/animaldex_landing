@@ -1,13 +1,16 @@
-import {DIMENSIONS, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, KIND_DIMENSIONS} from "@/lib/social-lab/arms";
+import {DIMENSIONS, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, type Intent, KIND_DIMENSIONS} from "@/lib/social-lab/arms";
 import type {SocialPlatform} from "@/lib/social/types";
 
 // The hook lab's learner, pure. Each published share gets a score in [0, 1]:
 // where its numbers rank among the same platform's posts of the same kind
 // (a percentile, so a TikTok view and a YouTube view are never compared
-// directly). An item's score is the mean over the platforms it went to. Each
-// arm then has a Beta posterior over "beats the typical post", and the next
-// item's arms are drawn by Thompson sampling, with a floor of pure exploration
-// so a slow starter still gets tried.
+// directly). An item built for one reaction (its intent) is judged half on
+// reach and half on that reaction per view: a "share" video on shares, a
+// "save" one on saves. An item's score is the mean over the platforms it went
+// to. Each arm then has a Beta posterior over "beats the typical post", and
+// the next item's arms are drawn by Thompson sampling, with a floor of pure
+// exploration so a slow starter still gets tried. Page families (blog, battle,
+// hybrid…) are drawn the same way, from every item's score.
 
 /** A post younger than this has not been judged by its feed yet. */
 export const MIN_AGE_HOURS = 36;
@@ -32,6 +35,8 @@ export type ScoredShare = {
     /** "video", "carousel" or "text": percentiles are taken within one family per platform. */
     family: "video" | "carousel" | "text";
     platform: SocialPlatform;
+    /** The page family the item was made from (blog, comparison, …); null when unknown. */
+    sourceType: string | null;
     experiment: Experiment | null;
     ageHours: number;
     metrics: PostMetrics;
@@ -41,6 +46,20 @@ export type ScoredShare = {
 export function signals(share: Pick<ScoredShare, "family" | "metrics">): Array<keyof PostMetrics> {
     if (share.family === "video") return ["views", "hold_3s", "completion", "avg_view_pct"];
     return ["views", "likes", "shares", "comments", "saves"];
+}
+
+/** A reaction count per view, so a post that reached more people is not credited for reach twice. */
+function perView(count: number | null, views: number | null) {
+    if (count === null || count === undefined || !Number.isFinite(count)) return null;
+    return views && views > 0 ? count / views : count;
+}
+
+/** The numbers that say whether an item did its job, best first. */
+export function jobValues(intent: Intent, metrics: PostMetrics): Array<number | null> {
+    if (intent === "share") return [perView(metrics.shares, metrics.views)];
+    if (intent === "save") return [perView(metrics.saves, metrics.views)];
+    if (intent === "comment") return [perView(metrics.comments, metrics.views)];
+    return [metrics.completion, metrics.avg_view_pct, metrics.hold_3s];
 }
 
 /** Percentile rank of `value` in `values` (ties share the midpoint), in [0, 1]. */
@@ -55,7 +74,9 @@ export function percentile(value: number, values: number[]) {
     return (below + (equal - 1) / 2) / (values.length - 1);
 }
 
-/** Each judged share's score: the mean percentile over the signals it has, within platform × family. */
+const finite = (value: number | null | undefined): value is number => value !== null && value !== undefined && Number.isFinite(value);
+
+/** Each judged share's score: the mean percentile over the signals it has, within platform × family; half its job's when it has one. */
 export function scoreShares(shares: ScoredShare[]): Array<ScoredShare & {score: number}> {
     const judged = shares.filter((share) => share.ageHours >= MIN_AGE_HOURS);
     const groups = new Map<string, ScoredShare[]>();
@@ -69,12 +90,25 @@ export function scoreShares(shares: ScoredShare[]): Array<ScoredShare & {score: 
             const parts: number[] = [];
             for (const signal of signals(share)) {
                 const value = share.metrics[signal];
-                if (value === null || value === undefined || !Number.isFinite(value)) continue;
-                const pool = group.map((other) => other.metrics[signal]).filter((other): other is number => other !== null && other !== undefined && Number.isFinite(other));
+                if (!finite(value)) continue;
+                const pool = group.map((other) => other.metrics[signal]).filter(finite);
                 if (pool.length < 3) continue;
                 parts.push(percentile(value, pool));
             }
-            if (parts.length) scored.push({...share, score: parts.reduce((sum, part) => sum + part, 0) / parts.length});
+            if (!parts.length) continue;
+            const reach = parts.reduce((sum, part) => sum + part, 0) / parts.length;
+            // The job's own numbers, ranked against every post in the group (not only same-job ones).
+            const intent = share.experiment?.intent;
+            const job: number[] = [];
+            if (intent) {
+                jobValues(intent, share.metrics).forEach((value, slot) => {
+                    if (!finite(value)) return;
+                    const pool = group.map((other) => jobValues(intent, other.metrics)[slot]).filter(finite);
+                    if (pool.length >= 3) job.push(percentile(value, pool));
+                });
+            }
+            const score = job.length ? (reach + job.reduce((sum, part) => sum + part, 0) / job.length) / 2 : reach;
+            scored.push({...share, score});
         }
     }
     return scored;
@@ -168,17 +202,54 @@ export function chanceBest(stats: ArmStats[], draws = 400, random: Random = Math
 
 /** Kinds that share what they learn about a dimension: a hook style that works in a battle informs an editorial too. */
 export function learningKinds(kind: ExperimentKind, dimension: Dimension): readonly ExperimentKind[] {
-    if (dimension === "hookStyle") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature"];
+    if (dimension === "hookStyle" || dimension === "intent") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature"];
     if (dimension === "ending" || dimension === "opener") return ["editorial", "battle", "creature"];
     return [kind];
 }
 
-/** The arms the next item of `kind` uses, one per dimension it tests. */
-export function chooseExperiment(kind: ExperimentKind, items: ItemScore[], random: Random = Math.random): Experiment {
+/** The arms the next item of `kind` uses, one per dimension it tests; `allowed` narrows a dimension (the intents a page fits). */
+export function chooseExperiment(kind: ExperimentKind, items: ItemScore[], random: Random = Math.random, allowed: Partial<Record<Dimension, readonly string[]>> = {}): Experiment {
     const experiment: Experiment = {version: EXPERIMENT_VERSION};
     for (const dimension of KIND_DIMENSIONS[kind]) {
-        const arm = pickArm(armStats(items, dimension, learningKinds(kind, dimension)), random);
-        (experiment as Record<string, unknown>)[dimension] = arm;
+        const only = allowed[dimension];
+        const stats = armStats(items, dimension, learningKinds(kind, dimension)).filter((entry) => !only?.length || only.includes(entry.arm));
+        if (!stats.length) continue;
+        (experiment as Record<string, unknown>)[dimension] = pickArm(stats, random);
     }
     return experiment;
+}
+
+// ── Page families ────────────────────────────────────────────────────────────
+
+/**
+ * Beta stats per page family (blog, comparison, …) for one item family, from
+ * every judged item's score whether or not it carried an experiment: an
+ * item's score is its mean over the platforms it went to.
+ */
+export function sourceTypeStats(scored: Array<ScoredShare & {score: number}>, family: ScoredShare["family"], types: readonly string[]): ArmStats[] {
+    const byItem = new Map<string, {type: string; scores: number[]}>();
+    for (const share of scored) {
+        if (share.family !== family || !share.sourceType) continue;
+        const entry = byItem.get(share.itemId) ?? {type: share.sourceType, scores: []};
+        entry.scores.push(share.score);
+        byItem.set(share.itemId, entry);
+    }
+    const items = Array.from(byItem.values()).map((entry) => ({type: entry.type, score: entry.scores.reduce((sum, value) => sum + value, 0) / entry.scores.length}));
+    return types.map((type) => {
+        const mine = items.filter((item) => item.type === type);
+        const sum = mine.reduce((total, item) => total + item.score, 0);
+        return {arm: type, items: mine.length, mean: mine.length ? sum / mine.length : null, alpha: 1 + sum, beta: 1 + mine.length - sum};
+    });
+}
+
+/** Every arm in the order Thompson draws pick them (each pick with the same exploration floor). */
+export function rankArms(stats: ArmStats[], random: Random = Math.random, exploration = EXPLORATION): string[] {
+    const left = [...stats];
+    const order: string[] = [];
+    while (left.length) {
+        const arm = pickArm(left, random, exploration);
+        order.push(arm);
+        left.splice(left.findIndex((entry) => entry.arm === arm), 1);
+    }
+    return order;
 }

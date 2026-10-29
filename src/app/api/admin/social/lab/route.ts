@@ -1,6 +1,7 @@
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {listAutomationRuns} from "@/lib/automation-runs";
+import {SOURCE_TYPES} from "@/lib/content-video/plan";
 import {labReport} from "@/lib/social-lab/experiments";
 import {lastMetricsSync, listPostMetrics, runMetricsSync} from "@/lib/social-lab/metrics";
 import {listPosts} from "@/lib/social/store";
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
     try {
         const [report, metrics, posts, lastSync, runs] = await Promise.all([
-            labReport(),
+            labReport(SOURCE_TYPES),
             listPostMetrics(),
             listPosts(600),
             lastMetricsSync(),

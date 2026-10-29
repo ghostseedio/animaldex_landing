@@ -17,14 +17,14 @@ import {Alert, Badge, Button, EmptyState, Section, Skeleton, Table, TD, TH} from
 
 type LabArm = {arm: string; label: string; items: number; mean: number | null; chanceBest: number};
 type LabPayload = {
-    report: {dimensions: Array<{kind: string; dimension: Dimension; arms: LabArm[]}>; judgedItems: number};
+    report: {dimensions: Array<{kind: string; dimension: Dimension; arms: LabArm[]}>; pageTypes: Array<{kind: string; arms: LabArm[]}>; judgedItems: number};
     recent: Array<{id: string; platform: SocialPlatform; kind: string; title: string; url: string | null; createdAt: string; views: number | null; likes: number | null; shares: number | null; hold3s: number | null; completion: number | null; avgViewPct: number | null}>;
     lastSync: string | null;
 };
 
 type ContentItem = SocialContentRow & {slideUrls: string[]; shares: Array<{platform: SocialPlatform; status: string; url: string | null; error: string | null}>};
 
-const DIMENSION_TITLES: Record<Dimension, string> = {hookStyle: "Hook style", length: "Length", ending: "Ending", opener: "Opener", textFormat: "Format"};
+const DIMENSION_TITLES: Record<Dimension, string> = {intent: "Job", hookStyle: "Hook style", length: "Length", ending: "Ending", opener: "Opener", textFormat: "Format"};
 
 async function api<T>(input: string, init?: RequestInit): Promise<T> {
     const response = await fetch(input, {cache: "no-store", ...init});
@@ -46,6 +46,24 @@ function experimentLabels(experiment: Experiment | null) {
         const arm = experiment[dimension];
         return arm ? [`${DIMENSION_TITLES[dimension]}: ${armLabel(dimension, arm)}`] : [];
     });
+}
+
+function ArmCard({title, arms}: {title: string; arms: LabArm[]}) {
+    return (
+        <article className="flex flex-col gap-2 border border-line-300 bg-surface-900 p-4">
+            <p className="text-sm font-bold text-white">{title}</p>
+            <ul className="flex flex-col gap-1.5">
+                {arms.map((arm) => (
+                    <li key={arm.arm} className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs">
+                        <span className="truncate text-ink-200">{arm.label}</span>
+                        <span className="tabular-nums text-ink-400">{arm.items} · {arm.mean === null ? "—" : Math.round(arm.mean * 100)}</span>
+                        <span className="col-span-2 h-1.5 bg-white/[.06]"><span className="block h-full bg-primary-400/80" style={{width: `${Math.round(arm.chanceBest * 100)}%`}} /></span>
+                    </li>
+                ))}
+            </ul>
+            <p className="mt-auto text-[11px] text-ink-500">Bar: chance it is the best option. Numbers: items judged · average score (50 = a typical post).</p>
+        </article>
+    );
 }
 
 function shareTone(status: string): "good" | "bad" | "warn" {
@@ -81,7 +99,7 @@ export function AdminHookLab() {
     return (
         <Section
             title="Hook lab"
-            description="Every new video, carousel and text post tests one option per dimension. Each post is ranked against the same platform's other posts (3-second hold, completion, views), and options that win get picked more often; 15% of picks stay random so new ideas keep getting tried."
+            description="Every new video, carousel and text post tests one option per dimension, including its job: to be shared, saved, commented on or watched to the end. Each post is ranked against the same platform's other posts (3-second hold, completion, views) and, for its job, on shares, saves or comments per view. Options that win, and the page types whose posts score best, get picked more often; 15% of picks stay random so new ideas keep getting tried."
             className="mt-6"
         >
             {error ? <Alert tone="bad" className="mb-3">{error}</Alert> : null}
@@ -95,21 +113,8 @@ export function AdminHookLab() {
                 <div className="grid gap-3 lg:grid-cols-3"><Skeleton className="h-48" /><Skeleton className="h-48" /><Skeleton className="h-48" /></div>
             ) : (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {data.report.dimensions.map((group) => (
-                        <article key={`${group.kind}-${group.dimension}`} className="flex flex-col gap-2 border border-line-300 bg-surface-900 p-4">
-                            <p className="text-sm font-bold text-white">{group.kind} · {DIMENSION_TITLES[group.dimension]}</p>
-                            <ul className="flex flex-col gap-1.5">
-                                {group.arms.map((arm) => (
-                                    <li key={arm.arm} className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs">
-                                        <span className="truncate text-ink-200">{arm.label}</span>
-                                        <span className="tabular-nums text-ink-400">{arm.items} · {arm.mean === null ? "—" : Math.round(arm.mean * 100)}</span>
-                                        <span className="col-span-2 h-1.5 bg-white/[.06]"><span className="block h-full bg-primary-400/80" style={{width: `${Math.round(arm.chanceBest * 100)}%`}} /></span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <p className="mt-auto text-[11px] text-ink-500">Bar: chance it is the best option. Numbers: items judged · average score (50 = a typical post).</p>
-                        </article>
-                    ))}
+                    {(data.report.pageTypes ?? []).map((group) => <ArmCard key={`pages-${group.kind}`} title={`${group.kind} · Page type (picks what gets made next)`} arms={group.arms} />)}
+                    {data.report.dimensions.map((group) => <ArmCard key={`${group.kind}-${group.dimension}`} title={`${group.kind} · ${DIMENSION_TITLES[group.dimension]}`} arms={group.arms} />)}
                 </div>
             )}
             {data?.recent.length ? (

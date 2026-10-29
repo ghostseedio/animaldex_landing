@@ -4,6 +4,8 @@ import {useCallback, useEffect, useState} from "react";
 import {ClapperboardPlay, Eye, EyeClosed, MagicStick3, Refresh, Share, TrashBinMinimalistic} from "solar-icon-set";
 import {SOURCE_TYPES, type SourceType, type TimelineEntry, type VideoPlan} from "@/lib/content-video/plan";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
+import {INTENTS} from "@/lib/social-lab/arms";
+import {jobScore, REACTIONS, type VideoReview} from "@/lib/social-lab/review";
 import type {ContentVideoClip, ContentVideoStatus} from "@/lib/content-video/store";
 import {SOCIAL_PLATFORM_LABELS, type SocialPostRow} from "@/lib/social/types";
 import {Alert, Badge, Button, Card, cn, EmptyState, fieldClass, Section, Skeleton, Spinner} from "@/components/admin/ui";
@@ -215,6 +217,7 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                                         </div>
                                         <a href={`${siteUrl}${sourcePath(video.source_type, video.source_slug)}`} target="_blank" rel="noreferrer" className="line-clamp-3 text-sm font-bold leading-5 text-white hover:text-primary-100">{video.source_title}</a>
                                         {video.plan?.hookText ? <p className="line-clamp-2 text-[11px] text-ink-300">“{video.plan.hookText}”</p> : null}
+                                        {video.plan?.review ? <ReviewBadges review={video.plan.review} /> : null}
                                         <p className="text-[11px] leading-4 tabular-nums text-ink-500">
                                             {[
                                                 video.duration_seconds ? `${Math.round(video.duration_seconds)}s` : null,
@@ -248,6 +251,7 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                                             ))}
                                             <li className="leading-5 text-ink-400"><span className="mr-1.5 bg-white/5 px-1 text-[9px] font-black uppercase">End</span>{video.plan.ctaNarration}</li>
                                         </ol>
+                                        {video.plan.review ? <ReviewDetails review={video.plan.review} /> : null}
                                     </details>
                                 )}
 
@@ -275,5 +279,32 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                 </div>
             )}
         </Section>
+    );
+}
+
+/** The test audience's verdict, at a glance: the job, the 5-year-old test and the job's score. */
+function ReviewBadges({review}: {review: VideoReview}) {
+    return (
+        <div className="flex flex-wrap gap-1" title={`A 5-year-old would say: ${review.fiveYearOld.wouldSay}`}>
+            {review.job ? <Badge className="normal-case tracking-normal">Job: {INTENTS[review.job].label}</Badge> : null}
+            <Badge tone={review.fiveYearOld.passes ? "good" : "bad"} className="normal-case tracking-normal">5-year-old test {review.fiveYearOld.passes ? "passed" : "failed"}</Badge>
+            <Badge tone={review.passes ? "good" : "warn"} className="normal-case tracking-normal">{review.job ? INTENTS[review.job].label.split(" ")[0] : "Best"} {jobScore(review)}/10{review.rewritten ? " · rewritten" : ""}</Badge>
+        </div>
+    );
+}
+
+function ReviewDetails({review}: {review: VideoReview}) {
+    return (
+        <div className="mt-3 flex flex-col gap-1.5 border-t border-line-300 pt-2">
+            <p className="font-bold text-ink-400">Test audience{review.rewritten && review.firstDraft ? ` (first draft: ${review.firstDraft.jobScore}/10, 5-year-old test ${review.firstDraft.fiveYearOld ? "passed" : "failed"})` : ""}</p>
+            <p className="leading-5">A 5-year-old would say: “{review.fiveYearOld.wouldSay}”{review.fiveYearOld.hardWords.length ? <span className="text-amber-200"> · hard words: {review.fiveYearOld.hardWords.join(", ")}</span> : null}</p>
+            <ul className="flex flex-col gap-1">
+                {REACTIONS.map((reaction) => (
+                    <li key={reaction} className={`leading-5 ${reaction === review.job ? "text-white" : "text-ink-400"}`}>
+                        <span className="mr-1.5 tabular-nums">{INTENTS[reaction].label.split(" ")[0]} {review.scores[reaction].score}/10</span>{review.scores[reaction].reason}
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 }

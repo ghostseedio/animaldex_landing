@@ -5,7 +5,7 @@ import {SOURCE_TYPES, type SourceImage, type SourceType, type VideoSource} from 
 import {loadImageBytes} from "@/lib/content-video/source";
 import {uploadToStorage} from "@/lib/content-video/store";
 import {EXPERIMENT_VERSION, type TextFormat} from "@/lib/social-lab/arms";
-import {nextExperiment} from "@/lib/social-lab/experiments";
+import {nextExperiment, rankSourceTypes} from "@/lib/social-lab/experiments";
 import {structuredClaude} from "@/lib/social-content/claude";
 import {buildCarouselUserPrompt, buildTextUserPrompt, CAROUSEL_SYSTEM_PROMPT, carouselJsonSchema, normalizeCarousel, normalizeTextPosts, TEXT_JSON_SCHEMA, TEXT_SYSTEM_PROMPT, textShareCopy} from "@/lib/social-content/plan";
 import {type Picture, pictureFromBytes, renderSlide, type SlideSize} from "@/lib/social-content/render";
@@ -53,17 +53,21 @@ export async function freshArticleNeeds() {
     };
 }
 
-/** Fresh articles first, then random pages from the families a carousel can be made of; never a page that already has one. */
+/**
+ * Fresh articles first, then random pages from the families a carousel can be
+ * made of, the family whose carousels scored best first (the hook lab's draw);
+ * never a page that already has one.
+ */
 async function carouselCandidates(): Promise<Pick[]> {
     const used = await carouselSourceSlugs().catch(() => new Set<string>());
     const fresh: Pick[] = (await freshArticles()).filter((page) => !used.has(`blog:${page.slug}`) && page.imageCount >= MIN_CAROUSEL_IMAGES).map((page) => ({type: "blog", slug: page.slug}));
-    const types = shuffle(Object.keys(TEMPLATES_FOR_SOURCE) as SourceType[]);
+    const types = await rankSourceTypes("carousel", Object.keys(TEMPLATES_FOR_SOURCE)) as SourceType[];
     const picks: Pick[] = [];
     for (const type of types) {
         const pages = shuffle(await listPageCandidates(type)).filter((page) => !used.has(`${type}:${page.slug}`) && page.imageCount >= MIN_CAROUSEL_IMAGES);
         picks.push(...pages.slice(0, 2).map((page) => ({type, slug: page.slug})));
     }
-    return [...fresh.slice(0, 2), ...shuffle(picks)].slice(0, PICKS_PER_RUN);
+    return [...fresh.slice(0, 2), ...picks].slice(0, PICKS_PER_RUN);
 }
 
 async function loadPictures(images: SourceImage[]) {
@@ -93,7 +97,8 @@ export async function generateCarousel(pick?: Pick): Promise<SocialContentRow> {
     }
     if (!source || !chosen) throw new Error("No page with enough photos for a carousel");
     const templates = TEMPLATES_FOR_SOURCE[chosen.type] ?? ["facts"];
-    const experiment = await nextExperiment("carousel");
+    const fresh = Boolean(source.publishedAt) && Date.now() - Date.parse(source.publishedAt!) < FRESH_ARTICLE_MS;
+    const experiment = await nextExperiment("carousel", {sourceType: chosen.type, fresh});
     // Only photos that load are offered: the writer picks from what will render.
     const pictures = await loadPictures(source.images.slice(0, 12));
     const offered = {...source, images: source.images.filter((image) => pictures.has(image.index))};
@@ -109,7 +114,10 @@ export async function generateCarousel(pick?: Pick): Promise<SocialContentRow> {
 
     const id = randomUUID();
     const {slides} = carousel.spec;
-    const pictureFor = (index: number) => slides[index].image !== null ? pictures.get(slides[index].image!) ?? null : null;
+    // A words-only slide sits on the cover's photo, blurred (else any real photo, never a cut-out).
+    const coverPicture = slides[0].image !== null ? pictures.get(slides[0].image) ?? null : null;
+    const backdrop = coverPicture && !coverPicture.cutout ? coverPicture : Array.from(pictures.values()).find((picture) => !picture.cutout) ?? null;
+    const pictureFor = (index: number) => (slides[index].image !== null ? pictures.get(slides[index].image!) : undefined) ?? (slides[index].layout === "text" || slides[index].layout === "cta" ? backdrop : null);
     const renderAll = async (size: Extract<SlideSize, "feed" | "tall">) => {
         const paths: string[] = [];
         for (let index = 0; index < slides.length; index += 1) {

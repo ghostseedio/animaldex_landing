@@ -14,8 +14,10 @@ import {fromFacebook, fromInstagram, fromX, fromYouTube, fromZernioAnalytics, ty
 
 /** Shares older than this stop being re-read: their numbers have settled. */
 const WINDOW_DAYS = 45;
-/** Instagram and Facebook are asked one post at a time; cap the calls per sync. */
+/** Instagram and Facebook are asked one post at a time; cap the calls per platform per sync. */
 const MAX_PER_POST_CALLS = 150;
+/** Facebook stops after this many unreadable posts in a row (they were posted on a previous Page). */
+const FACEBOOK_GIVE_UP_AFTER = 8;
 /** The timer path syncs at most this often. */
 export const SYNC_EVERY_MS = 6 * 3_600_000;
 
@@ -155,9 +157,12 @@ async function syncInstagram(posts: SocialPostRow[], out: Collected, budget: {ca
 async function syncFacebook(posts: SocialPostRow[], out: Collected, budget: {calls: number}) {
     const connection = await getFreshConnection("facebook");
     const token = encodeURIComponent(connection.accessToken);
+    let firstError: string | null = null;
     let done = 0;
+    let failedInARow = 0;
     for (const post of posts) {
-        if (budget.calls <= 0) break;
+        // Newest first: a long run of unreadable posts means the rest went out on a previous Page.
+        if (budget.calls <= 0 || failedInARow >= FACEBOOK_GIVE_UP_AFTER) break;
         budget.calls -= 1;
         const isReel = post.media_kind !== "carousel" && post.media_kind !== "text_post";
         try {
@@ -170,11 +175,13 @@ async function syncFacebook(posts: SocialPostRow[], out: Collected, budget: {cal
                 push(out, post, fromFacebook(insights, fields));
             }
             done += 1;
-        } catch {
-            // Posts on the previous Page are out of this login's reach.
+            failedInARow = 0;
+        } catch (error) {
+            failedInARow += 1;
+            firstError ??= (error instanceof Error ? error.message : String(error)).slice(0, 200);
         }
     }
-    out.notes.facebook = `${done} of ${posts.length} posts readable with the current Page login`;
+    out.notes.facebook = `${done} of ${posts.length} posts readable with the current Page login${firstError ? `; first error: ${firstError}` : ""}`;
 }
 
 async function syncX(posts: SocialPostRow[], out: Collected) {
@@ -201,7 +208,6 @@ export async function syncPostMetrics(): Promise<MetricsSyncResult> {
     const byPlatform = (platform: SocialPlatform) => posts.filter((post) => post.platform === platform);
     const connected = new Set((await listConnectionRows().catch(() => [])).map((row) => row.platform));
     const out: Collected = {rows: [], notes: {}};
-    const budget = {calls: MAX_PER_POST_CALLS};
     const attempt = async (platform: SocialPlatform, run: () => Promise<void>) => {
         try {
             await run();
@@ -216,8 +222,8 @@ export async function syncPostMetrics(): Promise<MetricsSyncResult> {
     if (connected.has("x") && byPlatform("x").length) await attempt("x", () => syncX(byPlatform("x"), out));
     // Newest first, so the per-post call budget goes to the posts still moving.
     const newest = (list: SocialPostRow[]) => [...list].sort((a, b) => b.created_at.localeCompare(a.created_at));
-    if (connected.has("instagram") && byPlatform("instagram").length) await attempt("instagram", () => syncInstagram(newest(byPlatform("instagram")), out, budget));
-    if (connected.has("facebook") && byPlatform("facebook").length) await attempt("facebook", () => syncFacebook(newest(byPlatform("facebook")), out, budget));
+    if (connected.has("instagram") && byPlatform("instagram").length) await attempt("instagram", () => syncInstagram(newest(byPlatform("instagram")), out, {calls: MAX_PER_POST_CALLS}));
+    if (connected.has("facebook") && byPlatform("facebook").length) await attempt("facebook", () => syncFacebook(newest(byPlatform("facebook")), out, {calls: MAX_PER_POST_CALLS}));
     if (out.rows.length) await upsertMetrics(out.rows);
     return {synced: out.rows.length, notes: out.notes};
 }
@@ -245,7 +251,8 @@ export async function runMetricsSync(trigger: "timer" | "admin"): Promise<Metric
 /** The timer's path: syncs in the background when the last reading is older than SYNC_EVERY_MS. */
 export async function maybeSyncPostMetrics() {
     const last = await lastMetricsSync().catch(() => null);
-    if (last && Date.now() - Date.parse(last) < SYNC_EVERY_MS) return false;
+    // Slack, so a reading stamped a minute after one timer tick does not make the next tick miss.
+    if (last && Date.now() - Date.parse(last) < SYNC_EVERY_MS - 15 * 60_000) return false;
     void runMetricsSync("timer").catch((error) => console.error("[social-metrics-sync]", error));
     return true;
 }

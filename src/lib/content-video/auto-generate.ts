@@ -8,10 +8,12 @@ import {getContentVideo, insertContentVideo, listContentVideos, spentTodayUSD, u
 import {isSocialUploadRunning} from "@/lib/social/auto-share";
 import {listPosts} from "@/lib/social/store";
 import {submitIndexNow} from "@/lib/indexnow";
+import {rankSourceTypes} from "@/lib/social-lab/experiments";
 import {videoWatchPath} from "@/lib/video-sitemap";
 
 // Unattended page videos, run by the VM timer (POST /api/cron/video-auto-generate):
-// each run makes one video from a random page family and a random page of it
+// each run makes one video from a page family the hook lab ranks highest (its
+// videos have scored best; some picks stay random) and a random page of it
 // that has no video yet, exactly as "Generate video" in /admin/story-videos.
 // A video takes 5-20 minutes, so a run waits while one is being made (or a
 // social upload is encoding) instead of queuing. A finished auto video is
@@ -93,7 +95,7 @@ async function run(): Promise<AutoGenerateResult> {
     // A page can lack the images a video needs; try the fresh ones, then a few random picks, before giving up.
     for (let attempt = 0; attempt < 5 + fresh.length; attempt += 1) {
         const freshPick = fresh.shift();
-        const pick = freshPick ? {type: "blog" as const, page: freshPick} : pickRandomSource(available);
+        const pick = freshPick ? {type: "blog" as const, page: freshPick} : pickRandomSource(available, Math.random, await rankSourceTypes("video", SOURCE_TYPES));
         if (!pick) return {ok: true, acted: false, summary: "Every page already has a video", detail: {published}};
         const {type, page} = pick;
         available[type] = available[type]!.filter((candidate) => candidate.slug !== page.slug);
@@ -106,7 +108,7 @@ async function run(): Promise<AutoGenerateResult> {
         })) {
             return {ok: true, acted: false, summary: "A video started elsewhere at the same moment", detail: {published}};
         }
-        return {ok: true, acted: true, summary: `Making a ${type} video from “${source.title}”`, ref: row.id, detail: {type, slug: page.slug, published}};
+        return {ok: true, acted: true, summary: `Making a ${type} video from “${source.title}”`, ref: row.id, detail: {type, slug: page.slug, fresh: Boolean(freshPick), published}};
     }
     return {ok: true, acted: false, summary: "No usable page in five random picks; trying again next run", detail: {published}};
 }

@@ -34,6 +34,7 @@ import {alignLine, speakLine, wavPcm} from "@/lib/content-video/tts";
 import {speechSpans, timeLineWords} from "@/lib/content-video/word-timing";
 import {musicTrackPath, pickMusicTrack} from "@/lib/content-video/music";
 import {nextExperiment} from "@/lib/social-lab/experiments";
+import {FRESH_ARTICLE_HOURS} from "@/lib/social-lab/arms";
 import {existsSync} from "node:fs";
 
 // Runs one page video from script to finished file in the background of the
@@ -101,8 +102,10 @@ async function runJob(id: string) {
 
         if (row.status === "scripting" || !row.plan) {
             await save({status: "scripting", progress: "Writing the script and shot list", error: null});
-            // The hook lab picks this video's hook style, length / opener and ending from what has worked.
-            const experiment = await nextExperiment(source.format === "battle" || source.format === "creature" ? source.format : "editorial");
+            // The hook lab picks this video's job (share, save, comment, stay; one the page fits),
+            // hook style, length / opener and ending from what has worked.
+            const fresh = Boolean(source.publishedAt) && Date.now() - Date.parse(source.publishedAt!) < FRESH_ARTICLE_HOURS * 3_600_000;
+            const experiment = await nextExperiment(source.format === "battle" || source.format === "creature" ? source.format : "editorial", {sourceType: source.type, fresh});
             const {plan, provider, failures} = await generateVideoPlan(source, experiment);
             if (failures.length) console.warn(`[content-video] ${id} plan fallbacks: ${failures.join("; ")}`);
             await save({plan, llm_provider: provider, status: "generating", progress: "Script ready"});

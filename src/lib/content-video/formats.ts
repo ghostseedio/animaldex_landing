@@ -270,7 +270,7 @@ ${HOOK_RULES}
 - creature_name: the animal's name from the page.
 - keyframe_prompt: a photoreal, documentary-photo description of the creature as the page describes it — anatomy that clearly blends both parents (which parts come from which), colour, texture, scale — standing or moving in its natural habitat in natural light. One creature, full body visible, believable as a real animal. Vertical 9:16. No text.
 - motion_prompt: how it moves for 10 seconds — its gait, how the blended body parts work, breathing, the environment reacting; a slow tracking documentary camera.
-- narration: the documentary voiceover over the clip, 18–30 words, present tense, vivid and specific to the page.
+- narration: the documentary voiceover over the clip, 18–30 words, present tense, vivid and specific to the page, in words a 5-year-old knows.
 - cta_narration: one line, e.g. "Would you want to meet one? Tell me below."; cta_text 2–5 words.
 - ${MUSIC_RULES} Reveals are usually wonder, mystery or epic.
 
