@@ -2,6 +2,7 @@ import type {Metadata} from "next";
 import {ProfilePageBody} from "@/app/[locale]/(composited)/u/[handle]/profile-page-body";
 import ShareReferralCapture from "@/components/store/share-referral-capture";
 import {getPublicProfileCard, normalizePublicHandle} from "@/data/public-profiles";
+import {profileOgImagePath} from "@/lib/og/profile-og-card";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,13 @@ export async function generateMetadata({params}: PublicProfilePageProps): Promis
     const url = getAbsoluteUrl(params.locale, pathname);
     const title = `${profile.displayName} (@${profile.username})`;
     const description = `${profile.displayName}'s public AnimalDex card: ${profile.captureCount} captures, ${profile.speciesCount} species, and a collector score of ${profile.collectorScore}.`;
+    // The branded card (name, handle, their best animals) rather than the bare avatar.
+    const image = {
+        url: profileOgImagePath(profile.username, profile.captureCount),
+        width: 1200,
+        height: 630,
+        alt: `${profile.displayName}'s AnimalDex profile`
+    };
 
     return {
         title,
@@ -44,13 +52,13 @@ export async function generateMetadata({params}: PublicProfilePageProps): Promis
             title,
             description,
             siteName: "AnimalDex",
-            images: profile.avatarUrl ? [{url: profile.avatarUrl, alt: `${profile.displayName}'s AnimalDex profile`}]: undefined
+            images: [image]
         },
         twitter: {
-            card: profile.avatarUrl ? "summary" : "summary_large_image",
+            card: "summary_large_image",
             title,
             description,
-            images: profile.avatarUrl ? [profile.avatarUrl] : undefined
+            images: [{url: image.url, alt: image.alt}]
         }
     };
 }

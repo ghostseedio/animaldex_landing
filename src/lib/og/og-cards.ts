@@ -3,6 +3,7 @@ import "server-only";
 import {getAnimalHybrid} from "@/data/animal-hybrids";
 import {getFusableSpecies, getPublishedAnimalFusion} from "@/data/animal-fusions";
 import {getCollectorPage} from "@/data/collector-pages";
+import {getPublicProfileCard} from "@/data/public-profiles";
 import {getSpeciesPageData} from "@/data/database-species-pages";
 import {
     getPokemonAnimalEntriesByGeneration,
@@ -19,6 +20,7 @@ import {
 import {getUseCase} from "@/data/use-cases";
 import {getSupportArticleBySlugs} from "@/lib/support-articles";
 import type {OgCardSpec, OgTile} from "@/lib/og/og-card";
+import {profileOgAnimals, profileOgCard} from "@/lib/og/profile-og-card";
 import {STATIC_OG_CARDS} from "@/lib/og/static-og-cards";
 
 /** Animals most people recognise at a glance, preferred when a card picks from a long list. */
@@ -159,6 +161,20 @@ function collectorCard(slug: string): OgCardSpec | null {
     return {...config, title: config.title || page.heroTitle.split(/\s[—-]\s/)[0]};
 }
 
+/** A collector's public profile: name, handle and their best animals that have artwork. */
+async function profileCard(handle: string): Promise<OgCardSpec | null> {
+    const profile = await getPublicProfileCard(handle);
+    if (!profile) return null;
+    const animals = profileOgAnimals(profile.topCaptures);
+    const slugs = await withArtwork(animals.map((animal) => animal.slug), 3);
+    // Under the species' artwork, the species' name: a capture may only be called "Bird".
+    const named = await Promise.all(slugs.map(async (slug) => {
+        const entry = await getSpeciesPageData(slug).catch(() => null);
+        return {slug, name: entry?.name ?? animals.find((animal) => animal.slug === slug)?.name ?? titleCase(slug)};
+    }));
+    return profileOgCard(profile, named);
+}
+
 /**
  * Turns an `/api/og/...` path into the card it should draw. Every key is
  * resolved from site data, so the endpoint can't be made to render arbitrary text.
@@ -182,6 +198,8 @@ export async function resolveOgCard(segments: string[]): Promise<OgCardSpec | nu
             return rest.length === 1 ? landingUseCaseCard(rest[0]) : null;
         case "collector":
             return rest.length === 1 ? collectorCard(rest[0]) : null;
+        case "profile":
+            return rest.length === 1 ? profileCard(rest[0]) : null;
         case "page":
             return STATIC_OG_CARDS[rest.join("/")] ?? null;
         default:
