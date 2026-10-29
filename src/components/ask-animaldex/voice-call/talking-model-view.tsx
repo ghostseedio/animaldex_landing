@@ -13,11 +13,29 @@
 
 import {useEffect, useRef, useState} from "react";
 import type {TalkingModelAsset} from "@/lib/talking-models/catalog";
-import type {TalkingStage} from "@/components/ask-animaldex/voice-call/talking-model-renderer";
+import type {TalkingStage, TalkingStageOptions} from "@/components/ask-animaldex/voice-call/talking-model-renderer";
 
 type Ring = {id: number; x: number; y: number; leaving: boolean};
 
 const DOUBLE_TAP_MS = 280;
+
+/**
+ * Development only: `?callAo=high|low|off` sets the ambient occlusion's
+ * quality, `?callProfile=1` offers `window.__talkingBench` (the passes'
+ * GPU time), and `?callHold=1` holds the animal at that second of its idle
+ * (the iOS preview tool's stills are at 1 s), for headless renders and
+ * timings.
+ */
+function developmentStageOptions(): Pick<TalkingStageOptions, "ambientOcclusion" | "profile" | "holdAt"> {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return {};
+    const query = new URLSearchParams(window.location.search);
+    const quality = query.get("callAo");
+    return {
+        ...(quality === "high" || quality === "low" || quality === "off" ? {ambientOcclusion: quality} : {}),
+        ...(query.get("callProfile") === "1" ? {profile: true} : {}),
+        ...(Number.isFinite(Number.parseFloat(query.get("callHold") ?? "")) ? {holdAt: Number.parseFloat(query.get("callHold") ?? "")} : {})
+    };
+}
 
 export default function TalkingModelView({
     asset,
@@ -55,7 +73,10 @@ export default function TalkingModelView({
                 const loaded = await renderer.loadTalkingModel(asset, abort.signal);
                 const container = containerRef.current;
                 if (cancelled || !container) return;
-                const stage = await renderer.createTalkingStage(container, loaded, {decibels: () => decibelsRef.current()});
+                const stage = await renderer.createTalkingStage(container, loaded, {
+                    decibels: () => decibelsRef.current(),
+                    ...developmentStageOptions()
+                });
                 if (cancelled) {
                     stage.dispose();
                     return;

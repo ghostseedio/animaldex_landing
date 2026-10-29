@@ -9,8 +9,10 @@
  * behaviour director's idle behaviours, and the body's own motion (swim,
  * flap, pulse, sway, a tail) as a vertex deformation on every layer of the
  * body. Studio light with a ground bounce, a soft shadow on an invisible
- * floor, and the same camera framing. Fingers turn it like a ball about its
- * middle (`AnimalGrip`), two twist and pinch, a double tap brings it home.
+ * floor, and the same camera framing, with the camera's vignette and, on an
+ * animal without fur, its ambient occlusion (`talking-model-effects.ts`).
+ * Fingers turn it like a ball about its middle (`AnimalGrip`), two twist and
+ * pinch, a double tap brings it home.
  *
  * The GLB (`export_glb.py`, format g1) holds four nodes — body, body_inner,
  * jaw, jaw_inner — in the model's own space (y up, head toward +z, 1 long),
@@ -35,6 +37,7 @@ import {
     Mesh,
     MeshBasicMaterial,
     MeshDepthMaterial,
+    MeshNormalMaterial,
     MeshPhysicalMaterial,
     MeshStandardMaterial,
     Object3D,
@@ -55,7 +58,8 @@ import {
     TextureLoader,
     Vector3,
     WebGLRenderer,
-    Box3
+    Box3,
+    Vector2
 } from "three";
 import {
     BehaviourDirector,
@@ -66,6 +70,21 @@ import {
 } from "@/lib/talking-models/behaviour";
 import {ballPoint, eyeOpenness, FIELD_OF_VIEW, MouthEnvelope, remainder, TalkingFraming, TalkingOrbit} from "@/lib/talking-models/model-math";
 import type {TalkingModelAsset, TalkingRig} from "@/lib/talking-models/catalog";
+import {
+    AMBIENT_OCCLUSION_SAMPLES,
+    AmbientOcclusionGovernor,
+    drawsAmbientOcclusion,
+    type AmbientOcclusionQuality
+} from "@/lib/talking-models/effects";
+import {
+    deviceAmbientOcclusionQuality,
+    SCREEN_OCCLUSION_DECLARATIONS,
+    SCREEN_OCCLUSION_FRAGMENT,
+    ScreenSpaceOcclusion,
+    VIGNETTE_DECLARATIONS,
+    VIGNETTE_FRAGMENT,
+    vignetteUniforms
+} from "@/components/ask-animaldex/voice-call/talking-model-effects";
 
 const FUR_SHELLS = 12;
 /** No single pointer event turns it more than a little (radians). */
@@ -204,8 +223,9 @@ function studioEnvironment(): CanvasTexture {
 
 /**
  * A soft dark patch where the animal touches the ground, from the skin's own
- * lowest points seen from above, blurred: SceneKit's ambient occlusion grounds
- * the paws on iOS, which this stands in for.
+ * lowest points seen from above, blurred: the paws as grounded as SceneKit's
+ * soft shadow leaves them in the app's renders (its ambient occlusion never
+ * reaches the shadow-only floor).
  */
 function contactShadow(body: BufferGeometry, footHeight: number): {mesh: Mesh; dispose: () => void} | null {
     const position = body.getAttribute("position");
@@ -351,8 +371,10 @@ const MOTION_BODY = `
 /**
  * Adds the fur shell (out along the normal, drooping, strands kept where the
  * noise reaches this layer, darker at the roots) and the body's motion, which
- * runs after it, as on iOS. Programs are shared between materials with the
- * same defines: the hook's source is the same for every one.
+ * runs after it, as on iOS; the camera's vignette on the colour, and the
+ * screen's ambient occlusion on the environment light. Programs are shared
+ * between materials with the same defines: the hook's source is the same for
+ * every one, so all of it is behind defines.
  */
 function layerHook(uniforms: LayerUniforms) {
     return (shader: {uniforms: LayerUniforms; vertexShader: string; fragmentShader: string}) => {
@@ -379,6 +401,12 @@ ${MOTION_BODY}
 #ifdef USE_FUR
 uniform sampler2D furNoise;
 uniform float furLayer;
+#endif
+#ifdef USE_VIGNETTE
+${VIGNETTE_DECLARATIONS}
+#endif
+#ifdef USE_SCREEN_AO
+${SCREEN_OCCLUSION_DECLARATIONS}
 #endif`)
             .replace("#include <map_fragment>", `#include <map_fragment>
 #ifdef USE_FUR
@@ -389,13 +417,33 @@ diffuseColor.rgb *= mix(0.8, 1.06, furLayer);
 #ifdef USE_FUR
 reflectedLight.indirectDiffuse *= mix(0.7, 1.0, furLayer);
 reflectedLight.indirectSpecular *= mix(0.7, 1.0, furLayer);
+#endif
+#ifdef USE_SCREEN_AO
+${SCREEN_OCCLUSION_FRAGMENT}
+#endif`)
+            .replace("#include <opaque_fragment>", `#include <opaque_fragment>
+#ifdef USE_VIGNETTE
+${VIGNETTE_FRAGMENT}
 #endif`);
     };
 }
 
-function shade<T extends Material>(material: T, options: {fur?: LayerUniforms; motion?: LayerUniforms | null}): T {
-    const uniforms: LayerUniforms = {...(options.fur ?? {}), ...(options.motion ?? {})};
-    material.defines = {...(material.defines ?? {}), ...(options.fur ? {USE_FUR: ""} : {}), ...(options.motion ? {USE_MOTION: ""} : {})};
+function shade<T extends Material>(material: T, options: {
+    fur?: LayerUniforms;
+    motion?: LayerUniforms | null;
+    /** The camera's vignette (the colour materials). */
+    vignette?: LayerUniforms | null;
+    /** The screen's ambient occlusion on the environment light. */
+    occlusion?: LayerUniforms | null;
+}): T {
+    const uniforms: LayerUniforms = {...(options.fur ?? {}), ...(options.motion ?? {}), ...(options.vignette ?? {}), ...(options.occlusion ?? {})};
+    material.defines = {
+        ...(material.defines ?? {}),
+        ...(options.fur ? {USE_FUR: ""} : {}),
+        ...(options.motion ? {USE_MOTION: ""} : {}),
+        ...(options.vignette ? {USE_VIGNETTE: ""} : {}),
+        ...(options.occlusion ? {USE_SCREEN_AO: ""} : {})
+    };
     if (Object.keys(uniforms).length > 0) material.onBeforeCompile = layerHook(uniforms) as Material["onBeforeCompile"];
     return material;
 }
@@ -475,7 +523,22 @@ function quaternionAngle(q: Quaternion): number {
 export type TalkingStageOptions = {
     /** The voice's level now (dBFS), read every frame. */
     decibels: () => number;
+    /**
+     * The ambient occlusion's quality; by default this device's
+     * (`deviceAmbientOcclusionQuality`), turned down if frames run slow. Only
+     * an animal without fur draws it at all, as on iOS.
+     */
+    ambientOcclusion?: AmbientOcclusionQuality;
+    /**
+     * Development: `window.__talkingBench(count)` draws the occlusion (each
+     * quality) and the scene `count` times back to back, waits for the GPU
+     * once, and gives the milliseconds each took.
+     */
+    profile?: boolean;
+    /** Development: the animal held at this moment of its idle (seconds), as the iOS preview tool's stills are, for comparing renders. */
+    holdAt?: number;
 };
+
 
 export type TalkingStage = {
     /** Back to how it started: upright, facing as it did, the usual distance. */
@@ -505,10 +568,12 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = SRGBColorSpace;
-    // SceneKit's HDR camera at its default white point is close to linear:
-    // matched by eye against the iOS preview tool's renders.
+    // SceneKit's HDR camera at its default white point and exposure is close
+    // to linear. With its vignette drawn too, exposure 1 matches the iOS
+    // preview tool's renders across the frame (mean brightness within 1–4%
+    // on the fox, koala and cane toad); 0.85 had stood in for the vignette.
     renderer.toneMapping = LinearToneMapping;
-    renderer.toneMappingExposure = 0.85;
+    renderer.toneMappingExposure = 1;
     renderer.shadowMap.enabled = true;
     // Variance shadows: blurred wide and smooth, as SceneKit's deferred soft shadow is.
     renderer.shadowMap.type = VSMShadowMap;
@@ -547,14 +612,35 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
     const furLength = Number(rig.fur_length ?? 0) || 0;
     const disposables: Array<{dispose: () => void}> = [noise, environment, environmentSource, pmrem];
 
+    // The camera's vignette on everything the animal is made of; the
+    // occlusion only where its skin is seen (no fur over it), as on iOS.
+    const vignette: LayerUniforms = vignetteUniforms();
+    const occludes = drawsAmbientOcclusion(furLength);
+    const occlusionPass = occludes ? new ScreenSpaceOcclusion(renderer) : null;
+    if (occlusionPass) disposables.push(occlusionPass);
+    const occlusion: LayerUniforms | null = occlusionPass ? occlusionPass.uniforms : null;
+    const governor = new AmbientOcclusionGovernor(occludes ? options.ambientOcclusion ?? deviceAmbientOcclusionQuality() : "off");
+    occlusionPass?.setEnabled(governor.quality !== "off");
+    /** Each occluder with the material that draws its normals (and depth) for the occlusion pass. */
+    const occluders: Array<{mesh: Mesh; normals: Material}> = [];
+    const occluder = (mesh: Mesh, moves: LayerUniforms | null) => {
+        if (!occlusionPass) return;
+        occluders.push({mesh, normals: shade(new MeshNormalMaterial(), {motion: moves})});
+    };
+
     const mouth = () => new MeshStandardMaterial({color: srgb(0.10, 0.02, 0.025), roughness: 0.6, metalness: 0});
 
     /** The skin and its fur shells over a part. */
     const skinned = (geometry: BufferGeometry, moves: boolean) => {
         const motionUniformsForPart = moves ? motionShared : null;
-        const material = shade(new MeshStandardMaterial({map: skin, color: srgb(0.9, 0.9, 0.9), roughness: 0.9, metalness: 0}), {motion: motionUniformsForPart});
+        const material = shade(new MeshStandardMaterial({map: skin, color: srgb(0.9, 0.9, 0.9), roughness: 0.9, metalness: 0}), {
+            motion: motionUniformsForPart,
+            vignette,
+            occlusion
+        });
         const mesh = new Mesh(geometry, material);
         mesh.castShadow = true;
+        occluder(mesh, motionUniformsForPart);
         if (motionUniformsForPart) {
             mesh.customDepthMaterial = shade(new MeshDepthMaterial({depthPacking: RGBADepthPacking}), {motion: motionUniformsForPart});
         }
@@ -568,7 +654,8 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
                         furLayer: {value: fraction},
                         furNoise: {value: noise}
                     },
-                    motion: motionUniformsForPart
+                    motion: motionUniformsForPart,
+                    vignette
                 });
                 const shell = new Mesh(geometry, fur);
                 shell.renderOrder = layer;
@@ -577,7 +664,11 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
         }
         return mesh;
     };
-    const inner = (geometry: BufferGeometry, moves: boolean) => new Mesh(geometry, shade(mouth(), {motion: moves ? motionShared : null}));
+    const inner = (geometry: BufferGeometry, moves: boolean) => {
+        const mesh = new Mesh(geometry, shade(mouth(), {motion: moves ? motionShared : null, vignette, occlusion}));
+        occluder(mesh, moves ? motionShared : null);
+        return mesh;
+    };
 
     const body = skinned(parts.body, true);
     root.add(body, inner(parts.body_inner, true));
@@ -593,7 +684,8 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
     jawInner.position.copy(h).negate();
     hinge.add(jaw, jawInner);
 
-    const cavity = new Mesh(new SphereGeometry(1, 32, 16), mouth());
+    const cavity = new Mesh(new SphereGeometry(1, 32, 16), shade(mouth(), {vignette, occlusion}));
+    occluder(cavity, null);
     cavity.position.fromArray(rig.cavity_center);
     const cavityRadii = new Vector3().fromArray(rig.cavity_radii);
     root.add(cavity);
@@ -614,13 +706,13 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
         return false;
     };
     const eyeRadius = Number(rig.eye_radius ?? 0.008) || 0.008;
-    const eyeMaterial = new MeshPhysicalMaterial({
+    const eyeMaterial = shade(new MeshPhysicalMaterial({
         color: srgb(0.09, 0.045, 0.015),
         roughness: 0.06,
         metalness: 0,
         clearcoat: 1,
         clearcoatRoughness: 0.02
-    });
+    }), {vignette, occlusion});
     const eyeGeometry = new SphereGeometry(eyeRadius, 24, 16);
     const eyes: Mesh[] = [];
     for (const position of rig.eyes ?? []) {
@@ -631,13 +723,15 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
         eye.position.copy(at);
         root.add(eye);
         eyes.push(eye);
+        occluder(eye, null);
     }
     let nose: Mesh | null = null;
     const noseScale = new Vector3(1, 1, 1);
     if (rig.nose?.length === 3 && rig.nose_radii?.length === 3) {
         const at = new Vector3().fromArray(rig.nose);
         if (onSkin(at, Math.max(...rig.nose_radii) * 2 + 0.012)) {
-            nose = new Mesh(new SphereGeometry(1, 32, 16), new MeshStandardMaterial({color: srgb(0.035, 0.035, 0.035), roughness: 0.28, metalness: 0}));
+            nose = new Mesh(new SphereGeometry(1, 32, 16), shade(new MeshStandardMaterial({color: srgb(0.035, 0.035, 0.035), roughness: 0.28, metalness: 0}), {vignette, occlusion}));
+            occluder(nose, null);
             nose.position.copy(at);
             noseScale.fromArray(rig.nose_radii);
             nose.scale.copy(noseScale);
@@ -709,6 +803,8 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
     floor.position.y = footHeight;
     floor.receiveShadow = true;
     scene.add(floor);
+    // The ground occludes the paws and the belly, as SceneKit's floor does; it takes no occlusion itself.
+    occluder(floor, null);
     // Under the paws, moving with the animal.
     const contact = contactShadow(parts.body, footHeight);
     if (contact) {
@@ -885,9 +981,66 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        const buffer = renderer.getDrawingBufferSize(new Vector2());
+        (vignette.vignetteSize.value as Vector2).copy(buffer);
+        occlusionPass?.setSize(buffer.x, buffer.y);
     };
 
     // MARK: Frames
+    // The shadow map is drawn once a frame, for the frame itself, not again for the occlusion's pass.
+    renderer.shadowMap.autoUpdate = false;
+    const hiddenForOcclusion: Object3D[] = [];
+    if (occlusionPass) {
+        const drawn = new Set<Object3D>(occluders.map((entry) => entry.mesh));
+        scene.traverse((node) => {
+            if ((node as Mesh).isMesh && !drawn.has(node)) hiddenForOcclusion.push(node);
+        });
+    }
+    /** The occluders' normals and depth, into the occlusion pass's target. */
+    const drawOccluders = () => {
+        const shown = occluders.map((entry) => entry.mesh.material as Material);
+        for (const entry of occluders) entry.mesh.material = entry.normals;
+        const visible = hiddenForOcclusion.map((node) => node.visible);
+        for (const node of hiddenForOcclusion) node.visible = false;
+        renderer.render(scene, camera);
+        occluders.forEach((entry, index) => {
+            entry.mesh.material = shown[index];
+        });
+        hiddenForOcclusion.forEach((node, index) => {
+            node.visible = visible[index];
+        });
+    };
+    if (options.profile && process.env.NODE_ENV !== "production") {
+        const context = renderer.getContext();
+        const pixel = new Uint8Array(4);
+        // Reading back one pixel waits for everything drawn before it (gl.finish does not, in Chrome).
+        const settle = () => context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, pixel);
+        // Many passes back to back, waited for once: each one's GPU time, without the read-back's.
+        (window as unknown as {__talkingBench?: (count: number) => {occlusion: Record<string, number>; scene: number}}).__talkingBench = (count) => {
+            const time = (draw: () => void) => {
+                settle();
+                const began = performance.now();
+                for (let index = 0; index < count; index++) draw();
+                settle();
+                return (performance.now() - began) / count;
+            };
+            const occlusionTimes: Record<string, number> = {};
+            if (occlusionPass) {
+                const was = occlusionPass.isEnabled;
+                occlusionPass.setEnabled(true);
+                for (const quality of ["high", "low"] as const) {
+                    occlusionTimes[quality] = time(() => occlusionPass.render(camera, AMBIENT_OCCLUSION_SAMPLES[quality], drawOccluders));
+                }
+                occlusionPass.setEnabled(was);
+            }
+            const sceneTime = time(() => {
+                renderer.shadowMap.needsUpdate = true;
+                renderer.render(scene, camera);
+            });
+            return {occlusion: occlusionTimes, scene: sceneTime};
+        };
+    }
+
     let frame = 0;
     let last: number | null = null;
     const started = performance.now() / 1000;
@@ -897,17 +1050,32 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
         const elapsed = last === null ? 0 : now - last;
         last = now;
         voiceOpen = Math.min(Math.max(envelope.update(options.decibels(), elapsed), 0), 1);
-        setIdle(now - started);
+        setIdle(options.holdAt ?? now - started);
         gripState.step(Math.min(elapsed, 0.1));
         gripState.apply(grip);
         orbit.step(Math.min(elapsed, 0.1));
         placeCamera();
+        if (occlusionPass) {
+            const quality = governor.frame(elapsed * 1000);
+            if ((quality !== "off") !== occlusionPass.isEnabled) occlusionPass.setEnabled(quality !== "off");
+            if (quality !== "off") occlusionPass.render(camera, AMBIENT_OCCLUSION_SAMPLES[quality], drawOccluders);
+        }
+        renderer.shadowMap.needsUpdate = true;
         renderer.render(scene, camera);
     };
 
     // Shaders compiled before the first frame (off the main thread where the
     // browser can), so the fade-in never stutters: on iOS the fur took ~1.5 s.
     await renderer.compileAsync(scene, camera).catch(() => renderer.compile(scene, camera));
+    if (occlusionPass && occluders.length > 0) {
+        // The occlusion pass's own materials, too.
+        const shown = occluders.map((entry) => entry.mesh.material as Material);
+        for (const entry of occluders) entry.mesh.material = entry.normals;
+        await renderer.compileAsync(scene, camera).catch(() => renderer.compile(scene, camera));
+        occluders.forEach((entry, index) => {
+            entry.mesh.material = shown[index];
+        });
+    }
     render();
 
     return {
@@ -926,6 +1094,7 @@ export async function createTalkingStage(container: HTMLElement, loaded: LoadedT
                 for (const material of materials) material.dispose();
                 mesh.customDepthMaterial?.dispose();
             });
+            for (const entry of occluders) entry.normals.dispose();
             for (const part of PART_NAMES) parts[part].dispose();
             eyeGeometry.dispose();
             cavity.geometry.dispose();
