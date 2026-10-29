@@ -15,9 +15,9 @@
  *     reply is cancelled (what it said stays in the chat), and listening goes
  *     on as their turn. Talking over it needs echo cancellation on what is
  *     heard: the browser's recognizer where it can be handed the call's
- *     echo-cancelled microphone (newer Chrome), or the server's recognizer on
- *     that same microphone where it hears every turn, counting only words
- *     that are not the animal's own. Without either, a tap interrupts.
+ *     echo-cancelled microphone (newer Chrome); elsewhere, for a signed-in
+ *     reader, the server's recognizer on that same microphone, counting only
+ *     words that are not the animal's own. Without either, a tap interrupts.
  *   - Without the browser's own recognizer (Firefox), every turn is heard by
  *     the server's (`CallServerListener`), with the same pause rules.
  *   - Carrying on before the animal has said anything was a pause, not the
@@ -140,9 +140,13 @@ export class VoiceCallController {
 
     /** What can hear them over the animal: only a recognizer on the echo-cancelled microphone. */
     private talkOverHearing(): CallHearing | null {
-        if (this.browserHearing) return this.browserHearing.cancelsEcho ? this.browserHearing : null;
+        if (this.browserHearing?.cancelsEcho) return this.browserHearing;
+        if (this.serverOverAnimalFailed) return null;
         return this.serverHearing && this.microphone.cancelsEcho ? this.serverHearing : null;
     }
+
+    /** The server's recognizer, there only for talking over the animal, refused: a tap interrupts from now on. */
+    private serverOverAnimalFailed = false;
 
     subscribe = (listener: () => void) => {
         this.subscribers.add(listener);
@@ -306,6 +310,19 @@ export class VoiceCallController {
 
     /** Sends what they said and speaks the animal's answer as it streams in, until it ends, is interrupted, or they talk over it. */
     private async answer(utterance: string) {
+        await this.speakAnswer(utterance);
+        // Answered without being talked over: where the server only heard them
+        // over the animal, the browser's own recognizer takes their turn again,
+        // unless they have already begun it.
+        const next = this.nextHearing;
+        if (this.nextTurn && next && next !== this.hearing && !this.talkedOver && !next.hearsSomeone && !this.cancelled) {
+            this.nextTurn = null;
+            this.nextHearing = null;
+            next.cancelTurn();
+        }
+    }
+
+    private async speakAnswer(utterance: string) {
         this.animalWords = [];
         this.set({phase: "thinking", spokenWords: []});
         this.turn = {firstSound: null, reply: 0};
@@ -428,8 +445,17 @@ export class VoiceCallController {
             this.params.cancelAsk();
             this.set({phase: "listening"});
         });
-        this.nextTurn = turn;
-        // A recognizer that fails here fails the next listen too; it is reported there.
-        turn.catch(() => undefined);
+        if (hearing === this.hearing) {
+            this.nextTurn = turn;
+            // A recognizer that fails here fails the next listen too; it is reported there.
+            turn.catch(() => undefined);
+            return;
+        }
+        // Only here for talking over the animal: if it fails, the browser's own
+        // recognizer still hears their turns, and a tap interrupts.
+        this.nextTurn = turn.catch(() => {
+            this.serverOverAnimalFailed = true;
+            return null;
+        });
     }
 }
