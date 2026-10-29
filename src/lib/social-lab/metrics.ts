@@ -170,8 +170,14 @@ async function syncFacebook(posts: SocialPostRow[], out: Collected, budget: {cal
                 const insights = await readJson(await fetch(`https://graph.facebook.com/v23.0/${post.external_id}/video_insights?metric=fb_reels_total_plays,blue_reels_play_count,post_video_avg_time_watched&access_token=${token}`), "Facebook reel insights");
                 push(out, post, fromFacebook(insights, null));
             } else {
-                const fields = await readJson(await fetch(`https://graph.facebook.com/v23.0/${post.external_id}?fields=reactions.summary(true).limit(0),comments.summary(true).limit(0),shares&access_token=${token}`), "Facebook post");
+                // No comments: that edge needs pages_read_user_content, which the app does not ask for (#10).
+                let fieldsError: unknown = null;
+                const fields = await readJson(await fetch(`https://graph.facebook.com/v23.0/${post.external_id}?fields=reactions.summary(true).limit(0),shares&access_token=${token}`), "Facebook post").catch((error) => {
+                    fieldsError = error;
+                    return null;
+                });
                 const insights = await fetch(`https://graph.facebook.com/v23.0/${post.external_id}/insights?metric=post_impressions_unique&access_token=${token}`).then((response) => response.ok ? response.json() : null).catch(() => null);
+                if (!fields && !insights) throw fieldsError ?? new Error("Facebook post: neither fields nor insights");
                 push(out, post, fromFacebook(insights, fields));
             }
             done += 1;
