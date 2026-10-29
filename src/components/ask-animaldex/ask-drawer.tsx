@@ -1306,6 +1306,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <AskVoiceCallButton
                             threadKey={threadKey}
                             animalName={animalName}
+                            captureId={resolvedSubject.captureId ?? null}
+                            speciesProfileId={context?.speciesProfileId ?? null}
                             names={[hints.animalName, resolvedSubject.name, resolvedSubject.slug]}
                             locale={locale}
                             disabled={isSending}

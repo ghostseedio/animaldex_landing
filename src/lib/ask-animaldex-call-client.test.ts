@@ -7,6 +7,7 @@ import test from "node:test";
 import {
     CALL_END_OF_TURN_SILENCE_MS,
     CALL_MID_SENTENCE_SILENCE_MS,
+    callClipSource,
     callClock,
     callEventFrom,
     callPauseAfter,
@@ -111,4 +112,24 @@ test("a slower animal takes longer to say the same thing, at the same pitch", ()
     const same = new StreamingTimeStretch(1);
     const input = sine(220, 0.1);
     assert.equal(same.push(input), input);
+});
+
+test("a turn whose voice did not stream is spoken as the speech route's clip (iOS speakWhole)", () => {
+    assert.deepEqual(callClipSource(true, {ok: true, url: "https://example.supabase.co/storage/v1/object/sign/animal-chat-speech/a.mp3?token=t", words: null}), {
+        kind: "url",
+        url: "https://example.supabase.co/storage/v1/object/sign/animal-chat-speech/a.mp3?token=t"
+    });
+    const inline = callClipSource(true, {ok: true, audio: Buffer.from([1, 2, 3, 250]).toString("base64")});
+    assert.equal(inline.kind, "inline");
+    assert.deepEqual(inline.kind === "inline" ? Array.from(inline.bytes) : null, [1, 2, 3, 250]);
+});
+
+test("today's spoken replies used up ends the voice; any failure leaves the answer as text", () => {
+    assert.deepEqual(callClipSource(true, {ok: false, reason: "speech_limit_reached", allowance: {remaining: 0}}), {kind: "limit"});
+    // Neither audio nor a URL is the voice used up, as on iOS.
+    assert.deepEqual(callClipSource(true, {ok: true}), {kind: "limit"});
+    assert.deepEqual(callClipSource(false, {ok: false, error: "sign_in_required"}), {kind: "none"});
+    assert.deepEqual(callClipSource(false, {ok: false, error: "speech_failed"}), {kind: "none"});
+    assert.deepEqual(callClipSource(true, null), {kind: "none"});
+    assert.deepEqual(callClipSource(true, {ok: true, url: "javascript:alert(1)"}), {kind: "none"});
 });

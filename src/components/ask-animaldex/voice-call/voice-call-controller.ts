@@ -17,6 +17,9 @@
  *     recognizer hears; without it, only a tap interrupts.
  *   - Carrying on before the animal has said anything was a pause, not the
  *     end: its reply is dropped and the rest joins what was said before.
+ *   - A voice that did not stream (none offered, or it failed) is the whole
+ *     reply's clip instead, from the chat's own spoken replies, as iOS's
+ *     `speakWhole`; today's spoken replies used up ends the voice.
  */
 
 import {CALL_TALKING_OVER_WORDS, callEventFrom, heardWordCount, type CallSpokenWord, type CallVoiceInfo} from "@/lib/ask-animaldex/call-events";
@@ -24,6 +27,7 @@ import {askReplyWordsOf} from "@/lib/ask-animaldex/spoken-words";
 import {CallMicrophone, CallVoicePlayer} from "@/components/ask-animaldex/voice-call/call-audio";
 import {CallListener} from "@/components/ask-animaldex/voice-call/call-listener";
 import type {CallCopy} from "@/lib/ask-animaldex/call-copy";
+import type {CallClip} from "@/lib/ask-animaldex/call-events";
 
 export type CallPhase = "starting" | "listening" | "thinking" | "speaking" | "voiceUsedUp" | "failed";
 
@@ -48,6 +52,9 @@ export type CallState = {
 
 /** Sends what they said as a chat turn; call frames go to `onEvent`; resolves with the answer's text, or null. */
 export type CallAsk = (said: string, onEvent: (frame: Record<string, unknown>) => void) => Promise<string | null>;
+
+/** The whole reply's voice as one clip (the chat's spoken reply), for a turn whose voice did not stream. */
+export type CallSpeak = (reply: string, signal: AbortSignal) => Promise<CallClip>;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -78,6 +85,10 @@ export class VoiceCallController {
     private turnHeard = false;
     private turn: CallTimings = {firstSound: null, reply: 0};
     private talkedOver = false;
+    /** The answer's text is all here (it stands in the thread whatever its voice does). */
+    private replyDone = false;
+    /** The whole clip being fetched, when the voice did not stream. */
+    private clipRequest: AbortController | null = null;
 
     constructor(private readonly params: {
         context: AudioContext;
@@ -89,6 +100,8 @@ export class VoiceCallController {
         ask: CallAsk;
         /** Stops the turn in flight; what it said so far stays in the thread. */
         cancelAsk: () => void;
+        /** The whole reply's clip, when its voice did not stream; without it the answer stands as text. */
+        speak?: CallSpeak;
         /**
          * Development only (iOS `ANIMALDEX_CALL_SCRIPT`): these are "said"
          * instead of listening, as a headless browser cannot speak; then the
@@ -136,6 +149,7 @@ export class VoiceCallController {
         // A listen in progress gives up (with nothing), so the loop can see it has ended.
         this.listener.cancelTurn();
         this.listener.stop();
+        this.clipRequest?.abort();
         this.voice.stop();
         // Hung up mid-answer: the reply stops (what it said stays in the chat) and so does its voice.
         if (this.state.phase === "thinking" || this.state.phase === "speaking") this.params.cancelAsk();
@@ -256,6 +270,7 @@ export class VoiceCallController {
         this.turnVoice = null;
         this.turnHeard = false;
         this.talkedOver = false;
+        this.replyDone = false;
         const sent = performance.now();
         const asking = this.params.ask(utterance, (frame) => {
             if (this.cancelled || this.talkedOver) return;
@@ -282,6 +297,7 @@ export class VoiceCallController {
         });
         this.listenWhileAnswering();
         const reply = await asking.catch(() => null);
+        this.replyDone = true;
         // They talked over it: it has stopped, and the next listen catches up.
         if (this.talkedOver || this.cancelled) return;
         this.turn = {...this.turn, reply: (performance.now() - sent) / 1000};
@@ -300,8 +316,42 @@ export class VoiceCallController {
         this.voice.stop();
         // Set by the stream's frames, after the checks above narrowed it.
         const voice = this.turnVoice as CallVoiceInfo | null;
-        if (voice?.reason === "speech_limit_reached") this.set({phase: "voiceUsedUp"});
-        // No voice this turn (none for this animal, or the voice failed): the answer stands as text and the call listens on.
+        if (voice?.reason === "speech_limit_reached") {
+            this.set({phase: "voiceUsedUp"});
+            return;
+        }
+        // The voice did not stream (none offered, or it failed): the whole reply's clip, as iOS does.
+        await this.speakWhole(reply, sent);
+    }
+
+    /**
+     * The whole reply in the animal's voice, as one clip (iOS `speakWhole`),
+     * its mouth following it. Still "thinking" while it is fetched; talking
+     * over it or hanging up drops it. Today's spoken replies used up ends the
+     * voice; any other failure leaves the answer as text and the call listens on.
+     */
+    private async speakWhole(reply: string, sent: number) {
+        const speak = this.params.speak;
+        if (!speak) return;
+        const request = new AbortController();
+        this.clipRequest = request;
+        let clip: CallClip;
+        try {
+            clip = await speak(reply, request.signal);
+        } catch {
+            clip = {kind: "none"};
+        } finally {
+            if (this.clipRequest === request) this.clipRequest = null;
+        }
+        if (this.cancelled || this.talkedOver || request.signal.aborted) return;
+        if (clip.kind === "limit") {
+            this.set({phase: "voiceUsedUp"});
+            return;
+        }
+        if (clip.kind !== "audio") return;
+        this.turn = {...this.turn, firstSound: (performance.now() - sent) / 1000};
+        this.set({timings: this.turn, phase: "speaking"});
+        await this.voice.playClip(clip.audio);
     }
 
     /**
@@ -317,8 +367,11 @@ export class VoiceCallController {
             this.set({heard: partial});
             const phase = this.state.phase;
             if (this.talkedOver || heardWordCount(partial) < CALL_TALKING_OVER_WORDS || (phase !== "thinking" && phase !== "speaking")) return;
-            this.carriesOn = phase === "thinking" && !this.turnHeard;
+            // Before the animal said anything, and while its answer was still coming: a pause, not the end.
+            // (An answer already whole stands in the thread, spoken or not.)
+            this.carriesOn = phase === "thinking" && !this.turnHeard && !this.replyDone;
             this.talkedOver = true;
+            this.clipRequest?.abort();
             this.voice.stop();
             this.params.cancelAsk();
             this.set({phase: "listening"});

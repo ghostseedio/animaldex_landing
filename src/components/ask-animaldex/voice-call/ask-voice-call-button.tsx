@@ -9,7 +9,9 @@
  *
  * Each call turn is a turn of this chat: what they said lands in the thread
  * like a typed message and the animal's answer comes back into it, so the
- * conversation carries on in text after the call (iOS `callTurn`).
+ * conversation carries on in text after the call (iOS `callTurn`). A turn
+ * whose voice did not stream is spoken as one clip by the chat's own speech
+ * route, from the reader's spoken replies (iOS `speakAnimalChatReply`).
  */
 
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -20,6 +22,7 @@ import {primeCallAudio} from "@/components/ask-animaldex/voice-call/call-audio";
 import {browserCanCall} from "@/components/ask-animaldex/voice-call/call-listener";
 import {MicIcon} from "@/components/ask-animaldex/voice-call/call-icons";
 import {callCopy} from "@/lib/ask-animaldex/call-copy";
+import {callClipSource, type CallClip} from "@/lib/ask-animaldex/call-events";
 import {
     loadTalkingModelManifest,
     talkingModelAsset,
@@ -34,6 +37,8 @@ type Send = (question: string, options?: {onCallEvent?: (frame: Record<string, u
 export default function AskVoiceCallButton({
     threadKey,
     animalName,
+    captureId,
+    speciesProfileId,
     names,
     locale,
     disabled,
@@ -44,6 +49,9 @@ export default function AskVoiceCallButton({
 }: {
     threadKey: string;
     animalName: string;
+    /** Whose voice a whole clip is in: the card, or the species (as the chat's own voice). */
+    captureId: string | null;
+    speciesProfileId: string | null;
     /** The names its model may be published under, best first (a breed, the species, its slug). */
     names: Array<string | null | undefined>;
     locale: string;
@@ -94,6 +102,29 @@ export default function AskVoiceCallButton({
         return send(said, {onCallEvent: onEvent});
     }, [threadKey, send]);
 
+    /**
+     * The whole reply as one clip, when its voice did not stream: the chat's
+     * speech route (the reader's own spoken replies; none without an account).
+     */
+    const speak = useCallback(async (reply: string, signal: AbortSignal): Promise<CallClip> => {
+        if (!captureId && !speciesProfileId) return {kind: "none"};
+        const response = await fetch("/api/ask/speech", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({text: reply, captureId, speciesProfileId}),
+            signal
+        });
+        const source = callClipSource(response.ok, await response.json().catch(() => null));
+        if (source.kind === "inline") {
+            const audio = new ArrayBuffer(source.bytes.byteLength);
+            new Uint8Array(audio).set(source.bytes);
+            return {kind: "audio", audio};
+        }
+        if (source.kind !== "url") return source;
+        const clip = await fetch(source.url, {signal});
+        return clip.ok ? {kind: "audio", audio: await clip.arrayBuffer()} : {kind: "none"};
+    }, [captureId, speciesProfileId]);
+
     /** The turn in flight stops; what the animal had said stays in the thread. */
     const cancelAsk = useCallback(() => {
         const thread = askSessionStore.messages(threadKey);
@@ -131,6 +162,7 @@ export default function AskVoiceCallButton({
                         locale={locale}
                         ask={ask}
                         cancelAsk={cancelAsk}
+                        speak={speak}
                         onClose={() => setOpen(false)}
                     />,
                     document.body

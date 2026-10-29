@@ -13,7 +13,7 @@
 
 import {useCallback, useEffect, useRef, useState, useSyncExternalStore} from "react";
 import TalkingModelView from "@/components/ask-animaldex/voice-call/talking-model-view";
-import {VoiceCallController, type CallAsk, type CallState} from "@/components/ask-animaldex/voice-call/voice-call-controller";
+import {VoiceCallController, type CallAsk, type CallSpeak, type CallState} from "@/components/ask-animaldex/voice-call/voice-call-controller";
 import {callAudioContext} from "@/components/ask-animaldex/voice-call/call-audio";
 import {CaptionsIcon, ChevronDownIcon, EllipsisIcon, HandIcon, MicIcon, MicSlashIcon, XMarkIcon} from "@/components/ask-animaldex/voice-call/call-icons";
 import {callClock, callSpokenIndex, type CallSpokenWord} from "@/lib/ask-animaldex/call-events";
@@ -53,6 +53,7 @@ export default function VoiceCallScreen({
     locale,
     ask,
     cancelAsk,
+    speak,
     onClose
 }: {
     animalName: string;
@@ -61,6 +62,8 @@ export default function VoiceCallScreen({
     locale: string;
     ask: CallAsk;
     cancelAsk: () => void;
+    /** The whole reply's clip, for a turn whose voice did not stream. */
+    speak?: CallSpeak;
     onClose: () => void;
 }) {
     const copy = callCopy(locale);
@@ -72,6 +75,8 @@ export default function VoiceCallScreen({
     askRef.current = ask;
     const cancelRef = useRef(cancelAsk);
     cancelRef.current = cancelAsk;
+    const speakRef = useRef(speak);
+    speakRef.current = speak;
 
     // One controller per opening (made in the effect, so a remount gets a fresh one).
     useEffect(() => {
@@ -84,6 +89,7 @@ export default function VoiceCallScreen({
             copy: callCopy(locale),
             ask: (said, onEvent) => askRef.current(said, onEvent),
             cancelAsk: () => cancelRef.current(),
+            speak: (reply, signal) => speakRef.current?.(reply, signal) ?? Promise.resolve({kind: "none"}),
             script: developmentCallScript()
         });
         setController(call);

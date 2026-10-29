@@ -10,7 +10,9 @@
  * comes, at the animal's pace (`StreamingTimeStretch`). Each piece's loudness
  * (every 10 ms) is kept against when it plays, so the mouth follows what is
  * actually heard even if the stream falls behind, and the transcript knows
- * which word is being said.
+ * which word is being said. A whole clip (the reply's voice when it did not
+ * stream) is decoded and measured the same way before it plays, as iOS
+ * measures its clip: a player's own meter smooths too much for a mouth.
  */
 
 import {StreamingTimeStretch} from "@/lib/ask-animaldex/call-time-stretch";
@@ -121,6 +123,10 @@ export class CallVoicePlayer {
     static readonly levelStep = 0.01;
 
     private output: GainNode | null = null;
+    /** A whole clip playing: when it started, its loudness every 10 ms, and how to say it is over. */
+    private clip: {source: AudioBufferSourceNode; output: GainNode; start: number; levels: number[]; done: () => void} | null = null;
+    /** Bumped by every stop, so a clip still decoding when the animal was stopped never plays. */
+    private stops = 0;
     private sources = new Set<AudioBufferSourceNode>();
     private pieces: Piece[] = [];
     private stretch: StreamingTimeStretch | null = null;
@@ -209,7 +215,62 @@ export class CallVoicePlayer {
         });
     }
 
+    /**
+     * Plays a whole clip (an encoded file, as the speech route returns it)
+     * and resolves once it has been heard, or was stopped. False when it
+     * could not be decoded or played.
+     */
+    async playClip(encoded: ArrayBuffer): Promise<boolean> {
+        this.stop();
+        const stops = this.stops;
+        let buffer: AudioBuffer;
+        try {
+            buffer = await this.context.decodeAudioData(encoded.slice(0));
+        } catch {
+            return false;
+        }
+        if (stops !== this.stops) return true;
+        void this.context.resume().catch(() => undefined);
+        const samples = buffer.getChannelData(0);
+        const levels = loudness(samples, Math.max(1, Math.round(buffer.sampleRate * CallVoicePlayer.levelStep)));
+        const output = this.context.createGain();
+        output.connect(this.context.destination);
+        const source = this.context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(output);
+        return new Promise<boolean>((resolve) => {
+            const start = this.context.currentTime + 0.03;
+            const done = () => {
+                if (this.clip?.source !== source) return;
+                this.clip = null;
+                source.onended = null;
+                source.disconnect();
+                output.disconnect();
+                resolve(true);
+            };
+            this.clip = {source, output, start, levels, done};
+            source.onended = done;
+            try {
+                source.start(start);
+            } catch {
+                this.clip = null;
+                output.disconnect();
+                resolve(false);
+            }
+        });
+    }
+
     stop() {
+        this.stops += 1;
+        const clip = this.clip;
+        if (clip) {
+            try {
+                clip.source.stop();
+            } catch {
+                // Never started or already over.
+            }
+            clip.done();
+        }
         for (const source of Array.from(this.sources)) {
             source.onended = null;
             try {
@@ -245,6 +306,10 @@ export class CallVoicePlayer {
 
     /** The voice's level now, in dBFS; quiet when nothing plays. */
     decibels(): number {
+        if (this.clip) {
+            const index = Math.floor((this.heardNow() - this.clip.start) / CallVoicePlayer.levelStep);
+            return index >= 0 ? this.clip.levels[index] ?? SILENT : SILENT;
+        }
         if (!this.output) return SILENT;
         const now = this.heardNow();
         const piece = this.pieceAt(now);
@@ -253,7 +318,7 @@ export class CallVoicePlayer {
         return piece.levels[index] ?? SILENT;
     }
 
-    /** How far into the answer's audio is being heard now, in seconds; null when nothing streamed is playing. */
+    /** How far into the answer's audio is being heard now, in seconds; null when nothing streamed is playing (a whole clip has no words timed, as on iOS). */
     heardSeconds(): number | null {
         if (!this.output) return null;
         const now = this.heardNow();

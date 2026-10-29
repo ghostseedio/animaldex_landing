@@ -20,6 +20,40 @@ export type CallVoiceInfo = {
     label: string | null;
 };
 
+/**
+ * The whole reply's voice, for a turn whose voice did not stream: the clip's
+ * audio, today's spoken replies used up, or nothing (the answer stands as text).
+ */
+export type CallClip = {kind: "audio"; audio: ArrayBuffer} | {kind: "limit"} | {kind: "none"};
+
+/** Where the speech route's answer has the clip: a stored file, the audio itself, or none. */
+export type CallClipSource = {kind: "url"; url: string} | {kind: "inline"; bytes: Uint8Array} | {kind: "limit"} | {kind: "none"};
+
+/**
+ * Reads `/api/ask/speech`'s answer (the apps' `animal-chat-speech`): the
+ * signed URL of the stored clip, or the clip inline when it could not be
+ * stored, or today's spoken replies used up. Anything else is no voice (iOS
+ * `speakWhole`: a failure leaves the text; neither audio nor a URL is the
+ * voice used up).
+ */
+export function callClipSource(ok: boolean, payload: unknown): CallClipSource {
+    const row = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+    if (row.reason === "speech_limit_reached") return {kind: "limit"};
+    if (!ok || row.ok !== true) return {kind: "none"};
+    if (typeof row.url === "string") return /^https?:\/\//i.test(row.url) ? {kind: "url", url: row.url} : {kind: "none"};
+    if (typeof row.audio === "string" && row.audio) {
+        try {
+            const binary = atob(row.audio);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes.length > 0 ? {kind: "inline", bytes} : {kind: "none"};
+        } catch {
+            return {kind: "none"};
+        }
+    }
+    return {kind: "limit"};
+}
+
 /** When one word of the answer is heard, in seconds from the start of the answer's audio. */
 export type CallSpokenWord = {text: string; start: number; end: number};
 
