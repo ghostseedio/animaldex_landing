@@ -75,19 +75,27 @@ const AskContext = createContext<AskContextValue | null>(null);
 
 export function AskAnimalDexProvider({locale, children}: {locale: string; children: React.ReactNode}) {
     const pathname = usePathname() ?? "/";
-    const [declaration, setDeclaration] = useState<AskSubjectDeclaration | null>(null);
-    const [trial, setTrial] = useState<AskTrialDeclaration | null>(null);
+    const pathnameRef = useRef(pathname);
+    pathnameRef.current = pathname;
+    // A page's declaration belongs to that page. Navigating away without the
+    // next page declaring anything would otherwise leave the assistant claiming
+    // to be about the animal the reader just left. So each declaration keeps
+    // the path it was made on and counts only there. (Clearing on every path
+    // change instead also wiped a page's own first declaration whenever both
+    // landed in the same commit: any page without a loading boundary, like /p/.)
+    const [declared, setDeclared] = useState<{path: string; value: AskSubjectDeclaration} | null>(null);
+    const [trialDeclared, setTrialDeclared] = useState<{path: string; value: AskTrialDeclaration} | null>(null);
+    const declaration = declared?.path === pathname ? declared.value : null;
+    const trial = trialDeclared?.path === pathname ? trialDeclared.value : null;
+    const setDeclaration = useCallback((value: AskSubjectDeclaration | null) => {
+        setDeclared(value ? {path: pathnameRef.current, value} : null);
+    }, []);
+    const setTrial = useCallback((value: AskTrialDeclaration | null) => {
+        setTrialDeclared(value ? {path: pathnameRef.current, value} : null);
+    }, []);
     const [isOpen, setIsOpen] = useState(false);
     const pendingQuestion = useRef<string | null>(null);
     const [questionRequest, setQuestionRequest] = useState(0);
-
-    // A page's declaration belongs to that page. Navigating away without the
-    // next page declaring anything would otherwise leave the assistant claiming
-    // to be about the animal the reader just left.
-    useEffect(() => {
-        setDeclaration(null);
-        setTrial(null);
-    }, [pathname]);
 
     const subject = useMemo<AskSubject>(() => {
         const fromPath = askSubjectFromPath(pathname);
