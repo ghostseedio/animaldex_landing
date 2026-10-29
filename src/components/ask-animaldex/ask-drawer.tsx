@@ -59,7 +59,7 @@ import {
 } from "@/lib/ask-animaldex/companion-loop";
 import {bondChipText, bondStageText, decodeChatBond, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
-import {reloadCompanions, useAnimalBond} from "@/components/companions/use-companions";
+import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
 import {
     AskAnimalFace,
     AskAnimalHero,
@@ -2291,7 +2291,9 @@ function MessageBlock({
 function CompanionEventBlock({event, principleName, labels}: {event: AskCompanionEvent; principleName: string | null; labels: AskDrawerLabels}) {
     const done = event.stepDone;
     const referral = event.referral;
-    const referralHref = referral ? referralCapturePath(referral) : null;
+    // That animal's chat on the card you last talked through, else the one the server named.
+    const referralCaptureId = useChatCaptureId(referral?.speciesProfileId ?? null, referral?.captureId ?? null);
+    const referralHref = referral ? referralCapturePath({...referral, captureId: referralCaptureId}) : null;
     return (
         <div className="flex flex-col items-start gap-2.5">
             {done ? (

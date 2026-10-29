@@ -5,7 +5,8 @@
  * animal you hold, in the server's order (an unread message, a referral
  * waiting, an open step, then the most recent). A row is the animal as its
  * icon art, its name, its level and stage, and one line on where the two of
- * you are. Tapping it opens that animal's chat on its newest card.
+ * you are. Tapping it opens that animal's chat on the card you last talked
+ * through in this browser, else its newest (iOS 5c980123).
  *
  * Refreshed when the tab is opened and when the window comes back into view.
  */
@@ -15,7 +16,7 @@ import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import {useCompanions} from "@/components/companions/use-companions";
+import {chatCaptureIdFor, useCompanionCards, useCompanions} from "@/components/companions/use-companions";
 import {
     bondChipText,
     companionRowHref,
@@ -83,7 +84,7 @@ function CompanionArt({slug}: {slug: string | null}) {
     );
 }
 
-function CompanionRow({row, words}: {row: CompanionSummary; words: CompanionWords}) {
+function CompanionRow({row, href, words}: {row: CompanionSummary; href: string | null; words: CompanionWords}) {
     const status = companionStatusLine(row, null, words);
     const unread = row.unread > 0;
     const body = (
@@ -108,8 +109,6 @@ function CompanionRow({row, words}: {row: CompanionSummary; words: CompanionWord
         </>
     );
     const className = "flex items-center gap-3.5 border-b border-white/[0.08] px-4 py-3.5 transition hover:bg-white/[0.03] md:px-5";
-    // Its chat, on its newest card; on the referral, when one is waiting.
-    const href = companionRowHref(row);
     return href
         ? <Link href={href} className={className}>{body}</Link>
         : <div className={className}>{body}</div>;
@@ -117,15 +116,20 @@ function CompanionRow({row, words}: {row: CompanionSummary; words: CompanionWord
 
 export default function CompanionsPage({words}: {words: CompanionWords}) {
     const {rows, didLoad, available, reload} = useCompanions();
+    const {cards, reload: reloadCards} = useCompanionCards();
     const [groupIntroSeen, setGroupIntroSeen] = useState(true);
     useEffect(() => setGroupIntroSeen(readIntroSeen()), []);
 
     useEffect(() => {
         void reload();
-        const onFocus = () => void reload();
+        void reloadCards();
+        const onFocus = () => {
+            void reload();
+            void reloadCards();
+        };
         window.addEventListener("focus", onFocus);
         return () => window.removeEventListener("focus", onFocus);
-    }, [reload]);
+    }, [reload, reloadCards]);
 
     return (
         <AppPage narrow>
@@ -163,7 +167,16 @@ export default function CompanionsPage({words}: {words: CompanionWords}) {
             ) : (
                 <div className="-mx-4 border-t border-white/[0.08] md:mx-0">
                     <GroupChatRow isNew={rows.length >= 2 && !groupIntroSeen} words={words} />
-                    {rows.map((row) => <CompanionRow key={row.speciesProfileId} row={row} words={words} />)}
+                    {rows.map((row) => (
+                        <CompanionRow
+                            key={row.speciesProfileId}
+                            row={row}
+                            // Its chat, on the card you last talked through (else
+                            // its newest); on the referral, when one is waiting.
+                            href={companionRowHref({...row, captureId: chatCaptureIdFor(cards, row.speciesProfileId, row.captureId)})}
+                            words={words}
+                        />
+                    ))}
                 </div>
             )}
         </AppPage>
