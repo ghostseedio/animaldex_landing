@@ -2628,6 +2628,18 @@
       "muteFailed": "Gagal terkirim. Coba lagi sebentar lagi.",
       "options": "Lainnya",
       "collection": "Koleksi"
+    },
+    "naming": {
+      "nameYour": "Beri nama {animal} Anda",
+      "nickname": "Nama panggilan",
+      "hint": "Ini juga nama panggilan di kartu.",
+      "failed": "Tidak dapat menyimpan nama. Coba lagi.",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "addNickname": "Tambah Nama Panggilan",
+      "editNickname": "Edit Nama Panggilan",
+      "example": "mis. Luna",
+      "leaveBlank": "Biarkan kosong untuk menampilkan nama hewan yang teridentifikasi."
     }
   }
 }

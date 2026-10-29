@@ -57,10 +57,12 @@ import {
     type AskCompanionEvent,
     type AskCompanionLoop
 } from "@/lib/ask-animaldex/companion-loop";
-import {bondChipText, bondStageText, decodeChatBond, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
+import {bondChipText, bondStageText, decodeChatBond, fillWords, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
 import {noteAnimalMessagesMuted, noteAnimalMessagesRead} from "@/components/companions/use-animal-conversations";
+import AnimalNameSheet from "@/components/companions/name-sheet";
+import {CAPTURE_NICKNAME_EVENT, type CaptureNicknameDetail} from "@/lib/capture-nickname";
 import {
     AskAnimalFace,
     AskAnimalHero,
@@ -445,9 +447,22 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     // Context first: the opening suggestions have to name this animal's real
     // states and failure modes, and the waiting lines are derived from the same
     // material. A generic chip row is what this replaces.
+    // The name the owner gave it here, before the context is read again.
+    const [savedNickname, setSavedNickname] = useState<{captureId: string; nickname: string | null} | null>(null);
+    const [showingNameSheet, setShowingNameSheet] = useState(false);
+    useEffect(() => {
+        const onNamed = (event: Event) => {
+            const detail = (event as CustomEvent<CaptureNicknameDetail>).detail;
+            if (detail?.captureId) setSavedNickname({captureId: detail.captureId, nickname: detail.nickname});
+        };
+        window.addEventListener(CAPTURE_NICKNAME_EVENT, onNamed);
+        return () => window.removeEventListener(CAPTURE_NICKNAME_EVENT, onNamed);
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
         setContext(null);
+        setShowingNameSheet(false);
         void fetch("/api/ask/context", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -912,7 +927,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const animalName = hints.animalName ?? resolvedSubject.name ?? null;
     // On someone else's card the animal is theirs; on the owner's, the name they gave it.
     const ownerName = context?.ownerName ?? null;
-    const nickname = ownerName ? null : context?.nickname ?? null;
+    const named = savedNickname && savedNickname.captureId === resolvedSubject.captureId ? savedNickname : null;
+    const nickname = ownerName ? null : named ? named.nickname : context?.nickname ?? null;
+    // "Name your Gray Wolf", on the owner's own card while it has no name (iOS AnimalPowerAskChatView).
+    const nameTitle = ownerChat && !nickname && resolvedSubject.captureId && animalName
+        ? fillWords(labels.companions.naming.nameYour, {animal: animalName})
+        : null;
     const speakerName = nickname ?? animalName ?? labels.title;
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
 
@@ -1338,8 +1358,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 setShowingBond(false);
                                 setShowingSoundCredits(true);
                             }}
-                            // "Mute messages from Luna" / "Let Luna message you" (AnimalDex 51293f02).
                             extraItems={[
+                                // "Name your Gray Wolf" while it has no name (iOS keeps it in the ••• menu too).
+                                ...(nameTitle ? [{
+                                    label: nameTitle,
+                                    icon: <PencilIcon />,
+                                    onSelect: () => setShowingNameSheet(true)
+                                }] : []),
+                                // "Mute messages from Luna" / "Let Luna message you" (AnimalDex 51293f02).
                                 ...(animalMuted === null ? [] : [{
                                     label: (animalMuted ? labels.unmuteAnimal : labels.muteAnimal)
                                         .replace("{name}", nickname ?? labels.theAnimal.replace("{animal}", animalName ?? "")),
@@ -1474,6 +1500,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     setShowingBond(true);
                                     void animalBond.reload();
                                 }}
+                                nameLabel={nameTitle}
+                                onName={() => setShowingNameSheet(true)}
                             />
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
@@ -1744,6 +1772,19 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         state={reportState}
                         onChoose={(choice) => void sendReport(choice)}
                         onClose={() => setReportTarget(null)}
+                    />
+                ) : null}
+                {showingNameSheet && resolvedSubject.captureId && animalName ? (
+                    <AnimalNameSheet
+                        captureId={resolvedSubject.captureId}
+                        animalName={animalName}
+                        initialName={nickname}
+                        mode="name"
+                        words={labels.companions}
+                        placement="panel"
+                        // The event the save sends sets the name here and on the card.
+                        onSaved={() => undefined}
+                        onClose={() => setShowingNameSheet(false)}
                     />
                 ) : null}
             </div>

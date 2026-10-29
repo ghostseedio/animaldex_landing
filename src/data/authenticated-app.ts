@@ -15,6 +15,7 @@ import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {discoverPostPath} from "@/lib/discover-post";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import {normalizeCaptureNickname} from "@/lib/capture-nickname";
 import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {hasAuthCookie} from "@/lib/viewer";
@@ -389,6 +390,8 @@ export type AppCaptureDetail = {
     locationLat: number | null;
     locationLng: number | null;
     animalName: string;
+    /** The name its owner gave it (`captures.title`), on the owner's own card. */
+    nickname?: string | null;
     scientificName: string | null;
     speciesSlug: string | null;
     breed: string | null;
@@ -1253,7 +1256,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     if (!user) return null;
     const [captureResult, comparisonResult, progressionResult] = await Promise.all([
         supabase.from("captures")
-            .select("id,status,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,error_message,completed_at)")
+            .select("id,status,title,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,error_message,completed_at)")
             .eq("id", id)
             .eq("user_id", user.id)
             .maybeSingle(),
@@ -1373,6 +1376,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         locationLat: nullableFiniteNumber(row.location_lat),
         locationLng: nullableFiniteNumber(row.location_lng),
         animalName,
+        nickname: normalizeCaptureNickname(row.title),
         scientificName: analysis.scientific_name ?? null,
         speciesSlug: slug,
         breed: analysis.breed_guess ?? null,

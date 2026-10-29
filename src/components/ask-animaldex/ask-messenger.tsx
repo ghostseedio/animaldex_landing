@@ -77,7 +77,9 @@ export function AskAnimalHero({
     avatarUrl,
     popularity,
     bondLabel,
-    onBond
+    onBond,
+    nameLabel,
+    onName
 }: {
     name: string;
     subtitle: string | null;
@@ -87,7 +89,12 @@ export function AskAnimalHero({
     /** "Level 4 · Working together" on the owner's chat. */
     bondLabel?: string | null;
     onBond?: () => void;
+    /** "Name your Eurasian Otter", while the owner has not named it (iOS AnimalChatHero). */
+    nameLabel?: string | null;
+    onName?: () => void;
 }) {
+    const showsBond = Boolean(bondLabel && onBond);
+    const showsName = Boolean(nameLabel && onName);
     return (
         <div className="flex flex-col items-center px-6 pt-5 text-center">
             <div className="relative grid h-28 w-28 place-items-center">
@@ -102,15 +109,29 @@ export function AskAnimalHero({
                     {popularity}
                 </p>
             ) : null}
-            {bondLabel && onBond ? (
-                <button
-                    type="button"
-                    onClick={onBond}
-                    className="mt-2.5 inline-flex items-center gap-1.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:text-primary-200"
-                >
-                    <LinkIcon />
-                    {bondLabel}
-                </button>
+            {showsBond || showsName ? (
+                <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-[18px] gap-y-1">
+                    {showsBond ? (
+                        <button
+                            type="button"
+                            onClick={onBond}
+                            className="inline-flex items-center gap-1.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:text-primary-200"
+                        >
+                            <LinkIcon />
+                            {bondLabel}
+                        </button>
+                    ) : null}
+                    {showsName ? (
+                        <button
+                            type="button"
+                            onClick={onName}
+                            className="inline-flex items-center gap-1.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:text-primary-200"
+                        >
+                            <HeroPencilIcon />
+                            {nameLabel}
+                        </button>
+                    ) : null}
+                </div>
             ) : null}
         </div>
     );
@@ -575,3 +596,4 @@ export const MoreIcon = () => (
 );
 const BubblesIcon = () => icon(<path d="M3.5 12.5V5.8A1.8 1.8 0 0 1 5.3 4h6.4a1.8 1.8 0 0 1 1.8 1.8v3.4a1.8 1.8 0 0 1-1.8 1.8H6Zm10-3h1.2a1.8 1.8 0 0 1 1.8 1.8V16l-2.5-2H9.3a1.8 1.8 0 0 1-1.8-1.8V11" />);
 const LinkIcon = () => icon(<path d="M8.5 11.5a3 3 0 0 0 4.2 0l2.3-2.3a3 3 0 0 0-4.2-4.2l-1 1m1.7 3.5a3 3 0 0 0-4.2 0L5 11.8A3 3 0 0 0 9.2 16l1-1" />);
+const HeroPencilIcon = () => icon(<path d="M4 16h3.5l8-8a2.1 2.1 0 0 0-3-3l-8 8V16Z" />);

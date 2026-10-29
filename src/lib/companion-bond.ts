@@ -159,6 +159,22 @@ export const COMPANION_WORDS_EN = {
         options: "More",
         collection: "Collection"
     },
+    /**
+     * Naming your animal: "Name your {animal}" in its chat (iOS
+     * AnimalCompanionNameSheet), Add/Edit Nickname on its card (Customize Card).
+     */
+    naming: {
+        nameYour: "Name your {animal}",
+        nickname: "Nickname",
+        hint: "It's the nickname on the card, too.",
+        failed: "Couldn't save the name. Try again.",
+        cancel: "Cancel",
+        save: "Save",
+        addNickname: "Add Nickname",
+        editNickname: "Edit Nickname",
+        example: "e.g. Luna",
+        leaveBlank: "Leave blank to show the identified animal name."
+    },
     /** Your own card's tabs: About · Bond · Battle. */
     card: {about: "About", bond: "Bond", battle: "Battle"},
     /** "Luna the Gray Wolf" (iOS "%@ the %@"). */

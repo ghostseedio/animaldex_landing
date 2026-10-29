@@ -2646,6 +2646,18 @@
       "muteFailed": "That didn't go through. Try again in a moment.",
       "options": "More",
       "collection": "Collection"
+    },
+    "naming": {
+      "nameYour": "Name your {animal}",
+      "nickname": "Nickname",
+      "hint": "It's the nickname on the card, too.",
+      "failed": "Couldn't save the name. Try again.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "addNickname": "Add Nickname",
+      "editNickname": "Edit Nickname",
+      "example": "e.g. Luna",
+      "leaveBlank": "Leave blank to show the identified animal name."
     }
   }
 }

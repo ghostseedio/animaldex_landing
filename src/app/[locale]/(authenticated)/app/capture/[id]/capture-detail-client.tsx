@@ -30,7 +30,10 @@ import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {allChallengersPowerLocked} from "@/lib/animal-powers";
 import {resolveReferralId} from "@/lib/ask-animaldex/companion-loop";
-import {COMPANION_WORDS_EN, bondChipText, companionSummaryName, fillWords, type CompanionWords} from "@/lib/companion-bond";
+import {COMPANION_WORDS_EN, bondChipText, fillWords, type CompanionWords} from "@/lib/companion-bond";
+import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
+import {CAPTURE_NICKNAME_EVENT, type CaptureNicknameDetail} from "@/lib/capture-nickname";
+import AnimalNameSheet from "@/components/companions/name-sheet";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {isEligibleToMarkAsPet} from "@/lib/capture-media-management";
 import {type CaptureReveal, captureRewardBreakdown, captureRewardShowcase, claimCaptureReveal} from "@/lib/capture-reveal";
@@ -191,7 +194,24 @@ export default function CaptureDetailClient({
             ? bondChipText(animalBond.bond, words)
             : companionRow ? bondChipText(companionRow, words) : null
         : null;
-    const companionName = companionRow ? companionSummaryName(companionRow, words) : speciesName;
+    // The name you gave this card ("Luna"), as its header, its Bond tab and its chat say it.
+    const [nickname, setNickname] = useState<string | null>(viewer.isOwner ? capture.nickname ?? null : null);
+    const [showsNameSheet, setShowsNameSheet] = useState(false);
+    useEffect(() => {
+        setNickname(viewer.isOwner ? capture.nickname ?? null : null);
+        setShowsNameSheet(false);
+    }, [capture.id, capture.nickname, viewer.isOwner]);
+    useEffect(() => {
+        if (!viewer.isOwner) return;
+        const onNamed = (event: Event) => {
+            const detail = (event as CustomEvent<CaptureNicknameDetail>).detail;
+            if (detail?.captureId === capture.id) setNickname(detail.nickname);
+        };
+        window.addEventListener(CAPTURE_NICKNAME_EVENT, onNamed);
+        return () => window.removeEventListener(CAPTURE_NICKNAME_EVENT, onNamed);
+    }, [capture.id, viewer.isOwner]);
+    // "Luna the Gray Wolf" (iOS: the card's own nickname and the animal).
+    const companionName = companionDisplayName(nickname, speciesName, words.displayName);
     // The lesson check (Training) opens from the Bond tab: the website's chat
     // has no lesson-check card for the animal to hand over.
     const speciesTraining = useSpeciesTraining(viewer.isOwner ? speciesProfileId : null);
@@ -503,7 +523,27 @@ export default function CaptureDetailClient({
                                 </button>
                             ) : null}
                         </div>
-                        <h1 className="font-display text-4xl font-bold text-white sm:text-5xl xl:text-6xl">{capture.animalName}</h1>
+                        {/* Its name, when you gave it one, then the animal (iOS headerTitle and headerSupportingName). */}
+                        <div className="flex items-end gap-2.5">
+                            <h1 className="min-w-0 break-words font-display text-4xl font-bold text-white sm:text-5xl xl:text-6xl">{nickname ?? capture.animalName}</h1>
+                            {viewer.isOwner ? (
+                                // iOS Customize Card → Add Nickname / Edit Nickname.
+                                <button
+                                    type="button"
+                                    onClick={() => setShowsNameSheet(true)}
+                                    aria-label={nickname ? words.naming.editNickname : words.naming.addNickname}
+                                    title={nickname ? words.naming.editNickname : words.naming.addNickname}
+                                    className="pointer-events-auto mb-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 bg-black/55 text-white/80 backdrop-blur-sm transition hover:text-white sm:mb-2.5"
+                                >
+                                    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M4 16h3.5l8-8a2.1 2.1 0 0 0-3-3l-8 8V16Z" />
+                                    </svg>
+                                </button>
+                            ) : null}
+                        </div>
+                        {nickname ? (
+                            <p className="mt-1 text-lg font-semibold text-white/80 sm:text-xl">{capture.animalName}</p>
+                        ) : null}
                         {capture.scientificName ? (
                             <p className="mt-1 text-sm italic text-white/55 sm:text-base">{capture.scientificName}</p>
                         ) : null}
@@ -774,6 +814,18 @@ export default function CaptureDetailClient({
                         </button>
                     </div>
                 </div>
+            ) : null}
+            {showsNameSheet && viewer.isOwner ? (
+                <AnimalNameSheet
+                    captureId={capture.id}
+                    animalName={capture.animalName}
+                    initialName={nickname}
+                    mode="card"
+                    words={words}
+                    // The save's event names it here, in its chat and on its rows.
+                    onSaved={() => undefined}
+                    onClose={() => setShowsNameSheet(false)}
+                />
             ) : null}
         </div>
     );
