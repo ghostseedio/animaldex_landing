@@ -14,6 +14,7 @@ import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 import {AskAnimalDexProvider} from "@/components/ask-animaldex/ask-animaldex-provider";
 import AskAnimalDexSurface from "@/components/ask-animaldex/ask-animaldex-surface";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getCompanionWords} from "@/loaders/companion-words";
 import ThemeScript from "@/components/theme/theme-script";
 
 // 192 px rendition of /images/logo.webp (400 px, 132 KB), which every page
@@ -39,7 +40,11 @@ export default async function RootLayout(
     // conversation follows the reader instead of each surface owning a copy.
     // Its copy is resolved here because this codebase hands translations to
     // client components as props rather than through a context.
-    const askT = await getScopedTranslator(locale, "askAnimalDex");
+    const [askT, companionWords] = await Promise.all([
+        getScopedTranslator(locale, "askAnimalDex"),
+        // The bond sheet the chat's bond chip opens.
+        getCompanionWords(locale)
+    ]);
     const askLabels = {
         launcher: askT("launcher"),
         speakLauncher: askT("speakLauncher"),
@@ -183,7 +188,8 @@ export default async function RootLayout(
         soundCredits: askT("soundCredits"),
         soundCreditsSpecies: askT("soundCreditsSpecies"),
         soundCreditsHabitat: askT("soundCreditsHabitat"),
-        soundOriginal: askT("soundOriginal")
+        soundOriginal: askT("soundOriginal"),
+        companions: companionWords
     };
 
     // noinspection HtmlRequiredTitleElement

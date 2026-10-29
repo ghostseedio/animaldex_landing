@@ -17,12 +17,12 @@ import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {useCompanions} from "@/components/companions/use-companions";
 import {
-    COMPANIONS_COPY,
     bondChipText,
     companionRowHref,
     companionStatusLine,
     companionSummaryName,
-    type CompanionSummary
+    type CompanionSummary,
+    type CompanionWords
 } from "@/lib/companion-bond";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
@@ -43,7 +43,7 @@ function readIntroSeen(): boolean {
  * "Talk to several animals": the group chat's own picker, then the chat.
  * Once a second animal is yours, the row says what it is for, until tried.
  */
-function GroupChatRow({isNew}: {isNew: boolean}) {
+function GroupChatRow({isNew, words}: {isNew: boolean; words: CompanionWords}) {
     return (
         <Link
             href="/app/companions/group"
@@ -63,10 +63,10 @@ function GroupChatRow({isNew}: {isNew: boolean}) {
             </span>
             <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                    <span className="truncate text-base font-bold text-white">{COMPANIONS_COPY.talkToSeveral}</span>
+                    <span className="truncate text-base font-bold text-white">{words.list.talkToSeveral}</span>
                     {isNew ? <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{backgroundColor: NEON}} /> : null}
                 </span>
-                {isNew ? <span className="mt-0.5 block text-sm leading-5 text-white/60">{COMPANIONS_COPY.talkToSeveralIntro}</span> : null}
+                {isNew ? <span className="mt-0.5 block text-sm leading-5 text-white/60">{words.list.talkToSeveralIntro}</span> : null}
             </span>
             <AppIcon name="chevron" className="h-4 w-4 shrink-0 text-white/35" />
         </Link>
@@ -83,22 +83,22 @@ function CompanionArt({slug}: {slug: string | null}) {
     );
 }
 
-function CompanionRow({row}: {row: CompanionSummary}) {
-    const status = companionStatusLine(row);
+function CompanionRow({row, words}: {row: CompanionSummary; words: CompanionWords}) {
+    const status = companionStatusLine(row, null, words);
     const unread = row.unread > 0;
     const body = (
         <>
             <CompanionArt slug={row.slug} />
             <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                    <span className="truncate text-base font-bold text-white">{companionSummaryName(row)}</span>
+                    <span className="truncate text-base font-bold text-white">{companionSummaryName(row, words)}</span>
                     {row.mastered ? (
                         <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-black" style={{backgroundColor: NEON}}>
-                            {COMPANIONS_COPY.mastered}
+                            {words.list.mastered}
                         </span>
                     ) : null}
                 </span>
-                <span className="mt-0.5 block text-xs font-semibold text-white/55">{bondChipText(row)}</span>
+                <span className="mt-0.5 block text-xs font-semibold text-white/55">{bondChipText(row, words)}</span>
                 <span className={`mt-1 flex items-center gap-1.5 text-sm ${unread ? "font-semibold text-white" : "text-white/60"}`}>
                     {unread ? <span aria-label="Unread" className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor: NEON}} /> : null}
                     <span className="truncate">{status.text}</span>
@@ -115,7 +115,7 @@ function CompanionRow({row}: {row: CompanionSummary}) {
         : <div className={className}>{body}</div>;
 }
 
-export default function CompanionsPage() {
+export default function CompanionsPage({words}: {words: CompanionWords}) {
     const {rows, didLoad, available, reload} = useCompanions();
     const [groupIntroSeen, setGroupIntroSeen] = useState(true);
     useEffect(() => setGroupIntroSeen(readIntroSeen()), []);
@@ -129,7 +129,7 @@ export default function CompanionsPage() {
 
     return (
         <AppPage narrow>
-            <AppPageHeader eyebrow="AnimalDex" title={COMPANIONS_COPY.title} />
+            <AppPageHeader eyebrow="AnimalDex" title={words.list.title} />
             {!didLoad ? (
                 <div className="-mx-4 md:mx-0" aria-busy="true">
                     {[0, 1, 2].map((index) => (
@@ -152,18 +152,18 @@ export default function CompanionsPage() {
                 </div>
             ) : rows.length === 0 ? (
                 <div className="-mx-4 flex flex-col items-start gap-4 border-y border-white/[0.08] px-4 py-8 md:mx-0 md:px-5">
-                    <p className="text-base font-semibold text-white">{COMPANIONS_COPY.empty}</p>
+                    <p className="text-base font-semibold text-white">{words.list.empty}</p>
                     <Link
                         href="/app/capture"
                         className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300"
                     >
-                        <AppIcon name="camera" /> {COMPANIONS_COPY.capture}
+                        <AppIcon name="camera" /> {words.list.capture}
                     </Link>
                 </div>
             ) : (
                 <div className="-mx-4 border-t border-white/[0.08] md:mx-0">
-                    <GroupChatRow isNew={rows.length >= 2 && !groupIntroSeen} />
-                    {rows.map((row) => <CompanionRow key={row.speciesProfileId} row={row} />)}
+                    <GroupChatRow isNew={rows.length >= 2 && !groupIntroSeen} words={words} />
+                    {rows.map((row) => <CompanionRow key={row.speciesProfileId} row={row} words={words} />)}
                 </div>
             )}
         </AppPage>

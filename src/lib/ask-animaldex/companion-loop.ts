@@ -169,11 +169,19 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
     return isEmptyCompanionEvent(event) ? null : event;
 }
 
-/** "Leo the African Lion", or the animal alone when it has no name of its own (iOS `AnimalCompanionNaming`). */
-export function companionDisplayName(nickname: string | null | undefined, animal: string): string {
+/**
+ * "Leo the African Lion", or the animal alone when it has no name of its own
+ * (iOS `AnimalCompanionNaming`). `template` is that in the reader's language
+ * ("{nickname} sang {animal}").
+ */
+export function companionDisplayName(
+    nickname: string | null | undefined,
+    animal: string,
+    template = "{nickname} the {animal}"
+): string {
     const trimmed = nickname?.trim() ?? "";
     if (!trimmed || trimmed.toLowerCase() === animal.trim().toLowerCase()) return animal;
-    return `${trimmed} the ${animal}`;
+    return template.replace("{nickname}", trimmed).replace("{animal}", animal);
 }
 
 /** Where "Talk to …" goes: that capture's card, which opens its chat on the referral. */

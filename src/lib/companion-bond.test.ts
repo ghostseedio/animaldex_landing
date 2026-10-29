@@ -1,9 +1,16 @@
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {dirname, join} from "node:path";
 import test from "node:test";
+import {fileURLToPath} from "node:url";
 import {
     BOND_COPY,
     COMPANIONS_COPY,
+    COMPANION_WORDS_EN,
     bondChipText,
+    bondStageText,
+    companionWords,
+    fillWords,
     bondLevelProgress,
     bondPowerLine,
     bondXpText,
@@ -161,4 +168,47 @@ test("bond copy matches the SPEC word for word", () => {
     assert.equal(BOND_COPY.battleLocked.replace("{name}", "Leo"), "Earn Leo's Power to battle with it.");
     assert.equal(COMPANIONS_COPY.empty, "Capture an animal to meet your first companion.");
     assert.equal(COMPANIONS_COPY.masteredCount.replace("{n}", "2"), "2 mastered");
+});
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const localeLabels = (locale: string) => JSON.parse(readFileSync(join(repoRoot, "src/data/locales", `${locale}.json`), "utf8")).companions;
+
+function keyPaths(value: unknown, prefix = ""): string[] {
+    if (!value || typeof value !== "object") return [prefix];
+    return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) => keyPaths(child, prefix ? `${prefix}.${key}` : key));
+}
+
+test("the label files carry every companion word: English as the SPEC says it, Indonesian for each", () => {
+    assert.deepEqual(localeLabels("en"), COMPANION_WORDS_EN);
+    const indonesian = localeLabels("id");
+    assert.deepEqual(keyPaths(indonesian).sort(), keyPaths(COMPANION_WORDS_EN).sort());
+    // Every placeholder survives the translation.
+    const english = companionWords(localeLabels("en"));
+    const translated = companionWords(indonesian);
+    for (const path of keyPaths(COMPANION_WORDS_EN)) {
+        const read = (words: unknown) => path.split(".").reduce<unknown>((at, key) => (at as Record<string, unknown>)[key], words) as string;
+        const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
+        assert.deepEqual(placeholders(read(translated)), placeholders(read(english)), path);
+    }
+});
+
+test("a locale's companion words lay over the English, key by key", () => {
+    const words = companionWords({list: {title: "Teman", sayHello: "  "}, stages: {trusted: "Dipercaya"}, bond: "oops"});
+    assert.equal(words.list.title, "Teman");
+    // A blank or missing word reads in English.
+    assert.equal(words.list.sayHello, "Say hello");
+    assert.equal(words.bond.talkToIt, "Talk to it");
+    assert.equal(companionWords(null).displayName, "{nickname} the {animal}");
+    assert.equal(fillWords("{n} mastered · {n}", {n: 2}), "2 mastered · 2");
+    assert.equal(fillWords("Hi {name}", {}), "Hi {name}");
+});
+
+test("the bond reads in the reader's words, the server's stage label only for a stage this build does not know", () => {
+    const id = companionWords(localeLabels("id"));
+    assert.equal(bondChipText({level: 4, stage: "working_together", stageLabel: "Working together"}, id), "Level 4 · Bekerja sama");
+    assert.equal(bondStageText({stage: "new_stage", stageLabel: "Brand new"}, id), "Brand new");
+    assert.equal(companionSummaryName({nickname: "Luna", animal: "Gray Wolf"}, id), "Luna sang Gray Wolf");
+    assert.equal(companionStatusLine({unread: 0, referralWaiting: false, openTrial: null, focus: "Tidur"}, null, id).text, "Sedang kita kerjakan: Tidur");
+    assert.equal(bondPowerLine({power: {name: "X", earned: false, via: null, at: null}, lessonCheckPassed: true}, "Leo", id), "Selesaikan satu Uji Coba bersama Leo untuk mendapatkannya.");
+    assert.equal(bondXpText(2480, "id", id), "2.480 XP");
 });

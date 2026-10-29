@@ -36,7 +36,7 @@ import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pacer";
 import {useAskGroupDirector} from "@/components/animal-group-chat/use-group-director";
 import {useCompanions} from "@/components/companions/use-companions";
-import {companionSummaryName, type CompanionSummary} from "@/lib/companion-bond";
+import {companionSummaryName, type CompanionSummary, type CompanionWords} from "@/lib/companion-bond";
 import {askReplyPieces} from "@/lib/ask-animaldex/thread-layout";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {askShortNames} from "@/lib/ask-animaldex/group-conversation";
@@ -118,12 +118,15 @@ export default function AnimalGroupChat({
     labels,
     budget,
     report,
+    words,
     locale
 }: {
     labels: AnimalGroupChatLabels;
     budget: AnimalGroupBudgetLabels;
     /** Report this reply, in the one-to-one chat's words. */
     report: AskReportLabels;
+    /** The animals' names ("Luna the Gray Wolf") and Capture, in the reader's language. */
+    words: CompanionWords;
     locale: string;
 }) {
     const {rows, didLoad} = useCompanions();
@@ -154,6 +157,7 @@ export default function AnimalGroupChat({
         return (
             <GroupPicker
                 labels={labels}
+                words={words}
                 animals={animals}
                 preselected={requested}
                 onStart={(picked) => choose(picked)}
@@ -166,6 +170,7 @@ export default function AnimalGroupChat({
             labels={labels}
             budget={budget}
             report={report}
+            words={words}
             locale={locale}
             members={chosen}
             onChangeAnimals={() => choose(null)}
@@ -186,11 +191,13 @@ function GroupFrame({children}: {children: React.ReactNode}) {
 
 function GroupPicker({
     labels,
+    words,
     animals,
     preselected,
     onStart
 }: {
     labels: AnimalGroupChatLabels;
+    words: CompanionWords;
     animals: CompanionSummary[];
     preselected: string[];
     onStart: (picked: CompanionSummary[]) => void;
@@ -201,8 +208,8 @@ function GroupPicker({
     const visible = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return animals;
-        return animals.filter((row) => companionSummaryName(row).toLowerCase().includes(needle) || row.animal.toLowerCase().includes(needle));
-    }, [animals, query]);
+        return animals.filter((row) => companionSummaryName(row, words).toLowerCase().includes(needle) || row.animal.toLowerCase().includes(needle));
+    }, [animals, query, words]);
     const isFull = selection.length >= ASK_GROUP_MAX_ANIMALS;
     const canStart = selection.length >= ASK_GROUP_MIN_ANIMALS && selection.length <= ASK_GROUP_MAX_ANIMALS;
     const byCapture = new Map(animals.map((row) => [String(row.captureId).toLowerCase(), row]));
@@ -225,7 +232,7 @@ function GroupPicker({
                 <div className="flex flex-1 flex-col items-start gap-4 px-4 py-8 md:px-5">
                     <p className="text-base font-semibold text-white">{labels.empty}</p>
                     <Link href="/app/capture" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300">
-                        <AppIcon name="camera" /> Capture
+                        <AppIcon name="camera" /> {words.list.capture}
                     </Link>
                 </div>
             ) : (
@@ -259,7 +266,7 @@ function GroupPicker({
                             >
                                 <AskAnimalFace url={faceUrl(row)} size={48} className={picked ? "ring-2 ring-primary-400" : ""} />
                                 <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-base font-bold text-white">{companionSummaryName(row)}</span>
+                                    <span className="block truncate text-base font-bold text-white">{companionSummaryName(row, words)}</span>
                                     {row.powerName ? <span className="mt-0.5 block truncate text-xs font-semibold text-white/50">{row.powerName}</span> : null}
                                 </span>
                                 <span
@@ -288,6 +295,7 @@ function GroupConversation({
     labels,
     budget,
     report,
+    words,
     locale,
     members,
     onChangeAnimals
@@ -295,6 +303,7 @@ function GroupConversation({
     labels: AnimalGroupChatLabels;
     budget: AnimalGroupBudgetLabels;
     report: AskReportLabels;
+    words: CompanionWords;
     locale: string;
     members: CompanionSummary[];
     onChangeAnimals: () => void;
@@ -393,8 +402,8 @@ function GroupConversation({
         const speaker = speakers.get(captureId);
         const animal = speaker?.animalName || row?.animal;
         if (!animal) return labels.anAnimal;
-        return companionSummaryName({nickname: speaker?.nickname ?? row?.nickname ?? null, animal});
-    }, [byCapture, speakers, labels.anAnimal, labels.theAnimals]);
+        return companionSummaryName({nickname: speaker?.nickname ?? row?.nickname ?? null, animal}, words);
+    }, [byCapture, speakers, labels.anAnimal, labels.theAnimals, words]);
     const colorFor = (captureId: string | null | undefined) => askGroupColor(captureId, captureIds);
 
     // Who is typing right now, for the strip.

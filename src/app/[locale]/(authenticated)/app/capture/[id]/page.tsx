@@ -13,6 +13,7 @@ import {getSpeciesRankings} from "@/data/species-rankings";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getBattleTier} from "@/lib/battle-tier";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getCompanionWords} from "@/loaders/companion-words";
 
 function toQualitySlug(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -22,9 +23,10 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
     // iOS opens every card in the same ScanResultView: an owned entry
     // (`isSavedEntry`) or a public one with a `spotter`. Try the owner read
     // first, then the public Discover row.
-    const [owned, context] = await Promise.all([
+    const [owned, context, companionWords] = await Promise.all([
         getAppCaptureDetail(params.id),
-        getAuthenticatedAppContext()
+        getAuthenticatedAppContext(),
+        getCompanionWords(params.locale)
     ]);
     const [publicDetail, ownedMediaAssets, isMarkedAsPet] = await Promise.all([
         owned ? null : getPublicCaptureDetail(params.id),
@@ -71,6 +73,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
                 isChallengeAvailable={isChallengeAvailable}
                 speciesSlug={requestedSpeciesSlug}
                 speciesName={capture.animalName}
+                companionWords={companionWords}
             />
         );
     }
@@ -201,6 +204,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             rankings={rankings}
             nativeRange={nativeRange}
             play={play}
+            companionWords={companionWords}
         />
     );
 }

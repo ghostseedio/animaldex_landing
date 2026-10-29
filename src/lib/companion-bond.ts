@@ -113,16 +113,86 @@ export const COMPANIONS_COPY = {
     powersEarned: "{n} Powers earned"
 } as const;
 
-const STAGE_LABELS: Record<string, string> = {
-    getting_to_know_you: "Getting to know you",
-    working_together: "Working together",
-    long_standing: "Long-standing",
-    trusted: "Trusted",
-    mastered: "Mastered"
+/** The bond's stages, by the key the server sends. */
+export type BondStageKey = "met" | "getting_to_know_you" | "working_together" | "long_standing" | "trusted" | "mastered";
+
+/**
+ * Every word the Companions tab, the bond screens and the group picker show,
+ * in English. The site's label files carry the same keys under `companions`
+ * (en.json, id.json); `companionWords` lays a locale's over these, so a key
+ * a locale lacks still reads, in English.
+ */
+export const COMPANION_WORDS_EN = {
+    bond: BOND_COPY,
+    list: COMPANIONS_COPY,
+    stages: {
+        met: "Met",
+        getting_to_know_you: "Getting to know you",
+        working_together: "Working together",
+        long_standing: "Long-standing",
+        trusted: "Trusted",
+        mastered: "Mastered"
+    } satisfies Record<BondStageKey, string>,
+    /** How the Power was earned, on the bond screen. */
+    earned: {
+        yourTrial: "Earned in your own life",
+        trial: "Earned by Trial",
+        application: "Earned by applying it",
+        any: "Earned"
+    },
+    /** A Trial's state, in a word, on the bond screen. */
+    trialStatus: {
+        completed: "Complete",
+        underWay: "Under way",
+        armed: "Armed",
+        missed: "Missed",
+        notStarted: "Not started"
+    },
+    difficulty: {Easy: "Easy", Medium: "Medium", Hard: "Hard"},
+    /** Your own card's tabs: About · Bond · Battle. */
+    card: {about: "About", bond: "Bond", battle: "Battle"},
+    /** "Luna the Gray Wolf" (iOS "%@ the %@"). */
+    displayName: "{nickname} the {animal}"
 };
 
-export function bondStageLabel(stage: string): string {
-    return STAGE_LABELS[stage] ?? "Met";
+type Words<T> = {[K in keyof T]: T[K] extends string ? string : Words<T[K]>};
+
+export type CompanionWords = Words<typeof COMPANION_WORDS_EN>;
+
+function overlay<T extends Record<string, unknown>>(base: T, raw: unknown): T {
+    const given = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    return Object.fromEntries(Object.entries(base).map(([key, value]) => {
+        const candidate = given[key];
+        if (typeof value === "string") {
+            return [key, typeof candidate === "string" && candidate.trim() ? candidate : value];
+        }
+        return [key, overlay(value as Record<string, unknown>, candidate)];
+    })) as T;
+}
+
+/** A locale's `companions` labels over the English ones: every key there, in that language where it has one. */
+export function companionWords(raw: unknown): CompanionWords {
+    return overlay(COMPANION_WORDS_EN as CompanionWords, raw);
+}
+
+/** "{n}"-style placeholders filled in. */
+export function fillWords(template: string, values: Record<string, string | number>): string {
+    return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+}
+
+function knownStage(stage: string | null | undefined, words: CompanionWords): string | null {
+    return stage && Object.prototype.hasOwnProperty.call(words.stages, stage)
+        ? (words.stages as Record<string, string>)[stage]
+        : null;
+}
+
+export function bondStageLabel(stage: string, words: CompanionWords = COMPANION_WORDS_EN): string {
+    return knownStage(stage, words) ?? words.stages.met;
+}
+
+/** The stage in the reader's words: the server's label stands only for a stage this build does not know. */
+export function bondStageText(bond: {stage?: string | null; stageLabel: string}, words: CompanionWords = COMPANION_WORDS_EN): string {
+    return knownStage(bond.stage, words) ?? bond.stageLabel;
 }
 
 function object(value: unknown): Record<string, unknown> | null {
@@ -241,19 +311,23 @@ export function decodeChatBond(raw: unknown): ChatBond | null {
 }
 
 /** "2,480 XP", grouped the way the reader's locale groups thousands. */
-export function bondXpText(xp: number, locale?: string | null): string {
+export function bondXpText(xp: number, locale?: string | null, words: CompanionWords = COMPANION_WORDS_EN): string {
     let grouped: string;
     try {
         grouped = new Intl.NumberFormat(locale ?? undefined).format(xp);
     } catch {
         grouped = new Intl.NumberFormat().format(xp);
     }
-    return BOND_COPY.xp.replace("{xp}", grouped);
+    return fillWords(words.bond.xp, {xp: grouped});
 }
 
 /** "Level 4 · Working together", or the stage alone before levels (the card hero and chat chip). */
-export function bondChipText(bond: {level: number | null; stageLabel: string}): string {
-    return bond.level === null ? bond.stageLabel : `Level ${bond.level} · ${bond.stageLabel}`;
+export function bondChipText(
+    bond: {level: number | null; stage?: string | null; stageLabel: string},
+    words: CompanionWords = COMPANION_WORDS_EN
+): string {
+    const stage = bondStageText(bond, words);
+    return bond.level === null ? stage : `${fillWords(words.bond.level, {n: bond.level})} · ${stage}`;
 }
 
 /** 0...1 through the current level. */
@@ -264,20 +338,27 @@ export function bondLevelProgress(bond: Pick<AnimalBond, "xp" | "levelXp" | "nex
 }
 
 /** The bond screen's Power line: how it was earned, or what earning it takes. */
-export function bondPowerLine(bond: Pick<AnimalBond, "power" | "lessonCheckPassed">, name: string): string {
+export function bondPowerLine(
+    bond: Pick<AnimalBond, "power" | "lessonCheckPassed">,
+    name: string,
+    words: CompanionWords = COMPANION_WORDS_EN
+): string {
     if (bond.power.earned) {
         switch (bond.power.via) {
-            case "your_trial": return "Earned in your own life";
-            case "trial": return "Earned by Trial";
-            case "application": return "Earned by applying it";
-            default: return "Earned";
+            case "your_trial": return words.earned.yourTrial;
+            case "trial": return words.earned.trial;
+            case "application": return words.earned.application;
+            default: return words.earned.any;
         }
     }
-    return (bond.lessonCheckPassed ? BOND_COPY.earnByTrial : BOND_COPY.earnAfterLessonCheck).replace("{name}", name);
+    return fillWords(bond.lessonCheckPassed ? words.bond.earnByTrial : words.bond.earnAfterLessonCheck, {name});
 }
 
-export function companionSummaryName(row: Pick<CompanionSummary, "nickname" | "animal">): string {
-    return companionDisplayName(row.nickname, row.animal);
+export function companionSummaryName(
+    row: Pick<CompanionSummary, "nickname" | "animal">,
+    words: CompanionWords = COMPANION_WORDS_EN
+): string {
+    return companionDisplayName(row.nickname, row.animal, words.displayName);
 }
 
 /**
@@ -286,13 +367,14 @@ export function companionSummaryName(row: Pick<CompanionSummary, "nickname" | "a
  */
 export function companionStatusLine(
     row: Pick<CompanionSummary, "unread" | "referralWaiting" | "openTrial" | "focus">,
-    unreadPreview: string | null = null
+    unreadPreview: string | null = null,
+    words: CompanionWords = COMPANION_WORDS_EN
 ): {text: string; unread: boolean} {
     if (row.unread > 0 && unreadPreview) return {text: unreadPreview, unread: true};
-    if (row.referralWaiting) return {text: COMPANIONS_COPY.referralWaiting, unread: false};
-    if (row.openTrial) return {text: COMPANIONS_COPY.yourStep.replace("{step}", row.openTrial), unread: false};
-    if (row.focus) return {text: COMPANIONS_COPY.workingOn.replace("{focus}", row.focus), unread: false};
-    return {text: COMPANIONS_COPY.sayHello, unread: false};
+    if (row.referralWaiting) return {text: words.list.referralWaiting, unread: false};
+    if (row.openTrial) return {text: fillWords(words.list.yourStep, {step: row.openTrial}), unread: false};
+    if (row.focus) return {text: fillWords(words.list.workingOn, {focus: row.focus}), unread: false};
+    return {text: words.list.sayHello, unread: false};
 }
 
 /**
@@ -334,6 +416,11 @@ export function ownCardLevel(rows: CompanionSummary[], card: CardSpeciesKey, car
     const row = (id ? rows.find((entry) => entry.speciesProfileId.toLowerCase() === id) : undefined)
         ?? (slug ? rows.find((entry) => slugKey(entry.slug) === slug) : undefined);
     return row ? row.level : cardLevel;
+}
+
+/** "Easy", "Medium" or "Hard", in the reader's words. */
+export function trialDifficultyText(difficulty: "Easy" | "Medium" | "Hard", words: CompanionWords = COMPANION_WORDS_EN): string {
+    return words.difficulty[difficulty];
 }
 
 /** Low/Mid/High frequency → Easy / Medium / Hard (SPEC "Words"). */

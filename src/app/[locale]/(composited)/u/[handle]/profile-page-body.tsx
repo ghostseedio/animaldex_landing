@@ -14,6 +14,7 @@ import {
 } from "@/data/profile-authenticated";
 import {getCollectionBinders} from "@/data/collection-binders";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getCompanionWords} from "@/loaders/companion-words";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
@@ -78,6 +79,8 @@ export async function ProfilePageBody({
     const viewer = await getProfileViewerState(profile.userId);
     const localePrefix = `/${locale}`;
     const t = await getScopedTranslator(locale, "profile");
+    // "My Companions" is on the owner's own profile only.
+    const companionWords = viewer.isOwner ? await getCompanionWords(locale) : undefined;
     const pageUrl = getAbsoluteUrl(locale, profilePath(profile.username));
     const joinedAtLabel = profile.joinedAt
         ? new Date(profile.joinedAt).toLocaleDateString(locale, {month: "short", year: "numeric"})
@@ -269,6 +272,7 @@ export async function ProfilePageBody({
                     packBuyInApp: t("packBuyInApp"),
                     viewSignedInAs: t("viewSignedInAs")
                 }}
+                companionWords={companionWords}
                 locale={locale}
                 localePrefix={localePrefix}
                 viewer={viewer}

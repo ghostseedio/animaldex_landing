@@ -11,6 +11,7 @@ import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
 import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
 import MyCompanionsSection from "@/components/companions/my-companions-section";
+import type {CompanionWords} from "@/lib/companion-bond";
 import {useOwnCardLevel} from "@/components/companions/use-companions";
 import {useSearchParams} from "next/navigation";
 import {
@@ -180,6 +181,8 @@ type ProfileContentProps = {
         captureGridSort: "recent" | "index";
     };
     labels: ProfileContentLabels;
+    /** "My Companions", in the reader's language. */
+    companionWords?: CompanionWords;
     locale: string;
     shareButton: React.ReactNode;
     localePrefix: string;
@@ -514,6 +517,7 @@ function HeadToHeadPrompt({onOpen}: {onOpen: () => void}) {
 export default function ProfileContent({
     profile,
     labels,
+    companionWords,
     locale,
     shareButton,
     localePrefix,
@@ -935,7 +939,7 @@ export default function ProfileContent({
                     {/* Your companions and their levels, above what you have
                         found. Read for the signed-in viewer only, so this is
                         the owner's own profile. */}
-                    {viewer.isOwner ? <MyCompanionsSection /> : null}
+                    {viewer.isOwner ? <MyCompanionsSection words={companionWords} /> : null}
                     {binders ? <CompletedBindersSection binders={binders} /> : null}
                     {!viewer.isOwner ? (
                         <StatsPanel className="px-[18px] py-4">

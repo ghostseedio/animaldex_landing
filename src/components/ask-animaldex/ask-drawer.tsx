@@ -57,7 +57,7 @@ import {
     type AskCompanionEvent,
     type AskCompanionLoop
 } from "@/lib/ask-animaldex/companion-loop";
-import {decodeChatBond, type ChatBond} from "@/lib/companion-bond";
+import {bondChipText, bondStageText, decodeChatBond, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond} from "@/components/companions/use-companions";
 import {
@@ -265,6 +265,8 @@ export type AskDrawerLabels = {
     soundCreditsSpecies: string;
     soundCreditsHabitat: string;
     soundOriginal: string;
+    /** The bond screen's words (and the bond chip's stage), in the reader's language. */
+    companions: CompanionWords;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -1242,7 +1244,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             3a603746); the animal's card shows it whole. */}
                                         {chipBond.level !== null
                                             ? labels.bondLevel.replace("{level}", String(chipBond.level))
-                                            : chipBond.stageLabel}
+                                            : bondStageText(chipBond, labels.companions)}
                                     </button>
                                 ) : null}
                             </div>
@@ -1402,7 +1404,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 didLoad={animalBond.didLoad}
                                 speciesProfileId={companionSpeciesProfileId}
                                 slug={resolvedSubject.slug}
-                                name={animalName ?? labels.title}
+                                name={animalName ? companionDisplayName(nickname, animalName, labels.companions.displayName) : labels.title}
                                 powerName={hints.principleName}
                                 onTalk={() => setShowingBond(false)}
                                 onAsk={(message) => {
@@ -1418,6 +1420,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 }}
                                 onRefresh={() => void animalBond.reload()}
                                 locale={locale}
+                                words={labels.companions}
                             />
                         </div>
                     ) : showingMemory ? (
@@ -1787,8 +1790,8 @@ function failureText(message: AskMessage, labels: AskDrawerLabels): string {
 }
 
 /** "Level 4 · Getting to know you", with "Level" in the reader's language. */
-function bondChip(bond: ChatBond | {level: number | null; stageLabel: string}, labels: AskDrawerLabels): string {
-    return bond.level === null ? bond.stageLabel : `${labels.bondLevel.replace("{level}", String(bond.level))} · ${bond.stageLabel}`;
+function bondChip(bond: ChatBond | {level: number | null; stage?: string | null; stageLabel: string}, labels: AskDrawerLabels): string {
+    return bondChipText(bond, labels.companions);
 }
 
 /** A reply refused at the day's limit: what to say, in the reader's language, and their next step. */
@@ -2314,7 +2317,7 @@ function CompanionEventBlock({event, principleName, labels}: {event: AskCompanio
                     className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40"
                 >
                     <ReferralIcon />
-                    {labels.talkTo.replace("{name}", companionDisplayName(referral.nickname, referral.animal))}
+                    {labels.talkTo.replace("{name}", companionDisplayName(referral.nickname, referral.animal, labels.companions.displayName))}
                 </Link>
             ) : null}
         </div>

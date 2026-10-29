@@ -5,6 +5,7 @@ import AnimalGroupChat, {
 } from "@/components/animal-group-chat/animal-group-chat";
 import type {AskReportLabels} from "@/components/ask-animaldex/ask-messenger";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getCompanionWords} from "@/loaders/companion-words";
 
 /** The group chat's words, in the reader's language. */
 const GROUP_KEYS: Array<keyof AnimalGroupChatLabels> = [
@@ -27,9 +28,10 @@ const BUDGET_KEYS: Array<keyof AnimalGroupBudgetLabels> = [
  * four of your animals, then hear them talk it over.
  */
 export default async function AnimalGroupChatPage({params}: {params: {locale: string}}) {
-    const [groupT, askT] = await Promise.all([
+    const [groupT, askT, words] = await Promise.all([
         getScopedTranslator(params.locale, "animalGroupChat"),
-        getScopedTranslator(params.locale, "askAnimalDex")
+        getScopedTranslator(params.locale, "askAnimalDex"),
+        getCompanionWords(params.locale)
     ]);
     const labels = Object.fromEntries(GROUP_KEYS.map((key) => [key, groupT(key)])) as AnimalGroupChatLabels;
     const budget = Object.fromEntries(BUDGET_KEYS.map((key) => [key, askT(key)])) as AnimalGroupBudgetLabels;
@@ -48,7 +50,7 @@ export default async function AnimalGroupChatPage({params}: {params: {locale: st
     };
     return (
         <Suspense>
-            <AnimalGroupChat labels={labels} budget={budget} report={report} locale={params.locale} />
+            <AnimalGroupChat labels={labels} budget={budget} report={report} words={words} locale={params.locale} />
         </Suspense>
     );
 }

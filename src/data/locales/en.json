@@ -2564,5 +2564,79 @@
     "offline": "You're offline. Reconnect and try again.",
     "signInNeeded": "Sign in to talk with your animals.",
     "shareHeading": "Your animals, in their own words — AnimalDex"
+  },
+  "companions": {
+    "bond": {
+      "level": "Level {n}",
+      "xp": "{xp} XP",
+      "mastered": "Mastered",
+      "livesItsLesson": "You live its lesson.",
+      "knowsTheLesson": "Knows the lesson",
+      "putsItIntoPractice": "Puts it into practice",
+      "changedYourLife": "Changed something in your life",
+      "workingOnTitle": "Working on",
+      "noFocus": "Tell {name} what's going on in your life and it will pick something to work on with you.",
+      "notThisAnyMore": "Not this any more",
+      "yourStep": "Your step",
+      "doneTogether": "Done together",
+      "itsPower": "Its Power",
+      "earnByTrial": "Complete one Trial with {name} to earn it.",
+      "earnAfterLessonCheck": "Pass its lesson check, then complete one Trial with {name}.",
+      "talkToIt": "Talk to it",
+      "takeLessonCheck": "Take the lesson check",
+      "lessonCheckMessage": "Can I take your lesson check?",
+      "animalTrials": "Animal Trials",
+      "askAboutIt": "Ask about it",
+      "askAboutTrialMessage": "Tell me about your {difficulty} Trial.",
+      "battleLocked": "Earn {name}'s Power to battle with it.",
+      "battleLockedDetail": "Complete one Trial with it, Animal or your own."
+    },
+    "list": {
+      "title": "Companions",
+      "talkToSeveral": "Talk to several animals",
+      "talkToSeveralIntro": "Bring two or more of your animals into one conversation and hear how each sees it.",
+      "empty": "Capture an animal to meet your first companion.",
+      "capture": "Capture",
+      "referralWaiting": "Sent your way: tap to hear its take",
+      "yourStep": "Your step: {step}",
+      "workingOn": "Working on: {focus}",
+      "sayHello": "Say hello",
+      "mastered": "Mastered",
+      "myCompanions": "My Companions",
+      "masteredCount": "{n} mastered",
+      "powersEarned": "{n} Powers earned"
+    },
+    "stages": {
+      "met": "Met",
+      "getting_to_know_you": "Getting to know you",
+      "working_together": "Working together",
+      "long_standing": "Long-standing",
+      "trusted": "Trusted",
+      "mastered": "Mastered"
+    },
+    "earned": {
+      "yourTrial": "Earned in your own life",
+      "trial": "Earned by Trial",
+      "application": "Earned by applying it",
+      "any": "Earned"
+    },
+    "trialStatus": {
+      "completed": "Complete",
+      "underWay": "Under way",
+      "armed": "Armed",
+      "missed": "Missed",
+      "notStarted": "Not started"
+    },
+    "difficulty": {
+      "Easy": "Easy",
+      "Medium": "Medium",
+      "Hard": "Hard"
+    },
+    "displayName": "{nickname} the {animal}",
+    "card": {
+      "about": "About",
+      "bond": "Bond",
+      "battle": "Battle"
+    }
   }
 }

@@ -30,7 +30,7 @@ import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {allChallengersPowerLocked} from "@/lib/animal-powers";
 import {resolveReferralId} from "@/lib/ask-animaldex/companion-loop";
-import {BOND_COPY, bondChipText, companionSummaryName} from "@/lib/companion-bond";
+import {COMPANION_WORDS_EN, bondChipText, companionSummaryName, fillWords, type CompanionWords} from "@/lib/companion-bond";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {isEligibleToMarkAsPet} from "@/lib/capture-media-management";
 import {type CaptureReveal, captureRewardBreakdown, captureRewardShowcase, claimCaptureReveal} from "@/lib/capture-reveal";
@@ -68,6 +68,8 @@ type CaptureDetailClientProps = {
     nativeRange?: ReactNode;
     /** Comparisons and Fusion, for the Battle tab. */
     play?: ReactNode;
+    /** The bond's words (the Bond tab, the level chip, Talk to it), in the reader's language. */
+    companionWords?: CompanionWords;
 };
 
 type CohortPage = {
@@ -154,7 +156,8 @@ export default function CaptureDetailClient({
     principle,
     rankings,
     nativeRange,
-    play
+    play,
+    companionWords: words = COMPANION_WORDS_EN
 }: CaptureDetailClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -185,10 +188,10 @@ export default function CaptureDetailClient({
     const animalBond = useAnimalBond(viewer.isOwner ? speciesProfileId : null);
     const bondChip = viewer.isOwner
         ? animalBond.bond
-            ? bondChipText(animalBond.bond)
-            : companionRow ? bondChipText(companionRow) : null
+            ? bondChipText(animalBond.bond, words)
+            : companionRow ? bondChipText(companionRow, words) : null
         : null;
-    const companionName = companionRow ? companionSummaryName(companionRow) : speciesName;
+    const companionName = companionRow ? companionSummaryName(companionRow, words) : speciesName;
     // The lesson check (Training) opens from the Bond tab: the website's chat
     // has no lesson-check card for the animal to hand over.
     const speciesTraining = useSpeciesTraining(viewer.isOwner ? speciesProfileId : null);
@@ -427,7 +430,7 @@ export default function CaptureDetailClient({
                             onClick={() => talk()}
                             className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-4 text-sm font-black text-black transition-colors hover:bg-primary-300"
                         >
-                            {BOND_COPY.talkToIt}
+                            {words.bond.talkToIt}
                         </button>
                     ) : null}
                 </div>
@@ -512,12 +515,12 @@ export default function CaptureDetailClient({
 
                 <section className="overflow-hidden border border-white/[0.08] bg-black font-sans">
                     <div className="px-5 pt-5">
-                        <AnimalDetailTabBar value={tab} onChange={setTab} tabs={cardTabs} />
+                        <AnimalDetailTabBar value={tab} onChange={setTab} tabs={cardTabs} labels={words.card} />
                     </div>
 
                     <div
                         role="tabpanel"
-                        aria-label="About"
+                        aria-label={words.card.about}
                         hidden={tab !== "about"}
                         className={tab === "about" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
@@ -573,7 +576,7 @@ export default function CaptureDetailClient({
                     {viewer.isOwner ? (
                         <div
                             role="tabpanel"
-                            aria-label="Bond"
+                            aria-label={words.card.bond}
                             hidden={tab !== "bond"}
                             className={tab === "bond" ? "mt-5 pb-5" : "hidden"}
                         >
@@ -596,13 +599,14 @@ export default function CaptureDetailClient({
                                 }}
                                 canAttemptTrials={trialUnlock.canAttempt}
                                 locale={locale}
+                                words={words}
                             />
                         </div>
                     ) : null}
 
                     <div
                         role="tabpanel"
-                        aria-label="Battle"
+                        aria-label={words.card.battle}
                         hidden={tab !== "battle"}
                         className={tab === "battle" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
@@ -610,15 +614,15 @@ export default function CaptureDetailClient({
                             // Battle is earned: the Power first, with the animal.
                             <div className="-mx-5 flex flex-col items-start gap-2 border-y border-white/[0.08] px-5 py-6">
                                 <p className="font-display text-xl font-black text-white">
-                                    {BOND_COPY.battleLocked.replace("{name}", companionName)}
+                                    {fillWords(words.bond.battleLocked, {name: companionName})}
                                 </p>
-                                <p className="text-sm leading-6 text-white/60">{BOND_COPY.battleLockedDetail}</p>
+                                <p className="text-sm leading-6 text-white/60">{words.bond.battleLockedDetail}</p>
                                 <button
                                     type="button"
                                     onClick={() => talk()}
                                     className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300"
                                 >
-                                    {BOND_COPY.talkToIt}
+                                    {words.bond.talkToIt}
                                 </button>
                             </div>
                         ) : (

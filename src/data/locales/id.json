@@ -2546,5 +2546,79 @@
     "offline": "Anda sedang offline. Sambungkan lagi lalu coba lagi.",
     "signInNeeded": "Masuk untuk berbicara dengan hewan Anda.",
     "shareHeading": "Hewan Anda, dengan kata-kata mereka sendiri — AnimalDex"
+  },
+  "companions": {
+    "bond": {
+      "level": "Level {n}",
+      "xp": "{xp} XP",
+      "mastered": "Dikuasai",
+      "livesItsLesson": "Anda menjalani pelajarannya.",
+      "knowsTheLesson": "Memahami pelajarannya",
+      "putsItIntoPractice": "Mempraktikkannya",
+      "changedYourLife": "Mengubah sesuatu dalam hidup Anda",
+      "workingOnTitle": "Sedang kita kerjakan",
+      "noFocus": "Ceritakan kepada {name} apa yang sedang terjadi dalam hidup Anda, dan ia akan memilih sesuatu untuk dikerjakan bersama Anda.",
+      "notThisAnyMore": "Bukan ini lagi",
+      "yourStep": "Langkah Anda",
+      "doneTogether": "Selesai bersama",
+      "itsPower": "Kekuatannya",
+      "earnByTrial": "Selesaikan satu Uji Coba bersama {name} untuk mendapatkannya.",
+      "earnAfterLessonCheck": "Lulus cek pelajarannya, lalu selesaikan satu Uji Coba bersama {name}.",
+      "talkToIt": "Bicara dengannya",
+      "takeLessonCheck": "Ikuti cek pelajaran",
+      "lessonCheckMessage": "Boleh aku ikut cek pelajaranmu?",
+      "animalTrials": "Uji Coba Hewan",
+      "askAboutIt": "Tanyakan",
+      "askAboutTrialMessage": "Ceritakan tentang Uji Coba {difficulty} milikmu.",
+      "battleLocked": "Dapatkan Kekuatan {name} untuk bertarung dengannya.",
+      "battleLockedDetail": "Selesaikan satu Uji Coba dengannya, Uji Coba Hewan atau milik Anda sendiri."
+    },
+    "list": {
+      "title": "Teman",
+      "talkToSeveral": "Bicara dengan beberapa hewan",
+      "talkToSeveralIntro": "Ajak dua hewan Anda atau lebih ke dalam satu percakapan dan dengarkan cara pandang masing-masing.",
+      "empty": "Tangkap seekor hewan untuk bertemu teman pertama Anda.",
+      "capture": "Tangkap",
+      "referralWaiting": "Dikirim untuk Anda: ketuk untuk mendengar pendapatnya",
+      "yourStep": "Langkah Anda: {step}",
+      "workingOn": "Sedang kita kerjakan: {focus}",
+      "sayHello": "Sapa dia",
+      "mastered": "Dikuasai",
+      "myCompanions": "Teman Saya",
+      "masteredCount": "{n} dikuasai",
+      "powersEarned": "{n} Kekuatan didapatkan"
+    },
+    "stages": {
+      "met": "Baru bertemu",
+      "getting_to_know_you": "Saling mengenal",
+      "working_together": "Bekerja sama",
+      "long_standing": "Sudah lama bersama",
+      "trusted": "Dipercaya",
+      "mastered": "Dikuasai"
+    },
+    "earned": {
+      "yourTrial": "Didapatkan dalam hidup Anda sendiri",
+      "trial": "Didapatkan melalui Uji Coba",
+      "application": "Didapatkan dengan menerapkannya",
+      "any": "Didapatkan"
+    },
+    "trialStatus": {
+      "completed": "Selesai",
+      "underWay": "Sedang berjalan",
+      "armed": "Terjadwal",
+      "missed": "Terlewat",
+      "notStarted": "Belum dimulai"
+    },
+    "difficulty": {
+      "Easy": "Mudah",
+      "Medium": "Sedang",
+      "Hard": "Sulit"
+    },
+    "displayName": "{nickname} sang {animal}",
+    "card": {
+      "about": "Tentang",
+      "bond": "Ikatan",
+      "battle": "Pertarungan"
+    }
   }
 }
