@@ -3,9 +3,13 @@ import {notFound, redirect} from "next/navigation";
 import AppShell from "@/app/[locale]/(authenticated)/app/_components/app-shell";
 import {AppCreditsProvider} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
+import {PostShareBand, PostSharePanel, type PostShareLabels} from "@/app/[locale]/p/[postId]/post-share-cta";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import ShareReferralCapture from "@/components/store/share-referral-capture";
 import {getDiscoverPostById, type DiscoverTimelineItem} from "@/data/discover-timeline";
+import {getSpeciesImageRoute} from "@/data/species-images";
 import {
+    discoverPostAnimal,
     discoverPostPath,
     discoverPostShareDescription,
     discoverPostShareTitle,
@@ -13,6 +17,7 @@ import {
     parseDiscoverPostId
 } from "@/lib/discover-post";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
+import {getScopedTranslator} from "@/loaders/translation";
 
 export const revalidate = 86400;
 export const dynamicParams = true;
@@ -260,6 +265,24 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
             : null
     ].filter(Boolean);
 
+    // Somebody who opened a shared link: the app, and the animal's own page and voice.
+    const animal = discoverPostAnimal(post);
+    const [t, askT, animalsT] = await Promise.all([
+        getScopedTranslator(params.locale, "post"),
+        getScopedTranslator(params.locale, "askAnimalDex"),
+        getScopedTranslator(params.locale, "animals")
+    ]);
+    const shareLabels: PostShareLabels = {
+        sharedFrom: t("sharedFrom"),
+        appLine: t("appLine"),
+        speak: animal ? askT("speakLauncher").replace("{animal}", animal.name) : "",
+        moreAbout: animal ? t("moreAbout", {animal: animal.name}) : "",
+        getApp: animalsT("getAnimalDex"),
+        fieldGuide: animalsT("tabGuide")
+    };
+    // The animal's face in its chat is its icon art, never a capture photo.
+    const shareAnimal = animal ? {...animal, avatarUrl: getSpeciesImageRoute(animal.slug)} : null;
+
     return (
         <AppCreditsProvider initialBalance={null}>
             <AppShell
@@ -271,6 +294,15 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
             >
                 {/* The feed rewrites the URL as it scrolls, so a shared `?ref=` is kept now. */}
                 <ShareReferralCapture />
+                {animal ? (
+                    <AskSubjectBridge
+                        scope="species"
+                        slug={animal.slug}
+                        name={animal.name}
+                        title={animal.name}
+                        avatarUrl={getSpeciesImageRoute(animal.slug)}
+                    />
+                ) : null}
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd.length === 1 ? jsonLd[0] : jsonLd)}}
@@ -285,6 +317,8 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
                     syncPostUrls
                     viewerUserId={null}
                     hydrateSignedInFeed
+                    shareBand={<PostShareBand labels={shareLabels} animal={shareAnimal} />}
+                    sharePanel={<PostSharePanel labels={shareLabels} animal={shareAnimal} />}
                 />
             </AppShell>
         </AppCreditsProvider>

@@ -48,6 +48,9 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
     if (subject.kind === "capture") return null;
     // The group chat is a conversation already; a second one would sit on its composer.
     if (subject.path === "/app/companions/group") return null;
+    // A shared post (/p/…) carries its own "Speak to the …" beside the store
+    // buttons; this one would sit on the feed's tab bar and action rail.
+    if (subject.path.startsWith("/p/")) return null;
 
     // The authenticated app carries a floating tab bar at the bottom of the
     // screen on mobile, so the launcher clears it there rather than sitting on

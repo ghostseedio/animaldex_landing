@@ -18,7 +18,7 @@ import {
 } from "@/lib/discover-seen";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getLocalePath} from "@/lib/site";
-import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type WheelEvent} from "react";
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
 
 type DiscoverSegment = "discover" | "collectors";
@@ -166,9 +166,10 @@ function DiscoverTopBar({
     );
 }
 
-function FeaturedPanel({items}: {items: DiscoverFeaturedItem[]}) {
+/** `fill`: shares the column with a panel above it, so it takes what is left instead of the feed's height. */
+function FeaturedPanel({items, fill = false}: {items: DiscoverFeaturedItem[]; fill?: boolean}) {
     return (
-        <aside className="hidden h-[90svh] min-h-[42rem] overflow-hidden border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] lg:flex lg:flex-col">
+        <aside className={`hidden overflow-hidden border border-white/[0.08] bg-[#121212]/90 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] lg:flex lg:flex-col ${fill ? "min-h-0 flex-1" : "h-[90svh] min-h-[42rem]"}`}>
             <div className="space-y-3 border-b border-white/[0.06] p-3">
                 <AppPrimaryLink href="/app/capture" icon="camera" className="w-full">Scan an animal</AppPrimaryLink>
             </div>
@@ -315,7 +316,9 @@ export default function DiscoverHome({
     initialFocusPostId = null,
     syncPostUrls = true,
     viewerUserId: initialViewerUserId = null,
-    hydrateSignedInFeed = false
+    hydrateSignedInFeed = false,
+    shareBand = null,
+    sharePanel = null
 }: {
     locale: string;
     timeline: DiscoverTimelineItem[];
@@ -334,6 +337,13 @@ export default function DiscoverHome({
      * only renders the page).
      */
     hydrateSignedInFeed?: boolean;
+    /**
+     * The /p/[postId] page's offer to somebody who arrived from a shared link:
+     * a band under the top bar on phones, a panel above the featured column on
+     * desktop. Each hides itself at the other size.
+     */
+    shareBand?: ReactNode;
+    sharePanel?: ReactNode;
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
@@ -868,6 +878,8 @@ export default function DiscoverHome({
                 />
             </div>
 
+            {segment === "discover" ? shareBand : null}
+
             {segment === "discover" ? (
                 <div className="min-h-0 flex-1 lg:grid lg:w-full lg:grid-cols-[10rem_minmax(0,42rem)_20rem] lg:items-start lg:justify-between lg:gap-4 xl:grid-cols-[12rem_minmax(0,42rem)_20rem]">
                     <div aria-hidden="true" className="hidden lg:block" />
@@ -910,7 +922,14 @@ export default function DiscoverHome({
                             </div>
                         )}
                     </div>
-                    <FeaturedPanel items={featuredItems} />
+                    {sharePanel ? (
+                        <div className="hidden h-[90svh] min-h-[42rem] flex-col gap-3 lg:flex">
+                            {sharePanel}
+                            <FeaturedPanel items={featuredItems} fill />
+                        </div>
+                    ) : (
+                        <FeaturedPanel items={featuredItems} />
+                    )}
                 </div>
             ) : collectorItems.length ? (
                 // iOS keeps the last collector row and pagination spinner above

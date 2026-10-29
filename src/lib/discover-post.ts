@@ -134,3 +134,37 @@ export function discoverPostShareDescription(input: {
 
     return `A completed AnimalDex trade involving ${animal}.`;
 }
+
+/** A species page, `/animals/<slug>`, and nothing else. */
+const SPECIES_PAGE_PATH = /^\/animals\/([a-z0-9][a-z0-9-]*)$/;
+
+export type DiscoverPostAnimal = {name: string; slug: string; href: string};
+
+/**
+ * The one animal a post is about, when it has a species page: what a shared
+ * post's page links on to ("More about the …") and lets a visitor speak to.
+ * None for an uncertain capture, or for posts about two animals or none.
+ */
+export function discoverPostAnimal(item: {
+    kind: string;
+    animalName?: string | null;
+    speciesName?: string | null;
+    isUncertain?: boolean;
+    href?: string | null;
+}): DiscoverPostAnimal | null {
+    if (item.kind !== "capture" && item.kind !== "animal-trial") return null;
+    if (item.isUncertain) return null;
+    const name = (item.kind === "capture" ? item.animalName : item.speciesName)?.trim();
+    const slug = item.href ? SPECIES_PAGE_PATH.exec(item.href)?.[1] : null;
+    if (!name || !slug) return null;
+    return {name, slug, href: `/animals/${slug}`};
+}
+
+/**
+ * Where a feed card's title goes. A signed-in reader opens the capture, as on
+ * iOS; anybody else (a shared post opened from a link) gets the public species
+ * page, because the capture view is behind sign-in.
+ */
+export function discoverCaptureTitleHref(item: {captureId: string; href: string}, viewerUserId: string | null) {
+    return viewerUserId ? `/app/capture/${encodeURIComponent(item.captureId)}` : item.href;
+}

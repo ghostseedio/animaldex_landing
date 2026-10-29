@@ -37,6 +37,7 @@ export type StorePlacement =
     | "profile_pack"
     | "wild_profile"
     | "import_result"
+    | "post"
     | `page_${string}`;
 
 /**

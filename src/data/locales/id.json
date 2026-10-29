@@ -2645,5 +2645,10 @@
       "alreadyHere": "Sudah ada",
       "alreadyHereHint": "Spesies ini sudah ada di grup"
     }
+  },
+  "post": {
+    "sharedFrom": "Dibagikan dari AnimalDex",
+    "appLine": "AnimalDex mengenali hewan yang Anda foto dan menyimpan masing-masing sebagai kartu.",
+    "moreAbout": "Selengkapnya tentang {animal}"
   }
 }

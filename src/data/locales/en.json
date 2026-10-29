@@ -2663,5 +2663,10 @@
       "alreadyHere": "Already here",
       "alreadyHereHint": "One of this species is already in the group"
     }
+  },
+  "post": {
+    "sharedFrom": "Shared from AnimalDex",
+    "appLine": "AnimalDex identifies the animals you photograph and keeps each one as a card.",
+    "moreAbout": "More about the {animal}"
   }
 }

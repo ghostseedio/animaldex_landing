@@ -30,6 +30,7 @@ import type {
   DiscoverTradeItem,
 } from "@/data/discover-timeline";
 import {
+  discoverCaptureTitleHref,
   discoverPostPath,
   discoverPostShareDescription,
   discoverPostShareTitle,
@@ -954,12 +955,13 @@ function FeedTopOverlay({
 }
 
 /** iOS `bottomOverlay`. */
-function FeedBottomOverlay({item, isOwn = false}: {item: DiscoverCaptureItem; isOwn?: boolean}) {
+function FeedBottomOverlay({item, isOwn = false, titleHref}: {item: DiscoverCaptureItem; isOwn?: boolean; titleHref: string}) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2 [filter:drop-shadow(0_1px_4px_rgba(0,0,0,0.65))]">
       {item.isUncertain ? <span className="pointer-events-auto self-start"><UncertainBadge /></span> : null}
-      {/* iOS `onOpenCapture`: the title block opens the capture detail, not the species page. */}
-      <Link href={`/app/capture/${encodeURIComponent(item.captureId)}`} className="pointer-events-auto flex flex-col gap-1.5">
+      {/* iOS `onOpenCapture`: the title block opens the capture detail, not the species
+          page. Signed out (a shared post) it opens the species page: the capture is behind sign-in. */}
+      <Link href={titleHref} className="pointer-events-auto flex flex-col gap-1.5">
         <h3 className="line-clamp-2 text-[17px] font-semibold leading-tight text-white">{item.animalName}</h3>
         <CapturePostChipRow item={item} isOwn={isOwn} />
       </Link>
@@ -1257,7 +1259,7 @@ function CaptureCard({
         <div className="min-h-5 flex-1 [@media(max-height:760px)]:min-h-2" />
 
         <div className="flex items-end gap-3.5 [@media(max-height:760px)]:gap-2">
-          <FeedBottomOverlay item={activeItem} isOwn={isOwnPost} />
+          <FeedBottomOverlay item={activeItem} isOwn={isOwnPost} titleHref={discoverCaptureTitleHref(activeItem, viewerUserId)} />
           {/* iOS `actionRail` order: Gift, Offer, Compare, Share, Info. */}
           <div className="flex w-[46px] shrink-0 flex-col items-center gap-1 [@media(max-height:760px)]:w-10 [@media(max-height:760px)]:gap-0.5">
             {viewerUserId ? (
