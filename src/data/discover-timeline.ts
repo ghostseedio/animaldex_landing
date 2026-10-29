@@ -20,6 +20,7 @@ import {getCatalogLandingPageIndex} from "@/data/catalog-landing-pages";
 import {animalTrialEvidenceRoute} from "@/lib/discover-animal-trial";
 import {parseDiscoverPostId, type ParsedDiscoverPostId} from "@/lib/discover-post";
 import {identityKindShortLabel} from "@/lib/identity-kind";
+import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
 import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
@@ -455,7 +456,10 @@ function resolveHref(slug: string | null, identityKey: string | null = null) {
     const canonicalSlug = resolveCanonicalSlugFromIdentity(identityKey) ?? slug;
     if (!canonicalSlug) return "/animals";
     const species = getSpeciesBySlug(canonicalSlug);
-    return species ? `/animals/${species.slug}` : `/animals/${canonicalSlug}`;
+    if (species) return `/animals/${species.slug}`;
+    // Signed-out readers follow this from a card's title; a species the site
+    // has no page for (horse, common carp…) would be a 404, so the catalogue.
+    return isPublishedAnimalSlug(canonicalSlug) ? `/animals/${canonicalSlug}` : "/animals";
 }
 
 function endorsementCount(row: QueryRow) {
