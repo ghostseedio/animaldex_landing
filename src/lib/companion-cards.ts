@@ -74,3 +74,36 @@ export function chatCaptureId(
     }
     return best?.id ?? fallback;
 }
+
+/**
+ * The group picker's rule (iOS `AnimalGroupCapturePicker`): two to four cards,
+ * one of each species. A picked card unpicks; another card of a species
+ * already in, or any card once the group is full, does nothing.
+ */
+export function toggleGroupPick(
+    selection: string[],
+    captureId: string,
+    speciesOf: (captureId: string) => string | undefined,
+    max: number
+): string[] {
+    if (selection.includes(captureId)) return selection.filter((id) => id !== captureId);
+    if (selection.length >= max || groupSpeciesTaken(selection, captureId, speciesOf)) return selection;
+    return [...selection, captureId];
+}
+
+/** Another card of this one's species is already picked. */
+export function groupSpeciesTaken(selection: string[], captureId: string, speciesOf: (captureId: string) => string | undefined): boolean {
+    if (selection.includes(captureId)) return false;
+    const species = speciesOf(captureId);
+    return Boolean(species) && selection.some((id) => speciesOf(id) === species);
+}
+
+/** Picked cards that can talk together: each species once, in the order picked. */
+export function onePerSpecies<T extends {speciesProfileId: string}>(picked: T[]): T[] {
+    const seen = new Set<string>();
+    return picked.filter((row) => {
+        if (seen.has(row.speciesProfileId)) return false;
+        seen.add(row.speciesProfileId);
+        return true;
+    });
+}

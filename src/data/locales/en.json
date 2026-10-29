@@ -2658,6 +2658,10 @@
       "editNickname": "Edit Nickname",
       "example": "e.g. Luna",
       "leaveBlank": "Leave blank to show the identified animal name."
+    },
+    "picker": {
+      "alreadyHere": "Already here",
+      "alreadyHereHint": "One of this species is already in the group"
     }
   }
 }

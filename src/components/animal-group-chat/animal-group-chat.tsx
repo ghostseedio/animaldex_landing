@@ -35,7 +35,8 @@ import type {AskReportChoice} from "@/lib/ask-animaldex/report";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pacer";
 import {useAskGroupDirector} from "@/components/animal-group-chat/use-group-director";
-import {useCompanions} from "@/components/companions/use-companions";
+import {useCompanionCards, useCompanions} from "@/components/companions/use-companions";
+import {groupSpeciesTaken, onePerSpecies, toggleGroupPick, type CompanionCard} from "@/lib/companion-cards";
 import {companionSummaryName, type CompanionSummary, type CompanionWords} from "@/lib/companion-bond";
 import {askReplyPieces} from "@/lib/ask-animaldex/thread-layout";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
@@ -110,8 +111,49 @@ function storage(): Storage | null {
     }
 }
 
-function faceUrl(row: CompanionSummary | undefined): string | null {
+/** One of your cards in the group: its face, its name, its species (one of each). */
+type GroupAnimal = {
+    captureId: string;
+    /** The canonical species. */
+    speciesProfileId: string;
+    animal: string;
+    nickname: string | null;
+    slug: string | null;
+    powerName: string | null;
+    capturedAt: string | null;
+};
+
+function faceUrl(row: Pick<GroupAnimal, "slug"> | undefined): string | null {
     return row?.slug ? getSpeciesImageRoute(row.slug) : null;
+}
+
+/**
+ * Every card you hold (iOS lists the whole library), each with its animal's
+ * Power. Before the cards are read, or when they cannot be, the animals the
+ * bond list has, one card each.
+ */
+function groupAnimals(cards: CompanionCard[], cardsAvailable: boolean, rows: CompanionSummary[]): GroupAnimal[] {
+    const powerOf = new Map(rows.map((row) => [row.speciesProfileId.toLowerCase(), row.powerName]));
+    if (cardsAvailable) {
+        return cards.map((card) => ({
+            captureId: card.captureId,
+            speciesProfileId: card.speciesProfileId,
+            animal: card.animal,
+            nickname: card.nickname,
+            slug: card.slug,
+            powerName: powerOf.get(card.speciesProfileId) ?? null,
+            capturedAt: card.capturedAt
+        }));
+    }
+    return rows.flatMap((row): GroupAnimal[] => row.captureId ? [{
+        captureId: row.captureId.toLowerCase(),
+        speciesProfileId: row.speciesProfileId.toLowerCase(),
+        animal: row.animal,
+        nickname: row.nickname,
+        slug: row.slug,
+        powerName: row.powerName,
+        capturedAt: null
+    }] : []);
 }
 
 export default function AnimalGroupChat({
@@ -125,32 +167,33 @@ export default function AnimalGroupChat({
     budget: AnimalGroupBudgetLabels;
     /** Report this reply, in the one-to-one chat's words. */
     report: AskReportLabels;
-    /** The animals' names ("Luna the Gray Wolf") and Capture, in the reader's language. */
+    /** The animals' names ("Luna the Gray Wolf"), Capture and "Already here", in the reader's language. */
     words: CompanionWords;
     locale: string;
 }) {
     const {rows, didLoad} = useCompanions();
+    const {cards, didLoad: cardsLoaded, available: cardsAvailable} = useCompanionCards();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     // Only animals with a card can talk: the conversation is through their cards.
-    const animals = useMemo(() => rows.filter((row) => row.captureId), [rows]);
+    const animals = useMemo(() => groupAnimals(cards, cardsAvailable, rows), [cards, cardsAvailable, rows]);
     const requested = useMemo(
         () => (searchParams?.get("animals") ?? "").split(",").map((id) => id.trim().toLowerCase()).filter(Boolean),
         [searchParams]
     );
     const chosen = useMemo(() => {
-        const byCapture = new Map(animals.map((row) => [String(row.captureId).toLowerCase(), row]));
-        const picked = requested.map((id) => byCapture.get(id)).filter((row): row is CompanionSummary => Boolean(row));
+        const byCapture = new Map(animals.map((row) => [row.captureId, row]));
+        const picked = onePerSpecies(requested.map((id) => byCapture.get(id)).filter((row): row is GroupAnimal => Boolean(row)));
         return picked.length >= ASK_GROUP_MIN_ANIMALS ? picked.slice(0, ASK_GROUP_MAX_ANIMALS) : null;
     }, [animals, requested]);
 
-    const choose = (picked: CompanionSummary[] | null) => {
+    const choose = (picked: GroupAnimal[] | null) => {
         const query = picked ? `?animals=${picked.map((row) => row.captureId).join(",")}` : "";
         router.replace(`${pathname ?? ""}${query}`);
     };
 
-    if (!didLoad) {
+    if (!didLoad || !cardsLoaded) {
         return <GroupFrame><p className="px-4 py-8 text-sm text-white/55 md:px-5">{labels.loading}</p></GroupFrame>;
     }
     if (!chosen) {
@@ -158,6 +201,7 @@ export default function AnimalGroupChat({
             <GroupPicker
                 labels={labels}
                 words={words}
+                locale={locale}
                 animals={animals}
                 preselected={requested}
                 onStart={(picked) => choose(picked)}
@@ -166,7 +210,7 @@ export default function AnimalGroupChat({
     }
     return (
         <GroupConversation
-            key={askGroupThreadKey(chosen.map((row) => String(row.captureId)))}
+            key={askGroupThreadKey(chosen.map((row) => row.captureId))}
             labels={labels}
             budget={budget}
             report={report}
@@ -187,32 +231,60 @@ function GroupFrame({children}: {children: React.ReactNode}) {
     );
 }
 
+function capturedOn(raw: string | null, locale: string): string | null {
+    const at = raw ? new Date(raw) : null;
+    if (!at || Number.isNaN(at.getTime())) return null;
+    const options: Intl.DateTimeFormatOptions = {day: "numeric", month: "short", year: "numeric"};
+    try {
+        return at.toLocaleDateString(locale, options);
+    } catch {
+        return at.toLocaleDateString(undefined, options);
+    }
+}
+
 // MARK: - The picker
 
+/**
+ * Every one of your cards, two to four picked, one of each species (iOS
+ * `AnimalGroupCapturePicker`): two of a kind would be twins, one voice and one
+ * way of seeing things, so once a species is in, its other cards say "Already
+ * here" and wait greyed out. Cards of one animal tell themselves apart by
+ * when they were caught.
+ */
 function GroupPicker({
     labels,
     words,
+    locale,
     animals,
     preselected,
     onStart
 }: {
     labels: AnimalGroupChatLabels;
     words: CompanionWords;
-    animals: CompanionSummary[];
+    locale: string;
+    animals: GroupAnimal[];
     preselected: string[];
-    onStart: (picked: CompanionSummary[]) => void;
+    onStart: (picked: GroupAnimal[]) => void;
 }) {
+    const byCapture = useMemo(() => new Map(animals.map((row) => [row.captureId, row])), [animals]);
     const [selection, setSelection] = useState<string[]>(() =>
-        preselected.filter((id) => animals.some((row) => String(row.captureId).toLowerCase() === id)).slice(0, ASK_GROUP_MAX_ANIMALS));
+        onePerSpecies(preselected.map((id) => byCapture.get(id)).filter((row): row is GroupAnimal => Boolean(row)))
+            .slice(0, ASK_GROUP_MAX_ANIMALS)
+            .map((row) => row.captureId));
     const [query, setQuery] = useState("");
     const visible = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return animals;
         return animals.filter((row) => companionSummaryName(row, words).toLowerCase().includes(needle) || row.animal.toLowerCase().includes(needle));
     }, [animals, query, words]);
+    const cardsPerSpecies = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const row of animals) counts.set(row.speciesProfileId, (counts.get(row.speciesProfileId) ?? 0) + 1);
+        return counts;
+    }, [animals]);
+    const speciesOf = (id: string) => byCapture.get(id)?.speciesProfileId;
     const isFull = selection.length >= ASK_GROUP_MAX_ANIMALS;
     const canStart = selection.length >= ASK_GROUP_MIN_ANIMALS && selection.length <= ASK_GROUP_MAX_ANIMALS;
-    const byCapture = new Map(animals.map((row) => [String(row.captureId).toLowerCase(), row]));
 
     return (
         <GroupFrame>
@@ -222,13 +294,13 @@ function GroupPicker({
                 <button
                     type="button"
                     disabled={!canStart}
-                    onClick={() => onStart(selection.map((id) => byCapture.get(id)).filter((row): row is CompanionSummary => Boolean(row)))}
+                    onClick={() => onStart(selection.map((id) => byCapture.get(id)).filter((row): row is GroupAnimal => Boolean(row)))}
                     className="text-sm font-black text-primary-300 transition enabled:hover:text-primary-200 disabled:text-white/25"
                 >
                     {labels.start.replace("{count}", String(selection.length))}
                 </button>
             </div>
-            {animals.length < ASK_GROUP_MIN_ANIMALS ? (
+            {cardsPerSpecies.size < ASK_GROUP_MIN_ANIMALS ? (
                 <div className="flex flex-1 flex-col items-start gap-4 px-4 py-8 md:px-5">
                     <p className="text-base font-semibold text-white">{labels.empty}</p>
                     <Link href="/app/capture" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300">
@@ -250,24 +322,32 @@ function GroupPicker({
                         />
                     </label>
                     {visible.map((row) => {
-                        const id = String(row.captureId).toLowerCase();
+                        const id = row.captureId;
                         const at = selection.indexOf(id);
                         const picked = at >= 0;
-                        const dimmed = !picked && isFull;
+                        const speciesTaken = groupSpeciesTaken(selection, id, speciesOf);
+                        const dimmed = !picked && (isFull || speciesTaken);
+                        const name = companionSummaryName(row, words);
+                        const caught = (cardsPerSpecies.get(row.speciesProfileId) ?? 0) > 1 ? capturedOn(row.capturedAt, locale) : null;
+                        const detail = [row.powerName, caught].filter(Boolean).join(" · ");
                         return (
                             <button
                                 key={id}
                                 type="button"
                                 aria-pressed={picked}
-                                onClick={() => setSelection((current) => (
-                                    current.includes(id) ? current.filter((value) => value !== id) : current.length >= ASK_GROUP_MAX_ANIMALS ? current : [...current, id]
-                                ))}
+                                title={speciesTaken ? words.picker.alreadyHereHint : undefined}
+                                onClick={() => setSelection((current) => toggleGroupPick(current, id, speciesOf, ASK_GROUP_MAX_ANIMALS))}
                                 className={`flex w-full items-center gap-3.5 border-b border-white/[0.08] px-4 py-3 text-left transition hover:bg-white/[0.03] md:px-5 ${dimmed ? "opacity-45" : ""}`}
                             >
                                 <AskAnimalFace url={faceUrl(row)} size={48} className={picked ? "ring-2 ring-primary-400" : ""} />
                                 <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-base font-bold text-white">{companionSummaryName(row, words)}</span>
-                                    {row.powerName ? <span className="mt-0.5 block truncate text-xs font-semibold text-white/50">{row.powerName}</span> : null}
+                                    <span className={`block truncate text-base font-bold ${speciesTaken ? "text-white/45" : "text-white"}`}>
+                                        {speciesTaken ? words.picker.alreadyHere : name}
+                                    </span>
+                                    <span className="mt-0.5 block truncate text-xs font-semibold text-white/50">
+                                        {speciesTaken ? name : detail}
+                                    </span>
+                                    {speciesTaken ? <span className="sr-only">{words.picker.alreadyHereHint}</span> : null}
                                 </span>
                                 <span
                                     aria-hidden="true"
@@ -305,7 +385,7 @@ function GroupConversation({
     report: AskReportLabels;
     words: CompanionWords;
     locale: string;
-    members: CompanionSummary[];
+    members: GroupAnimal[];
     onChangeAnimals: () => void;
 }) {
     const captureIds = useMemo(() => members.map((row) => String(row.captureId).toLowerCase()), [members]);

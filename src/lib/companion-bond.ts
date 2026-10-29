@@ -175,6 +175,11 @@ export const COMPANION_WORDS_EN = {
         example: "e.g. Luna",
         leaveBlank: "Leave blank to show the identified animal name."
     },
+    /** The group picker (iOS AnimalGroupCapturePicker): a second card of a species already picked. */
+    picker: {
+        alreadyHere: "Already here",
+        alreadyHereHint: "One of this species is already in the group"
+    },
     /** Your own card's tabs: About · Bond · Battle. */
     card: {about: "About", bond: "Bond", battle: "Battle"},
     /** "Luna the Gray Wolf" (iOS "%@ the %@"). */

@@ -2640,6 +2640,10 @@
       "editNickname": "Edit Nama Panggilan",
       "example": "mis. Luna",
       "leaveBlank": "Biarkan kosong untuk menampilkan nama hewan yang teridentifikasi."
+    },
+    "picker": {
+      "alreadyHere": "Sudah ada",
+      "alreadyHereHint": "Spesies ini sudah ada di grup"
     }
   }
 }
