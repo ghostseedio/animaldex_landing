@@ -188,7 +188,13 @@ test("each animal argues its own Power's move, not the sensible average or the r
         assert.ok(prompt.includes("Your advice is your Power's advice"));
         assert.ok(prompt.includes("Do not drift towards what they lean to"));
         assert.ok(prompt.includes("Your blind spot is a warning, not a U-turn"));
-        assert.ok(prompt.includes("rethink the advice from"));
+        assert.ok(prompt.includes("rethink the advice, do not reword it"));
+        // A side on what they asked, from how its kind lives; safety outranks every nature.
+        assert.ok(prompt.includes("take a side on it"));
+        assert.ok(prompt.includes("as a field biologist who knows your kind"));
+        assert.ok(prompt.includes("Real stakes are the one limit"));
+        assert.ok(prompt.includes("their safety comes before your Power"));
+        assert.ok(!prompt.includes("ending a relationship"));
         assert.ok(!prompt.includes("say it again in your own way"));
         assert.ok(!prompt.includes("rather than turning into a generic coach"));
     }

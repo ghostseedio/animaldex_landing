@@ -77,10 +77,13 @@ import {
     askAnswerSource,
     askChatMaxEffort,
     availableAskProviders,
+    claudeAskKey,
     requestAskAnswerJSON,
     type AnswerDeltaSource,
     type AskProviderName
 } from "@/lib/ask-animaldex/providers";
+import {askKindVerdictEnabled} from "@/lib/ask-animaldex/kind-verdict";
+import {requestAskKindVerdict} from "@/lib/ask-animaldex/kind-verdict-server";
 import {
     askPersonaDials,
     askPersonaFrame,
@@ -241,6 +244,25 @@ export async function POST(request: Request) {
         speaksAsAnimal ? loadAskStatQuantiles() : Promise.resolve(null)
     ]);
     const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
+    // Its kind's verdict on what they asked (`kind-verdict.ts`), settled as
+    // natural history while the rest of the turn loads, so the animal argues
+    // its own side rather than the sensible one. Not on a visit, a Trial or a call.
+    const verdictKey = claudeAskKey();
+    const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && basePacket.species && question &&
+            !isVisit && !isCall && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
+        ? requestAskKindVerdict({
+            key: verdictKey,
+            input: {
+                animalName: basePacket.species.name,
+                scientificName: basePacket.species.scientificName,
+                powerName: basePacket.species.power?.principleName ?? null,
+                coreLesson: basePacket.species.power?.coreLesson ?? null,
+                adviceStyle: companion?.voice?.advice_style ?? null,
+                message: question,
+                history
+            }
+        })
+        : Promise.resolve(null);
     // A Trial question is grounded on that Trial and kept there.
     const aboutTrial = Boolean(subject.trialContext);
     // The owner's turn: the bond, and (personalisation on, not a Trial) the
@@ -501,7 +523,8 @@ export async function POST(request: Request) {
             packet,
             conversationHistory: history,
             recordInSystem: speaksAsAnimal,
-            historyAsTurns: speaksAsAnimal
+            historyAsTurns: speaksAsAnimal,
+            kindVerdict: await kindVerdict
         });
     const providers = availableAskProviders({animalVoice: speaksAsAnimal});
 

@@ -11,6 +11,7 @@
  * `@/data/ask-grounding`, so the prompt shape can be tested without a network.
  */
 
+import {askKindVerdictPromptSection, type AskKindVerdict} from "@/lib/ask-animaldex/kind-verdict";
 import type {AskConversationTurn, AskScope} from "@/lib/ask-animaldex/prompt";
 import {askMemorySection, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import {
@@ -658,6 +659,8 @@ export function buildAskUserPrompt(params: {
     recordInSystem?: boolean;
     /** Species scope: the history goes to the model as real turns; leave it out of this text. */
     historyAsTurns?: boolean;
+    /** Species scope: what its kind does in the moment most like theirs (`kind-verdict.ts`). */
+    kindVerdict?: AskKindVerdict | null;
 }): string {
     const {packet} = params;
     const history = (params.conversationHistory ?? [])
@@ -680,6 +683,7 @@ export function buildAskUserPrompt(params: {
             `user_message: ${params.userQuestion}`,
             "",
             ...speciesContextLines({packet, recordInSystem: params.recordInSystem, pageLine}),
+            params.kindVerdict ? askKindVerdictPromptSection(params.kindVerdict) : "",
             params.historyAsTurns ? "" : historyLine,
             "",
             "Answer the person's latest message, as yourself.",
