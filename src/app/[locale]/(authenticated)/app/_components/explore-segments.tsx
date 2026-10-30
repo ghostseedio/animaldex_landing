@@ -1,22 +1,27 @@
 import Link from "@/app/[locale]/_components/link";
 
-export type ExploreSegment = "feed" | "battles" | "collectors";
-
-const SEGMENTS: Array<{id: ExploreSegment; label: string; href: string}> = [
-    {id: "feed", label: "Feed", href: "/app/explore"},
-    {id: "battles", label: "Battles", href: "/app/arena"},
-    {id: "collectors", label: "Collectors", href: "/app/explore?view=collectors"}
-];
+export type ExploreSegment = "feed" | "debates" | "collectors";
 
 /**
- * Explore's segments (docs/companion-loop/SPEC.md, phase 4): Feed · Battles ·
- * Collectors. Feed and Collectors are the feed page; Battles is the hub that
- * was the Play tab, at its own URL, so this is a row of links.
+ * Explore's segments (docs/companion-loop/SPEC.md, phase 4; 3.2 Debates,
+ * docs/debates/SPEC.md section 4): Feed · Debates · Collectors. Feed and
+ * Collectors are the feed page; Debates replaces Battles, at its own URL, so
+ * this is a row of links. While the server has Debates off, it is not there.
  */
-export default function ExploreSegments({active}: {active: ExploreSegment}) {
+export default function ExploreSegments({active, debatesLabel, showsDebates = true}: {
+    active: ExploreSegment;
+    /** `debates.tab`, in the reader's language. */
+    debatesLabel: string;
+    showsDebates?: boolean;
+}) {
+    const segments: Array<{id: ExploreSegment; label: string; href: string}> = [
+        {id: "feed", label: "Feed", href: "/app/explore"},
+        ...(showsDebates ? [{id: "debates" as const, label: debatesLabel, href: "/app/debates"}] : []),
+        {id: "collectors", label: "Collectors", href: "/app/explore?view=collectors"}
+    ];
     return (
         <nav aria-label="Explore" className="flex border border-white/10 bg-white/[0.04] p-[3px]">
-            {SEGMENTS.map((item) => {
+            {segments.map((item) => {
                 const isOn = item.id === active;
                 return (
                     <Link
