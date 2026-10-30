@@ -5,11 +5,10 @@
  *   ```animaldex-card
  *   {"kind":"training", ...}   → the Warmup: Take the warmup (+5 XP) / Skip
  *   {"kind":"trial","frequency":"MID", ...} → "{name}'s Trials", a picker
- *   {"kind":"debate","problem":"…", ...} → 3.2 Debates (docs/debates/SPEC.md,
- *                              section 1.1; SERVER.md "The card"): "Want to hear
- *                              how other animals would handle this?" and "Compare
- *                              with other animals"; its `problem` (the animal's
- *                              summary of theirs) prefills the sheet
+ *   {"kind":"debate","problem":"…","with":[…]} → 3.2 Debates' hidden marker
+ *                              (docs/debates/SPEC.md section 6): never drawn; the
+ *                              drawer's quick replies and setup come from
+ *                              `done.companion.debate_offer`, not from this
  *   ```
  *
  * Only the kind (a Trial's frequency, a debate's problem) is read: the card's words are the

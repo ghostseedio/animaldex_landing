@@ -41,7 +41,12 @@ import {
 } from "@/lib/ask-animaldex/companion";
 import {askAnimalRecordLines, type AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
 import {askPersonaLines, type AskPersonaDials, type AskPersonaStats} from "@/lib/ask-animaldex/persona";
-import {COMPANION_OUTPUT_LINES, companionLoopRules} from "@/lib/ask-animaldex/companion-focus";
+import {
+    CALL_DEBATE_OUTPUT_LINES,
+    CALL_DEBATE_RULES,
+    COMPANION_OUTPUT_LINES,
+    companionLoopRules
+} from "@/lib/ask-animaldex/companion-focus";
 import {askNatureLines, type AskAnimalNature} from "@/lib/ask-animaldex/nature";
 import {ANIMAL_STORY_OUTPUT_LINE, ANIMAL_STORY_RULES} from "@/lib/ask-animaldex/stories";
 import {askGroupLoopRules} from "@/lib/ask-animaldex/group-rules";
@@ -505,17 +510,19 @@ const VISUAL_MEDIUMS: Record<AskVisualMedium, string[]> = {
         "  Never more than ONE card per answer, after the prose, and only when the rules above allow it or they asked for",
         "  it. A card is an offer: they can say no. A step you set them in your own words needs no card: the app shows it."
     ],
-    // Not a medium of its own: the debate card kind (3.2), described with the
-    // card where the chat says it draws it ("debate" as well as "card"). The
-    // apps' `ASSISTANT_VISUAL_MEDIUMS.debate`, verbatim.
+    // Not a medium of its own: the debate marker (3.2), described with the
+    // card where the chat says it takes it ("debate" as well as "card"). Since
+    // SPEC section 6 the offer is the animal's own words; the marker only
+    // tells the app to put its quick replies under the message, and is never
+    // drawn. The apps' `ASSISTANT_VISUAL_MEDIUMS.debate`, verbatim.
     debate: [
-        "- kind can also be debate: other animals weigh in on their problem, each with its own way. It opens a sheet where",
-        "  they pick the animals and whether it stays private:",
+        "- The debate marker (kind debate) is not a card anyone sees. When you have made the debate offer yourself, in",
+        "  your own words, end that reply with it, so the app can put its two quick replies under your message:",
         "  ```animaldex-card",
-        '  {"kind":"debate","title":"How would other animals handle this?","body":"One sentence in your voice on why other ways are worth hearing here.","cta":"Compare with other animals","problem":"their problem in one or two sentences, as they told it"}',
+        '  {"kind":"debate","problem":"their problem in one line, from their side","with":["a2","a5"]}',
         "  ```",
-        "  problem is what they brought, in their own terms, for the sheet: nothing they did not tell you. Only when the",
-        "  debate rule allows it."
+        "  with: the keys from other_animals of the animals you named or have in mind (at most 3; [] when none). No title,",
+        "  body or button text: the words are in your reply. Never mention the marker. Only when the debate rule allows it."
     ]
 };
 
@@ -628,6 +635,10 @@ export type AskPromptOptions = {
     /// A live voice call: no steps, no Warmup or Trial offers and no cards
     /// (the apps' `call`). The loop is context only: `companionLoop` is null.
     call?: boolean;
+    /// A call whose request says it takes a debate from it (3.2, SPEC section
+    /// 6): the animal may offer other animals' ways once, by voice, and hand
+    /// the debate to the chat with a hidden DEBATE line (the apps' `callDebates`).
+    callDebates?: boolean;
     /// Species scope: the stats and System Dynamics rhythm as conversational
     /// dials (`persona.ts`), for the character section.
     persona?: AskPersonaDials | null;
@@ -669,6 +680,12 @@ const ANIMAL_CALL_STEP_RULES = [
     "step you set them (companion.open_trial), talk with them about how it is going."
 ];
 
+/** The same, for a call that may hand a debate to the chat. Verbatim from the apps' `ANIMAL_CALL_DEBATE_STEP_RULES`. */
+const ANIMAL_CALL_DEBATE_STEP_RULES = [
+    "This is a voice call: set no steps, offer no Warmup or Trials, and send no cards; other animals' ways only as the",
+    "rule below says. If they bring up the step you set them (companion.open_trial), talk with them about how it is going."
+];
+
 /** The owner's cards are in this prompt (3.2): the reader's own animal's one-to-one chat. */
 function hasCards(options: AskPromptOptions): boolean {
     return options.scope === "species" && (options.supportedVisuals ?? []).includes("card");
@@ -697,7 +714,11 @@ function companionRules(options: AskPromptOptions): string[] {
         : mode === "auto"
         ? cards || options.call ? ANIMAL_AUTO_MODE_RULES : ANIMAL_AUTO_MODE_RULES_WITHOUT_CARDS
         : [];
-    if (options.call) return [...modeLines, "", ...ANIMAL_CALL_STEP_RULES, "", ...ANIMAL_RELATIONSHIP_RULES];
+    if (options.call) {
+        return options.callDebates
+            ? [...modeLines, "", ...ANIMAL_CALL_DEBATE_STEP_RULES, "", ...CALL_DEBATE_RULES, "", ...ANIMAL_RELATIONSHIP_RULES]
+            : [...modeLines, "", ...ANIMAL_CALL_STEP_RULES, "", ...ANIMAL_RELATIONSHIP_RULES];
+    }
     const steps = options.companionLoop
         ? ["", ...companionLoopRules(options.companionLoop)]
         : cards
@@ -837,6 +858,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
             "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
             ...(options.stories ? [ANIMAL_STORY_OUTPUT_LINE] : []),
             ...(options.companionLoop && speciesMode(options) !== "training" ? COMPANION_OUTPUT_LINES : []),
+            ...(options.call && options.callDebates ? CALL_DEBATE_OUTPUT_LINES : []),
             ...followUpRules(options),
             `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,
             "",

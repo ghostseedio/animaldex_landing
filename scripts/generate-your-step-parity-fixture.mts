@@ -92,8 +92,18 @@ const promptCases = [
     {state: openState, roster, powerEarned: true, warmup: {available: true, passed: true, may_offer: false}, debateOffer: true},
     {state: {open_trial: null, your_trials_done: 2, recent_done: [{step: "Asked first"}]}, roster: [], powerEarned: true, debateOffer: true},
     {state: openState, roster, powerEarned: true, stepReport: {media: null}, debateOffer: false},
-    {state: null, roster: [], powerEarned: true, debateOffer: true}
+    {state: null, roster: [], powerEarned: true, debateOffer: true},
+    // SPEC section 6, a call that takes debates: may_offer and may_hand_over.
+    {state: openState, roster, powerEarned: true, debateOffer: true, debateHandOver: true},
+    {state: openState, roster, powerEarned: true, debateOffer: false, debateHandOver: true},
+    {state: openState, roster: [], powerEarned: true, debateOffer: false, debateHandOver: false}
 ];
+// Two of the owner's other animals, as the marker and the DEBATE line name them (a1, a2).
+const debateRoster = [
+    {species_profile_id: "s1", capture_id: "c1", animal: "European Hedgehog", nickname: "Pip", power: "Defended Curiosity", lesson: "x"},
+    {species_profile_id: "s2", capture_id: "c2", animal: "Gray Wolf", nickname: null, power: "Pack Patience", lesson: "y"}
+];
+const fence = (json: string) => `\`\`\`animaldex-card\n${json}\n\`\`\``;
 
 const card = 'Want to try?\n```animaldex-card\n{"kind":"training","title":"Warmup","body":"Two questions.","cta":"Take it"}\n```';
 const fixture = {
@@ -111,7 +121,11 @@ const fixture = {
         ANIMAL_VISITOR_FOLLOW_UP_RULES: privateArray("animal-voice.ts", "ANIMAL_VISITOR_FOLLOW_UP_RULES"),
         ANIMAL_FOLLOW_UP_RULES: privateArray("animal-voice.ts", "ANIMAL_FOLLOW_UP_RULES"),
         ANIMAL_GREETING_RULES: privateArray("animal-voice.ts", "ANIMAL_GREETING_RULES"),
-        ANIMAL_CALL_STEP_RULES: privateArray("animal-voice.ts", "ANIMAL_CALL_STEP_RULES")
+        ANIMAL_CALL_STEP_RULES: privateArray("animal-voice.ts", "ANIMAL_CALL_STEP_RULES"),
+        // SPEC section 6: the call that may hand a debate to the chat.
+        ANIMAL_CALL_DEBATE_STEP_RULES: privateArray("animal-voice.ts", "ANIMAL_CALL_DEBATE_STEP_RULES"),
+        CALL_DEBATE_RULES: focus.CALL_DEBATE_RULES,
+        CALL_DEBATE_OUTPUT_LINES: focus.CALL_DEBATE_OUTPUT_LINES
     },
     companionLoopRules: {
         offersSteps: focus.companionLoopRules({offersSteps: true}),
@@ -148,6 +162,31 @@ const fixture = {
         [{role: "assistant", content: 'Here.\n```animaldex-card\n{ "kind" : "training" }\n```'}],
         []
     ].map((input) => ({input, output: focus.conversationOffersWarmup(input)})),
+    // SPEC section 6: the hidden marker, the owner's animals it names, and the call's hidden lines.
+    parseDebateMarker: [
+        ["A hedgehog would tell you the opposite. Want to hear Pip and the wolf?", fence('{"kind":"debate","problem":"Whether to take the promotion that moves me away from my friends","with":["a1","A2","a1","a9","x"]}')].join("\n"),
+        fence('{"kind":"debate"}'),
+        fence('{"kind":"debate","problem":"Too short","with":"a1"}'),
+        fence(`{"kind":"debate","problem":"${"So much to say about this. ".repeat(14)}","with":[" a2 ",3,"a1","a3","a4"]}`),
+        `${fence('{"kind":"trial","frequency":"MID"}')}\nThen.\n${fence('{"kind":"debate","problem":"Whether to move to the coast for the job","with":[]}')}`,
+        fence('{"kind":"trial","frequency":"MID"}'),
+        fence("not json"),
+        "No marker here."
+    ].map((input) => ({input, output: debate.parseDebateMarker(input)})),
+    debateOfferAnimals: [
+        ["a1", "a2", "a9"],
+        ["a2", "a2", "a1"],
+        ["pip", "gray wolf"],
+        []
+    ].map((keys) => ({keys, roster: debateRoster, output: debate.debateOfferAnimals(keys, focus.parseCompanionRoster(debateRoster))})),
+    extractCompanionLines: [
+        ["Then I'll bring Pip and the wolf into our chat once we hang up.", "§§FOLLOW_UPS§§", "Sounds good", "DEBATE: Whether to take the promotion away from my friends | a1, a2, nope", "DEBATE_OFFER: Whether to take the promotion"].join("\n"),
+        "Yes.\n§§FOLLOW_UPS§§\nDEBATE: help",
+        "DEBATE: Whether to take the promotion away\n§§FOLLOW_UPS§§\nOk",
+        "Sure.\n§§FOLLOW_UPS§§\nOk\n- DEBATE: Whether to leave the band before the tour\nDEBATE: A second problem that is long enough | a3",
+        "Hm.\n§§FOLLOW_UPS§§\nOk\nDEBATE_OFFER:",
+        "Done.\n§§FOLLOW_UPS§§\nNice\nFOCUS: Speaking up first\nTRIAL: Say it first on Monday | 4\nDONE: She said it first\nREFER: a1 | She keeps losing the thread in meetings"
+    ].map((input) => ({input, output: focus.extractCompanionLines(input)})),
     conversationOffersDebate: [
         [{role: "assistant", content: 'Want other ways?\n```animaldex-card\n{"kind":"debate","title":"How would other animals handle this?","problem":"My boss."}\n```'}],
         [{role: "user", content: '```animaldex-card\n{"kind":"debate"}\n```'}],
@@ -177,7 +216,9 @@ const fixture = {
         // 3.2 Debates: the owner's chat that also draws the debate card (the web's owner chat since 3.2).
         ownerLoopDebate: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: {offersSteps: true, debates: true}, suggestSteps: true, stories: true}),
         ownerLoopDebateNoSteps: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "photo", "card", "debate"], companionLoop: {offersSteps: false, debates: true}, suggestSteps: false, stories: true}),
-        ownerNoLoopDebate: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: null, suggestSteps: true, stories: true})
+        ownerNoLoopDebate: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: null, suggestSteps: true, stories: true}),
+        // SPEC section 6: a call whose request says "debate": the spoken offer, and the hand-over's hidden lines.
+        callDebates: sections({mode: "auto", supportedVisuals: [], companionLoop: null, call: true, callDebates: true, suggestSteps: true, stories: true})
     }
 };
 

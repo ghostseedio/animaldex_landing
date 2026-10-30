@@ -12,6 +12,7 @@ import {
     companionPromptLines,
     companionWarmup,
     conversationOffersWarmup,
+    debateChatState,
     describeStepMedia,
     extractCompanionLines,
     openStepForClient,
@@ -321,4 +322,18 @@ test("done carries companion and the new bond in the server's shape", () => {
             trial_set: {id: "t", step: "Walk"}
         }
     });
+});
+
+test("debate_chat_state, read the server's way: the offer once for a problem, a call's hand-over without it", () => {
+    const open = {enabled: true, debated_this_problem: false, offered_this_problem: false, private_left: 2};
+    assert.deepEqual(debateChatState(open), {offer: true, handOver: true});
+    // Offered already (in a chat or on a call): no second offer, but a yes on a call may still be handed over.
+    assert.deepEqual(debateChatState({...open, offered_this_problem: true}), {offer: false, handOver: true});
+    assert.deepEqual(debateChatState({...open, debated_this_problem: true}), {offer: false, handOver: false});
+    assert.deepEqual(debateChatState({...open, private_left: 0}), {offer: false, handOver: false});
+    assert.deepEqual(debateChatState({...open, enabled: false}), {offer: false, handOver: false});
+    // An older database without offered_this_problem still offers.
+    assert.deepEqual(debateChatState({enabled: true, debated_this_problem: false, private_left: 1}), {offer: true, handOver: true});
+    assert.deepEqual(debateChatState(null), {offer: false, handOver: false});
+    assert.deepEqual(debateChatState("nope"), {offer: false, handOver: false});
 });

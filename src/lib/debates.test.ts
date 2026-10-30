@@ -4,6 +4,9 @@ import {COMPANION_WORDS_EN, companionWords} from "@/lib/companion-bond";
 import {
     canHealHeart,
     debateRequestProblem,
+    decodeDebateOffer,
+    decodeDebateRequest,
+    preselectedDebatePicks,
     suggestedDebatePicks,
     debateIsMine,
     debateOpenings,
@@ -324,4 +327,54 @@ test("a call that ended on yes carries the problem for the setup", () => {
     assert.equal(debateRequestProblem({problem: "  Whether to take\nthe job  "}), "Whether to take the job");
     assert.equal(debateRequestProblem({problem: ""}), null);
     assert.equal(debateRequestProblem(null), null);
+});
+
+const HEDGEHOG_CARD = "00000000-0000-4000-8000-0000000000c1";
+const WOLF_CARD = "00000000-0000-4000-8000-0000000000c2";
+const HEDGEHOG = "00000000-0000-4000-8000-0000000000a1";
+const WOLF = "00000000-0000-4000-8000-0000000000a2";
+
+test("SPEC section 6: the offer's quick replies and setup come from done.companion.debate_offer, the call's from debate_request", () => {
+    const offer = decodeDebateOffer({
+        problem: "  Whether to take the promotion\n away from my friends ",
+        with: [
+            {capture_id: HEDGEHOG_CARD, species_profile_id: HEDGEHOG, animal: "European Hedgehog", nickname: "Pip"},
+            {capture_id: HEDGEHOG_CARD, species_profile_id: HEDGEHOG, animal: "European Hedgehog", nickname: "Pip"},
+            {capture_id: "c2", animal: "Gray Wolf"},
+            {capture_id: WOLF_CARD, species_profile_id: WOLF, animal: "Gray Wolf", nickname: null}
+        ]
+    });
+    assert.deepEqual(offer, {
+        problem: "Whether to take the promotion away from my friends",
+        with: [
+            {captureId: HEDGEHOG_CARD, speciesProfileId: HEDGEHOG, animal: "European Hedgehog", nickname: "Pip"},
+            {captureId: WOLF_CARD, speciesProfileId: WOLF, animal: "Gray Wolf", nickname: null}
+        ]
+    });
+    // As the thread stores it, read back the same.
+    assert.deepEqual(decodeDebateOffer(JSON.parse(JSON.stringify(offer))), offer);
+    assert.deepEqual(decodeDebateOffer({problem: null, with: []}), {problem: null, with: []});
+    assert.equal(decodeDebateOffer(null), null);
+
+    assert.deepEqual(decodeDebateRequest({problem: "Whether to move for the job", with: [{capture_id: WOLF_CARD, species_profile_id: WOLF, animal: "Gray Wolf", nickname: null}]}), {
+        problem: "Whether to move for the job",
+        with: [{captureId: WOLF_CARD, speciesProfileId: WOLF, animal: "Gray Wolf", nickname: null}]
+    });
+    assert.deepEqual(decodeDebateRequest({problem: "Whether to move for the job"}), {problem: "Whether to move for the job", with: []});
+    assert.equal(decodeDebateRequest({problem: " ", with: []}), null);
+});
+
+test("SPEC section 6: the animals it named are pre-selected first, then the suggestions, never two of a species", () => {
+    const candidate = (id: string, fits: boolean, species: string | null) => ({
+        captureId: id, ownerIsMe: true, speciesProfileId: species, slug: null, animal: id, nickname: null, powerName: null, powerLesson: null, hearts: 3, fits
+    });
+    const candidates = [candidate("a", true, "s1"), candidate("b", false, "s2"), candidate("c", true, "s3"), candidate("d", true, "s4"), candidate("w", false, WOLF)];
+    const named = (captureId: string, speciesProfileId: string | null) => ({captureId, speciesProfileId, animal: "x", nickname: null});
+    // The wolf it named is not a suggestion, but goes first; then the suggestions fill up to 3.
+    assert.deepEqual(preselectedDebatePicks(candidates, [named("w", WOLF)]), ["w", "a", "c"]);
+    // Another card of a species it named: the candidate of that species.
+    assert.deepEqual(preselectedDebatePicks(candidates, [named("other-card", "s2")]), ["b", "a", "c"]);
+    // Named animals that are not candidates (a public debate's roster) leave the suggestions.
+    assert.deepEqual(preselectedDebatePicks(candidates, [named("zzz", "s9")]), suggestedDebatePicks(candidates));
+    assert.deepEqual(preselectedDebatePicks(candidates, []), ["a", "c", "d"]);
 });

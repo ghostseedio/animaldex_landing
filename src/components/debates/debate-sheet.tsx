@@ -25,9 +25,10 @@ import {
     DEBATE_PROBLEM_MAX,
     DEBATE_PUBLIC_TEXT_MAX,
     debateAnimalName,
-    suggestedDebatePicks,
+    preselectedDebatePicks,
     type Debate,
     type DebateCandidate,
+    type DebateNamedAnimal,
     type DebateProblemCode,
     type DebateVisibility
 } from "@/lib/debates";
@@ -51,6 +52,8 @@ const MIN_PROBLEM = 10;
 const DRAFT_POLL_MS = 1500;
 const DRAFT_POLLS = 20;
 
+const NO_NAMED: readonly DebateNamedAnimal[] = [];
+
 const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50";
 const quietButton = "inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50";
 
@@ -58,6 +61,7 @@ export default function DebateSetup({
     layout = "sheet",
     host,
     problem: initialProblem,
+    named = NO_NAMED,
     fromCall = false,
     words,
     closeLabel,
@@ -72,6 +76,11 @@ export default function DebateSetup({
     host: DebateHost;
     /** The person's problem: the animal's summary of it, or as they said it. */
     problem: string;
+    /**
+     * The owner's own animals the animal named in its offer (`debate_offer.with`,
+     * or a call's `debate_request.with`): pre-selected first, then the suggestions.
+     */
+    named?: readonly DebateNamedAnimal[];
     /** Asked for on a voice call: "From your call", Private. */
     fromCall?: boolean;
     words: CompanionWords;
@@ -175,11 +184,11 @@ export default function DebateSetup({
         };
     }, [draft, publicBlocker, host.captureId, host.speciesProfileId, visibility, fittedTo, words]);
 
-    // The suggestions, pre-selected, until they choose for themselves.
+    // The animals it named, then the suggestions, pre-selected, until they choose for themselves.
     useEffect(() => {
         if (!candidates || touched) return;
-        setPicked(suggestedDebatePicks(candidates, DEBATE_MAX_PICKS));
-    }, [candidates, touched]);
+        setPicked(preselectedDebatePicks(candidates, named, DEBATE_MAX_PICKS));
+    }, [candidates, touched, named]);
 
     const pickedSpecies = useMemo(() => new Set((candidates ?? [])
         .filter((candidate) => picked.includes(candidate.captureId) && candidate.speciesProfileId)

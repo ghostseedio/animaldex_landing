@@ -48,16 +48,24 @@ import {NextResponse} from "next/server";
  * `done` has no `companion`.
  *
  * 3.2 Debates (docs/debates/SERVER.md, "The chat"; the apps'
- * `generate-applied-insight` at AnimalDex r32d-server b09fd6a7): the owner's
- * chat also says it draws `debate`, so the card medium describes the debate
- * card, and the loop's rules carry the one-time offer of other animals' ways.
- * The animal may make it in this reply (`companion.debate`) only with the loop
- * on, not in a greeting or a call, with steps offered, the Power earned, no
- * crisis words, no debate card in the conversation yet, and
- * `debate_chat_state` saying the switch is on, this animal has not hosted one
- * on the problem and a private debate is still free today. The `comparison`
+ * `generate-applied-insight` at AnimalDex r32d-server 1e27f77d, SPEC section
+ * 6): the owner's chat also says it takes `debate`, so the card medium
+ * describes the hidden debate marker and the loop's rules carry the one-time
+ * offer of other animals' ways, in the animal's own words, naming up to three
+ * of the owner's own animals. The animal may make it in this reply
+ * (`companion.debate`) only with the loop on, not in a greeting, with steps
+ * offered, the Power earned, no crisis words, no debate marker in the
+ * conversation yet, and `debate_chat_state` saying the switch is on, this
+ * animal has neither offered nor hosted one on the problem and a private
+ * debate is still free today. A reply with the marker is noted
+ * (`debate_note_offer`), and, when the offer was allowed, `done.companion`
+ * carries `debate_offer: {problem, with}` for the quick replies and the setup
+ * band. A call whose request says `debate` may make the same offer by voice
+ * (`companion.debate: {may_offer, may_hand_over}`) and writes hidden
+ * DEBATE_OFFER / DEBATE lines, stripped here; a yes it may hand over is the
+ * call's top-level `done.debate_request: {problem, with}`. The `comparison`
  * card is gone. The debate itself runs through the edge function
- * (`/api/ask/debate`), never here.
+ * (`/api/ask/debate`), never here, and never on a call.
  *
  * On someone else's card the animal is theirs: it talks about its owner only
  * from what the owner shares (`animal_chat_owner_context`), tells the visitor
@@ -139,14 +147,18 @@ import {
     bondForClient,
     companionPromptLines,
     companionWarmup,
+    NO_DEBATE,
     conversationOffersDebate,
     conversationOffersWarmup,
+    debateOfferAnimals,
     extractCompanionLines,
+    parseDebateMarker,
     type CompanionLines
 } from "@/lib/ask-animaldex/companion-focus";
 import {
     applyCompanionLines,
     loadOwnerCompanion,
+    noteDebateOffer,
     takeAnimalReferral,
     type OwnerCompanion
 } from "@/lib/ask-animaldex/companion-loop-server";
@@ -322,11 +334,15 @@ export async function POST(request: Request) {
     const advertised = Array.isArray(body.supported_visuals) ? body.supported_visuals : [];
     const cards = speaksAsAnimal && ownsCapture && !isCall && !aboutTrial && advertised.includes("card");
     const debateCards = cards && advertised.includes("debate");
+    // A call whose request says "debate" (SPEC section 6): the spoken offer,
+    // and a yes handed to the chat (`done.debate_request`).
+    const callDebates = speaksAsAnimal && ownsCapture && isCall && advertised.includes("debate");
     // The animal may offer a debate once for a problem, once its Power is
     // earned, never in a crisis; the Power and `debate_chat_state` are read
     // with the owner's loop.
-    const debateOfferAsked = debateCards && personalise && !isGreeting && settings.suggestSteps !== false &&
-        !ASK_CRISIS_PATTERN.test(question ?? "") && !conversationOffersDebate(sentHistory);
+    const debateStateAsked = (debateCards || callDebates) && personalise && !isGreeting &&
+        settings.suggestSteps !== false && !ASK_CRISIS_PATTERN.test(question ?? "") &&
+        (callDebates || !conversationOffersDebate(sentHistory));
     const [owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories] = await Promise.all([
         ownerSpeciesId && viewer.userId
             ? loadOwnerCompanion({
@@ -335,7 +351,7 @@ export async function POST(request: Request) {
                 loopOn: personalise && !aboutTrial,
                 // "I did it": the report on the open step, already attached.
                 stepReportId,
-                debateOffer: debateOfferAsked
+                debateState: debateStateAsked
             })
                 .catch(() => null as OwnerCompanion | null)
             : Promise.resolve(null as OwnerCompanion | null),
@@ -352,6 +368,8 @@ export async function POST(request: Request) {
         speciesId && animalOwnerId ? loadAskOwnStories(animalOwnerId, speciesId) : Promise.resolve([])
     ]);
     const loop = owner?.loop ?? null;
+    // 3.2 Debates: whether the offer may be made in this reply, and on a call whether a yes may be handed over.
+    const debate = owner?.debate ?? NO_DEBATE;
     // Another of their animals sent them here about something not yet taken up.
     const referral = loop?.state?.referral ?? null;
     // How the animal talks is read from each message, as in the apps since
@@ -482,7 +500,9 @@ export async function POST(request: Request) {
                         offeredInConversation: conversationOffersWarmup(sentHistory)
                     }),
                     stepReport: loop.stepReport ? {media: loop.stepReport.media} : null,
-                    debateOffer: owner?.debateOffer ?? false
+                    debateOffer: debate.offer,
+                    // On a call: whether a yes may hand the debate over now.
+                    ...(callDebates ? {debateHandOver: debate.handOver} : {})
                 })
             }
             : {})
@@ -586,7 +606,9 @@ export async function POST(request: Request) {
         stats: companion?.stats ?? null,
         // On a call the loop is context only: no step rules, no hidden lines.
         companionLoop: loop && !isCall ? {offersSteps: settings.suggestSteps, debates: debateCards} : null,
-        call: isCall
+        call: isCall,
+        // A call that takes debates: the spoken offer and the hand-over (SPEC section 6).
+        callDebates: isCall && callDebates && Boolean(loop) && settings.suggestSteps !== false
     };
     // The animal sees the conversation as real turns (its own replies as its
     // own), as in the apps; the site-wide assistant keeps it in the text.
@@ -684,16 +706,52 @@ export async function POST(request: Request) {
         })
         : null;
     // The loop's hidden lines, written before `done`; what comes back is merged
-    // into it. Nothing is set or done on a call.
-    const onCompanion = loop && owner && ownerSpeciesId && viewer.userId && !isCall
-        ? (lines: CompanionLines) => applyCompanionLines({
-            service: owner.service,
-            userId: viewer.userId as string,
-            speciesProfileId: ownerSpeciesId,
-            state: loop.state,
-            roster: loop.roster,
-            lines
-        })
+    // into it. Nothing is set or done on a call; a call that takes debates
+    // only hands a yes to the chat.
+    const ownerUserId = viewer.userId;
+    const onCompanion = loop && owner && ownerSpeciesId && ownerUserId && !isCall
+        ? async (lines: CompanionLines, answer: string) => {
+            const result = await applyCompanionLines({
+                service: owner.service,
+                userId: ownerUserId,
+                speciesProfileId: ownerSpeciesId,
+                state: loop.state,
+                roster: loop.roster,
+                lines
+            });
+            // The offer, in the animal's own words, ends with the debate marker:
+            // noted so it is made once, and, when it was allowed, what the chat
+            // needs for its quick replies and setup band (the marker is never drawn).
+            const marker = debateCards ? parseDebateMarker(answer) : null;
+            if (marker) {
+                await noteDebateOffer(owner.service, {userId: ownerUserId, speciesProfileId: ownerSpeciesId, via: "chat"});
+                if (debate.offer && result.companion && typeof result.companion === "object") {
+                    (result.companion as Record<string, unknown>).debate_offer = {
+                        problem: marker.problem,
+                        with: debateOfferAnimals(marker.keys, loop.roster)
+                    };
+                }
+            }
+            return result;
+        }
+        : loop && owner && ownerSpeciesId && ownerUserId && callDebates
+        ? async (lines: CompanionLines): Promise<Record<string, unknown>> => {
+            // A call never runs a debate and never starts a public one: a yes is
+            // handed to the chat, which opens its setup with this problem.
+            if (lines.debate && debate.handOver) {
+                await noteDebateOffer(owner.service, {userId: ownerUserId, speciesProfileId: ownerSpeciesId, via: "call", accepted: true});
+                return {
+                    debate_request: {
+                        problem: lines.debate.problem,
+                        with: debateOfferAnimals(lines.debate.keys, loop.roster)
+                    }
+                };
+            }
+            if (lines.debateOffered || lines.debate) {
+                await noteDebateOffer(owner.service, {userId: ownerUserId, speciesProfileId: ownerSpeciesId, via: "call"});
+            }
+            return {};
+        }
         : null;
     const streamingSystemPrompt = buildAskStreamingSystemPrompt(promptOptions);
     const sourceFor = (provider: AskProviderName): AnswerDeltaSource | null => {
@@ -751,7 +809,7 @@ export async function POST(request: Request) {
                     speaker?.hear(split.answer.slice(emitted));
                 }
                 const companionFields = split.answer.trim() && onCompanion
-                    ? await onCompanion(hidden.lines).catch(() => ({}))
+                    ? await onCompanion(hidden.lines, split.answer).catch(() => ({}))
                     : {};
                 // On a call, `done` waits until all of it has been spoken.
                 await speaker?.finish();

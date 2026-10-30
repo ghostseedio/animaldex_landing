@@ -5,19 +5,26 @@ import test from "node:test";
 // by string. The fixture is the apps' own server modules' output (AnimalDex
 // r32d-server, `scripts/generate-your-step-parity-fixture.mts`): the loop
 // rules (with and without the debate offer), the prompt lines (with and
-// without companion.debate), the Warmup, debate-card and report helpers, the
-// card and debate mediums, and the owner's, the opted-out and the call's
-// system-prompt sections as built.
+// without companion.debate, and a call's may_hand_over), the Warmup,
+// debate-marker and report helpers, the hidden lines (a call's DEBATE_OFFER
+// and DEBATE included), the card and debate mediums, and the owner's, the
+// opted-out and the call's system-prompt sections as built (the call that
+// takes debates included).
 import fixture from "./ask-animaldex/__fixtures__/your-step-server-prompts.json";
 import {
     COMPANION_OUTPUT_LINES,
     REFERRAL_OPENING_RULES,
     companionLoopRules,
     companionPromptLines,
+    CALL_DEBATE_OUTPUT_LINES,
+    CALL_DEBATE_RULES,
     companionWarmup,
     conversationOffersDebate,
     conversationOffersWarmup,
+    debateOfferAnimals,
     describeStepMedia,
+    extractCompanionLines,
+    parseDebateMarker,
     openStepForClient,
     parseCompanionRoster,
     parseCompanionState,
@@ -59,9 +66,9 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
     }
 }
 
-test("the fixture is the Debates server lane's 3.2 build", () => {
+test("the fixture is the Debates server lane's 3.2 build (SPEC section 6)", () => {
     assert.equal(fixture.source.ref, "r32d-server");
-    assert.match(fixture.source.commit, /^b09fd6a7/);
+    assert.match(fixture.source.commit, /^1e27f77d/);
 });
 
 test("the companion loop's rules and hidden lines are the apps', word for word", () => {
@@ -97,6 +104,7 @@ test("the turn's loop lines come out as the server writes them", () => {
             warmup?: CompanionWarmup;
             stepReport?: {media: string | null} | null;
             debateOffer?: boolean;
+            debateHandOver?: boolean;
         };
         const web = companionPromptLines({
             ...input,
@@ -183,6 +191,37 @@ test("3.2 Debates: no battle and no comparison card anywhere in the owner's chat
     }
     // The site-wide assistant never describes the animals' debate card.
     assert.equal(buildAskStreamingSystemPrompt({scope: "general", supportedVisuals: ["flow", "card", "debate"]}).includes('"kind":"debate"'), false);
+});
+
+test("SPEC section 6: the marker, the owner's animals it names and the hidden lines read as the server reads them", () => {
+    for (const item of fixture.parseDebateMarker) {
+        assert.deepEqual(parseDebateMarker(item.input), item.output, item.input);
+    }
+    for (const item of fixture.debateOfferAnimals) {
+        assert.deepEqual(debateOfferAnimals(item.keys, parseCompanionRoster(item.roster)), item.output, JSON.stringify(item.keys));
+    }
+    for (const item of fixture.extractCompanionLines) {
+        assert.deepEqual(extractCompanionLines(item.input), item.output, item.input);
+    }
+    // The fixture really carries a hand-over and a voice offer.
+    assert.equal(fixture.extractCompanionLines.some((item) => item.output.lines.debate && item.output.lines.debateOffered), true);
+});
+
+test("SPEC section 6, a call that takes debates: the spoken offer, the hand-over and its hidden lines are the apps'", () => {
+    const call = sections({mode: "auto", supportedVisuals: [], companionLoop: null, call: true, callDebates: true, suggestSteps: true, stories: true});
+    sameLines(call.medium, fixture.prompts.callDebates.medium, "debate call medium");
+    sameLines(call.loop, fixture.prompts.callDebates.loop, "debate call loop");
+    sameLines(call.output, fixture.prompts.callDebates.output, "debate call output");
+    sameLines(CALL_DEBATE_RULES, fixture.arrays.CALL_DEBATE_RULES, "CALL_DEBATE_RULES");
+    sameLines(CALL_DEBATE_OUTPUT_LINES, fixture.arrays.CALL_DEBATE_OUTPUT_LINES, "CALL_DEBATE_OUTPUT_LINES");
+    const joined = call.loop.join("\n");
+    assert.equal(joined.includes(fixture.arrays.ANIMAL_CALL_DEBATE_STEP_RULES.join("\n")), true, "ANIMAL_CALL_DEBATE_STEP_RULES");
+    assert.equal(joined.includes(fixture.arrays.CALL_DEBATE_RULES.join("\n")), true);
+    assert.equal(call.output.join("\n").includes(fixture.arrays.CALL_DEBATE_OUTPUT_LINES.join("\n")), true);
+    // A call that does not take debates keeps the old call rules: no offer, no hidden debate lines.
+    const older = buildAskStreamingSystemPrompt({scope: "species", mode: "auto", animalName: "African Lion", supportedVisuals: [], call: true, stories: true});
+    assert.equal(older.includes("DEBATE"), false);
+    assert.equal(older.includes("offer no Warmup, Trials or debates"), true);
 });
 
 test("a call: no loop rules, the call's step rule, no cards", () => {

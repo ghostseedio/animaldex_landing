@@ -4,6 +4,7 @@ import {
     COMPANION_COPY,
     companionDisplayName,
     isEmptyCompanionEvent,
+    normalizeCompanionEvent,
     parseCompanionFocus,
     parseCompanionUpdate,
     referralCapturePath,
@@ -150,4 +151,24 @@ test("companion copy matches iOS word for word", () => {
     assert.equal(COMPANION_COPY.notThisAnyMore, "Not this any more");
     assert.equal("powerWaitsForTraining" in COMPANION_COPY, false);
     assert.equal(COMPANION_COPY.talkTo.replace("{name}", "Leo the African Lion"), "Talk to Leo the African Lion");
+});
+
+test("SPEC section 6: done.companion.debate_offer rides with the reply it was offered in, stored and read back", () => {
+    const update = parseCompanionUpdate({
+        focus: null,
+        your_trials_done: 1,
+        debate_offer: {
+            problem: "Whether to take the promotion away from my friends",
+            with: [{capture_id: "00000000-0000-4000-8000-0000000000c1", species_profile_id: "00000000-0000-4000-8000-0000000000a1", animal: "European Hedgehog", nickname: "Pip"}]
+        }
+    });
+    assert.deepEqual(update?.event.debateOffer, {
+        problem: "Whether to take the promotion away from my friends",
+        with: [{captureId: "00000000-0000-4000-8000-0000000000c1", speciesProfileId: "00000000-0000-4000-8000-0000000000a1", animal: "European Hedgehog", nickname: "Pip"}]
+    });
+    // An offer alone is an event: the quick replies need it kept with the reply.
+    assert.equal(isEmptyCompanionEvent(update?.event), false);
+    assert.deepEqual(normalizeCompanionEvent(JSON.parse(JSON.stringify(update?.event))), update?.event);
+    // No debate_offer (a marker the server did not allow): nothing to draw.
+    assert.equal(parseCompanionUpdate({focus: null})?.event.debateOffer, undefined);
 });

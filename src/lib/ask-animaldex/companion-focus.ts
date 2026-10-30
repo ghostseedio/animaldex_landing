@@ -19,12 +19,16 @@
  * anything the model writes.
  *
  * Port of the apps' `supabase/functions/_shared/animal-focus.ts` (AnimalDex
- * r32d-server b09fd6a7). The rule text is carried across verbatim, cards
+ * r32d-server 1e27f77d). The rule text is carried across verbatim, cards
  * included: the owner's chat draws the Warmup and Trials cards since 3.2
- * (`chat-cards.ts`), and the debate card with the 3.2 Debates: once its Power
- * is earned the animal may offer, once for a problem, to let other animals
- * weigh in (`companion.debate`, from `debate_chat_state`). Pure: no
- * `server-only`, no fetching, so the prompt builders and their tests can use it.
+ * (`chat-cards.ts`). With the 3.2 Debates, once its Power is earned the
+ * animal may offer, once for a problem, to let other animals weigh in
+ * (`companion.debate`, from `debate_chat_state`): since SPEC section 6 in its
+ * own words, naming up to three of the owner's own animals, the reply ending
+ * on a hidden marker (`parseDebateMarker`, `debateOfferAnimals`); on a call by
+ * voice, with the hidden DEBATE_OFFER and DEBATE lines (`CALL_DEBATE_RULES`).
+ * Pure: no `server-only`, no fetching, so the prompt builders and their tests
+ * can use it.
  */
 
 import {ASK_FOLLOW_UP_SENTINEL} from "@/lib/ask-animaldex/prompt";
@@ -72,6 +76,10 @@ export type CompanionLines = {
     trial: {step: string; checkInAfterDays: number} | null;
     done: string | null;
     refer: {key: string; problem: string} | null;
+    /** A call (3.2 Debates): they said yes to other animals' ways; the chat opens its setup with this problem. `keys` name other_animals entries. */
+    debate: {problem: string; keys: string[]} | null;
+    /** A call: the animal just offered a debate by voice (noted, so it is made once for a problem). */
+    debateOffered: boolean;
 };
 
 /** The bond as `animal_companion_bond` returns it; only what the client is sent is typed. */
@@ -85,7 +93,7 @@ export type CompanionBond = {
     counted?: Record<string, unknown> | null;
 };
 
-const PREFIXES = ["FOCUS:", "TRIAL:", "DONE:", "REFER:"] as const;
+const PREFIXES = ["FOCUS:", "TRIAL:", "DONE:", "REFER:", "DEBATE_OFFER:", "DEBATE:"] as const;
 
 function text(value: unknown, max: number): string | null {
     if (typeof value !== "string") return null;
@@ -98,7 +106,7 @@ function text(value: unknown, max: number): string | null {
  * sentinel only), so they are neither shown nor turned into chips.
  */
 export function extractCompanionLines(raw: string): {raw: string; lines: CompanionLines} {
-    const lines: CompanionLines = {focus: null, trial: null, done: null, refer: null};
+    const lines: CompanionLines = {focus: null, trial: null, done: null, refer: null, debate: null, debateOffered: false};
     const at = raw.indexOf(ASK_FOLLOW_UP_SENTINEL);
     if (at < 0) return {raw, lines};
     const head = raw.slice(0, at + ASK_FOLLOW_UP_SENTINEL.length);
@@ -111,6 +119,15 @@ export function extractCompanionLines(raw: string): {raw: string; lines: Compani
             lines.focus ??= text(body, 300);
         } else if (prefix === "DONE:") {
             lines.done ??= text(body, 400) ?? "done";
+        } else if (prefix === "DEBATE_OFFER:") {
+            lines.debateOffered = true;
+        } else if (prefix === "DEBATE:") {
+            const bar = body.indexOf("|");
+            const problem = text(bar >= 0 ? body.slice(0, bar) : body, 300);
+            const keys = bar >= 0
+                ? body.slice(bar + 1).split(/[,\s]+/).map((key) => key.trim().toLowerCase()).filter((key) => /^a\d+$/.test(key))
+                : [];
+            if (problem && problem.length >= 10 && !lines.debate) lines.debate = {problem, keys: Array.from(new Set(keys)).slice(0, 3)};
         } else if (prefix === "TRIAL:") {
             const [step, days] = body.split("|").map((part) => part.trim());
             const cleaned = text(step, 400);
@@ -269,11 +286,14 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
             ? [
                 "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
                 "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-                "  into — you may offer once, after giving your own verdict, to let other animals weigh in: ask in your own",
-                "  words whether they would like to hear how other animals would handle it, with the debate card. Never in small",
-                "  talk, never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is",
-                "  hurting them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave",
-                "  it. Without companion.debate, do not offer it."
+                "  into — you may offer once, after giving your own verdict, to let other animals weigh in. The offer is yours:",
+                "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
+                "  You may name up to three of your owner's other animals from other_animals whose ways would differ from yours,",
+                "  by the names other_animals gives; never name anyone else's animals. Then end the reply with the debate marker.",
+                "  The app puts two quick replies under your message, so never mention buttons or cards. Never in small talk,",
+                "  never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is hurting",
+                "  them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave it.",
+                "  Without companion.debate, do not offer it."
             ]
             : []),
         "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
@@ -369,6 +389,8 @@ export function companionPromptLines(params: {
     stepReport?: CompanionStepReport | null;
     /** The debate offer may be made in this reply (3.2): set only when it may. */
     debateOffer?: boolean;
+    /** A call that may hand a debate to the chat: whether a yes can be handed over now. Present on such calls only. */
+    debateHandOver?: boolean;
 }): string[] {
     const {state} = params;
     const open = state?.open_trial ?? null;
@@ -391,7 +413,11 @@ export function companionPromptLines(params: {
             your_power: params.powerEarned || params.powerJustEarned ? "earned" : "not earned yet",
             ...(params.powerJustEarned ? {power_just_earned: true} : {}),
             ...(params.warmup?.available ? {warmup: {passed: params.warmup.passed, may_offer: params.warmup.may_offer}} : {}),
-            ...(params.debateOffer ? {debate: {may_offer: true}} : {})
+            ...(params.debateHandOver !== undefined
+                ? {debate: {may_offer: Boolean(params.debateOffer), may_hand_over: params.debateHandOver}}
+                : params.debateOffer
+                ? {debate: {may_offer: true}}
+                : {})
         }
         : null;
     const report = params.stepReport && open
@@ -403,7 +429,7 @@ export function companionPromptLines(params: {
         companion ? `companion — what you and your owner are working on:\n${JSON.stringify(companion)}` : "",
         report,
         params.roster.length > 0
-            ? `other_animals — your owner's other animals and their lessons, for a referral only:\n${
+            ? `other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n${
                 JSON.stringify(params.roster.map((entry) => ({
                     key: entry.key,
                     animal: entry.animal,
@@ -425,6 +451,92 @@ export const REFERRAL_OPENING_RULES = [
     "- As long as the help needs, in your own manner, then one question or one step to get them moving.",
     "- Then the follow-ups line, and 2-3 short replies they might send, each under 60 characters, written AS THEM."
 ];
+
+/** A voice call that may hand a debate to the chat (3.2, SPEC section 6): the same one-time offer, spoken. Stable: system prompt. Verbatim. */
+export const CALL_DEBATE_RULES = [
+    "Other animals' ways, by voice (companion.debate): only while companion.debate.may_offer is true, at most once in",
+    "this call, and only after your own verdict on a real problem of theirs, you may ask in your own words whether",
+    "they would like to hear how other animals would handle it. You may name up to three of your owner's other animals",
+    "from other_animals, by the names other_animals gives; never anyone else's. Never in small talk, never while they",
+    "are telling you about something hard or anyone is hurting them. When you make the offer, write DEBATE_OFFER.",
+    "If they say yes, or ask for it themselves, and companion.debate.may_hand_over is true, say in your own words that",
+    "you will bring the others into their chat after the call: the debate happens there, not on the call. Then write",
+    "DEBATE. If may_hand_over is false, say plainly, as yourself, that it can't happen today. Never run the debate on",
+    "the call, never speak for the other animals, and never suggest posting it publicly."
+];
+
+/** The call's hidden lines for a debate, after the follow-ups (never spoken). Verbatim. */
+export const CALL_DEBATE_OUTPUT_LINES = [
+    "5. Then, only for what this reply actually did, one hidden line each (never shown or spoken):",
+    "   DEBATE_OFFER: <their problem in one line, from their side> (you just offered other animals' ways)",
+    "   DEBATE: <their problem in one line, from their side> | <keys from other_animals you named or have in mind,",
+    "   comma-separated, or nothing> (they said yes)"
+];
+
+function clip(value: string, max: number): string {
+    const cleaned = value.replace(/\s+/g, " ").trim();
+    return cleaned.length > max ? `${cleaned.slice(0, max).trimEnd()}…` : cleaned;
+}
+
+/**
+ * What the animal's debate marker says: the problem it heard and the keys of
+ * the owner's animals it named. The marker is never drawn; this is for the
+ * `done` event. Null when the reply carries no debate marker. The apps'
+ * `parseDebateMarker` (`animal-debate.ts`).
+ */
+export function parseDebateMarker(answer: string): {problem: string | null; keys: string[]} | null {
+    const fence = /```animaldex-card\s*([\s\S]*?)```/g;
+    for (let match = fence.exec(answer); match; match = fence.exec(answer)) {
+        let card: Record<string, unknown> | null = null;
+        try {
+            const parsed: unknown = JSON.parse(match[1].trim());
+            card = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+        } catch {
+            card = null;
+        }
+        if (card?.kind !== "debate") continue;
+        const problem = typeof card.problem === "string" ? clip(card.problem, 300) : "";
+        const keys = Array.isArray(card.with)
+            ? Array.from(new Set(card.with.filter((key): key is string => typeof key === "string").map((key) => key.trim().toLowerCase())))
+                .filter((key) => /^a\d+$/.test(key)).slice(0, 3)
+            : [];
+        return {problem: problem.length >= 10 ? problem : null, keys};
+    }
+    return null;
+}
+
+/** `debate_chat_state` read the server's way: whether the offer may be made now, and whether a call may hand one to the chat. */
+export type DebateChatState = {offer: boolean; handOver: boolean};
+
+export const NO_DEBATE: DebateChatState = {offer: false, handOver: false};
+
+/**
+ * The switch is on, this animal has not hosted one on this problem (since its
+ * focus was set, and at least today) and a private debate is still free today:
+ * a call may hand one over. The offer also needs it not to have been offered
+ * on this problem already, in a chat or on a call. The apps'
+ * `loadDebateChatState`, less the read.
+ */
+export function debateChatState(raw: unknown): DebateChatState {
+    if (!raw || typeof raw !== "object") return NO_DEBATE;
+    const state = raw as Record<string, unknown>;
+    const handOver = state.enabled === true && state.debated_this_problem !== true && Number(state.private_left ?? 0) > 0;
+    return {offer: handOver && state.offered_this_problem !== true, handOver};
+}
+
+/** The owner's animals a marker or a DEBATE line named, for the app to pre-select (only ever the owner's own: other_animals). */
+export type DebateOfferAnimal = {capture_id: string; species_profile_id: string; animal: string; nickname: string | null};
+
+/** The apps' `debateOfferAnimals` (`animal-debate.ts`). */
+export function debateOfferAnimals(keys: string[], roster: CompanionRosterEntry[]): DebateOfferAnimal[] {
+    const seen = new Set<string>();
+    return keys.flatMap((key) => {
+        const entry = resolveReferral(key, roster);
+        if (!entry || seen.has(entry.capture_id)) return [];
+        seen.add(entry.capture_id);
+        return [{capture_id: entry.capture_id, species_profile_id: entry.species_profile_id, animal: entry.animal, nickname: entry.nickname}];
+    });
+}
 
 /** The bond as the client is sent it in `done.bond` (the apps' `bondForClient`). */
 export function bondForClient(bond: CompanionBond): Record<string, unknown> {

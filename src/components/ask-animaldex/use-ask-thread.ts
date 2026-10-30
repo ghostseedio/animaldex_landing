@@ -10,7 +10,7 @@
  * in the thread.
  */
 
-import {debateRequestProblem} from "@/lib/debates";
+import {decodeDebateRequest, type DebateRequest} from "@/lib/debates";
 import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {askConversationHistory} from "@/lib/ask-animaldex/grounding";
@@ -213,7 +213,7 @@ type StreamEvent = {
     credit_cost?: number | null;
     credit_balance?: number | null;
     credit_overflow?: AskCreditOverflow;
-    /** A call turn where they said yes to hearing other animals (3.2 Debates, SPEC section 6). */
+    /** A call turn where they said yes to hearing other animals (3.2 Debates, SPEC section 6): `{problem, with}`. */
     debate_request?: unknown;
     /** The companion loop after this reply, on the owner's own chat (decoded tolerantly). */
     companion?: unknown;
@@ -295,11 +295,11 @@ export function useAskThread(params: {
     /** `done.bond` on the owner's own chat, raw (the drawer decodes it). */
     onBond?: (raw: unknown) => void;
     /**
-     * 3.2 Debates: a call turn's `done.debate_request.problem`, when they said
-     * yes on the call to hearing other animals. The chat sets the debate up
-     * once the call is over.
+     * 3.2 Debates: a call turn's `done.debate_request` (`problem`, and `with`,
+     * the owner's animals it named), when they said yes on the call to hearing
+     * other animals. The chat sets the debate up once the call is over.
      */
-    onDebateRequest?: (problem: string) => void;
+    onDebateRequest?: (request: DebateRequest) => void;
     onAnswered?: (info: {question: string; followUps: number}) => void;
     onFailed?: (reason: string) => void;
 }) {
@@ -579,7 +579,7 @@ export function useAskThread(params: {
                 }
                 if (event.done) {
                     didFinish = true;
-                    const request = options.onCallEvent ? debateRequestProblem(event.debate_request) : null;
+                    const request = options.onCallEvent ? decodeDebateRequest(event.debate_request) : null;
                     if (request) callbacks.current.onDebateRequest?.(request);
                     const split = splitStreamedReply(answer);
                     const offers = offersFor(

@@ -14,9 +14,15 @@
  * the server holds it (`companion.open_step`), so the chat's step card is
  * keyed off server state, never off reply text; `trial_set` carries the new
  * step's id and `trial_done` the XP it paid.
+ *
+ * 3.2 Debates (SPEC section 6): when the animal offered a debate in its own
+ * words and the offer was allowed, `debate_offer` carries the problem it heard
+ * and the owner's animals it named; the chat's quick replies and setup band
+ * come from it, never from the hidden marker in the reply.
  */
 
 import {decodeAnimalStep, stepUuid, type AnimalStep} from "@/lib/your-step";
+import {decodeDebateOffer, type DebateOffer} from "@/lib/debates";
 
 export type AskCompanionLoop = {
     focus: string | null;
@@ -53,6 +59,8 @@ export type AskCompanionEvent = {
     stepDone?: AskCompanionStepDone;
     stepSet?: AskCompanionStepSet;
     referral?: AskCompanionReferral;
+    /** The animal offered a debate in this reply, and it was allowed: [Yes, compare] [Not now] under it. */
+    debateOffer?: DebateOffer;
 };
 
 /** `done.companion`: the loop now, and what changed in this reply. */
@@ -123,6 +131,7 @@ export function parseCompanionUpdate(raw: unknown): AskCompanionUpdate | null {
     const stepDone = stepDoneFrom(row.trial_done);
     const stepSet = stepSetFrom(row.trial_set);
     const referral = referralFrom(row.referral);
+    const debateOffer = decodeDebateOffer(row.debate_offer);
     const openStep = decodeAnimalStep(row.open_step);
     return {
         loop: {
@@ -134,7 +143,8 @@ export function parseCompanionUpdate(raw: unknown): AskCompanionUpdate | null {
         event: {
             ...(stepDone ? {stepDone} : {}),
             ...(stepSet ? {stepSet} : {}),
-            ...(referral ? {referral} : {})
+            ...(referral ? {referral} : {}),
+            ...(debateOffer ? {debateOffer} : {})
         }
     };
 }
@@ -180,7 +190,7 @@ export function normalizeCompanionLoop(raw: unknown): AskCompanionLoop | null {
 }
 
 export function isEmptyCompanionEvent(event: AskCompanionEvent | null | undefined): boolean {
-    return !event || (!event.stepDone && !event.stepSet && !event.referral);
+    return !event || (!event.stepDone && !event.stepSet && !event.referral && !event.debateOffer);
 }
 
 /** The stored form, read back tolerantly: a thread saved by an older build has none. */
@@ -207,10 +217,12 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
             nickname: text(referralRow.nickname)
         }
         : null;
+    const debateOffer = decodeDebateOffer(row.debateOffer);
     const event: AskCompanionEvent = {
         ...(stepDone ? {stepDone} : {}),
         ...(stepSet ? {stepSet} : {}),
-        ...(referral ? {referral} : {})
+        ...(referral ? {referral} : {}),
+        ...(debateOffer ? {debateOffer} : {})
     };
     return isEmptyCompanionEvent(event) ? null : event;
 }

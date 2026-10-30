@@ -507,6 +507,76 @@ export function debateRequestProblem(raw: unknown): string | null {
     return problem || null;
 }
 
+/**
+ * One of the owner's own animals the animal named (or had in mind) when it
+ * offered a debate: an entry of `with` in `done.companion.debate_offer` or a
+ * call's `done.debate_request` (SERVER.md, "Changes since the first
+ * contract"), to pre-select in the setup.
+ */
+export type DebateNamedAnimal = {captureId: string; speciesProfileId: string | null; animal: string; nickname: string | null};
+
+/** `done.companion.debate_offer`: the animal offered in its own words; the quick replies and the setup band come from this, never from the marker. */
+export type DebateOffer = {problem: string | null; with: DebateNamedAnimal[]};
+
+/** A call turn's `done.debate_request`: they said yes on the call; the chat sets it up once the call is over. */
+export type DebateRequest = {problem: string; with: DebateNamedAnimal[]};
+
+/** `with`, as the server sends it or as the thread stored it: at most 3, each card once. */
+export function decodeDebateNamedAnimals(raw: unknown): DebateNamedAnimal[] {
+    const named: DebateNamedAnimal[] = [];
+    for (const item of list(raw)) {
+        const row = object(item);
+        const captureId = row ? debateUuid(first(row, "capture_id", "captureId")) : null;
+        const animal = row ? firstText(row, "animal", "animal_name") : null;
+        if (!row || !captureId || !animal || named.some((entry) => entry.captureId === captureId)) continue;
+        named.push({
+            captureId,
+            speciesProfileId: debateUuid(first(row, "species_profile_id", "speciesProfileId")),
+            animal,
+            nickname: firstText(row, "nickname")
+        });
+        if (named.length >= DEBATE_MAX_PICKS) break;
+    }
+    return named;
+}
+
+/** `done.companion.debate_offer` (or its stored form). Null when there is none. */
+export function decodeDebateOffer(raw: unknown): DebateOffer | null {
+    const row = object(raw);
+    if (!row) return null;
+    const problem = typeof row.problem === "string" ? row.problem.replace(/\s+/g, " ").trim().slice(0, DEBATE_PROBLEM_MAX) : "";
+    return {problem: problem || null, with: decodeDebateNamedAnimals(row.with)};
+}
+
+/** A call turn's `done.debate_request: {problem, with}`. Null without a problem. */
+export function decodeDebateRequest(raw: unknown): DebateRequest | null {
+    const problem = debateRequestProblem(raw);
+    return problem ? {problem, with: decodeDebateNamedAnimals(object(raw)?.with)} : null;
+}
+
+/**
+ * What the setup pre-selects: the animals the animal named, where they are
+ * among the candidates (that card, or the candidate of its species), then the
+ * suggestions, at most `max`, never two of one species.
+ */
+export function preselectedDebatePicks(candidates: DebateCandidate[], named: readonly DebateNamedAnimal[], max = DEBATE_MAX_PICKS): string[] {
+    const species = new Set<string>();
+    const picks: string[] = [];
+    const add = (candidate: DebateCandidate) => {
+        if (picks.length >= max || picks.includes(candidate.captureId)) return;
+        if (candidate.speciesProfileId && species.has(candidate.speciesProfileId)) return;
+        if (candidate.speciesProfileId) species.add(candidate.speciesProfileId);
+        picks.push(candidate.captureId);
+    };
+    for (const animal of named) {
+        const match = candidates.find((candidate) => candidate.captureId === animal.captureId)
+            ?? (animal.speciesProfileId ? candidates.find((candidate) => candidate.speciesProfileId === animal.speciesProfileId) : undefined);
+        if (match) add(match);
+    }
+    for (const candidate of candidates) if (candidate.fits) add(candidate);
+    return picks;
+}
+
 // MARK: - The thread and the feed
 
 /** Its turns as the thread shows them: open, then react, then close, each in seat order within the round. */

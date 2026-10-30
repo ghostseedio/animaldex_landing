@@ -4,8 +4,8 @@ import "server-only";
  * The companion loop's reads and writes, with the service role, as the apps'
  * `generate-applied-insight` does them (`loadCompanionLoop`,
  * `applyCompanionLines`, the referral take, and since 3.2 Debates
- * `loadDebateOfferAllowed`). The prompt text and the line parsing live in
- * `companion-focus.ts`.
+ * `loadDebateChatState` and `noteDebateOffer`). The prompt text and the line
+ * parsing live in `companion-focus.ts`.
  *
  * Every call fails quietly: a database without the migration, or one that
  * refuses, leaves the animal without the loop, never without an answer.
@@ -13,8 +13,11 @@ import "server-only";
 
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {
+    NO_DEBATE,
     companionDoneFields,
+    debateChatState,
     describeStepMedia,
+    type DebateChatState,
     parseCompanionRoster,
     parseCompanionState,
     resolveReferral,
@@ -68,11 +71,12 @@ export type OwnerCompanion = {
      */
     progress: Record<string, unknown>;
     /**
-     * 3.2 Debates: the animal may offer a debate in this reply
-     * (`companion.debate`). Only asked of `debate_chat_state` when the turn
-     * allows it (`debateOffer` on the call) and the Power is earned.
+     * 3.2 Debates (`debate_chat_state`): whether the animal may offer a debate
+     * in this reply (`companion.debate.may_offer`) and whether a call may hand
+     * one to the chat (`may_hand_over`). Only asked when the turn allows it
+     * (`debateState` on the call) and the Power is earned; both false otherwise.
      */
-    debateOffer: boolean;
+    debate: DebateChatState;
     /** The loop, when it is on (personalisation on, not a Trial thread). */
     loop: {
         state: CompanionState | null;
@@ -136,12 +140,12 @@ export async function loadOwnerCompanion(params: {
     /** `step_report.step_id` on the request: they tapped "I did it" on this step. */
     stepReportId?: string | null;
     /**
-     * 3.2 Debates: everything but the Power and `debate_chat_state` allows the
-     * offer in this reply (the chat draws the debate card, the loop is on, not a
-     * greeting or a call, steps are offered, no crisis words, no debate card in
-     * the conversation yet).
+     * 3.2 Debates: everything but the Power and `debate_chat_state` allows a
+     * debate offer (or, on a call, a hand-over) in this reply: the request takes
+     * debates, the loop is on, not a greeting, steps are offered, no crisis
+     * words, and in a chat no debate marker in the conversation yet.
      */
-    debateOffer?: boolean;
+    debateState?: boolean;
 }): Promise<OwnerCompanion | null> {
     const service = createSupabaseServiceClient();
     if (!service) return null;
@@ -199,12 +203,13 @@ export async function loadOwnerCompanion(params: {
     // The loop settles the Power first, so the progress read follows it, and
     // the debate state only once the Power is earned, as in the apps.
     const loop = params.loopOn ? await loadLoop() : null;
-    const [bond, [progress, debateOffer]] = await Promise.all([
+    const [bond, [progress, debate]] = await Promise.all([
         loadBond(),
         loadProgress().then(async (progress) => [
             progress,
-            Boolean(params.debateOffer && loop && progress.power_earned)
-                && await loadDebateOfferAllowed(service, params.userId, params.speciesProfileId)
+            params.debateState && loop && progress.power_earned
+                ? await loadDebateChatState(service, params.userId, params.speciesProfileId)
+                : NO_DEBATE
         ] as const)
     ]);
     return {
@@ -212,29 +217,49 @@ export async function loadOwnerCompanion(params: {
         bond,
         powerEarned: Boolean(progress.power_earned),
         progress,
-        debateOffer,
+        debate,
         loop
     };
 }
 
 /**
- * Whether the animal may offer a debate now: the switch is on, it has not
- * hosted one on this problem already (since its focus was set, or today),
- * and a private debate is still free today. The apps' `loadDebateOfferAllowed`
+ * Whether the animal may offer a debate now, and whether a call may hand one
+ * to the chat (`debateChatState`). The apps' `loadDebateChatState`
  * (`debate_chat_state`, service role only).
  */
-async function loadDebateOfferAllowed(service: Service, userId: string, speciesProfileId: string): Promise<boolean> {
+async function loadDebateChatState(service: Service, userId: string, speciesProfileId: string): Promise<DebateChatState> {
     try {
         const {data, error} = await service.rpc("debate_chat_state", {p_user_id: userId, p_species_profile_id: speciesProfileId});
-        if (error || !data || typeof data !== "object") {
-            if (error) warn("debate_chat_state", error);
-            return false;
-        }
-        const state = data as Record<string, unknown>;
-        return state.enabled === true && state.debated_this_problem !== true && Number(state.private_left ?? 0) > 0;
+        if (error) warn("debate_chat_state", error);
+        return error ? NO_DEBATE : debateChatState(data);
     } catch (error) {
         warn("debate_chat_state", error);
-        return false;
+        return NO_DEBATE;
+    }
+}
+
+/**
+ * The animal made the debate offer (its marker in a chat reply, DEBATE_OFFER
+ * or DEBATE on a call): noted, so it is made once for a problem, in any chat
+ * or call. `accepted` when they said yes on a call. The apps' `noteDebateOffer`
+ * (`debate_note_offer`, service role only).
+ */
+export async function noteDebateOffer(service: Service, params: {
+    userId: string;
+    speciesProfileId: string;
+    via: "chat" | "call";
+    accepted?: boolean;
+}): Promise<void> {
+    try {
+        const {error} = await service.rpc("debate_note_offer", {
+            p_user_id: params.userId,
+            p_species_profile_id: params.speciesProfileId,
+            p_via: params.via,
+            p_accepted: params.accepted === true
+        });
+        if (error) warn("debate_note_offer", error);
+    } catch (error) {
+        warn("debate_note_offer", error);
     }
 }
 

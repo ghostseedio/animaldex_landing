@@ -38,7 +38,9 @@
  *
  * 3.2 Debates (docs/debates/SPEC.md, sections 1, 4 and 6): the animal offers
  * a debate in its own words; its `debate` card is a hidden marker, never
- * drawn, and under that reply the app offers [Yes, compare] [Not now]. "Yes,
+ * drawn, and under that reply, when the server allowed the offer
+ * (`done.companion.debate_offer`), the app offers [Yes, compare] [Not now],
+ * the animals it named pre-selected in the setup. "Yes,
  * compare", "Compare with other animals" in the ••• menu and on the Bond tab,
  * and a call that ended on a yes (`debate_request`), open the setup as a band
  * in the thread itself (the modal sheet only at very small widths). Started,
@@ -123,7 +125,7 @@ import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
 import DebateSetup, {type DebateHost} from "@/components/debates/debate-sheet";
 import DebateThread from "@/components/debates/debate-thread";
 import {useMyDebates} from "@/components/debates/use-debates";
-import type {Debate} from "@/lib/debates";
+import type {Debate, DebateNamedAnimal, DebateRequest} from "@/lib/debates";
 
 export type AskDrawerLabels = {
     title: string;
@@ -399,8 +401,15 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     // Report this reply: which reply, and how the report is going.
     const [reportTarget, setReportTarget] = useState<AskMessage | null>(null);
     const [reportState, setReportState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
-    // 3.2 Debates: the debate sheet, from the animal's card or the ••• menu, or to approve a public draft.
-    const [debateSheet, setDebateSheet] = useState<{problem: string; messageId: string | null; approving: Debate | null; fromCall: boolean} | null>(null);
+    // 3.2 Debates: the setup, from the animal's offer, the ••• menu or a call, or to approve a public draft;
+    // `named`: the owner's animals the animal named in its offer, pre-selected.
+    const [debateSheet, setDebateSheet] = useState<{
+        problem: string;
+        messageId: string | null;
+        approving: Debate | null;
+        fromCall: boolean;
+        named: DebateNamedAnimal[];
+    } | null>(null);
     // Below this width a band in the thread has no room: the setup is the modal sheet instead.
     const [debateNarrow, setDebateNarrow] = useState(false);
     useEffect(() => {
@@ -411,8 +420,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         query.addEventListener?.("change", update);
         return () => query.removeEventListener?.("change", update);
     }, []);
-    // A call that ended on yes to a debate (`done.debate_request`): its problem, for when the call is over.
-    const callDebateRef = useRef<string | null>(null);
+    // A call that ended on yes to a debate (`done.debate_request`): its problem and the animals it named, for when the call is over.
+    const callDebateRef = useRef<DebateRequest | null>(null);
 
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
@@ -499,8 +508,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             lastReportRef.current = null;
         },
         // A call that ended on yes to a debate: set up once the call is over (Private, "From your call").
-        onDebateRequest: (problem) => {
-            callDebateRef.current = problem;
+        onDebateRequest: (request) => {
+            callDebateRef.current = request;
         },
         onBond: (raw) => {
             const next = decodeChatBond(raw);
@@ -1327,22 +1336,30 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         return placed;
     }, [threadDebates, messages]);
     /**
-     * The sheet, with the problem: the card's summary of it, else as they
-     * told it here (their latest message, or what the animal is helping with).
+     * The setup, with the problem: the animal's summary of it (its offer's
+     * `debate_offer`, or the call's `debate_request`), else as they told it
+     * here (their latest message, or what the animal is helping with); and the
+     * owner's animals it named, pre-selected.
      */
-    const openDebateSheet = useCallback((messageId: string | null, approving: Debate | null = null, problem: string | null = null, fromCall = false) => {
+    const openDebateSheet = useCallback((
+        messageId: string | null,
+        approving: Debate | null = null,
+        problem: string | null = null,
+        fromCall = false,
+        named: DebateNamedAnimal[] = []
+    ) => {
         speech.stop();
         setShowingBond(false);
         setShowingMemory(false);
-        setDebateSheet({problem: problem || lastQuestion(messages) || companionLoop?.focus || "", messageId, approving, fromCall});
+        setDebateSheet({problem: problem || lastQuestion(messages) || companionLoop?.focus || "", messageId, approving, fromCall, named});
         sticksToBottom.current = true;
     }, [speech, messages, companionLoop?.focus]);
-    // The call is over: the setup opens prefilled from it, Private (a public debate never starts from a call).
+    // The call is over: the setup opens prefilled from it, its animals pre-selected, Private (a public debate never starts from a call).
     useEffect(() => {
         if (onCall || !callDebateRef.current) return;
-        const problem = callDebateRef.current;
+        const request = callDebateRef.current;
         callDebateRef.current = null;
-        if (debatesOffered) openDebateSheet(null, null, problem, true);
+        if (debatesOffered) openDebateSheet(null, null, request.problem, true, request.with);
     }, [onCall, debatesOffered, openDebateSheet]);
     /** The setup, in the thread (or as the sheet, below `debateNarrow`). */
     const debateSetup = (layout: "band" | "sheet") => (debateSheet && debateHost ? (
@@ -1351,6 +1368,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             layout={layout}
             host={debateHost}
             problem={debateSheet.problem}
+            named={debateSheet.named}
             fromCall={debateSheet.fromCall}
             words={words}
             closeLabel={labels.close}
@@ -1457,7 +1475,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     /**
      * Under a finished reply on the owner's chat: the step card, while the
      * step it set is the open one, and the Warmup or Trials card the animal
-     * offered (never its own words: only its kind is read).
+     * offered (never its own words: only its kind is read). A debate offer's
+     * quick replies come from `done.companion.debate_offer` (SPEC section 6),
+     * never from the hidden marker: a marker the server did not allow shows
+     * nothing.
      */
     const stepBusyNow = stepBusy || (isSending && greetingState !== "loading");
     // The open step's card is under the reply that set it, when that reply is
@@ -1468,7 +1489,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (!ownerChat || message.role !== "assistant" || message.status !== "complete") return null;
         if (pacer.messageId === message.id && pacer.revealing) return null;
         const step = openStep && message.id === stepCardMessageId ? openStep : null;
-        const cards = message.cardsDismissed ? [] : askReplyCards(message.text);
+        const debateOffer = message.cardsDismissed ? null : message.companionEvent?.debateOffer ?? null;
+        const cards: AskChatCard[] = message.cardsDismissed
+            ? []
+            : [
+                ...askReplyCards(message.text).filter((card) => card.kind !== "debate"),
+                ...(debateOffer ? [{kind: "debate" as const, problem: debateOffer.problem}] : [])
+            ];
         if (!step && cards.length === 0) return null;
         return (
             <>
@@ -1507,7 +1534,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             setTrialPicker({highlight, messageId: message.id});
                         }}
                         debateOffered={debatesOffered && debateSheet?.messageId !== message.id}
-                        onDebate={() => openDebateSheet(message.id, null, card.kind === "debate" ? card.problem : null)}
+                        onDebate={() => openDebateSheet(message.id, null, debateOffer?.problem ?? null, false, debateOffer?.with ?? [])}
                     />
                 ))}
             </>

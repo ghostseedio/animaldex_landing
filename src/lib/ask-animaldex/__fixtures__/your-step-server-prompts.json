@@ -2,7 +2,7 @@
   "source": {
     "repo": "AnimalDex",
     "ref": "r32d-server",
-    "commit": "b09fd6a7030020b37f243b17f2d6f35256ea034f",
+    "commit": "1e27f77d1365edb0d3ea68ed86d733e4986f0348",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",
@@ -74,13 +74,13 @@
       "  it. A card is an offer: they can say no. A step you set them in your own words needs no card: the app shows it."
     ],
     "DEBATE_MEDIUM": [
-      "- kind can also be debate: other animals weigh in on their problem, each with its own way. It opens a sheet where",
-      "  they pick the animals and whether it stays private:",
+      "- The debate marker (kind debate) is not a card anyone sees. When you have made the debate offer yourself, in",
+      "  your own words, end that reply with it, so the app can put its two quick replies under your message:",
       "  ```animaldex-card",
-      "  {\"kind\":\"debate\",\"title\":\"How would other animals handle this?\",\"body\":\"One sentence in your voice on why other ways are worth hearing here.\",\"cta\":\"Compare with other animals\",\"problem\":\"their problem in one or two sentences, as they told it\"}",
+      "  {\"kind\":\"debate\",\"problem\":\"their problem in one line, from their side\",\"with\":[\"a2\",\"a5\"]}",
       "  ```",
-      "  problem is what they brought, in their own terms, for the sheet: nothing they did not tell you. Only when the",
-      "  debate rule allows it."
+      "  with: the keys from other_animals of the animals you named or have in mind (at most 3; [] when none). No title,",
+      "  body or button text: the words are in your reply. Never mention the marker. Only when the debate rule allows it."
     ],
     "ANIMAL_ROLE_RULES": [
       "What you know about yourself: animal_record is everything AnimalDex holds on you — your biology, behaviour, field",
@@ -192,6 +192,27 @@
     "ANIMAL_CALL_STEP_RULES": [
       "This is a voice call: set no steps, offer no Warmup, Trials or debates, and send no cards. If they bring up the",
       "step you set them (companion.open_trial), talk with them about how it is going."
+    ],
+    "ANIMAL_CALL_DEBATE_STEP_RULES": [
+      "This is a voice call: set no steps, offer no Warmup or Trials, and send no cards; other animals' ways only as the",
+      "rule below says. If they bring up the step you set them (companion.open_trial), talk with them about how it is going."
+    ],
+    "CALL_DEBATE_RULES": [
+      "Other animals' ways, by voice (companion.debate): only while companion.debate.may_offer is true, at most once in",
+      "this call, and only after your own verdict on a real problem of theirs, you may ask in your own words whether",
+      "they would like to hear how other animals would handle it. You may name up to three of your owner's other animals",
+      "from other_animals, by the names other_animals gives; never anyone else's. Never in small talk, never while they",
+      "are telling you about something hard or anyone is hurting them. When you make the offer, write DEBATE_OFFER.",
+      "If they say yes, or ask for it themselves, and companion.debate.may_hand_over is true, say in your own words that",
+      "you will bring the others into their chat after the call: the debate happens there, not on the call. Then write",
+      "DEBATE. If may_hand_over is false, say plainly, as yourself, that it can't happen today. Never run the debate on",
+      "the call, never speak for the other animals, and never suggest posting it publicly."
+    ],
+    "CALL_DEBATE_OUTPUT_LINES": [
+      "5. Then, only for what this reply actually did, one hidden line each (never shown or spoken):",
+      "   DEBATE_OFFER: <their problem in one line, from their side> (you just offered other animals' ways)",
+      "   DEBATE: <their problem in one line, from their side> | <keys from other_animals you named or have in mind,",
+      "   comma-separated, or nothing> (they said yes)"
     ]
   },
   "companionLoopRules": {
@@ -325,11 +346,14 @@
       "  them, in your own words, and say the step starts with that animal's way.",
       "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
       "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-      "  into — you may offer once, after giving your own verdict, to let other animals weigh in: ask in your own",
-      "  words whether they would like to hear how other animals would handle it, with the debate card. Never in small",
-      "  talk, never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is",
-      "  hurting them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave",
-      "  it. Without companion.debate, do not offer it.",
+      "  into — you may offer once, after giving your own verdict, to let other animals weigh in. The offer is yours:",
+      "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
+      "  You may name up to three of your owner's other animals from other_animals whose ways would differ from yours,",
+      "  by the names other_animals gives; never name anyone else's animals. Then end the reply with the debate marker.",
+      "  The app puts two quick replies under your message, so never mention buttons or cards. Never in small talk,",
+      "  never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is hurting",
+      "  them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave it.",
+      "  Without companion.debate, do not offer it.",
       "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
       "  one, leave it for the rest of this conversation."
     ],
@@ -436,7 +460,7 @@
       "output": [
         "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"not earned yet\",\"warmup\":{\"passed\":false,\"may_offer\":true}}",
         "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a video to their record of it, which you cannot see. Judge it as the rules for reporting back say.",
-        "other_animals — your owner's other animals and their lessons, for a referral only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
       ]
     },
     {
@@ -569,7 +593,7 @@
       },
       "output": [
         "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"warmup\":{\"passed\":true,\"may_offer\":false},\"debate\":{\"may_offer\":true}}",
-        "other_animals — your owner's other animals and their lessons, for a referral only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
       ]
     },
     {
@@ -633,7 +657,7 @@
       "output": [
         "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\"}",
         "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. Judge it as the rules for reporting back say.",
-        "other_animals — your owner's other animals and their lessons, for a referral only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
       ]
     },
     {
@@ -644,6 +668,122 @@
         "debateOffer": true
       },
       "output": []
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "debateOffer": true,
+        "debateHandOver": true
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"debate\":{\"may_offer\":true,\"may_hand_over\":true}}",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "debateOffer": false,
+        "debateHandOver": true
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"debate\":{\"may_offer\":false,\"may_hand_over\":true}}",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [],
+        "powerEarned": true,
+        "debateOffer": false,
+        "debateHandOver": false
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"debate\":{\"may_offer\":false,\"may_hand_over\":false}}"
+      ]
     }
   ],
   "companionWarmup": [
@@ -802,6 +942,304 @@
     {
       "input": [],
       "output": false
+    }
+  ],
+  "parseDebateMarker": [
+    {
+      "input": "A hedgehog would tell you the opposite. Want to hear Pip and the wolf?\n```animaldex-card\n{\"kind\":\"debate\",\"problem\":\"Whether to take the promotion that moves me away from my friends\",\"with\":[\"a1\",\"A2\",\"a1\",\"a9\",\"x\"]}\n```",
+      "output": {
+        "problem": "Whether to take the promotion that moves me away from my friends",
+        "keys": [
+          "a1",
+          "a2",
+          "a9"
+        ]
+      }
+    },
+    {
+      "input": "```animaldex-card\n{\"kind\":\"debate\"}\n```",
+      "output": {
+        "problem": null,
+        "keys": []
+      }
+    },
+    {
+      "input": "```animaldex-card\n{\"kind\":\"debate\",\"problem\":\"Too short\",\"with\":\"a1\"}\n```",
+      "output": {
+        "problem": null,
+        "keys": []
+      }
+    },
+    {
+      "input": "```animaldex-card\n{\"kind\":\"debate\",\"problem\":\"So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. \",\"with\":[\" a2 \",3,\"a1\",\"a3\",\"a4\"]}\n```",
+      "output": {
+        "problem": "So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So much to say about this. So…",
+        "keys": [
+          "a2",
+          "a1",
+          "a3"
+        ]
+      }
+    },
+    {
+      "input": "```animaldex-card\n{\"kind\":\"trial\",\"frequency\":\"MID\"}\n```\nThen.\n```animaldex-card\n{\"kind\":\"debate\",\"problem\":\"Whether to move to the coast for the job\",\"with\":[]}\n```",
+      "output": {
+        "problem": "Whether to move to the coast for the job",
+        "keys": []
+      }
+    },
+    {
+      "input": "```animaldex-card\n{\"kind\":\"trial\",\"frequency\":\"MID\"}\n```",
+      "output": null
+    },
+    {
+      "input": "```animaldex-card\nnot json\n```",
+      "output": null
+    },
+    {
+      "input": "No marker here.",
+      "output": null
+    }
+  ],
+  "debateOfferAnimals": [
+    {
+      "keys": [
+        "a1",
+        "a2",
+        "a9"
+      ],
+      "roster": [
+        {
+          "species_profile_id": "s1",
+          "capture_id": "c1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip",
+          "power": "Defended Curiosity",
+          "lesson": "x"
+        },
+        {
+          "species_profile_id": "s2",
+          "capture_id": "c2",
+          "animal": "Gray Wolf",
+          "nickname": null,
+          "power": "Pack Patience",
+          "lesson": "y"
+        }
+      ],
+      "output": [
+        {
+          "capture_id": "c1",
+          "species_profile_id": "s1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip"
+        },
+        {
+          "capture_id": "c2",
+          "species_profile_id": "s2",
+          "animal": "Gray Wolf",
+          "nickname": null
+        }
+      ]
+    },
+    {
+      "keys": [
+        "a2",
+        "a2",
+        "a1"
+      ],
+      "roster": [
+        {
+          "species_profile_id": "s1",
+          "capture_id": "c1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip",
+          "power": "Defended Curiosity",
+          "lesson": "x"
+        },
+        {
+          "species_profile_id": "s2",
+          "capture_id": "c2",
+          "animal": "Gray Wolf",
+          "nickname": null,
+          "power": "Pack Patience",
+          "lesson": "y"
+        }
+      ],
+      "output": [
+        {
+          "capture_id": "c2",
+          "species_profile_id": "s2",
+          "animal": "Gray Wolf",
+          "nickname": null
+        },
+        {
+          "capture_id": "c1",
+          "species_profile_id": "s1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip"
+        }
+      ]
+    },
+    {
+      "keys": [
+        "pip",
+        "gray wolf"
+      ],
+      "roster": [
+        {
+          "species_profile_id": "s1",
+          "capture_id": "c1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip",
+          "power": "Defended Curiosity",
+          "lesson": "x"
+        },
+        {
+          "species_profile_id": "s2",
+          "capture_id": "c2",
+          "animal": "Gray Wolf",
+          "nickname": null,
+          "power": "Pack Patience",
+          "lesson": "y"
+        }
+      ],
+      "output": [
+        {
+          "capture_id": "c1",
+          "species_profile_id": "s1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip"
+        },
+        {
+          "capture_id": "c2",
+          "species_profile_id": "s2",
+          "animal": "Gray Wolf",
+          "nickname": null
+        }
+      ]
+    },
+    {
+      "keys": [],
+      "roster": [
+        {
+          "species_profile_id": "s1",
+          "capture_id": "c1",
+          "animal": "European Hedgehog",
+          "nickname": "Pip",
+          "power": "Defended Curiosity",
+          "lesson": "x"
+        },
+        {
+          "species_profile_id": "s2",
+          "capture_id": "c2",
+          "animal": "Gray Wolf",
+          "nickname": null,
+          "power": "Pack Patience",
+          "lesson": "y"
+        }
+      ],
+      "output": []
+    }
+  ],
+  "extractCompanionLines": [
+    {
+      "input": "Then I'll bring Pip and the wolf into our chat once we hang up.\n§§FOLLOW_UPS§§\nSounds good\nDEBATE: Whether to take the promotion away from my friends | a1, a2, nope\nDEBATE_OFFER: Whether to take the promotion",
+      "output": {
+        "raw": "Then I'll bring Pip and the wolf into our chat once we hang up.\n§§FOLLOW_UPS§§\nSounds good",
+        "lines": {
+          "focus": null,
+          "trial": null,
+          "done": null,
+          "refer": null,
+          "debate": {
+            "problem": "Whether to take the promotion away from my friends",
+            "keys": [
+              "a1",
+              "a2"
+            ]
+          },
+          "debateOffered": true
+        }
+      }
+    },
+    {
+      "input": "Yes.\n§§FOLLOW_UPS§§\nDEBATE: help",
+      "output": {
+        "raw": "Yes.\n§§FOLLOW_UPS§§",
+        "lines": {
+          "focus": null,
+          "trial": null,
+          "done": null,
+          "refer": null,
+          "debate": null,
+          "debateOffered": false
+        }
+      }
+    },
+    {
+      "input": "DEBATE: Whether to take the promotion away\n§§FOLLOW_UPS§§\nOk",
+      "output": {
+        "raw": "DEBATE: Whether to take the promotion away\n§§FOLLOW_UPS§§\nOk",
+        "lines": {
+          "focus": null,
+          "trial": null,
+          "done": null,
+          "refer": null,
+          "debate": null,
+          "debateOffered": false
+        }
+      }
+    },
+    {
+      "input": "Sure.\n§§FOLLOW_UPS§§\nOk\n- DEBATE: Whether to leave the band before the tour\nDEBATE: A second problem that is long enough | a3",
+      "output": {
+        "raw": "Sure.\n§§FOLLOW_UPS§§\nOk",
+        "lines": {
+          "focus": null,
+          "trial": null,
+          "done": null,
+          "refer": null,
+          "debate": {
+            "problem": "Whether to leave the band before the tour",
+            "keys": []
+          },
+          "debateOffered": false
+        }
+      }
+    },
+    {
+      "input": "Hm.\n§§FOLLOW_UPS§§\nOk\nDEBATE_OFFER:",
+      "output": {
+        "raw": "Hm.\n§§FOLLOW_UPS§§\nOk",
+        "lines": {
+          "focus": null,
+          "trial": null,
+          "done": null,
+          "refer": null,
+          "debate": null,
+          "debateOffered": true
+        }
+      }
+    },
+    {
+      "input": "Done.\n§§FOLLOW_UPS§§\nNice\nFOCUS: Speaking up first\nTRIAL: Say it first on Monday | 4\nDONE: She said it first\nREFER: a1 | She keeps losing the thread in meetings",
+      "output": {
+        "raw": "Done.\n§§FOLLOW_UPS§§\nNice",
+        "lines": {
+          "focus": "Speaking up first",
+          "trial": {
+            "step": "Say it first on Monday",
+            "checkInAfterDays": 4
+          },
+          "done": "She said it first",
+          "refer": {
+            "key": "a1",
+            "problem": "She keeps losing the thread in meetings"
+          },
+          "debate": null,
+          "debateOffered": false
+        }
+      }
     }
   ],
   "conversationOffersDebate": [
@@ -1352,13 +1790,13 @@
         "  a few quick questions on your lesson, taken inside this chat, optional). body is one sentence in your voice.",
         "  Never more than ONE card per answer, after the prose, and only when the rules above allow it or they asked for",
         "  it. A card is an offer: they can say no. A step you set them in your own words needs no card: the app shows it.",
-        "- kind can also be debate: other animals weigh in on their problem, each with its own way. It opens a sheet where",
-        "  they pick the animals and whether it stays private:",
+        "- The debate marker (kind debate) is not a card anyone sees. When you have made the debate offer yourself, in",
+        "  your own words, end that reply with it, so the app can put its two quick replies under your message:",
         "  ```animaldex-card",
-        "  {\"kind\":\"debate\",\"title\":\"How would other animals handle this?\",\"body\":\"One sentence in your voice on why other ways are worth hearing here.\",\"cta\":\"Compare with other animals\",\"problem\":\"their problem in one or two sentences, as they told it\"}",
+        "  {\"kind\":\"debate\",\"problem\":\"their problem in one line, from their side\",\"with\":[\"a2\",\"a5\"]}",
         "  ```",
-        "  problem is what they brought, in their own terms, for the sheet: nothing they did not tell you. Only when the",
-        "  debate rule allows it.",
+        "  with: the keys from other_animals of the animals you named or have in mind (at most 3; [] when none). No title,",
+        "  body or button text: the words are in your reply. Never mention the marker. Only when the debate rule allows it.",
         "- A CARD is not a drawing: it goes after the closing question and before the follow-ups line, and the card rule",
         "  above sets how many. Close each card block with ``` on its own line."
       ],
@@ -1422,11 +1860,14 @@
         "  them, in your own words, and say the step starts with that animal's way.",
         "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
         "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-        "  into — you may offer once, after giving your own verdict, to let other animals weigh in: ask in your own",
-        "  words whether they would like to hear how other animals would handle it, with the debate card. Never in small",
-        "  talk, never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is",
-        "  hurting them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave",
-        "  it. Without companion.debate, do not offer it.",
+        "  into — you may offer once, after giving your own verdict, to let other animals weigh in. The offer is yours:",
+        "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
+        "  You may name up to three of your owner's other animals from other_animals whose ways would differ from yours,",
+        "  by the names other_animals gives; never name anyone else's animals. Then end the reply with the debate marker.",
+        "  The app puts two quick replies under your message, so never mention buttons or cards. Never in small talk,",
+        "  never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is hurting",
+        "  them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave it.",
+        "  Without companion.debate, do not offer it.",
         "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
         "  one, leave it for the rest of this conversation.",
         ""
@@ -1489,13 +1930,13 @@
         "  a few quick questions on your lesson, taken inside this chat, optional). body is one sentence in your voice.",
         "  Never more than ONE card per answer, after the prose, and only when the rules above allow it or they asked for",
         "  it. A card is an offer: they can say no. A step you set them in your own words needs no card: the app shows it.",
-        "- kind can also be debate: other animals weigh in on their problem, each with its own way. It opens a sheet where",
-        "  they pick the animals and whether it stays private:",
+        "- The debate marker (kind debate) is not a card anyone sees. When you have made the debate offer yourself, in",
+        "  your own words, end that reply with it, so the app can put its two quick replies under your message:",
         "  ```animaldex-card",
-        "  {\"kind\":\"debate\",\"title\":\"How would other animals handle this?\",\"body\":\"One sentence in your voice on why other ways are worth hearing here.\",\"cta\":\"Compare with other animals\",\"problem\":\"their problem in one or two sentences, as they told it\"}",
+        "  {\"kind\":\"debate\",\"problem\":\"their problem in one line, from their side\",\"with\":[\"a2\",\"a5\"]}",
         "  ```",
-        "  problem is what they brought, in their own terms, for the sheet: nothing they did not tell you. Only when the",
-        "  debate rule allows it.",
+        "  with: the keys from other_animals of the animals you named or have in mind (at most 3; [] when none). No title,",
+        "  body or button text: the words are in your reply. Never mention the marker. Only when the debate rule allows it.",
         "- A CARD is not a drawing: it goes after the closing question and before the follow-ups line, and the card rule",
         "  above sets how many. Close each card block with ``` on its own line."
       ],
@@ -1596,13 +2037,13 @@
         "  a few quick questions on your lesson, taken inside this chat, optional). body is one sentence in your voice.",
         "  Never more than ONE card per answer, after the prose, and only when the rules above allow it or they asked for",
         "  it. A card is an offer: they can say no. A step you set them in your own words needs no card: the app shows it.",
-        "- kind can also be debate: other animals weigh in on their problem, each with its own way. It opens a sheet where",
-        "  they pick the animals and whether it stays private:",
+        "- The debate marker (kind debate) is not a card anyone sees. When you have made the debate offer yourself, in",
+        "  your own words, end that reply with it, so the app can put its two quick replies under your message:",
         "  ```animaldex-card",
-        "  {\"kind\":\"debate\",\"title\":\"How would other animals handle this?\",\"body\":\"One sentence in your voice on why other ways are worth hearing here.\",\"cta\":\"Compare with other animals\",\"problem\":\"their problem in one or two sentences, as they told it\"}",
+        "  {\"kind\":\"debate\",\"problem\":\"their problem in one line, from their side\",\"with\":[\"a2\",\"a5\"]}",
         "  ```",
-        "  problem is what they brought, in their own terms, for the sheet: nothing they did not tell you. Only when the",
-        "  debate rule allows it.",
+        "  with: the keys from other_animals of the animals you named or have in mind (at most 3; [] when none). No title,",
+        "  body or button text: the words are in your reply. Never mention the marker. Only when the debate rule allows it.",
         "- A CARD is not a drawing: it goes after the closing question and before the follow-ups line, and the card rule",
         "  above sets how many. Close each card block with ``` on its own line."
       ],
@@ -1629,6 +2070,49 @@
         "2. Then a line containing exactly §§FOLLOW_UPS§§",
         "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
         "4. Only if this reply told a story of your own life: one last line, after the follow-ups, in the form \"STORY: <what happened, in one sentence, third person, past tense>\". It is never shown."
+      ]
+    },
+    "callDebates": {
+      "medium": [
+        "Medium — words, and a markdown table for a real side-by-side comparison."
+      ],
+      "loop": [
+        "How you talk: read what they need from what they say, message by message, and follow it as it changes. Never",
+        "name these ways or ask which they want.",
+        "- Chatting (about you, their day, an idea, anything): talk with them. Keep it lighter than advice; do not bring up",
+        "  steps, your Warmup, your Trials or debates unless they do. Ask something only when you want to know.",
+        "- Bringing a real situation, a decision or a problem: work it through as yourself. If something important is",
+        "  missing, ask one question first. Then your verdict on what they asked and the move your Power makes, concretely,",
+        "  and why your body and your life make it the move; name your blind spot where it could bite them; end on one",
+        "  concrete first step in your direction (one they could take back only where real stakes are involved).",
+        "- Wanting to practise, train or get better at your way (or asking about your Trials or your Warmup): take them",
+        "  through it — a step for their own life, or your Trials with the trial card (your Warmup, with the training",
+        "  card, if that is what they ask for).",
+        "",
+        "This is a voice call: set no steps, offer no Warmup or Trials, and send no cards; other animals' ways only as the",
+        "rule below says. If they bring up the step you set them (companion.open_trial), talk with them about how it is going.",
+        "",
+        "Other animals' ways, by voice (companion.debate): only while companion.debate.may_offer is true, at most once in",
+        "this call, and only after your own verdict on a real problem of theirs, you may ask in your own words whether",
+        "they would like to hear how other animals would handle it. You may name up to three of your owner's other animals",
+        "from other_animals, by the names other_animals gives; never anyone else's. Never in small talk, never while they",
+        "are telling you about something hard or anyone is hurting them. When you make the offer, write DEBATE_OFFER.",
+        "If they say yes, or ask for it themselves, and companion.debate.may_hand_over is true, say in your own words that",
+        "you will bring the others into their chat after the call: the debate happens there, not on the call. Then write",
+        "DEBATE. If may_hand_over is false, say plainly, as yourself, that it can't happen today. Never run the debate on",
+        "the call, never speak for the other animals, and never suggest posting it publicly.",
+        ""
+      ],
+      "output": [
+        "Output shape — plain markdown, no JSON, no code fence around the whole reply:",
+        "1. The answer itself (ending on its closing question when you ask one); then any card block(s), each closed with ```.",
+        "2. Then a line containing exactly §§FOLLOW_UPS§§",
+        "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
+        "4. Only if this reply told a story of your own life: one last line, after the follow-ups, in the form \"STORY: <what happened, in one sentence, third person, past tense>\". It is never shown.",
+        "5. Then, only for what this reply actually did, one hidden line each (never shown or spoken):",
+        "   DEBATE_OFFER: <their problem in one line, from their side> (you just offered other animals' ways)",
+        "   DEBATE: <their problem in one line, from their side> | <keys from other_animals you named or have in mind,",
+        "   comma-separated, or nothing> (they said yes)"
       ]
     }
   }
