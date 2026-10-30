@@ -178,11 +178,13 @@ function writePayingUntil(until: number | null) {
     }
 }
 /**
- * What the owner's chat draws, as the 3.2 apps say it (docs/your-step/SERVER.md):
- * the step card (`step`, so the check-in waits for "I'll do it") and the
- * Warmup and Trials cards (`card`).
+ * What the owner's chat draws, as the 3.2 apps say it (docs/your-step/SERVER.md,
+ * docs/debates/SERVER.md): the step card (`step`, so the check-in waits for
+ * "I'll do it"), the Warmup and Trials cards (`card`), and the debate card
+ * (`debate`, with `card`: the animal offers a debate only to a build that
+ * draws it).
  */
-const OWNER_CHAT_VISUALS = ["step", "card"] as const;
+const OWNER_CHAT_VISUALS = ["step", "card", "debate"] as const;
 
 /** Minutes ahead of UTC where the reader is (the apps send the same). */
 function readerUtcOffset(): number {

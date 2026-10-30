@@ -459,38 +459,6 @@ export function decodeDebateWayChoice(raw: unknown): DebateWayChoice | null {
     };
 }
 
-/** `debate_run_context` (service role, for the asker's run): the problem as the turns argue it, the animals by species, the kept turns. */
-export type DebateRunContext = {
-    enabled: boolean;
-    id: string;
-    status: DebateStatus | null;
-    visibility: DebateVisibility;
-    /** The approved text for a public debate, the asker's own words for a private one. */
-    problem: string | null;
-    publicChecked: boolean;
-    participants: DebateParticipant[];
-    turns: DebateTurn[];
-};
-
-export function decodeDebateRunContext(raw: unknown): DebateRunContext | null {
-    const row = object(raw);
-    const id = row ? debateUuid(first(row, "id", "debate_id")) : null;
-    if (!row || !id) return null;
-    return {
-        enabled: row.enabled !== false,
-        id,
-        status: debateStatus(row.status),
-        visibility: debateVisibility(row.visibility) ?? "private",
-        problem: firstText(row, "problem"),
-        publicChecked: bool(row.public_checked),
-        participants: list(row.participants)
-            .map((item, index) => decodeDebateParticipant(item, index))
-            .filter((item): item is DebateParticipant => item !== null)
-            .sort((a, b) => a.seat - b.seat),
-        turns: list(row.turns).map(decodeDebateTurn).filter((item): item is DebateTurn => item !== null)
-    };
-}
-
 export type HeartsResult = {hearts: number; credits: number | null};
 
 export function decodeHeartsResult(raw: unknown): HeartsResult | null {
@@ -556,12 +524,14 @@ export function reportWayFor(report: DebateReport | null, participant: DebatePar
 }
 
 /**
- * Boosted debates, pinned at the top of Discover for a viewer who has not
- * voted: open for votes, not theirs, at most two, fewest votes first.
+ * Boosted debates, pinned at the top of Discover for a viewer who can still
+ * vote on them (SERVER.md: the asker, the owners, signed-out readers and
+ * ineligible accounts never get pins): open for votes, at most two, fewest
+ * votes first.
  */
 export function pinnedDebates(debates: Debate[], max = DEBATE_MAX_PINNED): Debate[] {
     return debates
-        .filter((debate) => debate.visibility === "public" && debate.status === "voting" && debate.boosted && !debate.myVote && !debateIsMine(debate))
+        .filter((debate) => debate.visibility === "public" && debate.status === "voting" && debate.boosted && debate.canVote && !debate.myVote && !debateIsMine(debate))
         .sort((a, b) => (a.totalVotes ?? 0) - (b.totalVotes ?? 0) || Date.parse(a.createdAt ?? "") - Date.parse(b.createdAt ?? ""))
         .slice(0, max);
 }

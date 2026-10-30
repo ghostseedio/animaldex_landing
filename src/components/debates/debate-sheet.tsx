@@ -25,7 +25,7 @@ import {
     type DebateVisibility
 } from "@/lib/debates";
 import {debateProblemText, debateStakeNote} from "@/lib/debate-words";
-import {approvePublicDebate, createDebate, fetchDebate, loadDebateCandidates, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
+import {approvePublicDebate, cancelDebate, createDebate, fetchDebate, loadDebateCandidates, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
 
 /** The animal the debate starts from: the one whose chat this is. */
 export type DebateHost = {
@@ -40,8 +40,9 @@ export type DebateHost = {
 
 /** The server wants at least this much of the problem (and of the public text). */
 const MIN_PROBLEM = 10;
-const DRAFT_POLL_MS = 2000;
-const DRAFT_POLLS = 45;
+/** SERVER.md: poll about every 1.5 s; still drafting after about 30 s is a soft error. */
+const DRAFT_POLL_MS = 1500;
+const DRAFT_POLLS = 20;
 
 export default function DebateSheet({
     host,
@@ -112,12 +113,12 @@ export default function DebateSheet({
                 noteDebateChanged(next);
                 return;
             }
-            if (!cancelled) setFailure(web.problems.generic);
+            if (!cancelled) setFailure(web.problems.draftSlow);
         })();
         return () => {
             cancelled = true;
         };
-    }, [draft, web.problems.generic]);
+    }, [draft, web.problems.generic, web.problems.draftSlow]);
 
     const publicBlocker = visibility !== "public"
         ? null
@@ -219,6 +220,16 @@ export default function DebateSheet({
                 setRefusedPublic(true);
                 setVisibility("private");
                 setPicked([]);
+                return;
+            }
+            if (result.code === "animal_unavailable") {
+                // One of the invited animals joined another debate meanwhile: drop this one, pick again.
+                const dropped = await cancelDebate(draft.id);
+                if (dropped.ok && dropped.value) noteDebateChanged({...dropped.value, askerIsMe: true});
+                setDraft(null);
+                // Back to the picker, which reads the roster again.
+                setPicked([]);
+                say(result.code);
                 return;
             }
             say(result.code);

@@ -27,7 +27,8 @@ test("the Warmup, the Trials and the debate offer are the only cards the chat dr
     assert.deepEqual(decodeAskChatCard('{"kind":"trial","frequency":"mid","title":"Your MID Trial"}'), {kind: "trial", frequency: "MID"});
     assert.deepEqual(decodeAskChatCard('{"kind":"trial"}'), {kind: "trial", frequency: null});
     // 3.2 Debates: the animal's one-time offer; its words are the site's.
-    assert.deepEqual(decodeAskChatCard('{"kind":"debate","title":"Battle it out!"}'), {kind: "debate"});
+    assert.deepEqual(decodeAskChatCard('{"kind":"debate","title":"Battle it out!"}'), {kind: "debate", problem: null});
+    assert.deepEqual(decodeAskChatCard('{"kind":"debate","problem":"  Should I take the\\n job? "}'), {kind: "debate", problem: "Should I take the job?"});
     // The apps' retired cards are no card here.
     assert.equal(decodeAskChatCard('{"kind":"apply","domain":"BUSINESS"}'), null);
     assert.equal(decodeAskChatCard('{"kind":"comparison"}'), null);

@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
 import {
     loadDebatesEnabled,
     readDebate,
@@ -30,7 +31,9 @@ export const dynamic = "force-dynamic";
  * GET                       the switch, the reader's debates (`my_debates_v1`) and their roster opt-in.
  * GET ?captureId=           the same, only the debates that card of theirs was in (`p_capture_id`: the card's tab, the chat).
  * GET ?id=                  one debate (`debate_v1`): turns, report, votes, the reader's vote, `can_vote`.
- * POST {action: "candidates", hostCaptureId, visibility, problem}   `debate_candidates_v1`.
+ * POST {action: "candidates", hostCaptureId, visibility, problem}   the sheet's animals, with up to 3
+ *                           "Fits this best" picked by a fast model (`generate-applied-insight`,
+ *                           `mode: "debate_candidates"`), else `debate_candidates_v1`'s keyword marks.
  * POST {action: "create", hostCaptureId, visibility, problem, captureIds}   `create_debate_v1`.
  * POST {action: "approve", debateId, problemPublic}   `approve_public_debate_v1`.
  * POST {action: "cancel", debateId}                   `cancel_debate_v1` (not argued yet).
@@ -99,6 +102,19 @@ export async function POST(request: Request) {
         const problem = problemText(body.problem, DEBATE_PROBLEM_MAX);
         if (!hostCaptureId || !visibility) return refuse("invalid_participants");
         if (action === "candidates") {
+            // The model's picks first (SERVER.md "Candidate suggestions"); its refusals are the RPC's.
+            const suggested = await invokeAuthenticatedSupabaseFunctionResponse("generate-applied-insight", {
+                mode: "debate_candidates",
+                debate_candidates: {host_capture_id: hostCaptureId, visibility, problem}
+            }).catch(() => null);
+            if (suggested?.ok && suggested.payload?.ok === true) {
+                const candidates = decodeDebateCandidates(suggested.payload.candidates).filter((candidate) => candidate.captureId !== hostCaptureId);
+                return NextResponse.json({ok: true, candidates: await withCandidateSlugs(candidates), fitsBy: suggested.payload.fits_by ?? "model"});
+            }
+            const refused = typeof suggested?.payload?.error === "string" ? suggested.payload.error : null;
+            if (refused && ["debates_off", "capture_not_found", "power_not_earned", "no_hearts", "invalid_visibility"].includes(refused)) {
+                return failed("debate_candidates", refused);
+            }
             const {data, error} = await supabase.rpc("debate_candidates_v1", {
                 p_host_capture_id: hostCaptureId,
                 p_visibility: visibility,
@@ -107,7 +123,7 @@ export async function POST(request: Request) {
             if (error) return failed("debate_candidates_v1", error.message);
             // The host is never its own candidate.
             const candidates = decodeDebateCandidates(data).filter((candidate) => candidate.captureId !== hostCaptureId);
-            return NextResponse.json({ok: true, candidates: await withCandidateSlugs(candidates)});
+            return NextResponse.json({ok: true, candidates: await withCandidateSlugs(candidates), fitsBy: "keywords"});
         }
         const captureIds = Array.from(new Set(
             (Array.isArray(body.captureIds) ? body.captureIds : []).map(debateUuid).filter((id): id is string => id !== null && id !== hostCaptureId)

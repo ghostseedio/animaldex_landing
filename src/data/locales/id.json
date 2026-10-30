@@ -2705,6 +2705,8 @@
       "hearts": "{n} dari 3 hati",
       "choosing": "Membuka obrolan…",
       "getCredits": "Dapatkan Kredit",
+      "tryAgain": "Coba lagi",
+      "tryOwnWayMessage": "Aku akan mencoba caramu.",
       "problems": {
         "signIn": "Masuk untuk memulai debat.",
         "off": "Debat sedang dihentikan sementara.",
@@ -2715,6 +2717,7 @@
         "pickOne": "Pilih paling tidak satu hewan.",
         "tooShort": "Ceritakan sedikit lebih banyak: satu atau dua kalimat.",
         "animalUnavailable": "Salah satu hewan itu sedang tidak bisa ikut. Pilih yang lain.",
+        "draftSlow": "Versi publiknya agak lama. Coba lagi sebentar lagi.",
         "dailyLimit": "Itu semua debat yang bisa Anda mulai hari ini.",
         "notEligible": "Suara datang dari akun yang berumur paling tidak seminggu dan punya tangkapan publik.",
         "votingClosed": "Pemungutan suara sudah ditutup.",

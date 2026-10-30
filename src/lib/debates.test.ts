@@ -3,7 +3,6 @@ import test from "node:test";
 import {COMPANION_WORDS_EN, companionWords} from "@/lib/companion-bond";
 import {
     canHealHeart,
-    decodeDebateRunContext,
     debateIsMine,
     debateOpenings,
     debateProblemCode,
@@ -127,7 +126,7 @@ test("the winner's Credits are 5 for each other animal, less the 1 fee", () => {
 });
 
 test("boosted debates pin for a viewer who has not voted: at most two, fewest votes first", () => {
-    const base = decodeDebate(row({boosted: true}))!;
+    const base = decodeDebate(row({boosted: true, can_vote: true}))!;
     const make = (id: string, votes: number, changes: Partial<Debate> = {}): Debate => ({...base, id, totalVotes: votes, ...changes});
     const pinned = pinnedDebates([
         make("a", 4),
@@ -136,7 +135,9 @@ test("boosted debates pin for a viewer who has not voted: at most two, fewest vo
         make("d", 0, {myVote: P_HOST}),
         make("e", 0, {askerIsMe: true}),
         make("f", 0, {boosted: false}),
-        make("g", 0, {status: "settled"})
+        make("g", 0, {status: "settled"}),
+        // Pins are only for someone who can still vote on it.
+        make("h", 0, {canVote: false})
     ]);
     assert.deepEqual(pinned.map((debate) => debate.id), ["b", "c"]);
 });
@@ -280,20 +281,6 @@ test("the server's shapes: someone else's animal has no card, My debates says it
     assert.equal(debateOpenings(post).get(1), "Go play.");
     assert.deepEqual(debateVoteState({...post, visibility: "public"}, true), {kind: "own"});
 
-    // The run context: the problem as the turns argue it, the animals by species.
-    const run = decodeDebateRunContext({
-        enabled: true, id: DEBATE, status: "debating", visibility: "public", problem: "Moving?", public_checked: false,
-        participants: [
-            {participant_id: P_HOST, seat: 0, capture_id: HOST, species_profile_id: SPECIES, animal_name: "Gray Wolf", is_asker_owned: true, nickname: "Luna"},
-            {participant_id: P_THIRD, seat: 1, capture_id: null, species_profile_id: SPECIES, animal_name: "Crow", is_asker_owned: false}
-        ],
-        turns: [{turn_index: 0, seat: 0, phase: "open", text: "Stay."}]
-    })!;
-    assert.equal(run.status, "debating");
-    assert.equal(run.participants[1].captureId, null);
-    assert.equal(run.participants[0].nickname, "Luna");
-    assert.equal(run.turns[0].index, 0);
-    assert.equal(decodeDebateRunContext({status: "debating"}), null);
 });
 
 test("the server's refusals say themselves", () => {

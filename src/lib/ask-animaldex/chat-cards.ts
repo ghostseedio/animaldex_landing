@@ -5,12 +5,14 @@
  *   ```animaldex-card
  *   {"kind":"training", ...}   → the Warmup: Take the warmup (+5 XP) / Skip
  *   {"kind":"trial","frequency":"MID", ...} → "{name}'s Trials", a picker
- *   {"kind":"debate", ...}   → 3.2 Debates (docs/debates/SPEC.md, section 1.1):
- *                              "Want to hear how other animals would handle
- *                              this?" and "Compare with other animals"
+ *   {"kind":"debate","problem":"…", ...} → 3.2 Debates (docs/debates/SPEC.md,
+ *                              section 1.1; SERVER.md "The card"): "Want to hear
+ *                              how other animals would handle this?" and "Compare
+ *                              with other animals"; its `problem` (the animal's
+ *                              summary of theirs) prefills the sheet
  *   ```
  *
- * Only the kind (and a Trial's frequency) is read: the card's words are the
+ * Only the kind (a Trial's frequency, a debate's problem) is read: the card's words are the
  * site's own, never the model's. Any other kind (the apps' retired `apply`,
  * `comparison`) is no card here. The fence is never drawn as a bubble; the
  * drawer draws the card under the reply.
@@ -23,7 +25,7 @@ export const ASK_CHAT_CARD_LANGUAGE = "animaldex-card";
 export type AskChatCard =
     | {kind: "training"}
     | {kind: "trial"; frequency: StepFrequency | null}
-    | {kind: "debate"};
+    | {kind: "debate"; problem: string | null};
 
 export function decodeAskChatCard(payload: string): AskChatCard | null {
     let parsed: unknown;
@@ -37,7 +39,10 @@ export function decodeAskChatCard(payload: string): AskChatCard | null {
     const kind = typeof row.kind === "string" ? row.kind.trim().toLowerCase() : "";
     if (kind === "training" || kind === "warmup") return {kind: "training"};
     if (kind === "trial" || kind === "trials") return {kind: "trial", frequency: stepFrequency(row.frequency)};
-    if (kind === "debate") return {kind: "debate"};
+    if (kind === "debate") {
+        const problem = typeof row.problem === "string" ? row.problem.replace(/\s+/g, " ").trim().slice(0, 1500) : "";
+        return {kind: "debate", problem: problem || null};
+    }
     return null;
 }
 

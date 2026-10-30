@@ -271,8 +271,9 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
                                 <span className={`block truncate text-sm font-bold ${won ? "text-primary-200" : "text-white"}`}>{name}</span>
                                 {mine ? <span className="block text-[11px] font-semibold text-primary-200">{words.debate.voted}</span> : null}
                             </span>
-                            {showsCounts ? (
-                                <span className="shrink-0 text-xs font-bold tabular-nums text-white/60">{participant.votes ?? 0}</span>
+                            {/* Per-animal counts only once the server shows them (not to someone who could still be swayed). */}
+                            {showsCounts && participant.votes !== null ? (
+                                <span className="shrink-0 text-xs font-bold tabular-nums text-white/60">{participant.votes}</span>
                             ) : null}
                             {state.kind === "vote" ? (
                                 <button

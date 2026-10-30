@@ -8,9 +8,11 @@
  * and on the debate's own page.
  *
  * The asker's chat runs a debate the server holds `debating`
- * (`/api/ask/debate`); every other view reads it. Turns already kept show at
- * once; the report is read until it is in. Closing the chat mid-debate
- * leaves it running: the next look shows it where it got to.
+ * (`/api/ask/debate`, the apps' own debate flow); every other view reads it.
+ * Turns already said show at once (the stream's replays add any the read
+ * had not); the report comes at the end of the stream, or is read until it
+ * is in. Closing the chat mid-debate stops it there; the next look carries
+ * it on from the next turn.
  */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -20,7 +22,7 @@ import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pace
 import {parseAskGroupFrame} from "@/lib/ask-animaldex/group-thread";
 import type {CompanionWords} from "@/lib/companion-bond";
 import {
-    decodeDebate,
+    decodeDebateReport,
     orderedDebateTurns,
     type Debate,
     type DebateParticipant,
@@ -62,12 +64,27 @@ function phaseOf(raw: unknown): DebatePhase {
     return raw === "react" ? "react" : raw === "close" || raw === "seal" ? "close" : "open";
 }
 
+/** Each animal says each phase once: the server's turns, with any shown here that it does not have yet. */
+function mergeTurns(server: DebateTurn[], shown: DebateTurn[]): DebateTurn[] {
+    const key = (turn: DebateTurn) => `${turn.seat}:${turn.phase}`;
+    const known = new Set(server.map(key));
+    return orderedDebateTurns([...server, ...shown.filter((turn) => !known.has(key(turn)))]);
+}
+
+function withTurn(current: DebateTurn[], turn: DebateTurn): DebateTurn[] {
+    return current.some((item) => item.seat === turn.seat && item.phase === turn.phase) ? current : [...current, turn];
+}
+
 /**
  * "Try {name}'s way": the asker's private choice (never a vote), then the
- * chat that sets the step, with the problem already known: their own card
- * of that animal, or the host's when the animal is someone else's.
+ * chat that sets the step, with the problem already known (SERVER.md,
+ * `choose_debate_way_v1`): their own card of that animal with its referral,
+ * or the host's with a referral to turn another person's way into their
+ * step. The host's own way needs no referral: inside the host's chat the
+ * choice is said there as their message (`onOwnWay`); anywhere else the
+ * host's chat opens.
  */
-export function useTryDebateWay(debate: Debate | null, words: CompanionWords) {
+export function useTryDebateWay(debate: Debate | null, words: CompanionWords, chat: {captureId: string | null; onOwnWay?: () => void} = {captureId: null}) {
     const router = useRouter();
     const [choosing, setChoosing] = useState<string | null>(null);
     const [problem, setProblem] = useState<string | null>(null);
@@ -88,10 +105,14 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords) {
             const captureId = choice.captureId
                 ?? (choice.stepSource === "own_animal" && (participant.ownerIsMe || participant.isAskerOwned) ? participant.captureId : debate.hostCaptureId);
             if (!captureId) return;
+            if (!choice.referralId && chat.captureId && captureId === chat.captureId && chat.onOwnWay) {
+                chat.onOwnWay();
+                return;
+            }
             const query = choice.referralId ? `?referral=${encodeURIComponent(choice.referralId)}` : "?talk=1";
             router.push(`/app/capture/${encodeURIComponent(captureId)}${query}`);
         });
-    }, [debate, choosing, router, words]);
+    }, [debate, choosing, router, words, chat]);
     return {tryWay, choosing, chosenId, problem};
 }
 
@@ -103,7 +124,8 @@ export default function DebateThread({
     signedIn = true,
     bleed = "-mx-4 px-4",
     locale,
-    onApprove
+    onApprove,
+    chat
 }: {
     seed: Debate;
     words: CompanionWords;
@@ -115,9 +137,15 @@ export default function DebateThread({
     locale?: string;
     /** A public debate waiting for its text to be approved: open the approval. */
     onApprove?: (debate: Debate) => void;
+    /** Shown in this card's own chat: the host's own way is said here. */
+    chat?: {captureId: string | null; onOwnWay?: () => void};
 }) {
     const [debate, setDebate] = useState<Debate>(seed);
     const [shown, setShown] = useState<DebateTurn[]>(() => orderedDebateTurns(seed.turns));
+    /** The stream's phase for each frame index (the group parser reads only its own phases). */
+    const phasesRef = useRef(new Map<number, DebatePhase>());
+    /** Why the last run could not go on, in words, with a way to try again. */
+    const [runProblem, setRunProblem] = useState<string | null>(null);
     const [streaming, setStreaming] = useState(false);
     const [waitingReport, setWaitingReport] = useState(false);
     const reducedMotion = usePrefersReducedMotion();
@@ -134,7 +162,8 @@ export default function DebateThread({
         instant: reducedMotion,
         onTurnShown: (turn, text) => {
             if (!text) return;
-            setShown((current) => [...current, {seat: seatOf(turn.captureId), phase: phaseOf(turn.phase), text, createdAt: new Date().toISOString(), index: turn.index}]);
+            const said: DebateTurn = {seat: seatOf(turn.captureId), phase: phasesRef.current.get(turn.index) ?? phaseOf(turn.phase), text, createdAt: new Date().toISOString(), index: null};
+            setShown((current) => withTurn(current, said));
         }
     });
 
@@ -142,7 +171,7 @@ export default function DebateThread({
     const apply = useCallback((next: Debate, opts: {turns?: boolean} = {}) => {
         setDebate((current) => ({...current, ...next, participants: next.participants.length > 0 ? next.participants : current.participants}));
         if (opts.turns !== false && next.turns.length > 0) {
-            setShown((current) => (next.turns.length >= current.length ? orderedDebateTurns(next.turns) : current));
+            setShown((current) => mergeTurns(next.turns, current));
         }
     }, []);
     useDebateUpdates(seed.id, useCallback((next: Debate) => apply(next, {turns: !streaming}), [apply, streaming]));
@@ -184,25 +213,53 @@ export default function DebateThread({
 
     const runDebate = useCallback(async () => {
         setStreaming(true);
+        setRunProblem(null);
         director.beginRound();
-        let finished: Debate | null = null;
+        phasesRef.current = new Map();
+        let finished = false;
+        let report: Debate["report"] = null;
+        // Turns already said come back first, whole (`replay`): straight into the thread.
+        const replays = new Map<number, {seat: number; phase: DebatePhase; text: string}>();
         try {
             const response = await fetch("/api/ask/debate", {
                 method: "POST",
                 headers: {"Content-Type": "application/json", Accept: "text/event-stream"},
-                body: JSON.stringify({
-                    debateId: seed.id,
-                    locale,
-                    utcOffsetMinutes: -new Date().getTimezoneOffset()
-                })
+                body: JSON.stringify({debateId: seed.id, locale})
             });
             if (!response.ok || !response.body || !(response.headers.get("content-type") ?? "").includes("text/event-stream")) {
                 const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
-                finished = decodeDebate(payload?.debate);
+                const code = typeof payload?.error === "string" ? payload.error : "";
+                // Not ready, cancelled (too personal to post, among others) or gone: the debate as it stands says so.
+                if (!["debate_not_ready", "debate_cancelled", "debate_not_public", "debate_not_found"].includes(code)) {
+                    setRunProblem(debateProblemText(code === "debates_off" ? "debates_off" : null, words));
+                }
             } else {
                 await readFrames(response.body, (frame) => {
                     if (frame.done === true) {
-                        finished = decodeDebate(frame.debate);
+                        finished = true;
+                        return;
+                    }
+                    if (frame.report && typeof frame.report === "object") {
+                        report = decodeDebateReport(frame.report);
+                        return;
+                    }
+                    const turn = frame.turn && typeof frame.turn === "object" ? frame.turn as Record<string, unknown> : null;
+                    if (turn && typeof turn.index === "number") {
+                        const phase = phaseOf(turn.phase);
+                        phasesRef.current.set(turn.index, phase);
+                        if (turn.replay === true) {
+                            replays.set(turn.index, {seat: typeof turn.seat === "number" ? turn.seat : 0, phase, text: ""});
+                            return;
+                        }
+                    }
+                    const replayIndex = typeof frame.turn_index === "number" ? frame.turn_index : null;
+                    const replay = replayIndex === null ? undefined : replays.get(replayIndex);
+                    if (replay) {
+                        if (typeof frame.delta === "string") replay.text += frame.delta;
+                        if (frame.participant_done === true && replay.text.trim()) {
+                            const said: DebateTurn = {seat: replay.seat, phase: replay.phase, text: replay.text.trim(), createdAt: null, index: replayIndex};
+                            setShown((current) => withTurn(current, said));
+                        }
                         return;
                     }
                     const event = parseAskGroupFrame(frame);
@@ -226,19 +283,24 @@ export default function DebateThread({
                 });
             }
         } catch {
-            // Cut off: the debate as kept fills in what was not shown.
+            // Cut off: the debate as saved fills in what was not shown.
         } finally {
             director.streamFinished();
         }
         if (!mounted.current) return;
         setStreaming(false);
-        const done = finished as Debate | null;
-        if (done) {
-            apply(done, {turns: false});
-            noteDebateChanged(done);
+        const written = report as Debate["report"];
+        if (written) setDebate((current) => ({...current, report: written}));
+        // Where it stands now (the `done` frame carries only the status): the server's copy.
+        const {debate: fetched} = await fetchDebate(seed.id);
+        if (fetched && mounted.current) {
+            apply(written && !fetched.report ? {...fetched, report: written} : fetched);
+            noteDebateChanged(fetched);
         }
-        if (!done?.report) void waitForReport();
-    }, [seed.id, locale, director, apply, waitForReport]);
+        const now = fetched ?? null;
+        if (finished && !written && !now?.report) void waitForReport();
+        else if (!finished && now && (now.status === "reporting")) void waitForReport();
+    }, [seed.id, locale, director, apply, waitForReport, words]);
 
     // The asker's chat runs it once, while it is being argued; any other view reads it as it goes.
     useEffect(() => {
@@ -251,7 +313,7 @@ export default function DebateThread({
         if (!streaming && !ranRef.current) void waitForReport();
     }, [run, debate.status, debate.askerIsMe, runDebate, streaming, waitForReport]);
 
-    const tryWay = useTryDebateWay(debate, words);
+    const tryWay = useTryDebateWay(debate, words, chat);
     const live = director.revealing;
     const waiting = director.waiting ?? (director.current && director.current !== live ? director.current : null);
     const participantFor = (participantId: string | null) => debate.participants.find((participant) => participant.id === participantId) ?? null;
@@ -282,6 +344,20 @@ export default function DebateThread({
             ) : null}
             {waiting && talking ? (
                 <DebateTurnRow debate={debate} participant={participantFor(waiting.captureId)} text="" typingLabel={typingLabel} />
+            ) : null}
+            {runProblem && !talking ? (
+                <div className={`${bleed} flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3`}>
+                    <p className="min-w-0 flex-1 text-xs leading-5 text-white/60">{runProblem}</p>
+                    {debate.status === "debating" && debate.askerIsMe ? (
+                        <button
+                            type="button"
+                            onClick={() => void runDebate()}
+                            className="min-h-9 rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white hover:bg-white/10"
+                        >
+                            {words.debateWeb.tryAgain}
+                        </button>
+                    ) : null}
+                </div>
             ) : null}
             {debate.status === "approving" || debate.status === "drafting" ? (
                 <div className={`${bleed} flex flex-col items-start gap-2 border-y border-white/[0.08] py-3`}>

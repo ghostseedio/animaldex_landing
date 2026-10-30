@@ -1306,13 +1306,21 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         }
         return placed;
     }, [threadDebates, messages]);
-    /** The sheet, with the problem as they told it here (their latest message, or what the animal is helping with). */
-    const openDebateSheet = useCallback((messageId: string | null, approving: Debate | null = null) => {
+    /**
+     * The sheet, with the problem: the card's summary of it, else as they
+     * told it here (their latest message, or what the animal is helping with).
+     */
+    const openDebateSheet = useCallback((messageId: string | null, approving: Debate | null = null, problem: string | null = null) => {
         speech.stop();
         setShowingBond(false);
         setShowingMemory(false);
-        setDebateSheet({problem: lastQuestion(messages) || companionLoop?.focus || "", messageId, approving});
+        setDebateSheet({problem: problem || lastQuestion(messages) || companionLoop?.focus || "", messageId, approving});
     }, [speech, messages, companionLoop?.focus]);
+    // The host's own way, chosen in its own chat: said here, as their message.
+    const debateChat = useMemo(() => ({
+        captureId: hostCaptureId,
+        onOwnWay: () => submit(words.debateWeb.tryOwnWayMessage, "chip")
+    }), [hostCaptureId, submit, words.debateWeb.tryOwnWayMessage]);
     const debateBlocks = (anchor: string) => (debatesAfter.get(anchor) ?? []).map((debate) => (
         <div key={debate.id} className="pt-3.5">
             <DebateThread
@@ -1322,6 +1330,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 run
                 locale={locale}
                 onApprove={(draft) => openDebateSheet(null, draft)}
+                chat={debateChat}
             />
         </div>
     ));
@@ -1448,7 +1457,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         }}
                         debateOffered={debatesOffered}
                         notNowLabel={labels.notNow}
-                        onDebate={() => openDebateSheet(message.id)}
+                        onDebate={() => openDebateSheet(message.id, null, card.kind === "debate" ? card.problem : null)}
                     />
                 ))}
             </>
