@@ -37,6 +37,7 @@ const ARTICLE_UPDATED_AT = "2026-08-30T00:00:00.000Z";
 
 const CATEGORY_ALIASES: Record<string, string[]> = {
     "getting-started": ["basics", "start", "new user", "account"],
+    "your-animals": ["talk", "chat", "power", "step", "warmup", "bond", "companion", "animal"],
     "scanning-captures": ["scan", "camera", "capture", "photo", "processing", "upload"],
     identification: ["identify", "accuracy", "wrong", "confidence", "ai"],
     "animaldex-numbers": ["index", "number", "dex number", "catalog"],

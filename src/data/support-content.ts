@@ -1,3 +1,5 @@
+import {TRY_TALKING_HREF} from "@/lib/try-talking";
+
 export type SupportFAQ = {
     question: string;
     answer: string;
@@ -62,7 +64,7 @@ export type SupportContent = {
 const en: SupportContent = {
     eyebrow: "Help Center",
     title: "AnimalDex Support",
-    description: "Help with scanning animals, AnimalDex numbers, captures, collections, Credits, Earnings, Wildlife Guides, Sponsored Challenges, accounts, privacy, and app troubleshooting.",
+    description: "Help with talking to your animals, steps and Powers, scanning animals, AnimalDex numbers, captures, collections, Credits, Earnings, Wildlife Guides, Sponsored Challenges, accounts, privacy, and app troubleshooting.",
     metaTitle: "AnimalDex Support — Scanning, Captures, Credits, Earnings & App Help",
     metaDescription: "Get help with AnimalDex. Learn how Credits differ from Earnings, how Wildlife Guides work, how to join Sponsored Challenges, restore purchases, and fix app issues.",
     quickHelpTitle: "Find the answer you need",
@@ -73,11 +75,23 @@ const en: SupportContent = {
             title: "Getting started",
             description: "The basics of AnimalDex and your account.",
             items: [
-                {question: "What is AnimalDex?", answer: "AnimalDex is an animal scanner, field guide, and wildlife collection app. It uses AI to identify animals from live captures, then turns discoveries into species profiles, collectible cards, and collection progress."},
-                {question: "How does AnimalDex work?", answer: "Open the scanner, photograph an animal with the in-app camera, confirm the capture, and wait for analysis. AnimalDex identifies the animal, grades that specific capture, and adds the result to your collection."},
+                // Newcomer UX vet (2026-10-30): what is special first, then the rest.
+                {question: "What is AnimalDex?", answer: "AnimalDex lets you meet the animals you find and talk to them about your life. Photograph an animal and it becomes yours: it answers from how its kind really lives, and gives you one step to try in your own life. Finish a step, and its Power is yours. AnimalDex also identifies each animal, keeps it as a card, and has a field guide for every species."},
+                {question: "How does AnimalDex work?", answer: "Photograph an animal with the in-app camera, or pick a photo or video you took yourself from your gallery. AnimalDex identifies it, and it becomes yours. Tap Talk to it and tell it what's going on. It answers from how its kind lives and sets you one step. Do it, tap I did it and tell it how it went: the first step you finish together earns its Power."},
                 {question: "Is AnimalDex free?", answer: "You can start free with starter credits. Additional free credits may come from missions, referrals, and first-time wild species captures. Credit packs and AnimalDex Pro are available for people who want more scanning and field-guide access."},
                 {question: "Where is AnimalDex available?", answer: "AnimalDex is available from the App Store and Google Play. Features and purchase controls may differ slightly by platform."},
                 {question: "Do I need an account?", answer: "An account is required to save captures, credits, collection progress, purchases, and community activity across sessions."}
+            ]
+        },
+        {
+            id: "your-animals",
+            title: "Your animals",
+            description: "Talking to your animals, their steps and Powers, the Warmup and the bond.",
+            items: [
+                {question: "What is a Power?", answer: "Every animal in AnimalDex has a Power: one thing its kind does well to survive, put as a lesson for your own life, like the Common Octopus's Flexible Intelligence. When you talk to an animal you've captured, it answers from that Power and sets you one step to try. Finish one step it gives you, and its Power is yours. Its card shows how you earned it, and from then on it can compare its way with other animals in a debate.", searchAliases: ["power", "powers", "animal power", "earn power", "earned"]},
+                {question: "What is the Warmup?", answer: "The Warmup is two or three quick questions on an animal's lesson. The animal may offer it once in your first conversation, after it has told you its lesson. It's optional: get them all right for +5 XP the first time. A miss costs nothing and locks nothing. The animal tells you how its kind sees it, and you can take the Warmup again any time from its card's Bond tab.", searchAliases: ["warmup", "warm up", "quiz", "questions", "training"]},
+                {question: "What do the bond level and stages mean?", answer: "Each animal you've captured has one bond with you, shared by every card of it. It grows as you talk, learn its lesson, put it into practice and change something in your life with it. The stages run Met, Getting to know you, Working together, Long-standing, Trusted and Mastered. Lists and chips show the stage. The card's Bond tab shows the bond level and XP, and the three strands the bond grows on: knowing the lesson, putting it into practice, and changing something in your life.", searchAliases: ["bond", "level", "xp", "stage", "mastered", "trusted", "met"]},
+                {question: "What should I talk to my animal about?", answer: "Anything real in your life: a decision you're stuck on, a habit you want to change, a hard conversation, something you keep putting off. Tell it what's going on in your own words. It answers from how its kind lives, says what it would do, and sets you one step to try. You can also ask how it lives, what it eats or how it sees the world, and if you have nothing to bring, ask for one of its Trials. If you're in danger or thinking about harming yourself, contact local emergency services or a crisis line first: an animal can't help with that.", linkHref: TRY_TALKING_HREF, linkLabel: "Try talking to one now", searchAliases: ["talk", "chat", "what to say", "ask", "conversation", "speak"]}
             ]
         },
         {
@@ -86,7 +100,7 @@ const en: SupportContent = {
             description: "Camera access, processing, and supported animal sightings.",
             items: [
                 {question: "How do I scan an animal?", answer: "Tap the scan action, allow camera and location access, frame the animal clearly, and take a photo or supported loop. Review the result and choose the confirmation button to submit it for analysis."},
-                {question: "Can I upload an animal from my photo gallery?", answer: "No. AnimalDex currently uses its in-app camera for animal captures. This keeps collection entries tied to in-the-moment sightings and supports authenticity checks."},
+                {question: "Can I upload an animal from my photo gallery?", answer: "Yes. In the camera, tap the gallery button and pick a photo or video of a real animal that you took yourself. The first time, you agree to the capture rules: no screenshots, no photos of screens and no pictures taken by someone else. AnimalDex checks every photo for screens and screenshots, and breaking the rules can earn your account a strike. If a photo doesn't say where it was taken, you can choose the place before it's identified."},
                 {question: "Why is my capture still processing?", answer: "Analysis can take a few minutes depending on image quality, network connection, and service demand. Keep the app connected and check the capture again. If it remains stuck, restart the app and contact support with the capture time and app version."},
                 {question: "Why does AnimalDex need camera and location access?", answer: "Camera access is required to create a live capture. Location provides habitat and sighting context, such as approximate area and wild-versus-urban context, which can improve analysis and collection records."},
                 {question: "What animals can I scan?", answer: "You can scan wild animals, pets, zoo animals, and farm animals. AnimalDex also identifies insects. Plants are outside the app's animal-identification focus."}
@@ -405,11 +419,42 @@ const en: SupportContent = {
     feedbackStatsFirst: "Be the first to rate this article."
 };
 
+/**
+ * Indonesian for the sections and articles that have it, keyed by section id
+ * and by the English question; anything else reads in English. Each
+ * translated article keeps its English slug, so its address is the same.
+ */
+const ID_SECTIONS: Record<string, Pick<SupportSection, "title" | "description">> = {
+    "your-animals": {title: "Hewan-hewanmu", description: "Bicara dengan hewanmu, langkah dan Kekuatannya, Pemanasan, dan ikatan."}
+};
+
+const ID_ARTICLES: Record<string, SupportFAQ & {slug: string}> = {
+    "What is AnimalDex?": {slug: "what-is-animaldex", question: "Apa itu AnimalDex?", answer: "AnimalDex mempertemukanmu dengan hewan yang kamu temui, dan kamu bisa bicara dengan mereka tentang hidupmu. Foto seekor hewan dan ia jadi milikmu: ia menjawab dari cara hidup jenisnya yang sebenarnya, dan memberimu satu langkah untuk dicoba dalam hidupmu sendiri. Selesaikan satu langkah, dan Kekuatannya jadi milikmu. AnimalDex juga mengenali setiap hewan, menyimpannya sebagai kartu, dan punya panduan untuk setiap spesies."},
+    "How does AnimalDex work?": {slug: "how-does-animaldex-work", question: "Bagaimana cara kerja AnimalDex?", answer: "Foto seekor hewan dengan kamera di aplikasi, atau pilih foto atau video yang kamu ambil sendiri dari galeri. AnimalDex mengenalinya, dan ia jadi milikmu. Ketuk Bicara dengannya dan ceritakan apa yang sedang terjadi. Ia menjawab dari cara hidup jenisnya dan memberimu satu langkah. Lakukan, ketuk Sudah saya lakukan, lalu ceritakan hasilnya: langkah pertama yang kalian selesaikan bersama memberimu Kekuatannya."},
+    "Can I upload an animal from my photo gallery?": {slug: "can-i-upload-an-animal-from-my-photo-gallery", question: "Bisakah saya mengunggah hewan dari galeri foto?", answer: "Bisa. Di kamera, ketuk tombol galeri lalu pilih foto atau video hewan sungguhan yang kamu ambil sendiri. Pertama kali, kamu menyetujui aturan capture: tanpa tangkapan layar, tanpa foto dari layar, dan tanpa gambar yang diambil orang lain. AnimalDex memeriksa setiap foto dari layar dan tangkapan layar, dan melanggar aturan bisa membuat akunmu mendapat peringatan (strike). Jika foto tidak menyimpan lokasi pengambilannya, kamu bisa memilih tempatnya sebelum hewan dikenali."},
+    "What is a Power?": {slug: "what-is-a-power", question: "Apa itu Kekuatan?", answer: "Setiap hewan di AnimalDex punya Kekuatan: satu hal yang dikuasai jenisnya untuk bertahan hidup, dijadikan pelajaran untuk hidupmu sendiri. Contohnya, Kecerdasan Lentur milik gurita biasa. Saat kamu bicara dengan hewan yang sudah kamu tangkap, ia menjawab dari Kekuatan itu dan memberimu satu langkah untuk dicoba. Selesaikan satu langkah yang ia berikan, dan Kekuatannya jadi milikmu. Kartunya menunjukkan bagaimana kamu mendapatkannya, dan sejak itu ia bisa membandingkan caranya dengan hewan lain dalam debat."},
+    "What is the Warmup?": {slug: "what-is-the-warmup", question: "Apa itu Pemanasan?", answer: "Pemanasan adalah dua atau tiga pertanyaan singkat tentang pelajaran seekor hewan. Hewan itu mungkin menawarkannya sekali di percakapan pertamamu, setelah ia menceritakan pelajarannya. Sifatnya opsional: jawab semuanya dengan benar untuk +5 XP pertama kali. Salah tidak merugikan dan tidak mengunci apa pun. Hewan itu akan menceritakan cara pandang jenisnya, dan kamu bisa mengulang Pemanasan kapan saja dari tab Ikatan di kartunya."},
+    "What do the bond level and stages mean?": {slug: "what-do-the-bond-level-and-stages-mean", question: "Apa arti level dan tahap ikatan?", answer: "Setiap hewan yang sudah kamu tangkap punya satu ikatan denganmu, sama untuk setiap kartunya. Ikatan tumbuh saat kamu bicara, memahami pelajarannya, mempraktikkannya, dan mengubah sesuatu dalam hidupmu bersamanya. Tahapnya: Baru bertemu, Saling mengenal, Bekerja sama, Sudah lama bersama, Dipercaya, dan Dikuasai. Daftar dan chip menunjukkan tahapnya. Tab Ikatan di kartu menunjukkan level ikatan dan XP, serta tiga jalur tumbuhnya ikatan: memahami pelajaran, mempraktikkannya, dan mengubah sesuatu dalam hidupmu."},
+    "What should I talk to my animal about?": {slug: "what-should-i-talk-to-my-animal-about", question: "Apa yang sebaiknya saya bicarakan dengan hewan saya?", answer: "Apa saja yang nyata dalam hidupmu: keputusan yang membuatmu bingung, kebiasaan yang ingin kamu ubah, percakapan yang sulit, sesuatu yang terus kamu tunda. Ceritakan dengan kata-katamu sendiri. Ia menjawab dari cara hidup jenisnya, mengatakan apa yang akan ia lakukan, dan memberimu satu langkah untuk dicoba. Kamu juga bisa bertanya bagaimana ia hidup, apa yang ia makan, atau bagaimana ia melihat dunia, dan kalau sedang tidak ada yang ingin dibahas, minta salah satu Uji Cobanya. Jika kamu dalam bahaya atau berpikir untuk menyakiti diri sendiri, hubungi layanan darurat setempat atau layanan krisis lebih dulu: seekor hewan tidak bisa membantu untuk itu.", linkHref: TRY_TALKING_HREF, linkLabel: "Coba bicara dengan salah satunya sekarang"}
+};
+
+function indonesianSections(sections: SupportSection[]): SupportSection[] {
+    return sections.map((section) => ({
+        ...section,
+        ...(ID_SECTIONS[section.id] ?? {}),
+        items: section.items.map((item) => {
+            const translated = ID_ARTICLES[item.question];
+            return translated ? {...item, ...translated} : item;
+        })
+    }));
+}
+
 const id: SupportContent = {
     ...en,
+    sections: indonesianSections(en.sections),
     eyebrow: "Pusat Bantuan",
     title: "Dukungan AnimalDex",
-    description: "Bantuan untuk scan hewan, capture, koleksi, kredit, akun, privasi, dan pemecahan masalah aplikasi.",
+    description: "Bantuan untuk bicara dengan hewanmu, langkah dan Kekuatannya, scan hewan, capture, koleksi, kredit, akun, privasi, dan pemecahan masalah aplikasi.",
     metaTitle: "Dukungan AnimalDex — Bantuan Scan, Capture, Akun & Aplikasi",
     metaDescription: "Dapatkan bantuan untuk AnimalDex. Pelajari cara scan hewan, mengelola capture, menggunakan kredit, memulihkan pembelian, dan memperbaiki masalah aplikasi.",
     quickHelpTitle: "Temukan jawaban yang kamu butuhkan",
@@ -448,6 +493,9 @@ const id: SupportContent = {
     feedbackStatsSummary: "{helpful} dari {total} pembaca merasa artikel ini membantu",
     feedbackStatsFirst: "Jadilah yang pertama memberi penilaian."
 };
+
+/** For tests: the Indonesian articles by English question. */
+export const SUPPORT_ID_ARTICLES = ID_ARTICLES;
 
 export function getSupportContent(locale: string) {
     return locale === "id" ? id : en;

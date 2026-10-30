@@ -317,7 +317,7 @@
       },
       "identify": {
         "q": "Can I upload from my camera roll?",
-        "a": "Only after the animal has already been scanned. AnimalDex is built around real encounters first, then you can attach extra media from your camera roll to an existing capture."
+        "a": "Yes. In the camera, tap the gallery button and pick a photo or video of a real animal that you took yourself. Screenshots and photos of screens aren't allowed, and AnimalDex checks for them."
       },
       "family": {
         "q": "How do you stop people from cheating?",
