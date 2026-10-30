@@ -117,7 +117,7 @@ test("nav labels match the published category names", () => {
     assert.equal(en.nav.support, "Help Center");
     assert.equal(en.nav.compareAnimals, "Compare Animals");
     assert.equal(en.nav.wildlifeGuides, "Wildlife Guides");
-    assert.equal(en.nav.startYourCollection, "Start Your Collection");
+    assert.equal(en.nav.meetYourFirstAnimal, "Meet Your First Animal");
     assert.equal(en.nav.footerGroups.product, "AnimalDex");
     assert.notEqual(en.nav.animalWisdom, "Animal Guide");
     assert.equal(en.nav.moreNav, "More");
@@ -183,5 +183,5 @@ test("mobile drawer uses an accessible accordion and pinned collection CTA", () 
     assert.ok(pinnedCta > -1);
     assert.ok(pinnedAuth > pinnedCta);
     assert.equal(id.nav.moreNav, "Lainnya");
-    assert.equal(id.nav.startYourCollection, "Mulai Koleksimu");
+    assert.equal(id.nav.meetYourFirstAnimal, "Temui Hewan Pertamamu");
 });

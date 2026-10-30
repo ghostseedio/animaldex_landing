@@ -27,7 +27,8 @@ function translateLinks(t: (key: string) => string, links: PublicNavLink[]) {
 }
 
 export default function Header({locale, t}: {locale: string; t: ScopedTranslator}) {
-    const startCollectionLabel = t("startYourCollection");
+    // Newcomer UX vet (2026-10-30): the site tells one story, so the CTA is about meeting, not collecting.
+    const ctaLabel = t("meetYourFirstAnimal");
     const desktopDropdowns = headerDropdowns.map((section) => ({
         ...section,
         title: t(section.titleKey),
@@ -69,7 +70,7 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                     logoLabel={t("logo")}
                     brandTitle={t("title")}
                     ctaHref={START_COLLECTION_HREF}
-                    ctaLabel={startCollectionLabel}
+                    ctaLabel={ctaLabel}
                     navigationLabel={t("discover")}
                     followLabel={t("footerGroups.follow")}
                     actions={(
@@ -81,7 +82,7 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                                 href={START_COLLECTION_HREF}
                                 className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[2px] bg-primary-400 px-4 text-[0.8125rem] font-black uppercase leading-none tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                             >
-                                {startCollectionLabel}
+                                {ctaLabel}
                             </Link>
                             <HeaderAccountButton myAnimalsLabel={t("myAnimals")} />
                         </>

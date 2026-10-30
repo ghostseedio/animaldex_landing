@@ -40,7 +40,7 @@
     "creatorRewards": "Creator Rewards",
     "sponsorAChallenge": "Sponsor a Challenge",
     "wildlifeExperiences": "Wildlife Experiences",
-    "startYourCollection": "Start Your Collection",
+    "meetYourFirstAnimal": "Meet Your First Animal",
     "exploreAnimals": "Explore Animals",
     "experiences": "Experiences",
     "earn": "Earn",
@@ -86,7 +86,7 @@
     "heroLaurelMadeFor": "Made for",
     "heroLaurelExplorers": "explorers",
     "heroLaurelBuiltFor": "Built for",
-    "heroLaurelCollectors": "collectors",
+    "heroLaurelCurious": "the curious",
     "supporting": "Every encounter is a chance to learn how they succeed.",
     "chatStill": {
       "label": "An example conversation with a Common Octopus in AnimalDex",
@@ -160,15 +160,15 @@
     "team": {
       "eyebrow": "Find your place in AnimalDex",
       "title": "Which explorer are you?",
-      "descriptionLead": "Collect. Explore. Compete. Create.",
+      "descriptionLead": "Meet. Talk. Explore. Create.",
       "descriptionBody": "There's more than one way to experience the wild.",
       "explore": "Explore",
       "contact": "See why",
       "personas": {
         "collectors": {
           "title": "Collectors",
-          "tagline": "Like Pokémon but for animals",
-          "description": "Build your Dex. Chase rare finds. Complete your collection.",
+          "tagline": "Every animal you find becomes yours to talk to.",
+          "description": "Chase rare finds, keep each one as a card, and hear what it has to say.",
           "alt": "Grid of collected wildlife species"
         },
         "explorers": {
@@ -210,7 +210,7 @@
       }
     },
     "download": {
-      "title": "Collect 'em all!",
+      "title": "Meet them all.",
       "description": "Wherever there's animals. There's opportunity.",
       "launch": "Download on",
       "available": "Available on the",
@@ -220,7 +220,7 @@
       "unavailable": "Available on",
       "trust": {
         "scanner": "AI Animal Scanner",
-        "collect": "Collect Real Animals",
+        "collect": "Talk to Real Animals",
         "learn": "Learn From Nature"
       },
       "stats": {
@@ -228,7 +228,7 @@
         "users": "{count} Users",
         "indexes": "{count} Indexes",
         "capturesLabel": "Captures",
-        "usersLabel": "Collectors",
+        "usersLabel": "Explorers",
         "indexesLabel": "Indexed Animals"
       },
       "blogPrompt": "Get sharper on animal ID, rarity, travel spotting, and wildlife-friendly guides.",
@@ -1050,7 +1050,7 @@
     "compareNav": "Compare",
     "whereNav": "Where to find",
     "askWhy": "Why?",
-    "collectCta": "Collect {animal} in AnimalDex",
+    "collectCta": "Meet the {animal} in AnimalDex",
     "powerPattern": "The Pattern",
     "powerObservation": "Observation",
     "powerFunction": "Function",
@@ -2776,7 +2776,7 @@
   },
   "post": {
     "sharedFrom": "Shared from AnimalDex",
-    "appLine": "AnimalDex identifies the animals you photograph and keeps each one as a card.",
+    "appLine": "Photograph an animal in AnimalDex and it becomes yours to talk to. It answers from how its kind lives.",
     "moreAbout": "More about the {animal}"
   },
   "appCredits": {

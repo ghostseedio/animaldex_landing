@@ -40,7 +40,7 @@ export const productLinks: PublicNavLink[] = [
     {href: "/#more", labelKey: "howAnimalDexWorks"},
     {href: "/#features", labelKey: "appFeatures"},
     {href: "/use-cases", labelKey: "whosItFor"},
-    {href: START_COLLECTION_HREF, labelKey: "startYourCollection"},
+    {href: START_COLLECTION_HREF, labelKey: "meetYourFirstAnimal"},
     {href: INSTAGRAM_WILDLIFE_ARCHIVE_HREF, labelKey: "instagramWildlifeArchive"},
     {href: EARN_ON_ANIMALDEX_HREF, labelKey: "earnOnAnimalDex"}
 ];

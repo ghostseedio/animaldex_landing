@@ -432,7 +432,7 @@ export default async function Home({params}: HomePageProps) {
                                 {t("heroLaurelMadeFor")}{" "}
                                 <span className="ml-1.5 text-primary-200 sm:ml-2">{t("heroLaurelExplorers")}</span>.
                                 {" "}{t("heroLaurelBuiltFor")}{" "}
-                                <span className="ml-1.5 text-primary-200 sm:ml-2">{t("heroLaurelCollectors")}</span>.
+                                <span className="ml-1.5 text-primary-200 sm:ml-2">{t("heroLaurelCurious")}</span>.
                             </p>
                         </div>
                     </div>

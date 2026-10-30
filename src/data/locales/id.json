@@ -40,7 +40,7 @@
     "creatorRewards": "Creator Rewards",
     "sponsorAChallenge": "Sponsor Challenge",
     "wildlifeExperiences": "Pengalaman Satwa Liar",
-    "startYourCollection": "Mulai Koleksimu",
+    "meetYourFirstAnimal": "Temui Hewan Pertamamu",
     "exploreAnimals": "Eksplorasi Hewan",
     "experiences": "Pengalaman",
     "earn": "Hasilkan",
@@ -85,8 +85,8 @@
     "heroTryTalking": "Coba bicara dengan salah satunya sekarang",
     "heroLaurelMadeFor": "Dibuat untuk",
     "heroLaurelExplorers": "penjelajah",
-    "heroLaurelBuiltFor": "Dibangun untuk",
-    "heroLaurelCollectors": "kolektor",
+    "heroLaurelBuiltFor": "Juga untuk",
+    "heroLaurelCurious": "si penasaran",
     "supporting": "Gunakan pemindai AI untuk identifikasi instan, lalu pelajari meaning, symbolism, dan pelajaran hewan yang didukung biologi dan perilaku nyata.",
     "chatStill": {
       "label": "Contoh percakapan dengan gurita biasa di AnimalDex",
@@ -160,15 +160,15 @@
     "team": {
       "eyebrow": "Temukan tempatmu di AnimalDex",
       "title": "Kamu penjelajah tipe apa?",
-      "descriptionLead": "Koleksi. Jelajahi. Kompetisi. Ciptakan.",
+      "descriptionLead": "Temui. Bicara. Jelajahi. Ciptakan.",
       "descriptionBody": "Ada lebih dari satu cara untuk merasakan alam liar.",
       "explore": "Jelajahi",
       "contact": "Lihat alasannya",
       "personas": {
         "collectors": {
           "title": "Kolektor",
-          "tagline": "Seperti Pokémon, tapi untuk hewan",
-          "description": "Bangun Dex-mu. Kejar temuan langka. Lengkapi koleksimu.",
+          "tagline": "Setiap hewan yang kamu temukan jadi milikmu untuk diajak bicara.",
+          "description": "Kejar temuan langka, simpan masing-masing sebagai kartu, dan dengarkan apa yang ingin ia katakan.",
           "alt": "Grid spesies satwa liar yang terkumpul"
         },
         "explorers": {
@@ -220,7 +220,7 @@
       "unavailable": "Tersedia di",
       "trust": {
         "scanner": "AI Animal Scanner",
-        "collect": "Koleksi Hewan Nyata",
+        "collect": "Bicara dengan Hewan Nyata",
         "learn": "Belajar Dari Alam"
       },
       "stats": {
@@ -228,7 +228,7 @@
         "users": "{count} Pengguna",
         "indexes": "{count} Indeks",
         "capturesLabel": "Tangkapan",
-        "usersLabel": "Kolektor",
+        "usersLabel": "Penjelajah",
         "indexesLabel": "Hewan terindeks"
       },
       "blogPrompt": "Perjelas pemahaman soal ID hewan, rarity, spotting saat travel, dan panduan ramah satwa liar.",
@@ -1056,7 +1056,7 @@
     "compareNav": "Bandingkan",
     "whereNav": "Di mana menemukannya",
     "askWhy": "Mengapa?",
-    "collectCta": "Koleksi {animal} di AnimalDex",
+    "collectCta": "Temui {animal} di AnimalDex",
     "powerPattern": "Polanya",
     "powerObservation": "Pengamatan",
     "powerFunction": "Fungsi",
@@ -2758,7 +2758,7 @@
   },
   "post": {
     "sharedFrom": "Dibagikan dari AnimalDex",
-    "appLine": "AnimalDex mengenali hewan yang Anda foto dan menyimpan masing-masing sebagai kartu.",
+    "appLine": "Foto seekor hewan di AnimalDex, dan ia jadi milik Anda untuk diajak bicara. Ia menjawab dari cara hidup jenisnya.",
     "moreAbout": "Selengkapnya tentang {animal}"
   },
   "appCredits": {
