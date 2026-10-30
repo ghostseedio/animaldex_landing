@@ -1,18 +1,23 @@
 /**
- * The sign-in page's looping "spot → collect → learn" card, ported from iOS
+ * The sign-in page's looping "spot → talk → grow" card, first ported from iOS
  * `WelcomeIntroStage.swift` (~/AnimalDex, Oct 11 2026). One animal at a time:
  * brackets lock onto a silhouette, the shutter fires and the animal appears in
- * colour, its stats draw over it, then the card flips to the lesson it teaches.
+ * colour, then the card flips to what it says, and what that means for you.
  *
- * The lineup is iOS's, verbatim: dex numbers and stats are the live
- * `species_profiles` values, mottos the live Animal Power `short_motto`, and
- * the System Dynamics rows the live `species_system_dynamics` profile and
- * waveform. The voiceover clips are the iOS bundle's ElevenLabs files
- * (scripts/generate-welcome-voiceover.sh there); the cue seconds are measured
- * against those exact files, so regenerate both together or not at all.
+ * Newcomer UX vet (2026-10-30, P0-1): the beats are Spot · Talk · Grow, the
+ * stat pentagon and the tier are gone, and the Hawaiian Crow's card is a chat:
+ * your line, its reply from how its kind lives, the one step it sets, "Done
+ * together", then its Power earned. No Credits, no AI check.
+ *
+ * Dex numbers are the live `species_profiles` values, mottos the live Animal
+ * Power `short_motto`, and the System Dynamics rows the live
+ * `species_system_dynamics` profile and waveform. The voiceover clips are the
+ * iOS bundle's ElevenLabs files (scripts/generate-welcome-voiceover.sh there);
+ * the cue seconds are measured against those exact files, so regenerate both
+ * together or not at all. The clips still speak the older script (stats, the
+ * Trial's proof check) until the owner approves regenerating them.
  */
 
-import type {SpeciesStats} from "@/lib/battle-tier";
 import {type SpeciesSystemDynamics, type SystemDynamicsDomain, type SystemFrequency, decodeSpeciesSystemDynamics} from "@/lib/system-dynamics";
 
 export type WelcomeSystemStory = {
@@ -26,36 +31,51 @@ export type WelcomeSystemStory = {
     cueSeconds: number[];
 };
 
-export type WelcomeTrialStory = {
-    title: string;
-    instruction: string;
-    proofLabel: string;
-    minutes: number;
-    rewardCredits: number;
-    /** What the proof is checked for: the Trial's `animal_rule`, as two ticks. */
-    checks: string[];
-    /** Voice cues: trial shown, record, check, earned. */
+/** The chat card: what you tell the animal, what it says back, and the step it sets. */
+export type WelcomeChatStory = {
+    /** Your line. */
+    you: string;
+    /** Its reply, from how its kind lives. */
+    reply: string;
+    /** The one step it sets you. */
+    step: string;
+    /**
+     * Voice cues, seconds from the clip's start. The clip's four markers fall
+     * where the old Trial panels changed; each moves the chat to the stage in
+     * `WELCOME_CHAT_CUE_STAGES`.
+     */
     cueSeconds: number[];
 };
+
+/** The chat card's stages, in order. */
+export const WELCOME_CHAT_STAGES = {you: 0, reply: 1, step: 2, done: 3, earned: 4} as const;
+
+/** The stage each voice cue moves the chat to: the step, (still the step), done together, the Power earned. */
+export const WELCOME_CHAT_CUE_STAGES = [
+    WELCOME_CHAT_STAGES.step,
+    WELCOME_CHAT_STAGES.step,
+    WELCOME_CHAT_STAGES.done,
+    WELCOME_CHAT_STAGES.earned
+];
+
+/** The chat's pacing with no voice: the same four cues, paced for reading. */
+export const WELCOME_CHAT_SILENT_CUES = [5.2, 6.6, 7.8, 9.2];
 
 export type WelcomeIntroAnimal = {
     dexNumber: number;
     /** Basename under /images/welcome. */
     image: string;
     name: string;
-    stats: SpeciesStats;
-    /** The stats the lesson leans on. */
-    keyStats: Array<keyof SpeciesStats>;
     power: string;
     motto: string;
-    /** The motto in the reader's own life, reasoned from the key stats. */
+    /** The motto in the reader's own life. */
     forYou: string;
     /** Basename under /audio/welcome. */
     voiceover: string;
     /** The lesson side shows the System Dynamics wave and where it turns up in human life. */
     system?: WelcomeSystemStory;
-    /** The lesson side hands over to the Trial and its evidence flow. */
-    trial?: WelcomeTrialStory;
+    /** The lesson side is a chat with it, through to its Power earned. */
+    chat?: WelcomeChatStory;
 };
 
 const muggerCrocodile: WelcomeSystemStory = {
@@ -91,29 +111,27 @@ const whiteThroatedKingfisher: WelcomeSystemStory = {
     cueSeconds: [8.59, 11.27, 14.47]
 };
 
-const hawaiianCrowTrial: WelcomeTrialStory = {
-    title: "The Skill Was Already There",
-    instruction: "Try one thing you've decided you can't do. Smallest honest scale.",
-    proofLabel: "Video",
-    minutes: 2,
-    rewardCredits: 3,
-    checks: ["Never tried before", "Outcome said out loud"],
+/**
+ * The 'alalā went extinct in the wild in 2002; when nearly every bird alive
+ * was tested in 2016, most adults turned out to use stick tools, a skill no
+ * one had known the species had (Rutz et al., Nature 2016).
+ */
+const hawaiianCrowChat: WelcomeChatStory = {
+    you: "I gave up drawing years ago. I'm no good at it.",
+    reply: "No one knew we used tools until we were tested. Most of us could. Have you really tried?",
+    step: "Try one thing you've decided you can't do. Smallest honest scale.",
     cueSeconds: [8.22, 15.23, 17.69, 19.4]
 };
 
 export const WELCOME_INTRO_LINEUP: WelcomeIntroAnimal[] = [
     {
         dexNumber: 1933, image: "little-owl", name: "Little Owl",
-        stats: {dominance: 31, speed: 50, size: 14, intelligence: 39, rarity: 19},
-        keyStats: ["speed"],
         power: "Night Focus", motto: "Focus in the quiet.",
         forYou: "Fast, yet it waits for calm. Find your quiet hour and give it everything.",
         voiceover: "welcome_vo_little_owl"
     },
     {
         dexNumber: 2329, image: "mugger-crocodile", name: "Mugger Crocodile",
-        stats: {dominance: 84, speed: 55, size: 88, intelligence: 42, rarity: 66},
-        keyStats: ["dominance", "size"],
         power: "Bank Ambush", motto: "Wait where they must come.",
         forYou: "Powerful, yet it doesn't chase. Be where the chance has to come.",
         voiceover: "welcome_vo_mugger_crocodile",
@@ -121,8 +139,6 @@ export const WELCOME_INTRO_LINEUP: WelcomeIntroAnimal[] = [
     },
     {
         dexNumber: 2363, image: "common-octopus", name: "Common Octopus",
-        stats: {dominance: 30, speed: 25, size: 20, intelligence: 45, rarity: 15},
-        keyStats: ["intelligence"],
         power: "Flexible Intelligence", motto: "Switch the method.",
         forYou: "Its strength is its mind. Plan not working? Change the method, not the goal.",
         voiceover: "welcome_vo_common_octopus",
@@ -130,17 +146,13 @@ export const WELCOME_INTRO_LINEUP: WelcomeIntroAnimal[] = [
     },
     {
         dexNumber: 1655, image: "hawaiian-crow", name: "Hawaiian Crow",
-        stats: {dominance: 42, speed: 50, size: 20, intelligence: 78, rarity: 98},
-        keyStats: ["rarity", "intelligence"],
         power: "Comeback Mind", motto: "Teach the return.",
         forYou: "Almost lost from the wild, it comes back by learning. Setbacks aren't final.",
         voiceover: "welcome_vo_hawaiian_crow",
-        trial: hawaiianCrowTrial
+        chat: hawaiianCrowChat
     },
     {
         dexNumber: 2218, image: "white-throated-kingfisher", name: "White-throated Kingfisher",
-        stats: {dominance: 35, speed: 50, size: 20, intelligence: 36, rarity: 12},
-        keyStats: ["speed"],
         power: "Precision Dive", motto: "Aim, then dive.",
         forYou: "Its speed only counts after the aim. Pick one target, then commit.",
         voiceover: "welcome_vo_kingfisher",
@@ -148,8 +160,6 @@ export const WELCOME_INTRO_LINEUP: WelcomeIntroAnimal[] = [
     },
     {
         dexNumber: 1999, image: "lar-gibbon", name: "Lar Gibbon",
-        stats: {dominance: 54, speed: 58, size: 29, intelligence: 73, rarity: 62},
-        keyStats: ["intelligence", "dominance"],
         power: "Brachiation", motto: "Swing with purpose.",
         forYou: "Smart enough to plan the swing, strong enough to let go. Leave what's behind you.",
         voiceover: "welcome_vo_lar_gibbon"
@@ -160,21 +170,26 @@ export const WELCOME_INTRO_VOICEOVER = "welcome_vo_intro";
 
 export const WELCOME_INTRO_MUTED_KEY = "animaldex.welcomeIntroMuted";
 
-export type WelcomeIntroBeat = "spot" | "collect" | "learn";
+/** Spot it, talk to it, grow: what you do with an animal, in order. */
+export type WelcomeIntroBeat = "spot" | "talk" | "grow";
 
 export const WELCOME_INTRO_BEATS: Array<{id: WelcomeIntroBeat; title: string}> = [
     {id: "spot", title: "Spot"},
-    {id: "collect", title: "Collect"},
-    {id: "learn", title: "Learn"}
+    {id: "talk", title: "Talk"},
+    {id: "grow", title: "Grow"}
 ];
 
-/** Same order, short titles and tints as the species page's stat radar (iOS AnimalRadarMetric). */
-export const WELCOME_STAT_METRICS: Array<{key: keyof SpeciesStats; shortTitle: string; tint: string}> = [
-    {key: "dominance", shortTitle: "DOM", tint: "rgba(239, 68, 68, 0.92)"},
-    {key: "speed", shortTitle: "SPD", tint: "#A7F432"},
-    {key: "size", shortTitle: "SIZE", tint: "#9454fa"},
-    {key: "intelligence", shortTitle: "INT", tint: "rgba(34, 211, 238, 0.92)"},
-    {key: "rarity", shortTitle: "RAR", tint: "rgba(251, 146, 60, 0.92)"}
+/** The card's fixed labels (keys of the text file), besides each animal's own lines. */
+export const WELCOME_INTRO_LABELS = ["Spotted", "For you", "Seen in", "Your step", "Done together", "Power earned", "Language"];
+
+/**
+ * Keys added on the web for the Spot · Talk · Grow card (2026-10-30), in
+ * English and Indonesian only. Every other language reads them in English
+ * until the app's scripts carry them and the text file is copied over again.
+ */
+export const WELCOME_INTRO_PENDING_KEYS = [
+    "Talk", "Grow", "Spotted", "Your step", "Done together",
+    hawaiianCrowChat.you, hawaiianCrowChat.reply
 ];
 
 /** The story's live rows decoded the same way the species page decodes them. */
@@ -258,13 +273,12 @@ export function localizeWelcomeLineup(strings: WelcomeIntroStrings, lineup: Welc
         if (animal.system) {
             localized.system = {...animal.system, domains: animal.system.domains.map((line) => ({...line, text: t(line.text)}))};
         }
-        if (animal.trial) {
-            localized.trial = {
-                ...animal.trial,
-                title: t(animal.trial.title),
-                instruction: t(animal.trial.instruction),
-                proofLabel: t(animal.trial.proofLabel),
-                checks: animal.trial.checks.map(t)
+        if (animal.chat) {
+            localized.chat = {
+                ...animal.chat,
+                you: t(animal.chat.you),
+                reply: t(animal.chat.reply),
+                step: t(animal.chat.step)
             };
         }
         return localized;
@@ -274,10 +288,10 @@ export function localizeWelcomeLineup(strings: WelcomeIntroStrings, lineup: Welc
 /** Every voiceover clip the intro plays, in the order it plays them. */
 export const WELCOME_INTRO_CLIPS = [WELCOME_INTRO_VOICEOVER, ...WELCOME_INTRO_LINEUP.map((animal) => animal.voiceover)];
 
-/** How many `[[cue]]` markers each clip carries: one per domain or evidence step. */
+/** How many `[[cue]]` markers each clip carries: one per domain, or four for the chat. */
 export function welcomeExpectedCueCount(clip: string) {
     const animal = WELCOME_INTRO_LINEUP.find((candidate) => candidate.voiceover === clip);
-    return animal?.system?.cueSeconds.length ?? animal?.trial?.cueSeconds.length ?? 0;
+    return animal?.system?.cueSeconds.length ?? animal?.chat?.cueSeconds.length ?? 0;
 }
 
 export const WELCOME_VOICEOVER_BASE_URL = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/welcome-voiceover/";

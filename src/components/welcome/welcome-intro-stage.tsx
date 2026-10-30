@@ -1,20 +1,20 @@
 "use client";
 
 import {type CSSProperties, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
-import BattleTierChip from "@/app/[locale]/(composited)/animals/battle-tier-chip";
 import SystemWaveform from "@/components/animal-detail/system-dynamics/system-waveform";
 import {FrequencyStateChip} from "@/components/animal-detail/system-dynamics/frequency-chip";
-import {getBattleTier} from "@/lib/battle-tier";
 import {behaviorCompactTitle, resolveVisualSignature} from "@/lib/system-dynamics";
 import {
+    WELCOME_CHAT_CUE_STAGES,
+    WELCOME_CHAT_SILENT_CUES,
+    WELCOME_CHAT_STAGES,
     WELCOME_INTRO_BEATS,
     WELCOME_INTRO_VOICEOVER,
-    WELCOME_STAT_METRICS,
+    type WelcomeChatStory,
     type WelcomeIntroAnimal,
     type WelcomeIntroBeat,
     type WelcomeIntroStrings,
     type WelcomeSystemStory,
-    type WelcomeTrialStory,
     type WelcomeVoiceSource,
     localizeWelcomeLineup,
     selectWelcomeCues,
@@ -29,8 +29,11 @@ import {
 } from "@/lib/welcome-intro";
 
 /**
- * The looping "spot → collect → learn" card on the sign-in page, ported from
- * iOS `WelcomeIntroStage`. Same lineup, timings, voiceover and cue points.
+ * The looping "spot → talk → grow" card on the sign-in page, first ported
+ * from iOS `WelcomeIntroStage`: the same lineup, voiceover and cue points.
+ * Since the newcomer UX vet (2026-10-30, P0-1) a card shows no stats or tier:
+ * the animal is spotted, says its piece, then what it means for you; the
+ * Hawaiian Crow's card is a chat through to its Power earned.
  *
  * Web differences, all forced by the browser: sound starts off (audio cannot
  * play before the visitor interacts with the page), so the page's sound button
@@ -50,11 +53,14 @@ const NEAR_BLACK = "#070A08";
 const CARD_FILL = `linear-gradient(180deg, #10261A, ${NEAR_BLACK})`;
 /** iOS's largest card height; smaller cards are this layout scaled down. */
 const DESIGN_HEIGHT = 340;
+/** From the shutter to the flip: the animal's name on the card, and its voice starting. */
+const REVEAL_SECONDS = 2.2;
+/** The motto alone on the lesson side, before what it means for you. */
+const TALK_SECONDS = 1.4;
+/** At least this long on "For you". */
+const GROW_SECONDS = 3.6;
 
-type Sfx = "camera_shutter" | "reward_points" | "reward_credits" | "train_complete";
-
-/** The trial's proof frames: iOS draws SF Symbols, the web stands in with emoji. */
-const PROOF_FRAMES = ["🧍", "🤸", "👍"];
+type Sfx = "camera_shutter" | "reward_points" | "train_complete";
 
 /** The intro's on-screen strings for one language; English keys, English fallback. */
 const WelcomeTextContext = createContext<WelcomeIntroStrings>({});
@@ -166,10 +172,8 @@ export default function WelcomeIntroStage({
     const [scanSeconds, setScanSeconds] = useState(1.3);
     const [cardVisible, setCardVisible] = useState(true);
     const [showForYou, setShowForYou] = useState(false);
-    const [showStats, setShowStats] = useState(false);
-    const [statsGrow, setStatsGrow] = useState(0);
     const [domainIndex, setDomainIndex] = useState(-1);
-    const [trialStage, setTrialStage] = useState(-1);
+    const [chatStage, setChatStage] = useState(-1);
 
     const indexRef = useRef(0);
     /** Voice and sound play on the first lap after sound is turned on, never after. */
@@ -207,66 +211,81 @@ export default function WelcomeIntroStage({
         };
         const remaining = (spoken: SpokenClip | null, start: number) =>
             spoken?.duration == null ? 0 : Math.max(0, spoken.duration - (performance.now() - start) / 1000);
-        const voicesOnLessonSide = (current: WelcomeIntroAnimal) => Boolean(current.system || current.trial);
+        const voicesOnLessonSide = (current: WelcomeIntroAnimal) => Boolean(current.system || current.chat);
 
+        /** Motto and wave, where the pattern turns up in human life, then what it means for you. */
         async function runSystemLesson(current: WelcomeIntroAnimal, story: WelcomeSystemStory) {
             const start = performance.now();
             const spoken = speaks() ? await playVoice(current.voiceover) : null;
             const cues = selectWelcomeCues({spoken: spoken != null, englishCues: story.cueSeconds, clipCues: spoken?.cues ?? null, silentCues: [1.6, 4.4, 7.2]});
             const total = Math.max((spoken?.duration ?? 0) + 0.8, (cues[cues.length - 1] ?? 0) + 3.2);
-            startBeat("learn", total);
+            startBeat("talk", total);
             for (let i = 0; i < cues.length; i += 1) {
                 const cue = cues[i];
                 if (!(await pause(cue - (performance.now() - start) / 1000))) return;
                 setDomainIndex(i);
             }
-            await pause(total - (performance.now() - start) / 1000);
+            if (!(await pause(total - (performance.now() - start) / 1000))) return;
+            setShowForYou(true);
+            startBeat("grow", GROW_SECONDS);
+            await pause(GROW_SECONDS);
         }
 
-        async function runTrialLesson(current: WelcomeIntroAnimal, trial: WelcomeTrialStory) {
+        /** Your line, its reply, then the step it sets, done together, and its Power earned. */
+        async function runChatLesson(current: WelcomeIntroAnimal, chat: WelcomeChatStory) {
             const start = performance.now();
-            window.setTimeout(() => !cancelled && setShowForYou(true), 600);
             const spoken = speaks() ? await playVoice(current.voiceover) : null;
-            const cues = selectWelcomeCues({spoken: spoken != null, englishCues: trial.cueSeconds, clipCues: spoken?.cues ?? null, silentCues: [3.2, 5.6, 8.0, 9.8]});
+            const cues = selectWelcomeCues({spoken: spoken != null, englishCues: chat.cueSeconds, clipCues: spoken?.cues ?? null, silentCues: WELCOME_CHAT_SILENT_CUES});
             const total = Math.max((spoken?.duration ?? 0) + 1.2, (cues[cues.length - 1] ?? 0) + 3.0);
-            startBeat("learn", total);
+            const firstCue = cues[0] ?? total;
+            startBeat("talk", firstCue);
+            if (!(await pause(0.5 - (performance.now() - start) / 1000))) return;
+            setChatStage(WELCOME_CHAT_STAGES.you);
+            // Its reply lands well before the step, however the voice is paced.
+            if (!(await pause(Math.min(2.2, firstCue * 0.4) - (performance.now() - start) / 1000))) return;
+            setChatStage(WELCOME_CHAT_STAGES.reply);
             for (let i = 0; i < cues.length; i += 1) {
                 const cue = cues[i];
                 if (!(await pause(cue - (performance.now() - start) / 1000))) return;
-                setTrialStage(i);
-                if (i === 3) sfx("reward_credits");
+                if (i === 0) startBeat("grow", total - cue);
+                const stage = WELCOME_CHAT_CUE_STAGES[i] ?? WELCOME_CHAT_STAGES.earned;
+                setChatStage(stage);
+                if (stage === WELCOME_CHAT_STAGES.earned) sfx("train_complete");
             }
             await pause(total - (performance.now() - start) / 1000);
         }
 
         async function runLesson(current: WelcomeIntroAnimal) {
             if (current.system) await runSystemLesson(current, current.system);
-            else if (current.trial) await runTrialLesson(current, current.trial);
+            else if (current.chat) await runChatLesson(current, current.chat);
         }
 
-        /** Reduce motion: no sweep, flip or tilt; the collected card, then the lesson. */
+        /** The motto, then "For you", held long enough to read both or to hear the voice finish. */
+        async function runPlainLesson(spoken: SpokenClip | null, voiceStart: number) {
+            startBeat("talk", TALK_SECONDS);
+            if (!(await pause(TALK_SECONDS))) return;
+            if (spoken == null) sfx("train_complete");
+            const hold = Math.max(GROW_SECONDS, remaining(spoken, voiceStart) + 0.6);
+            setShowForYou(true);
+            startBeat("grow", hold);
+            await pause(hold);
+        }
+
+        /** Reduce motion: no sweep, flip or tilt; the spotted card, then the lesson. */
         async function runStillBeat(current: WelcomeIntroAnimal) {
             setRevealed(true);
             setFlipped(false);
             setCardVisible(true);
-            setBeat("collect");
-            setBeatRun((run) => ({key: run.key + 1, seconds: 0}));
-            setStatsGrow(1);
-            setShowStats(true);
+            setShowForYou(false);
             setDomainIndex(-1);
-            setTrialStage(-1);
+            setChatStage(-1);
+            startBeat("spot", REVEAL_SECONDS);
             const voiceStart = performance.now();
             const spoken = speaks() && !voicesOnLessonSide(current) ? await playVoice(current.voiceover) : null;
-            if (!(await pause(3.0))) return;
-            setShowStats(false);
+            if (!(await pause(REVEAL_SECONDS))) return;
             setFlipped(true);
-            setShowForYou(true);
-            setBeat("learn");
-            if (voicesOnLessonSide(current)) {
-                await runLesson(current);
-            } else if (!(await pause(Math.max(4.5, remaining(spoken, voiceStart) + 0.6)))) {
-                return;
-            }
+            if (voicesOnLessonSide(current)) await runLesson(current);
+            else await runPlainLesson(spoken, voiceStart);
             if (cancelled) return;
             setShowForYou(false);
             setCardVisible(false);
@@ -282,10 +301,8 @@ export default function WelcomeIntroStage({
             setScanSweep(false);
             setShine(false);
             setShowForYou(false);
-            setShowStats(false);
-            setStatsGrow(0);
             setDomainIndex(-1);
-            setTrialStage(-1);
+            setChatStage(-1);
 
             // First card of the first lap: the intro line plays over a longer scan.
             let scan = 1.3;
@@ -298,7 +315,8 @@ export default function WelcomeIntroStage({
 
             setCardVisible(true);
             setScanSeconds(scan);
-            startBeat("spot", scan);
+            // Spot runs through the scan and the reveal.
+            startBeat("spot", scan + REVEAL_SECONDS);
             setScanSweep(true);
             if (!(await pause(scan))) return;
 
@@ -309,38 +327,22 @@ export default function WelcomeIntroStage({
             setRevealed(true);
             setBloom(false);
             setShine(true);
-            startBeat("collect", 4.0);
             if (!(await pause(0.25))) return;
             sfx("reward_points");
             if (!(await pause(0.75))) return;
 
-            // Stats draw over the animal; the voice starts on what they say.
-            setShowStats(true);
-            setStatsGrow(1);
-            // System Dynamics and Trial cards hold their voice for the lesson side,
-            // where the wave, domains and evidence it talks about are on screen.
+            // The voice starts on the animal's name. System Dynamics and chat
+            // cards hold theirs for the lesson side, where what it talks about is.
             const voiceStart = performance.now();
             const spoken = speaks() && !voicesOnLessonSide(current) ? await playVoice(current.voiceover) : null;
-            if (!(await pause(3.0 - (performance.now() - voiceStart) / 1000))) return;
+            if (!(await pause(REVEAL_SECONDS - 1.0 - (performance.now() - voiceStart) / 1000))) return;
 
-            // Flip to the lesson.
-            setShowStats(false);
+            // Flip to what it says.
             setFlipped(true);
             if (!(await pause(0.3))) return;
-            if (voicesOnLessonSide(current)) {
-                await runLesson(current);
-                if (cancelled) return;
-                setCardVisible(false);
-                await pause(0.34);
-                return;
-            }
-            if (spoken == null) sfx("train_complete");
-            // Long enough to read both lines, or to hear the voice finish.
-            const hold = Math.max(4.2, remaining(spoken, voiceStart) + 0.6);
-            startBeat("learn", hold);
-            if (!(await pause(0.9))) return;
-            setShowForYou(true);
-            if (!(await pause(hold - 0.9))) return;
+            if (voicesOnLessonSide(current)) await runLesson(current);
+            else await runPlainLesson(spoken, voiceStart);
+            if (cancelled) return;
 
             // Slide away; the next animal comes in.
             setCardVisible(false);
@@ -378,7 +380,6 @@ export default function WelcomeIntroStage({
     }, [reduceMotion, soundGeneration, playVoice, playSfx, stop, lineup]);
 
     const motion = !reduceMotion;
-    const tier = getBattleTier(animal.stats);
 
     return (
         <WelcomeTextContext.Provider value={strings}>
@@ -424,24 +425,20 @@ export default function WelcomeIntroStage({
                             >
                                 <CardFront
                                     animal={animal}
-                                    tier={tier}
                                     cardHeight={DESIGN_HEIGHT}
                                     revealed={revealed}
                                     bloom={bloom}
                                     shine={shine}
                                     scanSweep={scanSweep}
                                     scanSeconds={scanSeconds}
-                                    showStats={showStats}
-                                    statsGrow={statsGrow}
                                     motion={motion}
                                 />
                                 <CardBack
                                     animal={animal}
-                                    tier={tier}
                                     flipped={flipped}
                                     showForYou={showForYou}
                                     domainIndex={domainIndex}
-                                    trialStage={trialStage}
+                                    chatStage={chatStage}
                                     motion={motion}
                                 />
                             </div>
@@ -493,37 +490,23 @@ function DexNumber({value}: {value: number}) {
     );
 }
 
-function TierCorner({tier}: {tier: ReturnType<typeof getBattleTier>}) {
-    return (
-        <span className="pointer-events-none absolute right-2.5 top-2">
-            <BattleTierChip tier={tier} compact />
-        </span>
-    );
-}
-
 function CardFront({
     animal,
-    tier,
     cardHeight,
     revealed,
     bloom,
     shine,
     scanSweep,
     scanSeconds,
-    showStats,
-    statsGrow,
     motion
 }: {
     animal: WelcomeIntroAnimal;
-    tier: ReturnType<typeof getBattleTier>;
     cardHeight: number;
     revealed: boolean;
     bloom: boolean;
     shine: boolean;
     scanSweep: boolean;
     scanSeconds: number;
-    showStats: boolean;
-    statsGrow: number;
     motion: boolean;
 }) {
     const t = useWelcomeText();
@@ -551,7 +534,7 @@ function CardFront({
                     padding: `${cardHeight * 0.09}px ${cardHeight * 0.07}px ${cardHeight * 0.22}px`,
                     // Silhouette until the shutter fires.
                     filter: revealed ? "brightness(1) drop-shadow(0 10px 14px rgba(0,0,0,0.45))" : "brightness(0.03)",
-                    opacity: revealed ? (showStats ? 0.22 : 1) : 0.9,
+                    opacity: revealed ? 1 : 0.9,
                     transform: `scale(${revealed ? 1 : 0.95})`,
                     transition: motion ? "filter 450ms ease, opacity 250ms ease, transform 500ms cubic-bezier(.2,.9,.3,1.2)" : "none"
                 }}
@@ -578,24 +561,11 @@ function CardFront({
                 className="absolute inset-x-4 bottom-4 flex flex-col gap-1"
                 style={{opacity: revealed ? 1 : 0, transform: `translateY(${revealed ? 0 : 8}px)`, transition: ease(400)}}
             >
-                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>{t("Collected")}</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>{t("Spotted")}</span>
                 <span className="truncate font-display text-[21px] font-bold leading-tight text-white">{animal.name}</span>
             </div>
 
-            <WelcomeStatPentagon
-                animal={animal}
-                progress={statsGrow}
-                visible={showStats}
-                cardHeight={cardHeight}
-                motion={motion}
-            />
-
-            {revealed ? (
-                <>
-                    <DexNumber value={animal.dexNumber} />
-                    <TierCorner tier={tier} />
-                </>
-            ) : null}
+            {revealed ? <DexNumber value={animal.dexNumber} /> : null}
 
             {/* Shutter bloom: a quick soft light from the centre. */}
             <div
@@ -608,7 +578,7 @@ function CardFront({
                 }}
             />
 
-            {/* One diagonal glint across the card as it's collected. */}
+            {/* One diagonal glint across the card as it's spotted. */}
             {motion ? (
                 <div
                     aria-hidden="true"
@@ -655,106 +625,6 @@ function ScanBrackets({active, seconds, motion}: {active: boolean; seconds: numb
     );
 }
 
-/** The same five stats, order and colours as the species page radar, sized to sit over the animal. */
-function WelcomeStatPentagon({
-    animal,
-    progress,
-    visible,
-    cardHeight,
-    motion
-}: {
-    animal: WelcomeIntroAnimal;
-    progress: number;
-    visible: boolean;
-    cardHeight: number;
-    motion: boolean;
-}) {
-    const size = 200;
-    const center = {x: size / 2, y: size / 2 + 4};
-    const radius = size * 0.3;
-    const point = (r: number, i: number) => {
-        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
-        return {x: center.x + Math.cos(angle) * r, y: center.y + Math.sin(angle) * r};
-    };
-    const polygon = (values: number[], r: number) =>
-        values.map((value, i) => point((r * Math.max(0, Math.min(100, value))) / 100, i)).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    const metrics = WELCOME_STAT_METRICS.map((metric) => ({...metric, value: animal.stats[metric.key]}));
-    const gradientId = `welcome-pentagon-${animal.image}`;
-
-    return (
-        <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0"
-            style={{
-                top: cardHeight * 0.1,
-                bottom: cardHeight * 0.24,
-                paddingInline: cardHeight * 0.06,
-                opacity: visible ? 1 : 0,
-                transition: motion ? "opacity 250ms ease" : "none"
-            }}
-        >
-            <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full overflow-visible">
-                <defs>
-                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(167,244,50,0.35)" />
-                        <stop offset="100%" stopColor="rgba(148,84,250,0.25)" />
-                    </linearGradient>
-                </defs>
-                {[1, 2, 3, 4].map((level) => (
-                    <polygon
-                        key={level}
-                        points={polygon([100, 100, 100, 100, 100], (radius * level) / 4)}
-                        fill="none"
-                        stroke={`rgba(255,255,255,${level === 4 ? 0.22 : 0.09})`}
-                        strokeWidth={0.75}
-                    />
-                ))}
-                {metrics.map((_, i) => {
-                    const end = point(radius, i);
-                    return <line key={i} x1={center.x} y1={center.y} x2={end.x} y2={end.y} stroke="rgba(255,255,255,0.1)" strokeWidth={0.75} />;
-                })}
-                <g
-                    style={{
-                        transform: `scale(${progress})`,
-                        transformOrigin: `${center.x}px ${center.y}px`,
-                        transition: motion ? "transform 800ms cubic-bezier(.2,.9,.3,1.15)" : "none"
-                    }}
-                >
-                    <polygon points={polygon(metrics.map((metric) => metric.value), radius)} fill={`url(#${gradientId})`} stroke={NEON} strokeWidth={1.5} strokeLinejoin="round" />
-                </g>
-                {metrics.map((metric, i) => {
-                    const isKey = animal.keyStats.includes(metric.key);
-                    const at = point(radius + 20, i);
-                    return (
-                        <g key={metric.key} fill={isKey ? metric.tint : "rgba(255,255,255,0.55)"} textAnchor="middle">
-                            <text x={at.x} y={at.y - (isKey ? 7 : 5)} fontSize={8} fontWeight={700} letterSpacing={1}>{metric.shortTitle}</text>
-                            <text x={at.x} y={at.y + (isKey ? 11 : 8)} fontSize={isKey ? 18 : 13} fontWeight={700} className="font-display">{metric.value}</text>
-                        </g>
-                    );
-                })}
-            </svg>
-        </div>
-    );
-}
-
-function KeyStatChips({animal}: {animal: WelcomeIntroAnimal}) {
-    const metrics = WELCOME_STAT_METRICS.filter((metric) => animal.keyStats.includes(metric.key));
-    return (
-        <div className="flex justify-center gap-1.5">
-            {metrics.map((metric) => (
-                <span
-                    key={metric.key}
-                    className="inline-flex items-center gap-1 border px-2 py-[3px]"
-                    style={{color: metric.tint, borderColor: `color-mix(in srgb, ${metric.tint} 60%, transparent)`}}
-                >
-                    <span className="text-[9px] font-bold tracking-[0.12em]">{metric.shortTitle}</span>
-                    <span className="font-display text-[13px] font-bold tabular-nums">{animal.stats[metric.key]}</span>
-                </span>
-            ))}
-        </div>
-    );
-}
-
 function PowerEyebrow({children}: {children: string}) {
     return (
         <p className="truncate text-center text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>
@@ -765,19 +635,17 @@ function PowerEyebrow({children}: {children: string}) {
 
 function CardBack({
     animal,
-    tier,
     flipped,
     showForYou,
     domainIndex,
-    trialStage,
+    chatStage,
     motion
 }: {
     animal: WelcomeIntroAnimal;
-    tier: ReturnType<typeof getBattleTier>;
     flipped: boolean;
     showForYou: boolean;
     domainIndex: number;
-    trialStage: number;
+    chatStage: number;
     motion: boolean;
 }) {
     return (
@@ -792,15 +660,14 @@ function CardBack({
             />
 
             {animal.system ? (
-                <SystemLesson animal={animal} story={animal.system} flipped={flipped} domainIndex={domainIndex} motion={motion} />
-            ) : animal.trial && trialStage >= 0 ? (
-                <TrialFlow animal={animal} trial={animal.trial} stage={trialStage} motion={motion} />
+                <SystemLesson animal={animal} story={animal.system} flipped={flipped} domainIndex={domainIndex} showForYou={showForYou} motion={motion} />
+            ) : animal.chat ? (
+                <ChatLesson animal={animal} chat={animal.chat} stage={chatStage} motion={motion} />
             ) : (
                 <PlainLesson animal={animal} showForYou={showForYou} motion={motion} />
             )}
 
             <DexNumber value={animal.dexNumber} />
-            <TierCorner tier={tier} />
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 border" style={{borderColor: "rgba(167,244,50,0.55)"}} />
         </div>
     );
@@ -811,7 +678,6 @@ function PlainLesson({animal, showForYou, motion}: {animal: WelcomeIntroAnimal; 
     return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-[18px] pb-4 pt-[38px] text-center">
             <PowerEyebrow>{animal.power}</PowerEyebrow>
-            <KeyStatChips animal={animal} />
             <p className="font-display text-[32px] font-black leading-[0.95] text-white">{animal.motto}</p>
             {/* The motto in the reader's own life. */}
             <div
@@ -825,18 +691,20 @@ function PlainLesson({animal, showForYou, motion}: {animal: WelcomeIntroAnimal; 
     );
 }
 
-/** Motto, the animal's frequency wave, then where the same pattern shows up in human life. */
+/** Motto, the animal's frequency wave, where the same pattern shows up in human life, then what it means for you. */
 function SystemLesson({
     animal,
     story,
     flipped,
     domainIndex,
+    showForYou,
     motion
 }: {
     animal: WelcomeIntroAnimal;
     story: WelcomeSystemStory;
     flipped: boolean;
     domainIndex: number;
+    showForYou: boolean;
     motion: boolean;
 }) {
     const strings = useContext(WelcomeTextContext);
@@ -849,8 +717,7 @@ function SystemLesson({
     return (
         <div className="absolute inset-0 flex flex-col items-center gap-[9px] px-4 pb-3.5 pt-[38px] text-center">
             <PowerEyebrow>{animal.power}</PowerEyebrow>
-            <KeyStatChips animal={animal} />
-            <p className="font-display text-[22px] font-black leading-[1.02] text-white">{animal.motto}</p>
+            <p className="font-display text-[24px] font-black leading-[1.02] text-white">{animal.motto}</p>
 
             <div className="flex w-full flex-col items-center gap-1">
                 <div className="flex items-center gap-[5px]">
@@ -877,7 +744,13 @@ function SystemLesson({
             </div>
 
             <div className="flex w-full flex-1 flex-col items-center">
-                {line ? (
+                {showForYou ? (
+                    // What the pattern means in the reader's own life.
+                    <div key="for-you" className={`flex flex-col gap-1 ${motion ? "welcome-rise-in" : ""}`}>
+                        <span className="text-[8px] font-bold uppercase tracking-[0.24em] text-white/45">{welcomeText(strings, "For you")}</span>
+                        <span className="text-[12.5px] font-semibold leading-snug text-white/90">{animal.forYou}</span>
+                    </div>
+                ) : line ? (
                     <div key={domainIndex} className={`flex flex-col gap-1 ${motion ? "welcome-rise-in" : ""}`}>
                         <span className="text-[8px] font-bold uppercase tracking-[0.22em]" style={{color: "rgba(167,244,50,0.85)"}}>
                             {welcomeText(strings, "Seen in")} {welcomeDomainTitle(strings, line.domain)}
@@ -887,7 +760,7 @@ function SystemLesson({
                 ) : null}
                 <div className="mt-auto flex gap-1">
                     {story.domains.map((_, i) => (
-                        <span key={i} className="h-0.5 w-3.5" style={{backgroundColor: i <= domainIndex ? NEON : "rgba(255,255,255,0.18)"}} />
+                        <span key={i} className="h-0.5 w-3.5" style={{backgroundColor: i <= domainIndex || showForYou ? NEON : "rgba(255,255,255,0.18)"}} />
                     ))}
                 </div>
             </div>
@@ -895,98 +768,62 @@ function SystemLesson({
     );
 }
 
-/** The Trial, then its evidence flow: record → AI check → Power earned. */
-function TrialFlow({animal, trial, stage, motion}: {animal: WelcomeIntroAnimal; trial: WelcomeTrialStory; stage: number; motion: boolean}) {
+/**
+ * A chat with it: your line, its reply from how its kind lives, the one step
+ * it sets, "Done together", then its Power earned. Each part rises in at its
+ * stage; the space is kept from the start, so nothing above it moves.
+ */
+function ChatLesson({animal, chat, stage, motion}: {animal: WelcomeIntroAnimal; chat: WelcomeChatStory; stage: number; motion: boolean}) {
     const t = useWelcomeText();
+    const shown = (at: number): CSSProperties => ({
+        opacity: stage >= at ? 1 : 0,
+        transform: `translateY(${stage >= at ? 0 : 6}px)`,
+        transition: motion ? "opacity 350ms ease-out, transform 350ms ease-out" : "none"
+    });
+    const done = stage >= WELCOME_CHAT_STAGES.done;
+
     return (
-        <div className={`absolute inset-0 flex flex-col items-center gap-[9px] px-4 pb-3 pt-9 text-center ${motion ? "welcome-rise-in" : ""}`}>
-            <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>{t("Trial")}</span>
-                <p className="font-display text-[21px] font-black leading-[1.02] text-white">{trial.title}</p>
-                <p className="text-[11.5px] font-medium leading-snug text-white/75">{trial.instruction}</p>
+        <div className="absolute inset-0 flex flex-col gap-2 px-3.5 pb-3.5 pt-9">
+            {/* Your line. */}
+            <p
+                className="self-end border px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-black"
+                style={{...shown(WELCOME_CHAT_STAGES.you), marginInlineStart: 32, backgroundColor: NEON, borderColor: NEON}}
+            >
+                {chat.you}
+            </p>
+            {/* Its reply. */}
+            <div className="flex items-end gap-1.5" style={{...shown(WELCOME_CHAT_STAGES.reply), marginInlineEnd: 24}}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/images/welcome/${animal.image}.webp`} alt="" draggable={false} className="h-6 w-6 shrink-0 rounded-full bg-white/[0.08] object-contain p-0.5" />
+                <p className="border border-white/[0.14] bg-white/[0.07] px-2.5 py-1.5 text-[11px] font-medium leading-snug text-white/90">{chat.reply}</p>
             </div>
 
-            <div className="flex gap-[5px]">
-                {[trial.proofLabel, `${trial.minutes} ${t("min")}`, `+${trial.rewardCredits}`].map((chip, i) => (
-                    <span key={chip} className="inline-flex items-center gap-[3px] border border-white/20 px-1.5 py-[3px] text-[8.5px] font-bold uppercase tracking-[0.08em] text-white/80">
-                        <span aria-hidden="true">{["●", "◷", "✦"][i]}</span>
-                        {chip}
+            {/* The one step it sets, then done together, then its Power. */}
+            <div className="relative mt-auto flex flex-col gap-1 border px-3 py-2.5" style={{...shown(WELCOME_CHAT_STAGES.step), borderColor: "rgba(167,244,50,0.45)", background: "rgba(167,244,50,0.06)"}}>
+                <span className="text-[8px] font-bold uppercase tracking-[0.24em]" style={{color: NEON}}>{t("Your step")}</span>
+                <span className="text-[11.5px] font-semibold leading-snug text-white">{chat.step}</span>
+                <span
+                    className="mt-1 inline-flex items-center gap-1 self-start rounded-full px-2 py-[3px] text-[9px] font-black uppercase tracking-[0.08em]"
+                    style={{
+                        color: done ? NEAR_BLACK : "rgba(255,255,255,0.4)",
+                        backgroundColor: done ? NEON : "rgba(255,255,255,0.06)",
+                        transition: motion ? "background-color 300ms ease, color 300ms ease" : "none"
+                    }}
+                >
+                    <span aria-hidden="true">✓</span>
+                    {t("Done together")}
+                </span>
+                {stage >= WELCOME_CHAT_STAGES.earned ? (
+                    <span
+                        className={`absolute left-1/2 top-1/2 flex flex-col items-center px-2.5 py-1.5 shadow-[0_4px_8px_rgba(0,0,0,0.5)] ${motion ? "welcome-stamp-in" : ""}`}
+                        style={{backgroundColor: NEON, color: NEAR_BLACK, transform: "translate(-50%,-50%) rotate(-6deg)"}}
+                    >
+                        <span className="whitespace-nowrap font-display text-[15px] font-black uppercase leading-none tracking-[0.08em]">{t("Power earned")}</span>
+                        <span className="whitespace-nowrap text-[9px] font-bold opacity-80">{animal.power}</span>
                     </span>
-                ))}
-            </div>
-
-            <div className="flex w-full flex-1 items-center justify-center">
-                {stage === 1 ? (
-                    <RecordingViewfinder />
-                ) : stage >= 2 ? (
-                    <div className="flex flex-col items-center gap-[7px]">
-                        {/* The clip, sent as frames: what the AI actually reviews. */}
-                        <div className="relative flex gap-[5px]">
-                            {PROOF_FRAMES.map((frame) => (
-                                <ProofFrame key={frame} symbol={frame} className="h-10 w-[52px] text-xl" />
-                            ))}
-                            {stage === 2 && motion ? <span aria-hidden="true" className="welcome-evidence-scan absolute inset-y-0 w-[1.5px]" style={{backgroundColor: NEON, boxShadow: `0 0 4px ${NEON}`}} /> : null}
-                            {stage >= 3 ? (
-                                <span
-                                    className={`absolute left-1/2 top-1/2 flex flex-col items-center px-2.5 py-1.5 shadow-[0_4px_8px_rgba(0,0,0,0.5)] ${motion ? "welcome-stamp-in" : ""}`}
-                                    style={{backgroundColor: NEON, color: NEAR_BLACK, transform: "translate(-50%,-50%) rotate(-6deg)"}}
-                                >
-                                    <span className="whitespace-nowrap font-display text-[15px] font-black uppercase leading-none tracking-[0.08em]">{t("Power earned")}</span>
-                                    <span className="whitespace-nowrap text-[9px] font-bold opacity-80">{animal.power}</span>
-                                </span>
-                            ) : null}
-                        </div>
-                        <div className="flex flex-col items-start gap-[3px]">
-                            {trial.checks.map((check) => (
-                                <span key={check} className="flex items-center gap-[5px] text-[10.5px] font-semibold text-white/85">
-                                    <span aria-hidden="true" style={{color: NEON}}>✓</span>
-                                    {check}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
                 ) : null}
             </div>
-
-            <div className="flex items-center gap-1.5">
-                {["Record", "AI check", "Earned"].map((step, i) => (
-                    <span key={step} className="flex items-center gap-1.5">
-                        <span className="text-[8px] font-bold uppercase tracking-[0.15em]" style={{color: stage >= i + 1 ? NEON : "rgba(255,255,255,0.35)"}}>{t(step)}</span>
-                        {i < 2 ? <span className="h-px w-3" style={{backgroundColor: stage >= i + 1 ? "rgba(167,244,50,0.6)" : "rgba(255,255,255,0.15)"}} /> : null}
-                    </span>
-                ))}
-            </div>
         </div>
-    );
-}
-
-function ProofFrame({symbol, className = ""}: {symbol: string; className?: string}) {
-    return (
-        <span
-            aria-hidden="true"
-            className={`grid place-items-center border border-white/20 ${className}`}
-            style={{background: "linear-gradient(135deg, #1E3A2A, #0B1A12)"}}
-        >
-            {symbol}
-        </span>
-    );
-}
-
-/** Recording: a viewfinder playing the illustrated attempt. */
-function RecordingViewfinder() {
-    const [tick, setTick] = useState(0);
-    useEffect(() => {
-        const id = window.setInterval(() => setTick((value) => value + 1), 700);
-        return () => window.clearInterval(id);
-    }, []);
-    return (
-        <span className="relative">
-            <ProofFrame symbol={PROOF_FRAMES[tick % PROOF_FRAMES.length]} className="h-24 w-[150px] text-[42px]" />
-            <span className="absolute left-1.5 top-1.5 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500" style={{opacity: tick % 2 === 0 ? 1 : 0.35}} />
-                <span className="text-[9px] font-bold tabular-nums text-white">00:{String(3 + (tick % 9)).padStart(2, "0")}</span>
-            </span>
-        </span>
     );
 }
 

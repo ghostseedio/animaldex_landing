@@ -753,9 +753,6 @@ button {
    other Indic scripts, Thai) and reads oddly in CJK: those languages set it to 0. */
 [data-welcome-tracking="off"] [class*="tracking-"] { letter-spacing: 0 !important; }
 
-@keyframes welcome-evidence-scan { from { left: 0; } to { left: 100%; } }
-.welcome-evidence-scan { animation: welcome-evidence-scan 0.8s ease-in-out infinite alternate; }
-
 @keyframes welcome-stamp-in {
     from { opacity: 0; transform: translate(-50%, -50%) rotate(-6deg) scale(1.4); }
     to { opacity: 1; transform: translate(-50%, -50%) rotate(-6deg) scale(1); }
@@ -766,5 +763,5 @@ button {
 .welcome-hero-drift { animation: welcome-hero-drift 18s ease-in-out infinite alternate; }
 
 @media (prefers-reduced-motion: reduce) {
-    .welcome-card-drift, .welcome-hero-drift, .welcome-evidence-scan { animation: none; }
+    .welcome-card-drift, .welcome-hero-drift { animation: none; }
 }
