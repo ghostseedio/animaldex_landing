@@ -7,6 +7,9 @@ import "server-only";
  *
  * A card that is not the reader's makes the whole group refused; a species
  * AnimalDex holds no Power for is left out of the room rather than failing it.
+ * A debate's animals (docs/debates/SPEC.md) come from the debate itself, so
+ * other people's cards may join (`anyOwner`): they speak as their species
+ * and Power only, never under the name their owner gave them.
  */
 
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
@@ -59,6 +62,8 @@ export async function loadAskGroupMembers(params: {
     userId: string;
     captureIds: string[];
     quantiles: AskStatQuantiles | null;
+    /** A debate's animals, already checked by the debate: other people's cards may be among them. */
+    anyOwner?: boolean;
 }): Promise<AskGroupMembersResult> {
     const service = createSupabaseServiceClient();
     if (!service) return {ok: false, error: "database_error"};
@@ -70,7 +75,7 @@ export async function loadAskGroupMembers(params: {
     ]);
     if (capturesRes.error) return {ok: false, error: "database_error"};
     const captures = (capturesRes.data ?? []) as Row[];
-    if (captures.length !== params.captureIds.length || captures.some((row) => row.user_id !== params.userId)) {
+    if (captures.length !== params.captureIds.length || (!params.anyOwner && captures.some((row) => row.user_id !== params.userId))) {
         return {ok: false, error: "capture_not_owned"};
     }
     const speciesOf = new Map<string, string>();
@@ -128,7 +133,8 @@ export async function loadAskGroupMembers(params: {
             captureId,
             speciesProfileId: companion.speciesProfileId ?? speciesProfileId,
             animalName: species.name,
-            nickname: sanitizeAskNickname(capture?.title),
+            // Someone else's animal in a debate is its species, not their name for it.
+            nickname: capture?.user_id === params.userId ? sanitizeAskNickname(capture?.title) : null,
             powerName: species.power.principleName,
             voice: companion.voice,
             slug,
