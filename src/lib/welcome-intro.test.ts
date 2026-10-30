@@ -4,13 +4,7 @@ import test from "node:test";
 import {resolveVisualSignature} from "@/lib/system-dynamics";
 import {
     WELCOME_APP_LANGUAGES,
-    WELCOME_CHAT_CUE_STAGES,
-    WELCOME_CHAT_SILENT_CUES,
-    WELCOME_CHAT_STAGES,
-    WELCOME_INTRO_BEATS,
     WELCOME_INTRO_CLIPS,
-    WELCOME_INTRO_LABELS,
-    WELCOME_INTRO_PENDING_KEYS,
     WELCOME_LANGUAGE_NATIVE_NAMES,
     formatWelcomeLanguageCookie,
     matchWelcomeLanguage,
@@ -49,27 +43,14 @@ test("every System Dynamics card decodes its live rows and draws a wave", () => 
     }
 });
 
-test("each lesson's cues are in order: one per domain, or the clip's four for the chat", () => {
+test("each lesson's cues are in order, one per domain or evidence step", () => {
     for (const animal of WELCOME_INTRO_LINEUP) {
-        const cues = animal.system?.cueSeconds ?? animal.chat?.cueSeconds;
+        const cues = animal.system?.cueSeconds ?? animal.trial?.cueSeconds;
         if (!cues) continue;
         assert.deepEqual([...cues].sort((a, b) => a - b), cues, `${animal.name} cues ascend`);
         if (animal.system) assert.equal(cues.length, animal.system.domains.length);
-        if (animal.chat) assert.equal(cues.length, WELCOME_CHAT_CUE_STAGES.length);
+        if (animal.trial) assert.equal(cues.length, 4);
     }
-});
-
-test("the welcome is Spot, Talk, Grow, and one card is a chat through to its Power", () => {
-    assert.deepEqual(WELCOME_INTRO_BEATS.map((beat) => beat.title), ["Spot", "Talk", "Grow"]);
-    const chats = WELCOME_INTRO_LINEUP.filter((animal) => animal.chat);
-    assert.deepEqual(chats.map((animal) => animal.image), ["hawaiian-crow"]);
-    assert.ok(!WELCOME_INTRO_LINEUP.some((animal) => "stats" in animal || "trial" in animal), "no stats or Trial on any card");
-    // The voice's cues step the chat forward, never back, and end on the Power earned.
-    assert.deepEqual([...WELCOME_CHAT_CUE_STAGES].sort((a, b) => a - b), WELCOME_CHAT_CUE_STAGES);
-    assert.ok(WELCOME_CHAT_CUE_STAGES[0] > WELCOME_CHAT_STAGES.reply, "your line and its reply come before the first cue");
-    assert.equal(WELCOME_CHAT_CUE_STAGES[WELCOME_CHAT_CUE_STAGES.length - 1], WELCOME_CHAT_STAGES.earned);
-    assert.equal(WELCOME_CHAT_SILENT_CUES.length, WELCOME_CHAT_CUE_STAGES.length);
-    assert.deepEqual([...WELCOME_CHAT_SILENT_CUES].sort((a, b) => a - b), WELCOME_CHAT_SILENT_CUES);
 });
 
 test("every card's image and voiceover is in public/", () => {
@@ -113,9 +94,9 @@ test("the bundled text file covers every on-screen string in English", () => {
     const keys = WELCOME_INTRO_LINEUP.flatMap((animal) => [
         animal.name, animal.power, animal.motto, animal.forYou,
         ...(animal.system?.domains.map((line) => line.text) ?? []),
-        ...(animal.chat ? [animal.chat.you, animal.chat.reply, animal.chat.step] : [])
+        ...(animal.trial ? [animal.trial.title, animal.trial.instruction, animal.trial.proofLabel, ...animal.trial.checks] : [])
     ]);
-    for (const key of [...keys, ...WELCOME_INTRO_LABELS, ...WELCOME_INTRO_BEATS.map((beat) => beat.title)]) {
+    for (const key of [...keys, "Collected", "For you", "Seen in", "Trial", "min", "Power earned", "Record", "AI check", "Earned", "Spot", "Collect", "Learn", "Language"]) {
         assert.ok(key in english, key);
     }
     for (const animal of WELCOME_INTRO_LINEUP) {
@@ -124,13 +105,11 @@ test("the bundled text file covers every on-screen string in English", () => {
 });
 
 test("a translated lineup swaps text but keeps stats, images, clips and cues", () => {
-    const strings = {"Hawaiian Crow": "Corbeau d'Hawaï", "I gave up drawing years ago. I'm no good at it.": "J'ai arrêté le dessin.", "Free jazz: each player acts on local cues.": "Free jazz : chacun réagit."};
+    const strings = {"Hawaiian Crow": "Corbeau d'Hawaï", "Video": "Vidéo", "Free jazz: each player acts on local cues.": "Free jazz : chacun réagit."};
     const lineup = localizeWelcomeLineup(strings);
     const crow = lineup.find((animal) => animal.image === "hawaiian-crow")!;
     assert.equal(crow.name, "Corbeau d'Hawaï");
-    assert.equal(crow.chat?.you, "J'ai arrêté le dessin.");
-    assert.equal(crow.chat?.step, WELCOME_INTRO_LINEUP[3].chat?.step, "an untranslated line stays English");
-    assert.deepEqual(crow.chat?.cueSeconds, WELCOME_INTRO_LINEUP[3].chat?.cueSeconds);
+    assert.equal(crow.trial?.proofLabel, "Vidéo");
     assert.equal(crow.voiceover, "welcome_vo_hawaiian_crow");
     const octopus = lineup.find((animal) => animal.image === "common-octopus")!;
     assert.equal(octopus.system?.domains[1].text, "Free jazz : chacun réagit.");
@@ -229,15 +208,11 @@ test("the text file offers all 45 app languages, each with every English key", (
     assert.equal(offered.length, 45);
     assert.deepEqual(offered, WELCOME_APP_LANGUAGES, "in the app's order");
     const englishKeys = Object.keys(file.languages.en);
-    const pending = new Set(WELCOME_INTRO_PENDING_KEYS);
     for (const code of offered) {
         assert.ok(WELCOME_LANGUAGE_NATIVE_NAMES[code], `${code} has a native name`);
-        // English and Indonesian carry the Spot · Talk · Grow keys; the rest read them in English for now.
-        const required = code === "en" || code === "id" ? englishKeys : englishKeys.filter((key) => !pending.has(key));
-        const missing = required.filter((key) => !file.languages[code][key]);
+        const missing = englishKeys.filter((key) => !file.languages[code][key]);
         assert.deepEqual(missing, [], `${code} translates every key`);
     }
-    for (const key of WELCOME_INTRO_PENDING_KEYS) assert.ok(file.languages.en[key] && file.languages.id[key], `${key} in English and Indonesian`);
 });
 
 test("short codes, tags and direction", () => {
