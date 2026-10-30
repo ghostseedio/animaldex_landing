@@ -12,7 +12,6 @@ import {idCaptionFixture} from "./id-caption-fixtures";
  *
  *   /dev/trial-motion                 every surface, every example
  *   /dev/trial-motion?only=koala-MID  one example
- *   /dev/trial-motion?detail=koala-MID  the Trial sheet, open
  *   /id/dev/trial-motion              the same with the Indonesian caption fixtures
  *                                     (grizzly-LOW is stale on purpose: English)
  *   /dev/trial-motion?sheet=koala-MID  the Discover post information sheet, open
@@ -32,7 +31,7 @@ const SLUGS: Record<string, string> = {
     "observation-sample": "cheetah"
 };
 
-export default function TrialMotionPreviewPage({params, searchParams}: {params: {locale: string}; searchParams: {only?: string; detail?: string; sheet?: string; t?: string}}) {
+export default function TrialMotionPreviewPage({params, searchParams}: {params: {locale: string}; searchParams: {only?: string; sheet?: string; t?: string}}) {
     if (process.env.NODE_ENV === "production") notFound();
 
     const all = examples as Example[];
@@ -70,7 +69,6 @@ export default function TrialMotionPreviewPage({params, searchParams}: {params: 
 
                 <TrialMotionPreviewClient
                     examples={shown}
-                    detailKey={searchParams.detail ?? null}
                     sheetKey={searchParams.sheet ?? null}
                     freezeAt={searchParams.t != null && Number.isFinite(Number(searchParams.t)) ? Number(searchParams.t) : null}
                 />

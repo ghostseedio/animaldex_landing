@@ -11,20 +11,19 @@ import {
 export const runtime = "nodejs";
 
 /**
- * Training for one animal: `get_species_training` to read it and
- * `submit_species_training` to answer it. Both RPCs are scoped to auth.uid()
- * server-side, so the right answers never leave the database and the reward
- * is paid there, never here.
+ * The Warmup for one animal (3.2, docs/your-step/SPEC.md): `get_species_training`
+ * to read it and `submit_species_training` to answer it. Both RPCs are scoped
+ * to auth.uid() server-side, so the right answers never leave the database and
+ * the reward (+5 XP, once) is paid there, never here. A miss locks nothing.
  *
  * A signed-out visitor gets a preview read from the same quiz row the RPC reads:
  * the real questions and choices, never an answer or an explanation, and
  * `unlocked: false`, so it can be read but not taken until they sign in. It
- * locks the Trials exactly as it will once they sign in; null (no quiz, or the
- * read failed) gates nothing.
+ * gates nothing.
  */
 
-/** `get_species_training` pays a fixed 10 XP and 1 Credit (iOS migration 20261011120000); it cannot be called signed out. */
-const PREVIEW_REWARD = {xp: 10, credits: 1};
+/** `submit_species_training` pays 5 XP and no Credits on the first pass (3.2); it cannot be called signed out. */
+const PREVIEW_REWARD = {xp: 5, credits: 0};
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function signedOutPreview(speciesProfileId: string): Promise<SpeciesTraining | null> {
@@ -65,7 +64,7 @@ async function signedOutPreview(speciesProfileId: string): Promise<SpeciesTraini
 }
 
 function errorCode(message: string) {
-    const match = /(not_authenticated|species_not_found|training_not_found|species_not_unlocked|answers_mismatch|training_locked)/i.exec(message);
+    const match = /(not_authenticated|species_not_found|training_not_found|species_not_unlocked|answers_mismatch)/i.exec(message);
     return match ? match[1].toLowerCase() : "training_failed";
 }
 

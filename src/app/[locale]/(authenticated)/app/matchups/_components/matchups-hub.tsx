@@ -9,32 +9,29 @@ import ChallengeSettingsSheet from "@/app/[locale]/(authenticated)/app/matchups/
 import MatchupsArenaTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-arena-tab";
 import MatchupsHistoryTab from "@/app/[locale]/(authenticated)/app/matchups/_components/matchups-history-tab";
 import {TrialHistoryList, useArenaTrials} from "@/app/[locale]/(authenticated)/app/matchups/_components/arena-trials";
-import {PlayPowersPage, PowerHistoryList} from "@/app/[locale]/(authenticated)/app/matchups/_components/play-powers-page";
+import {PowerHistoryList} from "@/app/[locale]/(authenticated)/app/matchups/_components/power-history-list";
 import type {MatchupHistoryItem, MatchupOpponent, MatchupResolveResult, MatchupRosterCapture} from "@/data/matchups-types";
 import type {SpeciesComparisonSummary} from "@/data/species-comparisons";
-import {completedTrialHistory, failedTrialHistory, isComplete} from "@/lib/animal-trials";
+import {completedTrialHistory, failedTrialHistory} from "@/lib/animal-trials";
 import {isOverallDraw} from "@/lib/matchup-battle-rules";
 import {
-    EMPTY_PLAY_JOURNEY,
     type PlayJourneyCard,
     type PlayJourneyFused,
-    type PlayJourneyStepFailure,
     type PlayPowerHistoryItem,
-    buildPlayJourney,
     sortPowerHistory
-} from "@/lib/play-journey";
+} from "@/lib/power-history";
 
 /**
- * The Play tab — iOS `MatchupsHubView` embedded in `IdentityHomeView`. Three
- * pages: Powers (every caught animal by the Power Loop step it waits on),
- * Comparisons (the arena), and History (Powers, Trials or Comparisons, set by
- * the last live page opened and by the chips on the page itself).
+ * Explore › Battles — iOS `MatchupsHubView`. Two pages: Comparisons (the
+ * arena) and History (Powers, Trials or Comparisons, set by the chips on the
+ * page). The old Powers page, every caught animal by the Power Loop step it
+ * waited on, is gone in 3.2 (docs/your-step/SPEC.md, section 5): a Power is
+ * earned with the animal, one step at a time in its chat.
  */
-export type PlayHubSegment = "powers" | "comparisons" | "history";
+export type PlayHubSegment = "comparisons" | "history";
 type HistorySubject = "powers" | "trials" | "comparisons";
 
 const SEGMENTS: Array<{id: PlayHubSegment; label: string}> = [
-    {id: "powers", label: "Powers"},
     {id: "comparisons", label: "Comparisons"},
     {id: "history", label: "History"}
 ];
@@ -53,8 +50,6 @@ const FAIL = "rgb(250,115,133)";
 type JourneyPayload = {
     loaded?: boolean;
     cards?: PlayJourneyCard[];
-    trainedSpecies?: string[] | null;
-    failures?: PlayJourneyStepFailure[] | null;
     fused?: PlayJourneyFused[] | null;
     earnedPowers?: Array<{speciesProfileId: string; speciesDisplayName: string; powerName: string; route: string | null; earnedAt: string | null}> | null;
     summary?: {wins: number; losses: number; netCredits: number};
@@ -85,7 +80,7 @@ export default function MatchupsHub({
     initialHistory,
     initialPopularBreakdowns,
     initialTargetId,
-    initialSegment = "powers"
+    initialSegment = "comparisons"
 }: {
     locale: string;
     viewerUserId: string;
@@ -101,7 +96,7 @@ export default function MatchupsHub({
     const {applyDelta} = useAppCredits();
     // A target always opens on Comparisons, where its picker lives.
     const [segment, setSegment] = useState<PlayHubSegment>(initialTargetId ? "comparisons" : initialSegment);
-    const [historySubject, setHistorySubject] = useState<HistorySubject>(initialTargetId || initialSegment === "comparisons" ? "comparisons" : "powers");
+    const [historySubject, setHistorySubject] = useState<HistorySubject>("comparisons");
     const trials = useArenaTrials(true);
     const [arena, setArena] = useState(initialArena);
     const [history, setHistory] = useState(initialHistory);
@@ -110,8 +105,6 @@ export default function MatchupsHub({
     const [targetError, setTargetError] = useState<string | null>(null);
     const [journeyInputs, setJourneyInputs] = useState<{[K in keyof Omit<JourneyPayload, "loaded" | "summary">]-?: NonNullable<JourneyPayload[K]>}>({
         cards: [],
-        trainedSpecies: [],
-        failures: [],
         fused: [],
         earnedPowers: []
     });
@@ -128,8 +121,6 @@ export default function MatchupsHub({
             // A failed read keeps what the page already had.
             setJourneyInputs((current) => ({
                 cards: payload.loaded && Array.isArray(payload.cards) ? payload.cards : current.cards,
-                trainedSpecies: payload.trainedSpecies ?? current.trainedSpecies,
-                failures: payload.failures ?? current.failures,
                 fused: payload.fused ?? current.fused,
                 earnedPowers: payload.earnedPowers ?? current.earnedPowers
             }));
@@ -144,7 +135,7 @@ export default function MatchupsHub({
         void refreshJourney();
     }, [refreshJourney]);
 
-    // Back on the tab after a card's Play tab: the steps may have moved.
+    // Back on the tab after a card's chat: a Power may have been earned.
     useEffect(() => {
         const onVisible = () => {
             if (document.visibilityState !== "visible") return;
@@ -154,20 +145,6 @@ export default function MatchupsHub({
         document.addEventListener("visibilitychange", onVisible);
         return () => document.removeEventListener("visibilitychange", onVisible);
     }, [refreshJourney, trials]);
-
-    const journey = useMemo(() => {
-        if (!journeyLoaded) return EMPTY_PLAY_JOURNEY;
-        const allTrials = [...trials.history, ...trials.openTrials];
-        return buildPlayJourney({
-            cards: journeyInputs.cards,
-            trainedSpecies: journeyInputs.trainedSpecies,
-            failures: journeyInputs.failures,
-            earnedSpecies: journeyInputs.earnedPowers.map((power) => power.speciesProfileId),
-            openTrials: trials.openTrials,
-            completedTrialSpecies: allTrials.filter(isComplete).map((trial) => trial.speciesProfileId),
-            fused: journeyInputs.fused
-        });
-    }, [journeyInputs, journeyLoaded, trials.history, trials.openTrials]);
 
     const earnedFused = useMemo(() => journeyInputs.fused.filter((power) => power.earnedAt), [journeyInputs.fused]);
 
@@ -302,7 +279,6 @@ export default function MatchupsHub({
 
     function selectSegment(next: PlayHubSegment) {
         setSegment(next);
-        if (next === "powers") setHistorySubject("powers");
         if (next === "comparisons") setHistorySubject("comparisons");
         if (next === "history") void trials.refresh();
     }
@@ -390,9 +366,7 @@ export default function MatchupsHub({
             </div>
 
             <div className="!mt-0">
-                {segment === "powers" ? (
-                    <PlayPowersPage journey={journey} loaded={journeyLoaded} onFindBattle={() => selectSegment("comparisons")} />
-                ) : segment === "comparisons" ? (
+                {segment === "comparisons" ? (
                     <MatchupsArenaTab
                         opponents={arena}
                         roster={roster}
@@ -407,7 +381,7 @@ export default function MatchupsHub({
                         history={trials.history}
                         postIds={trials.postIds}
                         didLoad={trials.didLoad}
-                        onNote={trials.note}
+                        cards={journeyInputs.cards}
                     />
                 ) : (
                     <MatchupsHistoryTab history={history} locale={locale} />

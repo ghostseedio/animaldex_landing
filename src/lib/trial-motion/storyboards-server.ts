@@ -40,26 +40,6 @@ export async function readTrialMotionStoryboards(
     return found;
 }
 
-/** Fills `motionStoryboard` on rows that arrived without one. Never fails the caller. */
-export async function attachTrialMotionStoryboards<T extends {speciesProfileId: string; frequency: string; motionStoryboard: TrialStoryboard | null}>(
-    supabase: SupabaseClient,
-    trials: T[]
-): Promise<T[]> {
-    const missing = trials.filter((trial) => !trial.motionStoryboard);
-    if (!missing.length) return trials;
-    try {
-        const storyboards = await readTrialMotionStoryboards(supabase, missing.map((trial) => trial.speciesProfileId));
-        if (!storyboards.size) return trials;
-        return trials.map((trial) => {
-            if (trial.motionStoryboard) return trial;
-            const storyboard = storyboards.get(trialMotionKey(trial.speciesProfileId, trial.frequency));
-            return storyboard ? {...trial, motionStoryboard: storyboard} : trial;
-        });
-    } catch {
-        return trials;
-    }
-}
-
 /** `<species id lowercased>:<FREQUENCY>` → caption row in `lang`. Empty on any error: English shows. */
 export async function readTrialMotionCaptionRows(
     supabase: SupabaseClient,

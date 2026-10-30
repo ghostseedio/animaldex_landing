@@ -15,13 +15,14 @@ import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
 import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
 import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
-import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
-import {trainingCanStart, trainingIsMissed} from "@/lib/species-training";
+import {trainingCanStart} from "@/lib/species-training";
 import BondPanel from "@/components/companions/bond-panel";
+import {noteOpenStep, useOpenStepUpdates} from "@/components/companions/use-steps";
+import type {AnimalStep} from "@/lib/your-step";
+import {trialPickedMessage} from "@/lib/your-step-words";
 import {useAnimalBond, useCompanionLevel} from "@/components/companions/use-companions";
 import {useFusedPowers} from "@/components/animal-detail/fused-powers/use-fused-powers";
 import {FusedPowersContext, type FusedPowersContextValue} from "@/components/animal-detail/fused-powers/fused-powers-context";
-import {useSpeciesUnlock} from "@/components/animal-detail/animal-trials/use-species-unlock";
 import {useAnimalPower, usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
 import CaptureMediaManager from "@/components/animal-detail/capture-media/capture-media-manager";
 import {CaptureMeetBeat, NewSpeciesCard, RewardShowcase} from "@/components/animal-detail/capture-reveal/capture-reveal";
@@ -185,7 +186,6 @@ export default function CaptureDetailClient({
         if (requestedTab === "bond" && viewer.isOwner) return "bond";
         return "about";
     });
-    const trialUnlock = useSpeciesUnlock([speciesProfileId], {ownsThisCapture: viewer.isOwner});
     const animalPower = useAnimalPower(speciesProfileId);
     // The bond: one level per animal on your own cards, and the Bond tab.
     const companionRow = useCompanionLevel(speciesProfileId, viewer.isOwner);
@@ -213,12 +213,27 @@ export default function CaptureDetailClient({
     }, [capture.id, viewer.isOwner]);
     // "Luna the Gray Wolf" (iOS: the card's own nickname and the animal).
     const companionName = companionDisplayName(nickname, speciesName, words.displayName);
-    // The lesson check (Training) opens from the Bond tab: the website's chat
-    // has no lesson-check card for the animal to hand over.
+    // The Warmup (3.2) is offered on the Bond tab and taken in the chat, where
+    // its result goes to the animal as the person's own message.
     const speciesTraining = useSpeciesTraining(viewer.isOwner ? speciesProfileId : null);
-    const [showsLessonCheck, setShowsLessonCheck] = useState(false);
-    // Battle is earned: on your own card it opens once the Power is (SPEC
-    // phase 3). A failed or missing Power read locks nothing.
+    // The open step, kept in step with the chat and Companions.
+    const [openStep, setOpenStep] = useState<AnimalStep | null>(null);
+    useEffect(() => {
+        setOpenStep(animalBond.bond?.openStep ?? null);
+    }, [animalBond.bond]);
+    const reloadBond = animalBond.reload;
+    useOpenStepUpdates(viewer.isOwner ? speciesProfileId : null, useCallback((step: AnimalStep | null) => {
+        setOpenStep(step);
+        // A step done or dropped in the chat moves the bond and the record.
+        if (!step) void reloadBond();
+    }, [reloadBond]));
+    const changeStep = useCallback((step: AnimalStep | null) => {
+        setOpenStep(step);
+        noteOpenStep(speciesProfileId, step);
+    }, [speciesProfileId]);
+    // Battle is earned: on your own card its battles open once the Power is
+    // (SPEC phase 3); the stats always show. A failed or missing Power read
+    // locks nothing.
     const battleLocked = viewer.isOwner && Boolean(animalPower.power) && animalPower.power?.isEarned !== true;
     // This card's fused Powers, for Fusion on the Battle tab. The owner's own card only.
     const fusedPowers = useFusedPowers(viewer.isOwner ? capture.id : null);
@@ -580,7 +595,7 @@ export default function CaptureDetailClient({
                             </div>
                         ) : null}
                         {/* The Power, its story, System Dynamics, then the animal
-                            itself. No form and no Prove It: the Power is earned
+                            itself. No form: the Power is earned
                             with the animal, in its chat. */}
                         {resolvedPowerProfile && !capture.hasUncertaintyFallback ? (
                             <div className="-mx-5">
@@ -588,7 +603,6 @@ export default function CaptureDetailClient({
                                     profile={resolvedPowerProfile}
                                     power={animalPower.power}
                                     speciesProfileId={speciesProfileId}
-                                    onEarnPower={null}
                                 />
                             </div>
                         ) : null}
@@ -628,18 +642,19 @@ export default function CaptureDetailClient({
                                 slug={resolvedSpeciesSlug}
                                 name={companionName}
                                 powerName={resolvedPowerProfile?.principleName ?? null}
+                                openStep={openStep}
+                                onStepChange={changeStep}
                                 onTalk={() => talk()}
-                                onAsk={(message) => talk(message)}
-                                onLessonCheck={trainingCanStart(speciesTraining.training)
-                                    ? () => setShowsLessonCheck(true)
-                                    : null}
-                                lessonCheckMissed={trainingIsMissed(speciesTraining.training)}
+                                // "I did it" tells the animal, in its chat.
+                                onDidIt={() => openAsk(undefined, {kind: "report"})}
+                                onDropped={() => talk(words.journey.step.otherMessage)}
+                                onTrialPicked={(frequency) => talk(trialPickedMessage(frequency, words) ?? undefined)}
+                                warmup={speciesTraining.training?.available ? {
+                                    onTake: trainingCanStart(speciesTraining.training) ? () => openAsk(undefined, {kind: "warmup"}) : null,
+                                    passed: speciesTraining.training.completed,
+                                    questionCount: speciesTraining.training.questions.length
+                                } : null}
                                 onBondChanged={animalBond.setBond}
-                                onRefresh={() => {
-                                    void animalBond.reload();
-                                    void animalPower.reload();
-                                }}
-                                canAttemptTrials={trialUnlock.canAttempt}
                                 locale={locale}
                                 words={words}
                             />
@@ -652,13 +667,29 @@ export default function CaptureDetailClient({
                         hidden={tab !== "battle"}
                         className={tab === "battle" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
+                        {capture.isEligibleCapture && !capture.hasUncertaintyFallback ? (
+                            <AnimalStatsPanel
+                                speciesName={speciesName}
+                                speciesSlug={resolvedSpeciesSlug}
+                                baseStats={capture.baseGameStats}
+                                effectiveStats={capture.effectiveGameStats}
+                                totalProgressionXP={capture.totalProgressionXP}
+                                recentProgressionSource={capture.recentProgressionSource}
+                                captureGrade={capture.captureGrade}
+                                settingTag={capture.settingTag}
+                                conservationTier={capture.conservationTier}
+                                bondChip={bondChip}
+                            />
+                        ) : null}
+                        {rankings ? <div className="mt-5">{rankings}</div> : null}
                         {battleLocked ? (
-                            // Battle is earned: the Power first, with the animal.
-                            <div className="-mx-5 flex flex-col items-start gap-2 border-y border-white/[0.08] px-5 py-6">
+                            // The stats always show; only its battles wait for the Power,
+                            // which one step done together earns (3.2).
+                            <div className="-mx-5 mt-5 flex flex-col items-start gap-2 border-y border-white/[0.08] px-5 py-6">
                                 <p className="font-display text-xl font-black text-white">
-                                    {fillWords(words.bond.battleLocked, {name: companionName})}
+                                    {fillWords(words.journey.battle.locked, {name: companionName})}
                                 </p>
-                                <p className="text-sm leading-6 text-white/60">{words.bond.battleLockedDetail}</p>
+                                <p className="text-sm leading-6 text-white/60">{words.journey.battle.lockedDetail}</p>
                                 <button
                                     type="button"
                                     onClick={() => talk()}
@@ -669,21 +700,6 @@ export default function CaptureDetailClient({
                             </div>
                         ) : (
                             <>
-                                {capture.isEligibleCapture && !capture.hasUncertaintyFallback ? (
-                                    <AnimalStatsPanel
-                                        speciesName={speciesName}
-                                        speciesSlug={resolvedSpeciesSlug}
-                                        baseStats={capture.baseGameStats}
-                                        effectiveStats={capture.effectiveGameStats}
-                                        totalProgressionXP={capture.totalProgressionXP}
-                                        recentProgressionSource={capture.recentProgressionSource}
-                                        captureGrade={capture.captureGrade}
-                                        settingTag={capture.settingTag}
-                                        conservationTier={capture.conservationTier}
-                                        bondChip={bondChip}
-                                    />
-                                ) : null}
-                                {rankings ? <div className="mt-5">{rankings}</div> : null}
                                 <div className="mt-5">
                                     <FusedPowersContext.Provider value={viewer.isOwner ? fusedContext : null}>
                                         {play}
@@ -766,26 +782,6 @@ export default function CaptureDetailClient({
                         talk();
                     }}
                     onSeeCard={() => setReveal(null)}
-                />
-            ) : null}
-
-            {showsLessonCheck && speciesTraining.training ? (
-                <TrainingQuiz
-                    training={speciesTraining.training}
-                    powerName={resolvedPowerProfile?.principleName}
-                    onPassed={() => {
-                        void animalBond.reload();
-                        void animalPower.reload();
-                    }}
-                    onReadPower={() => {
-                        setShowsLessonCheck(false);
-                        setTab("about");
-                    }}
-                    onClose={() => {
-                        setShowsLessonCheck(false);
-                        void speciesTraining.reload();
-                        void animalBond.reload();
-                    }}
                 />
             ) : null}
 

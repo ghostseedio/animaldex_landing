@@ -25,6 +25,16 @@
  * has found what it is helping them with, "Not this any more" to let it go,
  * and under the reply where it happened, a step done together or another of
  * their animals it sent them to.
+ *
+ * 3.2 "Your step" (docs/your-step/SPEC.md, section 5): the step the animal
+ * set is a card under the reply that set it, and pinned at the top while it
+ * is open, keyed off `companion.open_step`, never off reply text. "I did it"
+ * opens the report composer (their words, and a photo or video if they
+ * like), which is attached to the step and sent as their own message with
+ * `step_report`. The first done step earns the Power, shown full screen;
+ * otherwise "Done together · +5 XP". The animal's `training` card is the
+ * Warmup (no locks, the result sent as their message) and its `trial` card
+ * opens "{name}'s Trials", where one can be made their step.
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
@@ -53,10 +63,21 @@ import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/spec
 import {
     EMPTY_COMPANION_LOOP,
     companionDisplayName,
+    normalizeCompanionLoop,
     referralCapturePath,
     type AskCompanionEvent,
     type AskCompanionLoop
 } from "@/lib/ask-animaldex/companion-loop";
+import {askReplyCards, type AskChatCard} from "@/lib/ask-animaldex/chat-cards";
+import {cleanStepReport, isStepVideoFile, reportingStep, stepCardState, type AnimalStep, type StepFrequency} from "@/lib/your-step";
+import {stepProblemText, trialPickedMessage, warmupOfferText, warmupResultMessage} from "@/lib/your-step-words";
+import type {AnimalTrial} from "@/lib/animal-trials";
+import {notingTrainingResult, trainingCanStart, type SpeciesTrainingResult} from "@/lib/species-training";
+import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
+import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
+import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
+import {acceptStep, attachStepReport, dropStep, noteOpenStep, stepFromTrial, useOpenStepUpdates} from "@/components/companions/use-steps";
+import {StepCard, StepDoneChip, StepEarnedMoment, StepReportComposer, TrialRows, type StepReportDraft} from "@/components/companions/step-views";
 import {bondChipText, bondStageText, decodeChatBond, fillWords, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
@@ -170,9 +191,6 @@ export type AskDrawerLabels = {
     /** The companion loop on the owner's chat, under the animal's name. */
     workingOn: string;
     notThisAnyMore: string;
-    doneTogether: string;
-    powerYours: string;
-    powerWaitsForTraining: string;
     talkTo: string;
     talkToHint: string;
     /** A Trial's own thread. */
@@ -191,8 +209,6 @@ export type AskDrawerLabels = {
     checkInNotNow: string;
     checkInStop: string;
     checkInFailed: string;
-    /** Done on the check-in for the step the animal set: sent to the animal as the reader's message. */
-    checkInDidIt: string;
     report: string;
     reportTitle: string;
     reportOffensive: string;
@@ -348,7 +364,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         locale,
         close,
         takePendingQuestion,
-        questionRequest
+        questionRequest,
+        takePendingAction,
+        actionRequest
     } = useAskAnimalDex();
     const signInHref = signInHrefFor(usePathname());
     const [context, setContext] = useState<AskContextPayload | null>(null);
@@ -385,6 +403,26 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     );
     // What the animal is helping them with, and the step it set.
     const [companionLoop, setCompanionLoop] = useState<AskCompanionLoop | null>(null);
+    // The loop's first read has answered (or failed): a pending "I did it" can be settled.
+    const [loopLoaded, setLoopLoaded] = useState(false);
+    const words = labels.companions;
+    const openStep = ownerChat ? companionLoop?.openStep ?? null : null;
+    /** The step as the server now holds it, here and on every other surface showing it. */
+    const setOpenStep = useCallback((step: AnimalStep | null) => {
+        setCompanionLoop((current) => ({...(current ?? EMPTY_COMPANION_LOOP), openStep: step, openTrial: step?.step ?? null}));
+        noteOpenStep(companionSpeciesProfileId, step);
+    }, [companionSpeciesProfileId]);
+    // Accepted, dropped or made from a Trial on the card's Bond tab.
+    useOpenStepUpdates(ownerChat ? companionSpeciesProfileId : null, useCallback((step: AnimalStep | null) => {
+        setCompanionLoop((current) => (current?.openStep?.id === step?.id && current?.openStep?.acceptedAt === step?.acceptedAt
+            ? current
+            : {...(current ?? EMPTY_COMPANION_LOOP), openStep: step, openTrial: step?.step ?? null}));
+    }, []));
+    // What they told the animal in their last report, for the earned moment.
+    const lastReportRef = useRef<{text: string; media: {url: string; kind: "photo" | "video"} | null} | null>(null);
+    const [earnedMoment, setEarnedMoment] = useState<{account: string | null; media: {url: string; kind: "photo" | "video"} | null} | null>(null);
+    // "I did it": the report composer.
+    const [showingReport, setShowingReport] = useState(false);
     // The bond: the header chip, and the sheet it opens (SPEC phase 2). The
     // chip follows `done.bond`; the sheet reads `animal_bond_v1`.
     const animalBond = useAnimalBond(ownerChat ? companionSpeciesProfileId : null);
@@ -419,7 +457,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         principleName: hints.principleName,
         viewer: {signedIn: context?.signedIn ?? false, hasWildProfile: context?.hasWildProfile ?? false},
         ownerChat,
-        onCompanion: (update) => setCompanionLoop(update.loop),
+        onCompanion: (update) => {
+            setCompanionLoop(update.loop);
+            noteOpenStep(companionSpeciesProfileId, update.loop.openStep);
+            const done = update.event.stepDone;
+            if (!done) return;
+            void reloadCompanions();
+            // The first done step earns the Power: the full-screen moment, with their own words.
+            if (done.powerEarned) {
+                setEarnedMoment({account: lastReportRef.current?.text ?? null, media: lastReportRef.current?.media ?? null});
+            }
+            lastReportRef.current = null;
+        },
         onBond: (raw) => {
             const next = decodeChatBond(raw);
             if (!next) return;
@@ -596,6 +645,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     // The loop as it stands when the chat opens; replies keep it current.
     useEffect(() => {
         setCompanionLoop(null);
+        setLoopLoaded(false);
         if (!ownerChat || !companionSpeciesProfileId) return;
         let cancelled = false;
         void fetch(`/api/ask/companion?speciesProfileId=${encodeURIComponent(companionSpeciesProfileId)}`)
@@ -603,17 +653,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             .then((payload: {loop?: unknown} | null) => {
                 // The route answers the loop already read (`parseCompanionFocus`
                 // on the RPC's row); reading it a second time lost the focus.
-                const raw = payload?.loop && typeof payload.loop === "object" ? payload.loop as Partial<AskCompanionLoop> : null;
-                const loop: AskCompanionLoop | null = raw
-                    ? {
-                        focus: typeof raw.focus === "string" && raw.focus ? raw.focus : null,
-                        openTrial: typeof raw.openTrial === "string" && raw.openTrial ? raw.openTrial : null,
-                        yourTrialsDone: typeof raw.yourTrialsDone === "number" ? raw.yourTrialsDone : 0
-                    }
-                    : null;
+                const loop = normalizeCompanionLoop(payload?.loop);
                 if (!cancelled && loop) setCompanionLoop(loop);
             })
-            .catch(() => undefined);
+            .catch(() => undefined)
+            .finally(() => {
+                if (!cancelled) setLoopLoaded(true);
+            });
         return () => {
             cancelled = true;
         };
@@ -623,7 +669,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const clearCompanionFocus = useCallback(() => {
         if (!companionSpeciesProfileId) return;
         const previous = companionLoop;
+        // Letting the focus go drops the step on it too.
         setCompanionLoop({...EMPTY_COMPANION_LOOP, yourTrialsDone: previous?.yourTrialsDone ?? 0});
+        noteOpenStep(companionSpeciesProfileId, null);
         void fetch("/api/ask/companion", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -632,7 +680,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             .then((response) => {
                 if (!response.ok) throw new Error(String(response.status));
             })
-            .catch(() => setCompanionLoop(previous));
+            .catch(() => {
+                setCompanionLoop(previous);
+                noteOpenStep(companionSpeciesProfileId, previous?.openStep ?? null);
+            });
     }, [companionLoop, companionSpeciesProfileId]);
 
     /**
@@ -1060,18 +1111,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
 
     /**
      * One of the three chips under a check-in the animal raised. "Done" on
-     * the check-in for the step the animal set tells the animal instead,
-     * which asks how it went and counts it (AnimalDex e84e88e2); the
+     * the check-in for the step the animal set opens the report instead
+     * ("I did it", 3.2): the animal hears how it went and counts it, and the
      * check-in closes with the step.
      */
     const resolveFollowUp = useCallback(async (message: AskMessage, resolution: AskFollowUpResolution): Promise<boolean> => {
         const followUp = message.followUp;
         if (!followUp) return false;
-        const step = companionLoop?.openTrial?.trim().toLowerCase() ?? "";
+        const step = openStep?.step.trim().toLowerCase() ?? "";
         const topic = followUp.topic.trim().toLowerCase();
         if (resolution === "done" && !isSending && step && topic && step.startsWith(topic)) {
             updateMessage(message.id, {followUpResolution: "done"});
-            submit(labels.checkInDidIt.replace("{step}", followUp.topic), "chip");
+            setShowingReport(true);
             return true;
         }
         try {
@@ -1086,7 +1137,145 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         }
         updateMessage(message.id, {followUpResolution: resolution});
         return true;
-    }, [companionLoop, isSending, updateMessage, submit, labels.checkInDidIt]);
+    }, [openStep, isSending, updateMessage]);
+
+    // MARK: Your step (3.2)
+
+    const [stepBusy, setStepBusy] = useState(false);
+    /** Why the last step button did not go through, in words. */
+    const [stepProblem, setStepProblem] = useState<string | null>(null);
+    /** "I'll do it" accepts; "I did it" (or "Tell {name}" again) opens the report. */
+    const stepPrimary = useCallback((step: AnimalStep) => {
+        if (stepCardState(step) !== "offered") {
+            setShowingReport(true);
+            return;
+        }
+        setStepBusy(true);
+        setStepProblem(null);
+        void acceptStep(step).then((result) => {
+            setStepBusy(false);
+            if (result.ok) setOpenStep(result.value);
+            else setStepProblem(stepProblemText(result.code, words));
+        });
+    }, [setOpenStep, words]);
+    /** "Something else": the step is dropped, then they ask for a different one, as their own message. */
+    const stepOther = useCallback((step: AnimalStep) => {
+        if (isSending && greetingState !== "loading") return;
+        setStepBusy(true);
+        setStepProblem(null);
+        void dropStep(step).then((result) => {
+            setStepBusy(false);
+            if (!result.ok) {
+                setStepProblem(stepProblemText(result.code, words));
+                return;
+            }
+            setOpenStep(null);
+            submit(words.journey.step.otherMessage, "chip");
+        });
+    }, [isSending, greetingState, setOpenStep, submit, words]);
+    /** The report: uploaded and attached first, then sent as their own message with `step_report`. */
+    const sendStepReport = useCallback(async (draft: StepReportDraft): Promise<string | null> => {
+        if (!openStep || !companionSpeciesProfileId) return stepProblemText("step_not_open", words);
+        if (isSending && greetingState !== "loading") return stepProblemText(null, words);
+        const text = cleanStepReport(draft.text);
+        const attached = await attachStepReport({step: openStep, speciesProfileId: companionSpeciesProfileId, account: text, file: draft.file});
+        if (!attached.ok) return stepProblemText(attached.code, words);
+        lastReportRef.current = {
+            text,
+            media: draft.file && draft.previewUrl ? {url: draft.previewUrl, kind: isStepVideoFile(draft.file) ? "video" : "photo"} : null
+        };
+        setOpenStep(reportingStep(openStep));
+        setShowingReport(false);
+        setShowingBond(false);
+        speech.stop();
+        speech.prime();
+        void send(text, {stepReportId: openStep.id});
+        return null;
+    }, [openStep, companionSpeciesProfileId, isSending, greetingState, setOpenStep, speech, send, words]);
+
+    // The Warmup: the animal's `training` card, or the Bond tab.
+    const warmupTraining = useSpeciesTraining(ownerChat ? companionSpeciesProfileId : null);
+    const training = warmupTraining.training;
+    const [warmupFor, setWarmupFor] = useState<{messageId: string | null} | null>(null);
+    const openWarmup = useCallback((messageId: string | null) => {
+        if (!trainingCanStart(training)) return;
+        speech.stop();
+        setWarmupFor({messageId});
+    }, [training, speech]);
+    /** Either way, the result goes to the animal as their own message, which reacts in character. */
+    const closeWarmup = useCallback((result: SpeciesTrainingResult | null) => {
+        const messageId = warmupFor?.messageId ?? null;
+        setWarmupFor(null);
+        if (!result) return;
+        if (result.passed && training) warmupTraining.setTraining(notingTrainingResult(training, result));
+        if (messageId && result.passed) updateMessage(messageId, {cardsDismissed: true});
+        submit(warmupResultMessage(result, words), "chip");
+    }, [warmupFor, training, warmupTraining, updateMessage, submit, words]);
+
+    // "{name}'s Trials", from the animal's `trial` card: one of them can be their step.
+    const captionLanguage = useTrialMotionCaptionLanguage();
+    const [trialPicker, setTrialPicker] = useState<{highlight: StepFrequency | null; messageId: string | null} | null>(null);
+    const [trials, setTrials] = useState<AnimalTrial[] | null>(null);
+    const [trialBusy, setTrialBusy] = useState<StepFrequency | null>(null);
+    const [trialProblem, setTrialProblem] = useState<string | null>(null);
+    useEffect(() => {
+        setTrials(null);
+    }, [companionSpeciesProfileId]);
+    useEffect(() => {
+        if (!trialPicker || trials !== null || !companionSpeciesProfileId) return;
+        let cancelled = false;
+        void fetch(`/api/app/animal-trials?speciesProfileId=${encodeURIComponent(companionSpeciesProfileId)}${captionLanguage ? `&lang=${captionLanguage}` : ""}`, {
+            headers: {Accept: "application/json"}
+        })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload: {trials?: AnimalTrial[]} | null) => {
+                if (!cancelled) setTrials(payload?.trials && Array.isArray(payload.trials) ? payload.trials : []);
+            })
+            .catch(() => {
+                if (!cancelled) setTrials([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [trialPicker, trials, companionSpeciesProfileId, captionLanguage]);
+    /** "Make this my step": the Trial is their step, and they tell the animal they will try it. */
+    const makeTrialStep = useCallback((frequency: StepFrequency) => {
+        if (!companionSpeciesProfileId) return;
+        setTrialBusy(frequency);
+        setTrialProblem(null);
+        void stepFromTrial(companionSpeciesProfileId, frequency).then((result) => {
+            setTrialBusy(null);
+            if (!result.ok) {
+                setTrialProblem(stepProblemText(result.code, words));
+                return;
+            }
+            setOpenStep(result.value);
+            if (trialPicker?.messageId) updateMessage(trialPicker.messageId, {cardsDismissed: true});
+            setTrialPicker(null);
+            setShowingBond(false);
+            const message = trialPickedMessage(frequency, words);
+            if (message) submit(message, "chip");
+        });
+    }, [companionSpeciesProfileId, setOpenStep, submit, words, trialPicker, updateMessage]);
+
+    // Opened from the card's Bond tab with "I did it" or the Warmup: settled once
+    // the loop (or the quiz) has been read. With no step open, nothing opens.
+    const pendingActionRef = useRef<"report" | "warmup" | null>(null);
+    useEffect(() => {
+        const action = takePendingAction();
+        if (action) pendingActionRef.current = action.kind;
+    }, [actionRequest, takePendingAction]);
+    useEffect(() => {
+        const pending = pendingActionRef.current;
+        if (!pending || !ownerChat) return;
+        if (pending === "report" && loopLoaded) {
+            pendingActionRef.current = null;
+            if (openStep) setShowingReport(true);
+        } else if (pending === "warmup" && warmupTraining.didLoad) {
+            pendingActionRef.current = null;
+            openWarmup(null);
+        }
+    }, [actionRequest, ownerChat, loopLoaded, openStep, warmupTraining.didLoad, openWarmup]);
 
     /** Report this reply: files it for review, as the reader. */
     const sendReport = useCallback(async (choice: AskReportChoice) => {
@@ -1131,6 +1320,61 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         trackEvent("pro_intro_shown", {moment: "first_chat", surface: "web"});
         setShowsProIntro(true);
     }, [showsProIntro, finishedReplies, quota.isPro, quota.remaining, quota.reached, ownerChat, aboutTrial, animalTalking]);
+
+    /**
+     * Under a finished reply on the owner's chat: the step card, while the
+     * step it set is the open one, and the Warmup or Trials card the animal
+     * offered (never its own words: only its kind is read).
+     */
+    const stepBusyNow = stepBusy || (isSending && greetingState !== "loading");
+    const replyBand = (message: AskMessage) => {
+        if (!ownerChat || message.role !== "assistant" || message.status !== "complete") return null;
+        if (pacer.messageId === message.id && pacer.revealing) return null;
+        const stepSet = message.companionEvent?.stepSet;
+        const step = openStep && stepSet?.id === openStep.id ? openStep : null;
+        const cards = message.cardsDismissed ? [] : askReplyCards(message.text);
+        if (!step && cards.length === 0) return null;
+        return (
+            <>
+                {step ? (
+                    <StepCard
+                        step={step}
+                        speciesProfileId={companionSpeciesProfileId}
+                        name={speakerName}
+                        words={words}
+                        variant="inline"
+                        busy={stepBusyNow}
+                        problem={stepProblem}
+                        onPrimary={() => stepPrimary(step)}
+                        onOther={() => stepOther(step)}
+                    />
+                ) : null}
+                {cards.map((card) => (
+                    <ChatOfferCard
+                        key={card.kind}
+                        card={card}
+                        words={words}
+                        name={speakerName}
+                        powerName={hints.principleName}
+                        warmup={training?.available ? {
+                            canStart: trainingCanStart(training),
+                            passed: training.completed,
+                            questionCount: training.questions.length
+                        } : null}
+                        disabled={stepBusyNow}
+                        onTakeWarmup={() => openWarmup(message.id)}
+                        onSkip={() => updateMessage(message.id, {cardsDismissed: true})}
+                        onTrials={(highlight) => {
+                            setTrialProblem(null);
+                            setShowingBond(false);
+                            setShowingMemory(false);
+                            setTrialPicker({highlight, messageId: message.id});
+                        }}
+                    />
+                ))}
+            </>
+        );
+    };
 
     // Today's messages are spent: what to say and the reader's next step. A
     // card under the site-wide assistant's answers; in the animal's thread it
@@ -1436,8 +1680,51 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     </div>
                 ) : null}
 
+                {openStep && messenger && !showingBond && !showingMemory && !showingSoundCredits && !trialPicker ? (
+                    // The open step, pinned while it is open (3.2).
+                    <StepCard
+                        step={openStep}
+                        speciesProfileId={companionSpeciesProfileId}
+                        name={speakerName}
+                        words={words}
+                        variant="pinned"
+                        busy={stepBusyNow}
+                        problem={stepProblem}
+                        onPrimary={() => stepPrimary(openStep)}
+                        onOther={() => stepOther(openStep)}
+                    />
+                ) : null}
+
                 <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-                    {showingBond && ownerChat ? (
+                    {trialPicker && ownerChat ? (
+                        // "{name}'s Trials": Easy, Medium, Hard, each with its loop.
+                        <div className="-mx-4 -my-4 flex flex-col">
+                            <div className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setTrialPicker(null)}
+                                    className="inline-flex min-h-9 items-center gap-1.5 text-sm font-bold text-white/70 hover:text-white"
+                                >
+                                    <span aria-hidden="true">←</span> {labels.memoryBack}
+                                </button>
+                            </div>
+                            {trials === null ? (
+                                <p className="px-5 py-6 text-sm text-white/40">…</p>
+                            ) : (
+                                <TrialRows
+                                    trials={trials}
+                                    name={speakerName}
+                                    words={words}
+                                    openStep={openStep}
+                                    highlight={trialPicker.highlight}
+                                    busyFrequency={trialBusy}
+                                    closeLabel={labels.close}
+                                    onMakeStep={(trial) => makeTrialStep(trial.frequency)}
+                                />
+                            )}
+                            {trialProblem ? <p role="alert" className="px-5 py-3 text-xs text-white/60">{trialProblem}</p> : null}
+                        </div>
+                    ) : showingBond && ownerChat ? (
                         <div className="-mx-4 -my-4">
                             <BondPanel
                                 bond={animalBond.bond}
@@ -1446,20 +1733,38 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 slug={resolvedSubject.slug}
                                 name={animalName ? companionDisplayName(nickname, animalName, labels.companions.displayName) : labels.title}
                                 powerName={hints.principleName}
+                                openStep={openStep}
+                                onStepChange={setOpenStep}
                                 onTalk={() => setShowingBond(false)}
-                                onAsk={(message) => {
+                                onDidIt={() => {
                                     setShowingBond(false);
-                                    submit(message, "chip");
+                                    setShowingReport(true);
                                 }}
-                                // The website's chat has no lesson-check card; the
-                                // card's Bond tab holds the lesson check.
-                                onLessonCheck={null}
+                                onDropped={() => {
+                                    setShowingBond(false);
+                                    submit(words.journey.step.otherMessage, "chip");
+                                }}
+                                onTrialPicked={(frequency) => {
+                                    setShowingBond(false);
+                                    const message = trialPickedMessage(frequency, words);
+                                    if (message) submit(message, "chip");
+                                }}
+                                warmup={training?.available ? {
+                                    onTake: trainingCanStart(training)
+                                        ? () => {
+                                            setShowingBond(false);
+                                            openWarmup(null);
+                                        }
+                                        : null,
+                                    passed: training.completed,
+                                    questionCount: training.questions.length
+                                } : null}
                                 onBondChanged={(next) => {
                                     animalBond.setBond(next);
                                     if (next) setCompanionLoop((current) => ({...(current ?? EMPTY_COMPANION_LOOP), focus: next.focus, openTrial: next.openTrial}));
                                 }}
-                                onRefresh={() => void animalBond.reload()}
                                 locale={locale}
+                                closeLabel={labels.close}
                                 words={labels.companions}
                             />
                         </div>
@@ -1537,7 +1842,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             onRegenerate={() => regenerate(message.id)}
                                             onRetry={() => retry(message.id)}
                                             companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
-                                            principleName={hints.principleName}
+                                            band={replyBand(message)}
                                             signInHref={signInHref}
                                             onReport={context?.signedIn ? () => openReport(message) : undefined}
                                             onResolveFollowUp={ownerChat && message.followUp && !message.followUpResolution
@@ -1599,7 +1904,6 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     onRetry={() => retry(message.id)}
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
                                     companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
-                                    principleName={hints.principleName}
                                     signInHref={signInHref}
                                 />
                             ))}
@@ -1668,7 +1972,6 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     onRetry={() => retry(message.id)}
                                     onFollowUp={(prompt) => submit(prompt, "followup")}
                                     companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
-                                    principleName={hints.principleName}
                                     signInHref={signInHref}
                                 />
                             ))}
@@ -1758,6 +2061,46 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <span className="min-w-0">{labels.disclaimer}</span>
                     </p>
                 </div>
+                {showingReport && openStep ? (
+                    // "I did it": their words and, if they like, a photo or video.
+                    <StepReportComposer
+                        name={speakerName}
+                        words={words}
+                        sendingLabel={labels.sending}
+                        closeLabel={labels.close}
+                        onCancel={() => setShowingReport(false)}
+                        onSubmit={sendStepReport}
+                    />
+                ) : null}
+                {warmupFor && training ? (
+                    <TrainingQuiz
+                        training={training}
+                        powerName={hints.principleName}
+                        layer="chat"
+                        warmup={{
+                            title: words.journey.warmup.title,
+                            passed: words.journey.warmup.passed,
+                            missed: fillWords(words.journey.warmup.missed, {name: speakerName}),
+                            continue: words.journey.earned.continue,
+                            close: labels.close
+                        }}
+                        onClose={closeWarmup}
+                    />
+                ) : null}
+                {earnedMoment && hints.principleName ? (
+                    <StepEarnedMoment
+                        powerName={hints.principleName}
+                        name={speakerName}
+                        words={words}
+                        account={earnedMoment.account}
+                        media={earnedMoment.media}
+                        onContinue={() => {
+                            const media = earnedMoment.media;
+                            setEarnedMoment(null);
+                            if (media) URL.revokeObjectURL(media.url);
+                        }}
+                    />
+                ) : null}
                 {reportTarget ? (
                     <AskReportSheet
                         labels={{
@@ -1888,7 +2231,7 @@ function AnimalMessageRow({
     onRegenerate,
     onRetry,
     companionEvent,
-    principleName,
+    band = null,
     signInHref,
     onReport,
     onResolveFollowUp
@@ -1899,6 +2242,8 @@ function AnimalMessageRow({
     isSending: boolean;
     /** Waiting for the animal, or watching it type. */
     animalTalking: boolean;
+    /** Edge to edge under the reply: the step it set, or the card the animal offered (3.2). */
+    band?: React.ReactNode;
     /** Report this reply; signed-in readers only. */
     onReport?: () => void;
     /** The check-in this reply raised, while it is unanswered. */
@@ -1916,7 +2261,6 @@ function AnimalMessageRow({
     onRegenerate: () => void;
     onRetry: () => void;
     companionEvent?: AskCompanionEvent;
-    principleName: string | null;
     signInHref: string;
     /** The animal's voice, for a signed-in reader: this reply played, stopped, or why it could not be. */
     voice?: {
@@ -1997,7 +2341,9 @@ function AnimalMessageRow({
     const checkIn = !isLive && message.followUp && onResolveFollowUp
         ? <AskCheckInChips topic={message.followUp.topic} labels={labels} onResolve={onResolveFollowUp} />
         : null;
-    const event = !isLive && companionEvent ? <CompanionEventBlock event={companionEvent} principleName={principleName} labels={labels} /> : null;
+    const event = !isLive && companionEvent && (companionEvent.stepDone || companionEvent.referral)
+        ? <CompanionEventBlock event={companionEvent} name={speakerName} labels={labels} />
+        : null;
     return (
         <div className="group/reply">
             {/* Screen readers get the reply as it arrives, not a word at a time. */}
@@ -2057,7 +2403,93 @@ function AnimalMessageRow({
                     ) : null}
                 />
             </div>
+            {!isLive && band ? <div className="flex flex-col">{band}</div> : null}
         </div>
+    );
+}
+
+/**
+ * The card an animal offered under its reply (3.2): the Warmup ("Take the
+ * warmup (+5 XP)" / "Skip", or "Warmup done"), or "{name}'s Trials", which
+ * opens the picker. Only the card's kind comes from the reply; every word is
+ * the site's own.
+ */
+function ChatOfferCard({
+    card,
+    words,
+    name,
+    powerName,
+    warmup,
+    disabled,
+    onTakeWarmup,
+    onSkip,
+    onTrials
+}: {
+    card: AskChatCard;
+    words: CompanionWords;
+    name: string;
+    powerName: string | null;
+    warmup: {canStart: boolean; passed: boolean; questionCount: number} | null;
+    disabled: boolean;
+    onTakeWarmup: () => void;
+    onSkip: () => void;
+    onTrials: (highlight: StepFrequency | null) => void;
+}) {
+    const shell = "-mx-4 mt-3 flex flex-col gap-2.5 border-y border-white/[0.1] bg-white/[0.03] px-4 py-3.5";
+    if (card.kind === "training") {
+        if (!warmup || !powerName) return null;
+        return (
+            <section className={shell} aria-label={words.journey.warmup.title} data-testid="warmup-card">
+                <p className="text-[10px] font-black uppercase tracking-[0.13em] text-primary-300">{words.journey.warmup.title}</p>
+                {warmup.passed ? (
+                    <p className="text-sm font-semibold text-white">✓ {words.journey.warmup.passed}</p>
+                ) : (
+                    <>
+                        <p className="text-sm leading-6 text-white">{warmupOfferText(powerName, warmup.questionCount, words)}</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={onTakeWarmup}
+                                disabled={disabled || !warmup.canStart}
+                                className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
+                            >
+                                {words.journey.warmup.take}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onSkip}
+                                className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
+                            >
+                                {words.journey.warmup.skip}
+                            </button>
+                        </div>
+                    </>
+                )}
+            </section>
+        );
+    }
+    const difficulties: Array<[StepFrequency, string]> = [
+        ["LOW", words.journey.trial.easy],
+        ["MID", words.journey.trial.medium],
+        ["HIGH", words.journey.trial.hard]
+    ];
+    return (
+        <section className={shell} aria-label={fillWords(words.journey.trial.sectionTitle, {name})} data-testid="trials-card">
+            <p className="text-[10px] font-black uppercase tracking-[0.13em] text-primary-300">{fillWords(words.journey.trial.sectionTitle, {name})}</p>
+            <div className="flex flex-wrap gap-2">
+                {difficulties.map(([frequency, label]) => (
+                    <button
+                        key={frequency}
+                        type="button"
+                        onClick={() => onTrials(frequency)}
+                        disabled={disabled}
+                        className={`inline-flex min-h-9 items-center rounded-full px-4 text-xs font-black transition-colors disabled:opacity-50 ${card.frequency === frequency ? "bg-primary-400 text-black hover:bg-primary-300" : "border border-white/12 bg-white/[0.05] text-white hover:bg-white/10"}`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+        </section>
     );
 }
 
@@ -2185,7 +2617,6 @@ function MessageBlock({
     onRetry,
     onFollowUp,
     companionEvent,
-    principleName = null,
     signInHref
 }: {
     message: AskMessage;
@@ -2214,8 +2645,6 @@ function MessageBlock({
     onFollowUp: (prompt: string) => void;
     /** What the animal did in this reply in the companion loop; the owner's own chat only. */
     companionEvent?: AskCompanionEvent;
-    /** The animal's Power, named when a step earned it. */
-    principleName?: string | null;
     /** Where "Sign in" goes from a reply refused at the signed-out limit. */
     signInHref: string;
 }) {
@@ -2313,8 +2742,8 @@ function MessageBlock({
                 </div>
             ) : null}
 
-            {finished && companionEvent ? (
-                <CompanionEventBlock event={companionEvent} principleName={principleName} labels={labels} />
+            {finished && companionEvent && (companionEvent.stepDone || companionEvent.referral) ? (
+                <CompanionEventBlock event={companionEvent} name={labels.title} labels={labels} />
             ) : null}
 
             {/* Only the newest answer offers next questions. */}
@@ -2339,11 +2768,12 @@ function MessageBlock({
 }
 
 /**
- * Under the reply where the animal saw a step of theirs done, or sent them to
+ * Under the reply where the animal saw a step of theirs done ("Done together
+ * · +5 XP", and when it earned the Power, that it is theirs), or sent them to
  * another of their animals: the moment, marked in the thread. The animal has
  * already said well done in its own words; this is the game's part.
  */
-function CompanionEventBlock({event, principleName, labels}: {event: AskCompanionEvent; principleName: string | null; labels: AskDrawerLabels}) {
+function CompanionEventBlock({event, name, labels}: {event: AskCompanionEvent; name: string; labels: AskDrawerLabels}) {
     const done = event.stepDone;
     const referral = event.referral;
     // That animal's chat on the card you last talked through, else the one the server named.
@@ -2353,18 +2783,12 @@ function CompanionEventBlock({event, principleName, labels}: {event: AskCompanio
         <div className="flex flex-col items-start gap-2.5">
             {done ? (
                 <div className="flex flex-col gap-1">
-                    <p className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-300">
-                        <SealIcon />
-                        {labels.doneTogether}
-                    </p>
+                    <StepDoneChip
+                        xp={done.xp}
+                        words={labels.companions}
+                        earnedLine={done.powerEarned ? fillWords(labels.companions.journey.earned.subtitle, {name}) : null}
+                    />
                     <p className="text-[11px] leading-4 text-ink-300">{done.step}</p>
-                    {done.powerEarned && principleName ? (
-                        <p className="text-[11px] font-semibold leading-4 text-white">
-                            {labels.powerYours.replace("{power}", principleName)}
-                        </p>
-                    ) : !done.powerEarned && done.powerWaitsForTraining ? (
-                        <p className="text-[11px] font-semibold leading-4 text-white">{labels.powerWaitsForTraining}</p>
-                    ) : null}
                 </div>
             ) : null}
             {referral && referralHref ? (
@@ -2757,7 +3181,6 @@ const ArrowUpRightIcon = () => icon(<path d="M6.5 13.5l7-7m0 0h-5m5 0v5" />, 2.2
 const CopyIcon = () => icon(<path d="M7.5 7.5V5.2A1.2 1.2 0 0 1 8.7 4h6.1A1.2 1.2 0 0 1 16 5.2v6.1a1.2 1.2 0 0 1-1.2 1.2H12.5M5.2 7.5h6.1A1.2 1.2 0 0 1 12.5 8.7v6.1A1.2 1.2 0 0 1 11.3 16H5.2A1.2 1.2 0 0 1 4 14.8V8.7A1.2 1.2 0 0 1 5.2 7.5Z" />);
 const CheckIcon = () => icon(<path d="M4.5 10.5l3.5 3.5 7.5-8" />, 2.4);
 const ShareIcon = () => icon(<path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5M4.5 12v2.8A1.2 1.2 0 0 0 5.7 16h8.6a1.2 1.2 0 0 0 1.2-1.2V12" />);
-const SealIcon = () => icon(<path d="M10 2.8l1.8 1.3 2.2-.1.7 2.1 1.8 1.3-.7 2.1.7 2.1-1.8 1.3-.7 2.1-2.2-.1L10 17.2l-1.8-1.3-2.2.1-.7-2.1-1.8-1.3.7-2.1-.7-2.1 1.8-1.3.7-2.1 2.2.1Zm-2.6 7.4 1.8 1.8 3.6-3.8" />);
 const ReferralIcon = () => icon(<path d="M5 15V9.5A3.5 3.5 0 0 1 8.5 6H15m0 0-3-3m3 3-3 3" />);
 const RefreshIcon = () => icon(<path d="M15.5 10a5.5 5.5 0 1 1-1.9-4.2M15.5 4v3h-3" />);
 const BellIcon = () => icon(<path d="M6 13.5V9a4 4 0 0 1 8 0v4.5l1.3 1.5H4.7ZM8.5 16.5a1.6 1.6 0 0 0 3 0" />);

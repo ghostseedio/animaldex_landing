@@ -34,7 +34,8 @@ import AnimalStoryCard from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SpeciesStatMeters from "@/components/animal-detail/species-stat-meters";
 import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
-import EarnPowerMount from "@/components/animal-detail/animal-powers/earn-power-mount";
+import SpeciesPlayPower from "@/components/animal-detail/species-play/species-play-power";
+import {getCompanionWords} from "@/loaders/companion-words";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {getBlogPostsForSpecies} from "@/data/blog";
@@ -424,6 +425,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const {locale, slug} = params;
     const t = await getScopedTranslator(locale, "animals");
     const rankingsT = await getScopedTranslator(locale, "rankings");
+    // The Play tab's Power line, its Trials and "Talk to it", in the reader's language.
+    const companionWords = await getCompanionWords(locale);
     const entry = await getSpeciesPageData(slug);
 
     if (!entry) {
@@ -1285,16 +1288,19 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 play={(
                     <div className="flex flex-col gap-5">
                     <div className="-mx-5 lg:mx-0">
-                        {/* One mount, first on the tab: the Power Loop bar, then
-                            Train, Prove it (the earn fork, with the Trials as its
-                            Trial arm) and Battle & Fuse, in that order. A species
-                            page is about the species, so what earning unlocks is
-                            the reader's own captures of it — until the mount
-                            learns the reader has caught it. */}
-                        <EarnPowerMount speciesProfileId={entry.speciesProfileId} isViewersOwnAnimal={false} showsPowerLoop />
+                        {/* The Power, read only, and its Trials with their loops
+                            (3.2). The Power is earned with the animal, a step at
+                            a time in its chat: a reader who holds it gets "Talk
+                            to it". */}
+                        <SpeciesPlayPower
+                            speciesProfileId={entry.speciesProfileId}
+                            animalName={entry.name}
+                            powerName={principleProfile?.principle ?? null}
+                            coreLesson={principleProfile?.coreLesson ?? null}
+                            words={companionWords}
+                        />
                     </div>
-                    {/* The group's other animals, after this one's loop rather
-                        than between the bar and its steps. */}
+                    {/* The group's other animals, after this one's Trials. */}
                     <SpeciesGroupMembers
                         members={groupMembers}
                         labels={{

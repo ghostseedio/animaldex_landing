@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {decodeAnimalTrial, sortTrials, trialStartErrorMessage, trialStartRefusalCode} from "@/lib/animal-trials";
+import {decodeAnimalTrial, sortTrials} from "@/lib/animal-trials";
 import {trialMotionCaptionLanguage} from "@/lib/trial-motion/captions";
 import {attachTrialMotionCaptions} from "@/lib/trial-motion/storyboards-server";
 
@@ -13,9 +13,9 @@ export const runtime = "nodejs";
  *
  * Reading a Trial needs no account — a visitor should be able to see what an
  * animal teaches before deciding to sign up; the view simply returns no
- * per-viewer state for them. Starting one does, and every state transition that
- * matters still happens on the server: the web client may start a Trial and
- * attach evidence, never mark one active, approved or paid.
+ * per-viewer state for them. Since 3.2 nothing is started here: "Make this my
+ * step" makes a Trial the step with the animal (`/api/app/steps`), and the
+ * animal decides in conversation when it is done.
  */
 
 /**
@@ -62,61 +62,4 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({trials, isSignedIn: Boolean(user)});
-}
-
-export async function POST(request: Request) {
-    const supabase = createSupabaseServerClient();
-
-    if (!supabase) {
-        return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
-    }
-
-    const {data: {user}} = await supabase.auth.getUser();
-
-    if (!user) {
-        return NextResponse.json({error: "Authentication required."}, {status: 401});
-    }
-
-    const body = await request.json().catch(() => ({}));
-    const speciesProfileId = String(body.speciesProfileId ?? "").trim();
-    const frequency = String(body.frequency ?? "").trim().toUpperCase();
-    const action = String(body.action ?? "start");
-    const lang = trialMotionCaptionLanguage(typeof body.lang === "string" ? body.lang : null);
-
-    if (!speciesProfileId || !["LOW", "MID", "HIGH"].includes(frequency)) {
-        return NextResponse.json({error: "A species profile id and frequency are required."}, {status: 400});
-    }
-
-    const rpc = action === "restart" ? "restart_expired_animal_trial" : "start_animal_trial";
-
-    // Server-authoritative and idempotent: a second call returns the same row
-    // rather than starting a second attempt.
-    const {error} = await supabase.rpc(rpc, {
-        p_species_profile_id: speciesProfileId,
-        p_frequency: frequency,
-        // The browser stores no timezone preference, so it supplies its own
-        // offset and the server keeps a random HIGH activation inside local daytime.
-        p_utc_offset_minutes: Number.isFinite(Number(body.utcOffsetMinutes)) ? Number(body.utcOffsetMinutes) : 0
-    });
-
-    if (error) {
-        // The RPC's RAISE text is a code; the reader gets words, and the client the code.
-        const code = trialStartRefusalCode(error.message);
-        const fallback = action === "restart"
-            ? "Could not restart this Trial."
-            : "Could not start this Trial. Check your connection and try again.";
-        return NextResponse.json({error: trialStartErrorMessage(error.message, fallback), code}, {status: 400});
-    }
-
-    // Re-read through the view so definition and state arrive together.
-    const {error: readError, trials} = await readTrials(supabase, speciesProfileId, lang);
-
-    if (readError) {
-        return NextResponse.json({error: readError}, {status: 400});
-    }
-
-    return NextResponse.json({
-        trials,
-        trial: trials?.find((item) => item.frequency === frequency) ?? null
-    });
 }

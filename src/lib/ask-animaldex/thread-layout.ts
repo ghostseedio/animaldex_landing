@@ -10,6 +10,7 @@
  */
 
 import {decodeAskVisual, isAskVisualLanguage} from "@/lib/ask-animaldex/visuals";
+import {ASK_CHAT_CARD_LANGUAGE} from "@/lib/ask-animaldex/chat-cards";
 
 /** One piece of an animal's reply as the thread shows it. */
 export type AskReplyPiece =
@@ -103,6 +104,12 @@ function blocksOf(raw: string): Block[] {
     return blocks;
 }
 
+/** An `animaldex-card` is drawn by the drawer under the reply, never as a drawing in it (3.2). */
+function isChatCard(source: string): boolean {
+    const opening = source.split("\n", 1)[0] ?? "";
+    return opening.trim().slice(3).trim().toLowerCase() === ASK_CHAT_CARD_LANGUAGE;
+}
+
 function decodes(source: string): boolean {
     const lines = source.split("\n");
     const opening = lines.shift();
@@ -130,6 +137,7 @@ export function askReplyPieces(raw: string, isComplete: boolean): AskReplyPiece[
 
     for (const block of blocksOf(raw)) {
         if (block.kind === "visual") {
+            if (isChatCard(block.source)) continue;
             if ((block.isClosed || isComplete) && !decodes(block.source)) continue;
             pieces.push({kind: "visual", source: block.source});
             lastBubbleIsHeadingOnly = false;

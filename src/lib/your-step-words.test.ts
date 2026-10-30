@@ -1,0 +1,45 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {dirname, join} from "node:path";
+import test from "node:test";
+import {fileURLToPath} from "node:url";
+import {COMPANION_WORDS_EN, companionWords} from "@/lib/companion-bond";
+import {acceptingStep, decodeAnimalStep, reportingStep} from "@/lib/your-step";
+import {stepPrimaryLabel, stepProblemText, trialPickedMessage, warmupOfferText, warmupResultMessage} from "@/lib/your-step-words";
+
+const STEP = "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const indonesian = companionWords(JSON.parse(readFileSync(join(repoRoot, "src/data/locales/id.json"), "utf8")).companions);
+
+test("the card's first button: I'll do it, I did it, then Tell {name} again", () => {
+    const offered = decodeAnimalStep({id: STEP, step: "Walk"})!;
+    assert.equal(stepPrimaryLabel(offered, "Leo", COMPANION_WORDS_EN), "I'll do it");
+    assert.equal(stepPrimaryLabel(acceptingStep(offered), "Leo", COMPANION_WORDS_EN), "I did it");
+    assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", COMPANION_WORDS_EN), "Tell Leo");
+    assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", indonesian), "Ceritakan kepada Leo");
+    assert.equal(stepPrimaryLabel(offered, "Leo", indonesian), "Akan saya lakukan");
+});
+
+test("what is sent to the animal is the person's own message, in their language", () => {
+    assert.equal(trialPickedMessage("LOW", COMPANION_WORDS_EN), "I'll try your Easy Trial.");
+    assert.equal(trialPickedMessage("high", indonesian), "Aku akan mencoba Uji Coba Sulit milikmu.");
+    assert.equal(trialPickedMessage(null, COMPANION_WORDS_EN), null);
+    assert.equal(warmupResultMessage({passed: true, correct: [true, true, true]}, COMPANION_WORDS_EN), "I got all 3 on your warmup.");
+    assert.equal(warmupResultMessage({passed: false, correct: [true, false, false]}, COMPANION_WORDS_EN), "I got 1 of 3 on your warmup.");
+    assert.equal(warmupResultMessage({passed: false, correct: [false, false]}, indonesian), "Aku menjawab benar 0 dari 2 soal di pemanasanmu.");
+    assert.equal(warmupOfferText("Sentinel Shift", 2, COMPANION_WORDS_EN), "Two quick questions on Sentinel Shift.");
+    assert.equal(warmupOfferText("Sentinel Shift", 3, COMPANION_WORDS_EN), "3 quick questions on Sentinel Shift.");
+    assert.equal(COMPANION_WORDS_EN.journey.step.otherMessage, "Can I have a different step?");
+});
+
+test("every refusal is said calmly, in the reader's language, never as a code or a lock", () => {
+    assert.equal(stepProblemText("step_not_open", COMPANION_WORDS_EN), "That step isn't open any more.");
+    assert.equal(stepProblemText("species_not_unlocked", COMPANION_WORDS_EN), "Catch this animal first to make one of its Trials your step.");
+    assert.equal(stepProblemText("account_too_short", indonesian), "Tulis sedikit lagi: beberapa kata tentang apa yang terjadi.");
+    assert.equal(stepProblemText("too_many_media", COMPANION_WORDS_EN), "Add one photo or video at most.");
+    assert.equal(stepProblemText("media_path_not_owned", COMPANION_WORDS_EN), stepProblemText("upload_failed", COMPANION_WORDS_EN));
+    assert.equal(stepProblemText("whatever", COMPANION_WORDS_EN), "That didn't go through. Try again in a moment.");
+    for (const text of Object.values(COMPANION_WORDS_EN.journey.problems)) {
+        assert.equal(/tomorrow|lock|_/.test(text), false, text);
+    }
+});

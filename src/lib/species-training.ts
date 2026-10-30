@@ -1,67 +1,31 @@
 /**
- * Training: a short quiz on an animal's Power, taken once per animal before its
- * Trials and Apply It Your Way open. Same spec as iOS and Android, so the copy
- * below is word for word what they show.
+ * The quiz on an animal's Power. Since AnimalDex 3.2 (docs/your-step/SPEC.md)
+ * it is the optional **Warmup**: two or three questions on its lesson, +5 XP
+ * the first time all are right, and it never blocks anything. A miss costs
+ * nothing and locks nothing; it can be retaken any time, and passing is still
+ * once. A fused Power's quiz keeps its own Training wording (SPEC section 6).
  *
  * The server owns every decision. `get_species_training` never sends the right
  * answers, and `submit_species_training` only says which answers were wrong on
  * a fail — never what the right one was. The explanations arrive only on a pass.
  */
 
-// MARK: - Copy (identical on iOS, Android and web)
+// MARK: - Copy
 
 /**
- * The quiz is the animal's lesson check (docs/companion-loop/SPEC.md, "Words":
- * Lesson check, not Training). Identifiers keep the old name.
+ * A fused Power's quiz (its own Training wording until it is redone as steps,
+ * SPEC section 6). The animal's own quiz is the Warmup, in the companion
+ * words' `journey.warmup`.
  */
 export const TRAINING_COPY = {
     title: "Lesson check",
     start: "Take the lesson check",
-    /** Web only: iOS has no signed-out reader. */
-    signInToStart: "Sign in to take the lesson check",
     complete: "Lesson check passed",
     readPowerAgain: "Read the Power again",
     tryAgain: "Try again",
     continue: "Continue",
-    close: "Close",
-    lockedLine: "Pass the lesson check to unlock",
-    required: "Pass this animal's lesson check first."
+    close: "Close"
 } as const;
-
-/**
- * One attempt a day. A missed Training or a rejected proof locks until the
- * next day or a new card of the animal, whichever is first (AnimalDex
- * 20261028120000; it used to need a new card). Word for word with iOS
- * `SpeciesTrainingCopy` (9c7fea0b), which says only "tomorrow".
- */
-export const LOCKOUT_COPY = {
-    attemptUsedLine: "That was today's attempt. Try again tomorrow.",
-    trainingWarning: "One attempt a day. Get any answer wrong and you can try again tomorrow.",
-    proofWarning: "One attempt a day. A rejected proof means trying again tomorrow.",
-    trainingLockedBody: "You missed one. Try again tomorrow.",
-    proofLockedBody: "Your proof wasn't accepted. Try again tomorrow.",
-    lockedButton: "Try again tomorrow"
-} as const;
-
-/** A fused Power's missed lesson check reads as the animal's own (iOS `fusedLockedBody`). */
-export function fusedLockedBody() {
-    return LOCKOUT_COPY.trainingLockedBody;
-}
-
-/** The refusals that mean "today's attempt is used", where trying again cannot help. */
-const LOCKED_REFUSAL_CODES = ["fused_training_locked", "training_locked", "proof_locked"] as const;
-
-export function isLockedRefusal(code: unknown) {
-    const text = typeof code === "string" ? code : "";
-    return LOCKED_REFUSAL_CODES.some((locked) => text.toLowerCase().includes(locked));
-}
-
-/** "Answer 1 quick question about this animal's Power." / "Answer 3 quick questions …" */
-export function trainingIntroText(questionCount: number) {
-    return questionCount === 1
-        ? `Answer ${questionCount} quick question about this animal's Power.`
-        : `Answer ${questionCount} quick questions about this animal's Power.`;
-}
 
 /** "Question 2 of 3", 1-based. */
 export function trainingQuestionProgress(position: number, total: number) {
@@ -98,10 +62,6 @@ export type SpeciesTraining = {
     completed: boolean;
     /** The viewer has caught this animal; the server refuses a submit otherwise. */
     unlocked: boolean;
-    /** Missed today: the lesson check opens again tomorrow, or with a new card of the animal. */
-    locked: boolean;
-    /** A proof was rejected today: Trials and Apply It Your Way open again tomorrow. Never set once the Power is earned. */
-    proofLocked: boolean;
     rewardXP: number;
     rewardCredits: number;
     contentVersion: number | null;
@@ -152,8 +112,9 @@ function decodeQuestion(raw: unknown, position: number): SpeciesTrainingQuestion
 
 /**
  * Null when the payload is not a Training read at all. A Training that claims
- * to be available but carries no answerable question is treated as unavailable,
- * so a broken row can never lock the Trials behind a quiz nobody can take.
+ * to be available but carries no answerable question is treated as
+ * unavailable, so a broken row never offers a quiz nobody can take. `locked`
+ * and `proof_locked` are no longer read: since 3.2 they are always false.
  */
 export function decodeSpeciesTraining(payload: unknown): SpeciesTraining | null {
     const row = object(payload);
@@ -171,8 +132,6 @@ export function decodeSpeciesTraining(payload: unknown): SpeciesTraining | null 
         available: row.available === true && (completed || questions.length > 0),
         completed,
         unlocked: row.unlocked === true,
-        locked: !completed && row.locked === true,
-        proofLocked: row.proof_locked === true,
         rewardXP: num(row.reward_xp),
         rewardCredits: num(row.reward_credits),
         contentVersion: row.content_version == null ? null : num(row.content_version),
@@ -193,39 +152,16 @@ export function decodeSpeciesTrainingResult(payload: unknown): SpeciesTrainingRe
     };
 }
 
-// MARK: - Gate
+// MARK: - The Warmup
 
-/**
- * While this is true, Trials and Apply It Your Way show locked with
- * "Complete Training to unlock". An animal with no Training, or a read that has
- * not landed, gates nothing — the server is the authority and refuses with
- * `training_required` regardless.
- */
-export function trainingGatesPlay(training: SpeciesTraining | null | undefined) {
-    return Boolean(training && training.available && !training.completed);
-}
-
-/** The Training band shows only for an animal that has one. */
-export function showsTrainingStep(training: SpeciesTraining | null | undefined) {
-    return Boolean(training?.available);
-}
-
-/** Missed today, so there is nothing to press until tomorrow (iOS `isMissed`). */
-export function trainingIsMissed(training: SpeciesTraining | null | undefined) {
-    return Boolean(training && training.locked && !training.completed);
-}
-
-/** The lesson check can be opened and answered now. */
+/** The Warmup can be offered and taken now: it has questions, the animal is theirs, and it is not passed yet. */
 export function trainingCanStart(training: SpeciesTraining | null | undefined) {
-    return Boolean(training && training.available && training.unlocked && !training.completed && !training.locked && training.questions.length > 0);
+    return Boolean(training && training.available && training.unlocked && !training.completed && training.questions.length > 0);
 }
 
-/**
- * Folds a submit into the read, so the band flips without waiting for a
- * re-read: a pass completes it, a miss locks it for today.
- */
+/** Folds a submit into the read, so a pass shows at once. A miss changes nothing: it can be retaken. */
 export function notingTrainingResult(training: SpeciesTraining, result: SpeciesTrainingResult): SpeciesTraining {
-    return result.passed ? {...training, completed: true, locked: false} : {...training, locked: true};
+    return result.passed ? {...training, completed: true} : training;
 }
 
 // MARK: - Quiz state
@@ -267,18 +203,11 @@ export function trainingSubmission(state: TrainingQuizState): number[] | null {
 
 // MARK: - Refusals
 
-export function isTrainingRequiredRefusal(error: unknown) {
-    const text = typeof error === "string" ? error : error instanceof Error ? error.message : JSON.stringify(error ?? "");
-    return /training_required/i.test(text);
-}
-
-/** What to show for a Training RPC refusal. Never a raw code. */
+/** What to show for a quiz RPC refusal. Never a raw code. */
 export function trainingRefusalMessage(code: string) {
-    if (/training_required/i.test(code)) return TRAINING_COPY.required;
-    if (/training_locked/i.test(code)) return LOCKOUT_COPY.trainingLockedBody;
     if (/species_not_unlocked/i.test(code)) return "You don't own this index yet. Capture this animal first.";
-    if (/not_authenticated/i.test(code)) return "Sign in to take this animal's lesson check.";
-    if (/training_not_found|species_not_found/i.test(code)) return "This animal has no lesson check yet.";
+    if (/not_authenticated/i.test(code)) return "Sign in to take this animal's warmup.";
+    if (/training_not_found|species_not_found/i.test(code)) return "This animal has no warmup yet.";
     if (/answers_mismatch/i.test(code)) return "Those answers did not match the questions. Try again.";
     return "Could not check your answers right now. Try again in a moment.";
 }

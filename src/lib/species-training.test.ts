@@ -1,30 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-    LOCKOUT_COPY,
     TRAINING_COPY,
     chooseTrainingAnswer,
-    fusedLockedBody,
     decodeSpeciesTraining,
-    isLockedRefusal,
     decodeSpeciesTrainingResult,
     isTrainingQuizReady,
     notingTrainingResult,
     previousTrainingQuestion,
-    showsTrainingStep,
     startTrainingQuiz,
     trainingCanStart,
     trainingFailSummary,
-    trainingGatesPlay,
-    trainingIsMissed,
-    trainingIntroText,
     trainingQuestionProgress,
     trainingRefusalMessage,
     trainingRewardLine,
     trainingSubmission
 } from "@/lib/species-training";
 import {powerRefusalMessage} from "@/lib/animal-powers";
-import {MAX_PROOF_ATTEMPTS, isRetryableRefusal, trialStartErrorMessage, trialStartRefusalCode, verifierRefusalMessage} from "@/lib/animal-trials";
 import {fusedRefusalMessage} from "@/lib/fused-powers";
 
 const SPECIES = "742b057b-47c4-447a-a61c-53d0b28c5e00";
@@ -55,15 +47,14 @@ test("get_species_training decodes an available Training", () => {
     assert.equal(training.contentVersion, 1);
     assert.equal(training.questions.length, 2);
     assert.deepEqual(training.questions[0].choices, AVAILABLE.questions[0].choices);
-    assert.equal(trainingGatesPlay(training), true);
-    assert.equal(showsTrainingStep(training), true);
+    assert.equal(trainingCanStart(training), true);
 });
 
 test("get_species_training decodes from a JSON string too", () => {
     assert.equal(decodeSpeciesTraining(JSON.stringify(AVAILABLE))?.questions.length, 2);
 });
 
-test("an unavailable animal shows no Training step and gates nothing", () => {
+test("an animal with no quiz offers no Warmup", () => {
     const training = decodeSpeciesTraining({
         species_profile_id: SPECIES, available: false, completed: false, unlocked: true,
         reward_xp: 10, reward_credits: 1, content_version: null, questions: []
@@ -71,24 +62,23 @@ test("an unavailable animal shows no Training step and gates nothing", () => {
     assert.ok(training);
     assert.equal(training.available, false);
     assert.equal(training.contentVersion, null);
-    assert.equal(showsTrainingStep(training), false);
-    assert.equal(trainingGatesPlay(training), false);
+    assert.equal(trainingCanStart(training), false);
 });
 
-test("no read, or a broken one, gates nothing", () => {
-    assert.equal(trainingGatesPlay(null), false);
+test("no read, or a broken one, offers nothing", () => {
+    assert.equal(trainingCanStart(null), false);
     assert.equal(decodeSpeciesTraining(null), null);
     assert.equal(decodeSpeciesTraining("not json"), null);
-    // Claims available with nothing answerable: never lock the Trials behind it.
+    // Claims available with nothing answerable: no quiz nobody can take.
     const broken = decodeSpeciesTraining({...AVAILABLE, questions: [{index: 0, prompt: "", choices: []}]});
-    assert.equal(trainingGatesPlay(broken), false);
+    assert.equal(broken?.available, false);
+    assert.equal(trainingCanStart(broken), false);
 });
 
-test("a completed Training shows complete and unlocks Play", () => {
+test("a passed Warmup is done, and passing is once", () => {
     const training = decodeSpeciesTraining({...AVAILABLE, completed: true});
-    assert.equal(showsTrainingStep(training), true);
     assert.equal(training?.completed, true);
-    assert.equal(trainingGatesPlay(training), false);
+    assert.equal(trainingCanStart(training), false);
 });
 
 test("questions are ordered by index", () => {
@@ -103,22 +93,25 @@ test("submit_species_training decodes a fail without any right answer", () => {
     assert.deepEqual(result.correct, [true, false]);
     assert.deepEqual(result.explanations, []);
     assert.equal(trainingFailSummary(result.correct), "1 of 2 right. Every answer has to be right.");
+    // 3.2: a miss costs nothing and locks nothing; it can be retaken at once.
     const training = decodeSpeciesTraining(AVAILABLE)!;
-    assert.equal(trainingGatesPlay(notingTrainingResult(training, result)), true);
+    assert.equal(trainingCanStart(notingTrainingResult(training, result)), true);
 });
 
-test("submit_species_training decodes a pass and unlocks Play", () => {
+test("submit_species_training decodes a pass, once", () => {
     const result = decodeSpeciesTrainingResult({
         passed: true, already_completed: false, correct: [true, true],
-        explanations: ["Edges have the most food.", "Because."], reward_xp: 10, reward_credits: 1
+        explanations: ["Edges have the most food.", "Because."], reward_xp: 5, reward_credits: 0
     });
     assert.ok(result);
     assert.equal(result.passed, true);
     assert.equal(result.alreadyCompleted, false);
     assert.deepEqual(result.explanations, ["Edges have the most food.", "Because."]);
-    assert.equal(trainingRewardLine(result.rewardXP, result.rewardCredits), "+10 XP · +1 Credit");
+    // The Warmup pays +5 XP and no Credits (3.2).
+    assert.equal(trainingRewardLine(result.rewardXP, result.rewardCredits), "+5 XP");
     const training = decodeSpeciesTraining(AVAILABLE)!;
-    assert.equal(trainingGatesPlay(notingTrainingResult(training, result)), false);
+    assert.equal(notingTrainingResult(training, result).completed, true);
+    assert.equal(trainingCanStart(notingTrainingResult(training, result)), false);
 });
 
 test("a pass with no card to put XP on hides the XP part", () => {
@@ -167,97 +160,36 @@ test("Try again restarts with no answers chosen", () => {
     assert.deepEqual(startTrainingQuiz(2).answers, [null, null]);
 });
 
-test("copy matches the shared spec word for word", () => {
+test("a fused Power's quiz keeps its Training wording (SPEC section 6)", () => {
     assert.equal(TRAINING_COPY.title, "Lesson check");
     assert.equal(TRAINING_COPY.start, "Take the lesson check");
     assert.equal(TRAINING_COPY.complete, "Lesson check passed");
     assert.equal(TRAINING_COPY.readPowerAgain, "Read the Power again");
     assert.equal(TRAINING_COPY.tryAgain, "Try again");
     assert.equal(TRAINING_COPY.continue, "Continue");
-    assert.equal(TRAINING_COPY.lockedLine, "Pass the lesson check to unlock");
-    assert.equal(TRAINING_COPY.required, "Pass this animal's lesson check first.");
-    assert.equal(trainingIntroText(1), "Answer 1 quick question about this animal's Power.");
-    assert.equal(trainingIntroText(3), "Answer 3 quick questions about this animal's Power.");
     assert.equal(trainingQuestionProgress(1, 3), "Question 1 of 3");
 });
 
-test("training_required maps to the same message everywhere", () => {
-    const message = "Pass this animal's lesson check first.";
-    assert.equal(trialStartErrorMessage("training_required", "fallback"), message);
-    assert.equal(verifierRefusalMessage("training_required"), message);
-    assert.equal(isRetryableRefusal("training_required"), false);
-    assert.equal(powerRefusalMessage("training_required"), message);
-    assert.equal(trainingRefusalMessage("training_required"), message);
-    assert.equal(trialStartErrorMessage("something else", "fallback"), "fallback");
+test("the read's locks are never read, for every app version", () => {
+    // `locked` and `proof_locked` are always false since 3.2; even an old row saying true locks nothing.
+    const stale = decodeSpeciesTraining({...AVAILABLE, locked: true, proof_locked: true})!;
+    assert.equal("locked" in stale, false);
+    assert.equal("proofLocked" in stale, false);
+    assert.equal(trainingCanStart(stale), true);
+    assert.equal(trainingCanStart({...stale, unlocked: false}), false);
 });
 
-test("a miss locks until tomorrow, word for word with iOS", () => {
-    // iOS 9c7fea0b dropped "or capture this animal again".
-    assert.equal(LOCKOUT_COPY.attemptUsedLine, "That was today's attempt. Try again tomorrow.");
-    assert.equal(LOCKOUT_COPY.trainingWarning, "One attempt a day. Get any answer wrong and you can try again tomorrow.");
-    assert.equal(LOCKOUT_COPY.proofWarning, "One attempt a day. A rejected proof means trying again tomorrow.");
-    assert.equal(LOCKOUT_COPY.lockedButton, "Try again tomorrow");
-    assert.equal(fusedLockedBody(), "You missed one. Try again tomorrow.");
-
-    const missed = "You missed one. Try again tomorrow.";
-    const rejected = "Your proof wasn't accepted. Try again tomorrow.";
-    assert.equal(trainingRefusalMessage("training_locked"), missed);
-    assert.equal(powerRefusalMessage("training_locked"), missed);
-    assert.equal(fusedRefusalMessage("fused_training_locked"), missed);
-    assert.equal(powerRefusalMessage("proof_locked"), rejected);
-    assert.equal(verifierRefusalMessage("proof_locked"), rejected);
-    assert.equal(isRetryableRefusal("proof_locked"), false);
-});
-
-test("the read carries today's locks, and only an open, unlocked check can start", () => {
-    const open = decodeSpeciesTraining(AVAILABLE)!;
-    assert.equal(open.locked, false);
-    assert.equal(open.proofLocked, false);
-    assert.equal(trainingCanStart(open), true);
-    assert.equal(trainingIsMissed(open), false);
-
-    const missed = decodeSpeciesTraining({...AVAILABLE, locked: true})!;
-    assert.equal(missed.locked, true);
-    assert.equal(trainingIsMissed(missed), true);
-    assert.equal(trainingCanStart(missed), false);
-    // Still gating: the Trials stay closed behind it.
-    assert.equal(trainingGatesPlay(missed), true);
-
-    // A passed check is never locked, whatever the read says.
-    const passed = decodeSpeciesTraining({...AVAILABLE, completed: true, locked: true})!;
-    assert.equal(passed.locked, false);
-    assert.equal(trainingIsMissed(passed), false);
-
-    assert.equal(decodeSpeciesTraining({...AVAILABLE, proof_locked: true})!.proofLocked, true);
-    assert.equal(trainingCanStart({...open, unlocked: false}), false);
-});
-
-test("a submitted miss locks the read at once; a pass clears it", () => {
-    const open = decodeSpeciesTraining(AVAILABLE)!;
-    const miss = decodeSpeciesTrainingResult({passed: false, correct: [true, false]})!;
-    const pass = decodeSpeciesTrainingResult({passed: true, correct: [true, true], explanations: ["a", "b"]})!;
-    assert.equal(notingTrainingResult(open, miss).locked, true);
-    assert.equal(trainingCanStart(notingTrainingResult(open, miss)), false);
-    const afterPass = notingTrainingResult({...open, locked: true}, pass);
-    assert.equal(afterPass.completed, true);
-    assert.equal(afterPass.locked, false);
-});
-
-test("locked refusals are recognised, so no screen offers a retry that cannot work", () => {
-    for (const code of ["training_locked", "proof_locked", "fused_training_locked"]) assert.equal(isLockedRefusal(code), true);
-    for (const code of ["training_required", "answers_mismatch", "", undefined]) assert.equal(isLockedRefusal(code), false);
-});
-
-test("a refused Trial start is said in words, never as its code", () => {
-    assert.equal(trialStartErrorMessage("proof_locked", "fallback"), "Your proof wasn't accepted. Try again tomorrow.");
-    assert.equal(trialStartErrorMessage('{"message":"proof_locked"}', "fallback"), "Your proof wasn't accepted. Try again tomorrow.");
-    assert.equal(trialStartErrorMessage("trial_not_found", "fallback"), "This Trial isn't available any more.");
-    assert.equal(trialStartErrorMessage("not_authenticated", "fallback"), "Sign in to take this Trial.");
-    assert.equal(trialStartRefusalCode("ERROR: proof_locked"), "proof_locked");
-    assert.equal(trialStartRefusalCode("connection reset"), null);
-});
-
-test("the proof budget is the server's six, and its refusal no longer says 'both'", () => {
-    assert.equal(MAX_PROOF_ATTEMPTS, 6);
-    assert.equal(verifierRefusalMessage("proof_attempts_exhausted"), "You have used every check on this Trial. It cannot be submitted again.");
+test("no refusal says tomorrow or a lock any more", () => {
+    for (const message of [
+        trainingRefusalMessage("training_locked"),
+        trainingRefusalMessage("training_required"),
+        powerRefusalMessage("proof_locked"),
+        powerRefusalMessage("training_locked"),
+        fusedRefusalMessage("fused_training_locked"),
+        fusedRefusalMessage("attempts_exhausted_today")
+    ]) {
+        assert.equal(/tomorrow|lesson check first/i.test(message), false, message);
+    }
+    assert.equal(trainingRefusalMessage("species_not_unlocked"), "You don't own this index yet. Capture this animal first.");
+    assert.equal(trainingRefusalMessage("answers_mismatch"), "Those answers did not match the questions. Try again.");
 });

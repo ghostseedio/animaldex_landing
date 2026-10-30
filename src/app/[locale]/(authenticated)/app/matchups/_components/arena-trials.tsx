@@ -3,7 +3,6 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {AppEmpty} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
 import {
     type AnimalTrial,
     completedTrialHistory,
@@ -12,51 +11,45 @@ import {
     failedTrialHistory,
     frequencyAccent,
     isComplete,
-    mergeOpenTrials,
-    noteTrialUpdate,
     rewardXP,
     trialHistoryStatusLine,
     trialId
 } from "@/lib/animal-trials";
 import {discoverPostPath} from "@/lib/discover-post";
+import {trialHistoryHref, type PlayJourneyCard} from "@/lib/power-history";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
-import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 
 /**
- * Trials in the Battles hub. Ported from iOS `MatchupsHubView` after Trials became
- * a first-class segment beside Comparisons.
+ * Explore › Battles › History › Trials (iOS `MatchupsHubView`): what was
+ * completed and what never succeeded, with the Power and Qualities a
+ * completed Trial contributed.
  *
- * The Trials page lists every open Trial for an animal the person has caught,
- * grouped by animal; an animal leaves once every one of its Trials is
- * finished. The history page lists what was completed and what failed, with
- * the Power and Qualities a completed Trial contributed.
+ * Since 3.2 the old full Trial screen is no place to start or submit
+ * (docs/your-step/SPEC.md, section 5): a row that is a Discover post opens
+ * the post; any other opens the animal on your newest card of it, its record
+ * on the Bond tab for a completed Trial, else its chat.
  */
 
 const NEON = "#A7F432";
 const FAIL = "rgb(250,115,133)";
 
 type ArenaTrialsPayload = {
-    openTrials: AnimalTrial[];
     history: AnimalTrial[];
     /** `<species>:<frequency>` → Discover post id, for finished Trials that are posts. */
     postIds: Record<string, string>;
 };
 
 export function useArenaTrials(enabled: boolean) {
-    const [openTrials, setOpenTrials] = useState<AnimalTrial[]>([]);
     const [history, setHistory] = useState<AnimalTrial[]>([]);
     const [postIds, setPostIds] = useState<Record<string, string>>({});
     const [didLoad, setDidLoad] = useState(false);
-    /** `id` on /id pages: the open Trials' loops come back with translated captions. */
-    const captionLanguage = useTrialMotionCaptionLanguage();
 
     const refresh = useCallback(async () => {
         if (!enabled) return;
         try {
-            const response = await fetch(`/api/app/animal-trials/arena${captionLanguage ? `?lang=${captionLanguage}` : ""}`, {cache: "no-store"});
+            const response = await fetch("/api/app/animal-trials/arena", {cache: "no-store"});
             if (!response.ok) return;
             const payload = await response.json() as ArenaTrialsPayload;
-            setOpenTrials((previous) => mergeOpenTrials(previous, Array.isArray(payload.openTrials) ? payload.openTrials : []));
             // A failed read keeps what was there.
             if (Array.isArray(payload.history)) setHistory(payload.history);
             if (payload.postIds && typeof payload.postIds === "object") setPostIds(payload.postIds);
@@ -65,36 +58,30 @@ export function useArenaTrials(enabled: boolean) {
         } finally {
             setDidLoad(true);
         }
-    }, [captionLanguage, enabled]);
+    }, [enabled]);
 
     useEffect(() => {
         void refresh();
     }, [refresh]);
 
-    const note = useCallback((updated: AnimalTrial) => {
-        const next = noteTrialUpdate({openTrials, history}, updated);
-        setOpenTrials(next.openTrials);
-        setHistory(next.history);
-    }, [history, openTrials]);
-
-    return {openTrials, history, postIds, didLoad, refresh, note};
+    return {history, postIds, didLoad, refresh};
 }
 
 /** iOS `TrialHistoryRow`. */
 function TrialHistoryRow({
     trial,
     postId,
-    onOpen
+    cards
 }: {
     trial: AnimalTrial;
     postId: string | null;
-    onOpen: () => void;
+    cards: PlayJourneyCard[];
 }) {
     const complete = isComplete(trial);
     const accent = frequencyAccent(trial.frequency);
     const powerName = complete ? earnedPowerName(trial) : null;
     const qualities = complete ? earnedQualities(trial) : [];
-    const href = postId ? discoverPostPath(`animal-trial-${postId}`) : null;
+    const href = postId ? discoverPostPath(`animal-trial-${postId}`) : trialHistoryHref(trial, cards);
 
     const body = (
         <>
@@ -144,11 +131,11 @@ function TrialHistoryRow({
 
     const className = "flex w-full items-start gap-3 border-b border-white/[0.08] bg-white/[0.02] px-4 py-3.5 text-left first:border-t";
 
-    // A finished Trial that is a Discover post opens that card; otherwise the Trial itself.
+    // A finished Trial that is a Discover post opens that card; otherwise the animal.
     return href ? (
         <Link href={href} className={className}>{body}</Link>
     ) : (
-        <button type="button" onClick={onOpen} className={className}>{body}</button>
+        <div className={className}>{body}</div>
     );
 }
 
@@ -156,14 +143,14 @@ export function TrialHistoryList({
     history,
     postIds,
     didLoad,
-    onNote
+    cards
 }: {
     history: AnimalTrial[];
     postIds: Record<string, string>;
     didLoad: boolean;
-    onNote: (trial: AnimalTrial) => void;
+    /** Your cards, for the animal a row opens on. */
+    cards: PlayJourneyCard[];
 }) {
-    const [selectedTrial, setSelectedTrial] = useState<AnimalTrial | null>(null);
     const completed = useMemo(() => completedTrialHistory(history), [history]);
     const failed = useMemo(() => failedTrialHistory(history), [history]);
 
@@ -186,7 +173,7 @@ export function TrialHistoryList({
                         key={trialId(trial)}
                         trial={trial}
                         postId={postIds[`${trial.speciesProfileId}:${trial.frequency}`] ?? null}
-                        onOpen={() => setSelectedTrial(trial)}
+                        cards={cards}
                     />
                 ))}
             </div>
@@ -197,17 +184,6 @@ export function TrialHistoryList({
         <>
             {section("Completed", completed)}
             {section("Failed", failed)}
-            {selectedTrial ? (
-                <AnimalTrialDetail
-                    trial={selectedTrial}
-                    canAttempt
-                    onChange={(updated) => {
-                        setSelectedTrial(updated);
-                        onNote(updated);
-                    }}
-                    onClose={() => setSelectedTrial(null)}
-                />
-            ) : null}
         </>
     );
 }

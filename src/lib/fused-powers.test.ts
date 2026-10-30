@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-    FUSED_COPY,
-    attemptsExhausted,
     boostChips,
     boostStateText,
     decodeFusedPower,
@@ -10,7 +8,6 @@ import {
     decodeFusedSubmitResult,
     decodePrepareStage,
     estimatedMinutesLine,
-    finishButtonTitle,
     fusedProvingRewardLine,
     fusedRefusalMessage,
     fusedStage,
@@ -18,10 +15,7 @@ import {
     fusedTrainingForQuiz,
     fusedTrainingRewardLine,
     needsPrepare,
-    pendingFusedSummary,
-    pendingFusedXP,
     statDisplayName,
-    toFinishLine,
     whenEarnedLine
 } from "@/lib/fused-powers";
 
@@ -85,7 +79,7 @@ test("decodes the spec's sample item", () => {
     assert.deepEqual(item.trial?.successCriteria, ["A rota is visible", "Two names are on it"]);
     assert.equal(item.trial?.estimatedMinutes, 15);
     assert.deepEqual(item.reward, {xp: 10, credits: 3});
-    assert.deepEqual(item.attempts, {rejectionsToday: 0, maxRejectionsPerDay: 3, lastReason: null});
+    assert.deepEqual(item.attempts, {lastReason: null});
 });
 
 test("a preparing item carries no content; the list decodes from text and drops nameless rows", () => {
@@ -137,13 +131,6 @@ test("boost chips, state text and reward lines", () => {
     assert.equal(estimatedMinutesLine(15), "~15 min");
     assert.equal(estimatedMinutesLine(null), null);
     assert.equal(whenEarnedLine(1, "Intelligence"), "+1 Intelligence when earned");
-    assert.equal(toFinishLine(1), "1 to finish");
-    assert.equal(toFinishLine(3), "3 to finish");
-    assert.equal(finishButtonTitle("Lookout Turn"), "Finish Lookout Turn");
-    // iOS: over 14 characters says Continue.
-    assert.equal(finishButtonTitle("Quiet Patience"), "Finish Quiet Patience");
-    assert.equal(finishButtonTitle("Patient Lookout"), "Continue");
-    assert.equal(finishButtonTitle("A Very Long Fused Power Name"), "Continue");
 });
 
 test("prepare only when nobody is writing; poll otherwise", () => {
@@ -155,41 +142,6 @@ test("prepare only when nobody is writing; poll otherwise", () => {
     assert.equal(decodePrepareStage({stage: "ready"}), "ready");
     assert.equal(decodePrepareStage({stage: "unavailable"}), "unavailable");
     assert.equal(decodePrepareStage({error: "x"}), "preparing");
-});
-
-test("attempts: one rejected proof locks submit until tomorrow (proof_locked), not three", () => {
-    const item = decodeFusedPower(SAMPLE)!;
-    assert.equal(item.proofLocked, false);
-    assert.equal(item.trainingLocked, false);
-    assert.equal(attemptsExhausted(item), false);
-    // The read's old daily count no longer decides it.
-    assert.equal(attemptsExhausted({...item, attempts: {...item.attempts, rejectionsToday: 3}}), false);
-    assert.equal(attemptsExhausted(decodeFusedPower({...SAMPLE, proof_locked: true})!), true);
-    const missed = decodeFusedPower({...SAMPLE, training_locked: true})!;
-    assert.equal(missed.trainingLocked, true);
-    assert.equal(fusedTrainingForQuiz(missed)?.locked, true);
-    // An earned Power is never locked.
-    assert.equal(decodeFusedPower({...SAMPLE, earned: true, stage: "earned", proof_locked: true, training_locked: true})!.proofLocked, false);
-});
-
-test("pending summary for the Power Loop: count, first's name, stage and pay", () => {
-    const training = decodeFusedPower(SAMPLE)!;
-    const proving = decodeFusedPower({...SAMPLE, id: "p", name: "Second", stage: "proving", training: {...SAMPLE.training, completed: true}})!;
-    const earned = decodeFusedPower({...SAMPLE, id: "e", stage: "earned", earned: true})!;
-    assert.equal(pendingFusedXP(training), 20);
-    assert.equal(pendingFusedXP(proving), 10);
-    assert.equal(pendingFusedXP(earned), 0);
-    assert.deepEqual(pendingFusedSummary([earned, proving, training]), {
-        pending: 2,
-        firstId: "p",
-        firstName: "Second",
-        firstStage: "proving",
-        firstXP: 10,
-        firstCredits: 3
-    });
-    assert.deepEqual(pendingFusedSummary([earned]), {
-        pending: 0, firstId: null, firstName: null, firstStage: null, firstXP: 0, firstCredits: 0
-    });
 });
 
 test("the quiz adapter feeds the shared Training quiz", () => {
@@ -205,12 +157,13 @@ test("the quiz adapter feeds the shared Training quiz", () => {
 test("submit results and refusals", () => {
     assert.deepEqual(
         decodeFusedSubmitResult({ok: true, verdict: "approved", reason: "Nice rota.", earned: true, reward_xp: 10, reward_credits: 3, rejections_remaining: 3}),
-        {verdict: "approved", reason: "Nice rota.", earned: true, rewardXP: 10, rewardCredits: 3, rejectionsRemaining: 3, locked: false}
+        {verdict: "approved", reason: "Nice rota.", earned: true, rewardXP: 10, rewardCredits: 3, rejectionsRemaining: 3}
     );
-    assert.equal(decodeFusedSubmitResult({ok: true, verdict: "rejected", reason: "No.", rejections_remaining: 0, locked: true})?.locked, true);
+    // 3.2: a rejection locks nothing; it can be edited and sent again.
+    assert.equal("locked" in (decodeFusedSubmitResult({ok: true, verdict: "rejected", reason: "No.", locked: true}) ?? {}), false);
     assert.equal(decodeFusedSubmitResult({error: "training_required"}), null);
     assert.equal(fusedRefusalMessage("training_required"), "Pass this Power's lesson check first.");
-    assert.equal(fusedRefusalMessage("attempts_exhausted_today"), FUSED_COPY.attemptsExhausted);
+    assert.equal(/tomorrow/.test(fusedRefusalMessage("attempts_exhausted_today")), false);
     assert.equal(fusedRefusalMessage("fused_power_not_ready"), "This Power isn't ready yet. Try again in a minute.");
     assert.equal(fusedRefusalMessage("already_earned"), "You have already earned this Power.");
     assert.equal(fusedRefusalMessage("grading_unavailable"), "We could not check that right now. Nothing was used up — try again in a moment.");

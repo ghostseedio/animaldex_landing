@@ -21,10 +21,7 @@ function eligibilityReason(
     // Its own reason, never folded into "Not eligible": an empty capture needs
     // hearts, and this one needs a Power earned. Different problems, different
     // fixes.
-    const gate = powerLock(capture, eligibility);
-    if (gate) {
-        return gate.principleName ? `Earn ${gate.principleName} to battle` : "Earn this animal's Power to battle";
-    }
+    if (powerLock(capture, eligibility)) return "Earn its Power to battle with it";
     if (!capture.isChallengeReady) return "Not challenge-ready";
     if (!capture.isDiscoverable) return "Not public";
     if (!allowsMatchup(capture.battleTier, opponent.battleTier)) return "Tier mismatch";
@@ -38,7 +35,7 @@ export default function PickAnimalStep({
     selectedCaptureId,
     eligibility = null,
     onSelect,
-    onEarnPower
+    onTalkTo
 }: {
     opponent: MatchupOpponent;
     roster: MatchupRosterCapture[];
@@ -50,8 +47,8 @@ export default function PickAnimalStep({
      */
     eligibility?: CapturePlayEligibilityMap | null;
     onSelect: (captureId: string) => void;
-    /** Opens the earning flow for a Power-locked capture, keeping the picker underneath. */
-    onEarnPower?: (capture: MatchupRosterCapture, speciesProfileId: string | null) => void;
+    /** "Talk to it" for a Power-locked capture: its chat, where one step done together earns its Power. */
+    onTalkTo?: (capture: MatchupRosterCapture, speciesProfileId: string | null) => void;
 }) {
     // These are the reader's own animals: each shows its bond level, one level per animal.
     const companions = useCompanions();
@@ -139,19 +136,18 @@ export default function PickAnimalStep({
                         {blocked.map((capture) => {
                             const gate = capture.challengeHealth > 0 ? powerLock(capture, eligibility) : null;
                             // A Power lock is the one blocked state with something
-                            // to DO about it, so it routes instead of doing
-                            // nothing. Every other reason stays inert as before.
-                            return gate && onEarnPower ? (
+                            // to DO about it: talk to the animal. Every other
+                            // reason stays inert as before.
+                            return gate && onTalkTo ? (
                                 <button
                                     key={capture.captureId}
                                     type="button"
-                                    onClick={() => onEarnPower(capture, gate.canonicalSpeciesProfileId)}
+                                    onClick={() => onTalkTo(capture, gate.canonicalSpeciesProfileId)}
+                                    aria-label={`${capture.animalName}. ${eligibilityReason(capture, opponent, eligibility)}. Talk to it.`}
                                     className="flex min-h-9 w-full items-center justify-between gap-3 text-left text-sm text-white/60"
                                 >
-                                    <span className="truncate">🔒 {capture.animalName}</span>
-                                    <span className="shrink-0 text-xs font-bold text-primary-300">
-                                        {eligibilityReason(capture, opponent, eligibility)} ›
-                                    </span>
+                                    <span className="truncate">{capture.animalName}</span>
+                                    <span className="shrink-0 text-xs font-bold text-primary-300">Talk to it ›</span>
                                 </button>
                             ) : (
                                 <div key={capture.captureId} className="flex items-center justify-between gap-3 text-sm text-white/35">

@@ -9,18 +9,35 @@
  * iOS `AnimalCompanionLoop`, `AnimalCompanionEvent` and
  * `AnimalChatCompanionUpdate`. Pure, so the drawer, the thread store and the
  * tests share one decoder; a malformed field is dropped, never the answer.
+ *
+ * 3.2 (docs/your-step/SPEC.md, section 4): the loop carries the open step as
+ * the server holds it (`companion.open_step`), so the chat's step card is
+ * keyed off server state, never off reply text; `trial_set` carries the new
+ * step's id and `trial_done` the XP it paid.
  */
+
+import {decodeAnimalStep, stepUuid, type AnimalStep} from "@/lib/your-step";
 
 export type AskCompanionLoop = {
     focus: string | null;
+    /** The open step's words, for the places that only show it. */
     openTrial: string | null;
+    /** The open step itself: its id, whether it is accepted, the Trial it came from. Null without an id. */
+    openStep: AnimalStep | null;
     yourTrialsDone: number;
 };
 
 export type AskCompanionStepDone = {
     step: string;
     powerEarned: boolean;
-    powerWaitsForTraining: boolean;
+    /** The progression XP the step paid (`your_step:<id>`, +5, at most one a day per animal); 0 when none. */
+    xp: number;
+};
+
+/** The step the animal set in this reply: the card goes under it. */
+export type AskCompanionStepSet = {
+    id: string | null;
+    step: string;
 };
 
 export type AskCompanionReferral = {
@@ -34,6 +51,7 @@ export type AskCompanionReferral = {
 /** What the animal did in one reply, kept with that reply. */
 export type AskCompanionEvent = {
     stepDone?: AskCompanionStepDone;
+    stepSet?: AskCompanionStepSet;
     referral?: AskCompanionReferral;
 };
 
@@ -43,21 +61,15 @@ export type AskCompanionUpdate = {
     event: AskCompanionEvent;
 };
 
-export const EMPTY_COMPANION_LOOP: AskCompanionLoop = {focus: null, openTrial: null, yourTrialsDone: 0};
+export const EMPTY_COMPANION_LOOP: AskCompanionLoop = {focus: null, openTrial: null, openStep: null, yourTrialsDone: 0};
 
-/** Word for word with iOS. */
+/** Word for word with iOS. The step's own words are the companion words' `journey`. */
 export const COMPANION_COPY = {
     workingOn: "Working on: {focus}",
     notThisAnyMore: "Not this any more",
-    doneTogether: "Done together",
-    /** The SPEC's words: the Power is theirs, not "earned". */
-    powerYours: "{power} is yours now",
-    powerWaitsForTraining: "Pass its lesson check to earn its Power.",
     talkTo: "Talk to {name}",
     talkToHint: "It already knows what you talked about."
 } as const;
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function object(value: unknown): Record<string, unknown> | null {
     return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -69,10 +81,7 @@ function text(value: unknown): string | null {
     return trimmed ? trimmed : null;
 }
 
-function uuid(value: unknown): string | null {
-    const candidate = text(value);
-    return candidate && UUID_PATTERN.test(candidate) ? candidate.toLowerCase() : null;
-}
+const uuid = stepUuid;
 
 function count(value: unknown): number {
     const parsed = typeof value === "number" ? value : Number.NaN;
@@ -83,11 +92,14 @@ function stepDoneFrom(raw: unknown): AskCompanionStepDone | null {
     const row = object(raw);
     const step = text(row?.step);
     if (!row || !step) return null;
-    return {
-        step,
-        powerEarned: row.power_earned === true,
-        powerWaitsForTraining: row.power_waits_for_training === true
-    };
+    // `power_waits_for_training` is always false since 3.2 (kept for old apps).
+    return {step, powerEarned: row.power_earned === true, xp: count(row.xp ?? row.xp_awarded)};
+}
+
+function stepSetFrom(raw: unknown): AskCompanionStepSet | null {
+    const row = object(raw);
+    const step = text(row?.step);
+    return row && step ? {id: uuid(row.id), step} : null;
 }
 
 function referralFrom(raw: unknown): AskCompanionReferral | null {
@@ -109,15 +121,19 @@ export function parseCompanionUpdate(raw: unknown): AskCompanionUpdate | null {
     const row = object(raw);
     if (!row) return null;
     const stepDone = stepDoneFrom(row.trial_done);
+    const stepSet = stepSetFrom(row.trial_set);
     const referral = referralFrom(row.referral);
+    const openStep = decodeAnimalStep(row.open_step);
     return {
         loop: {
             focus: text(row.focus),
-            openTrial: text(row.open_trial),
+            openTrial: openStep?.step ?? text(row.open_trial),
+            openStep,
             yourTrialsDone: count(row.your_trials_done)
         },
         event: {
             ...(stepDone ? {stepDone} : {}),
+            ...(stepSet ? {stepSet} : {}),
             ...(referral ? {referral} : {})
         }
     };
@@ -125,20 +141,46 @@ export function parseCompanionUpdate(raw: unknown): AskCompanionUpdate | null {
 
 /**
  * `animal_companion_focus_v1`: the loop as it stands, before any turn. Its
- * focus and step are objects there (`{id, focus, since}`, `{id, step, set_at}`).
+ * focus and step are objects there (`{id, focus, since}`, and the step
+ * object `{id, step, set_at, accepted_at, trial_frequency, has_report}`).
  */
 export function parseCompanionFocus(raw: unknown): AskCompanionLoop | null {
     const row = object(raw);
     if (!row) return null;
+    const openStep = decodeAnimalStep(row.open_trial);
     return {
         focus: text(object(row.focus)?.focus),
-        openTrial: text(object(row.open_trial)?.step),
+        openTrial: openStep?.step ?? text(object(row.open_trial)?.step),
+        openStep,
         yourTrialsDone: count(row.your_trials_done)
     };
 }
 
+/** The loop as the companion route answered it (already decoded once), read back tolerantly. */
+export function normalizeCompanionLoop(raw: unknown): AskCompanionLoop | null {
+    const row = object(raw);
+    if (!row) return null;
+    const step = object(row.openStep);
+    const openStep = step
+        ? decodeAnimalStep({
+            id: step.id,
+            step: step.step,
+            set_at: step.setAt,
+            accepted_at: step.acceptedAt,
+            trial_frequency: step.trialFrequency,
+            has_report: step.hasReport
+        })
+        : null;
+    return {
+        focus: text(row.focus),
+        openTrial: openStep?.step ?? text(row.openTrial),
+        openStep,
+        yourTrialsDone: count(row.yourTrialsDone)
+    };
+}
+
 export function isEmptyCompanionEvent(event: AskCompanionEvent | null | undefined): boolean {
-    return !event || (!event.stepDone && !event.referral);
+    return !event || (!event.stepDone && !event.stepSet && !event.referral);
 }
 
 /** The stored form, read back tolerantly: a thread saved by an older build has none. */
@@ -147,11 +189,11 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
     if (!row) return null;
     const stepDoneRow = object(row.stepDone);
     const stepDone = stepDoneRow && text(stepDoneRow.step)
-        ? {
-            step: text(stepDoneRow.step) as string,
-            powerEarned: stepDoneRow.powerEarned === true,
-            powerWaitsForTraining: stepDoneRow.powerWaitsForTraining === true
-        }
+        ? {step: text(stepDoneRow.step) as string, powerEarned: stepDoneRow.powerEarned === true, xp: count(stepDoneRow.xp)}
+        : null;
+    const stepSetRow = object(row.stepSet);
+    const stepSet = stepSetRow && text(stepSetRow.step)
+        ? {id: uuid(stepSetRow.id), step: text(stepSetRow.step) as string}
         : null;
     const referralRow = object(row.referral);
     const referralSpecies = uuid(referralRow?.speciesProfileId);
@@ -165,7 +207,11 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
             nickname: text(referralRow.nickname)
         }
         : null;
-    const event: AskCompanionEvent = {...(stepDone ? {stepDone} : {}), ...(referral ? {referral} : {})};
+    const event: AskCompanionEvent = {
+        ...(stepDone ? {stepDone} : {}),
+        ...(stepSet ? {stepSet} : {}),
+        ...(referral ? {referral} : {})
+    };
     return isEmptyCompanionEvent(event) ? null : event;
 }
 

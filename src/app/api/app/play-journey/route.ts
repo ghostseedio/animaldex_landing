@@ -1,17 +1,18 @@
 import {NextResponse} from "next/server";
 import {getAppCaptures} from "@/data/authenticated-app";
 import {type AnimalPower, decodeAnimalPower, decodeCapturePlayEligibility, earnedLabel} from "@/lib/animal-powers";
-import type {PlayJourneyCard, PlayJourneyFused, PlayJourneyStepFailure} from "@/lib/play-journey";
+import type {PlayJourneyCard, PlayJourneyFused} from "@/lib/power-history";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 /**
- * The bulk reads behind the Play tab's Powers page — web twin of iOS
- * `SupabasePlayJourneyService` plus the Powers and eligibility reads
- * `MatchupsHubView.refreshJourneyInputs` makes, and the challenge summary the
- * hub's Wins/Net figures come from (`challenge_profile_stats_v1`, never the
- * paged history: reducing over a page made the totals climb on "load more").
+ * The bulk reads behind Explore › Battles › History › Powers — the Powers and
+ * eligibility reads iOS `MatchupsHubView.refreshJourneyInputs` makes, and the
+ * challenge summary the hub's Wins/Net figures come from
+ * (`challenge_profile_stats_v1`, never the paged history: reducing over a page
+ * made the totals climb on "load more"). The Training and step-failure reads
+ * went with the Powers page in 3.2.
  *
  * Every read is the signed-in player's own rows. The fused Powers table has
  * no user column, so it is read for the player's own capture ids only.
@@ -23,34 +24,12 @@ function str(value: unknown) {
     return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-async function readTrainedSpecies(supabase: Supabase, userId: string) {
-    const {data, error} = await supabase.from("user_species_trainings").select("species_profile_id").eq("user_id", userId);
-    if (error) return null;
-    return Array.from(new Set((data ?? []).map((row) => str(row.species_profile_id)).filter((id): id is string => Boolean(id))));
-}
-
-async function readStepFailures(supabase: Supabase, userId: string) {
-    const {data, error} = await supabase
-        .from("user_power_step_failures")
-        .select("species_profile_id,step,failed_at")
-        .eq("user_id", userId);
-    if (error) return null;
-    const failures: PlayJourneyStepFailure[] = [];
-    for (const row of data ?? []) {
-        const species = str(row.species_profile_id);
-        const failedAt = str(row.failed_at);
-        const step = row.step === "training" ? "train" : row.step === "proof" ? "proveIt" : null;
-        if (species && failedAt && step) failures.push({speciesProfileId: species, step, failedAt});
-    }
-    return failures;
-}
-
 async function readFusedPowers(supabase: Supabase, captureIds: string[]) {
     const fused: PlayJourneyFused[] = [];
     for (let start = 0; start < captureIds.length; start += 100) {
         const {data, error} = await supabase
             .from("capture_learned_sub_principles")
-            .select("id,capture_id,learned_sub_principle_name,created_at,training_completed_at,earned_at,training_failed_at,proof_failed_at")
+            .select("id,capture_id,learned_sub_principle_name,created_at,earned_at")
             .in("capture_id", captureIds.slice(start, start + 100))
             .order("created_at", {ascending: false});
         if (error) return null;
@@ -64,10 +43,7 @@ async function readFusedPowers(supabase: Supabase, captureIds: string[]) {
                 captureId: captureId.toLowerCase(),
                 name: str(row.learned_sub_principle_name) ?? "Fused Power",
                 createdAt,
-                trainingCompletedAt: str(row.training_completed_at),
-                earnedAt: str(row.earned_at),
-                trainingFailedAt: str(row.training_failed_at),
-                proofFailedAt: str(row.proof_failed_at)
+                earnedAt: str(row.earned_at)
             });
         }
     }
@@ -109,11 +85,9 @@ export async function GET() {
         return NextResponse.json({error: "Authentication required."}, {status: 401});
     }
 
-    const [eligibilityResult, captures, trainedSpecies, failures, earnedPowers, summary] = await Promise.all([
+    const [eligibilityResult, captures, earnedPowers, summary] = await Promise.all([
         supabase.from("capture_play_eligibility_v1").select(),
         getAppCaptures().catch(() => []),
-        readTrainedSpecies(supabase, user.id),
-        readStepFailures(supabase, user.id),
         readEarnedPowers(supabase),
         readChallengeSummary(supabase, user.id)
     ]);
@@ -150,8 +124,6 @@ export async function GET() {
         // Null where a read failed: the page keeps what it already had.
         loaded: eligibilityRows !== null,
         cards,
-        trainedSpecies,
-        failures,
         fused,
         earnedPowers: earnedPowers?.map((power) => ({
             speciesProfileId: power.speciesProfileId,

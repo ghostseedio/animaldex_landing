@@ -2,8 +2,8 @@
 
 import {useMemo, useState} from "react";
 import {type AnimalTrial, decodeAnimalTrial} from "@/lib/animal-trials";
-import {TrialCard} from "@/components/animal-detail/animal-trials/animal-trials-section";
-import AnimalTrialDetail from "@/components/animal-detail/animal-trials/animal-trial-detail";
+import {TrialRows} from "@/components/companions/step-views";
+import {COMPANION_WORDS_EN} from "@/lib/companion-bond";
 import AnimalTrialCard from "@/app/[locale]/(authenticated)/app/_components/discover-animal-trial-card";
 import {PostInformation} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import {primeTrialMotionStoryboard, useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
@@ -23,7 +23,7 @@ function frequencyOf(key: string) {
     return frequency === "LOW" || frequency === "HIGH" ? frequency : "MID";
 }
 
-export default function TrialMotionPreviewClient({examples, detailKey, sheetKey, freezeAt}: {examples: Example[]; detailKey: string | null; sheetKey: string | null; freezeAt: number | null}) {
+export default function TrialMotionPreviewClient({examples, sheetKey, freezeAt}: {examples: Example[]; sheetKey: string | null; freezeAt: number | null}) {
     // What the routes do on an /id page, with the fixture rows standing in for the table.
     const captionLanguage = useTrialMotionCaptionLanguage();
     const trials = useMemo(() => examples.map((example, index) => decodeAnimalTrial({
@@ -47,9 +47,7 @@ export default function TrialMotionPreviewClient({examples, detailKey, sheetKey,
         : trial
     ).filter((trial): trial is AnimalTrial => trial !== null), [captionLanguage, examples]);
 
-    const [openKey, setOpenKey] = useState<string | null>(detailKey);
-    const openIndex = examples.findIndex((example) => example.key === openKey);
-    const openTrial = openIndex >= 0 ? trials[openIndex] : null;
+    const [picked, setPicked] = useState<string | null>(null);
 
     const discoverItems = useMemo(() => examples.map((example, index): DiscoverAnimalTrialItem => {
         const idCaptions = trials[index] ? translatedTrialMotionCaptions(trials[index].motionStoryboard, idCaptionFixture(example.key)) : null;
@@ -77,15 +75,16 @@ export default function TrialMotionPreviewClient({examples, detailKey, sheetKey,
 
     return (
         <>
-            <h2 data-section="cards" className="mt-12 font-display text-2xl text-white">Trial cards (animal page, Play tab): compact</h2>
+            <h2 data-section="cards" className="mt-12 font-display text-2xl text-white">Trial rows (Bond tab, chat picker, animal page): compact, tap to enlarge</h2>
             <div className="mt-4 grid max-w-xl border border-white/[0.08]">
-                {trials.map((trial, index) => (
-                    <TrialCard key={examples[index].key} trial={trial} onOpen={() => setOpenKey(examples[index].key)} />
-                ))}
-                {trials[0] ? (
-                    <TrialCard key="locked" trial={trials[0]} lockedByTraining onOpen={() => undefined} />
-                ) : null}
+                <TrialRows
+                    trials={trials}
+                    name="Preview"
+                    words={COMPANION_WORDS_EN}
+                    onMakeStep={(trial) => setPicked(trial.title)}
+                />
             </div>
+            {picked ? <p className="mt-2 text-xs text-ink-400">Make this my step: {picked}</p> : null}
 
             <h2 data-section="full" className="mt-12 font-display text-2xl text-white">Full loop with steps</h2>
             <div className="mt-4 grid gap-8 md:grid-cols-2">
@@ -110,9 +109,6 @@ export default function TrialMotionPreviewClient({examples, detailKey, sheetKey,
                 />
             ) : null}
 
-            {openTrial ? (
-                <AnimalTrialDetail trial={openTrial} canAttempt onChange={() => undefined} onClose={() => setOpenKey(null)} />
-            ) : null}
         </>
     );
 }

@@ -1,20 +1,15 @@
 /**
- * Ask AnimalDex about one Trial, ported from the iOS source of truth
+ * Ask AnimalDex about writing one up, ported from the iOS source of truth
  * (`TrialJournalAsk` and the Trial mode of `AnimalPowerAskChatView`).
  *
- * The assistant is grounded on the Trial the person is looking at — what it
- * asks, the rule, why this animal — and told to stay on it. A Trial
- * conversation is its own thread, keyed separately from the animal's Power
- * thread, so asking about the Trial never continues a chat about the species.
+ * While a fused Power's written route is open, the assistant is grounded on
+ * it and told to stay on it, in a thread of its own, so it never continues a
+ * chat about the species. (The old full Trial screen's own thread went with
+ * that screen in 3.2: a Trial is a step now, talked through with the animal.)
  */
 
 import type {AnimalTrial} from "@/lib/animal-trials";
 import type {AskSuggestion} from "@/lib/ask-animaldex/subject";
-
-export const TRIAL_ASK_PLACEHOLDER = "Ask about this Trial…";
-export const TRIAL_ASK_EMPTY_HEADING = "What do you want to know about this Trial?";
-export const TRIAL_ASK_LOCKED_SUBTITLE = "Ask what this Trial means and for examples. Included with AnimalDex Pro.";
-export const TRIAL_ASK_CAPTURE_REQUIRED = "Capture this animal before asking about its Trial.";
 
 /** Openers for a blank Trial thread. All of them show, not the usual three. */
 export const TRIAL_ASK_SUGGESTIONS: AskSuggestion[] = [
@@ -41,26 +36,6 @@ export const TRIAL_ASK_THINKING_PHASES = [
 function line(key: string, value: string | null | undefined) {
     const trimmed = value?.trim();
     return trimmed ? `${key}: ${trimmed}` : null;
-}
-
-/** What the model is told about the Trial. Newline-joined `key: value` lines. */
-export function trialAskBrief(trial: AnimalTrial) {
-    return [
-        `frequency: ${trial.frequency}`,
-        `title: ${trial.title}`,
-        line("what_you_get", trial.userBenefit),
-        line("what_to_do", trial.instructions),
-        line("the_rule", trial.animalRule),
-        line("why_this_trial", trial.principleLink),
-        line("why_this_animal", trial.whyThisAnimal),
-        line("evidence", trial.proofPrompt),
-        trial.successCriteria.length ? `success: ${trial.successCriteria.join(" | ")}` : null
-    ].filter((entry): entry is string => Boolean(entry)).join("\n");
-}
-
-/** The thread for one person's questions about one Trial. */
-export function trialAskKey(trial: Pick<AnimalTrial, "speciesProfileId" | "frequency">) {
-    return `${trial.speciesProfileId.toLowerCase()}:ASK:${trial.frequency}`;
 }
 
 // MARK: - Writing it instead (Apply It Your Way)

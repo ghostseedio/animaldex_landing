@@ -1076,9 +1076,9 @@
     "glanceTitle": "{animal} at a glance",
     "groupMembersEyebrow": "In the AnimalDex",
     "groupMembersTitle": "Every {animal} species to play",
-    "groupMembersDescription": "The AnimalDex indexes each {animal} species on its own. Open one to take its Trial and unlock its powers.",
+    "groupMembersDescription": "The AnimalDex indexes each {animal} species on its own. Open one to see its Power and its Trials.",
     "groupMembersTrial": "Trial: {title}",
-    "groupMembersOpenPlay": "Open its Trial and powers",
+    "groupMembersOpenPlay": "See its Power and Trials",
     "storyMediaHookLabel": "A real AnimalDex capture of a {animal}, brought to life",
     "storyMediaStoryVideoLabel": "The {animal} story, narrated: a real AnimalDex capture",
     "storyMediaEyebrow": "From AnimalDex stories",
@@ -2376,7 +2376,6 @@
     "checkInNotNow": "Not now",
     "checkInStop": "Stop asking",
     "checkInFailed": "Couldn't save that. Try again.",
-    "checkInDidIt": "I did it: {step}",
     "report": "Report",
     "reportTitle": "Report this reply",
     "reportOffensive": "Offensive or harmful",
@@ -2425,9 +2424,6 @@
     "soundOriginal": "See the original recording",
     "workingOn": "Working on: {focus}",
     "notThisAnyMore": "Not this any more",
-    "doneTogether": "Done together",
-    "powerYours": "{power} is yours now",
-    "powerWaitsForTraining": "Pass its lesson check to earn its Power.",
     "talkTo": "Talk to {name}",
     "talkToHint": "It already knows what you talked about.",
     "trialPlaceholder": "Ask about this Trial…",
@@ -2578,19 +2574,8 @@
       "noFocus": "Tell {name} what's going on in your life and it will pick something to work on with you.",
       "notThisAnyMore": "Not this any more",
       "yourStep": "Your step",
-      "doneTogether": "Done together",
       "itsPower": "Its Power",
-      "earnByTrial": "Complete one Trial with {name} to earn it.",
-      "earnAfterLessonCheck": "Pass its lesson check, then complete one Trial with {name}.",
-      "talkToIt": "Talk to it",
-      "takeLessonCheck": "Take the lesson check",
-      "lessonCheckMessage": "Can I take your lesson check?",
-      "lessonCheckMissed": "You missed one. Try again tomorrow.",
-      "animalTrials": "Animal Trials",
-      "askAboutIt": "Ask about it",
-      "askAboutTrialMessage": "Tell me about your {difficulty} Trial.",
-      "battleLocked": "Earn {name}'s Power to battle with it.",
-      "battleLockedDetail": "Complete one Trial with it, Animal or your own."
+      "talkToIt": "Talk to it"
     },
     "list": {
       "title": "Companions",
@@ -2621,17 +2606,76 @@
       "application": "Earned by applying it",
       "any": "Earned"
     },
-    "trialStatus": {
-      "completed": "Complete",
-      "underWay": "Under way",
-      "armed": "Armed",
-      "missed": "Missed",
-      "notStarted": "Not started"
-    },
-    "difficulty": {
-      "Easy": "Easy",
-      "Medium": "Medium",
-      "Hard": "Hard"
+    "journey": {
+      "step": {
+        "eyebrow": "Your step with {name}",
+        "accept": "I'll do it",
+        "other": "Something else",
+        "didIt": "I did it",
+        "otherMessage": "Can I have a different step?",
+        "pinnedLabel": "Your step"
+      },
+      "report": {
+        "title": "What happened?",
+        "placeholder": "Tell {name} how it went",
+        "attach": "Add a photo or video",
+        "attachNote": "Optional. It's kept in your record with {name}, and only you can see it.",
+        "send": "Tell {name}"
+      },
+      "earned": {
+        "title": "{power}",
+        "subtitle": "{name}'s Power is yours",
+        "via": "Earned in your own life",
+        "continue": "Continue"
+      },
+      "done": {
+        "chip": "Done together",
+        "xp": "+{xp} XP"
+      },
+      "record": {
+        "title": "Your record with {name}",
+        "empty": "Steps you finish with {name} are kept here."
+      },
+      "steps": {
+        "sectionTitle": "Your steps",
+        "row": "{name}: {step}"
+      },
+      "warmup": {
+        "title": "Warmup",
+        "offer": "Two quick questions on {power}.",
+        "offerCount": "{n} quick questions on {power}.",
+        "take": "Take the warmup (+5 XP)",
+        "skip": "Skip",
+        "passed": "Warmup done",
+        "missed": "Not quite. {name} will tell you how its kind sees it.",
+        "resultMessagePassed": "I got all {n} on your warmup.",
+        "resultMessageMissed": "I got {right} of {n} on your warmup."
+      },
+      "trial": {
+        "sectionTitle": "{name}'s Trials",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard",
+        "makeStep": "Make this my step",
+        "pickedMessage": "I'll try your {difficulty} Trial."
+      },
+      "power": {
+        "notEarnedLine": "Finish one step with {name} to earn it."
+      },
+      "battle": {
+        "locked": "Earn {name}'s Power to battle with it.",
+        "lockedDetail": "Finish one step with it."
+      },
+      "problems": {
+        "signIn": "Sign in to keep going with your step.",
+        "stepGone": "That step isn't open any more.",
+        "catchFirst": "Catch this animal first to make one of its Trials your step.",
+        "trialGone": "That Trial isn't available any more.",
+        "tooShort": "Write a little more: a few words on what happened.",
+        "oneMedia": "Add one photo or video at most.",
+        "mediaFailed": "That photo or video didn't upload. Try another, or send it without one.",
+        "generic": "That didn't go through. Try again in a moment."
+      }
     },
     "displayName": "{nickname} the {animal}",
     "card": {

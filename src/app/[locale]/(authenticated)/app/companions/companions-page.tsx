@@ -13,6 +13,10 @@
  * in this browser, else its newest (iOS 5c980123). Before the server has the
  * bond, the animals you hold still show, without it.
  *
+ * On top, "Your steps" (3.2, docs/your-step/SPEC.md section 5): every open
+ * step across your animals (`animal_open_steps_v1`), "{name}: {step}"; a row
+ * opens that animal's chat, where the step is pinned.
+ *
  * Refreshed when the tab is opened and when the window comes back into view.
  */
 
@@ -24,7 +28,9 @@ import {AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_compon
 import {AskMenu, MoreIcon} from "@/components/ask-animaldex/ask-messenger";
 import {setAnimalMessagesMuted, useAnimalConversations} from "@/components/companions/use-animal-conversations";
 import {chatCaptureIdFor, useCompanionCards, useCompanions} from "@/components/companions/use-companions";
-import {companionRowHref, fillWords, type CompanionWords} from "@/lib/companion-bond";
+import {useOpenSteps} from "@/components/companions/use-steps";
+import {companionRowHref, companionSummaryName, fillWords, type CompanionWords} from "@/lib/companion-bond";
+import type {OpenStepRow} from "@/lib/your-step";
 import {buildCompanionRows, type CompanionStatusKind, type CompanionTabRow} from "@/lib/companion-rows";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
@@ -193,10 +199,39 @@ function CompanionRow({
     );
 }
 
+/** "Your steps": every open step, "{name}: {step}", each opening that animal's chat. */
+function YourStepsSection({steps, href, words}: {steps: OpenStepRow[]; href: (step: OpenStepRow) => string | null; words: CompanionWords}) {
+    if (steps.length === 0) return null;
+    return (
+        <section className="-mx-4 border-t border-white/[0.08] md:mx-0" aria-label={words.journey.steps.sectionTitle} data-testid="your-steps">
+            <h2 className="px-4 pb-2 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/55 md:px-5">{words.journey.steps.sectionTitle}</h2>
+            {steps.map((step) => {
+                const target = href(step);
+                const body = (
+                    <>
+                        <CompanionArt slug={step.slug} unread={false} />
+                        <span className="min-w-0 flex-1 text-sm font-semibold leading-5 text-white">
+                            {fillWords(words.journey.steps.row, {name: companionSummaryName(step, words), step: step.step})}
+                        </span>
+                        <AppIcon name="chevron" className="h-4 w-4 shrink-0 text-white/35" />
+                    </>
+                );
+                const className = "flex min-h-14 items-center gap-3.5 border-t border-white/[0.06] px-4 py-3 md:px-5";
+                return target ? (
+                    <Link key={step.id} href={target} className={`${className} transition hover:bg-white/[0.03]`}>{body}</Link>
+                ) : (
+                    <div key={step.id} className={className}>{body}</div>
+                );
+            })}
+        </section>
+    );
+}
+
 export default function CompanionsPage({words}: {words: CompanionWords}) {
     const {rows: companions, didLoad, available, reload} = useCompanions();
     const {cards, didLoad: cardsLoaded, available: cardsAvailable, reload: reloadCards} = useCompanionCards();
     const {conversations, reload: reloadConversations} = useAnimalConversations();
+    const {steps, reload: reloadSteps} = useOpenSteps();
     const [groupIntroSeen, setGroupIntroSeen] = useState(true);
     const [muteFailed, setMuteFailed] = useState(false);
     useEffect(() => setGroupIntroSeen(readIntroSeen()), []);
@@ -206,11 +241,12 @@ export default function CompanionsPage({words}: {words: CompanionWords}) {
             void reload();
             void reloadCards();
             void reloadConversations();
+            void reloadSteps();
         };
         refresh();
         window.addEventListener("focus", refresh);
         return () => window.removeEventListener("focus", refresh);
-    }, [reload, reloadCards, reloadConversations]);
+    }, [reload, reloadCards, reloadConversations, reloadSteps]);
 
     const rows = useMemo(
         () => buildCompanionRows({companions, conversations, cards, words}),
@@ -264,24 +300,36 @@ export default function CompanionsPage({words}: {words: CompanionWords}) {
                     </Link>
                 </div>
             ) : (
-                <div className="-mx-4 border-t border-white/[0.08] md:mx-0">
-                    <GroupChatRow isNew={rows.length >= 2 && !groupIntroSeen} words={words} />
-                    {rows.map((row) => (
-                        <CompanionRow
-                            key={row.speciesProfileId}
-                            row={row}
-                            // Its chat, on the card you last talked through (else
-                            // its newest); on the referral, when one is waiting.
-                            href={companionRowHref({
-                                captureId: chatCaptureIdFor(cards, row.speciesProfileId, row.captureId),
-                                referralWaiting: row.referralWaiting,
-                                referralId: row.referralId
-                            })}
-                            words={words}
-                            onMute={mute}
-                        />
-                    ))}
-                </div>
+                <>
+                    <YourStepsSection
+                        steps={steps}
+                        words={words}
+                        // That animal's chat, on the card you last talked through, with the step pinned.
+                        href={(step) => companionRowHref({
+                            captureId: chatCaptureIdFor(cards, step.speciesProfileId, step.captureId),
+                            referralWaiting: false,
+                            referralId: null
+                        })}
+                    />
+                    <div className="-mx-4 border-t border-white/[0.08] md:mx-0">
+                        <GroupChatRow isNew={rows.length >= 2 && !groupIntroSeen} words={words} />
+                        {rows.map((row) => (
+                            <CompanionRow
+                                key={row.speciesProfileId}
+                                row={row}
+                                // Its chat, on the card you last talked through (else
+                                // its newest); on the referral, when one is waiting.
+                                href={companionRowHref({
+                                    captureId: chatCaptureIdFor(cards, row.speciesProfileId, row.captureId),
+                                    referralWaiting: row.referralWaiting,
+                                    referralId: row.referralId
+                                })}
+                                words={words}
+                                onMute={mute}
+                            />
+                        ))}
+                    </div>
+                </>
             )}
         </AppPage>
     );

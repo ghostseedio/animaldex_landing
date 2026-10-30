@@ -1082,9 +1082,9 @@
     "glanceTitle": "{animal} dalam satu menit",
     "groupMembersEyebrow": "Di AnimalDex",
     "groupMembersTitle": "Semua spesies {animal} untuk dimainkan",
-    "groupMembersDescription": "AnimalDex mencatat setiap spesies {animal} secara terpisah. Buka salah satunya untuk mengikuti Trial-nya dan membuka kekuatannya.",
+    "groupMembersDescription": "AnimalDex mencatat setiap spesies {animal} secara terpisah. Buka salah satunya untuk melihat Kekuatan dan Uji Cobanya.",
     "groupMembersTrial": "Trial: {title}",
-    "groupMembersOpenPlay": "Buka Trial dan kekuatannya",
+    "groupMembersOpenPlay": "Lihat Kekuatan dan Uji Cobanya",
     "storyMediaHookLabel": "Tangkapan AnimalDex asli seekor {animal}, dihidupkan",
     "storyMediaStoryVideoLabel": "Kisah {animal} dengan narasi: tangkapan AnimalDex asli",
     "storyMediaEyebrow": "Dari cerita AnimalDex",
@@ -2358,7 +2358,6 @@
     "checkInNotNow": "Nanti saja",
     "checkInStop": "Berhenti bertanya",
     "checkInFailed": "Tidak dapat menyimpan. Coba lagi.",
-    "checkInDidIt": "Sudah kulakukan: {step}",
     "report": "Laporkan",
     "reportTitle": "Laporkan balasan ini",
     "reportOffensive": "Menyinggung atau berbahaya",
@@ -2407,9 +2406,6 @@
     "soundOriginal": "Lihat rekaman aslinya",
     "workingOn": "Sedang kita kerjakan: {focus}",
     "notThisAnyMore": "Bukan ini lagi",
-    "doneTogether": "Selesai bersama",
-    "powerYours": "{power} kini milikmu",
-    "powerWaitsForTraining": "Lulus cek pelajarannya untuk mendapatkan Kekuatannya.",
     "talkTo": "Bicara dengan {name}",
     "talkToHint": "Ia sudah tahu apa yang kalian bicarakan.",
     "trialPlaceholder": "Tanya tentang Uji Coba ini…",
@@ -2560,19 +2556,8 @@
       "noFocus": "Ceritakan kepada {name} apa yang sedang terjadi dalam hidup Anda, dan ia akan memilih sesuatu untuk dikerjakan bersama Anda.",
       "notThisAnyMore": "Bukan ini lagi",
       "yourStep": "Langkah Anda",
-      "doneTogether": "Selesai bersama",
       "itsPower": "Kekuatannya",
-      "earnByTrial": "Selesaikan satu Uji Coba bersama {name} untuk mendapatkannya.",
-      "earnAfterLessonCheck": "Lulus cek pelajarannya, lalu selesaikan satu Uji Coba bersama {name}.",
-      "talkToIt": "Bicara dengannya",
-      "takeLessonCheck": "Ikuti cek pelajaran",
-      "lessonCheckMessage": "Boleh aku ikut cek pelajaranmu?",
-      "lessonCheckMissed": "Ada satu jawaban yang salah. Coba lagi besok.",
-      "animalTrials": "Uji Coba Hewan",
-      "askAboutIt": "Tanyakan",
-      "askAboutTrialMessage": "Ceritakan tentang Uji Coba {difficulty} milikmu.",
-      "battleLocked": "Dapatkan Kekuatan {name} untuk bertarung dengannya.",
-      "battleLockedDetail": "Selesaikan satu Uji Coba dengannya, Uji Coba Hewan atau milik Anda sendiri."
+      "talkToIt": "Bicara dengannya"
     },
     "list": {
       "title": "Teman",
@@ -2603,17 +2588,76 @@
       "application": "Didapatkan dengan menerapkannya",
       "any": "Didapatkan"
     },
-    "trialStatus": {
-      "completed": "Selesai",
-      "underWay": "Sedang berjalan",
-      "armed": "Terjadwal",
-      "missed": "Terlewat",
-      "notStarted": "Belum dimulai"
-    },
-    "difficulty": {
-      "Easy": "Mudah",
-      "Medium": "Sedang",
-      "Hard": "Sulit"
+    "journey": {
+      "step": {
+        "eyebrow": "Langkah Anda bersama {name}",
+        "accept": "Akan saya lakukan",
+        "other": "Yang lain saja",
+        "didIt": "Sudah saya lakukan",
+        "otherMessage": "Boleh aku dapat langkah yang lain?",
+        "pinnedLabel": "Langkah Anda"
+      },
+      "report": {
+        "title": "Apa yang terjadi?",
+        "placeholder": "Ceritakan kepada {name} bagaimana hasilnya",
+        "attach": "Tambah foto atau video",
+        "attachNote": "Opsional. Disimpan dalam catatan Anda bersama {name}, dan hanya Anda yang bisa melihatnya.",
+        "send": "Ceritakan kepada {name}"
+      },
+      "earned": {
+        "title": "{power}",
+        "subtitle": "Kekuatan {name} kini milik Anda",
+        "via": "Didapatkan dalam hidup Anda sendiri",
+        "continue": "Lanjut"
+      },
+      "done": {
+        "chip": "Selesai bersama",
+        "xp": "+{xp} XP"
+      },
+      "record": {
+        "title": "Catatan Anda bersama {name}",
+        "empty": "Langkah yang Anda selesaikan bersama {name} tersimpan di sini."
+      },
+      "steps": {
+        "sectionTitle": "Langkah Anda",
+        "row": "{name}: {step}"
+      },
+      "warmup": {
+        "title": "Pemanasan",
+        "offer": "Dua pertanyaan singkat tentang {power}.",
+        "offerCount": "{n} pertanyaan singkat tentang {power}.",
+        "take": "Ikuti pemanasan (+5 XP)",
+        "skip": "Lewati",
+        "passed": "Pemanasan selesai",
+        "missed": "Belum tepat. {name} akan menceritakan cara pandang jenisnya.",
+        "resultMessagePassed": "Aku menjawab benar semua {n} soal di pemanasanmu.",
+        "resultMessageMissed": "Aku menjawab benar {right} dari {n} soal di pemanasanmu."
+      },
+      "trial": {
+        "sectionTitle": "Uji Coba {name}",
+        "easy": "Mudah",
+        "medium": "Sedang",
+        "hard": "Sulit",
+        "makeStep": "Jadikan langkah saya",
+        "pickedMessage": "Aku akan mencoba Uji Coba {difficulty} milikmu."
+      },
+      "power": {
+        "notEarnedLine": "Selesaikan satu langkah bersama {name} untuk mendapatkannya."
+      },
+      "battle": {
+        "locked": "Dapatkan Kekuatan {name} untuk bertarung dengannya.",
+        "lockedDetail": "Selesaikan satu langkah dengannya."
+      },
+      "problems": {
+        "signIn": "Masuk untuk melanjutkan langkah Anda.",
+        "stepGone": "Langkah itu sudah tidak terbuka lagi.",
+        "catchFirst": "Tangkap hewan ini dulu untuk menjadikan salah satu Uji Cobanya langkah Anda.",
+        "trialGone": "Uji Coba itu sudah tidak tersedia.",
+        "tooShort": "Tulis sedikit lagi: beberapa kata tentang apa yang terjadi.",
+        "oneMedia": "Tambahkan paling banyak satu foto atau video.",
+        "mediaFailed": "Foto atau video itu tidak terunggah. Coba yang lain, atau kirim tanpa itu.",
+        "generic": "Gagal terkirim. Coba lagi sebentar lagi."
+      }
     },
     "displayName": "{nickname} sang {animal}",
     "card": {

@@ -6,7 +6,6 @@ import {
     FUSED_COPY,
     type FusedPower,
     type FusedStage,
-    attemptsExhausted,
     boostChips,
     boostStateText,
     bringsLine,
@@ -21,7 +20,7 @@ import {
     taughtByLine,
     teachesLine
 } from "@/lib/fused-powers";
-import {type SpeciesTraining, LOCKOUT_COPY, TRAINING_COPY, decodeSpeciesTrainingResult, fusedLockedBody} from "@/lib/species-training";
+import {type SpeciesTraining, TRAINING_COPY, decodeSpeciesTrainingResult} from "@/lib/species-training";
 import TrainingQuiz, {type TrainingAnswerSubmitter} from "@/components/animal-detail/species-training/training-quiz";
 import ApplyItYourWay, {type ApplicationSubmitter} from "@/components/animal-detail/animal-powers/apply-it-your-way";
 import {
@@ -40,7 +39,8 @@ import {useFusedPowersContext} from "@/components/animal-detail/fused-powers/fus
  *
  * Nothing here decides anything. The stage, the quiz, the grading and the pay
  * are the server's; after a pass or an approval the list and the card are
- * both re-read.
+ * both re-read. Fused Powers keep this loop in 3.2 (docs/your-step/SPEC.md,
+ * section 6), minus the locks: a miss or a refused proof can go again.
  */
 
 const NEON = "#A7F432";
@@ -258,8 +258,7 @@ function TrainingStage({
     onStart: () => void;
 }) {
     const power = item.power;
-    // A miss today locks it until tomorrow, as on iOS.
-    const canStart = Boolean(fusedTrainingForQuiz(item)) && !item.trainingLocked;
+    const canStart = Boolean(fusedTrainingForQuiz(item));
 
     return (
         <>
@@ -275,30 +274,16 @@ function TrainingStage({
                 {power?.example ? <p className="text-[11px] leading-5 text-white/45">{power.example}</p> : null}
             </div>
             <p className="text-[11px] font-black" style={{color: NEON_TEXT}}>{fusedTrainingRewardLine(item)}</p>
-            {item.trainingLocked ? (
-                <LockedLine>{fusedLockedBody()}</LockedLine>
-            ) : (
-                <button
-                    type="button"
-                    onClick={onStart}
-                    disabled={!canStart}
-                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:opacity-50"
-                    style={{backgroundColor: NEON}}
-                >
-                    {TRAINING_COPY.start} <span aria-hidden="true">→</span>
-                </button>
-            )}
+            <button
+                type="button"
+                onClick={onStart}
+                disabled={!canStart}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:opacity-50"
+                style={{backgroundColor: NEON}}
+            >
+                {TRAINING_COPY.start} <span aria-hidden="true">→</span>
+            </button>
         </>
-    );
-}
-
-/** A miss or a rejected proof locks until tomorrow (iOS `lockedLine`). */
-function LockedLine({children}: {children: React.ReactNode}) {
-    return (
-        <p className="flex items-start gap-2 text-xs font-semibold leading-5 text-white/60">
-            <span aria-hidden="true">🔒</span>
-            {children}
-        </p>
     );
 }
 
@@ -336,7 +321,6 @@ function ProvingStage({
 }) {
     const [route, setRoute] = useState<Route>("trial");
     const [showsApply, setShowsApply] = useState(false);
-    const exhausted = attemptsExhausted(item);
 
     // Apply It Your Way, sent to the fused route instead of the Animal Power one.
     const submitApplication: ApplicationSubmitter = useCallback(async ({domain, account, evidence}) => {
@@ -355,8 +339,7 @@ function ProvingStage({
                 reason: outcome.result.reason,
                 quotedAction: "",
                 grantedPower: outcome.result.earned,
-                rejectionsRemaining: outcome.result.rejectionsRemaining,
-                locked: outcome.result.locked
+                rejectionsRemaining: outcome.result.rejectionsRemaining
             }
         };
     }, [item.id]);
@@ -408,7 +391,7 @@ function ProvingStage({
                 <div className="flex flex-col gap-3 px-5 pt-4">
                     {route === "trial" ? (
                         item.trial ? (
-                            <TrialRoute item={item} exhausted={exhausted} onReload={onReload} onSettled={onSettled} />
+                            <TrialRoute item={item} onReload={onReload} onSettled={onSettled} />
                         ) : (
                             <p className="text-sm leading-6 text-white/60">{FUSED_COPY.notReady}</p>
                         )
@@ -420,11 +403,10 @@ function ProvingStage({
                             <button
                                 type="button"
                                 onClick={() => setShowsApply(true)}
-                                disabled={exhausted}
-                                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/60"
-                                style={exhausted ? undefined : {backgroundColor: NEON}}
+                                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
+                                style={{backgroundColor: NEON}}
                             >
-                                {exhausted ? <>🔒 {LOCKOUT_COPY.lockedButton}</> : <>WRITE WHAT YOU DID <span aria-hidden="true">→</span></>}
+                                WRITE WHAT YOU DID <span aria-hidden="true">→</span>
                             </button>
                         </>
                     )}
@@ -436,13 +418,10 @@ function ProvingStage({
                     {item.attempts.lastReason}
                 </p>
             ) : null}
-            {exhausted ? <LockedLine>{LOCKOUT_COPY.proofLockedBody}</LockedLine> : null}
-
             {showsApply ? (
                 <ApplyItYourWay
                     power={applyPower}
                     submitApplication={submitApplication}
-                    proofLocked={exhausted}
                     onFinished={(result) => {
                         if (result.verdict === "approved") onSettled();
                         else void onReload();
@@ -463,12 +442,10 @@ function ProvingStage({
  */
 function TrialRoute({
     item,
-    exhausted,
     onReload,
     onSettled
 }: {
     item: FusedPower;
-    exhausted: boolean;
     onReload: () => Promise<unknown>;
     onSettled: () => void;
 }) {
@@ -492,9 +469,7 @@ function TrialRoute({
                 onSettled();
                 return;
             }
-            // A locked refusal is said by the band once re-read, not twice.
-            if (outcome.error && outcome.code !== "proof_locked") setErrorMessage(outcome.error);
-            if (outcome.code === "attempts_exhausted_today" || outcome.code === "proof_locked") void onReload();
+            if (outcome.error) setErrorMessage(outcome.error);
             return;
         }
         if (outcome.result.verdict === "approved") {
@@ -524,7 +499,7 @@ function TrialRoute({
                 onRemove={() => setEvidence(null)}
                 onPick={(file) => void attach(file)}
                 isPreparing={isPreparing}
-                disabled={isWorking || exhausted}
+                disabled={isWorking}
                 allowsLibrary={false}
             />
             {errorMessage ? <p className="text-[11px] leading-5 text-orange-400">{errorMessage}</p> : null}
@@ -533,13 +508,13 @@ function TrialRoute({
                 onClick={() => {
                     if (evidence) void submit(evidence);
                 }}
-                disabled={!evidence || isWorking || isPreparing || exhausted}
+                disabled={!evidence || isWorking || isPreparing}
                 className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/60"
-                style={!evidence || isWorking || isPreparing || exhausted ? undefined : {backgroundColor: NEON}}
+                style={!evidence || isWorking || isPreparing ? undefined : {backgroundColor: NEON}}
             >
-                {isWorking ? "…" : exhausted ? <>🔒 {LOCKOUT_COPY.lockedButton}</> : "SEND FOR REVIEW"}
+                {isWorking ? "…" : "SEND FOR REVIEW"}
             </button>
-            {!evidence && !exhausted ? (
+            {!evidence ? (
                 <p className="text-center text-[10px] text-white/50">Add a photo or video to submit.</p>
             ) : null}
         </>

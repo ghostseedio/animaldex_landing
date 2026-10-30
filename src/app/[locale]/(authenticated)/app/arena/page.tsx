@@ -12,18 +12,17 @@ type ArenaPageProps = {
     searchParams?: {target?: string; segment?: string};
 };
 
-const SEGMENTS: PlayHubSegment[] = ["powers", "comparisons", "history"];
-
 /**
  * Explore's Battles (docs/companion-loop/SPEC.md, phase 4; it was the Play
- * tab): the matchups hub, embedded as on iOS: Powers, Comparisons and History.
+ * tab): the matchups hub, embedded as on iOS: Comparisons and History. The
+ * Powers page is gone in 3.2; an old `?segment=powers` link opens Comparisons.
  */
 export default async function ArenaPage({params, searchParams}: ArenaPageProps) {
     const context = await getAuthenticatedAppContext();
     if (!context) redirect(getLocalePath(params.locale, "/account"));
 
     const targetId = searchParams?.target?.trim() || null;
-    const requestedSegment = searchParams?.segment?.trim() as PlayHubSegment | undefined;
+    const requestedSegment = searchParams?.segment?.trim() as PlayHubSegment | "powers" | undefined;
     const [bundle, popularBreakdowns] = await Promise.all([
         getMatchupHubBundle(context.profile.id),
         fetchSpeciesComparisonSummaries(12).catch(() => [])
@@ -50,7 +49,7 @@ export default async function ArenaPage({params, searchParams}: ArenaPageProps) 
                 initialHistory={bundle.history}
                 initialPopularBreakdowns={popularBreakdowns}
                 initialTargetId={targetId}
-                initialSegment={requestedSegment && SEGMENTS.includes(requestedSegment) ? requestedSegment : "powers"}
+                initialSegment={requestedSegment === "history" ? "history" : "comparisons"}
             />
         </Suspense>
     );

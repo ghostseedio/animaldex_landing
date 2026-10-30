@@ -59,6 +59,13 @@ export type AskMessage = {
     animalMessageId?: string;
     /** On a failed reply only: why, so the drawer says it in the reader's language. */
     failureKind?: AskFailureKind;
+    /**
+     * The person's own message that was their report on a step ("I did it",
+     * 3.2): the step it reported on, so a retry sends it as the report again.
+     */
+    stepReportId?: string;
+    /** The card under this reply (the Warmup, the Trials) was skipped or used. */
+    cardsDismissed?: boolean;
 };
 
 /** Why a reply failed, when it was not the day's limit. */
@@ -109,7 +116,9 @@ export function createAskMessage(
         ...(overrides.isGreeting ? {isGreeting: true} : {}),
         ...(overrides.companionEvent ? {companionEvent: overrides.companionEvent} : {}),
         ...(overrides.followUp ? {followUp: overrides.followUp} : {}),
-        ...(overrides.animalMessageId ? {animalMessageId: overrides.animalMessageId} : {})
+        ...(overrides.animalMessageId ? {animalMessageId: overrides.animalMessageId} : {}),
+        ...(overrides.stepReportId ? {stepReportId: overrides.stepReportId} : {}),
+        ...(overrides.cardsDismissed ? {cardsDismissed: true} : {})
     };
 }
 
@@ -179,7 +188,9 @@ function normalizeMessage(value: unknown): AskMessage | null {
         ...(row.isGreeting === true ? {isGreeting: true} : {}),
         ...companionEventField(row.companionEvent),
         ...followUpFields(row),
-        ...(typeof row.animalMessageId === "string" && row.animalMessageId ? {animalMessageId: row.animalMessageId} : {})
+        ...(typeof row.animalMessageId === "string" && row.animalMessageId ? {animalMessageId: row.animalMessageId} : {}),
+        ...(typeof row.stepReportId === "string" && row.stepReportId ? {stepReportId: row.stepReportId} : {}),
+        ...(row.cardsDismissed === true ? {cardsDismissed: true} : {})
     };
 }
 

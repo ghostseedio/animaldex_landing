@@ -10,14 +10,11 @@ import {useAnimalPowerIcon} from "@/components/animal-detail/animal-powers/use-a
 /**
  * The Animal Power band on Learn, ported from iOS `AnimalPowerGuideSection`.
  *
- * ONE Power surface, read top to bottom as the journey:
- *
- *     see the Power -> understand it -> want it -> Earn this Power
- *
- * The name and lesson come first, the rows that explain it follow, and the band
- * CLOSES on the single action. Earning swaps that closing action for what it
- * opened. There is no second Power heading and no second button anywhere else
- * on Learn.
+ * ONE Power surface, read top to bottom: see the Power, understand it, want
+ * it. The name and lesson come first and the rows that explain it follow.
+ * Earned, the band closes on what earning opened. It has no earning button:
+ * since 3.2 the Power is earned with the animal, one step at a time in its
+ * chat (docs/your-step/SPEC.md), which "Talk to it" opens.
  *
  * Nothing here reads a Pro entitlement: the Power, its explanation and its
  * earning action are core. The padlock marks ownership, never secrecy.
@@ -77,8 +74,7 @@ function Row({
 export default function AnimalPowerBand({
     profile,
     power,
-    speciesProfileId,
-    onEarnPower
+    speciesProfileId
 }: {
     profile: EnhancedAnimalPowerProfile;
     /**
@@ -88,8 +84,6 @@ export default function AnimalPowerBand({
     power: AnimalPower | null;
     /** The species, for the Power's icon before `power` has loaded. */
     speciesProfileId?: string | null;
-    /** Absent when there is no species to earn against, so the band draws no button. */
-    onEarnPower?: (() => void) | null;
 }) {
     const [openRow, setOpenRow] = useState<RowId | null>(null);
     const toggle = (row: RowId) => setOpenRow((current) => (current === row ? null : row));
@@ -226,7 +220,7 @@ export default function AnimalPowerBand({
                 )}
             </div>
 
-            {/* How the band ends: the one earning action, or what earning opened. */}
+            {/* Earned: what earning opened. */}
             {isEarned ? (
                 <div className="flex flex-col gap-2 pt-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: NEON}}>Play unlocked</p>
@@ -237,15 +231,6 @@ export default function AnimalPowerBand({
                         </p>
                     ))}
                 </div>
-            ) : power && onEarnPower ? (
-                <button
-                    type="button"
-                    onClick={onEarnPower}
-                    className="mt-1 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90"
-                    style={{backgroundColor: NEON}}
-                >
-                    Earn this Power <span aria-hidden="true">→</span>
-                </button>
             ) : null}
         </section>
     );

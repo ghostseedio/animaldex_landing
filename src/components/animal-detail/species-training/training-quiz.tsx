@@ -4,11 +4,9 @@ import {useCallback, useEffect, useState} from "react";
 import {
     type SpeciesTraining,
     type SpeciesTrainingResult,
-    LOCKOUT_COPY,
     TRAINING_COPY,
     chooseTrainingAnswer,
     decodeSpeciesTrainingResult,
-    isLockedRefusal,
     previousTrainingQuestion,
     startTrainingQuiz,
     trainingFailSummary,
@@ -20,22 +18,25 @@ import {
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 
 /**
- * The Training quiz, full screen like the Trial and Apply It Your Way sheets.
+ * The quiz on a Power, full screen.
  *
  * One question at a time; choosing advances, Back changes an earlier answer,
- * and the last answer submits on its own. A fail says how many were right and
- * which were wrong — never which answer was right.
+ * and the last answer submits on its own. A miss says which were wrong —
+ * never which answer was right.
  *
- * One attempt a day, as on iOS: the warning is said before the first answer,
- * and a miss offers no retry ("That was today's attempt. Try again tomorrow.").
- * Only answers that never reached the grader can be sent again.
+ * For an animal's own Power it is the 3.2 **Warmup** (`warmup` words): no
+ * warning before it, and nothing locked after it. A pass says "Warmup done"
+ * and its XP; a miss says the animal will tell them how its kind sees it,
+ * with Close. Either way the caller sends the result to the animal as the
+ * person's own message. A fused Power's quiz (no `warmup`) keeps its Training
+ * wording, and after a miss it can be taken again straight away.
  */
 
 const NEON = "#A7F432";
 const ORANGE = "#FB923C";
 
 /**
- * Where the answers go when it is not an animal's own Training — a fused
+ * Where the answers go when it is not an animal's own quiz — a fused
  * Power's. Same result shape; a refusal resolves with the copy to show.
  */
 export type TrainingAnswerSubmitter = (answers: number[]) => Promise<
@@ -43,31 +44,46 @@ export type TrainingAnswerSubmitter = (answers: number[]) => Promise<
     | {ok: false; error: string; code?: string}
 >;
 
+/** The Warmup's words, in the reader's language (the companion words' `journey.warmup`). */
+export type WarmupQuizWords = {
+    title: string;
+    passed: string;
+    /** "Not quite. {name} will tell you how its kind sees it.", with the name filled in. */
+    missed: string;
+    continue: string;
+    close: string;
+};
+
 type Phase =
     | {kind: "answering"}
     | {kind: "submitting"}
     | {kind: "result"; result: SpeciesTrainingResult}
-    /** `locked`: the server says today's attempt is used, so sending again cannot help. */
-    | {kind: "error"; message: string; locked: boolean};
+    | {kind: "error"; message: string};
 
 export default function TrainingQuiz({
     training,
     powerName,
+    warmup = null,
     onPassed,
     onReadPower,
     onClose,
-    submitAnswers
+    submitAnswers,
+    layer = "page"
 }: {
     training: SpeciesTraining;
     powerName: string | null | undefined;
-    /** A pass, the moment it lands, so the Play area can unlock before Continue. */
-    onPassed: (result: SpeciesTrainingResult) => void;
-    /** "Read the Power again": the quiz closes and the Power is shown. */
-    onReadPower: () => void;
-    /** Closing, by Continue or ✕. The caller re-reads the Play area. */
-    onClose: () => void;
-    /** Set for a fused Power's Training; otherwise the animal's own Training route. */
+    /** Set: the animal's own Warmup, in these words. Null: a fused Power's Training. */
+    warmup?: WarmupQuizWords | null;
+    /** A pass, the moment it lands, so the caller can show it before Continue. */
+    onPassed?: (result: SpeciesTrainingResult) => void;
+    /** "Read the Power again" (a fused Power's quiz only): the quiz closes and the Power is shown. */
+    onReadPower?: () => void;
+    /** Closing, by Continue, Close or ✕, with the result when there was one. */
+    onClose: (result: SpeciesTrainingResult | null) => void;
+    /** Set for a fused Power's Training; otherwise the animal's own quiz route. */
     submitAnswers?: TrainingAnswerSubmitter;
+    /** `chat`: drawn over the chat drawer, which sits above the page. */
+    layer?: "page" | "chat";
 }) {
     const questions = training.questions;
     const [quiz, setQuiz] = useState(() => startTrainingQuiz(questions.length));
@@ -87,11 +103,11 @@ export default function TrainingQuiz({
             if (submitAnswers) {
                 const outcome = await submitAnswers(answers);
                 if (!outcome.ok) {
-                    setPhase({kind: "error", message: outcome.error, locked: isLockedRefusal(outcome.code)});
+                    setPhase({kind: "error", message: outcome.error});
                     return;
                 }
                 setPhase({kind: "result", result: outcome.result});
-                if (outcome.result.passed) onPassed(outcome.result);
+                if (outcome.result.passed) onPassed?.(outcome.result);
                 return;
             }
             const response = await fetch("/api/app/species-training", {
@@ -102,17 +118,13 @@ export default function TrainingQuiz({
             const payload = await response.json().catch(() => null);
             const result = response.ok ? decodeSpeciesTrainingResult(payload?.result) : null;
             if (!result) {
-                setPhase({
-                    kind: "error",
-                    message: payload?.error ?? trainingRefusalMessage(payload?.code ?? ""),
-                    locked: isLockedRefusal(payload?.code)
-                });
+                setPhase({kind: "error", message: payload?.error ?? trainingRefusalMessage(payload?.code ?? "")});
                 return;
             }
             setPhase({kind: "result", result});
-            if (result.passed) onPassed(result);
+            if (result.passed) onPassed?.(result);
         } catch {
-            setPhase({kind: "error", message: trainingRefusalMessage(""), locked: false});
+            setPhase({kind: "error", message: trainingRefusalMessage("")});
         }
     }, [onPassed, submitAnswers, training.speciesProfileId]);
 
@@ -126,33 +138,42 @@ export default function TrainingQuiz({
         if (isLast && answers) void submit(answers);
     };
 
-    const title = powerName?.trim() || TRAINING_COPY.title;
+    /** Again, from the first question: a miss locks nothing. */
+    const restart = () => {
+        setQuiz(startTrainingQuiz(questions.length));
+        setPhase({kind: "answering"});
+    };
+
+    const result = phase.kind === "result" ? phase.result : null;
+    const close = () => onClose(result);
+    const kindTitle = warmup?.title ?? TRAINING_COPY.title;
     const question = questions[quiz.position];
     const showsProgress = phase.kind === "answering" || phase.kind === "submitting";
 
     return (
-        <div role="dialog" aria-modal="true" aria-label={TRAINING_COPY.title} className="fixed inset-0 z-[59] flex flex-col bg-black">
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={kindTitle}
+            className={`fixed inset-0 flex flex-col bg-black ${layer === "chat" ? "z-[72]" : "z-[59]"}`}
+        >
             <header className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-5 py-3">
                 <span className="flex min-w-0 flex-col">
                     <span className="truncate text-[10px] font-black uppercase tracking-[0.13em]" style={{color: NEON}}>
                         {/* A fused Power's Training (it submits elsewhere) has no species icon. */}
                         {powerName?.trim() && !submitAnswers ? <AnimalPowerIcon speciesProfileId={training.speciesProfileId} /> : null}
-                        {title}
+                        {warmup && powerName?.trim() ? `${warmup.title} · ${powerName.trim()}` : powerName?.trim() || kindTitle}
                     </span>
                     {showsProgress ? (
                         <span className="text-[10px] font-bold text-white/55">
                             {trainingQuestionProgress(quiz.position + 1, questions.length)}
                         </span>
                     ) : null}
-                    {/* Said before the first answer, not after the last one. */}
-                    {phase.kind === "answering" && quiz.position === 0 ? (
-                        <span className="mt-1 text-[11px] leading-4 text-white/55">{LOCKOUT_COPY.trainingWarning}</span>
-                    ) : null}
                 </span>
                 <button
                     type="button"
-                    onClick={onClose}
-                    aria-label="Close"
+                    onClick={close}
+                    aria-label={warmup?.close ?? TRAINING_COPY.close}
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-white"
                 >
                     ✕
@@ -203,12 +224,9 @@ export default function TrainingQuiz({
                         </section>
                     ) : null}
 
-                    {phase.kind === "result" && phase.result.passed ? (
-                        <PassedView training={training} result={phase.result} />
-                    ) : null}
-
-                    {phase.kind === "result" && !phase.result.passed ? (
-                        <FailedView training={training} result={phase.result} />
+                    {result?.passed ? <PassedView training={training} result={result} title={warmup?.passed ?? TRAINING_COPY.complete} /> : null}
+                    {result && !result.passed ? (
+                        <FailedView training={training} result={result} headline={warmup?.missed ?? trainingFailSummary(result.correct)} />
                     ) : null}
                 </div>
             </div>
@@ -216,13 +234,15 @@ export default function TrainingQuiz({
             {phase.kind === "result" || phase.kind === "error" ? (
                 <div className="border-t border-white/[0.08] bg-black/80 px-[18px] py-3 backdrop-blur">
                     <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
-                        {phase.kind === "result" && phase.result.passed ? (
-                            <PrimaryButton onClick={onClose}>{TRAINING_COPY.continue}</PrimaryButton>
-                        ) : phase.kind === "result" || (phase.kind === "error" && phase.locked) ? (
-                            // Today's attempt is used: no retry, as on iOS.
+                        {result?.passed ? (
+                            <PrimaryButton onClick={close}>{warmup?.continue ?? TRAINING_COPY.continue}</PrimaryButton>
+                        ) : result && warmup ? (
+                            // The animal tells them how its kind sees it; nothing is locked.
+                            <PrimaryButton onClick={close}>{warmup.close}</PrimaryButton>
+                        ) : result ? (
                             <>
-                                <PrimaryButton onClick={onClose}>{TRAINING_COPY.close}</PrimaryButton>
-                                <SecondaryButton onClick={onReadPower}>{TRAINING_COPY.readPowerAgain}</SecondaryButton>
+                                <PrimaryButton onClick={restart}>{TRAINING_COPY.tryAgain}</PrimaryButton>
+                                {onReadPower ? <SecondaryButton onClick={onReadPower}>{TRAINING_COPY.readPowerAgain}</SecondaryButton> : null}
                             </>
                         ) : trainingSubmission(quiz) ? (
                             // The answers never reached the grader; send the same ones again.
@@ -230,7 +250,7 @@ export default function TrainingQuiz({
                                 {TRAINING_COPY.tryAgain}
                             </PrimaryButton>
                         ) : (
-                            <PrimaryButton onClick={onClose}>{TRAINING_COPY.close}</PrimaryButton>
+                            <PrimaryButton onClick={close}>{warmup?.close ?? TRAINING_COPY.close}</PrimaryButton>
                         )}
                     </div>
                 </div>
@@ -239,14 +259,14 @@ export default function TrainingQuiz({
     );
 }
 
-function PassedView({training, result}: {training: SpeciesTraining; result: SpeciesTrainingResult}) {
+function PassedView({training, result, title}: {training: SpeciesTraining; result: SpeciesTrainingResult; title: string}) {
     const reward = trainingRewardLine(result.rewardXP, result.rewardCredits);
     return (
         <>
             <section className="flex flex-col gap-2 border-b border-white/[0.08] bg-primary-400/10 px-5 py-6">
                 <span aria-hidden="true" className="text-3xl font-bold" style={{color: NEON}}>✓</span>
-                <h2 className="font-display text-3xl font-black leading-tight text-white">{TRAINING_COPY.complete}</h2>
-                {reward ? <p className="text-sm font-black" style={{color: NEON}}>{reward}</p> : null}
+                <h2 className="font-display text-3xl font-black leading-tight text-white">{title}</h2>
+                {reward && !result.alreadyCompleted ? <p className="text-sm font-black" style={{color: NEON}}>{reward}</p> : null}
             </section>
             {result.explanations.length ? training.questions.map((question, position) => (
                 <section key={question.index} className="flex flex-col gap-1.5 border-b border-white/[0.08] bg-white/[0.02] px-5 py-4">
@@ -260,13 +280,11 @@ function PassedView({training, result}: {training: SpeciesTraining; result: Spec
     );
 }
 
-function FailedView({training, result}: {training: SpeciesTraining; result: SpeciesTrainingResult}) {
+function FailedView({training, result, headline}: {training: SpeciesTraining; result: SpeciesTrainingResult; headline: string}) {
     return (
         <>
             <section className="flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.03] px-5 py-6" style={{boxShadow: `inset 3px 0 0 ${ORANGE}8C`}}>
-                <p className="text-base font-bold leading-6 text-white">{trainingFailSummary(result.correct)}</p>
-                {/* One attempt a day: no retry here. */}
-                <p className="text-sm leading-6 text-white/70">{LOCKOUT_COPY.attemptUsedLine}</p>
+                <p className="text-base font-bold leading-6 text-white">{headline}</p>
             </section>
             {/* Which were wrong, never what was right. */}
             {training.questions.map((question, position) => {

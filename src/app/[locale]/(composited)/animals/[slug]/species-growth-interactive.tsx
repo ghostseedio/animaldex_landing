@@ -5,9 +5,7 @@ import {useRouter} from "next/navigation";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import type {FusionDonorCapture, SpeciesGrowthContext} from "@/data/species-growth";
-import EarnPowerSheet from "@/components/animal-detail/animal-powers/earn-power-sheet";
 import {usePlayEligibility} from "@/components/animal-detail/animal-powers/use-animal-power";
-import {usePowerLoopContext} from "@/components/animal-detail/power-loop/power-loop-context";
 import {FusedPowersSlot} from "@/components/animal-detail/fused-powers/fused-powers-section";
 import {useFusedPowersContext} from "@/components/animal-detail/fused-powers/fused-powers-context";
 import {FUSED_COPY, whenEarnedLine, statDisplayName} from "@/lib/fused-powers";
@@ -123,6 +121,7 @@ function PrincipleFusionModal({
      * as a lock the person could open.
      */
     receiverLocked: boolean;
+    /** "Talk to it": the Power is earned with the animal, in its chat (3.2). */
     onEarnPower: () => void;
     receiverCaptureId: string;
     donors: FusionDonorCapture[];
@@ -241,8 +240,8 @@ function PrincipleFusionModal({
                     </section>
 
                     {receiverLocked && !result ? (
-                        // Locked Fusion, with the route out. Same destination as
-                        // a locked Comparison row: the real earning flow.
+                        // Locked Fusion, with the route out: the animal's chat,
+                        // where one step done together earns its Power.
                         <button
                             type="button"
                             onClick={onEarnPower}
@@ -253,7 +252,7 @@ function PrincipleFusionModal({
                                 <span className="block text-sm font-semibold text-white">Fusion is locked</span>
                                 <span className="mt-0.5 block text-[10px] leading-4 text-white/60">Earn {powerName} to unlock Fusion for this animal.</span>
                             </span>
-                            <span aria-hidden="true" className="text-[11px] font-bold text-primary-400">›</span>
+                            <span className="shrink-0 text-[11px] font-bold text-primary-400">Talk to it ›</span>
                         </button>
                     ) : null}
 
@@ -350,7 +349,6 @@ export default function SpeciesGrowthInteractive({
     // Comparison tools start folded. Opened state is per-visit, which is right:
     // it is a detour, not a preference.
     const [showsComparisonTools, setShowsComparisonTools] = useState(false);
-    const [showsEarnPower, setShowsEarnPower] = useState(false);
 
     useEffect(() => {
         setClientSignedIn(requestHasSupabaseAuthCookie(document.cookie));
@@ -374,19 +372,7 @@ export default function SpeciesGrowthInteractive({
     const powerName = growth.principle?.principle ?? speciesName;
     const canFuse = Boolean(growth.primaryCaptureId && growth.principle && growth.fusionDonors.length > 0);
 
-    // Under the Power Loop bar the comparison tools and Fusion carry on step 3,
-    // "Battle & Fuse" (its eyebrow is drawn above them, over the unlock rows),
-    // and the bar's "Fuse Powers" opens the same sheet as the row.
-    const powerLoop = usePowerLoopContext();
     const fusedPowers = useFusedPowersContext();
-    const showsLoopSteps = Boolean(powerLoop && compareOnly);
-    const fusionOpenRequest = powerLoop?.fusionOpenRequest ?? 0;
-
-    useEffect(() => {
-        if (fusionOpenRequest > 0 && canFuse) setFusionOpen(true);
-        // Only a new request opens it, not a change in what it can open.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fusionOpenRequest]);
 
     const wide = layout === "wide";
     const compareCardClass = `  border p-3.5 ${wide ? "lg:h-full lg:  lg:p-6" : ""}`;
@@ -481,9 +467,7 @@ export default function SpeciesGrowthInteractive({
         });
     };
 
-    // The compact Fusion row (see where it is placed below). Under the Power
-    // Loop bar it moves below the comparison tools, so step 3 reads Battle then
-    // Fuse top to bottom; everywhere else it stays where it was.
+    // The compact Fusion row, for the foot of the Battle tab.
     const compactFusionRow = (
         <div className="flex flex-col">
             <button
@@ -519,7 +503,7 @@ export default function SpeciesGrowthInteractive({
                         // hero card under a tab whose job is a single choice.
                         // This keeps the entry point and the count, and lets the
                         // sheet do the explaining.
-                        showsLoopSteps ? null : compactFusionRow
+                        compactFusionRow
                     ) : growth.principle ? (
                         <section
                             className="  border p-4 font-sans"
@@ -826,8 +810,6 @@ export default function SpeciesGrowthInteractive({
                 </section>
             ) : null}
 
-            {showsLoopSteps && growth.isAuthenticated && growth.hasCapture && growth.principle ? compactFusionRow : null}
-
             {growth.primaryCaptureId ? (
                 <PrincipleFusionModal
                     open={fusionOpen}
@@ -843,7 +825,8 @@ export default function SpeciesGrowthInteractive({
                     receiverLocked={receiverLocked}
                     onEarnPower={() => {
                         powerGateAnalytics.lockedFusionEarnTap(receiverSpeciesProfileId);
-                        setShowsEarnPower(true);
+                        setFusionOpen(false);
+                        router.push(`/app/capture/${encodeURIComponent(growth.primaryCaptureId ?? "")}?talk=1`);
                     }}
                     onSuccess={() => {
                         refresh();
@@ -853,18 +836,6 @@ export default function SpeciesGrowthInteractive({
                 />
             ) : null}
 
-            {showsEarnPower ? (
-                <EarnPowerSheet
-                    speciesProfileId={receiverSpeciesProfileId}
-                    animalName={speciesName}
-                    onClose={() => {
-                        setShowsEarnPower(false);
-                        // Re-read: a Power earned in there unlocks Fusion here
-                        // without closing and reopening the sheet.
-                        void play.reload();
-                    }}
-                />
-            ) : null}
         </div>
     );
 }

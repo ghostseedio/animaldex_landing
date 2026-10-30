@@ -1,9 +1,7 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {type AnimalTrial, decodeAnimalTrial, isComplete, isFailed, sortTrials} from "@/lib/animal-trials";
+import {type AnimalTrial, decodeAnimalTrial, isComplete, isFailed} from "@/lib/animal-trials";
 import {animalTrialDiscoverPostId} from "@/lib/animal-trial-post-id";
-import {attachTrialMotionCaptions, attachTrialMotionStoryboards} from "@/lib/trial-motion/storyboards-server";
-import {trialMotionCaptionLanguage} from "@/lib/trial-motion/captions";
 
 export const runtime = "nodejs";
 
@@ -13,23 +11,6 @@ function decodeRows(data: unknown) {
     return (Array.isArray(data) ? data : [])
         .map(decodeAnimalTrial)
         .filter((trial): trial is AnimalTrial => trial !== null);
-}
-
-/**
- * Every Trial for an animal this person has caught, including ones not
- * started. An animal whose frequencies are all completed is absent. Sorted by
- * animal, then calm to volatile. Web twin of iOS `fetchOpenTrials`.
- */
-async function readOpenTrials(supabase: Supabase) {
-    const {data, error} = await supabase.from("arena_caught_trials_v1").select();
-    if (error) return [];
-    const sorted = decodeRows(data).sort((left, right) => {
-        const byName = left.speciesDisplayName.localeCompare(right.speciesDisplayName, undefined, {sensitivity: "base"});
-        if (byName !== 0) return byName;
-        return sortTrials([left, right])[0] === left ? -1 : 1;
-    });
-    // `arena_caught_trials_v1` has no `motion_storyboard`; the Trial Loops come from their own view.
-    return attachTrialMotionStoryboards(supabase, sorted);
 }
 
 /**
@@ -77,10 +58,11 @@ async function readTrialHistory(supabase: Supabase) {
 }
 
 /**
- * The Play hub's Trials: what is open, and what is done. Both read as the
- * signed-in viewer; `arena_caught_trials_v1` is authenticated-only by design.
+ * Explore › Battles › History › Trials: what was done, and what never
+ * succeeded, as the signed-in viewer. The open Trials went with the Powers
+ * page in 3.2: a Trial is now made a step from the animal's chat or Bond tab.
  */
-export async function GET(request: Request) {
+export async function GET() {
     const supabase = createSupabaseServerClient();
     if (!supabase) {
         return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
@@ -91,10 +73,7 @@ export async function GET(request: Request) {
         return NextResponse.json({error: "Authentication required."}, {status: 401});
     }
 
-    const lang = trialMotionCaptionLanguage(new URL(request.url).searchParams.get("lang"));
-    const [openLoops, history] = await Promise.all([readOpenTrials(supabase), readTrialHistory(supabase)]);
-    // One batch for the page: the open Trials' loops in the page language.
-    const openTrials = await attachTrialMotionCaptions(supabase, openLoops, lang);
+    const history = await readTrialHistory(supabase);
 
     // A finished Trial is a Discover post. The id is deterministic, so the
     // history row can link straight to the card without a lookup.
@@ -107,7 +86,7 @@ export async function GET(request: Request) {
             ])
     );
 
-    const response = NextResponse.json({openTrials, history, postIds});
+    const response = NextResponse.json({history, postIds});
     response.headers.set("Cache-Control", "private, no-store");
     return response;
 }

@@ -51,6 +51,13 @@ export type AskTrialDeclaration = {
     name?: string | null;
 };
 
+/**
+ * Something to open in the owner's chat besides a question (3.2 "Your
+ * step"): the report composer for "I did it" on the card's Bond tab, or the
+ * Warmup. Consumed once by the drawer.
+ */
+export type AskOpenAction = {kind: "report"} | {kind: "warmup"};
+
 type AskContextValue = {
     subject: AskSubject;
     /** The reader's own photo URL, for the photo medium. Never sent to the model. */
@@ -63,12 +70,16 @@ type AskContextValue = {
     referralId: string | null;
     locale: string;
     isOpen: boolean;
-    open: (question?: string) => void;
+    open: (question?: string, action?: AskOpenAction) => void;
     close: () => void;
     /** A question the launcher was opened with, consumed once by the drawer. */
     takePendingQuestion: () => string | null;
     /** Bumped with every question `open` is given, so an open drawer sends it too. */
     questionRequest: number;
+    /** An action the chat was opened with ("I did it", the Warmup), consumed once by the drawer. */
+    takePendingAction: () => AskOpenAction | null;
+    /** Bumped with every action `open` is given. */
+    actionRequest: number;
 };
 
 const AskContext = createContext<AskContextValue | null>(null);
@@ -96,6 +107,8 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     const [isOpen, setIsOpen] = useState(false);
     const pendingQuestion = useRef<string | null>(null);
     const [questionRequest, setQuestionRequest] = useState(0);
+    const pendingAction = useRef<AskOpenAction | null>(null);
+    const [actionRequest, setActionRequest] = useState(0);
 
     const subject = useMemo<AskSubject>(() => {
         const fromPath = askSubjectFromPath(pathname);
@@ -117,16 +130,21 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         };
     }, [pathname, declaration, trial]);
 
-    const open = useCallback((question?: string) => {
+    const open = useCallback((question?: string, action?: AskOpenAction) => {
         if (question && question.trim()) {
             pendingQuestion.current = question.trim();
             setQuestionRequest((current) => current + 1);
+        }
+        if (action) {
+            pendingAction.current = action;
+            setActionRequest((current) => current + 1);
         }
         setIsOpen(true);
     }, []);
 
     const close = useCallback(() => {
         pendingQuestion.current = null;
+        pendingAction.current = null;
         setIsOpen(false);
     }, []);
 
@@ -134,6 +152,12 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         const question = pendingQuestion.current;
         pendingQuestion.current = null;
         return question;
+    }, []);
+
+    const takePendingAction = useCallback(() => {
+        const action = pendingAction.current;
+        pendingAction.current = null;
+        return action;
     }, []);
 
     const value = useMemo<AskContextValue>(() => ({
@@ -147,7 +171,9 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         open,
         close,
         takePendingQuestion,
-        questionRequest
+        questionRequest,
+        takePendingAction,
+        actionRequest
     }), [
         subject,
         declaration?.photoUrl,
@@ -159,7 +185,9 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
         open,
         close,
         takePendingQuestion,
-        questionRequest
+        questionRequest,
+        takePendingAction,
+        actionRequest
     ]);
 
     return (
@@ -216,7 +244,9 @@ export function useAskAnimalDex(): AskContextValue {
         open: () => undefined,
         close: () => undefined,
         takePendingQuestion: () => null,
-        questionRequest: 0
+        questionRequest: 0,
+        takePendingAction: () => null,
+        actionRequest: 0
     };
 }
 

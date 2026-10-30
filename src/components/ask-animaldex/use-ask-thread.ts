@@ -177,6 +177,13 @@ function writePayingUntil(until: number | null) {
         // Session-only, then.
     }
 }
+/**
+ * What the owner's chat draws, as the 3.2 apps say it (docs/your-step/SERVER.md):
+ * the step card (`step`, so the check-in waits for "I'll do it") and the
+ * Warmup and Trials cards (`card`).
+ */
+const OWNER_CHAT_VISUALS = ["step", "card"] as const;
+
 /** Minutes ahead of UTC where the reader is (the apps send the same). */
 function readerUtcOffset(): number {
     return -new Date().getTimezoneOffset();
@@ -382,7 +389,12 @@ export function useAskThread(params: {
      */
     const send = useCallback(async (
         rawQuestion: string,
-        options: {requestId?: string; onCallEvent?: (frame: Record<string, unknown>) => void} = {}
+        options: {
+            requestId?: string;
+            onCallEvent?: (frame: Record<string, unknown>) => void;
+            /** "I did it" (3.2): this message is their report on the step, already attached. */
+            stepReportId?: string | null;
+        } = {}
     ): Promise<string | null> => {
         const question = rawQuestion.replace(/\s+/g, " ").trim();
         if (!question) return null;
@@ -398,7 +410,10 @@ export function useAskThread(params: {
         // The question's own id is the request id: one per message, and the
         // same one when that message is retried, so a retry is never charged
         // twice.
-        const userMessage = createAskMessage("user", question, options.requestId ? {id: options.requestId} : {});
+        const userMessage = createAskMessage("user", question, {
+            ...(options.requestId ? {id: options.requestId} : {}),
+            ...(options.stepReportId ? {stepReportId: options.stepReportId} : {})
+        });
         const requestId = userMessage.id;
         const placeholderId = newAskMessageId();
         const placeholder = createAskMessage("assistant", "", {id: placeholderId, status: "thinking"});
@@ -476,6 +491,8 @@ export function useAskThread(params: {
             utc_offset_minutes: readerUtcOffset(),
             ...(payWithCredits ? {payWithCredits: true} : {}),
             ...(options.onCallEvent ? {call: true} : {}),
+            ...(options.stepReportId ? {step_report: {step_id: options.stepReportId}} : {}),
+            ...(callbacks.current.ownerChat ? {supported_visuals: OWNER_CHAT_VISUALS} : {}),
             subject: {
                 scope: subject.scope,
                 slug: subject.slug,
@@ -720,6 +737,7 @@ export function useAskThread(params: {
                 body: JSON.stringify({
                     greeting: true,
                     ...(referralId ? {referral_id: referralId} : {}),
+                    ...(callbacks.current.ownerChat ? {supported_visuals: OWNER_CHAT_VISUALS} : {}),
                     locale,
                     utc_offset_minutes: readerUtcOffset(),
                     history: [],
@@ -817,7 +835,7 @@ export function useAskThread(params: {
         if (index <= 0 || thread[index - 1].role !== "user") return;
         const asked = thread[index - 1];
         replace([...thread.slice(0, index - 1), ...thread.slice(index + 1)]);
-        void send(asked.text, {requestId: asked.id});
+        void send(asked.text, {requestId: asked.id, stepReportId: asked.stepReportId});
     }, [threadKey, replace, send]);
 
     /**
@@ -841,9 +859,9 @@ export function useAskThread(params: {
         const thread = askSessionStore.messages(threadKey);
         const index = thread.findIndex((message) => message.id === messageId);
         if (index <= 0 || thread[index - 1].role !== "user") return;
-        const question = thread[index - 1].text;
+        const asked = thread[index - 1];
         replace([...thread.slice(0, index - 1), ...thread.slice(index + 1)]);
-        void send(question);
+        void send(asked.text, {stepReportId: asked.stepReportId});
     }, [threadKey, replace, send]);
 
     const clear = useCallback(() => {

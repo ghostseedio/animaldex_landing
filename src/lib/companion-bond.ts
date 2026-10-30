@@ -12,6 +12,7 @@
 
 import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
 import type {AnimalPowerRoute} from "@/lib/animal-powers";
+import {decodeAnimalStep, type AnimalStep} from "@/lib/your-step";
 
 export type BondStrands = {lesson: number; practice: number; life: number};
 
@@ -32,6 +33,8 @@ export type AnimalBond = {
     power: BondPower;
     focus: string | null;
     openTrial: string | null;
+    /** The open step as the server holds it (3.2): what the Bond tab's step card acts on. */
+    openStep: AnimalStep | null;
     yourTrialsDone: number;
     recentDone: Array<{step: string; doneAt: string | null}>;
 };
@@ -82,20 +85,91 @@ export const BOND_COPY = {
     noFocus: "Tell {name} what's going on in your life and it will pick something to work on with you.",
     notThisAnyMore: "Not this any more",
     yourStep: "Your step",
-    doneTogether: "Done together",
     itsPower: "Its Power",
-    earnByTrial: "Complete one Trial with {name} to earn it.",
-    earnAfterLessonCheck: "Pass its lesson check, then complete one Trial with {name}.",
-    talkToIt: "Talk to it",
-    takeLessonCheck: "Take the lesson check",
-    lessonCheckMessage: "Can I take your lesson check?",
-    /** iOS `SpeciesTrainingCopy.trainingLockedBody`. */
-    lessonCheckMissed: "You missed one. Try again tomorrow.",
-    animalTrials: "Animal Trials",
-    askAboutIt: "Ask about it",
-    askAboutTrialMessage: "Tell me about your {difficulty} Trial.",
-    battleLocked: "Earn {name}'s Power to battle with it.",
-    battleLockedDetail: "Complete one Trial with it, Animal or your own."
+    talkToIt: "Talk to it"
+} as const;
+
+/**
+ * AnimalDex 3.2 "Your step" (docs/your-step/SPEC.md, section 2): the step the
+ * animal sets, telling it how it went, the Power earned in your own life, the
+ * record of what you did together, the Warmup and the Trials. Word for word
+ * the same on iOS, Android and the web; the SPEC's `step.eyebrow` is
+ * `journey.step.eyebrow` here.
+ */
+export const YOUR_STEP_COPY = {
+    step: {
+        eyebrow: "Your step with {name}",
+        accept: "I'll do it",
+        other: "Something else",
+        didIt: "I did it",
+        otherMessage: "Can I have a different step?",
+        pinnedLabel: "Your step"
+    },
+    report: {
+        title: "What happened?",
+        placeholder: "Tell {name} how it went",
+        attach: "Add a photo or video",
+        attachNote: "Optional. It's kept in your record with {name}, and only you can see it.",
+        send: "Tell {name}"
+    },
+    earned: {
+        title: "{power}",
+        subtitle: "{name}'s Power is yours",
+        via: "Earned in your own life",
+        continue: "Continue"
+    },
+    done: {
+        chip: "Done together",
+        xp: "+{xp} XP"
+    },
+    record: {
+        title: "Your record with {name}",
+        empty: "Steps you finish with {name} are kept here."
+    },
+    steps: {
+        sectionTitle: "Your steps",
+        row: "{name}: {step}"
+    },
+    warmup: {
+        title: "Warmup",
+        offer: "Two quick questions on {power}.",
+        offerCount: "{n} quick questions on {power}.",
+        take: "Take the warmup (+5 XP)",
+        skip: "Skip",
+        passed: "Warmup done",
+        missed: "Not quite. {name} will tell you how its kind sees it.",
+        resultMessagePassed: "I got all {n} on your warmup.",
+        resultMessageMissed: "I got {right} of {n} on your warmup."
+    },
+    trial: {
+        sectionTitle: "{name}'s Trials",
+        easy: "Easy",
+        medium: "Medium",
+        hard: "Hard",
+        makeStep: "Make this my step",
+        pickedMessage: "I'll try your {difficulty} Trial."
+    },
+    power: {
+        notEarnedLine: "Finish one step with {name} to earn it."
+    },
+    battle: {
+        locked: "Earn {name}'s Power to battle with it.",
+        lockedDetail: "Finish one step with it."
+    },
+    /**
+     * Web only: the step RPCs' refusals (docs/your-step/SERVER.md), said
+     * calmly. Nothing here is a lock or a "tomorrow".
+     */
+    problems: {
+        signIn: "Sign in to keep going with your step.",
+        stepGone: "That step isn't open any more.",
+        catchFirst: "Catch this animal first to make one of its Trials your step.",
+        trialGone: "That Trial isn't available any more.",
+        tooShort: "Write a little more: a few words on what happened.",
+        oneMedia: "Add one photo or video at most.",
+        mediaFailed: "That photo or video didn't upload. Try another, or send it without one.",
+        generic: "That didn't go through. Try again in a moment."
+    }
 } as const;
 
 /** Word for word with iOS and Android (SPEC "Phase 4"). */
@@ -142,15 +216,8 @@ export const COMPANION_WORDS_EN = {
         application: "Earned by applying it",
         any: "Earned"
     },
-    /** A Trial's state, in a word, on the bond screen. */
-    trialStatus: {
-        completed: "Complete",
-        underWay: "Under way",
-        armed: "Armed",
-        missed: "Missed",
-        notStarted: "Not started"
-    },
-    difficulty: {Easy: "Easy", Medium: "Medium", Hard: "Hard"},
+    /** 3.2 "Your step": the step card, the report, the record, the Warmup and the Trials. */
+    journey: YOUR_STEP_COPY,
     /** The Companions tab's own parts: an animal's messages, muted or not. */
     tab: {
         unread: "{n} unread",
@@ -289,6 +356,7 @@ export function decodeAnimalBond(raw: unknown): AnimalBond | null {
         },
         focus: str(object(companion?.focus)?.focus),
         openTrial: str(object(companion?.open_trial)?.step),
+        openStep: decodeAnimalStep(companion?.open_trial),
         yourTrialsDone: Math.max(0, int(companion?.your_trials_done, 0)),
         recentDone: (Array.isArray(companion?.recent_done) ? companion?.recent_done as unknown[] : []).flatMap((item) => {
             const entry = object(item);
@@ -370,9 +438,12 @@ export function bondLevelProgress(bond: Pick<AnimalBond, "xp" | "levelXp" | "nex
     return Math.min(1, Math.max(0, (bond.xp - bond.levelXp) / (next - bond.levelXp)));
 }
 
-/** The bond screen's Power line: how it was earned, or what earning it takes. */
+/**
+ * The bond screen's Power line: how it was earned, or what earning it takes.
+ * Since 3.2 any first done step earns it; there is no lesson check first.
+ */
 export function bondPowerLine(
-    bond: Pick<AnimalBond, "power" | "lessonCheckPassed">,
+    bond: Pick<AnimalBond, "power">,
     name: string,
     words: CompanionWords = COMPANION_WORDS_EN
 ): string {
@@ -384,7 +455,7 @@ export function bondPowerLine(
             default: return words.earned.any;
         }
     }
-    return fillWords(bond.lessonCheckPassed ? words.bond.earnByTrial : words.bond.earnAfterLessonCheck, {name});
+    return fillWords(words.journey.power.notEarnedLine, {name});
 }
 
 export function companionSummaryName(
@@ -451,13 +522,19 @@ export function ownCardLevel(rows: CompanionSummary[], card: CardSpeciesKey, car
     return row ? row.level : cardLevel;
 }
 
-/** "Easy", "Medium" or "Hard", in the reader's words. */
-export function trialDifficultyText(difficulty: "Easy" | "Medium" | "Hard", words: CompanionWords = COMPANION_WORDS_EN): string {
-    return words.difficulty[difficulty];
+export type TrialDifficulty = "Easy" | "Medium" | "Hard";
+
+/** "Easy", "Medium" or "Hard", in the reader's words (SPEC `trial.easy / medium / hard`). */
+export function trialDifficultyText(difficulty: TrialDifficulty, words: CompanionWords = COMPANION_WORDS_EN): string {
+    switch (difficulty) {
+        case "Easy": return words.journey.trial.easy;
+        case "Medium": return words.journey.trial.medium;
+        case "Hard": return words.journey.trial.hard;
+    }
 }
 
 /** Low/Mid/High frequency → Easy / Medium / Hard (SPEC "Words"). */
-export function trialDifficulty(frequency: string | null | undefined): "Easy" | "Medium" | "Hard" | null {
+export function trialDifficulty(frequency: string | null | undefined): TrialDifficulty | null {
     switch ((frequency ?? "").trim().toUpperCase()) {
         case "LOW": return "Easy";
         case "MID":

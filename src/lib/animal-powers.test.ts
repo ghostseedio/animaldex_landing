@@ -14,13 +14,6 @@ import {
     gatePermitsPlay,
     powerRefusalMessage
 } from "@/lib/animal-powers";
-import {
-    type AnimalTrial,
-    decodeAnimalTrial,
-    primaryActionTitle,
-    requiresText,
-    verifierRefusalMessage
-} from "@/lib/animal-trials";
 import {resolveCaptureHeadlineDisplay} from "@/lib/capture-headline-display";
 import {
     identityLabelHasProseLead,
@@ -146,35 +139,6 @@ test("evidence refusals carry the shared cross-platform copy", () => {
     const upload = "Your photo or video did not finish uploading. Try adding it again.";
     assert.equal(powerRefusalMessage("evidence_path_not_owned"), upload);
     assert.equal(powerRefusalMessage("evidence_download_failed"), upload);
-});
-
-function trial(overrides: Record<string, unknown>): AnimalTrial {
-    const decoded = decodeAnimalTrial({
-        species_profile_id: SPECIES,
-        frequency: "LOW",
-        title: "Identify Five Materials by Touch",
-        primary_proof_type: "text",
-        proof_types: ["text"],
-        status: "active",
-        ...overrides
-    });
-    assert.ok(decoded);
-    return decoded;
-}
-
-test("a text Trial asks for writing, never for a camera", () => {
-    const written = trial({});
-    assert.equal(requiresText(written), true);
-    assert.equal(primaryActionTitle(written), "WRITE YOUR ANSWER");
-
-    const photo = trial({primary_proof_type: "photo", proof_types: ["photo"]});
-    assert.equal(requiresText(photo), false);
-    assert.equal(primaryActionTitle(photo), "ADD EVIDENCE");
-});
-
-test("text refusals have their own copy", () => {
-    assert.match(verifierRefusalMessage("proof_text_required"), /answered in writing/);
-    assert.match(verifierRefusalMessage("proof_text_too_short"), /little more/);
 });
 
 test("a label that opens like a sentence is prose; a real name is not", () => {

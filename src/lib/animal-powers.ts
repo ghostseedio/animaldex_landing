@@ -11,7 +11,6 @@
  */
 
 import {trackEvent} from "@/lib/analytics";
-import {LOCKOUT_COPY, TRAINING_COPY} from "@/lib/species-training";
 import {
     DOMAIN_PREFERRED_ORDER,
     type SystemDynamicsDomain,
@@ -159,8 +158,6 @@ export type PowerApplicationResult = {
      */
     grantedPower: boolean;
     rejectionsRemaining: number;
-    /** A rejection that locked this animal's proofs until tomorrow (one attempt a day). */
-    locked?: boolean;
     /** The grader's read on whether the photo or video shows what was written. */
     evidenceMatches?: boolean;
 };
@@ -210,12 +207,6 @@ export function powerRefusalMessage(code: string, serverMessage?: string | null)
             return "This animal has no Power to earn yet.";
         case "species_not_unlocked":
             return "You don't own this index yet. Capture this animal first.";
-        case "training_required":
-            return TRAINING_COPY.required;
-        case "training_locked":
-            return LOCKOUT_COPY.trainingLockedBody;
-        case "proof_locked":
-            return LOCKOUT_COPY.proofLockedBody;
         case "grading_unavailable":
             // Explicitly NOT phrased as a refusal. Nothing was graded and no
             // attempt was spent, so the copy must not imply otherwise.

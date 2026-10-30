@@ -9,10 +9,14 @@
  * `fused-power` edge function. Approval earns it: boost on, +10 XP and a few
  * Credits. The server owns every one of those decisions; this module only
  * reads what `get_capture_fused_powers` says.
+ *
+ * Fused Powers keep this loop in 3.2 until it is redone as steps
+ * (docs/your-step/SPEC.md, section 6), minus the locks: a missed Training or
+ * a refused proof can be tried again straight away.
  */
 
 import {POWER_APPLICATION_LIMITS, powerRefusalMessage} from "@/lib/animal-powers";
-import {LOCKOUT_COPY, type SpeciesTraining, type SpeciesTrainingQuestion, trainingRewardLine} from "@/lib/species-training";
+import {type SpeciesTraining, type SpeciesTrainingQuestion, trainingRewardLine} from "@/lib/species-training";
 
 // MARK: - Copy (identical on iOS, Android and web)
 
@@ -27,8 +31,6 @@ export const FUSED_COPY = {
     doTheTrial: "Do the Trial",
     applyItYourWay: "Apply It Your Way",
     earnedLine: "Power earned · Boost on",
-    attemptsExhausted: "You've used today's 3 tries. Try again tomorrow.",
-    oneToFinish: "1 to finish",
     finishSentence: "Train it, then prove it. Its boost switches on when it's earned.",
     repeatLine: "Battles repeat as often as you like. Each fused Power brings its own Training and Trial, so the loop starts again.",
     fusionResultLine: "Its boost switches on after its Training and Trial.",
@@ -40,19 +42,7 @@ export const FUSED_COPY = {
 export const taughtByLine = (teacher: string) => `Taught by ${teacher}`;
 export const bringsLine = (receiver: string, part: string) => `${receiver} brings: ${part}`;
 export const teachesLine = (teacher: string, part: string) => `${teacher} teaches: ${part}`;
-export const toFinishLine = (count: number) => (count === 1 ? FUSED_COPY.oneToFinish : `${count} to finish`);
-export const finishTitle = (name: string) => `Next: Finish ${name}`;
 export const whenEarnedLine = (amount: number, stat: string) => `+${amount} ${stat} when earned`;
-
-/**
- * "Finish Lookout Turn", or "Continue" when the name would not fit a 360px
- * button on one line next to its arrow.
- */
-export const FINISH_BUTTON_MAX_NAME = 14;
-export function finishButtonTitle(name: string) {
-    const trimmed = name.trim();
-    return trimmed && trimmed.length <= FINISH_BUTTON_MAX_NAME ? `Finish ${trimmed}` : FUSED_COPY.continue;
-}
 
 /** "intelligence" → "Intelligence", "pack_coordination" → "Pack Coordination". */
 export function statDisplayName(stat: string) {
@@ -120,11 +110,8 @@ export type FusedPower = {
     training: FusedTraining | null;
     trial: FusedTrial | null;
     reward: {xp: number; credits: number};
-    attempts: {rejectionsToday: number; maxRejectionsPerDay: number; lastReason: string | null};
-    /** Its lesson check was missed today: it opens again tomorrow, or with a new card of the animal. */
-    trainingLocked: boolean;
-    /** A proof was rejected today: its Trial and Apply It Your Way open again tomorrow. */
-    proofLocked: boolean;
+    /** The reviewer's last reason, shown under the routes. */
+    attempts: {lastReason: string | null};
 };
 
 /** `submit` on the `fused-power` edge function. */
@@ -137,8 +124,6 @@ export type FusedSubmitResult = {
     rewardXP: number;
     rewardCredits: number;
     rejectionsRemaining: number;
-    /** A rejection that locked this Power's proofs until tomorrow. */
-    locked: boolean;
 };
 
 // MARK: - Decoding
@@ -257,13 +242,8 @@ export function decodeFusedPower(raw: unknown): FusedPower | null {
             estimatedMinutes: trialRow.estimated_minutes == null ? null : num(trialRow.estimated_minutes)
         } : null,
         reward: {xp: num(rewardRow?.xp, 10), credits: Math.max(0, num(rewardRow?.credits))},
-        attempts: {
-            rejectionsToday: num(attemptsRow?.rejections_today),
-            maxRejectionsPerDay: num(attemptsRow?.max_rejections_per_day, 3),
-            lastReason: text(attemptsRow?.last_reason)
-        },
-        trainingLocked: !earned && row.training_locked === true,
-        proofLocked: !earned && row.proof_locked === true
+        // `training_locked` / `proof_locked` are always false since 3.2 and are not read.
+        attempts: {lastReason: text(attemptsRow?.last_reason)}
     };
 }
 
@@ -287,8 +267,7 @@ export function decodeFusedSubmitResult(payload: unknown): FusedSubmitResult | n
         earned: row.earned === true,
         rewardXP: num(row.reward_xp),
         rewardCredits: num(row.reward_credits),
-        rejectionsRemaining: num(row.rejections_remaining, POWER_APPLICATION_LIMITS.maxRejections),
-        locked: row.locked === true || verdict === "rejected"
+        rejectionsRemaining: num(row.rejections_remaining, POWER_APPLICATION_LIMITS.maxRejections)
     };
 }
 
@@ -339,15 +318,6 @@ export function estimatedMinutesLine(minutes: number | null) {
 }
 
 /**
- * Today's attempt is used: one rejected proof locks it until tomorrow, or a new
- * card of the animal (`proof_locked`, as iOS reads it). The read's
- * `max_rejections_per_day` (3) predates the one-attempt rule and is not used.
- */
-export function attemptsExhausted(item: FusedPower) {
-    return item.proofLocked;
-}
-
-/**
  * Call `prepare` once per visit, and only when nobody is writing the content:
  * a 'generating' row is already being written and only needs polling.
  */
@@ -359,40 +329,7 @@ export function needsPrepare(item: FusedPower) {
 export const FUSED_POLL_INTERVAL_MS = 5_000;
 export const FUSED_POLL_LIMIT_MS = 120_000;
 
-/** XP still on offer from one unearned fused Power: its Training, if owed, then earning it. */
-export function pendingFusedXP(item: Pick<FusedPower, "stage" | "training" | "reward">) {
-    if (item.stage === "earned") return 0;
-    const trainingOwed = item.stage === "preparing" || item.stage === "training";
-    return (trainingOwed ? item.training?.rewardXP ?? 10 : 0) + item.reward.xp;
-}
-
-/** The Power Loop's view of this card's fused Powers. */
-export type PendingFusedSummary = {
-    /** Fused Powers on this card not yet earned. */
-    pending: number;
-    /** The first pending one in the list (newest first). */
-    firstId: string | null;
-    firstName: string | null;
-    firstStage: FusedStage | null;
-    /** What finishing the first one pays. */
-    firstXP: number;
-    firstCredits: number;
-};
-
-export function pendingFusedSummary(items: FusedPower[]): PendingFusedSummary {
-    const pending = items.filter((item) => item.stage !== "earned");
-    const first = pending[0] ?? null;
-    return {
-        pending: pending.length,
-        firstId: first?.id ?? null,
-        firstName: first?.name ?? null,
-        firstStage: first?.stage ?? null,
-        firstXP: first ? pendingFusedXP(first) : 0,
-        firstCredits: first?.reward.credits ?? 0
-    };
-}
-
-/** The anchor each row carries, for the Power Loop's "Finish" button. */
+/** The anchor each row carries, to scroll back to its lesson. */
 export const fusedPowerAnchor = (id: string) => `fused-power-${id}`;
 
 /**
@@ -406,8 +343,6 @@ export function fusedTrainingForQuiz(item: FusedPower): SpeciesTraining | null {
         available: true,
         completed: item.training.completed,
         unlocked: true,
-        locked: item.trainingLocked,
-        proofLocked: item.proofLocked,
         rewardXP: item.training.rewardXP,
         rewardCredits: 0,
         contentVersion: null,
@@ -420,9 +355,6 @@ export function fusedTrainingForQuiz(item: FusedPower): SpeciesTraining | null {
 /** What to show for a `fused-power` or `submit_fused_training` refusal. Never a raw code. */
 export function fusedRefusalMessage(code: string, serverMessage?: string | null) {
     if (/training_required/i.test(code)) return FUSED_COPY.trainingRequired;
-    // The refusal does not name the animal to capture again.
-    if (/fused_training_locked/i.test(code)) return LOCKOUT_COPY.trainingLockedBody;
-    if (/attempts_exhausted_today/i.test(code)) return FUSED_COPY.attemptsExhausted;
     if (/fused_power_not_ready|fused_training_not_ready|preparing_failed/i.test(code)) return FUSED_COPY.notReady;
     if (/fused_power_not_found/i.test(code)) return "This Power is no longer on this card.";
     if (/answers_mismatch/i.test(code)) return "Those answers did not match the questions. Try again.";

@@ -23,7 +23,9 @@ import {
     decodeAnimalBond,
     decodeChatBond,
     decodeCompanionSummaries,
-    trialDifficulty
+    trialDifficulty,
+    trialDifficultyText,
+    YOUR_STEP_COPY
 } from "@/lib/companion-bond";
 
 const SPECIES = "0f2c1e5a-3b4d-4e6f-8a9b-1c2d3e4f5a6b";
@@ -69,12 +71,12 @@ test("the bond screen decodes animal_bond_v1, tolerantly", () => {
     assert.equal(decodeAnimalBond([1]), null);
 });
 
-test("the Power line says what earning it takes", () => {
+test("the Power line says what earning it takes: one step, never a lesson check first (3.2)", () => {
     const notEarned = {power: {name: "X", earned: false, via: null, at: null}};
-    assert.equal(bondPowerLine({...notEarned, lessonCheckPassed: true}, "Leo"), "Complete one Trial with Leo to earn it.");
-    assert.equal(bondPowerLine({...notEarned, lessonCheckPassed: false}, "Leo"), "Pass its lesson check, then complete one Trial with Leo.");
-    assert.equal(bondPowerLine({power: {name: "X", earned: true, via: "trial", at: null}, lessonCheckPassed: true}, "Leo"), "Earned by Trial");
-    assert.equal(bondPowerLine({power: {name: "X", earned: true, via: "application", at: null}, lessonCheckPassed: true}, "Leo"), "Earned by applying it");
+    assert.equal(bondPowerLine(notEarned, "Leo"), "Finish one step with Leo to earn it.");
+    assert.equal(bondPowerLine({power: {name: "X", earned: true, via: "your_trial", at: null}}, "Leo"), "Earned in your own life");
+    assert.equal(bondPowerLine({power: {name: "X", earned: true, via: "trial", at: null}}, "Leo"), "Earned by Trial");
+    assert.equal(bondPowerLine({power: {name: "X", earned: true, via: "application", at: null}}, "Leo"), "Earned by applying it");
 });
 
 test("companions decode in server order and skip rows without a species", () => {
@@ -159,13 +161,28 @@ test("frequencies read as difficulty", () => {
     assert.equal(trialDifficulty("mid"), "Medium");
     assert.equal(trialDifficulty("HIGH"), "Hard");
     assert.equal(trialDifficulty(null), null);
+    assert.equal(trialDifficultyText("Medium"), "Medium");
+});
+
+test("the 3.2 words are the SPEC's, word for word, and none of the retired ones is left", () => {
+    assert.equal(fillWords(YOUR_STEP_COPY.step.eyebrow, {name: "Leo"}), "Your step with Leo");
+    assert.equal(YOUR_STEP_COPY.step.otherMessage, "Can I have a different step?");
+    assert.equal(fillWords(YOUR_STEP_COPY.report.attachNote, {name: "Leo"}), "Optional. It's kept in your record with Leo, and only you can see it.");
+    assert.equal(fillWords(YOUR_STEP_COPY.done.xp, {xp: 5}), "+5 XP");
+    assert.equal(fillWords(YOUR_STEP_COPY.warmup.resultMessageMissed, {right: 1, n: 3}), "I got 1 of 3 on your warmup.");
+    assert.equal(fillWords(YOUR_STEP_COPY.trial.sectionTitle, {name: "Leo"}), "Leo's Trials");
+    assert.equal(YOUR_STEP_COPY.battle.lockedDetail, "Finish one step with it.");
+    const english = JSON.stringify(COMPANION_WORDS_EN);
+    for (const retired of ["Lesson check", "lesson check", "Training", "Apply It Your Way", "Your Trial", "Prove it", "Try again tomorrow", "Animal Trials"]) {
+        assert.equal(english.includes(retired), false, retired);
+    }
 });
 
 test("bond copy matches the SPEC word for word", () => {
     assert.equal(BOND_COPY.noFocus.replace("{name}", "Leo"), "Tell Leo what's going on in your life and it will pick something to work on with you.");
     assert.equal(BOND_COPY.livesItsLesson, "You live its lesson.");
-    assert.equal(BOND_COPY.askAboutTrialMessage.replace("{difficulty}", "Easy"), "Tell me about your Easy Trial.");
-    assert.equal(BOND_COPY.battleLocked.replace("{name}", "Leo"), "Earn Leo's Power to battle with it.");
+    assert.equal(YOUR_STEP_COPY.trial.pickedMessage.replace("{difficulty}", "Easy"), "I'll try your Easy Trial.");
+    assert.equal(YOUR_STEP_COPY.battle.locked.replace("{name}", "Leo"), "Earn Leo's Power to battle with it.");
     assert.equal(COMPANIONS_COPY.empty, "Capture an animal to meet your first companion.");
     assert.equal(COMPANIONS_COPY.masteredCount.replace("{n}", "2"), "2 mastered");
 });
@@ -209,6 +226,7 @@ test("the bond reads in the reader's words, the server's stage label only for a 
     assert.equal(bondStageText({stage: "new_stage", stageLabel: "Brand new"}, id), "Brand new");
     assert.equal(companionSummaryName({nickname: "Luna", animal: "Gray Wolf"}, id), "Luna sang Gray Wolf");
     assert.equal(companionStatusLine({unread: 0, referralWaiting: false, openTrial: null, focus: "Tidur"}, null, id).text, "Sedang kita kerjakan: Tidur");
-    assert.equal(bondPowerLine({power: {name: "X", earned: false, via: null, at: null}, lessonCheckPassed: true}, "Leo", id), "Selesaikan satu Uji Coba bersama Leo untuk mendapatkannya.");
+    assert.equal(bondPowerLine({power: {name: "X", earned: false, via: null, at: null}}, "Leo", id), "Selesaikan satu langkah bersama Leo untuk mendapatkannya.");
+    assert.equal(trialDifficultyText("Hard", id), "Sulit");
     assert.equal(bondXpText(2480, "id", id), "2.480 XP");
 });
