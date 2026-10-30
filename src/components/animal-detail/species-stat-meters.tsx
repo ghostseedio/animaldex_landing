@@ -1,4 +1,4 @@
-import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
+import type {SpeciesStats} from "@/lib/battle-tier";
 
 const STAT_LABELS: Array<{key: keyof SpeciesStats; label: string}> = [
     {key: "dominance", label: "Dominance"},
@@ -7,15 +7,6 @@ const STAT_LABELS: Array<{key: keyof SpeciesStats; label: string}> = [
     {key: "intelligence", label: "Intelligence"},
     {key: "rarity", label: "Rarity"}
 ];
-
-const TIER_NOTE: Record<AnimalBattleTier, string> = {
-    S: "Apex across the catalogue",
-    A: "Top tier in most matchups",
-    B: "Strong in its weight class",
-    C: "Even matchup against most species",
-    D: "Wins on evasion rather than force",
-    E: "Survives by avoiding contests"
-};
 
 /**
  * The five canonical stats for one species.
@@ -29,8 +20,6 @@ const TIER_NOTE: Record<AnimalBattleTier, string> = {
  * Square bar ends, matching the flat surfaces used across these pages.
  */
 export default function SpeciesStatMeters({stats}: {stats: SpeciesStats}) {
-    const tier = getBattleTier(stats);
-
     return (
         <figure className="m-0 flex flex-col gap-5">
             <div className="flex flex-col gap-3.5">
@@ -51,14 +40,6 @@ export default function SpeciesStatMeters({stats}: {stats: SpeciesStats}) {
                     );
                 })}
             </div>
-            {tier ? (
-                <figcaption className="flex items-center gap-2.5 border-t border-line-300 pt-4 text-[13px] text-ink-300">
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center border border-primary-500/30 bg-primary-400/10 px-1.5 font-mono text-xs font-bold text-primary-200">
-                        {tier}
-                    </span>
-                    <span>{TIER_NOTE[tier]}</span>
-                </figcaption>
-            ) : null}
         </figure>
     );
 }

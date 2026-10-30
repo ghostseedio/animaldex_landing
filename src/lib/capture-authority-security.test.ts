@@ -218,7 +218,7 @@ describe("capture authority — malicious signed-in user", {skip: configured ? f
         )).json();
         assert.equal(rows[0].model_version, "client_manual_v1", "manual saves must not claim a model identity");
         assert.equal(rows[0].capture_grade, null, "grade must be earned from a real analysis");
-        assert.equal(rows[0].game_stats, null, "game stats reach Arena and must not be self-assigned");
+        assert.equal(rows[0].game_stats, null, "game stats reach rankings and cards and must not be self-assigned");
         assert.equal(rows[0].credits_charged, 0);
     });
 

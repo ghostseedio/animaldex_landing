@@ -27,10 +27,10 @@ function readCanonicalStats(entry: SpeciesEntry): SpeciesStats | null {
 }
 
 /**
- * Battle tier for a resolved species entry.
+ * The stat tier (S to E) for a resolved species entry, as the location pages
+ * badge it.
  *
- * Prefers the catalog's canonical stats so the tier matches what the species page and
- * the arena show. Entries resolved from the local species file alone have no canonical
+ * Prefers the catalog's canonical stats so the tier matches the species' own stats. Entries resolved from the local species file alone have no canonical
  * stats, so those fall back to the same deterministic stats the species page uses.
  */
 export function getSpeciesTier(entry: SpeciesEntry): AnimalBattleTier {

@@ -280,7 +280,7 @@ export function decodeAnimalTrial(row: any): AnimalTrial | null {
     };
 }
 
-// MARK: - History (Explore › Battles › History › Trials)
+// MARK: - History (Trials taken)
 
 function timestamp(value: string | null) {
     const parsed = value ? Date.parse(value) : NaN;

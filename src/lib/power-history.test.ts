@@ -33,7 +33,7 @@ test("a row says the animal, how it was earned and when", () => {
     assert.equal(powerHistoryDetailLine(item({route: null, earnedAt: null})), "Red Fox");
 });
 
-test("an animal's own Power opens its Bond tab; a fused one its Battle tab (3.2: no Power Loop page)", () => {
+test("an animal's own Power opens its Bond tab; a fused one the card's third tab (3.2: no Power Loop page)", () => {
     assert.equal(powerHistoryHref(item({})), `/app/capture/${CAPTURE}?tab=bond`);
     assert.equal(powerHistoryHref(item({isFused: true})), `/app/capture/${CAPTURE}?tab=battle`);
     assert.equal(powerHistoryHref(item({captureId: null})), null);

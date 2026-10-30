@@ -65,8 +65,9 @@ export function discoverPostShareTitle(input: {
         return collector ? `${animal} · AnimalDex capture by ${collector}` : `${animal} · AnimalDex capture`;
     }
 
+    // An old battle post (before 3.2's Debates), still shared by its link.
     if (input.kind === "challenge") {
-        return collector ? `AnimalDex challenge · ${collector}` : "AnimalDex challenge";
+        return collector ? `${animal} on AnimalDex · ${collector}` : `${animal} on AnimalDex`;
     }
 
     if (input.kind === "alignment") {
@@ -117,7 +118,7 @@ export function discoverPostShareDescription(input: {
     }
 
     if (input.kind === "challenge") {
-        return `A live AnimalDex challenge result shared by ${handle}.`;
+        return `${animal} and another animal on AnimalDex, shared by ${handle}.`;
     }
 
     if (input.kind === "alignment") {

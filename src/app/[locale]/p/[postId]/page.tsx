@@ -124,6 +124,7 @@ function postSeoFields(item: DiscoverTimelineItem) {
         return {
             title: discoverPostShareTitle({
                 kind: item.kind,
+                animalName: item.attacker.animalName,
                 collectorName: item.attacker.displayName
             }),
             description: item.activitySummary || discoverPostShareDescription({
@@ -134,7 +135,7 @@ function postSeoFields(item: DiscoverTimelineItem) {
             }),
             imageSrc: item.attacker.imageSrc,
             publishedAt: item.date,
-            keywords: [item.attacker.animalName, item.defender.animalName, "AnimalDex", "challenge"].filter(Boolean),
+            keywords: [item.attacker.animalName, item.defender.animalName, "AnimalDex"].filter(Boolean),
             video: null
         };
     }

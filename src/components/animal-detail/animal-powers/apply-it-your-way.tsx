@@ -70,7 +70,7 @@ export default function ApplyItYourWay({
     submitApplication
 }: {
     power: AnimalPower;
-    /** The Arena Trial this writing stands in for; null on the Power page. */
+    /** The Trial this writing stands in for; null on the Power page. */
     trial?: AnimalTrial | null;
     /**
      * Called with the result once the reviewer has answered, so the caller can

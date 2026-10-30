@@ -10,7 +10,7 @@ import {
     sightingNovelty,
     storeCaptureReveal
 } from "@/lib/capture-reveal";
-import {getBattlePower} from "@/lib/matchup-stats";
+import {getBattlePower} from "@/lib/battle-tier";
 
 const STATS = {dominance: 60, speed: 50, size: 40, intelligence: 70, rarity: 30};
 const CAPTURE = "fff28a92-e96e-4e55-9ccb-eae132282f13";

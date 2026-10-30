@@ -8,7 +8,7 @@
  * analysis lands, and carried to the card.
  */
 
-import {getBattlePower, type MatchupGameStats} from "@/lib/matchup-stats";
+import {getBattlePower, type SpeciesStats} from "@/lib/battle-tier";
 
 export type SightingNovelty = {
     isNewSpecies: boolean;
@@ -96,7 +96,7 @@ export type CaptureRewardBreakdown = {
 };
 
 export function captureRewardBreakdown(input: {
-    baseGameStats: MatchupGameStats;
+    baseGameStats: SpeciesStats;
     settingTag: string | null | undefined;
     isEligibleCapture: boolean;
     hasUncertaintyFallback: boolean;

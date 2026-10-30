@@ -1,5 +1,5 @@
 /**
- * Explore › Battles › History › Powers: every Power the player has earned,
+ * The Powers history: every Power the player has earned,
  * their animals' own and fused ones, newest first.
  *
  * What is left of the web twin of iOS `PlayJourney` once 3.2 removed the
@@ -70,7 +70,7 @@ export function sortPowerHistory(items: PlayPowerHistoryItem[]) {
 /**
  * Where a row goes: an animal's own Power to its card's Bond tab, where the
  * Power and the record of the step that earned it are; a fused one to the
- * Battle tab, where its card's fused Powers are.
+ * card's third tab (`?tab=battle`, the stats, hearts and fused Powers).
  */
 export function powerHistoryHref(item: Pick<PlayPowerHistoryItem, "captureId" | "isFused">): string | null {
     if (!item.captureId) return null;

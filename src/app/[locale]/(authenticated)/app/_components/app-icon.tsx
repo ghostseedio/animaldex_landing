@@ -1,4 +1,4 @@
-export type AppIconName = "home" | "collection" | "arena" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "volume" | "volumeOff" | "boltShield" | "refresh" | "settings" | "companions" | "explore";
+export type AppIconName = "home" | "collection" | "arena" | "debate" | "train" | "profile" | "plus" | "bell" | "message" | "send" | "mission" | "sets" | "matchup" | "trade" | "search" | "filter" | "grid" | "list" | "back" | "camera" | "spark" | "lock" | "check" | "location" | "calendar" | "chevron" | "menu" | "close" | "volume" | "volumeOff" | "boltShield" | "refresh" | "settings" | "companions" | "explore";
 
 export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconName; className?: string}) {
     const path: Record<AppIconName, React.ReactNode> = {
@@ -8,6 +8,8 @@ export default function AppIcon({name, className = "h-5 w-5"}: {name: AppIconNam
         collection: <><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></>,
         train: <><path d="M6 7v10M3 9v6m15-8v10m3-8v6M6 12h12"/></>,
         arena: <><path d="M12 2 4 5v6c0 5.2 3.4 10 8 11 4.6-1 8-5.8 8-11V5l-8-3Z"/><path d="m13.3 6.5-4.1 6h3l-1 5 4.1-6h-3Z"/></>,
+        // Two animals talking it over (3.2 Debates).
+        debate: <><path d="M3.5 5.5h10a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H8l-3.5 3v-3h-1A1.5 1.5 0 0 1 2 12V7a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M18 9.5h1.5A1.5 1.5 0 0 1 21 11v5a1.5 1.5 0 0 1-1.5 1.5h-1v3l-3.5-3h-4a1.5 1.5 0 0 1-1.5-1.5v-1"/></>,
         boltShield: <><path d="M12 2 4 5v6c0 5.2 3.4 10 8 11 4.6-1 8-5.8 8-11V5l-8-3Z"/><path d="m13.3 6.5-4.1 6h3l-1 5 4.1-6h-3Z"/></>,
         profile: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
         plus: <path d="M12 5v14M5 12h14"/>,

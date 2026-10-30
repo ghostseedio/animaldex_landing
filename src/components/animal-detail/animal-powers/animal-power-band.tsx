@@ -223,8 +223,8 @@ export default function AnimalPowerBand({
             {/* Earned: what earning opened. */}
             {isEarned ? (
                 <div className="flex flex-col gap-2 pt-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: NEON}}>Play unlocked</p>
-                    {["Comparison Battles", "Fusion"].map((title) => (
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: NEON}}>Unlocked</p>
+                    {["Debates", "Fusion"].map((title) => (
                         <p key={title} aria-label={`${title} unlocked`} className="flex items-center gap-[7px] text-xs text-white/60">
                             <span aria-hidden="true" className="text-[10px] font-black" style={{color: NEON}}>✓</span>
                             {title}

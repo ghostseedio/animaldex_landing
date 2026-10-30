@@ -13,7 +13,7 @@ export function getOptimizedModuleImageUrl(path: string, maxPixelLength = 640, q
     return `${STORAGE_RENDER_BASE}/${path}?${params.toString()}`;
 }
 
-/** Public module art used across web profile shortcuts and arena surfaces (matches iOS `TrainModuleImagery`). */
+/** Public module art used across web profile shortcuts (matches iOS `TrainModuleImagery`). */
 export const APP_MODULE_THUMBNAILS = {
     dailyCompanion: getOptimizedModuleImageUrl("batfish-journal-thumbnail.webp"),
     wildProfile: getOptimizedModuleImageUrl("lion-identity-thumbnail.webp"),
