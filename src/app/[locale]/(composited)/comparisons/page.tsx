@@ -16,8 +16,6 @@ import ComparisonsDirectory, {
 } from "@/app/[locale]/(composited)/comparisons/_components/comparisons-directory";
 import {listSnapshotComparisons} from "@/lib/published-seo-page-data";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
-import battlesSnapshot from "@/data/published-comparison-battles.json";
-import {getComparisonBattles} from "@/data/comparison-battles";
 import {
     animalOptionsFromChallengeEntries
 } from "@/data/species-comparisons";
@@ -87,7 +85,6 @@ const FAQ_KEYS = ["anyPair", "howItWorks", "accuracy", "missing"] as const;
 const HOW_IT_WORKS_KEYS = ["pick", "generate", "read"] as const;
 const QUICK_CATEGORIES: Array<{key: QuickCategory; icon: string}> = [
     {key: "popular", icon: "🔥"},
-    {key: "battles", icon: "⚔️"},
     {key: "predators", icon: "🦁"},
     {key: "reptiles", icon: "🐍"},
     {key: "mammals", icon: "🐻"},
@@ -117,21 +114,6 @@ function getCardSearchText(entry: ChallengeEntry) {
     const names = entry.speciesSlugs.map((slug) => getSpeciesBySlug(slug)?.name);
     return [entry.title, entry.slug, entry.animalADisplayName, entry.animalBDisplayName, ...names, ...entry.searchIntents, ...entry.statCategories.map((stat) => stat.label)]
         .filter(Boolean).join(" ").toLowerCase();
-}
-
-/** The newest player battle on a pair, for the tile overlay; animal A's player first. */
-function toCardBattle(slug: string): DirectoryCard["battle"] {
-    const battles = getComparisonBattles(slug);
-    const latest = battles[0];
-    if (!latest) return undefined;
-    const players = [latest.attacker, latest.defender]
-        .map((player, index) => ({player, side: index === 0 ? "attacker" as const : "defender" as const}))
-        .sort((left, right) => left.player.comparisonSide.localeCompare(right.player.comparisonSide));
-    return {
-        players: players.map(({player, side}) => ({name: player.displayName, avatarUrl: player.avatarUrl, won: latest.winner === side})),
-        credits: latest.winner === "draw" ? 0 : latest.payout,
-        count: battles.length
-    };
 }
 
 function matchesQuickCategory(entry: ChallengeEntry, quick: QuickCategory) {
@@ -228,13 +210,10 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
             image: {src: entry.featuredImage.src, alt: entry.featuredImage.alt, width: entry.featuredImage.width, height: entry.featuredImage.height},
             statLabels: entry.statCategories.slice(0, 3).map((stat) => stat.label),
             search: getCardSearchText(entry),
-            quick: QUICK_CATEGORIES.map((category) => category.key).filter((key) => key === "battles"
-                ? getComparisonBattles(entry.slug).length > 0
-                : key !== "popular" && matchesQuickCategory(entry, key)),
+            quick: QUICK_CATEGORIES.map((category) => category.key).filter((key) => key !== "popular" && matchesQuickCategory(entry, key)),
             popularity: getPopularityScore(entry),
             date: entry.updatedAt || entry.publishedAt,
-            speciesSlugs: entry.speciesSlugs,
-            battle: toCardBattle(entry.slug)
+            speciesSlugs: entry.speciesSlugs
         };
     });
     const firstPage = [...allEntries]
@@ -247,7 +226,6 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
         .slice(0, 16);
     // Same catalog the picker searches and /animals lists.
     const comparableAnimalCount = publishedSeoSlugs.animals.length;
-    const battleCount = Object.values(battlesSnapshot.battles).reduce((sum, list) => sum + list.length, 0);
     const defaultAnimalA = toHubComparableAnimal("lion");
     const defaultAnimalB = toHubComparableAnimal("tiger");
     const speciesCount = new Set(allEntries.flatMap((entry) => entry.speciesSlugs)).size;
@@ -307,10 +285,6 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                         <div>
                             <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statComparisons")}</dt>
                             <dd className="font-display text-2xl font-bold text-white">{allEntries.length.toLocaleString(locale)}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statBattles")}</dt>
-                            <dd className="font-display text-2xl font-bold text-white">{battleCount.toLocaleString(locale)}</dd>
                         </div>
                     </dl>
                 </header>
@@ -454,9 +428,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                     paginationLabel: t("paginationLabel"),
                     previousPage: t("previousPage"),
                     nextPage: t("nextPage"),
-                    openComparison: t("openComparison"),
-                    battleCreditsWon: t("battleCreditsWon", {count: "{count}"}),
-                    battleMore: t("battleMore", {count: "{count}"})
+                    openComparison: t("openComparison")
                 }}
             />
 

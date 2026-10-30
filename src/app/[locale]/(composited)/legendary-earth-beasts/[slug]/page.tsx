@@ -13,7 +13,7 @@ import {
     LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH,
     LEGENDARY_EARTH_BEASTS_PILLAR_PATH
 } from "@/data/legendary-earth-beasts";
-import {getBattleTier, resolveSpeciesStats} from "@/data/species-stats";
+import {resolveSpeciesStats} from "@/data/species-stats";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast-capture";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -80,7 +80,6 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
     const species = await getResolvedSpeciesBySlug(entry.slug);
     const catalogSeed = getLegendaryCatalogSeedByBeastSlug(entry.slug);
     const statsResult = species ? await resolveSpeciesStats(species.slug, species) : null;
-    const battleTier = statsResult?.stats ? getBattleTier(statsResult.stats) : null;
     const captureRequirement = getLegendaryCaptureRequirementMessage(entry.slug);
     const relatedEntries = getRelatedLegendaryEarthBeasts(entry.slug);
     const pageUrl = getAbsoluteUrl(locale, `${LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH}/${entry.slug}`);
@@ -224,14 +223,12 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             {statsResult?.stats ? (
                 <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
                     <p className="text-primary-200 text-sm uppercase tracking-[0.2em]">Canonical stats</p>
-                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{entry.legendaryFormName} battle profile</h2>
+                    <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{entry.legendaryFormName} stat profile</h2>
                     <SpeciesStatsSection
                         result={statsResult}
-                        battleTier={battleTier}
                         labels={{
                             title: "Canonical game stats",
-                            description: "Legendary Earth Beasts use flagship S-tier stats tied to their landmark capture site.",
-                            battleTierChip: battleTier ? `Battle tier ${battleTier}` : "Battle tier",
+                            description: "Legendary Earth Beasts carry flagship stats tied to their landmark capture site.",
                             sourceLabel: "Stats source",
                             dominance: "Dominance",
                             speed: "Speed",

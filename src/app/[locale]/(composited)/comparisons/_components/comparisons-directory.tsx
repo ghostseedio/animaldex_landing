@@ -3,10 +3,9 @@
 import {type FormEvent, type MouseEvent, type ReactNode, useEffect, useMemo, useRef, useState} from "react";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
-import BattleAvatar from "@/app/[locale]/(composited)/comparisons/_components/battle-avatar";
 
 export type ComparisonSort = "popular" | "newest" | "az";
-export type QuickCategory = "popular" | "battles" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
+export type QuickCategory = "popular" | "predators" | "reptiles" | "mammals" | "birds" | "marine" | "venomous" | "fastest" | "defence" | "strength";
 
 /** One comparison card, reduced server-side to what the directory needs. */
 export type DirectoryCard = {
@@ -24,12 +23,6 @@ export type DirectoryCard = {
     popularity: number;
     date: string;
     speciesSlugs: string[];
-    /** Newest player Arena battle on this pair, if any. */
-    battle?: {
-        players: Array<{name: string; avatarUrl: string | null; won: boolean}>;
-        credits: number;
-        count: number;
-    };
 };
 
 type DirectoryState = {
@@ -75,10 +68,6 @@ type ComparisonsDirectoryProps = {
         previousPage: string;
         nextPage: string;
         openComparison: string;
-        /** Contains "{count}". */
-        battleCreditsWon: string;
-        /** Contains "{count}". */
-        battleMore: string;
     };
 };
 
@@ -272,24 +261,7 @@ export default function ComparisonsDirectory({
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-black/30" />
                                         <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white backdrop-blur">{card.typeLabel}</span>
                                         <span className="absolute right-4 top-4 rounded-full bg-primary-400/90 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-black">{card.winnerLabel}</span>
-                                        {card.battle ? (
-                                            <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-                                                {/* The artwork carries its own VS; the players flank it. */}
-                                                <div className={`flex items-center ${wide ? "gap-24" : "gap-16"}`}>
-                                                    <BattleAvatar name={card.battle.players[0].name} avatarUrl={card.battle.players[0].avatarUrl} size={wide ? 64 : 52} winner={card.battle.players[0].won} />
-                                                    <BattleAvatar name={card.battle.players[1].name} avatarUrl={card.battle.players[1].avatarUrl} size={wide ? 64 : 52} winner={card.battle.players[1].won} />
-                                                </div>
-                                                <span className="sr-only">{card.battle.players[0].name} vs {card.battle.players[1].name}</span>
-                                                {card.battle.credits > 0 ? (
-                                                    <span className="whitespace-nowrap rounded-full bg-black/70 px-3 py-1 text-xs font-bold text-primary-100 backdrop-blur">
-                                                        {copy.battleCreditsWon.replace("{count}", String(card.battle.credits))}
-                                                        {card.battle.count > 1 ? <span className="ml-1.5 text-ink-300">{copy.battleMore.replace("{count}", String(card.battle.count - 1))}</span> : null}
-                                                    </span>
-                                                ) : null}
-                                            </div>
-                                        ) : (
-                                            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl font-black italic tracking-[-0.08em] text-white/90 drop-shadow-xl" aria-hidden="true">VS</span>
-                                        )}
+                                        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl font-black italic tracking-[-0.08em] text-white/90 drop-shadow-xl" aria-hidden="true">VS</span>
                                         <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
                                             <h3 className={`font-display font-bold leading-tight text-white ${wide ? "text-3xl md:text-4xl" : "text-2xl"}`}>{card.title}</h3>
                                         </div>

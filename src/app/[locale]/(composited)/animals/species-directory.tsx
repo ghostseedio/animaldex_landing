@@ -22,8 +22,6 @@ import {
     type SpeciesDirectoryPageSize,
     type SpeciesRarityStatusKey
 } from "@/data/species-directory-options";
-import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
-import BattleTierChip from "./battle-tier-chip";
 import SpeciesRegionMap from "./species-region-map";
 import {getNativeRangeRegionLabel, type NativeRangeRegionKey, resolveNativeRangePresentation} from "@/data/native-range";
 
@@ -54,7 +52,6 @@ type SpeciesDirectoryCopy = {
     noResultsTitle: string;
     noResultsDescription: string;
     clearFilters: string;
-    battleTierChip: string;
     sortOptions: Record<SpeciesDirectorySort, {title: string; detail: string}>;
     rarityStatuses: Record<SpeciesRarityStatusKey, string>;
 };
@@ -79,8 +76,6 @@ type SpeciesDirectoryProps = {
     currentSort: SpeciesDirectorySort;
     currentOrder: SpeciesDirectorySortOrder;
     currentTier: SpeciesDirectoryTierFilter;
-    /** Slugs that always render as Tier S; the server knows the legendary roster. */
-    legendarySlugs: string[];
     /** Location slug -> display name for the active-location chip, computed on the server. */
     locationNames: Record<string, string>;
     copy: SpeciesDirectoryCopy;
@@ -223,7 +218,6 @@ const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 /** Widest grid is 8 columns, so roughly three rows are visible on load. */
 const ABOVE_FOLD_TILES = 24;
 const rarityOrder: SpeciesRarityStatusKey[] = ["relatively-common", "uncommon", "rare", "very-rare"];
-const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
 function ActiveFilterChip({
     label,
@@ -367,32 +361,6 @@ function resolveThumbnailStatKey(
     return status !== "all" ? "rarity" : null;
 }
 
-function getBattleTierFromEntry(entry: SpeciesEntry, isLegendary: boolean): AnimalBattleTier | null {
-    if (isLegendary) {
-        return "S";
-    }
-
-    const rawStats = entry.databaseSource?.canonicalGameStats;
-
-    if (!rawStats) {
-        return null;
-    }
-
-    const stats = {} as SpeciesStats;
-
-    for (const key of STAT_KEYS) {
-        const value = Number(rawStats[key]);
-
-        if (!Number.isFinite(value)) {
-            return null;
-        }
-
-        stats[key] = value;
-    }
-
-    return getBattleTier(stats);
-}
-
 function getLocationChipLabel(entry: SpeciesEntry) {
     const presentation = resolveNativeRangePresentation(entry);
 
@@ -468,9 +436,7 @@ function CatalogGlyphThumbnail({
     imageSrc,
     hasPublicCapture,
     priority,
-    statKey,
-    showBattleTier,
-    isLegendary
+    statKey
 }: {
     entry: DirectoryEntry;
     animalDexNumber: number | null;
@@ -479,12 +445,9 @@ function CatalogGlyphThumbnail({
     hasPublicCapture: boolean;
     priority: boolean;
     statKey: SortStatKey | null;
-    showBattleTier: boolean;
-    isLegendary: boolean;
 }) {
     const imageAlt = getSpeciesImageAltText(entry, "thumbnail");
     const statValue = statKey ? getCanonicalSortStatValue(entry, statKey) : null;
-    const battleTier = showBattleTier ? getBattleTierFromEntry(entry, isLegendary) : null;
     const targetImageSrc = !captured && !hasPublicCapture
         ? entry.artworkUrl ?? getSpeciesArtworkRoute(entry.slug, 240)
         : `${imageSrc}${imageSrc.includes("?") ? "&" : "?"}thumbnail=1`;
@@ -581,11 +544,6 @@ function CatalogGlyphThumbnail({
                     </span>
                 ) : null}
             </div>
-            {battleTier ? (
-                <div className="pointer-events-none absolute bottom-8 left-1.5">
-                    <BattleTierChip tier={battleTier} compact />
-                </div>
-            ) : null}
         </div>
     );
 }
@@ -606,12 +564,10 @@ export default function SpeciesDirectory({
     currentSort,
     currentOrder,
     currentTier,
-    legendarySlugs,
     locationNames,
     copy
 }: SpeciesDirectoryProps) {
     const pathname = usePathname();
-    const legendarySlugSet = useMemo(() => new Set(legendarySlugs), [legendarySlugs]);
     // Null until the browser reports the query string. Reading useSearchParams here
     // would opt this whole subtree out of server rendering, so it lives in a child
     // behind its own boundary and the grid renders from props on the server.
@@ -1251,8 +1207,6 @@ export default function SpeciesDirectory({
                                 // Eight columns on desktop means ~24 tiles sit above the fold, not 12.
                                 priority={index < ABOVE_FOLD_TILES}
                                 statKey={thumbnailStatKey}
-                                showBattleTier={activeTier !== "all"}
-                                isLegendary={legendarySlugSet.has(entry.slug)}
                             />
                         </Link>
                     ))}

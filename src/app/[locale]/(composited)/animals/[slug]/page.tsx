@@ -28,8 +28,6 @@ import {buildSpeciesAtAGlance} from "@/lib/species-field-guide";
 import {isSpeciesPageIndexable} from "@/lib/species-indexability";
 import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
 import {comparisonPairHref} from "@/data/species-comparisons";
-import {getSpeciesBattles} from "@/data/comparison-battles";
-import BattleAvatar from "@/app/[locale]/(composited)/comparisons/_components/battle-avatar";
 import AnimalStoryCard from "@/components/animal-detail/animal-story-card";
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SpeciesStatMeters from "@/components/animal-detail/species-stat-meters";
@@ -53,7 +51,7 @@ import {
 } from "@/data/species-images";
 import {getMiniSystemsBySpeciesSlug} from "@/data/species-mini-systems";
 import {getSpeciesSpottingContent} from "@/data/species-spotting";
-import {getBattleTier, resolveLocalSpeciesStats, type SpeciesStats} from "@/data/species-stats";
+import {resolveLocalSpeciesStats, type SpeciesStats} from "@/data/species-stats";
 import {getRelatedSpecies, getSpeciesBySlug, rarityLabel, speciesEntries} from "@/data/species";
 import type {SpeciesEntry} from "@/data/species";
 import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
@@ -522,10 +520,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         ? statsResult.stats.rarity
         : entry.analysis.rarityScore;
     const resolvedRarityLabel = rarityLabel(resolvedRarityScore);
-    const battleTier = statsResult.stats
-        ? getBattleTier(statsResult.stats)
-        : null;
-    const battleTierLabel = battleTier ? t("battleTierChip", {tier: battleTier}) : null;
     const featuredCaptureId = null;
     const featuredCaptureGrade = null;
     const featuredCaptureLocation = null;
@@ -562,8 +556,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const compareCards = compareWithLinks.length > 0
         ? compareWithLinks.slice(0, 3).map((item) => ({href: `/comparisons/${item.challengeSlug}`, published: true, otherSlug: item.otherSlug, otherName: item.otherName}))
         : related.slice(0, 3).map((item) => ({...comparisonPairHref(entry.slug, item.slug), otherSlug: item.slug, otherName: item.name}));
-    // Every Arena battle this animal was in, published pair or not (build-time snapshot).
-    const speciesBattles = getSpeciesBattles(entry.speciesProfileId);
     // A group page with no indexed group profile (octopus, fox…) lists the
     // indexed species it covers in the Play tab, each with its own Trial.
     const groupMembers = entry.speciesProfileId ? [] : getStaticSpeciesGroupMembers(entry.slug);
@@ -1025,11 +1017,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <span className="rounded-full border border-cyan-300/20 bg-cyan-400/[0.08] px-3 py-1.5 text-sm font-semibold text-cyan-100">
                                 {habitatLead}
                             </span>
-                            {battleTierLabel ? (
-                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-ink-100">
-                                    {battleTierLabel}
-                                </span>
-                            ) : null}
                         </div>
                         <div className="flex max-w-3xl flex-col gap-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/80">{t("fieldGuideLabel")}</p>
@@ -1447,56 +1434,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             </span>
                         </Link>
                     ))}
-                </div>
-                <div className="flex flex-col gap-3">
-                    <h3 className="font-display text-xl font-bold text-white">{t("compareBattlesTitle")}</h3>
-                    {speciesBattles.length === 0 ? (
-                        <p className="max-w-3xl text-base text-ink-300">{t("compareBattlesEmpty", {animal: entry.name})}</p>
-                    ) : (
-                        <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            {speciesBattles.slice(0, 6).map((battle) => {
-                                const mine = battle[battle.side];
-                                const theirs = battle[battle.side === "attacker" ? "defender" : "attacker"];
-                                const opponentSide = battle.side === "attacker" ? "defender" : "attacker";
-                                const result = battle.winner === "draw"
-                                    ? t("compareBattleDraw")
-                                    : t("compareBattleWon", {name: battle[battle.winner].displayName});
-                                const body = (
-                                    <>
-                                        <div className="flex items-center gap-3">
-                                            <BattleAvatar name={mine.displayName} avatarUrl={mine.avatarUrl} size={40} winner={battle.winner === battle.side} />
-                                            <span className="font-display text-xl font-black tabular-nums text-white">
-                                                {battle.roundsWon[battle.side]}<span className="mx-1 text-ink-400">–</span>{battle.roundsWon[opponentSide]}
-                                            </span>
-                                            <BattleAvatar name={theirs.displayName} avatarUrl={theirs.avatarUrl} size={40} winner={battle.winner === opponentSide} />
-                                            <span className="min-w-0">
-                                                <span className="block truncate text-sm font-bold text-white">
-                                                    {t("compareBattleVs", {animal: battle.opponentSpeciesName ?? theirs.animalName ?? "?"})}
-                                                </span>
-                                                <span className="block truncate text-xs text-ink-300">{mine.displayName} · {theirs.displayName}</span>
-                                            </span>
-                                        </div>
-                                        <p className="mt-2 text-xs text-ink-300">
-                                            {result} · {new Date(battle.date).toLocaleDateString(locale, {day: "numeric", month: "short", year: "numeric"})}
-                                        </p>
-                                    </>
-                                );
-                                const shell = "block border border-white/10 bg-surface-900/55 p-4";
-                                return (
-                                    <li key={`${battle.id}-${battle.side}`}>
-                                        {battle.comparisonSlug ? (
-                                            <Link href={`/comparisons/${battle.comparisonSlug}`} className={`${shell} transition hover:border-primary-300/40`}>{body}</Link>
-                                        ) : (
-                                            <div className={shell}>{body}</div>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ol>
-                    )}
-                    {speciesBattles.length > 6 ? (
-                        <p className="text-sm text-ink-300">{t("compareBattleMore", {count: speciesBattles.length - 6})}</p>
-                    ) : null}
                 </div>
             </section>
 

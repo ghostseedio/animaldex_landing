@@ -7,14 +7,12 @@ type Props = {
     animalBName: string;
     animalAResult: SpeciesStatsResolution;
     animalBResult: SpeciesStatsResolution;
-    animalABattleTier: string | null;
-    animalBBattleTier: string | null;
     labels: Record<string, string>;
 };
 
 const ROWS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
-export default function ChallengeSpeciesStatsComparison({title, description, animalAName, animalBName, animalAResult, animalBResult, animalABattleTier, animalBBattleTier, labels}: Props) {
+export default function ChallengeSpeciesStatsComparison({title, description, animalAName, animalBName, animalAResult, animalBResult, labels}: Props) {
     if (!animalAResult.stats || !animalBResult.stats) return null;
 
     return (
@@ -26,9 +24,9 @@ export default function ChallengeSpeciesStatsComparison({title, description, ani
 
             <div className="overflow-hidden  border border-line-300 bg-surface-900/80">
                 <div className="grid grid-cols-[1fr_6.5rem_1fr] items-center border-b border-line-300 bg-surface-800/70 px-3 py-5 text-center md:grid-cols-[1fr_11rem_1fr] md:px-6">
-                    <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalAName}</p>{animalABattleTier ? <span className="text-xs font-bold text-emerald-300">{labels.battleTierChip.replace("{tier}", animalABattleTier)}</span> : null}</div>
+                    <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalAName}</p></div>
                     <span className="text-xs font-black uppercase tracking-[0.18em] text-ink-300">VS</span>
-                    <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalBName}</p>{animalBBattleTier ? <span className="text-xs font-bold text-sky-300">{labels.battleTierChip.replace("{tier}", animalBBattleTier)}</span> : null}</div>
+                    <div><p className="font-display text-xl font-bold text-white md:text-2xl">{animalBName}</p></div>
                 </div>
 
                 {ROWS.map((key) => {

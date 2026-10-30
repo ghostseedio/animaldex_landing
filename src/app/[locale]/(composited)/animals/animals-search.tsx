@@ -12,7 +12,6 @@ export type AnimalsSearchSuggestion = {
     scientificName: string;
     category: string;
     animalDexNumber: number | null;
-    battleTier: string | null;
     identityKind: string | null;
     identityKindLabel: string | null;
 };
@@ -274,11 +273,6 @@ export default function AnimalsSearch({
                                                     </span>
                                                 </span>
                                             </span>
-                                            {match.battleTier ? (
-                                                <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 font-mono text-[0.7rem] font-black uppercase tracking-[0.14em] text-ink-200">
-                                                    {match.battleTier}
-                                                </span>
-                                            ) : null}
                                         </button>
                                     </li>
                                 );

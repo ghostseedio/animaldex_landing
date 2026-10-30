@@ -1099,14 +1099,8 @@
     "askError": "AnimalDex belum bisa menjawab. Coba pertanyaan yang lebih singkat.",
     "compareEyebrow": "Bandingkan",
     "compareTitle": "Bandingkan {animal}",
-    "compareBattlesTitle": "Bertarung di Arena",
-    "compareBattlesEmpty": "Belum ada yang membawa {animal} ke pertarungan Arena. Pertarungan pemain dengan hewan ini di aplikasi AnimalDex akan muncul di sini.",
     "compareCardsEmpty": "Belum ada perbandingan untuk {animal}. Pilih hewan apa saja untuk diadu.",
     "compareAnyAnimal": "Bandingkan dengan hewan apa saja",
-    "compareBattleVs": "vs {animal}",
-    "compareBattleWon": "{name} menang",
-    "compareBattleDraw": "Seri",
-    "compareBattleMore": "dan {count} lainnya",
     "whereEyebrow": "Di mana menemukannya",
     "whereTitle": "Di mana menemukan {animal}",
     "whereExperiencesCta": "Wildlife Guides →",
@@ -1186,7 +1180,6 @@
     "nativeRangeMissingAssets": "Beberapa overlay regional tidak tersedia di versi web ini.",
     "rareTitle": "Seberapa langka {animal}?",
     "rarityLabel": "Rarity",
-    "battleTierChip": "Tier {tier}",
     "lessonValueTitle": "Nilai Pelajaran",
     "lessonValueEstimated": "{amount} perkiraan",
     "lessonValueRange": "Rentang: {range}",
@@ -1699,7 +1692,6 @@
     "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan. Pilih dua spesies dari ribuan pilihan dan dapatkan verdict langsung dengan stat, breakdown skenario, tingkat keyakinan, dan FAQ — dibangun dari biologi nyata.",
     "statAnimals": "Hewan untuk dibandingkan",
     "statComparisons": "Matchup terbit",
-    "statBattles": "Battle pemain",
     "builder": {
       "animalA": "Hewan pertama",
       "animalB": "Hewan kedua",
@@ -1815,7 +1807,6 @@
     "quickFiltersLabel": "Kategori cepat perbandingan",
     "quickCategories": {
       "popular": "Populer",
-      "battles": "Battle pemain",
       "predators": "Predator",
       "reptiles": "Reptil",
       "mammals": "Mamalia",
@@ -1885,7 +1876,6 @@
     "whyInterestingTitle": "Kenapa matchup ini menarik",
     "speciesStatsTitle": "Stat spesies head-to-head",
     "speciesStatsDescription": "Ini memakai dimensi stat inti AnimalDex yang sama seperti di halaman hewan, lalu menampilkannya berdampingan supaya matchup lebih cepat dibaca.",
-    "battleTierChip": "Tier {tier}",
     "statsSourceLabel": "Sumber stat",
     "dominanceStat": "Dominance",
     "speedStat": "Speed",
@@ -1956,9 +1946,7 @@
       "even": "Seimbang",
       "draw": "Imbang",
       "depends": "Tergantung konteks"
-    },
-    "battleCreditsWon": "{count} kredit dimenangkan",
-    "battleMore": "+{count} lagi"
+    }
   },
   "collectorPages": {
     "back": "Kembali ke Use Cases",

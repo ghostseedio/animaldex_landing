@@ -13,8 +13,6 @@ import IntentCtaCard from "@/app/[locale]/(composited)/_components/intent-cta-ca
 import SystemsIntelligenceSection from "@/app/[locale]/(composited)/_components/systems-intelligence-section";
 import ComparisonVotePanel from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-vote-panel";
 import ComparisonComments from "@/app/[locale]/(composited)/comparisons/[slug]/_components/comparison-comments";
-import ComparisonUserBattles from "@/app/[locale]/(composited)/comparisons/_components/comparison-user-battles";
-import {getComparisonBattles} from "@/data/comparison-battles";
 import {
     COMMENT_MAX_LENGTH,
     EMPTY_VOTE_TALLY,
@@ -25,7 +23,7 @@ import {buildComparisonSpeciesFallback, getRelatedLocalChallenges} from "@/data/
 import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {getSpeciesBySlug, type SpeciesEntry} from "@/data/species";
 import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-systems-intelligence";
-import {getBattleTier, resolveLocalSpeciesStats} from "@/data/species-stats";
+import {resolveLocalSpeciesStats} from "@/data/species-stats";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 
@@ -73,8 +71,6 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
 
     const animalAStatsResult = resolveLocalSpeciesStats(animalA);
     const animalBStatsResult = resolveLocalSpeciesStats(animalB);
-    const animalABattleTier = animalAStatsResult.stats ? getBattleTier(animalAStatsResult.stats) : null;
-    const animalBBattleTier = animalBStatsResult.stats ? getBattleTier(animalBStatsResult.stats) : null;
 
     const decisiveScenarios = challenge.scenarioBreakdown.filter((item) => item.winner === "animalA" || item.winner === "animalB");
     const aWins = decisiveScenarios.filter((item) => item.winner === "animalA").length;
@@ -149,8 +145,8 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
     ];
 
     const speciesCards = [
-        {species: animalA, stats: animalAStatsResult.stats, tier: animalABattleTier},
-        {species: animalB, stats: animalBStatsResult.stats, tier: animalBBattleTier}
+        {species: animalA, stats: animalAStatsResult.stats},
+        {species: animalB, stats: animalBStatsResult.stats}
     ];
 
     const secondaryLinks = [
@@ -183,8 +179,6 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
             </Link>
 
             <ChallengeHero challenge={challenge} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} winnerLabel={winnerLabel} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
-
-            <ComparisonUserBattles battles={getComparisonBattles(challenge.slug)} />
 
             {locale === "en" ? (
                 <div className="editorial [&>section]:mb-0">
@@ -241,7 +235,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                 <div className="divide-y divide-line-300  border border-line-300 bg-surface-900/55 px-5 md:px-7">{challenge.faq.map((item) => <details key={item.question} className="group py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white marker:hidden">{item.question}<span className="text-primary-300 transition group-open:rotate-45">+</span></summary><p className="mt-3 max-w-3xl text-base leading-7 text-ink-200">{item.answer}</p></details>)}</div>
             </section>
 
-            <ChallengeSpeciesStatsComparison title={t("speciesStatsTitle")} description={t("speciesStatsDescription")} animalAName={animalA.name} animalBName={animalB.name} animalAResult={animalAStatsResult} animalBResult={animalBStatsResult} animalABattleTier={animalABattleTier} animalBBattleTier={animalBBattleTier} labels={{advantage: t("advantageLabel"), even: t("winnerLabels.even"), battleTierChip: t("battleTierChip", {tier: "{tier}"}), dominance: t("dominanceStat"), speed: t("speedStat"), size: t("sizeStat"), intelligence: t("intelligenceStat"), rarity: t("rarityStat")}} />
+            <ChallengeSpeciesStatsComparison title={t("speciesStatsTitle")} description={t("speciesStatsDescription")} animalAName={animalA.name} animalBName={animalB.name} animalAResult={animalAStatsResult} animalBResult={animalBStatsResult} labels={{advantage: t("advantageLabel"), even: t("winnerLabels.even"), dominance: t("dominanceStat"), speed: t("speedStat"), size: t("sizeStat"), intelligence: t("intelligenceStat"), rarity: t("rarityStat")}} />
 
             <AnimalVsStatTable title={t("statsTitle")} description={t("statsDescription")} animalAName={animalA.name} animalBName={animalB.name} items={challenge.statCategories} labels={{advantage: t("advantageLabel"), takeaway: t("takeawayLabel"), animalAAdvantage: animalA.name, animalBAdvantage: animalB.name, even: t("winnerLabels.even"), depends: t("winnerLabels.depends")}} />
 
@@ -254,7 +248,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
 
             <section id="meet-animals" className="scroll-mt-28 space-y-6">
                 <div><p className="text-xs font-black uppercase tracking-[0.22em] text-primary-200">{t("fieldProfiles")}</p><h2 className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">{t("exploreAnimalsTitle")}</h2></div>
-                <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats, tier}) => (
+                <div className="grid gap-5 md:grid-cols-2">{speciesCards.map(({species, stats}) => (
                     <article key={species.slug} className="group overflow-hidden  border border-line-300 bg-surface-900">
                         <div className="h-64 p-5 md:p-6">
                             <SpeciesArtworkImage
@@ -271,7 +265,6 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                                     <h3 className="font-display text-3xl font-bold text-white">{species.name}</h3>
                                     <p className="italic text-ink-300">{species.analysis.scientificName}</p>
                                 </div>
-                                {tier ? <span className="rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1 text-xs font-bold text-primary-100">{t("battleTierChip", {tier})}</span> : null}
                             </div>
                             <p className="line-clamp-2 text-sm leading-6 text-ink-200">{species.analysis.habitat}</p>
                             <div className="grid grid-cols-3 gap-2 border-y border-line-300 py-4 text-center">

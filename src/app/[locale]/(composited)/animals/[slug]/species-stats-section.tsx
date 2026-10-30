@@ -4,7 +4,6 @@ import SpeciesRadarStats from "@/app/[locale]/(composited)/animals/[slug]/specie
 type SpeciesStatsLabels = {
     title: string;
     description: string;
-    battleTierChip: string;
     sourceLabel: string;
     dominance: string;
     speed: string;
@@ -23,7 +22,6 @@ type SpeciesStatsLabels = {
 
 type SpeciesStatsSectionProps = {
     result: SpeciesStatsResolution;
-    battleTier?: string | null;
     labels: SpeciesStatsLabels;
 };
 
@@ -44,7 +42,7 @@ function getSourceLabel(source: SpeciesStatsResolution["statsSource"], labels: S
     }
 }
 
-export default function SpeciesStatsSection({result, battleTier = null, labels}: SpeciesStatsSectionProps) {
+export default function SpeciesStatsSection({result, labels}: SpeciesStatsSectionProps) {
     if (!result.stats || result.statsSource === "none") {
         return (
             <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4">
@@ -74,13 +72,6 @@ export default function SpeciesStatsSection({result, battleTier = null, labels}:
                         {getSourceLabel(result.statsSource, labels)}
                     </p>
                 </div>
-                {battleTier ? (
-                    <div className="md:pt-1">
-                        <span className="inline-flex shrink-0 whitespace-nowrap rounded-full border border-primary-300/25 bg-primary-500/18 px-4 py-2 text-sm md:text-base font-semibold text-primary-100">
-                            {labels.battleTierChip.replace("{tier}", battleTier)}
-                        </span>
-                    </div>
-                ) : null}
             </div>
 
             <SpeciesRadarStats stats={stats} labels={statLabels} />

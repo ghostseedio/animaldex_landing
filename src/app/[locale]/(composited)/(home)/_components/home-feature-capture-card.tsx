@@ -38,11 +38,6 @@ export default function HomeFeatureCaptureCard({capture, locale}: {capture: Disc
                                 {capture.contextLabel}
                             </span>
                         ) : null}
-                        {capture.battleTier ? (
-                            <span className="inline-flex rounded-full bg-cyan-400/15 px-2.5 py-1 text-[0.68rem] font-black text-cyan-100 ring-1 ring-cyan-400/20">
-                                Tier {capture.battleTier}
-                            </span>
-                        ) : null}
                         {capture.captureGrade != null ? (
                             <span className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[0.68rem] font-bold text-white/75 backdrop-blur-sm">
                                 Grade {capture.captureGrade}

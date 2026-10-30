@@ -3,12 +3,11 @@ import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {Suspense} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {getSpeciesDirectoryPage, getDefaultSpeciesDirectorySortOrder, speciesEntries, SpeciesEntry} from "@/data/species";
-import {getLegendaryEarthBeast, legendaryEarthBeastEntries} from "@/data/legendary-earth-beasts";
+import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {locationPages} from "@/data/locations";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
-import {getBattleTier, type SpeciesStats} from "@/lib/battle-tier";
 import {identityKindShortLabel} from "@/lib/identity-kind";
 import {localeConfig} from "@/i18n";
 import SpeciesDirectory from "./species-directory";
@@ -25,26 +24,8 @@ import {getSpeciesArtworkDirectUrls} from "@/data/species-artwork-index";
 const DIRECTORY_ARTWORK_THUMBNAIL_SIZE = 240;
 import {withOgCard} from "@/lib/og/og-image";
 
-const STAT_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
-
 /** Kept in sync with buildDirectoryRequestUrl in ./species-directory. */
 const DIRECTORY_API_PATH = "/api/animals/directory";
-
-function getSuggestionBattleTier(entry: SpeciesEntry) {
-    if (getLegendaryEarthBeast(entry.slug)) return "S";
-
-    const rawStats = entry.databaseSource?.canonicalGameStats;
-    if (!rawStats) return null;
-
-    const stats = {} as SpeciesStats;
-    for (const key of STAT_KEYS) {
-        const value = Number(rawStats[key]);
-        if (!Number.isFinite(value)) return null;
-        stats[key] = value;
-    }
-
-    return getBattleTier(stats);
-}
 
 function toSearchSuggestion(entry: SpeciesEntry): AnimalsSearchSuggestion {
     const identityKind = entry.databaseSource?.identityKind ?? null;
@@ -54,7 +35,6 @@ function toSearchSuggestion(entry: SpeciesEntry): AnimalsSearchSuggestion {
         scientificName: entry.analysis.scientificName,
         category: entry.analysis.category,
         animalDexNumber: getAnimalDexNumberFromEntry(entry),
-        battleTier: getSuggestionBattleTier(entry),
         identityKind,
         identityKindLabel: identityKindShortLabel(identityKind)
     };
@@ -70,9 +50,8 @@ const featuredAnimals = [
 type CatalogQuickLink = {
     label: string;
     href: string;
-    kind: "query" | "sort" | "tier";
+    kind: "query" | "sort";
     icon: "bird" | "paw" | "bolt" | "gem" | "snail" | "mountain" | "alert" | "lizard";
-    tier?: "S" | "A" | "B";
 };
 
 const hubTrendingSearches = [
@@ -93,36 +72,9 @@ const catalogQuickLinks: CatalogQuickLink[] = [
     {label: "Rarest animals", href: "/animals?sort=rarity", kind: "sort", icon: "gem"},
     {label: "Slowest animals", href: "/animals?sort=speed&order=asc", kind: "sort", icon: "snail"},
     {label: "Biggest animals", href: "/animals?sort=size", kind: "sort", icon: "mountain"},
-    {label: "Tier S", href: "/animals?tier=S", kind: "tier", icon: "bolt", tier: "S"},
-    {label: "Tier A", href: "/animals?tier=A", kind: "tier", icon: "bolt", tier: "A"},
-    {label: "Tier B", href: "/animals?tier=B", kind: "tier", icon: "bolt", tier: "B"},
     {label: "Endangered animals", href: "/animals?q=endangered", kind: "query", icon: "alert"},
     {label: "Reptiles", href: "/animals?q=reptile", kind: "query", icon: "lizard"}
 ];
-
-const TIER_CHIP_STYLE = {
-    S: {
-        color: "rgba(167, 244, 50, 1)",
-        background: "rgba(167, 244, 50, 0.14)",
-        border: "rgba(167, 244, 50, 0.4)",
-        activeBackground: "rgba(167, 244, 50, 0.22)",
-        activeBorder: "rgba(167, 244, 50, 0.55)"
-    },
-    A: {
-        color: "rgba(167, 244, 50, 0.92)",
-        background: "rgba(167, 244, 50, 0.12)",
-        border: "rgba(167, 244, 50, 0.34)",
-        activeBackground: "rgba(167, 244, 50, 0.2)",
-        activeBorder: "rgba(167, 244, 50, 0.5)"
-    },
-    B: {
-        color: "rgba(34, 211, 238, 0.95)",
-        background: "rgba(34, 211, 238, 0.12)",
-        border: "rgba(34, 211, 238, 0.36)",
-        activeBackground: "rgba(34, 211, 238, 0.2)",
-        activeBorder: "rgba(34, 211, 238, 0.5)"
-    }
-} as const;
 
 function CatalogQuickLinkIcon({icon, className}: {icon: CatalogQuickLink["icon"]; className?: string}) {
     const common = `shrink-0 ${className ?? "h-3.5 w-3.5"}`;
@@ -351,8 +303,7 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
     ]));
     const publicCaptureSpecies = Object.fromEntries(directoryPage.entries.map((entry) => [entry.slug, false]));
     // The directory is a client component; hand it the few strings it needs from the
-    // legendary roster and the location pages rather than letting it import either.
-    const legendarySlugs = legendaryEarthBeastEntries.map((beast) => beast.slug);
+    // location pages rather than letting it import them.
     const locationNames = Object.fromEntries(locationPages.map((page) => [page.slug, page.name]));
 
     const schema = {
@@ -425,29 +376,6 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                     {catalogQuickLinks.map((item) => {
                         const isActive = false;
 
-                        if (item.kind === "tier" && item.tier) {
-                            const tone = TIER_CHIP_STYLE[item.tier];
-                            return (
-                                <Link
-                                    key={item.label}
-                                    href={`${item.href}#all-animals`}
-                                    className="inline-flex items-center gap-1.5 border px-3 py-1.5 text-xs font-black uppercase tracking-[0.06em] transition-colors"
-                                    style={{
-                                        color: tone.color,
-                                        backgroundColor: isActive ? tone.activeBackground : tone.background,
-                                        borderColor: isActive ? tone.activeBorder : tone.border
-                                    }}
-                                >
-                                    <span
-                                        aria-hidden="true"
-                                        className="h-1.5 w-1.5 rounded-full"
-                                        style={{backgroundColor: tone.color}}
-                                    />
-                                    {item.label}
-                                </Link>
-                            );
-                        }
-
                         return (
                             <Link
                                 key={item.label}
@@ -491,7 +419,6 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                     currentSort={directoryPage.sort}
                     currentOrder={directoryPage.order}
                     currentTier={directoryPage.tier}
-                    legendarySlugs={legendarySlugs}
                     locationNames={locationNames}
                     copy={{
                         readSpecies: t("readSpecies"),
@@ -520,7 +447,6 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                         noResultsTitle: t("noResultsTitle"),
                         noResultsDescription: t("noResultsDescription"),
                         clearFilters: t("clearFilters"),
-                        battleTierChip: t("battleTierChip", {tier: "{tier}"}),
                         sortOptions: {
                             number: {title: t("sortNumberTitle"), detail: t("sortNumberDetail")},
                             rarity: {title: t("sortRarityTitle"), detail: t("sortRarityDetail")},
