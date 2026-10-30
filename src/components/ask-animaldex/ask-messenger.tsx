@@ -431,10 +431,16 @@ export function AskSpecialShell({children, testId = "special-message"}: {childre
  * special bubble (a Warmup question, docs/your-step/INLINE.md), with room
  * beside it where a reply's controls sit, so the edges line up.
  */
-export function AskSpecialBubble({avatarUrl, children, testId}: {avatarUrl: string | null; children: ReactNode; testId?: string}) {
+export function AskSpecialBubble({avatarUrl, showsFace = true, children, testId}: {
+    avatarUrl: string | null;
+    /** False while the next message is the animal's too (the next Warmup question): its face sits by the newest only. */
+    showsFace?: boolean;
+    children: ReactNode;
+    testId?: string;
+}) {
     return (
         <div className="flex items-end gap-2 pr-2">
-            <AskAnimalFace url={avatarUrl} size={28} />
+            {showsFace ? <AskAnimalFace url={avatarUrl} size={28} /> : <span aria-hidden="true" className="w-7 shrink-0" />}
             <div className="flex min-w-0 flex-1 items-end">
                 <div className="flex min-w-0 flex-1 flex-col items-start">
                     <AskSpecialShell testId={testId}>{children}</AskSpecialShell>

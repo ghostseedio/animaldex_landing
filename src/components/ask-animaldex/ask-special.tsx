@@ -421,6 +421,7 @@ const CHOICE_RADIUS: CSSProperties = {borderRadius: 14};
 export function AskWarmupQuestion({
     item,
     avatarUrl,
+    showsFace,
     name,
     words,
     checking,
@@ -431,6 +432,8 @@ export function AskWarmupQuestion({
 }: {
     item: AskWarmupItem;
     avatarUrl: string | null;
+    /** The run's next question follows: the face sits by the newest only. */
+    showsFace: boolean;
     name: string;
     words: CompanionWords;
     /** The answers are being checked (the last question). */
@@ -442,7 +445,7 @@ export function AskWarmupQuestion({
     onRetry: () => void;
 }) {
     return (
-        <AskSpecialBubble avatarUrl={avatarUrl} testId={`warmup-question-${item.index + 1}`}>
+        <AskSpecialBubble avatarUrl={avatarUrl} showsFace={showsFace} testId={`warmup-question-${item.index + 1}`}>
             <AskSpecialLabel icon={<BoltIcon />}>{warmupQuestionLabel(item.index + 1, item.total, words)}</AskSpecialLabel>
             <p role="heading" aria-level={3} className="text-[15px] font-semibold leading-6 text-white">{item.prompt}</p>
             <div className="flex flex-col gap-[7px]" role="group" aria-label={item.prompt}>

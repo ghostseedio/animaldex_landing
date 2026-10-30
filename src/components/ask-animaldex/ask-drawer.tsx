@@ -1379,29 +1379,6 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     useEffect(() => {
         submitRef.current = submit;
     }, [submit]);
-    /** A run still waiting for an answer or its check: another one does not start over it. */
-    const openWarmupRunId = useMemo(() => {
-        for (let index = messages.length - 1; index >= 0; index -= 1) {
-            const item = messages[index].warmup;
-            if (item) return typeof item.passed === "boolean" ? null : item.runId;
-        }
-        return null;
-    }, [messages]);
-    /** "Take the warmup": the offer's chips go, and the first question appears as the animal's next message. */
-    const startWarmup = useCallback((offerMessageId: string | null) => {
-        if (!training || !trainingCanStart(training)) return;
-        speech.stop();
-        setShowingBond(false);
-        setShowingMemory(false);
-        sticksToBottom.current = true;
-        if (openWarmupRunId) return;
-        const runId = offerMessageId ?? newAskMessageId();
-        const first = askWarmupItem(training, 0, runId);
-        if (!first) return;
-        transformThread((current) => (current.some((message) => message.warmup?.runId === runId)
-            ? current
-            : [...current, createAskMessage("assistant", "", {warmup: first})]));
-    }, [training, speech, openWarmupRunId, transformThread]);
     /**
      * The answers go to the server; the verdict is kept on each question, the
      * result line shows on the last, and a beat later the result goes to the
@@ -1462,6 +1439,43 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         const answers = askWarmupAnswers(items);
         if (answers && items[0] && !warmupChecking.has(runId)) void checkWarmup(runId, answers, items[0].speciesProfileId);
     }, [messages, warmupChecking, checkWarmup]);
+    /** The newest Warmup question while its run is unfinished: another run does not start over it. */
+    const openWarmupItem = useMemo(() => {
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+            const item = messages[index].warmup;
+            if (item) return typeof item.passed === "boolean" ? null : item;
+        }
+        return null;
+    }, [messages]);
+    /**
+     * "Take the warmup": the offer's chips go, and the first question appears
+     * as the animal's next message. A run left unfinished (the drawer closed
+     * between questions, or while its answers were checked) carries on instead.
+     */
+    const startWarmup = useCallback((offerMessageId: string | null) => {
+        if (!training || !trainingCanStart(training)) return;
+        speech.stop();
+        setShowingBond(false);
+        setShowingMemory(false);
+        sticksToBottom.current = true;
+        const open = openWarmupItem;
+        if (open) {
+            if (typeof open.chosen !== "number") return;
+            if (open.index < open.total - 1) {
+                const question = askWarmupItem(training, open.index + 1, open.runId);
+                if (question) transformThread((current) => [...current, createAskMessage("assistant", "", {warmup: question})]);
+            } else {
+                retryWarmup(open.runId);
+            }
+            return;
+        }
+        const runId = offerMessageId ?? newAskMessageId();
+        const first = askWarmupItem(training, 0, runId);
+        if (!first) return;
+        transformThread((current) => (current.some((message) => message.warmup?.runId === runId)
+            ? current
+            : [...current, createAskMessage("assistant", "", {warmup: first})]));
+    }, [training, speech, openWarmupItem, transformThread, retryWarmup]);
     /** What a reply's Warmup offer shows: loading, the offer, done, or nothing for an animal without one. */
     const warmupOfferState: "loading" | "offer" | "passed" | "hidden" = !warmupTraining.didLoad
         ? "loading"
@@ -1781,7 +1795,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         powerName={hints.principleName?.trim() || null}
                         questionCount={training?.questions.length ?? 0}
                         state={warmupOfferState}
-                        disabled={stepBusyNow || Boolean(openWarmupRunId)}
+                        disabled={stepBusyNow}
                         onTake={() => startWarmup(message.id)}
                         onSkip={() => updateMessage(message.id, {cardsDismissed: true})}
                     />
@@ -1831,7 +1845,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         const item = message.warmup;
         if (!item) return null;
         const isLast = item.index >= item.total - 1;
+        const next = messages[messages.findIndex((entry) => entry.id === message.id) + 1];
         return {
+            followedByNext: next?.warmup?.runId === item.runId,
             checking: isLast && warmupChecking.has(item.runId),
             problem: isLast ? warmupErrors[item.runId] ?? null : null,
             onChoose: (choice: number) => answerWarmup(message.id, choice),
@@ -2736,7 +2752,7 @@ function AnimalMessageRow({
     /** What the reply carries to do, inside its last bubble (docs/your-step/INLINE.md). */
     special?: React.ReactNode;
     /** A Warmup question's part in the run (its check, its problem), and its taps. */
-    warmup?: {checking: boolean; problem: string | null; onChoose: (choice: number) => void; onRetry: () => void} | null;
+    warmup?: {followedByNext: boolean; checking: boolean; problem: string | null; onChoose: (choice: number) => void; onRetry: () => void} | null;
     /** Report this reply; signed-in readers only. */
     onReport?: () => void;
     /** The check-in this reply raised, while it is unanswered. */
@@ -2786,6 +2802,7 @@ function AnimalMessageRow({
             <AskWarmupQuestion
                 item={message.warmup}
                 avatarUrl={faceUrl}
+                showsFace={!warmup?.followedByNext}
                 name={speakerName}
                 words={labels.companions}
                 checking={warmup?.checking ?? false}
