@@ -47,6 +47,18 @@ import {NextResponse} from "next/server";
  * them. On a call the loop is context only: nothing is set or done, and
  * `done` has no `companion`.
  *
+ * 3.2 Debates (docs/debates/SERVER.md, "The chat"; the apps'
+ * `generate-applied-insight` at AnimalDex r32d-server b09fd6a7): the owner's
+ * chat also says it draws `debate`, so the card medium describes the debate
+ * card, and the loop's rules carry the one-time offer of other animals' ways.
+ * The animal may make it in this reply (`companion.debate`) only with the loop
+ * on, not in a greeting or a call, with steps offered, the Power earned, no
+ * crisis words, no debate card in the conversation yet, and
+ * `debate_chat_state` saying the switch is on, this animal has not hosted one
+ * on the problem and a private debate is still free today. The `comparison`
+ * card is gone. The debate itself runs through the edge function
+ * (`/api/ask/debate`), never here.
+ *
  * On someone else's card the animal is theirs: it talks about its owner only
  * from what the owner shares (`animal_chat_owner_context`), tells the visitor
  * once that it passes visits on, and passes on the gist.
@@ -127,6 +139,7 @@ import {
     bondForClient,
     companionPromptLines,
     companionWarmup,
+    conversationOffersDebate,
     conversationOffersWarmup,
     extractCompanionLines,
     type CompanionLines
@@ -232,6 +245,10 @@ export async function POST(request: Request) {
     // The history must not carry the message being sent; an older client
     // still appends it, so a trailing copy of the question is dropped here.
     const history = dedupeCurrentQuestion(resolveAskHistory(body.history), question ?? "");
+    // The conversation as sent, whole, for the cards already offered in it: a
+    // card at the end of a long reply still counts, as the apps read it.
+    const sentHistory = (Array.isArray(body.history) ? body.history as unknown[] : [])
+        .filter((turn): turn is {role?: string | null; content?: string | null} => Boolean(turn) && typeof turn === "object");
     const [basePacket, wildProfile, settings, card] = await Promise.all([
         buildAskPacket({subject, question: question ?? ""}),
         getAskWildProfile(viewer.userId),
@@ -298,6 +315,18 @@ export async function POST(request: Request) {
     // thing they say) and who visited (in the hello or the first reply).
     const animalOwnerId = card?.ownerId ?? viewer.userId;
     const ownerTalksFirst = isGreeting || history.filter((turn) => turn.role === "assistant").length <= 1;
+    // The owner's own one-to-one chat draws the Warmup and Trials cards when it
+    // says so (`supported_visuals: ["step", "card"]`), as the 3.2 apps do, and
+    // the debate card when it also says "debate" (3.2 Debates). Never a
+    // visitor, a call or a Trial thread; groups have their own route.
+    const advertised = Array.isArray(body.supported_visuals) ? body.supported_visuals : [];
+    const cards = speaksAsAnimal && ownsCapture && !isCall && !aboutTrial && advertised.includes("card");
+    const debateCards = cards && advertised.includes("debate");
+    // The animal may offer a debate once for a problem, once its Power is
+    // earned, never in a crisis; the Power and `debate_chat_state` are read
+    // with the owner's loop.
+    const debateOfferAsked = debateCards && personalise && !isGreeting && settings.suggestSteps !== false &&
+        !ASK_CRISIS_PATTERN.test(question ?? "") && !conversationOffersDebate(sentHistory);
     const [owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories] = await Promise.all([
         ownerSpeciesId && viewer.userId
             ? loadOwnerCompanion({
@@ -305,7 +334,8 @@ export async function POST(request: Request) {
                 speciesProfileId: ownerSpeciesId,
                 loopOn: personalise && !aboutTrial,
                 // "I did it": the report on the open step, already attached.
-                stepReportId
+                stepReportId,
+                debateOffer: debateOfferAsked
             })
                 .catch(() => null as OwnerCompanion | null)
             : Promise.resolve(null as OwnerCompanion | null),
@@ -449,9 +479,10 @@ export async function POST(request: Request) {
                     warmup: companionWarmup({
                         ownerProgress: owner?.progress ?? {},
                         daysTalked: Number(owner?.bond?.counted?.days ?? 0) || 0,
-                        offeredInConversation: conversationOffersWarmup(history)
+                        offeredInConversation: conversationOffersWarmup(sentHistory)
                     }),
-                    stepReport: loop.stepReport ? {media: loop.stepReport.media} : null
+                    stepReport: loop.stepReport ? {media: loop.stepReport.media} : null,
+                    debateOffer: owner?.debateOffer ?? false
                 })
             }
             : {})
@@ -529,12 +560,11 @@ export async function POST(request: Request) {
         })
         : null;
 
-    // The owner's own one-to-one chat draws the Warmup and Trials cards when it
-    // says so (`supported_visuals: ["step", "card"]`), as the 3.2 apps do.
-    // Never a visitor, a call or a Trial thread; groups have their own route.
-    const advertised = Array.isArray(body.supported_visuals) ? body.supported_visuals : [];
-    const cards = speaksAsAnimal && ownsCapture && !isCall && !aboutTrial && advertised.includes("card");
-    const supportedVisuals: AskVisualMedium[] = [...askSupportedVisuals(packet.hasReaderPhoto), ...(cards ? ["card" as const] : [])];
+    const supportedVisuals: AskVisualMedium[] = [
+        ...askSupportedVisuals(packet.hasReaderPhoto),
+        ...(cards ? ["card" as const] : []),
+        ...(debateCards ? ["debate" as const] : [])
+    ];
     const promptOptions = {
         scope: packet.scope,
         supportedVisuals,
@@ -555,7 +585,7 @@ export async function POST(request: Request) {
         species: speaksAsAnimal ? packet.species : null,
         stats: companion?.stats ?? null,
         // On a call the loop is context only: no step rules, no hidden lines.
-        companionLoop: loop && !isCall ? {offersSteps: settings.suggestSteps} : null,
+        companionLoop: loop && !isCall ? {offersSteps: settings.suggestSteps, debates: debateCards} : null,
         call: isCall
     };
     // The animal sees the conversation as real turns (its own replies as its

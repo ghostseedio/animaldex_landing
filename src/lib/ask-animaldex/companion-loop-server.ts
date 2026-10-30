@@ -3,8 +3,9 @@ import "server-only";
 /**
  * The companion loop's reads and writes, with the service role, as the apps'
  * `generate-applied-insight` does them (`loadCompanionLoop`,
- * `applyCompanionLines`, the referral take). The prompt text and the line
- * parsing live in `companion-focus.ts`.
+ * `applyCompanionLines`, the referral take, and since 3.2 Debates
+ * `loadDebateOfferAllowed`). The prompt text and the line parsing live in
+ * `companion-focus.ts`.
  *
  * Every call fails quietly: a database without the migration, or one that
  * refuses, leaves the animal without the loop, never without an answer.
@@ -62,10 +63,16 @@ export type OwnerCompanion = {
     powerEarned: boolean;
     /**
      * `animal_chat_owner_progress` as it came (3.2: `loop_step`, `warmup`
-     * {available, passed}, the Trials, battles), for `companionWarmup`. The
+     * {available, passed}, the Trials, debates), for `companionWarmup`. The
      * prompt does not carry it as owner_progress on the web.
      */
     progress: Record<string, unknown>;
+    /**
+     * 3.2 Debates: the animal may offer a debate in this reply
+     * (`companion.debate`). Only asked of `debate_chat_state` when the turn
+     * allows it (`debateOffer` on the call) and the Power is earned.
+     */
+    debateOffer: boolean;
     /** The loop, when it is on (personalisation on, not a Trial thread). */
     loop: {
         state: CompanionState | null;
@@ -128,6 +135,13 @@ export async function loadOwnerCompanion(params: {
     loopOn: boolean;
     /** `step_report.step_id` on the request: they tapped "I did it" on this step. */
     stepReportId?: string | null;
+    /**
+     * 3.2 Debates: everything but the Power and `debate_chat_state` allows the
+     * offer in this reply (the chat draws the debate card, the loop is on, not a
+     * greeting or a call, steps are offered, no crisis words, no debate card in
+     * the conversation yet).
+     */
+    debateOffer?: boolean;
 }): Promise<OwnerCompanion | null> {
     const service = createSupabaseServiceClient();
     if (!service) return null;
@@ -182,16 +196,46 @@ export async function loadOwnerCompanion(params: {
         }
     };
 
-    // The loop settles the Power first, so the progress read follows it.
+    // The loop settles the Power first, so the progress read follows it, and
+    // the debate state only once the Power is earned, as in the apps.
     const loop = params.loopOn ? await loadLoop() : null;
-    const [bond, progress] = await Promise.all([loadBond(), loadProgress()]);
+    const [bond, [progress, debateOffer]] = await Promise.all([
+        loadBond(),
+        loadProgress().then(async (progress) => [
+            progress,
+            Boolean(params.debateOffer && loop && progress.power_earned)
+                && await loadDebateOfferAllowed(service, params.userId, params.speciesProfileId)
+        ] as const)
+    ]);
     return {
         service,
         bond,
         powerEarned: Boolean(progress.power_earned),
         progress,
+        debateOffer,
         loop
     };
+}
+
+/**
+ * Whether the animal may offer a debate now: the switch is on, it has not
+ * hosted one on this problem already (since its focus was set, or today),
+ * and a private debate is still free today. The apps' `loadDebateOfferAllowed`
+ * (`debate_chat_state`, service role only).
+ */
+async function loadDebateOfferAllowed(service: Service, userId: string, speciesProfileId: string): Promise<boolean> {
+    try {
+        const {data, error} = await service.rpc("debate_chat_state", {p_user_id: userId, p_species_profile_id: speciesProfileId});
+        if (error || !data || typeof data !== "object") {
+            if (error) warn("debate_chat_state", error);
+            return false;
+        }
+        const state = data as Record<string, unknown>;
+        return state.enabled === true && state.debated_this_problem !== true && Number(state.private_left ?? 0) > 0;
+    } catch (error) {
+        warn("debate_chat_state", error);
+        return false;
+    }
 }
 
 /**

@@ -1,12 +1,13 @@
 /**
  * Builds `src/lib/ask-animaldex/__fixtures__/your-step-server-prompts.json`:
- * the 3.2 "Your step" prompt text and loop helpers as the apps' own server
- * modules produce them, for `ask-animaldex-your-step-parity.test.ts` to hold
- * the web's copies to, string by string.
+ * the 3.2 "Your step" and Debates prompt text and loop helpers as the apps'
+ * own server modules produce them, for `ask-animaldex-your-step-parity.test.ts`
+ * to hold the web's copies to, string by string.
  *
  *   npx tsx scripts/generate-your-step-parity-fixture.mts <AnimalDex repo> [ref]
  *
- * The ref (default r32-server) is read with `git archive` into a temporary
+ * The ref (default r32d-server, the Debates server lane, which carries Your
+ * step too) is read with `git archive` into a temporary
  * folder; the AnimalDex checkout itself is never touched. Deno's remote
  * imports (npm:, jsr:, https:) become an empty stub: nothing here calls them.
  */
@@ -17,7 +18,7 @@ import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
-const [repo, ref = "r32-server"] = process.argv.slice(2);
+const [repo, ref = "r32d-server"] = process.argv.slice(2);
 if (!repo) throw new Error("usage: generate-your-step-parity-fixture.mts <AnimalDex repo> [ref]");
 const commit = execFileSync("git", ["-C", repo, "rev-parse", ref], {encoding: "utf8"}).trim();
 const root = mkdtempSync(join(tmpdir(), "your-step-parity-"));
@@ -38,6 +39,7 @@ const focus = await load("animal-focus.ts");
 const companion = await load("animal-companion.ts");
 const profile = await load("animal-power-profile.ts");
 const voice = await load("animal-voice.ts");
+const debate = await load("animal-debate.ts");
 
 /** A module-private string array, read from the source and evaluated alone. */
 function privateArray(file: string, name: string): string[] {
@@ -85,12 +87,17 @@ const promptCases = [
     {state: openState, roster: [], powerEarned: false, powerJustEarned: true, warmup: {available: true, passed: true, may_offer: false}, stepReport: {media: null}},
     {state: {open_trial: {id: "t2", step: "Walk home"}, your_trials_done: 0, recent_done: []}, roster: [], powerEarned: true, warmup: {available: false, passed: false, may_offer: false}, stepReport: null},
     {state: {your_trials_done: 0, recent_done: []}, roster: [], powerEarned: false, stepReport: {media: "2 photos"}},
-    {state: null, roster: [], powerEarned: true}
+    {state: null, roster: [], powerEarned: true},
+    // 3.2 Debates: the offer may be made in this reply (companion.debate), or not.
+    {state: openState, roster, powerEarned: true, warmup: {available: true, passed: true, may_offer: false}, debateOffer: true},
+    {state: {open_trial: null, your_trials_done: 2, recent_done: [{step: "Asked first"}]}, roster: [], powerEarned: true, debateOffer: true},
+    {state: openState, roster, powerEarned: true, stepReport: {media: null}, debateOffer: false},
+    {state: null, roster: [], powerEarned: true, debateOffer: true}
 ];
 
 const card = 'Want to try?\n```animaldex-card\n{"kind":"training","title":"Warmup","body":"Two questions.","cta":"Take it"}\n```';
 const fixture = {
-    source: {repo: "AnimalDex", ref, commit, files: ["animal-focus.ts", "animal-companion.ts", "animal-power-profile.ts", "animal-voice.ts"]},
+    source: {repo: "AnimalDex", ref, commit, files: ["animal-focus.ts", "animal-companion.ts", "animal-power-profile.ts", "animal-voice.ts", "animal-debate.ts"]},
     arrays: {
         COMPANION_OUTPUT_LINES: focus.COMPANION_OUTPUT_LINES,
         REFERRAL_OPENING_RULES: focus.REFERRAL_OPENING_RULES,
@@ -98,6 +105,7 @@ const fixture = {
         ANIMAL_CHAT_MODE_RULES: companion.ANIMAL_CHAT_MODE_RULES,
         ANIMAL_RELATIONSHIP_RULES: companion.ANIMAL_RELATIONSHIP_RULES,
         CARD_MEDIUM: profile.ASSISTANT_VISUAL_MEDIUMS.card,
+        DEBATE_MEDIUM: profile.ASSISTANT_VISUAL_MEDIUMS.debate,
         ANIMAL_ROLE_RULES: privateArray("animal-voice.ts", "ANIMAL_ROLE_RULES"),
         ANIMAL_VISITOR_RULES: privateArray("animal-voice.ts", "ANIMAL_VISITOR_RULES"),
         ANIMAL_VISITOR_FOLLOW_UP_RULES: privateArray("animal-voice.ts", "ANIMAL_VISITOR_FOLLOW_UP_RULES"),
@@ -107,7 +115,10 @@ const fixture = {
     },
     companionLoopRules: {
         offersSteps: focus.companionLoopRules({offersSteps: true}),
-        noSteps: focus.companionLoopRules({offersSteps: false})
+        noSteps: focus.companionLoopRules({offersSteps: false}),
+        // 3.2 Debates: a chat that draws the debate card; the offer rule needs steps on.
+        debates: focus.companionLoopRules({offersSteps: true, debates: true}),
+        debatesNoSteps: focus.companionLoopRules({offersSteps: false, debates: true})
     },
     stepOfferRules: {
         autoYes: companion.stepOfferRules(true, "auto"),
@@ -137,6 +148,14 @@ const fixture = {
         [{role: "assistant", content: 'Here.\n```animaldex-card\n{ "kind" : "training" }\n```'}],
         []
     ].map((input) => ({input, output: focus.conversationOffersWarmup(input)})),
+    conversationOffersDebate: [
+        [{role: "assistant", content: 'Want other ways?\n```animaldex-card\n{"kind":"debate","title":"How would other animals handle this?","problem":"My boss."}\n```'}],
+        [{role: "user", content: '```animaldex-card\n{"kind":"debate"}\n```'}],
+        [{role: "assistant", content: card}],
+        [{role: "assistant", content: 'Here.\n```animaldex-card\n{ "kind" : "debate" }\n```'}],
+        [{role: "assistant", content: '{"kind":"debate"} with no fence'}],
+        []
+    ].map((input) => ({input, output: debate.conversationOffersDebate(input)})),
     describeStepMedia: [
         [], null, ["u/steps/s/a.jpg"], ["u/steps/s/a.mp4", "u/steps/s/b.jpg"], ["u/steps/s/a.jpg", "u/steps/s/b.png"],
         ["u/steps/s/a.MOV", "u/steps/s/b.webm"], ["  ", "u/steps/s/a.webp"]
@@ -154,7 +173,11 @@ const fixture = {
         ownerNoLoop: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card"], companionLoop: null, suggestSteps: true, stories: true}),
         ownerNoLoopNoSteps: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card"], companionLoop: null, suggestSteps: false, stories: true}),
         // A call: no cards, no loop rules, the call's step rule.
-        call: sections({mode: "auto", supportedVisuals: [], companionLoop: null, call: true, suggestSteps: true, stories: true})
+        call: sections({mode: "auto", supportedVisuals: [], companionLoop: null, call: true, suggestSteps: true, stories: true}),
+        // 3.2 Debates: the owner's chat that also draws the debate card (the web's owner chat since 3.2).
+        ownerLoopDebate: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: {offersSteps: true, debates: true}, suggestSteps: true, stories: true}),
+        ownerLoopDebateNoSteps: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "photo", "card", "debate"], companionLoop: {offersSteps: false, debates: true}, suggestSteps: false, stories: true}),
+        ownerNoLoopDebate: sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: null, suggestSteps: true, stories: true})
     }
 };
 

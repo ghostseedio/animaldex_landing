@@ -206,14 +206,14 @@ test("the system prompt carries the loop on the owner's chat only, and the opt-o
 
 test("on a call nothing is set, offered or drawn; visitors and groups set no steps either", () => {
     const call = buildAskStreamingSystemPrompt({scope: "species", mode: "auto", animalName: "Lion", call: true, supportedVisuals: []});
-    assert.equal(call.includes("This is a voice call: set no steps, offer no Warmup, Trials or battles"), true);
+    assert.equal(call.includes("This is a voice call: set no steps, offer no Warmup, Trials or debates"), true);
     assert.equal(call.includes("Helping them with their life"), false);
     assert.equal(call.includes("TRIAL: <the step"), false);
     assert.equal(call.includes("Your Trials, unasked"), false);
     const visitor = buildAskStreamingSystemPrompt({scope: "species", mode: "auto", animalName: "Lion", speakingTo: "visitor"});
     assert.equal(visitor.includes("Do not offer the owner's steps, Warmup, Trials or"), true);
     const group = buildAskStreamingSystemPrompt({scope: "species", mode: "chat", animalName: "Lion", groupLines: ["group"]});
-    assert.equal(group.includes("asked not to be offered steps, your Warmup, Trials or battles"), true);
+    assert.equal(group.includes("asked not to be offered steps, your Warmup, Trials or debates"), true);
     assert.equal(group.includes("TRIAL: <the step"), false);
 });
 

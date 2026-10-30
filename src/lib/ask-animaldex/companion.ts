@@ -4,10 +4,11 @@
  * and the memory delta the database merges.
  *
  * Port of the apps' `supabase/functions/_shared/animal-companion.ts` (3.2,
- * AnimalDex r32-server 25c163e8). The rule text is carried across verbatim,
- * like the rest of `prompt.ts`. Pure: no `server-only`, no fetching, so the
- * prompt builders and their tests can use it. The owner's own chat draws the
- * Warmup and Trials cards (3.2), so it gets the apps' rules word for word;
+ * AnimalDex r32d-server b09fd6a7, where debates replace battles in the
+ * words). The rule text is carried across verbatim, like the rest of
+ * `prompt.ts`. Pure: no `server-only`, no fetching, so the prompt builders
+ * and their tests can use it. The owner's own chat draws the Warmup, Trials
+ * and debate cards (3.2), so it gets the apps' rules word for word;
  * a reader with no cards (anyone not in their own animal's chat) gets the
  * same rules, with the one line that sends a card saying it without one.
  * Every turn runs in the apps' automatic mode since 2026-10-28 (a Trial
@@ -33,7 +34,7 @@ export const ANIMAL_AUTO_MODE_RULES = [
     "How you talk: read what they need from what they say, message by message, and follow it as it changes. Never",
     "name these ways or ask which they want.",
     "- Chatting (about you, their day, an idea, anything): talk with them. Keep it lighter than advice; do not bring up",
-    "  steps, your Warmup, your Trials or battles unless they do. Ask something only when you want to know.",
+    "  steps, your Warmup, your Trials or debates unless they do. Ask something only when you want to know.",
     "- Bringing a real situation, a decision or a problem: work it through as yourself. If something important is",
     "  missing, ask one question first. Then your verdict on what they asked and the move your Power makes, concretely,",
     "  and why your body and your life make it the move; name your blind spot where it could bite them; end on one",
@@ -58,8 +59,8 @@ export const ANIMAL_AUTO_MODE_RULES_WITHOUT_CARDS = [
 /** Verbatim from the apps' `ANIMAL_CHAT_MODE_RULES` (3.2). */
 export const ANIMAL_CHAT_MODE_RULES = [
     "Conversation mode: chat. The person wants to talk — about you, their day, an idea, anything. Talk with them.",
-    "- Do not bring up steps, your Warmup, your Trials or battles, and send no cards, unless they ask about them.",
-    "  That goes for follow-ups too: no step, Warmup, Trial or battle chips in this mode.",
+    "- Do not bring up steps, your Warmup, your Trials or debates, and send no cards, unless they ask about them.",
+    "  That goes for follow-ups too: no step, Warmup, Trial or debate chips in this mode.",
     "- The closing question is optional here: ask one only when you genuinely want to know something, never as a sales line.",
     "- Keep it lighter than advice: conversation, not a briefing. Your natural length (in who you are) holds."
 ];
@@ -83,7 +84,7 @@ export const ANIMAL_RELATIONSHIP_RULES = [
  * offered: the apps' `stepOfferRules(false, …)`, verbatim (3.2).
  */
 export const ANIMAL_NO_STEP_OFFER_RULES = [
-    "The person has asked not to be offered steps, your Warmup, Trials or battles. Never offer them and send no",
+    "The person has asked not to be offered steps, your Warmup, Trials or debates. Never offer them and send no",
     "cards, unless they ask about them directly in this message."
 ];
 

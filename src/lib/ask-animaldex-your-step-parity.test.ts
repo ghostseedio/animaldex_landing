@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-// 3.2 "Your step": the web's animal holds the apps' words, string by string.
-// The fixture is the apps' own server modules' output (AnimalDex r32-server,
-// `scripts/generate-your-step-parity-fixture.mts`): the loop rules, the
-// prompt lines, the Warmup and report helpers, the card medium, and the
-// owner's, the opted-out and the call's system-prompt sections as built.
+// 3.2 "Your step" and Debates: the web's animal holds the apps' words, string
+// by string. The fixture is the apps' own server modules' output (AnimalDex
+// r32d-server, `scripts/generate-your-step-parity-fixture.mts`): the loop
+// rules (with and without the debate offer), the prompt lines (with and
+// without companion.debate), the Warmup, debate-card and report helpers, the
+// card and debate mediums, and the owner's, the opted-out and the call's
+// system-prompt sections as built.
 import fixture from "./ask-animaldex/__fixtures__/your-step-server-prompts.json";
 import {
     COMPANION_OUTPUT_LINES,
@@ -13,6 +15,7 @@ import {
     companionLoopRules,
     companionPromptLines,
     companionWarmup,
+    conversationOffersDebate,
     conversationOffersWarmup,
     describeStepMedia,
     openStepForClient,
@@ -56,14 +59,16 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
     }
 }
 
-test("the fixture is the server lane's 3.2 build", () => {
-    assert.equal(fixture.source.ref, "r32-server");
-    assert.match(fixture.source.commit, /^25c163e8/);
+test("the fixture is the Debates server lane's 3.2 build", () => {
+    assert.equal(fixture.source.ref, "r32d-server");
+    assert.match(fixture.source.commit, /^b09fd6a7/);
 });
 
 test("the companion loop's rules and hidden lines are the apps', word for word", () => {
     sameLines(companionLoopRules({offersSteps: true}), fixture.companionLoopRules.offersSteps, "companionLoopRules (steps)");
     sameLines(companionLoopRules({offersSteps: false}), fixture.companionLoopRules.noSteps, "companionLoopRules (no steps)");
+    sameLines(companionLoopRules({offersSteps: true, debates: true}), fixture.companionLoopRules.debates, "companionLoopRules (debates)");
+    sameLines(companionLoopRules({offersSteps: false, debates: true}), fixture.companionLoopRules.debatesNoSteps, "companionLoopRules (debates, no steps)");
     sameLines(COMPANION_OUTPUT_LINES, fixture.arrays.COMPANION_OUTPUT_LINES, "COMPANION_OUTPUT_LINES");
     sameLines(REFERRAL_OPENING_RULES, fixture.arrays.REFERRAL_OPENING_RULES, "REFERRAL_OPENING_RULES");
 });
@@ -91,6 +96,7 @@ test("the turn's loop lines come out as the server writes them", () => {
             powerJustEarned?: boolean;
             warmup?: CompanionWarmup;
             stepReport?: {media: string | null} | null;
+            debateOffer?: boolean;
         };
         const web = companionPromptLines({
             ...input,
@@ -108,6 +114,9 @@ test("the Warmup, the report's media and the open step read as the server reads 
     for (const item of fixture.conversationOffersWarmup) {
         assert.equal(conversationOffersWarmup(item.input), item.output, JSON.stringify(item.input));
     }
+    for (const item of fixture.conversationOffersDebate) {
+        assert.equal(conversationOffersDebate(item.input), item.output, JSON.stringify(item.input));
+    }
     for (const item of fixture.describeStepMedia) {
         assert.equal(describeStepMedia(item.input), item.output, JSON.stringify(item.input));
     }
@@ -122,8 +131,9 @@ test("the owner's chat with cards: medium, loop and output shape are the apps' s
     sameLines(owner.medium, fixture.prompts.ownerLoop.medium, "owner medium");
     sameLines(owner.loop, fixture.prompts.ownerLoop.loop, "owner loop");
     sameLines(owner.output, fixture.prompts.ownerLoop.output, "owner output");
-    // The card rule itself, as `ASSISTANT_VISUAL_MEDIUMS.card`.
+    // The card rule itself, as `ASSISTANT_VISUAL_MEDIUMS.card`; without "debate", no debate card.
     assert.equal(owner.medium.join("\n").includes(fixture.arrays.CARD_MEDIUM.join("\n")), true);
+    assert.equal(owner.medium.join("\n").includes('"kind":"debate"'), false);
 
     const optedOut = sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "photo", "card"], companionLoop: {offersSteps: false}, suggestSteps: false, stories: true});
     sameLines(optedOut.medium, fixture.prompts.ownerLoopNoSteps.medium, "opted-out medium");
@@ -137,6 +147,42 @@ test("the owner with personalisation off: cards and the apps' unasked Trial offe
     sameLines(noLoop.output, fixture.prompts.ownerNoLoop.output, "no-loop output");
     const noSteps = sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card"], companionLoop: null, suggestSteps: false, stories: true});
     sameLines(noSteps.loop, fixture.prompts.ownerNoLoopNoSteps.loop, "no-loop opted-out loop");
+});
+
+test("3.2 Debates, the owner's chat that draws the debate card: medium, loop and output are the apps'", () => {
+    const owner = sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: {offersSteps: true, debates: true}, suggestSteps: true, stories: true});
+    sameLines(owner.medium, fixture.prompts.ownerLoopDebate.medium, "debate owner medium");
+    sameLines(owner.loop, fixture.prompts.ownerLoopDebate.loop, "debate owner loop");
+    sameLines(owner.output, fixture.prompts.ownerLoopDebate.output, "debate owner output");
+    // The card rule, then the debate kind (`ASSISTANT_VISUAL_MEDIUMS.debate`) right after it.
+    assert.equal(owner.medium.join("\n").includes([...fixture.arrays.CARD_MEDIUM, ...fixture.arrays.DEBATE_MEDIUM].join("\n")), true);
+    // The one-time offer is in the loop's rules.
+    assert.equal(owner.loop.join("\n").includes(fixture.companionLoopRules.debates.join("\n")), true);
+    assert.equal(owner.loop.some((line) => line.startsWith("- Other animals' ways (companion.debate)")), true);
+
+    const optedOut = sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "photo", "card", "debate"], companionLoop: {offersSteps: false, debates: true}, suggestSteps: false, stories: true});
+    sameLines(optedOut.medium, fixture.prompts.ownerLoopDebateNoSteps.medium, "debate opted-out medium");
+    sameLines(optedOut.loop, fixture.prompts.ownerLoopDebateNoSteps.loop, "debate opted-out loop");
+    sameLines(optedOut.output, fixture.prompts.ownerLoopDebateNoSteps.output, "debate opted-out output");
+    // Someone who turned step suggestions off is never offered a debate.
+    assert.equal(optedOut.loop.some((line) => line.includes("companion.debate")), false);
+
+    const noLoop = sections({mode: "auto", supportedVisuals: ["flow", "scale", "chart", "card", "debate"], companionLoop: null, suggestSteps: true, stories: true});
+    sameLines(noLoop.medium, fixture.prompts.ownerNoLoopDebate.medium, "debate no-loop medium");
+    sameLines(noLoop.loop, fixture.prompts.ownerNoLoopDebate.loop, "debate no-loop loop");
+    sameLines(noLoop.output, fixture.prompts.ownerNoLoopDebate.output, "debate no-loop output");
+});
+
+test("3.2 Debates: no battle and no comparison card anywhere in the owner's chat, as the apps test it", () => {
+    for (const visuals of [["card"], ["card", "debate"]] as const) {
+        for (const companionLoop of [{offersSteps: true, debates: visuals.length > 1}, {offersSteps: false}, null]) {
+            const prompt = buildAskStreamingSystemPrompt({scope: "species", mode: "auto", animalName: "African Lion", supportedVisuals: [...visuals], companionLoop, stories: true});
+            assert.equal(/battle|comparison \(a comparison|comparison card/i.test(prompt), false, JSON.stringify({visuals, companionLoop}));
+            assert.equal(prompt.includes('"kind":"debate"'), visuals.length > 1, JSON.stringify({visuals, companionLoop}));
+        }
+    }
+    // The site-wide assistant never describes the animals' debate card.
+    assert.equal(buildAskStreamingSystemPrompt({scope: "general", supportedVisuals: ["flow", "card", "debate"]}).includes('"kind":"debate"'), false);
 });
 
 test("a call: no loop rules, the call's step rule, no cards", () => {

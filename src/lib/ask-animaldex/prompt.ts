@@ -16,8 +16,8 @@
  * for the web. Every line in it is load-bearing, and a reworded web copy would
  * be a different animal wearing the same name. Where the website differs it is
  * because it has less: no owner progress, and cards only in the reader's own
- * animal's chat (3.2: the Warmup and Trials cards, `chat-cards.ts`; the app
- * draws the step itself). Since 2026-10-28
+ * animal's chat (3.2: the Warmup, Trials and debate cards, `chat-cards.ts`;
+ * the app draws the step itself). Since 2026-10-28
  * it carries the rest of the apps' animal: its nature (`nature.ts`), its own
  * stories (`stories.ts`), each reply's length (`reply-length.ts`), the
  * automatic mode, the visitor's voice on someone else's card, its Trials and
@@ -53,9 +53,10 @@ export type AskScope = "species" | "general";
 
 /**
  * Non-prose mediums a client can render. Mirrors `AssistantVisual` on iOS.
- * `card` is the owner's chat only (the Warmup and Trials cards, 3.2).
+ * `card` is the owner's chat only (the Warmup and Trials cards, 3.2), and
+ * `debate` the debate card kind there (3.2 Debates), described with the card.
  */
-export type AskVisualMedium = "flow" | "scale" | "chart" | "photo" | "card";
+export type AskVisualMedium = "flow" | "scale" | "chart" | "photo" | "card" | "debate";
 
 export type AskConversationTurn = {
     role: "user" | "assistant";
@@ -317,7 +318,7 @@ const ANIMAL_VISITOR_RULES = [
     "your owner's animal and that kind of talk is for your owner, and that if they find and capture one of your kind",
     "themselves, it will talk their life through with them. Then offer something you can talk about.",
     "Do not bring up what_you_remember_about_them with a visitor. Do not offer the owner's steps, Warmup, Trials or",
-    "battles to the visitor as cards; those belong to the owner."
+    "debates to the visitor as cards; those belong to the owner."
 ];
 
 /**
@@ -338,7 +339,7 @@ const ANIMAL_VISITOR_FOLLOW_UP_RULES = [
     "- About your owner's time with you ('What has your owner worked on with you?', using their name) only when",
     "  your_owner has a journey note or Play records; otherwise about you as an animal (your life, in your own",
     "  specifics) or your Power in plain words.",
-    "- Never about the visitor's own life, work or decisions, and never your owner's steps, Warmup, Trials or battles."
+    "- Never about the visitor's own life, work or decisions, and never your owner's steps, Warmup, Trials or debates."
 ];
 
 /** Verbatim from the apps' `ANIMAL_TRIAL_FOLLOW_UP_RULES`. */
@@ -490,8 +491,8 @@ const VISUAL_MEDIUMS: Record<AskVisualMedium, string[]> = {
         "  type is one of line, area, bar, threshold. Use conceptual values; never invent measured numbers."
     ],
     // The apps' `ASSISTANT_VISUAL_MEDIUMS.card` (3.2), verbatim. The owner's
-    // chat draws `trial` and `training`; a `comparison` card is not drawn on
-    // the web (`chat-cards.ts`).
+    // chat draws `trial` and `training` (`chat-cards.ts`); the `comparison`
+    // card is gone from every prompt since 3.2 Debates.
     card: [
         "- A next step the person can take right now inside AnimalDex is a CARD. It renders as a tappable card with a",
         "  button that opens the real thing, so the step is never only described:",
@@ -500,17 +501,29 @@ const VISUAL_MEDIUMS: Record<AskVisualMedium, string[]> = {
         "  ```",
         "  kind is one of: trial (your Trials, to make one of them their step; frequency LOW|MID|HIGH is the one you would",
         "  suggest, as listed in owner_progress or available_content; shown with your motion loop), training (your Warmup:",
-        "  a few quick questions on your lesson, taken inside this chat, optional), comparison (a comparison battle with",
-        "  their card). body is one sentence in your voice. Never more than ONE card per answer, after the prose, and only",
-        "  when the rules above allow it or they asked for it. A card is an offer: they can say no. A step you set them in",
-        "  your own words needs no card: the app shows it."
+        "  a few quick questions on your lesson, taken inside this chat, optional). body is one sentence in your voice.",
+        "  Never more than ONE card per answer, after the prose, and only when the rules above allow it or they asked for",
+        "  it. A card is an offer: they can say no. A step you set them in your own words needs no card: the app shows it."
+    ],
+    // Not a medium of its own: the debate card kind (3.2), described with the
+    // card where the chat says it draws it ("debate" as well as "card"). The
+    // apps' `ASSISTANT_VISUAL_MEDIUMS.debate`, verbatim.
+    debate: [
+        "- kind can also be debate: other animals weigh in on their problem, each with its own way. It opens a sheet where",
+        "  they pick the animals and whether it stays private:",
+        "  ```animaldex-card",
+        '  {"kind":"debate","title":"How would other animals handle this?","body":"One sentence in your voice on why other ways are worth hearing here.","cta":"Compare with other animals","problem":"their problem in one or two sentences, as they told it"}',
+        "  ```",
+        "  problem is what they brought, in their own terms, for the sheet: nothing they did not tell you. Only when the",
+        "  debate rule allows it."
     ]
 };
 
 function mediumRules(supportedVisuals: AskVisualMedium[]): string[] {
-    // The site-wide assistant never sends the owner's cards.
+    // The site-wide assistant never sends the owner's cards; the debate card
+    // is the animals' own offer, not this assistant's.
     const available = supportedVisuals
-        .filter((name) => name !== "card")
+        .filter((name) => name !== "card" && name !== "debate")
         .map((name) => VISUAL_MEDIUMS[name])
         .filter((lines): lines is string[] => Array.isArray(lines));
 
@@ -628,8 +641,9 @@ export type AskPromptOptions = {
     stats?: AskPersonaStats | null;
     /// The companion loop (`companion-focus.ts`): the owner's one-to-one chat,
     /// personalisation on, not a Trial. `offersSteps` false: they asked not to
-    /// be offered steps.
-    companionLoop?: {offersSteps: boolean} | null;
+    /// be offered steps. `debates`: the chat draws the debate card (3.2), so
+    /// the one-time debate offer is in the loop's rules.
+    companionLoop?: {offersSteps: boolean; debates?: boolean} | null;
     /** A group conversation (`group-rules.ts`): these replace the loop and relationship rules. */
     groupLines?: string[] | null;
 };
@@ -651,7 +665,7 @@ function speciesMode(options: AskPromptOptions): AskConversationMode {
 
 /** On a call there is no screen: nothing is set, offered or drawn. Verbatim from the apps' `ANIMAL_CALL_STEP_RULES` (3.2). */
 const ANIMAL_CALL_STEP_RULES = [
-    "This is a voice call: set no steps, offer no Warmup, Trials or battles, and send no cards. If they bring up the",
+    "This is a voice call: set no steps, offer no Warmup, Trials or debates, and send no cards. If they bring up the",
     "step you set them (companion.open_trial), talk with them about how it is going."
 ];
 
@@ -720,7 +734,7 @@ function characterLines(options: AskPromptOptions): string[] {
  */
 function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConversationMode): string[] {
     const names = supportedVisuals.filter((name) => Array.isArray(VISUAL_MEDIUMS[name]));
-    const drawings = names.filter((name) => name !== "card");
+    const drawings = names.filter((name) => name !== "card" && name !== "debate");
     if (names.length === 0) {
         return ["Medium — words, and a markdown table for a real side-by-side comparison."];
     }
@@ -741,6 +755,8 @@ function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConvers
     if (names.includes("card")) {
         lines.push(
             ...VISUAL_MEDIUMS.card,
+            // 3.2: a chat that draws the debate card says so ("debate").
+            ...(names.includes("debate") ? VISUAL_MEDIUMS.debate : []),
             "- A CARD is not a drawing: it goes after the closing question and before the follow-ups line, and the card rule",
             "  above sets how many. Close each card block with ``` on its own line."
         );

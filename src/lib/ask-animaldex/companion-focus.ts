@@ -19,10 +19,12 @@
  * anything the model writes.
  *
  * Port of the apps' `supabase/functions/_shared/animal-focus.ts` (AnimalDex
- * r32-server 25c163e8). The rule text is carried across verbatim, cards
+ * r32d-server b09fd6a7). The rule text is carried across verbatim, cards
  * included: the owner's chat draws the Warmup and Trials cards since 3.2
- * (`chat-cards.ts`). Pure: no `server-only`, no fetching, so the prompt
- * builders and their tests can use it.
+ * (`chat-cards.ts`), and the debate card with the 3.2 Debates: once its Power
+ * is earned the animal may offer, once for a problem, to let other animals
+ * weigh in (`companion.debate`, from `debate_chat_state`). Pure: no
+ * `server-only`, no fetching, so the prompt builders and their tests can use it.
  */
 
 import {ASK_FOLLOW_UP_SENTINEL} from "@/lib/ask-animaldex/prompt";
@@ -204,10 +206,12 @@ export function resolveReferral(key: string, roster: CompanionRosterEntry[]): Co
 
 /**
  * How the animal works on its owner's life with them. Stable: system prompt.
- * `offersSteps` false: the person asked not to be offered steps. Verbatim
- * from the apps' `companionLoopRules`.
+ * `offersSteps` false: the person asked not to be offered steps. `debates`:
+ * this chat draws the debate card (3.2), so the one-time offer of other
+ * animals' ways is in the rules; whether it may be made now is per turn
+ * (companion.debate). Verbatim from the apps' `companionLoopRules`.
  */
-export function companionLoopRules(params: {offersSteps: boolean}): string[] {
+export function companionLoopRules(params: {offersSteps: boolean; debates?: boolean}): string[] {
     return [
         "Helping them with their life — what you are for, with your owner:",
         "- You help through your lesson, always. Whatever they bring, come at it from the core of your Power: your angle on",
@@ -257,7 +261,21 @@ export function companionLoopRules(params: {offersSteps: boolean}): string[] {
         "  name, in a sentence, saying why its way fits — and that you'll tell it what is going on so they don't have to",
         "  explain again. Only animals in other_animals, at most once for a problem, and never to get rid of them.",
         "- companion.referral: another of their animals sent them to you about it. You already know what it is: go",
-        "  straight into your take on it, from your lesson. Never ask them to explain it again.",
+        "  straight into your take on it, from your lesson. Never ask them to explain it again. If it says they chose",
+        "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
+        "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
+        "  them, in your own words, and say the step starts with that animal's way.",
+        ...(params.debates && params.offersSteps
+            ? [
+                "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
+                "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
+                "  into — you may offer once, after giving your own verdict, to let other animals weigh in: ask in your own",
+                "  words whether they would like to hear how other animals would handle it, with the debate card. Never in small",
+                "  talk, never while they are telling you about something hard (a loss, fear, feeling alone) or anyone is",
+                "  hurting them, and never instead of your own answer. Once for a problem: if they let it pass or say no, leave",
+                "  it. Without companion.debate, do not offer it."
+            ]
+            : []),
         "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
         "  one, leave it for the rest of this conversation."
     ];
@@ -303,11 +321,27 @@ export function companionWarmup(params: {
     };
 }
 
-/** A training card (the Warmup) already sent in this conversation. The apps' `conversationOffersWarmup`. */
+/**
+ * A training card (the Warmup) already sent in this conversation. The apps'
+ * `conversationOffersWarmup`, read, as the apps read it, from the whole
+ * history as sent, not the clipped prompt turns.
+ */
 export function conversationOffersWarmup(history: Array<{role?: string | null; content?: string | null}>): boolean {
     return history.some((turn) =>
         turn.role === "assistant" && typeof turn.content === "string" &&
         /animaldex-card/.test(turn.content) && /"kind"\s*:\s*"training"/.test(turn.content)
+    );
+}
+
+/**
+ * A debate card already sent in this conversation (3.2): the offer is made once
+ * in it. The apps' `conversationOffersDebate` (`animal-debate.ts`), read from
+ * the whole history as sent.
+ */
+export function conversationOffersDebate(history: Array<{role?: string | null; content?: string | null}>): boolean {
+    return history.some((turn) =>
+        turn.role === "assistant" && typeof turn.content === "string" &&
+        /animaldex-card/.test(turn.content) && /"kind"\s*:\s*"debate"/.test(turn.content)
     );
 }
 
@@ -333,6 +367,8 @@ export function companionPromptLines(params: {
     powerJustEarned?: boolean;
     warmup?: CompanionWarmup | null;
     stepReport?: CompanionStepReport | null;
+    /** The debate offer may be made in this reply (3.2): set only when it may. */
+    debateOffer?: boolean;
 }): string[] {
     const {state} = params;
     const open = state?.open_trial ?? null;
@@ -354,7 +390,8 @@ export function companionPromptLines(params: {
                 : null,
             your_power: params.powerEarned || params.powerJustEarned ? "earned" : "not earned yet",
             ...(params.powerJustEarned ? {power_just_earned: true} : {}),
-            ...(params.warmup?.available ? {warmup: {passed: params.warmup.passed, may_offer: params.warmup.may_offer}} : {})
+            ...(params.warmup?.available ? {warmup: {passed: params.warmup.passed, may_offer: params.warmup.may_offer}} : {}),
+            ...(params.debateOffer ? {debate: {may_offer: true}} : {})
         }
         : null;
     const report = params.stepReport && open

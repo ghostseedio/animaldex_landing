@@ -612,7 +612,7 @@ export const ANIMAL_GREETING_RULES = [
     "  your owner, or about you. Never ask about the visitor's own life. Their 3 replies below: one about your owner,",
     "  one about you, one about your Power.",
     "- If animal_trial is given, greet them about that Trial.",
-    "- No step, Warmup, Trial or battle offers, no cards, no drawings, no 'How can I help you today?', no list of what",
+    "- No step, Warmup, Trial or debate offers, no cards, no drawings, no 'How can I help you today?', no list of what",
     "  you can do.",
     "- Then the follow-ups line, and 3 short replies the person might send back, each under 40 characters, written AS",
     "  THEM, to you: one answering what you asked, one asking about you, one bringing something of theirs ('I need help",
