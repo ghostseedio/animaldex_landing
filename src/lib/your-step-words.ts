@@ -60,3 +60,41 @@ export function stepProblemText(code: StepProblemCode | string | null | undefine
         default: return words.journey.problems.generic;
     }
 }
+
+// MARK: - Everything inline in the conversation (docs/your-step/INLINE.md)
+
+/** The report mode's strip above the field: "Telling Leo how your step went". */
+export function stepReportStripText(name: string, words: CompanionWords): string {
+    return fillWords(words.journey.report.strip, {name});
+}
+
+/** The done special message's label: "Done together · +5 XP", or "Done together" when it paid nothing. */
+export function stepDoneLabel(xp: number, words: CompanionWords): string {
+    return xp > 0 ? `${words.journey.done.chip} · ${fillWords(words.journey.done.xp, {xp})}` : words.journey.done.chip;
+}
+
+/** Under the Power's name on the first done step: "Leo's Power is yours · Earned in your own life". */
+export function stepEarnedLine(name: string, words: CompanionWords): string {
+    return `${fillWords(words.journey.earned.subtitle, {name})} · ${words.journey.earned.via}`;
+}
+
+/** A Warmup question in the thread: "Warmup · 1 of 3" (shown in capitals). */
+export function warmupQuestionLabel(n: number, total: number, words: CompanionWords): string {
+    return fillWords(words.journey.warmup.questionLabel, {n, total});
+}
+
+/**
+ * The line at the end of the Warmup in the thread: "Warmup done · +5 XP" on
+ * a first pass, "Warmup done" on a pass that paid nothing, and on a miss
+ * `warmup.missed` ("Not quite. Leo will tell you how its kind sees it.").
+ */
+export function warmupResultLine(
+    result: {passed: boolean; rewardXP: number; alreadyCompleted: boolean},
+    name: string,
+    words: CompanionWords
+): string {
+    if (!result.passed) return fillWords(words.journey.warmup.missed, {name});
+    return result.rewardXP > 0 && !result.alreadyCompleted
+        ? `${words.journey.warmup.passed} · ${fillWords(words.journey.done.xp, {xp: result.rewardXP})}`
+        : words.journey.warmup.passed;
+}

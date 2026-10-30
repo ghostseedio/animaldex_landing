@@ -64,6 +64,14 @@ export type AskMessage = {
      * 3.2): the step it reported on, so a retry sends it as the report again.
      */
     stepReportId?: string;
+    /**
+     * The report's photo or video, as the small thumbnail its bubble shows
+     * beside "YOUR STEP" (docs/your-step/INLINE.md): a JPEG data URL drawn
+     * in the browser, so it is still there when the thread is reopened. The
+     * media itself lives only in their private record.
+     */
+    stepReportThumb?: string;
+    stepReportKind?: "photo" | "video";
     /** The card under this reply (the Warmup, the Trials) was skipped or used. */
     cardsDismissed?: boolean;
 };
@@ -85,6 +93,14 @@ export const ASK_THREAD_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const ASK_THREAD_MAX_MESSAGES = 60;
 /** Total threads retained, most recently active first. */
 export const ASK_THREAD_MAX_THREADS = 30;
+/** A report's thumbnail is a small data URL; anything longer is not one of ours, and is dropped. */
+export const ASK_STEP_REPORT_THUMB_MAX_LENGTH = 48_000;
+
+/** A report thumbnail as stored: a JPEG, PNG or WebP data URL within the cap, or nothing. */
+export function askStepReportThumb(value: unknown): string | null {
+    if (typeof value !== "string" || value.length > ASK_STEP_REPORT_THUMB_MAX_LENGTH) return null;
+    return /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) ? value : null;
+}
 
 type AskThreadSnapshot = {
     schemaVersion: number;
@@ -118,8 +134,16 @@ export function createAskMessage(
         ...(overrides.followUp ? {followUp: overrides.followUp} : {}),
         ...(overrides.animalMessageId ? {animalMessageId: overrides.animalMessageId} : {}),
         ...(overrides.stepReportId ? {stepReportId: overrides.stepReportId} : {}),
+        ...stepReportMediaFields(overrides.stepReportId ? overrides : {}),
         ...(overrides.cardsDismissed ? {cardsDismissed: true} : {})
     };
+}
+
+/** The thumbnail and its kind travel together, on a report only. */
+function stepReportMediaFields(row: {stepReportThumb?: unknown; stepReportKind?: unknown}): Pick<AskMessage, "stepReportThumb" | "stepReportKind"> {
+    const thumb = askStepReportThumb(row.stepReportThumb);
+    if (!thumb) return {};
+    return {stepReportThumb: thumb, stepReportKind: row.stepReportKind === "video" ? "video" : "photo"};
 }
 
 /**
@@ -207,7 +231,7 @@ function normalizeMessage(value: unknown): AskMessage | null {
         ...companionEventField(row.companionEvent),
         ...followUpFields(row),
         ...(typeof row.animalMessageId === "string" && row.animalMessageId ? {animalMessageId: row.animalMessageId} : {}),
-        ...(typeof row.stepReportId === "string" && row.stepReportId ? {stepReportId: row.stepReportId} : {}),
+        ...(typeof row.stepReportId === "string" && row.stepReportId ? {stepReportId: row.stepReportId, ...stepReportMediaFields(row)} : {}),
         ...(row.cardsDismissed === true ? {cardsDismissed: true} : {})
     };
 }

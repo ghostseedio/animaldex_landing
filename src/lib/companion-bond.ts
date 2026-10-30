@@ -110,7 +110,9 @@ export const YOUR_STEP_COPY = {
         placeholder: "Tell {name} how it went",
         attach: "Add a photo or video",
         attachNote: "Optional. It's kept in your record with {name}, and only you can see it.",
-        send: "Tell {name}"
+        send: "Tell {name}",
+        /** docs/your-step/INLINE.md: the message bar's report mode, the strip above the field. */
+        strip: "Telling {name} how your step went"
     },
     earned: {
         title: "{power}",
@@ -139,7 +141,9 @@ export const YOUR_STEP_COPY = {
         passed: "Warmup done",
         missed: "Not quite. {name} will tell you how its kind sees it.",
         resultMessagePassed: "I got all {n} on your warmup.",
-        resultMessageMissed: "I got {right} of {n} on your warmup."
+        resultMessageMissed: "I got {right} of {n} on your warmup.",
+        /** docs/your-step/INLINE.md: a Warmup question in the thread, shown in capitals. */
+        questionLabel: "Warmup · {n} of {total}"
     },
     trial: {
         sectionTitle: "{name}'s Trials",

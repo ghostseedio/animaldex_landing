@@ -3,9 +3,20 @@ import {readFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
-import {COMPANION_WORDS_EN, companionWords} from "@/lib/companion-bond";
+import {COMPANION_WORDS_EN, companionWords, fillWords} from "@/lib/companion-bond";
 import {acceptingStep, decodeAnimalStep, reportingStep} from "@/lib/your-step";
-import {stepPrimaryLabel, stepProblemText, trialPickedMessage, warmupOfferText, warmupResultMessage} from "@/lib/your-step-words";
+import {
+    stepDoneLabel,
+    stepEarnedLine,
+    stepPrimaryLabel,
+    stepProblemText,
+    stepReportStripText,
+    trialPickedMessage,
+    warmupOfferText,
+    warmupQuestionLabel,
+    warmupResultLine,
+    warmupResultMessage
+} from "@/lib/your-step-words";
 
 const STEP = "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -42,4 +53,21 @@ test("every refusal is said calmly, in the reader's language, never as a code or
     for (const text of Object.values(COMPANION_WORDS_EN.journey.problems)) {
         assert.equal(/tomorrow|lock|_/.test(text), false, text);
     }
+});
+
+test("the inline words (docs/your-step/INLINE.md): the report strip, done, the Power earned and the Warmup, in en and id", () => {
+    assert.equal(stepReportStripText("Leo", COMPANION_WORDS_EN), "Telling Leo how your step went");
+    assert.equal(stepReportStripText("Leo", indonesian), "Menceritakan langkah Anda kepada Leo");
+    assert.equal(fillWords(COMPANION_WORDS_EN.journey.report.placeholder, {name: "Leo"}), "Tell Leo how it went");
+    assert.equal(stepDoneLabel(5, COMPANION_WORDS_EN), "Done together · +5 XP");
+    assert.equal(stepDoneLabel(0, COMPANION_WORDS_EN), "Done together");
+    assert.equal(stepDoneLabel(5, indonesian), "Selesai bersama · +5 XP");
+    assert.equal(stepEarnedLine("Leo", COMPANION_WORDS_EN), "Leo's Power is yours · Earned in your own life");
+    assert.equal(stepEarnedLine("Leo", indonesian), "Kekuatan Leo kini milik Anda · Didapatkan dalam hidup Anda sendiri");
+    assert.equal(warmupQuestionLabel(1, 3, COMPANION_WORDS_EN), "Warmup · 1 of 3");
+    assert.equal(warmupQuestionLabel(2, 2, indonesian), "Pemanasan · 2 dari 2");
+    assert.equal(warmupResultLine({passed: true, rewardXP: 5, alreadyCompleted: false}, "Leo", COMPANION_WORDS_EN), "Warmup done · +5 XP");
+    assert.equal(warmupResultLine({passed: true, rewardXP: 5, alreadyCompleted: true}, "Leo", COMPANION_WORDS_EN), "Warmup done");
+    assert.equal(warmupResultLine({passed: false, rewardXP: 0, alreadyCompleted: false}, "Leo", COMPANION_WORDS_EN), "Not quite. Leo will tell you how its kind sees it.");
+    assert.equal(warmupResultLine({passed: true, rewardXP: 5, alreadyCompleted: false}, "Leo", indonesian), "Pemanasan selesai · +5 XP");
 });

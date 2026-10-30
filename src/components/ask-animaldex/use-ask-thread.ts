@@ -187,6 +187,11 @@ function writePayingUntil(until: number | null) {
  */
 const OWNER_CHAT_VISUALS = ["step", "card", "debate"] as const;
 
+/** A report asked again is the same report: its step, and the thumbnail its bubble shows. */
+function reportOptions(asked: AskMessage) {
+    return {stepReportId: asked.stepReportId, stepReportThumb: asked.stepReportThumb, stepReportKind: asked.stepReportKind};
+}
+
 /** Minutes ahead of UTC where the reader is (the apps send the same). */
 function readerUtcOffset(): number {
     return -new Date().getTimezoneOffset();
@@ -405,6 +410,9 @@ export function useAskThread(params: {
             onCallEvent?: (frame: Record<string, unknown>) => void;
             /** "I did it" (3.2): this message is their report on the step, already attached. */
             stepReportId?: string | null;
+            /** The report's photo or video as its bubble's thumbnail (docs/your-step/INLINE.md). */
+            stepReportThumb?: string | null;
+            stepReportKind?: "photo" | "video" | null;
         } = {}
     ): Promise<string | null> => {
         const question = rawQuestion.replace(/\s+/g, " ").trim();
@@ -423,7 +431,10 @@ export function useAskThread(params: {
         // twice.
         const userMessage = createAskMessage("user", question, {
             ...(options.requestId ? {id: options.requestId} : {}),
-            ...(options.stepReportId ? {stepReportId: options.stepReportId} : {})
+            ...(options.stepReportId ? {stepReportId: options.stepReportId} : {}),
+            ...(options.stepReportId && options.stepReportThumb
+                ? {stepReportThumb: options.stepReportThumb, stepReportKind: options.stepReportKind ?? "photo"}
+                : {})
         });
         const requestId = userMessage.id;
         const placeholderId = newAskMessageId();
@@ -848,7 +859,7 @@ export function useAskThread(params: {
         if (index <= 0 || thread[index - 1].role !== "user") return;
         const asked = thread[index - 1];
         replace([...thread.slice(0, index - 1), ...thread.slice(index + 1)]);
-        void send(asked.text, {requestId: asked.id, stepReportId: asked.stepReportId});
+        void send(asked.text, {requestId: asked.id, ...reportOptions(asked)});
     }, [threadKey, replace, send]);
 
     /**
@@ -874,7 +885,7 @@ export function useAskThread(params: {
         if (index <= 0 || thread[index - 1].role !== "user") return;
         const asked = thread[index - 1];
         replace([...thread.slice(0, index - 1), ...thread.slice(index + 1)]);
-        void send(asked.text, {stepReportId: asked.stepReportId});
+        void send(asked.text, reportOptions(asked));
     }, [threadKey, replace, send]);
 
     const clear = useCallback(() => {
