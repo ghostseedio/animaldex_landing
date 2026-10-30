@@ -56,7 +56,7 @@ export async function readerOwnsCapture(userId: string | null, captureId: string
 export type OwnerCompanion = {
     service: Service;
     bond: CompanionBond | null;
-    /** `animal_chat_owner_progress`: whether the Power is earned and the lesson check passed. */
+    /** `animal_chat_owner_progress`: whether the Power is earned (`training_passed` is always true since 3.2). */
     powerEarned: boolean;
     lessonCheckPassed: boolean;
     /** The loop, when it is on (personalisation on, not a Trial thread). */
@@ -105,9 +105,9 @@ async function readStepReport(service: Service, userId: string, open: CompanionO
 
 /**
  * Everything the owner's turn needs: the bond, where the Power stands and,
- * with the loop on, the loop itself. A Your Trial done since the lesson check
- * passed earns the Power first (`settle_animal_companion_power`), then the
- * state and their other animals are read for a referral.
+ * with the loop on, the loop itself. A step done earns the Power first
+ * (`settle_animal_companion_power`; since 3.2 any first done step does), then
+ * the state and their other animals are read for a referral.
  */
 export async function loadOwnerCompanion(params: {
     userId: string;

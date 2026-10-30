@@ -466,7 +466,7 @@ export function BestForTagsChartCard({
                     </p>
                     <p className="text-sm leading-6 text-white/[0.62]">
                         {isOwner
-                            ? "Each animal's Power carries the qualities it teaches. Take its Trial or apply the Power in your own life from the Play tab, and those qualities join your profile. Sightings of that animal then build them further."
+                            ? "Each animal's Power carries the qualities it teaches. Talk to the animal, finish one step with it in your own life, and those qualities join your profile. Sightings of that animal then build them further."
                             : `${usernameHandle}'s qualities appear here as they earn Animal Powers.`}
                     </p>
                 </div>

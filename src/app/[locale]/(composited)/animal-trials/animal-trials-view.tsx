@@ -47,7 +47,7 @@ const FAQ: Array<{question: string; answer: string}> = [
         question: "Do I need an account to read a Trial?",
         answer:
             "No. Every Trial here is readable without signing in — you can see what it asks and what the animal does before "
-            + "deciding. Starting a Trial and submitting evidence for it needs an AnimalDex account."
+            + "deciding. Making one your step with the animal, and telling it how it went, needs an AnimalDex account."
     },
     {
         question: "Are these challenges safe?",

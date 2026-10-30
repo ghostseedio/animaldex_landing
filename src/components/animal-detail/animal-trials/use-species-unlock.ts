@@ -3,12 +3,12 @@
 import {useEffect, useState} from "react";
 
 /**
- * May this viewer take a Trial for this species?
+ * Has this viewer caught this species? The species page's Play tab gives a
+ * reader who holds it "Talk to it" (3.2).
  *
- * `true` until proven otherwise: while the read is in flight, for a signed-out
- * reader (whose first tap goes to sign-in, after which the server decides),
- * and for the owner of the capture on screen. Only a signed-in reader whom the
- * server says has NOT unlocked the animal sees the lock — the same rule the
+ * `canAttempt` is `true` until proven otherwise: while the read is in flight,
+ * for a signed-out reader, and for the owner of the capture on screen.
+ * `unlocked` is true only once the server has said so — the same rule the
  * phone applies in `AnimalTrialUnlock.canAttempt`.
  */
 export function useSpeciesUnlock(
