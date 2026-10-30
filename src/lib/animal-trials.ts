@@ -211,6 +211,18 @@ export function instructionsPreview(text: string) {
     return `${head}…`;
 }
 
+/**
+ * The Trial's first instruction, plainly: its first line or sentence, without
+ * a list number or bullet, cut to one breath. What a picker shows under the
+ * title so the Trial reads at a glance (newcomer UX vet, 2026-10-30).
+ */
+export function trialFirstInstruction(text: string) {
+    const line = text.split(/\n+/).map((part) => part.trim()).find(Boolean) ?? "";
+    const plain = line.replace(/^(?:step\s*\d+\s*[:.)-]\s*|\d+\s*[.)]\s*|[-•*–]\s+)/i, "").trim();
+    const sentence = plain.match(/^.+?[.!?](?=\s|$)/)?.[0] ?? plain;
+    return instructionsPreview(sentence);
+}
+
 // MARK: - Row decoding
 
 function list(value: unknown): string[] {

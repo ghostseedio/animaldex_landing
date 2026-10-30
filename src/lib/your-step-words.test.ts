@@ -5,6 +5,7 @@ import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {COMPANION_WORDS_EN, companionWords, fillWords} from "@/lib/companion-bond";
 import {acceptingStep, decodeAnimalStep, reportingStep} from "@/lib/your-step";
+import {trialFirstInstruction} from "@/lib/animal-trials";
 import {
     stepDoneLabel,
     stepEarnedLine,
@@ -70,4 +71,24 @@ test("the inline words (docs/your-step/INLINE.md): the report strip, done, the P
     assert.equal(warmupResultLine({passed: true, rewardXP: 5, alreadyCompleted: true}, "Leo", COMPANION_WORDS_EN), "Warmup done");
     assert.equal(warmupResultLine({passed: false, rewardXP: 0, alreadyCompleted: false}, "Leo", COMPANION_WORDS_EN), "Not quite. Leo will tell you how its kind sees it.");
     assert.equal(warmupResultLine({passed: true, rewardXP: 5, alreadyCompleted: false}, "Leo", indonesian), "Pemanasan selesai · +5 XP");
+});
+
+test("the newcomer words (UX vet, 2026-10-30): what the chat is for and A different step, in en and id", () => {
+    assert.equal(COMPANION_WORDS_EN.journey.step.other, "A different step");
+    assert.equal(indonesian.journey.step.other, "Langkah yang lain");
+    assert.equal(fillWords(COMPANION_WORDS_EN.journey.chat.placeholder, {name: "Leo"}), "Tell Leo what's on your mind…");
+    assert.equal(fillWords(indonesian.journey.chat.placeholder, {name: "Leo"}), "Ceritakan kepada Leo apa yang sedang Anda pikirkan…");
+    assert.equal(COMPANION_WORDS_EN.journey.chat.caption, "Bring it something real. It answers from how its kind lives and sets you one step. Do it, and its Power is yours.");
+    assert.notEqual(indonesian.journey.chat.caption, COMPANION_WORDS_EN.journey.chat.caption);
+    assert.equal(COMPANION_WORDS_EN.journey.chat.visitorHint, "Ask it about something in your own life.");
+    assert.equal(indonesian.journey.chat.visitorHint, "Tanyakan tentang sesuatu dalam hidup Anda sendiri.");
+});
+
+test("a Trial reads at a glance: its first instruction, plainly, under its title", () => {
+    assert.equal(trialFirstInstruction("1. Stand by a doorway. 2. Count to five."), "Stand by a doorway.");
+    assert.equal(trialFirstInstruction("Step 1: Pick one tab to keep.\nStep 2: Close the rest."), "Pick one tab to keep.");
+    assert.equal(trialFirstInstruction("\n- Say one sentence first\n- Then listen"), "Say one sentence first");
+    assert.equal(trialFirstInstruction("Run a whole discussion: open it, steer it, close it."), "Run a whole discussion: open it, steer it, close it.");
+    assert.equal(trialFirstInstruction(""), "");
+    assert.ok(trialFirstInstruction(`${"word ".repeat(60)}end.`).endsWith("…"));
 });

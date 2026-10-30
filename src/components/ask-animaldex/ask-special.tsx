@@ -10,7 +10,7 @@
  *
  *   - the step: "YOUR STEP" with the walking figure (and the Trial's
  *     difficulty), the step in bold, its loop, then [I'll do it] / [I did it]
- *     and [Something else]; once finished, "DONE TOGETHER"; dropped or
+ *     and [A different step]; once finished, "DONE TOGETHER"; dropped or
  *     replaced, the words alone, dimmed;
  *   - done: "DONE TOGETHER · +5 XP", the step, Share; on the first done step
  *     the Power earned: its name large, "{name}'s Power is yours · Earned in
@@ -33,7 +33,7 @@ import TrialMotion from "@/components/trial-motion/trial-motion";
 import {useTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 import {AskSpecialBubble, AskSpecialLabel, AskWalkIcon} from "@/components/ask-animaldex/ask-messenger";
-import {type AnimalTrial, frequencyAccent, instructionsPreview, sortTrials} from "@/lib/animal-trials";
+import {type AnimalTrial, frequencyAccent, sortTrials, trialFirstInstruction} from "@/lib/animal-trials";
 import {fillWords, trialDifficultyText, trialDifficulty, type CompanionWords} from "@/lib/companion-bond";
 import {askWarmupChoiceMark, type AskStepResolution} from "@/lib/ask-animaldex/special-messages";
 import type {AskWarmupItem} from "@/lib/ask-animaldex/thread";
@@ -80,7 +80,8 @@ function LoopInPlace({storyboard, captions, label}: {storyboard: unknown; captio
             style={MEDIA_RADIUS}
             data-testid={large ? "trial-loop-large" : "trial-loop-compact"}
         >
-            <TrialMotion storyboard={storyboard} captions={captions} variant={large ? "full" : "compact"} />
+            {/* Small, it shows the step being drawn without "STEP n OF m"; large, every step. */}
+            <TrialMotion storyboard={storyboard} captions={captions} variant={large ? "full" : "compact"} showsStepCount={false} />
         </button>
     );
 }
@@ -101,7 +102,7 @@ function ShareChip({label, onShare}: {label: string; onShare: () => void}) {
 
 /**
  * The last section of the bubble that set the step. Live, not accepted: [I'll
- * do it] [Something else]; accepted: [I did it] [Something else], which puts
+ * do it] [A different step]; accepted: [I did it] [A different step], which puts
  * the message bar in report mode; reported: "Tell {name}" again. A step
  * picked from a Trial shows that Trial's loop and its difficulty.
  */
@@ -324,7 +325,7 @@ export function AskTrialsSection({
             {trials === null ? <Working /> : null}
             {(trials ? sortTrials(trials) : []).map((trial, index) => {
                 const difficulty = trialDifficulty(trial.frequency);
-                const preview = instructionsPreview(trial.instructions);
+                const first = trialFirstInstruction(trial.instructions);
                 return (
                     <div key={trial.frequency} className={`flex flex-col gap-2.5 ${index > 0 ? "border-t border-white/[0.08] pt-3" : ""}`} data-testid={`special-trial-${trial.frequency}`}>
                         <p className="flex items-baseline gap-2">
@@ -335,10 +336,10 @@ export function AskTrialsSection({
                             ) : null}
                             <span className="min-w-0 text-[14px] font-semibold leading-5 text-white">{trial.title}</span>
                         </p>
+                        {/* What to do, plainly, under the title; then its loop. */}
+                        {first ? <p className="-mt-1 line-clamp-3 text-[13px] leading-5 text-white/65">{first}</p> : null}
                         {trial.motionStoryboard ? (
                             <LoopInPlace storyboard={trial.motionStoryboard} captions={trial.motionCaptions ?? null} label={trial.title} />
-                        ) : preview ? (
-                            <p className="line-clamp-4 text-[13px] leading-5 text-white/65">{preview}</p>
                         ) : null}
                         {currentFrequency === trial.frequency ? (
                             <p className="flex items-center gap-1.5 text-xs font-bold text-primary-300"><CheckIcon /> {words.journey.step.pinnedLabel}</p>

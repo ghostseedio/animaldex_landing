@@ -74,7 +74,7 @@ export async function acceptStep(step: AnimalStep): Promise<StepCallResult<Anima
     return {ok: true, value: decodeStepResult(result.payload.step) ?? {...step, acceptedAt: step.acceptedAt ?? new Date().toISOString()}};
 }
 
-/** "Something else": the step is dropped (a no-op on one no longer open). */
+/** "A different step": the step is dropped (a no-op on one no longer open). */
 export async function dropStep(step: AnimalStep): Promise<StepCallResult<null>> {
     const result = await post({action: "drop", stepId: step.id});
     return result.ok ? {ok: true, value: null} : result;

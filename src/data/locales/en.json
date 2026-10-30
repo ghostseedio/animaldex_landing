@@ -2547,7 +2547,7 @@
       "step": {
         "eyebrow": "Your step with {name}",
         "accept": "I'll do it",
-        "other": "Something else",
+        "other": "A different step",
         "didIt": "I did it",
         "otherMessage": "Can I have a different step?",
         "pinnedLabel": "Your step"
@@ -2600,6 +2600,11 @@
       },
       "power": {
         "notEarnedLine": "Finish one step with {name} to earn it."
+      },
+      "chat": {
+        "placeholder": "Tell {name} what's on your mind…",
+        "caption": "Bring it something real. It answers from how its kind lives and sets you one step. Do it, and its Power is yours.",
+        "visitorHint": "Ask it about something in your own life."
       },
       "problems": {
         "signIn": "Sign in to keep going with your step.",

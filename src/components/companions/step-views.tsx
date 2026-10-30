@@ -17,7 +17,7 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import Image from "next/image";
 import TrialMotion from "@/components/trial-motion/trial-motion";
 import {useTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
-import {type AnimalTrial, instructionsPreview, trialId} from "@/lib/animal-trials";
+import {type AnimalTrial, trialFirstInstruction, trialId} from "@/lib/animal-trials";
 import {fillWords, trialDifficulty, trialDifficultyText, type CompanionWords} from "@/lib/companion-bond";
 import {
     isStepVideoFile,
@@ -42,8 +42,8 @@ function Eyebrow({children}: {children: React.ReactNode}) {
 /**
  * The step: pinned at the top of the chat while the reply that set it is
  * not in the loaded thread (`pinned`), or on the Bond tab (`band`). Not
- * accepted: "I'll do it" / "Something else". Accepted: "I did it" /
- * "Something else". With a report attached, "I did it" says "Tell {name}"
+ * accepted: "I'll do it" / "A different step". Accepted: "I did it" /
+ * "A different step". With a report attached, "I did it" says "Tell {name}"
  * again. A step made from a Trial shows that Trial's loop.
  */
 export function StepCard({
@@ -80,7 +80,7 @@ export function StepCard({
             <Eyebrow>{eyebrow}</Eyebrow>
             <p className={`${variant === "pinned" ? "line-clamp-2 text-sm" : "text-[15px]"} font-semibold leading-6 text-white`}>{step.step}</p>
             {loop.storyboard && variant !== "pinned" ? (
-                <TrialMotion storyboard={loop.storyboard} captions={loop.captions} variant="compact" />
+                <TrialMotion storyboard={loop.storyboard} captions={loop.captions} variant="compact" showsStepCount={false} />
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -273,7 +273,7 @@ function TrialLoop({trial, closeLabel}: {trial: AnimalTrial; closeLabel: string}
     return (
         <>
             <button type="button" onClick={() => setLarge(true)} aria-label={trial.title} className="block w-full text-left">
-                <TrialMotion storyboard={trial.motionStoryboard} captions={trial.motionCaptions} variant="compact" />
+                <TrialMotion storyboard={trial.motionStoryboard} captions={trial.motionCaptions} variant="compact" showsStepCount={false} />
             </button>
             {large ? (
                 <div
@@ -338,13 +338,14 @@ export function TrialRows({
             {ordered.map((trial) => {
                 const difficulty = trialDifficulty(trial.frequency);
                 const isStep = openStep?.trialFrequency === trial.frequency;
-                const preview = instructionsPreview(trial.instructions);
+                const first = trialFirstInstruction(trial.instructions);
                 return (
                     <div key={trialId(trial)} className="flex flex-col gap-2.5 border-t border-white/[0.06] px-5 py-4" data-testid={`trial-row-${trial.frequency}`}>
                         {difficulty ? <Eyebrow>{trialDifficultyText(difficulty, words)}</Eyebrow> : null}
                         <p className="font-display text-xl font-black leading-tight text-white">{trial.title}</p>
+                        {/* What to do, plainly, under the title; then its loop. */}
+                        {first ? <p className="text-sm leading-6 text-white/60">{first}</p> : null}
                         <TrialLoop trial={trial} closeLabel={closeLabel} />
-                        {preview ? <p className="text-sm leading-6 text-white/60">{preview}</p> : null}
                         {isStep ? (
                             <p className="text-xs font-black" style={{color: NEON}}>✓ {words.journey.step.pinnedLabel}</p>
                         ) : onMakeStep ? (

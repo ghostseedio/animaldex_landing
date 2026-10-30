@@ -100,7 +100,8 @@ export const YOUR_STEP_COPY = {
     step: {
         eyebrow: "Your step with {name}",
         accept: "I'll do it",
-        other: "Something else",
+        /** Was "Something else" (newcomer UX vet, 2026-10-30): says what it does. */
+        other: "A different step",
         didIt: "I did it",
         otherMessage: "Can I have a different step?",
         pinnedLabel: "Your step"
@@ -155,6 +156,18 @@ export const YOUR_STEP_COPY = {
     },
     power: {
         notEarnedLine: "Finish one step with {name} to earn it."
+    },
+    /**
+     * What the chat can do, said where you act (newcomer UX vet, 2026-10-30,
+     * P0-2): UI captions, never the animal's words.
+     */
+    chat: {
+        /** The owner's field while no step is open. */
+        placeholder: "Tell {name} what's on your mind…",
+        /** Under the animal's header in the owner's chat, until the first done step with it. */
+        caption: "Bring it something real. It answers from how its kind lives and sets you one step. Do it, and its Power is yours.",
+        /** Above the field in a visitor's chat, before their first message. */
+        visitorHint: "Ask it about something in your own life."
     },
     /**
      * Web only: the step RPCs' refusals (docs/your-step/SERVER.md), said

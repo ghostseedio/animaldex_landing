@@ -8,7 +8,7 @@
  * you, your private record of every step you finished together, its Trials
  * and its Power.
  *
- * The step's buttons are the chat's: "I'll do it" / "Something else", then
+ * The step's buttons are the chat's: "I'll do it" / "A different step", then
  * "I did it", which opens the chat for the report. A Trial row's "Make this
  * my step" makes it the step. Nothing here is a lesson check or a lock.
  *
@@ -100,7 +100,7 @@ export default function BondPanel({
     onTalk: () => void;
     /** "I did it": the chat opens on the report composer. */
     onDidIt: () => void;
-    /** "Something else" dropped the step: the chat asks for a different one. */
+    /** "A different step" dropped the step: the chat asks for a different one. */
     onDropped: () => void;
     /** A Trial is their step now: the chat tells the animal. */
     onTrialPicked: (frequency: StepFrequency) => void;

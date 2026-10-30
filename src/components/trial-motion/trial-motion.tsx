@@ -59,6 +59,7 @@ export default function TrialMotion({
     freezeAt = null,
     compactLayout = "auto",
     captions = null,
+    showsStepCount = true,
     className = ""
 }: {
     /** The raw `motion_storyboard` value, or one already parsed. Null renders nothing. */
@@ -78,11 +79,13 @@ export default function TrialMotion({
      * this storyboard (`trial-motion/captions`). Null shows the storyboard's own.
      */
     captions?: string[] | null;
+    /** Compact only: false leaves out "STEP n OF m" over the caption (a small loop in a picker). */
+    showsStepCount?: boolean;
     className?: string;
 }) {
     const parsed = useMemo(() => parseTrialStoryboard(storyboard), [storyboard]);
     if (!parsed) return null;
-    return <TrialMotionStage storyboard={parsed} variant={variant} posterMarkup={posterMarkup} freezeAt={freezeAt} compactLayout={compactLayout} translatedCaptions={captions} className={className} />;
+    return <TrialMotionStage storyboard={parsed} variant={variant} posterMarkup={posterMarkup} freezeAt={freezeAt} compactLayout={compactLayout} translatedCaptions={captions} showsStepCount={showsStepCount} className={className} />;
 }
 
 function TrialMotionStage({
@@ -92,6 +95,7 @@ function TrialMotionStage({
     freezeAt,
     compactLayout,
     translatedCaptions,
+    showsStepCount,
     className
 }: {
     storyboard: TrialStoryboard;
@@ -100,6 +104,7 @@ function TrialMotionStage({
     freezeAt: number | null;
     compactLayout: "auto" | "row";
     translatedCaptions: string[] | null;
+    showsStepCount: boolean;
     className: string;
 }) {
     // The captions actually shown, translated when there is one per beat; the
@@ -239,9 +244,11 @@ function TrialMotionStage({
                 >
                     <div className={compactLayout === "row" ? "w-[55%] max-w-[420px] shrink-0" : "w-full max-w-[420px] shrink-0 [@container(min-width:360px)]:w-[55%]"}>{stage}</div>
                     <div aria-hidden="true" className="flex min-w-0 flex-1 flex-col gap-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.12em] tabular-nums" style={{color: "rgb(var(--c-white) / 0.45)"}}>
-                            Step {activeBeat + 1} of {captions.length}
-                        </p>
+                        {showsStepCount ? (
+                            <p className="text-[10px] font-black uppercase tracking-[0.12em] tabular-nums" style={{color: "rgb(var(--c-white) / 0.45)"}}>
+                                Step {activeBeat + 1} of {captions.length}
+                            </p>
+                        ) : null}
                         <p className="line-clamp-3 text-[13px] font-semibold leading-[18px] text-white">{captions[activeBeat]}</p>
                     </div>
                 </div>

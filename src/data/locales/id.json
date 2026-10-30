@@ -2529,7 +2529,7 @@
       "step": {
         "eyebrow": "Langkah Anda bersama {name}",
         "accept": "Akan saya lakukan",
-        "other": "Yang lain saja",
+        "other": "Langkah yang lain",
         "didIt": "Sudah saya lakukan",
         "otherMessage": "Boleh aku dapat langkah yang lain?",
         "pinnedLabel": "Langkah Anda"
@@ -2582,6 +2582,11 @@
       },
       "power": {
         "notEarnedLine": "Selesaikan satu langkah bersama {name} untuk mendapatkannya."
+      },
+      "chat": {
+        "placeholder": "Ceritakan kepada {name} apa yang sedang Anda pikirkan…",
+        "caption": "Bawakan sesuatu yang nyata. Ia menjawab dari cara hidup jenisnya dan memberi Anda satu langkah. Lakukan, dan Kekuatannya jadi milik Anda.",
+        "visitorHint": "Tanyakan tentang sesuatu dalam hidup Anda sendiri."
       },
       "problems": {
         "signIn": "Masuk untuk melanjutkan langkah Anda.",
