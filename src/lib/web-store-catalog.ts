@@ -21,7 +21,8 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         kind: "credits",
         credits: 25,
         label: "25 Credits",
-        detail: "Enough for a small import of photo-equivalent animals.",
+        // What Credits buy for most people (newcomer UX vet, 2026-10-30): captures and more talking.
+        detail: "About 12 photo captures. Credits also keep a conversation going after the day's free messages.",
         fallbackPrice: "$2.99",
         fallbackAmount: 2.99,
         fallbackCurrency: "USD"
@@ -31,7 +32,7 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         kind: "credits",
         credits: 100,
         label: "100 Credits",
-        detail: "For a larger archive import or mixed photo and video.",
+        detail: "About 50 photo captures, or a mix of photos, videos and extra messages with your animals.",
         fallbackPrice: "$7.99",
         fallbackAmount: 7.99,
         fallbackCurrency: "USD"

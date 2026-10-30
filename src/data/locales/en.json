@@ -2779,6 +2779,10 @@
     "appLine": "AnimalDex identifies the animals you photograph and keeps each one as a card.",
     "moreAbout": "More about the {animal}"
   },
+  "appCredits": {
+    "packDetail25": "About 12 photo captures. Credits also keep a conversation going after the day's free messages.",
+    "packDetail100": "About 50 photo captures, or a mix of photos, videos and extra messages with your animals."
+  },
   "appCollection": {
     "title": "Collection",
     "description": "Every species in AnimalDex. Capture one to unlock its card.",

@@ -2761,6 +2761,10 @@
     "appLine": "AnimalDex mengenali hewan yang Anda foto dan menyimpan masing-masing sebagai kartu.",
     "moreAbout": "Selengkapnya tentang {animal}"
   },
+  "appCredits": {
+    "packDetail25": "Sekitar 12 capture foto. Kredit juga membuat obrolan tetap berjalan setelah pesan gratis hari itu habis.",
+    "packDetail100": "Sekitar 50 capture foto, atau campuran foto, video, dan pesan tambahan dengan hewan-hewanmu."
+  },
   "appCollection": {
     "title": "Koleksi",
     "description": "Setiap spesies di AnimalDex. Tangkap satu untuk membuka kartunya.",

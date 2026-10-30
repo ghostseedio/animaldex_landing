@@ -22,7 +22,11 @@ const UNAVAILABLE_LABEL = "Not available right now";
  * Credits and Pro on the web, in the order the iOS store uses: Pro first and
  * recommended, then the Credit packs for someone who only needs a few.
  */
-export default function CreditsClient({account}: {account: CreditsAccount}) {
+export default function CreditsClient({account, packDetails}: {
+    account: CreditsAccount;
+    /** Each pack's line in the reader's language; the catalog's English otherwise. */
+    packDetails?: Partial<Record<WebStoreProductCode, string>>;
+}) {
     // setBalance alone: the context value is new on every frame of the
     // balance animation, and depending on it would refetch on every frame.
     const {setBalance, displayBalance} = useAppCredits();
@@ -208,7 +212,7 @@ export default function CreditsClient({account}: {account: CreditsAccount}) {
                             <AppSurface key={code}>
                                 <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Credit pack</p>
                                 <h3 className="mt-2 font-display text-2xl font-bold text-white">{product.label}</h3>
-                                <p className="mt-2 text-sm leading-6 text-white/55">{product.detail}</p>
+                                <p className="mt-2 text-sm leading-6 text-white/55">{packDetails?.[code] ?? product.detail}</p>
                                 <p className="mt-3 text-sm font-bold text-white/80">{product.fallbackPrice}</p>
                                 <button
                                     type="button"
