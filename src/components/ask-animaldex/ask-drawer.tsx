@@ -142,7 +142,7 @@ import {
     askWarmupNextIndex,
     type AskSpecial
 } from "@/lib/ask-animaldex/special-messages";
-import {bondChipText, bondStageText, decodeChatBond, fillWords, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
+import {bondChipText, decodeChatBond, fillWords, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
 import {noteAnimalMessagesMuted, noteAnimalMessagesRead} from "@/components/companions/use-animal-conversations";
@@ -1987,52 +1987,43 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 <SparkIcon />
                             </span>
                         )}
-                        <div className="min-w-0">
-                            <div className="flex min-w-0 items-center gap-2">
-                                <p className="min-w-0 truncate text-sm font-semibold text-white">
-                                    {messenger ? speakerName : animalName ?? labels.title}
-                                </p>
-                                {ownerChat && chipBond ? (
-                                    // The bond chip: the level and the stage. It opens the bond.
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowingMemory(false);
-                                            setShowingBond((current) => !current);
-                                            if (!showingBond) void animalBond.reload();
-                                        }}
-                                        aria-pressed={showingBond}
-                                        aria-label={bondChip(chipBond, labels)}
-                                        title={bondChip(chipBond, labels)}
-                                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                                            showingBond ? "border-primary-300/50 bg-primary-400/14 text-white" : "border-white/12 text-ink-200 hover:text-white"
-                                        }`}
-                                    >
-                                        {/* Beside the header's buttons the stage runs out of room:
-                                            the level alone, never "Level 4 · Worki…" (AnimalDex
-                                            3a603746); the animal's card shows it whole. */}
-                                        {chipBond.level !== null
-                                            ? labels.bondLevel.replace("{level}", String(chipBond.level))
-                                            : bondStageText(chipBond, labels.companions)}
-                                    </button>
-                                ) : null}
-                            </div>
+                        {/* Who is talking, and one line under the name, as iOS's chat header has it:
+                            typing while it answers; on the owner's chat its bond (the level and the
+                            stage, which opens the bond); else what the two of you are working on;
+                            else its temperament. "Not this any more" is in the ••• menu. */}
+                        <div className="min-w-0 flex-1">
+                            <p className="min-w-0 truncate text-sm font-semibold text-white">
+                                {messenger ? speakerName : animalName ?? labels.title}
+                            </p>
                             {messenger && animalTalking ? (
                                 <p className="truncate text-[11px] leading-4 text-primary-300" aria-live="polite">{labels.typing}</p>
+                            ) : ownerChat && chipBond && chipBond.level !== null ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowingMemory(false);
+                                        setShowingBond((current) => !current);
+                                        if (!showingBond) void animalBond.reload();
+                                    }}
+                                    aria-pressed={showingBond}
+                                    aria-label={bondChip(chipBond, labels)}
+                                    title={bondChip(chipBond, labels)}
+                                    className="flex max-w-full items-center gap-1 text-[11px] font-semibold leading-4 text-primary-300 transition-colors hover:text-primary-200"
+                                    data-testid="header-bond"
+                                >
+                                    {/* The level and the stage when they fit; the level alone
+                                        when they do not, never "Level 4 · Worki…". */}
+                                    <AskFitText
+                                        full={bondChip(chipBond, labels)}
+                                        short={labels.bondLevel.replace("{level}", String(chipBond.level))}
+                                    />
+                                    <span aria-hidden="true" className="shrink-0 text-[9px]">›</span>
+                                </button>
                             ) : ownerChat && companionLoop?.focus ? (
                                 // What the two of you are working on, once the animal has found it.
-                                <div className="flex min-w-0 items-baseline gap-2">
-                                    <p className="min-w-0 truncate text-[11px] leading-4 text-ink-300" title={companionLoop.focus}>
-                                        {labels.workingOn.replace("{focus}", companionLoop.focus)}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={clearCompanionFocus}
-                                        className="shrink-0 text-[11px] font-semibold leading-4 text-ink-400 underline-offset-2 transition-colors hover:text-white hover:underline"
-                                    >
-                                        {labels.notThisAnyMore}
-                                    </button>
-                                </div>
+                                <p className="truncate text-[11px] leading-4 text-ink-300" title={companionLoop.focus} data-testid="header-focus">
+                                    {labels.workingOn.replace("{focus}", companionLoop.focus)}
+                                </p>
                             ) : speaksAsAnimal ? (
                                 // Whose it is, or its temperament once it has spoken, as in the app's header.
                                 <p className="truncate text-[11px] leading-4 text-ink-400">{headerStatus}</p>
@@ -2100,6 +2091,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 setShowingSoundCredits(true);
                             }}
                             extraItems={[
+                                // What the two of you are working on, and letting it go (iOS keeps it in the ••• menu).
+                                ...(ownerChat && companionLoop?.focus ? [{
+                                    label: labels.notThisAnyMore,
+                                    detail: labels.workingOn.replace("{focus}", companionLoop.focus),
+                                    icon: <CloseIcon />,
+                                    onSelect: clearCompanionFocus
+                                }] : []),
                                 // "Name your Gray Wolf" while it has no name (iOS keeps it in the ••• menu too).
                                 ...(nameTitle ? [{
                                     label: nameTitle,
@@ -3281,6 +3279,37 @@ function CompanionEventBlock({event, name, labels}: {event: AskCompanionEvent; n
             ) : null}
         </div>
     );
+}
+
+/**
+ * One line that fits: `full` while it fits its room, else `short` (iOS
+ * `ViewThatFits`), so a narrow header never cuts the words mid-way.
+ */
+function AskFitText({full, short}: {full: string; short: string}) {
+    const ref = useRef<HTMLSpanElement | null>(null);
+    const [fits, setFits] = useState(true);
+    useLayoutEffect(() => {
+        const node = ref.current;
+        const host = node?.parentElement;
+        const room = host?.parentElement;
+        if (!node || !host || !room) return;
+        const measure = () => {
+            // Measured whole, in its own type, off the line, against the room the header gives it.
+            const probe = node.cloneNode(true) as HTMLSpanElement;
+            probe.textContent = full;
+            probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;";
+            host.appendChild(probe);
+            const needed = probe.getBoundingClientRect().width;
+            probe.remove();
+            setFits(needed + 16 <= room.getBoundingClientRect().width);
+        };
+        measure();
+        if (typeof ResizeObserver === "undefined") return;
+        const observer = new ResizeObserver(measure);
+        observer.observe(room);
+        return () => observer.disconnect();
+    }, [full]);
+    return <span ref={ref} className="min-w-0 truncate">{fits ? full : short}</span>;
 }
 
 /** The animal's face beside what it says. */
