@@ -17,6 +17,8 @@ type SpeciesAnimalPowerGuideProps = {
     meaning?: AnimalMeaningSections | null;
     /** /animal-powers/<slug> when published: owns "what can we learn from…". */
     lessonHref?: string | null;
+    /** What makes this Power yours, for whoever is reading, and "Talk to it" (client). */
+    ownership?: ReactNode;
     labels: {
         eyebrow: string;
         pattern: string;
@@ -43,6 +45,7 @@ export default function SpeciesAnimalPowerGuide({
     dream,
     meaning,
     lessonHref,
+    ownership,
     labels
 }: SpeciesAnimalPowerGuideProps) {
     const enhanced = profile.availability === "enhanced";
@@ -62,12 +65,14 @@ export default function SpeciesAnimalPowerGuide({
                     {profile.principleExpression ? (
                         <p className="mt-3 text-xl font-semibold text-primary-100">{profile.principleExpression}</p>
                     ) : null}
-                    {profile.coreLesson ? (
+                    {/* Some profiles carry the same sentence as both; say it once. */}
+                    {profile.coreLesson && profile.coreLesson.trim() !== profile.principleExpression?.trim() ? (
                         <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-200">{profile.coreLesson}</p>
                     ) : null}
                     {profile.shortMotto ? (
                         <p className="mt-4 text-base italic text-ink-300">“{profile.shortMotto}”</p>
                     ) : null}
+                    {ownership}
                 </div>
                 {artwork ? <div className="justify-self-center lg:justify-self-end">{artwork}</div> : null}
             </div>

@@ -34,6 +34,7 @@ import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SpeciesStatMeters from "@/components/animal-detail/species-stat-meters";
 import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
 import SpeciesPlayPower from "@/components/animal-detail/species-play/species-play-power";
+import SpeciesPowerOwnership from "@/components/animal-detail/species-play/species-power-ownership";
 import {getCompanionWords} from "@/loaders/companion-words";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
@@ -1063,7 +1064,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
             <SpeciesAtAGlanceCard
                 animalName={entry.name}
-                powerIconSvg={powerIconSvg}
                 glance={buildSpeciesAtAGlance({
                     category: displayCategory,
                     habitat: habitatLead,
@@ -1075,8 +1075,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 })}
                 labels={{
                     title: t("glanceTitle"),
-                    knownFor: t("glanceKnownFor"),
-                    power: t("glancePower")
+                    knownFor: t("glanceKnownFor")
                 }}
             />
 
@@ -1124,6 +1123,14 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     dream={dreamReading}
                     meaning={meaningSections}
                     lessonHref={isPublishedLessonSlug(entry.slug) ? `/animal-powers/${entry.slug}` : null}
+                    ownership={(
+                        <SpeciesPowerOwnership
+                            speciesProfileId={entry.speciesProfileId}
+                            animalName={entry.name}
+                            words={companionWords}
+                            labels={{visitor: t("powerYoursVisitor"), owner: t("powerYoursOwner")}}
+                        />
+                    )}
                     artwork={(
                         <div className="relative h-44 w-44 overflow-hidden border border-primary-400/20 bg-primary-400/[0.06] p-4">
                             <SpeciesArtworkImage
@@ -1136,7 +1143,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         </div>
                     )}
                     labels={{
-                        eyebrow: t("animalPowerLabel"),
+                        // The page's one Power block (newcomer UX vet, 2026-10-30, P0-3).
+                        eyebrow: t("itsPowerLabel"),
                         pattern: t("powerPattern"),
                         natureProof: t("natureProofLabel"),
                         observation: t("powerObservation"),
@@ -1170,21 +1178,13 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     >
                         <div className="flex min-w-0 flex-col gap-5">
                             <div className="-mx-5 lg:mx-0">
+                                {/* The story alone: its Power is the page's "Its Power" block, not repeated here. */}
                                 <AnimalStoryCard
                                     layout="wide"
                                     contentKey={statsResult.species_profile_id ?? entry.normalizedIdentityKey ?? entry.slug}
                                     story={storyText}
                                     settingTag={featuredStorySetting}
-                                    principle={principleProfile ? {
-                                        name: principleProfile.principle,
-                                        motto: principleProfile.motto,
-                                        expression: principleProfile.principleExpression,
-                                        coreLesson: principleProfile.coreLesson,
-                                        biologicalBasis: principleProfile.biologicalBasis,
-                                        applicationExample: principleProfile.applicationExample,
-                                        bestUseCases: principleProfile.bestFor,
-                                        iconSvg: powerIconSvg
-                                    } : null}
+                                    principle={null}
                                 />
                             </div>
 
@@ -1274,15 +1274,11 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 play={(
                     <div className="flex flex-col gap-5">
                     <div className="-mx-5 lg:mx-0">
-                        {/* The Power, read only, and its Trials with their loops
-                            (3.2). The Power is earned with the animal, a step at
-                            a time in its chat: a reader who holds it gets "Talk
-                            to it". */}
+                        {/* Its Trials with their loops (3.2). The Power and "Talk to it"
+                            are the "Its Power" block above, said once. */}
                         <SpeciesPlayPower
                             speciesProfileId={entry.speciesProfileId}
                             animalName={entry.name}
-                            powerName={principleProfile?.principle ?? null}
-                            coreLesson={principleProfile?.coreLesson ?? null}
                             words={companionWords}
                         />
                     </div>
