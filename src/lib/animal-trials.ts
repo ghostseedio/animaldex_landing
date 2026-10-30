@@ -108,12 +108,15 @@ export function trialId(trial: AnimalTrial) {
 
 // MARK: - Frequency vocabulary
 
-/** LOW is calm, MID is active, HIGH is volatile. */
+/**
+ * Easy, Medium, Hard as one ramp: the brand lime, gold, then warning orange
+ * (the same as iOS and Android). Easy was red, which read as a warning.
+ */
 export function frequencyAccent(frequency: AnimalTrialFrequency) {
     switch (frequency) {
-        case "LOW": return "#E84D57";
-        case "MID": return "#FAC233";
-        case "HIGH": return "#5CDBFF";
+        case "LOW": return "rgb(var(--c-accent))";
+        case "MID": return "#FFC83D";
+        case "HIGH": return "#F29A2E";
     }
 }
 

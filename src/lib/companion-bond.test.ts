@@ -172,7 +172,7 @@ test("the 3.2 words are the SPEC's, word for word, and none of the retired ones 
     assert.equal(YOUR_STEP_COPY.step.otherMessage, "Can I have a different step?");
     assert.equal(fillWords(YOUR_STEP_COPY.report.attachNote, {name: "Leo"}), "Optional. It's kept in your record with Leo, and only you can see it.");
     assert.equal(fillWords(YOUR_STEP_COPY.done.xp, {xp: 5}), "+5 XP");
-    assert.equal(fillWords(YOUR_STEP_COPY.warmup.resultMessageMissed, {right: 1, n: 3}), "I got 1 of 3 on your warmup.");
+    assert.equal(fillWords(YOUR_STEP_COPY.warmup.resultMessage, {right: 1, n: 3}), "I got 1 of 3 on your warmup.");
     assert.equal(fillWords(YOUR_STEP_COPY.trial.sectionTitle, {name: "Leo"}), "Leo's Trials");
     const english = JSON.stringify(COMPANION_WORDS_EN);
     for (const retired of ["Lesson check", "lesson check", "Training", "Apply It Your Way", "Your Trial", "Prove it", "Try again tomorrow", "Animal Trials"]) {

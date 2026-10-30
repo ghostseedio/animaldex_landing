@@ -27,8 +27,8 @@ test("the card's first button: I'll do it, I did it, then Tell {name} again", ()
     const offered = decodeAnimalStep({id: STEP, step: "Walk"})!;
     assert.equal(stepPrimaryLabel(offered, "Leo", COMPANION_WORDS_EN), "I'll do it");
     assert.equal(stepPrimaryLabel(acceptingStep(offered), "Leo", COMPANION_WORDS_EN), "I did it");
-    assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", COMPANION_WORDS_EN), "Tell Leo");
-    assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", indonesian), "Ceritakan kepada Leo");
+    assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", COMPANION_WORDS_EN), "Tell Leo more");
+    assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", indonesian), "Ceritakan lagi kepada Leo");
     assert.equal(stepPrimaryLabel(offered, "Leo", indonesian), "Akan saya lakukan");
 });
 
@@ -36,7 +36,7 @@ test("what is sent to the animal is the person's own message, in their language"
     assert.equal(trialPickedMessage("LOW", COMPANION_WORDS_EN), "I'll try your Easy Trial.");
     assert.equal(trialPickedMessage("high", indonesian), "Aku akan mencoba Uji Coba Sulit milikmu.");
     assert.equal(trialPickedMessage(null, COMPANION_WORDS_EN), null);
-    assert.equal(warmupResultMessage({passed: true, correct: [true, true, true]}, COMPANION_WORDS_EN), "I got all 3 on your warmup.");
+    assert.equal(warmupResultMessage({passed: true, correct: [true, true, true]}, COMPANION_WORDS_EN), "I got 3 of 3 on your warmup.");
     assert.equal(warmupResultMessage({passed: false, correct: [true, false, false]}, COMPANION_WORDS_EN), "I got 1 of 3 on your warmup.");
     assert.equal(warmupResultMessage({passed: false, correct: [false, false]}, indonesian), "Aku menjawab benar 0 dari 2 soal di pemanasanmu.");
     assert.equal(warmupOfferText("Sentinel Shift", 2, COMPANION_WORDS_EN), "Two quick questions on Sentinel Shift.");

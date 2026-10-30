@@ -9,13 +9,13 @@ import {stepCardState, type AnimalStep, type StepProblemCode} from "@/lib/your-s
 
 /**
  * The card's first button (SPEC section 5): "I'll do it" until accepted, then
- * "I did it", and "Tell {name}" again once a report is attached.
+ * "I did it", and "Tell {name} more" once a report is attached.
  */
 export function stepPrimaryLabel(step: Pick<AnimalStep, "acceptedAt" | "hasReport">, name: string, words: CompanionWords): string {
     switch (stepCardState(step)) {
         case "offered": return words.journey.step.accept;
         case "accepted": return words.journey.step.didIt;
-        case "reported": return fillWords(words.journey.report.send, {name});
+        case "reported": return fillWords(words.journey.report.more, {name});
     }
 }
 
@@ -27,11 +27,9 @@ export function trialPickedMessage(frequency: string | null | undefined, words: 
     return difficulty ? fillWords(words.journey.trial.pickedMessage, {difficulty: trialDifficultyText(difficulty, words)}) : null;
 }
 
-/** "I got all 3 on your warmup." / "I got 1 of 3 on your warmup." */
+/** "I got 2 of 2 on your warmup." / "I got 1 of 3 on your warmup.", pass or miss ("all 2" read badly). */
 export function warmupResultMessage(result: {passed: boolean; correct: boolean[]}, words: CompanionWords): string {
-    const n = result.correct.length;
-    if (result.passed) return fillWords(words.journey.warmup.resultMessagePassed, {n});
-    return fillWords(words.journey.warmup.resultMessageMissed, {right: result.correct.filter(Boolean).length, n});
+    return fillWords(words.journey.warmup.resultMessage, {right: result.correct.filter(Boolean).length, n: result.correct.length});
 }
 
 /** "Two quick questions on {power}.", or "{n} quick questions …" for any other count. */

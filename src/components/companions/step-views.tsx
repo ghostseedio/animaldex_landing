@@ -43,7 +43,7 @@ function Eyebrow({children}: {children: React.ReactNode}) {
  * The step: pinned at the top of the chat while the reply that set it is
  * not in the loaded thread (`pinned`), or on the Bond tab (`band`). Not
  * accepted: "I'll do it" / "A different step". Accepted: "I did it" /
- * "A different step". With a report attached, "I did it" says "Tell {name}"
+ * "A different step". With a report attached, "I did it" says "Tell {name} more"
  * again. A step made from a Trial shows that Trial's loop.
  */
 export function StepCard({
@@ -66,7 +66,7 @@ export function StepCard({
     busy?: boolean;
     /** Why the last button press did not go through, in words. */
     problem?: string | null;
-    /** "I'll do it", or "I did it" / "Tell {name}" (which open the report). */
+    /** "I'll do it", or "I did it" / "Tell {name} more" (which open the report). */
     onPrimary: () => void;
     onOther: () => void;
 }) {

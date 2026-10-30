@@ -1264,7 +1264,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         setReportPreview(null);
         setReporting(null);
     }, [openStep, setReportPreview]);
-    /** "I'll do it" accepts; "I did it" (or "Tell {name}" again) puts the bar in report mode. */
+    /** "I'll do it" accepts; "I did it" (or "Tell {name} more") puts the bar in report mode. */
     const stepPrimary = useCallback((step: AnimalStep) => {
         if (stepCardState(step) !== "offered") {
             startReport();

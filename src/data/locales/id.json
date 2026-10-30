@@ -2540,6 +2540,7 @@
         "attach": "Tambah foto atau video",
         "attachNote": "Opsional. Disimpan dalam catatan Anda bersama {name}, dan hanya Anda yang bisa melihatnya.",
         "send": "Ceritakan kepada {name}",
+        "more": "Ceritakan lagi kepada {name}",
         "strip": "Menceritakan langkah Anda kepada {name}"
       },
       "earned": {
@@ -2568,8 +2569,7 @@
         "skip": "Lewati",
         "passed": "Pemanasan selesai",
         "missed": "Belum tepat. {name} akan menceritakan cara pandang jenisnya.",
-        "resultMessagePassed": "Aku menjawab benar semua {n} soal di pemanasanmu.",
-        "resultMessageMissed": "Aku menjawab benar {right} dari {n} soal di pemanasanmu.",
+        "resultMessage": "Aku menjawab benar {right} dari {n} soal di pemanasanmu.",
         "questionLabel": "Pemanasan · {n} dari {total}"
       },
       "trial": {
