@@ -95,7 +95,7 @@ const wisdomPaths: Array<{
         number: "06",
         label: "Talk",
         title: "Talk to Any Animal",
-        description: "Speak to any species and it answers as itself, from its real biology and its Power, and remembers you between chats.",
+        description: "Talk to any species and it answers as itself, from its real biology and its Power, and remembers you between chats.",
         href: "/talk-to-animals",
         cta: "Talk to an animal"
     }

@@ -104,7 +104,7 @@ test("a row's status line is the first that applies", () => {
     assert.equal(companionStatusLine({...row, unread: 1, referralWaiting: true}).text, "Sent your way: tap to hear its take");
     assert.equal(companionStatusLine({...row, openTrial: "Walk the long way", focus: "Sleep"}).text, "Your step: Walk the long way");
     assert.equal(companionStatusLine({...row, focus: "Sleep"}).text, "Working on: Sleep");
-    assert.equal(companionStatusLine(row).text, "Say hello");
+    assert.equal(companionStatusLine(row).text, "Talk to it");
 });
 
 test("the chat's bond carries the level", () => {
@@ -248,7 +248,7 @@ test("a locale's companion words lay over the English, key by key", () => {
     const words = companionWords({list: {title: "Teman", sayHello: "  "}, stages: {trusted: "Dipercaya"}, bond: "oops"});
     assert.equal(words.list.title, "Teman");
     // A blank or missing word reads in English.
-    assert.equal(words.list.sayHello, "Say hello");
+    assert.equal(words.list.sayHello, "Talk to it");
     assert.equal(words.bond.talkToIt, "Talk to it");
     assert.equal(companionWords(null).displayName, "{nickname} the {animal}");
     assert.equal(fillWords("{n} mastered · {n}", {n: 2}), "2 mastered · 2");

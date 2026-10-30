@@ -541,7 +541,7 @@ const answerPageData: AnswerPageEntry[] = [
         intro: "AI cannot translate a bark or a birdsong. What it can do is answer as the animal, grounded in what is actually known about that species, so you understand how it lives and what its way of living can do for you.",
         directAnswer: [
             "No app can decode what an individual animal is saying, and anyone claiming to is selling a trick. Talking to animals with AI means something different and more useful: a conversation with an AI that speaks as a species, built from that species' real biology, behaviour, habitat, and survival strategy, so the answers are about how the animal actually lives.",
-            "AnimalDex does this for more than 2,500 animals. Scan one with your camera or open any animal in the app or on this site, tap Speak to the Cheetah, and the cheetah answers in the first person. Ask how it hunts, why it rests so much, or bring it something of yours, a decision, a habit, a problem at work, and it tells you what it would do and why its biology makes that the move.",
+            "AnimalDex does this for more than 2,500 animals. Scan one with your camera or open any animal in the app or on this site, tap Talk to the Cheetah, and the cheetah answers in the first person. Ask how it hunts, why it rests so much, or bring it something of yours, a decision, a habit, a problem at work, and it tells you what it would do and why its biology makes that the move.",
             "Every answer comes from the animal's Power, the strategy it has evolved and the lesson AnimalDex reads from it, backed by its field guide, its operating states and failure modes, its stats, and its Trials. The biology is fact; the voice is AnimalDex's interpretation of it, and the animal says so rather than pretending to be a translator."
         ],
         howItWorks: [
@@ -567,7 +567,7 @@ const answerPageData: AnswerPageEntry[] = [
         ],
         features: [
             {
-                title: "Speak to any animal",
+                title: "Talk to any animal",
                 description: "Every species in the catalogue answers as itself, in the first person, from the floating button on its card."
             },
             {
@@ -584,7 +584,7 @@ const answerPageData: AnswerPageEntry[] = [
             },
             {
                 title: "Try it on this site",
-                description: "Every animal page has a Speak to button, a few messages a day without an account, more when you sign in."
+                description: "Every animal page has a Talk to button, a few messages a day without an account, more when you sign in."
             }
         ],
         speciesSlugs: ["cheetah", "gray-wolf", "elephant"],
@@ -596,7 +596,7 @@ const answerPageData: AnswerPageEntry[] = [
             },
             {
                 question: "How do I talk to an animal in AnimalDex?",
-                answer: "Scan an animal with the camera or open any species in the catalogue, then tap the floating Speak to button on its card. It opens a chat where the animal answers in the first person. On this website, every animal page has the same button."
+                answer: "Scan an animal with the camera or open any species in the catalogue, then tap Talk to it on its card, or the floating Talk to button on its page. It opens a chat where the animal answers in the first person. On this website, every animal page has the same button."
             },
             {
                 question: "What does the animal know about itself?",
@@ -642,7 +642,7 @@ const answerPageData: AnswerPageEntry[] = [
                 width: 780,
                 height: 1688,
                 title: "One tap from any animal.",
-                caption: "Every species page and every card in the app carries a Speak to button with the animal's own picture."
+                caption: "Every species page and every card in the app carries a Talk to button with the animal's own picture."
             },
             {
                 src: "/images/blog/answer-talk-to-animals/conversation-start.webp",

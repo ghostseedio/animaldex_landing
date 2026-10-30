@@ -327,7 +327,8 @@ export const COMPANIONS_COPY = {
     referralWaiting: "Sent your way: tap to hear its take",
     yourStep: "Your step: {step}",
     workingOn: "Working on: {focus}",
-    sayHello: "Say hello",
+    /** One name for talking (newcomer UX vet, 2026-10-30, P2); was "Say hello". */
+    sayHello: "Talk to it",
     mastered: "Mastered",
     myCompanions: "My Companions",
     masteredCount: "{n} mastered",

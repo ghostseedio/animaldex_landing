@@ -73,7 +73,7 @@ test("bond rows keep the server's order and carry what the animal wrote", () => 
     assert.equal(wolf.unreadCount, 0);
     assert.equal(wolf.muted, true);
     assert.equal(wolf.hasConversation, true);
-    assert.deepEqual(wolf.status, {text: "Say hello", kind: "hello"});
+    assert.deepEqual(wolf.status, {text: "Talk to it", kind: "hello"});
 
     // A referral comes before the open step; it carries its id.
     assert.deepEqual(fox.status, {text: "Sent your way: tap to hear its take", kind: "referral"});
