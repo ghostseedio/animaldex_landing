@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * AnimalDex 3.2 "Your step" (docs/your-step/SPEC.md, section 5), drawn the
- * same in the chat, on the card's Bond tab and on Companions: the step card,
- * the report composer, the earned moment, "Done together", the Trials with
- * their loops, and the private record of what you did together.
+ * AnimalDex 3.2 "Your step" (docs/your-step/SPEC.md, section 5) outside the
+ * thread: the step pinned at the top of the chat and on the card's Bond tab,
+ * the report composer (the chat's fallback below 340 px; docs/your-step/
+ * INLINE.md puts "I did it" in the message bar), "Done together", the Trials
+ * with their loops, and the private record of what you did together. Inside
+ * the thread, the same pieces are special messages (`ask-special.tsx`).
  *
  * Edge-to-edge bands, never inset rounded cards. Every word is the SPEC's, in
  * the reader's language (`words.journey`); nothing here is written by the
@@ -19,6 +21,7 @@ import {type AnimalTrial, instructionsPreview, trialId} from "@/lib/animal-trial
 import {fillWords, trialDifficulty, trialDifficultyText, type CompanionWords} from "@/lib/companion-bond";
 import {
     isStepVideoFile,
+    STEP_MEDIA_ACCEPT,
     stepReportReady,
     stepRecordThumbnail,
     type AnimalStep,
@@ -37,11 +40,11 @@ function Eyebrow({children}: {children: React.ReactNode}) {
 // MARK: - The step card
 
 /**
- * The step: under the reply that set it (`inline`), pinned at the top of the
- * chat while open (`pinned`), or on the Bond tab (`band`). Not accepted:
- * "I'll do it" / "Something else". Accepted: "I did it" / "Something else".
- * With a report attached, "I did it" says "Tell {name}" again. A step made
- * from a Trial shows that Trial's loop.
+ * The step: pinned at the top of the chat while the reply that set it is
+ * not in the loaded thread (`pinned`), or on the Bond tab (`band`). Not
+ * accepted: "I'll do it" / "Something else". Accepted: "I did it" /
+ * "Something else". With a report attached, "I did it" says "Tell {name}"
+ * again. A step made from a Trial shows that Trial's loop.
  */
 export function StepCard({
     step,
@@ -59,7 +62,7 @@ export function StepCard({
     /** "Leo", or the animal. */
     name: string;
     words: CompanionWords;
-    variant: "inline" | "pinned" | "band";
+    variant: "pinned" | "band";
     busy?: boolean;
     /** Why the last button press did not go through, in words. */
     problem?: string | null;
@@ -71,9 +74,7 @@ export function StepCard({
     const eyebrow = variant === "pinned" ? words.journey.step.pinnedLabel : fillWords(words.journey.step.eyebrow, {name});
     const shell = variant === "pinned"
         ? "flex shrink-0 flex-col gap-2 border-b border-primary-400/20 bg-primary-400/[0.06] px-4 py-2.5"
-        : variant === "inline"
-            ? "-mx-4 mt-3 flex flex-col gap-2.5 border-y border-primary-400/20 bg-white/[0.03] px-4 py-3.5"
-            : "flex flex-col gap-2.5 border-b border-white/[0.08] px-5 py-5";
+        : "flex flex-col gap-2.5 border-b border-white/[0.08] px-5 py-5";
     return (
         <section className={shell} aria-label={eyebrow} data-testid={`step-card-${variant}`}>
             <Eyebrow>{eyebrow}</Eyebrow>
@@ -137,10 +138,8 @@ export function StepReportComposer({
     const [problem, setProblem] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
     const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-    // The preview is handed on to the earned moment; it is revoked only if never sent.
-    const sentRef = useRef(false);
     useEffect(() => () => {
-        if (previewUrl && !sentRef.current) URL.revokeObjectURL(previewUrl);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
     }, [previewUrl]);
 
     const ready = stepReportReady(text) && !sending;
@@ -149,10 +148,7 @@ export function StepReportComposer({
         setSending(true);
         setProblem(null);
         const failure = await onSubmit({text, file, previewUrl});
-        if (!failure) {
-            sentRef.current = true;
-            return;
-        }
+        if (!failure) return;
         setSending(false);
         setProblem(failure);
     };
@@ -196,7 +192,7 @@ export function StepReportComposer({
                         <input
                             ref={inputRef}
                             type="file"
-                            accept="image/*,video/*"
+                            accept={STEP_MEDIA_ACCEPT}
                             className="sr-only"
                             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                         />
@@ -252,70 +248,7 @@ export function StepReportComposer({
     );
 }
 
-// MARK: - The earned moment
-
-/**
- * The first done step earns the Power: full screen, the Power, "Earned in
- * your own life", the person's own words and their photo or video.
- */
-export function StepEarnedMoment({
-    powerName,
-    name,
-    words,
-    account,
-    media,
-    onContinue
-}: {
-    powerName: string;
-    name: string;
-    words: CompanionWords;
-    account: string | null;
-    media: {url: string; kind: "photo" | "video"} | null;
-    onContinue: () => void;
-}) {
-    useEffect(() => {
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onContinue();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [onContinue]);
-    return (
-        <div role="dialog" aria-modal="true" aria-label={powerName} className="fixed inset-0 z-[74] flex flex-col bg-black">
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-6 py-10 text-center">
-                <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{color: NEON}}>{words.journey.earned.via}</p>
-                <h2 className="font-display text-4xl font-black leading-tight text-white sm:text-5xl">
-                    {fillWords(words.journey.earned.title, {power: powerName})}
-                </h2>
-                <p className="text-base font-semibold text-white/75">{fillWords(words.journey.earned.subtitle, {name})}</p>
-                {media ? (
-                    <div className="relative aspect-[4/3] w-full max-w-md overflow-hidden bg-white/[0.04]">
-                        {media.kind === "video" ? (
-                            <video src={media.url} controls playsInline className="h-full w-full object-cover" />
-                        ) : (
-                            <Image src={media.url} alt="" fill sizes="448px" unoptimized className="object-cover" />
-                        )}
-                    </div>
-                ) : null}
-                {account ? (
-                    <blockquote className="max-w-md border-l-2 pl-4 text-left text-[15px] italic leading-7 text-white/80" style={{borderColor: NEON}}>
-                        {account}
-                    </blockquote>
-                ) : null}
-            </div>
-            <div className="border-t border-white/[0.08] px-5 py-4">
-                <button
-                    type="button"
-                    onClick={onContinue}
-                    className="mx-auto flex min-h-[52px] w-full max-w-md items-center justify-center rounded-full text-base font-black text-black/90"
-                    style={{backgroundColor: NEON}}
-                >
-                    {words.journey.earned.continue}
-                </button>
-            </div>
-        </div>
-    );
-}
+// MARK: - Done together
 
 /** "Done together · +5 XP" under the reply where the animal counted it. */
 export function StepDoneChip({xp, words, earnedLine = null}: {xp: number; words: CompanionWords; earnedLine?: string | null}) {

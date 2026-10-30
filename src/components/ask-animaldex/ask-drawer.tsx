@@ -26,15 +26,27 @@
  * and under the reply where it happened, a step done together or another of
  * their animals it sent them to.
  *
- * 3.2 "Your step" (docs/your-step/SPEC.md, section 5): the step the animal
- * set is a card under the reply that set it, and pinned at the top while it
- * is open, keyed off `companion.open_step`, never off reply text. "I did it"
- * opens the report composer (their words, and a photo or video if they
- * like), which is attached to the step and sent as their own message with
- * `step_report`. The first done step earns the Power, shown full screen;
- * otherwise "Done together · +5 XP". The animal's `training` card is the
- * Warmup (no locks, the result sent as their message) and its `trial` card
- * opens "{name}'s Trials", where one can be made their step.
+ * 3.2 "Your step" (docs/your-step/SPEC.md, section 5), everything inline in
+ * the conversation (docs/your-step/INLINE.md, owner, 2026-10-30): nothing in
+ * the chat opens a window. An animal message that carries something to do is
+ * a special message (a neon edge on its left, a faint wash, a small label
+ * with an icon, its actions inside the bubble), keyed off server state and
+ * the reply's card kinds, never off its words:
+ *   - the step is the last section of the bubble that set it ("YOUR STEP",
+ *     the step, [I'll do it] or [I did it], and [Something else]); pinned at
+ *     the top only while that bubble is not in the loaded thread;
+ *   - "I did it" puts the message bar in report mode: a strip ("Telling
+ *     {name} how your step went", the step, ✕), the attach button for one
+ *     photo or video, and send at three characters, which uploads, attaches
+ *     the report and sends their words with `step_report`, their bubble
+ *     labelled "YOUR STEP" with the thumbnail (the composer sheet only below
+ *     340 px);
+ *   - done is "DONE TOGETHER · +5 XP"; the first done step is the Power
+ *     earned, in the same bubble, with a brief burst and Share;
+ *   - the Warmup runs in the thread, each question a special message with
+ *     its choices as chips, the result line sent to the animal as theirs;
+ *   - "{name}'s Trials" sit in the bubble, the chosen one in place, its loop
+ *     enlarging in place.
  *
  * 3.2 Debates (docs/debates/SPEC.md, sections 1, 4 and 6): the animal offers
  * a debate in its own words; its `debate` card is a hidden marker, never
@@ -81,16 +93,55 @@ import {
     type AskCompanionEvent,
     type AskCompanionLoop
 } from "@/lib/ask-animaldex/companion-loop";
-import {askReplyCards, type AskChatCard} from "@/lib/ask-animaldex/chat-cards";
-import {cleanStepReport, isStepVideoFile, reportingStep, stepCardState, type AnimalStep, type StepFrequency} from "@/lib/your-step";
-import {stepProblemText, trialPickedMessage, warmupOfferText, warmupResultMessage} from "@/lib/your-step-words";
+import {askReplyCards} from "@/lib/ask-animaldex/chat-cards";
+import {
+    cleanStepReport,
+    isStepVideoFile,
+    reportingStep,
+    stepCardState,
+    stepReportReady,
+    MAX_STEP_REPORT_CHARACTERS,
+    STEP_MEDIA_ACCEPT,
+    type AnimalStep,
+    type StepFrequency
+} from "@/lib/your-step";
+import {stepEarnedLine, stepProblemText, stepReportStripText, trialPickedMessage, warmupResultMessage} from "@/lib/your-step-words";
 import type {AnimalTrial} from "@/lib/animal-trials";
-import {notingTrainingResult, trainingCanStart, type SpeciesTrainingResult} from "@/lib/species-training";
-import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
-import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
+import {notingTrainingResult, trainingCanStart} from "@/lib/species-training";
+import {submitSpeciesTraining, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
-import {acceptStep, attachStepReport, dropStep, noteOpenStep, stepFromTrial, useOpenStepUpdates} from "@/components/companions/use-steps";
-import {StepCard, StepDoneChip, StepEarnedMoment, StepReportComposer, TrialRows, type StepReportDraft} from "@/components/companions/step-views";
+import {
+    acceptStep,
+    attachStepReport,
+    dropStep,
+    noteOpenStep,
+    stepFromTrial,
+    stepReportThumbnail,
+    useOpenStepUpdates
+} from "@/components/companions/use-steps";
+import {StepCard, StepDoneChip, StepReportComposer, type StepReportDraft} from "@/components/companions/step-views";
+import {
+    AskDebateOfferSection,
+    AskDoneSection,
+    AskEarnedSection,
+    AskStepSection,
+    AskTrialsSection,
+    AskWarmupOfferSection,
+    AskWarmupQuestion
+} from "@/components/ask-animaldex/ask-special";
+import {
+    answerAskWarmupItem,
+    applyWarmupResult,
+    askDoneStepIds,
+    askEarnedReport,
+    askReplySpecials,
+    askStepResolution,
+    askWarmupAnswers,
+    askWarmupItem,
+    askWarmupItems,
+    askWarmupNextIndex,
+    type AskSpecial
+} from "@/lib/ask-animaldex/special-messages";
 import {bondChipText, bondStageText, decodeChatBond, fillWords, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
 import BondPanel from "@/components/companions/bond-panel";
 import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
@@ -108,13 +159,14 @@ import {
     AskUserBubble,
     ASK_BUBBLE_INCOMING,
     AskReportSheet,
+    AskWalkIcon,
     MoreIcon,
     type AskMenuItem
 } from "@/components/ask-animaldex/ask-messenger";
 import {ASK_SUGGESTION_FRESHNESS_MS, askLabelledIndices, askReplyPieces, askTimeLabel} from "@/lib/ask-animaldex/thread-layout";
 import {mergeAskAnimalMessages, parseAskAnimalMessages} from "@/lib/ask-animaldex/animal-messages";
 import type {AskReportChoice} from "@/lib/ask-animaldex/report";
-import {createAskMessage, type AskFollowUpResolution} from "@/lib/ask-animaldex/thread";
+import {createAskMessage, newAskMessageId, type AskFollowUpResolution} from "@/lib/ask-animaldex/thread";
 import {AskLitPlainText} from "@/components/ask-animaldex/ask-messenger";
 import {askReplyWords} from "@/lib/ask-animaldex/spoken-words";
 import {AskChatOptions, AskSoundCreditsPanel, AskVoiceIcon} from "@/components/ask-animaldex/ask-chat-audio";
@@ -410,12 +462,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         fromCall: boolean;
         named: DebateNamedAnimal[];
     } | null>(null);
-    // Below this width a band in the thread has no room: the setup is the modal sheet instead.
-    const [debateNarrow, setDebateNarrow] = useState(false);
+    // Below this width a band in the thread or the bar's report mode has no
+    // room: the debate setup and "I did it" are their sheets instead.
+    const [narrow, setNarrow] = useState(false);
     useEffect(() => {
         const query = typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(max-width: 340px)") : null;
         if (!query) return;
-        const update = () => setDebateNarrow(query.matches);
+        const update = () => setNarrow(query.matches);
         update();
         query.addEventListener?.("change", update);
         return () => query.removeEventListener?.("change", update);
@@ -456,11 +509,33 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             ? current
             : {...(current ?? EMPTY_COMPANION_LOOP), openStep: step, openTrial: step?.step ?? null}));
     }, []));
-    // What they told the animal in their last report, for the earned moment.
-    const lastReportRef = useRef<{text: string; media: {url: string; kind: "photo" | "video"} | null} | null>(null);
-    const [earnedMoment, setEarnedMoment] = useState<{account: string | null; media: {url: string; kind: "photo" | "video"} | null} | null>(null);
-    // "I did it": the report composer.
-    const [showingReport, setShowingReport] = useState(false);
+    // "I did it": the message bar's report mode (docs/your-step/INLINE.md),
+    // with the one photo or video they added; below 340 px, the sheet.
+    const [reporting, setReporting] = useState<{file: File | null; previewUrl: string | null; sending: boolean; problem: string | null} | null>(null);
+    const [reportSheet, setReportSheet] = useState(false);
+    const reportFileRef = useRef<HTMLInputElement | null>(null);
+    // The strip's preview, revoked as soon as it is replaced, removed or done with.
+    const reportPreviewRef = useRef<string | null>(null);
+    const setReportPreview = useCallback((url: string | null) => {
+        if (reportPreviewRef.current && reportPreviewRef.current !== url) URL.revokeObjectURL(reportPreviewRef.current);
+        reportPreviewRef.current = url;
+    }, []);
+    useEffect(() => () => setReportPreview(null), [setReportPreview]);
+    /** ✕ on the strip (or Escape): the bar is the message bar again, with what they typed still in it. */
+    const leaveReportMode = useCallback(() => {
+        setReportPreview(null);
+        setReporting(null);
+    }, [setReportPreview]);
+    /** The bar's attach button: one photo or video, previewed in the strip; another replaces it, ✕ removes it. */
+    const attachReportFile = useCallback((file: File | null) => {
+        const url = file ? URL.createObjectURL(file) : null;
+        setReportPreview(url);
+        setReporting((current) => (current ? {...current, file, previewUrl: url, problem: null} : current));
+        if (reportFileRef.current) reportFileRef.current.value = "";
+    }, [setReportPreview]);
+    // The Power-earned messages whose burst has played (once, only for a reply that arrived here).
+    const [burstsPlayed, setBurstsPlayed] = useState<ReadonlySet<string>>(() => new Set());
+    const [sharedEarnedId, setSharedEarnedId] = useState<string | null>(null);
     // The bond: the header chip, and the sheet it opens (SPEC phase 2). The
     // chip follows `done.bond`; the sheet reads `animal_bond_v1`.
     const animalBond = useAnimalBond(ownerChat ? companionSpeciesProfileId : null);
@@ -498,14 +573,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         onCompanion: (update) => {
             setCompanionLoop(update.loop);
             noteOpenStep(companionSpeciesProfileId, update.loop.openStep);
-            const done = update.event.stepDone;
-            if (!done) return;
-            void reloadCompanions();
-            // The first done step earns the Power: the full-screen moment, with their own words.
-            if (done.powerEarned) {
-                setEarnedMoment({account: lastReportRef.current?.text ?? null, media: lastReportRef.current?.media ?? null});
-            }
-            lastReportRef.current = null;
+            // The reply itself shows it: "Done together", or the Power earned, in its bubble.
+            if (update.event.stepDone) void reloadCompanions();
         },
         // A call that ended on yes to a debate: set up once the call is over (Private, "From your call").
         onDebateRequest: (request) => {
@@ -805,6 +874,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
+                if (reporting && !reporting.sending) {
+                    leaveReportMode();
+                    return;
+                }
                 if (debateSheet) {
                     setDebateSheet(null);
                     return;
@@ -822,7 +895,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [close, confirmingClear, reportTarget, debateSheet]);
+    }, [close, confirmingClear, reportTarget, debateSheet, reporting, leaveReportMode]);
 
     useEffect(() => {
         if (hasConversation) return;
@@ -1052,6 +1125,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             : animalName
                 ? labels.placeholderAnimal.replace("{animal}", animalName)
                 : labels.placeholderGeneral;
+    // Report mode: "Tell Leo how it went", and send once there are three characters.
+    const fieldPlaceholder = reporting ? fillWords(labels.companions.journey.report.placeholder, {name: speakerName}) : placeholder;
+    const sendReady = reporting ? !reporting.sending && stepReportReady(composer) : composer.trim().length > 0;
     const thinkingLabel = speaksAsAnimal && animalName
         ? labels.thinkingAnimal.replace("{animal}", animalName)
         : labels.thinking;
@@ -1155,45 +1231,40 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         return newest.followUpPrompts.slice(0, 3);
     }, [messenger, animalTalking, quota.reached, composer, suggestions, messages, awaitingGreeting, hasConversation]);
 
-    /**
-     * One of the three chips under a check-in the animal raised. "Done" on
-     * the check-in for the step the animal set opens the report instead
-     * ("I did it", 3.2): the animal hears how it went and counts it, and the
-     * check-in closes with the step.
-     */
-    const resolveFollowUp = useCallback(async (message: AskMessage, resolution: AskFollowUpResolution): Promise<boolean> => {
-        const followUp = message.followUp;
-        if (!followUp) return false;
-        const step = openStep?.step.trim().toLowerCase() ?? "";
-        const topic = followUp.topic.trim().toLowerCase();
-        if (resolution === "done" && !isSending && step && topic && step.startsWith(topic)) {
-            updateMessage(message.id, {followUpResolution: "done"});
-            setShowingReport(true);
-            return true;
-        }
-        try {
-            const response = await fetch("/api/ask/followup", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({id: followUp.id, action: resolution})
-            });
-            if (!response.ok) return false;
-        } catch {
-            return false;
-        }
-        updateMessage(message.id, {followUpResolution: resolution});
-        return true;
-    }, [openStep, isSending, updateMessage]);
-
-    // MARK: Your step (3.2)
+    // MARK: Your step (3.2), everything inline (docs/your-step/INLINE.md)
 
     const [stepBusy, setStepBusy] = useState(false);
     /** Why the last step button did not go through, in words. */
     const [stepProblem, setStepProblem] = useState<string | null>(null);
-    /** "I'll do it" accepts; "I did it" (or "Tell {name}" again) opens the report. */
+    /**
+     * "I did it": the message bar's report mode, its field focused, the thread
+     * at its newest message. Below 340 px the bar has no room for the strip:
+     * the composer sheet instead.
+     */
+    const startReport = useCallback(() => {
+        if (!openStep) return;
+        setShowingBond(false);
+        setShowingMemory(false);
+        setShowingSoundCredits(false);
+        if (narrow) {
+            setReportSheet(true);
+            return;
+        }
+        setReporting((current) => current ?? {file: null, previewUrl: null, sending: false, problem: null});
+        sticksToBottom.current = true;
+        requestAnimationFrame(() => composerRef.current?.focus());
+    }, [openStep, narrow]);
+    // The step went (dropped, done, or let go elsewhere): so does its report.
+    useEffect(() => {
+        if (openStep) return;
+        setReportSheet(false);
+        setReportPreview(null);
+        setReporting(null);
+    }, [openStep, setReportPreview]);
+    /** "I'll do it" accepts; "I did it" (or "Tell {name}" again) puts the bar in report mode. */
     const stepPrimary = useCallback((step: AnimalStep) => {
         if (stepCardState(step) !== "offered") {
-            setShowingReport(true);
+            startReport();
             return;
         }
         setStepBusy(true);
@@ -1203,7 +1274,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             if (result.ok) setOpenStep(result.value);
             else setStepProblem(stepProblemText(result.code, words));
         });
-    }, [setOpenStep, words]);
+    }, [setOpenStep, words, startReport]);
     /** "Something else": the step is dropped, then they ask for a different one, as their own message. */
     const stepOther = useCallback((step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;
@@ -1219,56 +1290,202 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             submit(words.journey.step.otherMessage, "chip");
         });
     }, [isSending, greetingState, setOpenStep, submit, words]);
-    /** The report: uploaded and attached first, then sent as their own message with `step_report`. */
+    /**
+     * The report, from the bar or the sheet: uploaded and attached first,
+     * then their words sent as their own message with `step_report`, its
+     * bubble labelled "YOUR STEP" with a thumbnail of what they added.
+     */
     const sendStepReport = useCallback(async (draft: StepReportDraft): Promise<string | null> => {
         if (!openStep || !companionSpeciesProfileId) return stepProblemText("step_not_open", words);
         if (isSending && greetingState !== "loading") return stepProblemText(null, words);
         const text = cleanStepReport(draft.text);
-        const attached = await attachStepReport({step: openStep, speciesProfileId: companionSpeciesProfileId, account: text, file: draft.file});
+        const [attached, thumb] = await Promise.all([
+            attachStepReport({step: openStep, speciesProfileId: companionSpeciesProfileId, account: text, file: draft.file}),
+            draft.file ? stepReportThumbnail(draft.file) : Promise.resolve(null)
+        ]);
         if (!attached.ok) return stepProblemText(attached.code, words);
-        lastReportRef.current = {
-            text,
-            media: draft.file && draft.previewUrl ? {url: draft.previewUrl, kind: isStepVideoFile(draft.file) ? "video" : "photo"} : null
-        };
         setOpenStep(reportingStep(openStep));
-        setShowingReport(false);
+        setReportSheet(false);
         setShowingBond(false);
         speech.stop();
         speech.prime();
-        void send(text, {stepReportId: openStep.id});
+        sticksToBottom.current = true;
+        void send(text, {
+            stepReportId: openStep.id,
+            stepReportThumb: thumb,
+            stepReportKind: draft.file ? (isStepVideoFile(draft.file) ? "video" : "photo") : null
+        });
         return null;
     }, [openStep, companionSpeciesProfileId, isSending, greetingState, setOpenStep, speech, send, words]);
+    /** Send in report mode: at least three characters; a problem stays in the strip, with their words. */
+    const sendReportFromBar = useCallback(async () => {
+        if (!reporting || reporting.sending || !stepReportReady(composer)) return;
+        setReporting({...reporting, sending: true, problem: null});
+        const problem = await sendStepReport({text: composer, file: reporting.file, previewUrl: reporting.previewUrl});
+        if (problem) {
+            setReporting((current) => (current ? {...current, sending: false, problem} : current));
+            return;
+        }
+        setReportPreview(null);
+        setReporting(null);
+        setComposer("");
+        if (composerRef.current) composerRef.current.style.height = "";
+    }, [reporting, composer, sendStepReport, setReportPreview]);
 
-    // The Warmup: the animal's `training` card, or the Bond tab.
+    /**
+     * One of the three chips under a check-in the animal raised. "Done" on
+     * the check-in for the step the animal set puts the bar in report mode
+     * instead ("I did it", 3.2): the animal hears how it went and counts it,
+     * and the check-in closes with the step.
+     */
+    const resolveFollowUp = useCallback(async (message: AskMessage, resolution: AskFollowUpResolution): Promise<boolean> => {
+        const followUp = message.followUp;
+        if (!followUp) return false;
+        const step = openStep?.step.trim().toLowerCase() ?? "";
+        const topic = followUp.topic.trim().toLowerCase();
+        if (resolution === "done" && !isSending && step && topic && step.startsWith(topic)) {
+            updateMessage(message.id, {followUpResolution: "done"});
+            startReport();
+            return true;
+        }
+        try {
+            const response = await fetch("/api/ask/followup", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id: followUp.id, action: resolution})
+            });
+            if (!response.ok) return false;
+        } catch {
+            return false;
+        }
+        updateMessage(message.id, {followUpResolution: resolution});
+        return true;
+    }, [openStep, isSending, updateMessage, startReport]);
+
+    // The Warmup: from the animal's `training` card or the Bond tab, run in the
+    // thread as the animal's messages, a question at a time (iOS AnimalWarmupRun).
     const warmupTraining = useSpeciesTraining(ownerChat ? companionSpeciesProfileId : null);
     const training = warmupTraining.training;
-    const [warmupFor, setWarmupFor] = useState<{messageId: string | null} | null>(null);
-    const openWarmup = useCallback((messageId: string | null) => {
-        if (!trainingCanStart(training)) return;
+    const setTraining = warmupTraining.setTraining;
+    // Runs whose answers are being checked, and the ones that could not be.
+    const [warmupChecking, setWarmupChecking] = useState<ReadonlySet<string>>(() => new Set());
+    const [warmupErrors, setWarmupErrors] = useState<Record<string, string>>({});
+    const warmupTimers = useRef<number[]>([]);
+    useEffect(() => () => {
+        for (const timer of warmupTimers.current) window.clearTimeout(timer);
+    }, []);
+    // The result goes to the animal a beat after it shows: as whatever `submit` is by then.
+    const submitRef = useRef(submit);
+    useEffect(() => {
+        submitRef.current = submit;
+    }, [submit]);
+    /** A run still waiting for an answer or its check: another one does not start over it. */
+    const openWarmupRunId = useMemo(() => {
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+            const item = messages[index].warmup;
+            if (item) return typeof item.passed === "boolean" ? null : item.runId;
+        }
+        return null;
+    }, [messages]);
+    /** "Take the warmup": the offer's chips go, and the first question appears as the animal's next message. */
+    const startWarmup = useCallback((offerMessageId: string | null) => {
+        if (!training || !trainingCanStart(training)) return;
         speech.stop();
-        setWarmupFor({messageId});
-    }, [training, speech]);
-    /** Either way, the result goes to the animal as their own message, which reacts in character. */
-    const closeWarmup = useCallback((result: SpeciesTrainingResult | null) => {
-        const messageId = warmupFor?.messageId ?? null;
-        setWarmupFor(null);
-        if (!result) return;
-        if (result.passed && training) warmupTraining.setTraining(notingTrainingResult(training, result));
-        if (messageId && result.passed) updateMessage(messageId, {cardsDismissed: true});
-        submit(warmupResultMessage(result, words), "chip");
-    }, [warmupFor, training, warmupTraining, updateMessage, submit, words]);
+        setShowingBond(false);
+        setShowingMemory(false);
+        sticksToBottom.current = true;
+        if (openWarmupRunId) return;
+        const runId = offerMessageId ?? newAskMessageId();
+        const first = askWarmupItem(training, 0, runId);
+        if (!first) return;
+        transformThread((current) => (current.some((message) => message.warmup?.runId === runId)
+            ? current
+            : [...current, createAskMessage("assistant", "", {warmup: first})]));
+    }, [training, speech, openWarmupRunId, transformThread]);
+    /**
+     * The answers go to the server; the verdict is kept on each question, the
+     * result line shows on the last, and a beat later the result goes to the
+     * animal as their own message, which reacts in character.
+     */
+    const checkWarmup = useCallback(async (runId: string, answers: number[], speciesProfileId: string) => {
+        setWarmupChecking((current) => new Set(current).add(runId));
+        setWarmupErrors((current) => {
+            const next = {...current};
+            delete next[runId];
+            return next;
+        });
+        const outcome = await submitSpeciesTraining(speciesProfileId, answers);
+        setWarmupChecking((current) => {
+            const next = new Set(current);
+            next.delete(runId);
+            return next;
+        });
+        if (!outcome.ok) {
+            setWarmupErrors((current) => ({...current, [runId]: stepProblemText(/not_authenticated/i.test(outcome.code) ? "not_authenticated" : null, words)}));
+            return;
+        }
+        transformThread((current) => current.map((message) => (message.warmup?.runId === runId
+            ? {...message, warmup: applyWarmupResult(outcome.result, message.warmup)}
+            : message)));
+        if (outcome.result.passed && training) setTraining(notingTrainingResult(training, outcome.result));
+        sticksToBottom.current = true;
+        warmupTimers.current.push(window.setTimeout(() => submitRef.current(warmupResultMessage(outcome.result, words), "chip"), 600));
+    }, [transformThread, training, setTraining, words]);
+    /** A choice tapped: kept on the question, and after a beat the next question appears; the last one sends the answers. */
+    const answerWarmup = useCallback((messageId: string, choice: number) => {
+        const item = messages.find((message) => message.id === messageId)?.warmup;
+        if (!item || warmupChecking.has(item.runId)) return;
+        const answered = answerAskWarmupItem(item, choice);
+        if (answered === item) return;
+        updateMessage(messageId, {warmup: answered});
+        sticksToBottom.current = true;
+        const asked = askWarmupItems(messages, item.runId).map((entry) => (entry.index === item.index ? answered : entry));
+        const next = askWarmupNextIndex(answered, asked);
+        if (next !== null) {
+            // A beat, the way the next question would come in a chat.
+            warmupTimers.current.push(window.setTimeout(() => {
+                const question = training ? askWarmupItem(training, next, item.runId) : null;
+                if (!question) return;
+                transformThread((current) => (current.some((message) => message.warmup?.runId === item.runId && message.warmup.index === next)
+                    ? current
+                    : [...current, createAskMessage("assistant", "", {warmup: question})]));
+                sticksToBottom.current = true;
+            }, 350));
+            return;
+        }
+        const answers = askWarmupAnswers(asked);
+        if (answers) void checkWarmup(item.runId, answers, item.speciesProfileId);
+    }, [messages, warmupChecking, updateMessage, training, transformThread, checkWarmup]);
+    /** Try again, with the same answers, when they never reached the grader. */
+    const retryWarmup = useCallback((runId: string) => {
+        const items = askWarmupItems(messages, runId);
+        const answers = askWarmupAnswers(items);
+        if (answers && items[0] && !warmupChecking.has(runId)) void checkWarmup(runId, answers, items[0].speciesProfileId);
+    }, [messages, warmupChecking, checkWarmup]);
+    /** What a reply's Warmup offer shows: loading, the offer, done, or nothing for an animal without one. */
+    const warmupOfferState: "loading" | "offer" | "passed" | "hidden" = !warmupTraining.didLoad
+        ? "loading"
+        : !training?.available
+            ? "hidden"
+            : training.completed
+                ? "passed"
+                : trainingCanStart(training) ? "offer" : "hidden";
 
-    // "{name}'s Trials", from the animal's `trial` card: one of them can be their step.
+    // "{name}'s Trials", inside the animal's message: one of them can be their step.
     const captionLanguage = useTrialMotionCaptionLanguage();
-    const [trialPicker, setTrialPicker] = useState<{highlight: StepFrequency | null; messageId: string | null} | null>(null);
     const [trials, setTrials] = useState<AnimalTrial[] | null>(null);
     const [trialBusy, setTrialBusy] = useState<StepFrequency | null>(null);
-    const [trialProblem, setTrialProblem] = useState<string | null>(null);
+    const [trialProblem, setTrialProblem] = useState<{messageId: string; text: string} | null>(null);
+    // Read once a reply in the thread offers them, so the one it pointed at opens in place.
+    const trialsWanted = useMemo(() => ownerChat && messages.some((message) => message.role === "assistant"
+        && message.status === "complete"
+        && !message.cardsDismissed
+        && askReplyCards(message.text).some((card) => card.kind === "trial")), [ownerChat, messages]);
     useEffect(() => {
         setTrials(null);
     }, [companionSpeciesProfileId]);
     useEffect(() => {
-        if (!trialPicker || trials !== null || !companionSpeciesProfileId) return;
+        if (!trialsWanted || trials !== null || !companionSpeciesProfileId) return;
         let cancelled = false;
         void fetch(`/api/app/animal-trials?speciesProfileId=${encodeURIComponent(companionSpeciesProfileId)}${captionLanguage ? `&lang=${captionLanguage}` : ""}`, {
             headers: {Accept: "application/json"}
@@ -1283,26 +1500,30 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         return () => {
             cancelled = true;
         };
-    }, [trialPicker, trials, companionSpeciesProfileId, captionLanguage]);
+    }, [trialsWanted, trials, companionSpeciesProfileId, captionLanguage]);
     /** "Make this my step": the Trial is their step, and they tell the animal they will try it. */
-    const makeTrialStep = useCallback((frequency: StepFrequency) => {
+    const makeTrialStep = useCallback((frequency: StepFrequency, messageId: string) => {
         if (!companionSpeciesProfileId) return;
         setTrialBusy(frequency);
         setTrialProblem(null);
         void stepFromTrial(companionSpeciesProfileId, frequency).then((result) => {
             setTrialBusy(null);
             if (!result.ok) {
-                setTrialProblem(stepProblemText(result.code, words));
+                setTrialProblem({messageId, text: stepProblemText(result.code, words)});
                 return;
             }
-            setOpenStep(result.value);
-            if (trialPicker?.messageId) updateMessage(trialPicker.messageId, {cardsDismissed: true});
-            setTrialPicker(null);
+            const step = {...result.value, trialFrequency: result.value.trialFrequency ?? frequency};
+            setOpenStep(step);
+            // The reply now carries that step instead of its Trials, with its loop.
+            const offered = messages.find((message) => message.id === messageId);
+            updateMessage(messageId, {
+                companionEvent: {...offered?.companionEvent, stepSet: {id: step.id, step: step.step, trialFrequency: frequency}}
+            });
             setShowingBond(false);
             const message = trialPickedMessage(frequency, words);
             if (message) submit(message, "chip");
         });
-    }, [companionSpeciesProfileId, setOpenStep, submit, words, trialPicker, updateMessage]);
+    }, [companionSpeciesProfileId, setOpenStep, submit, words, updateMessage, messages]);
 
     // MARK: Debates (3.2)
 
@@ -1361,7 +1582,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         callDebateRef.current = null;
         if (debatesOffered) openDebateSheet(null, null, request.problem, true, request.with);
     }, [onCall, debatesOffered, openDebateSheet]);
-    /** The setup, in the thread (or as the sheet, below `debateNarrow`). */
+    /** The setup, in the thread (or as the sheet, below `narrow`). */
     const debateSetup = (layout: "band" | "sheet") => (debateSheet && debateHost ? (
         <DebateSetup
             key={`${debateSheet.messageId ?? "end"}:${debateSheet.approving?.id ?? "new"}`}
@@ -1384,7 +1605,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             onClose={() => setDebateSheet(null)}
         />
     ) : null);
-    const debateBandAfter = (messageId: string | null) => (!debateNarrow && debateSheet && debateSheet.messageId === messageId ? debateSetup("band") : null);
+    const debateBandAfter = (messageId: string | null) => (!narrow && debateSheet && debateSheet.messageId === messageId ? debateSetup("band") : null);
     // The host's own way, chosen in its own chat: said here, as their message.
     const debateChat = useMemo(() => ({
         captureId: hostCaptureId,
@@ -1406,7 +1627,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
 
     // Opened from the card's Bond tab with "I did it", the Warmup or a debate:
     // settled once the loop (the quiz, the debates) has been read. With no step
-    // open, nothing opens; with Debates off or the Power not earned, no sheet.
+    // open, nothing happens; with Debates off or the Power not earned, no setup.
     const pendingActionRef = useRef<"report" | "warmup" | "debate" | null>(null);
     useEffect(() => {
         const action = takePendingAction();
@@ -1417,16 +1638,16 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (!pending || !ownerChat) return;
         if (pending === "report" && loopLoaded) {
             pendingActionRef.current = null;
-            if (openStep) setShowingReport(true);
+            if (openStep) startReport();
         } else if (pending === "warmup" && training?.speciesProfileId) {
             // Only once this animal's quiz has been read, never on a read for no animal.
             pendingActionRef.current = null;
-            openWarmup(null);
+            startWarmup(null);
         } else if (pending === "debate" && myDebates.loaded && animalBond.didLoad) {
             pendingActionRef.current = null;
             if (debatesOffered) openDebateSheet(null);
         }
-    }, [actionRequest, ownerChat, loopLoaded, openStep, training, openWarmup, myDebates.loaded, animalBond.didLoad, debatesOffered, openDebateSheet]);
+    }, [actionRequest, ownerChat, loopLoaded, openStep, training, startReport, startWarmup, myDebates.loaded, animalBond.didLoad, debatesOffered, openDebateSheet]);
 
     /** Report this reply: files it for review, as the reader. */
     const sendReport = useCallback(async (choice: AskReportChoice) => {
@@ -1460,7 +1681,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
      * never a client Pro flag (AnimalDex d8a1c61c).
      */
     const finishedReplies = useMemo(
-        () => messages.filter((message) => message.role === "assistant" && message.status === "complete" && !message.isGreeting && !message.animalMessageId).length,
+        () => messages.filter((message) => message.role === "assistant" && message.status === "complete" && !message.isGreeting && !message.animalMessageId && !message.warmup).length,
         [messages]
     );
     const [showsProIntro, setShowsProIntro] = useState(false);
@@ -1473,72 +1694,149 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     }, [showsProIntro, finishedReplies, quota.isPro, quota.remaining, quota.reached, ownerChat, aboutTrial, animalTalking]);
 
     /**
-     * Under a finished reply on the owner's chat: the step card, while the
-     * step it set is the open one, and the Warmup or Trials card the animal
-     * offered (never its own words: only its kind is read). A debate offer's
-     * quick replies come from `done.companion.debate_offer` (SPEC section 6),
-     * never from the hidden marker: a marker the server did not allow shows
-     * nothing.
+     * What a finished reply on the owner's chat carries, inside its last
+     * bubble (docs/your-step/INLINE.md): done or the Power earned, the step
+     * while it is the open one, the Warmup or Trials it offered (only their
+     * kind is read, never its words), and a debate offer's quick replies
+     * from `done.companion.debate_offer` (a marker the server did not allow
+     * shows nothing). Nothing while it is still being typed out.
      */
     const stepBusyNow = stepBusy || (isSending && greetingState !== "loading");
-    // The open step's card is under the reply that set it, when that reply is
-    // in the loaded thread; only otherwise is it pinned at the top. Never both.
+    // The open step is in the bubble that set it, when that reply is in the
+    // loaded thread; only otherwise is it pinned at the top. Never both.
     const stepCardMessageId = ownerChat ? askStepCardMessageId(messages, openStep?.id) : null;
     const showsPinnedStep = Boolean(openStep) && stepCardMessageId === null;
-    const replyBand = (message: AskMessage) => {
-        if (!ownerChat || message.role !== "assistant" || message.status !== "complete") return null;
-        if (pacer.messageId === message.id && pacer.revealing) return null;
-        const step = openStep && message.id === stepCardMessageId ? openStep : null;
-        const debateOffer = message.cardsDismissed ? null : message.companionEvent?.debateOffer ?? null;
-        const cards: AskChatCard[] = message.cardsDismissed
-            ? []
-            : [
-                ...askReplyCards(message.text).filter((card) => card.kind !== "debate"),
-                ...(debateOffer ? [{kind: "debate" as const, problem: debateOffer.problem}] : [])
-            ];
-        if (!step && cards.length === 0) return null;
-        return (
-            <>
-                {step ? (
-                    <StepCard
-                        step={step}
+    // Steps the animal saw done in this thread: their sections say so.
+    const doneStepIds = useMemo(() => askDoneStepIds(messages), [messages]);
+    /**
+     * Share on a step done or a Power earned: this animal's page, and the
+     * Power when it was earned, never their private words or their step.
+     */
+    const shareCard = (messageId: string, powerName: string | null) => {
+        const url = resolvedSubject.slug && typeof window !== "undefined"
+            ? `${window.location.origin}${getLocalePath(locale, `/animals/${resolvedSubject.slug}`)}`
+            : undefined;
+        const text = powerName ? `${powerName}\n${stepEarnedLine(speakerName, words)}` : `${speakerName} — AnimalDex`;
+        if (navigator.share) {
+            void navigator.share({title: powerName ?? speakerName, text, ...(url ? {url} : {})}).catch(() => undefined);
+            return;
+        }
+        void navigator.clipboard?.writeText(url ? `${text}\n${url}` : text);
+        setSharedEarnedId(messageId);
+        setTimeout(() => setSharedEarnedId((current) => (current === messageId ? null : current)), 1600);
+    };
+    const specialSection = (message: AskMessage, special: AskSpecial) => {
+        const shareLabel = sharedEarnedId === message.id ? labels.copied : labels.share;
+        switch (special.kind) {
+            case "done": {
+                const powerName = hints.principleName?.trim();
+                if (special.powerEarned && powerName) {
+                    const report = askEarnedReport(messages, message.id);
+                    return (
+                        <AskEarnedSection
+                            key="done"
+                            powerName={powerName}
+                            speciesProfileId={companionSpeciesProfileId}
+                            name={speakerName}
+                            xp={special.xp}
+                            words={words}
+                            report={report ? {text: report.text, thumb: report.stepReportThumb ?? null, isVideo: report.stepReportKind === "video"} : null}
+                            // Only for a reply that has just arrived here, once, and never under Reduce Motion.
+                            burst={!reducedMotion && message.id === pacedId && !burstsPlayed.has(message.id)}
+                            onBurstEnd={() => setBurstsPlayed((current) => new Set(current).add(message.id))}
+                            shareLabel={shareLabel}
+                            onShare={() => shareCard(message.id, powerName)}
+                        />
+                    );
+                }
+                return <AskDoneSection key="done" xp={special.xp} step={special.step} words={words} shareLabel={shareLabel} onShare={() => shareCard(message.id, null)} />;
+            }
+            case "step": {
+                const resolution = askStepResolution({stepSet: special.stepSet, openStep, loaded: loopLoaded, doneStepIds});
+                return (
+                    <AskStepSection
+                        key="step"
+                        text={special.stepSet.step}
+                        resolution={resolution}
+                        trialFrequency={special.stepSet.trialFrequency ?? null}
                         speciesProfileId={companionSpeciesProfileId}
                         name={speakerName}
                         words={words}
-                        variant="inline"
                         busy={stepBusyNow}
                         problem={stepProblem}
-                        onPrimary={() => stepPrimary(step)}
-                        onOther={() => stepOther(step)}
-                    />
-                ) : null}
-                {cards.map((card) => (
-                    <ChatOfferCard
-                        key={card.kind}
-                        card={card}
-                        words={words}
-                        name={speakerName}
-                        powerName={hints.principleName}
-                        warmup={training?.available ? {
-                            canStart: trainingCanStart(training),
-                            passed: training.completed,
-                            questionCount: training.questions.length
-                        } : null}
-                        disabled={stepBusyNow}
-                        onTakeWarmup={() => openWarmup(message.id)}
-                        onSkip={() => updateMessage(message.id, {cardsDismissed: true})}
-                        onTrials={(highlight) => {
-                            setTrialProblem(null);
-                            setShowingBond(false);
-                            setShowingMemory(false);
-                            setTrialPicker({highlight, messageId: message.id});
+                        onPrimary={() => {
+                            if (resolution.kind === "live") stepPrimary(resolution.step);
                         }}
-                        debateOffered={debatesOffered && debateSheet?.messageId !== message.id}
-                        onDebate={() => openDebateSheet(message.id, null, debateOffer?.problem ?? null, false, debateOffer?.with ?? [])}
+                        onOther={() => {
+                            if (resolution.kind === "live") stepOther(resolution.step);
+                        }}
                     />
-                ))}
-            </>
-        );
+                );
+            }
+            case "warmup":
+                return warmupOfferState === "hidden" ? null : (
+                    <AskWarmupOfferSection
+                        key="warmup"
+                        words={words}
+                        powerName={hints.principleName?.trim() || null}
+                        questionCount={training?.questions.length ?? 0}
+                        state={warmupOfferState}
+                        disabled={stepBusyNow || Boolean(openWarmupRunId)}
+                        onTake={() => startWarmup(message.id)}
+                        onSkip={() => updateMessage(message.id, {cardsDismissed: true})}
+                    />
+                );
+            case "trials":
+                return (
+                    <AskTrialsSection
+                        key="trials"
+                        name={speakerName}
+                        words={words}
+                        trials={trials}
+                        currentFrequency={openStep?.trialFrequency ?? null}
+                        working={trialBusy}
+                        problem={trialProblem?.messageId === message.id ? trialProblem.text : null}
+                        disabled={stepBusyNow}
+                        onPick={(frequency) => makeTrialStep(frequency, message.id)}
+                    />
+                );
+            case "debate":
+                return (
+                    <AskDebateOfferSection
+                        key="debate"
+                        words={words}
+                        disabled={stepBusyNow}
+                        onYes={() => openDebateSheet(message.id, null, special.problem, false, special.with)}
+                        // "Not now" puts them away; the server will not offer again for this problem.
+                        onNotNow={() => updateMessage(message.id, {cardsDismissed: true})}
+                    />
+                );
+        }
+    };
+    const replySpecial = (message: AskMessage) => {
+        if (!ownerChat || message.role !== "assistant" || message.status !== "complete") return null;
+        if (pacer.messageId === message.id && pacer.revealing) return null;
+        const sections = askReplySpecials({
+            message,
+            warmupUnavailable: warmupOfferState === "hidden",
+            warmupStarted: messages.some((entry) => entry.warmup?.runId === message.id),
+            trialsUnavailable: trials !== null && trials.length === 0,
+            debatesOffered,
+            debateSetupOpenHere: debateSheet?.messageId === message.id
+        }).map((special) => specialSection(message, special)).filter(Boolean);
+        return sections.length > 0 ? <>{sections}</> : null;
+    };
+    /** A Warmup question in the thread: only the run's last question carries its check, its problem and Try again. */
+    const warmupProps = (message: AskMessage) => {
+        const item = message.warmup;
+        if (!item) return null;
+        const isLast = item.index >= item.total - 1;
+        return {
+            checking: isLast && warmupChecking.has(item.runId),
+            problem: isLast ? warmupErrors[item.runId] ?? null : null,
+            onChoose: (choice: number) => answerWarmup(message.id, choice),
+            onRetry: () => retryWarmup(item.runId)
+        };
     };
 
     // Today's messages are spent: what to say and the reader's next step. A
@@ -1851,7 +2149,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     </div>
                 ) : null}
 
-                {openStep && showsPinnedStep && messenger && !showingBond && !showingMemory && !showingSoundCredits && !trialPicker ? (
+                {openStep && showsPinnedStep && messenger && !showingBond && !showingMemory && !showingSoundCredits ? (
                     // The open step, pinned while it is open, when the reply that set it
                     // is not in the loaded thread (3.2): never a second card for it.
                     <StepCard
@@ -1868,35 +2166,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 ) : null}
 
                 <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-                    {trialPicker && ownerChat ? (
-                        // "{name}'s Trials": Easy, Medium, Hard, each with its loop.
-                        <div className="-mx-4 -my-4 flex flex-col">
-                            <div className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setTrialPicker(null)}
-                                    className="inline-flex min-h-9 items-center gap-1.5 text-sm font-bold text-white/70 hover:text-white"
-                                >
-                                    <span aria-hidden="true">←</span> {labels.memoryBack}
-                                </button>
-                            </div>
-                            {trials === null ? (
-                                <p className="px-5 py-6 text-sm text-white/40">…</p>
-                            ) : (
-                                <TrialRows
-                                    trials={trials}
-                                    name={speakerName}
-                                    words={words}
-                                    openStep={openStep}
-                                    highlight={trialPicker.highlight}
-                                    busyFrequency={trialBusy}
-                                    closeLabel={labels.close}
-                                    onMakeStep={(trial) => makeTrialStep(trial.frequency)}
-                                />
-                            )}
-                            {trialProblem ? <p role="alert" className="px-5 py-3 text-xs text-white/60">{trialProblem}</p> : null}
-                        </div>
-                    ) : showingBond && ownerChat ? (
+                    {showingBond && ownerChat ? (
                         <div className="-mx-4 -my-4">
                             <BondPanel
                                 bond={animalBond.bond}
@@ -1908,10 +2178,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 openStep={openStep}
                                 onStepChange={setOpenStep}
                                 onTalk={() => setShowingBond(false)}
-                                onDidIt={() => {
-                                    setShowingBond(false);
-                                    setShowingReport(true);
-                                }}
+                                onDidIt={startReport}
                                 onDropped={() => {
                                     setShowingBond(false);
                                     submit(words.journey.step.otherMessage, "chip");
@@ -1922,12 +2189,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     if (message) submit(message, "chip");
                                 }}
                                 warmup={training?.available ? {
-                                    onTake: trainingCanStart(training)
-                                        ? () => {
-                                            setShowingBond(false);
-                                            openWarmup(null);
-                                        }
-                                        : null,
+                                    onTake: trainingCanStart(training) ? () => startWarmup(null) : null,
                                     passed: training.completed,
                                     questionCount: training.questions.length
                                 } : null}
@@ -2016,7 +2278,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             onRegenerate={() => regenerate(message.id)}
                                             onRetry={() => retry(message.id)}
                                             companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
-                                            band={replyBand(message)}
+                                            special={replySpecial(message)}
+                                            warmup={warmupProps(message)}
                                             signInHref={signInHref}
                                             onReport={context?.signedIn ? () => openReport(message) : undefined}
                                             onResolveFollowUp={ownerChat && message.followUp && !message.followUpResolution
@@ -2175,7 +2438,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <ArrowDownIcon />
                         </button>
                     ) : null}
-                    {messenger && !showingMemory && !showingBond && !showingSoundCredits ? (
+                    {messenger && !showingMemory && !showingBond && !showingSoundCredits && !reporting ? (
                         <AskSuggestionBar
                             suggestions={dockedSuggestions}
                             onPick={(prompt) => submit(prompt, "followup")}
@@ -2186,50 +2449,128 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     {messenger && quota.reached && !showingMemory ? (
                         <div className="pb-1">{limitNoticeContent}</div>
                     ) : (
-                        <form
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                submit(composer, "form");
-                            }}
-                            className="flex items-end gap-2 border border-white/12 bg-white/[0.05] pl-4 pr-1.5 py-1.5 focus-within:border-primary-300/45"
-                        >
-                            <label className="sr-only" htmlFor="ask-animaldex-composer">{placeholder}</label>
-                            <textarea
-                                id="ask-animaldex-composer"
-                                ref={composerRef}
-                                value={composer}
-                                rows={1}
-                                maxLength={900}
-                                placeholder={placeholder}
-                                onChange={(event) => {
-                                    setComposer(event.target.value);
-                                    const node = event.target;
-                                    node.style.height = "auto";
-                                    // One to six lines, as the app's composer does.
-                                    node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+                        <>
+                            {reporting && openStep ? (
+                                // Report mode (docs/your-step/INLINE.md): what this message is, the step, and ✕ to leave it.
+                                <div
+                                    className="-mx-4 -mt-3 mb-3 flex items-start gap-3 border-b border-primary-400/20 bg-primary-400/[0.07] py-2.5 pl-[19px] pr-4"
+                                    // The neon edge of the special message it answers.
+                                    style={{boxShadow: "inset 3px 0 0 var(--ask-special-edge)"}}
+                                    data-testid="report-strip"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <p className="flex items-center gap-1.5 text-[11px] font-bold leading-4 text-primary-300">
+                                            <AskWalkIcon />
+                                            <span className="line-clamp-2 min-w-0">{stepReportStripText(speakerName, words)}</span>
+                                        </p>
+                                        <p className="mt-0.5 truncate text-[13px] leading-5 text-white/80" title={openStep.step}>{openStep.step}</p>
+                                        {reporting.problem ? <p role="alert" className="mt-0.5 text-[11px] leading-4 text-white/60">{reporting.problem}</p> : null}
+                                    </div>
+                                    {/* The photo or video they added, after the words, with ✕ to take it out (iOS AnimalStepReportStrip). */}
+                                    {reporting.file && reporting.previewUrl ? (
+                                        <span className="relative mr-1 mt-0.5 h-[46px] w-[46px] shrink-0">
+                                            <span className="absolute inset-0 overflow-hidden bg-white/[0.05]" style={{borderRadius: 9}}>
+                                                {isStepVideoFile(reporting.file) ? (
+                                                    <video src={reporting.previewUrl} muted playsInline className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <Image src={reporting.previewUrl} alt="" fill sizes="46px" unoptimized className="object-cover" />
+                                                )}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => attachReportFile(null)}
+                                                disabled={reporting.sending}
+                                                aria-label={labels.close}
+                                                title={reporting.file.name}
+                                                className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border border-white/20 bg-canvas-900 text-white transition-colors hover:bg-canvas-850"
+                                            >
+                                                <span className="scale-75"><CloseIcon /></span>
+                                            </button>
+                                        </span>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        onClick={leaveReportMode}
+                                        disabled={reporting.sending}
+                                        aria-label={labels.close}
+                                        className="-mr-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                                    >
+                                        <CloseIcon />
+                                    </button>
+                                </div>
+                            ) : null}
+                            <form
+                                onSubmit={(event) => {
+                                    event.preventDefault();
+                                    if (reporting) void sendReportFromBar();
+                                    else submit(composer, "form");
                                 }}
-                                onKeyDown={(event) => {
-                                    if (event.key === "Enter" && !event.shiftKey) {
-                                        event.preventDefault();
-                                        submit(composer, "form");
-                                    }
-                                }}
-                                className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
-                            />
-                            <button
-                                type={showStop ? "button" : "submit"}
-                                onClick={showStop ? stopTalking : undefined}
-                                disabled={!showStop && composer.trim().length === 0}
-                                aria-label={showStop ? labels.stop : labels.send}
-                                className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
-                                    showStop || composer.trim()
-                                        ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
-                                        : "bg-white/8 text-ink-400"
-                                }`}
+                                className={`flex items-end gap-2 border border-white/12 bg-white/[0.05] ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
                             >
-                                {showStop ? <StopIcon /> : <ArrowUpIcon />}
-                            </button>
-                        </form>
+                                {reporting ? (
+                                    <>
+                                        <input
+                                            ref={reportFileRef}
+                                            type="file"
+                                            accept={STEP_MEDIA_ACCEPT}
+                                            tabIndex={-1}
+                                            aria-hidden="true"
+                                            className="sr-only"
+                                            onChange={(event) => attachReportFile(event.target.files?.[0] ?? null)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => reportFileRef.current?.click()}
+                                            disabled={reporting.sending}
+                                            aria-label={words.journey.report.attach}
+                                            title={words.journey.report.attach}
+                                            className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary-300 transition-colors hover:bg-white/8 hover:text-primary-200 disabled:opacity-40"
+                                            data-testid="report-attach"
+                                        >
+                                            <AttachIcon />
+                                        </button>
+                                    </>
+                                ) : null}
+                                <label className="sr-only" htmlFor="ask-animaldex-composer">{fieldPlaceholder}</label>
+                                <textarea
+                                    id="ask-animaldex-composer"
+                                    ref={composerRef}
+                                    value={composer}
+                                    rows={1}
+                                    maxLength={reporting ? MAX_STEP_REPORT_CHARACTERS : 900}
+                                    placeholder={fieldPlaceholder}
+                                    readOnly={reporting?.sending === true}
+                                    onChange={(event) => {
+                                        setComposer(event.target.value);
+                                        const node = event.target;
+                                        node.style.height = "auto";
+                                        // One to six lines, as the app's composer does.
+                                        node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+                                    }}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter" && !event.shiftKey) {
+                                            event.preventDefault();
+                                            if (reporting) void sendReportFromBar();
+                                            else submit(composer, "form");
+                                        }
+                                    }}
+                                    className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
+                                />
+                                <button
+                                    type={showStop ? "button" : "submit"}
+                                    onClick={showStop ? stopTalking : undefined}
+                                    disabled={!showStop && !sendReady}
+                                    aria-label={showStop ? labels.stop : reporting ? fillWords(words.journey.report.send, {name: speakerName}) : labels.send}
+                                    className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
+                                        showStop || sendReady
+                                            ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
+                                            : "bg-white/8 text-ink-400"
+                                    }`}
+                                >
+                                    {showStop ? <StopIcon /> : reporting?.sending ? <span aria-hidden="true" className="text-sm font-black">…</span> : <ArrowUpIcon />}
+                                </button>
+                            </form>
+                        </>
                     )}
                     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-ink-400">
                         {/* Only a free budget is counted down: a Pro one is large
@@ -2238,47 +2579,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         <span className="min-w-0">{labels.disclaimer}</span>
                     </p>
                 </div>
-                {showingReport && openStep ? (
-                    // "I did it": their words and, if they like, a photo or video.
+                {reportSheet && openStep ? (
+                    // "I did it" below 340 px, where the bar has no room for its strip.
                     <StepReportComposer
                         name={speakerName}
                         words={words}
                         sendingLabel={labels.sending}
                         closeLabel={labels.close}
-                        onCancel={() => setShowingReport(false)}
+                        onCancel={() => setReportSheet(false)}
                         onSubmit={sendStepReport}
                     />
                 ) : null}
-                {warmupFor && training ? (
-                    <TrainingQuiz
-                        training={training}
-                        powerName={hints.principleName}
-                        layer="chat"
-                        warmup={{
-                            title: words.journey.warmup.title,
-                            passed: words.journey.warmup.passed,
-                            missed: fillWords(words.journey.warmup.missed, {name: speakerName}),
-                            continue: words.journey.earned.continue,
-                            close: labels.close
-                        }}
-                        onClose={closeWarmup}
-                    />
-                ) : null}
-                {earnedMoment && hints.principleName ? (
-                    <StepEarnedMoment
-                        powerName={hints.principleName}
-                        name={speakerName}
-                        words={words}
-                        account={earnedMoment.account}
-                        media={earnedMoment.media}
-                        onContinue={() => {
-                            const media = earnedMoment.media;
-                            setEarnedMoment(null);
-                            if (media) URL.revokeObjectURL(media.url);
-                        }}
-                    />
-                ) : null}
-                {debateNarrow ? debateSetup("sheet") : null}
+                {narrow ? debateSetup("sheet") : null}
                 {reportTarget ? (
                     <AskReportSheet
                         labels={{
@@ -2409,7 +2721,8 @@ function AnimalMessageRow({
     onRegenerate,
     onRetry,
     companionEvent,
-    band = null,
+    special = null,
+    warmup = null,
     signInHref,
     onReport,
     onResolveFollowUp
@@ -2420,8 +2733,10 @@ function AnimalMessageRow({
     isSending: boolean;
     /** Waiting for the animal, or watching it type. */
     animalTalking: boolean;
-    /** Edge to edge under the reply: the step it set, or the card the animal offered (3.2). */
-    band?: React.ReactNode;
+    /** What the reply carries to do, inside its last bubble (docs/your-step/INLINE.md). */
+    special?: React.ReactNode;
+    /** A Warmup question's part in the run (its check, its problem), and its taps. */
+    warmup?: {checking: boolean; problem: string | null; onChoose: (choice: number) => void; onRetry: () => void} | null;
     /** Report this reply; signed-in readers only. */
     onReport?: () => void;
     /** The check-in this reply raised, while it is unanswered. */
@@ -2450,7 +2765,37 @@ function AnimalMessageRow({
     /** The word its voice is saying, among the reply's words on screen; null when it is not speaking. */
     spokenWord?: number | null;
 }) {
-    if (message.role === "user") return <AskUserBubble text={message.text} label={labels.youAsked} />;
+    if (message.role === "user") {
+        return (
+            <AskUserBubble
+                text={message.text}
+                label={labels.youAsked}
+                // Their report on a step: "YOUR STEP", with the thumbnail of what they added.
+                report={message.stepReportId ? {
+                    label: labels.companions.journey.step.pinnedLabel,
+                    thumbUrl: message.stepReportThumb ?? null,
+                    kind: message.stepReportKind ?? null
+                } : null}
+            />
+        );
+    }
+
+    // A Warmup question: the animal's special message, its choices as chips (docs/your-step/INLINE.md).
+    if (message.warmup) {
+        return (
+            <AskWarmupQuestion
+                item={message.warmup}
+                avatarUrl={faceUrl}
+                name={speakerName}
+                words={labels.companions}
+                checking={warmup?.checking ?? false}
+                problem={warmup?.problem ?? null}
+                tryAgainLabel={labels.tryAgain}
+                onChoose={warmup?.onChoose ?? (() => undefined)}
+                onRetry={warmup?.onRetry ?? (() => undefined)}
+            />
+        );
+    }
 
     // Nothing on screen yet: the animal is still finding its first word.
     if (message.status === "thinking" || (paced !== null && paced.length === 0)) {
@@ -2519,8 +2864,9 @@ function AnimalMessageRow({
     const checkIn = !isLive && message.followUp && onResolveFollowUp
         ? <AskCheckInChips topic={message.followUp.topic} labels={labels} onResolve={onResolveFollowUp} />
         : null;
-    const event = !isLive && companionEvent && (companionEvent.stepDone || companionEvent.referral)
-        ? <CompanionEventBlock event={companionEvent} name={speakerName} labels={labels} />
+    // A step done is the reply's special message; another of their animals it sent them to stays under it.
+    const event = !isLive && companionEvent?.referral
+        ? <CompanionEventBlock event={{referral: companionEvent.referral}} name={speakerName} labels={labels} />
         : null;
     return (
         <div className="group/reply">
@@ -2557,6 +2903,7 @@ function AnimalMessageRow({
                             </span>
                         </>
                     }
+                    special={special}
                     after={!isLive && (checkIn || event || voice?.notice) ? (
                         <div className="flex flex-col items-start gap-2.5">
                             {voice?.notice ? (
@@ -2581,123 +2928,7 @@ function AnimalMessageRow({
                     ) : null}
                 />
             </div>
-            {!isLive && band ? <div className="flex flex-col">{band}</div> : null}
         </div>
-    );
-}
-
-/**
- * The card an animal offered under its reply (3.2): the Warmup ("Take the
- * warmup (+5 XP)" / "Skip", or "Warmup done"), or "{name}'s Trials", which
- * opens the picker. Only the card's kind comes from the reply; every word is
- * the site's own.
- */
-function ChatOfferCard({
-    card,
-    words,
-    name,
-    powerName,
-    warmup,
-    disabled,
-    onTakeWarmup,
-    onSkip,
-    onTrials,
-    debateOffered,
-    onDebate
-}: {
-    card: AskChatCard;
-    words: CompanionWords;
-    name: string;
-    powerName: string | null;
-    warmup: {canStart: boolean; passed: boolean; questionCount: number} | null;
-    disabled: boolean;
-    onTakeWarmup: () => void;
-    onSkip: () => void;
-    onTrials: (highlight: StepFrequency | null) => void;
-    /** 3.2 Debates: the Power is earned, the server has Debates on, and the setup is not open under this reply. */
-    debateOffered: boolean;
-    onDebate: () => void;
-}) {
-    const shell = "-mx-4 mt-3 flex flex-col gap-2.5 border-y border-white/[0.1] bg-white/[0.03] px-4 py-3.5";
-    if (card.kind === "debate") {
-        // The animal asked in its own words (SPEC section 6): never a card or a
-        // fixed line, only the two quick replies under its message. "Not now"
-        // puts them away; the server will not offer again for this problem.
-        if (!debateOffered) return null;
-        return (
-            <div className="mt-2.5 flex flex-wrap gap-2 pl-[38px]" data-testid="debate-quick-replies">
-                <button
-                    type="button"
-                    onClick={onDebate}
-                    disabled={disabled}
-                    className="inline-flex min-h-9 items-center rounded-full border border-primary-300/40 bg-primary-400/[0.12] px-4 text-xs font-bold text-primary-100 transition-colors hover:bg-primary-400/20 disabled:opacity-50"
-                >
-                    {words.debate.yes}
-                </button>
-                <button
-                    type="button"
-                    onClick={onSkip}
-                    className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
-                >
-                    {words.debate.notNow}
-                </button>
-            </div>
-        );
-    }
-    if (card.kind === "training") {
-        if (!warmup || !powerName) return null;
-        return (
-            <section className={shell} aria-label={words.journey.warmup.title} data-testid="warmup-card">
-                <p className="text-[10px] font-black uppercase tracking-[0.13em] text-primary-300">{words.journey.warmup.title}</p>
-                {warmup.passed ? (
-                    <p className="text-sm font-semibold text-white">✓ {words.journey.warmup.passed}</p>
-                ) : (
-                    <>
-                        <p className="text-sm leading-6 text-white">{warmupOfferText(powerName, warmup.questionCount, words)}</p>
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                onClick={onTakeWarmup}
-                                disabled={disabled || !warmup.canStart}
-                                className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
-                            >
-                                {words.journey.warmup.take}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onSkip}
-                                className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
-                            >
-                                {words.journey.warmup.skip}
-                            </button>
-                        </div>
-                    </>
-                )}
-            </section>
-        );
-    }
-    const difficulties: Array<[StepFrequency, string]> = [
-        ["LOW", words.journey.trial.easy],
-        ["MID", words.journey.trial.medium],
-        ["HIGH", words.journey.trial.hard]
-    ];
-    return (
-        <section className={shell} aria-label={fillWords(words.journey.trial.sectionTitle, {name})} data-testid="trials-card">
-            <p className="text-[10px] font-black uppercase tracking-[0.13em] text-primary-300">{fillWords(words.journey.trial.sectionTitle, {name})}</p>
-            <div className="flex flex-wrap gap-2">
-                {difficulties.map(([frequency, label]) => (
-                    <button
-                        key={frequency}
-                        type="button"
-                        onClick={() => onTrials(frequency)}
-                        disabled={disabled}
-                        className={`inline-flex min-h-9 items-center rounded-full px-4 text-xs font-black transition-colors disabled:opacity-50 ${card.frequency === frequency ? "bg-primary-400 text-black hover:bg-primary-300" : "border border-white/12 bg-white/[0.05] text-white hover:bg-white/10"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-        </section>
     );
 }
 
@@ -3395,4 +3626,13 @@ const BellIcon = () => icon(<path d="M6 13.5V9a4 4 0 0 1 8 0v4.5l1.3 1.5H4.7ZM8.
 const FlagIcon = () => icon(<path d="M5 17V3.8m0 0h8.5l-1.6 3.1 1.6 3.1H5" />);
 const CalendarIcon = () => icon(<path d="M4.5 6h11v9.5h-11Zm0 3h11M8 4v3m4-3v3" />);
 const DebateIcon = () => icon(<path d="M3.5 5.5h8v5.5h-4.5L4.5 13v-2h-1Zm4.5 7.5v1.5h4.5l2.5 2v-2h1.5V8.5h-3.5" />);
+/** The bar's attach button in report mode: a photo with a plus (iOS photo.badge.plus). */
+const AttachIcon = () => (
+    <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M13 4.5H6.2A2.2 2.2 0 0 0 4 6.7v11.1A2.2 2.2 0 0 0 6.2 20h11.1a2.2 2.2 0 0 0 2.2-2.2V11" />
+        <path d="m4.5 16.5 4.2-4.2a1.6 1.6 0 0 1 2.3 0l4.5 4.5M14 15.5l1.3-1.3a1.6 1.6 0 0 1 2.3 0l1.9 1.9" />
+        <circle cx="9" cy="9" r="1.4" />
+        <path d="M18.5 3v6M15.5 6h6" />
+    </svg>
+);
 const SpeakerSmallIcon = () => icon(<path d="M3.5 8v4h3l4 3.5v-11l-4 3.5Zm10-1.5a4.5 4.5 0 0 1 0 7" />);
