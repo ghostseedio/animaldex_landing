@@ -104,6 +104,21 @@ export function debateHeadline(debate: Debate): string {
         ?? "";
 }
 
+/**
+ * The debate in one line once it has started (SPEC section 6): "Luna, Pip
+ * and Bruno: private debate", the names joined the reader's way.
+ */
+export function debateLine(debate: Pick<Debate, "participants" | "visibility">, words: CompanionWords, locale = "en"): string {
+    const names = debate.participants.map(debateAnimalName).filter(Boolean);
+    let joined = names.join(", ");
+    try {
+        joined = new Intl.ListFormat(locale, {style: "long", type: "conjunction"}).format(names);
+    } catch {
+        // The plain list, then.
+    }
+    return fillWords(debate.visibility === "public" ? words.debate.publicLine : words.debate.privateLine, {names: joined});
+}
+
 /** The animals in it, by name: "Wolf, Otter and Crow". */
 export function debateCast(debate: Debate, and = "&"): string {
     const names = debate.participants.map(debateAnimalName).filter(Boolean);

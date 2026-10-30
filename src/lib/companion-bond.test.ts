@@ -192,6 +192,12 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(fillWords(DEBATE_COPY.won, {name: "Leo", credits: 9}), "Leo's way won. +9 Credits");
     assert.equal(DEBATE_COPY.draw, "Not enough votes came in. No hearts or Credits moved.");
     assert.equal(DEBATE_COPY.cantVoteOwn, "You can't vote on a debate you're in.");
+    // SPEC section 6.
+    assert.equal(DEBATE_COPY.yes, "Yes, compare");
+    assert.equal(DEBATE_COPY.notNow, "Not now");
+    assert.equal(fillWords(DEBATE_COPY.privateLine, {names: "Luna and Pip"}), "Luna and Pip: private debate");
+    assert.equal(fillWords(DEBATE_COPY.publicLine, {names: "Luna and Pip"}), "Luna and Pip: public debate");
+    assert.equal(DEBATE_COPY.fromCall, "From your call");
     assert.equal(ROSTER_COPY.optIn, "Let my animals join public debates");
     assert.equal(ROSTER_COPY.offRoster, "Out of hearts. Heal it to join debates again.");
     assert.equal(HEAL_COPY.one, "Heal a heart: 5 Credits");

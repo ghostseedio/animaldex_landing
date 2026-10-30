@@ -36,12 +36,16 @@
  * Warmup (no locks, the result sent as their message) and its `trial` card
  * opens "{name}'s Trials", where one can be made their step.
  *
- * 3.2 Debates (docs/debates/SPEC.md, sections 1 and 4): once the animal's
- * Power is earned, its `debate` card ("Want to hear how other animals would
- * handle this?") and "Compare with other animals" in the ••• menu open the
- * debate sheet. A debate the chat started runs in the thread, where it was
- * started, turn by turn with each animal's icon art, then its report band
- * with "Try {name}'s way". Nothing of it shows while the server's switch is off.
+ * 3.2 Debates (docs/debates/SPEC.md, sections 1, 4 and 6): the animal offers
+ * a debate in its own words; its `debate` card is a hidden marker, never
+ * drawn, and under that reply the app offers [Yes, compare] [Not now]. "Yes,
+ * compare", "Compare with other animals" in the ••• menu and on the Bond tab,
+ * and a call that ended on a yes (`debate_request`), open the setup as a band
+ * in the thread itself (the modal sheet only at very small widths). Started,
+ * the debate runs in the thread where it was asked, its setup one line
+ * ("Luna, Pip and Bruno: private debate"), turn by turn with each animal's
+ * icon art, then its report band with "Try {name}'s way". Nothing of it shows
+ * while the server's switch is off.
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
@@ -116,7 +120,7 @@ import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type Ask
 import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
-import DebateSheet, {type DebateHost} from "@/components/debates/debate-sheet";
+import DebateSetup, {type DebateHost} from "@/components/debates/debate-sheet";
 import DebateThread from "@/components/debates/debate-thread";
 import {useMyDebates} from "@/components/debates/use-debates";
 import type {Debate} from "@/lib/debates";
@@ -396,7 +400,19 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const [reportTarget, setReportTarget] = useState<AskMessage | null>(null);
     const [reportState, setReportState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
     // 3.2 Debates: the debate sheet, from the animal's card or the ••• menu, or to approve a public draft.
-    const [debateSheet, setDebateSheet] = useState<{problem: string; messageId: string | null; approving: Debate | null} | null>(null);
+    const [debateSheet, setDebateSheet] = useState<{problem: string; messageId: string | null; approving: Debate | null; fromCall: boolean} | null>(null);
+    // Below this width a band in the thread has no room: the setup is the modal sheet instead.
+    const [debateNarrow, setDebateNarrow] = useState(false);
+    useEffect(() => {
+        const query = typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(max-width: 340px)") : null;
+        if (!query) return;
+        const update = () => setDebateNarrow(query.matches);
+        update();
+        query.addEventListener?.("change", update);
+        return () => query.removeEventListener?.("change", update);
+    }, []);
+    // A call that ended on yes to a debate (`done.debate_request`): its problem, for when the call is over.
+    const callDebateRef = useRef<string | null>(null);
 
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
@@ -481,6 +497,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 setEarnedMoment({account: lastReportRef.current?.text ?? null, media: lastReportRef.current?.media ?? null});
             }
             lastReportRef.current = null;
+        },
+        // A call that ended on yes to a debate: set up once the call is over (Private, "From your call").
+        onDebateRequest: (problem) => {
+            callDebateRef.current = problem;
         },
         onBond: (raw) => {
             const next = decodeChatBond(raw);
@@ -1310,12 +1330,43 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
      * The sheet, with the problem: the card's summary of it, else as they
      * told it here (their latest message, or what the animal is helping with).
      */
-    const openDebateSheet = useCallback((messageId: string | null, approving: Debate | null = null, problem: string | null = null) => {
+    const openDebateSheet = useCallback((messageId: string | null, approving: Debate | null = null, problem: string | null = null, fromCall = false) => {
         speech.stop();
         setShowingBond(false);
         setShowingMemory(false);
-        setDebateSheet({problem: problem || lastQuestion(messages) || companionLoop?.focus || "", messageId, approving});
+        setDebateSheet({problem: problem || lastQuestion(messages) || companionLoop?.focus || "", messageId, approving, fromCall});
+        sticksToBottom.current = true;
     }, [speech, messages, companionLoop?.focus]);
+    // The call is over: the setup opens prefilled from it, Private (a public debate never starts from a call).
+    useEffect(() => {
+        if (onCall || !callDebateRef.current) return;
+        const problem = callDebateRef.current;
+        callDebateRef.current = null;
+        if (debatesOffered) openDebateSheet(null, null, problem, true);
+    }, [onCall, debatesOffered, openDebateSheet]);
+    /** The setup, in the thread (or as the sheet, below `debateNarrow`). */
+    const debateSetup = (layout: "band" | "sheet") => (debateSheet && debateHost ? (
+        <DebateSetup
+            key={`${debateSheet.messageId ?? "end"}:${debateSheet.approving?.id ?? "new"}`}
+            layout={layout}
+            host={debateHost}
+            problem={debateSheet.problem}
+            fromCall={debateSheet.fromCall}
+            words={words}
+            closeLabel={labels.close}
+            optedIn={myDebates.optedIn}
+            onOptedIn={myDebates.setOptedIn}
+            approving={debateSheet.approving}
+            onStarted={() => {
+                // The debate now runs in the thread; the quick replies have done their job.
+                if (debateSheet.messageId) updateMessage(debateSheet.messageId, {cardsDismissed: true});
+                setDebateSheet(null);
+                scrollToLatest("smooth");
+            }}
+            onClose={() => setDebateSheet(null)}
+        />
+    ) : null);
+    const debateBandAfter = (messageId: string | null) => (!debateNarrow && debateSheet && debateSheet.messageId === messageId ? debateSetup("band") : null);
     // The host's own way, chosen in its own chat: said here, as their message.
     const debateChat = useMemo(() => ({
         captureId: hostCaptureId,
@@ -1455,8 +1506,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             setShowingMemory(false);
                             setTrialPicker({highlight, messageId: message.id});
                         }}
-                        debateOffered={debatesOffered}
-                        notNowLabel={labels.notNow}
+                        debateOffered={debatesOffered && debateSheet?.messageId !== message.id}
                         onDebate={() => openDebateSheet(message.id, null, card.kind === "debate" ? card.problem : null)}
                     />
                 ))}
@@ -1953,9 +2003,11 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             } : null}
                                             spokenWord={speech.cursor?.messageId === message.id ? speech.cursor.word : null}
                                         />
+                                        {debateBandAfter(message.id)}
                                         {debateBlocks(message.id)}
                                     </div>
                                 ))}
+                                {debateBandAfter(null)}
                                 {messages.length === 0 && awaitingGreeting ? (
                                     <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />
                                 ) : null}
@@ -2199,24 +2251,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         }}
                     />
                 ) : null}
-                {debateSheet && debateHost ? (
-                    <DebateSheet
-                        host={debateHost}
-                        problem={debateSheet.problem}
-                        words={words}
-                        closeLabel={labels.close}
-                        optedIn={myDebates.optedIn}
-                        onOptedIn={myDebates.setOptedIn}
-                        approving={debateSheet.approving}
-                        onStarted={() => {
-                            // The debate now runs in the thread; its card has done its job.
-                            if (debateSheet.messageId) updateMessage(debateSheet.messageId, {cardsDismissed: true});
-                            setDebateSheet(null);
-                            scrollToLatest("smooth");
-                        }}
-                        onClose={() => setDebateSheet(null)}
-                    />
-                ) : null}
+                {debateNarrow ? debateSetup("sheet") : null}
                 {reportTarget ? (
                     <AskReportSheet
                         labels={{
@@ -2541,7 +2576,6 @@ function ChatOfferCard({
     onSkip,
     onTrials,
     debateOffered,
-    notNowLabel,
     onDebate
 }: {
     card: AskChatCard;
@@ -2553,36 +2587,34 @@ function ChatOfferCard({
     onTakeWarmup: () => void;
     onSkip: () => void;
     onTrials: (highlight: StepFrequency | null) => void;
-    /** 3.2 Debates: the Power is earned and the server has Debates on. */
+    /** 3.2 Debates: the Power is earned, the server has Debates on, and the setup is not open under this reply. */
     debateOffered: boolean;
-    notNowLabel: string;
     onDebate: () => void;
 }) {
     const shell = "-mx-4 mt-3 flex flex-col gap-2.5 border-y border-white/[0.1] bg-white/[0.03] px-4 py-3.5";
     if (card.kind === "debate") {
-        // Offered once, never pushed: "Not now" puts it away.
+        // The animal asked in its own words (SPEC section 6): never a card or a
+        // fixed line, only the two quick replies under its message. "Not now"
+        // puts them away; the server will not offer again for this problem.
         if (!debateOffered) return null;
         return (
-            <section className={shell} aria-label={words.debate.start} data-testid="debate-card">
-                <p className="text-sm leading-6 text-white">{words.debate.offer}</p>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        onClick={onDebate}
-                        disabled={disabled}
-                        className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
-                    >
-                        {words.debate.start}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onSkip}
-                        className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
-                    >
-                        {notNowLabel}
-                    </button>
-                </div>
-            </section>
+            <div className="mt-2.5 flex flex-wrap gap-2 pl-[38px]" data-testid="debate-quick-replies">
+                <button
+                    type="button"
+                    onClick={onDebate}
+                    disabled={disabled}
+                    className="inline-flex min-h-9 items-center rounded-full border border-primary-300/40 bg-primary-400/[0.12] px-4 text-xs font-bold text-primary-100 transition-colors hover:bg-primary-400/20 disabled:opacity-50"
+                >
+                    {words.debate.yes}
+                </button>
+                <button
+                    type="button"
+                    onClick={onSkip}
+                    className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
+                >
+                    {words.debate.notNow}
+                </button>
+            </div>
         );
     }
     if (card.kind === "training") {

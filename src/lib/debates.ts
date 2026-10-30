@@ -480,6 +480,33 @@ export function canHealHeart(hearts: number | null | undefined, credits: number 
     return {can: true, reason: null};
 }
 
+/**
+ * The suggestions to pre-select (SPEC section 6): the ones marked "Fits this
+ * best", best first, at most `max`, never two of one species.
+ */
+export function suggestedDebatePicks(candidates: DebateCandidate[], max = DEBATE_MAX_PICKS): string[] {
+    const species = new Set<string>();
+    const picks: string[] = [];
+    for (const candidate of candidates) {
+        if (!candidate.fits || picks.length >= max) continue;
+        if (candidate.speciesProfileId && species.has(candidate.speciesProfileId)) continue;
+        if (candidate.speciesProfileId) species.add(candidate.speciesProfileId);
+        picks.push(candidate.captureId);
+    }
+    return picks;
+}
+
+/**
+ * A call turn's `done.debate_request: {problem}` (SPEC section 6): they said
+ * yes on the call to hearing other animals; the problem in one line, from
+ * their side. Null when there is none.
+ */
+export function debateRequestProblem(raw: unknown): string | null {
+    const row = object(raw);
+    const problem = row && typeof row.problem === "string" ? row.problem.replace(/\s+/g, " ").trim().slice(0, DEBATE_PROBLEM_MAX) : "";
+    return problem || null;
+}
+
 // MARK: - The thread and the feed
 
 /** Its turns as the thread shows them: open, then react, then close, each in seat order within the round. */

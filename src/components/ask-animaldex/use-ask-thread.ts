@@ -10,6 +10,7 @@
  * in the thread.
  */
 
+import {debateRequestProblem} from "@/lib/debates";
 import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {askConversationHistory} from "@/lib/ask-animaldex/grounding";
@@ -212,6 +213,8 @@ type StreamEvent = {
     credit_cost?: number | null;
     credit_balance?: number | null;
     credit_overflow?: AskCreditOverflow;
+    /** A call turn where they said yes to hearing other animals (3.2 Debates, SPEC section 6). */
+    debate_request?: unknown;
     /** The companion loop after this reply, on the owner's own chat (decoded tolerantly). */
     companion?: unknown;
     /** The bond on the owner's own chat: the stage, the level, its strands. */
@@ -291,6 +294,12 @@ export function useAskThread(params: {
     onCompanion?: (update: AskCompanionUpdate) => void;
     /** `done.bond` on the owner's own chat, raw (the drawer decodes it). */
     onBond?: (raw: unknown) => void;
+    /**
+     * 3.2 Debates: a call turn's `done.debate_request.problem`, when they said
+     * yes on the call to hearing other animals. The chat sets the debate up
+     * once the call is over.
+     */
+    onDebateRequest?: (problem: string) => void;
     onAnswered?: (info: {question: string; followUps: number}) => void;
     onFailed?: (reason: string) => void;
 }) {
@@ -570,6 +579,8 @@ export function useAskThread(params: {
                 }
                 if (event.done) {
                     didFinish = true;
+                    const request = options.onCallEvent ? debateRequestProblem(event.debate_request) : null;
+                    if (request) callbacks.current.onDebateRequest?.(request);
                     const split = splitStreamedReply(answer);
                     const offers = offersFor(
                         event.follow_up_prompts?.length ? event.follow_up_prompts : split.followUps,

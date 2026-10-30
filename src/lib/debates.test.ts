@@ -3,6 +3,8 @@ import test from "node:test";
 import {COMPANION_WORDS_EN, companionWords} from "@/lib/companion-bond";
 import {
     canHealHeart,
+    debateRequestProblem,
+    suggestedDebatePicks,
     debateIsMine,
     debateOpenings,
     debateProblemCode,
@@ -21,7 +23,7 @@ import {
     splitMyDebates,
     type Debate
 } from "@/lib/debates";
-import {debateCast, debateHeadline, debateProblemText, debateResultLines, debateStakeNote, debateStatusText, debateVotesText} from "@/lib/debate-words";
+import {debateCast, debateHeadline, debateLine, debateProblemText, debateResultLines, debateStakeNote, debateStatusText, debateVotesText} from "@/lib/debate-words";
 
 const DEBATE = "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 const HOST = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
@@ -292,4 +294,34 @@ test("the server's refusals say themselves", () => {
     assert.equal(debateProblemCode("debate_not_found"), "not_found");
     assert.equal(debateProblemText("animal_unavailable", COMPANION_WORDS_EN), "One of those animals can't join right now. Pick another.");
     assert.equal(debateProblemText("problem_too_short", COMPANION_WORDS_EN), "Say a little more about it: a sentence or two.");
+});
+
+test("the setup pre-selects the suggestions: best first, at most three, one per species", () => {
+    const candidate = (id: string, fits: boolean, species: string | null) => ({
+        captureId: id, ownerIsMe: true, speciesProfileId: species, slug: null, animal: id, nickname: null, powerName: null, powerLesson: null, hearts: 3, fits
+    });
+    assert.deepEqual(suggestedDebatePicks([
+        candidate("a", true, "s1"),
+        candidate("b", false, "s2"),
+        candidate("c", true, "s1"),
+        candidate("d", true, "s3"),
+        candidate("e", true, null),
+        candidate("f", true, "s4")
+    ]), ["a", "d", "e"]);
+    assert.deepEqual(suggestedDebatePicks([candidate("b", false, "s2")]), []);
+});
+
+test("once started, the setup is one line: the animals by name, private or public", () => {
+    const debate = decodeDebate(row({visibility: "private"}))!;
+    assert.equal(debateLine(debate, COMPANION_WORDS_EN, "en"), "Luna and Eurasian Otter: private debate");
+    const three = {...debate, visibility: "public" as const, participants: [...debate.participants, {...debate.participants[1], id: P_THIRD, seat: 2, animal: "Crow"}]};
+    assert.equal(debateLine(three, COMPANION_WORDS_EN, "en"), "Luna, Eurasian Otter, and Crow: public debate");
+    const id = companionWords({debate: {privateLine: "{names}: debat pribadi"}});
+    assert.equal(debateLine(debate, id, "id"), "Luna dan Eurasian Otter: debat pribadi");
+});
+
+test("a call that ended on yes carries the problem for the setup", () => {
+    assert.equal(debateRequestProblem({problem: "  Whether to take\nthe job  "}), "Whether to take the job");
+    assert.equal(debateRequestProblem({problem: ""}), null);
+    assert.equal(debateRequestProblem(null), null);
 });

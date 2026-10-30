@@ -29,7 +29,7 @@ import {
     type DebatePhase,
     type DebateTurn
 } from "@/lib/debates";
-import {debateProblemText, debateStatusText} from "@/lib/debate-words";
+import {debateLine, debateProblemText, debateStatusText} from "@/lib/debate-words";
 import {chooseDebateWay, fetchDebate, noteDebateChanged, useDebateUpdates} from "@/components/debates/use-debates";
 import {DebateFaces, DebateReportBand, DebateTurnRow, DebateVotePanel, TypingDots} from "@/components/debates/debate-views";
 
@@ -324,10 +324,9 @@ export default function DebateThread({
         <div className="flex flex-col gap-3" aria-live="polite">
             <div className={`${bleed} flex items-center gap-2.5 border-y border-white/[0.08] bg-white/[0.025] py-2.5`}>
                 <DebateFaces debate={debate} size={24} />
+                {/* Started, the setup is one line: "Luna, Pip and Bruno: private debate" (SPEC section 6). */}
                 <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-primary-200/85">
-                        {debate.visibility === "public" ? words.debate.public : words.debate.private}
-                    </span>
+                    <span className="block text-[12px] font-bold leading-4 text-white">{debateLine(debate, words, locale)}</span>
                     <span className="block truncate text-[11px] font-semibold text-white/55">{status}</span>
                 </span>
             </div>

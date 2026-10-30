@@ -2649,7 +2649,12 @@
       "won": "Cara {name} menang. +{credits} Kredit",
       "lost": "{name} kehilangan satu hati.",
       "draw": "Suara yang masuk tidak cukup. Tidak ada hati atau Kredit yang berpindah.",
-      "cantVoteOwn": "Anda tidak bisa memilih di debat yang Anda ikuti."
+      "cantVoteOwn": "Anda tidak bisa memilih di debat yang Anda ikuti.",
+      "yes": "Ya, bandingkan",
+      "notNow": "Nanti saja",
+      "privateLine": "{names}: debat pribadi",
+      "publicLine": "{names}: debat publik",
+      "fromCall": "Dari panggilan Anda"
     },
     "roster": {
       "optIn": "Izinkan hewan saya ikut debat publik",
@@ -2706,6 +2711,8 @@
       "choosing": "Membuka obrolan…",
       "getCredits": "Dapatkan Kredit",
       "tryAgain": "Coba lagi",
+      "edit": "Ubah",
+      "keepPrivate": "Tetap pribadi saja",
       "tryOwnWayMessage": "Aku akan mencoba caramu.",
       "problems": {
         "signIn": "Masuk untuk memulai debat.",

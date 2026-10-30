@@ -201,7 +201,13 @@ export const DEBATE_COPY = {
     won: "{name}'s way won. +{credits} Credits",
     lost: "{name} lost a heart.",
     draw: "Not enough votes came in. No hearts or Credits moved.",
-    cantVoteOwn: "You can't vote on a debate you're in."
+    cantVoteOwn: "You can't vote on a debate you're in.",
+    // SPEC section 6 (owner, 2026-10-30): the offer is the animal's own words; these are the app's.
+    yes: "Yes, compare",
+    notNow: "Not now",
+    privateLine: "{names}: private debate",
+    publicLine: "{names}: public debate",
+    fromCall: "From your call"
 } as const;
 
 export const ROSTER_COPY = {
@@ -262,6 +268,8 @@ export const DEBATE_WEB_COPY = {
     choosing: "Opening the chat…",
     getCredits: "Get Credits",
     tryAgain: "Try again",
+    edit: "Edit",
+    keepPrivate: "Keep it private",
     tryOwnWayMessage: "I'll try your way.",
     problems: {
         signIn: "Sign in to start a debate.",
