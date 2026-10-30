@@ -196,7 +196,9 @@ export const YOUR_STEP_COPY = {
  */
 export const DEBATE_COPY = {
     offer: "Want to hear how other animals would handle this?",
-    start: "Compare with other animals",
+    /** One name for it everywhere (newcomer UX vet, 2026-10-30, P1-5); was "Compare with other animals". */
+    start: "Start a debate",
+    startNote: "See how other animals would handle it.",
     private: "Private",
     privateNote: "With your own animals. Only you see it.",
     public: "Public",
@@ -232,7 +234,8 @@ export const DEBATE_COPY = {
 export const ROSTER_COPY = {
     optIn: "Let my animals join public debates",
     optInNote: "Only animals with their Power earned. Each debate puts 1 heart on it, and a winning animal earns you Credits.",
-    offRoster: "Out of hearts. Heal it to join debates again."
+    /** Newcomer UX vet (2026-10-30, P1-5): says what healing costs and where, away from the card. */
+    offRoster: "Out of hearts. Heal a heart for 5 Credits on its card."
 } as const;
 
 export const HEAL_COPY = {
@@ -250,14 +253,15 @@ export const DEBATE_WEB_COPY = {
     open: "Open",
     past: "Past",
     empty: "No debates yet",
-    emptyBody: "Bring a real problem to one of your animals. Once its Power is earned, it can ask other animals how they'd handle it.",
+    emptyBody: "Debates start in a chat, once an animal's Power is yours. Bring it a problem, and when it offers to compare, say yes.",
+    goToCompanions: "Go to Companions",
     withAnimal: "Debates this animal was in",
     withAnimalEmpty: "It hasn't been in a debate yet.",
     problem: "The problem",
     problemPlaceholder: "What would you like the animals to weigh in on?",
     picked: "{n} of 3",
     loadingAnimals: "Finding animals…",
-    noOwnAnimals: "Catch another animal to compare with it.",
+    noOwnAnimals: "Private debates use your own animals. Capture another, or go public.",
     noRoster: "No animals are on the public roster right now. Private works any time.",
     writingPublic: "Writing the public version…",
     starting: "Starting…",
@@ -276,13 +280,16 @@ export const DEBATE_WEB_COPY = {
     reportTryFirst: "What to try first",
     reportWriting: "Writing the report…",
     signInToVote: "Sign in to vote",
-    ineligible: "Votes come from accounts at least a week old with a public capture.",
+    ineligible: "You can vote once your account is a week old and has a public capture.",
     openDebate: "Open the debate",
     yourDebate: "Your debate",
     seeAll: "See all",
     rosterOn: "In public debates",
     rosterNeedsPower: "Finish one step with {name} to put it in public debates.",
     healing: "Healing…",
+    /** On its own card, beside the heal button. */
+    outOfHearts: "Out of hearts.",
+    heal: "Heal",
     hearts: "{n} of 3 hearts",
     choosing: "Opening the chat…",
     getCredits: "Get Credits",
@@ -302,7 +309,7 @@ export const DEBATE_WEB_COPY = {
         animalUnavailable: "One of those animals can't join right now. Pick another.",
         draftSlow: "The public version is taking a while. Try again in a little while.",
         dailyLimit: "That's all the debates you can start today.",
-        notEligible: "Votes come from accounts at least a week old with a public capture.",
+        notEligible: "You can vote once your account is a week old and has a public capture.",
         votingClosed: "Voting has closed.",
         notFound: "That debate isn't available.",
         noCredits: "You need 5 Credits to heal a heart.",

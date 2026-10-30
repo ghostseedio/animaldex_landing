@@ -3,9 +3,9 @@
 /**
  * The card's hearts (docs/debates/SPEC.md, sections 1.8 and 4), where the
  * battle tools were, on the owner's own card: the animal's 3 hearts, "Heal
- * a heart: 5 Credits" any time below 3, "All 3 hearts" or "Out of hearts.
- * Heal it to join debates again.", the public roster opt-in (the same switch
- * as Settings, off by default) and the debates it was in. The stats stay
+ * a heart: 5 Credits" any time below 3, "All 3 hearts" or "Out of hearts."
+ * beside that button, the public roster opt-in (the same switch as
+ * Settings, off by default) and the debates it was in. The stats stay
  * where they are.
  */
 
@@ -46,7 +46,8 @@ export default function HeartsBand({captureId, hearts: initialHearts, powerEarne
     const [problem, setProblem] = useState<{text: string; credits: boolean} | null>(null);
     const [savingRoster, setSavingRoster] = useState(false);
     const heal = canHealHeart(hearts, null);
-    const status = hearts <= 0 ? words.roster.offRoster : hearts >= DEBATE_MAX_HEARTS ? words.heal.full : null;
+    // Out of hearts, the heal button is right here: no need to say where (newcomer UX vet, P1-5).
+    const status = hearts <= 0 ? words.debateWeb.outOfHearts : hearts >= DEBATE_MAX_HEARTS ? words.heal.full : null;
     const web = words.debateWeb;
 
     const healOne = () => {

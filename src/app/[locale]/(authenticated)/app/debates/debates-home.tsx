@@ -26,7 +26,7 @@ export default function DebatesHome({initialDebates, words}: {initialDebates: De
                     <p className="font-display text-xl font-black text-white">{web.empty}</p>
                     <p className="text-sm leading-6 text-white/60">{web.emptyBody}</p>
                     <Link href="/app/companions" className="mt-2 inline-flex min-h-11 items-center rounded-full bg-primary-400 px-5 text-sm font-black text-black hover:bg-primary-300">
-                        {words.list.title}
+                        {web.goToCompanions}
                     </Link>
                 </div>
             ) : null}

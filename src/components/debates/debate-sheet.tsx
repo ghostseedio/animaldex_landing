@@ -17,6 +17,7 @@
  */
 
 import {useCallback, useEffect, useMemo, useState} from "react";
+import Link from "@/app/[locale]/_components/link";
 import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {fillWords, type CompanionWords} from "@/lib/companion-bond";
@@ -389,7 +390,13 @@ export default function DebateSetup({
             ) : null}
 
             {publicBlocker ? (
-                <p className={`${rule} ${pad} py-3.5 text-sm leading-6 text-white/70`}>{publicBlocker}</p>
+                <p className={`${rule} ${pad} py-3.5 text-sm leading-6 text-white/70`}>
+                    {publicBlocker}
+                    {/* Out of hearts: heal on its card, where the hearts are (newcomer UX vet, P1-5). */}
+                    {publicBlocker === words.roster.offRoster ? (
+                        <> <Link href={`/app/capture/${encodeURIComponent(host.captureId)}?tab=stats`} className="font-bold text-primary-200 underline-offset-2 hover:underline">{web.heal}</Link></>
+                    ) : null}
+                </p>
             ) : (
                 <>
                     {visibility === "public" && optedIn === false ? (
@@ -521,7 +528,10 @@ export default function DebateSetup({
         return (
             <section aria-label={words.debate.start} data-testid="debate-setup" className="-mx-4 mt-3 border-y border-primary-300/25 bg-white/[0.035]">
                 <header className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-2.5">
-                    <p className="min-w-0 flex-1 truncate text-[11px] font-black uppercase tracking-[0.13em] text-primary-300">{words.debate.start}</p>
+                    <p className="min-w-0 flex-1 truncate text-[11px] font-black uppercase tracking-[0.13em] text-primary-300">
+                        {words.debate.start}
+                        <span className="ml-2 font-semibold normal-case tracking-normal text-white/55">{words.debate.startNote}</span>
+                    </p>
                     <button type="button" onClick={close} aria-label={closeLabel} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/60 hover:bg-white/8 hover:text-white">✕</button>
                 </header>
                 {body}
@@ -537,7 +547,10 @@ export default function DebateSetup({
         <div role="dialog" aria-modal="true" aria-label={words.debate.start} className="fixed inset-0 z-[72] flex items-end justify-center bg-black/70 md:items-center">
             <div className="flex max-h-[92dvh] w-full max-w-lg flex-col border-t border-white/12 bg-canvas-950 md:border">
                 <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-5 py-3.5">
-                    <h2 className="min-w-0 flex-1 font-display text-lg font-black text-white">{words.debate.start}</h2>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="font-display text-lg font-black text-white">{words.debate.start}</h2>
+                        <p className="text-xs leading-5 text-white/55">{words.debate.startNote}</p>
+                    </div>
                     <button
                         type="button"
                         onClick={close}

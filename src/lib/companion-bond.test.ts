@@ -183,7 +183,9 @@ test("the 3.2 words are the SPEC's, word for word, and none of the retired ones 
 
 test("the Debates words are the SPEC's, word for word, and no battle word is left", () => {
     assert.equal(DEBATE_COPY.offer, "Want to hear how other animals would handle this?");
-    assert.equal(DEBATE_COPY.start, "Compare with other animals");
+    // One name for it (newcomer UX vet, 2026-10-30, P1-5).
+    assert.equal(DEBATE_COPY.start, "Start a debate");
+    assert.equal(DEBATE_COPY.startNote, "See how other animals would handle it.");
     assert.equal(DEBATE_COPY.privateNote, "With your own animals. Only you see it.");
     assert.equal(DEBATE_COPY.publicNote, "Animals from other people join, and the community votes.");
     assert.equal(fillWords(DEBATE_COPY.stakeNote, {credits: 4}), "Each animal puts 1 heart on it. The winner's owner gets 4 Credits.");
@@ -200,7 +202,7 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(fillWords(DEBATE_COPY.publicLine, {names: "Luna and Pip"}), "Luna and Pip: public debate");
     assert.equal(DEBATE_COPY.fromCall, "From your call");
     assert.equal(ROSTER_COPY.optIn, "Let my animals join public debates");
-    assert.equal(ROSTER_COPY.offRoster, "Out of hearts. Heal it to join debates again.");
+    assert.equal(ROSTER_COPY.offRoster, "Out of hearts. Heal a heart for 5 Credits on its card.");
     assert.equal(HEAL_COPY.one, "Heal a heart: 5 Credits");
     assert.equal(HEAL_COPY.full, "All 3 hearts");
     assert.equal(COMPANION_WORDS_EN.debates.tab, "Debates");
