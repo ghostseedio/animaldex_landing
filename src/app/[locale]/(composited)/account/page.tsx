@@ -87,6 +87,9 @@ export default async function AccountPage({params, searchParams}: AccountPagePro
                     downloadPrompt: t("downloadPrompt"),
                     downloadApp: t("downloadApp"),
                     loginFormTitle: t("loginFormTitle"),
+                    termsLine: t("termsLine"),
+                    termsLink: t("termsLink"),
+                    privacyLink: t("privacyLink"),
                     continueWithGoogle: t("continueWithGoogle"),
                     continueWithApple: t("continueWithApple"),
                     emailSeparator: t("emailSeparator")

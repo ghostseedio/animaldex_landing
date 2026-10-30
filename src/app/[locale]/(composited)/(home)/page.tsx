@@ -8,11 +8,10 @@ import HomeFeatureCaptureCard from "@/app/[locale]/(composited)/(home)/_componen
 import FeaturesOverview from "@/app/[locale]/(composited)/(home)/_components/features-overview";
 import HomeArchiveModule from "@/app/[locale]/(composited)/(home)/_components/home-archive-module";
 import FaqSection from "@/app/[locale]/(composited)/(home)/_components/faq-section";
-import Phone from "@/app/[locale]/(composited)/(home)/_components/phone";
+import HomeChatStill from "@/app/[locale]/(composited)/(home)/_components/home-chat-still";
 import {checkedIcons} from "@/loaders/icons";
 import {animalSilhouetteImages} from "@/data/animal-silhouettes";
 import Marquee from "@/app/[locale]/_components/marquee";
-import {default as phone} from "@/data/phone.json";
 import {default as features} from "@/data/features.json";
 import {default as moreFeatures} from "@/data/more.json";
 import {default as splashes} from "@/data/splashes.json";
@@ -36,6 +35,9 @@ import {RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 
 const heroBackgroundImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
+
+/** The animal in the home page's chat still, and where "Try talking to one now" opens its chat. */
+const HOME_CHAT_ANIMAL = {slug: "common-octopus", image: "/images/welcome/common-octopus.webp"};
 
 const heroLaurelWreathImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/laurel-wreath-ede0a9b0-7b2e-45c3-a4fa-12bf9615c29d.webp";
@@ -315,22 +317,18 @@ export default async function Home({params}: HomePageProps) {
                 id="top"
             >
                 <div className="relative z-10 flex flex-col items-center text-center lg:-ml-3 lg:items-start lg:text-left xl:-ml-5">
-                    <h1 className="font-display font-extrabold uppercase leading-[0.88] tracking-tight text-white">
-                        <span className="block text-5xl sm:text-6xl lg:text-7xl xl:text-[5.5rem]">{t("headlineCollectThe")}</span>
+                    {/* Newcomer UX vet (2026-10-30, P0-4): what is special, first. */}
+                    <h1 className="font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white">
+                        <span className="block text-5xl sm:text-6xl lg:text-[4.25rem] xl:text-[5rem]">{t("heroTalkLead")}</span>
                         <span
-                            className="hero-wild-textured mt-0 block text-[5.75rem] font-semibold leading-[0.78] sm:text-[7.5rem] lg:text-[9.5rem] xl:text-[11.5rem]"
+                            className="hero-wild-textured mt-1 block text-6xl font-semibold leading-[0.85] sm:text-7xl lg:text-[5.5rem] xl:text-[6.75rem]"
                             style={{"--hero-wild-texture": `url(${heroBackgroundImage})`} as React.CSSProperties}
                         >
-                            {t("headlineWild")}
+                            {t("heroTalkAccent")}
                         </span>
                     </h1>
-                    <p className="mt-5 font-display text-2xl font-bold uppercase tracking-[0.04em] text-white sm:text-3xl">
-                        {t("headlineBuildYour")}
-                        <span className="italic">{t("headlineAnimal")}</span>
-                        <span className="italic text-primary-200">{t("headlineDex")}</span>
-                    </p>
-                    <p className="mt-5 max-w-lg text-base font-medium leading-7 text-white md:text-lg md:leading-8">
-                        {t("description")}
+                    <p className="mt-6 max-w-lg text-lg font-medium leading-8 text-white md:text-xl md:leading-9">
+                        {t("heroSubhead")}
                     </p>
                     <div className="mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
                         {downloadStoreLinks.map(({name}) => {
@@ -374,6 +372,13 @@ export default async function Home({params}: HomePageProps) {
                             );
                         })}
                     </div>
+                    {/* A quiet way in before installing anything: the animal's own chat, open to anyone. */}
+                    <Link
+                        href={`/animals/${HOME_CHAT_ANIMAL.slug}?talk=1`}
+                        className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary-200 underline-offset-4 transition-colors hover:text-white hover:underline"
+                    >
+                        {t("heroTryTalking")} <span aria-hidden="true">→</span>
+                    </Link>
                     <div className="mt-10 flex w-full max-w-xl items-stretch justify-center lg:justify-start">
                         {downloadHeroStats.map((item, index) => (
                             <div
@@ -397,25 +402,22 @@ export default async function Home({params}: HomePageProps) {
                         ))}
                     </div>
                 </div>
-                <div className="relative z-10 flex min-h-[26rem] w-full items-center justify-center sm:min-h-[30rem] lg:min-h-[34rem] xl:min-h-[38rem]">
-                    <div className="pointer-events-none absolute left-[calc(50%-1.75rem)] top-1/2 w-[430px] origin-center [transform-style:preserve-3d] [perspective:1600px] [transform:translate3d(-50%,-50%,0)_scale(0.5)] sm:[transform:translate3d(-50%,-50%,0)_scale(0.6)] lg:[transform:translate3d(-50%,-50%,0)_scale(0.64)] xl:[transform:translate3d(-50%,-50%,0)_scale(0.7)]">
-                        <Phone
-                            data={
-                                phone.elements.map((item) => ({
-                                    ...item,
-                                    src: localisePath(item.src, locale),
-                                    alt: t('phone.' + item.id)
-                                }))
-                            }
-                            phone={{
-                                src: localisePath(phone.phone, locale),
-                                alt: t('phone.phone'),
-                                width: phone.phoneWidth,
-                                height: phone.phoneHeight,
-                                className: "mx-auto"
-                            }}
-                        />
-                    </div>
+                <div className="relative z-10 flex w-full items-center justify-center pb-10 lg:pb-0">
+                    <HomeChatStill
+                        image={HOME_CHAT_ANIMAL.image}
+                        words={{
+                            label: t("chatStill.label"),
+                            animal: t("chatStill.animal"),
+                            power: t("chatStill.power"),
+                            you: t("chatStill.you"),
+                            reply: t("chatStill.reply"),
+                            stepLabel: t("chatStill.stepLabel"),
+                            step: t("chatStill.step"),
+                            accept: t("chatStill.accept"),
+                            other: t("chatStill.other"),
+                            caption: t("chatStill.caption")
+                        }}
+                    />
                 </div>
                 <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 w-full max-w-xl -translate-x-1/2 px-4 opacity-90 sm:bottom-4 lg:bottom-6">
                     <div className="relative mx-auto w-full max-w-[18rem] sm:max-w-[21rem] md:max-w-[24rem]">

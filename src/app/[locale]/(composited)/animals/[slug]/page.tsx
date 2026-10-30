@@ -16,6 +16,7 @@ import SpeciesEncyclopediaAnalytics from "@/app/[locale]/(composited)/animals/[s
 import SpeciesAtAGlanceCard from "@/app/[locale]/(composited)/animals/[slug]/species-at-a-glance";
 import SpeciesUnderstandGuide, {type UnderstandGuideSection} from "@/app/[locale]/(composited)/animals/[slug]/species-understand-guide";
 import SpeciesAnimalPowerGuide from "@/app/[locale]/(composited)/animals/[slug]/species-animal-power-guide";
+import SpeciesTalkOnArrival from "@/app/[locale]/(composited)/animals/[slug]/species-talk-on-arrival";
 import SpeciesAskAnimalDex from "@/app/[locale]/(composited)/animals/[slug]/species-ask-animaldex";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
@@ -1361,6 +1362,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 summary={entry.analysis.summary}
                 avatarUrl={getSpeciesImageRoute(entry.slug)}
             />
+            {/* "Try talking to one now" (home, signed-out web app): ?talk=1 opens its chat. */}
+            <SpeciesTalkOnArrival />
 
             <SpeciesAskAnimalDex
                 slug={entry.slug}

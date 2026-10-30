@@ -15,6 +15,10 @@ type AccountLoginFormProps = {
         downloadPrompt: string;
         downloadApp: string;
         loginFormTitle: string;
+        /** "By creating an account, you agree to AnimalDex's {terms} and {privacy}." */
+        termsLine: string;
+        termsLink: string;
+        privacyLink: string;
         continueWithGoogle: string;
         continueWithApple: string;
         emailSeparator: string;
@@ -31,6 +35,20 @@ function FieldIcon({path}: {path: string}) {
         <svg aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-ink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path d={path} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
+    );
+}
+
+/** The Terms line with its two links in place of `{terms}` and `{privacy}`. */
+function TermsLine({template, termsLink, privacyLink}: {template: string; termsLink: string; privacyLink: string}) {
+    const linkClass = "font-semibold text-ink-200 underline underline-offset-2 transition-colors hover:text-primary-100";
+    return (
+        <p className="text-xs leading-5 text-ink-400">
+            {template.split(/(\{terms\}|\{privacy\})/).map((part, index) => part === "{terms}" ? (
+                <Link key={index} href="/legal/terms" className={linkClass}>{termsLink}</Link>
+            ) : part === "{privacy}" ? (
+                <Link key={index} href="/legal/privacy" className={linkClass}>{privacyLink}</Link>
+            ) : part)}
+        </p>
     );
 }
 
@@ -225,6 +243,9 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                     >
                         {isSubmitting ? labels.loading : labels.submit}
                     </button>
+
+                    {/* Google and Apple create an account on first use, so the Terms line is for everyone here. */}
+                    <TermsLine template={labels.termsLine} termsLink={labels.termsLink} privacyLink={labels.privacyLink} />
                 </div>
 
                 <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line-300 px-6 py-5 sm:px-8">
