@@ -172,6 +172,116 @@ export const YOUR_STEP_COPY = {
     }
 } as const;
 
+/**
+ * AnimalDex 3.2 Debates (docs/debates/SPEC.md, section 2), replacing
+ * Comparison Battles: word for word the same on iOS, Android and the web. The
+ * SPEC's `debate.offer` is `debate.offer` here, `roster.optIn` is
+ * `roster.optIn`, `heal.one` is `heal.one` and `debates.tab` is
+ * `debates.tab`.
+ */
+export const DEBATE_COPY = {
+    offer: "Want to hear how other animals would handle this?",
+    start: "Compare with other animals",
+    private: "Private",
+    privateNote: "With your own animals. Only you see it.",
+    public: "Public",
+    publicNote: "Animals from other people join, and the community votes.",
+    pickAnimals: "Pick up to 3 animals",
+    suggested: "Fits this best",
+    publicText: "This is what people will see",
+    publicTextNote: "Names and details are left out. Change anything you like.",
+    approve: "Post the debate",
+    stakeNote: "Each animal puts 1 heart on it. The winner's owner gets {credits} Credits.",
+    notPublic: "This one stays private. It's too personal to post.",
+    begin: "Start the debate",
+    reportTitle: "Debate report",
+    tryWay: "Try {name}'s way",
+    catchToEarn: "Catch a {species} to earn its Power.",
+    voteQuestion: "Which animal has the best way for this?",
+    vote: "Vote",
+    voted: "You voted",
+    votesCount: "{n} votes",
+    rollover: "Not enough votes yet. Voting stays open another day.",
+    won: "{name}'s way won. +{credits} Credits",
+    lost: "{name} lost a heart.",
+    draw: "Not enough votes came in. No hearts or Credits moved.",
+    cantVoteOwn: "You can't vote on a debate you're in."
+} as const;
+
+export const ROSTER_COPY = {
+    optIn: "Let my animals join public debates",
+    optInNote: "Only animals with their Power earned. Each debate puts 1 heart on it, and a winning animal earns you Credits.",
+    offRoster: "Out of hearts. Heal it to join debates again."
+} as const;
+
+export const HEAL_COPY = {
+    title: "Hearts",
+    one: "Heal a heart: 5 Credits",
+    full: "All 3 hearts"
+} as const;
+
+/**
+ * Web only: the lines the SPEC leaves to each app (the Debates page, the
+ * report's parts, a debate's state) and the RPCs' refusals said calmly.
+ */
+export const DEBATE_WEB_COPY = {
+    myDebates: "My debates",
+    open: "Open",
+    past: "Past",
+    empty: "No debates yet",
+    emptyBody: "Bring a real problem to one of your animals. Once its Power is earned, it can ask other animals how they'd handle it.",
+    withAnimal: "Debates this animal was in",
+    withAnimalEmpty: "It hasn't been in a debate yet.",
+    problem: "The problem",
+    problemPlaceholder: "What would you like the animals to weigh in on?",
+    picked: "{n} of 3",
+    loadingAnimals: "Finding animals…",
+    noOwnAnimals: "Catch another animal to compare with it.",
+    noRoster: "No animals are on the public roster right now. Private works any time.",
+    writingPublic: "Writing the public version…",
+    starting: "Starting…",
+    posting: "Posting…",
+    statusApproving: "Waiting for you to approve the public text",
+    statusDebating: "The animals are talking it over",
+    statusReporting: "Writing the report",
+    statusVoting: "Voting is open",
+    statusDone: "Report ready",
+    wonBy: "{name}'s way won.",
+    reportProblem: "The problem",
+    reportWay: "Its way",
+    reportLesson: "The lesson behind it",
+    reportFits: "Where it fits",
+    reportCosts: "What it costs",
+    reportTryFirst: "What to try first",
+    reportWriting: "Writing the report…",
+    signInToVote: "Sign in to vote",
+    ineligible: "Votes come from accounts at least a week old with a public capture.",
+    openDebate: "Open the debate",
+    yourDebate: "Your debate",
+    seeAll: "See all",
+    rosterOn: "In public debates",
+    rosterNeedsPower: "Finish one step with {name} to put it in public debates.",
+    healing: "Healing…",
+    hearts: "{n} of 3 hearts",
+    choosing: "Opening the chat…",
+    problems: {
+        signIn: "Sign in to start a debate.",
+        off: "Debates are paused for now.",
+        powerNotEarned: "Earn its Power first: finish one step with it.",
+        noHearts: "It's out of hearts. Heal it to start a public debate.",
+        notOptedIn: "Turn on public debates in Settings first.",
+        alreadyInDebate: "One of those animals is already in an open public debate.",
+        pickOne: "Pick at least one animal.",
+        dailyLimit: "That's all the debates you can start today.",
+        notEligible: "Votes come from accounts at least a week old with a public capture.",
+        votingClosed: "Voting has closed.",
+        notFound: "That debate isn't available.",
+        noCredits: "You need 5 Credits to heal a heart.",
+        textTooLong: "Keep it to 400 characters.",
+        generic: "That didn't go through. Try again in a moment."
+    }
+} as const;
+
 /** Word for word with iOS and Android (SPEC "Phase 4"). */
 export const COMPANIONS_COPY = {
     title: "Companions",
@@ -193,7 +303,7 @@ export const COMPANIONS_COPY = {
 export type BondStageKey = "met" | "getting_to_know_you" | "working_together" | "long_standing" | "trusted" | "mastered";
 
 /**
- * Every word the Companions tab, the bond screens and the group picker show,
+ * Every word the Companions tab, the bond screens and the debates show,
  * in English. The site's label files carry the same keys under `companions`
  * (en.json, id.json); `companionWords` lays a locale's over these, so a key
  * a locale lacks still reads, in English.
@@ -218,6 +328,16 @@ export const COMPANION_WORDS_EN = {
     },
     /** 3.2 "Your step": the step card, the report, the record, the Warmup and the Trials. */
     journey: YOUR_STEP_COPY,
+    /** 3.2 Debates: the chat's debate, the sheet, the report, the vote. */
+    debate: DEBATE_COPY,
+    /** The public roster opt-in (Settings) and its status. */
+    roster: ROSTER_COPY,
+    /** Hearts, healed 5 Credits a heart. */
+    heal: HEAL_COPY,
+    /** Explore's Debates and the card's tab. */
+    debates: {tab: "Debates"},
+    /** The web's own Debates lines. */
+    debateWeb: DEBATE_WEB_COPY,
     /** The Companions tab's own parts: an animal's messages, muted or not. */
     tab: {
         unread: "{n} unread",
@@ -244,13 +364,13 @@ export const COMPANION_WORDS_EN = {
         example: "e.g. Luna",
         leaveBlank: "Leave blank to show the identified animal name."
     },
-    /** The group picker (iOS AnimalGroupCapturePicker): a second card of a species already picked. */
+    /** The debate picker: a second card of a species already in it. */
     picker: {
         alreadyHere: "Already here",
         alreadyHereHint: "One of this species is already in the group"
     },
-    /** Your own card's tabs: About · Bond · Battle. */
-    card: {about: "About", bond: "Bond", battle: "Battle"},
+    /** Your own card's tabs: About · Bond · Debates (3.2: the Battle tab is the hearts band and its debates). */
+    card: {about: "About", bond: "Bond", battle: "Battle", debates: "Debates"},
     /** "Luna the Gray Wolf" (iOS "%@ the %@"). */
     displayName: "{nickname} the {animal}"
 };

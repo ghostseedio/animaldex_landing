@@ -6,6 +6,9 @@ import {fileURLToPath} from "node:url";
 import {
     BOND_COPY,
     COMPANIONS_COPY,
+    DEBATE_COPY,
+    HEAL_COPY,
+    ROSTER_COPY,
     COMPANION_WORDS_EN,
     bondChipText,
     bondStageText,
@@ -178,11 +181,35 @@ test("the 3.2 words are the SPEC's, word for word, and none of the retired ones 
     }
 });
 
+test("the Debates words are the SPEC's, word for word, and no battle word is left", () => {
+    assert.equal(DEBATE_COPY.offer, "Want to hear how other animals would handle this?");
+    assert.equal(DEBATE_COPY.start, "Compare with other animals");
+    assert.equal(DEBATE_COPY.privateNote, "With your own animals. Only you see it.");
+    assert.equal(DEBATE_COPY.publicNote, "Animals from other people join, and the community votes.");
+    assert.equal(fillWords(DEBATE_COPY.stakeNote, {credits: 4}), "Each animal puts 1 heart on it. The winner's owner gets 4 Credits.");
+    assert.equal(DEBATE_COPY.notPublic, "This one stays private. It's too personal to post.");
+    assert.equal(fillWords(DEBATE_COPY.tryWay, {name: "Leo"}), "Try Leo's way");
+    assert.equal(fillWords(DEBATE_COPY.catchToEarn, {species: "Gray Wolf"}), "Catch a Gray Wolf to earn its Power.");
+    assert.equal(fillWords(DEBATE_COPY.won, {name: "Leo", credits: 9}), "Leo's way won. +9 Credits");
+    assert.equal(DEBATE_COPY.draw, "Not enough votes came in. No hearts or Credits moved.");
+    assert.equal(DEBATE_COPY.cantVoteOwn, "You can't vote on a debate you're in.");
+    assert.equal(ROSTER_COPY.optIn, "Let my animals join public debates");
+    assert.equal(ROSTER_COPY.offRoster, "Out of hearts. Heal it to join debates again.");
+    assert.equal(HEAL_COPY.one, "Heal a heart: 5 Credits");
+    assert.equal(HEAL_COPY.full, "All 3 hearts");
+    assert.equal(COMPANION_WORDS_EN.debates.tab, "Debates");
+    assert.equal(COMPANION_WORDS_EN.card.debates, "Debates");
+    const said = (value: unknown): string[] => (typeof value === "string" ? [value] : Object.values(value as Record<string, unknown>).flatMap(said));
+    const english = said({debate: DEBATE_COPY, roster: ROSTER_COPY, heal: HEAL_COPY, web: COMPANION_WORDS_EN.debateWeb}).join("\n");
+    for (const retired of ["Battle", "battle", "Opponent", "Rival", "Arena", "Matchup", "Rulebook", "Restore", "stake", "Tier "]) {
+        assert.equal(english.includes(retired), false, retired);
+    }
+});
+
 test("bond copy matches the SPEC word for word", () => {
     assert.equal(BOND_COPY.noFocus.replace("{name}", "Leo"), "Tell Leo what's going on in your life and it will pick something to work on with you.");
     assert.equal(BOND_COPY.livesItsLesson, "You live its lesson.");
     assert.equal(YOUR_STEP_COPY.trial.pickedMessage.replace("{difficulty}", "Easy"), "I'll try your Easy Trial.");
-    assert.equal(YOUR_STEP_COPY.battle.locked.replace("{name}", "Leo"), "Earn Leo's Power to battle with it.");
     assert.equal(COMPANIONS_COPY.empty, "Capture an animal to meet your first companion.");
     assert.equal(COMPANIONS_COPY.masteredCount.replace("{n}", "2"), "2 mastered");
 });
