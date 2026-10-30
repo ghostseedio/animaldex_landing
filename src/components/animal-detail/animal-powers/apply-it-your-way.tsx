@@ -20,6 +20,7 @@ import {
     useAttachedEvidence
 } from "@/components/animal-detail/animal-powers/power-evidence";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {LOCKOUT_COPY} from "@/lib/species-training";
 
 /**
  * The written route to an Animal Power, ported from iOS `ApplyItYourWayView`:
@@ -31,6 +32,10 @@ import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-pow
  * manufactured challenge. The second is arithmetic: 729 species have a Power
  * and no authored Trial, so for those animals this is not an alternative — it
  * is the only way in.
+ *
+ * One attempt a day, as on iOS: the warning is said before sending, and a
+ * rejection (here, or earlier today, `proofLocked`) leaves nothing to send
+ * until tomorrow. Only "needs more" can be edited and sent again.
  */
 
 const NEON = "#A7F432";
@@ -73,7 +78,8 @@ export default function ApplyItYourWay({
     trial = null,
     onFinished,
     onClose,
-    submitApplication
+    submitApplication,
+    proofLocked = false
 }: {
     power: AnimalPower;
     /** The Arena Trial this writing stands in for; null on the Power page. */
@@ -86,6 +92,8 @@ export default function ApplyItYourWay({
     onClose: () => void;
     /** Set for a fused Power: where the application goes instead of the Animal Power route. */
     submitApplication?: ApplicationSubmitter;
+    /** A proof for this Power was rejected earlier today: nothing can be sent until tomorrow. */
+    proofLocked?: boolean;
 }) {
     const [selectedDomain, setSelectedDomain] = useState<SystemDynamicsDomain | null>(null);
     const [account, setAccount] = useState("");
@@ -95,6 +103,8 @@ export default function ApplyItYourWay({
     const [showsAllDomains, setShowsAllDomains] = useState(false);
     /** The server said this Power is already held, so another write-up is not accepted. */
     const [earnedLocally, setEarnedLocally] = useState(false);
+    /** The server refused a send as `proof_locked`: a proof was rejected today on another screen. */
+    const [lockedByServer, setLockedByServer] = useState(false);
     const {open: openAsk} = useAskAnimalDex();
     const {
         evidence,
@@ -108,6 +118,9 @@ export default function ApplyItYourWay({
     const isApproved = result?.verdict === "approved";
     const isRevisable = result?.verdict === "needs_more";
     const holdsPower = power.isEarned || earnedLocally || isApproved;
+    /** Rejected here, or before this sheet opened: today's attempt is used. */
+    const rejectedHere = result?.verdict === "rejected" || result?.locked === true;
+    const attemptUsed = !holdsPower && (rejectedHere || proofLocked || lockedByServer);
     // A fused Power (it posts elsewhere) has no species icon of its own.
     const powerIcon = submitApplication ? null : <AnimalPowerIcon speciesProfileId={power.speciesProfileId} />;
     const journalDomain = selectedDomain ?? power.suggestedDomains[0] ?? "HUMAN_BEHAVIOR";
@@ -138,6 +151,7 @@ export default function ApplyItYourWay({
                         setEarnedLocally(true);
                         return;
                     }
+                    if (outcome.code === "proof_locked") setLockedByServer(true);
                     setErrorMessage(outcome.error);
                     return;
                 }
@@ -170,6 +184,7 @@ export default function ApplyItYourWay({
                     setErrorMessage(null);
                     return;
                 }
+                if (payload.code === "proof_locked") setLockedByServer(true);
                 setErrorMessage(payload.error ?? "Could not send that for review. Try again in a moment.");
                 return;
             }
@@ -186,13 +201,16 @@ export default function ApplyItYourWay({
 
     const actionTitle = holdsPower
         ? "DONE"
-        : !selectedDomain
-            ? "PICK AN AREA"
-            : result ? "SEND AGAIN" : "SEND FOR REVIEW";
-    const isDisabled = holdsPower
+        : attemptUsed
+            ? "CLOSE"
+            : !selectedDomain
+                ? "PICK AN AREA"
+                : result ? "SEND AGAIN" : "SEND FOR REVIEW";
+    const isDisabled = holdsPower || attemptUsed
         ? false
         : isWorking || isPreparingEvidence || !selectedDomain || !hasEnough || !evidence;
-    const needsEvidenceHint = !holdsPower && Boolean(selectedDomain) && hasEnough && !evidence;
+    const needsEvidenceHint = !holdsPower && !attemptUsed && Boolean(selectedDomain) && hasEnough && !evidence;
+    const lockLine = attemptUsed ? (rejectedHere ? LOCKOUT_COPY.attemptUsedLine : LOCKOUT_COPY.proofLockedBody) : null;
 
     return (
         <div
@@ -262,6 +280,12 @@ export default function ApplyItYourWay({
                         <p className="text-[10px] text-white/40">
                             You discovered it from the {power.speciesDisplayName}. Now you have used it.
                         </p>
+                    </Band>
+                ) : attemptUsed && !result ? (
+                    // Rejected earlier today: there is nothing to fill in until tomorrow.
+                    <Band accent={ORANGE}>
+                        <Eyebrow color={ORANGE}>{LOCKOUT_COPY.lockedButton}</Eyebrow>
+                        <p className="text-sm leading-6 text-white">{LOCKOUT_COPY.proofLockedBody}</p>
                     </Band>
                 ) : (
                     <>
@@ -380,9 +404,7 @@ export default function ApplyItYourWay({
                                 <p className="text-[10px] text-white/60">
                                     {isRevisable
                                         ? "↺ Editing and sending again costs nothing."
-                                        : result.rejectionsRemaining === 1
-                                            ? "1 more try on this Power"
-                                            : `${result.rejectionsRemaining} more tries on this Power`}
+                                        : LOCKOUT_COPY.attemptUsedLine}
                                 </p>
                             </Band>
                         ) : null}
@@ -393,15 +415,21 @@ export default function ApplyItYourWay({
             </div>
 
             <div className="border-t border-white/[0.08] bg-black/80 px-[18px] py-3 backdrop-blur">
-                {errorMessage ? (
+                {errorMessage && errorMessage !== lockLine ? (
                     <p className="mb-2 text-center text-[10px] text-orange-400">{errorMessage}</p>
+                ) : lockLine ? (
+                    <p className="mb-2 text-center text-[10px] text-orange-400">{lockLine}</p>
                 ) : needsEvidenceHint ? (
                     <p className="mb-2 text-center text-[10px] text-white/60">Add a photo or video to submit.</p>
+                ) : null}
+                {/* Said before the one attempt is spent. */}
+                {!result && !holdsPower && !attemptUsed ? (
+                    <p className="mb-2 text-center text-[10px] text-white/55">{LOCKOUT_COPY.proofWarning}</p>
                 ) : null}
                 <button
                     type="button"
                     onClick={() => {
-                        if (holdsPower) onClose();
+                        if (holdsPower || attemptUsed) onClose();
                         else void submit();
                     }}
                     disabled={isDisabled}

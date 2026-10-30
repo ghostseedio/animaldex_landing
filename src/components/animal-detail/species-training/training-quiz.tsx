@@ -4,9 +4,11 @@ import {useCallback, useEffect, useState} from "react";
 import {
     type SpeciesTraining,
     type SpeciesTrainingResult,
+    LOCKOUT_COPY,
     TRAINING_COPY,
     chooseTrainingAnswer,
     decodeSpeciesTrainingResult,
+    isLockedRefusal,
     previousTrainingQuestion,
     startTrainingQuiz,
     trainingFailSummary,
@@ -22,7 +24,11 @@ import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-pow
  *
  * One question at a time; choosing advances, Back changes an earlier answer,
  * and the last answer submits on its own. A fail says how many were right and
- * which were wrong — never which answer was right. Retries are unlimited.
+ * which were wrong — never which answer was right.
+ *
+ * One attempt a day, as on iOS: the warning is said before the first answer,
+ * and a miss offers no retry ("That was today's attempt. Try again tomorrow.").
+ * Only answers that never reached the grader can be sent again.
  */
 
 const NEON = "#A7F432";
@@ -34,14 +40,15 @@ const ORANGE = "#FB923C";
  */
 export type TrainingAnswerSubmitter = (answers: number[]) => Promise<
     | {ok: true; result: SpeciesTrainingResult}
-    | {ok: false; error: string}
+    | {ok: false; error: string; code?: string}
 >;
 
 type Phase =
     | {kind: "answering"}
     | {kind: "submitting"}
     | {kind: "result"; result: SpeciesTrainingResult}
-    | {kind: "error"; message: string};
+    /** `locked`: the server says today's attempt is used, so sending again cannot help. */
+    | {kind: "error"; message: string; locked: boolean};
 
 export default function TrainingQuiz({
     training,
@@ -80,7 +87,7 @@ export default function TrainingQuiz({
             if (submitAnswers) {
                 const outcome = await submitAnswers(answers);
                 if (!outcome.ok) {
-                    setPhase({kind: "error", message: outcome.error});
+                    setPhase({kind: "error", message: outcome.error, locked: isLockedRefusal(outcome.code)});
                     return;
                 }
                 setPhase({kind: "result", result: outcome.result});
@@ -95,13 +102,17 @@ export default function TrainingQuiz({
             const payload = await response.json().catch(() => null);
             const result = response.ok ? decodeSpeciesTrainingResult(payload?.result) : null;
             if (!result) {
-                setPhase({kind: "error", message: payload?.error ?? trainingRefusalMessage(payload?.code ?? "")});
+                setPhase({
+                    kind: "error",
+                    message: payload?.error ?? trainingRefusalMessage(payload?.code ?? ""),
+                    locked: isLockedRefusal(payload?.code)
+                });
                 return;
             }
             setPhase({kind: "result", result});
             if (result.passed) onPassed(result);
         } catch {
-            setPhase({kind: "error", message: trainingRefusalMessage("")});
+            setPhase({kind: "error", message: trainingRefusalMessage(""), locked: false});
         }
     }, [onPassed, submitAnswers, training.speciesProfileId]);
 
@@ -113,11 +124,6 @@ export default function TrainingQuiz({
         const isLast = quiz.position === questions.length - 1;
         const answers = trainingSubmission(next);
         if (isLast && answers) void submit(answers);
-    };
-
-    const restart = () => {
-        setQuiz(startTrainingQuiz(questions.length));
-        setPhase({kind: "answering"});
     };
 
     const title = powerName?.trim() || TRAINING_COPY.title;
@@ -137,6 +143,10 @@ export default function TrainingQuiz({
                         <span className="text-[10px] font-bold text-white/55">
                             {trainingQuestionProgress(quiz.position + 1, questions.length)}
                         </span>
+                    ) : null}
+                    {/* Said before the first answer, not after the last one. */}
+                    {phase.kind === "answering" && quiz.position === 0 ? (
+                        <span className="mt-1 text-[11px] leading-4 text-white/55">{LOCKOUT_COPY.trainingWarning}</span>
                     ) : null}
                 </span>
                 <button
@@ -208,21 +218,19 @@ export default function TrainingQuiz({
                     <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
                         {phase.kind === "result" && phase.result.passed ? (
                             <PrimaryButton onClick={onClose}>{TRAINING_COPY.continue}</PrimaryButton>
-                        ) : phase.kind === "result" ? (
+                        ) : phase.kind === "result" || (phase.kind === "error" && phase.locked) ? (
+                            // Today's attempt is used: no retry, as on iOS.
                             <>
-                                <PrimaryButton onClick={restart}>{TRAINING_COPY.tryAgain}</PrimaryButton>
+                                <PrimaryButton onClick={onClose}>{TRAINING_COPY.close}</PrimaryButton>
                                 <SecondaryButton onClick={onReadPower}>{TRAINING_COPY.readPowerAgain}</SecondaryButton>
                             </>
-                        ) : (
-                            <PrimaryButton
-                                onClick={() => {
-                                    const answers = trainingSubmission(quiz);
-                                    if (answers) void submit(answers);
-                                    else restart();
-                                }}
-                            >
+                        ) : trainingSubmission(quiz) ? (
+                            // The answers never reached the grader; send the same ones again.
+                            <PrimaryButton onClick={() => void submit(trainingSubmission(quiz)!)}>
                                 {TRAINING_COPY.tryAgain}
                             </PrimaryButton>
+                        ) : (
+                            <PrimaryButton onClick={onClose}>{TRAINING_COPY.close}</PrimaryButton>
                         )}
                     </div>
                 </div>
@@ -257,6 +265,8 @@ function FailedView({training, result}: {training: SpeciesTraining; result: Spec
         <>
             <section className="flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.03] px-5 py-6" style={{boxShadow: `inset 3px 0 0 ${ORANGE}8C`}}>
                 <p className="text-base font-bold leading-6 text-white">{trainingFailSummary(result.correct)}</p>
+                {/* One attempt a day: no retry here. */}
+                <p className="text-sm leading-6 text-white/70">{LOCKOUT_COPY.attemptUsedLine}</p>
             </section>
             {/* Which were wrong, never what was right. */}
             {training.questions.map((question, position) => {

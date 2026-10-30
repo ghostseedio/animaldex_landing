@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {decodeAnimalTrial, sortTrials} from "@/lib/animal-trials";
+import {decodeAnimalTrial, sortTrials, trialStartErrorMessage, trialStartRefusalCode} from "@/lib/animal-trials";
 import {trialMotionCaptionLanguage} from "@/lib/trial-motion/captions";
 import {attachTrialMotionCaptions} from "@/lib/trial-motion/storyboards-server";
 
@@ -100,7 +100,12 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-        return NextResponse.json({error: error.message}, {status: 400});
+        // The RPC's RAISE text is a code; the reader gets words, and the client the code.
+        const code = trialStartRefusalCode(error.message);
+        const fallback = action === "restart"
+            ? "Could not restart this Trial."
+            : "Could not start this Trial. Check your connection and try again.";
+        return NextResponse.json({error: trialStartErrorMessage(error.message, fallback), code}, {status: 400});
     }
 
     // Re-read through the view so definition and state arrive together.

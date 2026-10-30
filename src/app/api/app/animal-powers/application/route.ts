@@ -158,6 +158,7 @@ export async function POST(request: Request) {
         rejectionsRemaining: Number.isFinite(Number(invoked.payload?.rejections_remaining))
             ? Number(invoked.payload.rejections_remaining)
             : POWER_APPLICATION_LIMITS.maxRejections,
+        locked: invoked.payload?.locked === true,
         evidenceMatches: typeof invoked.payload?.evidence_matches === "boolean"
             ? invoked.payload.evidence_matches
             : undefined

@@ -83,6 +83,7 @@ export default function BondPanel({
     onTalk,
     onAsk,
     onLessonCheck,
+    lessonCheckMissed = false,
     onBondChanged,
     onRefresh,
     canAttemptTrials = true,
@@ -103,6 +104,8 @@ export default function BondPanel({
     onAsk: (message: string) => void;
     /** The lesson check. Null hides the action. */
     onLessonCheck: (() => void) | null;
+    /** Missed today: the lesson check opens again tomorrow, so the Bond tab says so instead of offering it. */
+    lessonCheckMissed?: boolean;
     /** The focus was cleared, or a Trial moved: re-read the bond. */
     onBondChanged: (next: AnimalBond | null) => void;
     /** A Trial moved (and may have earned the Power): re-read the bond. */
@@ -262,7 +265,12 @@ export default function BondPanel({
                 >
                     {words.bond.talkToIt}
                 </button>
-                {onLessonCheck && bond && !bond.lessonCheckPassed ? (
+                {lessonCheckMissed && bond && !bond.lessonCheckPassed ? (
+                    <p className="flex min-h-11 items-center gap-2 text-sm text-white/60">
+                        <span aria-hidden="true">🔒</span>
+                        {words.bond.lessonCheckMissed}
+                    </p>
+                ) : onLessonCheck && bond && !bond.lessonCheckPassed ? (
                     <button
                         type="button"
                         onClick={onLessonCheck}

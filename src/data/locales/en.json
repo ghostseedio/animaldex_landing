@@ -2585,6 +2585,7 @@
       "talkToIt": "Talk to it",
       "takeLessonCheck": "Take the lesson check",
       "lessonCheckMessage": "Can I take your lesson check?",
+      "lessonCheckMissed": "You missed one. Try again tomorrow.",
       "animalTrials": "Animal Trials",
       "askAboutIt": "Ask about it",
       "askAboutTrialMessage": "Tell me about your {difficulty} Trial.",

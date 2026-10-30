@@ -92,11 +92,12 @@ export type AnimalTrial = {
 };
 
 /**
- * Mirrors MAX_APEX_PROOF_ATTEMPTS in `_shared/apex-proof-attempts.ts`, which
- * `verify-animal-trial-proof` enforces. The client shows it so the budget is
- * visible BEFORE it is spent, instead of appearing as a refusal.
+ * Mirrors MAX_TRIAL_PROOF_SUBMISSIONS in `verify-animal-trial-proof` (and iOS
+ * `AnimalTrial.maxProofAttempts`). It only bounds model spend on one Trial run:
+ * a "needs more" verdict is free, and a rejection locks every proof for this
+ * animal until tomorrow (`proofLocked`), long before the bound is reached.
  */
-export const MAX_PROOF_ATTEMPTS = 2;
+export const MAX_PROOF_ATTEMPTS = 6;
 
 export function trialId(trial: AnimalTrial) {
     return `${trial.speciesProfileId}:${trial.frequency}`;
@@ -395,11 +396,24 @@ export function canAttemptTrial(input: {
 export const NOT_YET_CAPTURED_TITLE = "NOT YET CAPTURED";
 export const NOT_YET_CAPTURED_NOTE = "You don't own this index yet.";
 
-/** A start/restart refusal, with the unlock and Training gates named plainly. */
-export function trialStartErrorMessage(error: unknown, fallback: string) {
+const TRIAL_START_REFUSAL_CODES = ["training_required", "proof_locked", "species_not_unlocked", "trial_not_found", "not_authenticated"] as const;
+
+/** The code inside a `start_animal_trial` / `restart_expired_animal_trial` refusal, or null. */
+export function trialStartRefusalCode(error: unknown) {
     const text = typeof error === "string" ? error : error instanceof Error ? error.message : JSON.stringify(error ?? "");
-    if (/training_required/i.test(text)) return TRAINING_COPY.required;
-    return /species_not_unlocked/i.test(text) ? NOT_YET_CAPTURED_NOTE : fallback;
+    return TRIAL_START_REFUSAL_CODES.find((code) => text.toLowerCase().includes(code)) ?? null;
+}
+
+/** A start/restart refusal, said plainly. Never a raw code. */
+export function trialStartErrorMessage(error: unknown, fallback: string) {
+    switch (trialStartRefusalCode(error)) {
+        case "training_required": return TRAINING_COPY.required;
+        case "proof_locked": return LOCKOUT_COPY.proofLockedBody;
+        case "species_not_unlocked": return NOT_YET_CAPTURED_NOTE;
+        case "trial_not_found": return "This Trial isn't available any more.";
+        case "not_authenticated": return "Sign in to take this Trial.";
+        default: return fallback;
+    }
 }
 
 export function canSubmitEvidence(trial: AnimalTrial) {
@@ -447,6 +461,8 @@ export type AnimalTrialVerificationResult = {
      * not granted a second one.
      */
     grantedPower: boolean;
+    /** A rejection that locked this animal's proofs until tomorrow. */
+    locked: boolean;
 };
 
 export function isApproved(result: AnimalTrialVerificationResult) {
@@ -464,7 +480,7 @@ export function verifierRefusalMessage(code: string, serverMessage?: string | nu
             // Growth, whose copy says "a new challenge is available tomorrow" —
             // false for a Trial, which is earned once per species and frequency
             // and never refreshes.
-            return "You have used both checks on this Trial. It cannot be submitted again.";
+            return "You have used every check on this Trial. It cannot be submitted again.";
         case "trial_not_started":
             return "Start the Trial before adding evidence.";
         case "trial_not_active_yet":

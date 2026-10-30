@@ -89,6 +89,8 @@ export const BOND_COPY = {
     talkToIt: "Talk to it",
     takeLessonCheck: "Take the lesson check",
     lessonCheckMessage: "Can I take your lesson check?",
+    /** iOS `SpeciesTrainingCopy.trainingLockedBody`. */
+    lessonCheckMissed: "You missed one. Try again tomorrow.",
     animalTrials: "Animal Trials",
     askAboutIt: "Ask about it",
     askAboutTrialMessage: "Tell me about your {difficulty} Trial.",

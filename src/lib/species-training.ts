@@ -23,6 +23,7 @@ export const TRAINING_COPY = {
     readPowerAgain: "Read the Power again",
     tryAgain: "Try again",
     continue: "Continue",
+    close: "Close",
     lockedLine: "Pass the lesson check to unlock",
     required: "Pass this animal's lesson check first."
 } as const;
@@ -31,20 +32,28 @@ export const TRAINING_COPY = {
  * One attempt a day. A missed Training or a rejected proof locks until the
  * next day or a new card of the animal, whichever is first (AnimalDex
  * 20261028120000; it used to need a new card). Word for word with iOS
- * `SpeciesTrainingCopy`.
+ * `SpeciesTrainingCopy` (9c7fea0b), which says only "tomorrow".
  */
 export const LOCKOUT_COPY = {
-    attemptUsedLine: "That was today's attempt. Try again tomorrow, or capture this animal again.",
+    attemptUsedLine: "That was today's attempt. Try again tomorrow.",
     trainingWarning: "One attempt a day. Get any answer wrong and you can try again tomorrow.",
     proofWarning: "One attempt a day. A rejected proof means trying again tomorrow.",
-    trainingLockedBody: "You missed one. Try again tomorrow, or capture this animal again.",
-    proofLockedBody: "Your proof wasn't accepted. Try again tomorrow, or capture this animal again.",
+    trainingLockedBody: "You missed one. Try again tomorrow.",
+    proofLockedBody: "Your proof wasn't accepted. Try again tomorrow.",
     lockedButton: "Try again tomorrow"
 } as const;
 
-/** "You missed one. Try again tomorrow, or capture a Meerkat again." */
-export function fusedLockedBody(animalName: string) {
-    return `You missed one. Try again tomorrow, or capture a ${animalName} again.`;
+/** A fused Power's missed lesson check reads as the animal's own (iOS `fusedLockedBody`). */
+export function fusedLockedBody() {
+    return LOCKOUT_COPY.trainingLockedBody;
+}
+
+/** The refusals that mean "today's attempt is used", where trying again cannot help. */
+const LOCKED_REFUSAL_CODES = ["fused_training_locked", "training_locked", "proof_locked"] as const;
+
+export function isLockedRefusal(code: unknown) {
+    const text = typeof code === "string" ? code : "";
+    return LOCKED_REFUSAL_CODES.some((locked) => text.toLowerCase().includes(locked));
 }
 
 /** "Answer 1 quick question about this animal's Power." / "Answer 3 quick questions …" */
@@ -89,6 +98,10 @@ export type SpeciesTraining = {
     completed: boolean;
     /** The viewer has caught this animal; the server refuses a submit otherwise. */
     unlocked: boolean;
+    /** Missed today: the lesson check opens again tomorrow, or with a new card of the animal. */
+    locked: boolean;
+    /** A proof was rejected today: Trials and Apply It Your Way open again tomorrow. Never set once the Power is earned. */
+    proofLocked: boolean;
     rewardXP: number;
     rewardCredits: number;
     contentVersion: number | null;
@@ -158,6 +171,8 @@ export function decodeSpeciesTraining(payload: unknown): SpeciesTraining | null 
         available: row.available === true && (completed || questions.length > 0),
         completed,
         unlocked: row.unlocked === true,
+        locked: !completed && row.locked === true,
+        proofLocked: row.proof_locked === true,
         rewardXP: num(row.reward_xp),
         rewardCredits: num(row.reward_credits),
         contentVersion: row.content_version == null ? null : num(row.content_version),
@@ -195,9 +210,22 @@ export function showsTrainingStep(training: SpeciesTraining | null | undefined) 
     return Boolean(training?.available);
 }
 
-/** Folds a passing submit into the read, so the band flips without waiting for a re-read. */
+/** Missed today, so there is nothing to press until tomorrow (iOS `isMissed`). */
+export function trainingIsMissed(training: SpeciesTraining | null | undefined) {
+    return Boolean(training && training.locked && !training.completed);
+}
+
+/** The lesson check can be opened and answered now. */
+export function trainingCanStart(training: SpeciesTraining | null | undefined) {
+    return Boolean(training && training.available && training.unlocked && !training.completed && !training.locked && training.questions.length > 0);
+}
+
+/**
+ * Folds a submit into the read, so the band flips without waiting for a
+ * re-read: a pass completes it, a miss locks it for today.
+ */
 export function notingTrainingResult(training: SpeciesTraining, result: SpeciesTrainingResult): SpeciesTraining {
-    return result.passed ? {...training, completed: true} : training;
+    return result.passed ? {...training, completed: true, locked: false} : {...training, locked: true};
 }
 
 // MARK: - Quiz state

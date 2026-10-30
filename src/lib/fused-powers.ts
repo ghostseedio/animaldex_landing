@@ -121,6 +121,10 @@ export type FusedPower = {
     trial: FusedTrial | null;
     reward: {xp: number; credits: number};
     attempts: {rejectionsToday: number; maxRejectionsPerDay: number; lastReason: string | null};
+    /** Its lesson check was missed today: it opens again tomorrow, or with a new card of the animal. */
+    trainingLocked: boolean;
+    /** A proof was rejected today: its Trial and Apply It Your Way open again tomorrow. */
+    proofLocked: boolean;
 };
 
 /** `submit` on the `fused-power` edge function. */
@@ -133,6 +137,8 @@ export type FusedSubmitResult = {
     rewardXP: number;
     rewardCredits: number;
     rejectionsRemaining: number;
+    /** A rejection that locked this Power's proofs until tomorrow. */
+    locked: boolean;
 };
 
 // MARK: - Decoding
@@ -255,7 +261,9 @@ export function decodeFusedPower(raw: unknown): FusedPower | null {
             rejectionsToday: num(attemptsRow?.rejections_today),
             maxRejectionsPerDay: num(attemptsRow?.max_rejections_per_day, 3),
             lastReason: text(attemptsRow?.last_reason)
-        }
+        },
+        trainingLocked: !earned && row.training_locked === true,
+        proofLocked: !earned && row.proof_locked === true
     };
 }
 
@@ -279,7 +287,8 @@ export function decodeFusedSubmitResult(payload: unknown): FusedSubmitResult | n
         earned: row.earned === true,
         rewardXP: num(row.reward_xp),
         rewardCredits: num(row.reward_credits),
-        rejectionsRemaining: num(row.rejections_remaining, POWER_APPLICATION_LIMITS.maxRejections)
+        rejectionsRemaining: num(row.rejections_remaining, POWER_APPLICATION_LIMITS.maxRejections),
+        locked: row.locked === true || verdict === "rejected"
     };
 }
 
@@ -329,9 +338,13 @@ export function estimatedMinutesLine(minutes: number | null) {
     return minutes && minutes > 0 ? `~${minutes} min` : null;
 }
 
-/** Today's tries are used up: submit is off until the 24 hours roll over. */
+/**
+ * Today's attempt is used: one rejected proof locks it until tomorrow, or a new
+ * card of the animal (`proof_locked`, as iOS reads it). The read's
+ * `max_rejections_per_day` (3) predates the one-attempt rule and is not used.
+ */
 export function attemptsExhausted(item: FusedPower) {
-    return item.attempts.rejectionsToday >= Math.max(1, item.attempts.maxRejectionsPerDay);
+    return item.proofLocked;
 }
 
 /**
@@ -393,6 +406,8 @@ export function fusedTrainingForQuiz(item: FusedPower): SpeciesTraining | null {
         available: true,
         completed: item.training.completed,
         unlocked: true,
+        locked: item.trainingLocked,
+        proofLocked: item.proofLocked,
         rewardXP: item.training.rewardXP,
         rewardCredits: 0,
         contentVersion: null,

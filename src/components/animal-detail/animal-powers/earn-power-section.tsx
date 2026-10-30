@@ -10,7 +10,7 @@ import TrainingBand from "@/components/animal-detail/species-training/training-b
 import {type SpeciesTrainingState, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import LoopStepCard from "@/components/animal-detail/power-loop/loop-step-card";
 import {PowerLoopEyebrow} from "@/components/animal-detail/power-loop/power-loop-context";
-import {TRAINING_COPY, notingTrainingResult, showsTrainingStep, trainingGatesPlay} from "@/lib/species-training";
+import {LOCKOUT_COPY, TRAINING_COPY, notingTrainingResult, showsTrainingStep, trainingGatesPlay} from "@/lib/species-training";
 
 /**
  * The Play tab: one Power, two ways to earn it, one of them on screen. Ported
@@ -187,6 +187,8 @@ export default function EarnPowerSection({
     const ownTraining = useSpeciesTraining(sharedTraining ? null : speciesProfileId);
     const speciesTraining = sharedTraining ?? ownTraining;
     const lockedByTraining = trainingGatesPlay(speciesTraining.training);
+    // A proof rejected today (Trial or Apply It Your Way) closes both routes until tomorrow.
+    const proofLocked = Boolean(speciesTraining.training?.proofLocked && !power?.isEarned);
 
     const isLocked = Boolean(power && !power.isEarned);
     const lockedSpeciesId = isLocked ? power?.speciesProfileId : null;
@@ -217,6 +219,8 @@ export default function EarnPowerSection({
 
     const trialDidUpdate = (trial: AnimalTrial) => {
         if (isComplete(trial)) handleTrialCompleted();
+        // A rejection locks Apply It Your Way too; re-read so it says so.
+        else if (trial.verificationStatus === "rejected") void speciesTraining.reload();
     };
 
     const trials = (showsHeader: boolean) => (
@@ -252,6 +256,17 @@ export default function EarnPowerSection({
                 >
                     🔒 {TRAINING_COPY.lockedLine}
                 </button>
+            ) : canAttemptTrials && proofLocked ? (
+                <>
+                    <button
+                        type="button"
+                        disabled
+                        className="flex min-h-[48px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-white/[0.08] text-base font-bold text-white/60"
+                    >
+                        🔒 {LOCKOUT_COPY.lockedButton}
+                    </button>
+                    <p className="text-center text-[10px] text-white/55">{LOCKOUT_COPY.proofLockedBody}</p>
+                </>
             ) : canAttemptTrials ? (
                 <button
                     type="button"
@@ -386,9 +401,14 @@ export default function EarnPowerSection({
             {showsApply && power ? (
                 <ApplyItYourWay
                     power={power}
+                    proofLocked={proofLocked}
                     onClose={() => setShowsApply(false)}
                     onFinished={(result) => {
-                        if (result.verdict !== "approved") return;
+                        if (result.verdict !== "approved") {
+                            // A rejection locks the Trials too; re-read so they say so.
+                            if (result.verdict === "rejected") void speciesTraining.reload();
+                            return;
+                        }
                         powerGateAnalytics.powerEarned(power.speciesProfileId, "application");
                         void onReload();
                     }}

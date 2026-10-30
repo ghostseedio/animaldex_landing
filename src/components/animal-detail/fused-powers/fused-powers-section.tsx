@@ -21,7 +21,7 @@ import {
     taughtByLine,
     teachesLine
 } from "@/lib/fused-powers";
-import {type SpeciesTraining, TRAINING_COPY, decodeSpeciesTrainingResult} from "@/lib/species-training";
+import {type SpeciesTraining, LOCKOUT_COPY, TRAINING_COPY, decodeSpeciesTrainingResult, fusedLockedBody} from "@/lib/species-training";
 import TrainingQuiz, {type TrainingAnswerSubmitter} from "@/components/animal-detail/species-training/training-quiz";
 import ApplyItYourWay, {type ApplicationSubmitter} from "@/components/animal-detail/animal-powers/apply-it-your-way";
 import {
@@ -131,7 +131,7 @@ function FusedPowerRow({
             });
             const payload = await response.json().catch(() => null);
             const result = response.ok ? decodeSpeciesTrainingResult(payload?.result) : null;
-            if (!result) return {ok: false, error: payload?.error ?? fusedRefusalMessage(payload?.code ?? "")};
+            if (!result) return {ok: false, error: payload?.error ?? fusedRefusalMessage(payload?.code ?? ""), code: payload?.code ?? undefined};
             return {ok: true, result};
         } catch {
             return {ok: false, error: fusedRefusalMessage("")};
@@ -258,7 +258,8 @@ function TrainingStage({
     onStart: () => void;
 }) {
     const power = item.power;
-    const canStart = Boolean(fusedTrainingForQuiz(item));
+    // A miss today locks it until tomorrow, as on iOS.
+    const canStart = Boolean(fusedTrainingForQuiz(item)) && !item.trainingLocked;
 
     return (
         <>
@@ -274,16 +275,30 @@ function TrainingStage({
                 {power?.example ? <p className="text-[11px] leading-5 text-white/45">{power.example}</p> : null}
             </div>
             <p className="text-[11px] font-black" style={{color: NEON_TEXT}}>{fusedTrainingRewardLine(item)}</p>
-            <button
-                type="button"
-                onClick={onStart}
-                disabled={!canStart}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:opacity-50"
-                style={{backgroundColor: NEON}}
-            >
-                {TRAINING_COPY.start} <span aria-hidden="true">→</span>
-            </button>
+            {item.trainingLocked ? (
+                <LockedLine>{fusedLockedBody()}</LockedLine>
+            ) : (
+                <button
+                    type="button"
+                    onClick={onStart}
+                    disabled={!canStart}
+                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:opacity-50"
+                    style={{backgroundColor: NEON}}
+                >
+                    {TRAINING_COPY.start} <span aria-hidden="true">→</span>
+                </button>
+            )}
         </>
+    );
+}
+
+/** A miss or a rejected proof locks until tomorrow (iOS `lockedLine`). */
+function LockedLine({children}: {children: React.ReactNode}) {
+    return (
+        <p className="flex items-start gap-2 text-xs font-semibold leading-5 text-white/60">
+            <span aria-hidden="true">🔒</span>
+            {children}
+        </p>
     );
 }
 
@@ -340,7 +355,8 @@ function ProvingStage({
                 reason: outcome.result.reason,
                 quotedAction: "",
                 grantedPower: outcome.result.earned,
-                rejectionsRemaining: outcome.result.rejectionsRemaining
+                rejectionsRemaining: outcome.result.rejectionsRemaining,
+                locked: outcome.result.locked
             }
         };
     }, [item.id]);
@@ -408,7 +424,7 @@ function ProvingStage({
                                 className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/60"
                                 style={exhausted ? undefined : {backgroundColor: NEON}}
                             >
-                                WRITE WHAT YOU DID <span aria-hidden="true">→</span>
+                                {exhausted ? <>🔒 {LOCKOUT_COPY.lockedButton}</> : <>WRITE WHAT YOU DID <span aria-hidden="true">→</span></>}
                             </button>
                         </>
                     )}
@@ -420,12 +436,13 @@ function ProvingStage({
                     {item.attempts.lastReason}
                 </p>
             ) : null}
-            {exhausted ? <p className="text-xs font-semibold leading-5 text-orange-400">{FUSED_COPY.attemptsExhausted}</p> : null}
+            {exhausted ? <LockedLine>{LOCKOUT_COPY.proofLockedBody}</LockedLine> : null}
 
             {showsApply ? (
                 <ApplyItYourWay
                     power={applyPower}
                     submitApplication={submitApplication}
+                    proofLocked={exhausted}
                     onFinished={(result) => {
                         if (result.verdict === "approved") onSettled();
                         else void onReload();
@@ -475,8 +492,9 @@ function TrialRoute({
                 onSettled();
                 return;
             }
-            if (outcome.error) setErrorMessage(outcome.error);
-            if (outcome.code === "attempts_exhausted_today") void onReload();
+            // A locked refusal is said by the band once re-read, not twice.
+            if (outcome.error && outcome.code !== "proof_locked") setErrorMessage(outcome.error);
+            if (outcome.code === "attempts_exhausted_today" || outcome.code === "proof_locked") void onReload();
             return;
         }
         if (outcome.result.verdict === "approved") {
@@ -519,7 +537,7 @@ function TrialRoute({
                 className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/60"
                 style={!evidence || isWorking || isPreparing || exhausted ? undefined : {backgroundColor: NEON}}
             >
-                {isWorking ? "…" : "SEND FOR REVIEW"}
+                {isWorking ? "…" : exhausted ? <>🔒 {LOCKOUT_COPY.lockedButton}</> : "SEND FOR REVIEW"}
             </button>
             {!evidence && !exhausted ? (
                 <p className="text-center text-[10px] text-white/50">Add a photo or video to submit.</p>

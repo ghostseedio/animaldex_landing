@@ -2567,6 +2567,7 @@
       "talkToIt": "Bicara dengannya",
       "takeLessonCheck": "Ikuti cek pelajaran",
       "lessonCheckMessage": "Boleh aku ikut cek pelajaranmu?",
+      "lessonCheckMissed": "Ada satu jawaban yang salah. Coba lagi besok.",
       "animalTrials": "Uji Coba Hewan",
       "askAboutIt": "Tanyakan",
       "askAboutTrialMessage": "Ceritakan tentang Uji Coba {difficulty} milikmu.",

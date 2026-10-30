@@ -157,10 +157,19 @@ test("prepare only when nobody is writing; poll otherwise", () => {
     assert.equal(decodePrepareStage({error: "x"}), "preparing");
 });
 
-test("attempts: three rejections today lock submit", () => {
+test("attempts: one rejected proof locks submit until tomorrow (proof_locked), not three", () => {
     const item = decodeFusedPower(SAMPLE)!;
+    assert.equal(item.proofLocked, false);
+    assert.equal(item.trainingLocked, false);
     assert.equal(attemptsExhausted(item), false);
-    assert.equal(attemptsExhausted({...item, attempts: {...item.attempts, rejectionsToday: 3}}), true);
+    // The read's old daily count no longer decides it.
+    assert.equal(attemptsExhausted({...item, attempts: {...item.attempts, rejectionsToday: 3}}), false);
+    assert.equal(attemptsExhausted(decodeFusedPower({...SAMPLE, proof_locked: true})!), true);
+    const missed = decodeFusedPower({...SAMPLE, training_locked: true})!;
+    assert.equal(missed.trainingLocked, true);
+    assert.equal(fusedTrainingForQuiz(missed)?.locked, true);
+    // An earned Power is never locked.
+    assert.equal(decodeFusedPower({...SAMPLE, earned: true, stage: "earned", proof_locked: true, training_locked: true})!.proofLocked, false);
 });
 
 test("pending summary for the Power Loop: count, first's name, stage and pay", () => {
@@ -196,8 +205,9 @@ test("the quiz adapter feeds the shared Training quiz", () => {
 test("submit results and refusals", () => {
     assert.deepEqual(
         decodeFusedSubmitResult({ok: true, verdict: "approved", reason: "Nice rota.", earned: true, reward_xp: 10, reward_credits: 3, rejections_remaining: 3}),
-        {verdict: "approved", reason: "Nice rota.", earned: true, rewardXP: 10, rewardCredits: 3, rejectionsRemaining: 3}
+        {verdict: "approved", reason: "Nice rota.", earned: true, rewardXP: 10, rewardCredits: 3, rejectionsRemaining: 3, locked: false}
     );
+    assert.equal(decodeFusedSubmitResult({ok: true, verdict: "rejected", reason: "No.", rejections_remaining: 0, locked: true})?.locked, true);
     assert.equal(decodeFusedSubmitResult({error: "training_required"}), null);
     assert.equal(fusedRefusalMessage("training_required"), "Pass this Power's lesson check first.");
     assert.equal(fusedRefusalMessage("attempts_exhausted_today"), FUSED_COPY.attemptsExhausted);

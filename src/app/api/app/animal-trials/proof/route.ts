@@ -174,7 +174,8 @@ export async function POST(request: Request) {
             reason: invoked.payload?.reason ?? "Try again with clearer evidence.",
             rewardXP: invoked.payload?.reward_xp ?? 0,
             framesUsed: invoked.payload?.frames_used ?? 0,
-            grantedPower: invoked.payload?.granted_power === true
+            grantedPower: invoked.payload?.granted_power === true,
+            locked: invoked.payload?.locked === true
         },
         trials,
         trial

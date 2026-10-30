@@ -6,14 +6,17 @@ import {
     chooseTrainingAnswer,
     fusedLockedBody,
     decodeSpeciesTraining,
+    isLockedRefusal,
     decodeSpeciesTrainingResult,
     isTrainingQuizReady,
     notingTrainingResult,
     previousTrainingQuestion,
     showsTrainingStep,
     startTrainingQuiz,
+    trainingCanStart,
     trainingFailSummary,
     trainingGatesPlay,
+    trainingIsMissed,
     trainingIntroText,
     trainingQuestionProgress,
     trainingRefusalMessage,
@@ -21,7 +24,7 @@ import {
     trainingSubmission
 } from "@/lib/species-training";
 import {powerRefusalMessage} from "@/lib/animal-powers";
-import {isRetryableRefusal, trialStartErrorMessage, verifierRefusalMessage} from "@/lib/animal-trials";
+import {MAX_PROOF_ATTEMPTS, isRetryableRefusal, trialStartErrorMessage, trialStartRefusalCode, verifierRefusalMessage} from "@/lib/animal-trials";
 import {fusedRefusalMessage} from "@/lib/fused-powers";
 
 const SPECIES = "742b057b-47c4-447a-a61c-53d0b28c5e00";
@@ -189,18 +192,72 @@ test("training_required maps to the same message everywhere", () => {
 });
 
 test("a miss locks until tomorrow, word for word with iOS", () => {
-    assert.equal(LOCKOUT_COPY.attemptUsedLine, "That was today's attempt. Try again tomorrow, or capture this animal again.");
+    // iOS 9c7fea0b dropped "or capture this animal again".
+    assert.equal(LOCKOUT_COPY.attemptUsedLine, "That was today's attempt. Try again tomorrow.");
     assert.equal(LOCKOUT_COPY.trainingWarning, "One attempt a day. Get any answer wrong and you can try again tomorrow.");
     assert.equal(LOCKOUT_COPY.proofWarning, "One attempt a day. A rejected proof means trying again tomorrow.");
     assert.equal(LOCKOUT_COPY.lockedButton, "Try again tomorrow");
-    assert.equal(fusedLockedBody("Meerkat"), "You missed one. Try again tomorrow, or capture a Meerkat again.");
+    assert.equal(fusedLockedBody(), "You missed one. Try again tomorrow.");
 
-    const missed = "You missed one. Try again tomorrow, or capture this animal again.";
-    const rejected = "Your proof wasn't accepted. Try again tomorrow, or capture this animal again.";
+    const missed = "You missed one. Try again tomorrow.";
+    const rejected = "Your proof wasn't accepted. Try again tomorrow.";
     assert.equal(trainingRefusalMessage("training_locked"), missed);
     assert.equal(powerRefusalMessage("training_locked"), missed);
     assert.equal(fusedRefusalMessage("fused_training_locked"), missed);
     assert.equal(powerRefusalMessage("proof_locked"), rejected);
     assert.equal(verifierRefusalMessage("proof_locked"), rejected);
     assert.equal(isRetryableRefusal("proof_locked"), false);
+});
+
+test("the read carries today's locks, and only an open, unlocked check can start", () => {
+    const open = decodeSpeciesTraining(AVAILABLE)!;
+    assert.equal(open.locked, false);
+    assert.equal(open.proofLocked, false);
+    assert.equal(trainingCanStart(open), true);
+    assert.equal(trainingIsMissed(open), false);
+
+    const missed = decodeSpeciesTraining({...AVAILABLE, locked: true})!;
+    assert.equal(missed.locked, true);
+    assert.equal(trainingIsMissed(missed), true);
+    assert.equal(trainingCanStart(missed), false);
+    // Still gating: the Trials stay closed behind it.
+    assert.equal(trainingGatesPlay(missed), true);
+
+    // A passed check is never locked, whatever the read says.
+    const passed = decodeSpeciesTraining({...AVAILABLE, completed: true, locked: true})!;
+    assert.equal(passed.locked, false);
+    assert.equal(trainingIsMissed(passed), false);
+
+    assert.equal(decodeSpeciesTraining({...AVAILABLE, proof_locked: true})!.proofLocked, true);
+    assert.equal(trainingCanStart({...open, unlocked: false}), false);
+});
+
+test("a submitted miss locks the read at once; a pass clears it", () => {
+    const open = decodeSpeciesTraining(AVAILABLE)!;
+    const miss = decodeSpeciesTrainingResult({passed: false, correct: [true, false]})!;
+    const pass = decodeSpeciesTrainingResult({passed: true, correct: [true, true], explanations: ["a", "b"]})!;
+    assert.equal(notingTrainingResult(open, miss).locked, true);
+    assert.equal(trainingCanStart(notingTrainingResult(open, miss)), false);
+    const afterPass = notingTrainingResult({...open, locked: true}, pass);
+    assert.equal(afterPass.completed, true);
+    assert.equal(afterPass.locked, false);
+});
+
+test("locked refusals are recognised, so no screen offers a retry that cannot work", () => {
+    for (const code of ["training_locked", "proof_locked", "fused_training_locked"]) assert.equal(isLockedRefusal(code), true);
+    for (const code of ["training_required", "answers_mismatch", "", undefined]) assert.equal(isLockedRefusal(code), false);
+});
+
+test("a refused Trial start is said in words, never as its code", () => {
+    assert.equal(trialStartErrorMessage("proof_locked", "fallback"), "Your proof wasn't accepted. Try again tomorrow.");
+    assert.equal(trialStartErrorMessage('{"message":"proof_locked"}', "fallback"), "Your proof wasn't accepted. Try again tomorrow.");
+    assert.equal(trialStartErrorMessage("trial_not_found", "fallback"), "This Trial isn't available any more.");
+    assert.equal(trialStartErrorMessage("not_authenticated", "fallback"), "Sign in to take this Trial.");
+    assert.equal(trialStartRefusalCode("ERROR: proof_locked"), "proof_locked");
+    assert.equal(trialStartRefusalCode("connection reset"), null);
+});
+
+test("the proof budget is the server's six, and its refusal no longer says 'both'", () => {
+    assert.equal(MAX_PROOF_ATTEMPTS, 6);
+    assert.equal(verifierRefusalMessage("proof_attempts_exhausted"), "You have used every check on this Trial. It cannot be submitted again.");
 });

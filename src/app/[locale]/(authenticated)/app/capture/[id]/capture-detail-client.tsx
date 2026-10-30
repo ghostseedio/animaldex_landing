@@ -16,6 +16,7 @@ import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/sy
 import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
 import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import TrainingQuiz from "@/components/animal-detail/species-training/training-quiz";
+import {trainingCanStart, trainingIsMissed} from "@/lib/species-training";
 import BondPanel from "@/components/companions/bond-panel";
 import {useAnimalBond, useCompanionLevel} from "@/components/companions/use-companions";
 import {useFusedPowers} from "@/components/animal-detail/fused-powers/use-fused-powers";
@@ -629,9 +630,10 @@ export default function CaptureDetailClient({
                                 powerName={resolvedPowerProfile?.principleName ?? null}
                                 onTalk={() => talk()}
                                 onAsk={(message) => talk(message)}
-                                onLessonCheck={speciesTraining.training?.available && speciesTraining.training.unlocked && !speciesTraining.training.completed
+                                onLessonCheck={trainingCanStart(speciesTraining.training)
                                     ? () => setShowsLessonCheck(true)
                                     : null}
+                                lessonCheckMissed={trainingIsMissed(speciesTraining.training)}
                                 onBondChanged={animalBond.setBond}
                                 onRefresh={() => {
                                     void animalBond.reload();

@@ -21,7 +21,6 @@ import {
     isTimed,
     notingApproval,
     primaryActionTitle,
-    remainingProofAttempts,
     remainingSeconds,
     requiresText,
     requiresVideo,
@@ -34,6 +33,7 @@ import {
     wasRejected
 } from "@/lib/animal-trials";
 import {extractTrialFrames} from "@/lib/animal-trial-frames";
+import {LOCKOUT_COPY, TRAINING_COPY, decodeSpeciesTraining, trainingGatesPlay} from "@/lib/species-training";
 import {TRIAL_ASK_SUGGESTIONS, trialAskBrief, trialAskKey} from "@/lib/animal-trial-ask";
 import type {DiscoverAnimalTrialItem} from "@/data/discover-timeline";
 import {AskTrialBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
@@ -58,6 +58,12 @@ import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial
  *
  * Below the Trial itself: Ask AnimalDex about it, and what other people
  * submitted — so a person who is unsure what "counts" can see, and ask.
+ *
+ * It reads the animal's lesson check itself, whichever surface opened it (the
+ * Power Loop, the card's Bond tab, Battles): until the check is passed the
+ * Trial cannot start, and after a rejected proof today every proof for this
+ * animal waits until tomorrow. Both are said before anything is uploaded,
+ * never as a refusal after it.
  */
 
 const NEON = "#A7F432";
@@ -142,12 +148,40 @@ export default function AnimalTrialDetail({
     const {open: openAsk} = useAskAnimalDex();
     /** Re-reads carry the Trial Loop's captions in the page language (`id` on /id pages). */
     const captionLanguage = useTrialMotionCaptionLanguage();
+    /** The lesson check's read: whether it still gates the Trial, and whether a proof was rejected today. */
+    const [gate, setGate] = useState({trainingRequired: false, proofLocked: false});
+    /** A proof was rejected (or refused as locked) while this sheet was open. */
+    const [lockedThisVisit, setLockedThisVisit] = useState(false);
 
     const accent = frequencyAccent(current.frequency);
     const timed = isTimed(current);
     const complete = isComplete(current);
 
     useEffect(() => setCurrent(trial), [trial]);
+
+    // The server is the authority and refuses regardless; this read only lets
+    // the sheet say so first. A read that fails gates nothing.
+    useEffect(() => {
+        if (!canAttempt) return undefined;
+        let cancelled = false;
+        void fetch(`/api/app/species-training?speciesProfileId=${encodeURIComponent(trial.speciesProfileId)}`, {cache: "no-store"})
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload) => {
+                const training = decodeSpeciesTraining(payload?.training);
+                if (cancelled || !training) return;
+                setGate({trainingRequired: trainingGatesPlay(training), proofLocked: training.proofLocked});
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [canAttempt, trial.speciesProfileId]);
+
+    /** What a refusal's code says about the gate, so the button stops offering what cannot work. */
+    const noteRefusal = useCallback((code: unknown) => {
+        if (code === "proof_locked") setGate((value) => ({...value, proofLocked: true}));
+        if (code === "training_required") setGate((value) => ({...value, trainingRequired: true}));
+    }, []);
 
     // Only a timed Trial needs a ticking clock; the calm modes never show one.
     useEffect(() => {
@@ -177,7 +211,7 @@ export default function AnimalTrialDetail({
     }, [loadSubmission]);
 
     // Other people's attempts at THIS Trial: completions and evidence that
-    // failed both checks. A rejection with a check left is not a post yet.
+    // was not accepted.
     useEffect(() => {
         let cancelled = false;
         void fetch(
@@ -230,7 +264,9 @@ export default function AnimalTrialDetail({
                 return;
             }
             if (!response.ok) {
-                setErrorMessage(trialStartErrorMessage(payload.error ?? "", payload.error ?? fallback));
+                noteRefusal(payload.code);
+                // The route says it in words already; an older shape still never shows a raw code.
+                setErrorMessage(typeof payload.error === "string" ? trialStartErrorMessage(payload.code ?? payload.error, payload.error) : fallback);
                 return;
             }
             apply(payload.trial);
@@ -239,7 +275,7 @@ export default function AnimalTrialDetail({
         } finally {
             setIsWorking(false);
         }
-    }, [apply, canAttempt, captionLanguage, current.frequency, current.speciesProfileId]);
+    }, [apply, canAttempt, captionLanguage, current.frequency, current.speciesProfileId, noteRefusal]);
 
     /**
      * After a verdict: an approval is shown at once and the server's row is
@@ -249,6 +285,8 @@ export default function AnimalTrialDetail({
     const settleVerification = useCallback((payload: {verification?: AnimalTrialVerificationResult; trial?: AnimalTrial | null}) => {
         const result = payload.verification ?? null;
         setVerification(result);
+        // A rejection locks every proof for this animal until tomorrow.
+        if (result?.locked) setLockedThisVisit(true);
         if (result && isApproved(result)) {
             const optimistic = notingApproval(current, {reason: result.reason, rewardXP: result.rewardXP});
             const refreshed = payload.trial ?? null;
@@ -287,6 +325,7 @@ export default function AnimalTrialDetail({
             const payload = await response.json().catch(() => ({}));
 
             if (!response.ok) {
+                noteRefusal(payload.code);
                 setErrorMessage(payload.error ?? "Could not check that evidence. Try again in a moment.");
                 // A refusal still moves the server's attempt budget, so take the
                 // fresh row when the route managed to return one.
@@ -300,7 +339,7 @@ export default function AnimalTrialDetail({
         } finally {
             setIsWorking(false);
         }
-    }, [apply, canAttempt, captionLanguage, current, settleVerification]);
+    }, [apply, canAttempt, captionLanguage, current, noteRefusal, settleVerification]);
 
     const written = requiresText(current);
     const submittable = canSubmitEvidence(current);
@@ -328,6 +367,7 @@ export default function AnimalTrialDetail({
             const payload = await response.json().catch(() => ({}));
 
             if (!response.ok) {
+                noteRefusal(payload.code);
                 setErrorMessage(payload.error ?? "Could not check that answer. Try again in a moment.");
                 // A refusal still spends server state, so take the fresh row
                 // rather than leaving a stale attempt budget on screen.
@@ -341,19 +381,32 @@ export default function AnimalTrialDetail({
         } finally {
             setIsWorking(false);
         }
-    }, [apply, canAttempt, captionLanguage, current.frequency, current.speciesProfileId, settleVerification, trimmedAnswer]);
+    }, [apply, canAttempt, captionLanguage, current.frequency, current.speciesProfileId, noteRefusal, settleVerification, trimmedAnswer]);
 
+    // One attempt a day: after a rejected proof, nothing more is sent today.
+    const proofLocked = !complete && (gate.proofLocked || lockedThisVisit);
+    const needsTraining = !complete && !proofLocked && gate.trainingRequired;
+    const lockLine = proofLocked
+        ? (lockedThisVisit ? LOCKOUT_COPY.attemptUsedLine : LOCKOUT_COPY.proofLockedBody)
+        : needsTraining ? TRAINING_COPY.required : null;
     const outOfAttempts = !complete && submittable && !hasProofAttemptsLeft(current);
-    const actionTitle = !canAttempt ? NOT_YET_CAPTURED_TITLE : outOfAttempts ? "NO CHECKS LEFT" : primaryActionTitle(current);
-    const actionDisabled = !canAttempt
+    const lockedAction = !canAttempt || proofLocked || needsTraining;
+    const actionTitle = !canAttempt
+        ? NOT_YET_CAPTURED_TITLE
+        : proofLocked
+            ? LOCKOUT_COPY.lockedButton
+            : needsTraining
+                ? TRAINING_COPY.lockedLine
+                : outOfAttempts ? "NO CHECKS LEFT" : primaryActionTitle(current);
+    const actionDisabled = lockedAction
         || isWorking
         || current.status === "pending_activation"
         || outOfAttempts
-        // Never let a text Trial spend one of its two checks on an empty box.
+        // Never let a text Trial spend its attempt on an empty box.
         || (written && submittable && !hasEnoughAnswer);
 
     const primaryAction = () => {
-        if (!canAttempt) return;
+        if (lockedAction) return;
         switch (current.status) {
             case "notStarted":
                 void runLifecycle("start");
@@ -408,10 +461,14 @@ export default function AnimalTrialDetail({
             {current.successCriteria.map((criterion, index) => (
                 <p key={`${index}-${criterion}`} className="text-[10px] text-white/55">✓ {criterion}</p>
             ))}
-            {/* Completing a Trial is public — and so is evidence that fails
-                both checks. Saying that here, before anyone uploads anything,
-                is the only honest place to say it. */}
+            {/* Completing a Trial is public — and so is evidence that is not
+                accepted. Saying that here, before anyone uploads anything, is
+                the only honest place to say it. */}
             <p className="text-[10px] text-white/40">🌐 Accepted or not, this posts to Discover.</p>
+            {/* Said before the one attempt is spent. */}
+            {submittable && !proofLocked && current.proofAttemptCount === 0 && !wasRejected(current) ? (
+                <p className="text-[10px] font-semibold text-white/55">{LOCKOUT_COPY.proofWarning}</p>
+            ) : null}
             {socialProofText(current) ? (
                 <p className="text-[10px]" style={{color: NEON}}>{socialProofText(current)}</p>
             ) : null}
@@ -426,12 +483,9 @@ export default function AnimalTrialDetail({
                             <p className="mt-1 text-xs leading-5 text-white">{current.verificationReason}</p>
                         </div>
                     ) : null}
-                    {hasProofAttemptsLeft(current) ? (
-                        <p className="text-[10px] font-semibold text-white/55">
-                            {remainingProofAttempts(current) === 1
-                                ? "1 check left on this Trial"
-                                : `${remainingProofAttempts(current)} checks left on this Trial`}
-                        </p>
+                    {/* Locked, the line sits over the button instead. */}
+                    {proofLocked ? null : hasProofAttemptsLeft(current) ? (
+                        <p className="text-[10px] font-semibold text-white/55">{LOCKOUT_COPY.proofWarning}</p>
                     ) : (
                         <p className="text-[10px] font-semibold text-orange-400">
                             No checks left. This Trial cannot be submitted again.
@@ -792,7 +846,11 @@ export default function AnimalTrialDetail({
                     {!canAttempt ? (
                         <p className="mb-2 text-center text-[10px] text-white/55">{NOT_YET_CAPTURED_NOTE}</p>
                     ) : null}
-                    {errorMessage ? (
+                    {lockLine && canAttempt ? (
+                        <p className="mb-2 text-center text-[10px] text-white/60">{lockLine}</p>
+                    ) : null}
+                    {/* A refusal that only repeats the lock is already said above. */}
+                    {errorMessage && errorMessage !== lockLine ? (
                         <p className="mb-2 text-center text-[10px] text-orange-400">{errorMessage}</p>
                     ) : null}
                     {verification && !isApproved(verification) ? (
@@ -802,11 +860,11 @@ export default function AnimalTrialDetail({
                         type="button"
                         onClick={primaryAction}
                         disabled={actionDisabled}
-                        className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-black disabled:cursor-not-allowed ${canAttempt ? "text-black/90" : "text-white/60"}`}
+                        className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full text-base font-black disabled:cursor-not-allowed ${lockedAction ? "text-white/60" : "text-black/90"}`}
                         style={{backgroundColor: actionDisabled ? "rgba(255,255,255,0.14)" : accent}}
                     >
                         {isWorking ? "…" : null}
-                        {!canAttempt ? <span aria-hidden="true">🔒</span> : null}
+                        {lockedAction ? <span aria-hidden="true">🔒</span> : null}
                         {actionTitle}
                     </button>
                 </div>

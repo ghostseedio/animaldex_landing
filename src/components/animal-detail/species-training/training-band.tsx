@@ -6,9 +6,12 @@ import {NOT_YET_CAPTURED_NOTE, NOT_YET_CAPTURED_TITLE} from "@/lib/animal-trials
 import {
     type SpeciesTraining,
     type SpeciesTrainingResult,
+    LOCKOUT_COPY,
     TRAINING_COPY,
     showsTrainingStep,
+    trainingCanStart,
     trainingIntroText,
+    trainingIsMissed,
     trainingRewardLine
 } from "@/lib/species-training";
 import LoopStepCard from "@/components/animal-detail/power-loop/loop-step-card";
@@ -65,7 +68,8 @@ export default function TrainingBand({
     const [showsPower, setShowsPower] = useState(false);
     // Playing needs an account: a signed-out reader sees the step and its
     // questions' count, and "Sign in to start Training" instead of the quiz.
-    const canStart = Boolean(isSignedIn !== false && training?.available && training.unlocked && !training.completed && training.questions.length > 0);
+    // A miss today locks it until tomorrow (or a new card), as on iOS.
+    const canStart = isSignedIn !== false && trainingCanStart(training);
 
     useEffect(() => {
         if (!openRequest || !canStart) return;
@@ -127,6 +131,31 @@ export default function TrainingBand({
                         <span aria-hidden="true" className="text-[13px] font-bold">✓</span>
                         {TRAINING_COPY.complete}
                     </p>
+                </section>
+                {quiz}
+            </>
+        );
+    }
+
+    if (trainingIsMissed(training)) {
+        // Missed today: nothing to press until tomorrow.
+        const missed = <p className="text-sm leading-6 text-white/70">{LOCKOUT_COPY.trainingLockedBody}</p>;
+        return asLoopStep ? (
+            <>
+                <LoopStepCard accent={NEON} tone="quiet" label={TRAINING_COPY.title} state="🔒 Locked">
+                    <h3 className="font-display text-2xl font-black leading-tight text-white">
+                        {power ? <AnimalPowerIcon speciesProfileId={power.speciesProfileId} /> : null}
+                        {power?.principleName ?? TRAINING_COPY.title}
+                    </h3>
+                    {missed}
+                </LoopStepCard>
+                {quiz}
+            </>
+        ) : (
+            <>
+                <section className="flex flex-col gap-3 border-b border-white/[0.08] bg-white/[0.03] px-5 py-5" style={{boxShadow: `inset 3px 0 0 ${NEON}8C`}}>
+                    <TrainingHeading />
+                    {missed}
                 </section>
                 {quiz}
             </>

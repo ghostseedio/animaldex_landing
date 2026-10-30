@@ -159,6 +159,8 @@ export type PowerApplicationResult = {
      */
     grantedPower: boolean;
     rejectionsRemaining: number;
+    /** A rejection that locked this animal's proofs until tomorrow (one attempt a day). */
+    locked?: boolean;
     /** The grader's read on whether the photo or video shows what was written. */
     evidenceMatches?: boolean;
 };
