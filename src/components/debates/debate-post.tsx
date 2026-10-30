@@ -43,7 +43,7 @@ export default function DebatePost({debate: seed, words, signedIn, pinned = fals
 
             <div className="-mx-5 mt-4 flex flex-col divide-y divide-white/[0.06] border-y border-white/[0.08]">
                 {debate.participants.map((participant) => {
-                    const color = debateColor(debate, participant.captureId);
+                    const color = debateColor(participant);
                     const opening = openings.get(participant.seat);
                     return (
                         <div key={participant.id} className="flex items-start gap-2.5 px-5 py-3">

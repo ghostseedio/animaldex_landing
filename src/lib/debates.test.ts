@@ -3,6 +3,7 @@ import test from "node:test";
 import {COMPANION_WORDS_EN, companionWords} from "@/lib/companion-bond";
 import {
     canHealHeart,
+    decodeDebateRunContext,
     debateIsMine,
     debateOpenings,
     debateProblemCode,
@@ -230,4 +231,78 @@ test("a report needs something in it", () => {
     assert.equal(decodeDebateReport({}), null);
     assert.equal(decodeDebateReport({ways: [{lesson: "no way given"}]}), null);
     assert.equal(decodeDebateReport({problem: "Moving"})?.problem, "Moving");
+});
+
+test("the server's shapes: someone else's animal has no card, My debates says its role, a Discover row its viewer", () => {
+    // debate_v1 for a voter: no capture ids, nicknames or hearts for animals that are not theirs.
+    const viewed = decodeDebate({
+        id: DEBATE, visibility: "public", status: "voting", is_asker: false,
+        problem: "Should I move cities?", problem_public: "Should I move cities?", problem_private: null,
+        votes_total: 6, my_vote: null, can_vote: true, cant_vote_reason: null, my_way: null,
+        credits_for_winner: 4, report_status: "ready",
+        participants: [
+            {participant_id: P_HOST, seat: 0, capture_id: null, animal: "Gray Wolf", power_name: "The Pack Holds", is_mine: false, votes: null},
+            {participant_id: P_OTHER, seat: 1, capture_id: null, animal: "Eurasian Otter", power_name: "Play", is_mine: false, votes: null}
+        ],
+        turns: [{turn_index: 1, seat: 1, participant_id: P_OTHER, phase: "open", text: "Go and play."}, {turn_index: 0, seat: 0, phase: "open", text: "Stay."}]
+    })!;
+    assert.equal(viewed.participants.length, 2);
+    assert.equal(viewed.participants[0].captureId, null);
+    assert.equal(viewed.participants[1].id, P_OTHER);
+    assert.equal(viewed.totalVotes, 6);
+    assert.equal(viewed.problemPrivate, null);
+    assert.equal(viewed.creditsForWinner, 4);
+    assert.deepEqual(orderedDebateTurns(viewed.turns).map((turn) => turn.text), ["Stay.", "Go and play."]);
+    assert.deepEqual(debateVoteState(viewed, true), {kind: "vote"});
+
+    // A row of my_debates_v1: the role, the asker's own words in `problem`, the host's card (theirs).
+    const mine = decodeDebate({
+        id: DEBATE, visibility: "private", status: "private_done", role: "asker", problem: "My own words", my_result: null, report_ready: true,
+        participants: [{participant_id: P_HOST, seat: 0, capture_id: HOST, animal: "Gray Wolf", is_mine: true}]
+    })!;
+    assert.equal(mine.askerIsMe, true);
+    assert.equal(mine.problemPrivate, "My own words");
+    assert.equal(mine.hostCaptureId, HOST);
+    assert.equal(mine.reportStatus, "ready");
+    assert.equal(decodeDebate({id: DEBATE, role: "owner", problem: "Public words"})?.problemPrivate, null);
+
+    // A Discover row: the viewer's vote, whether they can, and each animal's opening.
+    const post = decodeDebate({
+        debate_id: DEBATE, created_at: "2026-10-30T09:00:00Z", status: "voting", problem_public: "Moving?",
+        votes_total: 2, viewer_vote_participant_id: null, viewer_can_vote: false, viewer_cant_vote_reason: "own_debate", viewer_is_participant: true,
+        boosted: true, participants: [
+            {participant_id: P_HOST, seat: 0, animal: "Gray Wolf", opening: "Stay with your pack.", votes: 1, is_winner: false},
+            {participant_id: P_OTHER, seat: 1, animal: "Eurasian Otter", opening: "Go play.", votes: 1, is_winner: false}
+        ]
+    })!;
+    assert.equal(post.id, DEBATE);
+    assert.equal(post.voteBlockedCode, "own_debate");
+    assert.equal(debateOpenings(post).get(1), "Go play.");
+    assert.deepEqual(debateVoteState({...post, visibility: "public"}, true), {kind: "own"});
+
+    // The run context: the problem as the turns argue it, the animals by species.
+    const run = decodeDebateRunContext({
+        enabled: true, id: DEBATE, status: "debating", visibility: "public", problem: "Moving?", public_checked: false,
+        participants: [
+            {participant_id: P_HOST, seat: 0, capture_id: HOST, species_profile_id: SPECIES, animal_name: "Gray Wolf", is_asker_owned: true, nickname: "Luna"},
+            {participant_id: P_THIRD, seat: 1, capture_id: null, species_profile_id: SPECIES, animal_name: "Crow", is_asker_owned: false}
+        ],
+        turns: [{turn_index: 0, seat: 0, phase: "open", text: "Stay."}]
+    })!;
+    assert.equal(run.status, "debating");
+    assert.equal(run.participants[1].captureId, null);
+    assert.equal(run.participants[0].nickname, "Luna");
+    assert.equal(run.turns[0].index, 0);
+    assert.equal(decodeDebateRunContext({status: "debating"}), null);
+});
+
+test("the server's refusals say themselves", () => {
+    assert.equal(debateProblemCode("capture_health_full"), "hearts_full");
+    assert.equal(debateProblemCode("animal_unavailable"), "animal_unavailable");
+    assert.equal(debateProblemCode("duplicate_species"), "duplicate_species");
+    assert.equal(debateProblemCode("problem_too_short"), "problem_too_short");
+    assert.equal(debateProblemCode("problem_too_long"), "text_too_long");
+    assert.equal(debateProblemCode("debate_not_found"), "not_found");
+    assert.equal(debateProblemText("animal_unavailable", COMPANION_WORDS_EN), "One of those animals can't join right now. Pick another.");
+    assert.equal(debateProblemText("problem_too_short", COMPANION_WORDS_EN), "Say a little more about it: a sentence or two.");
 });

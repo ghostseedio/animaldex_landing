@@ -64,8 +64,9 @@ test("stream: the remaining turns in order, each kept, a silent animal skipped, 
             emit(`${plan.phase} by ${plan.seat} after ${turns.length} `);
             emit("[[settled]]");
         },
-        onTurn: async (turn) => {
+        onTurn: async (turn, index) => {
             kept.push(turn);
+            assert.equal(index >= 0, true);
         },
         finish: async (turns) => {
             finishedWith = turns.length;
@@ -77,7 +78,8 @@ test("stream: the remaining turns in order, each kept, a silent animal skipped, 
     assert.equal(frames[0].flow, "debate");
     assert.deepEqual((frames[0].speakers as Array<{seat: number}>).map((speaker) => speaker.seat), [0, 1, 2]);
     const starts = frames.filter((frame) => frame.turn).map((frame) => frame.turn as {seat: number; phase: string; index: number});
-    assert.equal(starts[0].index, 1);
+    // Each turn's index is its place in the schedule, gaps and all.
+    assert.deepEqual(starts.map((start) => start.index), [1, 2, 3, 4, 6, 7]);
     assert.deepEqual(starts.map((start) => `${start.phase}:${start.seat}`), ["open:1", "open:2", "react:0", "react:1", "close:0", "close:1"]);
     assert.ok(frames.some((frame) => frame.error === "speaker_failed" && frame.participant === "c"));
     // Markers never reach the page, and every finished turn is kept.

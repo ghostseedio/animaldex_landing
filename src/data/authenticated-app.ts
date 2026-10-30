@@ -127,8 +127,6 @@ export type AppNotification = {
     comparisonSlug: string | null;
     campaignId: string | null;
     challengeId: string | null;
-    /** 3.2 Debates: the debate a `debate_*` row is about (joined, settled, drawn). */
-    debateId: string | null;
     eventType: string;
     likeCount: number | null;
     endorsedStat: string | null;
@@ -1088,12 +1086,9 @@ export async function getAppSponsoredCampaigns(): Promise<AppSponsoredCampaign[]
 
 const NOTIFICATION_SELECT = "id,capture_id,actor_user_id,actor_display_name,actor_username,trade_offer_id,credit_offer_id,comparison_slug,campaign_id,challenge_id,event_type,like_count,endorsed_stat,gift_slug,subject_animal_name,subject_animaldex_number,source_key,title,body,created_at,read_at";
 
-/**
- * The reader's notifications, newest first: with `debate_id` (3.2 Debates),
- * else without it until that column is live, else the oldest columns.
- */
+/** The reader's notifications, newest first; the oldest columns when the full read fails. */
 async function selectNotificationRows(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, limit: number): Promise<QueryRow[]> {
-    for (const columns of [`${NOTIFICATION_SELECT},debate_id`, NOTIFICATION_SELECT, "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at"]) {
+    for (const columns of [NOTIFICATION_SELECT, "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at"]) {
         const {data, error} = await supabase.from("user_notifications").select(columns).order("created_at", {ascending: false}).limit(limit);
         if (!error) return (data ?? []) as unknown as QueryRow[];
     }
@@ -1112,7 +1107,6 @@ function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
         comparisonSlug: row.comparison_slug ?? null,
         campaignId: row.campaign_id ?? null,
         challengeId: row.challenge_id ?? null,
-        debateId: row.debate_id ?? null,
         eventType: row.event_type,
         likeCount: row.like_count ?? null,
         endorsedStat: row.endorsed_stat ?? null,

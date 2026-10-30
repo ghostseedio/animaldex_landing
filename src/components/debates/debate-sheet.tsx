@@ -25,7 +25,7 @@ import {
     type DebateVisibility
 } from "@/lib/debates";
 import {debateProblemText, debateStakeNote} from "@/lib/debate-words";
-import {approvePublicDebate, createDebate, loadDebateCandidates, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
+import {approvePublicDebate, createDebate, fetchDebate, loadDebateCandidates, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
 
 /** The animal the debate starts from: the one whose chat this is. */
 export type DebateHost = {
@@ -38,7 +38,10 @@ export type DebateHost = {
     hearts: number | null;
 };
 
-const MIN_PROBLEM = 3;
+/** The server wants at least this much of the problem (and of the public text). */
+const MIN_PROBLEM = 10;
+const DRAFT_POLL_MS = 2000;
+const DRAFT_POLLS = 45;
 
 export default function DebateSheet({
     host,
@@ -78,6 +81,43 @@ export default function DebateSheet({
     const [rosterSaving, setRosterSaving] = useState(false);
     // Candidates are fitted to the problem as it stands when they ask, not at every keystroke.
     const [fittedTo, setFittedTo] = useState(initialProblem.trim());
+
+    // A public debate starts as a draft the server writes (no names, places
+    // or other identifying details): wait for it, then show it to approve. One
+    // too personal to post comes back cancelled `not_public`: it stays private.
+    const drafting = draft?.status === "drafting";
+    useEffect(() => {
+        if (!draft || draft.status !== "drafting") return;
+        let cancelled = false;
+        void (async () => {
+            for (let attempt = 0; attempt < DRAFT_POLLS && !cancelled; attempt += 1) {
+                await new Promise((resolve) => setTimeout(resolve, DRAFT_POLL_MS));
+                if (cancelled) return;
+                const {debate} = await fetchDebate(draft.id);
+                if (!debate || cancelled || debate.status === "drafting") continue;
+                if (debate.status === "cancelled") {
+                    setDraft(null);
+                    if (debate.cancelReason === "not_public") {
+                        setRefusedPublic(true);
+                        setVisibility("private");
+                        setPicked([]);
+                    } else {
+                        setFailure(web.problems.generic);
+                    }
+                    return;
+                }
+                const next: Debate = {...debate, askerIsMe: true, participants: debate.participants.length > 0 ? debate.participants : draft.participants};
+                setDraft(next);
+                setPublicText((debate.problemPublic ?? "").slice(0, DEBATE_PUBLIC_TEXT_MAX));
+                noteDebateChanged(next);
+                return;
+            }
+            if (!cancelled) setFailure(web.problems.generic);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [draft, web.problems.generic]);
 
     const publicBlocker = visibility !== "public"
         ? null
@@ -127,7 +167,7 @@ export default function DebateSheet({
         if (working) return;
         const text = problem.trim();
         if (text.length < MIN_PROBLEM) {
-            setFailure(web.problemPlaceholder);
+            setFailure(web.problems.tooShort);
             return;
         }
         if (picked.length === 0) {
@@ -231,8 +271,10 @@ export default function DebateSheet({
                             <p className="text-sm font-black text-white">{words.debate.publicText}</p>
                             <p className="mt-1 text-xs leading-5 text-white/60">{words.debate.publicTextNote}</p>
                             <label className="sr-only" htmlFor="debate-public-text">{words.debate.publicText}</label>
+                            {drafting ? <p role="status" className="mt-3 text-sm text-white/55">{web.writingPublic}</p> : null}
                             <textarea
                                 id="debate-public-text"
+                                hidden={drafting}
                                 value={publicText}
                                 onChange={(event) => setPublicText(event.target.value.slice(0, DEBATE_PUBLIC_TEXT_MAX))}
                                 rows={5}
@@ -363,7 +405,7 @@ export default function DebateSheet({
                         <button
                             type="button"
                             onClick={() => void approve()}
-                            disabled={working || publicText.trim().length < MIN_PROBLEM}
+                            disabled={working || drafting || publicText.trim().length < MIN_PROBLEM}
                             className="flex min-h-12 w-full items-center justify-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
                         >
                             {working ? web.posting : words.debate.approve}

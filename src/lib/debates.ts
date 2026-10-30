@@ -5,12 +5,18 @@
  * nothing at stake) or public (other people's animals from the roster, a heart
  * on each, and the community votes).
  *
- * The client RPCs (SPEC section 3; the server lane's SERVER.md is the source
- * of truth once it exists): `debate_candidates_v1`, `create_debate_v1`,
- * `approve_public_debate_v1`, `vote_debate_v1`, `debate_v1`,
- * `my_debates_v1`, `set_debate_roster_v1`, `heal_capture_heart_v1`,
- * `choose_debate_way_v1`. Their refusals come back as codes, said in words by
- * `debateProblemText`.
+ * The client RPCs (SPEC section 3; AnimalDex migration
+ * 20261031150000_debates, docs/debates/SERVER.md): `debate_candidates_v1`,
+ * `create_debate_v1`, `approve_public_debate_v1`, `cancel_debate_v1`,
+ * `vote_debate_v1`, `debate_v1`, `my_debates_v1`, `debate_roster_v1`,
+ * `set_debate_roster_v1`, `heal_capture_heart_v1`, `choose_debate_way_v1`,
+ * and the Discover views `discover_debate_timeline_v1` /
+ * `discover_debate_pinned_v1`. Their refusals come back as codes, said in
+ * words by `debateProblemText`.
+ *
+ * Someone else's animal is never named by its card: the server sends a
+ * participant's `capture_id` (and nickname, and hearts) only to its owner.
+ * A participant is keyed by its participant id and its seat.
  *
  * Pure: the routes, the chat drawer, the Debates page, Discover, the card and
  * the tests share these decoders. A malformed field is dropped, never the
@@ -34,8 +40,10 @@ export type DebatePhase = "open" | "react" | "close";
 
 /** One animal in a debate. Seat 0 is the host, the asker's own animal. */
 export type DebateParticipant = {
+    /** The participant id: what a vote and "Try {name}'s way" name. */
     id: string;
-    captureId: string;
+    /** The card, for the reader's own animals only. */
+    captureId: string | null;
     seat: number;
     speciesProfileId: string | null;
     /** The species' icon-art slug, when known: the face in the thread is icon art, never a photo. */
@@ -55,6 +63,10 @@ export type DebateParticipant = {
     heartLost: boolean;
     creditsWon: number;
     xpAwarded: number;
+    /** Discover: its opening turn, as the post shows it. */
+    opening: string | null;
+    /** Discover: it won the vote. */
+    isWinner: boolean;
 };
 
 export type DebateTurn = {seat: number; phase: DebatePhase; text: string; createdAt: string | null; index: number | null};
@@ -107,6 +119,14 @@ export type Debate = {
     voteBlockedCode: string | null;
     /** The way the asker chose to try (private; never a vote). */
     chosenParticipantId: string | null;
+    /** Why it ended unargued: `not_public` (too personal to post), `asker_cancelled`, … */
+    cancelReason: string | null;
+    /** The report's state: none | writing | ready | failed. */
+    reportStatus: string | null;
+    /** Public: what the winner's owner gets, from the server. */
+    creditsForWinner: number | null;
+    /** My debates: how it went for the reader (`won`, `lost_heart`, `draw`). */
+    myResult: string | null;
 };
 
 /** One row of `debate_candidates_v1`. */
@@ -267,14 +287,15 @@ export function decodeDebateParticipant(raw: unknown, index = 0): DebateParticip
     const row = object(raw);
     if (!row) return null;
     const captureId = debateUuid(first(row, "capture_id", "captureId"));
-    if (!captureId) return null;
+    const id = debateUuid(first(row, "participant_id", "participantId", "id")) ?? captureId;
+    if (!id) return null;
     const animalRow = object(row.animal);
     const animal = firstText(row, "animal_name", "animalName", "species_name", "common_name")
         ?? (typeof row.animal === "string" ? text(row.animal) : null)
         ?? (animalRow ? firstText(animalRow, "name", "animal_name", "common_name") : null)
         ?? "";
     return {
-        id: debateUuid(first(row, "id", "participant_id", "participantId")) ?? captureId,
+        id,
         captureId,
         seat: int(first(row, "seat")) ?? index,
         speciesProfileId: debateUuid(first(row, "species_profile_id", "speciesProfileId")) ?? (animalRow ? debateUuid(animalRow.species_profile_id) : null),
@@ -292,7 +313,9 @@ export function decodeDebateParticipant(raw: unknown, index = 0): DebateParticip
         })(),
         heartLost: bool(first(row, "heart_lost", "heartLost")),
         creditsWon: Math.max(0, int(first(row, "credits_won", "creditsWon")) ?? 0),
-        xpAwarded: Math.max(0, int(first(row, "xp_awarded", "xpAwarded")) ?? 0)
+        xpAwarded: Math.max(0, int(first(row, "xp_awarded", "xpAwarded")) ?? 0),
+        opening: firstText(row, "opening"),
+        isWinner: bool(first(row, "is_winner", "isWinner"))
     };
 }
 
@@ -352,15 +375,18 @@ export function decodeDebate(raw: unknown): Debate | null {
     const summed = counted.some((participant) => participant.votes !== null)
         ? counted.reduce((sum, participant) => sum + (participant.votes ?? 0), 0)
         : null;
-    const myVote = debateUuid(first(row, "my_vote", "myVote", "viewer_vote", "my_vote_participant_id", "voted_participant_id"))
+    const myVote = debateUuid(first(row, "my_vote", "myVote", "viewer_vote_participant_id", "viewer_vote", "my_vote_participant_id", "voted_participant_id"))
         ?? (object(row.my_vote) ? debateUuid(object(row.my_vote)!.participant_id) : null);
+    // `debate_v1` says `is_asker`; a row of My debates says its `role`.
+    const askerIsMe = bool(first(row, "asker_is_me", "askerIsMe", "is_asker")) || row.role === "asker";
     return {
         id,
         visibility: debateVisibility(row.visibility) ?? "private",
         status: debateStatus(row.status) ?? "debating",
         hostCaptureId: debateUuid(first(row, "host_capture_id", "hostCaptureId")) ?? counted.find((participant) => participant.seat === 0)?.captureId ?? null,
-        askerIsMe: bool(first(row, "asker_is_me", "askerIsMe", "is_asker")),
-        problemPrivate: firstText(row, "problem_private", "problemPrivate", "problem"),
+        askerIsMe,
+        // `problem` is the asker's own words for the asker, and the public text for anyone else.
+        problemPrivate: firstText(row, "problem_private", "problemPrivate") ?? (askerIsMe ? firstText(row, "problem") : null),
         problemPublic: firstText(row, "problem_public", "problemPublic", "public_text", "draft_public", "draft_public_text"),
         participants: counted,
         turns,
@@ -369,14 +395,19 @@ export function decodeDebate(raw: unknown): Debate | null {
         votingDeadlineAt: isoDate(first(row, "voting_deadline_at", "votingDeadlineAt")),
         rollovers: Math.max(0, int(row.rollovers) ?? 0),
         boosted: bool(row.boosted),
-        winnerParticipantId: debateUuid(first(row, "winner_participant_id", "winnerParticipantId")),
+        winnerParticipantId: debateUuid(first(row, "winner_participant_id", "winnerParticipantId")) ?? counted.find((participant) => participant.isWinner)?.id ?? null,
         createdAt: isoDate(first(row, "created_at", "createdAt")),
         settledAt: isoDate(first(row, "settled_at", "settledAt")),
-        totalVotes: int(first(row, "total_votes", "totalVotes", "vote_count")) ?? (typeof row.votes === "number" ? int(row.votes) : null) ?? summed,
+        totalVotes: int(first(row, "votes_total", "total_votes", "totalVotes", "vote_count")) ?? (typeof row.votes === "number" ? int(row.votes) : null) ?? summed,
         myVote,
-        canVote: bool(first(row, "can_vote", "canVote")),
-        voteBlockedCode: firstText(row, "cant_vote_reason", "vote_block", "vote_blocked", "cannot_vote_reason", "vote_blocked_reason"),
-        chosenParticipantId: debateUuid(first(row, "chosen_participant_id", "asker_choice", "chosenParticipantId"))
+        canVote: bool(first(row, "can_vote", "canVote", "viewer_can_vote")),
+        voteBlockedCode: firstText(row, "cant_vote_reason", "viewer_cant_vote_reason", "vote_block", "vote_blocked", "cannot_vote_reason", "vote_blocked_reason")
+            ?? (bool(row.viewer_is_participant) ? "own_debate" : null),
+        chosenParticipantId: debateUuid(first(row, "my_way", "chosen_participant_id", "asker_choice", "chosenParticipantId")),
+        cancelReason: firstText(row, "cancel_reason", "cancelReason"),
+        reportStatus: firstText(row, "report_status", "reportStatus") ?? (row.report_ready === true ? "ready" : null),
+        creditsForWinner: int(first(row, "credits_for_winner", "creditsForWinner")),
+        myResult: firstText(row, "my_result", "myResult")
     };
 }
 
@@ -428,6 +459,38 @@ export function decodeDebateWayChoice(raw: unknown): DebateWayChoice | null {
     };
 }
 
+/** `debate_run_context` (service role, for the asker's run): the problem as the turns argue it, the animals by species, the kept turns. */
+export type DebateRunContext = {
+    enabled: boolean;
+    id: string;
+    status: DebateStatus | null;
+    visibility: DebateVisibility;
+    /** The approved text for a public debate, the asker's own words for a private one. */
+    problem: string | null;
+    publicChecked: boolean;
+    participants: DebateParticipant[];
+    turns: DebateTurn[];
+};
+
+export function decodeDebateRunContext(raw: unknown): DebateRunContext | null {
+    const row = object(raw);
+    const id = row ? debateUuid(first(row, "id", "debate_id")) : null;
+    if (!row || !id) return null;
+    return {
+        enabled: row.enabled !== false,
+        id,
+        status: debateStatus(row.status),
+        visibility: debateVisibility(row.visibility) ?? "private",
+        problem: firstText(row, "problem"),
+        publicChecked: bool(row.public_checked),
+        participants: list(row.participants)
+            .map((item, index) => decodeDebateParticipant(item, index))
+            .filter((item): item is DebateParticipant => item !== null)
+            .sort((a, b) => a.seat - b.seat),
+        turns: list(row.turns).map(decodeDebateTurn).filter((item): item is DebateTurn => item !== null)
+    };
+}
+
 export type HeartsResult = {hearts: number; credits: number | null};
 
 export function decodeHeartsResult(raw: unknown): HeartsResult | null {
@@ -467,10 +530,14 @@ export function orderedDebateTurns(turns: DebateTurn[]): DebateTurn[] {
 }
 
 /** Each animal's opening (its first `open` turn), by seat: the Discover post shows these. */
-export function debateOpenings(debate: Pick<Debate, "turns">): Map<number, string> {
+export function debateOpenings(debate: Pick<Debate, "turns" | "participants">): Map<number, string> {
     const openings = new Map<number, string>();
     for (const turn of orderedDebateTurns(debate.turns)) {
         if (turn.phase === "open" && !openings.has(turn.seat)) openings.set(turn.seat, turn.text);
+    }
+    // A Discover post carries each animal's opening on the animal itself.
+    for (const participant of debate.participants) {
+        if (participant.opening && !openings.has(participant.seat)) openings.set(participant.seat, participant.opening);
     }
     return openings;
 }
@@ -483,7 +550,7 @@ export function debateParticipantAt(debate: Pick<Debate, "participants">, seat: 
 export function reportWayFor(report: DebateReport | null, participant: DebateParticipant): DebateReportWay | null {
     if (!report) return null;
     return report.ways.find((way) => way.participantId === participant.id)
-        ?? report.ways.find((way) => way.captureId === participant.captureId)
+        ?? (participant.captureId ? report.ways.find((way) => way.captureId === participant.captureId) : undefined)
         ?? report.ways.find((way) => way.seat === participant.seat)
         ?? null;
 }
@@ -543,6 +610,11 @@ export const DEBATE_PROBLEM_CODES = [
     "hearts_full",
     "insufficient_credits",
     "text_too_long",
+    "problem_too_short",
+    "animal_unavailable",
+    "duplicate_species",
+    "debate_not_finished",
+    "account_suspended",
     "debate_unavailable"
 ] as const;
 
@@ -552,9 +624,14 @@ export type DebateProblemCode = (typeof DEBATE_PROBLEM_CODES)[number];
 export function debateProblemCode(message: unknown): DebateProblemCode {
     const said = typeof message === "string" ? message.toLowerCase() : "";
     if (said.includes("participant_cannot_vote") || said.includes("cannot_vote_own")) return "own_debate";
-    if (said.includes("not_enough_credits")) return "insufficient_credits";
-    if (said.includes("challenge_health_full") || said.includes("already_full")) return "hearts_full";
-    if (said.includes("rate_limit") || said.includes("too_many_debates")) return "daily_limit";
+    if (said.includes("not_enough_credits") || said.includes("insufficient_balance")) return "insufficient_credits";
+    if (said.includes("health_full") || said.includes("already_full")) return "hearts_full";
+    if (said.includes("rate_limit") || said.includes("too_many_debates") || said.includes("debate_limit")) return "daily_limit";
+    if (said.includes("problem_too_long")) return "text_too_long";
+    if (said.includes("debate_not_found") || said.includes("capture_not_found")) return "not_found";
+    if (said.includes("participant_busy") || said.includes("participant_invalid") || said.includes("invalid_participant")) return "animal_unavailable";
+    if (said.includes("host_power_not_earned")) return "power_not_earned";
+    if (said.includes("host_no_hearts")) return "no_hearts";
     return DEBATE_PROBLEM_CODES.find((code) => said.includes(code)) ?? "debate_unavailable";
 }
 

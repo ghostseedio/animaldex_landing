@@ -26,14 +26,18 @@ export function debateProblemText(code: DebateProblemCode | null | undefined, wo
         case "already_in_debate": return problems.alreadyInDebate;
         case "invalid_participants":
         case "too_many_animals":
-        case "roster_unavailable": return problems.alreadyInDebate;
+        case "animal_unavailable":
+        case "roster_unavailable": return problems.animalUnavailable;
+        case "duplicate_species": return words.picker.alreadyHereHint;
+        case "problem_too_short": return problems.tooShort;
         case "daily_limit":
         case "limit_reached": return problems.dailyLimit;
         case "not_eligible": return problems.notEligible;
         case "already_voted": return words.debate.voted;
         case "own_debate": return words.debate.cantVoteOwn;
         case "voting_closed": return problems.votingClosed;
-        case "not_found": return problems.notFound;
+        case "not_found":
+        case "debate_not_finished": return problems.notFound;
         case "hearts_full": return words.heal.full;
         case "insufficient_credits": return problems.noCredits;
         case "text_too_long": return problems.textTooLong;

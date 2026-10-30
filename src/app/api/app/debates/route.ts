@@ -15,7 +15,6 @@ import {
     debateProblemCode,
     debateUuid,
     debateVisibility,
-    debatesWithCapture,
     decodeDebate,
     decodeDebateCandidates,
     decodeDebateWayChoice
@@ -29,11 +28,12 @@ export const dynamic = "force-dynamic";
  * reader. Every RPC acts on auth.uid() and refuses with a code.
  *
  * GET                       the switch, the reader's debates (`my_debates_v1`) and their roster opt-in.
- * GET ?captureId=           the same, only the debates that card was in (the card's tab, the chat).
+ * GET ?captureId=           the same, only the debates that card of theirs was in (`p_capture_id`: the card's tab, the chat).
  * GET ?id=                  one debate (`debate_v1`): turns, report, votes, the reader's vote, `can_vote`.
  * POST {action: "candidates", hostCaptureId, visibility, problem}   `debate_candidates_v1`.
  * POST {action: "create", hostCaptureId, visibility, problem, captureIds}   `create_debate_v1`.
  * POST {action: "approve", debateId, problemPublic}   `approve_public_debate_v1`.
+ * POST {action: "cancel", debateId}                   `cancel_debate_v1` (not argued yet).
  * POST {action: "vote", debateId, participantId}      `vote_debate_v1`.
  * POST {action: "choose", debateId, participantId}    `choose_debate_way_v1` (never a vote).
  * POST {action: "roster", optedIn}                    `set_debate_roster_v1`.
@@ -77,9 +77,9 @@ export async function GET(request: Request) {
         return NextResponse.json({enabled, debate}, {headers: PRIVATE});
     }
 
-    const [debates, optedIn] = await Promise.all([readMyDebates(supabase), readRosterOptIn(supabase)]);
     const captureId = debateUuid(params.get("captureId"));
-    const listed = debates === null ? [] : captureId ? debatesWithCapture(debates, captureId) : debates;
+    const [debates, optedIn] = await Promise.all([readMyDebates(supabase, captureId), readRosterOptIn(supabase)]);
+    const listed = debates ?? [];
     return NextResponse.json({enabled, available: debates !== null, debates: listed, optedIn}, {headers: PRIVATE});
 }
 
@@ -136,6 +136,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ok: true, debate: decodeDebate(data)});
     }
 
+    if (action === "cancel") {
+        const debateId = debateUuid(body.debateId);
+        if (!debateId) return refuse("not_found");
+        const {data, error} = await supabase.rpc("cancel_debate_v1", {p_debate_id: debateId});
+        if (error) return failed("cancel_debate_v1", error.message);
+        return NextResponse.json({ok: true, debate: decodeDebate(data)});
+    }
+
     if (action === "vote" || action === "choose") {
         const debateId = debateUuid(body.debateId);
         const participantId = debateUuid(body.participantId);
@@ -145,7 +153,7 @@ export async function POST(request: Request) {
             if (error) return failed("vote_debate_v1", error.message);
             const row = data && typeof data === "object" ? data as Record<string, unknown> : {};
             if (row.ok === false) return failed("vote_debate_v1", String(row.code ?? row.error ?? ""));
-            return NextResponse.json({ok: true, votes: row.votes ?? null});
+            return NextResponse.json({ok: true, votes: row.votes ?? null, counts: Array.isArray(row.counts) ? row.counts : []});
         }
         const {data, error} = await supabase.rpc("choose_debate_way_v1", {p_debate_id: debateId, p_participant_id: participantId});
         if (error) return failed("choose_debate_way_v1", error.message);

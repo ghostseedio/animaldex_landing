@@ -7,7 +7,9 @@
  *
  * The schedule and the stream only. What each turn is told is
  * `debate-rules.ts`; each finished turn is handed to `onTurn` to be kept
- * (`debate_turns`), and `finish` writes the report before the last frame.
+ * (`debate_record_turn`, idempotent on its index: a turn's index is its place
+ * in the schedule, so a debate picked up again never writes one twice), and
+ * `finish` moves it on to its report before the last frame.
  *
  * Frames, as the group conversation's, so the page reads them with the same
  * parser: {flow:"debate", speakers} · {turn:{index, participant, seat, phase,
@@ -31,6 +33,11 @@ export type AskDebatePlan = {
 };
 
 export type AskDebateTurn = {seat: number; phase: AskDebatePhase; text: string};
+
+/** A turn's index: its place in the schedule. */
+export function askDebateTurnIndex(schedule: AskDebatePlan[], plan: Pick<AskDebatePlan, "seat" | "phase">): number {
+    return schedule.findIndex((entry) => entry.seat === plan.seat && entry.phase === plan.phase);
+}
 
 /**
  * The whole debate, in order: everyone opens, everyone reacts once (each to
@@ -88,8 +95,8 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
     /** Turns already kept (a debate picked up again): never said twice. */
     said: AskDebateTurn[];
     sourceFor: (plan: AskDebatePlan, turns: AskDebateTurn[], signal: AbortSignal) => AnswerDeltaSource;
-    /** A finished turn, to keep. */
-    onTurn: (turn: AskDebateTurn) => Promise<void>;
+    /** A finished turn, to keep, with its index in the schedule. */
+    onTurn: (turn: AskDebateTurn, index: number) => Promise<void>;
     /** Every turn is in: write the report; its answer joins the last frame. */
     finish: (turns: AskDebateTurn[]) => Promise<Record<string, unknown>>;
     headers: Record<string, string>;
@@ -131,7 +138,6 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
 
             const turns: AskDebateTurn[] = [...params.said];
             const out = new Set<number>();
-            let turnIndex = params.said.length;
             for (;;) {
                 const plan = nextAskDebateTurn({schedule, said: turns, out});
                 if (!plan) break;
@@ -141,8 +147,7 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
                     continue;
                 }
                 const participant = speaker.member.captureId;
-                const index = turnIndex;
-                turnIndex += 1;
+                const index = askDebateTurnIndex(schedule, plan);
                 send({
                     turn: {
                         index,
@@ -180,7 +185,7 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
                 }
                 const turn: AskDebateTurn = {seat: plan.seat, phase: plan.phase, text};
                 turns.push(turn);
-                await params.onTurn(turn).catch((error) => {
+                await params.onTurn(turn, index).catch((error) => {
                     console.warn("[debates] keeping a turn failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
                 });
                 send({participant, turn_index: index, participant_done: true});

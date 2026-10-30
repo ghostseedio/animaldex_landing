@@ -128,7 +128,8 @@ export default function DebateThread({
         mounted.current = false;
     }, []);
 
-    const seatOf = useCallback((captureId: string) => debate.participants.find((participant) => participant.captureId === captureId)?.seat ?? 0, [debate.participants]);
+    // The stream names each animal by its participant id (never by card).
+    const seatOf = useCallback((participantId: string) => debate.participants.find((participant) => participant.id === participantId)?.seat ?? 0, [debate.participants]);
     const director = useAskGroupDirector({
         instant: reducedMotion,
         onTurnShown: (turn, text) => {
@@ -253,7 +254,7 @@ export default function DebateThread({
     const tryWay = useTryDebateWay(debate, words);
     const live = director.revealing;
     const waiting = director.waiting ?? (director.current && director.current !== live ? director.current : null);
-    const participantFor = (captureId: string | null) => debate.participants.find((participant) => participant.captureId === captureId) ?? null;
+    const participantFor = (participantId: string | null) => debate.participants.find((participant) => participant.id === participantId) ?? null;
     const talking = streaming || director.active;
     const status = useMemo(() => debateStatusText(debate, words), [debate, words]);
 
@@ -316,7 +317,9 @@ export default function DebateThread({
             {!talking && debate.visibility === "public" && (debate.status === "voting" || debate.status === "settled" || debate.status === "draw") ? (
                 <DebateVotePanel debate={debate} words={words} signedIn={signedIn} bleed={bleed} onChange={(next) => apply(next, {turns: false})} />
             ) : null}
-            {debate.status === "cancelled" ? <p className="text-xs text-white/50">{words.debateWeb.problems.notFound}</p> : null}
+            {debate.status === "cancelled" ? (
+                <p className="text-xs text-white/50">{debate.cancelReason === "not_public" ? words.debate.notPublic : words.debateWeb.problems.notFound}</p>
+            ) : null}
         </div>
     );
 }

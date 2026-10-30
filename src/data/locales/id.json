@@ -2713,6 +2713,8 @@
         "notOptedIn": "Aktifkan debat publik di Pengaturan dulu.",
         "alreadyInDebate": "Salah satu hewan itu sudah ada di debat publik yang masih berlangsung.",
         "pickOne": "Pilih paling tidak satu hewan.",
+        "tooShort": "Ceritakan sedikit lebih banyak: satu atau dua kalimat.",
+        "animalUnavailable": "Salah satu hewan itu sedang tidak bisa ikut. Pilih yang lain.",
         "dailyLimit": "Itu semua debat yang bisa Anda mulai hari ini.",
         "notEligible": "Suara datang dari akun yang berumur paling tidak seminggu dan punya tangkapan publik.",
         "votingClosed": "Pemungutan suara sudah ditutup.",

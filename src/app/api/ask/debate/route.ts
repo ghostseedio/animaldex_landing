@@ -8,31 +8,36 @@ import {NextResponse} from "next/server";
  * each); no converge, no decide, at most three turns per animal.
  *
  * The web's own run of the apps' `generate-applied-insight` `debate` flow, as
- * the group route is of `animal_group_query`:
- *   - Only the asker runs it, and only while the server holds it `debating`
- *     (`debate_v1`). Turns already kept are not said again, so a debate picked
- *     up after a reload carries on where it stopped.
- *   - Each animal speaks from its species, nature and Power; invited animals
- *     never under their owner's name for them, and no other owner's memory
- *     is loaded. A public debate is argued from the approved, anonymised text,
- *     because its openings are shown on Discover; a private one from the
- *     asker's own words.
- *   - Each finished turn is kept in `debate_turns` (service role). When the
- *     last is in, `write-debate-report` writes the report (and moves the
- *     debate on: `private_done`, or `voting` with its Discover post), and the
- *     last frame carries the debate as it then stands.
+ * the group route is of `animal_group_query`, on the server's service steps
+ * (AnimalDex migration 20261031150000_debates, docs/debates/SERVER.md):
+ *   - `debate_run_context(debate, asker)`: only the asker runs it, and only
+ *     while the server holds it `debating`. Turns already kept are not said
+ *     again, so a debate picked up after a reload carries on where it stopped.
+ *   - Each animal speaks from its species, nature and Power (by species, from
+ *     the run context); invited animals come as species and Power only,
+ *     never under their owner's name for them, and no other owner's memory is
+ *     loaded. The context's problem is the approved, anonymised text for a
+ *     public debate (its openings are shown on Discover) and the asker's own
+ *     words for a private one.
+ *   - Each finished turn: `debate_record_turn` (idempotent on its index). When
+ *     the last is in: `debate_finish_turns` (status `reporting`), then the
+ *     report job (`debate_request_job(debate, 'report')`, which posts to
+ *     `write-debate-report`; `settle_due_debates` asks again if it never
+ *     came). The last frame carries the debate as the reader then sees it.
  *   - A debate's turns never take from the chat allowance: the debate limit
  *     replaces it.
+ *   - Not here yet: the model safety re-check of a public debate's approved
+ *     text before its first turn (`debate_mark_public_checked` /
+ *     `debate_refuse_public`), which ports with the server's debate rules.
  *
  * What each turn is told is `debate-rules.ts`, which the server's rules
  * replace word for word.
  */
 
-import {loadAskGroupMembers, type AskGroupMember} from "@/data/ask-group-members";
+import {loadAskDebateMembers, type AskGroupMember} from "@/data/ask-group-members";
 import {loadAskStatQuantiles} from "@/data/ask-stat-quantiles";
-import {loadDebatesEnabled, readDebate} from "@/data/debates";
+import {readDebate} from "@/data/debates";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
-import {getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {loadAskChatSettings, loadAskMemory} from "@/lib/ask-animaldex/memory";
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import {ASK_RESPONSE_HEADERS, askLanguageName, resolveAskViewer} from "@/lib/ask-animaldex/request";
@@ -44,7 +49,7 @@ import {askParticipantLabel, trimAskGroundingForGroup} from "@/lib/ask-animaldex
 import {askShortNames, buildAskGroupTurnUserPrompt} from "@/lib/ask-animaldex/group-conversation";
 import {streamAskDebate, type AskDebateTurn} from "@/lib/ask-animaldex/debate-flow";
 import {askDebateRulesLines, askDebateTurnInstruction, askDebateWordBudget} from "@/lib/ask-animaldex/debate-rules";
-import {debateUuid, orderedDebateTurns, type Debate} from "@/lib/debates";
+import {debateUuid, decodeDebateRunContext, orderedDebateTurns} from "@/lib/debates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,37 +84,35 @@ function turnSource(providers: AskProviderName[], params: Parameters<typeof askA
     };
 }
 
-/** One kept turn (`debate_turns`, service role: clients read it through `debate_v1` only). */
-async function keepTurn(debateId: string, turn: AskDebateTurn): Promise<void> {
-    const service = createSupabaseServiceClient();
-    if (!service) return;
-    const {error} = await service.from("debate_turns").insert({debate_id: debateId, seat: turn.seat, phase: turn.phase, text: turn.text});
+type Service = NonNullable<ReturnType<typeof createSupabaseServiceClient>>;
+
+/** One finished turn (`debate_record_turn`, idempotent on its index). */
+async function keepTurn(service: Service, debateId: string, turn: AskDebateTurn, index: number): Promise<void> {
+    const {error} = await service.rpc("debate_record_turn", {
+        p_debate_id: debateId,
+        p_turn_index: index,
+        p_seat: turn.seat,
+        p_phase: turn.phase,
+        p_text: turn.text
+    });
     if (error) throw new Error(error.message);
 }
 
 /**
- * The report, once (`write-debate-report`, the repurposed Round 3 editorial
- * function), called with the service key as the push senders are. It stores
- * `debates.report` and moves the debate on.
+ * Every turn is in: the debate goes on to its report (`debate_finish_turns`),
+ * and the report is asked for (`debate_request_job`, posted to
+ * `write-debate-report` when the call commits). True when it was asked for.
  */
-async function writeReport(debateId: string): Promise<boolean> {
-    const url = getSupabaseUrl();
-    const key = getSupabaseServiceKey();
-    if (!url || !key) return false;
-    try {
-        const response = await fetch(`${url}/functions/v1/write-debate-report`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json", Authorization: `Bearer ${key}`, apikey: key},
-            body: JSON.stringify({debate_id: debateId}),
-            cache: "no-store",
-            signal: AbortSignal.timeout(120_000)
-        });
-        if (!response.ok) console.warn("[debates] write-debate-report answered", response.status);
-        return response.ok;
-    } catch (error) {
-        console.warn("[debates] write-debate-report failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
+async function askForReport(service: Service, debateId: string): Promise<boolean> {
+    const finished = await service.rpc("debate_finish_turns", {p_debate_id: debateId});
+    if (finished.error) {
+        console.warn("[debates] debate_finish_turns failed", finished.error.message.slice(0, 200));
         return false;
     }
+    if (finished.data !== "reporting") return false;
+    const job = await service.rpc("debate_request_job", {p_debate_id: debateId, p_job: "report"});
+    if (job.error) console.warn("[debates] debate_request_job failed", job.error.message.slice(0, 200));
+    return job.data === true;
 }
 
 export async function POST(request: Request) {
@@ -124,25 +127,35 @@ export async function POST(request: Request) {
     const userId = viewer.userId;
     const debateId = debateUuid(body.debateId);
     if (!debateId) return askJson({error: "not_found"}, 400);
-    if (!(await loadDebatesEnabled())) return askJson({error: "debates_off"}, 403);
+    const service = createSupabaseServiceClient();
+    if (!service) return askJson({error: "unavailable"}, 503);
 
-    const read = await readDebate(viewer.client as Parameters<typeof readDebate>[0], debateId);
-    const debate: Debate | null = read.debate;
-    if (!debate) return askJson({error: "not_found"}, 404);
-    if (!debate.askerIsMe) return askJson({error: "not_asker"}, 403);
+    // What the run needs, for the asker only (`debate_run_context`).
+    const context = await service.rpc("debate_run_context", {p_debate_id: debateId, p_user_id: userId});
+    const run = context.error ? null : decodeDebateRunContext(context.data);
+    if (!run) return askJson({error: "not_found"}, 404);
+    if (!run.enabled) return askJson({error: "debates_off"}, 403);
     // Only a debate still being argued runs; any other is shown as it stands.
-    if (debate.status !== "debating") return askJson({error: "debate_not_running", debate}, 409);
+    if (run.status !== "debating") {
+        const current = await readDebate(viewer.client as Parameters<typeof readDebate>[0], debateId).catch(() => ({debate: null}));
+        return askJson({error: "debate_not_running", debate: current.debate}, 409);
+    }
+    const problem = run.problem ?? "";
+    if (!problem) return askJson({error: "not_found"}, 409);
 
     const quantiles = await loadAskStatQuantiles();
-    const captureIds = debate.participants.map((participant) => participant.captureId);
-    const [loaded, settings] = await Promise.all([
-        loadAskGroupMembers({userId, captureIds, quantiles, anyOwner: true}),
+    const [members, settings] = await Promise.all([
+        loadAskDebateMembers({
+            participants: run.participants.flatMap((participant) => participant.speciesProfileId
+                ? [{key: participant.id, speciesProfileId: participant.speciesProfileId, nickname: participant.isAskerOwned ? participant.nickname : null}]
+                : []),
+            quantiles
+        }),
         loadAskChatSettings(userId)
     ]);
-    if (!loaded.ok) return askJson({error: loaded.error}, 500);
-    const memberOf = new Map(loaded.members.map((member) => [member.captureId, member]));
-    const seated = debate.participants.flatMap((participant) => {
-        const member = memberOf.get(participant.captureId);
+    const memberOf = new Map(members.map((member) => [member.captureId, member]));
+    const seated = run.participants.flatMap((participant) => {
+        const member = memberOf.get(participant.id);
         return member ? [{seat: participant.seat, participant, member}] : [];
     });
     if (seated.length < 2) return askJson({error: "animal_power_unavailable"}, 422);
@@ -155,8 +168,6 @@ export async function POST(request: Request) {
 
     // The asker's own memory only: it is about them. No other owner's is ever read.
     const memory: AskMemoryFact[] = settings.personalisationEnabled ? await loadAskMemory(userId).catch(() => []) : [];
-    const problem = (debate.visibility === "public" ? debate.problemPublic : debate.problemPrivate ?? debate.problemPublic) ?? "";
-    if (!problem) return askJson({error: "not_found"}, 409);
     const languageName = askLanguageName(body.locale);
     const utcOffset = Number.isFinite(Number(body.utcOffsetMinutes)) && body.utcOffsetMinutes !== null
         ? Math.max(-14 * 60, Math.min(14 * 60, Math.round(Number(body.utcOffsetMinutes))))
@@ -193,7 +204,7 @@ export async function POST(request: Request) {
         return {seat: entry.seat, member: me, persona, systemPrompt};
     });
     const bySeat = new Map(prepared.map((entry, index) => [entry.seat, {...entry, room: room[index]}]));
-    const said: AskDebateTurn[] = orderedDebateTurns(debate.turns)
+    const said: AskDebateTurn[] = orderedDebateTurns(run.turns)
         .filter((turn) => bySeat.has(turn.seat))
         .map((turn) => ({seat: turn.seat, phase: turn.phase, text: turn.text}));
 
@@ -230,11 +241,11 @@ export async function POST(request: Request) {
                 signal
             });
         },
-        onTurn: (turn) => keepTurn(debateId, turn),
+        onTurn: (turn, index) => keepTurn(service, debateId, turn, index),
         finish: async () => {
-            const reported = await writeReport(debateId);
+            const reported = await askForReport(service, debateId);
             const after = await readDebate(viewer.client as Parameters<typeof readDebate>[0], debateId).catch(() => ({debate: null}));
-            return {report_written: reported, debate: after.debate};
+            return {report_requested: reported, debate: after.debate};
         },
         headers: ASK_RESPONSE_HEADERS,
         signal: request.signal

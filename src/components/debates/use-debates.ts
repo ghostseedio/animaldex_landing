@@ -60,9 +60,24 @@ export async function approvePublicDebate(debateId: string, problemPublic: strin
     return result.ok ? {ok: true, value: decodeDebate(result.payload.debate)} : result;
 }
 
-export async function voteOnDebate(debateId: string, participantId: string): Promise<DebateCallResult<number | null>> {
+/** The vote, and the counts as they stand after it (participant id → votes). */
+export async function voteOnDebate(debateId: string, participantId: string): Promise<DebateCallResult<{votes: number | null; counts: Map<string, number>}>> {
     const result = await debatesCall({action: "vote", debateId, participantId});
-    return result.ok ? {ok: true, value: typeof result.payload.votes === "number" ? result.payload.votes : null} : result;
+    if (!result.ok) return result;
+    const counts = new Map<string, number>();
+    for (const item of Array.isArray(result.payload.counts) ? result.payload.counts : []) {
+        const row = item && typeof item === "object" ? item as Record<string, unknown> : null;
+        const id = typeof row?.participant_id === "string" ? row.participant_id.toLowerCase() : null;
+        const votes = typeof row?.votes === "number" ? row.votes : Number(row?.votes);
+        if (id && Number.isFinite(votes)) counts.set(id, votes);
+    }
+    return {ok: true, value: {votes: typeof result.payload.votes === "number" ? result.payload.votes : null, counts}};
+}
+
+/** Drops a debate that has not been argued yet (`cancel_debate_v1`). */
+export async function cancelDebate(debateId: string): Promise<DebateCallResult<Debate | null>> {
+    const result = await debatesCall({action: "cancel", debateId});
+    return result.ok ? {ok: true, value: decodeDebate(result.payload.debate)} : result;
 }
 
 export async function chooseDebateWay(debateId: string, participantId: string): Promise<DebateCallResult<DebateWayChoice>> {

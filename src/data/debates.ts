@@ -17,32 +17,21 @@ import {
 type Supabase = NonNullable<ReturnType<typeof createSupabaseServerClient>>;
 
 /**
- * `debates_enabled`, the server's switch (SPEC: `app_feature_flags`, or the
- * `arena_v2_config` row). Off when it cannot be read: a client never shows a
- * debate the server would refuse.
+ * `debates_enabled`, the server's switch (`arena_v2_config.debates_enabled`,
+ * read through `debates_config_v1()`, else `debates_enabled()`). Off when it
+ * cannot be read: a client never shows a debate the server would refuse.
  */
 export async function loadDebatesEnabled(): Promise<boolean> {
     const supabase = createSupabaseServerClient() ?? createSupabaseServiceClient();
     if (!supabase) return false;
     try {
-        const viaRpc = await supabase.rpc("debates_enabled_v1");
-        if (!viaRpc.error && typeof viaRpc.data === "boolean") return viaRpc.data;
-        if (!viaRpc.error && viaRpc.data && typeof viaRpc.data === "object") {
-            const row = (Array.isArray(viaRpc.data) ? viaRpc.data[0] : viaRpc.data) as Record<string, unknown> | undefined;
-            if (row && ("debates_enabled" in row || "enabled" in row)) return (row.debates_enabled ?? row.enabled) === true;
-        }
+        const config = await supabase.rpc("debates_config_v1");
+        const row = !config.error && config.data && typeof config.data === "object" ? config.data as Record<string, unknown> : null;
+        if (row && typeof row.debates_enabled === "boolean") return row.debates_enabled;
+        const flag = await supabase.rpc("debates_enabled");
+        if (!flag.error && typeof flag.data === "boolean") return flag.data;
     } catch {
-        // Try the flag rows below.
-    }
-    for (const table of ["app_feature_flags", "arena_v2_config"]) {
-        try {
-            const {data, error} = await supabase.from(table).select("debates_enabled").limit(1).maybeSingle();
-            if (!error && data && typeof (data as {debates_enabled?: unknown}).debates_enabled === "boolean") {
-                return (data as {debates_enabled: boolean}).debates_enabled;
-            }
-        } catch {
-            // Next.
-        }
+        // Off, then.
     }
     return false;
 }
@@ -85,9 +74,13 @@ export async function withCandidateSlugs(candidates: DebateCandidate[]): Promise
         : {...candidate, slug: slugs.get(candidate.speciesProfileId) ?? null});
 }
 
-/** `my_debates_v1`: where the reader is the asker or an owner. Null when it cannot be read. */
-export async function readMyDebates(supabase: Supabase): Promise<Debate[] | null> {
-    const {data, error} = await supabase.rpc("my_debates_v1");
+/**
+ * `my_debates_v1`: where the reader is the asker or an owner, newest first
+ * (with `captureId`, only those that card of theirs was in). Null when it
+ * cannot be read.
+ */
+export async function readMyDebates(supabase: Supabase, captureId: string | null = null): Promise<Debate[] | null> {
+    const {data, error} = await supabase.rpc("my_debates_v1", captureId ? {p_capture_id: captureId} : {});
     if (error) {
         console.warn("[debates] my_debates_v1 failed", error.message.slice(0, 200));
         return null;
@@ -151,21 +144,31 @@ export async function getDebateForViewer(debateId: string): Promise<Debate | nul
 }
 
 /**
- * Public debates for the Discover feed (`discover_debates_v1`): open for
- * votes and finished, each as `debate_v1` shapes it for this viewer (their
- * vote, `can_vote`), boosted ones flagged. Private debates never appear.
+ * Public debates for the Discover feed: the boosted ones pinned for this
+ * viewer (`discover_debate_pinned_v1`: still short of votes, theirs to vote
+ * on, at most two, fewest votes first), then the rest of the debate posts
+ * (`discover_debate_timeline_v1`), newest first. Each row carries the
+ * viewer's vote and whether they can vote. Private debates never appear.
  */
 export async function getDiscoverDebates(limit = 12): Promise<Debate[]> {
     if (!(await loadDebatesEnabled())) return [];
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
     try {
-        const {data, error} = await supabase.rpc("discover_debates_v1", {p_limit: limit});
-        if (error) {
-            if (error.code !== "PGRST202") console.warn("[debates] discover_debates_v1 failed", error.message.slice(0, 200));
+        const [pinned, timeline] = await Promise.all([
+            supabase.from("discover_debate_pinned_v1").select("*"),
+            supabase.from("discover_debate_timeline_v1").select("*").order("created_at", {ascending: false}).limit(limit)
+        ]);
+        if (timeline.error) {
+            console.warn("[debates] discover_debate_timeline_v1 failed", timeline.error.message.slice(0, 200));
             return [];
         }
-        return withDebateSlugs(decodeDebates(data).filter((debate) => debate.visibility === "public"));
+        // The views hold public debates only (they carry no visibility column).
+        const asPost = (debate: Debate): Debate => ({...debate, visibility: "public"});
+        const pins = pinned.error ? [] : decodeDebates(pinned.data).map((debate) => ({...asPost(debate), boosted: true}));
+        const pinIds = new Set(pins.map((debate) => debate.id));
+        const rest = decodeDebates(timeline.data).filter((debate) => !pinIds.has(debate.id)).map(asPost);
+        return withDebateSlugs([...pins, ...rest]);
     } catch {
         return [];
     }

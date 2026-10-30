@@ -7,9 +7,9 @@ import "server-only";
  *
  * A card that is not the reader's makes the whole group refused; a species
  * AnimalDex holds no Power for is left out of the room rather than failing it.
- * A debate's animals (docs/debates/SPEC.md) come from the debate itself, so
- * other people's cards may join (`anyOwner`): they speak as their species
- * and Power only, never under the name their owner gave them.
+ * A debate's animals (docs/debates/SPEC.md) come from the debate's run
+ * context, by species (`loadAskDebateMembers`): other people's animals speak
+ * as their species and Power only, never under their owner's name for them.
  */
 
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
@@ -62,8 +62,6 @@ export async function loadAskGroupMembers(params: {
     userId: string;
     captureIds: string[];
     quantiles: AskStatQuantiles | null;
-    /** A debate's animals, already checked by the debate: other people's cards may be among them. */
-    anyOwner?: boolean;
 }): Promise<AskGroupMembersResult> {
     const service = createSupabaseServiceClient();
     if (!service) return {ok: false, error: "database_error"};
@@ -75,7 +73,7 @@ export async function loadAskGroupMembers(params: {
     ]);
     if (capturesRes.error) return {ok: false, error: "database_error"};
     const captures = (capturesRes.data ?? []) as Row[];
-    if (captures.length !== params.captureIds.length || (!params.anyOwner && captures.some((row) => row.user_id !== params.userId))) {
+    if (captures.length !== params.captureIds.length || captures.some((row) => row.user_id !== params.userId)) {
         return {ok: false, error: "capture_not_owned"};
     }
     const speciesOf = new Map<string, string>();
@@ -133,8 +131,7 @@ export async function loadAskGroupMembers(params: {
             captureId,
             speciesProfileId: companion.speciesProfileId ?? speciesProfileId,
             animalName: species.name,
-            // Someone else's animal in a debate is its species, not their name for it.
-            nickname: capture?.user_id === params.userId ? sanitizeAskNickname(capture?.title) : null,
+            nickname: sanitizeAskNickname(capture?.title),
             powerName: species.power.principleName,
             voice: companion.voice,
             slug,
@@ -151,4 +148,69 @@ export async function loadAskGroupMembers(params: {
         };
     }));
     return {ok: true, members: loaded.filter((member): member is AskGroupMember => member !== null)};
+}
+
+/**
+ * A debate's animals, from its run context (`debate_run_context`): each by its
+ * canonical species, keyed by its participant id (the stream names it so). The
+ * asker's own may carry the nickname they gave it; anyone else's comes as its
+ * species and Power only. A species AnimalDex holds no Power for is left out.
+ */
+export async function loadAskDebateMembers(params: {
+    participants: Array<{key: string; speciesProfileId: string; nickname: string | null}>;
+    quantiles: AskStatQuantiles | null;
+}): Promise<AskGroupMember[]> {
+    const service = createSupabaseServiceClient();
+    if (!service || params.participants.length === 0) return [];
+    const ids = Array.from(new Set(params.participants.map((participant) => participant.speciesProfileId)));
+    const profileRows = ((await service.from("species_profiles").select("id, canonical_species_profile_id").in("id", ids)).data ?? []) as Row[];
+    const canonicalOf = new Map(profileRows.map((row) => {
+        const canonical = str(row.canonical_species_profile_id);
+        return [String(row.id), canonical && canonical !== row.id ? canonical : String(row.id)] as [string, string];
+    }));
+    const canonicalIds = Array.from(new Set(ids.map((id) => canonicalOf.get(id) ?? id)));
+    const [canonicalRes, taxonomyRes, voiceRes] = await Promise.all([
+        service.from("species_profiles").select("id, normalized_identity_key").in("id", canonicalIds),
+        service.from("species_taxonomy").select("species_profile_id, class_name, order_name, family_name").in("species_profile_id", canonicalIds),
+        service.from("species_companion_voice").select("species_profile_id, voice").in("species_profile_id", canonicalIds)
+    ]);
+    const slugOf = new Map(((canonicalRes.data ?? []) as Row[]).flatMap((row) => {
+        const key = str(row.normalized_identity_key);
+        return key ? [[String(row.id), key.replace(/_/g, "-")] as [string, string]] : [];
+    }));
+    const taxonomyOf = new Map(((taxonomyRes.data ?? []) as Row[]).map((row) => [String(row.species_profile_id), row as AskSpeciesTaxonomy]));
+    const cardNatureOf = new Map(((voiceRes.data ?? []) as Row[]).map((row) => {
+        const voice = row.voice && typeof row.voice === "object" ? row.voice as Row : null;
+        return [String(row.species_profile_id), voice?.nature ?? null] as [string, unknown];
+    }));
+
+    const loaded = await Promise.all(params.participants.map(async (participant): Promise<AskGroupMember | null> => {
+        const speciesProfileId = canonicalOf.get(participant.speciesProfileId) ?? participant.speciesProfileId;
+        const slug = slugOf.get(speciesProfileId);
+        if (!slug) return null;
+        const species = await buildAskSpeciesGrounding(slug).catch(() => null);
+        if (!species?.power) return null;
+        const companion = await loadAskCompanion(species);
+        const stats = companion.stats;
+        return {
+            captureId: participant.key,
+            speciesProfileId: companion.speciesProfileId ?? speciesProfileId,
+            animalName: species.name,
+            nickname: sanitizeAskNickname(participant.nickname),
+            powerName: species.power.principleName,
+            voice: companion.voice,
+            slug,
+            species,
+            stats,
+            nature: askAnimalNatureFor({
+                animalName: species.name,
+                taxonomy: taxonomyOf.get(speciesProfileId) ?? null,
+                stats,
+                fieldGuide: fieldGuideFor(species),
+                intellect: askPersonaDials({stats, dynamics: null, voice: null, quantiles: params.quantiles}).intellect,
+                card: cardNatureOf.get(speciesProfileId) ?? null
+            })
+        };
+    }));
+    return loaded.filter((member): member is AskGroupMember => member !== null);
 }

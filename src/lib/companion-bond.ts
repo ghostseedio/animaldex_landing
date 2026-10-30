@@ -269,6 +269,8 @@ export const DEBATE_WEB_COPY = {
         notOptedIn: "Turn on public debates in Settings first.",
         alreadyInDebate: "One of those animals is already in an open public debate.",
         pickOne: "Pick at least one animal.",
+        tooShort: "Say a little more about it: a sentence or two.",
+        animalUnavailable: "One of those animals can't join right now. Pick another.",
         dailyLimit: "That's all the debates you can start today.",
         notEligible: "Votes come from accounts at least a week old with a public capture.",
         votingClosed: "Voting has closed.",

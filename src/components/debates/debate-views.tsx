@@ -12,7 +12,7 @@ import Link from "@/app/[locale]/_components/link";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {AskAnimalFace, AskPlainBubbleText, AskSparkle, ASK_BUBBLE_INCOMING} from "@/components/ask-animaldex/ask-messenger";
 import {askReplyPieces} from "@/lib/ask-animaldex/thread-layout";
-import {askGroupColor} from "@/lib/ask-animaldex/group-thread";
+import {ASK_GROUP_COLORS} from "@/lib/ask-animaldex/group-thread";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import {
@@ -29,8 +29,9 @@ export function debateFaceUrl(participant: Pick<DebateParticipant, "slug"> | nul
     return participant?.slug ? getSpeciesImageRoute(participant.slug) : null;
 }
 
-export function debateColor(debate: Pick<Debate, "participants">, captureId: string | null): string {
-    return askGroupColor(captureId, debate.participants.map((participant) => participant.captureId));
+/** Each animal's colour, by its seat: the host first. Never by card, which only its owner is sent. */
+export function debateColor(participant: Pick<DebateParticipant, "seat"> | null | undefined): string {
+    return participant ? ASK_GROUP_COLORS[Math.max(0, participant.seat) % ASK_GROUP_COLORS.length] : "rgb(var(--c-ink-300))";
 }
 
 /** The animals' faces, overlapping, each ringed in its colour. */
@@ -41,7 +42,7 @@ export function DebateFaces({debate, size = 26}: {debate: Debate; size?: number}
                 <span
                     key={participant.id}
                     className="rounded-full bg-canvas-950"
-                    style={{marginLeft: index === 0 ? 0 : -size * 0.3, boxShadow: `0 0 0 1.5px ${debateColor(debate, participant.captureId)}cc`}}
+                    style={{marginLeft: index === 0 ? 0 : -size * 0.3, boxShadow: `0 0 0 1.5px ${debateColor(participant)}cc`}}
                 >
                     <AskAnimalFace url={debateFaceUrl(participant)} size={size} />
                 </span>
@@ -58,7 +59,7 @@ export function DebateTurnRow({debate, participant, text, live = false, typingLa
     live?: boolean;
     typingLabel?: string;
 }) {
-    const color = debateColor(debate, participant?.captureId ?? null);
+    const color = debateColor(participant);
     const pieces = askReplyPieces(text, !live).filter((piece) => piece.kind === "bubble");
     return (
         <div className="flex items-start gap-2">
@@ -155,7 +156,7 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
                     const way = reportWayFor(report, participant);
                     if (!way) return null;
                     const name = debateAnimalName(participant);
-                    const color = debateColor(debate, participant.captureId);
+                    const color = debateColor(participant);
                     const chosen = chosenId === participant.id;
                     return (
                         <div key={participant.id} className="flex flex-col gap-1.5 py-3">
@@ -232,12 +233,17 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
                 setProblem(debateProblemText(result.code, words));
                 return;
             }
+            const {votes, counts} = result.value;
             const next: Debate = {
                 ...debate,
                 myVote: participant.id,
                 canVote: false,
-                totalVotes: result.value ?? (debate.totalVotes ?? 0) + 1,
-                participants: debate.participants.map((item) => item.id === participant.id ? {...item, votes: (item.votes ?? 0) + 1} : item)
+                totalVotes: votes ?? (debate.totalVotes ?? 0) + 1,
+                // The server's counts once they voted; else one more for theirs.
+                participants: debate.participants.map((item) => ({
+                    ...item,
+                    votes: counts.get(item.id) ?? (item.id === participant.id ? (item.votes ?? 0) + 1 : item.votes)
+                }))
             };
             onChange?.(next);
             noteDebateChanged(next);
@@ -258,7 +264,7 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
                     const won = debate.status === "settled" && debate.winnerParticipantId === participant.id;
                     return (
                         <div key={participant.id} className="flex items-center gap-2.5">
-                            <span className="shrink-0 rounded-full" style={{boxShadow: `0 0 0 1.5px ${debateColor(debate, participant.captureId)}cc`}}>
+                            <span className="shrink-0 rounded-full" style={{boxShadow: `0 0 0 1.5px ${debateColor(participant)}cc`}}>
                                 <AskAnimalFace url={debateFaceUrl(participant)} size={28} />
                             </span>
                             <span className="min-w-0 flex-1">

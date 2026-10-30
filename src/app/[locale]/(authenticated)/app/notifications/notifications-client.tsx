@@ -14,12 +14,22 @@ export function listedNotification(item: Pick<AppNotification, "eventType">): bo
     return !item.eventType.startsWith("battle_");
 }
 
+/**
+ * A debate notice (AnimalDex 20261031150000: a `system_message` row keyed
+ * `debate-joined:<debate>` or `debate-result:<debate>`): its kind and debate.
+ */
+export function debateNotice(item: Pick<AppNotification, "sourceKey">): {kind: "joined" | "result"; debateId: string | null} | null {
+    const match = /^debate-(joined|result):([0-9a-f-]{36})$/i.exec(item.sourceKey?.trim() ?? "");
+    return match ? {kind: match[1].toLowerCase() as "joined" | "result", debateId: match[2].toLowerCase()} : null;
+}
+
 function copy(item: AppNotification, debate: NotificationDebateWords) {
-    if (item.eventType.startsWith("debate_")) {
-        // "Your animal joined a public debate", or how one went: written when it is sent.
+    const notice = debateNotice(item);
+    if (notice) {
+        // "Your Gray Wolf joined a debate", or how one went: written when it is sent.
         return {
             title: item.serverTitle || debate.title,
-            detail: item.serverBody || (item.eventType === "debate_joined" ? debate.joined : item.eventType === "debate_draw" ? debate.draw : debate.settled),
+            detail: item.serverBody || (notice.kind === "joined" ? debate.joined : debate.settled),
             icon: "debate" as const
         };
     }
@@ -72,7 +82,8 @@ function copy(item: AppNotification, debate: NotificationDebateWords) {
 
 function notificationHref(item: AppNotification) {
     // The debate push and row open the debate (3.2).
-    if (item.eventType.startsWith("debate_")) return item.debateId ? `/app/debates/${encodeURIComponent(item.debateId)}` : "/app/debates";
+    const notice = debateNotice(item);
+    if (notice) return notice.debateId ? `/app/debates/${encodeURIComponent(notice.debateId)}` : "/app/debates";
     if (item.tradeOfferId || item.creditOfferId) return "/app/trades";
     if (item.captureId) return `/app/capture/${encodeURIComponent(item.captureId)}`;
     if (item.campaignId) return "/app/missions";
