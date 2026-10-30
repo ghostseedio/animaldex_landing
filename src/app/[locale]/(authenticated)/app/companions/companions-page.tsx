@@ -104,11 +104,6 @@ function CompanionRow({
             <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                     <span className={`truncate text-base text-white ${unread ? "font-black" : "font-bold"}`}>{row.displayName}</span>
-                    {row.mastered ? (
-                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-black" style={{backgroundColor: NEON}}>
-                            {words.list.mastered}
-                        </span>
-                    ) : null}
                     {row.muted ? <span className="shrink-0 text-white/40"><BellSlashIcon /></span> : null}
                 </span>
                 {row.bondText ? (

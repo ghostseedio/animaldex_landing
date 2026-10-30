@@ -10,6 +10,7 @@ import {
     HEAL_COPY,
     ROSTER_COPY,
     COMPANION_WORDS_EN,
+    bondLevelXpText,
     bondChipText,
     bondStageText,
     companionWords,
@@ -261,4 +262,11 @@ test("the bond reads in the reader's words, the server's stage label only for a 
     assert.equal(bondPowerLine({power: {name: "X", earned: false, via: null, at: null}}, "Leo", id), "Selesaikan satu langkah bersama Leo untuk mendapatkannya.");
     assert.equal(trialDifficultyText("Hard", id), "Sulit");
     assert.equal(bondXpText(2480, "id", id), "2.480 XP");
+});
+
+test("the level and XP read once, in the Bond tab's header; rows and chips say the stage", () => {
+    assert.equal(bondLevelXpText({level: 7, xp: 2480}, "en"), "Bond level 7 · 2,480 XP");
+    const id = companionWords(localeLabels("id"));
+    assert.equal(bondLevelXpText({level: 7, xp: 12}, "id", id), "Level ikatan 7 · 12 XP");
+    assert.equal(bondStageText({stage: "working_together", stageLabel: "Working together"}, id), "Bekerja sama");
 });

@@ -23,10 +23,10 @@ import {acceptStep, dropStep, stepFromTrial, useStepRecords} from "@/components/
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 import {
     COMPANION_WORDS_EN,
-    bondChipText,
+    bondLevelXpText,
+    bondStageText,
     bondLevelProgress,
     bondPowerLine,
-    bondXpText,
     fillWords,
     type AnimalBond,
     type CompanionWords
@@ -232,11 +232,12 @@ export default function BondPanel({
                     <p className="truncate font-display text-2xl font-black leading-tight text-white">{name}</p>
                     {bond ? (
                         <>
-                            <p className="mt-0.5 text-sm font-semibold text-white/70">{bondChipText(bond, words)}</p>
+                            <p className="mt-0.5 text-sm font-semibold" style={{color: bond.mastered ? NEON : "rgb(255 255 255 / 0.7)"}}>{bondStageText(bond, words)}</p>
                             <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
                                 <div className="h-full rounded-full" style={{width: `${bondLevelProgress(bond) * 100}%`, backgroundColor: NEON}} />
                             </div>
-                            <p className="mt-1.5 text-[11px] font-semibold text-white/45">{bondXpText(bond.xp, locale, words)}</p>
+                            {/* The one place the level and XP show (newcomer UX vet, P1-2). */}
+                            <p className="mt-1.5 text-[11px] font-semibold text-white/45">{bondLevelXpText(bond, locale, words)}</p>
                         </>
                     ) : !didLoad ? (
                         <p className="mt-1 text-sm text-white/40">…</p>
@@ -244,12 +245,9 @@ export default function BondPanel({
                 </div>
             </section>
 
-            {/* 2. Mastered. */}
+            {/* 2. Mastered: the stage above says it; this says what it means. */}
             {bond?.mastered ? (
-                <section className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4">
-                    <span className="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-black" style={{backgroundColor: NEON}}>
-                        {words.bond.mastered}
-                    </span>
+                <section className="border-b border-white/[0.08] px-5 py-4">
                     <span className="text-sm font-semibold text-white">{words.bond.livesItsLesson}</span>
                 </section>
             ) : null}

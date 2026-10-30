@@ -2493,6 +2493,7 @@
     "bond": {
       "level": "Level {n}",
       "xp": "{xp} XP",
+      "bondLevel": "Level ikatan {n}",
       "mastered": "Dikuasai",
       "livesItsLesson": "Anda menjalani pelajarannya.",
       "knowsTheLesson": "Memahami pelajarannya",

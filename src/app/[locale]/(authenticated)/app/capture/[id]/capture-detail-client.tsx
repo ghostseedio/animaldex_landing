@@ -33,7 +33,7 @@ import type {AppCaptureDetail} from "@/data/authenticated-app";
 import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from "@/data/discover-timeline";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {resolveReferralId} from "@/lib/ask-animaldex/companion-loop";
-import {COMPANION_WORDS_EN, bondChipText, type CompanionWords} from "@/lib/companion-bond";
+import {COMPANION_WORDS_EN, bondStageText, type CompanionWords} from "@/lib/companion-bond";
 import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
 import {CAPTURE_NICKNAME_EVENT, type CaptureNicknameDetail} from "@/lib/capture-nickname";
 import AnimalNameSheet from "@/components/companions/name-sheet";
@@ -190,10 +190,11 @@ export default function CaptureDetailClient({
     // The bond: one level per animal on your own cards, and the Bond tab.
     const companionRow = useCompanionLevel(speciesProfileId, viewer.isOwner);
     const animalBond = useAnimalBond(viewer.isOwner ? speciesProfileId : null);
+    // The stage alone on chips; the level and XP are the Bond tab's header (newcomer UX vet, P1-2).
     const bondChip = viewer.isOwner
         ? animalBond.bond
-            ? bondChipText(animalBond.bond, words)
-            : companionRow ? bondChipText(companionRow, words) : null
+            ? bondStageText(animalBond.bond, words)
+            : companionRow ? bondStageText(companionRow, words) : null
         : null;
     // The name you gave this card ("Luna"), as its header, its Bond tab and its chat say it.
     const [nickname, setNickname] = useState<string | null>(viewer.isOwner ? capture.nickname ?? null : null);

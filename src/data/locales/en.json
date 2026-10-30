@@ -2511,6 +2511,7 @@
     "bond": {
       "level": "Level {n}",
       "xp": "{xp} XP",
+      "bondLevel": "Bond level {n}",
       "mastered": "Mastered",
       "livesItsLesson": "You live its lesson.",
       "knowsTheLesson": "Knows the lesson",

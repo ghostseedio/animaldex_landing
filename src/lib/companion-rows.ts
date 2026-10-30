@@ -16,7 +16,7 @@ import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
 import type {CompanionCard} from "@/lib/companion-cards";
 import {
     COMPANION_WORDS_EN,
-    bondChipText,
+    bondStageText,
     companionStatusLine,
     companionSummaryName,
     type CompanionSummary,
@@ -173,7 +173,8 @@ export function buildCompanionRows({
                 ? companionSummaryName(companion, words)
                 : companionDisplayName(conversation?.nickname, animal, words.displayName),
             slug: companion.slug ?? slugOf.get(species) ?? null,
-            bondText: bondChipText(companion, words),
+            // The stage alone; the level is the Bond tab's (newcomer UX vet, P1-2).
+            bondText: bondStageText(companion, words),
             mastered: companion.mastered,
             status: {text: companionStatusLine(line, preview, words).text, kind: statusKind(line, preview)},
             unreadCount: unread,

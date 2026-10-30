@@ -76,6 +76,8 @@ export type ChatBond = {
 export const BOND_COPY = {
     level: "Level {n}",
     xp: "{xp} XP",
+    /** The Bond tab's header only (newcomer UX vet, 2026-10-30, P1-2): "Bond level 7 · 12 XP". */
+    bondLevel: "Bond level {n}",
     mastered: "Mastered",
     livesItsLesson: "You live its lesson.",
     knowsTheLesson: "Knows the lesson",
@@ -571,13 +573,27 @@ export function bondXpText(xp: number, locale?: string | null, words: CompanionW
     return fillWords(words.bond.xp, {xp: grouped});
 }
 
-/** "Level 4 · Working together", or the stage alone before levels (the card hero and chat chip). */
+/**
+ * "Level 4 · Working together", or the stage alone before levels. Since the
+ * newcomer UX vet (2026-10-30, P1-2) rows and chips say the stage alone
+ * (`bondStageText`); the level and XP are the Bond tab's header
+ * (`bondLevelXpText`).
+ */
 export function bondChipText(
     bond: {level: number | null; stage?: string | null; stageLabel: string},
     words: CompanionWords = COMPANION_WORDS_EN
 ): string {
     const stage = bondStageText(bond, words);
     return bond.level === null ? stage : `${fillWords(words.bond.level, {n: bond.level})} · ${stage}`;
+}
+
+/** The Bond tab's header line: "Bond level 7 · 2,480 XP". */
+export function bondLevelXpText(
+    bond: {level: number; xp: number},
+    locale?: string | null,
+    words: CompanionWords = COMPANION_WORDS_EN
+): string {
+    return `${fillWords(words.bond.bondLevel, {n: bond.level})} · ${bondXpText(bond.xp, locale, words)}`;
 }
 
 /** 0...1 through the current level. */

@@ -68,7 +68,8 @@ test("bond rows keep the server's order and carry what the animal wrote", () => 
 
     const [wolf, fox, koala] = rows;
     assert.equal(wolf.displayName, "Luna the Gray Wolf");
-    assert.equal(wolf.bondText, "Level 4 · Working together");
+    // The stage alone: the level is the Bond tab's (newcomer UX vet, 2026-10-30, P1-2).
+    assert.equal(wolf.bondText, "Working together");
     assert.equal(wolf.unreadCount, 0);
     assert.equal(wolf.muted, true);
     assert.equal(wolf.hasConversation, true);

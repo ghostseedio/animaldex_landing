@@ -263,7 +263,7 @@ export default function AnimalStatsPanel({
     captureGrade?: number | null;
     settingTag?: string | null;
     conservationTier?: string | null;
-    /** Your own card: "Level 4 · Working together", the bond's level in place of the card's. */
+    /** Your own card: the bond's stage ("Working together") in place of the card's level. */
     bondChip?: string | null;
     layout?: "compact" | "wide";
 }) {

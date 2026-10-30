@@ -4,13 +4,14 @@ import Image from "next/image";
 import {useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useCompanions} from "@/components/companions/use-companions";
-import {COMPANION_WORDS_EN, bondChipText, companionSummaryName, fillWords, type CompanionSummary, type CompanionWords} from "@/lib/companion-bond";
+import {COMPANION_WORDS_EN, bondStageText, companionSummaryName, fillWords, type CompanionSummary, type CompanionWords} from "@/lib/companion-bond";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 /**
  * "My Companions" on your own profile (docs/companion-loop/SPEC.md, phase 4;
- * it was "My Animal Powers"): your animals with their level, and how many you
- * have mastered and whose Powers you have earned. Each opens its card.
+ * it was "My Animal Powers"): your animals with their stage (the level is the
+ * Bond tab's, newcomer UX vet P1-2), and how many you have mastered and whose
+ * Powers you have earned. Each opens its card.
  *
  * Someone with no companions yet sees nothing here: no empty scoreboard.
  */
@@ -27,10 +28,7 @@ function Tile({row, words}: {row: CompanionSummary; words: CompanionWords}) {
                 </span>
             ) : <span aria-hidden="true" className="h-12 w-12" />}
             <p className="line-clamp-2 text-sm font-bold text-white">{companionSummaryName(row, words)}</p>
-            <p className="mt-auto text-[10px] font-semibold text-white/55">{bondChipText(row, words)}</p>
-            {row.mastered ? (
-                <p className="text-[10px] font-black uppercase tracking-[0.08em]" style={{color: NEON}}>{words.list.mastered}</p>
-            ) : null}
+            <p className="mt-auto text-[10px] font-semibold" style={{color: row.mastered ? NEON : "rgb(255 255 255 / 0.55)"}}>{bondStageText(row, words)}</p>
         </>
     );
     const className = "flex h-[150px] w-[150px] shrink-0 flex-col gap-1.5 border border-white/10 bg-white/[0.04] p-3";
