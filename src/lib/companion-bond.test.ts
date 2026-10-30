@@ -174,7 +174,6 @@ test("the 3.2 words are the SPEC's, word for word, and none of the retired ones 
     assert.equal(fillWords(YOUR_STEP_COPY.done.xp, {xp: 5}), "+5 XP");
     assert.equal(fillWords(YOUR_STEP_COPY.warmup.resultMessageMissed, {right: 1, n: 3}), "I got 1 of 3 on your warmup.");
     assert.equal(fillWords(YOUR_STEP_COPY.trial.sectionTitle, {name: "Leo"}), "Leo's Trials");
-    assert.equal(YOUR_STEP_COPY.battle.lockedDetail, "Finish one step with it.");
     const english = JSON.stringify(COMPANION_WORDS_EN);
     for (const retired of ["Lesson check", "lesson check", "Training", "Apply It Your Way", "Your Trial", "Prove it", "Try again tomorrow", "Animal Trials"]) {
         assert.equal(english.includes(retired), false, retired);
@@ -198,7 +197,7 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(HEAL_COPY.one, "Heal a heart: 5 Credits");
     assert.equal(HEAL_COPY.full, "All 3 hearts");
     assert.equal(COMPANION_WORDS_EN.debates.tab, "Debates");
-    assert.equal(COMPANION_WORDS_EN.card.debates, "Debates");
+    assert.equal(COMPANION_WORDS_EN.card.stats, "Stats");
     const said = (value: unknown): string[] => (typeof value === "string" ? [value] : Object.values(value as Record<string, unknown>).flatMap(said));
     const english = said({debate: DEBATE_COPY, roster: ROSTER_COPY, heal: HEAL_COPY, web: COMPANION_WORDS_EN.debateWeb}).join("\n");
     for (const retired of ["Battle", "battle", "Opponent", "Rival", "Arena", "Matchup", "Rulebook", "Restore", "stake", "Tier "]) {

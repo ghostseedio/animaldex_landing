@@ -78,6 +78,7 @@ export default function BondPanel({
     onDropped,
     onTrialPicked,
     warmup = null,
+    onDebate = null,
     onBondChanged,
     locale = null,
     closeLabel = "Close",
@@ -104,6 +105,11 @@ export default function BondPanel({
     /** A Trial is their step now: the chat tells the animal. */
     onTrialPicked: (frequency: StepFrequency) => void;
     warmup?: BondWarmup | null;
+    /**
+     * 3.2 Debates: "Compare with other animals", once its Power is earned and
+     * while the server has Debates on; null hides it.
+     */
+    onDebate?: (() => void) | null;
     /** The focus was cleared: re-read the bond. */
     onBondChanged: (next: AnimalBond | null) => void;
     /** The site's locale, for grouping thousands in the XP and writing dates. */
@@ -302,6 +308,15 @@ export default function BondPanel({
                 >
                     {words.bond.talkToIt}
                 </button>
+                {onDebate ? (
+                    <button
+                        type="button"
+                        onClick={onDebate}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-5 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                    >
+                        {words.debate.start}
+                    </button>
+                ) : null}
                 {warmup?.passed ? (
                     <p className="flex min-h-11 items-center gap-2 text-sm font-semibold" style={{color: NEON}}>
                         <span aria-hidden="true">✓</span>

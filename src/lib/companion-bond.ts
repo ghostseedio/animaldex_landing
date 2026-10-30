@@ -152,10 +152,6 @@ export const YOUR_STEP_COPY = {
     power: {
         notEarnedLine: "Finish one step with {name} to earn it."
     },
-    battle: {
-        locked: "Earn {name}'s Power to battle with it.",
-        lockedDetail: "Finish one step with it."
-    },
     /**
      * Web only: the step RPCs' refusals (docs/your-step/SERVER.md), said
      * calmly. Nothing here is a lock or a "tomorrow".
@@ -264,6 +260,7 @@ export const DEBATE_WEB_COPY = {
     healing: "Healing…",
     hearts: "{n} of 3 hearts",
     choosing: "Opening the chat…",
+    getCredits: "Get Credits",
     problems: {
         signIn: "Sign in to start a debate.",
         off: "Debates are paused for now.",
@@ -369,8 +366,8 @@ export const COMPANION_WORDS_EN = {
         alreadyHere: "Already here",
         alreadyHereHint: "One of this species is already in the group"
     },
-    /** Your own card's tabs: About · Bond · Debates (3.2: the Battle tab is the hearts band and its debates). */
-    card: {about: "About", bond: "Bond", battle: "Battle", debates: "Debates"},
+    /** Your own card's tabs: About · Bond · Stats (3.2: the Battle tab is the stats, with the hearts band and its debates). */
+    card: {about: "About", bond: "Bond", stats: "Stats"},
     /** "Luna the Gray Wolf" (iOS "%@ the %@"). */
     displayName: "{nickname} the {animal}"
 };

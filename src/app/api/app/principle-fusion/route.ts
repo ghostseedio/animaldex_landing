@@ -12,7 +12,7 @@ function friendlyFusionError(error: unknown) {
     if (message.includes("insufficient_credits")) return "You do not have enough credits for this fusion.";
     if (message.includes("learned_sub_principle_exists")) return "This animal already learned that sub-principle.";
     if (message.includes("principle_missing")) return "Both animals need an Animal Principle before fusion can run.";
-    if (message.includes("health_depleted")) return "Both animals need comparison hearts before fusion can run.";
+    if (message.includes("health_depleted")) return "Both animals need at least 1 heart to fuse. Heal a heart on the card's Stats tab.";
     if (message.includes("not_fusion_ready")) return "Both animals need valid live capture analysis before fusion can run.";
 
     return message || "Principle Fusion is unavailable right now.";

@@ -1326,9 +1326,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         </div>
     ));
 
-    // Opened from the card's Bond tab with "I did it" or the Warmup: settled once
-    // the loop (or the quiz) has been read. With no step open, nothing opens.
-    const pendingActionRef = useRef<"report" | "warmup" | null>(null);
+    // Opened from the card's Bond tab with "I did it", the Warmup or a debate:
+    // settled once the loop (the quiz, the debates) has been read. With no step
+    // open, nothing opens; with Debates off or the Power not earned, no sheet.
+    const pendingActionRef = useRef<"report" | "warmup" | "debate" | null>(null);
     useEffect(() => {
         const action = takePendingAction();
         if (action) pendingActionRef.current = action.kind;
@@ -1343,8 +1344,11 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             // Only once this animal's quiz has been read, never on a read for no animal.
             pendingActionRef.current = null;
             openWarmup(null);
+        } else if (pending === "debate" && myDebates.loaded && animalBond.didLoad) {
+            pendingActionRef.current = null;
+            if (debatesOffered) openDebateSheet(null);
         }
-    }, [actionRequest, ownerChat, loopLoaded, openStep, training, openWarmup]);
+    }, [actionRequest, ownerChat, loopLoaded, openStep, training, openWarmup, myDebates.loaded, animalBond.didLoad, debatesOffered, openDebateSheet]);
 
     /** Report this reply: files it for review, as the reader. */
     const sendReport = useCallback(async (choice: AskReportChoice) => {
@@ -1841,6 +1845,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     passed: training.completed,
                                     questionCount: training.questions.length
                                 } : null}
+                                onDebate={debatesOffered ? () => openDebateSheet(null) : null}
                                 onBondChanged={(next) => {
                                     animalBond.setBond(next);
                                     if (next) setCompanionLoop((current) => ({...(current ?? EMPTY_COMPANION_LOOP), focus: next.focus, openTrial: next.openTrial}));

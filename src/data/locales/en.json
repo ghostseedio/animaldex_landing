@@ -2650,10 +2650,6 @@
       "power": {
         "notEarnedLine": "Finish one step with {name} to earn it."
       },
-      "battle": {
-        "locked": "Earn {name}'s Power to battle with it.",
-        "lockedDetail": "Finish one step with it."
-      },
       "problems": {
         "signIn": "Sign in to keep going with your step.",
         "stepGone": "That step isn't open any more.",
@@ -2669,8 +2665,7 @@
     "card": {
       "about": "About",
       "bond": "Bond",
-      "battle": "Battle",
-      "debates": "Debates"
+      "stats": "Stats"
     },
     "tab": {
       "unread": "{n} unread",
@@ -2778,6 +2773,7 @@
       "healing": "Healing…",
       "hearts": "{n} of 3 hearts",
       "choosing": "Opening the chat…",
+      "getCredits": "Get Credits",
       "problems": {
         "signIn": "Sign in to start a debate.",
         "off": "Debates are paused for now.",

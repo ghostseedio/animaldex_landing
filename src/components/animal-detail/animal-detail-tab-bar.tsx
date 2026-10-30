@@ -2,8 +2,9 @@
 
 /**
  * `learn | stats | play` on a species page; `about | bond | battle` on a card
- * (docs/companion-loop/SPEC.md, phase 3: About · Bond · Battle on your own
- * card, About · Battle on anyone else's).
+ * (docs/companion-loop/SPEC.md, phase 3). In 3.2 the card's `battle` tab is
+ * Stats (docs/debates/SPEC.md): About · Bond · Stats on your own card, About ·
+ * Stats on anyone else's; the id stays so old `?tab=battle` links land.
  */
 export type AnimalDetailTab = "learn" | "stats" | "play" | "about" | "bond" | "battle";
 
@@ -15,7 +16,7 @@ const LABELS: Record<AnimalDetailTab, string> = {
     play: "Play",
     about: "About",
     bond: "Bond",
-    battle: "Battle"
+    battle: "Stats"
 };
 
 const DEFAULT_TABS: AnimalDetailTab[] = ["learn", "stats", "play"];
@@ -36,7 +37,7 @@ function TabIcon({tab, className}: {tab: AnimalDetailTab; className: string}) {
             </svg>
         );
     }
-    if (tab === "stats") {
+    if (tab === "stats" || tab === "battle") {
         return (
             <svg aria-hidden="true" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 19h18M5 16l4-5 3 3 6-8 2 2" strokeLinecap="round" strokeLinejoin="round" />

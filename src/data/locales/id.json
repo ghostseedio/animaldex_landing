@@ -2632,10 +2632,6 @@
       "power": {
         "notEarnedLine": "Selesaikan satu langkah bersama {name} untuk mendapatkannya."
       },
-      "battle": {
-        "locked": "Dapatkan Kekuatan {name} untuk bertarung dengannya.",
-        "lockedDetail": "Selesaikan satu langkah dengannya."
-      },
       "problems": {
         "signIn": "Masuk untuk melanjutkan langkah Anda.",
         "stepGone": "Langkah itu sudah tidak terbuka lagi.",
@@ -2651,8 +2647,7 @@
     "card": {
       "about": "Tentang",
       "bond": "Ikatan",
-      "battle": "Pertarungan",
-      "debates": "Debat"
+      "stats": "Statistik"
     },
     "tab": {
       "unread": "{n} belum dibaca",
@@ -2760,6 +2755,7 @@
       "healing": "Memulihkan…",
       "hearts": "{n} dari 3 hati",
       "choosing": "Membuka obrolan…",
+      "getCredits": "Dapatkan Kredit",
       "problems": {
         "signIn": "Masuk untuk memulai debat.",
         "off": "Debat sedang dihentikan sementara.",

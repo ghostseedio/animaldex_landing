@@ -54,9 +54,9 @@ export type AskTrialDeclaration = {
 /**
  * Something to open in the owner's chat besides a question (3.2 "Your
  * step"): the report composer for "I did it" on the card's Bond tab, or the
- * Warmup. Consumed once by the drawer.
+ * Warmup; 3.2 Debates: the debate sheet. Consumed once by the drawer.
  */
-export type AskOpenAction = {kind: "report"} | {kind: "warmup"};
+export type AskOpenAction = {kind: "report"} | {kind: "warmup"} | {kind: "debate"};
 
 type AskContextValue = {
     subject: AskSubject;

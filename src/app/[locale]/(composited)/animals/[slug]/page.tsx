@@ -527,8 +527,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const featuredStorySetting = null;
     const featuredBaseStats = captureStatsOrFallback(undefined, statsResult.stats);
     const featuredEffectiveStats = featuredBaseStats;
-    const featuredIsZooComparisonBanned = false;
-    const featuredHasChallengeStats = false;
     const isBreed = isBreedSpeciesEntry(entry);
     const identityKind = entry.databaseSource?.identityKind ?? null;
     const displayCategory = speciesDisplayCategory(entry);
@@ -1307,11 +1305,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                         qualityName={primaryQuality}
                         growth={growthContext}
                         compareOnly
-                        comparisonTier={null}
                         settingTag={featuredCaptureSetting}
-                        isZooComparisonBanned={featuredIsZooComparisonBanned}
-                        isChallengeAnalysisEligible={false}
-                        hasChallengeGameStats={featuredHasChallengeStats}
                         labels={{
                             apexPathEyebrow: t("growthApexPathEyebrow"),
                             apexInsightTitle: t("growthApexInsightTitle"),

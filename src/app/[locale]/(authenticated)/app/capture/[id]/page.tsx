@@ -11,7 +11,6 @@ import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
 import {getSpeciesGrowthContext} from "@/data/species-growth";
 import {getSpeciesRankings} from "@/data/species-rankings";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
-import {getBattleTier} from "@/lib/battle-tier";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getCompanionWords} from "@/loaders/companion-words";
 
@@ -49,7 +48,6 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         speciesProfileId: publicDetail?.speciesProfileId ?? null,
         normalizedIdentityKey: publicDetail?.normalizedIdentityKey ?? capture.speciesSlug
     };
-    const isChallengeAvailable = publicDetail?.isChallengeAvailable ?? false;
 
     const requestedSpeciesSlug = capture.speciesSlug?.trim().replace(/_/g, "-") ?? null;
     const entry = requestedSpeciesSlug ? await getResolvedSpeciesBySlug(requestedSpeciesSlug) : null;
@@ -70,7 +68,6 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
                 isMarkedAsPet={isMarkedAsPet}
                 cohort={cohort}
                 speciesProfileId={speciesProfileId}
-                isChallengeAvailable={isChallengeAvailable}
                 speciesSlug={requestedSpeciesSlug}
                 speciesName={capture.animalName}
                 companionWords={companionWords}
@@ -92,7 +89,6 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
     ]);
     const primaryQuality = principle?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
-    const comparisonTier = getBattleTier(capture.effectiveGameStats);
 
     const rankings = (
         <SpeciesRankingCarousel
@@ -137,11 +133,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             qualityName={primaryQuality}
             growth={growth}
             compareOnly
-            comparisonTier={comparisonTier}
             settingTag={capture.settingTag}
-            isZooComparisonBanned={capture.isZooComparisonBanned}
-            isChallengeAnalysisEligible={capture.isChallengeAnalysisEligible}
-            hasChallengeGameStats={capture.hasChallengeGameStats}
             labels={{
                 apexPathEyebrow: t("growthApexPathEyebrow"),
                 apexInsightTitle: t("growthApexInsightTitle"),
@@ -187,7 +179,6 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             cohort={cohort}
             speciesProfileId={speciesProfileId}
             powerProfile={powerProfile}
-            isChallengeAvailable={isChallengeAvailable}
             speciesSlug={entry.slug}
             speciesName={entry.name}
             descriptor={subtitle.descriptor}
