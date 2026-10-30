@@ -2756,5 +2756,12 @@
     "sharedFrom": "Dibagikan dari AnimalDex",
     "appLine": "AnimalDex mengenali hewan yang Anda foto dan menyimpan masing-masing sebagai kartu.",
     "moreAbout": "Selengkapnya tentang {animal}"
+  },
+  "appCollection": {
+    "title": "Koleksi",
+    "description": "Setiap spesies di AnimalDex. Tangkap satu untuk membuka kartunya.",
+    "found": "{found} dari {total} ditemukan",
+    "addCapture": "Tambah tangkapan",
+    "checkInstagram": "Cek Instagram saya"
   }
 }

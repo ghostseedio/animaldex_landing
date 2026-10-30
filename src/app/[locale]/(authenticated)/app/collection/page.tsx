@@ -3,6 +3,7 @@ import {AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSecondaryLink, A
 import CollectionPageClient from "@/app/[locale]/(authenticated)/app/collection/collection-page-client";
 import type {CatalogSpecies} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
 import {getAppCaptures} from "@/data/authenticated-app";
+import {getScopedTranslator} from "@/loaders/translation";
 import {getCollectionBinders} from "@/data/collection-binders";
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
@@ -18,12 +19,13 @@ import {
     latestCaptureForCatalogEntry
 } from "@/lib/collection-discovery";
 
-export default async function CollectionPage() {
-    const [captures, catalogEntries, behaviorPrinciples, binderData] = await Promise.all([
+export default async function CollectionPage({params}: {params: {locale: string}}) {
+    const [captures, catalogEntries, behaviorPrinciples, binderData, t] = await Promise.all([
         getAppCaptures(),
         getUnifiedSpeciesEntries(),
         getCatalogBehaviorPrincipleIndex(),
-        getCollectionBinders()
+        getCollectionBinders(),
+        getScopedTranslator(params.locale, "appCollection")
     ]);
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     const species: CatalogSpecies[] = catalogEntries.map((entry) => {
@@ -82,32 +84,30 @@ export default async function CollectionPage() {
         ? Math.round(discoveryStats.found / discoveryStats.indexed * 100)
         : 0;
 
+    // Newcomer UX vet (2026-10-30, P1-4): what this page is, and a count rather than a percentage.
     return (
         <AppPage>
             <AppPageHeader
-                eyebrow="Collection"
-                title="Collection"
-                description="Browse the indexed catalog and fill curated binders with the animals you've captured."
+                eyebrow="AnimalDex"
+                title={t("title")}
+                description={t("description")}
                 action={(
                     <div className="flex flex-col gap-2 sm:flex-row">
-                        <AppPrimaryLink href="/app/capture" icon="camera">Add capture</AppPrimaryLink>
-                        <AppSecondaryLink href="/app/import/instagram">Check my Instagram</AppSecondaryLink>
+                        <AppPrimaryLink href="/app/capture" icon="camera">{t("addCapture")}</AppPrimaryLink>
+                        <AppSecondaryLink href="/app/import/instagram">{t("checkInstagram")}</AppSecondaryLink>
                     </div>
                 )}
             />
 
             <AppSurface>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Unique AnimalDex entries</p>
-                        <p className="mt-2 font-display text-3xl font-bold tabular-nums text-white">{discoveryStats.found}<span className="text-white/35"> / {discoveryStats.indexed}</span></p>
-                        <p className="mt-1 text-sm text-white/45">{discoveryStats.remaining} indexed animals left to discover. Totals include group-level identities, not only species.</p>
-                    </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                    <p className="font-display text-2xl font-bold tabular-nums text-white">
+                        {t("found", {
+                            found: discoveryStats.found.toLocaleString(params.locale),
+                            total: discoveryStats.indexed.toLocaleString(params.locale)
+                        })}
+                    </p>
                     <div className="w-full sm:max-w-xs">
-                        <div className="mb-2 flex justify-between text-xs font-bold text-white/40">
-                            <span>Completion</span>
-                            <span>{progress}%</span>
-                        </div>
                         <AppProgress value={progress} />
                     </div>
                 </div>

@@ -2774,5 +2774,12 @@
     "sharedFrom": "Shared from AnimalDex",
     "appLine": "AnimalDex identifies the animals you photograph and keeps each one as a card.",
     "moreAbout": "More about the {animal}"
+  },
+  "appCollection": {
+    "title": "Collection",
+    "description": "Every species in AnimalDex. Capture one to unlock its card.",
+    "found": "{found} of {total} found",
+    "addCapture": "Add capture",
+    "checkInstagram": "Check my Instagram"
   }
 }
