@@ -1271,11 +1271,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         if (pending === "report" && loopLoaded) {
             pendingActionRef.current = null;
             if (openStep) setShowingReport(true);
-        } else if (pending === "warmup" && warmupTraining.didLoad) {
+        } else if (pending === "warmup" && training?.speciesProfileId) {
+            // Only once this animal's quiz has been read, never on a read for no animal.
             pendingActionRef.current = null;
             openWarmup(null);
         }
-    }, [actionRequest, ownerChat, loopLoaded, openStep, warmupTraining.didLoad, openWarmup]);
+    }, [actionRequest, ownerChat, loopLoaded, openStep, training, openWarmup]);
 
     /** Report this reply: files it for review, as the reader. */
     const sendReport = useCallback(async (choice: AskReportChoice) => {
