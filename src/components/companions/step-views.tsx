@@ -17,7 +17,7 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import Image from "next/image";
 import TrialMotion from "@/components/trial-motion/trial-motion";
 import {useTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
-import {type AnimalTrial, trialFirstInstruction, trialId} from "@/lib/animal-trials";
+import {type AnimalTrial, instructionsPreview, trialFirstInstruction, trialId} from "@/lib/animal-trials";
 import {fillWords, trialDifficulty, trialDifficultyText, type CompanionWords} from "@/lib/companion-bond";
 import {
     isStepVideoFile,
@@ -338,7 +338,8 @@ export function TrialRows({
             {ordered.map((trial) => {
                 const difficulty = trialDifficulty(trial.frequency);
                 const isStep = openStep?.trialFrequency === trial.frequency;
-                const first = trialFirstInstruction(trial.instructions);
+                // With a loop, the first instruction in plain words before it; without one, the instructions themselves (as iOS).
+                const first = trial.motionStoryboard ? trialFirstInstruction(trial.instructions) : instructionsPreview(trial.instructions);
                 return (
                     <div key={trialId(trial)} className="flex flex-col gap-2.5 border-t border-white/[0.06] px-5 py-4" data-testid={`trial-row-${trial.frequency}`}>
                         {difficulty ? <Eyebrow>{trialDifficultyText(difficulty, words)}</Eyebrow> : null}

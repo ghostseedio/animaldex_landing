@@ -33,7 +33,7 @@ import TrialMotion from "@/components/trial-motion/trial-motion";
 import {useTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 import {AskSpecialBubble, AskSpecialLabel, AskWalkIcon} from "@/components/ask-animaldex/ask-messenger";
-import {type AnimalTrial, frequencyAccent, sortTrials, trialFirstInstruction} from "@/lib/animal-trials";
+import {type AnimalTrial, frequencyAccent, instructionsPreview, sortTrials, trialFirstInstruction} from "@/lib/animal-trials";
 import {fillWords, trialDifficultyText, trialDifficulty, type CompanionWords} from "@/lib/companion-bond";
 import {askWarmupChoiceMark, type AskStepResolution} from "@/lib/ask-animaldex/special-messages";
 import type {AskWarmupItem} from "@/lib/ask-animaldex/thread";
@@ -325,7 +325,8 @@ export function AskTrialsSection({
             {trials === null ? <Working /> : null}
             {(trials ? sortTrials(trials) : []).map((trial, index) => {
                 const difficulty = trialDifficulty(trial.frequency);
-                const first = trialFirstInstruction(trial.instructions);
+                // With a loop, the first instruction in plain words before it; without one, the instructions themselves (as iOS).
+                const whatToDo = trial.motionStoryboard ? trialFirstInstruction(trial.instructions) : instructionsPreview(trial.instructions);
                 return (
                     <div key={trial.frequency} className={`flex flex-col gap-2.5 ${index > 0 ? "border-t border-white/[0.08] pt-3" : ""}`} data-testid={`special-trial-${trial.frequency}`}>
                         <p className="flex items-baseline gap-2">
@@ -337,7 +338,7 @@ export function AskTrialsSection({
                             <span className="min-w-0 text-[14px] font-semibold leading-5 text-white">{trial.title}</span>
                         </p>
                         {/* What to do, plainly, under the title; then its loop. */}
-                        {first ? <p className="-mt-1 line-clamp-3 text-[13px] leading-5 text-white/65">{first}</p> : null}
+                        {whatToDo ? <p className="-mt-1 line-clamp-4 text-[13px] leading-5 text-white/65">{whatToDo}</p> : null}
                         {trial.motionStoryboard ? (
                             <LoopInPlace storyboard={trial.motionStoryboard} captions={trial.motionCaptions ?? null} label={trial.title} />
                         ) : null}
