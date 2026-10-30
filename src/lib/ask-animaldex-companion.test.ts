@@ -192,6 +192,8 @@ test("each animal argues its own Power's move, not the sensible average or the r
         // A side on what they asked, from how its kind lives; safety outranks every nature.
         assert.ok(prompt.includes("take a side on it"));
         assert.ok(prompt.includes("as a field biologist who knows your kind"));
+        assert.ok(prompt.includes("Your Power decides which way your life points"));
+        assert.ok(prompt.includes("and is it your Power's way?"));
         assert.ok(prompt.includes("Real stakes are the one limit"));
         assert.ok(prompt.includes("their safety comes before your Power"));
         assert.ok(!prompt.includes("ending a relationship"));

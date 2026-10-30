@@ -18,6 +18,7 @@ const input = {
 };
 
 const verdict = {
+    power_says: "Keep your own hours; do not take charge of others.",
     nearest_situation: "Two cats sharing one garden wall.",
     what_it_does: "Keeps its own hours and never takes charge of the others.",
     verdict: "Decline the role."
@@ -29,12 +30,25 @@ test("the verdict prompt asks for natural history, not advice, and names only th
     assert.ok(prompt.includes('its Power is "Self-chosen Rhythm": Move when the timing is yours.'));
     assert.ok(prompt.includes("How it would tell anyone to act: Engage fully when the timing belongs to you."));
     assert.ok(prompt.includes("Never pick the middle"));
+    assert.ok(!prompt.includes(".."));
     assert.ok(!/wolf|dog|dolphin|octopus/i.test(prompt));
+});
+
+test("the Power is read at its word first and wins where the kind's life points both ways", () => {
+    const prompt = buildAskKindVerdictPrompt(input);
+    assert.ok(prompt.includes("3. If decision is true, power_says: its Power is the part of its life it lives by"));
+    assert.ok(prompt.includes("4. Then find the moment"));
+    assert.ok(prompt.includes("the side its Power lives by wins, and no other habit of its kind overturns it"));
+    assert.ok(prompt.includes('"power_says": "max 20 words"'));
+    const unanchored = buildAskKindVerdictPrompt({...input, powerName: null});
+    assert.ok(!/power_says|its Power/.test(unanchored));
+    assert.ok(unanchored.includes("3. If decision is true: find the moment"));
 });
 
 test("only a decision with nothing dangerous in it gives a verdict", () => {
     const raw = {decision: true, safety: false, ...verdict};
     assert.deepEqual(parseAskKindVerdict(raw), verdict);
+    assert.equal(parseAskKindVerdict({...raw, power_says: undefined})?.power_says, "");
     assert.equal(parseAskKindVerdict({...raw, decision: false}), null);
     assert.equal(parseAskKindVerdict({...raw, safety: true}), null);
     assert.equal(parseAskKindVerdict({...raw, safety: undefined}), null);
@@ -50,6 +64,8 @@ test("the animal reads its verdict as its own, and never calls it one", () => {
     assert.ok(section.startsWith("your_kinds_verdict"));
     assert.ok(section.includes('"verdict":"Decline the role."'));
     assert.ok(section.includes("never call it a verdict"));
+    assert.ok(section.includes('"what_your_power_says":"Keep your own hours; do not take charge of others."'));
+    assert.ok(!askKindVerdictPromptSection({...verdict, power_says: ""}).includes("what_your_power_says"));
 });
 
 test("the request runs with thinking off, and a failure gives no verdict", async () => {
