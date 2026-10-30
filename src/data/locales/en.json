@@ -2565,6 +2565,7 @@
         "attach": "Add a photo or video",
         "attachNote": "Optional. It's kept in your record with {name}, and only you can see it.",
         "send": "Tell {name}",
+        "more": "Tell {name} more",
         "strip": "Telling {name} how your step went"
       },
       "earned": {
@@ -2593,8 +2594,7 @@
         "skip": "Skip",
         "passed": "Warmup done",
         "missed": "Not quite. {name} will tell you how its kind sees it.",
-        "resultMessagePassed": "I got all {n} on your warmup.",
-        "resultMessageMissed": "I got {right} of {n} on your warmup.",
+        "resultMessage": "I got {right} of {n} on your warmup.",
         "questionLabel": "Warmup · {n} of {total}"
       },
       "trial": {
