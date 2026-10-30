@@ -19,7 +19,55 @@ import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider
 import {SPECIES_ASK_EVENT} from "@/lib/ask-animaldex/events";
 import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-drawer";
 
-const AskDrawer = dynamic(() => import("@/components/ask-animaldex/ask-drawer"), {ssr: false});
+// While the panel's code loads, its frame with the animal's header, never an
+// empty screen (newcomer UX vet, 2026-10-30, P0-2).
+const AskDrawer = dynamic(() => import("@/components/ask-animaldex/ask-drawer"), {ssr: false, loading: () => <AskDrawerShell />});
+
+/**
+ * The drawer's frame as it opens: the animal's face and name in the header
+ * and on its card, and the animal typing, until the conversation itself has
+ * loaded. Kept to the provider's subject, so this stays small on every page.
+ */
+function AskDrawerShell() {
+    const {subject, avatarUrl, close} = useAskAnimalDex();
+    const name = subject.scope === "species" ? subject.name : null;
+    const face = (size: number) => (
+        <span className="relative shrink-0 overflow-hidden rounded-full bg-white/[0.06]" style={{width: size, height: size}}>
+            {avatarUrl && name ? <Image src={avatarUrl} unoptimized alt="" fill sizes={`${size}px`} className="object-contain p-[8%]" /> : null}
+        </span>
+    );
+    return (
+        <>
+            <button type="button" aria-hidden="true" tabIndex={-1} onClick={close} className="fixed inset-0 z-[60] bg-canvas-950/60 backdrop-blur-[2px] lg:hidden" />
+            <div
+                role="dialog"
+                aria-modal="false"
+                aria-busy="true"
+                aria-label={name ?? undefined}
+                className="ask-panel fixed inset-x-0 bottom-0 z-[61] flex h-[85vh] flex-col border-t border-white/12 bg-canvas-950 shadow-[0_-12px_40px_rgba(0,0,0,0.5)] lg:inset-y-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[26rem] lg:border-l lg:border-t-0 lg:shadow-[-12px_0_40px_rgba(0,0,0,0.45)]"
+                data-testid="ask-drawer-shell"
+            >
+                <header className="flex shrink-0 items-center gap-2.5 border-b border-white/10 px-4 pb-3 pt-4 lg:pt-3">
+                    {face(32)}
+                    <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{name}</p>
+                </header>
+                <div className="flex flex-1 flex-col items-center px-6 pt-10 text-center">
+                    {name ? (
+                        <>
+                            {face(96)}
+                            <p className="mt-3 font-display text-2xl font-bold leading-8 text-white">{name}</p>
+                        </>
+                    ) : null}
+                    <span aria-hidden="true" className="mt-8 flex gap-[5px]">
+                        {[0, 1, 2].map((dot) => (
+                            <span key={dot} className="ask-typing-dot h-[7px] w-[7px] rounded-full bg-white/75" style={{animationDelay: `${dot * 150}ms`}} />
+                        ))}
+                    </span>
+                </div>
+            </div>
+        </>
+    );
+}
 
 export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels & {launcher: string}}) {
     const {isOpen, open, subject, avatarUrl} = useAskAnimalDex();

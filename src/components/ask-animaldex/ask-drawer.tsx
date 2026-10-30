@@ -33,7 +33,7 @@
  * with an icon, its actions inside the bubble), keyed off server state and
  * the reply's card kinds, never off its words:
  *   - the step is the last section of the bubble that set it ("YOUR STEP",
- *     the step, [I'll do it] or [I did it], and [Something else]); pinned at
+ *     the step, [I'll do it] or [I did it], and [A different step]); pinned at
  *     the top only while that bubble is not in the loaded thread;
  *   - "I did it" puts the message bar in report mode: a strip ("Telling
  *     {name} how your step went", the step, ✕), the attach button for one
@@ -1112,7 +1112,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const speaksAsAnimal = resolvedSubject.scope === "species" && Boolean(animalName);
     // The animal's face is its icon art, never a capture photo.
     const faceUrl = speaksAsAnimal ? avatarUrl : photoUrl;
-    const placeholder = messenger && animalName && !(aboutTrial && !hasConversation)
+    // The owner's own chat with no step open: what to bring it (newcomer UX vet, P0-2).
+    const placeholder = messenger && animalName && ownerChat && !openStep
+        ? fillWords(labels.companions.journey.chat.placeholder, {name: speakerName})
+        : messenger && animalName && !(aboutTrial && !hasConversation)
         ? (nickname
             ? labels.placeholderNamed.replace("{name}", nickname)
             : labels.placeholderFollowUpAnimal.replace("{animal}", animalName))
@@ -1275,7 +1278,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
             else setStepProblem(stepProblemText(result.code, words));
         });
     }, [setOpenStep, words, startReport]);
-    /** "Something else": the step is dropped, then they ask for a different one, as their own message. */
+    /** "A different step": the step is dropped, then they ask for a different one, as their own message. */
     const stepOther = useCallback((step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;
         setStepBusy(true);
@@ -1546,6 +1549,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     const hostCaptureId = ownerChat ? resolvedSubject.captureId ?? null : null;
     const myDebates = useMyDebates({captureId: hostCaptureId, active: Boolean(hostCaptureId)});
     const powerEarned = animalBond.bond?.power.earned === true;
+    /**
+     * Under the animal's header in the owner's chat, until the first step
+     * done with it: what the chat is for (newcomer UX vet, P0-2). Only once
+     * the bond and the loop are read, so it never flashes for an owner who
+     * has done one.
+     */
+    const showsLoopCaption = ownerChat
+        && animalBond.didLoad
+        && loopLoaded
+        && !powerEarned
+        && (companionLoop?.yourTrialsDone ?? 0) === 0
+        && !messages.some((message) => message.companionEvent?.stepDone);
     const debatesOffered = Boolean(ownerChat && hostCaptureId && myDebates.enabled && powerEarned && !aboutTrial);
     const debateHost: DebateHost | null = hostCaptureId ? {
         captureId: hostCaptureId,
@@ -2261,6 +2276,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                 }}
                                 nameLabel={nameTitle}
                                 onName={() => setShowingNameSheet(true)}
+                                caption={showsLoopCaption ? labels.companions.journey.chat.caption : null}
                             />
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
@@ -2453,6 +2469,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             {labels.latestMessages}
                             <ArrowDownIcon />
                         </button>
+                    ) : null}
+                    {messenger && context && !ownerChat && !aboutTrial && !hasConversation && !quota.reached && !showingMemory && !showingSoundCredits ? (
+                        // A visitor's first message: what to ask it about (newcomer UX vet, P0-2).
+                        <p className="pb-2 text-[12px] font-semibold leading-4 text-ink-300" data-testid="visitor-hint">
+                            {labels.companions.journey.chat.visitorHint}
+                        </p>
                     ) : null}
                     {messenger && !showingMemory && !showingBond && !showingSoundCredits && !reporting ? (
                         <AskSuggestionBar

@@ -79,7 +79,8 @@ export function AskAnimalHero({
     bondLabel,
     onBond,
     nameLabel,
-    onName
+    onName,
+    caption = null
 }: {
     name: string;
     subtitle: string | null;
@@ -92,6 +93,8 @@ export function AskAnimalHero({
     /** "Name your Eurasian Otter", while the owner has not named it (iOS AnimalChatHero). */
     nameLabel?: string | null;
     onName?: () => void;
+    /** What the chat is for, under the header, until the owner's first step done with it (UI, not the animal speaking). */
+    caption?: string | null;
 }) {
     const showsBond = Boolean(bondLabel && onBond);
     const showsName = Boolean(nameLabel && onName);
@@ -132,6 +135,9 @@ export function AskAnimalHero({
                         </button>
                     ) : null}
                 </div>
+            ) : null}
+            {caption ? (
+                <p className="mt-3 max-w-[19rem] text-[13px] leading-5 text-ink-300" data-testid="hero-caption">{caption}</p>
             ) : null}
         </div>
     );
