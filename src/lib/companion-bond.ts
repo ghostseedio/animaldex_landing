@@ -282,8 +282,6 @@ export const DEBATE_WEB_COPY = {
 /** Word for word with iOS and Android (SPEC "Phase 4"). */
 export const COMPANIONS_COPY = {
     title: "Companions",
-    talkToSeveral: "Talk to several animals",
-    talkToSeveralIntro: "Bring two or more of your animals into one conversation and hear how each sees it.",
     empty: "Capture an animal to meet your first companion.",
     capture: "Capture",
     referralWaiting: "Sent your way: tap to hear its take",

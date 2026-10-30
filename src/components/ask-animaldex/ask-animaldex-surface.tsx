@@ -46,8 +46,6 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
     // A card has its own Talk to it button in its action bar, which replaces
     // this one there (docs/companion-loop/SPEC.md, phase 3).
     if (subject.kind === "capture") return null;
-    // The group chat is a conversation already; a second one would sit on its composer.
-    if (subject.path === "/app/companions/group") return null;
     // A shared post (/p/…) carries its own "Speak to the …" beside the store
     // buttons; this one would sit on the feed's tab bar and action rail.
     if (subject.path.startsWith("/p/")) return null;
