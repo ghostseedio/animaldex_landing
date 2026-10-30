@@ -442,7 +442,7 @@ function BuildPackCallout({eligibleCount, onBuild}: {eligibleCount: number; onBu
                     <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-primary-400" style={{width: `${Math.max(5, progress)}%`}} />
                 </div>
                 <p className="text-sm leading-6 text-white/55">
-                    {ready ? "List a sealed mystery pack from 10 eligible captures." : `Need ${Math.max(0, 10 - eligibleCount)} more public, battle-ready captures to list.`}
+                    {ready ? "List a sealed mystery pack from 10 eligible captures." : `Need ${Math.max(0, 10 - eligibleCount)} more public captures with stats to list.`}
                 </p>
                 {ready ? (
                     <button type="button" onClick={onBuild} className="w-full rounded-full bg-primary-400 px-4 py-3 text-sm font-black text-black">

@@ -51,6 +51,8 @@ test("protected app paths include nested routes and both locales", () => {
     assert.equal(isProtectedAppPath("/app/billing/return"), true);
     assert.equal(isProtectedAppPath("/app/collection/binders/1"), true);
     assert.equal(isProtectedAppPath("/id/app/train"), true);
+    assert.equal(isProtectedAppPath("/app/debates"), true);
+    assert.equal(isProtectedAppPath("/id/app/debates/0b9a1f4e-2c3d-4e5f-8a9b-1c2d3e4f5a6b"), true);
     assert.equal(isProtectedAppPath("/app"), false);
     assert.equal(isProtectedAppPath("/animals/lion"), false);
     assert.equal(isProtectedAppPath("/account"), false);

@@ -3,7 +3,6 @@ import "server-only";
 import type {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {getAppJournalEntries} from "@/data/authenticated-app";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
-import {getMatchupArena} from "@/data/matchups";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {APP_MODULE_THUMBNAILS, ARENA_MODULE_ACCENTS} from "@/lib/app-module-thumbnails";
@@ -26,10 +25,6 @@ export type TrainModuleDefinition = {
 
 export type TrainPageData = {
     modules: TrainModuleDefinition[];
-};
-
-export type ArenaPageData = TrainPageData & {
-    opponentCount: number;
 };
 
 const TRAIN_MODULE_CATALOG: Array<Pick<TrainModuleDefinition, "id" | "title" | "subtitle" | "icon">> = [
@@ -666,27 +661,6 @@ function mapTrainAnimalPackRows(rows: QueryRow[], userId: string): TrainAnimalPa
     }));
 }
 
-export async function getArenaPageData(localePrefix: string): Promise<ArenaPageData> {
-    const supabase = createSupabaseServerClient();
-    const pagePromise = getTrainPageData(localePrefix);
-
-    if (!supabase) {
-        const page = await pagePromise;
-        return {...page, opponentCount: 0};
-    }
-
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) {
-        const page = await pagePromise;
-        return {...page, opponentCount: 0};
-    }
-
-    const [page, arena] = await Promise.all([
-        pagePromise,
-        getMatchupArena(user.id, 48).catch(() => [])
-    ]);
-    return {...page, opponentCount: arena.length};
-}
 
 /** @deprecated Use getArenaPageData */
 export async function getTrainPageData(localePrefix: string): Promise<TrainPageData> {

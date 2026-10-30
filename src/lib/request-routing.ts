@@ -25,6 +25,7 @@ export const protectedAppPrefixes = [
     "/app/collection",
     "/app/credits",
     "/app/billing",
+    "/app/debates",
     "/app/journal",
     "/app/import",
     "/app/matchups",

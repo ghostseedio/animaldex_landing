@@ -31,9 +31,8 @@ const mainLinks: {href: string; label: string; icon: AppIconName}[] = [
 ];
 
 /**
- * The drawer: everything that is not a tab. The web has no Widgets, Rulebook
- * or Healing Station pages, and gifts and credit offers live on the cards and
- * the Credits page.
+ * The drawer: everything that is not a tab. The web has no Widgets page, and
+ * gifts and credit offers live on the cards and the Credits page.
  */
 const drawerLinks: {href: string; label: string; icon: AppIconName}[] = [
     {href: "/app/missions", label: "Missions", icon: "mission"},
@@ -66,10 +65,10 @@ function localePrefix(pathname: string) {
     return pathname.startsWith("/id/") ? "/id" : "";
 }
 
-/** Explore: the feed (and its posts), Battles and Collectors. */
+/** Explore: the feed (and its posts), Debates and Collectors; old Battles links redirect into it. */
 function isExploreRoute(pathname: string) {
     if (pathname.startsWith("/p/")) return true;
-    return ["/app/explore", "/app/arena", "/app/train", "/app/matchups"].some(
+    return ["/app/explore", "/app/debates", "/app/arena", "/app/train", "/app/matchups"].some(
         (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );
 }
