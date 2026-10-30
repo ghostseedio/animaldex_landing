@@ -3,7 +3,7 @@
 /**
  * AnimalDex 3.2 "Your step" in the browser: the calls behind the step card's
  * buttons and the report composer, and the open step kept in step between the
- * three places it shows (the chat, pinned; the card's Bond tab; "Your steps"
+ * three places it shows (the chat, in its thread; the card's Bond tab; "Your steps"
  * on Companions). The server is the authority: these only say what it
  * answered, and every caller puts back what it showed when a call fails.
  */

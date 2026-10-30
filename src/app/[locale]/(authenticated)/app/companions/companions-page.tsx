@@ -15,7 +15,7 @@
  *
  * On top, "Your steps" (3.2, docs/your-step/SPEC.md section 5): every open
  * step across your animals (`animal_open_steps_v1`), "{name}: {step}"; a row
- * opens that animal's chat, where the step is pinned.
+ * opens that animal's chat, where the step is in the conversation.
  *
  * Refreshed when the tab is opened and when the window comes back into view.
  *
@@ -288,7 +288,7 @@ function YourCompanions({words}: {words: CompanionWords}) {
                     <YourStepsSection
                         steps={steps}
                         words={words}
-                        // That animal's chat, on the card you last talked through, with the step pinned.
+                        // That animal's chat, on the card you last talked through, the step in its thread.
                         href={(step) => companionRowHref({
                             captureId: chatCaptureIdFor(cards, step.speciesProfileId, step.captureId),
                             referralWaiting: false,

@@ -104,7 +104,10 @@ function ShareChip({label, onShare}: {label: string; onShare: () => void}) {
  * The last section of the bubble that set the step. Live, not accepted: [I'll
  * do it] [A different step]; accepted: [I did it] [A different step], which puts
  * the message bar in report mode; reported: "Tell {name} more". A step
- * picked from a Trial shows that Trial's loop and its difficulty.
+ * picked from a Trial shows that Trial's loop and its difficulty. When no
+ * reply in the thread carries the open step (set in an earlier conversation,
+ * or the thread cleared), this section is the whole of one more animal
+ * message, with no words above it.
  */
 export function AskStepSection({
     text,

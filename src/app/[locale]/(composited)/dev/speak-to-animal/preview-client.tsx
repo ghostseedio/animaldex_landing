@@ -36,6 +36,15 @@ export default function SpeakToAnimalPreviewClient({slug, name, speciesProfileId
             >
                 Open the chat
             </button>
+            {/* As the card's Bond tab does for its step's "I did it": the chat, its bar in report mode. */}
+            <button
+                type="button"
+                data-testid="open-chat-report"
+                onClick={() => open(undefined, {kind: "report"})}
+                className="ml-3 mt-6 rounded-full border border-white/20 px-5 py-2.5 text-sm font-bold text-white"
+            >
+                Open the chat as the Bond tab&apos;s I did it
+            </button>
         </div>
     );
 }
