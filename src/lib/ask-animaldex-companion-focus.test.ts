@@ -76,6 +76,10 @@ test("the state reads tolerantly", () => {
     assert.equal(state?.focus?.focus, "Asking for the raise");
     assert.equal(state?.recent_done.length, 1);
     assert.equal(state?.referral?.from_animal, "Giant Oceanic Manta Ray");
+    // 3.2: the open step says whether it is accepted, its Trial and whether a report waits.
+    const open = parseCompanionState({open_trial: {id: "t", step: "Walk", set_at: "2026-10-31", accepted_at: "2026-10-31T08:00:00Z", trial_frequency: "LOW", has_report: true}});
+    assert.deepEqual(open?.open_trial, {id: "t", step: "Walk", set_at: "2026-10-31", accepted_at: "2026-10-31T08:00:00Z", trial_frequency: "LOW", has_report: true});
+    assert.equal(parseCompanionState({open_trial: {id: "t", step: "Walk"}})?.open_trial?.has_report, false);
 });
 
 test("the prompt carries the loop, the Power's state and the other animals", () => {
@@ -165,9 +169,9 @@ test("done carries companion and the new bond in the server's shape", () => {
     assert.deepEqual(
         companionDoneFields({
             focus: "Speaking up first",
-            openTrial: null,
+            openStep: null,
             yourTrialsDone: 2,
-            event: {trial_done: {step: "Said it first", power_earned: true, power_waits_for_training: false}},
+            event: {trial_done: {step: "Said it first", power_earned: true, xp: 5}},
             bond: {stage: "trusted", stage_index: 3, stage_label: "Trusted", level: 7, mastered: false, strands: {lesson: 80, practice: 40, life: 20}, counted: {days: 9}}
         }),
         {
@@ -175,13 +179,26 @@ test("done carries companion and the new bond in the server's shape", () => {
             companion: {
                 focus: "Speaking up first",
                 open_trial: null,
+                open_step: null,
                 your_trials_done: 2,
-                trial_done: {step: "Said it first", power_earned: true, power_waits_for_training: false}
+                trial_done: {step: "Said it first", power_earned: true, xp: 5}
             }
         }
     );
     assert.deepEqual(bondForClient({stage: "met", mastered: true}), {stage: "met", stage_index: 0, stage_label: null, mastered: true});
-    assert.deepEqual(companionDoneFields({focus: null, openTrial: "Walk", yourTrialsDone: 0, event: {}}), {
-        companion: {focus: null, open_trial: "Walk", your_trials_done: 0}
+    assert.deepEqual(companionDoneFields({
+        focus: null,
+        openStep: {id: "t", step: "Walk", set_at: "2026-10-31", accepted_at: "2026-10-31T08:00:00Z", trial_frequency: "LOW", has_report: true},
+        yourTrialsDone: 0,
+        event: {trial_set: {step: "Walk", id: "t"}}
+    }), {
+        companion: {
+            focus: null,
+            open_trial: "Walk",
+            // The client's step object: no set_at or has_report in the done event (SPEC section 4).
+            open_step: {id: "t", step: "Walk", accepted_at: "2026-10-31T08:00:00Z", trial_frequency: "LOW"},
+            your_trials_done: 0,
+            trial_set: {step: "Walk", id: "t"}
+        }
     });
 });

@@ -18,6 +18,7 @@ import {
     resolveReferral,
     type CompanionBond,
     type CompanionLines,
+    type CompanionOpenTrial,
     type CompanionRosterEntry,
     type CompanionState
 } from "@/lib/ask-animaldex/companion-focus";
@@ -59,8 +60,48 @@ export type OwnerCompanion = {
     powerEarned: boolean;
     lessonCheckPassed: boolean;
     /** The loop, when it is on (personalisation on, not a Trial thread). */
-    loop: {state: CompanionState | null; roster: CompanionRosterEntry[]; powerJustEarned: boolean} | null;
+    loop: {
+        state: CompanionState | null;
+        roster: CompanionRosterEntry[];
+        powerJustEarned: boolean;
+        /**
+         * 3.2: this message is their report on the open step ("I did it",
+         * `step_report`), already attached through `attach_animal_step_report_v1`,
+         * with how many photos or videos they added. Only for the step that
+         * is open now; null otherwise.
+         */
+        stepReport: StepReport | null;
+    } | null;
 };
+
+export type StepReport = {stepId: string; mediaCount: number};
+
+/**
+ * The report a `step_report` names, checked against the step that is open:
+ * a stale or someone else's step id is no report. The media is counted from
+ * the row (`media_paths`), never from the request.
+ */
+async function readStepReport(service: Service, userId: string, open: CompanionOpenTrial | null, stepId: string | null): Promise<StepReport | null> {
+    if (!stepId || !open || open.id.toLowerCase() !== stepId.toLowerCase()) return null;
+    try {
+        const {data, error} = await service
+            .from("animal_companion_trials")
+            .select("media_paths")
+            .eq("id", stepId)
+            .eq("user_id", userId)
+            .maybeSingle();
+        if (error) {
+            warn("step report read", error);
+            return {stepId, mediaCount: 0};
+        }
+        const paths: unknown = data?.media_paths;
+        const count = Array.isArray(paths) ? paths.filter((path) => typeof path === "string" && path.trim()).length : 0;
+        return {stepId, mediaCount: count};
+    } catch (error) {
+        warn("step report read", error);
+        return {stepId, mediaCount: 0};
+    }
+}
 
 /**
  * Everything the owner's turn needs: the bond, where the Power stands and,
@@ -72,6 +113,8 @@ export async function loadOwnerCompanion(params: {
     userId: string;
     speciesProfileId: string;
     loopOn: boolean;
+    /** `step_report.step_id` on the request: they tapped "I did it" on this step. */
+    stepReportId?: string | null;
 }): Promise<OwnerCompanion | null> {
     const service = createSupabaseServiceClient();
     if (!service) return null;
@@ -91,14 +134,16 @@ export async function loadOwnerCompanion(params: {
             ]);
             if (state.error) warn("animal_companion_state", state.error);
             if (roster.error) warn("animal_companion_roster", roster.error);
+            const parsed = parseCompanionState(state.data);
             return {
-                state: parseCompanionState(state.data),
+                state: parsed,
                 roster: parseCompanionRoster(roster.data),
-                powerJustEarned: settled.data === true
+                powerJustEarned: settled.data === true,
+                stepReport: await readStepReport(service, params.userId, parsed?.open_trial ?? null, params.stepReportId ?? null)
             };
         } catch (error) {
             warn("companion loop", error);
-            return {state: null, roster: [], powerJustEarned: false};
+            return {state: null, roster: [], powerJustEarned: false, stepReport: null};
         }
     };
 
@@ -152,7 +197,7 @@ export async function applyCompanionLines(params: {
     const {service, userId, speciesProfileId, lines} = params;
     const base = {p_user_id: userId, p_species_profile_id: speciesProfileId};
     let focus = params.state?.focus?.focus ?? null;
-    let openTrial = params.state?.open_trial?.step ?? null;
+    let openStep: CompanionOpenTrial | null = params.state?.open_trial ?? null;
     let done = params.state?.your_trials_done ?? 0;
     let bond: CompanionBond | null = null;
     const event: Record<string, unknown> = {};
@@ -168,13 +213,16 @@ export async function applyCompanionLines(params: {
             if (error) warn("complete_animal_companion_trial", error);
             else if (data && typeof data === "object") {
                 const result = data as Record<string, unknown>;
+                // 3.2: the step pays +5 XP (at most one a day per animal); the
+                // Power never waits for a lesson check any more.
+                const xp = Number(result.xp ?? result.xp_awarded);
                 event.trial_done = {
                     step: result.step ?? params.state.open_trial.step,
                     power_earned: result.power_earned === true,
-                    power_waits_for_training: result.power_waits_for_training === true
+                    xp: Number.isFinite(xp) && xp > 0 ? Math.floor(xp) : 0
                 };
                 done = Number(result.your_trials_done) || done + 1;
-                openTrial = null;
+                openStep = null;
                 if (result.bond && typeof result.bond === "object") bond = result.bond as CompanionBond;
             }
         }
@@ -186,8 +234,13 @@ export async function applyCompanionLines(params: {
             });
             if (error) warn("set_animal_companion_trial", error);
             else if (data) {
-                openTrial = lines.trial.step;
-                event.trial_set = {step: lines.trial.step};
+                const id = typeof data === "string" ? data : null;
+                // The id is the step the card under this reply acts on. The
+                // same step set again keeps the one already open, as it was.
+                if (id && id !== openStep?.id) {
+                    openStep = {id, step: lines.trial.step, set_at: new Date().toISOString(), accepted_at: null, trial_frequency: null, has_report: false};
+                }
+                event.trial_set = {step: lines.trial.step, ...(id ? {id} : {})};
             }
         }
         if (lines.refer) {
@@ -215,7 +268,7 @@ export async function applyCompanionLines(params: {
     } catch (error) {
         warn("companion lines", error);
     }
-    return companionDoneFields({focus, openTrial, yourTrialsDone: done, event, bond});
+    return companionDoneFields({focus, openStep, yourTrialsDone: done, event, bond});
 }
 
 /** The animal it was sent to has now taken the problem up. */

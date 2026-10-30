@@ -31,6 +31,13 @@ import {NextResponse} from "next/server";
  * on who visited, checks back on what they asked it to, and keeps the
  * visitor-safe journey note.
  *
+ * 3.2 "Your step" (docs/your-step/SPEC.md, section 4): a message may carry
+ * `step_report: {step_id}`, which means they tapped "I did it" and their
+ * report is already attached (`attach_animal_step_report_v1`). It is checked
+ * against the step that is open and handed to the loop as `stepReport`. The
+ * `done` event's `companion` carries `open_step`, `trial_set` its step's id,
+ * and `trial_done` the XP it paid; the chat's step card is keyed off them.
+ *
  * On someone else's card the animal is theirs: it talks about its owner only
  * from what the owner shares (`animal_chat_owner_context`), tells the visitor
  * once that it passes visits on, and passes on the gist.
@@ -105,6 +112,7 @@ import {askSupportedVisuals} from "@/lib/ask-animaldex/visuals";
 import {askCallTurn, resolveAskCallQuestion} from "@/lib/ask-animaldex/call-voice";
 import {CALL_REPLY_LINE} from "@/lib/ask-animaldex/call-speech";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
+import {resolveStepReport} from "@/lib/your-step";
 import {
     bondForClient,
     companionPromptLines,
@@ -276,7 +284,13 @@ export async function POST(request: Request) {
     const ownerTalksFirst = isGreeting || history.filter((turn) => turn.role === "assistant").length <= 1;
     const [owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories] = await Promise.all([
         ownerSpeciesId && viewer.userId
-            ? loadOwnerCompanion({userId: viewer.userId, speciesProfileId: ownerSpeciesId, loopOn: personalise && !aboutTrial})
+            ? loadOwnerCompanion({
+                userId: viewer.userId,
+                speciesProfileId: ownerSpeciesId,
+                loopOn: personalise && !aboutTrial,
+                // "I did it": the report on the open step, already attached.
+                stepReportId: isGreeting ? null : resolveStepReport(body.step_report)?.stepId ?? null
+            })
                 .catch(() => null as OwnerCompanion | null)
             : Promise.resolve(null as OwnerCompanion | null),
         speciesId ? loadAskRecordExtras(speciesId) : Promise.resolve(null),
@@ -406,6 +420,8 @@ export async function POST(request: Request) {
         ...(owner?.bond?.stage
             ? {relationship: {stage: owner.bond.stage, counted: owner.bond.counted ?? {}}}
             : {}),
+        // `loop.stepReport` ({stepId, mediaCount}) is this message's report on
+        // the open step; its prompt line arrives with the server lane's text.
         ...(loop
             ? {
                 companionLines: companionPromptLines({

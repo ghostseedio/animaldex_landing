@@ -25,7 +25,18 @@
 import {ASK_FOLLOW_UP_SENTINEL} from "@/lib/ask-animaldex/prompt";
 
 export type CompanionFocus = {id: string; focus: string; since?: string | null};
-export type CompanionOpenTrial = {id: string; step: string; set_at?: string | null};
+/**
+ * The open step (3.2, docs/your-step/SPEC.md section 3): when it was set and
+ * accepted, the Trial it came from, and whether a report is attached.
+ */
+export type CompanionOpenTrial = {
+    id: string;
+    step: string;
+    set_at?: string | null;
+    accepted_at?: string | null;
+    trial_frequency?: string | null;
+    has_report?: boolean;
+};
 export type CompanionReferral = {id: string; from_animal: string; problem: string; at?: string | null};
 
 /** `animal_companion_state`: what the animal knows of the loop with its owner. */
@@ -128,7 +139,14 @@ export function parseCompanionState(raw: unknown): CompanionState | null {
             ? {id: focus.id, focus: focus.focus, since: typeof focus.since === "string" ? focus.since : null}
             : null,
         open_trial: open && typeof open.id === "string" && typeof open.step === "string"
-            ? {id: open.id, step: open.step, set_at: typeof open.set_at === "string" ? open.set_at : null}
+            ? {
+                id: open.id,
+                step: open.step,
+                set_at: typeof open.set_at === "string" ? open.set_at : null,
+                accepted_at: typeof open.accepted_at === "string" ? open.accepted_at : null,
+                trial_frequency: typeof open.trial_frequency === "string" ? open.trial_frequency : null,
+                has_report: open.has_report === true
+            }
             : null,
         your_trials_done: Number(row.your_trials_done) || 0,
         recent_done: (Array.isArray(row.recent_done) ? row.recent_done : []).flatMap((item) => {
@@ -307,6 +325,17 @@ export function bondForClient(bond: CompanionBond): Record<string, unknown> {
     };
 }
 
+/** `companion.open_step` (3.2): the step the chat's card is keyed off, in the edge function's shape. */
+export function openStepForClient(step: CompanionOpenTrial | null | undefined): Record<string, unknown> | null {
+    if (!step) return null;
+    return {
+        id: step.id,
+        step: step.step,
+        accepted_at: step.accepted_at ?? null,
+        trial_frequency: step.trial_frequency ?? null
+    };
+}
+
 /**
  * What the writes changed, for `done`: `companion` (the loop now) in the
  * server's shape, and the event this reply made. The apps' tail of
@@ -314,7 +343,7 @@ export function bondForClient(bond: CompanionBond): Record<string, unknown> {
  */
 export function companionDoneFields(params: {
     focus: string | null;
-    openTrial: string | null;
+    openStep: CompanionOpenTrial | null;
     yourTrialsDone: number;
     event: Record<string, unknown>;
     bond?: CompanionBond | null;
@@ -323,7 +352,8 @@ export function companionDoneFields(params: {
         ...(params.bond ? {bond: bondForClient(params.bond)} : {}),
         companion: {
             focus: params.focus,
-            open_trial: params.openTrial,
+            open_trial: params.openStep?.step ?? null,
+            open_step: openStepForClient(params.openStep),
             your_trials_done: params.yourTrialsDone,
             ...params.event
         }
