@@ -73,6 +73,8 @@ export const STEP_MEDIA_BUCKET = "journal-proofs";
 /** The bucket's own types (`journal-proofs`, no HEIC): a photo is turned into a JPEG before it goes. */
 export const STEP_PHOTO_TYPES: readonly string[] = ["image/jpeg", "image/png", "image/webp"];
 export const STEP_VIDEO_TYPES: readonly string[] = ["video/mp4", "video/quicktime", "video/webm"];
+/** What the attach button offers: any photo or video (a photo the bucket cannot take is redrawn as a JPEG). */
+export const STEP_MEDIA_ACCEPT = "image/*,video/*";
 
 /**
  * The codes the step RPCs raise (docs/your-step/SERVER.md), and the route's

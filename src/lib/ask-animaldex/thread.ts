@@ -74,6 +74,33 @@ export type AskMessage = {
     stepReportKind?: "photo" | "video";
     /** The card under this reply (the Warmup, the Trials) was skipped or used. */
     cardsDismissed?: boolean;
+    /**
+     * A Warmup question, as the animal's message in the thread
+     * (docs/your-step/INLINE.md): its text is empty, so it is never history
+     * for the model. Its answer and, once checked, the verdict are kept on
+     * it, so the run is still there when the thread is reopened.
+     */
+    warmup?: AskWarmupItem;
+};
+
+/** One Warmup question in the thread (iOS `AnimalWarmupItem`). */
+export type AskWarmupItem = {
+    /** The reply that offered it: one run per offer. */
+    runId: string;
+    /** The species the answers go back to. */
+    speciesProfileId: string;
+    /** 0-based, in question order. */
+    index: number;
+    total: number;
+    prompt: string;
+    choices: string[];
+    /** The choice they tapped. */
+    chosen?: number;
+    /** The server's verdict on this question, once checked. */
+    correct?: boolean;
+    /** On the last question, once checked: passed, and the XP it paid. */
+    passed?: boolean;
+    rewardXP?: number;
 };
 
 /** Why a reply failed, when it was not the day's limit. */
@@ -94,7 +121,7 @@ export const ASK_THREAD_MAX_MESSAGES = 60;
 /** Total threads retained, most recently active first. */
 export const ASK_THREAD_MAX_THREADS = 30;
 /** A report's thumbnail is a small data URL; anything longer is not one of ours, and is dropped. */
-export const ASK_STEP_REPORT_THUMB_MAX_LENGTH = 48_000;
+export const ASK_STEP_REPORT_THUMB_MAX_LENGTH = 64_000;
 
 /** A report thumbnail as stored: a JPEG, PNG or WebP data URL within the cap, or nothing. */
 export function askStepReportThumb(value: unknown): string | null {
@@ -135,7 +162,36 @@ export function createAskMessage(
         ...(overrides.animalMessageId ? {animalMessageId: overrides.animalMessageId} : {}),
         ...(overrides.stepReportId ? {stepReportId: overrides.stepReportId} : {}),
         ...stepReportMediaFields(overrides.stepReportId ? overrides : {}),
-        ...(overrides.cardsDismissed ? {cardsDismissed: true} : {})
+        ...(overrides.cardsDismissed ? {cardsDismissed: true} : {}),
+        ...warmupField(overrides.warmup)
+    };
+}
+
+/** A Warmup question as stored, or nothing: a malformed one is dropped, never the thread. */
+function warmupField(raw: unknown): {warmup?: AskWarmupItem} {
+    const row = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
+    if (!row) return {};
+    const index = typeof row.index === "number" && Number.isInteger(row.index) ? row.index : -1;
+    const total = typeof row.total === "number" && Number.isInteger(row.total) ? row.total : 0;
+    const prompt = typeof row.prompt === "string" ? row.prompt.trim() : "";
+    const choices = Array.isArray(row.choices) ? row.choices.filter((choice): choice is string => typeof choice === "string").slice(0, 8) : [];
+    const runId = typeof row.runId === "string" ? row.runId : "";
+    const speciesProfileId = typeof row.speciesProfileId === "string" ? row.speciesProfileId : "";
+    if (!runId || !speciesProfileId || index < 0 || total <= index || total > 10 || !prompt || choices.length < 2) return {};
+    const chosen = typeof row.chosen === "number" && Number.isInteger(row.chosen) && row.chosen >= 0 && row.chosen < choices.length ? row.chosen : null;
+    return {
+        warmup: {
+            runId,
+            speciesProfileId,
+            index,
+            total,
+            prompt: prompt.slice(0, 500),
+            choices: choices.map((choice) => choice.slice(0, 300)),
+            ...(chosen !== null ? {chosen} : {}),
+            ...(typeof row.correct === "boolean" ? {correct: row.correct} : {}),
+            ...(typeof row.passed === "boolean" ? {passed: row.passed} : {}),
+            ...(typeof row.rewardXP === "number" && Number.isFinite(row.rewardXP) && row.rewardXP >= 0 ? {rewardXP: Math.floor(row.rewardXP)} : {})
+        }
     };
 }
 
@@ -232,7 +288,8 @@ function normalizeMessage(value: unknown): AskMessage | null {
         ...followUpFields(row),
         ...(typeof row.animalMessageId === "string" && row.animalMessageId ? {animalMessageId: row.animalMessageId} : {}),
         ...(typeof row.stepReportId === "string" && row.stepReportId ? {stepReportId: row.stepReportId, ...stepReportMediaFields(row)} : {}),
-        ...(row.cardsDismissed === true ? {cardsDismissed: true} : {})
+        ...(row.cardsDismissed === true ? {cardsDismissed: true} : {}),
+        ...warmupField(row.warmup)
     };
 }
 

@@ -10,6 +10,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import {extractTrialFrames} from "@/lib/animal-trial-frames";
+import {askStepReportThumb} from "@/lib/ask-animaldex/thread";
 import {
     STEP_VIDEO_FRAMES,
     cleanStepReport,
@@ -142,6 +143,40 @@ export async function attachStepReport(params: {
         return response.ok && payload?.ok === true ? {ok: true, value: null} : {ok: false, code: stepProblemCode(payload?.code)};
     } catch {
         return {ok: false, code: "step_unavailable"};
+    }
+}
+
+/**
+ * The small thumbnail the person's report bubble shows beside "YOUR STEP"
+ * (docs/your-step/INLINE.md): a photo, or a video's first frame, drawn at
+ * most `longEdge` pixels on its long side as a JPEG data URL, so the thread
+ * keeps it when it is reopened. Null when the browser cannot draw it (the
+ * report still goes, without one).
+ */
+export async function stepReportThumbnail(file: File, longEdge = 360): Promise<string | null> {
+    try {
+        const source = isStepVideoFile(file)
+            ? (await extractTrialFrames(file, 1, {maxLongEdge: longEdge}).catch(() => [] as File[]))[0] ?? null
+            : file;
+        if (!source || typeof createImageBitmap !== "function") return null;
+        const bitmap = await createImageBitmap(source);
+        // Smaller and softer until it fits what the thread keeps.
+        for (const [edge, quality] of [[longEdge, 0.72], [Math.round(longEdge * 0.7), 0.6], [Math.round(longEdge * 0.5), 0.5]] as const) {
+            const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            const thumb = askStepReportThumb(canvas.toDataURL("image/jpeg", quality));
+            if (thumb) {
+                bitmap.close();
+                return thumb;
+            }
+        }
+        bitmap.close();
+        return null;
+    } catch {
+        return null;
     }
 }
 

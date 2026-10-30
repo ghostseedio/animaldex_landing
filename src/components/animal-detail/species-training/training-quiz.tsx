@@ -6,7 +6,6 @@ import {
     type SpeciesTrainingResult,
     TRAINING_COPY,
     chooseTrainingAnswer,
-    decodeSpeciesTrainingResult,
     previousTrainingQuestion,
     startTrainingQuiz,
     trainingFailSummary,
@@ -16,6 +15,7 @@ import {
     trainingSubmission
 } from "@/lib/species-training";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {submitSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 
 /**
  * The quiz on a Power, full screen.
@@ -110,19 +110,13 @@ export default function TrainingQuiz({
                 if (outcome.result.passed) onPassed?.(outcome.result);
                 return;
             }
-            const response = await fetch("/api/app/species-training", {
-                method: "POST",
-                headers: {"Content-Type": "application/json", Accept: "application/json"},
-                body: JSON.stringify({speciesProfileId: training.speciesProfileId, answers})
-            });
-            const payload = await response.json().catch(() => null);
-            const result = response.ok ? decodeSpeciesTrainingResult(payload?.result) : null;
-            if (!result) {
-                setPhase({kind: "error", message: payload?.error ?? trainingRefusalMessage(payload?.code ?? "")});
+            const outcome = await submitSpeciesTraining(training.speciesProfileId, answers);
+            if (!outcome.ok) {
+                setPhase({kind: "error", message: outcome.message});
                 return;
             }
-            setPhase({kind: "result", result});
-            if (result.passed) onPassed?.(result);
+            setPhase({kind: "result", result: outcome.result});
+            if (outcome.result.passed) onPassed?.(outcome.result);
         } catch {
             setPhase({kind: "error", message: trainingRefusalMessage("")});
         }

@@ -1,171 +1,200 @@
 /**
  * Everything inline in the conversation (docs/your-step/INLINE.md, owner,
- * 2026-10-30): which of the animal's messages are **special** (they carry
- * something to do) and what each carries, and the Warmup as it runs in the
- * thread, a question at a time.
+ * 2026-10-30), as iOS `AnimalSpecialSections` and `AnimalWarmupRun` decide it:
+ * which sections an animal's reply carries to do, and how the Warmup moves on
+ * as messages in the thread, a question at a time.
  *
  * A special message is the animal's own bubble with one treatment on every
  * platform (a neon edge on its left, a faint neon wash, a small uppercase
  * label with an icon) and its actions inside it. The words stay the
  * animal's; what makes it special comes from server state and the reply's
- * hidden card kinds, never from its words:
- *   - done: `companionEvent.stepDone` ("DONE TOGETHER · +5 XP"), the Power
- *     earned when `powerEarned`;
- *   - the step: the reply that set the open step (`askStepCardMessageId`);
- *   - the Warmup offer: its `training` card, while the animal has a Warmup;
- *   - the Trials: its `trial` card;
- *   - the debate offer: `companionEvent.debateOffer`, while Debates are offered.
+ * hidden card kinds, never from its words.
  *
  * Pure, so the drawer and the tests share it.
  */
 
 import {askReplyCards} from "@/lib/ask-animaldex/chat-cards";
-import type {AskMessage} from "@/lib/ask-animaldex/thread";
+import type {AskCompanionStepSet} from "@/lib/ask-animaldex/companion-loop";
+import type {AskMessage, AskWarmupItem} from "@/lib/ask-animaldex/thread";
 import type {DebateNamedAnimal} from "@/lib/debates";
-import type {StepFrequency} from "@/lib/your-step";
-import {
-    chooseTrainingAnswer,
-    isTrainingQuizReady,
-    startTrainingQuiz,
-    trainingSubmission,
-    type SpeciesTrainingResult,
-    type TrainingQuizState
-} from "@/lib/species-training";
+import type {AnimalStep} from "@/lib/your-step";
+import type {SpeciesTraining, SpeciesTrainingResult} from "@/lib/species-training";
 
+// MARK: - Sections of a special message
+
+/** One thing a reply carries to do, drawn as a section of its last bubble. */
 export type AskSpecial =
-    /** The animal saw their step done; `powerEarned` on the first one. */
+    /** "DONE TOGETHER · +5 XP": the animal saw a step done; the first one earned the Power. */
     | {kind: "done"; xp: number; step: string; powerEarned: boolean}
-    /** The reply set the step that is open now. */
-    | {kind: "step"}
+    /** "YOUR STEP": the step this reply set (or the Trial picked from it). */
+    | {kind: "step"; stepSet: AskCompanionStepSet}
+    /** "{NAME}'S TRIALS": the picker. */
+    | {kind: "trials"}
+    /** "WARMUP": Take the warmup (+5 XP) / Skip. */
     | {kind: "warmup"}
-    | {kind: "trials"; frequency: StepFrequency | null}
+    /** "COMPARE WITH OTHER ANIMALS": Yes, compare / Not now. */
     | {kind: "debate"; problem: string | null; with: DebateNamedAnimal[]};
 
 export type AskSpecialKind = AskSpecial["kind"];
 
 /**
- * What a finished reply on the owner's chat carries, in the order it is
- * drawn: done first (it answers their report), then a step it set, then
- * the Warmup, the Trials and a debate it offered. Empty: a normal bubble.
- * Skipped or used offers (`cardsDismissed`) are gone; a done step never is.
+ * The sections of a finished reply on the owner's chat, in the order they
+ * read: what was done, the step it set (or else its Trials), then what it
+ * offers. Empty: a normal bubble. Skip, Not now or a started debate put the
+ * offers away (`cardsDismissed`); a done step and a step never go.
  */
 export function askReplySpecials(input: {
-    message: Pick<AskMessage, "id" | "role" | "status" | "text" | "cardsDismissed" | "companionEvent">;
-    /** The reply whose step is the open one (`askStepCardMessageId`). */
-    stepCardMessageId: string | null;
-    /** The animal has a Warmup (`training.available`). */
-    warmupAvailable: boolean;
+    message: Pick<AskMessage, "role" | "status" | "text" | "cardsDismissed" | "companionEvent" | "warmup">;
+    /** The animal has no Warmup to take (or it could not load). */
+    warmupUnavailable: boolean;
+    /** "Take the warmup" was tapped on this reply: its questions follow in the thread. */
+    warmupStarted: boolean;
+    /** The animal has no Trials (or they could not load). */
+    trialsUnavailable: boolean;
     /** The Power is earned and the server has Debates on. */
     debatesOffered: boolean;
+    /** The debate's setup band is open under this reply. */
+    debateSetupOpenHere: boolean;
 }): AskSpecial[] {
     const {message} = input;
-    if (message.role !== "assistant" || message.status !== "complete") return [];
+    if (message.role !== "assistant" || message.status !== "complete" || message.warmup) return [];
+    const event = message.companionEvent;
+    const kinds = new Set(askReplyCards(message.text).map((card) => card.kind));
     const specials: AskSpecial[] = [];
-    const done = message.companionEvent?.stepDone;
-    if (done) specials.push({kind: "done", xp: done.xp, step: done.step, powerEarned: done.powerEarned});
-    if (input.stepCardMessageId && message.id === input.stepCardMessageId) specials.push({kind: "step"});
-    if (message.cardsDismissed) return specials;
-    for (const card of askReplyCards(message.text)) {
-        if (card.kind === "training" && input.warmupAvailable) specials.push({kind: "warmup"});
-        if (card.kind === "trial") specials.push({kind: "trials", frequency: card.frequency});
+    if (event?.stepDone) {
+        specials.push({kind: "done", xp: event.stepDone.xp, step: event.stepDone.step, powerEarned: event.stepDone.powerEarned});
     }
-    // The offer's quick replies come from the server's `debate_offer`, never from the hidden marker.
-    const offer = message.companionEvent?.debateOffer;
-    if (offer && input.debatesOffered) specials.push({kind: "debate", problem: offer.problem, with: offer.with});
+    if (event?.stepSet) {
+        specials.push({kind: "step", stepSet: event.stepSet});
+    } else if (kinds.has("trial") && !message.cardsDismissed && !input.trialsUnavailable) {
+        // Once a Trial is picked the reply carries that step instead.
+        specials.push({kind: "trials"});
+    }
+    if (kinds.has("training") && !message.cardsDismissed && !input.warmupStarted && !input.warmupUnavailable) {
+        specials.push({kind: "warmup"});
+    }
+    // The quick replies come from the server's `debate_offer`, never from the hidden marker.
+    if (input.debatesOffered && !message.cardsDismissed && !input.debateSetupOpenHere && event?.debateOffer) {
+        specials.push({kind: "debate", problem: event.debateOffer.problem, with: event.debateOffer.with});
+    }
     return specials;
 }
 
 /**
- * The person's own words the Power-earned message quotes: the message this
- * reply answered (their report, with its thumbnail, when they tapped "I did
- * it"). Null when the reply opens the thread.
+ * Where the step a reply set stands: the open step, with its buttons
+ * (`live`); finished together in this thread (`done`); dropped or replaced
+ * (`closed`); or not read yet (`pending`).
  */
-export function askEarnedQuote(
-    messages: Array<Pick<AskMessage, "id" | "role" | "text" | "stepReportThumb" | "stepReportKind">>,
-    messageId: string
-): {text: string; thumb: string | null; kind: "photo" | "video" | null} | null {
+export type AskStepResolution = {kind: "live"; step: AnimalStep} | {kind: "done"} | {kind: "closed"} | {kind: "pending"};
+
+export function askStepResolution(params: {
+    stepSet: AskCompanionStepSet;
+    openStep: AnimalStep | null;
+    /** The companion loop has been read once. */
+    loaded: boolean;
+    /** Steps the animal saw done in this thread (`stepDone.id`). */
+    doneStepIds: ReadonlySet<string>;
+}): AskStepResolution {
+    const {stepSet, openStep} = params;
+    if (stepSet.id && params.doneStepIds.has(stepSet.id)) return {kind: "done"};
+    if (openStep && (stepSet.id ? stepSet.id === openStep.id : stepSet.step === openStep.step)) return {kind: "live", step: openStep};
+    return params.loaded ? {kind: "closed"} : {kind: "pending"};
+}
+
+/** The step ids the animal saw done in this thread. */
+export function askDoneStepIds(messages: Array<Pick<AskMessage, "companionEvent">>): Set<string> {
+    const ids = new Set<string>();
+    for (const message of messages) {
+        const id = message.companionEvent?.stepDone?.id;
+        if (id) ids.add(id);
+    }
+    return ids;
+}
+
+/**
+ * The person's report a Power-earned reply answered: the nearest report
+ * before it (on that step, when the reply names it), whose words it quotes
+ * with their photo. Null when there is none.
+ */
+export function askEarnedReport<T extends Pick<AskMessage, "id" | "role" | "stepReportId" | "companionEvent">>(messages: T[], messageId: string): T | null {
     const index = messages.findIndex((message) => message.id === messageId);
+    if (index < 0) return null;
+    const stepId = messages[index].companionEvent?.stepDone?.id ?? null;
     for (let at = index - 1; at >= 0; at -= 1) {
-        const message = messages[at];
-        if (message.role !== "user") continue;
-        const text = message.text.trim();
-        return text ? {text, thumb: message.stepReportThumb ?? null, kind: message.stepReportKind ?? null} : null;
+        const candidate = messages[at];
+        if (candidate.role !== "user" || !candidate.stepReportId) continue;
+        if (!stepId || candidate.stepReportId === stepId) return candidate;
     }
     return null;
 }
 
-// MARK: - The Warmup, in the thread
+// MARK: - The Warmup in the thread
 
 /**
- * One run of the Warmup in the thread: each question appears as the
- * animal's special message ("WARMUP · 1 OF 3") with its choices as chips; a
- * tap records the answer and the next question appears; the last one sends
- * the answers. A miss locks nothing: the offer stays, and another run can
- * start. Session-only: the result line is sent to the animal as the
- * person's own message, which the thread keeps.
+ * Question `index` of the quiz, as the message that asks it ("WARMUP · 1 OF
+ * 2", the question, its choices as chips). `runId` is the reply that offered
+ * it (one run per offer); the species is the one the answers go back to.
  */
-export type WarmupRun = {
-    id: string;
-    /** Drawn after this message: the newest one when it started (null: an empty thread). */
-    afterMessageId: string | null;
-    /** The animal's message that offered it; null from the Bond tab. */
-    offerMessageId: string | null;
-    quiz: TrainingQuizState;
-    phase: "answering" | "submitting" | "result" | "error";
-    result: SpeciesTrainingResult | null;
-};
-
-export function startWarmupRun(params: {id: string; questionCount: number; afterMessageId: string | null; offerMessageId: string | null}): WarmupRun {
+export function askWarmupItem(training: SpeciesTraining, index: number, runId: string): AskWarmupItem | null {
+    const question = training.questions[index];
+    if (!question || !training.speciesProfileId) return null;
     return {
-        id: params.id,
-        afterMessageId: params.afterMessageId,
-        offerMessageId: params.offerMessageId,
-        quiz: startTrainingQuiz(params.questionCount),
-        phase: "answering",
-        result: null
+        runId,
+        speciesProfileId: training.speciesProfileId,
+        index,
+        total: training.questions.length,
+        prompt: question.prompt,
+        choices: question.choices
     };
 }
 
-/** How many questions are in the thread: every one answered, and the one being asked. */
-export function warmupRunShownCount(run: WarmupRun): number {
-    const total = run.quiz.answers.length;
-    if (run.phase !== "answering") return total;
-    return Math.min(total, run.quiz.answers.filter((answer) => answer !== null).length + 1);
+/** The run's questions as they stand in the thread, in order. */
+export function askWarmupItems(messages: Array<Pick<AskMessage, "warmup">>, runId: string): AskWarmupItem[] {
+    return messages
+        .flatMap((message) => (message.warmup && message.warmup.runId === runId ? [message.warmup] : []))
+        .sort((left, right) => left.index - right.index);
 }
 
-/**
- * A tap on a choice of the question being asked. Earlier questions are
- * settled: a tap on one changes nothing. The last answer moves the run to
- * `submitting`; the caller sends `warmupRunSubmission`.
- */
-export function answerWarmupRun(run: WarmupRun, question: number, choice: number): WarmupRun {
-    if (run.phase !== "answering") return run;
-    const current = warmupRunShownCount(run) - 1;
-    if (question !== current || run.quiz.answers[question] !== null) return run;
-    const quiz = chooseTrainingAnswer({...run.quiz, position: question}, choice);
-    return {...run, quiz, phase: isTrainingQuizReady(quiz) ? "submitting" : "answering"};
+/** The question to ask after `item`, or null when it was the last (or that one is already asked). */
+export function askWarmupNextIndex(item: AskWarmupItem, asked: AskWarmupItem[]): number | null {
+    if (item.index >= item.total - 1) return null;
+    const next = item.index + 1;
+    return asked.some((candidate) => candidate.index === next) ? null : next;
 }
 
-/** `p_answers` in question order, once every question is answered. */
-export function warmupRunSubmission(run: WarmupRun): number[] | null {
-    return trainingSubmission(run.quiz);
+/** Every question answered, in question order: what the server takes. */
+export function askWarmupAnswers(items: AskWarmupItem[]): number[] | null {
+    const total = items[0]?.total ?? 0;
+    if (total <= 0 || items.length !== total) return null;
+    const ordered = [...items].sort((left, right) => left.index - right.index);
+    if (ordered.some((item, position) => item.index !== position)) return null;
+    const chosen = ordered.map((item) => item.chosen);
+    return chosen.every((choice): choice is number => typeof choice === "number") ? chosen : null;
 }
 
-/** The answers were marked: the result line shows, and goes to the animal. */
-export function finishWarmupRun(run: WarmupRun, result: SpeciesTrainingResult): WarmupRun {
-    return {...run, phase: "result", result};
+/** A tap on a choice: kept on the question. A question already answered stays as it was. */
+export function answerAskWarmupItem(item: AskWarmupItem, choice: number): AskWarmupItem {
+    if (typeof item.chosen === "number" || choice < 0 || choice >= item.choices.length) return item;
+    return {...item, chosen: choice};
 }
 
-/** The answers never reached the grader: the same ones can be sent again. */
-export function failWarmupRun(run: WarmupRun): WarmupRun {
-    return run.phase === "submitting" ? {...run, phase: "error"} : run;
+/** The server's verdict, kept on each question (and the pass, with the XP it paid, on the last). */
+export function applyWarmupResult(result: SpeciesTrainingResult, item: AskWarmupItem): AskWarmupItem {
+    const checked: AskWarmupItem = {...item, correct: item.index < result.correct.length ? result.correct[item.index] === true : result.passed};
+    if (item.index >= item.total - 1) {
+        checked.passed = result.passed;
+        checked.rewardXP = result.passed && !result.alreadyCompleted ? result.rewardXP : 0;
+    }
+    return checked;
 }
 
-export function retryWarmupRun(run: WarmupRun): WarmupRun {
-    return run.phase === "error" ? {...run, phase: "submitting"} : run;
-}
+/** How one choice looks on its chip: open to tap, their answer (checked or not), or another answer. */
+export type AskWarmupChoiceMark = "open" | "chosen" | "right" | "wrong" | "faded";
 
-/** A run is under way (its offer's chips are put away until it ends). */
-export function warmupRunActive(run: WarmupRun | null | undefined): boolean {
-    return Boolean(run && (run.phase === "answering" || run.phase === "submitting" || run.phase === "error"));
+export function askWarmupChoiceMark(item: AskWarmupItem, choice: number): AskWarmupChoiceMark {
+    if (typeof item.chosen !== "number") return "open";
+    if (choice !== item.chosen) return "faded";
+    if (item.correct === true) return "right";
+    if (item.correct === false) return "wrong";
+    return "chosen";
 }

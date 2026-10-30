@@ -21,7 +21,7 @@
  * come from it, never from the hidden marker in the reply.
  */
 
-import {decodeAnimalStep, stepUuid, type AnimalStep} from "@/lib/your-step";
+import {decodeAnimalStep, stepFrequency, stepUuid, type AnimalStep, type StepFrequency} from "@/lib/your-step";
 import {decodeDebateOffer, type DebateOffer} from "@/lib/debates";
 
 export type AskCompanionLoop = {
@@ -34,6 +34,8 @@ export type AskCompanionLoop = {
 };
 
 export type AskCompanionStepDone = {
+    /** The step's id (`trial_done.id`), when the server sent it: its card in the thread then says it is done. */
+    id?: string;
     step: string;
     powerEarned: boolean;
     /** The progression XP the step paid (`your_step:<id>`, +5, at most one a day per animal); 0 when none. */
@@ -44,6 +46,8 @@ export type AskCompanionStepDone = {
 export type AskCompanionStepSet = {
     id: string | null;
     step: string;
+    /** A Trial picked from this reply's Trials (its loop shows with the step); absent for a step the animal set. */
+    trialFrequency?: StepFrequency;
 };
 
 export type AskCompanionReferral = {
@@ -101,7 +105,8 @@ function stepDoneFrom(raw: unknown): AskCompanionStepDone | null {
     const step = text(row?.step);
     if (!row || !step) return null;
     // `power_waits_for_training` is always false since 3.2 (kept for old apps).
-    return {step, powerEarned: row.power_earned === true, xp: count(row.xp ?? row.xp_awarded)};
+    const id = uuid(row.id);
+    return {...(id ? {id} : {}), step, powerEarned: row.power_earned === true, xp: count(row.xp ?? row.xp_awarded)};
 }
 
 function stepSetFrom(raw: unknown): AskCompanionStepSet | null {
@@ -198,12 +203,14 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
     const row = object(raw);
     if (!row) return null;
     const stepDoneRow = object(row.stepDone);
+    const stepDoneId = uuid(stepDoneRow?.id);
     const stepDone = stepDoneRow && text(stepDoneRow.step)
-        ? {step: text(stepDoneRow.step) as string, powerEarned: stepDoneRow.powerEarned === true, xp: count(stepDoneRow.xp)}
+        ? {...(stepDoneId ? {id: stepDoneId} : {}), step: text(stepDoneRow.step) as string, powerEarned: stepDoneRow.powerEarned === true, xp: count(stepDoneRow.xp)}
         : null;
     const stepSetRow = object(row.stepSet);
+    const stepSetFrequency = stepFrequency(stepSetRow?.trialFrequency);
     const stepSet = stepSetRow && text(stepSetRow.step)
-        ? {id: uuid(stepSetRow.id), step: text(stepSetRow.step) as string}
+        ? {id: uuid(stepSetRow.id), step: text(stepSetRow.step) as string, ...(stepSetFrequency ? {trialFrequency: stepSetFrequency} : {})}
         : null;
     const referralRow = object(row.referral);
     const referralSpecies = uuid(referralRow?.speciesProfileId);

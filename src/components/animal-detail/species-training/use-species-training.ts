@@ -1,7 +1,38 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState} from "react";
-import {type SpeciesTraining, decodeSpeciesTraining} from "@/lib/species-training";
+import {
+    type SpeciesTraining,
+    type SpeciesTrainingResult,
+    decodeSpeciesTraining,
+    decodeSpeciesTrainingResult,
+    trainingRefusalMessage
+} from "@/lib/species-training";
+
+/**
+ * The answers to an animal's own quiz (the Warmup), marked by the server:
+ * the result, or why it did not go (`code`, and the English line to show
+ * where nothing better is said).
+ */
+export async function submitSpeciesTraining(
+    speciesProfileId: string,
+    answers: number[]
+): Promise<{ok: true; result: SpeciesTrainingResult} | {ok: false; code: string; message: string}> {
+    try {
+        const response = await fetch("/api/app/species-training", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", Accept: "application/json"},
+            body: JSON.stringify({speciesProfileId, answers})
+        });
+        const payload = await response.json().catch(() => null);
+        const result = response.ok ? decodeSpeciesTrainingResult(payload?.result) : null;
+        if (result) return {ok: true, result};
+        const code = typeof payload?.code === "string" ? payload.code : "";
+        return {ok: false, code, message: typeof payload?.error === "string" ? payload.error : trainingRefusalMessage(code)};
+    } catch {
+        return {ok: false, code: "", message: trainingRefusalMessage("")};
+    }
+}
 
 /**
  * This viewer's Training for one animal. A signed-out visitor gets a preview
