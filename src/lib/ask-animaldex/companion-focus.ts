@@ -1,25 +1,28 @@
 /**
  * The companion loop, the server half (AnimalDex 20261028120000; owner,
  * 2026-10-28: "capture animal - talk to it - work through personal problems
- * together").
+ * together"), as "Your step" since 3.2 (AnimalDex 20261031120000,
+ * docs/your-step/SPEC.md).
  *
  * With its owner, the animal quietly finds the one thing in their life its
- * lesson can help with (its focus), sets them a concrete step on it (Your
- * Trial: the personal route, never named as such), and when they say they did
- * it, says well done, which completes it, grows the bond and can earn the
- * Power. A problem that is clearly another animal's lesson is handed to that
- * animal, with the problem, so the person never explains it twice.
+ * lesson can help with (its focus), sets them one concrete step on it (Your
+ * step), and when they say they did it, says well done, which completes it,
+ * grows the bond and, the first time, earns the Power. A problem that is
+ * clearly another animal's lesson is handed to that animal, with the problem,
+ * so the person never explains it twice.
  *
  * None of it is a form or a mode. The animal judges all of it in the reply it
  * is writing anyway, and records what it did in hidden lines after its
  * follow-ups: FOCUS, TRIAL, DONE, REFER. The server takes them out (the reader
  * never sees them), writes them, and reports what changed in the `companion`
- * field of `done`.
+ * field of `done`. The drawer draws the step card from that state, never from
+ * anything the model writes.
  *
- * Port of the apps' `supabase/functions/_shared/animal-focus.ts`. The rule
- * text is carried across verbatim, less the step cards the website does not
- * have. Pure: no `server-only`, no fetching, so the prompt builders and their
- * tests can use it.
+ * Port of the apps' `supabase/functions/_shared/animal-focus.ts` (AnimalDex
+ * r32-server 25c163e8). The rule text is carried across verbatim, cards
+ * included: the owner's chat draws the Warmup and Trials cards since 3.2
+ * (`chat-cards.ts`). Pure: no `server-only`, no fetching, so the prompt
+ * builders and their tests can use it.
  */
 
 import {ASK_FOLLOW_UP_SENTINEL} from "@/lib/ask-animaldex/prompt";
@@ -201,9 +204,8 @@ export function resolveReferral(key: string, roster: CompanionRosterEntry[]): Co
 
 /**
  * How the animal works on its owner's life with them. Stable: system prompt.
- * `offersSteps` false: the person asked not to be offered steps. The apps'
- * text, less "with its card" and owner_progress: the website has no step
- * cards.
+ * `offersSteps` false: the person asked not to be offered steps. Verbatim
+ * from the apps' `companionLoopRules`.
  */
 export function companionLoopRules(params: {offersSteps: boolean}): string[] {
     return [
@@ -220,25 +222,36 @@ export function companionLoopRules(params: {offersSteps: boolean}): string[] {
                 "- Once you understand their situation — ask what you need to first, never on the first mention — set them one",
                 "  concrete step on the focus that does your lesson in their real life: specific to what they told you, small",
                 "  enough to actually do within days, and clearly yours. Say it the way you would, in plain words, as part of",
-                "  the conversation. Never call it a Trial, a challenge, a task, homework or Apply It Your Way, and never make",
-                "  it sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
-                "  clearly moved on from it or it no longer fits.",
-                "- Most steps need no proof: what they tell you is enough. Only when a step naturally leaves something they could",
-                "  show you (something made, written, somewhere they went) may you ask to see it; never insist.",
-                "- If they want a challenge but have not shared anything personal, or ask for one, offer your Animal Trial."
+                "  the conversation. The app shows it to them under your reply with its own buttons, so never mention a card, a",
+                "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
+                "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
+                "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+                "- What they tell you is enough. Never ask for proof or to see anything; a photo or video they add goes into",
+                "  their own record, and you do not see it.",
+                "- If they ask for a different step, or want a challenge but have nothing of their own to bring, you may offer",
+                "  your own Trials instead, with the trial card: they pick the one that suits them, and it becomes their step.",
+                "  Say in a sentence what your Trials ask of them, as yourself.",
+                "- Your Warmup (companion.warmup): a few quick questions on your lesson, a little XP, never a condition for",
+                "  anything. Only while companion.warmup.may_offer is true, and only after you have told them your lesson in",
+                "  your own words in this conversation, you may offer it once, with the training card. If they skip it or let",
+                "  it pass, never offer it again in this conversation. When they tell you how their Warmup went, react as",
+                "  yourself: a pass gets a line of recognition; a miss gets how your kind actually sees it, plainly, from your",
+                "  own life — no consolation speech, and nothing about trying again."
             ]
             : [
-                "- They have asked not to be offered steps. Help in conversation only: set no steps unless they ask for one in",
-                "  this message."
+                "- They have asked not to be offered steps. Help in conversation only: set no steps and send no cards unless they",
+                "  ask for one in this message."
             ]),
-        "- When they tell you how companion.open_trial went: if they really did it — it happened, they can say something",
-        "  about how, even if it went badly — tell them well done, in your own way and as only you would, and what it",
-        "  shows about them through your lesson. If they only say they did it, ask how it went first. If they have not",
-        "  done it yet, or did something else, do not count it: encourage, or adjust the step.",
-        "- companion.your_power says where your Power stands. Until it is earned, their first completed step earns it —",
-        "  once they have passed your lesson check. So when you congratulate them and lesson_check_passed is false, say in",
-        "  a line that your lesson check is all that stands between them and your Power, and offer it. When",
-        "  power_just_earned is true, they have just earned it: tell them, as yourself, once.",
+        "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
+        "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — tell them well",
+        "  done, in your own way and as only you would, and what it shows about them through your lesson. If what they did",
+        "  was something else that still does your lesson, it counts the same. Either way, write the DONE line.",
+        "  If what they say is too vague to tell what happened, ask them one specific question about it, the one only you",
+        "  would ask. Never refuse it, never say it does not count, and never mention attempts, limits, waiting or",
+        "  tomorrow. If they have not done it yet, encourage them, or change the step if it does not fit.",
+        "- companion.your_power says where your Power stands. Until it is earned, the first step they finish with you",
+        "  earns it. When power_just_earned is true, they have just earned it: tell them, as yourself, once. After a step",
+        "  is done, talk about what it showed; do not reach for your Warmup or any card as the next thing.",
         "- When the heart of a problem is really another animal's lesson: give your own take from your lesson first. Then,",
         "  only if one of other_animals has a lesson that clearly fits it better, suggest they talk to that one — by its",
         "  name, in a sentence, saying why its way fits — and that you'll tell it what is going on so they don't have to",
@@ -263,31 +276,95 @@ export const COMPANION_OUTPUT_LINES = [
     "   needs so they never have to explain it again>"
 ];
 
-/** The loop as it stands, and who else they could be sent to. Per turn. */
+/**
+ * The Warmup's standing in this conversation. The animal may offer it once,
+ * in the first conversation, while it is not passed (SPEC section 1.2).
+ */
+export type CompanionWarmup = {available: boolean; passed: boolean; may_offer: boolean};
+
+/**
+ * Whether the animal may offer its Warmup in this reply: there is one, they
+ * have not passed it, this is their first day talking with it, and it has
+ * not already been offered in this conversation. The apps' `companionWarmup`.
+ */
+export function companionWarmup(params: {
+    ownerProgress: Record<string, unknown> | null | undefined;
+    daysTalked: number;
+    offeredInConversation: boolean;
+}): CompanionWarmup {
+    const raw = params.ownerProgress?.warmup;
+    const warmup = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+    const available = warmup.available === true;
+    const passed = warmup.passed === true;
+    return {
+        available,
+        passed,
+        may_offer: available && !passed && params.daysTalked <= 1 && !params.offeredInConversation
+    };
+}
+
+/** A training card (the Warmup) already sent in this conversation. The apps' `conversationOffersWarmup`. */
+export function conversationOffersWarmup(history: Array<{role?: string | null; content?: string | null}>): boolean {
+    return history.some((turn) =>
+        turn.role === "assistant" && typeof turn.content === "string" &&
+        /animaldex-card/.test(turn.content) && /"kind"\s*:\s*"training"/.test(turn.content)
+    );
+}
+
+const VIDEO_PATH = /\.(mp4|mov|webm)$/i;
+
+/** What they attached to the record, in words for the animal (it never sees it). The apps' `describeStepMedia`. */
+export function describeStepMedia(paths: readonly string[] | null | undefined): string | null {
+    const list = (paths ?? []).filter((path) => typeof path === "string" && path.trim().length > 0);
+    if (list.length === 0) return null;
+    const videos = list.filter((path) => VIDEO_PATH.test(path)).length;
+    if (videos > 0) return videos === 1 ? "a video" : `${videos} videos`;
+    return list.length === 1 ? "a photo" : `${list.length} photos`;
+}
+
+/** The person tapped "I did it" on the open step: their message is the report. */
+export type CompanionStepReport = {media: string | null};
+
+/** The loop as it stands, and who else they could be sent to. Per turn. Verbatim from the apps' `companionPromptLines`. */
 export function companionPromptLines(params: {
     state: CompanionState | null;
     roster: CompanionRosterEntry[];
     powerEarned: boolean;
-    lessonCheckPassed: boolean;
     powerJustEarned?: boolean;
+    warmup?: CompanionWarmup | null;
+    stepReport?: CompanionStepReport | null;
 }): string[] {
     const {state} = params;
+    const open = state?.open_trial ?? null;
     const companion = state
         ? {
             focus: state.focus?.focus ?? null,
-            open_trial: state.open_trial ? {step: state.open_trial.step, set: state.open_trial.set_at?.slice(0, 10) ?? null} : null,
+            open_trial: open
+                ? {
+                    step: open.step,
+                    set: open.set_at?.slice(0, 10) ?? null,
+                    accepted: Boolean(open.accepted_at),
+                    ...(open.trial_frequency ? {from_your_trial: open.trial_frequency} : {})
+                }
+                : null,
             steps_done_together: state.your_trials_done,
             recent_done: state.recent_done.map((done) => done.step),
             referral: state.referral
                 ? {from: state.referral.from_animal, problem: state.referral.problem}
                 : null,
             your_power: params.powerEarned || params.powerJustEarned ? "earned" : "not earned yet",
-            lesson_check_passed: params.lessonCheckPassed,
-            ...(params.powerJustEarned ? {power_just_earned: true} : {})
+            ...(params.powerJustEarned ? {power_just_earned: true} : {}),
+            ...(params.warmup?.available ? {warmup: {passed: params.warmup.passed, may_offer: params.warmup.may_offer}} : {})
         }
         : null;
+    const report = params.stepReport && open
+        ? `step_report — they have just tapped "I did it" on companion.open_trial: their message is how it went, in their own words.${
+            params.stepReport.media ? ` They also added ${params.stepReport.media} to their record of it, which you cannot see.` : ""
+        } Judge it as the rules for reporting back say.`
+        : "";
     return [
         companion ? `companion — what you and your owner are working on:\n${JSON.stringify(companion)}` : "",
+        report,
         params.roster.length > 0
             ? `other_animals — your owner's other animals and their lessons, for a referral only:\n${
                 JSON.stringify(params.roster.map((entry) => ({
@@ -325,15 +402,14 @@ export function bondForClient(bond: CompanionBond): Record<string, unknown> {
     };
 }
 
-/** `companion.open_step` (3.2): the step the chat's card is keyed off, in the edge function's shape. */
-export function openStepForClient(step: CompanionOpenTrial | null | undefined): Record<string, unknown> | null {
-    if (!step) return null;
-    return {
-        id: step.id,
-        step: step.step,
-        accepted_at: step.accepted_at ?? null,
-        trial_frequency: step.trial_frequency ?? null
-    };
+/** The `done` event's `companion.open_step` (3.2): the open step the chat pins. The apps' `CompanionOpenStep`. */
+export type CompanionOpenStep = {id: string; step: string; accepted_at: string | null; trial_frequency: string | null};
+
+/** `companion.open_step` from the step object, in the edge function's shape. The apps' `openStepForClient`. */
+export function openStepForClient(open: CompanionOpenTrial | null | undefined): CompanionOpenStep | null {
+    return open
+        ? {id: open.id, step: open.step, accepted_at: open.accepted_at ?? null, trial_frequency: open.trial_frequency ?? null}
+        : null;
 }
 
 /**

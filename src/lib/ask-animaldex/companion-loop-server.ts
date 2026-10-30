@@ -13,6 +13,7 @@ import "server-only";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {
     companionDoneFields,
+    describeStepMedia,
     parseCompanionRoster,
     parseCompanionState,
     resolveReferral,
@@ -20,7 +21,8 @@ import {
     type CompanionLines,
     type CompanionOpenTrial,
     type CompanionRosterEntry,
-    type CompanionState
+    type CompanionState,
+    type CompanionStepReport
 } from "@/lib/ask-animaldex/companion-focus";
 
 type Service = NonNullable<ReturnType<typeof createSupabaseServiceClient>>;
@@ -56,9 +58,14 @@ export async function readerOwnsCapture(userId: string | null, captureId: string
 export type OwnerCompanion = {
     service: Service;
     bond: CompanionBond | null;
-    /** `animal_chat_owner_progress`: whether the Power is earned (`training_passed` is always true since 3.2). */
+    /** `animal_chat_owner_progress`: whether the Power is earned. */
     powerEarned: boolean;
-    lessonCheckPassed: boolean;
+    /**
+     * `animal_chat_owner_progress` as it came (3.2: `loop_step`, `warmup`
+     * {available, passed}, the Trials, battles), for `companionWarmup`. The
+     * prompt does not carry it as owner_progress on the web.
+     */
+    progress: Record<string, unknown>;
     /** The loop, when it is on (personalisation on, not a Trial thread). */
     loop: {
         state: CompanionState | null;
@@ -67,39 +74,45 @@ export type OwnerCompanion = {
         /**
          * 3.2: this message is their report on the open step ("I did it",
          * `step_report`), already attached through `attach_animal_step_report_v1`,
-         * with how many photos or videos they added. Only for the step that
-         * is open now; null otherwise.
+         * with what they added in words ("a video", "2 photos"). Only for the
+         * step that is open now; null otherwise.
          */
         stepReport: StepReport | null;
     } | null;
 };
 
-export type StepReport = {stepId: string; mediaCount: number};
+export type StepReport = CompanionStepReport & {stepId: string};
 
 /**
  * The report a `step_report` names, checked against the step that is open:
- * a stale or someone else's step id is no report. The media is counted from
- * the row (`media_paths`), never from the request.
+ * a stale or someone else's step id is no report (an ordinary message). What
+ * was attached is read from the row (`media_paths`), never from the request,
+ * and said in words (`describeStepMedia`). The apps' `loadStepReport`.
  */
 async function readStepReport(service: Service, userId: string, open: CompanionOpenTrial | null, stepId: string | null): Promise<StepReport | null> {
-    if (!stepId || !open || open.id.toLowerCase() !== stepId.toLowerCase()) return null;
+    if (!stepId) return null;
+    if (!open || open.id.toLowerCase() !== stepId.toLowerCase()) {
+        console.warn("[ask-animaldex] step_report is not the open step", stepId);
+        return null;
+    }
     try {
         const {data, error} = await service
             .from("animal_companion_trials")
             .select("media_paths")
-            .eq("id", stepId)
+            .eq("id", open.id)
             .eq("user_id", userId)
+            .eq("status", "open")
             .maybeSingle();
         if (error) {
             warn("step report read", error);
-            return {stepId, mediaCount: 0};
+            return {stepId: open.id, media: null};
         }
-        const paths: unknown = data?.media_paths;
-        const count = Array.isArray(paths) ? paths.filter((path) => typeof path === "string" && path.trim()).length : 0;
-        return {stepId, mediaCount: count};
+        const raw: unknown = data?.media_paths;
+        const paths = Array.isArray(raw) ? raw.filter((path): path is string => typeof path === "string") : [];
+        return {stepId: open.id, media: describeStepMedia(paths)};
     } catch (error) {
         warn("step report read", error);
-        return {stepId, mediaCount: 0};
+        return {stepId: open.id, media: null};
     }
 }
 
@@ -176,15 +189,20 @@ export async function loadOwnerCompanion(params: {
         service,
         bond,
         powerEarned: Boolean(progress.power_earned),
-        lessonCheckPassed: progress.training_passed !== false,
+        progress,
         loop
     };
 }
 
 /**
  * Writes what the animal did in this reply (its hidden lines) and says what
- * changed, for the `done` event: `companion` (the loop now) and, when a step
- * was completed, the new `bond`.
+ * changed, for the `done` event: `companion` (the loop now: `open_trial` is
+ * the open step's text, `open_step` the step object the chat pins) and, when
+ * a step was completed, the new `bond`. The apps' `applyCompanionLines`.
+ *
+ * The web is a 3.2 client: the step card's "I'll do it" accepts the step
+ * (`accept_animal_step_v1`), which makes its check-in, so a step set here
+ * never makes one (`p_check_in_on_set: false`).
  */
 export async function applyCompanionLines(params: {
     service: Service;
@@ -213,13 +231,14 @@ export async function applyCompanionLines(params: {
             if (error) warn("complete_animal_companion_trial", error);
             else if (data && typeof data === "object") {
                 const result = data as Record<string, unknown>;
-                // 3.2: the step pays +5 XP (at most one a day per animal); the
-                // Power never waits for a lesson check any more.
-                const xp = Number(result.xp ?? result.xp_awarded);
+                // 3.2: the step pays +5 XP (0 past the first paying step with
+                // this animal today); the Power never waits for a lesson check.
                 event.trial_done = {
+                    id: typeof result.trial_id === "string" ? result.trial_id : params.state.open_trial.id,
                     step: result.step ?? params.state.open_trial.step,
                     power_earned: result.power_earned === true,
-                    xp: Number.isFinite(xp) && xp > 0 ? Math.floor(xp) : 0
+                    power_waits_for_training: result.power_waits_for_training === true,
+                    xp: Number(result.xp) || 0
                 };
                 done = Number(result.your_trials_done) || done + 1;
                 openStep = null;
@@ -230,17 +249,17 @@ export async function applyCompanionLines(params: {
             const {data, error} = await service.rpc("set_animal_companion_trial", {
                 ...base,
                 p_step: lines.trial.step,
-                p_check_in_after_days: lines.trial.checkInAfterDays
+                p_check_in_after_days: lines.trial.checkInAfterDays,
+                p_check_in_on_set: false
             });
             if (error) warn("set_animal_companion_trial", error);
-            else if (data) {
-                const id = typeof data === "string" ? data : null;
+            else if (typeof data === "string" && data) {
                 // The id is the step the card under this reply acts on. The
-                // same step set again keeps the one already open, as it was.
-                if (id && id !== openStep?.id) {
-                    openStep = {id, step: lines.trial.step, set_at: new Date().toISOString(), accepted_at: null, trial_frequency: null, has_report: false};
-                }
-                event.trial_set = {step: lines.trial.step, ...(id ? {id} : {})};
+                // same step said again keeps its id and where it stood.
+                openStep = openStep?.id === data
+                    ? openStep
+                    : {id: data, step: lines.trial.step, set_at: new Date().toISOString(), accepted_at: null, trial_frequency: null, has_report: false};
+                event.trial_set = {id: data, step: openStep.step};
             }
         }
         if (lines.refer) {

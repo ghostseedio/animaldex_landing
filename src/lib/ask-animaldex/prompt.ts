@@ -15,7 +15,9 @@
  * The rule text is deliberately carried across verbatim rather than rewritten
  * for the web. Every line in it is load-bearing, and a reworded web copy would
  * be a different animal wearing the same name. Where the website differs it is
- * because it has less: no step cards and no owner progress. Since 2026-10-28
+ * because it has less: no owner progress, and cards only in the reader's own
+ * animal's chat (3.2: the Warmup and Trials cards, `chat-cards.ts`; the app
+ * draws the step itself). Since 2026-10-28
  * it carries the rest of the apps' animal: its nature (`nature.ts`), its own
  * stories (`stories.ts`), each reply's length (`reply-length.ts`), the
  * automatic mode, the visitor's voice on someone else's card, its Trials and
@@ -27,10 +29,12 @@
 import {ASK_MEMORY_RULES} from "@/lib/ask-animaldex/memory-prompt";
 import {
     ANIMAL_AUTO_MODE_RULES,
+    ANIMAL_AUTO_MODE_RULES_WITHOUT_CARDS,
     ANIMAL_CHAT_MODE_RULES,
     ANIMAL_NO_STEP_OFFER_RULES,
     ANIMAL_RELATIONSHIP_RULES,
     askCompanionVoiceLines,
+    askStepOfferRules,
     askCompanionWorldFrom,
     type AskCompanionVoice,
     type AskConversationMode
@@ -47,8 +51,11 @@ export const ASK_FOLLOW_UP_SENTINEL = "§§FOLLOW_UPS§§";
 /** Which grounding the question is answered from. */
 export type AskScope = "species" | "general";
 
-/** Non-prose mediums a client can render. Mirrors `AssistantVisual` on iOS. */
-export type AskVisualMedium = "flow" | "scale" | "chart" | "photo";
+/**
+ * Non-prose mediums a client can render. Mirrors `AssistantVisual` on iOS.
+ * `card` is the owner's chat only (the Warmup and Trials cards, 3.2).
+ */
+export type AskVisualMedium = "flow" | "scale" | "chart" | "photo" | "card";
 
 export type AskConversationTurn = {
     role: "user" | "assistant";
@@ -93,8 +100,8 @@ const ANIMAL_ROLE_RULES = [
     "your side (animal_record.power.related_powers and the related species in available_content are the ones you know).",
     "Where the record is silent, use established biology of your species, said as what you do, never as a fact sheet.",
     "Never invent numbers, measurements, an IUCN status or behaviours the record does not support.",
-    "You know you are an animal talking to a person through AnimalDex. You may point them at your Trials, Training or",
-    "Power inside AnimalDex when the record lists them, in your own words.",
+    "You know you are an animal talking to a person through AnimalDex. You may point them at your Trials, your Warmup",
+    "or your Power inside AnimalDex when the record lists them, in your own words.",
     "Never say 'as an AI', 'as an assistant', 'as a language model', and never step outside the animal to explain the",
     "app. The mapping from your biology to a human pattern is AnimalDex's reading of you — say it as how you live, not",
     "as a law of nature or a scientific claim about people.",
@@ -309,8 +316,8 @@ const ANIMAL_VISITOR_RULES = [
     "apply your Power to their life, not even briefly. If they bring one, say warmly in a sentence or two that you are",
     "your owner's animal and that kind of talk is for your owner, and that if they find and capture one of your kind",
     "themselves, it will talk their life through with them. Then offer something you can talk about.",
-    "Do not bring up what_you_remember_about_them with a visitor. Do not offer the owner's Trials, Training or battles",
-    "to the visitor as cards; those steps belong to the owner."
+    "Do not bring up what_you_remember_about_them with a visitor. Do not offer the owner's steps, Warmup, Trials or",
+    "battles to the visitor as cards; those belong to the owner."
 ];
 
 /**
@@ -331,7 +338,7 @@ const ANIMAL_VISITOR_FOLLOW_UP_RULES = [
     "- About your owner's time with you ('What has your owner worked on with you?', using their name) only when",
     "  your_owner has a journey note or Play records; otherwise about you as an animal (your life, in your own",
     "  specifics) or your Power in plain words.",
-    "- Never about the visitor's own life, work or decisions, and never your owner's Training, Trials or battles."
+    "- Never about the visitor's own life, work or decisions, and never your owner's steps, Warmup, Trials or battles."
 ];
 
 /** Verbatim from the apps' `ANIMAL_TRIAL_FOLLOW_UP_RULES`. */
@@ -481,11 +488,29 @@ const VISUAL_MEDIUMS: Record<AskVisualMedium, string[]> = {
         '  {"type":"line","title":"Trail strength over time","x_axis":{"label":"Time"},"y_axis":{"label":"Scent strength"},"series":[{"label":"Trail","points":[{"x":0,"y":10},{"x":1,"y":60}]}],"annotations":[{"label":"Food runs out"}]}',
         "  ```",
         "  type is one of line, area, bar, threshold. Use conceptual values; never invent measured numbers."
+    ],
+    // The apps' `ASSISTANT_VISUAL_MEDIUMS.card` (3.2), verbatim. The owner's
+    // chat draws `trial` and `training`; a `comparison` card is not drawn on
+    // the web (`chat-cards.ts`).
+    card: [
+        "- A next step the person can take right now inside AnimalDex is a CARD. It renders as a tappable card with a",
+        "  button that opens the real thing, so the step is never only described:",
+        "  ```animaldex-card",
+        '  {"kind":"trial","title":"Your MID Trial: One sure sprint","body":"One sentence on why this is the step for them now.","cta":"Open the Trial","frequency":"MID"}',
+        "  ```",
+        "  kind is one of: trial (your Trials, to make one of them their step; frequency LOW|MID|HIGH is the one you would",
+        "  suggest, as listed in owner_progress or available_content; shown with your motion loop), training (your Warmup:",
+        "  a few quick questions on your lesson, taken inside this chat, optional), comparison (a comparison battle with",
+        "  their card). body is one sentence in your voice. Never more than ONE card per answer, after the prose, and only",
+        "  when the rules above allow it or they asked for it. A card is an offer: they can say no. A step you set them in",
+        "  your own words needs no card: the app shows it."
     ]
 };
 
 function mediumRules(supportedVisuals: AskVisualMedium[]): string[] {
+    // The site-wide assistant never sends the owner's cards.
     const available = supportedVisuals
+        .filter((name) => name !== "card")
         .map((name) => VISUAL_MEDIUMS[name])
         .filter((lines): lines is string[] => Array.isArray(lines));
 
@@ -585,8 +610,11 @@ export type AskPromptOptions = {
     nickname?: string | null;
     /// Species scope, one-to-one: the animal may tell stories of its own life.
     stories?: boolean;
-    /// The person asked not to be offered Training or Trials.
+    /// The person asked not to be offered steps or Trials.
     suggestSteps?: boolean;
+    /// A live voice call: no steps, no Warmup or Trial offers and no cards
+    /// (the apps' `call`). The loop is context only: `companionLoop` is null.
+    call?: boolean;
     /// Species scope: the stats and System Dynamics rhythm as conversational
     /// dials (`persona.ts`), for the character section.
     persona?: AskPersonaDials | null;
@@ -621,10 +649,26 @@ function speciesMode(options: AskPromptOptions): AskConversationMode {
     return options.mode ?? (options.aboutTrial ? "training" : "auto");
 }
 
+/** On a call there is no screen: nothing is set, offered or drawn. Verbatim from the apps' `ANIMAL_CALL_STEP_RULES` (3.2). */
+const ANIMAL_CALL_STEP_RULES = [
+    "This is a voice call: set no steps, offer no Warmup, Trials or battles, and send no cards. If they bring up the",
+    "step you set them (companion.open_trial), talk with them about how it is going."
+];
+
+/** The owner's cards are in this prompt (3.2): the reader's own animal's one-to-one chat. */
+function hasCards(options: AskPromptOptions): boolean {
+    return options.scope === "species" && (options.supportedVisuals ?? []).includes("card");
+}
+
 /**
- * The apps' `loopRules` without step cards: a visitor gets the visitor's
- * rules; otherwise the mode's rules (training has no loop rules on the web),
- * the companion loop on the owner's own chat, then the relationship rules.
+ * The apps' `loopRules`: a visitor gets the visitor's rules; a group its own;
+ * training (a Trial thread) has no loop rules on the web (the apps' goal rules
+ * need owner_progress, which the website does not send); a call the call's
+ * step rule; otherwise the mode's rules, then the companion loop on the
+ * owner's own chat or the step-offer rules, then the relationship rules.
+ * With cards (the owner's chat), and on a call (whose rule sends none), every
+ * line is the apps'; otherwise the mode's last line and the step offers say
+ * it without a card.
  */
 function companionRules(options: AskPromptOptions): string[] {
     if (options.speakingTo === "visitor") {
@@ -633,9 +677,17 @@ function companionRules(options: AskPromptOptions): string[] {
     if (options.groupLines?.length) return askGroupLoopRules(options.groupLines);
     const mode = speciesMode(options);
     if (mode === "training") return ANIMAL_RELATIONSHIP_RULES;
-    const modeLines = mode === "chat" ? ANIMAL_CHAT_MODE_RULES : mode === "auto" ? ANIMAL_AUTO_MODE_RULES : [];
+    const cards = hasCards(options);
+    const modeLines = mode === "chat"
+        ? ANIMAL_CHAT_MODE_RULES
+        : mode === "auto"
+        ? cards || options.call ? ANIMAL_AUTO_MODE_RULES : ANIMAL_AUTO_MODE_RULES_WITHOUT_CARDS
+        : [];
+    if (options.call) return [...modeLines, "", ...ANIMAL_CALL_STEP_RULES, "", ...ANIMAL_RELATIONSHIP_RULES];
     const steps = options.companionLoop
         ? ["", ...companionLoopRules(options.companionLoop)]
+        : cards
+        ? askStepOfferRules(options.suggestSteps !== false, mode)
         : options.suggestSteps === false ? ANIMAL_NO_STEP_OFFER_RULES : [];
     return [...modeLines, ...steps, "", ...ANIMAL_RELATIONSHIP_RULES];
 }
@@ -662,28 +714,38 @@ function characterLines(options: AskPromptOptions): string[] {
 }
 
 /**
- * Drawings exist, but an animal talking to you rarely reaches for one. The
- * apps' `animalMediumRules`; the website has no step cards.
+ * Drawings exist, but an animal talking to you rarely reaches for one; the
+ * cards are the exception, because they are how the loop is offered. The
+ * apps' `animalMediumRules`, verbatim.
  */
 function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConversationMode): string[] {
-    const drawings = supportedVisuals
-        .map((name) => VISUAL_MEDIUMS[name])
-        .filter((lines): lines is string[] => Array.isArray(lines));
-    if (drawings.length === 0) {
+    const names = supportedVisuals.filter((name) => Array.isArray(VISUAL_MEDIUMS[name]));
+    const drawings = names.filter((name) => name !== "card");
+    if (names.length === 0) {
         return ["Medium — words, and a markdown table for a real side-by-side comparison."];
     }
-    return [
-        "Medium — you are talking, so words come first.",
-        "- A drawing is rare in conversation. Use one only when they ask how something works step by step, or when the",
-        "  answer is a sequence, a switch between states or a too-little/too-much scale that is genuinely clearer drawn.",
-        ...(mode === "chat" || mode === "auto" ? ["  Never in small talk."] : []),
-        "- At most ONE drawing (flow, scale, chart or photo) per answer. It replaces the prose that would have described",
-        "  it: never draw it and then narrate it, and never point at it ('here is a chart', 'as shown').",
-        "- Every visual block is closed with ``` on its own line before anything else follows it. An unclosed block is",
-        "  never drawn. A block must be valid JSON and must never sit inside a list, a table or a quote; if you cannot",
-        "  produce a valid one, say it in words.",
-        ...drawings.flat()
-    ];
+    const lines = ["Medium — you are talking, so words come first."];
+    if (drawings.length > 0) {
+        lines.push(
+            "- A drawing is rare in conversation. Use one only when they ask how something works step by step, or when the",
+            "  answer is a sequence, a switch between states or a too-little/too-much scale that is genuinely clearer drawn.",
+            ...(mode === "chat" || mode === "auto" ? ["  Never in small talk."] : []),
+            "- At most ONE drawing (flow, scale, chart or photo) per answer. It replaces the prose that would have described",
+            "  it: never draw it and then narrate it, and never point at it ('here is a chart', 'as shown').",
+            "- Every visual block is closed with ``` on its own line before anything else follows it. An unclosed block is",
+            "  never drawn. A block must be valid JSON and must never sit inside a list, a table or a quote; if you cannot",
+            "  produce a valid one, say it in words.",
+            ...drawings.flatMap((name) => VISUAL_MEDIUMS[name])
+        );
+    }
+    if (names.includes("card")) {
+        lines.push(
+            ...VISUAL_MEDIUMS.card,
+            "- A CARD is not a drawing: it goes after the closing question and before the follow-ups line, and the card rule",
+            "  above sets how many. Close each card block with ``` on its own line."
+        );
+    }
+    return lines;
 }
 
 /** The record and the content index, appended to the system prompt. */
@@ -751,7 +813,10 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
             ...speciesBody(options, "Formatting — your reply is rendered as markdown, so markdown works, but keep it conversational:"),
             "",
             "Output shape — plain markdown, no JSON, no code fence around the whole reply:",
-            "1. The answer itself (ending on its closing question when you ask one).",
+            // The apps' line, where the reader has cards (and on a call, as the apps send it).
+            hasCards(options) || options.call
+                ? "1. The answer itself (ending on its closing question when you ask one); then any card block(s), each closed with ```."
+                : "1. The answer itself (ending on its closing question when you ask one).",
             `2. Then a line containing exactly ${ASK_FOLLOW_UP_SENTINEL}`,
             "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
             ...(options.stories ? [ANIMAL_STORY_OUTPUT_LINE] : []),

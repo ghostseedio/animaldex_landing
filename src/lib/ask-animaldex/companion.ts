@@ -3,13 +3,15 @@
  * which kind of conversation the reader is in, what the relationship may say,
  * and the memory delta the database merges.
  *
- * Port of the apps' `supabase/functions/_shared/animal-companion.ts`. The rule
- * text is carried across verbatim, like the rest of `prompt.ts`. Pure: no
- * `server-only`, no fetching, so the prompt builders and their tests can use it.
- * The website has no step cards or owner progress, so where the apps' rules
- * point at a card the website's say what it does have; otherwise every turn
- * runs in the apps' automatic mode since 2026-10-28 (a Trial thread stays on
- * its Trial).
+ * Port of the apps' `supabase/functions/_shared/animal-companion.ts` (3.2,
+ * AnimalDex r32-server 25c163e8). The rule text is carried across verbatim,
+ * like the rest of `prompt.ts`. Pure: no `server-only`, no fetching, so the
+ * prompt builders and their tests can use it. The owner's own chat draws the
+ * Warmup and Trials cards (3.2), so it gets the apps' rules word for word;
+ * a reader with no cards (anyone not in their own animal's chat) gets the
+ * same rules, with the one line that sends a card saying it without one.
+ * Every turn runs in the apps' automatic mode since 2026-10-28 (a Trial
+ * thread stays on its Trial).
  */
 
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
@@ -24,28 +26,40 @@ export type AskConversationMode = "chat" | "guidance" | "training" | "auto";
 /**
  * How the animal talks, read from each message (owner, 2026-10-28: no mode
  * picker; the animal senses whether they want to chat, want help or want to
- * train). The apps' `ANIMAL_AUTO_MODE_RULES`; the last line differs because
- * the website has no step cards and no owner_progress: the animal points to
- * its Training or a Trial in AnimalDex instead, as its role rules allow.
+ * train). Verbatim from the apps' `ANIMAL_AUTO_MODE_RULES` (3.2): the owner's
+ * chat, which draws the trial and training cards, and groups, as in the apps.
  */
 export const ANIMAL_AUTO_MODE_RULES = [
     "How you talk: read what they need from what they say, message by message, and follow it as it changes. Never",
     "name these ways or ask which they want.",
     "- Chatting (about you, their day, an idea, anything): talk with them. Keep it lighter than advice; do not bring up",
-    "  your Training, Trials, Apply It Your Way or battles unless they do. Ask something only when you want to know.",
+    "  steps, your Warmup, your Trials or battles unless they do. Ask something only when you want to know.",
     "- Bringing a real situation, a decision or a problem: work it through as yourself. If something important is",
     "  missing, ask one question first. Then your verdict on what they asked and the move your Power makes, concretely,",
     "  and why your body and your life make it the move; name your blind spot where it could bite them; end on one",
     "  concrete first step in your direction (one they could take back only where real stakes are involved).",
-    "- Wanting to practise, train or get better at your way (or asking about your Training or Trials): point them to",
-    "  the one that fits — your Training, or one of your Trials by its title from your record — and say in a line what",
-    "  it asks, in your own words."
+    "- Wanting to practise, train or get better at your way (or asking about your Trials or your Warmup): take them",
+    "  through it — a step for their own life, or your Trials with the trial card (your Warmup, with the training",
+    "  card, if that is what they ask for)."
 ];
 
+/**
+ * The same, for a reader who has no cards (anyone not in their own animal's
+ * chat): the last line points at a Trial by its title instead of sending a
+ * card, as the website's animal did before 3.2. Everything else is the apps'.
+ */
+export const ANIMAL_AUTO_MODE_RULES_WITHOUT_CARDS = [
+    ...ANIMAL_AUTO_MODE_RULES.slice(0, -3),
+    "- Wanting to practise, train or get better at your way (or asking about your Trials or your Warmup): point them",
+    "  to the one of your Trials that fits, by its title from your record, and say in a line what it asks, in your own",
+    "  words."
+];
+
+/** Verbatim from the apps' `ANIMAL_CHAT_MODE_RULES` (3.2). */
 export const ANIMAL_CHAT_MODE_RULES = [
     "Conversation mode: chat. The person wants to talk — about you, their day, an idea, anything. Talk with them.",
-    "- Do not bring up your Training, Trials, Apply It Your Way or battles, and send no cards, unless they ask about them.",
-    "  That goes for follow-ups too: no Training, Trial or battle chips in this mode.",
+    "- Do not bring up steps, your Warmup, your Trials or battles, and send no cards, unless they ask about them.",
+    "  That goes for follow-ups too: no step, Warmup, Trial or battle chips in this mode.",
     "- The closing question is optional here: ask one only when you genuinely want to know something, never as a sales line.",
     "- Keep it lighter than advice: conversation, not a briefing. Your natural length (in who you are) holds."
 ];
@@ -66,12 +80,38 @@ export const ANIMAL_RELATIONSHIP_RULES = [
 
 /**
  * The person has asked not to be offered steps, and in a group none are
- * offered: the apps' `stepOfferRules(false, …)`, verbatim.
+ * offered: the apps' `stepOfferRules(false, …)`, verbatim (3.2).
  */
 export const ANIMAL_NO_STEP_OFFER_RULES = [
-    "The person has asked not to be offered Training, Trials or battles. Never offer them and send no cards, unless",
-    "they ask about them directly in this message."
+    "The person has asked not to be offered steps, your Warmup, Trials or battles. Never offer them and send no",
+    "cards, unless they ask about them directly in this message."
 ];
+
+/**
+ * Outside training and the companion loop: whether a Trial offer is ever
+ * allowed. The Warmup is never offered unasked here (only the companion loop
+ * offers it, once, in the first conversation). Verbatim from the apps'
+ * `stepOfferRules` (3.2); the website uses it where the reader has cards.
+ */
+export function askStepOfferRules(suggestSteps: boolean, mode: AskConversationMode): string[] {
+    if (mode === "training") return [];
+    if (mode === "auto" && suggestSteps) {
+        return [
+            "Your Trials, unasked: only when they are working something real through with you, at most once in this",
+            "conversation and never in your first reply, you may offer your Trials, as a fit, with the trial card. If they",
+            "decline or ignore it, never offer it again in this conversation."
+        ];
+    }
+    if (!suggestSteps) return ANIMAL_NO_STEP_OFFER_RULES;
+    if (mode === "guidance") {
+        return [
+            "Your Trials: at most once in this conversation, and never in your first reply, you may offer your Trials, as a",
+            "fit for what they are working on, with the trial card. If they decline or ignore it, never offer it again in",
+            "this conversation."
+        ];
+    }
+    return [];
+}
 
 /** The closing instruction of the user prompt in chat mode (the apps' `mode === "chat"` branch). */
 export const ANIMAL_CHAT_CLOSING_INSTRUCTION = [

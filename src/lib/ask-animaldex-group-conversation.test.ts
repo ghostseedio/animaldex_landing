@@ -348,7 +348,7 @@ test("group prompt: own angle, no step offers, never speaks for the others, the 
     });
     assert.ok(prompt.includes("Your angle this time: weigh who is affected"));
     assert.ok(prompt.includes("Never write lines for the other animals"));
-    assert.ok(prompt.includes("Never offer them and send no cards"));
+    assert.ok(prompt.includes("asked not to be offered steps, your Warmup, Trials or battles. Never offer them and send no\ncards"));
     assert.ok(prompt.includes("In a group you set the direction"));
     // No one-to-one relationship rules, and no word count from the persona.
     assert.equal(prompt.includes("Relationship — how you speak about you and them"), false);

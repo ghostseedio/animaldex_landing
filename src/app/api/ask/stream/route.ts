@@ -31,12 +31,21 @@ import {NextResponse} from "next/server";
  * on who visited, checks back on what they asked it to, and keeps the
  * visitor-safe journey note.
  *
- * 3.2 "Your step" (docs/your-step/SPEC.md, section 4): a message may carry
- * `step_report: {step_id}`, which means they tapped "I did it" and their
+ * 3.2 "Your step" (docs/your-step/SPEC.md, section 4; the apps'
+ * `generate-applied-insight` at AnimalDex r32-server 25c163e8): a message may
+ * carry `step_report: {step_id}`, which means they tapped "I did it" and their
  * report is already attached (`attach_animal_step_report_v1`). It is checked
- * against the step that is open and handed to the loop as `stepReport`. The
- * `done` event's `companion` carries `open_step`, `trial_set` its step's id,
- * and `trial_done` the XP it paid; the chat's step card is keyed off them.
+ * against the step that is open; the animal is told the message is the report
+ * and what was attached, never the media, and takes no side on it (no kind's
+ * verdict). The owner's chat says it draws `card` (and `step`), so the animal
+ * gets the card medium and offers its Warmup (once, on the first day, while
+ * not passed) and its Trials with cards, as in the apps; never a visitor, a
+ * call or a Trial thread. A step set here never makes a check-in
+ * (`p_check_in_on_set: false`): the card's "I'll do it" does. The `done`
+ * event's `companion` carries `open_step`, `trial_set` its step's id, and
+ * `trial_done` its id and the XP it paid; the chat's step card is keyed off
+ * them. On a call the loop is context only: nothing is set or done, and
+ * `done` has no `companion`.
  *
  * On someone else's card the animal is theirs: it talks about its owner only
  * from what the owner shares (`animal_chat_owner_context`), tells the visitor
@@ -78,7 +87,8 @@ import {
     buildAskSystemPrompt,
     splitStreamedReply,
     visibleAnswerSoFar,
-    type AskConversationTurn
+    type AskConversationTurn,
+    type AskVisualMedium
 } from "@/lib/ask-animaldex/prompt";
 import {
     askAnswerSource,
@@ -116,6 +126,8 @@ import {resolveStepReport} from "@/lib/your-step";
 import {
     bondForClient,
     companionPromptLines,
+    companionWarmup,
+    conversationOffersWarmup,
     extractCompanionLines,
     type CompanionLines
 } from "@/lib/ask-animaldex/companion-focus";
@@ -252,12 +264,16 @@ export async function POST(request: Request) {
         speaksAsAnimal ? loadAskStatQuantiles() : Promise.resolve(null)
     ]);
     const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
+    // "I did it" (3.2): this message is their report on the open step, if it
+    // still is that step (checked with the loop below).
+    const stepReportId = isGreeting ? null : resolveStepReport(body.step_report)?.stepId ?? null;
     // Its kind's verdict on what they asked (`kind-verdict.ts`), settled as
     // natural history while the rest of the turn loads, so the animal argues
-    // its own side rather than the sensible one. Not on a visit, a Trial or a call.
+    // its own side rather than the sensible one. Not on a visit, a Trial or a
+    // call, and not on a report on their step: that is not a problem to take a side on.
     const verdictKey = claudeAskKey();
     const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && basePacket.species && question &&
-            !isVisit && !isCall && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
+            !isVisit && !isCall && !stepReportId && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
         ? requestAskKindVerdict({
             key: verdictKey,
             input: {
@@ -289,7 +305,7 @@ export async function POST(request: Request) {
                 speciesProfileId: ownerSpeciesId,
                 loopOn: personalise && !aboutTrial,
                 // "I did it": the report on the open step, already attached.
-                stepReportId: isGreeting ? null : resolveStepReport(body.step_report)?.stepId ?? null
+                stepReportId
             })
                 .catch(() => null as OwnerCompanion | null)
             : Promise.resolve(null as OwnerCompanion | null),
@@ -420,8 +436,9 @@ export async function POST(request: Request) {
         ...(owner?.bond?.stage
             ? {relationship: {stage: owner.bond.stage, counted: owner.bond.counted ?? {}}}
             : {}),
-        // `loop.stepReport` ({stepId, mediaCount}) is this message's report on
-        // the open step; its prompt line arrives with the server lane's text.
+        // The loop as it stands; the Warmup's standing in this conversation
+        // (offered once, on the first day talking, while not passed); and,
+        // when this message is their report on the open step, that it is.
         ...(loop
             ? {
                 companionLines: companionPromptLines({
@@ -429,7 +446,12 @@ export async function POST(request: Request) {
                     roster: loop.roster,
                     powerJustEarned: loop.powerJustEarned,
                     powerEarned: owner?.powerEarned ?? false,
-                    lessonCheckPassed: owner?.lessonCheckPassed ?? true
+                    warmup: companionWarmup({
+                        ownerProgress: owner?.progress ?? {},
+                        daysTalked: Number(owner?.bond?.counted?.days ?? 0) || 0,
+                        offeredInConversation: conversationOffersWarmup(history)
+                    }),
+                    stepReport: loop.stepReport ? {media: loop.stepReport.media} : null
                 })
             }
             : {})
@@ -507,7 +529,12 @@ export async function POST(request: Request) {
         })
         : null;
 
-    const supportedVisuals = askSupportedVisuals(packet.hasReaderPhoto);
+    // The owner's own one-to-one chat draws the Warmup and Trials cards when it
+    // says so (`supported_visuals: ["step", "card"]`), as the 3.2 apps do.
+    // Never a visitor, a call or a Trial thread; groups have their own route.
+    const advertised = Array.isArray(body.supported_visuals) ? body.supported_visuals : [];
+    const cards = speaksAsAnimal && ownsCapture && !isCall && !aboutTrial && advertised.includes("card");
+    const supportedVisuals: AskVisualMedium[] = [...askSupportedVisuals(packet.hasReaderPhoto), ...(cards ? ["card" as const] : [])];
     const promptOptions = {
         scope: packet.scope,
         supportedVisuals,
@@ -527,7 +554,9 @@ export async function POST(request: Request) {
         persona,
         species: speaksAsAnimal ? packet.species : null,
         stats: companion?.stats ?? null,
-        companionLoop: loop ? {offersSteps: settings.suggestSteps} : null
+        // On a call the loop is context only: no step rules, no hidden lines.
+        companionLoop: loop && !isCall ? {offersSteps: settings.suggestSteps} : null,
+        call: isCall
     };
     // The animal sees the conversation as real turns (its own replies as its
     // own), as in the apps; the site-wide assistant keeps it in the text.
@@ -624,8 +653,9 @@ export async function POST(request: Request) {
             ownerName: isVisit ? ownerName || null : null
         })
         : null;
-    // The loop's hidden lines, written before `done`; what comes back is merged into it.
-    const onCompanion = loop && owner && ownerSpeciesId && viewer.userId
+    // The loop's hidden lines, written before `done`; what comes back is merged
+    // into it. Nothing is set or done on a call.
+    const onCompanion = loop && owner && ownerSpeciesId && viewer.userId && !isCall
         ? (lines: CompanionLines) => applyCompanionLines({
             service: owner.service,
             userId: viewer.userId as string,
