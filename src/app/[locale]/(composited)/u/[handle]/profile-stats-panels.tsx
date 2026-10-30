@@ -13,12 +13,10 @@ import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import type {
-    ProfileBattleTierCounts,
     ProfileBestForTag,
     ProfileInsight,
     PublicProfileCapture
 } from "@/data/public-profiles";
-import type {AnimalBattleTier} from "@/lib/battle-tier";
 import {collectorScoreAccent, getCollectorScoreBand} from "@/lib/collector-score";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
@@ -248,121 +246,6 @@ export function SettingComparisonCard({
             </div>
         </StatsPanel>
     );
-}
-
-/* ------------------------------------------------------------------ *
- * Battle tier spread — iOS `TierDistributionCard`
- * ------------------------------------------------------------------ */
-
-const ORDERED_TIERS: AnimalBattleTier[] = ["S", "A", "B", "C", "D", "E"];
-
-/**
- * Chart-only tier colours. The tier-chip palette collapses under adjacency
- * (S/A are the same green, C sits on top of B under protanopia), so the chart
- * re-steps A to a deeper green and C to the app violet.
- */
-const TIER_CHART_COLORS: Record<AnimalBattleTier, string> = {
-    S: "rgb(77,242,92)",
-    A: "rgb(18,166,61)",
-    B: "rgb(33,194,224)",
-    C: "rgb(176,125,240)",
-    D: "rgb(240,153,31)",
-    E: "rgb(214,54,46)"
-};
-
-function tierPercentLabel(ratio: number) {
-    if (ratio <= 0) return "0%";
-    const percent = ratio * 100;
-    // Never round a present tier away to "0%".
-    return percent < 1 ? "<1%" : `${Math.round(percent)}%`;
-}
-
-export type TierDistributionRow = {
-    label: string;
-    counts: ProfileBattleTierCounts;
-};
-
-export function TierDistributionCard({
-    title,
-    rows,
-    showsRowLabels = false,
-    flush = true
-}: {
-    title: string;
-    rows: TierDistributionRow[];
-    showsRowLabels?: boolean;
-    flush?: boolean;
-}) {
-    const legendCounts = rows[0]?.counts;
-    const legendTotal = legendCounts ? ORDERED_TIERS.reduce((sum, tier) => sum + legendCounts[tier], 0) : 0;
-
-    const content = (
-        <>
-            <PanelTitle>{title}</PanelTitle>
-
-            {rows.map((row) => {
-                const total = ORDERED_TIERS.reduce((sum, tier) => sum + row.counts[tier], 0);
-                const present = ORDERED_TIERS.filter((tier) => row.counts[tier] > 0);
-
-                return (
-                    <div key={row.label} className="mt-3 flex flex-col gap-1.5">
-                        {showsRowLabels ? (
-                            <div className="flex items-center gap-2">
-                                <span className="truncate text-xs font-extrabold text-white">{row.label}</span>
-                                <span className="ml-auto text-[11px] font-semibold tabular-nums text-white/40">{total}</span>
-                            </div>
-                        ) : null}
-                        <div className="flex h-[26px] w-full items-stretch overflow-hidden bg-white/[0.05]">
-                            {total === 0 ? (
-                                <span className="flex items-center pl-2.5 text-[11px] font-semibold text-white/40">
-                                    No ranked captures yet
-                                </span>
-                            ) : (
-                                present.map((tier, index) => (
-                                    <div
-                                        key={tier}
-                                        className="grid min-w-[3px] place-items-center"
-                                        style={{
-                                            width: `calc(${(row.counts[tier] / total) * 100}% - ${
-                                                (2 * Math.max(present.length - 1, 0)) / present.length
-                                            }px)`,
-                                            backgroundColor: TIER_CHART_COLORS[tier],
-                                            marginLeft: index === 0 ? 0 : 2
-                                        }}
-                                    >
-                                        <span className="text-[10px] font-black text-black/75">{tier}</span>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                );
-            })}
-
-            <div className="mt-3 grid grid-cols-3 gap-2">
-                {ORDERED_TIERS.map((tier) => (
-                    <div key={tier} className="flex items-center gap-1.5">
-                        <span
-                            className="h-2.5 w-2.5 shrink-0 "
-                            style={{backgroundColor: TIER_CHART_COLORS[tier]}}
-                        />
-                        <span className="text-[11px] font-black text-white/[0.62]">{tier}</span>
-                        <span className="text-[11px] font-semibold tabular-nums text-white/40">
-                            {legendTotal > 0 && legendCounts
-                                ? tierPercentLabel(legendCounts[tier] / legendTotal)
-                                : "—"}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </>
-    );
-
-    if (!flush) {
-        return <section className="w-full border border-white/10 bg-[#1F1F1F] light:bg-surface-900 p-4">{content}</section>;
-    }
-
-    return <StatsPanel className="p-4">{content}</StatsPanel>;
 }
 
 /* ------------------------------------------------------------------ *

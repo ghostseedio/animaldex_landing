@@ -25,12 +25,10 @@ import {
     StatTile,
     StatsPanel,
     THEME,
-    TierDistributionCard,
     type ProfileBinder,
     type ProfileStatChip
 } from "@/app/[locale]/(composited)/u/[handle]/profile-stats-panels";
 import type {
-    ProfileBattleTierCounts,
     ProfileBestForTag,
     ProfileInsight,
     ProfileLocationVisit,
@@ -155,8 +153,6 @@ type ProfileContentProps = {
         tradesMade: number;
         missionsCompleted: number;
         animalPowersEarned: number | null;
-        challengeWins: number;
-        challengeLosses: number;
         discoveryDistanceLabel: string | null;
         collectionValueUsd: number | null;
         averageTraits: {
@@ -166,7 +162,6 @@ type ProfileContentProps = {
             intelligence: number;
             rarity: number;
         };
-        battleTierCounts: ProfileBattleTierCounts;
         bestForTagScores: ProfileBestForTag[];
         powerSetCompletions: ProfilePowerSetCompletion[];
         wildIdentity: PublicWildIdentity | null;
@@ -651,11 +646,6 @@ export default function ProfileContent({
             },
             // iOS omits the chip when the count is not known.
             ...(binders ? [{title: "Binders complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"}] : []),
-            {
-                title: "Battles",
-                value: `${profile.challengeWins}/${profile.challengeWins + profile.challengeLosses}`,
-                tint: THEME.neon
-            },
             {title: "Trades made", value: String(profile.tradesMade), tint: "rgba(255,149,0,0.92)"},
             {title: "Missions complete", value: String(profile.missionsCompleted), tint: THEME.mint}
         ];
@@ -897,10 +887,6 @@ export default function ProfileContent({
                         zoo={profile.zooCount}
                         domestic={profile.domesticCount}
                         farm={profile.farmCount}
-                    />
-                    <TierDistributionCard
-                        title="BATTLE TIER SPREAD"
-                        rows={[{label: profile.displayName, counts: profile.battleTierCounts}]}
                     />
                     {!viewer.isOwner && viewer.isLoggedIn ? (
                         <HeadToHeadPrompt onOpen={() => setShowHeadToHead(true)} />

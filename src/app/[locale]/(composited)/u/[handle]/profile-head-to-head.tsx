@@ -4,24 +4,17 @@
 
 import Image from "next/image";
 import {useEffect, useState} from "react";
-import {
-    THEME,
-    TierDistributionCard,
-    type TierDistributionRow
-} from "@/app/[locale]/(composited)/u/[handle]/profile-stats-panels";
-import type {ProfileBattleTierCounts} from "@/data/public-profiles";
+import {THEME} from "@/app/[locale]/(composited)/u/[handle]/profile-stats-panels";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {CloseIconButton} from "@/components/ui/icon-buttons";
 
 type ComparisonSide = {
     collectorScore: number;
-    competitiveScore: number;
     powerSetScore: number;
     overallScore: number;
     indexedSpeciesCount: number;
     wildObservationCount: number;
     rareObservationCount: number;
-    challengeWins: number;
     averageDominance: number | null;
     averageSpeed: number | null;
     averageSize: number | null;
@@ -33,8 +26,6 @@ type ComparisonSide = {
 type Comparison = {
     viewer: ComparisonSide;
     member: ComparisonSide;
-    viewerTierCounts: ProfileBattleTierCounts;
-    memberTierCounts: ProfileBattleTierCounts;
 };
 
 type Person = {
@@ -165,16 +156,6 @@ export default function ProfileHeadToHeadSheet({
         };
     }, [memberUserId]);
 
-    const tierRows: TierDistributionRow[] = comparison
-        ? [
-            {label: viewerPerson.displayName || "You", counts: comparison.viewerTierCounts},
-            {label: memberPerson.displayName, counts: comparison.memberTierCounts}
-        ]
-        : [];
-    const hasTierData = tierRows.some((row) =>
-        Object.values(row.counts).some((count) => count > 0)
-    );
-
     return (
         <div
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 md:items-center md:p-4"
@@ -271,21 +252,8 @@ export default function ProfileHeadToHeadSheet({
                                 <ComparisonRow label="Rarity" viewer={comparison.viewer.averageRarity} member={comparison.member.averageRarity} />
                             </ComparisonSection>
 
-                            {hasTierData ? (
-                                <div className="px-4">
-                                    <TierDistributionCard
-                                        title="BATTLE TIER SPREAD"
-                                        rows={tierRows}
-                                        showsRowLabels
-                                        flush={false}
-                                    />
-                                </div>
-                            ) : null}
-
-                            <ComparisonSection title="ARENA">
-                                <ComparisonRow label="Competitive score" viewer={comparison.viewer.competitiveScore} member={comparison.member.competitiveScore} />
+                            <ComparisonSection title="SETS">
                                 <ComparisonRow label="Power sets" viewer={comparison.viewer.powerSetScore} member={comparison.member.powerSetScore} />
-                                <ComparisonRow label="Challenge wins" viewer={comparison.viewer.challengeWins} member={comparison.member.challengeWins} />
                             </ComparisonSection>
                         </div>
                     )}

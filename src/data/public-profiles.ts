@@ -6,15 +6,12 @@ import {resolveCollectionArchetype} from "@/lib/collection-archetype";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-setting-label";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
-import {type AnimalBattleTier, getBattleTier} from "@/lib/battle-tier";
 import {animalLevel} from "@/lib/animal-level";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,28}[a-z0-9])?$/;
 /** iOS never reveals a distance built from fewer located observations than this. */
 const MIN_LOCATED_OBSERVATIONS_FOR_DISTANCE = 3;
-/** Battle-tier spread is a whole-collection shape, so it reads past the History page size. */
-const TIER_SAMPLE_LIMIT = 1000;
 
 type ProfileRow = {
     id: string;
@@ -110,14 +107,6 @@ type MaterializedProfileStatsRow = {
 type ProfileInsightIdRow = {
     insight_key: string;
     capture_id: string;
-};
-
-type TierSampleRow = {
-    capture_id: string;
-    game_stats?: Record<string, number> | null;
-    dominance_boost?: number | null;
-    speed_boost?: number | null;
-    intelligence_boost?: number | null;
 };
 
 type BestForTagRow = {
@@ -237,8 +226,6 @@ export type ProfileInsight = {
 
 export type ProfileInsightScope = "overall" | "wild";
 
-export type ProfileBattleTierCounts = Record<AnimalBattleTier, number>;
-
 export type ProfileLocationVisibility = "everyone" | "following" | "friends" | "private";
 
 export type PublicProfileCard = {
@@ -287,9 +274,6 @@ export type PublicProfileCard = {
     recentCaptures: PublicProfileCapture[];
     /** iOS ProfilePetSelectionResolver: the captures the owner marked as pets (`profile_pets`), newest first, at most 6. */
     pets: PublicProfilePet[];
-    battleTierCounts: ProfileBattleTierCounts;
-    challengeWins: number;
-    challengeLosses: number;
     locationVisibility: ProfileLocationVisibility;
     /** iOS `UserProfile.captureGridSort`: the owner's choice in the profile editor. */
     captureGridSort: "recent" | "index";
@@ -582,30 +566,6 @@ function buildScopedInsights(
     });
 }
 
-function emptyBattleTierCounts(): ProfileBattleTierCounts {
-    return {S: 0, A: 0, B: 0, C: 0, D: 0, E: 0};
-}
-
-/** iOS `Array<AnimalCapture>.battleTierCounts` — effective stats, boosts included. */
-function buildBattleTierCounts(rows: TierSampleRow[]): ProfileBattleTierCounts {
-    const counts = emptyBattleTierCounts();
-
-    for (const row of rows) {
-        const stats = row.game_stats ?? {};
-        const dominance = readStat(stats, "dominance", row.dominance_boost ?? 0);
-        const speed = readStat(stats, "speed", row.speed_boost ?? 0);
-        const size = readStat(stats, "size");
-        const intelligence = readStat(stats, "intelligence", row.intelligence_boost ?? 0);
-        const rarity = readStat(stats, "rarity");
-        // An identity-less capture has no stats at all; it is not a ranked capture.
-        if (dominance + speed + size + intelligence + rarity <= 0) continue;
-
-        counts[getBattleTier({dominance, speed, size, intelligence, rarity})] += 1;
-    }
-
-    return counts;
-}
-
 function normalizeLocationVisibility(value: string | null | undefined): ProfileLocationVisibility {
     switch (value?.trim().toLowerCase()) {
         case "following":
@@ -818,12 +778,6 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         user_id: `eq.${profile.id}`,
         limit: "24"
     });
-    const tierSampleParams = new URLSearchParams({
-        select: "capture_id,game_stats,dominance_boost,speed_boost,intelligence_boost",
-        user_id: `eq.${profile.id}`,
-        order: "capture_created_at.desc",
-        limit: String(TIER_SAMPLE_LIMIT)
-    });
 
     const [
         topRows,
@@ -833,8 +787,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         bestForRows,
         powerSetRows,
         identityRows,
-        insightRows,
-        tierSampleRows
+        insightRows
     ] = await Promise.all([
         fetchRows<PublicCaptureRow>("discover_feed_v1", topCaptureParams),
         fetchRows<PublicCaptureRow>("discover_feed_v1", recentCaptureParams),
@@ -849,8 +802,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         fetchRows<BestForTagRow>("public_profile_best_for_tag_scores_v1", bestForParams).catch((): BestForTagRow[] => []),
         fetchRows<PowerSetRow>("public_profile_power_set_completions_v1", powerSetParams).catch((): PowerSetRow[] => []),
         fetchRows<IdentityRow>("public_identity_profiles_v1", identityParams).catch((): IdentityRow[] => []),
-        fetchRows<ProfileInsightIdRow>("profile_insight_capture_ids_v1", insightParams).catch((): ProfileInsightIdRow[] => []),
-        fetchRows<TierSampleRow>("discover_feed_v1", tierSampleParams).catch((): TierSampleRow[] => [])
+        fetchRows<ProfileInsightIdRow>("profile_insight_capture_ids_v1", insightParams).catch((): ProfileInsightIdRow[] => [])
     ]);
 
     const speciesByIdentity = new Map<string, string>();
@@ -1027,9 +979,6 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         topCaptures,
         recentCaptures,
         pets,
-        battleTierCounts: buildBattleTierCounts(tierSampleRows),
-        challengeWins: Number(summary?.challenge_wins ?? 0),
-        challengeLosses: Number(summary?.challenge_losses ?? 0),
         locationVisibility: normalizeLocationVisibility(profile.location_visibility),
         captureGridSort: profile.capture_grid_sort?.trim().toLowerCase() === "index" ? "index" : "recent",
         discoveryDistanceMeters:

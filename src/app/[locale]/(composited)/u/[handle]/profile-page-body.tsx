@@ -184,14 +184,11 @@ export async function ProfilePageBody({
                     tradesMade: profile.tradesMade,
                     missionsCompleted: profile.missionsCompleted,
                     animalPowersEarned: profile.animalPowersEarned,
-                    challengeWins: profile.challengeWins,
-                    challengeLosses: profile.challengeLosses,
                     discoveryDistanceLabel: canViewLocations && profile.discoveryDistanceMeters != null
                         ? formatDiscoveryDistance(profile.discoveryDistanceMeters)
                         : null,
                     collectionValueUsd: profile.collectionValueUsd,
                     averageTraits: profile.averageTraits,
-                    battleTierCounts: profile.battleTierCounts,
                     bestForTagScores: profile.bestForTagScores,
                     powerSetCompletions: profile.powerSetCompletions,
                     wildIdentity: profile.wildIdentity,
