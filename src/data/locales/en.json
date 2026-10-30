@@ -2140,7 +2140,6 @@
     "topCapturesTrailing": "Best + endorsed",
     "recentSightingsTitle": "Recent sightings",
     "recentSightingsEmpty": "No public captures yet.",
-    "userIdLabel": "User ID",
     "noPublicCapturesTitle": "No public captures yet",
     "noPublicCapturesDescription": "This card will update automatically when @{username} shares discoverable AnimalDex captures.",
     "scoreLabel": "Score {score}",

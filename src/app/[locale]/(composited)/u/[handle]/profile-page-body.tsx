@@ -257,7 +257,6 @@ export async function ProfilePageBody({
                     locationsTitle: t("locationsTitle"),
                     locationsEmpty: t("locationsEmpty"),
                     locationCaptures: t("locationCaptures"),
-                    userIdLabel: t("userIdLabel"),
                     noPublicCapturesTitle: t("noPublicCapturesTitle"),
                     noPublicCapturesDescription: t("noPublicCapturesDescription"),
                     signOut: t("signOut"),

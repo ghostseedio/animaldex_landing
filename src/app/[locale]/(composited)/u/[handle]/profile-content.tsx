@@ -114,7 +114,6 @@ export type ProfileContentLabels = {
     locationsTitle: string;
     locationsEmpty: string;
     locationCaptures: string;
-    userIdLabel: string;
     noPublicCapturesTitle: string;
     noPublicCapturesDescription: string;
     signOut: string;
@@ -927,12 +926,7 @@ export default function ProfileContent({
                         the owner's own profile. */}
                     {viewer.isOwner ? <MyCompanionsSection words={companionWords} /> : null}
                     {binders ? <CompletedBindersSection binders={binders} /> : null}
-                    {!viewer.isOwner ? (
-                        <StatsPanel className="px-[18px] py-4">
-                            <p className="text-[11px] font-semibold uppercase text-white/40">{labels.userIdLabel}</p>
-                            <p className="mt-1 break-all font-mono text-xs text-white/[0.62]">{profile.userId}</p>
-                        </StatsPanel>
-                    ) : null}
+                    {/* No raw user ID here: it meant nothing to a visitor (newcomer UX vet, 2026-10-30). */}
                 </div>
             ) : null}
 
