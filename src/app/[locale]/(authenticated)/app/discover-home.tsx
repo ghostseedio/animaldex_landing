@@ -3,7 +3,7 @@
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
-import {AppEmpty, AppPrimaryLink, AppSegmentedControl} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import {AppEmpty, AppPrimaryLink} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import LessonVideoFeed, {PlayRectangleIcon} from "@/app/[locale]/(authenticated)/app/lesson-video-feed";
 import type {DiscoverCollectorItem} from "@/data/discover-collectors";
@@ -75,6 +75,28 @@ function CountBadge({count}: {count: number}) {
     );
 }
 
+/** Collectors (the leaderboards), and back to the feed from there: right of the lesson videos button. */
+function CollectorsButton({active, onToggle, className = ""}: {active: boolean; onToggle: () => void; className?: string}) {
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-label={active ? "Back to timeline" : "Collectors"}
+            className={`grid place-items-center rounded-[2px] text-white ${className}`}
+        >
+            {active ? (
+                <AppIcon name="back" className="h-[1.35rem] w-[1.35rem]" />
+            ) : (
+                <svg viewBox="0 0 24 24" className="h-[1.3rem] w-[1.3rem]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+                    <path d="M7 6H4.5a1 1 0 0 0-1 1 4 4 0 0 0 3.7 4M17 6h2.5a1 1 0 0 1 1 1 4 4 0 0 1-3.7 4" />
+                    <path d="M12 14v3m-3 3h6m-3-3v3" />
+                </svg>
+            )}
+        </button>
+    );
+}
+
 /** iOS `DiscoverTopBar.lessonVideosButton`: switches the feed to lesson videos, and back. */
 function LessonVideosButton({active, onToggle, className = ""}: {active: boolean; onToggle: () => void; className?: string}) {
     return (
@@ -91,25 +113,23 @@ function LessonVideosButton({active, onToggle, className = ""}: {active: boolean
 }
 
 /**
- * iOS `DiscoverTopBar`: collectors toggle, challenges and lesson videos on the
- * left, wordmark in the middle, notifications on the right. One row, like iOS
- * since the third left button: the wordmark takes only the space between the
- * two groups and shrinks to fit it, so it never covers a button. Sits in the
- * flow above the snap feed so nothing floats over the first post.
+ * iOS `DiscoverTopBar`: lesson videos then Collectors on the left, wordmark in
+ * the middle, notifications on the right. No segments: the feed is Explore,
+ * and Debates start in a chat (public ones pin to the top of the feed). The
+ * wordmark takes only the space between the two groups and shrinks to fit
+ * it, so it never covers a button. Sits in the flow above the snap feed so
+ * nothing floats over the first post.
  */
 function DiscoverTopBar({
     segment,
     showsLessonVideos,
     onToggleCollectors,
-    onToggleLessonVideos,
-    debatesLabel
+    onToggleLessonVideos
 }: {
     segment: DiscoverSegment;
     showsLessonVideos: boolean;
     onToggleCollectors: () => void;
     onToggleLessonVideos: () => void;
-    /** Explore's Debates (3.2), while the server has them on. */
-    debatesLabel: string | null;
 }) {
     const chrome = useAppShellChrome();
     const showsCollectors = segment === "collectors";
@@ -117,29 +137,8 @@ function DiscoverTopBar({
     return (
         <div className="flex h-14 shrink-0 items-center gap-1 px-3 lg:hidden">
             <div className="flex shrink-0 items-center gap-1">
-                <button
-                    type="button"
-                    onClick={onToggleCollectors}
-                    aria-label={showsCollectors ? "Back to timeline" : "Collectors"}
-                    className="grid h-11 w-11 place-items-center text-white"
-                >
-                    {showsCollectors ? (
-                        <AppIcon name="back" className="h-[1.35rem] w-[1.35rem]" />
-                    ) : (
-                        <svg viewBox="0 0 24 24" className="h-[1.3rem] w-[1.3rem]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
-                            <path d="M7 6H4.5a1 1 0 0 0-1 1 4 4 0 0 0 3.7 4M17 6h2.5a1 1 0 0 1 1 1 4 4 0 0 1-3.7 4" />
-                            <path d="M12 14v3m-3 3h6m-3-3v3" />
-                        </svg>
-                    )}
-                </button>
-                {/* Explore's Debates (3.2), replacing Battles. */}
-                {debatesLabel ? (
-                    <Link href="/app/debates" aria-label={debatesLabel} className="grid h-11 w-11 place-items-center text-white">
-                        <AppIcon name="debate" className="h-[1.3rem] w-[1.3rem]" />
-                    </Link>
-                ) : null}
                 <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className="h-11 w-11" />
+                <CollectorsButton active={showsCollectors} onToggle={onToggleCollectors} className="h-11 w-11" />
             </div>
 
             <Link href="/app/explore" aria-label="AnimalDex" className="flex h-7 min-w-0 flex-1 justify-center overflow-hidden">
@@ -523,12 +522,7 @@ export default function DiscoverHome({
         });
     }, [seenOutbox]);
 
-    function handleSegmentChange(next: DiscoverSegment | "debates") {
-        // Explore's middle segment is Debates, a page of its own.
-        if (next === "debates") {
-            router.push(getLocalePath(locale, "/app/debates"));
-            return;
-        }
+    function handleSegmentChange(next: DiscoverSegment) {
         setSegment(next);
         if (next === "collectors") {
             router.replace(getLocalePath(locale, "/app/explore?view=collectors"));
@@ -895,26 +889,18 @@ export default function DiscoverHome({
                 showsLessonVideos={lessonVideosActive}
                 onToggleCollectors={() => handleSegmentChange(segment === "collectors" ? "discover" : "collectors")}
                 onToggleLessonVideos={toggleLessonVideos}
-                debatesLabel={debateWords?.debates.tab ?? null}
             />
 
-            {/* Desktop keeps the floating segment toggle beside the feed column. */}
+            {/* Desktop: the same two buttons, floating beside the feed column. */}
             <div className="pointer-events-none fixed left-[calc(17rem+2.5rem)] top-6 z-40 hidden lg:flex lg:items-center lg:gap-2">
-                <div className="pointer-events-auto border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-                    {/* Explore: Feed · Debates · Collectors (docs/companion-loop/SPEC.md, phase 4; 3.2 Debates). */}
-                    <AppSegmentedControl<DiscoverSegment | "debates">
-                        value={segment}
-                        options={[
-                            {id: "discover", label: "Feed"},
-                            ...(debateWords ? [{id: "debates" as const, label: debateWords.debates.tab}] : []),
-                            {id: "collectors", label: "Collectors"}
-                        ]}
-                        onChange={handleSegmentChange}
-                    />
-                </div>
                 <LessonVideosButton
                     active={lessonVideosActive}
                     onToggle={toggleLessonVideos}
+                    className="pointer-events-auto h-11 w-11 border border-white/10 bg-black"
+                />
+                <CollectorsButton
+                    active={segment === "collectors"}
+                    onToggle={() => handleSegmentChange(segment === "collectors" ? "discover" : "collectors")}
                     className="pointer-events-auto h-11 w-11 border border-white/10 bg-black"
                 />
             </div>
