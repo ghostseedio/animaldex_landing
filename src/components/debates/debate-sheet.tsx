@@ -260,6 +260,21 @@ export default function DebateSheet({
 
     const stakeCount = draft ? Math.max(1, draft.participants.length - 1) : picked.length;
 
+    /**
+     * Closing lets an unapproved public draft go (`cancel_debate_v1`, as the
+     * apps' Cancel does): nothing was posted, and the day's public debate is
+     * free again.
+     */
+    const close = () => {
+        if (draft && (draft.status === "drafting" || draft.status === "approving")) {
+            const dropped = draft;
+            void cancelDebate(dropped.id).then((result) => {
+                noteDebateChanged(result.ok && result.value ? {...result.value, askerIsMe: true} : {...dropped, status: "cancelled", cancelReason: "asker_cancelled"});
+            });
+        }
+        onClose();
+    };
+
     return (
         <div role="dialog" aria-modal="true" aria-label={words.debate.start} className="fixed inset-0 z-[72] flex items-end justify-center bg-black/70 md:items-center">
             <div className="flex max-h-[92dvh] w-full max-w-lg flex-col border-t border-white/12 bg-canvas-950 md:border">
@@ -267,7 +282,7 @@ export default function DebateSheet({
                     <h2 className="min-w-0 flex-1 font-display text-lg font-black text-white">{words.debate.start}</h2>
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={close}
                         aria-label={closeLabel}
                         className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-white"
                     >
