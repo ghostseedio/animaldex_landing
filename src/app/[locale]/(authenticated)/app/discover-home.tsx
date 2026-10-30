@@ -20,6 +20,9 @@ import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getLocalePath} from "@/lib/site";
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
+import DebatePost from "@/components/debates/debate-post";
+import {pinnedDebates, type Debate} from "@/lib/debates";
+import type {CompanionWords} from "@/lib/companion-bond";
 
 type DiscoverSegment = "discover" | "collectors";
 
@@ -98,12 +101,15 @@ function DiscoverTopBar({
     segment,
     showsLessonVideos,
     onToggleCollectors,
-    onToggleLessonVideos
+    onToggleLessonVideos,
+    debatesLabel
 }: {
     segment: DiscoverSegment;
     showsLessonVideos: boolean;
     onToggleCollectors: () => void;
     onToggleLessonVideos: () => void;
+    /** Explore's Debates (3.2), while the server has them on. */
+    debatesLabel: string | null;
 }) {
     const chrome = useAppShellChrome();
     const showsCollectors = segment === "collectors";
@@ -127,16 +133,12 @@ function DiscoverTopBar({
                         </svg>
                     )}
                 </button>
-                {/* Explore's Battles: the hub that was the Play tab. */}
-                <Link href="/app/arena" aria-label="Battles" className="grid h-11 w-11 place-items-center text-white">
-                    <AppIcon name="arena" className="h-[1.3rem] w-[1.3rem]" />
-                </Link>
-                <Link href="/challenges" aria-label="Challenges" className="grid h-11 w-11 place-items-center text-white">
-                    <svg viewBox="0 0 24 24" className="h-[1.3rem] w-[1.3rem]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M5 21V4" />
-                        <path d="M5 4h13l-2.5 4L18 12H5" />
-                    </svg>
-                </Link>
+                {/* Explore's Debates (3.2), replacing Battles. */}
+                {debatesLabel ? (
+                    <Link href="/app/debates" aria-label={debatesLabel} className="grid h-11 w-11 place-items-center text-white">
+                        <AppIcon name="debate" className="h-[1.3rem] w-[1.3rem]" />
+                    </Link>
+                ) : null}
                 <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className="h-11 w-11" />
             </div>
 
@@ -318,7 +320,9 @@ export default function DiscoverHome({
     viewerUserId: initialViewerUserId = null,
     hydrateSignedInFeed = false,
     shareBand = null,
-    sharePanel = null
+    sharePanel = null,
+    debates = [],
+    debateWords = null
 }: {
     locale: string;
     timeline: DiscoverTimelineItem[];
@@ -344,6 +348,14 @@ export default function DiscoverHome({
      */
     shareBand?: ReactNode;
     sharePanel?: ReactNode;
+    /**
+     * 3.2 Debates in the feed (docs/debates/SPEC.md, section 1.6): public
+     * debates, the boosted ones pinned first for a reader who has not voted
+     * (at most two, fewest votes first). Empty while the server has Debates off.
+     */
+    debates?: Debate[];
+    /** Their words; null hides Explore's Debates everywhere on this page. */
+    debateWords?: CompanionWords | null;
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
@@ -356,6 +368,31 @@ export default function DiscoverHome({
     const timelineVisibleRef = useRef(timelineVisible);
     timelineVisibleRef.current = timelineVisible;
     const [timelineItems, setTimelineItems] = useState(timeline);
+    /**
+     * The feed's slots: boosted debates the reader has not voted on first,
+     * then the posts with the other public debates among them by date.
+     */
+    const feedSlots = useMemo(() => {
+        type Slot = {kind: "post"; item: DiscoverTimelineItem} | {kind: "debate"; debate: Debate; pinned: boolean};
+        if (!debateWords || debates.length === 0) return timelineItems.map((item): Slot => ({kind: "post", item}));
+        const pinned = pinnedDebates(debates);
+        const pinnedIds = new Set(pinned.map((debate) => debate.id));
+        const rest = debates
+            .filter((debate) => !pinnedIds.has(debate.id))
+            .sort((a, b) => Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? ""));
+        const slots: Slot[] = pinned.map((debate) => ({kind: "debate", debate, pinned: true}));
+        let next = 0;
+        for (const item of timelineItems) {
+            const at = Date.parse(item.date);
+            while (next < rest.length && Date.parse(rest[next].createdAt ?? "") >= at) {
+                slots.push({kind: "debate", debate: rest[next], pinned: false});
+                next += 1;
+            }
+            slots.push({kind: "post", item});
+        }
+        for (; next < rest.length; next += 1) slots.push({kind: "debate", debate: rest[next], pinned: false});
+        return slots;
+    }, [timelineItems, debates, debateWords]);
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
     const [viewerUserId, setViewerUserId] = useState(initialViewerUserId);
@@ -486,10 +523,10 @@ export default function DiscoverHome({
         });
     }, [seenOutbox]);
 
-    function handleSegmentChange(next: DiscoverSegment | "battles") {
-        // Explore's middle segment is the Battles hub, a page of its own.
-        if (next === "battles") {
-            router.push(getLocalePath(locale, "/app/arena"));
+    function handleSegmentChange(next: DiscoverSegment | "debates") {
+        // Explore's middle segment is Debates, a page of its own.
+        if (next === "debates") {
+            router.push(getLocalePath(locale, "/app/debates"));
             return;
         }
         setSegment(next);
@@ -855,17 +892,18 @@ export default function DiscoverHome({
                 showsLessonVideos={lessonVideosActive}
                 onToggleCollectors={() => handleSegmentChange(segment === "collectors" ? "discover" : "collectors")}
                 onToggleLessonVideos={toggleLessonVideos}
+                debatesLabel={debateWords?.debates.tab ?? null}
             />
 
             {/* Desktop keeps the floating segment toggle beside the feed column. */}
             <div className="pointer-events-none fixed left-[calc(17rem+2.5rem)] top-6 z-40 hidden lg:flex lg:items-center lg:gap-2">
                 <div className="pointer-events-auto border border-white/10 bg-black/70 p-1 shadow-[0_18px_45px_-24px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-                    {/* Explore: Feed · Battles · Collectors (docs/companion-loop/SPEC.md, phase 4). */}
-                    <AppSegmentedControl<DiscoverSegment | "battles">
+                    {/* Explore: Feed · Debates · Collectors (docs/companion-loop/SPEC.md, phase 4; 3.2 Debates). */}
+                    <AppSegmentedControl<DiscoverSegment | "debates">
                         value={segment}
                         options={[
                             {id: "discover", label: "Feed"},
-                            {id: "battles", label: "Battles"},
+                            ...(debateWords ? [{id: "debates" as const, label: debateWords.debates.tab}] : []),
                             {id: "collectors", label: "Collectors"}
                         ]}
                         onChange={handleSegmentChange}
@@ -886,7 +924,7 @@ export default function DiscoverHome({
                     <div className="h-full min-h-0 min-w-0">
                         {showsLessonVideos ? (
                             <LessonVideoFeed locale={locale} />
-                        ) : timelineItems.length ? (
+                        ) : feedSlots.length ? (
                             <section
                                 ref={timelineScrollerRef}
                                 onWheel={handleTimelineWheel}
@@ -896,14 +934,19 @@ export default function DiscoverHome({
                             >
                                 {/* Flush stacking: iOS uses VStack(spacing: 0) so one
                                     swipe always lands on exactly one post. */}
-                                {timelineItems.map((item) => (
+                                {feedSlots.map((slot) => slot.kind === "debate" ? (
+                                    // A debate has no /p page and no seen mark: no post id.
+                                    <div key={`debate-${slot.debate.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
+                                        <DebatePost debate={slot.debate} words={debateWords as CompanionWords} signedIn={Boolean(viewerUserId)} pinned={slot.pinned} />
+                                    </div>
+                                ) : (
                                     <div
-                                        key={item.id}
+                                        key={slot.item.id}
                                         data-timeline-snap-item
-                                        data-post-id={item.id}
+                                        data-post-id={slot.item.id}
                                         className="h-full min-h-0 snap-start snap-always"
                                     >
-                                        <DiscoverTimelineCard item={item} locale={locale} viewerUserId={viewerUserId} />
+                                        <DiscoverTimelineCard item={slot.item} locale={locale} viewerUserId={viewerUserId} />
                                     </div>
                                 ))}
                                 {isLoadingTimeline ? <TimelineLoadingSnap /> : null}
@@ -916,7 +959,7 @@ export default function DiscoverHome({
                                 <AppEmpty
                                     icon="home"
                                     title="Timeline is quiet"
-                                    detail="Check back soon, or make one of your animals public and comparison-ready."
+                                    detail="Check back soon, or make one of your animals public."
                                     action={<AppPrimaryLink href="/app/capture" icon="camera" className="hidden md:inline-flex">Scan an animal</AppPrimaryLink>}
                                 />
                             </div>

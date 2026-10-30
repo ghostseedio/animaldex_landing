@@ -77,7 +77,6 @@ function ThumbsUpIcon({filled}: {filled: boolean}) {
 export default function DiscoverCaptureActions({
     captureId,
     isOwnPost,
-    canChallenge,
     canOffer,
     viewerEndorsementStat,
     onEndorsementChange,
@@ -85,7 +84,6 @@ export default function DiscoverCaptureActions({
 }: {
     captureId: string;
     isOwnPost: boolean;
-    canChallenge: boolean;
     canOffer: boolean;
     viewerEndorsementStat: string | null;
     onEndorsementChange?: (stat: string | null, endorsementCountDelta: number) => void;
@@ -136,8 +134,8 @@ export default function DiscoverCaptureActions({
     const showsGift = giftsEnabled;
     const showsEndorse = !giftsEnabled;
     const showsOffer = canOffer;
-    const showsCompare = canChallenge;
-    if (!showsGift && !showsEndorse && !showsOffer && !showsCompare) return null;
+    // 3.2: no battle "Compare" here; debates start from the animal's own chat.
+    if (!showsGift && !showsEndorse && !showsOffer) return null;
 
     const endorseLabel = localStat ? `Endorsed ${shortStatTitle(localStat.toLowerCase())}` : "Endorse";
 
@@ -312,9 +310,6 @@ export default function DiscoverCaptureActions({
                 ) : null}
                 {showsOffer ? (
                     <ActionButton title="Offer" href={`/app/trades?theirCapture=${encodeURIComponent(captureId)}`} />
-                ) : null}
-                {showsCompare ? (
-                    <ActionButton title="Compare" href={`/app/matchups?target=${encodeURIComponent(captureId)}`} />
                 ) : null}
             </div>
             {giftModal}

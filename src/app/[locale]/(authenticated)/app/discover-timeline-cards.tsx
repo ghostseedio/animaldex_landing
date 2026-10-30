@@ -10,13 +10,6 @@ import AnimalTrialCard, { AnimalTrialEvidence } from "@/app/[locale]/(authentica
 import { animalTrialFrequencyLabel } from "@/lib/discover-animal-trial";
 import TrialMotion from "@/components/trial-motion/trial-motion";
 import { useTrialMotionStoryboard } from "@/components/trial-motion/use-trial-motion-storyboard";
-import {
-  OVERALL_DRAW_LINE,
-  VOTE_RULE_LINE,
-  VOTING_TIMEOUT_FALLBACK_LINE,
-  roundWinnerText as battleRoundWinnerText,
-  voteProgressText,
-} from "@/lib/matchup-battle-rules";
 import type {
   DiscoverAlignmentItem,
   DiscoverAnimalTrialItem,
@@ -798,7 +791,7 @@ function CaptureChip({
 }
 
 /**
- * iOS `capturePostChipRow`: one HStack of Level · Tier · Grade — never wraps.
+ * iOS `capturePostChipRow`: one HStack of Level · Grade — never wraps (3.2: no battle tier).
  * On the reader's own post the level is its animal's bond level.
  */
 function CapturePostChipRow({item, isOwn = false}: {item: DiscoverCaptureItem; isOwn?: boolean}) {
@@ -807,7 +800,6 @@ function CapturePostChipRow({item, isOwn = false}: {item: DiscoverCaptureItem; i
   return (
     <div className="flex flex-nowrap items-center gap-2">
       <CaptureChip tone="green">{levelLabel}</CaptureChip>
-      <CaptureChip tone="cyan">Tier {item.battleTier}</CaptureChip>
       <CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} compact />
     </div>
   );
@@ -866,15 +858,6 @@ function OfferIcon() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M8 7H3m0 0 3-3M3 7l3 3" />
       <path d="M16 17h5m0 0-3-3m3 3-3 3" />
-    </svg>
-  );
-}
-
-function CompareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
-      <path d="M12 2.2 4.4 5v6.4c0 4.6 3.2 8.9 7.6 10.4 4.4-1.5 7.6-5.8 7.6-10.4V5z" fillOpacity="0.92" />
-      <path d="M12.9 6.6 8.4 13.1h2.9l-.8 4.9 4.6-6.8h-3z" fill="#000" fillOpacity="0.7" />
     </svg>
   );
 }
@@ -1193,7 +1176,6 @@ function CaptureCard({
 
   const isOwnPost = Boolean(viewerUserId && activeItem.collector.userId && viewerUserId === activeItem.collector.userId);
   const canOffer = Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain;
-  const canChallenge = Boolean(viewerUserId) && !isOwnPost && activeItem.isChallengeAvailable;
   const activityLabel = activeItem.activityBadge.toLowerCase() === "capture" && activeItem.animalDexNumber
     ? `#${String(activeItem.animalDexNumber).padStart(3, "0")}`
     : activeItem.activityBadge;
@@ -1260,14 +1242,13 @@ function CaptureCard({
 
         <div className="flex items-end gap-3.5 [@media(max-height:760px)]:gap-2">
           <FeedBottomOverlay item={activeItem} isOwn={isOwnPost} titleHref={discoverCaptureTitleHref(activeItem, viewerUserId)} />
-          {/* iOS `actionRail` order: Gift, Offer, Compare, Share, Info. */}
+          {/* iOS `actionRail` order: Gift, Offer, Share, Info (3.2: no battle Compare). */}
           <div className="flex w-[46px] shrink-0 flex-col items-center gap-1 [@media(max-height:760px)]:w-10 [@media(max-height:760px)]:gap-0.5">
             {viewerUserId ? (
               <DiscoverCaptureActions
                 variant="rail"
                 captureId={activeItem.captureId}
                 isOwnPost={isOwnPost}
-                canChallenge={canChallenge}
                 canOffer={canOffer}
                 viewerEndorsementStat={activeItem.viewerEndorsementStat}
                 onEndorsementChange={(stat, delta) => {
@@ -1283,14 +1264,6 @@ function CaptureCard({
                 <OfferIcon />
               </FeedRailButton>
             ) : null}
-            <FeedRailButton
-              label="Compare"
-              href={`/app/matchups?target=${encodeURIComponent(activeItem.captureId)}`}
-              tone={canChallenge ? "cyan" : "dim"}
-              disabled={!canChallenge}
-            >
-              <CompareIcon />
-            </FeedRailButton>
             <span className={`${FEED_RAIL_BUTTON_CLASS} text-white [&>button]:grid [&>button]:h-full [&>button]:w-full [&>button]:place-items-center [&>button]:p-0 [&>button]:text-white`}>
               <ShareDiscoverPostButton
                 url={shareForActive.url}
@@ -1419,12 +1392,10 @@ function FusionCard({
 }
 
 /* ------------------------------------------------------------------ *
- * Scenario arena — iOS `DiscoverChallengeHistoryCardView`
- *
- * The post owns the whole snap slot: attacker photo on the top half,
- * defender photo on the bottom half, each identity row pinned to the seam
- * between them, and every panel (chrome, battle status, backstory) layered
- * over the media. It is not a text card with thumbnails.
+ * An old comparison post (before 3.2 Debates), read only: no new one can
+ * be made and nothing on it moves any more, so it shows the two animals,
+ * which one came out ahead, and the write-up. It is not in the feed; a
+ * shared /p link to one still opens.
  * ------------------------------------------------------------------ */
 
 /** iOS `participantHero`. */
@@ -1496,114 +1467,6 @@ function ChallengeParticipantHero({
   );
 }
 
-/** iOS `votingCountdown`: minute ticks, neon until the last hour, then orange. */
-function ChallengeVotingCountdown({createdAt, deadline}: {createdAt: string; deadline: string}) {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const deadlineMs = new Date(deadline).getTime();
-  const startMs = new Date(createdAt).getTime();
-  if (!Number.isFinite(deadlineMs) || !Number.isFinite(startMs)) return null;
-
-  const total = Math.max(1, (deadlineMs - startMs) / 1000);
-  const remaining = Math.max(0, (deadlineMs - now) / 1000);
-  const urgent = remaining <= 3600;
-  const tint = urgent ? "text-orange-400" : "text-primary-200";
-  const bar = urgent ? "bg-orange-400" : "bg-primary-200";
-
-  return (
-    <div className="space-y-1.5">
-      <div className={`flex items-center gap-1.5 ${tint}`}>
-        <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-          <circle cx="12" cy="13" r="8" />
-          <path d="M12 9.5V13l2.2 1.6M9.4 2.6h5.2" />
-        </svg>
-        <span className="text-[11px] font-black tabular-nums">{formatVotingTimeRemaining(remaining)}</span>
-        <span className="ml-auto text-[9px] font-extrabold text-white/[0.62]">{VOTE_RULE_LINE}</span>
-      </div>
-      <div className="h-[5px] w-full overflow-hidden rounded-full bg-white/10">
-        <div className={`h-full rounded-full ${bar}`} style={{width: `${Math.min(100, (remaining / total) * 100)}%`}} />
-      </div>
-    </div>
-  );
-}
-
-/** iOS `votingTimeRemaining`. */
-function formatVotingTimeRemaining(seconds: number) {
-  const minutes = Math.max(0, Math.ceil(seconds / 60));
-  if (minutes <= 0) return "Closing now";
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h left`;
-  if (hours > 0) return `${hours}h ${remainder}m left`;
-  return `${minutes}m left`;
-}
-
-/** iOS `battleRoundPage`, paged the way the SwiftUI TabView pages. */
-function ChallengeRoundPager({
-  item,
-  attackerCaptureId,
-}: {
-  item: DiscoverChallengeItem;
-  attackerCaptureId: string;
-}) {
-  const [page, setPage] = useState(0);
-
-  function roundWinnerText(round: 2 | 3) {
-    return battleRoundWinnerText({
-      round,
-      round2Draw: item.round2Draw,
-      winnerCaptureId: round === 2 ? item.round2WinnerCaptureId : item.round3WinnerCaptureId,
-      attackerCaptureId,
-      attackerName: item.attacker.animalName,
-      defenderName: item.defender.animalName,
-    });
-  }
-
-  return (
-    <div>
-      <div
-        onScroll={(event) => {
-          const node = event.currentTarget;
-          setPage(node.clientWidth > 0 ? Math.round(node.scrollLeft / node.clientWidth) : 0);
-        }}
-        className="flex h-[92px] snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        <div className="w-full shrink-0 snap-center space-y-1.5 pr-2">
-          <p className="text-[10px] font-black text-primary-200">ROUND 2 OF 3 · COMMUNITY</p>
-          <p className="text-[11px] font-medium text-white/[0.86]">{roundWinnerText(2)}</p>
-        </div>
-        <div className="w-full shrink-0 snap-center space-y-1.5 pr-2">
-          <p className="text-[10px] font-black text-primary-200">ROUND 3 OF 3 · SPECIES</p>
-          <p className="text-[11px] font-medium text-white/[0.86]">{roundWinnerText(3)}</p>
-          {item.speciesComparisonSlug ? (
-            <Link
-              href={`/comparisons/${item.speciesComparisonSlug}`}
-              className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-primary-200"
-            >
-              <AppIcon name="spark" className="h-3 w-3" />
-              View species comparison
-            </Link>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex justify-center gap-1.5 pt-1">
-        {[0, 1].map((index) => (
-          <span
-            key={index}
-            aria-hidden="true"
-            className={`h-1.5 w-1.5 rounded-full ${index === page ? "bg-white" : "bg-white/30"}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /** iOS `backstoryPanel`: 10-word preview over a scrim, expanding in place. */
 function ChallengeBackstoryPanel({text}: {text: string}) {
   const [expanded, setExpanded] = useState(false);
@@ -1659,128 +1522,30 @@ function ChallengeCard({
   item,
   onInfo,
   share,
-  viewerUserId,
 }: {
   item: DiscoverChallengeItem;
   onInfo: () => void;
   share: { url: string; title: string; text?: string };
-  viewerUserId: string | null;
 }) {
-  const [votedCaptureId, setVotedCaptureId] = useState<string | null>(null);
-  const [votesCount, setVotesCount] = useState(item.votesCount);
-  const [voteError, setVoteError] = useState<string | null>(null);
-  const [votePending, setVotePending] = useState(false);
-
-  const attackerWon = item.winnerCaptureId === item.attacker.captureId;
-  const isV2 = item.challengeFormat === "best_of_3_v2";
-  const isVoting = isV2 && item.battleStatus === "round_2_voting";
-  const isComplete = !isV2 || item.battleStatus === "completed";
-  const isParticipant = viewerUserId != null
-    && (viewerUserId === item.attacker.userId || viewerUserId === item.defender.userId);
+  // A drawn one has no winner to mark.
+  const winnerCaptureId = item.overallDraw ? null : item.winnerCaptureId;
   const backstory = challengeBackstoryText(item);
-
-  async function castVote(captureId: string) {
-    if (votePending) return;
-    setVotePending(true);
-    setVoteError(null);
-    try {
-      const response = await fetch("/api/app/discover/challenge-vote", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({challengeId: item.id.replace(/^challenge-/, ""), captureId})
-      });
-      const payload = await response.json().catch(() => ({})) as {error?: string};
-      if (!response.ok) {
-        setVoteError(payload.error ?? "Vote could not be recorded.");
-        return;
-      }
-      setVotedCaptureId(captureId);
-      setVotesCount((count) => count + 1);
-    } catch {
-      setVoteError("Vote could not be recorded.");
-    } finally {
-      setVotePending(false);
-    }
-  }
-
-  function voteButton(participant: DiscoverChallengeParticipant) {
-    return (
-      <button
-        type="button"
-        disabled={votePending}
-        onClick={() => castVote(participant.captureId)}
-        className="min-w-0 flex-1 truncate rounded-full bg-primary-200 py-2.5 text-[11px] font-extrabold text-black/90 disabled:opacity-60"
-      >
-        Vote {participant.animalName}
-      </button>
-    );
-  }
-
-  const statusPanel = isVoting ? (
-    <div className="pointer-events-auto space-y-2 bg-black/[0.72] p-3">
-      <p className="text-[11px] font-black text-primary-200">Round 2: Who would win?</p>
-      <p className="text-xs font-medium tabular-nums text-white">{voteProgressText(votesCount)}</p>
-      {item.votingDeadlineAt ? (
-        <ChallengeVotingCountdown createdAt={item.date} deadline={item.votingDeadlineAt} />
-      ) : null}
-      {viewerUserId == null ? (
-        <Link
-          href={`/account?next=${encodeURIComponent(discoverPostPath(item.id))}`}
-          className="block text-[11px] font-extrabold text-primary-200"
-        >
-          Sign in to vote
-        </Link>
-      ) : isParticipant ? (
-        <p className="text-[11px] font-medium text-white/[0.78]">Your battle is live. The community is voting.</p>
-      ) : votedCaptureId ? (
-        <p className="flex items-center gap-1.5 py-2 text-[11px] font-extrabold text-primary-200">
-          <AppIcon name="check" className="h-3.5 w-3.5" />
-          Vote recorded ·{" "}
-          {votedCaptureId === item.attacker.captureId ? item.attacker.animalName : item.defender.animalName}
-        </p>
-      ) : (
-        <div className="flex gap-2">
-          {voteButton(item.attacker)}
-          {voteButton(item.defender)}
-        </div>
-      )}
-      {voteError ? <p className="text-[11px] font-medium text-red-400">{voteError}</p> : null}
-    </div>
-  ) : isV2 && isComplete ? (
-    <div className="pointer-events-auto space-y-1.5 bg-black/[0.72] p-3">
-      <div className="flex items-center gap-2">
-        <p className="text-[11px] font-black text-primary-200">BATTLE COMPLETE</p>
-        <p className="text-sm font-black text-white">
-          {item.roundsWonAttacker}–{item.roundsWonDefender}
-        </p>
-      </div>
-      {item.overallDraw ? (
-        <p className="text-[11px] font-medium text-white/[0.78]">{OVERALL_DRAW_LINE}</p>
-      ) : null}
-      {item.settlementReason === "voting_timeout_round1_fallback" ? (
-        <p className="text-[11px] font-medium text-white/[0.78]">{VOTING_TIMEOUT_FALLBACK_LINE}</p>
-      ) : (
-        <ChallengeRoundPager item={item} attackerCaptureId={item.attacker.captureId} />
-      )}
-    </div>
-  ) : null;
 
   return (
     <article className="relative h-full min-h-0 w-full snap-start snap-always overflow-hidden bg-black">
       <div className="absolute inset-0 flex flex-col">
         <ChallengeParticipantHero
           participant={item.attacker}
-          highlighted={attackerWon}
+          highlighted={winnerCaptureId === item.attacker.captureId}
           pinsIdentityToTop={false}
         />
         <ChallengeParticipantHero
           participant={item.defender}
-          highlighted={!attackerWon}
+          highlighted={winnerCaptureId === item.defender.captureId}
           pinsIdentityToTop
         />
       </div>
 
-      {/* iOS overlay stack: chrome, battle status, spacer, backstory. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col gap-2 px-3.5 pt-2.5">
         <div className="pointer-events-auto flex items-center justify-end gap-1 [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))]">
           <span className="grid h-9 w-9 place-items-center text-white/[0.78] [&_svg]:h-[1.1rem] [&_svg]:w-[1.1rem] [&>button]:grid [&>button]:h-full [&>button]:w-full [&>button]:place-items-center [&>button]:p-0">
@@ -1795,8 +1560,6 @@ function ChallengeCard({
             <InfoIcon />
           </button>
         </div>
-
-        {statusPanel}
 
         <div className="min-h-0 flex-1" />
 
@@ -1940,7 +1703,6 @@ export function PostInformation({item, locale, onClose, isOwn = false}: {
               ) : null}
               {item.conservationTier ? <FeedPill tone="amber">{item.conservationTier}</FeedPill> : null}
               <FeedPill tone="green">Level {captureLevel}</FeedPill>
-              <FeedPill tone="cyan">Tier {item.battleTier}</FeedPill>
               <FeedPill tone="violet">Rarity {item.rarity}</FeedPill>
               {item.animalDexNumber ? <FeedPill>#{String(item.animalDexNumber).padStart(3, "0")}</FeedPill> : null}
             </div>
@@ -1956,7 +1718,7 @@ export function PostInformation({item, locale, onClose, isOwn = false}: {
         ) : item.kind === "alignment" ? (
           <div className="space-y-4"><img src={item.imageSrc} alt={item.rewardedAnimalName} className="aspect-square w-full object-cover"/><h3 className="text-xl font-bold text-white">Daily Companion</h3><p className="text-sm leading-6 text-white/65">{item.summary ?? item.moveTodayText ?? "Shared a Daily Alignment proof."}</p><div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Collector" value={item.collector.name}/><DetailRow label="Rewarded animal" value={item.rewardedAnimalName}/><DetailRow label="Stat boost" value={item.statBoostStat}/><DetailRow label="Post ID" value={item.proofId}/></div></div>
         ) : item.kind === "challenge" ? (
-          <div className="space-y-4"><h3 className="text-xl font-bold text-white">{item.outcomeLine}</h3>{item.winningsLine ? <p className="text-sm text-amber-200">{item.winningsLine}</p> : null}<p className="text-sm leading-6 text-white/65">{item.activitySummary}</p><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><div className="text-center"><img src={item.attacker.imageSrc} alt={item.attacker.animalName} className="aspect-square w-full object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.attacker.animalName}</p></div><span className="text-xs font-black text-white/35">VS</span><div className="text-center"><img src={item.defender.imageSrc} alt={item.defender.animalName} className="aspect-square w-full object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.defender.animalName}</p></div></div><div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Scenario" value={item.scenarioTitle}/><DetailRow label="Deciding edge" value={item.decidingEdgeLabel ?? item.chosenStat}/><DetailRow label="Winner" value={item.overallDraw ? "Draw" : item.winnerCaptureId === item.attacker.captureId ? item.attacker.displayName : item.defender.displayName}/><DetailRow label="Credits wagered" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/>{item.overallDraw ? <DetailRow label="Credits returned to each player" value={`${item.stakeAmount} ${item.stakeAmount === 1 ? "credit" : "credits"}`}/> : <DetailRow label={item.battleStatus === "completed" || item.challengeFormat !== "best_of_3_v2" ? "Credits paid to winner" : "Potential winner payout"} value={`${item.payoutAmount} ${item.payoutAmount === 1 ? "credit" : "credits"}`}/>}<DetailRow label="Post ID" value={item.id.replace(/^challenge-/, "")}/></div></div>
+          <div className="space-y-4"><h3 className="text-xl font-bold text-white">{item.overallDraw ? "Draw" : item.outcomeLine}</h3><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><div className="text-center"><img src={item.attacker.imageSrc} alt={item.attacker.animalName} className="aspect-square w-full object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.attacker.animalName}</p></div><span className="text-xs font-black text-white/35">VS</span><div className="text-center"><img src={item.defender.imageSrc} alt={item.defender.animalName} className="aspect-square w-full object-cover"/><p className="mt-2 text-sm font-bold text-white">{item.defender.animalName}</p></div></div><div className="space-y-3 border border-white/[0.06] bg-white/[0.025] p-3"><DetailRow label="Came out ahead" value={item.overallDraw ? "Draw" : item.winnerCaptureId === item.attacker.captureId ? item.attacker.animalName : item.defender.animalName}/><DetailRow label="Post ID" value={item.id.replace(/^challenge-/, "")}/></div></div>
         ) : item.kind === "fusion" ? (
           <div className="space-y-4"><h3 className="text-xl font-bold text-white">Principle Fusion</h3><p className="text-sm leading-6 text-white/65">{item.receiverAnimalName} learned from {item.donorAnimalName}.</p><DetailRow label="Learned sub-principle" value={item.learnedPrinciple}/><DetailRow label="Expression" value={item.learnedExpression}/><DetailRow label="Post ID" value={item.fusionId}/></div>
         ) : item.kind === "animal-trial" ? (
@@ -2020,7 +1782,7 @@ export function DiscoverTimelineCard({
       card = <FusionCard item={item} locale={locale} onInfo={onInfo} share={share} />;
       break;
     case "challenge":
-      card = <ChallengeCard item={item} onInfo={onInfo} share={share} viewerUserId={viewerUserId} />;
+      card = <ChallengeCard item={item} onInfo={onInfo} share={share} />;
       break;
     case "trade":
       card = <TradeCard item={item} locale={locale} onInfo={onInfo} share={share} />;

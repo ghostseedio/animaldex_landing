@@ -1795,7 +1795,6 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         feedRows,
         alignmentResult,
         fusionResult,
-        challengeResult,
         tradeResult,
         animalTrialResult,
         animalDexNumbers,
@@ -1805,7 +1804,6 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         fetchDiscoverFeedRows(supabase, candidateLimit, afterCaptureId),
         readUnseenActivity(supabase, "discover_alignment_timeline_unseen_v1", "discover_alignment_timeline_v1", "*", "completed_at", activityLimit),
         readUnseenActivity(supabase, "discover_principle_fusion_timeline_unseen_v1", "discover_principle_fusion_timeline_v1", "*", "created_at", activityLimit),
-        readUnseenActivity(supabase, "discover_challenge_history_unseen_v2", "discover_challenge_history_v2", discoverChallengeSelect, "created_at", activityLimit),
         readUnseenActivity(supabase, "discover_trade_history_unseen_v1", "discover_trade_history_v1", "id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind", "completed_at", activityLimit),
         readUnseenActivity(supabase, "discover_animal_trial_timeline_unseen_v1", "discover_animal_trial_timeline_v1", "*", "completed_at", activityLimit),
         buildAnimalDexNumberIndex(),
@@ -1816,7 +1814,10 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     const captures = feedRows.map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples));
     const alignments = ((alignmentResult.data ?? []) as unknown as QueryRow[]).map(mapAlignmentRow);
     const fusions = ((fusionResult.data ?? []) as unknown as QueryRow[]).map(mapFusionRow);
-    const challenges = ((challengeResult.data ?? []) as unknown as QueryRow[]).map(mapChallengeRow);
+    // 3.2 Debates replace battles: an old battle post is no longer in the feed
+    // (its /p link still opens it, read only). Public debates join the feed
+    // from `getDiscoverDebates`.
+    const challenges: DiscoverChallengeItem[] = [];
     const trades = ((tradeResult.data ?? []) as unknown as QueryRow[]).map(mapTradeRow);
     const animalTrials = ((animalTrialResult.data ?? []) as unknown as QueryRow[]).map((row) => mapAnimalTrialRow(row, speciesHref));
     // On a cursor page the activity lists are still read from the top, so the
@@ -1834,58 +1835,6 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
             ? timelineCursorForItem(page[page.length - 1], lastDeliveredCaptureId(page, afterCaptureId))
             : null
     };
-}
-
-export async function getChallengeArenaCaptures(excludeUserId: string | null, limit = 48, followingOnly = false): Promise<DiscoverCaptureItem[]> {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return [];
-
-    // `following_challenge_feed_v1` applies follow membership before the LIMIT (iOS `fetchChallengeFeed`).
-    let query = supabase
-        .from(followingOnly ? "following_challenge_feed_v1" : "challenge_feed_v1")
-        .select(richFeedSelect)
-        .order("capture_created_at", {ascending: false})
-        .limit(limit);
-
-    if (excludeUserId) {
-        query = query.neq("user_id", excludeUserId);
-    }
-
-    const {data, error} = await query;
-    if (error) return [];
-
-    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
-        buildAnimalDexNumberIndex(),
-        getCatalogBehaviorPrincipleIndex()
-    ]);
-    return ((data ?? []) as unknown as QueryRow[])
-        .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
-        .filter((item) => item.isChallengeAvailable && item.challengeHealth > 0);
-}
-
-export async function getChallengeArenaCaptureById(captureId: string, excludeUserId: string | null): Promise<DiscoverCaptureItem | null> {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return null;
-
-    let query = supabase
-        .from("challenge_feed_v1")
-        .select(richFeedSelect)
-        .eq("capture_id", captureId)
-        .limit(1);
-
-    if (excludeUserId) {
-        query = query.neq("user_id", excludeUserId);
-    }
-
-    const {data, error} = await query;
-    if (error || !data?.length) return null;
-
-    const [animalDexNumbers, behaviorPrinciples] = await Promise.all([
-        buildAnimalDexNumberIndex(),
-        getCatalogBehaviorPrincipleIndex()
-    ]);
-    const item = mapCaptureRow(data[0] as unknown as QueryRow, animalDexNumbers, behaviorPrinciples);
-    return item.isChallengeAvailable && item.challengeHealth > 0 ? item : null;
 }
 
 async function fetchDiscoverFeedRowByCaptureId(
