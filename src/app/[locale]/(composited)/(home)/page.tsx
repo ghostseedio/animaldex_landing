@@ -32,12 +32,10 @@ import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/d
 import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
 import {getRecentPublicCaptures} from "@/data/discover-timeline";
 import {RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
+import {TRY_TALKING_HREF, TRY_TALKING_SPECIES} from "@/lib/try-talking";
 
 const heroBackgroundImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
-
-/** The animal in the home page's chat still, and where "Try talking to one now" opens its chat. */
-const HOME_CHAT_ANIMAL = {slug: "common-octopus", image: "/images/welcome/common-octopus.webp"};
 
 const heroLaurelWreathImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/laurel-wreath-ede0a9b0-7b2e-45c3-a4fa-12bf9615c29d.webp";
@@ -374,7 +372,7 @@ export default async function Home({params}: HomePageProps) {
                     </div>
                     {/* A quiet way in before installing anything: the animal's own chat, open to anyone. */}
                     <Link
-                        href={`/animals/${HOME_CHAT_ANIMAL.slug}?talk=1`}
+                        href={TRY_TALKING_HREF}
                         className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary-200 underline-offset-4 transition-colors hover:text-white hover:underline"
                     >
                         {t("heroTryTalking")} <span aria-hidden="true">→</span>
@@ -404,7 +402,7 @@ export default async function Home({params}: HomePageProps) {
                 </div>
                 <div className="relative z-10 flex w-full items-center justify-center pb-10 lg:pb-0">
                     <HomeChatStill
-                        image={HOME_CHAT_ANIMAL.image}
+                        image={TRY_TALKING_SPECIES.image}
                         words={{
                             label: t("chatStill.label"),
                             animal: t("chatStill.animal"),

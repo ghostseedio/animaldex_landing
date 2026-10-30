@@ -371,7 +371,11 @@ export const COMPANION_WORDS_EN = {
         unmute: "Unmute",
         muteFailed: "That didn't go through. Try again in a moment.",
         options: "More",
-        collection: "Collection"
+        collection: "Collection",
+        /** Signed out (newcomer UX vet, 2026-10-30, P1-10): the tab says what to do instead of showing nothing. */
+        signedOut: "Sign in to meet your animals, or try talking to one now.",
+        signIn: "Sign in",
+        tryTalking: "Try talking to one now"
     },
     /**
      * Naming your animal: "Name your {animal}" in its chat (iOS

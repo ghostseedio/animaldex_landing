@@ -2619,7 +2619,10 @@
       "unmute": "Bunyikan",
       "muteFailed": "Gagal terkirim. Coba lagi sebentar lagi.",
       "options": "Lainnya",
-      "collection": "Koleksi"
+      "collection": "Koleksi",
+      "signedOut": "Masuk untuk bertemu hewan-hewan Anda, atau coba bicara dengan salah satunya sekarang.",
+      "signIn": "Masuk",
+      "tryTalking": "Coba bicara dengan salah satunya sekarang"
     },
     "naming": {
       "nameYour": "Beri nama {animal} Anda",

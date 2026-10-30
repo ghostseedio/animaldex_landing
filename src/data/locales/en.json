@@ -2637,7 +2637,10 @@
       "unmute": "Unmute",
       "muteFailed": "That didn't go through. Try again in a moment.",
       "options": "More",
-      "collection": "Collection"
+      "collection": "Collection",
+      "signedOut": "Sign in to meet your animals, or try talking to one now.",
+      "signIn": "Sign in",
+      "tryTalking": "Try talking to one now"
     },
     "naming": {
       "nameYour": "Name your {animal}",

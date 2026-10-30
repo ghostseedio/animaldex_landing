@@ -18,12 +18,16 @@
  * opens that animal's chat, where the step is pinned.
  *
  * Refreshed when the tab is opened and when the window comes back into view.
+ *
+ * Signed out, the tab says what to do instead of showing nothing (newcomer
+ * UX vet, 2026-10-30, P1-10): sign in, or talk to an animal right now.
  */
 
 import {useEffect, useMemo, useState} from "react";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {AppPage, AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {AskMenu, MoreIcon} from "@/components/ask-animaldex/ask-messenger";
 import {setAnimalMessagesMuted, useAnimalConversations} from "@/components/companions/use-animal-conversations";
@@ -33,6 +37,7 @@ import {companionRowHref, companionSummaryName, fillWords, type CompanionWords} 
 import type {OpenStepRow} from "@/lib/your-step";
 import {buildCompanionRows, type CompanionStatusKind, type CompanionTabRow} from "@/lib/companion-rows";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {TRY_TALKING_HREF} from "@/lib/try-talking";
 
 const NEON = "#A7F432";
 
@@ -183,6 +188,37 @@ function YourStepsSection({steps, href, words}: {steps: OpenStepRow[]; href: (st
 }
 
 export default function CompanionsPage({words}: {words: CompanionWords}) {
+    const {isAuthenticated} = useAppShellChrome();
+    return isAuthenticated ? <YourCompanions words={words} /> : <SignedOutCompanions words={words} />;
+}
+
+/** Signed out: sign in to meet your animals, or talk to one now. */
+function SignedOutCompanions({words}: {words: CompanionWords}) {
+    return (
+        <AppPage narrow>
+            <AppPageHeader eyebrow="AnimalDex" title={words.list.title} />
+            <div className="-mx-4 flex flex-col items-start gap-4 border-y border-white/[0.08] px-4 py-8 md:mx-0 md:px-5">
+                <p className="text-base font-semibold leading-7 text-white">{words.tab.signedOut}</p>
+                <div className="flex flex-wrap gap-2">
+                    <Link
+                        href="/account?next=/app"
+                        className="inline-flex min-h-11 items-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300"
+                    >
+                        {words.tab.signIn}
+                    </Link>
+                    <Link
+                        href={TRY_TALKING_HREF}
+                        className="inline-flex min-h-11 items-center rounded-full border border-white/12 bg-white/[0.05] px-5 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                    >
+                        {words.tab.tryTalking}
+                    </Link>
+                </div>
+            </div>
+        </AppPage>
+    );
+}
+
+function YourCompanions({words}: {words: CompanionWords}) {
     const {rows: companions, didLoad, available, reload} = useCompanions();
     const {cards, didLoad: cardsLoaded, available: cardsAvailable, reload: reloadCards} = useCompanionCards();
     const {conversations, reload: reloadConversations} = useAnimalConversations();
