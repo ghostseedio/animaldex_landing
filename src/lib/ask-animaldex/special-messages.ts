@@ -94,11 +94,94 @@ export function askStepResolution(params: {
     loaded: boolean;
     /** Steps the animal saw done in this thread (`stepDone.id`). */
     doneStepIds: ReadonlySet<string>;
+    /**
+     * A newer message in the thread carries this same step: only that one
+     * has its buttons, so one step never shows twice. False when absent.
+     */
+    carriedLater?: boolean;
 }): AskStepResolution {
     const {stepSet, openStep} = params;
     if (stepSet.id && params.doneStepIds.has(stepSet.id)) return {kind: "done"};
-    if (openStep && (stepSet.id ? stepSet.id === openStep.id : stepSet.step === openStep.step)) return {kind: "live", step: openStep};
+    if (openStep && askSameStep(stepSet, openStep)) return params.carriedLater ? {kind: "closed"} : {kind: "live", step: openStep};
     return params.loaded ? {kind: "closed"} : {kind: "pending"};
+}
+
+/** The same step: by id when both have one, else (an older server) by its words, as iOS `StepSet.matches`. */
+export function askSameStep(left: {id?: string | null; step: string}, right: {id?: string | null; step: string}): boolean {
+    if (left.id && right.id) return left.id === right.id;
+    return left.step.trim() === right.step.trim();
+}
+
+/** The newest finished reply in the thread that set this step (its anchor), or null: set in an earlier conversation, or cleared away. */
+export function askStepCarrierId(
+    messages: Array<Pick<AskMessage, "id" | "role" | "status" | "companionEvent">>,
+    step: {id?: string | null; step: string} | null | undefined
+): string | null {
+    if (!step) return null;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        const stepSet = message.role === "assistant" && message.status === "complete" ? message.companionEvent?.stepSet : undefined;
+        if (stepSet && askSameStep(stepSet, step)) return message.id;
+    }
+    return null;
+}
+
+// MARK: - The open step as a message of its own
+
+/**
+ * The open step lives in the conversation (owner, 2026-10-30), never pinned
+ * above it. When no reply in the loaded thread carries it (it was set in an
+ * earlier conversation, or the thread was cleared), the thread shows one
+ * more animal message holding only its step section: no words of the
+ * animal's, which come from the model alone.
+ *
+ * What that message shows this visit, from what it showed so far (`shown`):
+ * the open step while no reply carries it; once shown it stays, resolving
+ * as older step sections do (done, or dropped or replaced by a step a reply
+ * set). Null: no such message. It is drawn, never stored, never history.
+ */
+export function askThreadStep(params: {
+    shown: AskCompanionStepSet | null;
+    openStep: AnimalStep | null;
+    messages: Array<Pick<AskMessage, "id" | "role" | "status" | "companionEvent">>;
+}): AskCompanionStepSet | null {
+    const {shown, openStep, messages} = params;
+    if (!openStep || askStepCarrierId(messages, openStep) !== null) return shown;
+    const trialFrequency = openStep.trialFrequency ?? undefined;
+    if (shown && shown.id === openStep.id && shown.step === openStep.step && shown.trialFrequency === trialFrequency) return shown;
+    return {id: openStep.id, step: openStep.step, ...(trialFrequency ? {trialFrequency} : {})};
+}
+
+/**
+ * Where that message goes: where the conversation picks up. After the
+ * history the chat opened on (`openedAt`), before anything said this visit;
+ * with no history, right after the animal's hello once it is all shown; with
+ * neither, first. The number of messages above it, or null while it waits
+ * for the hello, or when a reply in the thread now carries the step itself
+ * (one step never shows twice). New messages arrive below it.
+ */
+export function askThreadStepIndex(params: {
+    step: AskCompanionStepSet | null;
+    messages: Array<Pick<AskMessage, "id" | "role" | "status" | "companionEvent" | "createdAt" | "isGreeting">>;
+    /** When the chat opened: what was written before it is the history it opened on. */
+    openedAt: number;
+    /** The hello is still to come: the thread is empty and the animal is about to speak first. */
+    greetingPending: boolean;
+    /** The reply being typed out right now, if any. */
+    revealingId: string | null;
+}): number | null {
+    const {step, messages} = params;
+    if (!step || askStepCarrierId(messages, step) !== null) return null;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const written = Date.parse(messages[index].createdAt);
+        if (Number.isFinite(written) && written < params.openedAt) return index + 1;
+    }
+    const hello = messages.findIndex((message) => message.isGreeting === true);
+    if (hello >= 0) {
+        const greeting = messages[hello];
+        return greeting.status === "complete" && greeting.id !== params.revealingId ? hello + 1 : null;
+    }
+    return params.greetingPending ? null : 0;
 }
 
 /** The step ids the animal saw done in this thread. */

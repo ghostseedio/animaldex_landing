@@ -2,8 +2,7 @@
 
 /**
  * AnimalDex 3.2 "Your step" (docs/your-step/SPEC.md, section 5) outside the
- * thread: the step pinned at the top of the chat and on the card's Bond tab,
- * the report composer (the chat's fallback below 340 px; docs/your-step/
+ * thread: the step on the card's Bond tab, the report composer (the chat's fallback below 340 px; docs/your-step/
  * INLINE.md puts "I did it" in the message bar), "Done together", the Trials
  * with their loops, and the private record of what you did together. Inside
  * the thread, the same pieces are special messages (`ask-special.tsx`).
@@ -40,9 +39,8 @@ function Eyebrow({children}: {children: React.ReactNode}) {
 // MARK: - The step card
 
 /**
- * The step: pinned at the top of the chat while the reply that set it is
- * not in the loaded thread (`pinned`), or on the Bond tab (`band`). Not
- * accepted: "I'll do it" / "A different step". Accepted: "I did it" /
+ * The step on the Bond tab, as a band (in the chat it is only ever a section
+ * of an animal message, `AskStepSection`). Not accepted: "I'll do it" / "A different step". Accepted: "I did it" /
  * "A different step". With a report attached, "I did it" says "Tell {name} more"
  * again. A step made from a Trial shows that Trial's loop.
  */
@@ -51,7 +49,6 @@ export function StepCard({
     speciesProfileId,
     name,
     words,
-    variant,
     busy = false,
     problem = null,
     onPrimary,
@@ -62,7 +59,6 @@ export function StepCard({
     /** "Leo", or the animal. */
     name: string;
     words: CompanionWords;
-    variant: "pinned" | "band";
     busy?: boolean;
     /** Why the last button press did not go through, in words. */
     problem?: string | null;
@@ -70,16 +66,13 @@ export function StepCard({
     onPrimary: () => void;
     onOther: () => void;
 }) {
-    const loop = useTrialMotionStoryboard(speciesProfileId, step.trialFrequency, variant !== "pinned");
-    const eyebrow = variant === "pinned" ? words.journey.step.pinnedLabel : fillWords(words.journey.step.eyebrow, {name});
-    const shell = variant === "pinned"
-        ? "flex shrink-0 flex-col gap-2 border-b border-primary-400/20 bg-primary-400/[0.06] px-4 py-2.5"
-        : "flex flex-col gap-2.5 border-b border-white/[0.08] px-5 py-5";
+    const loop = useTrialMotionStoryboard(speciesProfileId, step.trialFrequency);
+    const eyebrow = fillWords(words.journey.step.eyebrow, {name});
     return (
-        <section className={shell} aria-label={eyebrow} data-testid={`step-card-${variant}`}>
+        <section className="flex flex-col gap-2.5 border-b border-white/[0.08] px-5 py-5" aria-label={eyebrow} data-testid="step-card-band">
             <Eyebrow>{eyebrow}</Eyebrow>
-            <p className={`${variant === "pinned" ? "line-clamp-2 text-sm" : "text-[15px]"} font-semibold leading-6 text-white`}>{step.step}</p>
-            {loop.storyboard && variant !== "pinned" ? (
+            <p className="text-[15px] font-semibold leading-6 text-white">{step.step}</p>
+            {loop.storyboard ? (
                 <TrialMotion storyboard={loop.storyboard} captions={loop.captions} variant="compact" showsStepCount={false} />
             ) : null}
             <div className="flex flex-wrap items-center gap-2">

@@ -289,7 +289,6 @@ export default function BondPanel({
                     speciesProfileId={speciesProfileId}
                     name={name}
                     words={words}
-                    variant="band"
                     busy={stepBusy}
                     problem={stepProblem}
                     onPrimary={() => primary(openStep)}

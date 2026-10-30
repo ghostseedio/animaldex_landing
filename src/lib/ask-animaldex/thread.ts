@@ -202,24 +202,6 @@ function stepReportMediaFields(row: {stepReportThumb?: unknown; stepReportKind?:
     return {stepReportThumb: thumb, stepReportKind: row.stepReportKind === "video" ? "video" : "photo"};
 }
 
-/**
- * The reply whose step card shows this step (3.2): the finished animal reply
- * whose `companionEvent.stepSet` is it. Null when the loaded thread has none
- * — the step was set in an earlier conversation, or the thread was trimmed or
- * reloaded without it — which is when the step is pinned at the top instead,
- * so it never shows twice.
- */
-export function askStepCardMessageId(messages: AskMessage[], stepId: string | null | undefined): string | null {
-    if (!stepId) return null;
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-        const message = messages[index];
-        if (message.role === "assistant" && message.status === "complete" && message.companionEvent?.stepSet?.id === stepId) {
-            return message.id;
-        }
-    }
-    return null;
-}
-
 export function newAskMessageId(): string {
     const cryptoRef = typeof globalThis.crypto !== "undefined" ? globalThis.crypto : undefined;
     if (cryptoRef && typeof cryptoRef.randomUUID === "function") return cryptoRef.randomUUID();

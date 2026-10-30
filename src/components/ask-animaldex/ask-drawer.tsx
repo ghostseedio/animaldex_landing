@@ -33,8 +33,11 @@
  * with an icon, its actions inside the bubble), keyed off server state and
  * the reply's card kinds, never off its words:
  *   - the step is the last section of the bubble that set it ("YOUR STEP",
- *     the step, [I'll do it] or [I did it], and [A different step]); pinned at
- *     the top only while that bubble is not in the loaded thread;
+ *     the step, [I'll do it] or [I did it], and [A different step]). Set in
+ *     an earlier conversation, or with the thread cleared, it is one more
+ *     animal message holding only that section, where the conversation picks
+ *     up (`askThreadStep`): never pinned above the thread, never stored or
+ *     sent as history, and one step never shows twice;
  *   - "I did it" puts the message bar in report mode: a strip ("Telling
  *     {name} how your step went", the step, ✕), the attach button for one
  *     photo or video, and send at three characters, which uploads, attaches
@@ -71,7 +74,7 @@ import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider
 import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex/use-reply-pacer";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
-import {askStepCardMessageId, askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
+import {askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
 import {WILD_PROFILE_PATH, isWildProfileFollowUp} from "@/lib/ask-animaldex/wild-profile";
 import {getLocalePath} from "@/lib/site";
@@ -91,7 +94,8 @@ import {
     normalizeCompanionLoop,
     referralCapturePath,
     type AskCompanionEvent,
-    type AskCompanionLoop
+    type AskCompanionLoop,
+    type AskCompanionStepSet
 } from "@/lib/ask-animaldex/companion-loop";
 import {askReplyCards} from "@/lib/ask-animaldex/chat-cards";
 import {
@@ -119,7 +123,7 @@ import {
     stepReportThumbnail,
     useOpenStepUpdates
 } from "@/components/companions/use-steps";
-import {StepCard, StepDoneChip, StepReportComposer, type StepReportDraft} from "@/components/companions/step-views";
+import {StepDoneChip, StepReportComposer, type StepReportDraft} from "@/components/companions/step-views";
 import {
     AskDebateOfferSection,
     AskDoneSection,
@@ -135,7 +139,10 @@ import {
     askDoneStepIds,
     askEarnedReport,
     askReplySpecials,
+    askStepCarrierId,
     askStepResolution,
+    askThreadStep,
+    askThreadStepIndex,
     askWarmupAnswers,
     askWarmupItem,
     askWarmupItems,
@@ -153,6 +160,7 @@ import {
     AskAnimalHero,
     AskMenu,
     AskReplyBubbles,
+    AskSpecialBubble,
     AskSuggestionBar,
     AskTimeLabel,
     AskTypingBubble,
@@ -1240,6 +1248,27 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     /** Why the last step button did not go through, in words. */
     const [stepProblem, setStepProblem] = useState<string | null>(null);
     /**
+     * When this chat opened: what was written before it is the history it
+     * opened on, and the open step a reply here does not carry goes after
+     * that, as a message of its own (`askThreadStep`).
+     */
+    const [visit, setVisit] = useState(() => ({threadKey, openedAt: Date.now()}));
+    useEffect(() => {
+        setVisit((current) => (current.threadKey === threadKey ? current : {threadKey, openedAt: Date.now()}));
+    }, [threadKey]);
+    /**
+     * The step that message shows this visit: the open one while no reply
+     * carries it, then as it resolves. A cleared thread starts it again.
+     */
+    const [shownStep, setShownStep] = useState<{threadKey: string; step: AskCompanionStepSet | null}>(() => ({threadKey, step: null}));
+    useEffect(() => {
+        setShownStep((current) => {
+            const step = askThreadStep({shown: current.threadKey === threadKey ? current.step : null, openStep, messages});
+            return current.threadKey === threadKey && current.step === step ? current : {threadKey, step};
+        });
+    }, [threadKey, openStep, messages]);
+    const threadStep = shownStep.threadKey === threadKey ? shownStep.step : null;
+    /**
      * "I did it": the message bar's report mode, its field focused, the thread
      * at its newest message. Below 340 px the bar has no room for the strip:
      * the composer sheet instead.
@@ -1731,10 +1760,17 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
      * shows nothing). Nothing while it is still being typed out.
      */
     const stepBusyNow = stepBusy || (isSending && greetingState !== "loading");
-    // The open step is in the bubble that set it, when that reply is in the
-    // loaded thread; only otherwise is it pinned at the top. Never both.
-    const stepCardMessageId = ownerChat ? askStepCardMessageId(messages, openStep?.id) : null;
-    const showsPinnedStep = Boolean(openStep) && stepCardMessageId === null;
+    // The open step is in the newest bubble that set it, when that reply is in
+    // the loaded thread; otherwise it is a message of its own where the
+    // conversation picks up (`threadStepAt` messages above it). Never both.
+    const stepCarrierId = ownerChat ? askStepCarrierId(messages, openStep) : null;
+    const threadStepAt = ownerChat && messenger ? askThreadStepIndex({
+        step: threadStep,
+        messages,
+        openedAt: visit.openedAt,
+        greetingPending: awaitingGreeting,
+        revealingId: pacer.revealing ? pacer.messageId : null
+    }) : null;
     // Steps the animal saw done in this thread: their sections say so.
     const doneStepIds = useMemo(() => askDoneStepIds(messages), [messages]);
     /**
@@ -1754,6 +1790,43 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         setSharedEarnedId(messageId);
         setTimeout(() => setSharedEarnedId((current) => (current === messageId ? null : current)), 1600);
     };
+    /**
+     * "YOUR STEP", the step and its chips: the last section of the reply that
+     * set it, or all of the message the thread shows for an open step no
+     * reply in it carries. Done or dropped, it resolves the same either way.
+     */
+    const stepSection = (stepSet: AskCompanionStepSet, carriedLater: boolean) => {
+        const resolution = askStepResolution({stepSet, openStep, loaded: loopLoaded, doneStepIds, carriedLater});
+        return (
+            <AskStepSection
+                key="step"
+                text={stepSet.step}
+                resolution={resolution}
+                trialFrequency={stepSet.trialFrequency ?? null}
+                speciesProfileId={companionSpeciesProfileId}
+                name={speakerName}
+                words={words}
+                busy={stepBusyNow}
+                problem={stepProblem}
+                onPrimary={() => {
+                    if (resolution.kind === "live") stepPrimary(resolution.step);
+                }}
+                onOther={() => {
+                    if (resolution.kind === "live") stepOther(resolution.step);
+                }}
+            />
+        );
+    };
+    /** The open step's own message: the animal's face and the step section, no words above it (those are the model's alone). */
+    const threadStepMessage = threadStep && threadStepAt !== null ? (
+        <div
+            key={`thread-step-${threadStep.id ?? threadStep.step}`}
+            className={threadStepAt === 0 ? "" : messages[threadStepAt - 1].role === "assistant" ? "pt-1.5" : "pt-3.5"}
+            data-testid="thread-step"
+        >
+            <AskSpecialBubble avatarUrl={faceUrl}>{stepSection(threadStep, false)}</AskSpecialBubble>
+        </div>
+    ) : null;
     const specialSection = (message: AskMessage, special: AskSpecial) => {
         const shareLabel = sharedEarnedId === message.id ? labels.copied : labels.share;
         switch (special.kind) {
@@ -1780,28 +1853,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                 }
                 return <AskDoneSection key="done" xp={special.xp} step={special.step} words={words} shareLabel={shareLabel} onShare={() => shareCard(message.id, null)} />;
             }
-            case "step": {
-                const resolution = askStepResolution({stepSet: special.stepSet, openStep, loaded: loopLoaded, doneStepIds});
-                return (
-                    <AskStepSection
-                        key="step"
-                        text={special.stepSet.step}
-                        resolution={resolution}
-                        trialFrequency={special.stepSet.trialFrequency ?? null}
-                        speciesProfileId={companionSpeciesProfileId}
-                        name={speakerName}
-                        words={words}
-                        busy={stepBusyNow}
-                        problem={stepProblem}
-                        onPrimary={() => {
-                            if (resolution.kind === "live") stepPrimary(resolution.step);
-                        }}
-                        onOther={() => {
-                            if (resolution.kind === "live") stepOther(resolution.step);
-                        }}
-                    />
-                );
-            }
+            case "step":
+                // Only the newest reply that set the open step has its buttons.
+                return stepSection(special.stepSet, stepCarrierId !== null && stepCarrierId !== message.id);
             case "warmup":
                 return warmupOfferState === "hidden" ? null : (
                     <AskWarmupOfferSection
@@ -2160,6 +2214,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     speech.stop();
                                     sounds.stop();
                                     clear();
+                                    // A step still open shows again after the new hello; one already resolved goes with the thread.
+                                    setShownStep({threadKey, step: null});
                                     setConfirmingClear(false);
                                     composerRef.current?.focus();
                                 }}
@@ -2176,22 +2232,6 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             </button>
                         </div>
                     </div>
-                ) : null}
-
-                {openStep && showsPinnedStep && messenger && !showingBond && !showingMemory && !showingSoundCredits ? (
-                    // The open step, pinned while it is open, when the reply that set it
-                    // is not in the loaded thread (3.2): never a second card for it.
-                    <StepCard
-                        step={openStep}
-                        speciesProfileId={companionSpeciesProfileId}
-                        name={speakerName}
-                        words={words}
-                        variant="pinned"
-                        busy={stepBusyNow}
-                        problem={stepProblem}
-                        onPrimary={() => stepPrimary(openStep)}
-                        onOther={() => stepOther(openStep)}
-                    />
                 ) : null}
 
                 <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
@@ -2279,11 +2319,13 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
                                 {debateBlocks("top")}
-                                {messages.map((message, index) => (
+                                {messages.flatMap((message, index) => [
+                                    // The open step no reply here carries, where the conversation picks up.
+                                    index === threadStepAt ? threadStepMessage : null,
                                     <div
                                         key={message.id}
                                         // Tight between two messages from one side, wider when the other speaks.
-                                        className={index === 0 ? "" : messages[index - 1].role === message.role ? "pt-1.5" : "pt-3.5"}
+                                        className={index === 0 && threadStepAt !== 0 ? "" : (index === threadStepAt ? "assistant" : messages[index - 1].role) === message.role ? "pt-1.5" : "pt-3.5"}
                                     >
                                         {labelledIndices.has(index) ? (
                                             <AskTimeLabel
@@ -2326,7 +2368,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                         {debateBandAfter(message.id)}
                                         {debateBlocks(message.id)}
                                     </div>
-                                ))}
+                                ])}
+                                {threadStepAt === messages.length ? threadStepMessage : null}
                                 {debateBandAfter(null)}
                                 {messages.length === 0 && awaitingGreeting ? (
                                     <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />
