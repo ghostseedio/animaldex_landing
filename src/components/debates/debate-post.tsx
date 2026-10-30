@@ -35,7 +35,8 @@ export default function DebatePost({debate: seed, words, signedIn, pinned = fals
     const openings = debateOpenings(debate);
 
     return (
-        <article aria-label={words.debate.voteQuestion} className="flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain bg-black px-5 pb-28 pt-5 [scrollbar-width:none] lg:pb-6 [&::-webkit-scrollbar]:hidden">
+        // It scrolls inside its feed slot, and hands the swipe on to the feed at its edges.
+        <article data-feed-inner-scroll aria-label={words.debate.voteQuestion} className="flex h-full min-h-0 flex-col overflow-y-auto bg-black px-5 pb-28 pt-5 [scrollbar-width:none] lg:pb-6 [&::-webkit-scrollbar]:hidden">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary-200/85">{words.debate.voteQuestion}</p>
             {pinned && debate.rollovers > 0 ? <p className="mt-1 text-[11px] font-semibold text-amber-200/90">{words.debate.rollover}</p> : null}
             <h2 className="mt-2 font-display text-xl font-black leading-7 text-white">{debateHeadline(debate)}</h2>

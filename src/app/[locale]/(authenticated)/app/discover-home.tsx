@@ -774,6 +774,9 @@ export default function DiscoverHome({
     const handleTimelineWheel = useCallback((event: WheelEvent<HTMLElement>) => {
         const verticalDelta = event.deltaY;
         if (Math.abs(verticalDelta) < Math.max(6, Math.abs(event.deltaX))) return;
+        // A post that scrolls inside its slot (a debate) scrolls first, until its edge.
+        const inner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-feed-inner-scroll]") : null;
+        if (inner && (verticalDelta > 0 ? inner.scrollTop + inner.clientHeight < inner.scrollHeight - 1 : inner.scrollTop > 0)) return;
 
         event.preventDefault();
 
