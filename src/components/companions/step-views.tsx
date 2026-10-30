@@ -164,8 +164,10 @@ export function StepReportComposer({
             aria-label={words.journey.report.title}
             className={`fixed inset-0 flex items-end justify-center bg-black/70 md:items-center ${layer === "chat" ? "z-[72]" : "z-[60]"}`}
         >
-            <div className="flex max-h-[92vh] w-full max-w-lg flex-col border-t border-white/12 bg-canvas-950 md:border">
-                <header className="flex items-center gap-3 border-b border-white/10 px-5 py-3.5">
+            {/* Only the words scroll: the photo or video, the note under it and
+                the send button stay together, fully in view, above the keyboard. */}
+            <div className="flex max-h-[92dvh] w-full max-w-lg flex-col border-t border-white/12 bg-canvas-950 md:border">
+                <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-5 py-3.5">
                     <h2 className="min-w-0 flex-1 font-display text-lg font-black text-white">{words.journey.report.title}</h2>
                     <button
                         type="button"
@@ -176,7 +178,7 @@ export function StepReportComposer({
                         ✕
                     </button>
                 </header>
-                <div className="flex flex-col gap-4 overflow-y-auto px-5 py-4">
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4">
                     <label className="sr-only" htmlFor="step-report-text">{fillWords(words.journey.report.placeholder, {name})}</label>
                     <textarea
                         id="step-report-text"
@@ -186,8 +188,10 @@ export function StepReportComposer({
                         maxLength={1500}
                         autoFocus
                         placeholder={fillWords(words.journey.report.placeholder, {name})}
-                        className="min-h-[7rem] w-full resize-none border border-white/12 bg-white/[0.05] px-3.5 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400 focus:border-primary-300/45"
+                        className="min-h-[5.5rem] w-full resize-none border border-white/12 bg-white/[0.05] px-3.5 py-3 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400 focus:border-primary-300/45"
                     />
+                </div>
+                <div className="flex shrink-0 flex-col gap-3 px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3" data-testid="step-report-actions">
                     <div className="flex flex-col gap-2">
                         <input
                             ref={inputRef}
@@ -228,19 +232,20 @@ export function StepReportComposer({
                                 {words.journey.report.attach}
                             </button>
                         )}
-                        <p className="text-[11px] leading-4 text-white/50">{fillWords(words.journey.report.attachNote, {name})}</p>
+                        {/* Never clipped: it wraps in full, outside the scrolling words. */}
+                        <p className="whitespace-normal break-words text-[11px] leading-4 text-white/50">{fillWords(words.journey.report.attachNote, {name})}</p>
                     </div>
                     {problem ? <p role="alert" className="text-xs leading-5 text-white/70">{problem}</p> : null}
-                </div>
-                <div className="border-t border-white/10 px-5 py-3">
-                    <button
-                        type="button"
-                        onClick={() => void submit()}
-                        disabled={!ready}
-                        className="flex min-h-12 w-full items-center justify-center rounded-full bg-primary-400 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:bg-white/8 disabled:text-ink-400"
-                    >
-                        {sending ? sendingLabel : fillWords(words.journey.report.send, {name})}
-                    </button>
+                    <div className="border-t border-white/10 pt-3">
+                        <button
+                            type="button"
+                            onClick={() => void submit()}
+                            disabled={!ready}
+                            className="flex min-h-12 w-full items-center justify-center rounded-full bg-primary-400 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:bg-white/8 disabled:text-ink-400"
+                        >
+                            {sending ? sendingLabel : fillWords(words.journey.report.send, {name})}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

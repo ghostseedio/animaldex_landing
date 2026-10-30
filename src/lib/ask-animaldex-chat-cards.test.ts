@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {askReplyCards, decodeAskChatCard} from "@/lib/ask-animaldex/chat-cards";
 import {askReplyPieces} from "@/lib/ask-animaldex/thread-layout";
-import {createAskMessage, loadAskThreads, saveAskThreads, type AskThreadStorage} from "@/lib/ask-animaldex/thread";
+import {askStepCardMessageId, createAskMessage, loadAskThreads, saveAskThreads, type AskThreadStorage} from "@/lib/ask-animaldex/thread";
 
 const STEP = "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 
@@ -57,4 +57,19 @@ test("a report keeps its step through a reload, and a skipped card stays skipped
     assert.equal(restoredSaid.stepReportId, STEP);
     assert.equal(restoredAnswered.cardsDismissed, true);
     assert.equal(createAskMessage("user", "hi").stepReportId, undefined);
+});
+
+test("the open step's card is under the reply that set it when that reply is loaded; otherwise it is pinned", () => {
+    const set = createAskMessage("assistant", "Try this.", {companionEvent: {stepSet: {id: STEP, step: "Say it first"}}});
+    const later = createAskMessage("assistant", "And again.", {companionEvent: {stepSet: {id: STEP, step: "Say it first"}}});
+    const other = createAskMessage("assistant", "Something else.", {companionEvent: {stepSet: {id: "6e7f8091-2b3c-4d4e-9f0a-1b2c3d4e5f60", step: "Old"}}});
+    const asked = createAskMessage("user", "Help me speak up.");
+    // The newest reply that set it carries the card, so it shows once.
+    assert.equal(askStepCardMessageId([asked, set, later], STEP), later.id);
+    // Set in an earlier conversation, or trimmed away: no card in the thread, so it is pinned.
+    assert.equal(askStepCardMessageId([asked, other], STEP), null);
+    assert.equal(askStepCardMessageId([], STEP), null);
+    // A reply still arriving does not carry it yet; nor does no step at all.
+    assert.equal(askStepCardMessageId([{...set, status: "streaming"}], STEP), null);
+    assert.equal(askStepCardMessageId([set], null), null);
 });

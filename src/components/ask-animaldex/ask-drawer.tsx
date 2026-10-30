@@ -46,7 +46,7 @@ import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider
 import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex/use-reply-pacer";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
-import {askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
+import {askStepCardMessageId, askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
 import {WILD_PROFILE_PATH, isWildProfileFollowUp} from "@/lib/ask-animaldex/wild-profile";
 import {getLocalePath} from "@/lib/site";
@@ -1328,11 +1328,14 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
      * offered (never its own words: only its kind is read).
      */
     const stepBusyNow = stepBusy || (isSending && greetingState !== "loading");
+    // The open step's card is under the reply that set it, when that reply is
+    // in the loaded thread; only otherwise is it pinned at the top. Never both.
+    const stepCardMessageId = ownerChat ? askStepCardMessageId(messages, openStep?.id) : null;
+    const showsPinnedStep = Boolean(openStep) && stepCardMessageId === null;
     const replyBand = (message: AskMessage) => {
         if (!ownerChat || message.role !== "assistant" || message.status !== "complete") return null;
         if (pacer.messageId === message.id && pacer.revealing) return null;
-        const stepSet = message.companionEvent?.stepSet;
-        const step = openStep && stepSet?.id === openStep.id ? openStep : null;
+        const step = openStep && message.id === stepCardMessageId ? openStep : null;
         const cards = message.cardsDismissed ? [] : askReplyCards(message.text);
         if (!step && cards.length === 0) return null;
         return (
@@ -1681,8 +1684,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                     </div>
                 ) : null}
 
-                {openStep && messenger && !showingBond && !showingMemory && !showingSoundCredits && !trialPicker ? (
-                    // The open step, pinned while it is open (3.2).
+                {openStep && showsPinnedStep && messenger && !showingBond && !showingMemory && !showingSoundCredits && !trialPicker ? (
+                    // The open step, pinned while it is open, when the reply that set it
+                    // is not in the loaded thread (3.2): never a second card for it.
                     <StepCard
                         step={openStep}
                         speciesProfileId={companionSpeciesProfileId}
