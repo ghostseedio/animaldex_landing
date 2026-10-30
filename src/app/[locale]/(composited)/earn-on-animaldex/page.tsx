@@ -86,7 +86,7 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
                     {creditsAreNotCash}
                 </p>
                 <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-300 md:text-base">
-                    Score, Capture XP, Grade, Gifts, Packs, PvP stakes, and Credit Offers stay inside Credits. None of them become a bank transfer.
+                    Score, Capture XP, Grade, Gifts, Packs, debate wins, and Credit Offers stay inside Credits. None of them become a bank transfer.
                 </p>
             </section>
 
@@ -142,7 +142,7 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
                             `Referrals: +${earnFacts.referralInviterCredits} / +${earnFacts.referralInviteeCredits} after a friend’s first qualifying capture`,
                             `First wild species: +${earnFacts.firstWildSpeciesCredits} Credit each`,
                             `Sealed Packs: Credits after a ${earnFacts.packPlatformFeePercent}% platform fee`,
-                            "PvP / Arena stakes: Credits, never cash",
+                            "Public debates: the winning animal’s owner earns Credits, never cash",
                             "Credit Offers: user-to-user Credit escrow",
                             "Gifts: sender spends Credits; the recipient gets Capture XP, not cash"
                         ].map((item) => (

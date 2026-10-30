@@ -92,7 +92,7 @@ export default async function Home({params}: HomePageProps) {
     const rootSiteUrl = getSiteUrl();
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
-    const appSchemaDescription = "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Identify, collect and battle the animals you meet.";
+    const appSchemaDescription = "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Identify and collect the animals you meet, and hear them debate your real problems.";
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
@@ -226,7 +226,7 @@ export default async function Home({params}: HomePageProps) {
             "Custom animal card decks for pets, wildlife, and creator projects",
             "Albums, sets, missions, and progression",
             "Discovery feed for real animal sightings",
-            "Challenge, battle, and trading loops",
+            "Animal debates on your real problems, and trading",
             "Family-friendly animal learning",
             "Animal-inspired reflection and self-improvement prompts",
             "Respectful wildlife observation and habitat curiosity"

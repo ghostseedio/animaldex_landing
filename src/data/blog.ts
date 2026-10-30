@@ -3567,7 +3567,7 @@ const blogPostsData: BlogPost[] = [
             },
             {
                 question: "Can collecting still be meaningful if I am not competitive?",
-                answer: "Yes. You can focus on personal discovery, set completion, and better species recognition without using battle or trading loops."
+                answer: "Yes. You can focus on personal discovery, set completion, and better species recognition without using debates or trading."
             }
         ]
     },

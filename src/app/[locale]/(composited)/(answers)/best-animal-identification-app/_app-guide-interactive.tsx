@@ -13,7 +13,7 @@ const apps: Array<{name: string; values: Support[]}> = [
     {name: "PictureThis", values: ["no", "limited", "limited", "yes", "limited", "yes", "yes", "no", "yes", "no", "no", "limited", "yes", "no", "no", "no", "no", "no"]}
 ];
 
-const criteria = ["All animals", "Birds", "Insects", "Plants", "Offline", "Collection", "AI ID", "Community verification", "Education", "Progression", "Personal growth", "Free", "Premium", "Video ID", "Capture grading", "Animal stats", "Tiers & battles", "Where to find it"];
+const criteria = ["All animals", "Birds", "Insects", "Plants", "Offline", "Collection", "AI ID", "Community verification", "Education", "Progression", "Personal growth", "Free", "Premium", "Video ID", "Capture grading", "Animal stats", "Animal debates", "Where to find it"];
 
 const choices = [
     {label: "Identify birds", app: "Merlin Bird ID", reason: "Its bird-only focus, Sound ID, Photo ID and downloadable bird packs make it the specialist choice."},

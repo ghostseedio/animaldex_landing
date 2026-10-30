@@ -189,8 +189,8 @@
         },
         "competitors": {
           "title": "Gamers",
-          "tagline": "All animals are tiered for the arena",
-          "description": "Compare animals, battle traits and climb the rankings.",
+          "tagline": "Every animal has stats to compare",
+          "description": "Compare animals' stats, win public debates and climb the rankings.",
           "alt": "Two striking animals facing one another"
         }
       },
@@ -564,7 +564,7 @@
       "pause": "Pause",
       "play": "Play",
       "sectionTitle": "The five AnimalDex stats",
-      "sectionDescription": "The numbers behind every tier list, every battle and every card in your collection, and what each one says about the animal's lesson.",
+      "sectionDescription": "The numbers behind every tier list and every card in your collection, and what each one says about the animal's lesson.",
       "recordedTitle": "How AnimalDex records them",
       "recordedOne": "When an animal is identified in the app, its species gets one canonical stat profile: five whole numbers from 0 to 100 for a typical healthy adult in the wild. An unremarkable species sits near the middle of each scale, not near zero, and reference species anchor every score so the order stays biologically honest: no fish outsizes a whale, no beetle out-dominates a bear.",
       "recordedTwo": "Those base stats are the same for everyone. Your own capture can move away from them for real reasons, such as a zoo, farm or juvenile animal, but the species' numbers stay the species' numbers. They power the tier lists, battles and your collection, and they shape how each animal's lesson is meant to be lived.",
@@ -2099,7 +2099,7 @@
     "settingsActivityDetail": "Recent AnimalDex notifications and account activity.",
     "settingsConnectedServices": "Connected services",
     "overallScore": "Overall score",
-    "scoreFootnote": "Collection progress remains the foundation, with challenge wins adding controlled score on top.",
+    "scoreFootnote": "Collection progress is the foundation of this score.",
     "wildVsZooVsDomestic": "Wild vs zoo vs domestic",
     "noCapturesYet": "No captures yet",
     "settingWild": "Wild",
@@ -2240,7 +2240,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Talk to Any Animal, Then Collect It",
     "title": "AnimalDex",
-    "description": "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Then identify, collect and battle it.",
+    "description": "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Then identify and collect it, and hear animals debate your real problems.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
@@ -2274,7 +2274,7 @@
       "safari animal app",
       "species collecting game",
       "animal set collection game",
-      "animal battle app",
+      "animal debate app",
       "animal trading app",
       "Pokemon-like animal app",
       "Top Trumps-like animal app",

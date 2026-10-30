@@ -390,14 +390,15 @@ const useCaseData: UseCaseLanding[] = [
         ]
     },
     {
-        slug: "species-collecting-game-battles-trading-app",
-        shortLabel: "Battles & Trading",
-        title: "Species collecting game with battles and trading loops",
-        description: "AnimalDex combines real-animal collection with challenge, progression, and trading mechanics for users who want competitive energy without leaving the educational core.",
-        audience: "Competitive players, collectors, and strategy-oriented users",
-        updatedAt: "2026-04-09",
+        // 3.2's Debates replaced battles; the old battles URL redirects here (next.config.js).
+        slug: "species-collecting-game-debates-trading-app",
+        shortLabel: "Debates & Trading",
+        title: "Species collecting game with animal debates and trading",
+        description: "AnimalDex combines real-animal collection with progression, trading, and debates where your animals argue a real problem of yours, for users who want a game with stakes without leaving the educational core.",
+        audience: "Collectors, players who like progression, and strategy-oriented users",
+        updatedAt: "2026-10-30",
         searchIntents: [
-            "animal battle app",
+            "animal debate app",
             "animal trading app",
             "species collecting game",
             "animal grading app",
@@ -405,35 +406,35 @@ const useCaseData: UseCaseLanding[] = [
         ],
         keyActions: [
             "Train collection depth through missions and progression",
-            "Use stats and rarity to support challenge play",
+            "Bring a real problem and hear your animals debate it, each from how its kind lives",
             "Trade fairly while improving set completion",
-            "Keep real species learning inside competitive loops"
+            "Keep real species learning inside every loop"
         ],
         whyDifferent: [
-            "AnimalDex gives competitive users game depth while preserving real-world animal context.",
-            "Trading and challenge mechanics are tied to collectible progress and knowledge retention.",
+            "AnimalDex gives game-minded users depth while preserving real-world animal context.",
+            "Trading and debates are tied to collectible progress and to each animal's real lesson.",
             "The model supports excitement without reducing animals to empty tokens."
         ],
         sections: [
             {
-                title: "Competition with educational grounding",
+                title: "Debates grounded in how animals live",
                 paragraphs: [
-                    "AnimalDex introduces battle and trading energy for players who enjoy progression systems, but keeps species context and field-guide depth in the loop.",
-                    "This creates a rarer blend of meaningful competition and practical learning."
+                    "Once you have earned an animal's Power, it can debate a real problem of yours with other animals. Each argues its own way from its own life, a report sets out where each way fits and what it costs, and you pick one to try.",
+                    "In a public debate, animals from other people join and the community votes on the best way. The winning animal's owner earns Credits; nobody's real life is decided by the vote."
                 ]
             },
             {
                 title: "For strategy-minded collectors",
                 paragraphs: [
                     "Users can pursue rarity, set value, and mission progression while continuing to build recognition and animal-awareness skills.",
-                    "That balance helps AnimalDex appeal to both competitive and curiosity-driven audiences."
+                    "That balance helps AnimalDex appeal to both game-minded and curiosity-driven audiences."
                 ]
             }
         ],
         faq: [
             {
                 question: "Is AnimalDex only for competitive players?",
-                answer: "No. Competitive features are optional layers on top of scanning, collecting, and learning."
+                answer: "No. Public debates and trading are optional layers on top of scanning, collecting, and learning. Private debates, with only your own animals, are the default."
             },
             {
                 question: "Is this a fantasy creature game?",

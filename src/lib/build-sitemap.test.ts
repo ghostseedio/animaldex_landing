@@ -45,3 +45,16 @@ test("sitemap indexes the Indonesian homepage and localized qualities, not Engli
     assert.match(source, /published-seo-comparison-pages/);
     assert.doesNotMatch(source, /listMergedChallengeSitemapEntries/);
 });
+
+test("3.2: the sitemap lists no battle, arena or matchup pages, and the battles use case is the debates one", async () => {
+    const source = readFileSync(join(repoRoot, "src/lib/build-sitemap.ts"), "utf8");
+    assert.doesNotMatch(source, /\/app\/(arena|matchups|train)\b/);
+    assert.doesNotMatch(source, /battle/i);
+
+    const {useCases} = await import("@/data/use-cases");
+    assert.ok(useCases.every((entry) => !/battle|arena|matchup/i.test(`${entry.slug} ${entry.title} ${entry.shortLabel}`)));
+    assert.ok(useCases.some((entry) => entry.slug === "species-collecting-game-debates-trading-app"));
+
+    const config = readFileSync(join(repoRoot, "next.config.js"), "utf8");
+    assert.match(config, /species-collecting-game-battles-trading-app`,\s*destination: `\$\{prefix\}\/use-cases\/species-collecting-game-debates-trading-app`/);
+});

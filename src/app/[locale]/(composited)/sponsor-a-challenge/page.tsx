@@ -102,7 +102,7 @@ export default async function SponsorAChallengePage({params}: {params: {locale: 
                         In the app, a Sponsored Challenge is a time-boxed campaign. Collectors join at no cost, follow published rules, and complete an objective. Apple is not a sponsor of these Challenges.
                     </p>
                     <p className="mt-4 max-w-xl text-sm text-ink-400">
-                        This is not the public website’s animal-versus-animal comparison pages, and it is not Arena PvP with Credit stakes.
+                        This is not the public website’s animal-versus-animal comparison pages, and it is not the app’s debates.
                     </p>
                 </div>
                 <div>

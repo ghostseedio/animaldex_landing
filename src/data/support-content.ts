@@ -185,13 +185,13 @@ const en: SupportContent = {
             items: [
                 {
                     question: "How do I earn on AnimalDex?",
-                    answer: "There are two separate economies. Credits are a closed virtual currency from missions, qualified referrals, first-time wild species captures, Sealed Packs, PvP stakes, and Credit Offers. Earnings is the real-money ledger. Virtual Wildlife Guides will add a seller's share of each sale when buying opens. Creator Rewards is a company-funded program that is currently paused. Sponsored Challenge cash is not live. Credits cannot be withdrawn or converted into Earnings.",
+                    answer: "There are two separate economies. Credits are a closed virtual currency from missions, qualified referrals, first-time wild species captures, Sealed Packs, public debate wins, and Credit Offers. Earnings is the real-money ledger. Virtual Wildlife Guides will add a seller's share of each sale when buying opens. Creator Rewards is a company-funded program that is currently paused. Sponsored Challenge cash is not live. Credits cannot be withdrawn or converted into Earnings.",
                     linkHref: "/earn-on-animaldex",
                     linkLabel: "Ways to earn on AnimalDex"
                 },
                 {
                     question: "What are AnimalDex Credits?",
-                    answer: "Credits are AnimalDex's closed virtual currency. They pay for scans, field-guide unlocks, stat training, health restores, Packs, Gifts when enabled, and PvP stakes. You can earn free Credits from a starter grant, missions, qualified referrals, and first-time wild species captures. You can also buy Credit packs. Credits cannot be withdrawn, cashed out, or converted into Earnings.",
+                    answer: "Credits are AnimalDex's closed virtual currency. They pay for scans, field-guide unlocks, stat training, healing an animal's hearts, Packs, and Gifts when enabled. You can earn free Credits from a starter grant, missions, qualified referrals, and first-time wild species captures. You can also buy Credit packs. Credits cannot be withdrawn, cashed out, or converted into Earnings.",
                     linkHref: "/earn-on-animaldex",
                     linkLabel: "See Credits vs Earnings"
                 },
@@ -203,7 +203,7 @@ const en: SupportContent = {
                 },
                 {
                     question: "Are AnimalDex Credits worth real money?",
-                    answer: "No. Credits cannot be withdrawn, converted, or exchanged for Earnings. Buying Credits never creates a cash claim. Gift Credit prices never determine Creator Rewards. Sealed Packs and PvP pay in Credits only.",
+                    answer: "No. Credits cannot be withdrawn, converted, or exchanged for Earnings. Buying Credits never creates a cash claim. Gift Credit prices never determine Creator Rewards. Sealed Packs and public debates pay in Credits only.",
                     linkHref: "/earn-on-animaldex",
                     linkLabel: "Read the Credits vs Earnings explainer"
                 },

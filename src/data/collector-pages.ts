@@ -107,7 +107,6 @@ const collectorPageData: CollectorPageEntry[] = [
         searchIntents: [
             "Top Trumps animal game",
             "Top Trumps-like animal app",
-            "animal battle app",
             "animal grading app"
         ],
         sections: [

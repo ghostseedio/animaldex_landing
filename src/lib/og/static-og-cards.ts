@@ -140,9 +140,9 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
         title: "Identify breeds and their lookalikes",
         tiles: [art("german-shepherd", "German Shepherd"), art("siamese-cat", "Siamese Cat"), art("border-collie", "Border Collie")]
     },
-    "use-cases/species-collecting-game-battles-trading-app": {
-        kicker: "Use case · Battles",
-        title: "Collect species, battle and trade",
+    "use-cases/species-collecting-game-debates-trading-app": {
+        kicker: "Use case · Debates",
+        title: "Collect species, debate and trade",
         joiner: "vs",
         tiles: [art("african-lion", "Lion"), art("bengal-tiger", "Tiger")]
     },

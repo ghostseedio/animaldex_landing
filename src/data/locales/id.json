@@ -189,8 +189,8 @@
         },
         "competitors": {
           "title": "Gamer",
-          "tagline": "Semua hewan punya tier untuk arena",
-          "description": "Bandingkan hewan, adu trait, dan naik peringkat.",
+          "tagline": "Setiap hewan punya statistik untuk dibandingkan",
+          "description": "Bandingkan statistik hewan, menangkan debat publik, dan naik peringkat.",
           "alt": "Dua hewan yang saling berhadapan"
         }
       },
@@ -570,7 +570,7 @@
       "pause": "Jeda",
       "play": "Putar",
       "sectionTitle": "Lima stat AnimalDex",
-      "sectionDescription": "Angka di balik setiap tier list, setiap battle, dan setiap kartu di koleksimu, serta arti masing-masing untuk pelajaran hewan itu.",
+      "sectionDescription": "Angka di balik setiap tier list dan setiap kartu di koleksimu, serta arti masing-masing untuk pelajaran hewan itu.",
       "recordedTitle": "Cara AnimalDex mencatatnya",
       "recordedOne": "Saat seekor hewan teridentifikasi di aplikasi, spesiesnya mendapat satu profil stat kanonik: lima angka bulat dari 0 sampai 100 untuk individu dewasa yang sehat di alam liar. Spesies yang biasa saja berada di tengah skala, bukan di dekat nol, dan spesies acuan menjaga setiap skor agar urutannya tetap jujur secara biologis: tidak ada ikan yang lebih besar dari paus, tidak ada kumbang yang lebih dominan dari beruang.",
       "recordedTwo": "Stat dasar ini sama untuk semua orang. Tangkapanmu sendiri bisa bergeser karena alasan nyata, seperti hewan kebun binatang, ternak, atau anakan, tetapi angka spesiesnya tetap milik spesies itu. Stat ini menggerakkan tier list, battle, dan koleksimu, sekaligus membentuk cara pelajaran setiap hewan dijalani.",
@@ -2088,7 +2088,7 @@
     "settingsActivityDetail": "Notifikasi AnimalDex terbaru dan aktivitas akun.",
     "settingsConnectedServices": "Layanan terhubung",
     "overallScore": "Skor keseluruhan",
-    "scoreFootnote": "Progres koleksi tetap menjadi fondasi, dengan kemenangan tantangan menambah skor secara terkontrol.",
+    "scoreFootnote": "Progres koleksi adalah fondasi skor ini.",
     "wildVsZooVsDomestic": "Liar vs kebun binatang vs domestik",
     "noCapturesYet": "Belum ada capture",
     "settingWild": "Liar",
@@ -2259,7 +2259,7 @@
       "aplikasi safari",
       "game koleksi spesies",
       "game koleksi hewan",
-      "aplikasi battle hewan",
+      "aplikasi debat hewan",
       "aplikasi trade hewan",
       "observasi satwa liar yang penuh hormat",
       "koleksi hewan nyata"

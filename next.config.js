@@ -123,6 +123,12 @@ module.exports = withNextIntl({
                 {source: `${prefix}${from}`, destination: `${prefix}/wildlife-guides`, permanent: true},
                 {source: `${prefix}${from}/:path*`, destination: `${prefix}/wildlife-guides`, permanent: true}
             ])),
+            // 3.2: Debates replaced battles; the battles use case is the debates one.
+            ...["", "/id"].map((prefix) => ({
+                source: `${prefix}/use-cases/species-collecting-game-battles-trading-app`,
+                destination: `${prefix}/use-cases/species-collecting-game-debates-trading-app`,
+                permanent: true
+            })),
             ...reversedComparisonRedirects(),
             // "tiger vs cheetah" has no battle page yet; the speed matchup is the
             // closest published answer (Search Console, Oct 2026).

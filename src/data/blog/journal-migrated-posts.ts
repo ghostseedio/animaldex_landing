@@ -279,7 +279,7 @@ export const journalMigratedPosts: BlogPost[] = [
                     {label: "Grade that teaches", body: "A score for the photo, not the animal, rewards patience, distance and light rather than getting closer."}
                 ],
                 inlineLinks: [
-                    {text: "Species collecting game with battles and trading", slug: "species-collecting-game-battles-trading-app", href: "/use-cases/species-collecting-game-battles-trading-app"}
+                    {text: "Species collecting game with animal debates and trading", slug: "species-collecting-game-debates-trading-app", href: "/use-cases/species-collecting-game-debates-trading-app"}
                 ]
             },
             {
