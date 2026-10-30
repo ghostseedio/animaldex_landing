@@ -27,8 +27,9 @@ export async function loadDebatesEnabled(): Promise<boolean> {
     try {
         const viaRpc = await supabase.rpc("debates_enabled_v1");
         if (!viaRpc.error && typeof viaRpc.data === "boolean") return viaRpc.data;
-        if (!viaRpc.error && viaRpc.data && typeof viaRpc.data === "object" && "debates_enabled" in viaRpc.data) {
-            return (viaRpc.data as {debates_enabled?: unknown}).debates_enabled === true;
+        if (!viaRpc.error && viaRpc.data && typeof viaRpc.data === "object") {
+            const row = (Array.isArray(viaRpc.data) ? viaRpc.data[0] : viaRpc.data) as Record<string, unknown> | undefined;
+            if (row && ("debates_enabled" in row || "enabled" in row)) return (row.debates_enabled ?? row.enabled) === true;
         }
     } catch {
         // Try the flag rows below.
@@ -114,7 +115,8 @@ export async function readRosterOptIn(supabase: Supabase): Promise<boolean | nul
         const viaRpc = await supabase.rpc("debate_roster_v1");
         if (!viaRpc.error) {
             if (typeof viaRpc.data === "boolean") return viaRpc.data;
-            const row = viaRpc.data && typeof viaRpc.data === "object" ? viaRpc.data as Record<string, unknown> : null;
+            const data = Array.isArray(viaRpc.data) ? viaRpc.data[0] : viaRpc.data;
+            const row = data && typeof data === "object" ? data as Record<string, unknown> : null;
             if (row && "opted_in" in row) return row.opted_in === true;
         }
     } catch {

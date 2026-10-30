@@ -35,6 +35,13 @@
  * otherwise "Done together · +5 XP". The animal's `training` card is the
  * Warmup (no locks, the result sent as their message) and its `trial` card
  * opens "{name}'s Trials", where one can be made their step.
+ *
+ * 3.2 Debates (docs/debates/SPEC.md, sections 1 and 4): once the animal's
+ * Power is earned, its `debate` card ("Want to hear how other animals would
+ * handle this?") and "Compare with other animals" in the ••• menu open the
+ * debate sheet. A debate the chat started runs in the thread, where it was
+ * started, turn by turn with each animal's icon art, then its report band
+ * with "Try {name}'s way". Nothing of it shows while the server's switch is off.
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
@@ -109,6 +116,10 @@ import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type Ask
 import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
+import DebateSheet, {type DebateHost} from "@/components/debates/debate-sheet";
+import DebateThread from "@/components/debates/debate-thread";
+import {useMyDebates} from "@/components/debates/use-debates";
+import type {Debate} from "@/lib/debates";
 
 export type AskDrawerLabels = {
     title: string;
@@ -384,6 +395,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     // Report this reply: which reply, and how the report is going.
     const [reportTarget, setReportTarget] = useState<AskMessage | null>(null);
     const [reportState, setReportState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+    // 3.2 Debates: the debate sheet, from the animal's card or the ••• menu, or to approve a public draft.
+    const [debateSheet, setDebateSheet] = useState<{problem: string; messageId: string | null; approving: Debate | null} | null>(null);
 
     const threadKey = askThreadKey(subject);
     const hints = context?.hints ?? EMPTY_ASK_HINTS;
@@ -763,6 +776,10 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
+                if (debateSheet) {
+                    setDebateSheet(null);
+                    return;
+                }
                 if (reportTarget) {
                     setReportTarget(null);
                     return;
@@ -776,7 +793,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [close, confirmingClear, reportTarget]);
+    }, [close, confirmingClear, reportTarget, debateSheet]);
 
     useEffect(() => {
         if (hasConversation) return;
@@ -1258,6 +1275,57 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         });
     }, [companionSpeciesProfileId, setOpenStep, submit, words, trialPicker, updateMessage]);
 
+    // MARK: Debates (3.2)
+
+    // The debates this chat started, and the server's switch: every debate
+    // entry hides while it is off. Offered once the animal's Power is earned.
+    const hostCaptureId = ownerChat ? resolvedSubject.captureId ?? null : null;
+    const myDebates = useMyDebates({captureId: hostCaptureId, active: Boolean(hostCaptureId)});
+    const powerEarned = animalBond.bond?.power.earned === true;
+    const debatesOffered = Boolean(ownerChat && hostCaptureId && myDebates.enabled && powerEarned && !aboutTrial);
+    const debateHost: DebateHost | null = hostCaptureId ? {
+        captureId: hostCaptureId,
+        name: speakerName,
+        speciesProfileId: companionSpeciesProfileId,
+        powerEarned,
+        hearts: null
+    } : null;
+    const threadDebates = useMemo(() => (myDebates.enabled ? myDebates.debates : [])
+        .filter((debate) => debate.askerIsMe && debate.hostCaptureId === hostCaptureId && debate.status !== "cancelled")
+        .sort((a, b) => Date.parse(a.createdAt ?? "") - Date.parse(b.createdAt ?? "")), [myDebates.enabled, myDebates.debates, hostCaptureId]);
+    /** Each debate sits after the message it was started from: the newest one before it. */
+    const debatesAfter = useMemo(() => {
+        const placed = new Map<string, Debate[]>();
+        for (const debate of threadDebates) {
+            const at = Date.parse(debate.createdAt ?? "");
+            let anchor = Number.isFinite(at) ? "top" : messages[messages.length - 1]?.id ?? "top";
+            if (Number.isFinite(at)) {
+                for (const message of messages) if (Date.parse(message.createdAt) <= at) anchor = message.id;
+            }
+            placed.set(anchor, [...(placed.get(anchor) ?? []), debate]);
+        }
+        return placed;
+    }, [threadDebates, messages]);
+    /** The sheet, with the problem as they told it here (their latest message, or what the animal is helping with). */
+    const openDebateSheet = useCallback((messageId: string | null, approving: Debate | null = null) => {
+        speech.stop();
+        setShowingBond(false);
+        setShowingMemory(false);
+        setDebateSheet({problem: lastQuestion(messages) || companionLoop?.focus || "", messageId, approving});
+    }, [speech, messages, companionLoop?.focus]);
+    const debateBlocks = (anchor: string) => (debatesAfter.get(anchor) ?? []).map((debate) => (
+        <div key={debate.id} className="pt-3.5">
+            <DebateThread
+                seed={debate}
+                words={words}
+                typingLabel={labels.typing}
+                run
+                locale={locale}
+                onApprove={(draft) => openDebateSheet(null, draft)}
+            />
+        </div>
+    ));
+
     // Opened from the card's Bond tab with "I did it" or the Warmup: settled once
     // the loop (or the quiz) has been read. With no step open, nothing opens.
     const pendingActionRef = useRef<"report" | "warmup" | null>(null);
@@ -1374,6 +1442,9 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             setShowingMemory(false);
                             setTrialPicker({highlight, messageId: message.id});
                         }}
+                        debateOffered={debatesOffered}
+                        notNowLabel={labels.notNow}
+                        onDebate={() => openDebateSheet(message.id)}
                     />
                 ))}
             </>
@@ -1623,6 +1694,12 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                     icon: <BellIcon />,
                                     onSelect: toggleAnimalMuted
                                 }]),
+                                // 3.2 Debates: once its Power is earned, and while the server has them on.
+                                ...(debatesOffered ? [{
+                                    label: words.debate.start,
+                                    icon: <DebateIcon />,
+                                    onSelect: () => openDebateSheet(null)
+                                }] : []),
                                 // In the menu, as on iOS, so the header has room for the call.
                                 {
                                     label: labels.newConversation,
@@ -1818,6 +1895,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             />
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
+                                {debateBlocks("top")}
                                 {messages.map((message, index) => (
                                     <div
                                         key={message.id}
@@ -1861,6 +1939,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             } : null}
                                             spokenWord={speech.cursor?.messageId === message.id ? speech.cursor.word : null}
                                         />
+                                        {debateBlocks(message.id)}
                                     </div>
                                 ))}
                                 {messages.length === 0 && awaitingGreeting ? (
@@ -2104,6 +2183,24 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             setEarnedMoment(null);
                             if (media) URL.revokeObjectURL(media.url);
                         }}
+                    />
+                ) : null}
+                {debateSheet && debateHost ? (
+                    <DebateSheet
+                        host={debateHost}
+                        problem={debateSheet.problem}
+                        words={words}
+                        closeLabel={labels.close}
+                        optedIn={myDebates.optedIn}
+                        onOptedIn={myDebates.setOptedIn}
+                        approving={debateSheet.approving}
+                        onStarted={() => {
+                            // The debate now runs in the thread; its card has done its job.
+                            if (debateSheet.messageId) updateMessage(debateSheet.messageId, {cardsDismissed: true});
+                            setDebateSheet(null);
+                            scrollToLatest("smooth");
+                        }}
+                        onClose={() => setDebateSheet(null)}
                     />
                 ) : null}
                 {reportTarget ? (
@@ -2428,7 +2525,10 @@ function ChatOfferCard({
     disabled,
     onTakeWarmup,
     onSkip,
-    onTrials
+    onTrials,
+    debateOffered,
+    notNowLabel,
+    onDebate
 }: {
     card: AskChatCard;
     words: CompanionWords;
@@ -2439,8 +2539,38 @@ function ChatOfferCard({
     onTakeWarmup: () => void;
     onSkip: () => void;
     onTrials: (highlight: StepFrequency | null) => void;
+    /** 3.2 Debates: the Power is earned and the server has Debates on. */
+    debateOffered: boolean;
+    notNowLabel: string;
+    onDebate: () => void;
 }) {
     const shell = "-mx-4 mt-3 flex flex-col gap-2.5 border-y border-white/[0.1] bg-white/[0.03] px-4 py-3.5";
+    if (card.kind === "debate") {
+        // Offered once, never pushed: "Not now" puts it away.
+        if (!debateOffered) return null;
+        return (
+            <section className={shell} aria-label={words.debate.start} data-testid="debate-card">
+                <p className="text-sm leading-6 text-white">{words.debate.offer}</p>
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={onDebate}
+                        disabled={disabled}
+                        className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
+                    >
+                        {words.debate.start}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onSkip}
+                        className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
+                    >
+                        {notNowLabel}
+                    </button>
+                </div>
+            </section>
+        );
+    }
     if (card.kind === "training") {
         if (!warmup || !powerName) return null;
         return (
@@ -3191,4 +3321,5 @@ const RefreshIcon = () => icon(<path d="M15.5 10a5.5 5.5 0 1 1-1.9-4.2M15.5 4v3h
 const BellIcon = () => icon(<path d="M6 13.5V9a4 4 0 0 1 8 0v4.5l1.3 1.5H4.7ZM8.5 16.5a1.6 1.6 0 0 0 3 0" />);
 const FlagIcon = () => icon(<path d="M5 17V3.8m0 0h8.5l-1.6 3.1 1.6 3.1H5" />);
 const CalendarIcon = () => icon(<path d="M4.5 6h11v9.5h-11Zm0 3h11M8 4v3m4-3v3" />);
+const DebateIcon = () => icon(<path d="M3.5 5.5h8v5.5h-4.5L4.5 13v-2h-1Zm4.5 7.5v1.5h4.5l2.5 2v-2h1.5V8.5h-3.5" />);
 const SpeakerSmallIcon = () => icon(<path d="M3.5 8v4h3l4 3.5v-11l-4 3.5Zm10-1.5a4.5 4.5 0 0 1 0 7" />);

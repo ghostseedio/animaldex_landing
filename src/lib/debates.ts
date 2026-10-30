@@ -50,12 +50,14 @@ export type DebateParticipant = {
     ownerIsMe: boolean;
     /** Public: its votes so far. */
     votes: number | null;
+    /** Its hearts now, when the server says. */
+    hearts: number | null;
     heartLost: boolean;
     creditsWon: number;
     xpAwarded: number;
 };
 
-export type DebateTurn = {seat: number; phase: DebatePhase; text: string; createdAt: string | null};
+export type DebateTurn = {seat: number; phase: DebatePhase; text: string; createdAt: string | null; index: number | null};
 
 /** Each animal's way in the report: what it would do, the lesson behind it, where it fits, what it costs. */
 export type DebateReportWay = {
@@ -103,6 +105,8 @@ export type Debate = {
     canVote: boolean;
     /** Why not, as the server says it (`own_debate`, `not_eligible`, `voting_closed`, `already_voted`). */
     voteBlockedCode: string | null;
+    /** The way the asker chose to try (private; never a vote). */
+    chosenParticipantId: string | null;
 };
 
 /** One row of `debate_candidates_v1`. */
@@ -282,6 +286,10 @@ export function decodeDebateParticipant(raw: unknown, index = 0): DebateParticip
         isAskerOwned: bool(first(row, "is_asker_owned", "isAskerOwned")),
         ownerIsMe: bool(first(row, "owner_is_me", "ownerIsMe", "is_mine")),
         votes: int(first(row, "votes", "vote_count", "votes_count")),
+        hearts: (() => {
+            const hearts = int(first(row, "hearts", "challenge_health"));
+            return hearts === null ? null : clampHearts(hearts);
+        })(),
         heartLost: bool(first(row, "heart_lost", "heartLost")),
         creditsWon: Math.max(0, int(first(row, "credits_won", "creditsWon")) ?? 0),
         xpAwarded: Math.max(0, int(first(row, "xp_awarded", "xpAwarded")) ?? 0)
@@ -293,9 +301,9 @@ export function decodeDebateTurn(raw: unknown): DebateTurn | null {
     if (!row) return null;
     const seat = int(row.seat);
     const phase = phaseOf(row.phase);
-    const said = text(first(row, "text", "content"));
+    const said = text(first(row, "text", "content", "body"));
     if (seat === null || !phase || !said) return null;
-    return {seat, phase, text: said, createdAt: isoDate(first(row, "created_at", "createdAt"))};
+    return {seat, phase, text: said, createdAt: isoDate(first(row, "created_at", "createdAt")), index: int(first(row, "turn_index", "index"))};
 }
 
 export function decodeDebateReport(raw: unknown): DebateReport | null {
@@ -308,7 +316,7 @@ export function decodeDebateReport(raw: unknown): DebateReport | null {
         if (!said) return [];
         return [{
             seat: int(way.seat),
-            participantId: debateUuid(first(way, "participant_id", "participantId")),
+            participantId: debateUuid(first(way, "participant_id", "participantId", "id")),
             captureId: debateUuid(first(way, "capture_id", "captureId")),
             way: said,
             lesson: firstText(way, "lesson", "why", "lesson_behind"),
@@ -317,7 +325,7 @@ export function decodeDebateReport(raw: unknown): DebateReport | null {
         }];
     });
     const problem = firstText(row, "problem", "problem_line", "summary");
-    const tryFirst = firstText(row, "try_first", "tryFirst", "first_try", "first_step");
+    const tryFirst = firstText(row, "try_first", "tryFirst", "first_try", "first_step", "try");
     if (!problem && ways.length === 0 && !tryFirst) return null;
     return {problem, ways, tryFirst};
 }
@@ -336,7 +344,7 @@ export function decodeDebate(raw: unknown): Debate | null {
     const turns = list(first(row, "turns") ?? outer?.turns)
         .map(decodeDebateTurn)
         .filter((item): item is DebateTurn => item !== null);
-    const votes = object(first(row, "votes", "vote_counts"));
+    const votes = object(first(row, "vote_counts", "votes"));
     // Vote counts may come as their own map (participant id → n).
     const counted = votes
         ? participants.map((participant) => ({...participant, votes: int(votes[participant.id]) ?? participant.votes}))
@@ -344,7 +352,7 @@ export function decodeDebate(raw: unknown): Debate | null {
     const summed = counted.some((participant) => participant.votes !== null)
         ? counted.reduce((sum, participant) => sum + (participant.votes ?? 0), 0)
         : null;
-    const myVote = debateUuid(first(row, "my_vote", "myVote", "viewer_vote", "my_vote_participant_id"))
+    const myVote = debateUuid(first(row, "my_vote", "myVote", "viewer_vote", "my_vote_participant_id", "voted_participant_id"))
         ?? (object(row.my_vote) ? debateUuid(object(row.my_vote)!.participant_id) : null);
     return {
         id,
@@ -352,8 +360,8 @@ export function decodeDebate(raw: unknown): Debate | null {
         status: debateStatus(row.status) ?? "debating",
         hostCaptureId: debateUuid(first(row, "host_capture_id", "hostCaptureId")) ?? counted.find((participant) => participant.seat === 0)?.captureId ?? null,
         askerIsMe: bool(first(row, "asker_is_me", "askerIsMe", "is_asker")),
-        problemPrivate: firstText(row, "problem_private", "problemPrivate"),
-        problemPublic: firstText(row, "problem_public", "problemPublic", "public_text", "draft_public_text"),
+        problemPrivate: firstText(row, "problem_private", "problemPrivate", "problem"),
+        problemPublic: firstText(row, "problem_public", "problemPublic", "public_text", "draft_public", "draft_public_text"),
         participants: counted,
         turns,
         report: decodeDebateReport(first(row, "report") ?? outer?.report),
@@ -364,10 +372,11 @@ export function decodeDebate(raw: unknown): Debate | null {
         winnerParticipantId: debateUuid(first(row, "winner_participant_id", "winnerParticipantId")),
         createdAt: isoDate(first(row, "created_at", "createdAt")),
         settledAt: isoDate(first(row, "settled_at", "settledAt")),
-        totalVotes: int(first(row, "total_votes", "totalVotes", "vote_count")) ?? summed,
+        totalVotes: int(first(row, "total_votes", "totalVotes", "vote_count")) ?? (typeof row.votes === "number" ? int(row.votes) : null) ?? summed,
         myVote,
         canVote: bool(first(row, "can_vote", "canVote")),
-        voteBlockedCode: firstText(row, "vote_blocked", "cannot_vote_reason", "vote_blocked_reason")
+        voteBlockedCode: firstText(row, "cant_vote_reason", "vote_block", "vote_blocked", "cannot_vote_reason", "vote_blocked_reason"),
+        chosenParticipantId: debateUuid(first(row, "chosen_participant_id", "asker_choice", "chosenParticipantId"))
     };
 }
 
@@ -383,7 +392,7 @@ export function decodeDebateCandidates(raw: unknown): DebateCandidate[] {
     const seen = new Set<string>();
     return rows.flatMap((item): DebateCandidate[] => {
         const row = object(item);
-        const captureId = row ? debateUuid(first(row, "capture_id", "captureId")) : null;
+        const captureId = row ? debateUuid(first(row, "capture_id", "captureId", "id")) : null;
         if (!row || !captureId || seen.has(captureId)) return [];
         seen.add(captureId);
         const animalRow = object(row.animal);
@@ -400,7 +409,7 @@ export function decodeDebateCandidates(raw: unknown): DebateCandidate[] {
             powerName: firstText(row, "power_name", "powerName"),
             powerLesson: firstText(row, "power_lesson", "powerLesson"),
             hearts: int(first(row, "hearts", "challenge_health")),
-            fits: bool(row.fits)
+            fits: bool(first(row, "fits", "suggested"))
         }];
     });
 }
@@ -408,9 +417,8 @@ export function decodeDebateCandidates(raw: unknown): DebateCandidate[] {
 export function decodeDebateWayChoice(raw: unknown): DebateWayChoice | null {
     const row = object(raw);
     if (!row) return null;
-    const source = row.step_source === "own_animal" || row.stepSource === "own_animal"
-        ? "own_animal"
-        : row.step_source === "host" || row.stepSource === "host" ? "host" : null;
+    const said = String(first(row, "step_source", "stepSource", "source") ?? "").toLowerCase();
+    const source = said === "own_animal" ? "own_animal" : said === "host" ? "host" : null;
     if (!source) return null;
     return {
         stepSource: source,
@@ -449,6 +457,7 @@ export function orderedDebateTurns(turns: DebateTurn[]): DebateTurn[] {
     return turns
         .map((turn, index) => ({turn, index}))
         .sort((a, b) => {
+            if (a.turn.index !== null && b.turn.index !== null && a.turn.index !== b.turn.index) return a.turn.index - b.turn.index;
             const at = a.turn.createdAt ? Date.parse(a.turn.createdAt) : Number.NaN;
             const bt = b.turn.createdAt ? Date.parse(b.turn.createdAt) : Number.NaN;
             if (Number.isFinite(at) && Number.isFinite(bt) && at !== bt) return at - bt;

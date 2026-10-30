@@ -34,7 +34,7 @@ import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import type {AskReportChoice} from "@/lib/ask-animaldex/report";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pacer";
-import {useAskGroupDirector} from "@/components/animal-group-chat/use-group-director";
+import {useAskGroupDirector} from "@/components/ask-animaldex/use-group-director";
 import {useCompanionCards, useCompanions} from "@/components/companions/use-companions";
 import {groupSpeciesTaken, onePerSpecies, toggleGroupPick, type CompanionCard} from "@/lib/companion-cards";
 import {companionSummaryName, type CompanionSummary, type CompanionWords} from "@/lib/companion-bond";

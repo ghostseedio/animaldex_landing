@@ -5,6 +5,9 @@
  *   ```animaldex-card
  *   {"kind":"training", ...}   → the Warmup: Take the warmup (+5 XP) / Skip
  *   {"kind":"trial","frequency":"MID", ...} → "{name}'s Trials", a picker
+ *   {"kind":"debate", ...}   → 3.2 Debates (docs/debates/SPEC.md, section 1.1):
+ *                              "Want to hear how other animals would handle
+ *                              this?" and "Compare with other animals"
  *   ```
  *
  * Only the kind (and a Trial's frequency) is read: the card's words are the
@@ -19,7 +22,8 @@ export const ASK_CHAT_CARD_LANGUAGE = "animaldex-card";
 
 export type AskChatCard =
     | {kind: "training"}
-    | {kind: "trial"; frequency: StepFrequency | null};
+    | {kind: "trial"; frequency: StepFrequency | null}
+    | {kind: "debate"};
 
 export function decodeAskChatCard(payload: string): AskChatCard | null {
     let parsed: unknown;
@@ -33,6 +37,7 @@ export function decodeAskChatCard(payload: string): AskChatCard | null {
     const kind = typeof row.kind === "string" ? row.kind.trim().toLowerCase() : "";
     if (kind === "training" || kind === "warmup") return {kind: "training"};
     if (kind === "trial" || kind === "trials") return {kind: "trial", frequency: stepFrequency(row.frequency)};
+    if (kind === "debate") return {kind: "debate"};
     return null;
 }
 
