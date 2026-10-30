@@ -15,6 +15,9 @@ import {
     passwordChangeProblem
 } from "@/lib/account-settings";
 import {connectionStatusLabel, INSTAGRAM_IMPORT_PATH, type ExternalImportConnectionRow} from "@/lib/instagram-import";
+import {setDebateRoster} from "@/components/debates/use-debates";
+import {debateProblemText} from "@/lib/debate-words";
+import type {CompanionWords} from "@/lib/companion-bond";
 import {
     SelectedMark,
     SettingsActionRow,
@@ -42,7 +45,7 @@ async function postSetting(body: Record<string, unknown>) {
 
 const SOUND_KEY = "animaldex.soundEffectsEnabled";
 
-/** iOS "Sound Effects": the web's matchup sounds read the same switch. */
+/** iOS "Sound Effects": the web's own sounds read the same switch. */
 export function SoundEffectsRow() {
     const [enabled, setEnabled] = useState(true);
     useEffect(() => {
@@ -66,6 +69,42 @@ export function SoundEffectsRow() {
                 }
             }}
         />
+    );
+}
+
+/**
+ * 3.2 Debates (docs/debates/SPEC.md, section 4): "Let my animals join public
+ * debates", off by default. Only animals with their Power earned join; each
+ * debate puts a heart on it. The server's answer is what shows.
+ */
+export function DebateRosterSection({initial, words}: {initial: boolean | null; words: CompanionWords}) {
+    const [optedIn, setOptedIn] = useState(initial === true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    return (
+        <SettingsSection title={words.debates.tab.toUpperCase()} footer={error ?? undefined}>
+            <SettingsToggleRow
+                icon={SettingsIcons.people}
+                title={words.roster.optIn}
+                subtitle={words.roster.optInNote}
+                checked={optedIn}
+                disabled={saving}
+                onChange={(next) => {
+                    setOptedIn(next);
+                    setSaving(true);
+                    setError(null);
+                    void setDebateRoster(next).then((result) => {
+                        setSaving(false);
+                        if (result.ok) {
+                            setOptedIn(result.value);
+                        } else {
+                            setOptedIn(!next);
+                            setError(debateProblemText(result.code, words));
+                        }
+                    });
+                }}
+            />
+        </SettingsSection>
     );
 }
 

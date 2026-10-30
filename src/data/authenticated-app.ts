@@ -127,6 +127,8 @@ export type AppNotification = {
     comparisonSlug: string | null;
     campaignId: string | null;
     challengeId: string | null;
+    /** 3.2 Debates: the debate a `debate_*` row is about (joined, settled, drawn). */
+    debateId: string | null;
     eventType: string;
     likeCount: number | null;
     endorsedStat: string | null;
@@ -679,26 +681,17 @@ export async function getAuthenticatedAppShellData() {
         };
     }
 
-    const fullSelect = "id,capture_id,actor_user_id,actor_display_name,actor_username,trade_offer_id,credit_offer_id,comparison_slug,campaign_id,challenge_id,event_type,like_count,endorsed_stat,gift_slug,subject_animal_name,subject_animaldex_number,source_key,title,body,created_at,read_at";
-    const fallbackSelect = "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at";
-
-    const [profileRow, notificationsResult, unreadMessageCount, creditBalance] = await Promise.all([
+    const [profileRow, notifications, unreadMessageCount, creditBalance] = await Promise.all([
         session.supabase
             .from("profiles")
             .select("display_name,username,avatar_url")
             .eq("id", session.user.id)
             .maybeSingle(),
-        session.supabase.from("user_notifications")
-            .select(fullSelect)
-            .order("created_at", {ascending: false})
-            .limit(40),
+        selectNotificationRows(session.supabase, 40),
         getDirectMessageUnreadCountForUser(session.supabase, session.user.id),
         getAppCreditBalance(session)
     ]);
 
-    const notifications = notificationsResult.error
-        ? ((await session.supabase.from("user_notifications").select(fallbackSelect).order("created_at", {ascending: false}).limit(40)).data ?? [])
-        : (notificationsResult.data ?? []);
 
     return {
         context: {
@@ -1093,6 +1086,20 @@ export async function getAppSponsoredCampaigns(): Promise<AppSponsoredCampaign[]
     });
 }
 
+const NOTIFICATION_SELECT = "id,capture_id,actor_user_id,actor_display_name,actor_username,trade_offer_id,credit_offer_id,comparison_slug,campaign_id,challenge_id,event_type,like_count,endorsed_stat,gift_slug,subject_animal_name,subject_animaldex_number,source_key,title,body,created_at,read_at";
+
+/**
+ * The reader's notifications, newest first: with `debate_id` (3.2 Debates),
+ * else without it until that column is live, else the oldest columns.
+ */
+async function selectNotificationRows(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, limit: number): Promise<QueryRow[]> {
+    for (const columns of [`${NOTIFICATION_SELECT},debate_id`, NOTIFICATION_SELECT, "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at"]) {
+        const {data, error} = await supabase.from("user_notifications").select(columns).order("created_at", {ascending: false}).limit(limit);
+        if (!error) return (data ?? []) as unknown as QueryRow[];
+    }
+    return [];
+}
+
 function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
     return rows.map((row) => ({
         id: row.id,
@@ -1105,6 +1112,7 @@ function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
         comparisonSlug: row.comparison_slug ?? null,
         campaignId: row.campaign_id ?? null,
         challengeId: row.challenge_id ?? null,
+        debateId: row.debate_id ?? null,
         eventType: row.event_type,
         likeCount: row.like_count ?? null,
         endorsedStat: row.endorsed_stat ?? null,
@@ -1122,15 +1130,7 @@ function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
 export async function getAppNotifications(limit = 40): Promise<AppNotification[]> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
-    const fullSelect = "id,capture_id,actor_user_id,actor_display_name,actor_username,trade_offer_id,credit_offer_id,comparison_slug,campaign_id,challenge_id,event_type,like_count,endorsed_stat,gift_slug,subject_animal_name,subject_animaldex_number,source_key,title,body,created_at,read_at";
-    const fallbackSelect = "id,capture_id,trade_offer_id,credit_offer_id,event_type,like_count,endorsed_stat,created_at,read_at";
-    const result = await supabase.from("user_notifications")
-        .select(fullSelect)
-        .order("created_at", {ascending: false}).limit(limit);
-    const {data} = result.error
-        ? await supabase.from("user_notifications").select(fallbackSelect).order("created_at", {ascending: false}).limit(limit)
-        : result;
-    return mapAppNotificationRows((data ?? []) as QueryRow[]);
+    return mapAppNotificationRows(await selectNotificationRows(supabase, limit));
 }
 
 export async function getAppDiscoverFeed(limit = 18): Promise<AppDiscoverItem[]> {

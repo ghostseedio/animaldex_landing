@@ -1,5 +1,5 @@
 import {redirect} from "next/navigation";
-import {InstagramRow, SoundEffectsRow} from "@/app/[locale]/(authenticated)/app/settings/_components/settings-client";
+import {DebateRosterSection, InstagramRow, SoundEffectsRow} from "@/app/[locale]/(authenticated)/app/settings/_components/settings-client";
 import {
     SettingsDivider,
     SettingsIcons,
@@ -7,6 +7,9 @@ import {
     SettingsSection
 } from "@/app/[locale]/(authenticated)/app/settings/_components/settings-ui";
 import {getSettingsOverview} from "@/data/account-settings";
+import {loadDebatesEnabled, readRosterOptIn} from "@/data/debates";
+import {getCompanionWords} from "@/loaders/companion-words";
+import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {accountStandingValue, currencySelectionLabel, locationVisibilityTitle, missionsSubtitle} from "@/lib/account-settings";
 import {getLocalePath} from "@/lib/site";
 import {appStoreUrl} from "@/lib/store-links";
@@ -26,6 +29,10 @@ const LANGUAGE_NAMES: Record<string, string> = {en: "English", id: "Bahasa Indon
 export default async function SettingsPage({params}: {params: {locale: string}}) {
     const overview = await getSettingsOverview();
     if (!overview) redirect(getLocalePath(params.locale, "/account"));
+    // 3.2 Debates: the public roster opt-in, while the server has Debates on.
+    const supabase = createSupabaseServerClient();
+    const [debatesEnabled, words] = await Promise.all([loadDebatesEnabled(), getCompanionWords(params.locale)]);
+    const optedIn = debatesEnabled && supabase ? await readRosterOptIn(supabase) : null;
 
     const anyPush = Object.values(overview.push).some(Boolean);
 
@@ -58,6 +65,8 @@ export default async function SettingsPage({params}: {params: {locale: string}})
                 <SettingsDivider />
                 <SoundEffectsRow />
             </SettingsSection>
+
+            {debatesEnabled ? <DebateRosterSection initial={optedIn} words={words} /> : null}
 
             <SettingsSection title="PRIVACY & DATA">
                 <SettingsNavigationRow href="/app/settings/location-privacy" icon={SettingsIcons.location} title="Location Privacy" value={locationVisibilityTitle(overview.locationVisibility)} />

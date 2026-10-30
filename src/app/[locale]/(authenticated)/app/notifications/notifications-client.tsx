@@ -6,7 +6,23 @@ import {AppBadge, AppListRow} from "@/app/[locale]/(authenticated)/app/_componen
 import type {AppNotification} from "@/data/authenticated-app";
 import {formatAppShortDate} from "@/lib/app-dates";
 
-function copy(item: AppNotification) {
+/** The Debates words a row falls back on when the server sent none. */
+export type NotificationDebateWords = {title: string; joined: string; settled: string; draw: string};
+
+/** 3.2 Debates replaced battles: an old battle row is no longer listed (as on iOS). */
+export function listedNotification(item: Pick<AppNotification, "eventType">): boolean {
+    return !item.eventType.startsWith("battle_");
+}
+
+function copy(item: AppNotification, debate: NotificationDebateWords) {
+    if (item.eventType.startsWith("debate_")) {
+        // "Your animal joined a public debate", or how one went: written when it is sent.
+        return {
+            title: item.serverTitle || debate.title,
+            detail: item.serverBody || (item.eventType === "debate_joined" ? debate.joined : item.eventType === "debate_draw" ? debate.draw : debate.settled),
+            icon: "debate" as const
+        };
+    }
     if (item.serverTitle || item.serverBody) {
         return {
             title: item.serverTitle || "AnimalDex update",
@@ -20,9 +36,6 @@ function copy(item: AppNotification) {
     if (item.eventType.startsWith("campaign_")) {
         const label = item.eventType.replace("campaign_", "").replaceAll("_", " ");
         return {title: `Sponsored challenge ${label}`, detail: "Open the campaign to review progress and rewards.", icon: "arena" as const};
-    }
-    if (item.eventType.startsWith("battle_")) {
-        return {title: "Arena battle update", detail: "Open Arena to review the latest round.", icon: "arena" as const};
     }
     if (item.eventType === "capture_gift_received") {
         return {title: "Your capture received a Gift", detail: "Open the capture to see the community support.", icon: "spark" as const};
@@ -58,8 +71,9 @@ function copy(item: AppNotification) {
 }
 
 function notificationHref(item: AppNotification) {
+    // The debate push and row open the debate (3.2).
+    if (item.eventType.startsWith("debate_")) return item.debateId ? `/app/debates/${encodeURIComponent(item.debateId)}` : "/app/debates";
     if (item.tradeOfferId || item.creditOfferId) return "/app/trades";
-    if (item.challengeId) return "/app/arena";
     if (item.captureId) return `/app/capture/${encodeURIComponent(item.captureId)}`;
     if (item.campaignId) return "/app/missions";
     if (item.comparisonSlug?.trim()) return `/challenges/${encodeURIComponent(item.comparisonSlug.trim())}`;
@@ -69,8 +83,8 @@ function notificationHref(item: AppNotification) {
     return "/app/notifications";
 }
 
-export default function NotificationsClient({items, locale}: {items: AppNotification[]; locale: string}) {
-    const [notifications, setNotifications] = useState(items);
+export default function NotificationsClient({items, locale, debateWords}: {items: AppNotification[]; locale: string; debateWords: NotificationDebateWords}) {
+    const [notifications, setNotifications] = useState(() => items.filter(listedNotification));
 
     useEffect(() => {
         if (!items.some((item) => !item.readAt)) return;
@@ -82,7 +96,7 @@ export default function NotificationsClient({items, locale}: {items: AppNotifica
     return (
         <div className="mx-auto max-w-3xl space-y-3">
             {notifications.map((item) => {
-                const text = copy(item);
+                const text = copy(item, debateWords);
                 const href = notificationHref(item);
                 return (
                     <AppListRow
