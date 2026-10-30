@@ -32,7 +32,7 @@ export const FUSED_COPY = {
     applyItYourWay: "Apply It Your Way",
     earnedLine: "Power earned · Boost on",
     finishSentence: "Train it, then prove it. Its boost switches on when it's earned.",
-    repeatLine: "Battles repeat as often as you like. Each fused Power brings its own Training and Trial, so the loop starts again.",
+    repeatLine: "Each fused Power brings its own Training and Trial, so the loop starts again.",
     fusionResultLine: "Its boost switches on after its Training and Trial.",
     notReady: "This Power isn't ready yet. Try again in a minute.",
     trainingRequired: "Pass this Power's lesson check first.",

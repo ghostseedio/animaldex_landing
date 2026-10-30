@@ -71,7 +71,7 @@ type CaptureDetailClientProps = {
     principle?: AnimalStoryPrinciple | null;
     rankings?: ReactNode;
     nativeRange?: ReactNode;
-    /** Comparisons and Fusion, for the Battle tab. */
+    /** Fusion, for the Stats tab (3.2: the old Battle tab). */
     play?: ReactNode;
     /** The bond's words (the Bond tab, the level chip, Talk to it), in the reader's language. */
     companionWords?: CompanionWords;
