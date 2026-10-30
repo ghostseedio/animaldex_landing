@@ -47,9 +47,9 @@ export function askDebateTurnInstruction(params: {plan: AskDebatePlan; words: nu
     }
 }
 
-/** How long a debate turn may be: an opening has room, a close is one line. */
+/** How long a debate turn may be (the apps' `debateWordBudget`): big animals (small persona budgets) say less. */
 export function askDebateWordBudget(phase: AskDebatePlan["phase"], personaWordBudget: number): number {
-    const base = {open: 55, react: 36, close: 18}[phase];
+    const base = {open: 60, react: 40, close: 22}[phase];
     const scale = 0.7 + 0.3 * Math.min(1, Math.max(0, personaWordBudget - 35) / 60);
-    return Math.max(10, Math.round(base * scale));
+    return Math.max(12, Math.round(base * scale));
 }

@@ -1,21 +1,23 @@
 /**
  * A debate's turns (docs/debates/SPEC.md, section 1.3), on the group
- * conversation engine's frames: every animal opens with its verdict, then
- * each answers the others once, then each closes in one line. No converge
- * and no decide: no animal decides for the person. At most three turns per
- * animal, in seat order (seat 0 is the host).
+ * conversation engine's frames: every animal opens with its own way (the host
+ * first), then each answers the others once (the host first), then each
+ * closes in a line (the host last, since the thread is its chat). No converge
+ * and no decide: no animal decides for the person. Three turns per animal.
  *
- * The schedule and the stream only. What each turn is told is
- * `debate-rules.ts`; each finished turn is handed to `onTurn` to be kept
- * (`debate_record_turn`, idempotent on its index: a turn's index is its place
- * in the schedule, so a debate picked up again never writes one twice), and
- * `finish` moves it on to its report before the last frame.
+ * Port of the plan and the stream of the apps' `_shared/animal-debate.ts`
+ * (AnimalDex r32d-server 0021b8b2, e97df917): the same sequence, the same
+ * resume from saved turns, one more try for a turn that came back empty, and
+ * two counters, the stream's frame index (a failed try uses one) and the
+ * saved `turn_index` (only a turn that was said takes one). What each turn is
+ * told is `debate-rules.ts`.
  *
- * Frames, as the group conversation's, so the page reads them with the same
- * parser: {flow:"debate", speakers} · {turn:{index, participant, seat, phase,
- * reply_to, persona}} · {participant, turn_index, delta} · {participant,
- * turn_index, participant_done} · {participant, turn_index, error} · {done,
- * turns, ...finish()}.
+ * Frames, as the apps': {flow:"debate", debate_id, speakers} · {turn:{index,
+ * participant, seat, phase, reply_to, persona}} · {participant, turn_index,
+ * delta} · {participant, turn_index, participant_done} · {participant,
+ * turn_index, error} · {report_pending} · {report} | {report_error} ·
+ * {done, debate, turns}. Turns already said are not replayed: the page shows
+ * them from `debate_v1`.
  */
 
 import {splitStreamedReply} from "@/lib/ask-animaldex/prompt";
@@ -28,106 +30,106 @@ export type AskDebatePlan = {
     /** Which seat speaks. */
     seat: number;
     phase: AskDebatePhase;
-    /** The seat this turn answers; null for an opening or a close. */
+    /** The seat this turn answers (react only); null for the person. */
     replyTo: number | null;
 };
 
 export type AskDebateTurn = {seat: number; phase: AskDebatePhase; text: string};
 
-/** A turn's index: its place in the schedule. */
-export function askDebateTurnIndex(schedule: AskDebatePlan[], plan: Pick<AskDebatePlan, "seat" | "phase">): number {
-    return schedule.findIndex((entry) => entry.seat === plan.seat && entry.phase === plan.phase);
-}
-
-/**
- * The whole debate, in order: everyone opens, everyone reacts once (each to
- * the animal who spoke just before, the host to the last opener), everyone
- * closes. Two animals: six turns; four: twelve.
- */
-export function askDebateSchedule(seats: number[]): AskDebatePlan[] {
+/** Every turn of a debate among these seats, in order. Fewer than two animals is no debate. */
+export function askDebateSchedule(seats: number[]): Array<{seat: number; phase: AskDebatePhase}> {
     const order = Array.from(new Set(seats)).sort((a, b) => a - b);
-    if (order.length < 2) return order.map((seat) => ({seat, phase: "open" as const, replyTo: null}));
-    const opens = order.map((seat) => ({seat, phase: "open" as const, replyTo: null}));
-    const reacts = order.map((seat, index) => ({
-        seat,
-        phase: "react" as const,
-        replyTo: index === 0 ? order[order.length - 1] : order[index - 1]
-    }));
-    const closes = order.map((seat) => ({seat, phase: "close" as const, replyTo: null}));
-    return [...opens, ...reacts, ...closes];
+    if (order.length < 2) return [];
+    const [host, ...others] = order;
+    return [
+        ...order.map((seat) => ({seat, phase: "open" as const})),
+        ...order.map((seat) => ({seat, phase: "react" as const})),
+        ...[...others, host].map((seat) => ({seat, phase: "close" as const}))
+    ];
 }
 
 /**
- * The next turn: the first in the schedule not yet said, skipping animals
- * whose model failed. A reaction to a silent animal answers the last one who
- * did speak; with one animal left there is no one to answer, so it ends.
+ * The next turn, given the turns already said (saved, so a debate the person
+ * left resumes where it stopped). `out` holds seats whose model failed in this
+ * run; their turns are skipped and the debate stays incomplete. An answer
+ * goes to whoever spoke last, unless that was this animal.
  */
 export function nextAskDebateTurn(params: {
-    schedule: AskDebatePlan[];
-    said: Array<Pick<AskDebateTurn, "seat" | "phase">>;
+    seats: number[];
+    said: ReadonlyArray<Pick<AskDebateTurn, "seat" | "phase">>;
     out?: ReadonlySet<number>;
 }): AskDebatePlan | null {
+    const done = new Set(params.said.map((turn) => `${turn.seat}:${turn.phase}`));
     const out = params.out ?? new Set<number>();
-    const done = new Set(params.said.map((turn) => `${turn.phase}:${turn.seat}`));
-    const standing = new Set(params.schedule.map((plan) => plan.seat).filter((seat) => !out.has(seat)));
-    if (standing.size < 2) return null;
-    for (const plan of params.schedule) {
-        if (done.has(`${plan.phase}:${plan.seat}`) || out.has(plan.seat)) continue;
-        if (plan.replyTo !== null && out.has(plan.replyTo)) {
-            const last = [...params.said].reverse().find((turn) => turn.seat !== plan.seat && !out.has(turn.seat));
-            return {...plan, replyTo: last?.seat ?? null};
-        }
-        return plan;
+    const next = askDebateSchedule(params.seats).find((step) => !done.has(`${step.seat}:${step.phase}`) && !out.has(step.seat));
+    if (!next) return null;
+    if (next.phase !== "react") return {...next, replyTo: null};
+    for (let index = params.said.length - 1; index >= 0; index -= 1) {
+        if (params.said[index].seat !== next.seat) return {...next, replyTo: params.said[index].seat};
     }
-    return null;
+    return {...next, replyTo: null};
+}
+
+/** Every turn of the schedule has been said. */
+export function askDebateComplete(seats: number[], said: ReadonlyArray<Pick<AskDebateTurn, "seat" | "phase">>): boolean {
+    const done = new Set(said.map((turn) => `${turn.seat}:${turn.phase}`));
+    const schedule = askDebateSchedule(seats);
+    return schedule.length > 0 && schedule.every((step) => done.has(`${step.seat}:${step.phase}`));
 }
 
 export type AskDebateSpeaker<M extends AskConversationMember> = AskConversationSpeaker<M> & {seat: number};
 
+export type AskDebateFinish = {report: Record<string, unknown> | null; debate: Record<string, unknown> | null};
+
 /**
- * One SSE response for the debate's remaining turns, each kept as it is
- * finished. The debate runs to its end even when the page goes away (the
- * reader closed the chat): a public debate must reach its report and its
- * vote, and a private one is there when they come back. Only the frames stop.
+ * One SSE response for the rest of a debate: each turn saved before the next
+ * starts. Once every turn is in, the report is asked for and sent, then
+ * `done`. When the page goes away the turns stop (the debate resumes when the
+ * asker comes back); a debate whose last turn is in still goes on to its
+ * report.
  */
 export function streamAskDebate<M extends AskConversationMember>(params: {
+    debateId: string;
     speakers: Array<AskDebateSpeaker<M>>;
-    /** Turns already kept (a debate picked up again): never said twice. */
-    said: AskDebateTurn[];
+    /** Turns already saved: never said twice. */
+    existing: Array<AskDebateTurn & {turnIndex: number}>;
     sourceFor: (plan: AskDebatePlan, turns: AskDebateTurn[], signal: AbortSignal) => AnswerDeltaSource;
-    /** A finished turn, to keep, with its index in the schedule. */
-    onTurn: (turn: AskDebateTurn, index: number) => Promise<void>;
-    /** Every turn is in: write the report; its answer joins the last frame. */
-    finish: (turns: AskDebateTurn[]) => Promise<Record<string, unknown>>;
+    /** A finished turn, to save under its `turn_index`. */
+    record: (turn: AskDebateTurn & {turnIndex: number}) => Promise<boolean>;
+    /** Every turn is in: the report, and where the debate then stands. */
+    finish: () => Promise<AskDebateFinish>;
+    /** Where the debate stands when this run could not finish it. */
+    incomplete: () => Promise<Record<string, unknown> | null>;
     headers: Record<string, string>;
-    /** The request's own signal: only the frames stop with it. */
+    /** The request's own signal: the page went away. */
     signal?: AbortSignal;
-    /** How long one turn may take before it counts as failed. */
-    turnTimeoutMs?: number;
 }): Response {
     const encoder = new TextEncoder();
-    let gone = false;
+    const abort = new AbortController();
+    let cancelled = false;
     params.signal?.addEventListener("abort", () => {
-        gone = true;
+        cancelled = true;
+        abort.abort();
     });
+    const seats = params.speakers.map((speaker) => speaker.seat);
     const bySeat = new Map(params.speakers.map((speaker) => [speaker.seat, speaker]));
-    const schedule = askDebateSchedule(params.speakers.map((speaker) => speaker.seat));
-    const turnTimeoutMs = params.turnTimeoutMs ?? 60_000;
 
     const body = new ReadableStream<Uint8Array>({
         async start(controller) {
             const send = (event: Record<string, unknown>) => {
-                if (gone) return;
+                if (cancelled) return;
                 try {
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
                 } catch {
-                    gone = true;
+                    cancelled = true;
+                    abort.abort();
                 }
             };
             send({
                 flow: "debate",
+                debate_id: params.debateId,
                 speakers: params.speakers.map((speaker) => ({
-                    capture_id: speaker.member.captureId,
+                    participant_id: speaker.member.captureId,
                     seat: speaker.seat,
                     animal_name: speaker.member.animalName,
                     nickname: speaker.member.nickname,
@@ -136,18 +138,24 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
                 }))
             });
 
-            const turns: AskDebateTurn[] = [...params.said];
+            const turns: AskDebateTurn[] = [];
+            let frameIndex = 0;
+            let savedIndex = 0;
+            for (const turn of [...params.existing].sort((a, b) => a.turnIndex - b.turnIndex)) {
+                if (!bySeat.has(turn.seat)) continue;
+                turns.push({seat: turn.seat, phase: turn.phase, text: turn.text});
+                frameIndex = Math.max(frameIndex, turn.turnIndex + 1);
+                savedIndex = Math.max(savedIndex, turn.turnIndex + 1);
+            }
+
             const out = new Set<number>();
-            for (;;) {
-                const plan = nextAskDebateTurn({schedule, said: turns, out});
+            const attempts = new Map<string, number>();
+            while (!cancelled) {
+                const plan = nextAskDebateTurn({seats, said: turns, out});
                 if (!plan) break;
-                const speaker = bySeat.get(plan.seat);
-                if (!speaker) {
-                    out.add(plan.seat);
-                    continue;
-                }
+                const speaker = bySeat.get(plan.seat)!;
                 const participant = speaker.member.captureId;
-                const index = askDebateTurnIndex(schedule, plan);
+                const index = frameIndex;
                 send({
                     turn: {
                         index,
@@ -161,10 +169,9 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
 
                 let raw = "";
                 let emitted = 0;
-                const timeout = AbortSignal.timeout(turnTimeoutMs);
                 try {
-                    await params.sourceFor(plan, turns, timeout)((delta) => {
-                        if (!delta) return;
+                    await params.sourceFor(plan, turns, abort.signal)((delta) => {
+                        if (!delta || cancelled) return;
                         raw += delta;
                         const visible = askVisibleTurnText(raw, false).text;
                         if (visible.length > emitted) {
@@ -173,27 +180,57 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
                         }
                     });
                 } catch (error) {
-                    console.warn("[debates] turn failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
+                    if (!cancelled) console.warn("[debates] turn failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
                 }
+                if (cancelled) break;
 
                 const text = splitStreamedReply(askVisibleTurnText(raw, true).text).answer.trim();
                 if (text.length > emitted) send({participant, turn_index: index, delta: text.slice(emitted)});
+                const key = `${plan.seat}:${plan.phase}`;
                 if (!text) {
-                    out.add(plan.seat);
                     send({participant, turn_index: index, error: "speaker_failed"});
+                    const tried = (attempts.get(key) ?? 0) + 1;
+                    attempts.set(key, tried);
+                    // One more try for a turn, then this animal sits the rest of this run out.
+                    if (tried >= 2) out.add(plan.seat);
+                    frameIndex += 1;
                     continue;
                 }
                 const turn: AskDebateTurn = {seat: plan.seat, phase: plan.phase, text};
-                turns.push(turn);
-                await params.onTurn(turn, index).catch((error) => {
-                    console.warn("[debates] keeping a turn failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
+                await params.record({...turn, turnIndex: savedIndex}).catch((error) => {
+                    console.warn("[debates] turn not saved", error instanceof Error ? error.message.slice(0, 200) : String(error));
+                    return false;
                 });
+                turns.push(turn);
+                savedIndex += 1;
+                frameIndex += 1;
                 send({participant, turn_index: index, participant_done: true});
             }
 
-            // The report is written once every animal has had its say (or could not).
-            const finished = await params.finish(turns).catch(() => ({} as Record<string, unknown>));
-            send({done: true, turns: turns.length, ...finished});
+            const complete = askDebateComplete(seats, turns);
+            if (cancelled) {
+                // The page left after the last word: the report is still asked for.
+                if (complete) await params.finish().catch(() => null);
+                try {
+                    controller.close();
+                } catch {
+                    // Already closed by the page.
+                }
+                return;
+            }
+            if (complete) {
+                send({report_pending: true});
+                const finished = await params.finish().catch((error) => {
+                    console.warn("[debates] report failed", error instanceof Error ? error.message.slice(0, 200) : String(error));
+                    return null;
+                });
+                if (finished?.report) send({report: finished.report});
+                else send({report_error: "report_unavailable"});
+                send({done: true, debate: finished?.debate ?? {id: params.debateId}, turns: turns.length});
+            } else {
+                const debate = await params.incomplete().catch(() => null);
+                send({done: true, debate: {...(debate ?? {id: params.debateId}), incomplete: true}, turns: turns.length});
+            }
             try {
                 controller.close();
             } catch {
@@ -201,7 +238,8 @@ export function streamAskDebate<M extends AskConversationMember>(params: {
             }
         },
         cancel() {
-            gone = true;
+            cancelled = true;
+            abort.abort();
         }
     });
     return new Response(body, {

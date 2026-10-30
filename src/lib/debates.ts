@@ -343,7 +343,7 @@ export function decodeDebateReport(raw: unknown): DebateReport | null {
             captureId: debateUuid(first(way, "capture_id", "captureId")),
             way: said,
             lesson: firstText(way, "lesson", "why", "lesson_behind"),
-            fits: firstText(way, "fits", "fit", "where_it_fits", "best_for"),
+            fits: firstText(way, "fits_when", "fits", "fit", "where_it_fits", "best_for"),
             costs: firstText(way, "costs", "cost", "what_it_costs", "tradeoff")
         }];
     });
@@ -401,7 +401,7 @@ export function decodeDebate(raw: unknown): Debate | null {
         totalVotes: int(first(row, "votes_total", "total_votes", "totalVotes", "vote_count")) ?? (typeof row.votes === "number" ? int(row.votes) : null) ?? summed,
         myVote,
         canVote: bool(first(row, "can_vote", "canVote", "viewer_can_vote")),
-        voteBlockedCode: firstText(row, "cant_vote_reason", "viewer_cant_vote_reason", "vote_block", "vote_blocked", "cannot_vote_reason", "vote_blocked_reason")
+        voteBlockedCode: firstText(row, "voteBlockedCode", "cant_vote_reason", "viewer_cant_vote_reason", "vote_block", "vote_blocked", "cannot_vote_reason", "vote_blocked_reason")
             ?? (bool(row.viewer_is_participant) ? "own_debate" : null),
         chosenParticipantId: debateUuid(first(row, "my_way", "chosen_participant_id", "asker_choice", "chosenParticipantId")),
         cancelReason: firstText(row, "cancel_reason", "cancelReason"),

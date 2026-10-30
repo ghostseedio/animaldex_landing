@@ -19,11 +19,15 @@ import {NextResponse} from "next/server";
  *     loaded. The context's problem is the approved, anonymised text for a
  *     public debate (its openings are shown on Discover) and the asker's own
  *     words for a private one.
- *   - Each finished turn: `debate_record_turn` (idempotent on its index). When
- *     the last is in: `debate_finish_turns` (status `reporting`), then the
- *     report job (`debate_request_job(debate, 'report')`, which posts to
- *     `write-debate-report`; `settle_due_debates` asks again if it never
- *     came). The last frame carries the debate as the reader then sees it.
+ *   - Each finished turn: `debate_record_turn` (idempotent; the last one moves
+ *     the debate on to `reporting`, even if the person has left). Then the
+ *     report: `write-debate-report` (job "report", with the service key, as
+ *     the apps' route asks for it; `debate_request_job` if that cannot be
+ *     reached, and `settle_due_debates` asks again if it never came), waited
+ *     for briefly, and sent with the debate as the reader then sees it.
+ *   - Memory: none in a public debate (its turns are shown to the
+ *     community); in a private one, the asker's own, for their own animals'
+ *     turns only.
  *   - A debate's turns never take from the chat allowance: the debate limit
  *     replaces it.
  *   - Not here yet: the model safety re-check of a public debate's approved
@@ -38,6 +42,7 @@ import {loadAskDebateMembers, type AskGroupMember} from "@/data/ask-group-member
 import {loadAskStatQuantiles} from "@/data/ask-stat-quantiles";
 import {readDebate} from "@/data/debates";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
+import {getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {loadAskChatSettings, loadAskMemory} from "@/lib/ask-animaldex/memory";
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import {ASK_RESPONSE_HEADERS, askLanguageName, resolveAskViewer} from "@/lib/ask-animaldex/request";
@@ -86,33 +91,47 @@ function turnSource(providers: AskProviderName[], params: Parameters<typeof askA
 
 type Service = NonNullable<ReturnType<typeof createSupabaseServiceClient>>;
 
-/** One finished turn (`debate_record_turn`, idempotent on its index). */
-async function keepTurn(service: Service, debateId: string, turn: AskDebateTurn, index: number): Promise<void> {
-    const {error} = await service.rpc("debate_record_turn", {
+/** One finished turn (`debate_record_turn`: false when it was already saved, or the debate moved on). */
+async function keepTurn(service: Service, debateId: string, turn: AskDebateTurn & {turnIndex: number}): Promise<boolean> {
+    const {data, error} = await service.rpc("debate_record_turn", {
         p_debate_id: debateId,
-        p_turn_index: index,
+        p_turn_index: turn.turnIndex,
         p_seat: turn.seat,
         p_phase: turn.phase,
         p_text: turn.text
     });
     if (error) throw new Error(error.message);
+    return data === true;
 }
 
+const REPORT_WAIT_TRIES = 10;
+const REPORT_WAIT_MS = 3000;
+
 /**
- * Every turn is in: the debate goes on to its report (`debate_finish_turns`),
- * and the report is asked for (`debate_request_job`, posted to
- * `write-debate-report` when the call commits). True when it was asked for.
+ * Asks `write-debate-report` for the report (it claims the job, so a retry
+ * never writes it twice), with `debate_request_job` as the fallback.
  */
-async function askForReport(service: Service, debateId: string): Promise<boolean> {
-    const finished = await service.rpc("debate_finish_turns", {p_debate_id: debateId});
-    if (finished.error) {
-        console.warn("[debates] debate_finish_turns failed", finished.error.message.slice(0, 200));
-        return false;
+async function askForReport(service: Service, debateId: string): Promise<void> {
+    const url = getSupabaseUrl();
+    const key = getSupabaseServiceKey();
+    if (url && key) {
+        try {
+            const response = await fetch(`${url}/functions/v1/write-debate-report`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json", Authorization: `Bearer ${key}`, apikey: key},
+                body: JSON.stringify({debate_id: debateId, job: "report"}),
+                cache: "no-store",
+                signal: AbortSignal.timeout(110_000)
+            });
+            await response.body?.cancel().catch(() => undefined);
+            if (response.ok) return;
+            console.warn("[debates] write-debate-report answered", response.status);
+        } catch (error) {
+            console.warn("[debates] write-debate-report unreachable", error instanceof Error ? error.message.slice(0, 200) : String(error));
+        }
     }
-    if (finished.data !== "reporting") return false;
     const job = await service.rpc("debate_request_job", {p_debate_id: debateId, p_job: "report"});
     if (job.error) console.warn("[debates] debate_request_job failed", job.error.message.slice(0, 200));
-    return job.data === true;
 }
 
 export async function POST(request: Request) {
@@ -166,8 +185,10 @@ export async function POST(request: Request) {
         return askJson({error: "unavailable"}, 503);
     }
 
-    // The asker's own memory only: it is about them. No other owner's is ever read.
-    const memory: AskMemoryFact[] = settings.personalisationEnabled ? await loadAskMemory(userId).catch(() => []) : [];
+    // The asker's own memory, in a private debate only: a public one's turns are shown to the community.
+    const memory: AskMemoryFact[] = run.visibility === "private" && settings.personalisationEnabled
+        ? await loadAskMemory(userId).catch(() => [])
+        : [];
     const languageName = askLanguageName(body.locale);
     const utcOffset = Number.isFinite(Number(body.utcOffsetMinutes)) && body.utcOffsetMinutes !== null
         ? Math.max(-14 * 60, Math.min(14 * 60, Math.round(Number(body.utcOffsetMinutes))))
@@ -201,25 +222,27 @@ export async function POST(request: Request) {
             stats: me.stats,
             groupLines: [...askDebateRulesLines({me: room[index], others: room.filter((_, other) => other !== index)}), ...preyLines]
         });
-        return {seat: entry.seat, member: me, persona, systemPrompt};
+        return {seat: entry.seat, member: me, persona, systemPrompt, ownAnimal: entry.participant.isAskerOwned};
     });
     const bySeat = new Map(prepared.map((entry, index) => [entry.seat, {...entry, room: room[index]}]));
-    const said: AskDebateTurn[] = orderedDebateTurns(run.turns)
+    const existing = orderedDebateTurns(run.turns)
         .filter((turn) => bySeat.has(turn.seat))
-        .map((turn) => ({seat: turn.seat, phase: turn.phase, text: turn.text}));
+        .map((turn, order) => ({seat: turn.seat, phase: turn.phase, text: turn.text, turnIndex: turn.index ?? order}));
+    const readNow = () => readDebate(viewer.client as Parameters<typeof readDebate>[0], debateId).catch(() => ({debate: null, error: null}));
 
     return streamAskDebate<AskGroupMember>({
+        debateId,
         speakers: prepared.map((entry) => ({
             seat: entry.seat,
             member: entry.member,
             persona: askPersonaFrame(entry.member.voice, entry.persona)
         })),
-        said,
+        existing,
         sourceFor: (plan, turns, signal) => {
             const entry = bySeat.get(plan.seat)!;
             const userPrompt = buildAskGroupTurnUserPrompt({
                 userMessage: problem,
-                memory,
+                memory: entry.ownAnimal ? memory : [],
                 speciesProfileId: entry.member.speciesProfileId,
                 rightNow: askRightNowLine({nature: entry.member.nature, utcOffsetMinutes: utcOffset}),
                 earlier: [],
@@ -241,12 +264,20 @@ export async function POST(request: Request) {
                 signal
             });
         },
-        onTurn: (turn, index) => keepTurn(service, debateId, turn, index),
+        record: (turn) => keepTurn(service, debateId, turn),
         finish: async () => {
-            const reported = await askForReport(service, debateId);
-            const after = await readDebate(viewer.client as Parameters<typeof readDebate>[0], debateId).catch(() => ({debate: null}));
-            return {report_requested: reported, debate: after.debate};
+            await askForReport(service, debateId);
+            // Another writer may still be on it: wait for it briefly.
+            for (let attempt = 0; attempt < REPORT_WAIT_TRIES; attempt += 1) {
+                const {debate} = await readNow();
+                if (debate?.report || (debate && debate.status !== "reporting" && debate.status !== "debating") || attempt === REPORT_WAIT_TRIES - 1) {
+                    return {report: debate?.report ?? null, debate: debate as unknown as Record<string, unknown> | null};
+                }
+                await new Promise((resolve) => setTimeout(resolve, REPORT_WAIT_MS));
+            }
+            return {report: null, debate: null};
         },
+        incomplete: async () => (await readNow()).debate as unknown as Record<string, unknown> | null,
         headers: ASK_RESPONSE_HEADERS,
         signal: request.signal
     });
