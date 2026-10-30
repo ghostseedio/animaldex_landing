@@ -674,6 +674,56 @@ button {
     .ask-hero-glow { animation: none; }
 }
 
+/* A special message (docs/your-step/INLINE.md): the animal's own bubble with
+   a neon edge on its left and a faint neon wash, strongest by the edge, the
+   same on every platform (iOS AnimalSpecialMessageBubble). */
+:root,
+.theme-dark {
+    --ask-special-edge: #A7F432;
+    --ask-special-wash-from: rgba(167, 244, 50, 0.13);
+    --ask-special-wash-to: rgba(167, 244, 50, 0.035);
+    --ask-special-line: rgba(167, 244, 50, 0.22);
+}
+
+:root[data-theme="light"] {
+    --ask-special-edge: #5C9A12;
+    --ask-special-wash-from: rgba(92, 154, 18, 0.16);
+    --ask-special-wash-to: rgba(92, 154, 18, 0.05);
+    --ask-special-line: rgba(92, 154, 18, 0.3);
+}
+
+.ask-special {
+    background-image: linear-gradient(to right, var(--ask-special-wash-from), var(--ask-special-wash-to));
+    box-shadow: inset 3px 0 0 var(--ask-special-edge), inset 0 0 0 1px var(--ask-special-line);
+}
+
+/* Between the animal's words and what its bubble carries, and between sections. */
+.ask-special-sections { border-top: 1px solid var(--ask-special-line); }
+.ask-special-sections > * + * { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--ask-special-line); }
+
+/* The Power earned: about a second of sparkles in place and a soft flash,
+   then nothing. None under Reduce Motion (the drawer does not draw them). */
+@keyframes askSpecialSpark {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--burst-x), var(--burst-y)) scale(1.1); }
+}
+
+@keyframes askSpecialFlash {
+    0% { opacity: 0.9; transform: scale(0.6); }
+    100% { opacity: 0; transform: scale(1); }
+}
+
+.ask-special-spark { animation: askSpecialSpark 1100ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.ask-special-flash {
+    background: radial-gradient(circle, rgba(167, 244, 50, 0.35), transparent 70%);
+    animation: askSpecialFlash 1100ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ask-special-burst { display: none; }
+}
+
 /* Signed in on a narrow phone, the header's avatar needs the wordmark's room:
    the logo mark stays and the bar still fits beside the menu button. */
 @media (max-width: 429px) {

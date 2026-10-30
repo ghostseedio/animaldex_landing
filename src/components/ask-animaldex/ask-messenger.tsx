@@ -146,17 +146,64 @@ export function AskTimeLabel({text}: {text: string}) {
     );
 }
 
-/** What the person said, on the right in their green. */
-export function AskUserBubble({text, label}: {text: string; label: string}) {
+/**
+ * What the person said, on the right in their green. Their report on a step
+ * ("I did it", docs/your-step/INLINE.md) carries a small "YOUR STEP" label
+ * and the thumbnail of the photo or video they added.
+ */
+export function AskUserBubble({
+    text,
+    label,
+    report = null
+}: {
+    text: string;
+    label: string;
+    report?: {label: string; thumbUrl: string | null; kind: "photo" | "video" | null} | null;
+}) {
+    const radius = bubbleRadius({fromAnimal: false, groupStart: true, groupEnd: true});
+    if (!report) {
+        return (
+            <div className="flex justify-end pl-11" aria-label={`${label} ${text}`}>
+                <p
+                    className="max-w-full whitespace-pre-wrap break-words px-3.5 py-2 text-[15px] leading-6 text-white"
+                    style={{backgroundColor: ASK_BUBBLE_OUTGOING, borderRadius: radius}}
+                >
+                    {text}
+                </p>
+            </div>
+        );
+    }
     return (
-        <div className="flex justify-end pl-11" aria-label={`${label} ${text}`}>
-            <p
-                className="max-w-full whitespace-pre-wrap break-words px-3.5 py-2 text-[15px] leading-6 text-white"
-                style={{backgroundColor: ASK_BUBBLE_OUTGOING, borderRadius: bubbleRadius({fromAnimal: false, groupStart: true, groupEnd: true})}}
-            >
-                {text}
-            </p>
+        <div className="flex justify-end pl-11" aria-label={`${report.label}. ${text}`} data-testid="step-report-bubble">
+            <div className="flex max-w-full flex-col gap-2 px-3.5 py-2.5" style={{backgroundColor: ASK_BUBBLE_OUTGOING, borderRadius: radius}}>
+                <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-primary-300">
+                    <AskWalkIcon />
+                    {report.label}
+                </p>
+                {report.thumbUrl ? (
+                    <span className="relative block h-[132px] w-[180px] max-w-full overflow-hidden bg-black/20" style={{borderRadius: 12}}>
+                        {/* A small data URL drawn in the browser: nothing for the image optimiser to do. */}
+                        <Image src={report.thumbUrl} alt="" fill sizes="180px" unoptimized className="object-cover" />
+                        {report.kind === "video" ? (
+                            <span aria-hidden="true" className="absolute bottom-1.5 right-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white">
+                                <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor"><path d="M3 6.2A1.7 1.7 0 0 1 4.7 4.5h6.6A1.7 1.7 0 0 1 13 6.2v7.6a1.7 1.7 0 0 1-1.7 1.7H4.7A1.7 1.7 0 0 1 3 13.8Zm11 2.1 3-2v7.4l-3-2Z" /></svg>
+                            </span>
+                        ) : null}
+                    </span>
+                ) : null}
+                <p className="whitespace-pre-wrap break-words text-[15px] leading-6 text-white">{text}</p>
+            </div>
         </div>
+    );
+}
+
+/** The step's walking figure: on "YOUR STEP", the report strip and the person's report. */
+export function AskWalkIcon({className = "h-3.5 w-3.5"}: {className?: string}) {
+    return (
+        <svg viewBox="0 0 20 20" className={`shrink-0 ${className}`} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="3.6" r="1.6" fill="currentColor" stroke="none" />
+            <path d="M9.6 7.2 7.4 11.6l3 1.6.8 4.6M9.6 7.2l2.6 1 1.5 2.6 2.4.6M7.4 11.6 5.6 17.2M9.6 7.2 6.6 8.6 5.4 11" />
+        </svg>
     );
 }
 
@@ -262,7 +309,8 @@ export function AskReplyBubbles({
     onSkip,
     renderPlain,
     trailing,
-    after
+    after,
+    special = null
 }: {
     /** What is on screen of the reply (the pacer's text while it types). */
     text: string;
@@ -280,12 +328,19 @@ export function AskReplyBubbles({
     renderPlain?: (bubble: AskPlainBubbleProps & {index: number; pieceIndex: number}) => ReactNode;
     /** Beside the last bubble of a finished reply: its voice, its menu. */
     trailing?: ReactNode;
-    /** Under the bubbles: a check-in, a step done together, a referral. */
+    /** Under the bubbles: a check-in, a referral. */
     after?: ReactNode;
+    /**
+     * What this reply carries to do (docs/your-step/INLINE.md): drawn inside
+     * its last bubble, which becomes a special message (neon edge, faint
+     * wash, its own label), never as a card under it. Once it is all shown.
+     */
+    special?: ReactNode;
 }) {
     const pieces = askReplyPieces(text, !isLive);
     if (pieces.length === 0) return <AskTypingBubble avatarUrl={avatarUrl} label={speakerName} />;
     const lastBubble = lastBubbleIndex(pieces);
+    const specialHere = special && !isLive ? special : null;
     let plainIndex = -1;
     return (
         <div className="flex flex-col">
@@ -306,10 +361,12 @@ export function AskReplyBubbles({
                         if (piece.isPlain) plainIndex += 1;
                         const radius = bubbleRadius({fromAnimal: true, groupStart: index === 0, groupEnd: index === pieces.length - 1});
                         const sparkle = isLive && index === pieces.length - 1;
+                        const carries = specialHere !== null && index === lastBubble;
                         const bubble = (
                             <div
-                                className="min-w-0 max-w-full break-words px-3.5 py-2 text-[15px] leading-6 text-white"
+                                className={`min-w-0 max-w-full break-words text-[15px] leading-6 text-white ${carries ? "ask-special w-full py-[11px] pl-[17px] pr-3.5" : "px-3.5 py-2"}`}
                                 style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: radius}}
+                                data-testid={carries ? "special-message" : undefined}
                             >
                                 {piece.isPlain
                                     ? (renderPlain
@@ -321,11 +378,12 @@ export function AskReplyBubbles({
                                             {sparkle ? <AskSparkle /> : null}
                                         </>
                                     )}
+                                {carries ? <AskSpecialSections>{specialHere}</AskSpecialSections> : null}
                             </div>
                         );
                         return (
                             <div key={`b-${index}`} className="flex items-end">
-                                <div className="flex min-w-0 flex-col items-start">{bubble}</div>
+                                <div className={`flex min-w-0 flex-col items-start ${carries ? "flex-1" : ""}`}>{bubble}</div>
                                 {/* Room beside every bubble for the reply's controls (its voice, its
                                     menu), so their far edges line up. */}
                                 <div className="flex w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1">
@@ -334,10 +392,75 @@ export function AskReplyBubbles({
                             </div>
                         );
                     })}
+                    {specialHere !== null && lastBubble < 0 ? (
+                        // Only drawings in the reply: what it carries is a special message of its own.
+                        <div className="flex items-end">
+                            <div className="flex min-w-0 flex-1 flex-col items-start">
+                                <AskSpecialShell>{specialHere}</AskSpecialShell>
+                            </div>
+                            <div className="flex w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1">{trailing}</div>
+                        </div>
+                    ) : null}
                 </div>
             </div>
             {after ? <div className="pl-9 pt-2.5">{after}</div> : null}
         </div>
+    );
+}
+
+/** The special part of a bubble: after the animal's words, set apart by a neon hairline, one section after another. */
+function AskSpecialSections({children}: {children: ReactNode}) {
+    return <div className="ask-special-sections mt-[11px] flex flex-col pt-[11px]">{children}</div>;
+}
+
+/** A special message's bubble on its own: the neon edge, the wash, and what it carries. */
+export function AskSpecialShell({children, testId = "special-message"}: {children: ReactNode; testId?: string}) {
+    return (
+        <div
+            className="ask-special flex w-full min-w-0 flex-col gap-2.5 break-words py-[11px] pl-[17px] pr-3.5 text-[15px] leading-6 text-white"
+            style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: bubbleRadius({fromAnimal: true, groupStart: true, groupEnd: true})}}
+            data-testid={testId}
+        >
+            {children}
+        </div>
+    );
+}
+
+/**
+ * A special message that is not a reply: the animal's face beside one
+ * special bubble (a Warmup question, docs/your-step/INLINE.md), with room
+ * beside it where a reply's controls sit, so the edges line up.
+ */
+export function AskSpecialBubble({avatarUrl, children, testId}: {avatarUrl: string | null; children: ReactNode; testId?: string}) {
+    return (
+        <div className="flex items-end gap-2 pr-2">
+            <AskAnimalFace url={avatarUrl} size={28} />
+            <div className="flex min-w-0 flex-1 items-end">
+                <div className="flex min-w-0 flex-1 flex-col items-start">
+                    <AskSpecialShell testId={testId}>{children}</AskSpecialShell>
+                </div>
+                <div className="w-[60px] shrink-0" />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * A special message's label: "YOUR STEP", "DONE TOGETHER · +5 XP", "WARMUP ·
+ * 1 OF 2", in small capitals with its icon, UI rather than the animal
+ * speaking; `trailing` is a word after it in its own colour ("Easy").
+ */
+export function AskSpecialLabel({icon, children, trailing = null}: {
+    icon: ReactNode;
+    children: ReactNode;
+    trailing?: {text: string; color: string} | null;
+}) {
+    return (
+        <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[10px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300">
+            {icon}
+            <span className="min-w-0">{children}</span>
+            {trailing ? <span className="shrink-0 font-bold normal-case tracking-normal" style={{color: trailing.color}}>{trailing.text}</span> : null}
+        </p>
     );
 }
 
