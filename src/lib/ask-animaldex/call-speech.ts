@@ -29,39 +29,55 @@ export const CALL_REPLY_LINE =
 
 // MARK: - What is said
 
-/** Box-drawing characters: a text diagram's lines (docs/rich-chat/SPEC.md, section 1.3). */
-export const BOX_DRAWING = /[\u2500-\u257F]/;
-
 /**
- * Emoji are looked at, not heard (rich answers, SPEC section 1.3): keycaps
- * whole, then pictographs, variation selectors and joiners.
+ * Emoji are looked at, not heard: a voice reads "🌙" as "crescent moon", or
+ * stumbles. One run of them goes with the spaces before it, so "it 🎉." is
+ * said "it." and "## 🌙 What I would do" keeps its heading. A keycap (1️⃣)
+ * goes whole, digit and all; skin tones and the tags of a subdivision flag
+ * go with the emoji they belong to (docs/rich-chat/SPEC.md, section 1.3).
  */
+export const SPOKEN_EMOJI_RUN =
+    /[ \t]*(?:[0-9#*]\uFE0F?\u20E3|[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u{E0020}-\u{E007F}\u200D\uFE0E\uFE0F\u20E3])+/gu;
+
+/** Box-drawing characters (U+2500-U+257F) and arrows (U+2190-U+21FF): the strokes of a text diagram. */
+const DIAGRAM_CHARACTER = /[\u2500-\u257F\u2190-\u21FF]/u;
+
+/** Box-drawing strokes around the words of a diagram line, and the space beside them. */
+export const BOX_STROKES = /\s*[\u2500-\u257F]+\s*/g;
+
 export function withoutSpokenEmoji(text: string): string {
-    return text
-        .replace(/[#*0-9]\uFE0F?\u20E3/gu, "")
-        .replace(/\p{Extended_Pictographic}/gu, "")
-        .replace(/[\uFE0E\uFE0F\u200D]/gu, "");
+    return text.replace(SPOKEN_EMOJI_RUN, "");
+}
+
+/** A line of a text diagram that lost its fence: mostly strokes, never words. */
+export function isDiagramLine(line: string): boolean {
+    const characters = Array.from(line.replace(/\s+/g, ""));
+    const strokes = characters.filter((character) => DIAGRAM_CHARACTER.test(character)).length;
+    return strokes > 0 && strokes * 2 > characters.length;
 }
 
 /**
  * A chat reply as something to say out loud: the cards and drawings go (they
- * are tapped and looked at, not heard), and so do tables, emoji and any stray
- * box-drawing line; markdown marks go, lists become sentences, and the text
- * is cut at a sentence boundary under `maxChars`, so a long reply costs a
- * bounded number of voice credits.
+ * are tapped and looked at, not heard), markdown marks go, lists become
+ * sentences, and the text is cut at a sentence boundary under `maxChars`, so
+ * a long reply costs a bounded number of voice credits.
  */
 export function speakableText(markdown: string, maxChars = 1100): string {
     let text = markdown.replace(/\r\n/g, "\n");
     // Fenced blocks: cards, flows, charts, photo callouts, text diagrams. An
     // unclosed fence at the end is dropped too.
     text = text.replace(/```[\s\S]*?(```|$)/g, "\n");
+    text = withoutSpokenEmoji(text);
     const lines = text.split("\n").map((line) => {
-        let out = withoutSpokenEmoji(line).trim();
+        let out = line.trim();
         if (!out) return "";
         // Table rows and separators are read badly; leave them out.
         if (/^\|.*\|$/.test(out) || /^[-:| ]{3,}$/.test(out)) return "";
-        // A diagram line that strayed outside its fence.
-        if (BOX_DRAWING.test(out)) return "";
+        // A diagram outside its fence: its border and arrow lines go, and the
+        // strokes around the words that are left.
+        if (isDiagramLine(out)) return "";
+        out = out.replace(BOX_STROKES, " ").trim();
+        if (!out) return "";
         out = out.replace(/^#{1,6}\s+/, "");
         out = out.replace(/^>\s?/, "");
         out = out.replace(/^([-*+]|\d+[.)])\s+/, "");

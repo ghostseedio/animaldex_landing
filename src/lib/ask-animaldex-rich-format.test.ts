@@ -1,86 +1,147 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-// Rich answers (docs/rich-chat/SPEC.md, section 1.2): the web's animal holds
-// the apps' rich format rules word for word. Until the server lane's own
-// generated fixture lands, the fixture is the SPEC's text itself.
-import fixture from "./ask-animaldex/__fixtures__/rich-format-rules.json";
+// Rich answers (docs/rich-chat/SPEC.md, sections 1.2 and 1.3): the web's
+// animal holds the apps' rich format rules word for word, and says aloud
+// exactly what the server says. The fixture is the server's own modules'
+// output (AnimalDex rich-server, `_shared/animal-voice.ts` and
+// `_shared/speech-text.ts`): the lead, the medium line, the rules at 36 and
+// 72 columns, the text_columns clamp, the medium and formatting sections as
+// built for five cases, and speakableText pairs.
+import fixture from "./ask-animaldex/__fixtures__/rich-format-fixture.json";
 import {
+    ANIMAL_RICH_DRAWING_LINE,
     ANIMAL_RICH_FORMAT_LEAD,
+    ANIMAL_RICH_LAST_CHECK_LINE,
     animalRichFormatRules,
     askRichColumns,
     buildAskStreamingSystemPrompt,
     buildAskSystemPrompt,
-    type AskPromptOptions
+    type AskPromptOptions,
+    type AskVisualMedium
 } from "@/lib/ask-animaldex/prompt";
+import {speakableText} from "@/lib/ask-animaldex/call-speech";
 
-const BASE: AskPromptOptions = {scope: "species", animalName: "Barn Owl", supportedVisuals: ["flow", "scale", "chart"]};
+type ServerCase = {
+    options: {
+        mode?: string;
+        companionLoop?: {offersSteps: boolean; debates?: boolean} | null;
+        suggestSteps?: boolean;
+        stories?: boolean;
+        supportedVisuals: string[];
+        textColumns?: number;
+        call?: boolean;
+    };
+    medium: string[];
+    formatting: string[];
+    lastCheck: string[];
+};
 
-/** The formatting section as built: its lead through the line before the closing rules. */
-function formatting(prompt: string): string[] {
+/**
+ * The server's case as the web route builds it: "rich" is not a drawing
+ * medium on the web but its own option, with the clamped text_columns.
+ */
+function webOptions(input: ServerCase["options"]): AskPromptOptions {
+    const advertised = input.supportedVisuals;
+    return {
+        scope: "species",
+        animalName: "African Lion",
+        mode: "auto",
+        supportedVisuals: advertised.filter((name): name is AskVisualMedium => name !== "rich"),
+        companionLoop: input.companionLoop ?? null,
+        suggestSteps: input.suggestSteps,
+        stories: input.stories,
+        call: input.call === true,
+        rich: advertised.includes("rich") ? {columns: askRichColumns(input.textColumns)} : null
+    };
+}
+
+/** Lines from the first starting with `from` up to (not including) the next starting with `to`. */
+function slice(prompt: string, from: string, to: (line: string) => boolean): string[] {
     const lines = prompt.split("\n");
-    const start = lines.findIndex((line) => line.startsWith("Formatting —"));
-    assert.ok(start >= 0, "no formatting lead");
-    const end = lines.findIndex((line, index) => index > start && (line.startsWith("- End ") || line === ""));
+    const start = lines.findIndex((line) => line.startsWith(from));
+    assert.ok(start >= 0, `no line starts with ${from}`);
+    const end = lines.findIndex((line, index) => index > start && to(line));
+    assert.ok(end >= 0, `nothing ends the section after ${from}`);
     return lines.slice(start, end);
 }
 
-function sameLines(web: readonly string[], spec: readonly string[], what: string) {
-    for (let index = 0; index < Math.max(web.length, spec.length); index += 1) {
-        assert.equal(web[index], spec[index], `${what}, line ${index + 1}`);
+function sections(prompt: string) {
+    return {
+        medium: slice(prompt, "Medium —", (line) => line.startsWith("Formatting —"))
+            .filter((line, index, all) => !(index === all.length - 1 && line === "")),
+        // The lead and its rules, up to the closing rules ("- End …").
+        formatting: slice(prompt, "Formatting —", (line) => line.startsWith("- End ") || line === "")
+    };
+}
+
+function sameLines(web: readonly string[], server: readonly string[], what: string) {
+    for (let index = 0; index < Math.max(web.length, server.length); index += 1) {
+        assert.equal(web[index], server[index], `${what}, line ${index + 1}`);
     }
 }
 
-test("the rich rules are the SPEC's, word for word, at 36 and 72 columns", () => {
+test("the fixture is the rich-chat server lane's build (owner, 2026-10-31)", () => {
+    assert.equal(fixture.source.repo, "AnimalDex");
+    assert.ok(fixture.source.files.includes("supabase/functions/_shared/animal-voice.ts"));
+});
+
+test("the rich lead, medium line and rules are the server's, word for word", () => {
     assert.equal(ANIMAL_RICH_FORMAT_LEAD, fixture.lead);
-    sameLines(animalRichFormatRules(36), fixture.rules["36"], "rules at 36");
-    sameLines(animalRichFormatRules(72), fixture.rules["72"], "rules at 72");
+    assert.equal(ANIMAL_RICH_DRAWING_LINE, fixture.mediumLine);
+    assert.equal(ANIMAL_RICH_LAST_CHECK_LINE, fixture.lastCheckLine);
+    sameLines(animalRichFormatRules(36), fixture.rules36, "rules at 36");
+    sameLines(animalRichFormatRules(72), fixture.rules72, "rules at 72");
 });
 
-test("with rich, the lead and the rules replace the conversational format rules", () => {
-    for (const columns of [36, 72] as const) {
-        const streaming = formatting(buildAskStreamingSystemPrompt({...BASE, rich: {columns}}));
-        sameLines(streaming, [fixture.lead, ...fixture.rules[String(columns) as "36" | "72"]], `streaming at ${columns}`);
-        const json = formatting(buildAskSystemPrompt({...BASE, rich: {columns}}));
-        sameLines(json, [fixture.lead, ...fixture.rules[String(columns) as "36" | "72"]], `json at ${columns}`);
+test("text_columns is clamped as the server clamps it", () => {
+    assert.equal(fixture.textColumns.min, 28);
+    assert.equal(fixture.textColumns.max, 80);
+    assert.equal(askRichColumns(undefined), fixture.textColumns.default);
+    for (const pair of fixture.textColumns.clamp) {
+        assert.equal(askRichColumns(pair.input), pair.output, JSON.stringify(pair.input));
     }
-    const prompt = buildAskStreamingSystemPrompt({...BASE, rich: {columns: 44}});
-    assert.equal(prompt.includes("- Plain sentence case. No emoji."), false);
-    assert.equal(prompt.includes("fits\n    in 44 characters."), true);
 });
 
-test("with rich, a text diagram counts as a drawing", () => {
-    const lines = buildAskStreamingSystemPrompt({...BASE, rich: {columns: 36}}).split("\n");
-    const small = lines.indexOf("  Never in small talk.");
-    assert.ok(small > 0);
-    assert.equal(lines[small + 1].trim(), fixture.drawingLine);
-    assert.equal(lines.filter((line) => line.trim() === fixture.drawingLine).length, 1);
-});
-
-test("without rich, and on a call, a group or a Trial thread, nothing changes", () => {
-    const plain = buildAskStreamingSystemPrompt(BASE);
-    for (const options of [
-        {...BASE, rich: null},
-        {...BASE, rich: {columns: 36}, call: true},
-        {...BASE, rich: {columns: 36}, groupLines: ["You are in a group."]},
-        {...BASE, rich: {columns: 36}, aboutTrial: true}
-    ] satisfies AskPromptOptions[]) {
-        const prompt = buildAskStreamingSystemPrompt(options);
-        assert.equal(prompt.includes(fixture.lead), false, JSON.stringify(options));
-        assert.equal(prompt.includes(fixture.drawingLine), false, JSON.stringify(options));
-        assert.equal(prompt.includes("- Plain sentence case. No emoji."), true, JSON.stringify(options));
+test("the medium and formatting sections come out as the server builds them, in every case", () => {
+    for (const [name, raw] of Object.entries(fixture.prompts)) {
+        const item = raw as ServerCase;
+        const options = webOptions(item.options);
+        for (const [variant, prompt] of [
+            ["streaming", buildAskStreamingSystemPrompt(options)],
+            ["json", buildAskSystemPrompt(options)]
+        ] as const) {
+            const built = sections(prompt);
+            sameLines(built.medium, item.medium, `${name} (${variant}) medium`);
+            // The JSON variant's conversational lead says "the answer is"; the rich lead is one.
+            const formatting = variant === "json" && built.formatting[0] !== fixture.lead
+                ? built.formatting.map((line, index) => (index === 0 ? line.replace("the answer is", "your reply is") : line))
+                : built.formatting;
+            sameLines(formatting, item.formatting, `${name} (${variant}) formatting`);
+            const lines = prompt.split("\n");
+            const check = lines.findIndex((line) => line.startsWith("Last check before you finish"));
+            sameLines(lines.slice(check, check + item.lastCheck.length), item.lastCheck, `${name} (${variant}) last check`);
+        }
     }
-    assert.equal(buildAskStreamingSystemPrompt({...BASE, rich: null}), plain);
 });
 
-test("text_columns is clamped to 28–80, and 36 when missing", () => {
-    assert.equal(askRichColumns(undefined), 36);
-    assert.equal(askRichColumns(null), 36);
-    assert.equal(askRichColumns("wide"), 36);
-    assert.equal(askRichColumns(10), 28);
-    assert.equal(askRichColumns(200), 80);
-    assert.equal(askRichColumns(44.7), 44);
-    assert.equal(askRichColumns("50"), 50);
-    // The rules are written at the clamped width.
-    assert.equal(animalRichFormatRules(300).some((line) => line.includes("in 80 characters.")), true);
+test("in rich mode the last check keeps the layout; elsewhere it is unchanged", () => {
+    const rich = buildAskStreamingSystemPrompt(webOptions((fixture.prompts.publicRich44 as ServerCase).options));
+    assert.equal(rich.includes(ANIMAL_RICH_LAST_CHECK_LINE), true);
+    assert.equal(rich.includes("say it out loud like this? If it reads like a report, say it your own way."), false);
+    const plain = buildAskStreamingSystemPrompt(webOptions((fixture.prompts.ownerPlain as ServerCase).options));
+    assert.equal(plain.includes(ANIMAL_RICH_LAST_CHECK_LINE), false);
+    assert.equal(plain.includes("say it out loud like this? If it reads like a report, say it your own way."), true);
+    // A call, a group or a Trial thread never goes rich, whatever the client says.
+    for (const extra of [{call: true}, {groupLines: ["You are in a group."]}, {aboutTrial: true}] satisfies Partial<AskPromptOptions>[]) {
+        const prompt = buildAskStreamingSystemPrompt({...webOptions((fixture.prompts.publicRich44 as ServerCase).options), ...extra});
+        assert.equal(prompt.includes(fixture.lead), false, JSON.stringify(extra));
+        assert.equal(prompt.includes(ANIMAL_RICH_LAST_CHECK_LINE), false, JSON.stringify(extra));
+    }
+});
+
+test("speakableText says what the server says", () => {
+    for (const pair of fixture.speakableText) {
+        assert.equal(speakableText(pair.input), pair.output, JSON.stringify(pair.input));
+    }
 });

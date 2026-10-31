@@ -258,10 +258,10 @@ export const ASK_RICH_COLUMNS_MIN = 28;
 export const ASK_RICH_COLUMNS_MAX = 80;
 export const ASK_RICH_COLUMNS_DEFAULT = 36;
 
+/** A whole number of columns, clamped; anything but a number (a string included) is the default, as the server takes it. */
 export function askRichColumns(raw: unknown): number {
-    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw.trim() ? Number(raw) : Number.NaN;
-    if (!Number.isFinite(value)) return ASK_RICH_COLUMNS_DEFAULT;
-    return Math.min(ASK_RICH_COLUMNS_MAX, Math.max(ASK_RICH_COLUMNS_MIN, Math.floor(value)));
+    if (typeof raw !== "number" || !Number.isFinite(raw)) return ASK_RICH_COLUMNS_DEFAULT;
+    return Math.min(ASK_RICH_COLUMNS_MAX, Math.max(ASK_RICH_COLUMNS_MIN, Math.floor(raw)));
 }
 
 export function animalRichFormatRules(columns: number): string[] {
@@ -418,6 +418,17 @@ const ANIMAL_LAST_CHECK = [
     "your first two sentences, and is it your Power's way? If you end on a question, could another animal ask it word for word? Then ask yours.",
     "Then: would you, this particular animal, say it out loud like this? If it reads like a report, say it your own way."
 ];
+
+/**
+ * In rich mode the check's last line keeps the layout: a laid-out answer is
+ * not a report, only a neutral one is. The apps' `ANIMAL_RICH_LAST_CHECK_LINE`.
+ */
+export const ANIMAL_RICH_LAST_CHECK_LINE =
+    "Then: would you, this particular animal, say it like this? If it reads like a neutral report, put it back in your own voice and keep the layout.";
+
+function animalLastCheck(options: AskPromptOptions): string[] {
+    return richFormat(options) ? [...ANIMAL_LAST_CHECK.slice(0, -1), ANIMAL_RICH_LAST_CHECK_LINE] : ANIMAL_LAST_CHECK;
+}
 
 /**
  * The reader is somewhere that is not one animal's page — the home page, a
@@ -857,7 +868,7 @@ function speciesRecordSection(options: AskPromptOptions): string[] {
  * (training, with its own format) keep `ANIMAL_FORMAT_RULES`.
  */
 function richFormat(options: AskPromptOptions): {columns: number} | null {
-    if (!options.rich || options.call || options.groupLines?.length) return null;
+    if (!options.rich || options.call || options.aboutTrial || options.groupLines?.length) return null;
     if (speciesMode(options) === "training") return null;
     return {columns: askRichColumns(options.rich.columns)};
 }
@@ -933,7 +944,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
             ...followUpRules(options),
             `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,
             "",
-            ...ANIMAL_LAST_CHECK,
+            ...animalLastCheck(options),
             ...speciesRecordSection(options)
         ].join("\n");
     }
@@ -983,7 +994,7 @@ export function buildAskSystemPrompt(options: AskPromptOptions): string {
             "answer must be a single JSON string with real newlines escaped as \\n.",
             ...followUpRules(options),
             "",
-            ...ANIMAL_LAST_CHECK,
+            ...animalLastCheck(options),
             ...speciesRecordSection(options)
         ].join("\n");
     }

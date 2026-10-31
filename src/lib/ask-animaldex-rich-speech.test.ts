@@ -31,16 +31,17 @@ const RICH_SPEECH_SAMPLE = [
     "Keep your nights 1️⃣ free 👍."
 ].join("\n");
 
-test("the sample is said without its table, its diagram, its emoji or a stray box line", () => {
+test("the sample is said without its table, its diagram, its emoji or the strokes around stray words", () => {
     assert.equal(
         speakableText(RICH_SPEECH_SAMPLE),
         "Take it, but not the way they offered it. What I would do. Ask for a trial month before you say yes. "
-            + "Name one person you will learn from. Keep your nights free ."
+            + "Name one person you will learn from. a stray line. Keep your nights free."
     );
 });
 
 test("emoji go whole: keycaps, pictographs, variation selectors and joiners", () => {
-    assert.equal(withoutSpokenEmoji("1️⃣ Go 👩‍💻 now ✌️ #️⃣"), " Go  now  ");
+    // A run goes with the spaces before it.
+    assert.equal(withoutSpokenEmoji("1️⃣ Go 👩‍💻 now ✌️ #️⃣"), " Go now");
     // Arrows and box-drawing are not emoji: a diagram keeps them.
     assert.equal(withoutSpokenEmoji("A → B ─ C"), "A → B ─ C");
 });
@@ -52,6 +53,7 @@ test("the words lit on screen are the words said, in step to the last", () => {
         "What", "I", "would", "do",
         "Ask", "for", "a", "trial", "month", "before", "you", "say", "yes.",
         "Name", "one", "person", "you", "will", "learn", "from.",
+        "a", "stray", "line",
         "Keep", "your", "nights", "free"
     ]);
     const spoken = askWords(speakableText(RICH_SPEECH_SAMPLE));
@@ -62,8 +64,9 @@ test("a table or a diagram holds no words, so the bubbles after it keep their pl
     const pieces = askReplyPieces(RICH_SPEECH_SAMPLE, true);
     const {pieceStarts, words} = askReplyWords(pieces);
     assert.equal(pieces.length, pieceStarts.length);
-    // The last bubble's words start right after the list's.
-    assert.equal(words[pieceStarts[pieceStarts.length - 1]], "Keep");
+    // The last bubble's words (the stray line's, then the last line's) start right after the list's.
+    assert.equal(words[pieceStarts[pieceStarts.length - 1]], "a");
+    assert.equal(words[words.length - 1], "free");
     // An emoji alone, or a keycap, is never a word to light.
     assert.deepEqual(askWordRanges("Go 🌙 1️⃣ now"), [[0, 2], [10, 13]]);
 });

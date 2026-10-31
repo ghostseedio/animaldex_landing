@@ -13,7 +13,7 @@
 
 import {askInlinePlainText, parseAskMarkdown} from "@/lib/ask-animaldex/markdown";
 import {askPlainBubbleText, askReplyPieces, type AskReplyPiece} from "@/lib/ask-animaldex/thread-layout";
-import {BOX_DRAWING, withoutSpokenEmoji} from "@/lib/ask-animaldex/call-speech";
+import {BOX_STROKES, isDiagramLine, withoutSpokenEmoji} from "@/lib/ask-animaldex/call-speech";
 
 /** When one word of a spoken reply is said, in seconds from the start of the clip. */
 export type AskSpokenWord = {text: string; start: number; end: number};
@@ -48,10 +48,19 @@ export function askWords(text: string): string[] {
  * What of a bubble with structure is heard, as the server's `speakableText`
  * hears it (docs/rich-chat/SPEC.md, section 1.3): headings, paragraphs,
  * quotes and list items; never a table, a fenced block (a text diagram, a
- * drawing) or a stray box-drawing line. Emoji are not words (`askWordRanges`).
+ * drawing), a diagram line outside its fence or the strokes around its
+ * words. Emoji are not words (`askWordRanges`).
  */
 export function askSpokenMarkdownText(raw: string): string {
-    const lines = raw.replace(/\r\n/g, "\n").split("\n").filter((line) => !BOX_DRAWING.test(line));
+    let inFence = false;
+    const lines = raw.replace(/\r\n/g, "\n").split("\n").flatMap((line) => {
+        if (line.trim().startsWith("```")) inFence = !inFence;
+        else if (!inFence) {
+            if (isDiagramLine(line)) return [];
+            return [line.replace(BOX_STROKES, " ")];
+        }
+        return [line];
+    });
     return parseAskMarkdown(lines.join("\n"))
         .map((block): string | null => {
             switch (block.kind) {
