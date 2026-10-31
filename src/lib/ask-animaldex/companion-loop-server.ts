@@ -12,6 +12,8 @@ import "server-only";
  */
 
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
+import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
+import {STEP_PROOF_WAIT_MS, decodeStepProofResponse, type StepProof} from "@/lib/ask-animaldex/step-proof";
 import {
     NO_DEBATE,
     companionDoneFields,
@@ -99,6 +101,13 @@ export type StepReport = CompanionStepReport & {stepId: string};
  * a stale or someone else's step id is no report (an ordinary message). What
  * was attached is read from the row (`media_paths`), never from the request,
  * and said in words (`describeStepMedia`). The apps' `loadStepReport`.
+ *
+ * With a photo or video, the proof check (owner, 2026-10-31; the apps'
+ * docs/your-step/PROOF.md) is the apps' `check-animal-step-proof`, asked with
+ * the reader's own session: it reuses a stored result or runs the check and
+ * stores it, so a confirmed proof adds +5 XP when the step is done. A failed,
+ * refused or slow check (about 12 s) is `failed`: the animal is told nobody
+ * could look at it. It never throws.
  */
 async function readStepReport(service: Service, userId: string, open: CompanionOpenTrial | null, stepId: string | null): Promise<StepReport | null> {
     if (!stepId) return null;
@@ -106,6 +115,7 @@ async function readStepReport(service: Service, userId: string, open: CompanionO
         console.warn("[ask-animaldex] step_report is not the open step", stepId);
         return null;
     }
+    let media: string | null = null;
     try {
         const {data, error} = await service
             .from("animal_companion_trials")
@@ -120,10 +130,34 @@ async function readStepReport(service: Service, userId: string, open: CompanionO
         }
         const raw: unknown = data?.media_paths;
         const paths = Array.isArray(raw) ? raw.filter((path): path is string => typeof path === "string") : [];
-        return {stepId: open.id, media: describeStepMedia(paths)};
+        media = describeStepMedia(paths);
+        if (!media) return {stepId: open.id, media: null};
+        return {stepId: open.id, media, proof: await askStepProof(open.id)};
     } catch (error) {
         warn("step report read", error);
-        return {stepId: open.id, media: null};
+        return {stepId: open.id, media};
+    }
+}
+
+/** `check-animal-step-proof` for the open step; `failed` on any error or after about 12 s. */
+async function askStepProof(stepId: string): Promise<StepProof | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<StepProof>((resolve) => {
+        timer = setTimeout(() => resolve({status: "failed", seen: null}), STEP_PROOF_WAIT_MS);
+    });
+    const asked = invokeAuthenticatedSupabaseFunctionResponse("check-animal-step-proof", {step_id: stepId})
+        .then((result) => {
+            if (!result.ok) console.warn("[ask-animaldex] check-animal-step-proof", result.status, String(result.payload?.error ?? "").slice(0, 120));
+            return decodeStepProofResponse(result.ok, result.payload);
+        })
+        .catch((error): StepProof => {
+            warn("check-animal-step-proof", error);
+            return {status: "failed", seen: null};
+        });
+    try {
+        return await Promise.race([asked, late]);
+    } finally {
+        clearTimeout(timer);
     }
 }
 

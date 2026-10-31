@@ -32,6 +32,7 @@
  */
 
 import {ASK_FOLLOW_UP_SENTINEL} from "@/lib/ask-animaldex/prompt";
+import type {StepProofStatus} from "@/lib/ask-animaldex/step-proof";
 
 export type CompanionFocus = {id: string; focus: string; since?: string | null};
 /**
@@ -247,8 +248,10 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
                 "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
                 "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
                 "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
-                "- What they tell you is enough. Never ask for proof or to see anything; a photo or video they add goes into",
-                "  their own record, and you do not see it.",
+                "- What they tell you is enough. Never ask for proof or to see anything. A photo or video they add goes into",
+                "  their own record; when step_report says what it shows (proof.seen), you may react to that as if you had seen",
+                "  it, using only what proof.seen says and adding no detail of your own. Whatever it shows, their word stands:",
+                "  never doubt them because of it, and never mention a check, a bonus or XP.",
                 "- If they ask for a different step, or want a challenge but have nothing of their own to bring, you may offer",
                 "  your own Trials instead, with the trial card: they pick the one that suits them, and it becomes their step.",
                 "  Say in a sentence what your Trials ask of them, as yourself.",
@@ -286,7 +289,9 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
             ? [
                 "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
                 "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-                "  into — you may offer once, after giving your own verdict, to let other animals weigh in. The offer is yours:",
+                "  into — you may offer once, after giving your own verdict, to let other animals weigh in. In a reply where you",
+                "  may, this offer comes first: make it instead of setting a new step or offering your Trials or Warmup in that",
+                "  reply; those can wait. The offer is yours:",
                 "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
                 "  You may name up to three of your owner's other animals from other_animals whose ways would differ from yours,",
                 "  by the names other_animals gives; never name anyone else's animals. Then end the reply with the debate marker.",
@@ -376,8 +381,25 @@ export function describeStepMedia(paths: readonly string[] | null | undefined): 
     return list.length === 1 ? "a photo" : `${list.length} photos`;
 }
 
-/** The person tapped "I did it" on the open step: their message is the report. */
-export type CompanionStepReport = {media: string | null};
+/**
+ * The person tapped "I did it" on the open step: their message is the report.
+ * `proof`: what the check saw in their photo or video (the apps'
+ * docs/your-step/PROOF.md); absent or `failed` when nobody could look at it.
+ */
+export type CompanionStepProof = {status: StepProofStatus; seen: string | null};
+export type CompanionStepReport = {media: string | null; proof?: CompanionStepProof | null};
+
+/** The step_report line's sentence about their photo or video. Verbatim from the apps' `stepReportMediaLine`. */
+export function stepReportMediaLine(report: CompanionStepReport): string {
+    if (!report.media) return "";
+    const proof = report.proof;
+    if (proof && proof.status !== "failed" && proof.seen) {
+        return ` They also added ${report.media} to their record of it, and it was looked at for you: proof ${
+            JSON.stringify({status: proof.status, seen: proof.seen})
+        } (confirmed: it shows the step; unclear: it cannot be told from it; not_shown: it shows something else). React to it only if it fits, using only what proof.seen says.`;
+    }
+    return ` They also added ${report.media} to their record of it; nobody could look at it this time, so say nothing about what it shows.`;
+}
 
 /** The loop as it stands, and who else they could be sent to. Per turn. Verbatim from the apps' `companionPromptLines`. */
 export function companionPromptLines(params: {
@@ -422,7 +444,7 @@ export function companionPromptLines(params: {
         : null;
     const report = params.stepReport && open
         ? `step_report — they have just tapped "I did it" on companion.open_trial: their message is how it went, in their own words.${
-            params.stepReport.media ? ` They also added ${params.stepReport.media} to their record of it, which you cannot see.` : ""
+            stepReportMediaLine(params.stepReport)
         } Judge it as the rules for reporting back say.`
         : "";
     return [
@@ -506,15 +528,18 @@ export function parseDebateMarker(answer: string): {problem: string | null; keys
 }
 
 /**
- * The problem a debate offer (or a call's hand-over) carries (owner,
- * 2026-10-31): the animal's focus, "Working on: …", when there is one, else
- * the problem the marker heard. Null when there is neither.
+ * The problem a debate the animal offers is about (debate_offer.problem and a
+ * call's debate_request.problem; owner, 2026-10-31): its focus with them
+ * ("Working on: ..."), the one it sets in this very reply first (a new focus
+ * replaces the old one), else the problem it wrote with the offer. The apps'
+ * `debateOfferProblem`.
  */
-export function debateOfferProblem(focus: string | null | undefined, heard: string | null | undefined): string | null {
-    const working = typeof focus === "string" ? focus.replace(/\s+/g, " ").trim() : "";
-    if (working) return clip(working, 300);
-    const said = typeof heard === "string" ? heard.trim() : "";
-    return said || null;
+export function debateOfferProblem(
+    state: CompanionState | null | undefined,
+    lines: Pick<CompanionLines, "focus"> | null | undefined,
+    written: string | null
+): string | null {
+    return lines?.focus?.trim() || state?.focus?.focus?.trim() || written;
 }
 
 /** `debate_chat_state` read the server's way: whether the offer may be made now, and whether a call may hand one to the chat. */

@@ -500,7 +500,7 @@ export async function POST(request: Request) {
                         daysTalked: Number(owner?.bond?.counted?.days ?? 0) || 0,
                         offeredInConversation: conversationOffersWarmup(sentHistory)
                     }),
-                    stepReport: loop.stepReport ? {media: loop.stepReport.media} : null,
+                    stepReport: loop.stepReport ? {media: loop.stepReport.media, proof: loop.stepReport.proof ?? null} : null,
                     debateOffer: debate.offer,
                     // On a call: whether a yes may hand the debate over now.
                     ...(callDebates ? {debateHandOver: debate.handOver} : {})
@@ -727,11 +727,9 @@ export async function POST(request: Request) {
             if (marker) {
                 await noteDebateOffer(owner.service, {userId: ownerUserId, speciesProfileId: ownerSpeciesId, via: "chat"});
                 if (debate.offer && result.companion && typeof result.companion === "object") {
-                    const companionNow = result.companion as Record<string, unknown>;
-                    // The debate is on the main problem (owner, 2026-10-31): the focus, as this reply left it, when there is one.
-                    const focusNow = typeof companionNow.focus === "string" ? companionNow.focus : null;
-                    companionNow.debate_offer = {
-                        problem: debateOfferProblem(focusNow, marker.problem),
+                    (result.companion as Record<string, unknown>).debate_offer = {
+                        // The main problem: the animal's focus with them, when it has one.
+                        problem: debateOfferProblem(loop.state, lines, marker.problem),
                         with: debateOfferAnimals(marker.keys, loop.roster)
                     };
                 }
@@ -746,7 +744,7 @@ export async function POST(request: Request) {
                 await noteDebateOffer(owner.service, {userId: ownerUserId, speciesProfileId: ownerSpeciesId, via: "call", accepted: true});
                 return {
                     debate_request: {
-                        problem: debateOfferProblem(loop.state?.focus?.focus ?? null, lines.debate.problem),
+                        problem: debateOfferProblem(loop.state, lines, lines.debate.problem),
                         with: debateOfferAnimals(lines.debate.keys, loop.roster)
                     }
                 };

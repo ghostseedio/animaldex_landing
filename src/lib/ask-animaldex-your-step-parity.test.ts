@@ -3,7 +3,7 @@ import test from "node:test";
 
 // 3.2 "Your step" and Debates: the web's animal holds the apps' words, string
 // by string. The fixture is the apps' own server modules' output (AnimalDex
-// r32d-server, `scripts/generate-your-step-parity-fixture.mts`): the loop
+// proof-debates-server, `scripts/generate-your-step-parity-fixture.mts`): the loop
 // rules (with and without the debate offer), the prompt lines (with and
 // without companion.debate, and a call's may_hand_over), the Warmup,
 // debate-marker and report helpers, the hidden lines (a call's DEBATE_OFFER
@@ -22,7 +22,10 @@ import {
     conversationOffersDebate,
     conversationOffersWarmup,
     debateOfferAnimals,
+    debateOfferProblem,
     describeStepMedia,
+    stepReportMediaLine,
+    type CompanionStepReport,
     extractCompanionLines,
     parseDebateMarker,
     openStepForClient,
@@ -66,9 +69,25 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
     }
 }
 
-test("the fixture is the Debates server lane's 3.2 build (SPEC section 6)", () => {
-    assert.equal(fixture.source.ref, "r32d-server");
-    assert.match(fixture.source.commit, /^1e27f77d/);
+test("the fixture is the proof bonus + debates fixes server lane's build (owner, 2026-10-31)", () => {
+    assert.equal(fixture.source.ref, "proof-debates-server");
+    assert.match(fixture.source.commit, /^cc714467/);
+});
+
+test("proof bonus: the animal hears what the proof shows, as the server says it", () => {
+    for (const item of fixture.proof.stepReportMediaLine) {
+        assert.equal(stepReportMediaLine(item.input as CompanionStepReport), item.output, JSON.stringify(item.input));
+    }
+    // The old line is gone: a photo with no check is "nobody could look at it", never "you cannot see".
+    assert.equal(fixture.companionLoopRules.offersSteps.join("\n").includes("you do not see it"), false);
+});
+
+test("debates fixes: the offer's problem is the animal's focus, as the server picks it", () => {
+    for (const item of fixture.proof.debateOfferProblem) {
+        assert.equal(debateOfferProblem(parseCompanionState(item.input.state), item.input.lines, item.input.written), item.output, JSON.stringify(item.input));
+    }
+    // The offer comes first in a reply where it may be made.
+    assert.equal(fixture.companionLoopRules.debates.join("\n").includes("this offer comes first"), true);
 });
 
 test("the companion loop's rules and hidden lines are the apps', word for word", () => {
@@ -102,7 +121,7 @@ test("the turn's loop lines come out as the server writes them", () => {
             powerEarned: boolean;
             powerJustEarned?: boolean;
             warmup?: CompanionWarmup;
-            stepReport?: {media: string | null} | null;
+            stepReport?: CompanionStepReport | null;
             debateOffer?: boolean;
             debateHandOver?: boolean;
         };

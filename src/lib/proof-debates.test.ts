@@ -9,6 +9,7 @@ import {normalizeCompanionEvent, parseCompanionUpdate} from "@/lib/ask-animaldex
 import {askReplySpecials} from "@/lib/ask-animaldex/special-messages";
 import {debateOfferProblem} from "@/lib/ask-animaldex/companion-focus";
 import {decodeStepRecords, stepProofStatus} from "@/lib/your-step";
+import {decodeStepProofResponse} from "@/lib/ask-animaldex/step-proof";
 import {stepProofBonusLine} from "@/lib/your-step-words";
 import {
     debateHasStakes,
@@ -122,8 +123,18 @@ test("a debate starts on the main problem: the offer's, else the focus, else wha
     assert.equal(debateSeedProblem({focus: null, said: [null, "my last message"]}), "my last message");
     assert.equal(debateSeedProblem({focus: null, said: ["the call's problem", "my last message"]}), "the call's problem");
     assert.equal(debateSeedProblem({}), "");
-    // The server's offer and hand-over: the focus when there is one.
-    assert.equal(debateOfferProblem("Speaking up first", "They freeze in meetings"), "Speaking up first");
-    assert.equal(debateOfferProblem(null, "They freeze in meetings"), "They freeze in meetings");
-    assert.equal(debateOfferProblem(" ", null), null);
+    // The server's offer and hand-over (the parity test holds the rest): a focus set in this reply first, then the standing one.
+    const state = {focus: {id: "f", focus: "Speaking up first"}, open_trial: null, your_trials_done: 0, recent_done: [], referral: null} as unknown as Parameters<typeof debateOfferProblem>[0];
+    assert.equal(debateOfferProblem(state, {focus: "Moving cities"}, "They freeze in meetings"), "Moving cities");
+    assert.equal(debateOfferProblem(state, null, "They freeze in meetings"), "Speaking up first");
+    assert.equal(debateOfferProblem(null, null, "They freeze in meetings"), "They freeze in meetings");
+});
+
+test("check-animal-step-proof's answer: a status and what was seen, none without media, failed otherwise", () => {
+    assert.deepEqual(decodeStepProofResponse(true, {status: "confirmed", seen: "  A desk  with a list. "}), {status: "confirmed", seen: "A desk with a list."});
+    assert.deepEqual(decodeStepProofResponse(true, {status: "failed", seen: "ignored"}), {status: "failed", seen: null});
+    assert.equal(decodeStepProofResponse(true, {status: null}), null);
+    assert.deepEqual(decodeStepProofResponse(false, {error: "step_not_open"}), {status: "failed", seen: null});
+    assert.deepEqual(decodeStepProofResponse(true, {status: "maybe"}), {status: "failed", seen: null});
+    assert.deepEqual(decodeStepProofResponse(true, "nope"), {status: "failed", seen: null});
 });

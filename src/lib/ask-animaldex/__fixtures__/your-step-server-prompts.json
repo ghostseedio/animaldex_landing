@@ -1,14 +1,170 @@
 {
   "source": {
     "repo": "AnimalDex",
-    "ref": "r32d-server",
-    "commit": "1e27f77d1365edb0d3ea68ed86d733e4986f0348",
+    "ref": "proof-debates-server",
+    "commit": "cc7144678ecf91299cd5d5629ab0a005a210976a",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",
       "animal-power-profile.ts",
       "animal-voice.ts",
       "animal-debate.ts"
+    ]
+  },
+  "proof": {
+    "stepReportMediaLine": [
+      {
+        "input": {
+          "media": null
+        },
+        "output": ""
+      },
+      {
+        "input": {
+          "media": "a photo"
+        },
+        "output": " They also added a photo to their record of it; nobody could look at it this time, so say nothing about what it shows."
+      },
+      {
+        "input": {
+          "media": "a photo",
+          "proof": {
+            "status": "confirmed",
+            "seen": "A desk with a written list."
+          }
+        },
+        "output": " They also added a photo to their record of it, and it was looked at for you: proof {\"status\":\"confirmed\",\"seen\":\"A desk with a written list.\"} (confirmed: it shows the step; unclear: it cannot be told from it; not_shown: it shows something else). React to it only if it fits, using only what proof.seen says."
+      },
+      {
+        "input": {
+          "media": "a video",
+          "proof": {
+            "status": "failed",
+            "seen": null
+          }
+        },
+        "output": " They also added a video to their record of it; nobody could look at it this time, so say nothing about what it shows."
+      },
+      {
+        "input": {
+          "media": "2 photos",
+          "proof": {
+            "status": "not_shown",
+            "seen": "A cat on a sofa."
+          }
+        },
+        "output": " They also added 2 photos to their record of it, and it was looked at for you: proof {\"status\":\"not_shown\",\"seen\":\"A cat on a sofa.\"} (confirmed: it shows the step; unclear: it cannot be told from it; not_shown: it shows something else). React to it only if it fits, using only what proof.seen says."
+      }
+    ],
+    "debateOfferProblem": [
+      {
+        "input": {
+          "state": {
+            "focus": {
+              "id": "f",
+              "focus": "Asking for the raise"
+            },
+            "open_trial": {
+              "id": "t1",
+              "step": "Say it first on Monday",
+              "set_at": "2026-10-30T09:00:00Z",
+              "accepted_at": "2026-10-30T09:05:00Z",
+              "trial_frequency": "MID",
+              "has_report": true
+            },
+            "your_trials_done": 1,
+            "recent_done": [
+              {
+                "step": "Wrote the numbers"
+              }
+            ],
+            "referral": null
+          },
+          "lines": {
+            "focus": "Moving cities for work"
+          },
+          "written": "Whether to take the job"
+        },
+        "output": "Moving cities for work"
+      },
+      {
+        "input": {
+          "state": {
+            "focus": {
+              "id": "f",
+              "focus": "Asking for the raise"
+            },
+            "open_trial": {
+              "id": "t1",
+              "step": "Say it first on Monday",
+              "set_at": "2026-10-30T09:00:00Z",
+              "accepted_at": "2026-10-30T09:05:00Z",
+              "trial_frequency": "MID",
+              "has_report": true
+            },
+            "your_trials_done": 1,
+            "recent_done": [
+              {
+                "step": "Wrote the numbers"
+              }
+            ],
+            "referral": null
+          },
+          "lines": {
+            "focus": null
+          },
+          "written": "Whether to take the job"
+        },
+        "output": "Asking for the raise"
+      },
+      {
+        "input": {
+          "state": {
+            "focus": {
+              "id": "f",
+              "focus": "Asking for the raise"
+            },
+            "open_trial": {
+              "id": "t1",
+              "step": "Say it first on Monday",
+              "set_at": "2026-10-30T09:00:00Z",
+              "accepted_at": "2026-10-30T09:05:00Z",
+              "trial_frequency": "MID",
+              "has_report": true
+            },
+            "your_trials_done": 1,
+            "recent_done": [
+              {
+                "step": "Wrote the numbers"
+              }
+            ],
+            "referral": null
+          },
+          "lines": null,
+          "written": null
+        },
+        "output": "Asking for the raise"
+      },
+      {
+        "input": {
+          "state": {
+            "open_trial": null
+          },
+          "lines": {
+            "focus": "  "
+          },
+          "written": "Whether to take the job"
+        },
+        "output": "Whether to take the job"
+      },
+      {
+        "input": {
+          "state": null,
+          "lines": null,
+          "written": null
+        },
+        "output": null
+      }
     ]
   },
   "arrays": {
@@ -232,8 +388,10 @@
       "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
       "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
       "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
-      "- What they tell you is enough. Never ask for proof or to see anything; a photo or video they add goes into",
-      "  their own record, and you do not see it.",
+      "- What they tell you is enough. Never ask for proof or to see anything. A photo or video they add goes into",
+      "  their own record; when step_report says what it shows (proof.seen), you may react to that as if you had seen",
+      "  it, using only what proof.seen says and adding no detail of your own. Whatever it shows, their word stands:",
+      "  never doubt them because of it, and never mention a check, a bonus or XP.",
       "- If they ask for a different step, or want a challenge but have nothing of their own to bring, you may offer",
       "  your own Trials instead, with the trial card: they pick the one that suits them, and it becomes their step.",
       "  Say in a sentence what your Trials ask of them, as yourself.",
@@ -314,8 +472,10 @@
       "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
       "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
       "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
-      "- What they tell you is enough. Never ask for proof or to see anything; a photo or video they add goes into",
-      "  their own record, and you do not see it.",
+      "- What they tell you is enough. Never ask for proof or to see anything. A photo or video they add goes into",
+      "  their own record; when step_report says what it shows (proof.seen), you may react to that as if you had seen",
+      "  it, using only what proof.seen says and adding no detail of your own. Whatever it shows, their word stands:",
+      "  never doubt them because of it, and never mention a check, a bonus or XP.",
       "- If they ask for a different step, or want a challenge but have nothing of their own to bring, you may offer",
       "  your own Trials instead, with the trial card: they pick the one that suits them, and it becomes their step.",
       "  Say in a sentence what your Trials ask of them, as yourself.",
@@ -346,7 +506,9 @@
       "  them, in your own words, and say the step starts with that animal's way.",
       "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
       "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-      "  into — you may offer once, after giving your own verdict, to let other animals weigh in. The offer is yours:",
+      "  into — you may offer once, after giving your own verdict, to let other animals weigh in. In a reply where you",
+      "  may, this offer comes first: make it instead of setting a new step or offering your Trials or Warmup in that",
+      "  reply; those can wait. The offer is yours:",
       "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
       "  You may name up to three of your owner's other animals from other_animals whose ways would differ from yours,",
       "  by the names other_animals gives; never name anyone else's animals. Then end the reply with the debate marker.",
@@ -459,7 +621,7 @@
       },
       "output": [
         "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"not earned yet\",\"warmup\":{\"passed\":false,\"may_offer\":true}}",
-        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a video to their record of it, which you cannot see. Judge it as the rules for reporting back say.",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a video to their record of it; nobody could look at it this time, so say nothing about what it shows. Judge it as the rules for reporting back say.",
         "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
       ]
     },
@@ -783,6 +945,292 @@
       },
       "output": [
         "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"debate\":{\"may_offer\":false,\"may_hand_over\":false}}"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": false,
+        "stepReport": {
+          "media": "a photo",
+          "proof": {
+            "status": "confirmed",
+            "seen": "A person stands at the head of a meeting table, speaking."
+          }
+        }
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"not earned yet\"}",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a photo to their record of it, and it was looked at for you: proof {\"status\":\"confirmed\",\"seen\":\"A person stands at the head of a meeting table, speaking.\"} (confirmed: it shows the step; unclear: it cannot be told from it; not_shown: it shows something else). React to it only if it fits, using only what proof.seen says. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "stepReport": {
+          "media": "a video",
+          "proof": {
+            "status": "not_shown",
+            "seen": "A plate of pasta on a kitchen counter."
+          }
+        }
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\"}",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a video to their record of it, and it was looked at for you: proof {\"status\":\"not_shown\",\"seen\":\"A plate of pasta on a kitchen counter.\"} (confirmed: it shows the step; unclear: it cannot be told from it; not_shown: it shows something else). React to it only if it fits, using only what proof.seen says. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "stepReport": {
+          "media": "2 photos",
+          "proof": {
+            "status": "unclear",
+            "seen": "A dark, blurred room."
+          }
+        }
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\"}",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added 2 photos to their record of it, and it was looked at for you: proof {\"status\":\"unclear\",\"seen\":\"A dark, blurred room.\"} (confirmed: it shows the step; unclear: it cannot be told from it; not_shown: it shows something else). React to it only if it fits, using only what proof.seen says. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "stepReport": {
+          "media": "a photo",
+          "proof": {
+            "status": "failed",
+            "seen": null
+          }
+        }
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\"}",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a photo to their record of it; nobody could look at it this time, so say nothing about what it shows. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "stepReport": {
+          "media": "a photo",
+          "proof": {
+            "status": "confirmed",
+            "seen": null
+          }
+        }
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\"}",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. They also added a photo to their record of it; nobody could look at it this time, so say nothing about what it shows. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true,
+        "debateOffer": true,
+        "stepReport": {
+          "media": null,
+          "proof": null
+        }
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"debate\":{\"may_offer\":true}}",
+        "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
       ]
     }
   ],
@@ -1440,8 +1888,10 @@
         "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
         "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
         "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
-        "- What they tell you is enough. Never ask for proof or to see anything; a photo or video they add goes into",
-        "  their own record, and you do not see it.",
+        "- What they tell you is enough. Never ask for proof or to see anything. A photo or video they add goes into",
+        "  their own record; when step_report says what it shows (proof.seen), you may react to that as if you had seen",
+        "  it, using only what proof.seen says and adding no detail of your own. Whatever it shows, their word stands:",
+        "  never doubt them because of it, and never mention a check, a bonus or XP.",
         "- If they ask for a different step, or want a challenge but have nothing of their own to bring, you may offer",
         "  your own Trials instead, with the trial card: they pick the one that suits them, and it becomes their step.",
         "  Say in a sentence what your Trials ask of them, as yourself.",
@@ -1828,8 +2278,10 @@
         "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
         "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
         "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
-        "- What they tell you is enough. Never ask for proof or to see anything; a photo or video they add goes into",
-        "  their own record, and you do not see it.",
+        "- What they tell you is enough. Never ask for proof or to see anything. A photo or video they add goes into",
+        "  their own record; when step_report says what it shows (proof.seen), you may react to that as if you had seen",
+        "  it, using only what proof.seen says and adding no detail of your own. Whatever it shows, their word stands:",
+        "  never doubt them because of it, and never mention a check, a bonus or XP.",
         "- If they ask for a different step, or want a challenge but have nothing of their own to bring, you may offer",
         "  your own Trials instead, with the trial card: they pick the one that suits them, and it becomes their step.",
         "  Say in a sentence what your Trials ask of them, as yourself.",
@@ -1860,7 +2312,9 @@
         "  them, in your own words, and say the step starts with that animal's way.",
         "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
         "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-        "  into — you may offer once, after giving your own verdict, to let other animals weigh in. The offer is yours:",
+        "  into — you may offer once, after giving your own verdict, to let other animals weigh in. In a reply where you",
+        "  may, this offer comes first: make it instead of setting a new step or offering your Trials or Warmup in that",
+        "  reply; those can wait. The offer is yours:",
         "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
         "  You may name up to three of your owner's other animals from other_animals whose ways would differ from yours,",
         "  by the names other_animals gives; never name anyone else's animals. Then end the reply with the debate marker.",

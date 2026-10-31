@@ -96,7 +96,14 @@ const promptCases = [
     // SPEC section 6, a call that takes debates: may_offer and may_hand_over.
     {state: openState, roster, powerEarned: true, debateOffer: true, debateHandOver: true},
     {state: openState, roster, powerEarned: true, debateOffer: false, debateHandOver: true},
-    {state: openState, roster: [], powerEarned: true, debateOffer: false, debateHandOver: false}
+    {state: openState, roster: [], powerEarned: true, debateOffer: false, debateHandOver: false},
+    // Proof bonus: what the check saw is told to the animal; a failed or missing check says nobody could look.
+    {state: openState, roster, powerEarned: false, stepReport: {media: "a photo", proof: {status: "confirmed", seen: "A person stands at the head of a meeting table, speaking."}}},
+    {state: openState, roster, powerEarned: true, stepReport: {media: "a video", proof: {status: "not_shown", seen: "A plate of pasta on a kitchen counter."}}},
+    {state: openState, roster, powerEarned: true, stepReport: {media: "2 photos", proof: {status: "unclear", seen: "A dark, blurred room."}}},
+    {state: openState, roster, powerEarned: true, stepReport: {media: "a photo", proof: {status: "failed", seen: null}}},
+    {state: openState, roster, powerEarned: true, stepReport: {media: "a photo", proof: {status: "confirmed", seen: null}}},
+    {state: openState, roster, powerEarned: true, debateOffer: true, stepReport: {media: null, proof: null}}
 ];
 // Two of the owner's other animals, as the marker and the DEBATE line name them (a1, a2).
 const debateRoster = [
@@ -108,6 +115,23 @@ const fence = (json: string) => `\`\`\`animaldex-card\n${json}\n\`\`\``;
 const card = 'Want to try?\n```animaldex-card\n{"kind":"training","title":"Warmup","body":"Two questions.","cta":"Take it"}\n```';
 const fixture = {
     source: {repo: "AnimalDex", ref, commit, files: ["animal-focus.ts", "animal-companion.ts", "animal-power-profile.ts", "animal-voice.ts", "animal-debate.ts"]},
+    // Proof bonus + debates fixes (owner, 2026-10-31).
+    proof: {
+        stepReportMediaLine: [
+            {media: null},
+            {media: "a photo"},
+            {media: "a photo", proof: {status: "confirmed", seen: "A desk with a written list."}},
+            {media: "a video", proof: {status: "failed", seen: null}},
+            {media: "2 photos", proof: {status: "not_shown", seen: "A cat on a sofa."}}
+        ].map((input) => ({input, output: focus.stepReportMediaLine(input)})),
+        debateOfferProblem: [
+            {state: openState, lines: {focus: "Moving cities for work"}, written: "Whether to take the job"},
+            {state: openState, lines: {focus: null}, written: "Whether to take the job"},
+            {state: openState, lines: null, written: null},
+            {state: {open_trial: null}, lines: {focus: "  "}, written: "Whether to take the job"},
+            {state: null, lines: null, written: null}
+        ].map((input) => ({input, output: focus.debateOfferProblem(focus.parseCompanionState(input.state), input.lines, input.written)}))
+    },
     arrays: {
         COMPANION_OUTPUT_LINES: focus.COMPANION_OUTPUT_LINES,
         REFERRAL_OPENING_RULES: focus.REFERRAL_OPENING_RULES,

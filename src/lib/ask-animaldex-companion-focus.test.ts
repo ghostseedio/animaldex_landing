@@ -134,7 +134,10 @@ test("a report says it is one, and what was attached, without the media", () => 
     const state = parseCompanionState({open_trial: {id: "t1", step: "Say it first"}, your_trials_done: 0, recent_done: []});
     const withVideo = companionPromptLines({state, roster: [], powerEarned: false, stepReport: {media: "a video"}}).join("\n");
     assert.equal(withVideo.includes('step_report — they have just tapped "I did it" on companion.open_trial'), true);
-    assert.equal(withVideo.includes("They also added a video to their record of it, which you cannot see."), true);
+    // Proof bonus (2026-10-31): unchecked media is "nobody could look at it", never invented.
+    assert.equal(withVideo.includes("They also added a video to their record of it; nobody could look at it this time, so say nothing about what it shows."), true);
+    const seen = companionPromptLines({state, roster: [], powerEarned: false, stepReport: {media: "a photo", proof: {status: "confirmed", seen: "A desk with a list."}}}).join("\n");
+    assert.equal(seen.includes('it was looked at for you: proof {"status":"confirmed","seen":"A desk with a list."}'), true);
     const plain = companionPromptLines({state, roster: [], powerEarned: false, stepReport: {media: null}}).join("\n");
     assert.equal(plain.includes("step_report"), true);
     assert.equal(plain.includes("They also added"), false);

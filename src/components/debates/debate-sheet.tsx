@@ -376,8 +376,14 @@ export default function DebateSetup({
         : false;
     const stakeLine = (hasStakes: boolean, count: number) => (hasStakes ? debateStakeNote(count, words) : words.debate.ownOnly);
     const pickedOthers = othersPicked(candidates ?? [], picked);
-    // Someone else's animal picked, and the host has no heart to put on it: heal it, or pick only your own.
-    const hostOutOfHearts = visibility === "public" && pickedOthers > 0 && host.hearts !== null && host.hearts <= 0;
+    // With a stake (someone else's animal picked), the host and your own picks each need a heart
+    // (SPEC section 7): the first of yours without one, to heal on its card, or pick only your own.
+    const heartless = visibility !== "public" || pickedOthers === 0
+        ? null
+        : host.hearts !== null && host.hearts <= 0
+            ? host.captureId
+            : (candidates ?? []).find((candidate) => candidate.ownerIsMe && picked.includes(candidate.captureId) && candidate.hearts !== null && candidate.hearts <= 0)?.captureId ?? null;
+    const hostOutOfHearts = heartless !== null;
     // Why Start can't be tapped yet, so it is never a disabled button with no reason.
     const startHint = !draft && !working && !failure && !publicBlocker && candidates !== null && candidates.length > 0
         ? picked.length === 0
@@ -545,7 +551,7 @@ export default function DebateSetup({
                     {hostOutOfHearts ? (
                         <>
                             {words.roster.offRoster}{" "}
-                            <Link href={`/app/capture/${encodeURIComponent(host.captureId)}?tab=stats`} className="font-bold text-primary-200 underline-offset-2 hover:underline">{web.heal}</Link>
+                            <Link href={`/app/capture/${encodeURIComponent(heartless ?? host.captureId)}?tab=stats`} className="font-bold text-primary-200 underline-offset-2 hover:underline">{web.heal}</Link>
                         </>
                     ) : stakeLine(pickedOthers > 0, pickedOthers)}
                 </p>
