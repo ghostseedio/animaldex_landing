@@ -10,7 +10,7 @@
  * (a card of the animal) for one signed in. Never a modal, never a nag.
  */
 
-import {useEffect, useState, type ReactNode} from "react";
+import {useEffect, useRef, useState, type ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {AskSpecialBubble} from "@/components/ask-animaldex/ask-messenger";
 import {AskTrialsSection} from "@/components/ask-animaldex/ask-special";
@@ -33,7 +33,8 @@ export default function TalkCapabilities({
     companionWords,
     signUpHref,
     appHref,
-    onTalk
+    onTalk,
+    onReveal
 }: {
     /** As the chat calls it. */
     name: string;
@@ -47,6 +48,8 @@ export default function TalkCapabilities({
     signUpHref: string;
     appHref: string;
     onTalk: () => void;
+    /** Something opened here: the thread shows it, rather than staying on its newest message. */
+    onReveal?: (element: HTMLElement) => void;
 }) {
     const [open, setOpen] = useState<Capability | null>(null);
     const captionLanguage = useTrialMotionCaptionLanguage();
@@ -75,6 +78,10 @@ export default function TalkCapabilities({
     }, [open, trials, speciesProfileId, captionLanguage]);
 
     const toggle = (capability: Capability) => setOpen((current) => (current === capability ? null : capability));
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        if (open && rootRef.current) onReveal?.(rootRef.current);
+    }, [open, onReveal]);
     const viewer = {signedIn};
     /** The locked capability's one action: an account, or the app. */
     const action = (kind: "step" | "debates") => (talkCapabilityAction(kind, viewer) === "signUp"
@@ -106,7 +113,7 @@ export default function TalkCapabilities({
         : {label: words.getApp, href: appHref, note: fillWords(words.catchForTrials, {animal: animalName})};
 
     return (
-        <div className="flex flex-col pt-4" data-testid="talk-capabilities">
+        <div ref={rootRef} className="flex scroll-mt-3 flex-col pt-4" data-testid="talk-capabilities">
             <p className="text-center text-[10px] font-black uppercase tracking-[0.14em] text-ink-400">
                 {fillWords(words.capabilities, {name})}
             </p>

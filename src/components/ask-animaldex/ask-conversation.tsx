@@ -1081,6 +1081,14 @@ export default function AskConversation({
         setShowsLatest(false);
         scroller.scrollTo({top: scroller.scrollHeight, behavior});
     }, []);
+    /** Something opened in the thread (the public chat's Trials): it is shown, and the thread stops following the newest message. */
+    const followHeldUntilRef = useRef(0);
+    const revealInThread = useCallback((element: HTMLElement) => {
+        sticksToBottom.current = false;
+        // While it scrolls into view and what it opened loads, the thread does not pull back to the end.
+        followHeldUntilRef.current = Date.now() + 2500;
+        requestAnimationFrame(() => element.scrollIntoView({block: "start", behavior: "smooth"}));
+    }, []);
     const onThreadScroll = useCallback(() => {
         const scroller = scrollRef.current;
         if (!scroller || !messenger) return;
@@ -1105,7 +1113,8 @@ export default function AskConversation({
         let lastHeight = scroller.scrollHeight;
         const follow = () => {
             const before = lastHeight - scroller.scrollTop - scroller.clientHeight;
-            if (!showingMemoryRef.current && (sticksToBottom.current || before < 72) && scroller.scrollHeight !== lastHeight) {
+            const held = Date.now() < followHeldUntilRef.current;
+            if (!held && !showingMemoryRef.current && (sticksToBottom.current || before < 72) && scroller.scrollHeight !== lastHeight) {
                 scroller.scrollTop = scroller.scrollHeight;
                 sticksToBottom.current = true;
             }
@@ -2334,6 +2343,7 @@ export default function AskConversation({
                                     signUpHref={talkSignUpHref(currentPath)}
                                     appHref={page.appHref}
                                     onTalk={() => composerRef.current?.focus()}
+                                    onReveal={revealInThread}
                                 />
                             ) : null}
                             <div aria-hidden="true" className="min-h-7 flex-1" />

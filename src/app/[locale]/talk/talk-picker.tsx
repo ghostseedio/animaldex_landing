@@ -155,14 +155,14 @@ function AnimalCard({animal, href, compact = false}: {animal: TalkAnimal; href: 
     return (
         <Link
             href={href}
-            className={`flex min-w-0 flex-1 items-center gap-3 border border-white/10 bg-white/[0.035] transition-colors hover:border-primary-300/40 hover:bg-white/[0.06] ${compact ? "px-2.5 py-2" : "px-3 py-3"}`}
+            className={`flex min-w-0 flex-1 items-center gap-2.5 border border-white/10 bg-white/[0.035] transition-colors hover:border-primary-300/40 hover:bg-white/[0.06] sm:gap-3 ${compact ? "px-2.5 py-2" : "px-2.5 py-2.5 sm:px-3 sm:py-3"}`}
             style={{borderRadius: 14}}
             data-testid="talk-animal"
         >
-            <AskAnimalFace url={getSpeciesImageRoute(animal.slug)} size={compact ? 36 : 44} />
+            <AskAnimalFace url={getSpeciesImageRoute(animal.slug)} size={compact ? 36 : 40} />
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-semibold leading-5 text-white">{animal.name}</span>
-                {animal.power ? <span className="block truncate text-[12px] leading-4 text-primary-300/90">{animal.power}</span> : null}
+                <span className="line-clamp-2 block text-[14px] font-semibold leading-5 text-white">{animal.name}</span>
+                {animal.power ? <span className="line-clamp-2 block text-[12px] leading-4 text-primary-300/90">{animal.power}</span> : null}
             </span>
         </Link>
     );
