@@ -385,7 +385,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                         <p className="text-ink-100 text-lg md:text-xl leading-8">
                             Scan animals, collect species, unlock profiles, and learn from the living world around you—at zoos, on nature walks, with pets, or wherever discovery happens.
                         </p>
-                        <Link href="/#more" className="text-primary-200 font-bold hover:text-primary-100 transition-colors w-fit">
+                        <Link href="/how-it-works" className="text-primary-200 font-bold hover:text-primary-100 transition-colors w-fit">
                             See how AnimalDex works →
                         </Link>
                     </div>
