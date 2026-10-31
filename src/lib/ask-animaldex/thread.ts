@@ -75,6 +75,11 @@ export type AskMessage = {
     /** The card under this reply (the Warmup, the Trials) was skipped or used. */
     cardsDismissed?: boolean;
     /**
+     * The debate started from this reply's offer (docs/rich-chat/SPEC.md,
+     * section 2.2): its section stays in the bubble, quiet, naming who is in it.
+     */
+    debateId?: string;
+    /**
      * A Warmup question, as the animal's message in the thread
      * (docs/your-step/INLINE.md): its text is empty, so it is never history
      * for the model. Its answer and, once checked, the verdict are kept on
@@ -163,8 +168,14 @@ export function createAskMessage(
         ...(overrides.stepReportId ? {stepReportId: overrides.stepReportId} : {}),
         ...stepReportMediaFields(overrides.stepReportId ? overrides : {}),
         ...(overrides.cardsDismissed ? {cardsDismissed: true} : {}),
+        ...debateIdField(overrides.debateId),
         ...warmupField(overrides.warmup)
     };
+}
+
+/** A started debate's id as stored, or nothing. */
+function debateIdField(raw: unknown): {debateId?: string} {
+    return typeof raw === "string" && /^[0-9a-f-]{36}$/i.test(raw) ? {debateId: raw.toLowerCase()} : {};
 }
 
 /** A Warmup question as stored, or nothing: a malformed one is dropped, never the thread. */
@@ -271,6 +282,7 @@ function normalizeMessage(value: unknown): AskMessage | null {
         ...(typeof row.animalMessageId === "string" && row.animalMessageId ? {animalMessageId: row.animalMessageId} : {}),
         ...(typeof row.stepReportId === "string" && row.stepReportId ? {stepReportId: row.stepReportId, ...stepReportMediaFields(row)} : {}),
         ...(row.cardsDismissed === true ? {cardsDismissed: true} : {}),
+        ...debateIdField(row.debateId),
         ...warmupField(row.warmup)
     };
 }

@@ -9,16 +9,20 @@
  * back to approve in the same place, with the stake: Post, Edit, or Keep it
  * private. Anything too personal stays private (`debate_not_public`).
  *
- * Since the owner's change of 2026-10-30 (SPEC section 6) it is drawn in the
- * chat thread itself, an edge-to-edge band under the animal's message
- * (`layout: "band"`): app UI, never the animal's voice. The modal sheet
- * (`layout: "sheet"`) is only the fallback where a band cannot be drawn, the
- * drawer at very small widths.
+ * Since 2026-10-31 (docs/rich-chat/SPEC.md, section 2.2) it lives in the
+ * conversation's own shapes, like Your step (`layout: "section"`): the offer's
+ * section in the animal's special message grows into this setup in place
+ * ("SET UP THE DEBATE", the question in bold with Edit, the animals as
+ * compact rows, Private | Public chips, the notes, [Start the debate] and
+ * [Not now]); opened from the ••• menu, the Bond tab or a call, it is a
+ * special message of its own from the host. Edit works in the message bar
+ * (`onEdit`), never in a field in the bubble. The modal sheet (`layout:
+ * "sheet"`) is only the drawer's fallback below 340 px.
  */
 
-import {useCallback, useEffect, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState, type ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
-import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
+import {AskAnimalFace, AskSpecialLabel} from "@/components/ask-animaldex/ask-messenger";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import {
@@ -27,6 +31,7 @@ import {
     DEBATE_PUBLIC_TEXT_MAX,
     debateAnimalName,
     debateHasStakes,
+    debateSetupRows,
     groupDebateCandidates,
     othersPicked,
     preselectedDebatePicks,
@@ -50,8 +55,22 @@ export type DebateHost = {
     hearts: number | null;
 };
 
+/**
+ * The message bar's edit mode (docs/rich-chat/SPEC.md, section 2.2): the
+ * strip says what is being edited, the field is prefilled, Send saves it.
+ */
+export type DebateEdit = {
+    kind: "problem" | "public";
+    text: string;
+    min: number;
+    max: number;
+    save: (text: string) => void;
+};
+
 /** The server wants at least this much of the problem (and of the public text). */
 const MIN_PROBLEM = 10;
+/** "More animals" shows this many more rows at a time. */
+const MORE_ROWS = 6;
 /** SERVER.md: poll about every 1.5 s; still drafting after about 30 s is a soft error. */
 const DRAFT_POLL_MS = 1500;
 const DRAFT_POLLS = 20;
@@ -60,6 +79,11 @@ const NO_NAMED: readonly DebateNamedAnimal[] = [];
 
 const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50";
 const quietButton = "inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50";
+// Inside the bubble: the special message's own chips (ask-special.tsx).
+const CHIP = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-[14px] py-1.5 text-left text-xs leading-4 transition-colors disabled:opacity-50";
+const PRIMARY_CHIP = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300`;
+const SECONDARY_CHIP = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10`;
+const ROW_RADIUS = {borderRadius: 12} as const;
 
 export default function DebateSetup({
     layout = "sheet",
@@ -73,10 +97,12 @@ export default function DebateSetup({
     onOptedIn,
     approving: initialApproving = null,
     onStarted,
-    onClose
+    onClose,
+    onEdit,
+    initialVisibility = "private"
 }: {
-    /** In the chat thread (the band), or the modal fallback. */
-    layout?: "band" | "sheet";
+    /** In the thread, the section of the animal's special message; or the modal fallback. */
+    layout?: "section" | "sheet";
     host: DebateHost;
     /** The person's problem: the animal's summary of it, or as they said it. */
     problem: string;
@@ -97,9 +123,13 @@ export default function DebateSetup({
     /** The debate is on: the chat shows it turn by turn. */
     onStarted: (debate: Debate) => void;
     onClose: () => void;
+    /** The section's Edit: the message bar's edit mode. Without it (the sheet), a field. */
+    onEdit?: (edit: DebateEdit) => void;
+    /** Private, always, in the chat; the dev gallery opens on Public to show it. */
+    initialVisibility?: DebateVisibility;
 }) {
     const web = words.debateWeb;
-    const [visibility, setVisibility] = useState<DebateVisibility>("private");
+    const [visibility, setVisibility] = useState<DebateVisibility>(initialVisibility);
     const [problem, setProblem] = useState(initialProblem.slice(0, DEBATE_PROBLEM_MAX));
     const [editingProblem, setEditingProblem] = useState(initialProblem.trim().length === 0);
     const [candidates, setCandidates] = useState<DebateCandidate[] | null>(null);
@@ -107,6 +137,8 @@ export default function DebateSetup({
     // The suggestions are pre-selected until the person picks for themselves.
     const [touched, setTouched] = useState(false);
     const [showsAll, setShowsAll] = useState(false);
+    // The section's "More animals": rows beyond the suggestions, six at a time.
+    const [moreRows, setMoreRows] = useState(0);
     const [working, setWorking] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
     const [refusedPublic, setRefusedPublic] = useState(false);
@@ -197,10 +229,12 @@ export default function DebateSetup({
     const suggested = useMemo(() => (candidates ?? []).filter((candidate) => candidate.fits).slice(0, DEBATE_MAX_PICKS), [candidates]);
     const listed = useMemo(() => {
         if (!candidates) return [];
+        // The suggestions and whatever else they picked, then six more at a time.
+        if (layout === "section") return debateSetupRows(candidates, picked, moreRows).rows;
         if (showsAll || suggested.length === 0) return candidates;
         // The suggestions, and whatever else they picked.
         return candidates.filter((candidate) => suggested.includes(candidate) || picked.includes(candidate.captureId));
-    }, [candidates, showsAll, suggested, picked]);
+    }, [candidates, showsAll, suggested, picked, layout, moreRows]);
 
     const toggle = (candidate: DebateCandidate) => {
         setTouched(true);
@@ -392,9 +426,164 @@ export default function DebateSetup({
                 ? web.problems.tooShort
                 : null
         : null;
-    const band = layout === "band";
-    const pad = band ? "px-4" : "px-5";
+    const pad = "px-5";
     const rule = "border-b border-white/[0.08]";
+
+    /** Edit, in the bar (the section) or in a field (the sheet). */
+    const editProblem = () => {
+        if (onEdit) {
+            onEdit({
+                kind: "problem",
+                text: problem,
+                min: MIN_PROBLEM,
+                max: DEBATE_PROBLEM_MAX,
+                save: (text) => {
+                    const next = text.slice(0, DEBATE_PROBLEM_MAX);
+                    setProblem(next);
+                    setFittedTo(next.trim());
+                    setFailure(null);
+                }
+            });
+            return;
+        }
+        setEditingProblem(true);
+    };
+    const editPublic = () => {
+        if (onEdit) {
+            onEdit({kind: "public", text: publicText, min: MIN_PROBLEM, max: DEBATE_PUBLIC_TEXT_MAX, save: (text) => setPublicText(text.slice(0, DEBATE_PUBLIC_TEXT_MAX))});
+            return;
+        }
+        setEditingPublic(true);
+    };
+
+    if (layout === "section") {
+        return (
+            <DebateSetupSection
+                words={words}
+                fromCall={fromCall}
+                problem={problem}
+                onEditProblem={editProblem}
+                visibility={visibility}
+                onVisibility={(option) => {
+                    if (visibility === option) return;
+                    setVisibility(option);
+                    setPicked([]);
+                    setTouched(false);
+                    setMoreRows(0);
+                    setFailure(null);
+                }}
+                draft={draft}
+                drafting={drafting}
+                publicText={publicText}
+                onEditPublic={editPublic}
+                stake={draft
+                    ? (draftHasStakes && draft.creditsForWinner !== null
+                        ? fillWords(words.debate.stakeNote, {credits: draft.creditsForWinner})
+                        : stakeLine(draftHasStakes, draft.participants.length > 1
+                            ? draft.participants.filter((participant) => !participant.isAskerOwned).length
+                            : othersPicked(candidates ?? [], picked)))
+                    : null}
+                notes={
+                    <>
+                        {refusedPublic ? <SectionNote tone="warn">{words.debate.notPublic}</SectionNote> : null}
+                        {publicBlocker ? <SectionNote>{publicBlocker}</SectionNote> : null}
+                    </>
+                }
+                roster={!draft && !publicBlocker && visibility === "public" && optedIn === false ? (
+                    <div className="flex items-start gap-3">
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-bold leading-5 text-white">{words.roster.optIn}</span>
+                            <span className="mt-0.5 block text-[11px] leading-4 text-white/60">{words.roster.optInNote}</span>
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => void optIn()}
+                            disabled={rosterSaving}
+                            role="switch"
+                            aria-checked={false}
+                            aria-label={words.roster.optIn}
+                            className="mt-0.5 h-6 w-10 shrink-0 rounded-full bg-white/15 p-0.5 disabled:opacity-60"
+                        >
+                            <span className="block h-5 w-5 rounded-full bg-white" />
+                        </button>
+                    </div>
+                ) : null}
+                animals={!draft && !publicBlocker ? (
+                    candidates === null ? (
+                        <p className="text-[13px] text-white/50">{web.loadingAnimals}</p>
+                    ) : candidates.length === 0 ? (
+                        <SectionNote>{visibility === "public" ? web.noRoster : web.noOwnAnimals}</SectionNote>
+                    ) : (
+                        <div className="flex flex-col gap-1.5" data-testid="debate-animals">
+                            {(visibility === "public" ? publicGroups(listed) : [{key: "all", title: null, rows: listed, note: null}]).map((group) => (
+                                <div key={group.key} className="flex flex-col gap-1.5">
+                                    {group.title ? (
+                                        <p className="pt-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{group.title}</p>
+                                    ) : null}
+                                    {group.rows.map((candidate) => (
+                                        <SectionAnimalRow
+                                            key={candidate.captureId}
+                                            candidate={candidate}
+                                            on={picked.includes(candidate.captureId)}
+                                            taken={!picked.includes(candidate.captureId) && Boolean(candidate.speciesProfileId && pickedSpecies.has(candidate.speciesProfileId))}
+                                            full={!picked.includes(candidate.captureId) && picked.length >= DEBATE_MAX_PICKS}
+                                            words={words}
+                                            onToggle={() => toggle(candidate)}
+                                        />
+                                    ))}
+                                    {group.note ? <SectionNote testId="debate-no-others">{group.note}</SectionNote> : null}
+                                </div>
+                            ))}
+                            {listed.length < candidates.length ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setMoreRows((current) => current + MORE_ROWS)}
+                                    className="self-start py-1 text-xs font-bold text-primary-300 hover:text-primary-200"
+                                    data-testid="debate-more-animals"
+                                >
+                                    {words.debate.moreAnimals} ›
+                                </button>
+                            ) : null}
+                        </div>
+                    )
+                ) : null}
+                stakeNote={!draft && visibility === "public" && picked.length > 0 && !publicBlocker ? (
+                    hostOutOfHearts ? (
+                        <>
+                            {words.roster.offRoster}{" "}
+                            <Link href={`/app/capture/${encodeURIComponent(heartless ?? host.captureId)}?tab=stats`} className="font-bold text-primary-200 underline-offset-2 hover:underline">{web.heal}</Link>
+                        </>
+                    ) : stakeLine(pickedOthers > 0, pickedOthers)
+                ) : null}
+                failure={failure}
+                startHint={startHint}
+                actions={draft ? (
+                    <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => void approve()} disabled={working || drafting || publicText.trim().length < MIN_PROBLEM} className={PRIMARY_CHIP}>
+                            {working ? web.posting : words.debate.approve}
+                        </button>
+                        {!drafting ? (
+                            <button type="button" onClick={editPublic} disabled={working} className={SECONDARY_CHIP}>{web.edit}</button>
+                        ) : null}
+                        <button type="button" onClick={keepPrivate} disabled={working} className={SECONDARY_CHIP}>{web.keepPrivate}</button>
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => void start()}
+                            disabled={working || Boolean(publicBlocker) || hostOutOfHearts || picked.length === 0 || problem.trim().length < MIN_PROBLEM}
+                            className={PRIMARY_CHIP}
+                            data-testid="debate-start"
+                        >
+                            {working ? (visibility === "public" ? web.writingPublic : web.starting) : words.debate.begin}
+                        </button>
+                        <button type="button" onClick={close} disabled={working} className={SECONDARY_CHIP}>{words.debate.notNow}</button>
+                    </div>
+                )}
+            />
+        );
+    }
 
     const body = draft ? (
         // Public: the anonymised text to approve. Nothing posts until then.
@@ -522,16 +711,16 @@ export default function DebateSetup({
                 <div className="flex items-center justify-between gap-3">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">{web.problem}</p>
                     {!editingProblem ? (
-                        <button type="button" onClick={() => setEditingProblem(true)} className="text-xs font-bold text-primary-200 hover:text-primary-100">
+                        <button type="button" onClick={editProblem} className="text-xs font-bold text-primary-200 hover:text-primary-100">
                             {web.edit}
                         </button>
                     ) : null}
                 </div>
                 {editingProblem ? (
                     <>
-                        <label className="sr-only" htmlFor={`debate-problem-${layout}`}>{web.problem}</label>
+                        <label className="sr-only" htmlFor="debate-problem-sheet">{web.problem}</label>
                         <textarea
-                            id={`debate-problem-${layout}`}
+                            id="debate-problem-sheet"
                             value={problem}
                             onChange={(event) => setProblem(event.target.value.slice(0, DEBATE_PROBLEM_MAX))}
                             onBlur={() => setFittedTo(problem.trim())}
@@ -565,7 +754,7 @@ export default function DebateSetup({
                 {working ? web.posting : words.debate.approve}
             </button>
             {!drafting && !editingPublic ? (
-                <button type="button" onClick={() => setEditingPublic(true)} disabled={working} className={quietButton}>{web.edit}</button>
+                <button type="button" onClick={editPublic} disabled={working} className={quietButton}>{web.edit}</button>
             ) : null}
             <button type="button" onClick={keepPrivate} disabled={working} className={quietButton}>{web.keepPrivate}</button>
         </div>
@@ -574,32 +763,11 @@ export default function DebateSetup({
             type="button"
             onClick={() => void start()}
             disabled={working || Boolean(publicBlocker) || hostOutOfHearts || picked.length === 0 || problem.trim().length < MIN_PROBLEM}
-            className={`${primaryButton} ${band ? "" : "w-full"}`}
+            className={`${primaryButton} w-full`}
         >
             {working ? (visibility === "public" ? web.writingPublic : web.starting) : words.debate.begin}
         </button>
     );
-
-    if (band) {
-        // In the thread: plainly the app's own part, not the animal speaking.
-        return (
-            <section aria-label={words.debate.start} data-testid="debate-setup" className="-mx-4 mt-3 border-y border-primary-300/25 bg-white/[0.035]">
-                <header className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-2.5">
-                    <p className="min-w-0 flex-1 truncate text-[11px] font-black uppercase tracking-[0.13em] text-primary-300">
-                        {words.debate.start}
-                        <span className="ml-2 font-semibold normal-case tracking-normal text-white/55">{words.debate.startNote}</span>
-                    </p>
-                    <button type="button" onClick={close} aria-label={closeLabel} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/60 hover:bg-white/8 hover:text-white">✕</button>
-                </header>
-                {body}
-                <div className="px-4 py-3">
-                    {failure ? <p role="alert" className="mb-2 text-xs leading-5 text-white/65">{failure}</p> : null}
-                    {startHint ? <p className="mb-2 text-xs leading-5 text-white/55" data-testid="debate-start-hint">{startHint}</p> : null}
-                    {actions}
-                </div>
-            </section>
-        );
-    }
 
     return (
         <div role="dialog" aria-modal="true" aria-label={words.debate.start} className="fixed inset-0 z-[72] flex items-end justify-center bg-black/70 md:items-center">
@@ -626,5 +794,159 @@ export default function DebateSetup({
                 </div>
             </div>
         </div>
+    );
+}
+
+/** A small line inside the section: a note, a reason, an error. */
+function SectionNote({children, tone = "quiet", testId}: {children: ReactNode; tone?: "quiet" | "warn"; testId?: string}) {
+    return (
+        <p role={tone === "warn" ? "status" : undefined} className={`text-[12px] leading-[18px] ${tone === "warn" ? "text-amber-200" : "text-white/60"}`} data-testid={testId}>
+            {children}
+        </p>
+    );
+}
+
+/** One animal to pick, compact: its face, name and Power, "Fits this best", and, picked, a neon outline and a check. */
+function SectionAnimalRow({candidate, on, taken, full, words, onToggle}: {
+    candidate: DebateCandidate;
+    on: boolean;
+    taken: boolean;
+    full: boolean;
+    words: CompanionWords;
+    onToggle: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            disabled={taken || full}
+            aria-pressed={on}
+            title={taken ? words.picker.alreadyHereHint : undefined}
+            className={`flex w-full items-center gap-2.5 border px-2.5 py-2 text-left transition-colors disabled:opacity-45 ${on ? "bg-primary-400/[0.1]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"}`}
+            style={{...ROW_RADIUS, ...(on ? {borderColor: "var(--ask-special-edge)"} : {})}}
+            data-testid="debate-animal-row"
+        >
+            <AskAnimalFace url={candidate.slug ? getSpeciesImageRoute(candidate.slug) : null} size={30} />
+            <span className="min-w-0 flex-1">
+                <span className="flex min-w-0 items-baseline gap-1.5">
+                    <span className="min-w-0 truncate text-[13px] font-bold leading-5 text-white">{taken ? words.picker.alreadyHere : debateAnimalName(candidate)}</span>
+                    {candidate.fits ? (
+                        <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.08em] text-primary-300" data-testid="debate-fits">{words.debate.suggested}</span>
+                    ) : null}
+                </span>
+                <span className="block truncate text-[11px] font-semibold leading-4 text-white/50">{candidate.powerName ?? candidate.animal}</span>
+            </span>
+            <span aria-hidden="true" className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[11px] font-black ${on ? "border-primary-300 bg-primary-300 text-black" : "border-white/25 text-transparent"}`}>✓</span>
+        </button>
+    );
+}
+
+/**
+ * The setup as a section of the animal's special message (docs/rich-chat/
+ * SPEC.md, section 2.2), top to bottom: the label, the question in bold with
+ * Edit, the animals, Private | Public, the notes, and its chips; or, for a
+ * public debate, what people will see, to approve.
+ */
+function DebateSetupSection({
+    words,
+    fromCall,
+    problem,
+    onEditProblem,
+    visibility,
+    onVisibility,
+    draft,
+    drafting,
+    publicText,
+    onEditPublic,
+    stake,
+    notes,
+    roster,
+    animals,
+    stakeNote,
+    failure,
+    startHint,
+    actions
+}: {
+    words: CompanionWords;
+    fromCall: boolean;
+    problem: string;
+    onEditProblem: () => void;
+    visibility: DebateVisibility;
+    onVisibility: (visibility: DebateVisibility) => void;
+    draft: Debate | null;
+    drafting: boolean;
+    publicText: string;
+    onEditPublic: () => void;
+    stake: string | null;
+    notes: ReactNode;
+    roster: ReactNode;
+    animals: ReactNode;
+    stakeNote: ReactNode;
+    failure: string | null;
+    startHint: string | null;
+    actions: ReactNode;
+}) {
+    const web = words.debateWeb;
+    return (
+        <section className="flex flex-col gap-3" aria-label={words.debate.setUp} data-testid="debate-setup">
+            <div>
+                <AskSpecialLabel icon={<GroupIcon />}>{words.debate.setUp}</AskSpecialLabel>
+                {fromCall ? <p className="mt-0.5 text-[11px] font-semibold leading-4 text-white/55">{words.debate.fromCall}</p> : null}
+            </div>
+            {draft ? (
+                <div className="flex flex-col gap-1.5" data-testid="debate-approval">
+                    <p className="text-[11px] font-black uppercase tracking-[0.1em] text-white/50">{words.debate.publicText}</p>
+                    {drafting ? (
+                        <p role="status" className="text-[14px] leading-6 text-white/55">{web.writingPublic}</p>
+                    ) : (
+                        <p className="whitespace-pre-line text-[15px] font-bold leading-6 text-white" data-testid="debate-public-text">{publicText}</p>
+                    )}
+                    <p className="text-[12px] leading-[18px] text-white/60">{words.debate.publicTextNote}</p>
+                    {stake ? <p className="text-[12px] leading-[18px] text-white/70" data-testid="debate-stake">{stake}</p> : null}
+                </div>
+            ) : (
+                <>
+                    <p className="text-[15px] leading-6" data-testid="debate-question">
+                        <span className={`font-bold ${problem.trim() ? "text-white" : "text-white/40"}`}>{problem.trim() || web.problemPlaceholder}</span>{" "}
+                        <button type="button" onClick={onEditProblem} className="text-xs font-bold text-primary-300 hover:text-primary-200" data-testid="debate-edit-question">
+                            {web.edit}
+                        </button>
+                    </p>
+                    {notes}
+                    {animals}
+                    <div className="flex flex-col gap-1.5">
+                        <div role="radiogroup" aria-label={words.debate.start} className="flex flex-wrap gap-1.5">
+                            {(["private", "public"] as const).map((option) => (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={visibility === option}
+                                    onClick={() => onVisibility(option)}
+                                    className={`inline-flex min-h-8 items-center rounded-full border px-3.5 text-[12px] font-black transition-colors ${visibility === option ? "border-white bg-white text-black" : "border-white/15 text-white/70 hover:text-white"}`}
+                                    data-testid={`debate-${option}`}
+                                >
+                                    {option === "private" ? words.debate.private : words.debate.public}
+                                </button>
+                            ))}
+                        </div>
+                        <SectionNote>{visibility === "private" ? words.debate.privateNote : words.debate.publicNote}</SectionNote>
+                    </div>
+                    {roster}
+                    {stakeNote ? <SectionNote testId="debate-stake">{stakeNote}</SectionNote> : null}
+                </>
+            )}
+            {failure ? <p role="alert" className="text-[12px] leading-[18px] text-white/70">{failure}</p> : null}
+            {startHint ? <SectionNote testId="debate-start-hint">{startHint}</SectionNote> : null}
+            {actions}
+        </section>
+    );
+}
+
+function GroupIcon() {
+    return (
+        <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 9a2.3 2.3 0 1 0 0-4.6A2.3 2.3 0 0 0 7 9Zm6.5-.6a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM2.8 15.5a4.2 4.2 0 0 1 8.4 0m1-4.6a3.7 3.7 0 0 1 5 3.6" />
+        </svg>
     );
 }

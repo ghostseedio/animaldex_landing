@@ -722,6 +722,9 @@ button {
     box-shadow: inset 3px 0 0 var(--ask-special-edge), inset 0 0 0 1px var(--ask-special-line);
 }
 
+/* A special message holding only sections (a debate's report and its vote): a hairline between them. */
+.ask-special-stack > * + * { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--ask-special-line); }
+
 /* Between the animal's words and what its bubble carries, and between sections. */
 .ask-special-sections { border-top: 1px solid var(--ask-special-line); }
 .ask-special-sections > * + * { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--ask-special-line); }

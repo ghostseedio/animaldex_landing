@@ -28,7 +28,7 @@ export default function DebateDetail({debate, words, typingLabel, backLabel, loc
                     <h1 className="mt-1 font-display text-2xl font-black leading-8 text-white">{headline}</h1>
                 </div>
             ) : null}
-            <DebateThread seed={debate} words={words} typingLabel={typingLabel} bleed="-mx-5 px-5 lg:mx-0" locale={locale} />
+            <DebateThread seed={debate} words={words} typingLabel={typingLabel} locale={locale} />
         </div>
     );
 }

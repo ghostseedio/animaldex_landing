@@ -2,10 +2,18 @@
 
 /**
  * One debate as the person watches it (docs/debates/SPEC.md, sections 1.3
- * to 1.6): its turns typing out one animal at a time, as group turns do,
- * with the species' icon art beside each; then the report band and "Try
- * {name}'s way"; in public, the votes. The same block in the chat thread
- * and on the debate's own page.
+ * to 1.6): its turns typing out one animal at a time, as group turns do;
+ * then the report and "Try {name}'s way"; in public, the vote. The same block
+ * in the chat thread and on the debate's own page.
+ *
+ * In the conversation's own shapes (docs/rich-chat/SPEC.md, sections 2.3 to
+ * 2.5): each turn is the speaking animal's own messages, its icon art beside
+ * the last bubble and its name and Power above the first; the report and the
+ * vote are one special message from the host, and while the report is being
+ * written, the host's typing bubble says so. No turn style, no phase labels,
+ * no bands. Started from an offer in the chat, the offer's section has gone
+ * quiet in place ("DEBATE" and who is in it); anywhere else the block opens
+ * on that line as the host's own special message (`opening`).
  *
  * The asker's chat runs a debate the server holds `debating`
  * (`/api/ask/debate`, the apps' own debate flow); every other view reads it.
@@ -15,14 +23,13 @@
  * it on from the next turn.
  */
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 import {useAskGroupDirector} from "@/components/ask-animaldex/use-group-director";
 import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pacer";
 import {parseAskGroupFrame} from "@/lib/ask-animaldex/group-thread";
 import type {CompanionWords} from "@/lib/companion-bond";
 import {
-    debateIsOwnOnly,
     decodeDebateReport,
     orderedDebateTurns,
     type Debate,
@@ -30,9 +37,12 @@ import {
     type DebatePhase,
     type DebateTurn
 } from "@/lib/debates";
-import {debateLine, debateProblemText, debateStatusText} from "@/lib/debate-words";
+import {debateProblemText} from "@/lib/debate-words";
 import {chooseDebateWay, fetchDebate, noteDebateChanged, useDebateUpdates} from "@/components/debates/use-debates";
-import {DebateFaces, DebateReportBand, DebateTurnRow, DebateVotePanel, TypingDots} from "@/components/debates/debate-views";
+import {AskSpecialBubble, AskTypingBubble} from "@/components/ask-animaldex/ask-messenger";
+import {debateFaceUrl, DebateQuietSection, DebateReportSections, DebateTurnMessage} from "@/components/debates/debate-views";
+
+export {DebateQuietSection};
 
 /** Reads an SSE body frame by frame. */
 async function readFrames(body: ReadableStream<Uint8Array>, onFrame: (frame: Record<string, unknown>) => void) {
@@ -123,10 +133,11 @@ export default function DebateThread({
     typingLabel,
     run = false,
     signedIn = true,
-    bleed = "-mx-4 px-4",
     locale,
     onApprove,
-    chat
+    chat,
+    hostFaceUrl = null,
+    opening = true
 }: {
     seed: Debate;
     words: CompanionWords;
@@ -134,12 +145,15 @@ export default function DebateThread({
     /** The asker's own chat: it runs a debate still being argued. */
     run?: boolean;
     signedIn?: boolean;
-    bleed?: string;
     locale?: string;
     /** A public debate waiting for its text to be approved: open the approval. */
     onApprove?: (debate: Debate) => void;
     /** Shown in this card's own chat: the host's own way is said here. */
     chat?: {captureId: string | null; onOwnWay?: () => void};
+    /** The host's face for its special messages (its species icon art); else the host's seat's. */
+    hostFaceUrl?: string | null;
+    /** Opens on "DEBATE" and who is in it, as the host's own message (false: the offer's section already says it). */
+    opening?: boolean;
 }) {
     const [debate, setDebate] = useState<Debate>(seed);
     const [shown, setShown] = useState<DebateTurn[]>(() => orderedDebateTurns(seed.turns));
@@ -319,86 +333,91 @@ export default function DebateThread({
     const waiting = director.waiting ?? (director.current && director.current !== live ? director.current : null);
     const participantFor = (participantId: string | null) => debate.participants.find((participant) => participant.id === participantId) ?? null;
     const talking = streaming || director.active;
-    const status = useMemo(() => debateStatusText(debate, words), [debate, words]);
+    const hostFace = hostFaceUrl ?? debateFaceUrl(debate.participants.find((participant) => participant.seat === 0) ?? debate.participants[0] ?? null);
+    const writingReport = !talking && !debate.report && (waitingReport || debate.status === "reporting" || (debate.status === "debating" && shown.length > 0));
+    const votes = debate.visibility === "public" && (debate.status === "voting" || debate.status === "settled" || debate.status === "draw");
+    const hostMessage = (children: React.ReactNode, testId?: string) => (
+        <div className="pt-3.5">
+            <AskSpecialBubble avatarUrl={hostFace} testId={testId}>{children}</AskSpecialBubble>
+        </div>
+    );
 
     return (
-        <div className="flex flex-col gap-3" aria-live="polite">
-            <div className={`${bleed} flex items-center gap-2.5 border-y border-white/[0.08] bg-white/[0.025] py-2.5`}>
-                <DebateFaces debate={debate} size={24} />
-                {/* Started, the setup is one line: "Luna, Pip and Bruno: private debate" (SPEC section 6). */}
-                <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-bold leading-4 text-white">{debateLine(debate, words, locale)}</span>
-                    <span className="block truncate text-[11px] font-semibold text-white/55">{status}</span>
-                    {debateIsOwnOnly(debate) ? (
-                        // Public with only the asker's animals (owner, 2026-10-31): still voted on, nothing moves.
-                        <span className="block text-[11px] font-semibold leading-4 text-white/55" data-testid="debate-own-only">{words.debate.ownOnly}</span>
-                    ) : null}
-                </span>
-            </div>
+        <div className="flex flex-col" aria-live="polite" data-testid="debate-block">
+            {opening ? (
+                <AskSpecialBubble avatarUrl={hostFace} testId="debate-opening">
+                    <DebateQuietSection debate={debate} words={words} locale={locale} />
+                </AskSpecialBubble>
+            ) : null}
             {shown.map((turn, index) => (
-                <DebateTurnRow
-                    key={`${turn.seat}-${turn.phase}-${index}`}
-                    debate={debate}
-                    participant={debate.participants.find((participant) => participant.seat === turn.seat) ?? null}
-                    text={turn.text}
-                />
+                <div key={`${turn.seat}-${turn.phase}-${index}`} className={index === 0 && !opening ? "" : "pt-3.5"}>
+                    <DebateTurnMessage
+                        participant={debate.participants.find((participant) => participant.seat === turn.seat) ?? null}
+                        text={turn.text}
+                    />
+                </div>
             ))}
             {live ? (
-                <DebateTurnRow debate={debate} participant={participantFor(live.captureId)} text={director.visibleText} live />
+                <div className="pt-3.5">
+                    <DebateTurnMessage participant={participantFor(live.captureId)} text={director.visibleText} live onSkip={director.skipCurrent} />
+                </div>
             ) : null}
             {waiting && talking ? (
-                <DebateTurnRow debate={debate} participant={participantFor(waiting.captureId)} text="" typingLabel={typingLabel} />
+                <div className="pt-3.5">
+                    <DebateTurnMessage participant={participantFor(waiting.captureId)} text="" typingLabel={typingLabel} />
+                </div>
             ) : null}
-            {runProblem && !talking ? (
-                <div className={`${bleed} flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3`}>
-                    <p className="min-w-0 flex-1 text-xs leading-5 text-white/60">{runProblem}</p>
+            {runProblem && !talking ? hostMessage(
+                <div className="flex flex-col items-start gap-2">
+                    <p className="text-[13px] leading-5 text-white/70">{runProblem}</p>
                     {debate.status === "debating" && debate.askerIsMe ? (
                         <button
                             type="button"
                             onClick={() => void runDebate()}
-                            className="min-h-9 rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white hover:bg-white/10"
+                            className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.07] px-[14px] text-xs font-bold text-white hover:bg-white/10"
                         >
                             {words.debateWeb.tryAgain}
                         </button>
                     ) : null}
                 </div>
             ) : null}
-            {debate.status === "approving" || debate.status === "drafting" ? (
-                <div className={`${bleed} flex flex-col items-start gap-2 border-y border-white/[0.08] py-3`}>
-                    <p className="text-sm text-white/70">{words.debateWeb.statusApproving}</p>
+            {debate.status === "approving" || debate.status === "drafting" ? hostMessage(
+                <div className="flex flex-col items-start gap-2">
+                    <p className="text-[13px] leading-5 text-white/70">{words.debateWeb.statusApproving}</p>
                     {onApprove && debate.askerIsMe ? (
                         <button
                             type="button"
                             onClick={() => onApprove(debate)}
-                            className="min-h-10 rounded-full bg-primary-400 px-4 text-[13px] font-black text-black hover:bg-primary-300"
+                            className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-[14px] text-xs font-black text-black hover:bg-primary-300"
                         >
                             {words.debate.publicText}
                         </button>
                     ) : null}
                 </div>
             ) : null}
-            {!talking && !debate.report && (waitingReport || debate.status === "reporting" || (debate.status === "debating" && shown.length > 0)) ? (
-                <div className="flex items-center gap-2 text-xs text-white/55">
-                    <TypingDots />
-                    <span>{words.debateWeb.reportWriting}</span>
+            {writingReport ? (
+                // The host's typing bubble, captioned: the report is the app's writer's, not the animal speaking.
+                <div className="flex flex-col gap-1 pt-3.5" data-testid="debate-report-writing">
+                    <AskTypingBubble avatarUrl={hostFace} label={words.debate.writingReport} />
+                    <p className="pl-9 text-[11px] font-semibold text-white/50">{words.debate.writingReport}</p>
                 </div>
             ) : null}
-            {!talking ? (
-                <DebateReportBand
+            {!talking && (debate.report || votes) ? hostMessage(
+                <DebateReportSections
                     debate={debate}
                     words={words}
-                    bleed={bleed}
+                    locale={locale}
                     onTryWay={debate.askerIsMe ? tryWay.tryWay : undefined}
                     choosing={tryWay.choosing}
                     chosenId={tryWay.chosenId}
                     problem={tryWay.problem}
-                />
-            ) : null}
-            {!talking && debate.visibility === "public" && (debate.status === "voting" || debate.status === "settled" || debate.status === "draw") ? (
-                <DebateVotePanel debate={debate} words={words} signedIn={signedIn} bleed={bleed} onChange={(next) => apply(next, {turns: false})} />
+                    signedIn={signedIn}
+                    onVoted={(next) => apply(next, {turns: false})}
+                />,
+                "debate-report-message"
             ) : null}
             {debate.status === "cancelled" ? (
-                <p className="text-xs text-white/50">{debate.cancelReason === "not_public" ? words.debate.notPublic : words.debateWeb.problems.notFound}</p>
+                <p className="pt-3 text-[12px] text-white/50">{debate.cancelReason === "not_public" ? words.debate.notPublic : words.debateWeb.problems.notFound}</p>
             ) : null}
         </div>
     );

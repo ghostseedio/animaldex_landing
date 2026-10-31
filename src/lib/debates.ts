@@ -782,3 +782,24 @@ export function debateVoteState(debate: Pick<Debate, "visibility" | "status" | "
     if (debate.canVote) return {kind: "vote"};
     return {kind: "ineligible"};
 }
+
+/**
+ * The animals the in-thread setup lists (docs/rich-chat/SPEC.md, section
+ * 2.2): the suggestions and whatever else they picked (the first few when
+ * nothing fits best), then `more` of the rest, in the candidates' order.
+ * "More animals" adds six at a time while any are left (`hasMore`).
+ */
+export function debateSetupRows(
+    candidates: readonly DebateCandidate[],
+    picked: readonly string[],
+    more: number,
+    max = DEBATE_MAX_PICKS
+): {rows: DebateCandidate[]; hasMore: boolean} {
+    const suggested = candidates.filter((candidate) => candidate.fits).slice(0, max);
+    const base = suggested.length === 0
+        ? candidates.slice(0, Math.min(candidates.length, max))
+        : candidates.filter((candidate) => suggested.includes(candidate) || picked.includes(candidate.captureId));
+    const rest = candidates.filter((candidate) => !base.includes(candidate)).slice(0, Math.max(0, more));
+    const rows = candidates.filter((candidate) => base.includes(candidate) || rest.includes(candidate));
+    return {rows, hasMore: rows.length < candidates.length};
+}

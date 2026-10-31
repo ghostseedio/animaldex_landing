@@ -43,8 +43,7 @@ test("the done special carries the bonus, and the line says it only when there i
         warmupUnavailable: false,
         warmupStarted: false,
         trialsUnavailable: false,
-        debatesOffered: false,
-        debateSetupOpenHere: false
+        debatesOffered: false
     });
     assert.deepEqual(specials[0], {kind: "done", xp: 10, step: "Walked", powerEarned: false, proofBonus: 5});
     assert.equal(stepProofBonusLine(5, COMPANION_WORDS_EN), "+5 XP for your proof");

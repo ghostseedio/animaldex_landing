@@ -187,12 +187,12 @@ import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type Ask
 import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
-import DebateSetup, {type DebateHost} from "@/components/debates/debate-sheet";
-import DebateThread from "@/components/debates/debate-thread";
+import DebateSetup, {type DebateEdit, type DebateHost} from "@/components/debates/debate-sheet";
+import DebateThread, {DebateQuietSection} from "@/components/debates/debate-thread";
 import {useMyDebates} from "@/components/debates/use-debates";
 import {debateSeedProblem, type Debate, type DebateNamedAnimal, type DebateRequest} from "@/lib/debates";
 import {askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
-import {talkCapabilityAction, talkChatPath, talkSignUpHref, type TalkWords} from "@/lib/ask-animaldex/talk";
+import {talkChatPath, talkSignUpHref, type TalkWords} from "@/lib/ask-animaldex/talk";
 import {rememberTalkThread} from "@/components/ask-animaldex/ask-thread-meta";
 import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
 
@@ -491,6 +491,8 @@ export default function AskConversation({
     const signInHref = signInHrefFor(currentPath);
     const [context, setContext] = useState<AskContextPayload | null>(null);
     const [composer, setComposer] = useState("");
+    const composerValueRef = useRef("");
+    composerValueRef.current = composer;
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [confirmingClear, setConfirmingClear] = useState(false);
     const [showingMemory, setShowingMemory] = useState(false);
@@ -612,6 +614,41 @@ export default function AskConversation({
         setReporting((current) => (current ? {...current, file, previewUrl: url, problem: null} : current));
         if (reportFileRef.current) reportFileRef.current.value = "";
     }, [setReportPreview]);
+    /**
+     * The debate setup's Edit (docs/rich-chat/SPEC.md, section 2.2): the
+     * message bar's edit mode, the way "I did it" is its report mode. A strip
+     * says what is being edited, with ✕ to leave; the field is prefilled and
+     * Send saves it (10–1500 characters for the question, 10–400 for what
+     * people will see). What they had typed comes back once they are done.
+     */
+    const [debateEdit, setDebateEdit] = useState<DebateEdit | null>(null);
+    const draftBeforeEditRef = useRef("");
+    const startDebateEdit = useCallback((edit: DebateEdit) => {
+        setReportPreview(null);
+        setReporting(null);
+        setDebateEdit((current) => {
+            if (!current) draftBeforeEditRef.current = composerValueRef.current;
+            return edit;
+        });
+        setComposer(edit.text);
+        requestAnimationFrame(() => {
+            const node = composerRef.current;
+            if (!node) return;
+            node.focus();
+            node.style.height = "auto";
+            node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+            node.setSelectionRange(node.value.length, node.value.length);
+        });
+    }, [setReportPreview]);
+    const leaveDebateEdit = useCallback(() => {
+        setDebateEdit((current) => {
+            if (current) {
+                setComposer(draftBeforeEditRef.current);
+                if (composerRef.current) composerRef.current.style.height = "";
+            }
+            return null;
+        });
+    }, []);
     // The Power-earned messages whose burst has played (once, only for a reply that arrived here).
     const [burstsPlayed, setBurstsPlayed] = useState<ReadonlySet<string>>(() => new Set());
     const [sharedEarnedId, setSharedEarnedId] = useState<string | null>(null);
@@ -949,7 +986,7 @@ export default function AskConversation({
     const animalTalking = isSending || pacer.revealing;
     // With something typed the button sends, over a greeting or a reply that
     // is only still typing out; a reply still arriving is stopped first.
-    const showStop = (isSending && greetingState !== "loading") || (animalTalking && composer.trim().length === 0);
+    const showStop = !debateEdit && ((isSending && greetingState !== "loading") || (animalTalking && composer.trim().length === 0));
     const stopTalking = useCallback(() => {
         // Still arriving: stop it, keeping what the reader saw. All here:
         // show the rest.
@@ -964,6 +1001,10 @@ export default function AskConversation({
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
+                if (debateEdit) {
+                    leaveDebateEdit();
+                    return;
+                }
                 if (reporting && !reporting.sending) {
                     leaveReportMode();
                     return;
@@ -986,7 +1027,7 @@ export default function AskConversation({
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [close, confirmingClear, reportTarget, debateSheet, reporting, leaveReportMode, onPage]);
+    }, [close, confirmingClear, reportTarget, debateSheet, reporting, leaveReportMode, onPage, debateEdit, leaveDebateEdit]);
 
     useEffect(() => {
         if (hasConversation) return;
@@ -1225,8 +1266,22 @@ export default function AskConversation({
                 ? labels.placeholderAnimal.replace("{animal}", animalName)
                 : labels.placeholderGeneral;
     // Report mode: "Tell Leo how it went", and send once there are three characters.
-    const fieldPlaceholder = reporting ? fillWords(labels.companions.journey.report.placeholder, {name: speakerName}) : placeholder;
-    const sendReady = reporting ? !reporting.sending && stepReportReady(composer) : composer.trim().length > 0;
+    const fieldPlaceholder = debateEdit
+        ? words.debateWeb.problemPlaceholder
+        : reporting ? fillWords(labels.companions.journey.report.placeholder, {name: speakerName}) : placeholder;
+    const sendReady = debateEdit
+        ? composer.trim().length >= debateEdit.min
+        : reporting ? !reporting.sending && stepReportReady(composer) : composer.trim().length > 0;
+    /** Save in the bar's edit mode: the setup takes the words, and the bar is the message bar again. */
+    const saveDebateEdit = () => {
+        if (!debateEdit) return;
+        const text = composer.replace(/\s+$/g, "").trim();
+        if (text.length < debateEdit.min) return;
+        debateEdit.save(text.slice(0, debateEdit.max));
+        setDebateEdit(null);
+        setComposer(draftBeforeEditRef.current);
+        if (composerRef.current) composerRef.current.style.height = "";
+    };
     const thinkingLabel = speaksAsAnimal && animalName
         ? labels.thinkingAnimal.replace("{animal}", animalName)
         : labels.thinking;
@@ -1387,10 +1442,11 @@ export default function AskConversation({
             setReportSheet(true);
             return;
         }
+        leaveDebateEdit();
         setReporting((current) => current ?? {file: null, previewUrl: null, sending: false, problem: null});
         sticksToBottom.current = true;
         requestAnimationFrame(() => composerRef.current?.focus());
-    }, [openStep, narrow]);
+    }, [openStep, narrow, leaveDebateEdit]);
     // The step went (dropped, done, or let go elsewhere): so does its report.
     useEffect(() => {
         if (openStep) return;
@@ -1751,8 +1807,14 @@ export default function AskConversation({
         callDebateRef.current = null;
         if (debatesOffered) openDebateSheet(null, null, null, true, request.with, request.problem);
     }, [onCall, debatesOffered, openDebateSheet]);
-    /** The setup, in the thread (or as the sheet, below `narrow`). */
-    const debateSetup = (layout: "band" | "sheet") => (debateSheet && debateHost ? (
+    /**
+     * The setup (docs/rich-chat/SPEC.md, section 2.2): the offer's section
+     * grown in place, or, opened from the ••• menu, the Bond tab or a call, a
+     * special message of its own from the host where the thread ends; below
+     * `narrow`, the sheet. Started from an offer, that section goes quiet in
+     * place (`debateId` on its message).
+     */
+    const debateSetup = (layout: "section" | "sheet") => (debateSheet && debateHost ? (
         <DebateSetup
             key={`${debateSheet.messageId ?? "end"}:${debateSheet.approving?.id ?? "new"}`}
             layout={layout}
@@ -1765,16 +1827,27 @@ export default function AskConversation({
             optedIn={myDebates.optedIn}
             onOptedIn={myDebates.setOptedIn}
             approving={debateSheet.approving}
-            onStarted={() => {
-                // The debate now runs in the thread; the quick replies have done their job.
-                if (debateSheet.messageId) updateMessage(debateSheet.messageId, {cardsDismissed: true});
+            onEdit={layout === "section" ? startDebateEdit : undefined}
+            onStarted={(debate) => {
+                // The debate now runs in the thread; the offer's section stays, quiet, naming who is in it.
+                if (debateSheet.messageId) updateMessage(debateSheet.messageId, {debateId: debate.id, cardsDismissed: true});
                 setDebateSheet(null);
+                leaveDebateEdit();
                 scrollToLatest("smooth");
             }}
-            onClose={() => setDebateSheet(null)}
+            onClose={() => {
+                setDebateSheet(null);
+                leaveDebateEdit();
+            }}
         />
     ) : null);
-    const debateBandAfter = (messageId: string | null) => (!narrow && debateSheet && debateSheet.messageId === messageId ? debateSetup("band") : null);
+    const debateSetupMessage = !narrow && debateSheet && debateSheet.messageId === null ? (
+        <div className="pt-3.5" data-testid="debate-setup-message">
+            <AskSpecialBubble avatarUrl={faceUrl}>{debateSetup("section")}</AskSpecialBubble>
+        </div>
+    ) : null;
+    // Debates started from an offer in this thread: that offer's section says so, so its block opens on its first turn.
+    const anchoredDebateIds = useMemo(() => new Set(messages.map((message) => message.debateId).filter(Boolean)), [messages]);
     // The host's own way, chosen in its own chat: said here, as their message.
     const debateChat = useMemo(() => ({
         captureId: hostCaptureId,
@@ -1790,6 +1863,8 @@ export default function AskConversation({
                 locale={locale}
                 onApprove={(draft) => openDebateSheet(null, draft)}
                 chat={debateChat}
+                hostFaceUrl={faceUrl}
+                opening={!anchoredDebateIds.has(debate.id)}
             />
         </div>
     ));
@@ -1996,6 +2071,10 @@ export default function AskConversation({
                     />
                 );
             case "debate":
+                // "Yes, compare" grows the offer into the setup, in this same section.
+                if (!narrow && debateSheet?.messageId === message.id) {
+                    return <div key="debate">{debateSetup("section")}</div>;
+                }
                 return (
                     <AskDebateOfferSection
                         key="debate"
@@ -2006,6 +2085,10 @@ export default function AskConversation({
                         onNotNow={() => updateMessage(message.id, {cardsDismissed: true})}
                     />
                 );
+            case "debateStarted": {
+                const started = threadDebates.find((debate) => debate.id === special.debateId) ?? null;
+                return started ? <DebateQuietSection key="debate" debate={started} words={words} locale={locale} /> : null;
+            }
         }
     };
     const replySpecial = (message: AskMessage) => {
@@ -2016,8 +2099,7 @@ export default function AskConversation({
             warmupUnavailable: warmupOfferState === "hidden",
             warmupStarted: messages.some((entry) => entry.warmup?.runId === message.id),
             trialsUnavailable: trials !== null && trials.length === 0,
-            debatesOffered,
-            debateSetupOpenHere: debateSheet?.messageId === message.id
+            debatesOffered
         }).map((special) => specialSection(message, special)).filter(Boolean);
         return sections.length > 0 ? <>{sections}</> : null;
     };
@@ -2275,12 +2357,11 @@ export default function AskConversation({
                                                     : null
                                             } : null}
                                         />
-                                        {debateBandAfter(message.id)}
                                         {debateBlocks(message.id)}
                                     </div>
                                 ])}
                                 {threadStepAt === messages.length ? threadStepMessage : null}
-                                {debateBandAfter(null)}
+                                {debateSetupMessage}
                                 {messages.length === 0 && awaitingGreeting ? (
                                     <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />
                                 ) : null}
@@ -2701,7 +2782,7 @@ export default function AskConversation({
                             {labels.companions.journey.chat.visitorHint}
                         </p>
                     ) : null}
-                    {messenger && !showingMemory && !showingBond && !showingSoundCredits && !reporting ? (
+                    {messenger && !showingMemory && !showingBond && !showingSoundCredits && !reporting && !debateEdit ? (
                         <AskSuggestionBar
                             suggestions={dockedSuggestions}
                             onPick={(prompt) => submit(prompt, "followup")}
@@ -2774,10 +2855,33 @@ export default function AskConversation({
                                     </button>
                                 </div>
                             ) : null}
+                            {debateEdit ? (
+                                // Edit mode (docs/rich-chat/SPEC.md, section 2.2): what is being edited, and ✕ to leave it.
+                                <div
+                                    className="-mx-4 -mt-3 mb-3 flex items-center gap-3 border-b border-primary-400/20 bg-primary-400/[0.07] py-2.5 pl-[19px] pr-4"
+                                    style={{boxShadow: "inset 3px 0 0 var(--ask-special-edge)"}}
+                                    data-testid="debate-edit-strip"
+                                >
+                                    <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] font-bold leading-4 text-primary-300">
+                                        <PencilIcon />
+                                        <span className="min-w-0 truncate">{debateEdit.kind === "public" ? words.debate.editingPublic : words.debate.editingQuestion}</span>
+                                    </p>
+                                    <span className="shrink-0 text-[11px] tabular-nums text-white/45">{composer.length} / {debateEdit.max}</span>
+                                    <button
+                                        type="button"
+                                        onClick={leaveDebateEdit}
+                                        aria-label={labels.close}
+                                        className="-mr-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                                    >
+                                        <CloseIcon />
+                                    </button>
+                                </div>
+                            ) : null}
                             <form
                                 onSubmit={(event) => {
                                     event.preventDefault();
-                                    if (reporting) void sendReportFromBar();
+                                    if (debateEdit) saveDebateEdit();
+                                    else if (reporting) void sendReportFromBar();
                                     else submit(composer, "form");
                                 }}
                                 className={`flex items-end gap-2 border border-white/12 bg-white/[0.05] ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
@@ -2812,7 +2916,7 @@ export default function AskConversation({
                                     ref={composerRef}
                                     value={composer}
                                     rows={1}
-                                    maxLength={reporting ? MAX_STEP_REPORT_CHARACTERS : 900}
+                                    maxLength={debateEdit ? debateEdit.max : reporting ? MAX_STEP_REPORT_CHARACTERS : 900}
                                     placeholder={fieldPlaceholder}
                                     readOnly={reporting?.sending === true}
                                     onChange={(event) => {
@@ -2825,25 +2929,37 @@ export default function AskConversation({
                                     onKeyDown={(event) => {
                                         if (event.key === "Enter" && !event.shiftKey) {
                                             event.preventDefault();
-                                            if (reporting) void sendReportFromBar();
+                                            if (debateEdit) saveDebateEdit();
+                                            else if (reporting) void sendReportFromBar();
                                             else submit(composer, "form");
                                         }
                                     }}
                                     className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
                                 />
-                                <button
-                                    type={showStop ? "button" : "submit"}
-                                    onClick={showStop ? stopTalking : undefined}
-                                    disabled={!showStop && !sendReady}
-                                    aria-label={showStop ? labels.stop : reporting ? fillWords(words.journey.report.send, {name: speakerName}) : labels.send}
-                                    className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
-                                        showStop || sendReady
-                                            ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
-                                            : "bg-white/8 text-ink-400"
-                                    }`}
-                                >
-                                    {showStop ? <StopIcon /> : reporting?.sending ? <span aria-hidden="true" className="text-sm font-black">…</span> : <ArrowUpIcon />}
-                                </button>
+                                {debateEdit ? (
+                                    <button
+                                        type="submit"
+                                        disabled={!sendReady}
+                                        className={`mb-0.5 inline-flex h-9 shrink-0 items-center rounded-full px-4 text-xs font-black transition-colors ${sendReady ? "bg-primary-400 text-canvas-950 hover:bg-primary-300" : "bg-white/8 text-ink-400"}`}
+                                        data-testid="debate-edit-save"
+                                    >
+                                        {words.debate.save}
+                                    </button>
+                                ) : (
+                                    <button
+                                        type={showStop ? "button" : "submit"}
+                                        onClick={showStop ? stopTalking : undefined}
+                                        disabled={!showStop && !sendReady}
+                                        aria-label={showStop ? labels.stop : reporting ? fillWords(words.journey.report.send, {name: speakerName}) : labels.send}
+                                        className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
+                                            showStop || sendReady
+                                                ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
+                                                : "bg-white/8 text-ink-400"
+                                        }`}
+                                    >
+                                        {showStop ? <StopIcon /> : reporting?.sending ? <span aria-hidden="true" className="text-sm font-black">…</span> : <ArrowUpIcon />}
+                                    </button>
+                                )}
                             </form>
                         </>
                     )}

@@ -54,8 +54,7 @@ const context = {
     warmupUnavailable: false,
     warmupStarted: false,
     trialsUnavailable: false,
-    debatesOffered: true,
-    debateSetupOpenHere: false
+    debatesOffered: true
 };
 
 test("a plain reply is a plain bubble; only a finished animal reply can be special", () => {
@@ -82,8 +81,12 @@ test("the Warmup, the Trials and the debate offer come from the reply's cards an
         {kind: "warmup"},
         {kind: "debate", problem: "My boss", with: []}
     ]);
-    // Taken, unavailable, Debates off, the setup open under it: each goes.
-    assert.deepEqual(askReplySpecials({...context, message, warmupStarted: true, trialsUnavailable: true, debateSetupOpenHere: true}), []);
+    // Taken, unavailable, Debates off: each goes. Yes, compare grows the offer into the setup in place: it stays.
+    assert.deepEqual(askReplySpecials({...context, message, warmupStarted: true, trialsUnavailable: true}), [{kind: "debate", problem: "My boss", with: []}]);
+    // Started from it, the section goes quiet in place (docs/rich-chat/SPEC.md, section 2.2).
+    const debateId = "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+    assert.deepEqual(askReplySpecials({...context, message: {...message, debateId}, warmupStarted: true, trialsUnavailable: true}), [{kind: "debateStarted", debateId}]);
+    assert.deepEqual(askReplySpecials({...context, message: {...message, debateId}, warmupStarted: true, trialsUnavailable: true, debatesOffered: false}), []);
     assert.deepEqual(askReplySpecials({...context, message, warmupUnavailable: true, debatesOffered: false}), [{kind: "trials"}]);
     // Skip, Not now: the offers go; a done step never does.
     const used = {...message, cardsDismissed: true, companionEvent: {...message.companionEvent, stepDone: {step: "Walked", powerEarned: false, xp: 0}}};

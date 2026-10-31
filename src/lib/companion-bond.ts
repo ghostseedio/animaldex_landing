@@ -240,7 +240,24 @@ export const DEBATE_COPY = {
     ownOnly: "Only your animals: nothing at stake.",
     yourAnimals: "Your animals",
     othersAnimals: "Other people's animals",
-    noOthers: "No one else's animals can join yet, so yours debate it and the community votes."
+    noOthers: "No one else's animals can join yet, so yours debate it and the community votes.",
+    // In the thread, like Your step (docs/rich-chat/SPEC.md, section 2.6).
+    setUp: "Set up the debate",
+    quiet: "Debate",
+    moreAnimals: "More animals",
+    editingQuestion: "Editing the debate's question",
+    editingPublic: "Editing what people will see",
+    save: "Save",
+    communityVote: "Community vote",
+    votingClosesIn: "Voting closes in {time}",
+    youChose: "You chose {name}'s way",
+    tryFirst: "Try first: {text}",
+    itsWay: "Its way:",
+    fitsWhen: "Fits when {text}",
+    costs: "Costs {text}",
+    writingReport: "Writing the debate report",
+    /** The report as a table, where the column is wide: "Animal | Its way | Fits when | Costs". */
+    reportAnimal: "Animal"
 } as const;
 
 export const ROSTER_COPY = {

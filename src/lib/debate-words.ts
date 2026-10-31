@@ -131,3 +131,31 @@ export function debateCast(debate: Debate, and = "&"): string {
     if (names.length <= 1) return names.join("");
     return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
 }
+
+/**
+ * "Voting closes in 5 hours" (docs/rich-chat/SPEC.md, section 2.4): the
+ * time left, short, in the reader's language; null once it has passed or when
+ * the debate has no deadline.
+ */
+export function debateClosesIn(deadline: string | null | undefined, words: CompanionWords, locale = "en", now = Date.now()): string | null {
+    const at = Date.parse(deadline ?? "");
+    if (!Number.isFinite(at) || at <= now) return null;
+    const minutes = Math.max(1, Math.round((at - now) / 60_000));
+    const [value, unit] = minutes < 60 ? [minutes, "minute"] : minutes < 48 * 60 ? [Math.round(minutes / 60), "hour"] : [Math.round(minutes / (24 * 60)), "day"];
+    let time = `${value} ${unit}${value === 1 ? "" : "s"}`;
+    try {
+        time = new Intl.NumberFormat(locale, {style: "unit", unit, unitDisplay: "long"}).format(value);
+    } catch {
+        // The English, then.
+    }
+    return fillWords(words.debate.votingClosesIn, {time});
+}
+
+/**
+ * How an animal is named over its turns (section 2.3): the nickname for the
+ * asker's own animals, else the species, then " · " and its Power.
+ */
+export function debateSpeakerLine(participant: Pick<DebateParticipant, "nickname" | "animal" | "powerName" | "isAskerOwned" | "ownerIsMe">): string {
+    const name = (participant.isAskerOwned || participant.ownerIsMe) && participant.nickname?.trim() ? participant.nickname.trim() : participant.animal;
+    return participant.powerName?.trim() ? `${name} · ${participant.powerName.trim()}` : name;
+}

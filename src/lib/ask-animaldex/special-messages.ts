@@ -32,8 +32,13 @@ export type AskSpecial =
     | {kind: "trials"}
     /** "WARMUP": Take the warmup (+5 XP) / Skip. */
     | {kind: "warmup"}
-    /** "COMPARE WITH OTHER ANIMALS": Yes, compare / Not now. */
-    | {kind: "debate"; problem: string | null; with: DebateNamedAnimal[]};
+    /**
+     * "START A DEBATE": Yes, compare / Not now. "Yes, compare" grows it into
+     * the setup in the same section (docs/rich-chat/SPEC.md, section 2.2).
+     */
+    | {kind: "debate"; problem: string | null; with: DebateNamedAnimal[]}
+    /** "DEBATE": the debate started from this offer, the section gone quiet in place. */
+    | {kind: "debateStarted"; debateId: string};
 
 export type AskSpecialKind = AskSpecial["kind"];
 
@@ -44,7 +49,7 @@ export type AskSpecialKind = AskSpecial["kind"];
  * offers away (`cardsDismissed`); a done step and a step never go.
  */
 export function askReplySpecials(input: {
-    message: Pick<AskMessage, "role" | "status" | "text" | "cardsDismissed" | "companionEvent" | "warmup">;
+    message: Pick<AskMessage, "role" | "status" | "text" | "cardsDismissed" | "companionEvent" | "warmup" | "debateId">;
     /** The animal has no Warmup to take (or it could not load). */
     warmupUnavailable: boolean;
     /** "Take the warmup" was tapped on this reply: its questions follow in the thread. */
@@ -53,8 +58,6 @@ export function askReplySpecials(input: {
     trialsUnavailable: boolean;
     /** The Power is earned and the server has Debates on. */
     debatesOffered: boolean;
-    /** The debate's setup band is open under this reply. */
-    debateSetupOpenHere: boolean;
 }): AskSpecial[] {
     const {message} = input;
     if (message.role !== "assistant" || message.status !== "complete" || message.warmup) return [];
@@ -75,7 +78,10 @@ export function askReplySpecials(input: {
         specials.push({kind: "warmup"});
     }
     // The quick replies come from the server's `debate_offer`, never from the hidden marker.
-    if (input.debatesOffered && !message.cardsDismissed && !input.debateSetupOpenHere && event?.debateOffer) {
+    // Started from here, the same section stays, quiet: "DEBATE" and who is in it.
+    if (input.debatesOffered && message.debateId) {
+        specials.push({kind: "debateStarted", debateId: message.debateId});
+    } else if (input.debatesOffered && !message.cardsDismissed && event?.debateOffer) {
         specials.push({kind: "debate", problem: event.debateOffer.problem, with: event.debateOffer.with});
     }
     return specials;

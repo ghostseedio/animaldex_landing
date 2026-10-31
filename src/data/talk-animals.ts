@@ -16,6 +16,8 @@ import {talkDisagreePairs, talkNameFromSlug, type TalkAnimal, type TalkCatalogRo
 export type TalkCatalog = {
     animals: TalkAnimal[];
     popular: string[];
+    /** What "popular" is: most talked to, or (while too few people have talked to enough animals) most caught. */
+    popularBy: "talked" | "caught";
     disagree: Array<[string, string]>;
 };
 
@@ -77,20 +79,23 @@ async function load(): Promise<TalkCatalog> {
         animals.set(slug, {slug, name, power: typeof row.principle_name === "string" && row.principle_name.trim() ? row.principle_name.trim() : null});
     }
     // Most talked to first; while too few people have talked to enough of them, the most caught.
+    // People are not one of the animals to bring a problem to, whatever the catalog counts.
     const caught = [...rows]
-        .filter((row) => typeof row.landing_page_slug === "string" && animals.has(row.landing_page_slug))
+        .filter((row) => typeof row.landing_page_slug === "string" && animals.has(row.landing_page_slug) && row.landing_page_slug !== "human")
         .sort((left, right) => (Number(right.public_capture_count) || 0) - (Number(left.public_capture_count) || 0))
         .map((row) => row.landing_page_slug as string);
-    const popular = Array.from(new Set([...talkedTo.filter((slug) => animals.has(slug)), ...caught])).slice(0, POPULAR);
+    const talked = talkedTo.filter((slug) => animals.has(slug));
+    const popular = Array.from(new Set([...talked, ...caught])).slice(0, POPULAR);
     return {
         animals: Array.from(animals.values()).sort((left, right) => left.name.localeCompare(right.name)),
         popular,
+        popularBy: talked.length * 2 >= POPULAR ? "talked" : "caught",
         disagree: talkDisagreePairs(rows, PAIRS)
     };
 }
 
 export async function getTalkCatalog(): Promise<TalkCatalog> {
-    if (isSeoSsgRemoteForbidden()) return {animals: [], popular: [], disagree: []};
+    if (isSeoSsgRemoteForbidden()) return {animals: [], popular: [], popularBy: "caught", disagree: []};
     if (cached && Date.now() - cached.at < DAY_MS) return cached.value;
     if (!loading) {
         loading = load()
@@ -106,7 +111,7 @@ export async function getTalkCatalog(): Promise<TalkCatalog> {
         return await loading;
     } catch (error) {
         console.warn("[talk] catalog unavailable", error instanceof Error ? error.message.slice(0, 200) : "unknown");
-        return cached?.value ?? {animals: [], popular: [], disagree: []};
+        return cached?.value ?? {animals: [], popular: [], popularBy: "caught", disagree: []};
     }
 }
 

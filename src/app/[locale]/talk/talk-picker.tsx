@@ -16,7 +16,7 @@ import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {talkSearch, type TalkAnimal, type TalkWords} from "@/lib/ask-animaldex/talk";
 import {useTalkShell} from "@/app/[locale]/talk/talk-shell";
 
-type Catalog = {animals: TalkAnimal[]; popular: string[]; disagree: Array<[string, string]>};
+type Catalog = {animals: TalkAnimal[]; popular: string[]; popularBy?: "talked" | "caught"; disagree: Array<[string, string]>};
 
 let catalogCache: Promise<Catalog> | null = null;
 
@@ -117,14 +117,14 @@ export default function TalkPicker({words}: {words: TalkWords}) {
                     ) : (
                         <>
                             <section className="pt-8">
-                                <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-ink-400">{words.popular}</h2>
+                                <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-ink-400">{catalog?.popularBy === "talked" ? words.popular : words.mostCaught}</h2>
                                 {catalog === null ? <p className="pt-3 text-sm text-ink-400">{failed ? "" : words.loading}</p> : <div className="pt-3"><AnimalGrid animals={popular} href={href} /></div>}
                             </section>
                             {pairs.length > 0 ? (
                                 <section className="pt-9" data-testid="talk-disagree">
                                     <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-ink-400">{words.disagree}</h2>
                                     <p className="mt-1 text-[13px] text-ink-300">{words.disagreeHint}</p>
-                                    <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                                    <div className="mt-3 grid gap-2.5">
                                         {pairs.map(([left, right]) => (
                                             <div key={`${left.slug}-${right.slug}`} className="flex items-stretch gap-1.5 border border-white/10 bg-white/[0.02] p-1.5" style={{borderRadius: 16}}>
                                                 <AnimalCard animal={left} href={href(left)} compact />
