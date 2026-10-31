@@ -107,6 +107,7 @@ import {
     buildAskSystemPrompt,
     splitStreamedReply,
     visibleAnswerSoFar,
+    askRichColumns,
     type AskConversationTurn,
     type AskVisualMedium
 } from "@/lib/ask-animaldex/prompt";
@@ -335,6 +336,13 @@ export async function POST(request: Request) {
     const advertised = Array.isArray(body.supported_visuals) ? body.supported_visuals : [];
     const cards = speaksAsAnimal && ownsCapture && !isCall && !aboutTrial && advertised.includes("card");
     const debateCards = cards && advertised.includes("debate");
+    // Rich answers (docs/rich-chat/SPEC.md, section 1): a client that draws
+    // headings, tables and text diagrams says "rich", with how many monospace
+    // characters fit across its reply column. One-to-one replies only: never
+    // a call or a Trial thread (groups and debates have their own routes).
+    const rich = speaksAsAnimal && !isCall && !aboutTrial && advertised.includes("rich")
+        ? {columns: askRichColumns(body.text_columns)}
+        : null;
     // A call whose request says "debate" (SPEC section 6): the spoken offer,
     // and a yes handed to the chat (`done.debate_request`).
     const callDebates = speaksAsAnimal && ownsCapture && isCall && advertised.includes("debate");
@@ -608,6 +616,7 @@ export async function POST(request: Request) {
         // On a call the loop is context only: no step rules, no hidden lines.
         companionLoop: loop && !isCall ? {offersSteps: settings.suggestSteps, debates: debateCards} : null,
         call: isCall,
+        rich,
         // A call that takes debates: the spoken offer and the hand-over (SPEC section 6).
         callDebates: isCall && callDebates && Boolean(loop) && settings.suggestSteps !== false
     };

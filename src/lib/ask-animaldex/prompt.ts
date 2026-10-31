@@ -244,6 +244,61 @@ const ANIMAL_FORMAT_RULES = [
 ];
 
 /**
+ * Rich answers (docs/rich-chat/SPEC.md, section 1, owner, 2026-10-31): a
+ * client that draws headings, tables and text diagrams says "rich" with its
+ * one-to-one turns, and how many monospace characters fit across its reply
+ * column (`text_columns`). These lines then replace `ANIMAL_FORMAT_RULES`.
+ * The apps' `animalRichFormatRules(columns)` in `_shared/animal-voice.ts`,
+ * verbatim, with its formatting lead.
+ */
+export const ANIMAL_RICH_FORMAT_LEAD = "Formatting — your reply is drawn as rich markdown: headings, lists, tables and text diagrams all render.";
+
+/** `text_columns` as the server takes it: 28–80 characters, 36 when it is missing. */
+export const ASK_RICH_COLUMNS_MIN = 28;
+export const ASK_RICH_COLUMNS_MAX = 80;
+export const ASK_RICH_COLUMNS_DEFAULT = 36;
+
+export function askRichColumns(raw: unknown): number {
+    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw.trim() ? Number(raw) : Number.NaN;
+    if (!Number.isFinite(value)) return ASK_RICH_COLUMNS_DEFAULT;
+    return Math.min(ASK_RICH_COLUMNS_MAX, Math.max(ASK_RICH_COLUMNS_MIN, Math.floor(value)));
+}
+
+export function animalRichFormatRules(columns: number): string[] {
+    const width = askRichColumns(columns);
+    return [
+        "- Match the size of what they said. A hello, small talk, thanks, something hard they are telling you, or a quick",
+        "  question gets a plain reply: one to three short paragraphs, the way you would text a friend, with no headings,",
+        "  lists, tables, diagrams or emoji. Each paragraph reaches them as its own message bubble: one thought each, with a",
+        "  blank line between thoughts.",
+        "- When they bring a real problem, a decision, a plan, a 'how do I' or a 'why', or ask you to explain or compare, give",
+        "  a rich answer they can take in at a glance, laid out the way the best answers are:",
+        "  - Open with your verdict, or the heart of it, in one or two plain sentences. Never open with a heading.",
+        "  - Then two to four parts, each under a '## ' heading that begins with one fitting emoji (for example",
+        "    '## 🌙 What I would do'). Never a top-level '#'.",
+        "  - Steps to do in order as '1. ' lines, each starting with the action in **bold**. Options to weigh as '- ' lines,",
+        "    each starting with the option in **bold**, then what it gives and what it costs.",
+        "  - A side-by-side comparison as a markdown table: at most 3 columns and 6 rows, a few words per cell.",
+        "  - When a picture would make it click (a loop they are stuck in, a path from here to there, a fork between two",
+        "    choices, a before and after, two pulls against each other), draw ONE text diagram in a ```text fence. Use",
+        "    box-drawing characters (┌ ─ ┐ │ └ ┘ ├ ┤ ┬ ┴ ┼) and arrows (→ ← ↑ ↓). Every line of it, borders included, fits",
+        `    in ${width} characters. Put a short title in capitals on its first line, and plain words inside: no emoji,`,
+        "    no markdown and no tabs.",
+        "  - Bold the two or three phrases worth remembering, never whole sentences.",
+        "  - An emoji begins each heading, and may mark list items where it is the clearest marker. Never mid-sentence,",
+        "    never more than one on a line.",
+        "- Every part is still you talking: your life, your Power, your side, in the first person. The layout carries your",
+        "  view. It never becomes a neutral menu of everyone's options, and it never softens the side you took.",
+        "- Your nature still sets the manner: a spare animal keeps its parts few and short; a chatty one may add an aside.",
+        "- At most one table and one diagram in a reply, and a diagram counts as your one drawing. No '> ' quotes, no",
+        "  mottos, no sign-off, no 'Move today' / 'Avoid today' blocks."
+    ];
+}
+
+/** In `animalMediumRules`, with "rich": the drawing line's addition (SPEC section 1.2). */
+export const ANIMAL_RICH_DRAWING_LINE = "  A text diagram counts as a drawing.";
+
+/**
  * How a reply ends. In conversation a question is something you want to
  * know; when they came for help, it is the next step; an animal that hardly
  * ever asks (`nature.asks`) ends on its point. The apps' `closingRules`.
@@ -657,6 +712,10 @@ export type AskPromptOptions = {
     companionLoop?: {offersSteps: boolean; debates?: boolean} | null;
     /** A group conversation (`group-rules.ts`): these replace the loop and relationship rules. */
     groupLines?: string[] | null;
+    /// Species scope, one-to-one: the client draws rich answers (it sent
+    /// "rich"), `columns` its clamped `text_columns`. Never on a call, a group
+    /// or debate turn, or a Trial thread (`richFormat` below).
+    rich?: {columns: number} | null;
 };
 
 function localeRules(languageName: string | null | undefined): string[] {
@@ -753,7 +812,7 @@ function characterLines(options: AskPromptOptions): string[] {
  * cards are the exception, because they are how the loop is offered. The
  * apps' `animalMediumRules`, verbatim.
  */
-function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConversationMode): string[] {
+function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConversationMode, rich = false): string[] {
     const names = supportedVisuals.filter((name) => Array.isArray(VISUAL_MEDIUMS[name]));
     const drawings = names.filter((name) => name !== "card" && name !== "debate");
     if (names.length === 0) {
@@ -765,6 +824,7 @@ function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConvers
             "- A drawing is rare in conversation. Use one only when they ask how something works step by step, or when the",
             "  answer is a sequence, a switch between states or a too-little/too-much scale that is genuinely clearer drawn.",
             ...(mode === "chat" || mode === "auto" ? ["  Never in small talk."] : []),
+            ...(rich ? [ANIMAL_RICH_DRAWING_LINE] : []),
             "- At most ONE drawing (flow, scale, chart or photo) per answer. It replaces the prose that would have described",
             "  it: never draw it and then narrate it, and never point at it ('here is a chart', 'as shown').",
             "- Every visual block is closed with ``` on its own line before anything else follows it. An unclosed block is",
@@ -792,6 +852,17 @@ function speciesRecordSection(options: AskPromptOptions): string[] {
 }
 
 /**
+ * Whether this turn is drawn rich: the client said so, and it is a one-to-one
+ * reply in conversation. Calls, group and debate turns, and a Trial thread
+ * (training, with its own format) keep `ANIMAL_FORMAT_RULES`.
+ */
+function richFormat(options: AskPromptOptions): {columns: number} | null {
+    if (!options.rich || options.call || options.groupLines?.length) return null;
+    if (speciesMode(options) === "training") return null;
+    return {columns: askRichColumns(options.rich.columns)};
+}
+
+/**
  * Everything the species prompts share, in the apps' order (`sharedBody`):
  * who you are, how you talk, register, what you know, your stories, medium,
  * format, safety, memory, the conversation's mode and relationship, locale.
@@ -800,6 +871,7 @@ function speciesBody(options: AskPromptOptions, formattingLead: string): string[
     const mode = speciesMode(options);
     const character = characterLines(options);
     const locale = localeRules(options.languageName);
+    const rich = richFormat(options);
     return [
         ...ANIMAL_ROLE_INTRO,
         "",
@@ -815,10 +887,9 @@ function speciesBody(options: AskPromptOptions, formattingLead: string): string[
         ...ANIMAL_KNOWLEDGE_RULES,
         "",
         ...(options.stories ? [...ANIMAL_STORY_RULES, ""] : []),
-        ...animalMediumRules(options.supportedVisuals ?? [], mode),
+        ...animalMediumRules(options.supportedVisuals ?? [], mode, rich !== null),
         "",
-        formattingLead,
-        ...ANIMAL_FORMAT_RULES,
+        ...(rich ? [ANIMAL_RICH_FORMAT_LEAD, ...animalRichFormatRules(rich.columns)] : [formattingLead, ...ANIMAL_FORMAT_RULES]),
         // A group talks it over: its turns end the way a person's would.
         ...animalClosingRules(options.groupLines?.length ? "chat" : mode, options.nature?.asks),
         "",

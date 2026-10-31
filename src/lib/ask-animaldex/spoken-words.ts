@@ -11,8 +11,9 @@
  * its tests. Pure.
  */
 
-import {askInlinePlainText, askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
+import {askInlinePlainText, parseAskMarkdown} from "@/lib/ask-animaldex/markdown";
 import {askPlainBubbleText, askReplyPieces, type AskReplyPiece} from "@/lib/ask-animaldex/thread-layout";
+import {BOX_DRAWING, withoutSpokenEmoji} from "@/lib/ask-animaldex/call-speech";
 
 /** When one word of a spoken reply is said, in seconds from the start of the clip. */
 export type AskSpokenWord = {text: string; start: number; end: number};
@@ -21,13 +22,14 @@ const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 
 /**
  * The words of a text, in order, as [start, end) offsets: runs of non-space
- * characters that hold a letter or a digit (a lone dash is not a word).
+ * characters that hold a letter or a digit once emoji are set aside (a lone
+ * dash, a 🌙 or a 1️⃣ is not a word: the voice never says it).
  */
 export function askWordRanges(text: string): Array<[number, number]> {
     const ranges: Array<[number, number]> = [];
     let start = -1;
     const close = (end: number) => {
-        if (start >= 0 && LETTER_OR_DIGIT.test(text.slice(start, end))) ranges.push([start, end]);
+        if (start >= 0 && LETTER_OR_DIGIT.test(withoutSpokenEmoji(text.slice(start, end)))) ranges.push([start, end]);
         start = -1;
     };
     for (let index = 0; index < text.length; index += 1) {
@@ -43,11 +45,38 @@ export function askWords(text: string): string[] {
 }
 
 /**
- * What a bubble shows as plain characters: the same text the bubble is drawn
- * from, so word N here is word N on screen.
+ * What of a bubble with structure is heard, as the server's `speakableText`
+ * hears it (docs/rich-chat/SPEC.md, section 1.3): headings, paragraphs,
+ * quotes and list items; never a table, a fenced block (a text diagram, a
+ * drawing) or a stray box-drawing line. Emoji are not words (`askWordRanges`).
+ */
+export function askSpokenMarkdownText(raw: string): string {
+    const lines = raw.replace(/\r\n/g, "\n").split("\n").filter((line) => !BOX_DRAWING.test(line));
+    return parseAskMarkdown(lines.join("\n"))
+        .map((block): string | null => {
+            switch (block.kind) {
+                case "heading":
+                case "paragraph":
+                case "quote":
+                    return askInlinePlainText(block.text);
+                case "bulletList":
+                case "numberedList":
+                    return block.items.map((item) => askInlinePlainText(item.text)).join(" ");
+                default:
+                    return null;
+            }
+        })
+        .filter((value): value is string => Boolean(value))
+        .join(" ");
+}
+
+/**
+ * What a bubble shows as plain characters that its voice says: the same text
+ * the bubble is drawn from, so word N here is word N on screen; a bubble with
+ * structure counts only what is heard, so the words after it stay in step.
  */
 export function askShownBubbleText(text: string, isPlain: boolean): string {
-    return isPlain ? askInlinePlainText(askPlainBubbleText(text)) : askMarkdownPlainText(text);
+    return isPlain ? askInlinePlainText(askPlainBubbleText(text)) : askSpokenMarkdownText(text);
 }
 
 /**

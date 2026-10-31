@@ -29,22 +29,39 @@ export const CALL_REPLY_LINE =
 
 // MARK: - What is said
 
+/** Box-drawing characters: a text diagram's lines (docs/rich-chat/SPEC.md, section 1.3). */
+export const BOX_DRAWING = /[\u2500-\u257F]/;
+
+/**
+ * Emoji are looked at, not heard (rich answers, SPEC section 1.3): keycaps
+ * whole, then pictographs, variation selectors and joiners.
+ */
+export function withoutSpokenEmoji(text: string): string {
+    return text
+        .replace(/[#*0-9]\uFE0F?\u20E3/gu, "")
+        .replace(/\p{Extended_Pictographic}/gu, "")
+        .replace(/[\uFE0E\uFE0F\u200D]/gu, "");
+}
+
 /**
  * A chat reply as something to say out loud: the cards and drawings go (they
- * are tapped and looked at, not heard), markdown marks go, lists become
- * sentences, and the text is cut at a sentence boundary under `maxChars`, so
- * a long reply costs a bounded number of voice credits.
+ * are tapped and looked at, not heard), and so do tables, emoji and any stray
+ * box-drawing line; markdown marks go, lists become sentences, and the text
+ * is cut at a sentence boundary under `maxChars`, so a long reply costs a
+ * bounded number of voice credits.
  */
 export function speakableText(markdown: string, maxChars = 1100): string {
     let text = markdown.replace(/\r\n/g, "\n");
-    // Fenced blocks: cards, flows, charts, photo callouts. An unclosed fence at
-    // the end is dropped too.
+    // Fenced blocks: cards, flows, charts, photo callouts, text diagrams. An
+    // unclosed fence at the end is dropped too.
     text = text.replace(/```[\s\S]*?(```|$)/g, "\n");
     const lines = text.split("\n").map((line) => {
-        let out = line.trim();
+        let out = withoutSpokenEmoji(line).trim();
         if (!out) return "";
         // Table rows and separators are read badly; leave them out.
         if (/^\|.*\|$/.test(out) || /^[-:| ]{3,}$/.test(out)) return "";
+        // A diagram line that strayed outside its fence.
+        if (BOX_DRAWING.test(out)) return "";
         out = out.replace(/^#{1,6}\s+/, "");
         out = out.replace(/^>\s?/, "");
         out = out.replace(/^([-*+]|\d+[.)])\s+/, "");
