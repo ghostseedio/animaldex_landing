@@ -71,7 +71,7 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
 
 test("the fixture is the proof bonus + debates fixes server lane's build (owner, 2026-10-31)", () => {
     assert.equal(fixture.source.ref, "proof-debates-server");
-    assert.match(fixture.source.commit, /^cc714467/);
+    assert.match(fixture.source.commit, /^1c2b3bc2/);
 });
 
 test("proof bonus: the animal hears what the proof shows, as the server says it", () => {

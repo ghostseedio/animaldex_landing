@@ -2,7 +2,7 @@
   "source": {
     "repo": "AnimalDex",
     "ref": "proof-debates-server",
-    "commit": "cc7144678ecf91299cd5d5629ab0a005a210976a",
+    "commit": "1c2b3bc24fab1364f7bd815558fe788b4f2e7086",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",
