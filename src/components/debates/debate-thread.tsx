@@ -167,8 +167,12 @@ export default function DebateThread({
     const ranRef = useRef(false);
     const pollingRef = useRef(false);
     const mounted = useRef(true);
-    useEffect(() => () => {
-        mounted.current = false;
+    // Set again on every mount: React's development double mount runs the cleanup once in between.
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+        };
     }, []);
 
     // The stream names each animal by its participant id (never by card).

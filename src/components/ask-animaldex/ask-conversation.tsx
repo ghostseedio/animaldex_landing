@@ -622,14 +622,15 @@ export default function AskConversation({
      * people will see). What they had typed comes back once they are done.
      */
     const [debateEdit, setDebateEdit] = useState<DebateEdit | null>(null);
+    const debateEditRef = useRef<DebateEdit | null>(null);
+    debateEditRef.current = debateEdit;
     const draftBeforeEditRef = useRef("");
     const startDebateEdit = useCallback((edit: DebateEdit) => {
         setReportPreview(null);
         setReporting(null);
-        setDebateEdit((current) => {
-            if (!current) draftBeforeEditRef.current = composerValueRef.current;
-            return edit;
-        });
+        // What they had typed, kept for when they are done (read now, before the field is prefilled).
+        if (!debateEditRef.current) draftBeforeEditRef.current = composerValueRef.current;
+        setDebateEdit(edit);
         setComposer(edit.text);
         requestAnimationFrame(() => {
             const node = composerRef.current;
@@ -641,13 +642,10 @@ export default function AskConversation({
         });
     }, [setReportPreview]);
     const leaveDebateEdit = useCallback(() => {
-        setDebateEdit((current) => {
-            if (current) {
-                setComposer(draftBeforeEditRef.current);
-                if (composerRef.current) composerRef.current.style.height = "";
-            }
-            return null;
-        });
+        if (!debateEditRef.current) return;
+        setDebateEdit(null);
+        setComposer(draftBeforeEditRef.current);
+        if (composerRef.current) composerRef.current.style.height = "";
     }, []);
     // The Power-earned messages whose burst has played (once, only for a reply that arrived here).
     const [burstsPlayed, setBurstsPlayed] = useState<ReadonlySet<string>>(() => new Set());
@@ -1073,6 +1071,8 @@ export default function AskConversation({
      * down again). A message the reader sends always goes to the bottom.
      */
     const sticksToBottom = useRef(true);
+    const showingMemoryRef = useRef(false);
+    showingMemoryRef.current = showingMemory || showingBond || showingSoundCredits;
     const [showsLatest, setShowsLatest] = useState(false);
     const scrollToLatest = useCallback((behavior: ScrollBehavior = "auto") => {
         const scroller = scrollRef.current;
@@ -1096,6 +1096,41 @@ export default function AskConversation({
     useEffect(() => {
         if (messenger && trailingQuestionId) scrollToLatest();
     }, [messenger, trailingQuestionId, scrollToLatest]);
+    // What grows without this component drawing again (a debate's turns typing out, its report,
+    // a loop or a picture loading) keeps the thread on its newest message too, while the reader
+    // was there: followed on any change in the thread, and on any change of its parts' sizes.
+    useEffect(() => {
+        const scroller = scrollRef.current;
+        if (!messenger || !scroller) return;
+        let lastHeight = scroller.scrollHeight;
+        const follow = () => {
+            const before = lastHeight - scroller.scrollTop - scroller.clientHeight;
+            if (!showingMemoryRef.current && (sticksToBottom.current || before < 72) && scroller.scrollHeight !== lastHeight) {
+                scroller.scrollTop = scroller.scrollHeight;
+                sticksToBottom.current = true;
+            }
+            lastHeight = scroller.scrollHeight;
+        };
+        const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(follow);
+        const observeParts = () => {
+            if (!resize) return;
+            resize.disconnect();
+            for (const child of Array.from(scroller.children)) {
+                resize.observe(child);
+                for (const inner of Array.from(child.children)) resize.observe(inner);
+            }
+        };
+        observeParts();
+        const mutations = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => {
+            observeParts();
+            follow();
+        });
+        mutations?.observe(scroller, {childList: true, subtree: true, characterData: true});
+        return () => {
+            resize?.disconnect();
+            mutations?.disconnect();
+        };
+    }, [messenger, onPage]);
 
     const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
         // The reader may talk over the animal's greeting (it keeps what it
