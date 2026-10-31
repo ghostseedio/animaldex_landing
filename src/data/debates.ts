@@ -99,9 +99,11 @@ export async function readDebate(supabase: Supabase, debateId: string): Promise<
 }
 
 /**
- * Whether the reader's animals may join public debates (off by default).
- * Read through `debate_roster_v1`, else their own `debate_roster_settings`
- * row; null when neither can be read.
+ * Whether the reader's animals may join public debates. On by default since
+ * the owner's change of 2026-10-31: no `debate_roster_settings` row counts as
+ * opted in, and only `opted_in = false` (the Settings switch turned off) is
+ * out. Read through `debate_roster_v1`, else their own row; null when neither
+ * can be read.
  */
 export async function readRosterOptIn(supabase: Supabase): Promise<boolean | null> {
     try {
@@ -110,7 +112,7 @@ export async function readRosterOptIn(supabase: Supabase): Promise<boolean | nul
             if (typeof viaRpc.data === "boolean") return viaRpc.data;
             const data = Array.isArray(viaRpc.data) ? viaRpc.data[0] : viaRpc.data;
             const row = data && typeof data === "object" ? data as Record<string, unknown> : null;
-            if (row && "opted_in" in row) return row.opted_in === true;
+            if (row && "opted_in" in row) return row.opted_in !== false;
         }
     } catch {
         // The row below.
@@ -120,7 +122,7 @@ export async function readRosterOptIn(supabase: Supabase): Promise<boolean | nul
         if (!user) return null;
         const {data, error} = await supabase.from("debate_roster_settings").select("opted_in").eq("user_id", user.id).maybeSingle();
         if (error) return null;
-        return data?.opted_in === true;
+        return data ? data.opted_in !== false : true;
     } catch {
         return null;
     }

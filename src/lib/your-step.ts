@@ -51,8 +51,26 @@ export type StepRecord = {
     evidence: string | null;
     mediaPaths: string[];
     doneAt: string | null;
+    /** What the step paid, the proof bonus included. */
     xpAwarded: number;
+    /**
+     * What the server's proof check made of the photo or video
+     * (`confirmed` | `unclear` | `not_shown` | `failed`); null when none was
+     * added, or it was never checked. Only `confirmed` shows ("Proof").
+     */
+    proofStatus: StepProofStatus | null;
 };
+
+export type StepProofStatus = "confirmed" | "unclear" | "not_shown" | "failed";
+
+/** The proof bonus: +5 XP when the photo or video shows the step, on a step that paid. */
+export const STEP_PROOF_BONUS_XP = 5;
+
+/** `proof_status`, as the server stores it; anything else is unknown. */
+export function stepProofStatus(value: unknown): StepProofStatus | null {
+    const said = typeof value === "string" ? value.trim().toLowerCase() : "";
+    return said === "confirmed" || said === "unclear" || said === "not_shown" || said === "failed" ? said : null;
+}
 
 /** A record's photo or video, signed for the reader by the route. */
 export type StepRecordMedia = {path: string; url: string; kind: "photo" | "video"};
@@ -209,7 +227,8 @@ export function decodeStepRecords(raw: unknown): StepRecord[] {
             evidence: text(row.evidence),
             mediaPaths: list(row.media_paths).flatMap((path) => (text(path) ? [text(path) as string] : [])).slice(0, MAX_STEP_MEDIA_PATHS),
             doneAt: text(row.done_at),
-            xpAwarded: count(row.xp_awarded)
+            xpAwarded: count(row.xp_awarded),
+            proofStatus: stepProofStatus(row.proof_status)
         }];
     });
 }

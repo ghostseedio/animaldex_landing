@@ -74,11 +74,13 @@ export function SoundEffectsRow() {
 
 /**
  * 3.2 Debates (docs/debates/SPEC.md, section 4): "Let my animals join public
- * debates", off by default. Only animals with their Power earned join; each
- * debate puts a heart on it. The server's answer is what shows.
+ * debates", on by default since the owner's change of 2026-10-31 (no row is
+ * opted in), so this is an opt-out. Only animals with their Power earned
+ * join; each debate puts a heart on it. The server's answer is what shows,
+ * and an unread state is never taken as off.
  */
 export function DebateRosterSection({initial, words}: {initial: boolean | null; words: CompanionWords}) {
-    const [optedIn, setOptedIn] = useState(initial === true);
+    const [optedIn, setOptedIn] = useState(initial !== false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     return (

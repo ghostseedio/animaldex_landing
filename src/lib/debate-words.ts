@@ -45,7 +45,13 @@ export function debateProblemText(code: DebateProblemCode | null | undefined, wo
     }
 }
 
-/** "Each animal puts 1 heart on it. The winner's owner gets {credits} Credits.", for the host and the picked animals. */
+/**
+ * "Each animal puts 1 heart on it. The winner's owner gets {credits} Credits.",
+ * with `pickedCount` the other people's animals picked: since 2026-10-31 the
+ * winner's owner gets 5 × (losing animals of other owners) − 1, so this is
+ * what a win by the asker's own animal brings. With none, nothing is at stake
+ * (`debate.ownOnly`).
+ */
 export function debateStakeNote(pickedCount: number, words: CompanionWords): string {
     return fillWords(words.debate.stakeNote, {credits: debateWinnerCredits(pickedCount + 1)});
 }

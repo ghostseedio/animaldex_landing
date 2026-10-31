@@ -185,7 +185,7 @@ import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
 import DebateSetup, {type DebateHost} from "@/components/debates/debate-sheet";
 import DebateThread from "@/components/debates/debate-thread";
 import {useMyDebates} from "@/components/debates/use-debates";
-import type {Debate, DebateNamedAnimal, DebateRequest} from "@/lib/debates";
+import {debateSeedProblem, type Debate, type DebateNamedAnimal, type DebateRequest} from "@/lib/debates";
 
 export type AskDrawerLabels = {
     title: string;
@@ -1615,30 +1615,36 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
         return placed;
     }, [threadDebates, messages]);
     /**
-     * The setup, with the problem: the animal's summary of it (its offer's
-     * `debate_offer`, or the call's `debate_request`), else as they told it
-     * here (their latest message, or what the animal is helping with); and the
-     * owner's animals it named, pre-selected.
+     * The setup, with the problem (owner, 2026-10-31, `debateSeedProblem`):
+     * the animal's offer names it (`debate_offer.problem`, the focus when
+     * there is one); started by them (the menu, the Bond tab, a call) it is
+     * what the animal is helping them with, and only without a focus what
+     * they said (the call's `debate_request`, then their latest message).
+     * The owner's animals it named are pre-selected.
      */
     const openDebateSheet = useCallback((
         messageId: string | null,
         approving: Debate | null = null,
-        problem: string | null = null,
+        offered: string | null = null,
         fromCall = false,
-        named: DebateNamedAnimal[] = []
+        named: DebateNamedAnimal[] = [],
+        said: string | null = null
     ) => {
         speech.stop();
         setShowingBond(false);
         setShowingMemory(false);
-        setDebateSheet({problem: problem || lastQuestion(messages) || companionLoop?.focus || "", messageId, approving, fromCall, named});
+        // The loop's focus, else the bond's (read for the Bond tab before the loop is).
+        const focus = companionLoop?.focus ?? animalBond.bond?.focus ?? null;
+        const problem = debateSeedProblem({offered, focus, said: [said, lastQuestion(messages)]});
+        setDebateSheet({problem, messageId, approving, fromCall, named});
         sticksToBottom.current = true;
-    }, [speech, messages, companionLoop?.focus]);
+    }, [speech, messages, companionLoop?.focus, animalBond.bond?.focus]);
     // The call is over: the setup opens prefilled from it, its animals pre-selected, Private (a public debate never starts from a call).
     useEffect(() => {
         if (onCall || !callDebateRef.current) return;
         const request = callDebateRef.current;
         callDebateRef.current = null;
-        if (debatesOffered) openDebateSheet(null, null, request.problem, true, request.with);
+        if (debatesOffered) openDebateSheet(null, null, null, true, request.with, request.problem);
     }, [onCall, debatesOffered, openDebateSheet]);
     /** The setup, in the thread (or as the sheet, below `narrow`). */
     const debateSetup = (layout: "band" | "sheet") => (debateSheet && debateHost ? (
@@ -1841,6 +1847,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                             speciesProfileId={companionSpeciesProfileId}
                             name={speakerName}
                             xp={special.xp}
+                            proofBonus={special.proofBonus}
                             words={words}
                             report={report ? {text: report.text, thumb: report.stepReportThumb ?? null, isVideo: report.stepReportKind === "video"} : null}
                             // Only for a reply that has just arrived here, once, and never under Reduce Motion.
@@ -1851,7 +1858,7 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                         />
                     );
                 }
-                return <AskDoneSection key="done" xp={special.xp} step={special.step} words={words} shareLabel={shareLabel} onShare={() => shareCard(message.id, null)} />;
+                return <AskDoneSection key="done" xp={special.xp} proofBonus={special.proofBonus} step={special.step} words={words} shareLabel={shareLabel} onShare={() => shareCard(message.id, null)} />;
             }
             case "step":
                 // Only the newest reply that set the open step has its buttons.
@@ -2543,6 +2550,18 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             <span className="line-clamp-2 min-w-0">{stepReportStripText(speakerName, words)}</span>
                                         </p>
                                         <p className="mt-0.5 truncate text-[13px] leading-5 text-white/80" title={openStep.step}>{openStep.step}</p>
+                                        {!reporting.file ? (
+                                            // The proof bonus, said where you add it: optional, never required.
+                                            <button
+                                                type="button"
+                                                onClick={() => reportFileRef.current?.click()}
+                                                disabled={reporting.sending}
+                                                className="mt-1 block max-w-full text-left text-[11px] font-semibold leading-4 text-primary-300/90 transition-colors hover:text-primary-200 disabled:opacity-40"
+                                                data-testid="report-proof-hint"
+                                            >
+                                                {words.journey.report.attachBonus}
+                                            </button>
+                                        ) : null}
                                         {reporting.problem ? <p role="alert" className="mt-0.5 text-[11px] leading-4 text-white/60">{reporting.problem}</p> : null}
                                     </div>
                                     {/* The photo or video they added, after the words, with ✕ to take it out (iOS AnimalStepReportStrip). */}
@@ -2601,8 +2620,8 @@ export default function AskDrawer({labels}: {labels: AskDrawerLabels}) {
                                             type="button"
                                             onClick={() => reportFileRef.current?.click()}
                                             disabled={reporting.sending}
-                                            aria-label={words.journey.report.attach}
-                                            title={words.journey.report.attach}
+                                            aria-label={words.journey.report.attachBonus}
+                                            title={words.journey.report.attachBonus}
                                             className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary-300 transition-colors hover:bg-white/8 hover:text-primary-200 disabled:opacity-40"
                                             data-testid="report-attach"
                                         >

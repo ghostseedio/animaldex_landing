@@ -218,7 +218,7 @@ export function StepReportComposer({
                                 className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10"
                             >
                                 <span aria-hidden="true">＋</span>
-                                {words.journey.report.attach}
+                                {words.journey.report.attachBonus}
                             </button>
                         )}
                         {/* Never clipped: it wraps in full, outside the scrolling words. */}
@@ -415,6 +415,7 @@ export function StepRecordList({
                         )}
                         <span className="min-w-0 flex-1">
                             <span className="block text-sm font-semibold leading-6 text-white">{record.step}</span>
+                            {record.proofStatus === "confirmed" ? <ProofMark label={words.journey.record.proof} /> : null}
                             {record.account ?? record.evidence ? (
                                 <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-white/55">{record.account ?? record.evidence}</span>
                             ) : null}
@@ -424,6 +425,16 @@ export function StepRecordList({
                 );
             })}
         </section>
+    );
+}
+
+/** A record whose photo or video showed the step: a quiet "Proof" mark. */
+function ProofMark({label}: {label: string}) {
+    return (
+        <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/45" data-testid="record-proof">
+            <span aria-hidden="true" style={{color: NEON}}>✓</span>
+            {label}
+        </span>
     );
 }
 
@@ -479,6 +490,7 @@ export function StepRecordEntry({
                         {date ? <p className="text-[11px] font-semibold text-white/45">{date}</p> : null}
                         <p className="font-display text-xl font-black leading-tight text-white">{record.step}</p>
                         <StepDoneChip xp={record.xpAwarded} words={words} />
+                        {record.proofStatus === "confirmed" ? <ProofMark label={words.journey.record.proof} /> : null}
                     </section>
                     {record.account ? (
                         <section className="border-b border-white/[0.08] px-5 py-5">

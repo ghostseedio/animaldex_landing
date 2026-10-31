@@ -40,6 +40,7 @@ import type {AskWarmupItem} from "@/lib/ask-animaldex/thread";
 import type {StepFrequency} from "@/lib/your-step";
 import {
     stepDoneLabel,
+    stepProofBonusLine,
     stepEarnedLine,
     stepPrimaryLabel,
     warmupOfferText,
@@ -170,15 +171,24 @@ export function AskStepSection({
 
 // MARK: - Done, and the Power earned
 
-/** "DONE TOGETHER · +5 XP", the step, and Share. */
+/** Under the done label: "+5 XP for your proof", when the photo or video showed the step. */
+function ProofBonusLine({bonus, words}: {bonus: number; words: CompanionWords}) {
+    const line = stepProofBonusLine(bonus, words);
+    return line ? <p className="-mt-1 text-[12px] font-semibold leading-4 text-primary-300/80" data-testid="proof-bonus">{line}</p> : null;
+}
+
+/** "DONE TOGETHER · +10 XP", "+5 XP for your proof" when it earned it, the step, and Share. */
 export function AskDoneSection({
     xp,
+    proofBonus = 0,
     step,
     words,
     shareLabel,
     onShare
 }: {
     xp: number;
+    /** Of `xp`, the proof bonus (0 or 5). */
+    proofBonus?: number;
     step: string;
     words: CompanionWords;
     shareLabel: string;
@@ -187,6 +197,7 @@ export function AskDoneSection({
     return (
         <section className="flex flex-col gap-2" data-testid="special-done">
             <AskSpecialLabel icon={<SealIcon />}>{stepDoneLabel(xp, words)}</AskSpecialLabel>
+            <ProofBonusLine bonus={proofBonus} words={words} />
             <p className="line-clamp-3 text-[13px] leading-5 text-white/65">{step}</p>
             <ShareChip label={shareLabel} onShare={onShare} />
         </section>
@@ -241,6 +252,7 @@ export function AskEarnedSection({
     speciesProfileId,
     name,
     xp,
+    proofBonus = 0,
     words,
     report,
     burst,
@@ -253,6 +265,8 @@ export function AskEarnedSection({
     speciesProfileId: string | null;
     name: string;
     xp: number;
+    /** Of `xp`, the proof bonus (0 or 5). */
+    proofBonus?: number;
     words: CompanionWords;
     /** The report it answered: their words, and the thumbnail of what they added. */
     report: {text: string; thumb: string | null; isVideo: boolean} | null;
@@ -267,6 +281,7 @@ export function AskEarnedSection({
         <section className="relative flex flex-col gap-3" aria-label={powerName} data-testid="special-earned">
             {burst ? <SparkleBurst onEnd={onBurstEnd} /> : null}
             <AskSpecialLabel icon={<SealIcon />}>{stepDoneLabel(xp, words)}</AskSpecialLabel>
+            <ProofBonusLine bonus={proofBonus} words={words} />
             <div className="flex items-center gap-3">
                 <span aria-hidden="true" className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full border-[1.5px] border-primary-400/55 bg-primary-400/[0.14] text-primary-300">
                     <AnimalPowerIcon speciesProfileId={speciesProfileId} size={30} gap={0} fallback={<BoltIcon />} />

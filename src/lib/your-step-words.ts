@@ -71,6 +71,12 @@ export function stepDoneLabel(xp: number, words: CompanionWords): string {
     return xp > 0 ? `${words.journey.done.chip} · ${fillWords(words.journey.done.xp, {xp})}` : words.journey.done.chip;
 }
 
+/** Under the done label when the proof showed the step: "+5 XP for your proof"; null without a bonus. */
+export function stepProofBonusLine(bonus: number | null | undefined, words: CompanionWords): string | null {
+    const n = Math.max(0, Math.round(bonus ?? 0));
+    return n > 0 ? fillWords(words.journey.done.proofBonus, {n}) : null;
+}
+
 /** Under the Power's name on the first done step: "Leo's Power is yours · Earned in your own life". */
 export function stepEarnedLine(name: string, words: CompanionWords): string {
     return `${fillWords(words.journey.earned.subtitle, {name})} · ${words.journey.earned.via}`;

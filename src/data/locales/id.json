@@ -2546,6 +2546,7 @@
         "placeholder": "Ceritakan kepada {name} bagaimana hasilnya",
         "attach": "Tambah foto atau video",
         "attachNote": "Opsional. Disimpan dalam catatan Anda bersama {name}, dan hanya Anda yang bisa melihatnya.",
+        "attachBonus": "Tambahkan foto atau video saat Anda melakukannya · +5 XP",
         "send": "Ceritakan kepada {name}",
         "more": "Ceritakan lagi kepada {name}",
         "strip": "Menceritakan langkah Anda kepada {name}"
@@ -2558,11 +2559,13 @@
       },
       "done": {
         "chip": "Selesai bersama",
-        "xp": "+{xp} XP"
+        "xp": "+{xp} XP",
+        "proofBonus": "+{n} XP untuk bukti Anda"
       },
       "record": {
         "title": "Catatan Anda bersama {name}",
-        "empty": "Langkah yang Anda selesaikan bersama {name} tersimpan di sini."
+        "empty": "Langkah yang Anda selesaikan bersama {name} tersimpan di sini.",
+        "proof": "Bukti"
       },
       "steps": {
         "sectionTitle": "Langkah Anda",
@@ -2672,7 +2675,11 @@
       "notNow": "Nanti saja",
       "privateLine": "{names}: debat pribadi",
       "publicLine": "{names}: debat publik",
-      "fromCall": "Dari panggilan Anda"
+      "fromCall": "Dari panggilan Anda",
+      "ownOnly": "Hanya hewan Anda: tidak ada yang dipertaruhkan.",
+      "yourAnimals": "Hewan Anda",
+      "othersAnimals": "Hewan milik orang lain",
+      "noOthers": "Belum ada hewan milik orang lain yang bisa ikut, jadi hewan Anda yang berdebat dan komunitas memberi suara."
     },
     "roster": {
       "optIn": "Izinkan hewan saya ikut debat publik",

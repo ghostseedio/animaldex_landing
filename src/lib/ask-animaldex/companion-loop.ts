@@ -38,8 +38,10 @@ export type AskCompanionStepDone = {
     id?: string;
     step: string;
     powerEarned: boolean;
-    /** The progression XP the step paid (`your_step:<id>`, +5, at most one a day per animal); 0 when none. */
+    /** The progression XP the step paid (`your_step:<id>`, +5, at most one a day per animal), the proof bonus included; 0 when none. */
     xp: number;
+    /** Of `xp`, the proof bonus (`trial_done.proof_bonus`, 5): the photo or video showed the step. Absent when none. */
+    proofBonus?: number;
 };
 
 /** The step the animal set in this reply: the card goes under it. */
@@ -106,7 +108,10 @@ function stepDoneFrom(raw: unknown): AskCompanionStepDone | null {
     if (!row || !step) return null;
     // `power_waits_for_training` is always false since 3.2 (kept for old apps).
     const id = uuid(row.id);
-    return {...(id ? {id} : {}), step, powerEarned: row.power_earned === true, xp: count(row.xp ?? row.xp_awarded)};
+    const xp = count(row.xp ?? row.xp_awarded);
+    // Never more than the step paid: an old server sends none, so 0.
+    const proofBonus = Math.min(xp, count(row.proof_bonus ?? row.proof_bonus_xp));
+    return {...(id ? {id} : {}), step, powerEarned: row.power_earned === true, xp, ...(proofBonus > 0 ? {proofBonus} : {})};
 }
 
 function stepSetFrom(raw: unknown): AskCompanionStepSet | null {
@@ -205,7 +210,17 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
     const stepDoneRow = object(row.stepDone);
     const stepDoneId = uuid(stepDoneRow?.id);
     const stepDone = stepDoneRow && text(stepDoneRow.step)
-        ? {...(stepDoneId ? {id: stepDoneId} : {}), step: text(stepDoneRow.step) as string, powerEarned: stepDoneRow.powerEarned === true, xp: count(stepDoneRow.xp)}
+        ? (() => {
+            const xp = count(stepDoneRow.xp);
+            const proofBonus = Math.min(xp, count(stepDoneRow.proofBonus));
+            return {
+                ...(stepDoneId ? {id: stepDoneId} : {}),
+                step: text(stepDoneRow.step) as string,
+                powerEarned: stepDoneRow.powerEarned === true,
+                xp,
+                ...(proofBonus > 0 ? {proofBonus} : {})
+            };
+        })()
         : null;
     const stepSetRow = object(row.stepSet);
     const stepSetFrequency = stepFrequency(stepSetRow?.trialFrequency);

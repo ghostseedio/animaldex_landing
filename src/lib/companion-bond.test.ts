@@ -173,6 +173,10 @@ test("the 3.2 words are the SPEC's, word for word, and none of the retired ones 
     assert.equal(YOUR_STEP_COPY.step.otherMessage, "Can I have a different step?");
     assert.equal(fillWords(YOUR_STEP_COPY.report.attachNote, {name: "Leo"}), "Optional. It's kept in your record with Leo, and only you can see it.");
     assert.equal(fillWords(YOUR_STEP_COPY.done.xp, {xp: 5}), "+5 XP");
+    // Proof bonus (owner, 2026-10-31).
+    assert.equal(YOUR_STEP_COPY.report.attachBonus, "Add a photo or video of you doing it · +5 XP");
+    assert.equal(fillWords(YOUR_STEP_COPY.done.proofBonus, {n: 5}), "+5 XP for your proof");
+    assert.equal(YOUR_STEP_COPY.record.proof, "Proof");
     assert.equal(fillWords(YOUR_STEP_COPY.warmup.resultMessage, {right: 1, n: 3}), "I got 1 of 3 on your warmup.");
     assert.equal(fillWords(YOUR_STEP_COPY.trial.sectionTitle, {name: "Leo"}), "Leo's Trials");
     const english = JSON.stringify(COMPANION_WORDS_EN);
@@ -208,7 +212,13 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(COMPANION_WORDS_EN.debates.tab, "Debates");
     assert.equal(COMPANION_WORDS_EN.card.stats, "Stats");
     const said = (value: unknown): string[] => (typeof value === "string" ? [value] : Object.values(value as Record<string, unknown>).flatMap(said));
-    const english = said({debate: DEBATE_COPY, roster: ROSTER_COPY, heal: HEAL_COPY, web: COMPANION_WORDS_EN.debateWeb}).join("\n");
+    // Owner, 2026-10-31: public with your own animals. "nothing at stake" is the owner's own wording.
+    assert.equal(DEBATE_COPY.ownOnly, "Only your animals: nothing at stake.");
+    assert.equal(DEBATE_COPY.yourAnimals, "Your animals");
+    assert.equal(DEBATE_COPY.othersAnimals, "Other people's animals");
+    assert.equal(DEBATE_COPY.noOthers, "No one else's animals can join yet, so yours debate it and the community votes.");
+    const {ownOnly: _ownOnly, ...retiredChecked} = DEBATE_COPY;
+    const english = said({debate: retiredChecked, roster: ROSTER_COPY, heal: HEAL_COPY, web: COMPANION_WORDS_EN.debateWeb}).join("\n");
     for (const retired of ["Battle", "battle", "Opponent", "Rival", "Arena", "Matchup", "Rulebook", "Restore", "stake", "Tier "]) {
         assert.equal(english.includes(retired), false, retired);
     }

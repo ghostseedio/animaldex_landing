@@ -22,6 +22,7 @@ import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pace
 import {parseAskGroupFrame} from "@/lib/ask-animaldex/group-thread";
 import type {CompanionWords} from "@/lib/companion-bond";
 import {
+    debateIsOwnOnly,
     decodeDebateReport,
     orderedDebateTurns,
     type Debate,
@@ -328,6 +329,10 @@ export default function DebateThread({
                 <span className="min-w-0 flex-1">
                     <span className="block text-[12px] font-bold leading-4 text-white">{debateLine(debate, words, locale)}</span>
                     <span className="block truncate text-[11px] font-semibold text-white/55">{status}</span>
+                    {debateIsOwnOnly(debate) ? (
+                        // Public with only the asker's animals (owner, 2026-10-31): still voted on, nothing moves.
+                        <span className="block text-[11px] font-semibold leading-4 text-white/55" data-testid="debate-own-only">{words.debate.ownOnly}</span>
+                    ) : null}
                 </span>
             </div>
             {shown.map((turn, index) => (

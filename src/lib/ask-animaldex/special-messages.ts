@@ -25,7 +25,7 @@ import type {SpeciesTraining, SpeciesTrainingResult} from "@/lib/species-trainin
 /** One thing a reply carries to do, drawn as a section of its last bubble. */
 export type AskSpecial =
     /** "DONE TOGETHER · +5 XP": the animal saw a step done; the first one earned the Power. */
-    | {kind: "done"; xp: number; step: string; powerEarned: boolean}
+    | {kind: "done"; xp: number; step: string; powerEarned: boolean; /** Of `xp`, the proof bonus; absent when none. */ proofBonus?: number}
     /** "YOUR STEP": the step this reply set (or the Trial picked from it). */
     | {kind: "step"; stepSet: AskCompanionStepSet}
     /** "{NAME}'S TRIALS": the picker. */
@@ -62,7 +62,8 @@ export function askReplySpecials(input: {
     const kinds = new Set(askReplyCards(message.text).map((card) => card.kind));
     const specials: AskSpecial[] = [];
     if (event?.stepDone) {
-        specials.push({kind: "done", xp: event.stepDone.xp, step: event.stepDone.step, powerEarned: event.stepDone.powerEarned});
+        const {xp, step, powerEarned, proofBonus} = event.stepDone;
+        specials.push({kind: "done", xp, step, powerEarned, ...(proofBonus ? {proofBonus} : {})});
     }
     if (event?.stepSet) {
         specials.push({kind: "step", stepSet: event.stepSet});

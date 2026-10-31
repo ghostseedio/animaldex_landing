@@ -302,12 +302,15 @@ export async function applyCompanionLines(params: {
                 const result = data as Record<string, unknown>;
                 // 3.2: the step pays +5 XP (0 past the first paying step with
                 // this animal today); the Power never waits for a lesson check.
+                // Since 2026-10-31 a confirmed proof adds +5 on a step that
+                // pays: `xp` includes it, `proof_bonus` says it (0 or 5).
                 event.trial_done = {
                     id: typeof result.trial_id === "string" ? result.trial_id : params.state.open_trial.id,
                     step: result.step ?? params.state.open_trial.step,
                     power_earned: result.power_earned === true,
                     power_waits_for_training: result.power_waits_for_training === true,
-                    xp: Number(result.xp) || 0
+                    xp: Number(result.xp) || 0,
+                    proof_bonus: Number(result.proof_bonus) || 0
                 };
                 done = Number(result.your_trials_done) || done + 1;
                 openStep = null;

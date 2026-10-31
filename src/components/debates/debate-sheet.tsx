@@ -26,6 +26,9 @@ import {
     DEBATE_PROBLEM_MAX,
     DEBATE_PUBLIC_TEXT_MAX,
     debateAnimalName,
+    debateHasStakes,
+    groupDebateCandidates,
+    othersPicked,
     preselectedDebatePicks,
     type Debate,
     type DebateCandidate,
@@ -155,13 +158,10 @@ export default function DebateSetup({
         };
     }, [draft, web.problems.generic, web.problems.draftSlow, backToPrivate]);
 
-    const publicBlocker = visibility !== "public"
-        ? null
-        : !host.powerEarned
-            ? web.problems.powerNotEarned
-            : host.hearts !== null && host.hearts <= 0
-                ? words.roster.offRoster
-                : null;
+    // Out of hearts no longer blocks Public (owner, 2026-10-31): with only
+    // its own animals nothing is at stake; it needs a heart only with someone
+    // else's animal picked (said beside the stake, below).
+    const publicBlocker = visibility !== "public" || host.powerEarned ? null : web.problems.powerNotEarned;
 
     useEffect(() => {
         if (draft || publicBlocker) return;
@@ -209,6 +209,50 @@ export default function DebateSetup({
             if (current.length >= DEBATE_MAX_PICKS) return current;
             return [...current, candidate.captureId];
         });
+    };
+
+    /** One animal to pick: its face, name and Power, "Fits this best", and the tick. */
+    const candidateRow = (candidate: DebateCandidate) => {
+        const on = picked.includes(candidate.captureId);
+        const taken = !on && Boolean(candidate.speciesProfileId && pickedSpecies.has(candidate.speciesProfileId));
+        const full = !on && picked.length >= DEBATE_MAX_PICKS;
+        return (
+            <button
+                key={candidate.captureId}
+                type="button"
+                onClick={() => toggle(candidate)}
+                disabled={taken || full}
+                aria-pressed={on}
+                title={taken ? words.picker.alreadyHereHint : undefined}
+                className={`flex items-center gap-3 ${pad} py-2.5 text-left transition-colors disabled:opacity-45 ${on ? "bg-primary-400/[0.1]" : "hover:bg-white/[0.03]"}`}
+            >
+                <AskAnimalFace url={candidate.slug ? getSpeciesImageRoute(candidate.slug) : null} size={34} />
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-white">{taken ? words.picker.alreadyHere : debateAnimalName(candidate)}</span>
+                    <span className="block truncate text-[11px] font-semibold text-white/50">{candidate.powerName ?? candidate.animal}</span>
+                </span>
+                {candidate.fits ? (
+                    <span className="shrink-0 rounded-full border border-primary-300/30 px-2 py-0.5 text-[10px] font-bold text-primary-200">{words.debate.suggested}</span>
+                ) : null}
+                <span aria-hidden="true" className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[11px] font-black ${on ? "border-primary-300 bg-primary-300 text-black" : "border-white/25 text-transparent"}`}>✓</span>
+            </button>
+        );
+    };
+
+    /**
+     * Public (owner, 2026-10-31): "Your animals" first, then "Other people's
+     * animals" when there are any; with none, the note says yours debate it
+     * and the community votes.
+     */
+    const publicGroups = (rows: DebateCandidate[]) => {
+        const {own, others} = groupDebateCandidates(rows);
+        const groups: Array<{key: string; title: string | null; rows: DebateCandidate[]; note: string | null}> = [];
+        if (own.length > 0) groups.push({key: "own", title: words.debate.yourAnimals, rows: own, note: null});
+        if (others.length > 0) groups.push({key: "others", title: words.debate.othersAnimals, rows: others, note: null});
+        if (!(candidates ?? []).some((candidate) => !candidate.ownerIsMe)) {
+            groups.push({key: "no-others", title: null, rows: [], note: words.debate.noOthers});
+        }
+        return groups;
     };
 
     const say = useCallback((code: DebateProblemCode) => setFailure(debateProblemText(code, words)), [words]);
@@ -326,7 +370,22 @@ export default function DebateSetup({
         onClose();
     };
 
-    const stakeCount = draft ? Math.max(1, draft.participants.length - 1) : picked.length;
+    // Hearts and Credits move only between different owners: only your own animals, nothing at stake.
+    const draftHasStakes = draft
+        ? draft.stakes ?? (draft.participants.length > 1 ? debateHasStakes({...draft, stakes: null}) : othersPicked(candidates ?? [], picked) > 0)
+        : false;
+    const stakeLine = (hasStakes: boolean, count: number) => (hasStakes ? debateStakeNote(count, words) : words.debate.ownOnly);
+    const pickedOthers = othersPicked(candidates ?? [], picked);
+    // Someone else's animal picked, and the host has no heart to put on it: heal it, or pick only your own.
+    const hostOutOfHearts = visibility === "public" && pickedOthers > 0 && host.hearts !== null && host.hearts <= 0;
+    // Why Start can't be tapped yet, so it is never a disabled button with no reason.
+    const startHint = !draft && !working && !failure && !publicBlocker && candidates !== null && candidates.length > 0
+        ? picked.length === 0
+            ? web.problems.pickOne
+            : problem.trim().length < MIN_PROBLEM
+                ? web.problems.tooShort
+                : null
+        : null;
     const band = layout === "band";
     const pad = band ? "px-4" : "px-5";
     const rule = "border-b border-white/[0.08]";
@@ -357,7 +416,11 @@ export default function DebateSetup({
                     <p className="mt-3 whitespace-pre-line border-l-2 border-white/15 pl-3 text-[15px] leading-6 text-white">{publicText}</p>
                 )}
             </div>
-            <p className={`${rule} ${pad} py-3 text-xs leading-5 text-white/70`}>{debateStakeNote(stakeCount, words)}</p>
+            <p className={`${rule} ${pad} py-3 text-xs leading-5 text-white/70`} data-testid="debate-stake">{draft && draftHasStakes && draft.creditsForWinner !== null
+                ? fillWords(words.debate.stakeNote, {credits: draft.creditsForWinner})
+                : stakeLine(draftHasStakes, draft && draft.participants.length > 1
+                    ? draft.participants.filter((participant) => !participant.isAskerOwned).length
+                    : othersPicked(candidates ?? [], picked))}</p>
         </>
     ) : (
         <>
@@ -392,10 +455,6 @@ export default function DebateSetup({
             {publicBlocker ? (
                 <p className={`${rule} ${pad} py-3.5 text-sm leading-6 text-white/70`}>
                     {publicBlocker}
-                    {/* Out of hearts: heal on its card, where the hearts are (newcomer UX vet, P1-5). */}
-                    {publicBlocker === words.roster.offRoster ? (
-                        <> <Link href={`/app/capture/${encodeURIComponent(host.captureId)}?tab=stats`} className="font-bold text-primary-200 underline-offset-2 hover:underline">{web.heal}</Link></>
-                    ) : null}
                 </p>
             ) : (
                 <>
@@ -428,32 +487,17 @@ export default function DebateSetup({
                         <p className={`${pad} py-3 text-sm leading-6 text-white/60`}>{visibility === "public" ? web.noRoster : web.noOwnAnimals}</p>
                     ) : (
                         <div className="flex flex-col pb-1">
-                            {listed.map((candidate) => {
-                                const on = picked.includes(candidate.captureId);
-                                const taken = !on && Boolean(candidate.speciesProfileId && pickedSpecies.has(candidate.speciesProfileId));
-                                const full = !on && picked.length >= DEBATE_MAX_PICKS;
-                                return (
-                                    <button
-                                        key={candidate.captureId}
-                                        type="button"
-                                        onClick={() => toggle(candidate)}
-                                        disabled={taken || full}
-                                        aria-pressed={on}
-                                        title={taken ? words.picker.alreadyHereHint : undefined}
-                                        className={`flex items-center gap-3 ${pad} py-2.5 text-left transition-colors disabled:opacity-45 ${on ? "bg-primary-400/[0.1]" : "hover:bg-white/[0.03]"}`}
-                                    >
-                                        <AskAnimalFace url={candidate.slug ? getSpeciesImageRoute(candidate.slug) : null} size={34} />
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate text-sm font-bold text-white">{taken ? words.picker.alreadyHere : debateAnimalName(candidate)}</span>
-                                            <span className="block truncate text-[11px] font-semibold text-white/50">{candidate.powerName ?? candidate.animal}</span>
-                                        </span>
-                                        {candidate.fits ? (
-                                            <span className="shrink-0 rounded-full border border-primary-300/30 px-2 py-0.5 text-[10px] font-bold text-primary-200">{words.debate.suggested}</span>
-                                        ) : null}
-                                        <span aria-hidden="true" className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[11px] font-black ${on ? "border-primary-300 bg-primary-300 text-black" : "border-white/25 text-transparent"}`}>✓</span>
-                                    </button>
-                                );
-                            })}
+                            {(visibility === "public" ? publicGroups(listed) : [{key: "all", title: null, rows: listed, note: null}]).map((group) => (
+                                <div key={group.key} className="flex flex-col">
+                                    {group.title ? (
+                                        <p className={`${pad} pb-1 pt-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-white/40`}>{group.title}</p>
+                                    ) : null}
+                                    {group.rows.map(candidateRow)}
+                                    {group.note ? (
+                                        <p className={`${pad} py-2.5 text-xs leading-5 text-white/55`} data-testid="debate-no-others">{group.note}</p>
+                                    ) : null}
+                                </div>
+                            ))}
                             {!showsAll && listed.length < candidates.length ? (
                                 <button
                                     type="button"
@@ -497,7 +541,14 @@ export default function DebateSetup({
                 )}
             </div>
             {visibility === "public" && picked.length > 0 && !publicBlocker ? (
-                <p className={`border-t border-white/[0.08] ${pad} py-3 text-xs leading-5 text-white/70`}>{debateStakeNote(picked.length, words)}</p>
+                <p className={`border-t border-white/[0.08] ${pad} py-3 text-xs leading-5 text-white/70`} data-testid="debate-stake">
+                    {hostOutOfHearts ? (
+                        <>
+                            {words.roster.offRoster}{" "}
+                            <Link href={`/app/capture/${encodeURIComponent(host.captureId)}?tab=stats`} className="font-bold text-primary-200 underline-offset-2 hover:underline">{web.heal}</Link>
+                        </>
+                    ) : stakeLine(pickedOthers > 0, pickedOthers)}
+                </p>
             ) : null}
         </>
     );
@@ -516,7 +567,7 @@ export default function DebateSetup({
         <button
             type="button"
             onClick={() => void start()}
-            disabled={working || Boolean(publicBlocker) || picked.length === 0 || problem.trim().length < MIN_PROBLEM}
+            disabled={working || Boolean(publicBlocker) || hostOutOfHearts || picked.length === 0 || problem.trim().length < MIN_PROBLEM}
             className={`${primaryButton} ${band ? "" : "w-full"}`}
         >
             {working ? (visibility === "public" ? web.writingPublic : web.starting) : words.debate.begin}
@@ -537,6 +588,7 @@ export default function DebateSetup({
                 {body}
                 <div className="px-4 py-3">
                     {failure ? <p role="alert" className="mb-2 text-xs leading-5 text-white/65">{failure}</p> : null}
+                    {startHint ? <p className="mb-2 text-xs leading-5 text-white/55" data-testid="debate-start-hint">{startHint}</p> : null}
                     {actions}
                 </div>
             </section>
@@ -563,6 +615,7 @@ export default function DebateSetup({
                 <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>
                 <div className="shrink-0 border-t border-white/10 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                     {failure ? <p role="alert" className="mb-2 text-xs leading-5 text-white/65">{failure}</p> : null}
+                    {startHint ? <p className="mb-2 text-xs leading-5 text-white/55" data-testid="debate-start-hint">{startHint}</p> : null}
                     {actions}
                 </div>
             </div>

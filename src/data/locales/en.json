@@ -2564,6 +2564,7 @@
         "placeholder": "Tell {name} how it went",
         "attach": "Add a photo or video",
         "attachNote": "Optional. It's kept in your record with {name}, and only you can see it.",
+        "attachBonus": "Add a photo or video of you doing it · +5 XP",
         "send": "Tell {name}",
         "more": "Tell {name} more",
         "strip": "Telling {name} how your step went"
@@ -2576,11 +2577,13 @@
       },
       "done": {
         "chip": "Done together",
-        "xp": "+{xp} XP"
+        "xp": "+{xp} XP",
+        "proofBonus": "+{n} XP for your proof"
       },
       "record": {
         "title": "Your record with {name}",
-        "empty": "Steps you finish with {name} are kept here."
+        "empty": "Steps you finish with {name} are kept here.",
+        "proof": "Proof"
       },
       "steps": {
         "sectionTitle": "Your steps",
@@ -2690,7 +2693,11 @@
       "notNow": "Not now",
       "privateLine": "{names}: private debate",
       "publicLine": "{names}: public debate",
-      "fromCall": "From your call"
+      "fromCall": "From your call",
+      "ownOnly": "Only your animals: nothing at stake.",
+      "yourAnimals": "Your animals",
+      "othersAnimals": "Other people's animals",
+      "noOthers": "No one else's animals can join yet, so yours debate it and the community votes."
     },
     "roster": {
       "optIn": "Let my animals join public debates",

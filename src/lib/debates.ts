@@ -127,6 +127,13 @@ export type Debate = {
     creditsForWinner: number | null;
     /** My debates: how it went for the reader (`won`, `lost_heart`, `draw`). */
     myResult: string | null;
+    /**
+     * Whether hearts and Credits are at stake, as the server says it. Since
+     * the owner's change of 2026-10-31 a public debate of only the asker's
+     * own animals has none. Null when the server does not say
+     * (`debateHasStakes` then reads the animals).
+     */
+    stakes: boolean | null;
 };
 
 /** One row of `debate_candidates_v1`. */
@@ -407,7 +414,11 @@ export function decodeDebate(raw: unknown): Debate | null {
         cancelReason: firstText(row, "cancel_reason", "cancelReason"),
         reportStatus: firstText(row, "report_status", "reportStatus") ?? (row.report_ready === true ? "ready" : null),
         creditsForWinner: int(first(row, "credits_for_winner", "creditsForWinner")),
-        myResult: firstText(row, "my_result", "myResult")
+        myResult: firstText(row, "my_result", "myResult"),
+        stakes: (() => {
+            const said = first(row, "has_stakes", "hasStakes", "stakes", "at_stake");
+            return typeof said === "boolean" ? said : null;
+        })()
     };
 }
 
@@ -478,6 +489,39 @@ export function canHealHeart(hearts: number | null | undefined, credits: number 
     if (now >= DEBATE_MAX_HEARTS) return {can: false, reason: "full"};
     if (typeof credits === "number" && credits < HEART_HEAL_CREDITS) return {can: false, reason: "credits"};
     return {can: true, reason: null};
+}
+
+/**
+ * Whether hearts and Credits are at stake (owner, 2026-10-31): only between
+ * different owners. A private debate never; a public one of only the asker's
+ * own animals never either, though it still goes to the vote and Discover.
+ */
+export function debateHasStakes(debate: Pick<Debate, "visibility" | "participants" | "stakes">): boolean {
+    if (debate.visibility !== "public") return false;
+    if (debate.stakes !== null) return debate.stakes;
+    return debate.participants.some((participant) => !participant.isAskerOwned);
+}
+
+/** A public debate of only the asker's own animals: "Only your animals: nothing at stake." */
+export function debateIsOwnOnly(debate: Pick<Debate, "visibility" | "participants" | "stakes">): boolean {
+    return debate.visibility === "public" && debate.participants.length > 0 && !debateHasStakes(debate);
+}
+
+/**
+ * The setup's animals in Public (owner, 2026-10-31): "Your animals" first,
+ * then "Other people's animals", each best fit first, in the order given.
+ */
+export function groupDebateCandidates(candidates: readonly DebateCandidate[]): {own: DebateCandidate[]; others: DebateCandidate[]} {
+    const fitsFirst = (rows: DebateCandidate[]) => [...rows.filter((row) => row.fits), ...rows.filter((row) => !row.fits)];
+    return {
+        own: fitsFirst(candidates.filter((candidate) => candidate.ownerIsMe)),
+        others: fitsFirst(candidates.filter((candidate) => !candidate.ownerIsMe))
+    };
+}
+
+/** How many of the picks are other people's animals: none means nothing at stake. */
+export function othersPicked(candidates: readonly DebateCandidate[], picked: readonly string[]): number {
+    return candidates.filter((candidate) => !candidate.ownerIsMe && picked.includes(candidate.captureId)).length;
 }
 
 /**
@@ -552,6 +596,26 @@ export function decodeDebateOffer(raw: unknown): DebateOffer | null {
 export function decodeDebateRequest(raw: unknown): DebateRequest | null {
     const problem = debateRequestProblem(raw);
     return problem ? {problem, with: decodeDebateNamedAnimals(object(raw)?.with)} : null;
+}
+
+/**
+ * The problem a debate starts on (owner, 2026-10-31): the animal's own offer
+ * names it (the server sets `debate_offer.problem` to the focus when there is
+ * one); started by them, from the menu, the Bond tab or a call, it is what
+ * the animal is helping them with ("Working on: …"), and only without a focus
+ * what they said (the call's request, then their last message).
+ */
+export function debateSeedProblem(params: {
+    offered?: string | null;
+    focus?: string | null;
+    said?: ReadonlyArray<string | null | undefined>;
+}): string {
+    const clean = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, " ").trim().slice(0, DEBATE_PROBLEM_MAX);
+    for (const candidate of [params.offered, params.focus, ...(params.said ?? [])]) {
+        const text = clean(candidate);
+        if (text) return text;
+    }
+    return "";
 }
 
 /**

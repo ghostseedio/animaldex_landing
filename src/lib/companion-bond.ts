@@ -113,6 +113,8 @@ export const YOUR_STEP_COPY = {
         placeholder: "Tell {name} how it went",
         attach: "Add a photo or video",
         attachNote: "Optional. It's kept in your record with {name}, and only you can see it.",
+        /** Proof bonus (owner, 2026-10-31): report mode's attach caption. Optional; a step counts without it. */
+        attachBonus: "Add a photo or video of you doing it · +5 XP",
         send: "Tell {name}",
         /** The step's first button once a report is attached: it opens report mode again. */
         more: "Tell {name} more",
@@ -127,11 +129,15 @@ export const YOUR_STEP_COPY = {
     },
     done: {
         chip: "Done together",
-        xp: "+{xp} XP"
+        xp: "+{xp} XP",
+        /** Under the done label when the photo or video showed the step: "+5 XP for your proof". */
+        proofBonus: "+{n} XP for your proof"
     },
     record: {
         title: "Your record with {name}",
-        empty: "Steps you finish with {name} are kept here."
+        empty: "Steps you finish with {name} are kept here.",
+        /** A record row whose photo or video showed the step. */
+        proof: "Proof"
     },
     steps: {
         sectionTitle: "Your steps",
@@ -229,7 +235,12 @@ export const DEBATE_COPY = {
     notNow: "Not now",
     privateLine: "{names}: private debate",
     publicLine: "{names}: public debate",
-    fromCall: "From your call"
+    fromCall: "From your call",
+    // Public with your own animals (owner, 2026-10-31).
+    ownOnly: "Only your animals: nothing at stake.",
+    yourAnimals: "Your animals",
+    othersAnimals: "Other people's animals",
+    noOthers: "No one else's animals can join yet, so yours debate it and the community votes."
 } as const;
 
 export const ROSTER_COPY = {

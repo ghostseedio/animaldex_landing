@@ -505,6 +505,18 @@ export function parseDebateMarker(answer: string): {problem: string | null; keys
     return null;
 }
 
+/**
+ * The problem a debate offer (or a call's hand-over) carries (owner,
+ * 2026-10-31): the animal's focus, "Working on: …", when there is one, else
+ * the problem the marker heard. Null when there is neither.
+ */
+export function debateOfferProblem(focus: string | null | undefined, heard: string | null | undefined): string | null {
+    const working = typeof focus === "string" ? focus.replace(/\s+/g, " ").trim() : "";
+    if (working) return clip(working, 300);
+    const said = typeof heard === "string" ? heard.trim() : "";
+    return said || null;
+}
+
 /** `debate_chat_state` read the server's way: whether the offer may be made now, and whether a call may hand one to the chat. */
 export type DebateChatState = {offer: boolean; handOver: boolean};
 
