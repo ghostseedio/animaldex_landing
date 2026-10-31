@@ -11,6 +11,7 @@ import HeaderMobileNav from "@/app/[locale]/(composited)/_components/header-mobi
 import {
     BLOG_HREF,
     START_COLLECTION_HREF,
+    TALK_HREF,
     blogNavLink,
     headerDropdowns,
     mobileAccordionSections,
@@ -27,8 +28,10 @@ function translateLinks(t: (key: string) => string, links: PublicNavLink[]) {
 }
 
 export default function Header({locale, t}: {locale: string; t: ScopedTranslator}) {
-    // Newcomer UX vet (2026-10-30): the site tells one story, so the CTA is about meeting, not collecting.
-    const ctaLabel = t("meetYourFirstAnimal");
+    // The primary action on every page is talking (docs/rich-chat/SPEC.md §4.5),
+    // with getting the app beside it.
+    const ctaLabel = t("talkToAnAnimal");
+    const getAppLabel = t("getTheApp");
     const desktopDropdowns = headerDropdowns.map((section) => ({
         ...section,
         title: t(section.titleKey),
@@ -69,8 +72,10 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                 <HeaderMenu
                     logoLabel={t("logo")}
                     brandTitle={t("title")}
-                    ctaHref={START_COLLECTION_HREF}
+                    ctaHref={TALK_HREF}
                     ctaLabel={ctaLabel}
+                    secondaryCtaHref={START_COLLECTION_HREF}
+                    secondaryCtaLabel={getAppLabel}
                     navigationLabel={t("discover")}
                     followLabel={t("footerGroups.follow")}
                     actions={(
@@ -80,6 +85,12 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                             <HeaderAuthLink webAppLabel={t("webApp")} myAnimalsLabel={t("myAnimals")} />
                             <Link
                                 href={START_COLLECTION_HREF}
+                                className="inline-flex h-9 items-center whitespace-nowrap rounded-[2px] border border-line-100 px-3.5 text-[0.8125rem] font-bold leading-none text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:border-primary-400 focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                            >
+                                {getAppLabel}
+                            </Link>
+                            <Link
+                                href={TALK_HREF}
                                 className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[2px] bg-primary-400 px-4 text-[0.8125rem] font-black uppercase leading-none tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                             >
                                 {ctaLabel}

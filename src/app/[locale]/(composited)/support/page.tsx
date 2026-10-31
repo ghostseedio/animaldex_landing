@@ -5,6 +5,8 @@ import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import SupportSearch from "@/app/[locale]/(composited)/support/_components/support-search";
 import TalkToSupportLink from "@/app/[locale]/(composited)/support/_components/talk-to-support-link";
 import {getSupportContent} from "@/data/support-content";
+import {getAnimalsWorkPoints} from "@/data/animal-perspective";
+import {HOW_IT_WORKS_HREF} from "@/data/public-navigation";
 import {getSupportArticlePath, slugifySupportText} from "@/lib/support-articles";
 import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
@@ -56,6 +58,7 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
     const content = getSupportContent(locale);
     const talkToSupportHref = PUBLIC_SUPPORT_CHAT_HREF;
     const allFAQs = content.sections.flatMap((section) => section.items);
+    const animalsWork = getAnimalsWorkPoints(locale);
 
     const schema = {
         "@context": "https://schema.org",
@@ -101,6 +104,12 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                         talkToSupportHref={talkToSupportHref}
                     />
                     <nav aria-label="Popular help topics" className="flex flex-wrap justify-center gap-2">
+                        <Link
+                            href="#how-the-animals-work"
+                            className="rounded-full border border-primary-200/25 bg-[#071B0F]/80 light:bg-surface-900 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary-200 transition-colors hover:border-primary-200/50 hover:text-white"
+                        >
+                            {content.animalsWorkTitle}
+                        </Link>
                         {content.sections.map((section) => (
                             <Link
                                 key={section.id}
@@ -120,6 +129,25 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                             {content.talkToSupportLabel} →
                         </TalkToSupportLink>
                     </div>
+                </section>
+
+                {/* Every animal is different (docs/rich-chat/SPEC.md §3.2). */}
+                <section id="how-the-animals-work" aria-labelledby="how-the-animals-work-title" className="scroll-mt-28 grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:gap-12">
+                    <div className="flex flex-col gap-3 lg:sticky lg:top-28 lg:self-start">
+                        <h2 id="how-the-animals-work-title" className="font-display text-3xl font-bold uppercase tracking-[0.03em] text-white md:text-4xl">{content.animalsWorkTitle}</h2>
+                        <p className="text-ink-300 leading-relaxed">{content.animalsWorkDescription}</p>
+                        <Link href={HOW_IT_WORKS_HREF} className="w-fit font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-200 hover:text-white">
+                            {content.animalsWorkLink} →
+                        </Link>
+                    </div>
+                    <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {animalsWork.map((point, index) => (
+                            <li key={point.id} className="flex gap-4 border border-white/[0.07] bg-[#071B0F]/80 light:bg-surface-900 px-5 py-5">
+                                <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-400 font-display text-sm font-bold text-canvas-950">{index + 1}</span>
+                                <p className="text-base leading-relaxed text-ink-100">{point.text}</p>
+                            </li>
+                        ))}
+                    </ol>
                 </section>
 
                 <section className="  border border-white/[0.07] bg-[#071B0F]/85 light:bg-surface-900 p-6 md:p-8">

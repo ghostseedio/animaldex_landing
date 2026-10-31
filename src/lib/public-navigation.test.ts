@@ -4,6 +4,7 @@ import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {
+    ADVICE_FATIGUE_HREF,
     ANIMAL_FREQUENCIES_HREF,
     animalWisdomLinks,
     blogNavLink,
@@ -13,6 +14,7 @@ import {
     footerColumns,
     headerDropdowns,
     headerResourceLinks,
+    HOW_IT_WORKS_HREF,
     INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
     LOCATIONS_HREF,
     mobileAccordionSections,
@@ -20,6 +22,7 @@ import {
     productLinks,
     resourceLinks,
     START_COLLECTION_HREF,
+    TALK_HREF,
     WILDLIFE_GUIDES_HREF
 } from "@/data/public-navigation";
 
@@ -30,8 +33,11 @@ function readRepo(...parts: string[]) {
 }
 
 test("public navigation keeps existing SEO routes", () => {
+    // Talking first (2026-10-31): the Talk page, how the animals work, the article, then the app.
     assert.deepEqual(productLinks.map((link) => link.href), [
-        "/#more",
+        TALK_HREF,
+        HOW_IT_WORKS_HREF,
+        ADVICE_FATIGUE_HREF,
         "/#features",
         "/use-cases",
         START_COLLECTION_HREF,
@@ -64,6 +70,9 @@ test("public navigation keeps existing SEO routes", () => {
         "/branding"
     ]);
     assert.equal(START_COLLECTION_HREF, "/#download");
+    assert.equal(TALK_HREF, "/talk");
+    assert.equal(HOW_IT_WORKS_HREF, "/how-it-works");
+    assert.equal(ADVICE_FATIGUE_HREF, "/advice-fatigue");
     assert.equal(INSTAGRAM_WILDLIFE_ARCHIVE_HREF, "/use-cases/import-instagram-wildlife-photos");
 
     // Retired from public navigation by an explicit product decision: Creator
@@ -78,6 +87,18 @@ test("public navigation keeps existing SEO routes", () => {
     for (const retired of ["/become-a-wildlife-guide", "/wildlife-experiences", "/creator-rewards"]) {
         assert.ok(!everyNavHref.includes(retired), `${retired} should not be in public navigation`);
     }
+});
+
+test("the header's primary action is Talk to an animal, with Get the app beside it (spec §4.5)", () => {
+    const header = readRepo("src/app/[locale]/(composited)/_components/header.tsx");
+    assert.match(header, /ctaHref=\{TALK_HREF\}/);
+    assert.match(header, /t\("talkToAnAnimal"\)/);
+    assert.match(header, /secondaryCtaHref=\{START_COLLECTION_HREF\}/);
+    // Desktop: the get-the-app outline comes before the lime Talk button.
+    const getApp = header.indexOf("{getAppLabel}");
+    const talk = header.indexOf("href={TALK_HREF}");
+    assert.ok(getApp > -1 && talk > getApp);
+    assert.doesNotMatch(header, /meetYourFirstAnimal/);
 });
 
 test("header and footer consume the shared public navigation data", () => {
@@ -117,7 +138,10 @@ test("nav labels match the published category names", () => {
     assert.equal(en.nav.support, "Help Center");
     assert.equal(en.nav.compareAnimals, "Compare Animals");
     assert.equal(en.nav.wildlifeGuides, "Wildlife Guides");
-    assert.equal(en.nav.meetYourFirstAnimal, "Meet Your First Animal");
+    assert.equal(en.nav.talkToAnAnimal, "Talk to an Animal");
+    assert.equal(en.nav.getTheApp, "Get the App");
+    assert.equal(en.nav.adviceFatigue, "Advice Fatigue");
+    assert.equal(en.nav.howAnimalDexWorks, "How AnimalDex Works");
     assert.equal(en.nav.footerGroups.product, "AnimalDex");
     assert.notEqual(en.nav.animalWisdom, "Animal Guide");
     assert.equal(en.nav.moreNav, "More");
@@ -152,16 +176,20 @@ test("the mobile drawer shows every link exactly once", () => {
     assert.ok(!headerResourceLinks.some((link) => link.href === "/blog"));
     assert.ok(resourceLinks.some((link) => link.href === "/blog"));
     assert.ok(!moreHrefs.includes("/blog"));
+    // The drawer pins Talk to an animal, and Get the app beside Web app, at its foot.
     assert.ok(!moreHrefs.includes(START_COLLECTION_HREF));
+    assert.ok(!moreHrefs.includes(TALK_HREF));
     assert.ok(moreHrefs.includes(EARN_ON_ANIMALDEX_HREF));
     assert.ok(productLinks.some((link) => link.href === START_COLLECTION_HREF));
+    assert.ok(productLinks.some((link) => link.href === TALK_HREF));
     assert.ok(!mobileAccordionSections.some((section) => section.id === "blog"));
 
     // The drawer renders accordions, Articles and More together, so a repeat is
     // a duplicate tap target rather than a shortcut.
     assert.equal(new Set(mobileHrefs).size, mobileHrefs.length);
     assert.deepEqual(moreNavGroups[0].map((link) => link.href), [
-        "/#more",
+        HOW_IT_WORKS_HREF,
+        ADVICE_FATIGUE_HREF,
         "/#features",
         "/use-cases",
         INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
@@ -169,7 +197,7 @@ test("the mobile drawer shows every link exactly once", () => {
     ]);
 });
 
-test("mobile drawer uses an accessible accordion and pinned collection CTA", () => {
+test("mobile drawer uses an accessible accordion and pins Talk, then Get the app beside the account", () => {
     const mobileNav = readRepo("src/app/[locale]/(composited)/_components/header-mobile-nav.tsx");
     const menu = readRepo("src/app/[locale]/(composited)/_components/header-menu.tsx");
     const id = JSON.parse(readRepo("src/data/locales/id.json"));
@@ -182,6 +210,8 @@ test("mobile drawer uses an accessible accordion and pinned collection CTA", () 
     assert.match(mobileNav, /type="button"/);
     assert.ok(pinnedCta > -1);
     assert.ok(pinnedAuth > pinnedCta);
+    assert.ok(menu.indexOf("href={secondaryCtaHref}", pinnedCta) > pinnedCta);
     assert.equal(id.nav.moreNav, "Lainnya");
-    assert.equal(id.nav.meetYourFirstAnimal, "Temui Hewan Pertamamu");
+    assert.equal(id.nav.talkToAnAnimal, "Bicara dengan Seekor Hewan");
+    assert.equal(id.nav.getTheApp, "Dapatkan Aplikasinya");
 });

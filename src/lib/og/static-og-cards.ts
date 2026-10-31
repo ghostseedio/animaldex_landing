@@ -81,6 +81,19 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
         kicker: "Help Center",
         title: "AnimalDex support and answers"
     },
+    // The repositioning (2026-10-31): two animals on opposite sides of one question.
+    "advice-fatigue": {
+        kicker: "AnimalDex article",
+        title: "Advice fatigue: why agreeable AI leaves you stuck",
+        joiner: "vs",
+        tiles: [art("european-hedgehog", "Hedgehog", "Take it"), art("groundhog", "Groundhog", "Stay")]
+    },
+    "how-it-works": {
+        kicker: "How AnimalDex works",
+        title: "Every animal sees it differently",
+        joiner: "vs",
+        tiles: [art("little-owl", "Little Owl", "Not yet"), art("cheetah", "Cheetah", "Take it")]
+    },
     "contact": {
         kicker: "Contact",
         title: "Get in touch with the AnimalDex team"

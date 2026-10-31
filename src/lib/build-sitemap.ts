@@ -2,6 +2,8 @@ import {animalTrials, behaviourSignatures} from "@/data/animal-behaviours";
 import {animalFrequenciesPagination, animalHybridsPagination, animalTrialsPagination, tierListPagination, type HubPagination} from "@/data/hub-pagination";
 import {getAnimalHybridCards} from "@/data/animal-hybrid-cards";
 import {WHAT_ANIMAL_AM_I_UPDATED_AT} from "@/data/what-animal-am-i-page";
+import {ADVICE_FATIGUE_UPDATED} from "@/data/advice-fatigue";
+import {HOW_IT_WORKS_UPDATED} from "@/data/how-it-works";
 import {MetadataRoute} from "next";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl} from "@/lib/site";
@@ -133,6 +135,9 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         if (locale !== localeConfig.defaultLocale) {
             return [
                 {url: getAbsoluteUrl(locale)},
+                // Written in Indonesian too (src/data/advice-fatigue.ts, how-it-works.ts).
+                {url: getAbsoluteUrl(locale, "/advice-fatigue"), lastModified: new Date(ADVICE_FATIGUE_UPDATED)},
+                {url: getAbsoluteUrl(locale, "/how-it-works"), lastModified: new Date(HOW_IT_WORKS_UPDATED)},
                 {url: getAbsoluteUrl(locale, "/qualities")},
                 ...getLocalPrincipleSlugs().map((slug) => ({
                     url: getAbsoluteUrl(locale, `/qualities/${slug}`)
@@ -142,6 +147,10 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
         const staticEntries: MetadataRoute.Sitemap = [
             {url: getAbsoluteUrl(locale)},
+            // The full-screen chat. /talk/<slug> is noindex (its canonical is the species page), so only /talk.
+            {url: getAbsoluteUrl(locale, "/talk")},
+            {url: getAbsoluteUrl(locale, "/how-it-works"), lastModified: new Date(HOW_IT_WORKS_UPDATED)},
+            {url: getAbsoluteUrl(locale, "/advice-fatigue"), lastModified: new Date(ADVICE_FATIGUE_UPDATED)},
             {url: getAbsoluteUrl(locale, "/what-animal-am-i"), lastModified: new Date(WHAT_ANIMAL_AM_I_UPDATED_AT)},
             {url: getAbsoluteUrl(locale, "/animals")},
             {url: getAbsoluteUrl(locale, "/use-cases")},

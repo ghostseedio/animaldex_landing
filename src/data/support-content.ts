@@ -18,6 +18,10 @@ export type SupportSection = {
 };
 
 export type SupportContent = {
+    /** "How the animals work" (docs/rich-chat/SPEC.md §3.2); its six points live in animal-perspective.ts. */
+    animalsWorkTitle: string;
+    animalsWorkDescription: string;
+    animalsWorkLink: string;
     eyebrow: string;
     title: string;
     description: string;
@@ -62,6 +66,9 @@ export type SupportContent = {
 };
 
 const en: SupportContent = {
+    animalsWorkTitle: "How the animals work",
+    animalsWorkDescription: "Every animal is different. Six things to know before you talk to one.",
+    animalsWorkLink: "See how it works",
     eyebrow: "Help Center",
     title: "AnimalDex Support",
     description: "Help with talking to your animals, steps and Powers, scanning animals, AnimalDex numbers, captures, collections, Credits, Earnings, Wildlife Guides, Sponsored Challenges, accounts, privacy, and app troubleshooting.",
@@ -452,6 +459,9 @@ function indonesianSections(sections: SupportSection[]): SupportSection[] {
 const id: SupportContent = {
     ...en,
     sections: indonesianSections(en.sections),
+    animalsWorkTitle: "Cara kerja hewan-hewannya",
+    animalsWorkDescription: "Setiap hewan berbeda. Enam hal yang perlu kamu tahu sebelum bicara dengan salah satunya.",
+    animalsWorkLink: "Lihat cara kerjanya",
     eyebrow: "Pusat Bantuan",
     title: "Dukungan AnimalDex",
     description: "Bantuan untuk bicara dengan hewanmu, langkah dan Kekuatannya, scan hewan, capture, koleksi, kredit, akun, privasi, dan pemecahan masalah aplikasi.",

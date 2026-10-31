@@ -28,7 +28,8 @@ export type HomeChatStillWords = {
 export default function HomeChatStill({words, image}: {words: HomeChatStillWords; image: string}) {
     return (
         <figure className="relative mx-auto w-full max-w-[24rem]" aria-label={words.label}>
-            <div aria-hidden="true" className="pointer-events-none absolute -inset-10 -z-10 rounded-full bg-[radial-gradient(circle,rgba(167,244,50,0.18),transparent_65%)] blur-2xl" />
+            {/* The glow stays inside a phone's width: wider, it scrolled the page sideways. */}
+            <div aria-hidden="true" className="pointer-events-none absolute -inset-y-10 -inset-x-2 -z-10 rounded-full bg-[radial-gradient(circle,rgba(167,244,50,0.18),transparent_65%)] blur-2xl sm:-inset-x-10" />
             <div className="theme-dark overflow-hidden rounded-[2rem] border border-white/[0.12] bg-[#070A08]/95 shadow-[0_40px_120px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]">
                 {/* The animal, as a chat heads it. */}
                 <div className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4">

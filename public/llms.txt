@@ -1,0 +1,40 @@
+# AnimalDex
+
+> AnimalDex is a talking-to-animals app for iOS, Android and the web: a coaching engine disguised as a collection game. You collect real animals by photographing them, and you talk to them. Each animal answers from its own Power, a lesson from how its kind survives. It takes a side on your problem and keeps it, so you get perspective instead of agreement.
+
+General-purpose chatbots are tuned to agree with you. For decisions, conflicts and change, that leaves people comforted rather than helped; AnimalDex calls that feeling "advice fatigue" (its own term, not a research term). AnimalDex answers it with animals that each argue from their own way of living, and with one real step to try.
+
+## Talk to an animal
+
+- [Talk](https://animaldex.app/talk): a full-screen chat with any animal in the catalogue (more than 2,500 species). Anyone can talk there, with no account and no capture needed.
+- Each animal's species page has a "Talk to it" chat too, for example [Common Octopus](https://animaldex.app/animals/common-octopus).
+
+## How the animals work
+
+1. Every animal has a Power: a lesson from how its kind survives.
+2. It answers from its own life. It takes a side and keeps it, even when it isn't what you hoped to hear.
+3. Different animals disagree. That's the point: ask two, and you see your problem from two sides.
+4. Your step: bring it a real problem and it gives you one step to try. Do it, and its Power is yours.
+5. Debates: once its Power is yours, it can bring other animals in to argue your problem, privately or in public.
+6. Trials: each animal's own challenges, one more way to get a step.
+
+Before an animal answers a decision or a problem, a separate step works out its kind's verdict, read from its Power; the animal then writes from that side, and changes its mind only for a new fact. Safety comes before any animal's nature: when someone could be hurt, every animal puts the person's safety first, and on health, money or the law it tells them to ask a person who knows. Your step, Powers and debates need an account and an animal caught in the app.
+
+## Read more
+
+- [Advice fatigue: why agreeable AI leaves you stuck, and what animals do instead](https://animaldex.app/advice-fatigue): the research on sycophantic AI, what AnimalDex does differently, a worked example and references.
+- [How it works](https://animaldex.app/how-it-works): every animal is different; Your step, Trials and Debates explained.
+- [Help Center](https://animaldex.app/support): accounts, captures, Credits and troubleshooting, with "How the animals work".
+- [Animal Powers](https://animaldex.app/animal-powers): the Power of every animal.
+- [Animal Trials](https://animaldex.app/animal-trials): each animal's own challenges.
+- [Animal encyclopedia](https://animaldex.app/animals): a page for every species.
+
+## Get the app
+
+- [AnimalDex on the App Store](https://apps.apple.com/app/6761607780)
+- [AnimalDex on Google Play](https://play.google.com/store/apps/details?id=app.animaldex)
+
+## Indonesian
+
+- [Lelah nasihat (advice fatigue)](https://animaldex.app/id/advice-fatigue)
+- [Cara kerjanya](https://animaldex.app/id/how-it-works)

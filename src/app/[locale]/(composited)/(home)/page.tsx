@@ -32,7 +32,14 @@ import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/d
 import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
 import {getRecentPublicCaptures} from "@/data/discover-timeline";
 import {RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
-import {TRY_TALKING_HREF, TRY_TALKING_SPECIES} from "@/lib/try-talking";
+import {TRY_TALKING_SPECIES} from "@/lib/try-talking";
+import {ADVICE_FATIGUE_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
+import DisagreeStill from "@/app/[locale]/(composited)/_components/disagree-still";
+import TextDiagramPanel from "@/app/[locale]/(composited)/_components/text-diagram-panel";
+import {getDisagreeExample} from "@/data/animal-perspective";
+import {getAdviceFatigueContent} from "@/data/advice-fatigue";
+import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {drawGrid} from "@/lib/text-diagram";
 
 const heroBackgroundImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
@@ -92,7 +99,13 @@ export default async function Home({params}: HomePageProps) {
     const rootSiteUrl = getSiteUrl();
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
-    const appSchemaDescription = "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Identify and collect the animals you meet, and hear them debate your real problems.";
+    const appSchemaDescription = "Talk to real animals with AI. Each of 2,500+ species answers from its own Power, a lesson from how its kind survives, takes a side on your problem and keeps it. Bring a real problem, hear a real side, and take one step. Photograph the animals you meet to collect them, and let them debate your problems.";
+    const disagree = getDisagreeExample(locale, getSpeciesArtworkUrl);
+    const paradox = getAdviceFatigueContent(locale).paradox;
+    const fatigueStats = ["models", "affirm", "people"].map((id) => ({
+        value: t(`fatigue.stats.${id}.value`),
+        label: t(`fatigue.stats.${id}.label`)
+    }));
     const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
@@ -219,6 +232,10 @@ export default async function Home({params}: HomePageProps) {
             {"@type": "Audience", "audienceType": "Self-improvement learners"}
         ],
         featureList: [
+            "Talk to animals that answer from their own Power, take a side and keep it",
+            "Your step: one real step from your own problem, which earns the animal's Power",
+            "Debates between animals on your problem, private or public with a community vote",
+            "Trials: each animal's own challenges",
             "AI animal scanning and analysis",
             "Animal identification and field-guide context",
             "Breed identification, grading, and pricing context",
@@ -226,12 +243,15 @@ export default async function Home({params}: HomePageProps) {
             "Custom animal card decks for pets, wildlife, and creator projects",
             "Albums, sets, missions, and progression",
             "Discovery feed for real animal sightings",
-            "Animal debates on your real problems, and trading",
+            "Trading animals",
             "Family-friendly animal learning",
             "Animal-inspired reflection and self-improvement prompts",
             "Respectful wildlife observation and habitat curiosity"
         ],
         about: [
+            {"@type": "Thing", "name": "Talking to animals"},
+            {"@type": "Thing", "name": "Perspective-driven AI"},
+            {"@type": "Thing", "name": "Advice fatigue"},
             {"@type": "Thing", "name": "Animal identification"},
             {"@type": "Thing", "name": "Animal breed grading"},
             {"@type": "Thing", "name": "Animal breed pricing"},
@@ -315,67 +335,54 @@ export default async function Home({params}: HomePageProps) {
                 id="top"
             >
                 <div className="relative z-10 flex flex-col items-center text-center lg:-ml-3 lg:items-start lg:text-left xl:-ml-5">
-                    {/* Newcomer UX vet (2026-10-30, P0-4): what is special, first. */}
+                    {/* The repositioning (2026-10-31): talking, and an animal that takes a side, first. */}
                     <h1 className="font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white">
-                        <span className="block text-5xl sm:text-6xl lg:text-[4.25rem] xl:text-[5rem]">{t("heroTalkLead")}</span>
                         <span
-                            className="hero-wild-textured mt-1 block text-6xl font-semibold leading-[0.85] sm:text-7xl lg:text-[5.5rem] xl:text-[6.75rem]"
+                            className="hero-wild-textured block text-6xl font-semibold leading-[0.85] sm:text-7xl lg:text-[5.25rem] xl:text-[6.25rem]"
                             style={{"--hero-wild-texture": `url(${heroBackgroundImage})`} as React.CSSProperties}
                         >
-                            {t("heroTalkAccent")}
+                            {t("heroTalkLead")}
                         </span>
+                        <span className="mt-3 block text-[2.1rem] leading-[0.95] [text-wrap:balance] sm:text-5xl lg:text-[3rem] xl:text-[3.5rem]">{t("heroTalkAccent")}</span>
                     </h1>
                     <p className="mt-6 max-w-lg text-lg font-medium leading-8 text-white md:text-xl md:leading-9">
                         {t("heroSubhead")}
                     </p>
-                    <div className="mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                        {downloadStoreLinks.map(({name}) => {
-                            const isAppStore = name === "App Store";
-                            return (
+                    <div className="mt-8 flex w-full max-w-xl flex-col items-center gap-4 lg:items-start">
+                        <Link
+                            href={TALK_HREF}
+                            className="group/talk relative flex min-h-[4.25rem] w-full items-center gap-3 overflow-hidden rounded-[1.35rem] border border-primary-200/40 bg-primary-400 px-5 py-3.5 text-left text-canvas-950 shadow-[0_18px_50px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.38)] transition-[transform,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:bg-primary-300 hover:shadow-[0_26px_74px_rgba(167,244,50,0.32)] sm:w-auto sm:min-w-[22rem]"
+                        >
+                            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
+                                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" />
+                                    <path d="M8 10.5h8" />
+                                </svg>
+                            </span>
+                            <span className="min-w-0 flex-1 font-display text-xl font-bold leading-none sm:text-2xl">{t("heroCta")}</span>
+                            <span aria-hidden="true" className="text-2xl transition-transform duration-300 group-hover/talk:translate-x-1">→</span>
+                        </Link>
+                        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+                            <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">{t("heroGetApp")}</span>
+                            {downloadStoreLinks.map(({name}) => (
                                 <StoreLink
                                     key={name}
-                                    store={isAppStore ? "app_store" : "google_play"}
+                                    store={name === "App Store" ? "app_store" : "google_play"}
                                     placement="home_hero"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={
-                                        isAppStore
-                                            ? "group/store relative flex min-h-[4.25rem] flex-1 items-center gap-3 overflow-hidden rounded-[1.35rem] border border-primary-200/40 bg-primary-400 px-5 py-3.5 text-left text-canvas-950 shadow-[0_18px_50px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.38)] transition-[transform,box-shadow,background-color,border-color] duration-300 ease-out hover:-translate-y-1 hover:bg-primary-300 hover:shadow-[0_26px_74px_rgba(167,244,50,0.32)]"
-                                            : "group/store relative flex min-h-[4.25rem] flex-1 items-center gap-3 overflow-hidden rounded-[1.35rem] border border-primary-200 bg-transparent px-5 py-3.5 text-left text-white transition-[transform,background-color,border-color,color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950"
-                                    }
+                                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary-200/60 px-4 text-sm font-bold text-white transition-colors duration-300 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950"
                                 >
-                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center ${isAppStore ? "text-canvas-950" : "text-white"}`}>
-                                        {isAppStore ? (
-                                            <svg aria-hidden="true" viewBox="0 0 32 32" className="h-7 w-7 fill-current">
-                                                <path d="M21.8 4.2c.1 1.4-.4 2.8-1.3 3.8-.9 1.1-2.4 1.9-3.8 1.8-.2-1.3.4-2.8 1.2-3.7.9-1.1 2.5-1.9 3.9-1.9Zm4.7 19.2c-.6 1.4-.9 2.1-1.7 3.3-1.1 1.7-2.7 3.8-4.7 3.8-1.8 0-2.2-1.1-4.6-1.1s-2.9 1.1-4.6 1.2c-2 0-3.5-1.9-4.7-3.6-3.2-4.9-3.6-10.6-1.6-13.7 1.4-2.2 3.6-3.4 5.7-3.4 2.1 0 3.5 1.2 5.3 1.2 1.7 0 2.8-1.2 5.3-1.2 1.9 0 3.9 1 5.3 2.8-4.7 2.6-3.9 9.3.3 10.7Z" />
-                                            </svg>
-                                        ) : (
-                                            <svg aria-hidden="true" viewBox="0 0 42 42" className="h-7 w-7 fill-current">
-                                                <path fillRule="evenodd" clipRule="evenodd" d="M21.5435 24.9506C20.8295 24.234 19.6675 24.234 18.9547 24.9506C17.0825 26.8266 5.34416 38.5968 3.76343 40.1699C5.59743 42.1248 8.91926 42.5982 11.2471 41.1779L28.1031 31.5178C26.5478 29.9677 23.1204 26.5326 21.5435 24.9506Z" />
-                                                <path fillRule="evenodd" clipRule="evenodd" d="M18.9544 17.1818C19.6684 17.8983 20.8291 17.8983 21.5431 17.1818L25.4797 13.2363L25.4759 13.2338L28.155 10.5572L11.3129 0.859026C8.93803 -0.627523 5.51693 -0.11843 3.67529 1.87466C5.21911 3.40958 17.114 15.3401 18.9544 17.1818Z" />
-                                                <path fillRule="evenodd" clipRule="evenodd" d="M16.3722 22.3631C17.0874 21.6453 17.0874 20.4846 16.3722 19.7668L5.82886 9.19418L2.04249 5.4129C2.01576 5.63436 1.99667 5.8749 2.00049 6.10909L2.00303 35.9533C2.01194 36.2333 2.05267 36.5592 2.09594 36.8404C4.58922 34.3993 13.7656 25.0193 16.3722 22.3631Z" />
-                                                <path fillRule="evenodd" clipRule="evenodd" d="M37.0414 15.6736L31.4388 12.4473C29.797 14.0764 25.8045 18.0906 24.127 19.7693C23.4105 20.4871 23.4105 21.6478 24.127 22.3657C25.8146 24.0457 29.7385 27.9988 31.3905 29.6368L36.9892 26.4295C41.2223 24.3295 41.2541 17.8105 37.0414 15.6736Z" />
-                                            </svg>
-                                        )}
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block font-display text-xl font-bold leading-none sm:text-2xl">
-                                            {name}
-                                        </span>
-                                    </span>
-                                    <span className="text-2xl transition-transform duration-300 group-hover/store:translate-x-1">
-                                        →
-                                    </span>
+                                    {name}
                                 </StoreLink>
-                            );
-                        })}
+                            ))}
+                        </div>
                     </div>
-                    {/* A quiet way in before installing anything: the animal's own chat, open to anyone. */}
                     <Link
-                        href={TRY_TALKING_HREF}
+                        href={HOW_IT_WORKS_HREF}
                         className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary-200 underline-offset-4 transition-colors hover:text-white hover:underline"
                     >
-                        {t("heroTryTalking")} <span aria-hidden="true">→</span>
+                        {t("heroHowItWorks")} <span aria-hidden="true">→</span>
                     </Link>
                     <div className="mt-10 flex w-full max-w-xl items-stretch justify-center lg:justify-start">
                         {downloadHeroStats.map((item, index) => (
@@ -438,6 +445,90 @@ export default async function Home({params}: HomePageProps) {
                     </div>
                 </div>
             </section>
+            {/* Every animal is different (spec §3): one question, two sides. */}
+            <section
+                aria-labelledby="home-different-title"
+                className="relative mx-auto mb-16 grid w-full max-w-[86rem] grid-cols-1 items-center gap-10 px-4 md:px-8 lg:mb-24 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16"
+            >
+                <div className="flex flex-col items-center gap-4 text-center lg:items-start lg:text-left">
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">{t("different.eyebrow")}</p>
+                    <h2 id="home-different-title" className="max-w-xl font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white md:text-5xl lg:text-6xl">
+                        {t("different.title")}
+                    </h2>
+                    <p className="max-w-xl text-lg leading-8 text-ink-200">{t("different.body")}</p>
+                    <Link href={HOW_IT_WORKS_HREF} className="mt-1 inline-flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.14em] text-primary-200 transition-colors hover:text-white">
+                        {t("different.link")} <span aria-hidden="true">→</span>
+                    </Link>
+                </div>
+                <div className="rounded-[2rem] border border-line-200 bg-canvas-900/85 p-5 shadow-[0_30px_100px_rgba(0,0,0,0.3)] light:shadow-[0_20px_60px_rgba(12,26,17,0.08)] md:p-7">
+                    <DisagreeStill example={disagree} />
+                </div>
+            </section>
+
+            {/* Advice fatigue: why an animal that takes a side matters, and the article. */}
+            <section aria-labelledby="home-fatigue-title" className="relative mx-auto mb-16 w-full max-w-[86rem] px-4 md:px-8 lg:mb-20">
+                <div className="relative overflow-hidden rounded-[2rem] border border-primary-200/15 bg-[#071B0F] p-6 light:border-line-200 light:bg-surface-900 md:p-10 lg:p-14">
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-primary-200/40 to-transparent" />
+                    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start lg:gap-12">
+                        <div className="flex min-w-0 flex-col gap-5">
+                            <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">{t("fatigue.eyebrow")}</p>
+                            <h2 id="home-fatigue-title" className="font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white md:text-5xl">
+                                {t("fatigue.title")}
+                            </h2>
+                            <p className="text-lg leading-8 text-ink-200">{t("fatigue.body")}</p>
+                            <dl className="grid grid-cols-3 gap-3 border-y border-line-200 py-5 sm:gap-4">
+                                {fatigueStats.map((stat) => (
+                                    <div key={stat.label} className="flex min-w-0 flex-col gap-1.5">
+                                        <dt className="order-2 text-xs leading-snug text-ink-300 sm:text-sm">{stat.label}</dt>
+                                        <dd className="order-1 font-display text-3xl font-extrabold leading-none tracking-tight text-white sm:text-4xl">{stat.value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                            <p className="-mt-2 text-xs text-ink-400">{t("fatigue.source")}</p>
+                            <p className="text-lg font-semibold leading-8 text-white">{t("fatigue.line")}</p>
+                            <div className="flex flex-wrap items-center justify-start gap-3">
+                                <Link
+                                    href={ADVICE_FATIGUE_HREF}
+                                    className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300"
+                                >
+                                    {t("fatigue.cta")} <span aria-hidden="true">→</span>
+                                </Link>
+                            </div>
+                        </div>
+                        <TextDiagramPanel
+                            title={paradox.title}
+                            lines={drawGrid({headers: paradox.headers, widths: [13, 22, 26], rows: paradox.rows})}
+                            label={paradox.label}
+                            caption={paradox.caption}
+                            equivalentLabel={paradox.tableLabel}
+                            className="min-w-0"
+                        >
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse text-left text-sm">
+                                    <caption className="sr-only">{paradox.title}</caption>
+                                    <thead>
+                                        <tr className="border-b border-line-200 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-300">
+                                            <th scope="col" className="py-2 pr-4"><span className="sr-only">{paradox.aspectLabel}</span></th>
+                                            <th scope="col" className="py-2 pr-4">{paradox.headers[1]}</th>
+                                            <th scope="col" className="py-2">{paradox.headers[2]}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paradox.rows.map((row) => (
+                                            <tr key={row[0]} className="border-b border-line-300 last:border-b-0 align-top">
+                                                <th scope="row" className="py-2.5 pr-4 font-semibold text-white">{row[0]}</th>
+                                                <td className="py-2.5 pr-4 text-ink-300">{row[1]}</td>
+                                                <td className="py-2.5 text-ink-100">{row[2]}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </TextDiagramPanel>
+                    </div>
+                </div>
+            </section>
+
             <Anchor id="features" className="top-12 lg:-top-48" />
             <section
                 className="bg-canvas-950 text-white justify-between flex -mb-24 flex-col w-full-no-offset gap-8

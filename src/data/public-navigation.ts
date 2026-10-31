@@ -27,6 +27,14 @@ export type PublicNavSection = {
 };
 
 export const START_COLLECTION_HREF = "/#download";
+/**
+ * The full-screen chat (docs/rich-chat/SPEC.md §4): the header's primary
+ * button on every page, and the home hero's. Anyone can talk there, with no
+ * account and no capture.
+ */
+export const TALK_HREF = "/talk";
+export const HOW_IT_WORKS_HREF = "/how-it-works";
+export const ADVICE_FATIGUE_HREF = "/advice-fatigue";
 export const BLOG_HREF = "/blog";
 export const LOCATIONS_HREF = "/locations";
 export const INSTAGRAM_WILDLIFE_ARCHIVE_HREF = "/use-cases/import-instagram-wildlife-photos";
@@ -35,12 +43,18 @@ export const ANIMAL_FREQUENCIES_HREF = "/animal-frequencies";
 export const ANIMAL_TRIALS_HREF = "/animal-trials";
 export const WILDLIFE_GUIDES_HREF = "/wildlife-guides";
 
-/** 01 — AnimalDex: what the product is, and the two ways in. */
+/**
+ * 01 — AnimalDex: what the product is, and the ways in. Talking comes first
+ * (the 2026-10-31 repositioning): the Talk page, how the animals work and the
+ * article on advice fatigue, then the app.
+ */
 export const productLinks: PublicNavLink[] = [
-    {href: "/#more", labelKey: "howAnimalDexWorks"},
+    {href: TALK_HREF, labelKey: "talkToAnAnimal"},
+    {href: HOW_IT_WORKS_HREF, labelKey: "howAnimalDexWorks"},
+    {href: ADVICE_FATIGUE_HREF, labelKey: "adviceFatigue"},
     {href: "/#features", labelKey: "appFeatures"},
     {href: "/use-cases", labelKey: "whosItFor"},
-    {href: START_COLLECTION_HREF, labelKey: "meetYourFirstAnimal"},
+    {href: START_COLLECTION_HREF, labelKey: "getTheApp"},
     {href: INSTAGRAM_WILDLIFE_ARCHIVE_HREF, labelKey: "instagramWildlifeArchive"},
     {href: EARN_ON_ANIMALDEX_HREF, labelKey: "earnOnAnimalDex"}
 ];
@@ -106,14 +120,17 @@ export const DEFAULT_MOBILE_ACCORDION_ID = "explore";
 
 export const mobileAccordionSections: PublicNavSection[] = headerDropdowns;
 
+/** The drawer pins these at its foot: Talk to an animal, then Get the app beside Web app. */
+export const PINNED_DRAWER_HREFS = [TALK_HREF, START_COLLECTION_HREF];
+
 /**
  * The mobile drawer's "More" group: everything the accordions do not already
- * carry. Start Your Collection is excluded because the drawer pins it as a CTA,
- * and the resource links are excluded because they are now an accordion of
- * their own — leaving the product links, minus that CTA.
+ * carry. The pinned actions are excluded because the drawer's foot carries
+ * them, and the resource links are excluded because they are an accordion of
+ * their own — leaving the rest of the product links.
  */
 export const moreNavGroups: PublicNavLink[][] = [
-    productLinks.filter((link) => link.href !== START_COLLECTION_HREF)
+    productLinks.filter((link) => !PINNED_DRAWER_HREFS.includes(link.href))
 ];
 
 export const blogNavLink: PublicNavLink = {href: BLOG_HREF, labelKey: "blog"};

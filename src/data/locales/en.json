@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Back to AnimalDex homepage",
     "title": "AnimalDex",
-    "description": "Every animal has a lesson.",
+    "description": "Every animal sees it differently.",
     "team": "Who It's For",
     "features": "Features",
     "download": "Get app",
@@ -40,7 +40,6 @@
     "creatorRewards": "Creator Rewards",
     "sponsorAChallenge": "Sponsor a Challenge",
     "wildlifeExperiences": "Wildlife Experiences",
-    "meetYourFirstAnimal": "Meet Your First Animal",
     "exploreAnimals": "Explore Animals",
     "experiences": "Experiences",
     "earn": "Earn",
@@ -73,16 +72,18 @@
       "statusValue": "GHOSTSEED LTD · No. 17287552"
     },
     "webApp": "Web app",
-    "talkToAnimals": "Talk to Any Animal"
+    "talkToAnimals": "Talk to Any Animal",
+    "talkToAnAnimal": "Talk to an Animal",
+    "getTheApp": "Get the App",
+    "adviceFatigue": "Advice Fatigue"
   },
   "home": {
     "title": "AnimalDex",
     "tagline": "Discover what animals can teach you.",
     "intro": "AnimalDex helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
-    "heroTalkLead": "Talk to any animal",
-    "heroTalkAccent": "you meet.",
-    "heroSubhead": "Photograph an animal and it becomes yours. It answers from how its kind lives, and gives you one step for your own life.",
-    "heroTryTalking": "Try talking to one now",
+    "heroTalkLead": "Talk to animals.",
+    "heroTalkAccent": "They won't just agree with you.",
+    "heroSubhead": "Every animal answers from its own Power, a lesson from how its kind survives. Bring a real problem, hear a real side, and take one step.",
     "heroLaurelMadeFor": "Made for",
     "heroLaurelExplorers": "explorers",
     "heroLaurelBuiltFor": "Built for",
@@ -113,7 +114,7 @@
       "wisdomDescription": "Every animal has a strategy for survival.",
       "appliedInsight": "Capture one. Discover what it can teach you.",
       "appliedInsightLead": "Capture one.",
-      "appliedInsightBody": "Discover what it can teach you.",
+      "appliedInsightBody": "Every animal you meet adds a new way of seeing.",
       "more": "THE FULL|AnimalDex",
       "button": "Explore"
     },
@@ -330,6 +331,37 @@
       "respect": {
         "q": "Is it Free to Play?",
         "a": "Yes. AnimalDex offers free credits when you start, you can then complete missions and earn more free credits. Paid plans are affordable and allow users to scan animals without limits."
+      }
+    },
+    "heroCta": "Talk to an animal",
+    "heroGetApp": "Or get the app",
+    "heroHowItWorks": "How the animals work",
+    "different": {
+      "eyebrow": "Every animal is different",
+      "title": "Every animal sees it differently.",
+      "body": "Ask an owl and a cheetah the same thing and they'll disagree. Each answers from its own Power, the way its kind survives, not from what you want to hear.",
+      "link": "How the animals work"
+    },
+    "fatigue": {
+      "eyebrow": "Why it matters",
+      "title": "Most AI agrees with you. That's the problem.",
+      "body": "General-purpose chatbots are tuned to agree with you. For a quick task that's fine. For a decision, a conflict or a change you're trying to make, it leaves you comforted, not helped. We call that advice fatigue: you keep asking, and nothing changes.",
+      "line": "AnimalDex is a coaching engine disguised as a collection game. Every animal argues from its own Power, so you get perspective instead of agreement.",
+      "cta": "Read: Advice fatigue",
+      "source": "Cheng et al., Science (2026). Stanford University and Carnegie Mellon.",
+      "stats": {
+        "models": {
+          "value": "11",
+          "label": "AI models compared with people"
+        },
+        "affirm": {
+          "value": "~49%",
+          "label": "more often than people, AI affirmed users' actions"
+        },
+        "people": {
+          "value": "2,405",
+          "label": "participants in three preregistered experiments"
+        }
       }
     }
   },
@@ -2244,9 +2276,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Talk to Any Animal, Then Collect It",
+    "fullTitle": "AnimalDex: Talk to Animals That Don't Just Agree With You",
     "title": "AnimalDex",
-    "description": "Talk to any animal with AI: scan or pick one of 2,500+ species and it answers as itself, from its real biology. Then identify and collect it, and hear animals debate your real problems.",
+    "description": "Talk to real animals with AI. Each one answers from its own Power, a lesson from how its kind survives, and takes a side. Bring a real problem, hear a real side, and take one step.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
@@ -2254,6 +2286,13 @@
     "refundTitle": "AnimalDex Refund Policy",
     "refundDescription": "Read how refunds and cancellations work for AnimalDex purchases made through Paddle, Apple, and Google Play.",
     "keywords": [
+      "talk to animals",
+      "talk to animals app",
+      "AI that disagrees with you",
+      "perspective-driven AI",
+      "advice fatigue",
+      "sycophantic AI",
+      "AI coaching app",
       "AI animal scanner",
       "animal identifier app",
       "animal identification app",

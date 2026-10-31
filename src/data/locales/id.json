@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Kembali ke beranda AnimalDex",
     "title": "AnimalDex",
-    "description": "Setiap hewan punya pelajaran.",
+    "description": "Setiap hewan melihatnya dengan cara berbeda.",
     "team": "Untuk Siapa",
     "features": "Fitur",
     "download": "Dapatkan app",
@@ -40,7 +40,6 @@
     "creatorRewards": "Creator Rewards",
     "sponsorAChallenge": "Sponsor Challenge",
     "wildlifeExperiences": "Pengalaman Satwa Liar",
-    "meetYourFirstAnimal": "Temui Hewan Pertamamu",
     "exploreAnimals": "Eksplorasi Hewan",
     "experiences": "Pengalaman",
     "earn": "Hasilkan",
@@ -73,16 +72,18 @@
       "statusValue": "GHOSTSEED LTD · No. 17287552"
     },
     "webApp": "Aplikasi web",
-    "talkToAnimals": "Bicara dengan Hewan"
+    "talkToAnimals": "Bicara dengan Hewan",
+    "talkToAnAnimal": "Bicara dengan Seekor Hewan",
+    "getTheApp": "Dapatkan Aplikasinya",
+    "adviceFatigue": "Lelah Nasihat"
   },
   "home": {
     "title": "AnimalDex",
     "tagline": "Pemindai hewan AI dan aplikasi koleksi satwa liar",
     "intro": "AnimalDex membantu pengguna mengidentifikasi hewan nyata dengan AI, menyimpan penampakan sebagai kartu koleksi, dan mempelajari fakta biologi, makna, dan pelajaran perilaku.",
-    "heroTalkLead": "Bicaralah dengan hewan",
-    "heroTalkAccent": "yang kamu temui.",
-    "heroSubhead": "Foto seekor hewan, dan ia menjadi milikmu. Ia menjawab dari cara hidup jenisnya, dan memberimu satu langkah untuk hidupmu sendiri.",
-    "heroTryTalking": "Coba bicara dengan salah satunya sekarang",
+    "heroTalkLead": "Bicaralah dengan hewan.",
+    "heroTalkAccent": "Mereka tidak sekadar setuju denganmu.",
+    "heroSubhead": "Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup. Bawa masalah nyata, dengar sisi yang nyata, dan ambil satu langkah.",
     "heroLaurelMadeFor": "Dibuat untuk",
     "heroLaurelExplorers": "penjelajah",
     "heroLaurelBuiltFor": "Juga untuk",
@@ -113,7 +114,7 @@
       "wisdomDescription": "Setiap hewan punya strategi untuk bertahan hidup.",
       "appliedInsight": "Tangkap satu. Temukan apa yang bisa dia ajarkan.",
       "appliedInsightLead": "Tangkap satu.",
-      "appliedInsightBody": "Temukan apa yang bisa dia ajarkan.",
+      "appliedInsightBody": "Setiap hewan yang kamu temui menambah satu cara pandang baru.",
       "more": "THE FULL|AnimalDex",
       "button": "Jelajahi"
     },
@@ -330,6 +331,37 @@
       "respect": {
         "q": "Apakah AnimalDex mendorong observasi satwa liar yang penuh hormat?",
         "a": "Ya. AnimalDex mendorong curiosity over cruelty lewat spotting yang tidak invasif, kesadaran habitat, dan pembelajaran tanpa menyakiti atau menekan hewan."
+      }
+    },
+    "heroCta": "Bicara dengan seekor hewan",
+    "heroGetApp": "Atau dapatkan aplikasinya",
+    "heroHowItWorks": "Cara kerja hewan-hewannya",
+    "different": {
+      "eyebrow": "Setiap hewan berbeda",
+      "title": "Setiap hewan melihatnya dengan cara berbeda.",
+      "body": "Tanyakan hal yang sama pada burung hantu dan cheetah, dan mereka tidak akan sepakat. Masing-masing menjawab dari Kekuatannya sendiri, cara jenisnya bertahan hidup, bukan dari apa yang ingin kamu dengar.",
+      "link": "Cara kerja hewan-hewannya"
+    },
+    "fatigue": {
+      "eyebrow": "Mengapa ini penting",
+      "title": "Kebanyakan AI setuju denganmu. Itulah masalahnya.",
+      "body": "Chatbot serba guna disetel untuk setuju denganmu. Untuk tugas cepat, itu tidak masalah. Untuk keputusan, konflik, atau perubahan yang ingin kamu buat, ia membuatmu terhibur, bukan terbantu. Kami menyebutnya lelah nasihat: kamu terus bertanya, dan tidak ada yang berubah.",
+      "line": "AnimalDex adalah mesin coaching yang menyamar sebagai game koleksi. Setiap hewan berargumen dari Kekuatannya sendiri, sehingga kamu mendapat sudut pandang, bukan sekadar persetujuan.",
+      "cta": "Baca: Lelah nasihat",
+      "source": "Cheng dkk., Science (2026). Stanford University dan Carnegie Mellon.",
+      "stats": {
+        "models": {
+          "value": "11",
+          "label": "model AI dibandingkan dengan manusia"
+        },
+        "affirm": {
+          "value": "~49%",
+          "label": "lebih sering daripada manusia, AI membenarkan tindakan pengguna"
+        },
+        "people": {
+          "value": "2.405",
+          "label": "peserta dalam tiga eksperimen yang didaftarkan sebelumnya"
+        }
       }
     }
   },
@@ -2233,9 +2265,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex | pemindai hewan AI, aplikasi koleksi satwa liar, dan field guide",
+    "fullTitle": "AnimalDex: Bicara dengan Hewan yang Tidak Sekadar Setuju denganmu",
     "title": "AnimalDex",
-    "description": "AnimalDex adalah aplikasi iOS dan Android live untuk pemindaian hewan AI, koleksi satwa liar, pembelajaran field guide, dan jurnal kartu hewan kolektibel.",
+    "description": "Bicara dengan hewan sungguhan lewat AI. Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan memilih satu sisi. Bawa masalah nyata, dengar sisi yang nyata, dan ambil satu langkah.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
@@ -2243,6 +2275,13 @@
     "refundTitle": "Kebijakan Pengembalian Dana AnimalDex",
     "refundDescription": "Pelajari cara kerja pengembalian dana dan pembatalan untuk pembelian AnimalDex melalui Paddle, Apple, dan Google Play.",
     "keywords": [
+      "bicara dengan hewan",
+      "aplikasi bicara dengan hewan",
+      "AI yang tidak selalu setuju",
+      "lelah nasihat",
+      "advice fatigue",
+      "AI yang menjilat",
+      "aplikasi coaching AI",
       "pemindai hewan AI",
       "aplikasi identifier hewan",
       "aplikasi identifikasi hewan",

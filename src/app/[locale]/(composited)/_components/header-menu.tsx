@@ -33,6 +33,9 @@ type HeaderMenuProps = {
     mobileAuth: ReactNode;
     ctaHref: string;
     ctaLabel: string;
+    /** Pinned beside the account link under the primary action: Get the app. */
+    secondaryCtaHref?: string;
+    secondaryCtaLabel?: string;
     navigationLabel: string;
     followLabel: string;
 };
@@ -48,6 +51,8 @@ export default function HeaderMenu({
     mobileAuth,
     ctaHref,
     ctaLabel,
+    secondaryCtaHref,
+    secondaryCtaLabel,
     navigationLabel,
     followLabel
 }: HeaderMenuProps) {
@@ -238,7 +243,18 @@ export default function HeaderMenu({
                         >
                             {ctaLabel}
                         </Link>
-                        {mobileAuth}
+                        {secondaryCtaHref && secondaryCtaLabel ? (
+                            <div className="grid grid-cols-2 gap-2">
+                                <Link
+                                    href={secondaryCtaHref}
+                                    onClick={closeMenu}
+                                    className="flex min-h-12 w-full items-center justify-center rounded-[2px] border border-line-100 bg-transparent px-3 text-center text-sm font-bold leading-snug text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                                >
+                                    {secondaryCtaLabel}
+                                </Link>
+                                <div className="min-w-0">{mobileAuth}</div>
+                            </div>
+                        ) : mobileAuth}
                     </div>
                 </nav>
             </div>, document.body) : null}
