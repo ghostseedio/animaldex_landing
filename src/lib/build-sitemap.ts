@@ -139,6 +139,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
                 {url: getAbsoluteUrl(locale, "/advice-fatigue"), lastModified: new Date(ADVICE_FATIGUE_UPDATED)},
                 {url: getAbsoluteUrl(locale, "/how-it-works"), lastModified: new Date(HOW_IT_WORKS_UPDATED)},
                 {url: getAbsoluteUrl(locale, "/qualities")},
+                // Talk (docs/rich-chat/SPEC.md, section 4.1): a real Indonesian page too.
+                {url: getAbsoluteUrl(locale, "/talk")},
                 ...getLocalPrincipleSlugs().map((slug) => ({
                     url: getAbsoluteUrl(locale, `/qualities/${slug}`)
                 }))
@@ -177,6 +179,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ...hubPageEntries(locale, animalFrequenciesPagination, behaviourSignatures.length),
             {url: getAbsoluteUrl(locale, "/animal-trials")},
             ...hubPageEntries(locale, animalTrialsPagination, animalTrials.length),
+            // Talk to an animal; its per-animal chats are noindex (the species pages are those).
+            {url: getAbsoluteUrl(locale, "/talk")},
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
             ...hubPageEntries(locale, animalHybridsPagination, getAnimalHybridCards().length),

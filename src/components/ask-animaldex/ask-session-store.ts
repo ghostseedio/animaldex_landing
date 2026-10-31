@@ -89,6 +89,11 @@ export const askSessionStore = {
     /** Snapshot for `useSyncExternalStore`, which needs a stable reference. */
     snapshot(key: string) {
         return this.messages(key);
+    },
+
+    /** Every thread, for the Talk page's Recent chats: a new object only when a thread changes. */
+    all(): AskThreads {
+        return ensureLoaded();
     }
 };
 

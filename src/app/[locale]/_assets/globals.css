@@ -636,6 +636,31 @@ button {
     --ask-bubble-in: #E3EBE0;
 }
 
+/* Rich answers (docs/rich-chat/SPEC.md, section 1.4): the diagram panel and a
+   table's header row, a quiet surface a step lighter than the animal's
+   bubble, with crisp hairlines. */
+:root,
+.theme-dark {
+    --ask-panel: #24322B;
+    --ask-hairline: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="light"] {
+    --ask-panel: #F3F7F1;
+    --ask-hairline: rgba(14, 34, 22, 0.14);
+}
+
+/* Monospace at the size text_columns is measured with, never wrapped: a
+   text diagram's box lines join only at one line height. */
+.ask-diagram {
+    font-family: var(--font-diagram-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.32;
+    font-variant-ligatures: none;
+    tab-size: 4;
+    white-space: pre;
+}
+
 /* The animal is typing: three soft dots in its own bubble (iOS AnimalTypingBubble). */
 @keyframes askTypingBob {
     0%, 100% { transform: translateY(0); opacity: 0.4; }

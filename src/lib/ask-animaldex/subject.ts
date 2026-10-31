@@ -18,6 +18,8 @@ export type AskSubjectKind =
     | "article"
     | "capture"
     | "collection"
+    /** The full-screen Talk page (/talk, /talk/<slug>): the page is the conversation. */
+    | "talk"
     | "site";
 
 export type AskSubject = {
@@ -111,6 +113,10 @@ export function askSubjectFromPath(rawPath: string): AskSubject {
 
     if (segments[0] === "animals" && segments[1]) {
         return {...base, scope: "species", kind: "species", slug: segments[1], name: null};
+    }
+    // The Talk page's chat with one animal is that animal's thread, as on its species page.
+    if (segments[0] === "talk") {
+        return segments[1] ? {...base, scope: "species", kind: "talk", slug: segments[1], name: null} : {...base, kind: "talk"};
     }
     if (segments[0] === "comparisons" && segments[1]) {
         return {...base, kind: "comparison"};

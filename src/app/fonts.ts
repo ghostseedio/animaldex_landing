@@ -41,7 +41,24 @@ export const barlowCondensed = localFont({
     display: "swap"
 });
 
-export const fontClassName = `${inter.variable} ${barlowCondensed.variable}`;
+/**
+ * The chat's diagram panel (docs/rich-chat/SPEC.md, section 1.4): JetBrains
+ * Mono (OFL, licence beside it), because a text diagram only lines up when
+ * the box-drawing characters and arrows have the letters' advance, and
+ * Android's monospace (Droid Sans Mono) has none of them. Never preloaded:
+ * the browser fetches it only once a panel is drawn. No size-adjusted Arial
+ * fallback either, which would misalign the diagram while it loads.
+ */
+export const diagramMono = localFont({
+    src: [{path: "./font-files/jetbrains-mono-latin-400-normal.ttf", weight: "400", style: "normal"}],
+    variable: "--font-diagram-mono",
+    display: "swap",
+    preload: false,
+    adjustFontFallback: false,
+    fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"]
+});
+
+export const fontClassName = `${inter.variable} ${barlowCondensed.variable} ${diagramMono.variable}`;
 
 export const fontCssVariables = {
     "--font-sans": "var(--font-inter)",

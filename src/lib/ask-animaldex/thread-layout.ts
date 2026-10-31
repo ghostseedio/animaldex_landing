@@ -159,6 +159,36 @@ export function askReplyPieces(raw: string, isComplete: boolean): AskReplyPiece[
 }
 
 /**
+ * A bubble that holds a table or a diagram panel (any fence that is not a
+ * drawing, whole or still arriving) widens to the whole reply column, so the
+ * grid and the diagram have room (docs/rich-chat/SPEC.md, section 1.4).
+ * Plain bubbles keep their width.
+ */
+export function askPieceIsWide(piece: AskReplyPiece): boolean {
+    if (piece.kind !== "bubble" || piece.isPlain) return false;
+    return piece.text.split("\n").some((line) => {
+        const kind = kindOf(line);
+        return kind === "table" || kind === "code";
+    });
+}
+
+/** An emoji run at the start of a heading: pictographs, keycaps, flags, with their joiners and modifiers. */
+const LEADING_EMOJI = /^((?:[#*0-9]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)+)\s*/u;
+
+/**
+ * A rich heading ("## 🌙 What I would do") as the bubble draws it: the
+ * emoji, then the title in the heading style. A heading without one is all
+ * title.
+ */
+export function askHeadingParts(text: string): {emoji: string | null; title: string} {
+    const trimmed = text.trim();
+    const match = LEADING_EMOJI.exec(trimmed);
+    if (!match) return {emoji: null, title: trimmed};
+    const title = trimmed.slice(match[0].length).trim();
+    return title ? {emoji: match[1], title} : {emoji: null, title: trimmed};
+}
+
+/**
  * The text of a plain bubble as one run: the markdown renderer joins a
  * paragraph's lines with spaces, and so does the bubble.
  */

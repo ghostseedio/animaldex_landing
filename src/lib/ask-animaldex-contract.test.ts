@@ -30,7 +30,9 @@ test("Ask AnimalDex is one assistant mounted once, not a copy per surface", () =
     // One provider and one launcher, in the layout every locale route shares.
     assert.match(rootLayout, /AskAnimalDexProvider/);
     assert.match(rootLayout, /AskAnimalDexSurface/);
-    assert.match(rootLayout, /getScopedTranslator\(locale, "askAnimalDex"\)/);
+    // Its words are read once, in the reader's language, for the drawer and the Talk page alike.
+    assert.match(rootLayout, /getAskDrawerLabels\(locale\)/);
+    assert.match(readRepo("src/loaders/ask-labels.ts"), /getScopedTranslator\(locale, "askAnimalDex"\)/);
 
     // The panel is loaded on demand. This sits on every SEO page, so shipping
     // the renderer, the visual mediums and the chart to a reader who never
@@ -142,7 +144,9 @@ test("the answer renderer is the block renderer, not a markdown drop-in", () => 
 });
 
 test("the drawer keeps the page readable under it and never traps the reader", () => {
-    const drawer = readCode("src/components/ask-animaldex/ask-drawer.tsx");
+    // The drawer is the conversation's drawer presentation (`AskConversation`, shared with the Talk page).
+    assert.match(readCode("src/components/ask-animaldex/ask-drawer.tsx"), /<AskConversation labels=\{labels\} presentation="drawer" \/>/);
+    const drawer = readCode("src/components/ask-animaldex/ask-conversation.tsx");
 
     // Docked, not modal: the reader keeps reading the page it is about.
     assert.match(drawer, /aria-modal="false"/);

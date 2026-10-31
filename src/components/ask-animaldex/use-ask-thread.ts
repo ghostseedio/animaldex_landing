@@ -26,6 +26,7 @@ import type {AskSubject} from "@/lib/ask-animaldex/subject";
 import {decorateFollowUps} from "@/lib/ask-animaldex/wild-profile";
 import {parseAskPersonaFrame, type AskPersonaFrame} from "@/lib/ask-animaldex/persona";
 import {isCallFrame} from "@/lib/ask-animaldex/call-events";
+import {askTurnVisuals} from "@/lib/ask-animaldex/rich";
 import {TRIAL_ASK_FALLBACK_FOLLOW_UPS} from "@/lib/animal-trial-ask";
 import {
     isEmptyCompanionEvent,
@@ -307,6 +308,12 @@ export function useAskThread(params: {
     onDebateRequest?: (request: DebateRequest) => void;
     onAnswered?: (info: {question: string; followUps: number}) => void;
     onFailed?: (reason: string) => void;
+    /**
+     * Rich answers (docs/rich-chat/SPEC.md, section 1.1): how many monospace
+     * characters fit across the reply column, once measured. Set, every
+     * one-to-one turn says "rich" with it; calls never do.
+     */
+    richColumns?: number | null;
 }) {
     const {threadKey, subject, locale, principleName} = params;
 
@@ -514,7 +521,11 @@ export function useAskThread(params: {
             ...(payWithCredits ? {payWithCredits: true} : {}),
             ...(options.onCallEvent ? {call: true} : {}),
             ...(options.stepReportId ? {step_report: {step_id: options.stepReportId}} : {}),
-            ...(callbacks.current.ownerChat ? {supported_visuals: OWNER_CHAT_VISUALS} : {}),
+            ...askTurnVisuals({
+                ownerVisuals: callbacks.current.ownerChat ? OWNER_CHAT_VISUALS : null,
+                richColumns: callbacks.current.richColumns,
+                call: Boolean(options.onCallEvent)
+            }),
             subject: {
                 scope: subject.scope,
                 slug: subject.slug,
@@ -761,7 +772,10 @@ export function useAskThread(params: {
                 body: JSON.stringify({
                     greeting: true,
                     ...(referralId ? {referral_id: referralId} : {}),
-                    ...(callbacks.current.ownerChat ? {supported_visuals: OWNER_CHAT_VISUALS} : {}),
+                    ...askTurnVisuals({
+                        ownerVisuals: callbacks.current.ownerChat ? OWNER_CHAT_VISUALS : null,
+                        richColumns: callbacks.current.richColumns
+                    }),
                     locale,
                     utc_offset_minutes: readerUtcOffset(),
                     history: [],

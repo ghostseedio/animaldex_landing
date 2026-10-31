@@ -25,7 +25,7 @@ import Image from "next/image";
 import AssistantMarkdown, {AskInline, AskInlineSegmentView} from "@/components/ask-animaldex/assistant-markdown";
 import {parseAskInline} from "@/lib/ask-animaldex/markdown";
 import {askWordRanges} from "@/lib/ask-animaldex/spoken-words";
-import {askPlainBubbleText, askReplyPieces, type AskReplyPiece} from "@/lib/ask-animaldex/thread-layout";
+import {askPieceIsWide, askPlainBubbleText, askReplyPieces, type AskReplyPiece} from "@/lib/ask-animaldex/thread-layout";
 import {ASK_REPORT_CHOICES, type AskReportChoice} from "@/lib/ask-animaldex/report";
 
 /**
@@ -80,7 +80,8 @@ export function AskAnimalHero({
     onBond,
     nameLabel,
     onName,
-    caption = null
+    caption = null,
+    differenceLine = null
 }: {
     name: string;
     subtitle: string | null;
@@ -95,6 +96,8 @@ export function AskAnimalHero({
     onName?: () => void;
     /** What the chat is for, under the header, until the owner's first step done with it (UI, not the animal speaking). */
     caption?: string | null;
+    /** "{name} answers from its own Power. Another animal may tell you the opposite." (SPEC section 3.3). */
+    differenceLine?: string | null;
 }) {
     const showsBond = Boolean(bondLabel && onBond);
     const showsName = Boolean(nameLabel && onName);
@@ -138,6 +141,9 @@ export function AskAnimalHero({
             ) : null}
             {caption ? (
                 <p className="mt-3 max-w-[19rem] text-[13px] leading-5 text-ink-300" data-testid="hero-caption">{caption}</p>
+            ) : null}
+            {differenceLine ? (
+                <p className="mt-2.5 max-w-[22rem] text-[12px] leading-[18px] text-ink-400" data-testid="hero-difference">{differenceLine}</p>
             ) : null}
         </div>
     );
@@ -368,9 +374,12 @@ export function AskReplyBubbles({
                         const radius = bubbleRadius({fromAnimal: true, groupStart: index === 0, groupEnd: index === pieces.length - 1});
                         const sparkle = isLive && index === pieces.length - 1;
                         const carries = specialHere !== null && index === lastBubble;
+                        // A table or a diagram panel: the bubble takes the whole reply column,
+                        // its controls under it (docs/rich-chat/SPEC.md, section 1.4).
+                        const wide = askPieceIsWide(piece);
                         const bubble = (
                             <div
-                                className={`min-w-0 max-w-full break-words text-[15px] leading-6 text-white ${carries ? "ask-special w-full py-[11px] pl-[17px] pr-3.5" : "px-3.5 py-2"}`}
+                                className={`min-w-0 max-w-full break-words text-[15px] leading-6 text-white ${carries ? "ask-special w-full py-[11px] pl-[17px] pr-3.5" : wide ? "w-full px-3.5 py-2.5" : "px-3.5 py-2"}`}
                                 style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: radius}}
                                 data-testid={carries ? "special-message" : undefined}
                             >
@@ -387,6 +396,16 @@ export function AskReplyBubbles({
                                 {carries ? <AskSpecialSections>{specialHere}</AskSpecialSections> : null}
                             </div>
                         );
+                        if (wide) {
+                            return (
+                                <div key={`b-${index}`} className="flex min-w-0 flex-col" data-testid="wide-bubble">
+                                    {bubble}
+                                    {!isLive && index === lastBubble && trailing ? (
+                                        <div className="flex items-center justify-end gap-0.5 pt-1">{trailing}</div>
+                                    ) : null}
+                                </div>
+                            );
+                        }
                         return (
                             <div key={`b-${index}`} className="flex items-end">
                                 <div className={`flex min-w-0 flex-col items-start ${carries ? "flex-1" : ""}`}>{bubble}</div>

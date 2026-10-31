@@ -171,7 +171,7 @@ test("the step's own message is drawn, never stored and never sent as history", 
 });
 
 test("the chat draws it in the thread and pins nothing above it", () => {
-    const drawer = readFileSync(join(process.cwd(), "src/components/ask-animaldex/ask-drawer.tsx"), "utf8");
+    const drawer = readFileSync(join(process.cwd(), "src/components/ask-animaldex/ask-conversation.tsx"), "utf8");
     assert.doesNotMatch(drawer, /variant="pinned"/);
     assert.doesNotMatch(drawer, /<StepCard\b/);
     assert.doesNotMatch(drawer, /showsPinnedStep/);

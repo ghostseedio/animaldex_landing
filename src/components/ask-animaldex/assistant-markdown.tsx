@@ -19,7 +19,13 @@ import {
     type AskMarkdownListItem
 } from "@/lib/ask-animaldex/markdown";
 import {askVisualIdentity, type AskVisual} from "@/lib/ask-animaldex/visuals";
+import {askHeadingParts} from "@/lib/ask-animaldex/thread-layout";
 import AskVisualView from "@/components/ask-animaldex/ask-visual";
+
+/** The diagram panel (docs/rich-chat/SPEC.md, section 1.4): radius 16, about 14 of padding. */
+const PANEL_STYLE = {borderRadius: 16, backgroundColor: "var(--ask-panel)", padding: 14} as const;
+const TABLE_STYLE = {borderRadius: 12, boxShadow: "inset 0 0 0 1px var(--ask-hairline)"} as const;
+const HAIRLINE = {borderColor: "var(--ask-hairline)"} as const;
 
 const DEPTH_INDENT = ["", "pl-4", "pl-8"] as const;
 
@@ -96,6 +102,28 @@ function ListItems({items, ordered}: {items: AskMarkdownListItem[]; ordered: boo
     );
 }
 
+/**
+ * A heading: its emoji, then the title in the heading style (a rich answer's
+ * "## 🌙 What I would do"), or the title alone.
+ */
+function Heading({text, level}: {text: string; level: number}) {
+    const {emoji, title} = askHeadingParts(text);
+    const mark = emoji ? <span aria-hidden="true" className="mr-2 inline-block text-[17px] leading-6">{emoji}</span> : null;
+    return level <= 2
+        ? (
+            <h3 className="mt-1 text-[16px] font-bold leading-6 text-white">
+                {mark}
+                <Inline text={title} />
+            </h3>
+        )
+        : (
+            <h4 className="mt-1 text-sm font-semibold uppercase tracking-[0.12em] text-ink-300">
+                {mark}
+                <Inline text={title} />
+            </h4>
+        );
+}
+
 function Block({block, photoUrl, photoAlt}: {
     block: AskMarkdownBlock;
     photoUrl: string | null;
@@ -103,17 +131,7 @@ function Block({block, photoUrl, photoAlt}: {
 }) {
     switch (block.kind) {
         case "heading":
-            return block.level <= 2
-                ? (
-                    <h3 className="mt-1 text-[15px] font-bold leading-6 text-white">
-                        <Inline text={block.text} />
-                    </h3>
-                )
-                : (
-                    <h4 className="mt-1 text-sm font-semibold uppercase tracking-[0.12em] text-ink-300">
-                        <Inline text={block.text} />
-                    </h4>
-                );
+            return <Heading text={block.text} level={block.level} />;
         case "paragraph":
             return (
                 <p className="text-[15px] leading-7 text-ink-100">
@@ -131,22 +149,29 @@ function Block({block, photoUrl, photoAlt}: {
                 </blockquote>
             );
         case "code":
+            // The diagram panel: any fence that is not a drawing (```text, ``` or a
+            // language), drawn as it arrives, never wrapped; it scrolls sideways if
+            // it must. Looked at, not heard: the voice skips it.
             return (
-                <pre className="overflow-x-auto border border-white/10 bg-black/40 p-3 font-mono text-xs leading-5 text-ink-200">
-                    {block.text}
-                </pre>
+                <div className="ask-diagram-panel max-w-full overflow-x-auto" style={PANEL_STYLE} data-testid="ask-diagram">
+                    <pre className="ask-diagram m-0 w-max min-w-full text-ink-100">{block.text}</pre>
+                </div>
             );
         case "table":
+            // A real grid: a bold header row, hairline rules, room in every cell.
+            // Wider than the bubble, it scrolls sideways inside it; a cell is never
+            // squashed below a readable width.
             return (
-                <div className="-mx-1 overflow-x-auto px-1">
-                    <table className="w-full min-w-[18rem] border-collapse text-left text-[13px]">
+                <div className="max-w-full overflow-x-auto" style={TABLE_STYLE} data-testid="ask-table">
+                    <table className="w-full border-collapse text-left text-[13px] leading-5">
                         <thead>
-                            <tr>
+                            <tr style={{backgroundColor: "var(--ask-panel)"}}>
                                 {block.headers.map((header, index) => (
                                     <th
                                         key={`${index}-${header}`}
                                         scope="col"
-                                        className="border-b border-white/15 pb-2 pr-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-300"
+                                        className="min-w-[6.5rem] border-b px-3 py-2.5 align-bottom font-bold text-white"
+                                        style={HAIRLINE}
                                     >
                                         <Inline text={header} />
                                     </th>
@@ -159,7 +184,8 @@ function Block({block, photoUrl, photoAlt}: {
                                     {row.map((cell, cellIndex) => (
                                         <td
                                             key={cellIndex}
-                                            className="border-b border-white/[0.06] py-2 pr-3 leading-6 text-ink-100"
+                                            className={`min-w-[6.5rem] px-3 py-2.5 text-ink-100 ${rowIndex > 0 ? "border-t" : ""}`}
+                                            style={HAIRLINE}
                                         >
                                             <Inline text={cell} />
                                         </td>

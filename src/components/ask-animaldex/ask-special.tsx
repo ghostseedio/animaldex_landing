@@ -29,6 +29,7 @@
 
 import {useState, type CSSProperties, type ReactNode} from "react";
 import Image from "next/image";
+import Link from "@/app/[locale]/_components/link";
 import TrialMotion from "@/components/trial-motion/trial-motion";
 import {useTrialMotionStoryboard} from "@/components/trial-motion/use-trial-motion-storyboard";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
@@ -323,7 +324,8 @@ export function AskTrialsSection({
     working,
     problem,
     disabled,
-    onPick
+    onPick,
+    publicAction = null
 }: {
     name: string;
     words: CompanionWords;
@@ -335,6 +337,12 @@ export function AskTrialsSection({
     problem: string | null;
     disabled: boolean;
     onPick: (frequency: StepFrequency) => void;
+    /**
+     * The public Talk chat (docs/rich-chat/SPEC.md, section 4.4): no card, so
+     * no step to make; each Trial offers the account action instead ("Do
+     * this Trial" → sign up), or a line saying to catch one in the app.
+     */
+    publicAction?: {label: string; href: string; note: string | null} | null;
 }) {
     const title = fillWords(words.journey.trial.sectionTitle, {name});
     return (
@@ -360,7 +368,14 @@ export function AskTrialsSection({
                         {trial.motionStoryboard ? (
                             <LoopInPlace storyboard={trial.motionStoryboard} captions={trial.motionCaptions ?? null} label={trial.title} />
                         ) : null}
-                        {currentFrequency === trial.frequency ? (
+                        {publicAction ? (
+                            <div className="flex flex-col items-start gap-1.5">
+                                {publicAction.note ? <p className="text-[12px] leading-4 text-white/60">{publicAction.note}</p> : null}
+                                <Link href={publicAction.href} className={`${CHIP} border border-primary-400/45 font-semibold text-primary-300 hover:bg-primary-400/10`}>
+                                    {publicAction.label}
+                                </Link>
+                            </div>
+                        ) : currentFrequency === trial.frequency ? (
                             <p className="flex items-center gap-1.5 text-xs font-bold text-primary-300"><CheckIcon /> {words.journey.step.pinnedLabel}</p>
                         ) : working === trial.frequency ? (
                             <Working />

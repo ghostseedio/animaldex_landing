@@ -89,6 +89,9 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
 
     if (!mounted) return null;
 
+    // The Talk page is the conversation itself: no launcher and no drawer over it.
+    if (subject.kind === "talk") return null;
+
     if (isOpen) return <AskDrawer labels={labels} />;
 
     // A card has its own Talk to it button in its action bar, which replaces
