@@ -179,8 +179,6 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ...hubPageEntries(locale, animalFrequenciesPagination, behaviourSignatures.length),
             {url: getAbsoluteUrl(locale, "/animal-trials")},
             ...hubPageEntries(locale, animalTrialsPagination, animalTrials.length),
-            // Talk to an animal; its per-animal chats are noindex (the species pages are those).
-            {url: getAbsoluteUrl(locale, "/talk")},
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},
             {url: getAbsoluteUrl(locale, ANIMAL_HYBRID_CANONICAL_BASE_PATH)},
             ...hubPageEntries(locale, animalHybridsPagination, getAnimalHybridCards().length),
