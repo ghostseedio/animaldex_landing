@@ -373,7 +373,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                 <tbody>
                                     {ways.map(({participant, way}, index) => (
                                         <tr key={participant.id} className="align-top">
-                                            <td className={`px-3 py-2.5 ${index > 0 ? "border-t" : ""}`} style={{borderColor: "var(--ask-hairline)"}}>
+                                            <td className={`min-w-[10rem] px-3 py-2.5 ${index > 0 ? "border-t" : ""}`} style={{borderColor: "var(--ask-hairline)"}}>
                                                 <span className="flex items-center gap-2">
                                                     <AskAnimalFace url={debateFaceUrl(participant)} size={24} />
                                                     <span className="min-w-0">
