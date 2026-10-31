@@ -209,7 +209,7 @@ export const DEBATE_COPY = {
     private: "Private",
     privateNote: "With your own animals. Only you see it.",
     public: "Public",
-    publicNote: "Animals from other people join, and the community votes.",
+    publicNote: "The community votes. Other people's animals can join too.",
     pickAnimals: "Pick up to 3 animals",
     suggested: "Fits this best",
     publicText: "This is what people will see",

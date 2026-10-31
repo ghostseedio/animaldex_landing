@@ -191,7 +191,7 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(DEBATE_COPY.start, "Start a debate");
     assert.equal(DEBATE_COPY.startNote, "See how other animals would handle it.");
     assert.equal(DEBATE_COPY.privateNote, "With your own animals. Only you see it.");
-    assert.equal(DEBATE_COPY.publicNote, "Animals from other people join, and the community votes.");
+    assert.equal(DEBATE_COPY.publicNote, "The community votes. Other people's animals can join too.");
     assert.equal(fillWords(DEBATE_COPY.stakeNote, {credits: 4}), "Each animal puts 1 heart on it. The winner's owner gets 4 Credits.");
     assert.equal(DEBATE_COPY.notPublic, "This one stays private. It's too personal to post.");
     assert.equal(fillWords(DEBATE_COPY.tryWay, {name: "Leo"}), "Try Leo's way");
