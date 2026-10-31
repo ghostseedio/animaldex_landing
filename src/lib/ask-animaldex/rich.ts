@@ -58,3 +58,16 @@ export function askReplyIsRealProblem(text: string): boolean {
     }
     return false;
 }
+
+/**
+ * What Copy puts on the clipboard (SPEC section 1.4): the reply's own
+ * markdown, its headings, tables and text diagrams as written, without the
+ * fenced `animaldex-*` blocks (the hidden cards and the drawings' JSON).
+ */
+export function askCopyText(raw: string): string {
+    return raw
+        .replace(/\r\n/g, "\n")
+        .replace(/```animaldex-[\w-]*[^\n]*\n[\s\S]*?(```|$)/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}

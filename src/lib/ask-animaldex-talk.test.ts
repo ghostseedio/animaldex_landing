@@ -15,7 +15,7 @@ import {
     talkWords,
     TALK_WORDS_EN
 } from "@/lib/ask-animaldex/talk";
-import {askReplyIsRealProblem, askTextColumns, askTurnVisuals} from "@/lib/ask-animaldex/rich";
+import {askCopyText, askReplyIsRealProblem, askTextColumns, askTurnVisuals} from "@/lib/ask-animaldex/rich";
 import {askHeadingParts, askPieceIsWide, askReplyPieces} from "@/lib/ask-animaldex/thread-layout";
 import {askSubjectFromPath} from "@/lib/ask-animaldex/subject";
 import {askThreadKey, type AskMessage} from "@/lib/ask-animaldex/thread";
@@ -183,4 +183,10 @@ test("locked capabilities offer an account to a visitor without one, the app to 
     assert.equal(talkCapabilityAction("step", {signedIn: true}), "app");
     assert.equal(talkCapabilityAction("debates", {signedIn: true}), "app");
     assert.equal(talkCapabilityAction("trial", {signedIn: true}), "catch");
+});
+
+test("Copy is the reply's own markdown, without the hidden cards or a drawing's JSON", () => {
+    const raw = "Take it.\n\n## 🐺 What I would do\n| Way | Gives |\n|---|---|\n| Lead | Growth |\n\n```text\nTHE FORK\n┌──┐\n```\n\n```animaldex-card\n{\"kind\":\"debate\"}\n```";
+    assert.equal(askCopyText(raw), "Take it.\n\n## 🐺 What I would do\n| Way | Gives |\n|---|---|\n| Lead | Growth |\n\n```text\nTHE FORK\n┌──┐\n```");
+    assert.equal(askCopyText("Look:\n```animaldex-flow\n{\"steps\":[]}\n```\nDone."), "Look:\n\nDone.");
 });

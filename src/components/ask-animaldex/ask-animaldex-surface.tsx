@@ -70,7 +70,12 @@ function AskDrawerShell() {
 }
 
 export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels & {launcher: string}}) {
-    const {isOpen, open, subject, avatarUrl} = useAskAnimalDex();
+    const {isOpen, open, close, subject, avatarUrl} = useAskAnimalDex();
+    // On the Talk page the page is the chat: a drawer left open elsewhere closes, so it doesn't reopen on the next page.
+    const onTalk = subject.kind === "talk";
+    useEffect(() => {
+        if (onTalk && isOpen) close();
+    }, [onTalk, isOpen, close]);
     const [mounted, setMounted] = useState(false);
 
     // The launcher is client-only chrome. Rendering it during hydration of a
@@ -90,7 +95,7 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
     if (!mounted) return null;
 
     // The Talk page is the conversation itself: no launcher and no drawer over it.
-    if (subject.kind === "talk") return null;
+    if (onTalk) return null;
 
     if (isOpen) return <AskDrawer labels={labels} />;
 

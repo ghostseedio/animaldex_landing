@@ -191,7 +191,7 @@ import DebateSetup, {type DebateEdit, type DebateHost} from "@/components/debate
 import DebateThread, {DebateQuietSection} from "@/components/debates/debate-thread";
 import {useMyDebates} from "@/components/debates/use-debates";
 import {debateSeedProblem, type Debate, type DebateNamedAnimal, type DebateRequest} from "@/lib/debates";
-import {askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
+import {askCopyText, askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
 import {talkChatPath, talkSignUpHref, type TalkWords} from "@/lib/ask-animaldex/talk";
 import {rememberTalkThread} from "@/components/ask-animaldex/ask-thread-meta";
 import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
@@ -1338,7 +1338,8 @@ export default function AskConversation({
         && (context === null ? subject.scope === "species" : canGreet);
 
     const copyMessage = (message: AskMessage) => {
-        void navigator.clipboard?.writeText(askMarkdownPlainText(message.text));
+        // The animal's own markdown (headings, tables, diagrams as written); the site-wide assistant's reads as prose.
+        void navigator.clipboard?.writeText(messenger ? askCopyText(message.text) : askMarkdownPlainText(message.text));
         setCopiedId(message.id);
         setTimeout(() => {
             setCopiedId((current) => (current === message.id ? null : current));
