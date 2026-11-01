@@ -23,6 +23,9 @@ test("a species page shows the Power Talk and the chat answer from, not its brow
     assert.equal(resolveSpeciesBehaviorProfileForPage("african-bush-elephant")?.principle, "Memory Path");
     // The cluster stays for grouping only.
     assert.ok(resolveSpeciesBehaviorProfileForPage("red-fox")?.browseCluster);
+    // The Lion page stands for the catalog's African Lion: Pride Command on the page and in the chat.
+    assert.equal(getCatalogSpeciesPower("lion")?.name, "Pride Command");
+    assert.equal(resolveSpeciesBehaviorProfileForPage("lion")?.principle, "Pride Command");
     // A group page with no catalog profile keeps its local profile, as its chat does.
     assert.equal(getCatalogSpeciesPower("fox"), null);
 });

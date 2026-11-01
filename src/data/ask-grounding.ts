@@ -23,6 +23,7 @@ import {getSpeciesSystemDynamics} from "@/data/species-system-dynamics";
 import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
 import {getRelatedSpecies, getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/species";
 import {resolveSpeciesBehaviorProfile} from "@/data/species-behavior-lessons";
+import {getCatalogSpeciesPower} from "@/lib/species-power";
 import {
     behaviorDisplayTitle,
     domainDisplayTitle,
@@ -115,6 +116,26 @@ function askAnimalPower(
     };
 }
 
+/**
+ * The local profile with the catalog's Power over its cluster name, exactly as
+ * the species page resolves it, for the pages whose own row has no Power
+ * profile (the static Lion page stands for the catalog's African Lion).
+ */
+function withCatalogPower(
+    slug: string,
+    fallback: Awaited<ReturnType<typeof resolveSpeciesBehaviorProfile>>
+): Awaited<ReturnType<typeof resolveSpeciesBehaviorProfile>> {
+    const catalog = getCatalogSpeciesPower(slug);
+    if (!catalog || !fallback) return fallback;
+    return {
+        ...fallback,
+        principle: catalog.name,
+        principleExpression: catalog.expression ?? fallback.principleExpression,
+        coreLesson: catalog.lesson ?? fallback.coreLesson,
+        motto: catalog.motto ?? fallback.motto
+    };
+}
+
 function relatedSpeciesFor(slug: string) {
     return getRelatedSpecies(slug)
         .map((entry) => ({slug: entry.slug, name: entry.name}))
@@ -166,7 +187,8 @@ export async function buildAskSpeciesGrounding(
         interestingFacts: resolved.premiumDetails.whyInteresting.slice(0, 8),
         behaviorTraits: resolved.premiumDetails.behaviorTraits.slice(0, 8),
         spottingTips: spotting.tips.slice(0, 4),
-        power: askAnimalPower(power, principle),
+        // One Power per animal (WEB-7): the catalog's Power, as the species page shows it, before any local cluster.
+        power: askAnimalPower(power, withCatalogPower(resolved.slug, principle)),
         systemDynamics: dynamics ? askSystemDynamics(dynamics) : null,
         relatedSpecies: relatedSpeciesFor(resolved.slug),
         relatedLocations: getLocationsFeaturingSpecies(resolved.slug)

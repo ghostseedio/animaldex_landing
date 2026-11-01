@@ -7,15 +7,11 @@
  * collectors, public profiles, shared posts and the home page's captures.
  */
 
-const HUMAN_SLUGS = new Set(["human", "humans", "homo-sapiens", "homo-sapiens-sapiens"]);
+import {isHomoSapiens} from "@/lib/people-never-public";
 
-function normalized(value: string | null | undefined): string {
-    return (value ?? "").trim().toLowerCase();
-}
-
-/** True for the human species page slug. */
+/** True for the human species page slug. One rule for the whole site: src/lib/people-never-public.ts. */
 export function isHumanSlug(slug: string | null | undefined): boolean {
-    return HUMAN_SLUGS.has(normalized(slug));
+    return isHomoSapiens({slug});
 }
 
 /** True when a species (or a capture of one) is a person: the "human" slug or Homo sapiens. */
@@ -24,10 +20,7 @@ export function isHumanSpecies(species: {
     scientificName?: string | null;
     identityKey?: string | null;
 } | null | undefined): boolean {
-    if (!species) return false;
-    if (isHumanSlug(species.slug)) return true;
-    if (isHumanSlug(normalized(species.identityKey).replace(/_/g, "-"))) return true;
-    return /^homo sapiens\b/.test(normalized(species.scientificName));
+    return Boolean(species) && isHomoSapiens({slug: species!.slug, scientificName: species!.scientificName, identityKey: species!.identityKey});
 }
 
 /** A side-by-side slug ("x-vs-human") with a person on either side. */
@@ -37,5 +30,5 @@ export function involvesHuman(slugs: Array<string | null | undefined>): boolean 
 
 /** A comparison page slug with a person on either side. */
 export function isHumanComparisonSlug(slug: string): boolean {
-    return normalized(slug).split("-vs-").some((side) => isHumanSlug(side));
+    return slug.trim().toLowerCase().split("-vs-").some((side) => isHumanSlug(side));
 }
