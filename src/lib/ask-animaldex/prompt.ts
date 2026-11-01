@@ -1137,6 +1137,17 @@ export const ASK_STREAM_HOLDBACK = ASK_FOLLOW_UP_SENTINEL.length - 1;
  */
 export function visibleAnswerSoFar(full: string): string {
     const sentinelIndex = full.indexOf(ASK_FOLLOW_UP_SENTINEL);
-    if (sentinelIndex >= 0) return full.slice(0, sentinelIndex);
-    return full.slice(0, Math.max(0, full.length - ASK_STREAM_HOLDBACK));
+    if (sentinelIndex >= 0) return full.slice(0, sentinelIndex).trimEnd();
+    // Before the sentinel arrives, only a tail that could be the start of it
+    // is held back (a sentinel arriving a token at a time is never shown),
+    // plus trailing whitespace, which the finished answer trims. Holding a
+    // fixed ASK_STREAM_HOLDBACK characters kept a short reply's first words
+    // off the screen until the next token arrived.
+    const longest = Math.min(ASK_STREAM_HOLDBACK, full.length);
+    for (let held = longest; held > 0; held -= 1) {
+        if (ASK_FOLLOW_UP_SENTINEL.startsWith(full.slice(full.length - held))) {
+            return full.slice(0, full.length - held).trimEnd();
+        }
+    }
+    return full.trimEnd();
 }

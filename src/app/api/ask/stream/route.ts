@@ -230,36 +230,30 @@ export async function POST(request: Request) {
     const question = isGreeting ? "" : body.call === true ? resolveAskCallQuestion(body.question) : resolveAskQuestion(body.question);
     if (!isGreeting && !question) return askJson({error: "invalid_question"}, 400);
 
-    const viewer = await resolveAskViewer(request);
     const subject = resolveAskSubject(body.subject);
+    // The animal's record is keyed by the subject alone: it loads while the
+    // reader is resolved, instead of after (the apps' function starts its
+    // reads beside the sign-in check the same way).
+    const basePacketPending = buildAskPacket({subject, question: question ?? ""});
+    basePacketPending.catch(() => undefined);
+    const viewer = await resolveAskViewer(request);
 
     // A greeting is free: it never touches the message allowance or credits.
     // Every other message takes one from today's budget (or one credit past
     // it), with one id per message, reused when that message is retried (and
     // by the one-piece retry below), so the same message is never charged twice.
-    const rate = isGreeting
+    // Taken beside the first reads rather than before them; the reply waits
+    // for it only where it decides something.
+    const ratePending = isGreeting
         ? null
-        : await takeAskTurn(request, viewer, {
+        : takeAskTurn(request, viewer, {
             requestId: resolveAskRequestId(body.requestId),
             payWithCredits: body.payWithCredits === true
         });
-    if (rate && !rate.allowed) {
-        return askJson({
-            error: "limit_reached",
-            // The apps' reasons: the day's allowance is used, or the reader
-            // chose to pay and the balance cannot cover a message.
-            reason: rate.reason ?? "daily_limit_reached",
-            remaining: 0,
-            limit: rate.limit,
-            retryAfterSeconds: rate.retryAfterSeconds,
-            resetsAt: rate.resetsAt,
-            signedIn: viewer.signedIn,
-            isPro: rate.isPro,
-            ...(rate.creditOverflow ? {creditOverflow: rate.creditOverflow} : {})
-        }, 429);
-    }
+    ratePending?.catch(() => undefined);
     const refund = async () => {
-        if (rate) await refundAskTurn(viewer, rate);
+        const taken = ratePending ? await ratePending.catch(() => null) : null;
+        if (taken?.allowed) await refundAskTurn(viewer, taken);
     };
 
     if (availableAskProviders({animalVoice: true}).length === 0) {
@@ -277,15 +271,31 @@ export async function POST(request: Request) {
     // card at the end of a long reply still counts, as the apps read it.
     const sentHistory = (Array.isArray(body.history) ? body.history as unknown[] : [])
         .filter((turn): turn is {role?: string | null; content?: string | null} => Boolean(turn) && typeof turn === "object");
-    const [basePacket, wildProfile, settings, card] = await Promise.all([
-        buildAskPacket({subject, question: question ?? ""}),
+    const [basePacket, wildProfile, settings, card, rate] = await Promise.all([
+        basePacketPending,
         getAskWildProfile(viewer.userId),
         loadAskChatSettings(viewer.userId),
         // The card the chat is about: whose it is, its name, how they met.
         // Only for a signed-in reader; a signed-out one is never anyone's
         // owner or visitor.
-        viewer.signedIn ? loadAskCaptureContext(subject.captureId) : Promise.resolve(null)
+        viewer.signedIn ? loadAskCaptureContext(subject.captureId) : Promise.resolve(null),
+        ratePending ?? Promise.resolve(null)
     ]);
+    if (rate && !rate.allowed) {
+        return askJson({
+            error: "limit_reached",
+            // The apps' reasons: the day's allowance is used, or the reader
+            // chose to pay and the balance cannot cover a message.
+            reason: rate.reason ?? "daily_limit_reached",
+            remaining: 0,
+            limit: rate.limit,
+            retryAfterSeconds: rate.retryAfterSeconds,
+            resetsAt: rate.resetsAt,
+            signedIn: viewer.signedIn,
+            isPro: rate.isPro,
+            ...(rate.creditOverflow ? {creditOverflow: rate.creditOverflow} : {})
+        }, 429);
+    }
     const ownsCapture = Boolean(card && viewer.userId && card.ownerId === viewer.userId);
     // On someone else's card the animal is theirs.
     const isVisit = Boolean(card && viewer.userId && card.ownerId !== viewer.userId);
@@ -299,16 +309,18 @@ export async function POST(request: Request) {
         // Only an animal speaks first; the site-wide assistant waits to be asked.
         return askJson({error: "greeting_unavailable"}, 400);
     }
-    const [memory, companion, quantiles] = await Promise.all([
-        speaksAsAnimal && personalise ? loadAskMemory(viewer.userId) : Promise.resolve([]),
-        // How this animal talks: its voice card, or the record-derived fallback.
-        speaksAsAnimal && basePacket.species
-            ? loadAskCompanion(basePacket.species)
-            : Promise.resolve(null as AskCompanion | null),
-        // The persona's bands are cut on the live catalogue's spread.
-        speaksAsAnimal ? loadAskStatQuantiles() : Promise.resolve(null)
-    ]);
-    const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
+    // How this animal talks: its voice card, or the record-derived fallback.
+    // Read first: its kind's verdict and the owner's reads key off it, so it
+    // no longer waits for the memory and the quantiles beside it.
+    const companionPending: Promise<AskCompanion | null> = speaksAsAnimal && basePacket.species
+        ? loadAskCompanion(basePacket.species)
+        : Promise.resolve(null as AskCompanion | null);
+    companionPending.catch(() => undefined);
+    // The canonical species, as the companion read resolves it.
+    const speciesIdPending = companionPending.then(
+        (companion) => (speaksAsAnimal ? companion?.speciesProfileId ?? null : null),
+        () => null as string | null
+    );
     // "I did it" (3.2): this message is their report on the open step, if it
     // still is that step (checked with the loop below).
     const stepReportId = isGreeting ? null : resolveStepReport(body.step_report)?.stepId ?? null;
@@ -317,30 +329,34 @@ export async function POST(request: Request) {
     // its own side rather than the sensible one. Not on a visit, a Trial or a
     // call, and not on a report on their step: that is not a problem to take a side on.
     const verdictKey = claudeAskKey();
-    const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && basePacket.species && question &&
+    const verdictSpecies = basePacket.species;
+    const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && verdictSpecies && question &&
             !isVisit && !isCall && !stepReportId && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
-        ? requestAskKindVerdict({
-            key: verdictKey,
-            input: {
-                animalName: basePacket.species.name,
-                scientificName: basePacket.species.scientificName,
-                powerName: basePacket.species.power?.principleName ?? null,
-                coreLesson: basePacket.species.power?.coreLesson ?? null,
-                principleExpression: basePacket.species.power?.principleExpression ?? null,
-                shortMotto: basePacket.species.power?.shortMotto ?? null,
-                biologicalBasis: basePacket.species.power?.biologicalBasis ?? null,
-                applicationExample: basePacket.species.power?.applicationExample ?? null,
-                adviceStyle: companion?.voice?.advice_style ?? null,
-                message: question,
-                history
-            }
-        })
+        ? companionPending.then(
+            (companion) => requestAskKindVerdict({
+                key: verdictKey,
+                input: {
+                    animalName: verdictSpecies.name,
+                    scientificName: verdictSpecies.scientificName,
+                    powerName: verdictSpecies.power?.principleName ?? null,
+                    coreLesson: verdictSpecies.power?.coreLesson ?? null,
+                    principleExpression: verdictSpecies.power?.principleExpression ?? null,
+                    shortMotto: verdictSpecies.power?.shortMotto ?? null,
+                    biologicalBasis: verdictSpecies.power?.biologicalBasis ?? null,
+                    applicationExample: verdictSpecies.power?.applicationExample ?? null,
+                    adviceStyle: companion?.voice?.advice_style ?? null,
+                    message: question,
+                    history
+                }
+            }),
+            () => null
+        )
         : Promise.resolve(null);
     // A Trial question is grounded on that Trial and kept there.
     const aboutTrial = Boolean(subject.trialContext);
     // The owner's turn: the bond, and (personalisation on, not a Trial) the
     // companion loop. Anything that fails leaves the animal without it.
-    const ownerSpeciesId = ownsCapture && viewer.userId ? speciesId : null;
+    const ownerSpeciesIdPending = speciesIdPending.then((speciesId) => (ownsCapture && viewer.userId ? speciesId : null));
     const followUpsOn = personalise && settings.followUpsEnabled;
     // Its Trials and qualities, its taxonomy; on a visit, what it may say
     // about its owner; for the owner, a check-in they asked for (on the first
@@ -370,36 +386,58 @@ export async function POST(request: Request) {
     const debateStateAsked = (debateCards || callDebates) && personalise && !isGreeting &&
         settings.suggestSteps !== false && !ASK_CRISIS_PATTERN.test(question ?? "") &&
         (callDebates || !conversationOffersDebate(sentHistory));
-    const [owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories, holdsSpecies] = await Promise.all([
-        ownerSpeciesId && viewer.userId
-            ? loadOwnerCompanion({
-                userId: viewer.userId,
-                speciesProfileId: ownerSpeciesId,
-                loopOn: personalise && !aboutTrial,
-                // "I did it": the report on the open step, already attached.
-                stepReportId,
-                debateState: debateStateAsked
-            })
-                .catch(() => null as OwnerCompanion | null)
-            : Promise.resolve(null as OwnerCompanion | null),
-        speciesId ? loadAskRecordExtras(speciesId) : Promise.resolve(null),
-        isVisit && speciesId && card && viewer.userId
-            ? loadAskOwnerContext({viewerId: viewer.userId, ownerId: card.ownerId, speciesProfileId: speciesId})
-            : Promise.resolve(null),
-        ownerSpeciesId && viewer.userId && followUpsOn && !history.some((turn) => turn.role === "user") && !aboutTrial
-            ? loadAskDueFollowUp(viewer.userId, ownerSpeciesId)
-            : Promise.resolve(null),
-        ownerSpeciesId && viewer.userId && askVisitorNotesEnabled() && ownerTalksFirst
-            ? loadAskPendingVisitorNotes(viewer.userId, ownerSpeciesId)
-            : Promise.resolve([]),
-        speciesId && animalOwnerId ? loadAskOwnStories(animalOwnerId, speciesId) : Promise.resolve([]),
-        // A species with no card: whether they hold a live card of it (a public chat when not).
-        !speaksAsAnimal || subject.captureId || aboutTrial
-            ? Promise.resolve(null as boolean | null)
-            : !viewer.userId
-            ? Promise.resolve(false as boolean | null)
-            : speciesId ? holdsLiveCard(viewer.userId, speciesId) : Promise.resolve(null as boolean | null)
-    ]);
+    // Everything else the prompt needs, in one round beside the companion read:
+    // the memory and the quantiles at once, the owner's and the species'
+    // reads as soon as the canonical species is known. Before, these were two
+    // rounds, one after the other. A hello's daily cap is read here too, unless
+    // another animal sent them (referral_id), which the loop below decides.
+    const referralRequested = typeof body.referral_id === "string" && UUID_PATTERN.test(body.referral_id.trim());
+    const [memory, companion, quantiles, owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories, holdsSpecies, greetingTaken] =
+        await Promise.all([
+            speaksAsAnimal && personalise ? loadAskMemory(viewer.userId) : Promise.resolve([]),
+            companionPending,
+            // The persona's bands are cut on the live catalogue's spread.
+            speaksAsAnimal ? loadAskStatQuantiles() : Promise.resolve(null),
+            ownerSpeciesIdPending.then((ownerSpeciesId) =>
+                ownerSpeciesId && viewer.userId
+                    ? loadOwnerCompanion({
+                        userId: viewer.userId,
+                        speciesProfileId: ownerSpeciesId,
+                        loopOn: personalise && !aboutTrial,
+                        // "I did it": the report on the open step, already attached.
+                        stepReportId,
+                        debateState: debateStateAsked
+                    })
+                        .catch(() => null as OwnerCompanion | null)
+                    : (null as OwnerCompanion | null)
+            ),
+            speciesIdPending.then((speciesId) => (speciesId ? loadAskRecordExtras(speciesId) : null)),
+            speciesIdPending.then((speciesId) =>
+                isVisit && speciesId && card && viewer.userId
+                    ? loadAskOwnerContext({viewerId: viewer.userId, ownerId: card.ownerId, speciesProfileId: speciesId})
+                    : null
+            ),
+            ownerSpeciesIdPending.then((ownerSpeciesId) =>
+                ownerSpeciesId && viewer.userId && followUpsOn && !history.some((turn) => turn.role === "user") && !aboutTrial
+                    ? loadAskDueFollowUp(viewer.userId, ownerSpeciesId)
+                    : null
+            ),
+            ownerSpeciesIdPending.then((ownerSpeciesId) =>
+                ownerSpeciesId && viewer.userId && askVisitorNotesEnabled() && ownerTalksFirst
+                    ? loadAskPendingVisitorNotes(viewer.userId, ownerSpeciesId)
+                    : []
+            ),
+            speciesIdPending.then((speciesId) => (speciesId && animalOwnerId ? loadAskOwnStories(animalOwnerId, speciesId) : [])),
+            // A species with no card: whether they hold a live card of it (a public chat when not).
+            !speaksAsAnimal || subject.captureId || aboutTrial
+                ? Promise.resolve(null as boolean | null)
+                : !viewer.userId
+                ? Promise.resolve(false as boolean | null)
+                : speciesIdPending.then((speciesId) => (speciesId ? holdsLiveCard(viewer.userId!, speciesId) : null)),
+            isGreeting && !referralRequested ? takeAskGreeting(request, viewer) : Promise.resolve(null as boolean | null)
+        ]);
+    const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
+    const ownerSpeciesId = ownsCapture && viewer.userId ? speciesId : null;
     // A public species chat (SPEC section 4): nobody's card, and nothing of theirs to set or offer.
     const publicChat = speaksAsAnimal && !subject.captureId && !aboutTrial && !isVisit && holdsSpecies === false;
     // Web only (2026-11-01): there too the animal may set one step, which the
@@ -761,7 +799,7 @@ export async function POST(request: Request) {
     // opens with its card's own question, in the streamed shape. Sent here by
     // another animal, it always opens with the problem.
     const greetingFromModel = isGreeting && !staleReferral
-        ? Boolean(referral) || await takeAskGreeting(request, viewer)
+        ? Boolean(referral) || (greetingTaken ?? await takeAskGreeting(request, viewer))
         : false;
     const fixedGreeting = isGreeting && packet.species && !staleReferral
         ? fallbackAskGreeting({

@@ -221,6 +221,17 @@ test("a reply with no sentinel is all answer", () => {
     assert.deepEqual(followUps, []);
 });
 
+test("the first words of a reply are visible as soon as they arrive", () => {
+    assert.equal(visibleAnswerSoFar("Take"), "Take");
+    assert.equal(visibleAnswerSoFar("Take it."), "Take it.");
+    // Trailing whitespace waits for what follows it; a possible sentinel start is held back.
+    assert.equal(visibleAnswerSoFar("Take it.\n"), "Take it.");
+    assert.equal(visibleAnswerSoFar("Take it.\n§§FOLLOW"), "Take it.");
+    assert.equal(visibleAnswerSoFar(`Take it.\n${ASK_FOLLOW_UP_SENTINEL}\nWhy?`), "Take it.");
+    // A section sign inside the answer shows once it is clearly not the sentinel.
+    assert.equal(visibleAnswerSoFar("See §4 of"), "See §4 of");
+});
+
 test("a sentinel arriving one character at a time is never shown as answer text", () => {
     const answer = "Workers bridge the gap first.";
     let emitted = "";
