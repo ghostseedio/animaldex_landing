@@ -12,13 +12,16 @@
  * capture photo.
  */
 
-import {useEffect, useMemo, useState, useSyncExternalStore} from "react";
+import {useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import Image from "next/image";
 import BrandLockup from "@/components/brand/brand-lockup";
-import {usePathname} from "next/navigation";
+import {usePathname, useRouter} from "next/navigation";
+import {getLocalePath} from "@/lib/site";
+import {onIdle} from "@/lib/on-idle";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
+import {askContextIntentHandlers, prefetchAskContext} from "@/components/ask-animaldex/ask-context-prefetch";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {forgetTalkThread, useTalkThreadMetas} from "@/components/ask-animaldex/ask-thread-meta";
 import {useCompanions} from "@/components/companions/use-companions";
@@ -31,6 +34,7 @@ import {
     talkMergeRecentChats,
     talkRecentChats,
     talkRelativeTime,
+    talkThreadsDigest,
     type TalkAnimal,
     type TalkServerChat,
     type TalkWords
@@ -38,6 +42,26 @@ import {
 import type {AskThreads} from "@/lib/ask-animaldex/thread";
 
 const NO_THREADS: AskThreads = {};
+
+/**
+ * The thread store, as far as the sidebar is concerned: the same object back
+ * while no message has landed or gone (`talkThreadsDigest`), so a reply
+ * typing out in the main pane does not draw the sidebar again on every step.
+ */
+function useTalkThreads(): AskThreads {
+    const last = useRef<{digest: string; threads: AskThreads} | null>(null);
+    return useSyncExternalStore(
+        askSessionStore.subscribe,
+        () => {
+            const threads = askSessionStore.all();
+            const digest = talkThreadsDigest(threads);
+            if (last.current && last.current.digest === digest) return last.current.threads;
+            last.current = {digest, threads};
+            return threads;
+        },
+        () => NO_THREADS
+    );
+}
 
 /** The account's threads, once per tab: the sidebar is drawn again on every page of the Talk area. */
 let serverChatsCache: Promise<{available: boolean; threads: TalkServerChat[]}> | null = null;
@@ -63,7 +87,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
     const {session} = useHeaderAuth();
     const signedIn = Boolean(session.user);
     const companions = useCompanions(signedIn);
-    const threads = useSyncExternalStore(askSessionStore.subscribe, () => askSessionStore.all(), () => NO_THREADS);
+    const threads = useTalkThreads();
     const metas = useTalkThreadMetas();
     const [server, setServer] = useState<{available: boolean; threads: TalkServerChat[]}>({available: false, threads: []});
     const [removed, setRemoved] = useState<ReadonlySet<string>>(() => new Set());
@@ -92,6 +116,22 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
     const yourAnimals = signedIn ? companions.rows.filter((row) => row.captureId && row.slug) : [];
     const synced = signedIn && server.available;
     const accountHref = `/account?next=${encodeURIComponent(current)}`;
+    // The chats most likely opened next (the first of each list), fetched once
+    // the page is idle, so switching to them is a paint, not a download.
+    const router = useRouter();
+    const nextHrefs = useMemo(() => {
+        const hrefs = [
+            ...yourAnimals.slice(0, 2).map((row) => talkChatPath({slug: row.slug as string, captureId: row.captureId})),
+            ...groups.flatMap((group) => group.chats).slice(0, 3).map((chat) => talkChatPath(chat))
+        ];
+        return Array.from(new Set(hrefs)).filter((href) => href !== current).slice(0, 4).join("\u0001");
+    }, [yourAnimals, groups, current]);
+    useEffect(() => {
+        if (!nextHrefs) return;
+        return onIdle(() => {
+            for (const href of nextHrefs.split("\u0001")) router.prefetch(getLocalePath(locale, href));
+        }, 2000);
+    }, [nextHrefs, router, locale]);
 
     const deleteChat = (chat: {key: string; serverKey?: string}) => {
         askSessionStore.clear(chat.key);
@@ -141,6 +181,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                 <Link
                                     key={row.speciesProfileId}
                                     href={href}
+                                    {...askContextIntentHandlers(() => prefetchAskContext(locale, row.slug as string, row.animal, row.captureId))}
                                     className={`flex items-center gap-2.5 px-2 py-2 transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`}
                                     style={{borderRadius: 12}}
                                 >
@@ -164,7 +205,12 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                     const href = talkChatPath(chat);
                                     return (
                                         <div key={chat.key} className={`group/chat relative flex items-center transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`} style={{borderRadius: 12}}>
-                                            <Link href={href} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 pr-11">
+                                            <Link
+                                                href={href}
+                                                // Intent on a chat starts its context read, so it opens with it in flight.
+                                                {...askContextIntentHandlers(() => prefetchAskContext(locale, chat.slug, chat.name, chat.captureId))}
+                                                className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 pr-11"
+                                            >
                                                 <AskAnimalFace url={getSpeciesImageRoute(chat.slug)} size={30} />
                                                 <span className="min-w-0 flex-1">
                                                     <span className="flex items-baseline gap-2">

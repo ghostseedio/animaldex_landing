@@ -13,7 +13,7 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
 import {usePathname} from "next/navigation";
 import {
-    askSubjectFromPath,
+    askDeclaredSubject,
     emptyAskSubject,
     type AskSubject
 } from "@/lib/ask-animaldex/subject";
@@ -110,25 +110,7 @@ export function AskAnimalDexProvider({locale, children}: {locale: string; childr
     const pendingAction = useRef<AskOpenAction | null>(null);
     const [actionRequest, setActionRequest] = useState(0);
 
-    const subject = useMemo<AskSubject>(() => {
-        const fromPath = askSubjectFromPath(pathname);
-        const trialFields = trial
-            ? {trialContext: trial.trialContext, trialKey: trial.trialKey}
-            : {trialContext: null, trialKey: null};
-        if (!declaration) return {...fromPath, ...trialFields, name: trial?.name ?? fromPath.name};
-        const slug = declaration.slug ?? fromPath.slug;
-        return {
-            ...fromPath,
-            slug,
-            scope: slug && (declaration.scope ?? fromPath.scope) === "species" ? "species" : "general",
-            name: declaration.name ?? trial?.name ?? fromPath.name,
-            captureId: declaration.captureId ?? fromPath.captureId,
-            hasReaderPhoto: Boolean(declaration.photoUrl),
-            title: declaration.title ?? fromPath.title,
-            summary: declaration.summary ?? fromPath.summary,
-            ...trialFields
-        };
-    }, [pathname, declaration, trial]);
+    const subject = useMemo<AskSubject>(() => askDeclaredSubject(pathname, declaration, trial), [pathname, declaration, trial]);
 
     const open = useCallback((question?: string, action?: AskOpenAction) => {
         if (question && question.trim()) {

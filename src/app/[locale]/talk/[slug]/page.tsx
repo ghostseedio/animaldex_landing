@@ -2,7 +2,6 @@ import type {Metadata} from "next";
 import {notFound, permanentRedirect} from "next/navigation";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {loadLocaleMessages} from "@/loaders/locale";
-import {getAskDrawerLabels} from "@/loaders/ask-labels";
 import {resolveTalkPage, talkCanonicalPath} from "@/data/talk-animals";
 import {talkAnimalTitle, talkWords} from "@/lib/ask-animaldex/talk";
 import {ogImagePath} from "@/lib/og/og-image";
@@ -62,12 +61,13 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
     };
 }
 
+/**
+ * The page's own payload is the animal alone (its words and the chat's
+ * labels come once with the layout, `TalkShell`): a switch between chats
+ * downloads a few hundred bytes.
+ */
 export default async function TalkAnimalPage({params}: Props) {
-    const [resolution, messages, labels] = await Promise.all([
-        resolveTalkPage(params.slug),
-        loadLocaleMessages(params.locale).catch(() => null),
-        getAskDrawerLabels(params.locale)
-    ]);
+    const resolution = await resolveTalkPage(params.slug);
     if (resolution.kind === "redirect") permanentRedirect(getLocalePath(params.locale, `/talk/${resolution.slug}`));
     if (resolution.kind === "none" || !resolution.animal) notFound();
     const animal = resolution.animal;
@@ -77,8 +77,6 @@ export default async function TalkAnimalPage({params}: Props) {
             slug={params.slug}
             name={animal.name}
             power={animal.power}
-            labels={labels}
-            words={talkWords(messages?.talkPage)}
             locale={params.locale}
         />
     );

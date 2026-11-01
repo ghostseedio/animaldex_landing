@@ -28,7 +28,10 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
 import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {prefetchAskContextFor} from "@/components/ask-animaldex/ask-context-prefetch";
 import {SPECIES_ASK_EVENT} from "@/lib/ask-animaldex/events";
+import type {AskSubject} from "@/lib/ask-animaldex/subject";
+import {onIdle} from "@/lib/on-idle";
 import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-drawer";
 
 // While the panel's code loads, its frame with the animal's header, never an
@@ -194,8 +197,14 @@ function TalkGlyph() {
     );
 }
 
+/** The conversation's code and this animal's context, on the first sign of intent on the pill: the drawer then opens ready. */
+function warmDrawer(locale: string, subject: AskSubject) {
+    void import("@/components/ask-animaldex/ask-drawer").catch(() => undefined);
+    prefetchAskContextFor(locale, subject);
+}
+
 export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels & {launcher: string}}) {
-    const {isOpen, open, close, subject, avatarUrl} = useAskAnimalDex();
+    const {isOpen, open, close, subject, avatarUrl, locale} = useAskAnimalDex();
     // On the Talk page the page is the chat: a drawer left open elsewhere closes, so it doesn't reopen on the next page.
     const onTalk = subject.kind === "talk";
     useEffect(() => {
@@ -233,6 +242,15 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
         || (subject.kind === "species" && !speaksAsAnimal);
     // Both pills wait for the first screen to scroll away: the hero carries its own Talk button.
     const placement = usePillPlacement(mounted && !quiet, true);
+    // A species page's primary action is its animal's chat: once the page is
+    // idle, the conversation's code comes in, so the drawer opens on the tap
+    // instead of after a download (the context is read on intent, not here).
+    useEffect(() => {
+        if (!mounted || quiet || !speaksAsAnimal) return;
+        return onIdle(() => {
+            void import("@/components/ask-animaldex/ask-drawer").catch(() => undefined);
+        }, 2500);
+    }, [mounted, quiet, speaksAsAnimal]);
     const setPillRef = useCallback((element: HTMLElement | null) => {
         placement.ref.current = element;
     }, [placement.ref]);
@@ -251,7 +269,16 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
         return (
             <FloatingPill shown={placement.shown} pillRef={setPillRef}>
                 {({tabIndex, className}) => (
-                    <button type="button" onClick={() => open()} tabIndex={tabIndex} className={className}>
+                    <button
+                        type="button"
+                        onClick={() => open()}
+                        onPointerEnter={() => warmDrawer(locale, subject)}
+                        onPointerDown={() => warmDrawer(locale, subject)}
+                        onTouchStart={() => warmDrawer(locale, subject)}
+                        onFocus={() => warmDrawer(locale, subject)}
+                        tabIndex={tabIndex}
+                        className={className}
+                    >
                         {avatarUrl ? (
                             <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/15">
                                 <Image src={avatarUrl} unoptimized alt="" fill sizes="32px" className="object-cover" />

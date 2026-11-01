@@ -1,6 +1,7 @@
 import React from "react";
 import {HeaderAuthProvider} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import {loadLocaleMessages} from "@/loaders/locale";
+import {getAskDrawerLabels} from "@/loaders/ask-labels";
 import {talkWords} from "@/lib/ask-animaldex/talk";
 import TalkShell from "@/app/[locale]/talk/talk-shell";
 import {getTalkPickerRows} from "@/data/talk-animals";
@@ -13,9 +14,10 @@ import {getSupabaseUrl} from "@/lib/supabase-http";
  * picker (/talk) and an animal's chat (/talk/<slug>).
  */
 export default async function TalkLayout({children, params}: {children: React.ReactNode; params: {locale: string}}) {
-    const [messages, rows] = await Promise.all([
+    const [messages, rows, labels] = await Promise.all([
         loadLocaleMessages(params.locale).catch(() => null),
-        getTalkPickerRows().catch(() => ({popular: [], disagree: []}))
+        getTalkPickerRows().catch(() => ({popular: [], disagree: []})),
+        getAskDrawerLabels(params.locale)
     ]);
     const words = talkWords(messages?.talkPage);
     // The animals' faces come from storage: the connection opens with the page, not with the first face (WEB-18).
@@ -29,7 +31,7 @@ export default async function TalkLayout({children, params}: {children: React.Re
     return (
         <HeaderAuthProvider>
             {storage ? <link rel="preconnect" href={storage} /> : null}
-            <TalkShell locale={params.locale} words={words} starters={rows.popular.slice(0, 3)}>
+            <TalkShell locale={params.locale} words={words} labels={labels} starters={rows.popular.slice(0, 3)}>
                 {children}
             </TalkShell>
         </HeaderAuthProvider>

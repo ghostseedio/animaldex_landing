@@ -9,19 +9,27 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {usePathname} from "next/navigation";
 import TalkSidebar from "@/app/[locale]/talk/talk-sidebar";
+import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
 import type {TalkAnimal, TalkWords} from "@/lib/ask-animaldex/talk";
 
-type TalkShellValue = {openSidebar: () => void; words: TalkWords; locale: string};
+/**
+ * `words` and `labels` are the same for every page of the Talk area, so the
+ * layout carries them once: a chat page's own payload is then its animal
+ * (slug, name, Power), a few hundred bytes, which is what a switch between
+ * chats downloads.
+ */
+type TalkShellValue = {openSidebar: () => void; words: TalkWords; labels: AskDrawerLabels; locale: string};
 
-const TalkShellContext = createContext<TalkShellValue>({openSidebar: () => undefined, words: {} as TalkWords, locale: "en"});
+const TalkShellContext = createContext<TalkShellValue>({openSidebar: () => undefined, words: {} as TalkWords, labels: {} as AskDrawerLabels, locale: "en"});
 
 export function useTalkShell() {
     return useContext(TalkShellContext);
 }
 
-export default function TalkShell({locale, words, starters = [], children}: {
+export default function TalkShell({locale, words, labels, starters = [], children}: {
     locale: string;
     words: TalkWords;
+    labels: AskDrawerLabels;
     /** Animals to start with in an empty sidebar. */
     starters?: TalkAnimal[];
     children: React.ReactNode;
@@ -39,7 +47,7 @@ export default function TalkShell({locale, words, starters = [], children}: {
         return () => window.removeEventListener("keydown", onKey);
     }, [open]);
     const openSidebar = useCallback(() => setOpen(true), []);
-    const value = useMemo(() => ({openSidebar, words, locale}), [openSidebar, words, locale]);
+    const value = useMemo(() => ({openSidebar, words, labels, locale}), [openSidebar, words, labels, locale]);
     return (
         <TalkShellContext.Provider value={value}>
             <div className="fixed inset-0 flex h-[100dvh] w-full overflow-hidden bg-canvas-950" data-testid="talk-shell">

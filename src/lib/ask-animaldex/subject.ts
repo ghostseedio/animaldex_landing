@@ -136,6 +136,47 @@ export function askSubjectFromPath(rawPath: string): AskSubject {
     return base;
 }
 
+/** The page-declared half of a subject, as `AskSubjectBridge` declares it. */
+export type AskSubjectDeclaredFields = {
+    scope?: "species" | "general";
+    slug?: string | null;
+    name?: string | null;
+    captureId?: string | null;
+    photoUrl?: string | null;
+    title?: string | null;
+    summary?: string | null;
+};
+
+/** The Trial a sheet declares while it is open. */
+export type AskTrialDeclaredFields = {trialContext: string; trialKey: string; name?: string | null};
+
+/**
+ * The subject a page is about: what the route implies, refined by what the
+ * page declared and the Trial a sheet is showing. The provider computes it
+ * for the drawer; the Talk page computes it the same way for its own chat,
+ * so the conversation can open on the right thread without waiting for the
+ * provider's declaration to land.
+ */
+export function askDeclaredSubject(pathname: string, declaration: AskSubjectDeclaredFields | null, trial: AskTrialDeclaredFields | null): AskSubject {
+    const fromPath = askSubjectFromPath(pathname);
+    const trialFields = trial
+        ? {trialContext: trial.trialContext, trialKey: trial.trialKey}
+        : {trialContext: null, trialKey: null};
+    if (!declaration) return {...fromPath, ...trialFields, name: trial?.name ?? fromPath.name};
+    const slug = declaration.slug ?? fromPath.slug;
+    return {
+        ...fromPath,
+        slug,
+        scope: slug && (declaration.scope ?? fromPath.scope) === "species" ? "species" : "general",
+        name: declaration.name ?? trial?.name ?? fromPath.name,
+        captureId: declaration.captureId ?? fromPath.captureId,
+        hasReaderPhoto: Boolean(declaration.photoUrl),
+        title: declaration.title ?? fromPath.title,
+        summary: declaration.summary ?? fromPath.summary,
+        ...trialFields
+    };
+}
+
 export type AskSuggestion = {
     /** Short label for the chip. */
     title: string;

@@ -195,6 +195,22 @@ function startOfDay(at: number): number {
  * (it cannot be opened without its species). The site-wide assistant's and
  * a Trial's threads are not animals' chats.
  */
+/**
+ * What of the thread store the Recent chats list depends on, as one string:
+ * each thread's key, its length and its last message's id, status and time.
+ * A reply typing out changes the store many times a second; none of that
+ * changes this, so the sidebar can keep its rows until a message lands.
+ */
+export function talkThreadsDigest(threads: AskThreads): string {
+    const parts: string[] = [];
+    for (const [key, messages] of Object.entries(threads)) {
+        if (!messages || messages.length === 0) continue;
+        const last = messages[messages.length - 1];
+        parts.push(`${key}\u0001${messages.length}\u0001${last.id}\u0001${last.status}\u0001${last.createdAt}`);
+    }
+    return parts.join("\u0002");
+}
+
 export function talkRecentChats(threads: AskThreads, metas: TalkThreadMetas, now: number = Date.now()): TalkRecentGroup[] {
     const chats: TalkRecentChat[] = [];
     for (const [key, messages] of Object.entries(threads)) {

@@ -13,8 +13,12 @@
  */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import {getLocalePath} from "@/lib/site";
+import {onIdle} from "@/lib/on-idle";
 import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
+import {askContextIntentHandlers, prefetchAskContext} from "@/components/ask-animaldex/ask-context-prefetch";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {talkSearch, type TalkAnimal, type TalkDisagreePair, type TalkWords} from "@/lib/ask-animaldex/talk";
 import {useTalkShell} from "@/app/[locale]/talk/talk-shell";
@@ -44,7 +48,8 @@ export default function TalkPicker({words, initial}: {
     /** The first rows, from the server; empty when the catalog could not be read then. */
     initial: {popular: TalkAnimal[]; disagree: TalkDisagreePair[]};
 }) {
-    const {openSidebar} = useTalkShell();
+    const {openSidebar, locale} = useTalkShell();
+    const router = useRouter();
     const [catalog, setCatalog] = useState<Catalog | null>(null);
     const [catalogState, setCatalogState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
     const [query, setQuery] = useState("");
@@ -74,6 +79,15 @@ export default function TalkPicker({words, initial}: {
         const coarse = window.matchMedia?.("(pointer: coarse)").matches;
         if (!coarse) searchRef.current?.focus();
     }, []);
+    // Nearly everyone here opens a chat next, and every chat shares one set
+    // of scripts: once the picker is idle, one chat page is fetched, which
+    // brings those scripts in, so the first tap opens with them already here
+    // (a touch comes too late to download them first).
+    const firstSlug = initial.popular[0]?.slug ?? null;
+    useEffect(() => {
+        if (!firstSlug) return;
+        return onIdle(() => router.prefetch(getLocalePath(locale, `/talk/${firstSlug}`)), 1200);
+    }, [firstSlug, router, locale]);
 
     const bySlug = useMemo(() => new Map((catalog?.animals ?? []).map((animal) => [animal.slug, animal])), [catalog]);
     const results = useMemo(() => talkSearch(catalog?.animals ?? [], query), [catalog, query]);
@@ -229,9 +243,13 @@ function AnimalGridSkeleton({count}: {count: number}) {
 }
 
 function AnimalCard({animal, href, compact = false}: {animal: TalkAnimal; href: string; compact?: boolean}) {
+    const {locale} = useTalkShell();
+    // Intent on a card starts its chat's context read, so the chat opens with it in flight (the link prefetches its page the same way).
+    const intent = useMemo(() => askContextIntentHandlers(() => prefetchAskContext(locale, animal.slug, animal.name)), [locale, animal.slug, animal.name]);
     return (
         <Link
             href={href}
+            {...intent}
             className={`flex min-w-0 flex-1 items-center gap-2.5 border border-white/10 bg-white/[0.035] transition-colors hover:border-primary-300/40 hover:bg-white/[0.06] sm:gap-3 ${compact ? "min-h-[52px] px-2.5 py-2" : "min-h-[60px] px-2.5 py-2.5 sm:px-3 sm:py-3"}`}
             style={{borderRadius: 14}}
             data-testid="talk-animal"

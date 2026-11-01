@@ -13,38 +13,47 @@
  * HTML (WEB-23): the header, the animal's contact card and what it can do,
  * laid out exactly as the conversation lays them out, so the largest paint
  * is in the first HTML and nothing moves when the conversation takes over.
+ *
+ * The conversation itself is given the subject straight from this page (the
+ * address and the server's animal, `askDeclaredSubject`), read before the
+ * first paint in the browser: switching chats puts the next conversation on
+ * screen in the same paint as the navigation, with no frame of the frame in
+ * between. The provider is told too, for everything else that listens.
  */
 
-import {useEffect, useMemo, useState} from "react";
-import {useRouter} from "next/navigation";
+import {useEffect, useLayoutEffect, useMemo, useState} from "react";
+import {usePathname, useRouter} from "next/navigation";
 import AskConversation, {type AskConversationPage, type AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
-import {AskSubjectBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {AskAnimalFace, AskAnimalHero, AskTypingBubble} from "@/components/ask-animaldex/ask-messenger";
 import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
 import {useCompanionCards} from "@/components/companions/use-companions";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {getLocalePath} from "@/lib/site";
+import {askDeclaredSubject} from "@/lib/ask-animaldex/subject";
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
 import {useTalkShell} from "@/app/[locale]/talk/talk-shell";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default function TalkChat({slug, name, power, labels, words, locale}: {
+/** Before the first paint in the browser; a plain effect on the server, where there is no paint. */
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+export default function TalkChat({slug, name, power, locale}: {
     slug: string;
     name: string;
     /** Its Power, as the catalog has it: the header's second line from the first paint. */
     power: string | null;
-    labels: AskDrawerLabels;
-    words: TalkWords;
     locale: string;
 }) {
     const router = useRouter();
-    const {openSidebar} = useTalkShell();
-    const {subject} = useAskAnimalDex();
-    // From the address once mounted (`useSearchParams` would render the page on the client only).
+    const pathname = usePathname() ?? `/talk/${slug}`;
+    // The chat's words and labels come once with the layout, not with every chat page.
+    const {openSidebar, words, labels} = useTalkShell();
+    // From the address, before the first paint (`useSearchParams` would render the page on the client only).
     const [query, setQuery] = useState<{card: string | null; ask: string | null} | null>(null);
-    useEffect(() => {
+    useIsomorphicLayoutEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const card = params.get("card")?.trim().toLowerCase() ?? "";
         const ask = params.get("ask")?.trim() ?? "";
@@ -52,14 +61,21 @@ export default function TalkChat({slug, name, power, labels, words, locale}: {
     }, []);
     // A card is the owner's when it is one of theirs: their chat, with its loop. Read only with a session.
     const [hasSession, setHasSession] = useState(false);
-    useEffect(() => setHasSession(requestHasSupabaseAuthCookie(document.cookie)), []);
+    useIsomorphicLayoutEffect(() => setHasSession(requestHasSupabaseAuthCookie(document.cookie)), []);
     const cards = useCompanionCards(Boolean(query?.card) && hasSession);
     const ownCard = query?.card ? cards.cards.find((card) => card.captureId === query.card) ?? null : null;
     const settled = query !== null && (!query.card || !hasSession || cards.didLoad);
     const companionSpeciesProfileId = ownCard?.speciesProfileId ?? null;
+    const avatarUrl = getSpeciesImageRoute(slug);
+    const captureId = query?.card ?? null;
 
-    // The conversation opens once the provider holds this subject, so its first read is the right one.
-    const declared = settled && subject.slug === slug && subject.name === name && (subject.captureId ?? null) === (query?.card ?? null);
+    const subject = useMemo(() => (settled
+        ? {
+            subject: askDeclaredSubject(pathname, {scope: "species", slug, name, title: name, captureId}, null),
+            avatarUrl,
+            companionSpeciesProfileId
+        }
+        : null), [settled, pathname, slug, name, captureId, avatarUrl, companionSpeciesProfileId]);
 
     const page = useMemo<AskConversationPage>(() => ({
         onMenu: openSidebar,
@@ -69,8 +85,9 @@ export default function TalkChat({slug, name, power, labels, words, locale}: {
             router.push(getLocalePath(locale, ask ? `/talk?ask=${encodeURIComponent(ask.slice(0, 900))}` : "/talk"));
         },
         initialQuestion: query?.ask ?? null,
-        appHref: "/#download"
-    }), [openSidebar, words, router, locale, query?.ask]);
+        appHref: "/#download",
+        subject
+    }), [openSidebar, words, router, locale, query?.ask, subject]);
 
     return (
         <>
@@ -80,12 +97,12 @@ export default function TalkChat({slug, name, power, labels, words, locale}: {
                     slug={slug}
                     name={name}
                     title={name}
-                    captureId={query?.card ?? null}
-                    avatarUrl={getSpeciesImageRoute(slug)}
+                    captureId={captureId}
+                    avatarUrl={avatarUrl}
                     companionSpeciesProfileId={companionSpeciesProfileId}
                 />
             ) : null}
-            {declared ? (
+            {subject ? (
                 <AskConversation labels={labels} presentation="page" page={page} />
             ) : (
                 <TalkChatShell

@@ -21,7 +21,7 @@
  * (owner, 2026-10-23). The site-wide assistant keeps the drawer's own layout.
  */
 
-import {useEffect, useRef, useState, type ReactNode} from "react";
+import {useEffect, useLayoutEffect, useRef, useState, type ReactNode} from "react";
 import Image from "next/image";
 import AssistantMarkdown, {AskInline, AskInlineSegmentView} from "@/components/ask-animaldex/assistant-markdown";
 import {parseAskInline} from "@/lib/ask-animaldex/markdown";
@@ -39,6 +39,9 @@ export const ASK_BUBBLE_INCOMING = "var(--ask-bubble-in)";
 const BIG = "19px";
 const SMALL = "6px";
 
+/** Before the first paint in the browser; a plain effect on the server, where there is no paint. */
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 /** A Messages bubble's corners: the speaker's side tightens where bubbles of one turn meet. */
 function bubbleRadius(params: {fromAnimal: boolean; groupStart: boolean; groupEnd: boolean}): string {
     const top = params.groupStart ? BIG : SMALL;
@@ -47,17 +50,41 @@ function bubbleRadius(params: {fromAnimal: boolean; groupStart: boolean; groupEn
     return params.fromAnimal ? `${top} ${BIG} ${BIG} ${bottom}` : `${BIG} ${top} ${bottom} ${BIG}`;
 }
 
-/** The animal's face: its icon art in a circle, or its spark while it has none. */
+/**
+ * The animal's face: its icon art in a circle, or its spark while it has none.
+ * The circle is there at its size from the first paint; the art fades in over
+ * it once it has loaded (no pop-in), and one already in the cache is simply
+ * there. Reduced motion: no fade.
+ */
 export function AskAnimalFace({url, size, className = ""}: {url: string | null; size: number; className?: string}) {
     const [failed, setFailed] = useState(false);
+    // Visible until proven otherwise: the first HTML carries the art, so it
+    // must not be hidden before hydration. Before the first paint here, an
+    // image still loading is hidden, then fades in when it lands.
+    const [shown, setShown] = useState(true);
+    const imageRef = useRef<HTMLImageElement | null>(null);
     useEffect(() => setFailed(false), [url]);
+    useIsomorphicLayoutEffect(() => {
+        const node = imageRef.current;
+        setShown(!node || (node.complete && node.naturalWidth > 0));
+    }, [url]);
     return (
         <span
             className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-white/[0.06] ${className}`}
             style={{width: size, height: size}}
         >
             {url && !failed ? (
-                <Image src={url} unoptimized alt="" fill sizes={`${size}px`} className="object-contain p-[8%]" onError={() => setFailed(true)} />
+                <Image
+                    ref={imageRef}
+                    src={url}
+                    unoptimized
+                    alt=""
+                    fill
+                    sizes={`${size}px`}
+                    className={`object-contain p-[8%] transition-opacity duration-200 ease-out motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
+                    onLoad={() => setShown(true)}
+                    onError={() => setFailed(true)}
+                />
             ) : (
                 <svg viewBox="0 0 20 20" className="h-1/2 w-1/2 text-primary-200" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M10 3.5 11.4 8 16 9.4 11.4 10.8 10 15.4 8.6 10.8 4 9.4 8.6 8Z" />

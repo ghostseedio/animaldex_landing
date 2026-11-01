@@ -70,13 +70,14 @@
  * while the server's switch is off.
  */
 
-import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
+import {memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AssistantMarkdown from "@/components/ask-animaldex/assistant-markdown";
 import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {askContextRequestBody, fetchAskContext} from "@/components/ask-animaldex/ask-context-prefetch";
 import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex/use-reply-pacer";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
@@ -421,6 +422,13 @@ export type AskConversationPage = {
     initialQuestion: string | null;
     /** Where the app is ("Get the app"). */
     appHref: string;
+    /**
+     * Who the page is about, from the page itself (the address and the
+     * server's animal), so the conversation opens on the right thread in the
+     * same paint as the navigation, before the provider's declaration lands.
+     * Absent, the provider's subject is used, as in the drawer.
+     */
+    subject?: {subject: AskSubject; avatarUrl: string | null; companionSpeciesProfileId: string | null} | null;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -506,10 +514,10 @@ export default function AskConversation({
     const onPage = presentation === "page" && page !== null;
     const router = useRouter();
     const {
-        subject,
+        subject: providerSubject,
         photoUrl,
-        avatarUrl,
-        companionSpeciesProfileId,
+        avatarUrl: providerAvatarUrl,
+        companionSpeciesProfileId: providerCompanionSpeciesProfileId,
         referralId,
         locale,
         close,
@@ -518,6 +526,12 @@ export default function AskConversation({
         takePendingAction,
         actionRequest
     } = useAskAnimalDex();
+    // The Talk page knows its subject from its own address and server data: it
+    // opens on the right thread in the same paint as the navigation. The drawer
+    // takes the provider's, as any page declared it.
+    const subject = page?.subject?.subject ?? providerSubject;
+    const avatarUrl = page?.subject ? page.subject.avatarUrl : providerAvatarUrl;
+    const companionSpeciesProfileId = page?.subject ? page.subject.companionSpeciesProfileId : providerCompanionSpeciesProfileId;
     const currentPath = usePathname();
     const signInHref = signInHrefFor(currentPath);
     const [context, setContext] = useState<AskContextPayload | null>(null);
@@ -772,25 +786,8 @@ export default function AskConversation({
         let cancelled = false;
         setContext(null);
         setShowingNameSheet(false);
-        void fetch("/api/ask/context", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                locale,
-                subject: {
-                    scope: subject.scope,
-                    slug: subject.slug,
-                    name: subject.name,
-                    captureId: subject.captureId,
-                    hasReaderPhoto: subject.hasReaderPhoto,
-                    title: subject.title,
-                    summary: subject.summary,
-                    path: subject.path,
-                    trialContext: subject.trialContext,
-                    trialKey: subject.trialKey
-                }
-            })
-        })
+        // The read a hover or touch on the way here may already have started (`ask-context-prefetch`).
+        void fetchAskContext(askContextRequestBody(locale, subject))
             .then((response) => (response.ok ? response.json() : null))
             .then((payload: AskContextPayload | null) => {
                 if (!cancelled && payload) setContext(payload);
@@ -866,6 +863,11 @@ export default function AskConversation({
     // from another animal's referral, it speaks first about that instead,
     // history or not (once per referral; `greet` keeps count).
     const canGreet = Boolean(context?.available && context.subject.scope === "species" && (context.hints.animalName ?? context.subject.name));
+    // A public species chat says hello without waiting for the context's round
+    // trip: the page already names the animal and the server grounds the hello
+    // itself. The owner's own chat waits, since its referral and the messages
+    // the animal wrote are read with the context; so does a Trial's thread.
+    const greetsBeforeContext = context === null && subject.scope === "species" && Boolean(subject.name) && !companionSpeciesProfileId && !subject.trialContext;
     const greetsForReferral = ownerChat && Boolean(referralId);
 
     /**
@@ -943,7 +945,7 @@ export default function AskConversation({
     }, [animalSpeciesId, animalMuted]);
 
     useEffect(() => {
-        if (!canGreet || isSending) return;
+        if (!(canGreet || greetsBeforeContext) || isSending) return;
         if (animalSpeciesId && !animalMessagesSettled) return;
         if (greetsForReferral) {
             void greet({referralId});
@@ -951,7 +953,7 @@ export default function AskConversation({
         }
         if (messages.length > 0 || greetingState !== "idle") return;
         void greet();
-    }, [canGreet, greetsForReferral, referralId, messages.length, greetingState, isSending, greet, animalSpeciesId, animalMessagesSettled]);
+    }, [canGreet, greetsBeforeContext, greetsForReferral, referralId, messages.length, greetingState, isSending, greet, animalSpeciesId, animalMessagesSettled]);
 
     // The loop as it stands when the chat opens; replies keep it current.
     useEffect(() => {
@@ -2133,6 +2135,28 @@ export default function AskConversation({
     }) : null;
     // Steps the animal saw done in this thread: their sections say so.
     const doneStepIds = useMemo(() => askDoneStepIds(messages), [messages]);
+    // The rows' handlers, one stable object (see `AskRowActions`): each reads
+    // this render's closure through the ref, so a memoised row never calls a
+    // stale one and never renders again just because a closure was remade.
+    const rowClosuresRef = useRef({copyMessage, shareMessage, regenerate, retry, openReport, resolveFollowUp, submit, toggleVoice: speech.toggle, askAnother: (message: AskMessage) => page?.onAskAnother(askedBefore(message.id) ?? "")});
+    rowClosuresRef.current = {copyMessage, shareMessage, regenerate, retry, openReport, resolveFollowUp, submit, toggleVoice: speech.toggle, askAnother: (message: AskMessage) => page?.onAskAnother(askedBefore(message.id) ?? "")};
+    const rowActions = useMemo<AskRowActions>(() => ({
+        onCopy: (message) => rowClosuresRef.current.copyMessage(message),
+        onShare: (message) => rowClosuresRef.current.shareMessage(message),
+        onRegenerate: (message) => rowClosuresRef.current.regenerate(message.id),
+        onRetry: (message) => rowClosuresRef.current.retry(message.id),
+        onFollowUp: (prompt) => rowClosuresRef.current.submit(prompt, "followup"),
+        onReport: (message) => rowClosuresRef.current.openReport(message),
+        onResolveFollowUp: (message, resolution) => rowClosuresRef.current.resolveFollowUp(message, resolution),
+        onToggleVoice: (message) => rowClosuresRef.current.toggleVoice(message.id, message.text),
+        onAskAnother: (message) => rowClosuresRef.current.askAnother(message)
+    }), []);
+    // Under the first real-problem reply on the public Talk chat, once: why to sign up (one object, so the row stays memoised).
+    const signUpOffer = useMemo(() => (page ? {text: page.words.signUpForMore, href: page.appHref} : null), [page]);
+    const thinkingPhases = useMemo(() => askThinkingPhases(
+        lastQuestion(messages),
+        {...hints, hasWildProfile: context?.hasWildProfile ?? false, aboutTrial, speaksAsAnimal}
+    ), [messages, hints, context?.hasWildProfile, aboutTrial, speaksAsAnimal]);
     /**
      * Share on a step done or a Power earned: this animal's page, and the
      * Power when it was earned, never their private words or their step.
@@ -2535,38 +2559,26 @@ export default function AskConversation({
                                             paced={pacer.messageId === message.id && pacer.revealing ? pacer.visibleText : null}
                                             onSkip={pacer.skipToEnd}
                                             copied={copiedId === message.id}
-                                            onCopy={() => copyMessage(message)}
-                                            onShare={() => shareMessage(message)}
-                                            onRegenerate={() => regenerate(message.id)}
-                                            onRetry={() => retry(message.id)}
+                                            actions={rowActions}
                                             companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
                                             special={replySpecial(message)}
                                             warmup={warmupProps(message)}
                                             signInHref={signInHref}
-                                            onReport={context?.signedIn ? () => openReport(message) : undefined}
-                                            onResolveFollowUp={ownerChat && message.followUp && !message.followUpResolution
-                                                ? (resolution) => resolveFollowUp(message, resolution)
-                                                : undefined}
-                                            voice={context?.signedIn ? {
-                                                phase: speech.phase,
-                                                allowance: speech.allowance,
-                                                notice: speech.notice?.messageId === message.id ? speech.notice : null,
-                                                onToggle: () => speech.toggle(message.id, message.text)
-                                            } : null}
+                                            reportable={context?.signedIn === true}
+                                            resolvesFollowUp={Boolean(ownerChat && message.followUp && !message.followUpResolution)}
+                                            // Only the reply being played sees the phase change; the others keep the idle one.
+                                            voicePhase={context?.signedIn ? (speech.phase.kind !== "idle" && speech.phase.messageId === message.id ? speech.phase : IDLE_PHASE) : null}
+                                            voiceAllowance={context?.signedIn ? speech.allowance : null}
+                                            voiceNotice={speech.notice?.messageId === message.id ? speech.notice : null}
                                             spokenWord={speech.cursor?.messageId === message.id ? speech.cursor.word : null}
-                                            askAnother={page && message.role === "assistant" && talkAskAnotherOffered({
+                                            askAnotherLabel={page && message.role === "assistant" && talkAskAnotherOffered({
                                                 publicChat: publicTalk,
                                                 quotaReached: quota.reached,
                                                 finished: message.status === "complete",
                                                 realProblem: askReplyIsRealProblem(message.text)
-                                            }) ? {
-                                                label: page.words.askAnother,
-                                                onAsk: () => page.onAskAnother(askedBefore(message.id) ?? ""),
-                                                // Steps and debates need an animal of their own, captured in the app (W13, JRN-6).
-                                                signUp: message.id === firstRealProblemId
-                                                    ? {text: page.words.signUpForMore, href: page.appHref}
-                                                    : null
-                                            } : null}
+                                            }) ? page.words.askAnother : null}
+                                            // Steps and debates need an animal of their own, captured in the app (W13, JRN-6).
+                                            askAnotherSignUp={message.id === firstRealProblemId ? signUpOffer : null}
                                         />
                                         {debateBlocks(message.id)}
                                     </div>
@@ -2609,15 +2621,11 @@ export default function AskConversation({
                                     photoAlt={animalName ?? ""}
                                     avatarUrl={speaksAsAnimal ? faceUrl : null}
                                     thinkingLabel={thinkingLabel}
-                                    thinkingPhases={[thinkingLabel]}
+                                    thinkingPhases={message.status === "thinking" ? [thinkingLabel] : NO_PHASES}
                                     paced={pacer.messageId === message.id && pacer.revealing ? pacer.visibleText : null}
                                     onSkip={pacer.skipToEnd}
                                     copied={copiedId === message.id}
-                                    onCopy={() => copyMessage(message)}
-                                    onShare={() => shareMessage(message)}
-                                    onRegenerate={() => regenerate(message.id)}
-                                    onRetry={() => retry(message.id)}
-                                    onFollowUp={(prompt) => submit(prompt, "followup")}
+                                    actions={rowActions}
                                     companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
                                     signInHref={signInHref}
                                 />
@@ -2673,19 +2681,13 @@ export default function AskConversation({
                                     photoAlt={animalName ?? ""}
                                     avatarUrl={speaksAsAnimal ? faceUrl : null}
                                     thinkingLabel={thinkingLabel}
-                                    thinkingPhases={askThinkingPhases(
-                                        lastQuestion(messages),
-                                        {...hints, hasWildProfile: context?.hasWildProfile ?? false, aboutTrial, speaksAsAnimal}
-                                    )}
+                                    // Only the reply still finding its first word shows the phases: the rows stay memoised.
+                                    thinkingPhases={message.status === "thinking" ? thinkingPhases : NO_PHASES}
                                     paced={pacer.messageId === message.id && pacer.revealing ? pacer.visibleText : null}
                                     onSkip={pacer.skipToEnd}
                                     copied={copiedId === message.id}
                                     questionRef={message.id === trailingQuestionId ? trailingQuestionRef : undefined}
-                                    onCopy={() => copyMessage(message)}
-                                    onShare={() => shareMessage(message)}
-                                    onRegenerate={() => regenerate(message.id)}
-                                    onRetry={() => retry(message.id)}
-                                    onFollowUp={(prompt) => submit(prompt, "followup")}
+                                    actions={rowActions}
                                     companionEvent={companionSpeciesProfileId ? message.companionEvent : undefined}
                                     signInHref={signInHref}
                                 />
@@ -2917,9 +2919,14 @@ export default function AskConversation({
                                 if (fullScreenSlug && !resolvedSubject.captureId && fullScreenSlug !== resolvedSubject.slug) {
                                     askSessionStore.move(threadKey, askThreadKey({scope: "species", slug: fullScreenSlug}));
                                 }
-                                close();
+                                // The drawer stays up until the Talk page is on screen (the surface closes it
+                                // there): the thread never leaves the screen on the way to full screen.
                                 router.push(getLocalePath(locale, fullScreenHref));
                             }}
+                            // Intent on the button fetches the Talk page, so the switch is ready when tapped.
+                            onPointerEnter={() => router.prefetch(getLocalePath(locale, fullScreenHref))}
+                            onPointerDown={() => router.prefetch(getLocalePath(locale, fullScreenHref))}
+                            onFocus={() => router.prefetch(getLocalePath(locale, fullScreenHref))}
                             aria-label={labels.fullScreen}
                             title={labels.fullScreen}
                             className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
@@ -2991,8 +2998,10 @@ export default function AskConversation({
                             <ArrowDownIcon />
                         </button>
                     ) : null}
-                    {messenger && context && !ownerChat && !aboutTrial && !hasConversation && !quota.reached && !showingMemory && !showingSoundCredits && dictation.phase === "idle" ? (
-                        // A visitor's first message: what to ask it about (newcomer UX vet, P0-2).
+                    {messenger && context && !ownerChat && !aboutTrial && !hasConversation && !awaitingGreeting && greetingState !== "loading" && !quota.reached && !showingMemory && !showingSoundCredits && dictation.phase === "idle" ? (
+                        // A visitor's first message: what to ask it about (newcomer UX vet, P0-2). Only
+                        // once the hello could not be had: while it is coming, the hello says it, and the
+                        // line would flash in and out under the message bar (a layout shift on mobile).
                         <p className="pb-2 text-[12px] font-semibold leading-4 text-ink-300" data-testid="visitor-hint">
                             {labels.companions.journey.chat.visitorHint}
                         </p>
@@ -3360,10 +3369,34 @@ function limitFailure(notice: AskLimitNotice, labels: AskDrawerLabels, signInHre
  * animal typing, its reply as bubbles (with its menu beside the last), or the
  * reply it could not give, with a way to ask again.
  */
-function AnimalMessageRow({
-    voice = null,
+/**
+ * What a thread row can do, as one object whose identity never changes: the
+ * rows are memoised (`AnimalMessageRow`, `MessageBlock`), so while a reply
+ * types out only its own row renders again, not the forty above it. Each
+ * handler reads the conversation's latest closure through a ref at call time.
+ */
+type AskRowActions = {
+    onCopy: (message: AskMessage) => void;
+    onShare: (message: AskMessage) => void;
+    onRegenerate: (message: AskMessage) => void;
+    onRetry: (message: AskMessage) => void;
+    onFollowUp: (prompt: string) => void;
+    onReport: (message: AskMessage) => void;
+    onResolveFollowUp: (message: AskMessage, resolution: AskFollowUpResolution) => Promise<boolean>;
+    onToggleVoice: (message: AskMessage) => void;
+    onAskAnother: (message: AskMessage) => void;
+};
+
+const IDLE_PHASE: AskSpeechPhase = {kind: "idle"};
+const NO_PHASES: string[] = [];
+
+const AnimalMessageRow = memo(function AnimalMessageRow({
+    voicePhase = null,
+    voiceAllowance = null,
+    voiceNotice = null,
     spokenWord = null,
-    askAnother = null,
+    askAnotherLabel = null,
+    askAnotherSignUp = null,
     message,
     labels,
     isLast,
@@ -3376,16 +3409,13 @@ function AnimalMessageRow({
     paced,
     onSkip,
     copied,
-    onCopy,
-    onShare,
-    onRegenerate,
-    onRetry,
+    actions,
     companionEvent,
     special = null,
     warmup = null,
     signInHref,
-    onReport,
-    onResolveFollowUp
+    reportable = false,
+    resolvesFollowUp = false
 }: {
     message: AskMessage;
     labels: AskDrawerLabels;
@@ -3398,9 +3428,9 @@ function AnimalMessageRow({
     /** A Warmup question's part in the run (its check, its problem), and its taps. */
     warmup?: {followedByNext: boolean; checking: boolean; problem: string | null; onChoose: (choice: number) => void; onRetry: () => void} | null;
     /** Report this reply; signed-in readers only. */
-    onReport?: () => void;
+    reportable?: boolean;
     /** The check-in this reply raised, while it is unanswered. */
-    onResolveFollowUp?: (resolution: AskFollowUpResolution) => Promise<boolean>;
+    resolvesFollowUp?: boolean;
     faceUrl: string | null;
     speakerName: string;
     photoUrl: string | null;
@@ -3409,24 +3439,31 @@ function AnimalMessageRow({
     paced: string | null;
     onSkip: () => void;
     copied: boolean;
-    onCopy: () => void;
-    onShare: () => void;
-    onRegenerate: () => void;
-    onRetry: () => void;
+    actions: AskRowActions;
     companionEvent?: AskCompanionEvent;
     signInHref: string;
-    /** The animal's voice, for a signed-in reader: this reply played, stopped, or why it could not be. */
-    voice?: {
-        phase: AskSpeechPhase;
-        allowance: AskSpeechAllowance | null;
-        notice: AskSpeechNotice | null;
-        onToggle: () => void;
-    } | null;
+    /**
+     * The animal's voice, for a signed-in reader: null when it has none here;
+     * else this reply's phase (idle unless it is the one playing), the
+     * allowance, and why it could not play, when that was this reply.
+     */
+    voicePhase?: AskSpeechPhase | null;
+    voiceAllowance?: AskSpeechAllowance | null;
+    voiceNotice?: AskSpeechNotice | null;
     /** The word its voice is saying, among the reply's words on screen; null when it is not speaking. */
     spokenWord?: number | null;
     /** The public Talk chat, under a reply to a real problem: a second side, and once, why to sign up (SPEC section 4.4). */
-    askAnother?: {label: string; onAsk: () => void; signUp: {text: string; href: string} | null} | null;
+    askAnotherLabel?: string | null;
+    askAnotherSignUp?: {text: string; href: string} | null;
 }) {
+    const onCopy = () => actions.onCopy(message);
+    const onShare = () => actions.onShare(message);
+    const onRegenerate = () => actions.onRegenerate(message);
+    const onRetry = () => actions.onRetry(message);
+    const onReport = reportable ? () => actions.onReport(message) : undefined;
+    const onResolveFollowUp = resolvesFollowUp ? (resolution: AskFollowUpResolution) => actions.onResolveFollowUp(message, resolution) : undefined;
+    const voice = voicePhase ? {phase: voicePhase, allowance: voiceAllowance, notice: voiceNotice, onToggle: () => actions.onToggleVoice(message)} : null;
+    const askAnother = askAnotherLabel ? {label: askAnotherLabel, onAsk: () => actions.onAskAnother(message), signUp: askAnotherSignUp} : null;
     if (message.role === "user") {
         return (
             <AskUserBubble
@@ -3610,7 +3647,7 @@ function AnimalMessageRow({
             </div>
         </div>
     );
-}
+});
 
 /**
  * A check-in the animal raised, under its reply: what it is about, and Done,
@@ -3716,7 +3753,7 @@ function AskProIntroBand({
     );
 }
 
-function MessageBlock({
+const MessageBlock = memo(function MessageBlock({
     message,
     labels,
     isLast,
@@ -3730,11 +3767,7 @@ function MessageBlock({
     onSkip,
     copied,
     questionRef,
-    onCopy,
-    onShare,
-    onRegenerate,
-    onRetry,
-    onFollowUp,
+    actions,
     companionEvent,
     signInHref
 }: {
@@ -3757,16 +3790,17 @@ function MessageBlock({
     onSkip?: () => void;
     copied: boolean;
     questionRef?: React.RefObject<HTMLDivElement>;
-    onCopy: () => void;
-    onShare: () => void;
-    onRegenerate: () => void;
-    onRetry: () => void;
-    onFollowUp: (prompt: string) => void;
+    actions: AskRowActions;
     /** What the animal did in this reply in the companion loop; the owner's own chat only. */
     companionEvent?: AskCompanionEvent;
     /** Where "Sign in" goes from a reply refused at the signed-out limit. */
     signInHref: string;
 }) {
+    const onCopy = () => actions.onCopy(message);
+    const onShare = () => actions.onShare(message);
+    const onRegenerate = () => actions.onRegenerate(message);
+    const onRetry = () => actions.onRetry(message);
+    const onFollowUp = actions.onFollowUp;
     if (message.role === "user") {
         return (
             <div ref={questionRef} className="flex justify-end pl-8" aria-label={`${labels.youAsked} ${message.text}`}>
@@ -3884,7 +3918,7 @@ function MessageBlock({
         </div>
         </div>
     );
-}
+});
 
 /**
  * Under the reply where the animal saw a step of theirs done ("Done together
