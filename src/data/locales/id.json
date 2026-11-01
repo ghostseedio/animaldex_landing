@@ -903,7 +903,7 @@
     "emptyReservesDescription": "Kami belum memiliki data cagar atau habitat terlindungi terkurasi untuk {location}. Gunakan panduan lokasi dan hewan di bawah sementara halaman ini tetap tidak diindeks mesin pencari.",
     "ctaTitle": "Bawa AnimalDex bersamamu",
     "ctaDescription": "Pindai hewan, kumpulkan spesies, dan ubah kebun binatang, cagar, taman, serta perjalanan alam menjadi petualangan AnimalDex di dunia nyata.",
-    "getAnimalDex": "Dapatkan AnimalDex",
+    "getAnimalDex": "Dapatkan aplikasinya",
     "types": {
       "zoo": "Kebun binatang",
       "aquarium": "Akuarium",
@@ -2037,7 +2037,7 @@
     "collectionDescription": "Ini adalah kartu AnimalDex yang terhubung ke akunmu, diurutkan berdasarkan skor.",
     "emptyTitle": "Belum ada hewan",
     "emptyDescription": "Tangkap hewan di aplikasi AnimalDex dan mereka akan muncul di sini saat kamu masuk di web.",
-    "downloadApp": "Dapatkan AnimalDex",
+    "downloadApp": "Dapatkan aplikasinya",
     "scoreLabel": "Skor {score}",
     "dashboard": {
       "webCompanion": "Pendamping web",

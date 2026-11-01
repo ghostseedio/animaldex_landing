@@ -222,7 +222,7 @@ export default function AnimalWisdomPage({params}: AnimalWisdomPageProps) {
                             Explore Wisdom
                         </Link>
                         <Link href="/#download" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl border border-line-200 px-7 font-bold text-white hover:border-primary-400 hover:text-primary-100 transition-colors">
-                            Get AnimalDex
+                            Get the app
                         </Link>
                     </div>
                 </div>

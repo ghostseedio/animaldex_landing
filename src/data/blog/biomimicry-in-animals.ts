@@ -268,7 +268,7 @@ export const biomimicryInAnimalsPost: BlogPost = {
                 {text: "Animal Powers", slug: "animal-powers", href: "/animal-powers"},
                 {text: "Animal Qualities", slug: "qualities", href: "/qualities"},
                 {text: "What If Every Animal Is a Lesson?", slug: "what-if-every-animal-is-a-lesson", href: "/blog/what-if-every-animal-is-a-lesson"},
-                {text: "Get AnimalDex", slug: "download", href: "/#download"}
+                {text: "Get the app", slug: "download", href: "/#download"}
             ]
         },
         {

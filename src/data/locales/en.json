@@ -897,7 +897,7 @@
     "emptyReservesDescription": "We do not have curated reserve or protected-habitat data for {location} yet. Use the location and animal guides below while this page remains out of search indexes.",
     "ctaTitle": "Take AnimalDex with you",
     "ctaDescription": "Scan animals, collect species, and turn zoos, reserves, parks, and nature walks into a real-world AnimalDex adventure.",
-    "getAnimalDex": "Get AnimalDex",
+    "getAnimalDex": "Get the app",
     "types": {
       "zoo": "Zoo",
       "aquarium": "Aquarium",
@@ -1102,7 +1102,7 @@
     "askRemaining": "{remaining} of {limit} messages left today",
     "askQuota": "Anonymous: {anonymous}/day. Signed-in: {signedIn}/day. Pro: {pro}/day.",
     "askFollowups": "Keep exploring",
-    "askNoscript": "This field guide is complete without the conversation. Speaking to the animal needs JavaScript.",
+    "askNoscript": "This field guide is complete without the conversation. Talking with the animal needs JavaScript.",
     "askLayerBiology": "Biology",
     "askLayerBiologyCaption": "Established animal facts and behavior",
     "askLayerWhy": "Why",
@@ -2048,7 +2048,7 @@
     "collectionDescription": "These are the AnimalDex cards tied to your account, ranked by score.",
     "emptyTitle": "No animals yet",
     "emptyDescription": "Capture animals in the AnimalDex app and they will appear here when you sign in on the web.",
-    "downloadApp": "Get AnimalDex",
+    "downloadApp": "Get the app",
     "scoreLabel": "Score {score}",
     "dashboard": {
       "webCompanion": "Web companion",

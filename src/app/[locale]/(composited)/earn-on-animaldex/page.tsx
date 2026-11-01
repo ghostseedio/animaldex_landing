@@ -222,7 +222,7 @@ export default async function EarnOnAnimalDexPage({params}: {params: {locale: st
                 </p>
                 <div className="flex flex-wrap gap-3">
                     <EarnPrimaryCta href={earnPaths.download} event="earn_page_cta_clicked" label="download">
-                        Get AnimalDex
+                        Get the app
                     </EarnPrimaryCta>
                     <EarnGhostCta href={supportArticleHrefs.howEarn} event="earn_page_cta_clicked" label="support_how_earn">
                         Support: How earning works
