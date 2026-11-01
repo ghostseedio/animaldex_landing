@@ -72,7 +72,17 @@ import {NextResponse} from "next/server";
  * once that it passes visits on, and passes on the gist.
  *
  * Every answered turn of a signed-in reader notes that they talked to this
- * animal today (`animal_chat_species_days`), for how many people have.
+ * animal today (`animal_chat_species_days`), for how many people have, and
+ * (docs/chat-sync/SPEC.md, section 2; AnimalDex df8d2dc0) is kept in their
+ * chat history, so their other devices show the thread: the message and the
+ * reply as shown, through `record_animal_chat_messages_v1` with
+ * `p_surface: "web"` (a hello is its reply alone). Never a call or a Trial
+ * thread, never a signed-out reader, never a failed turn; before the
+ * migration nothing is written.
+ *
+ * A species with no card, from someone who holds no live card of it (or has
+ * no account), is a public chat (SPEC section 4): the animal meets them and
+ * sets and offers nothing (`ANIMAL_PUBLIC_CHAT_RULES`), as in the apps.
  */
 
 import {buildAskPacket} from "@/data/ask-grounding";
@@ -167,8 +177,10 @@ import {
 import {
     loadAskDueFollowUp,
     loadAskOwnerContext,
+    holdsLiveCard,
     loadAskOwnStories,
     loadAskPendingVisitorNotes,
+    recordAskChatTranscript,
     markAskFollowUpRaised,
     markAskVisitorNotesDelivered,
     recordAskCompanionDay,
@@ -204,6 +216,8 @@ const STREAM_HEADERS = {
 } as const;
 
 export async function POST(request: Request) {
+    // When the message arrived: it is kept in their history at this time.
+    const askedAt = new Date();
     let body: Record<string, unknown>;
     try {
         body = await request.json() as Record<string, unknown>;
@@ -352,7 +366,7 @@ export async function POST(request: Request) {
     const debateStateAsked = (debateCards || callDebates) && personalise && !isGreeting &&
         settings.suggestSteps !== false && !ASK_CRISIS_PATTERN.test(question ?? "") &&
         (callDebates || !conversationOffersDebate(sentHistory));
-    const [owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories] = await Promise.all([
+    const [owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories, holdsSpecies] = await Promise.all([
         ownerSpeciesId && viewer.userId
             ? loadOwnerCompanion({
                 userId: viewer.userId,
@@ -374,8 +388,16 @@ export async function POST(request: Request) {
         ownerSpeciesId && viewer.userId && askVisitorNotesEnabled() && ownerTalksFirst
             ? loadAskPendingVisitorNotes(viewer.userId, ownerSpeciesId)
             : Promise.resolve([]),
-        speciesId && animalOwnerId ? loadAskOwnStories(animalOwnerId, speciesId) : Promise.resolve([])
+        speciesId && animalOwnerId ? loadAskOwnStories(animalOwnerId, speciesId) : Promise.resolve([]),
+        // A species with no card: whether they hold a live card of it (a public chat when not).
+        !speaksAsAnimal || subject.captureId || aboutTrial
+            ? Promise.resolve(null as boolean | null)
+            : !viewer.userId
+            ? Promise.resolve(false as boolean | null)
+            : speciesId ? holdsLiveCard(viewer.userId, speciesId) : Promise.resolve(null as boolean | null)
     ]);
+    // A public species chat (SPEC section 4): nobody's card, and nothing of theirs to set or offer.
+    const publicChat = speaksAsAnimal && !subject.captureId && !aboutTrial && !isVisit && holdsSpecies === false;
     const loop = owner?.loop ?? null;
     // 3.2 Debates: whether the offer may be made in this reply, and on a call whether a yes may be handed over.
     const debate = owner?.debate ?? NO_DEBATE;
@@ -565,6 +587,28 @@ export async function POST(request: Request) {
         if (dueFollowUp) work.push(markAskFollowUpRaised(userId, dueFollowUp.id));
         void Promise.allSettled(work);
     };
+    /**
+     * The turn in their history (docs/chat-sync/SPEC.md, section 2): the
+     * message and `shown`, the reply as the reader received it.
+     */
+    const requestId = isGreeting ? null : resolveAskRequestId(body.requestId) ?? globalThis.crypto.randomUUID();
+    const recordTranscript = (shown: string) => {
+        if (!viewer.userId || !speaksAsAnimal) return;
+        void recordAskChatTranscript({
+            userId: viewer.userId,
+            captureId: subject.captureId,
+            speciesProfileId: speciesId,
+            call: isCall,
+            aboutTrial,
+            greeting: isGreeting,
+            requestId,
+            question: question ?? "",
+            answer: shown,
+            askedAt,
+            stepReport: stepReportId && loop?.stepReport ? {stepId: stepReportId, media: loop.stepReport.media ?? null} : null,
+            followUpId: dueFollowUp?.id ?? null
+        });
+    };
     /** A story of its own life it told in this reply: kept with the owner's animal of this species. */
     const rememberStory = (story: string | null) => {
         if (!story || !speciesId || !animalOwnerId || !packet.species) return;
@@ -603,6 +647,7 @@ export async function POST(request: Request) {
         animalName: packet.species?.name ?? null,
         mode,
         speakingTo: isVisit ? "visitor" as const : "owner" as const,
+        publicChat,
         visitorRelay: relayOn,
         nature,
         nickname: card?.nickname ?? null,
@@ -686,6 +731,7 @@ export async function POST(request: Request) {
             const whole = await oneShot();
             if (whole?.answer.trim()) {
                 afterAnswer(whole.answer);
+                recordTranscript(shownWhole(whole.answer));
                 rememberStory(cleanAskOwnStory(whole.ownStory));
                 return askJson({answer: shownWhole(whole.answer), follow_up_prompts: whole.followUps, ...closing});
             }
@@ -827,6 +873,7 @@ export async function POST(request: Request) {
                 send({done: true, follow_up_prompts: split.followUps, ...closing, ...companionFields});
                 if (split.answer.trim()) {
                     afterAnswer(split.answer);
+                    recordTranscript(split.answer);
                     rememberStory(told.story);
                     // The animal it was sent to has now taken the problem up.
                     if (isGreeting && referral && owner && viewer.userId) {
@@ -893,6 +940,7 @@ export async function POST(request: Request) {
                     await speaker?.finish();
                     send({done: true, follow_up_prompts: whole.followUps, ...closing});
                     afterAnswer(whole.answer);
+                    recordTranscript(shownWhole(whole.answer));
                     rememberStory(cleanAskOwnStory(whole.ownStory));
                     controller.close();
                     return;

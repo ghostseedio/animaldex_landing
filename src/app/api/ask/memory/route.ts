@@ -14,7 +14,10 @@ import {NextResponse} from "next/server";
  * GET also returns `settings` — personalisation, step suggestions, check-ins,
  * whether visitors may hear the journey note (`animal_chat_settings`) and
  * whether animals may message them (`animal_messages_settings`) — and POST
- * {action: "preferences", ...} changes any of them.
+ * {action: "preferences", ...} changes any of them. With chat history on the
+ * account (docs/chat-sync/SPEC.md, section 3), "Keep my chats on all my
+ * devices" is one of them (`history_sync`, `set_animal_chat_history_sync`);
+ * before that migration the setting is null, so it is not shown.
  */
 
 import {ASK_RESPONSE_HEADERS, resolveAskViewer} from "@/lib/ask-animaldex/request";
@@ -36,6 +39,8 @@ type AskMemorySettings = {
     followUpsEnabled: boolean | null;
     shareJourney: boolean | null;
     animalMessagesEnabled: boolean | null;
+    /** "Keep my chats on all my devices"; null before the chat history migration. */
+    historySync: boolean | null;
 };
 
 /** Each switch the database answered; null for one it could not (it is then not shown). */
@@ -52,7 +57,8 @@ async function readSettings(client: NonNullable<Awaited<ReturnType<typeof resolv
         suggestSteps: flag(row?.suggest_steps),
         followUpsEnabled: flag(row?.follow_ups_enabled),
         shareJourney: flag(row?.share_journey),
-        animalMessagesEnabled: flag(messagesRow?.enabled)
+        animalMessagesEnabled: flag(messagesRow?.enabled),
+        historySync: flag(row?.history_sync)
     };
 }
 
@@ -85,6 +91,7 @@ export async function POST(request: Request) {
         const followUps = flag(body.followUpsEnabled);
         const shareJourney = flag(body.shareJourney);
         const animalMessages = flag(body.animalMessagesEnabled);
+        const historySync = flag(body.historySync);
         const writes: Array<PromiseLike<{error: {message: string} | null}>> = [];
         if (personalisation !== null || suggestSteps !== null || followUps !== null) {
             writes.push(viewer.client.rpc("set_animal_chat_preferences", {
@@ -95,6 +102,7 @@ export async function POST(request: Request) {
         }
         if (shareJourney !== null) writes.push(viewer.client.rpc("set_animal_chat_share_journey", {p_enabled: shareJourney}));
         if (animalMessages !== null) writes.push(viewer.client.rpc("set_animal_messages_enabled", {p_enabled: animalMessages}));
+        if (historySync !== null) writes.push(viewer.client.rpc("set_animal_chat_history_sync", {p_on: historySync}));
         const results = await Promise.all(writes);
         const failure = results.find((result) => result.error);
         if (failure?.error) return failed(failure.error.message);

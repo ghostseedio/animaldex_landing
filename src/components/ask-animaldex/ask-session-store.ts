@@ -86,6 +86,35 @@ export const askSessionStore = {
         schedulePersist();
     },
 
+    /**
+     * Files a thread under another key, when that key holds nothing yet: the
+     * drawer's species page and the Talk page can name one animal by two
+     * slugs (`lion`, `african-lion`), and Full screen keeps the conversation.
+     */
+    move(from: string, to: string) {
+        if (from === to) return;
+        const current = ensureLoaded();
+        const source = current[from];
+        if (!source || source.length === 0 || (current[to]?.length ?? 0) > 0) return;
+        const next = {...current, [to]: source};
+        delete next[from];
+        threads = next;
+        emit();
+        schedulePersist();
+    },
+
+    /** Every animal thread gone ("Delete chat history"); the site assistant's own thread stays. */
+    clearAnimalThreads() {
+        const current = ensureLoaded();
+        const next: AskThreads = {};
+        for (const [key, messages] of Object.entries(current)) {
+            if (!/^(species|capture):/.test(key)) next[key] = messages;
+        }
+        threads = next;
+        emit();
+        schedulePersist();
+    },
+
     /** Snapshot for `useSyncExternalStore`, which needs a stable reference. */
     snapshot(key: string) {
         return this.messages(key);

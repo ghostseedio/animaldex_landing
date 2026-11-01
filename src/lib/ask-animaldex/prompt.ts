@@ -688,6 +688,11 @@ export type AskPromptOptions = {
     /// else's card (signed in, not the owner); everyone else is spoken to as
     /// the apps speak to an owner.
     speakingTo?: "owner" | "visitor";
+    /// Species scope: a public species chat (docs/chat-sync/SPEC.md, section
+    /// 4): no card, and the reader holds no live card of this animal (or has
+    /// no account). The animal meets them, sets and offers nothing
+    /// (`ANIMAL_PUBLIC_CHAT_RULES` in place of the step-offer rules).
+    publicChat?: boolean;
     /// Visitor only: this animal passes on to its owner who visited and the
     /// gist of what they asked (`visitor-notes.ts`), and the visitor has been told.
     visitorRelay?: boolean;
@@ -757,6 +762,18 @@ const ANIMAL_CALL_DEBATE_STEP_RULES = [
     "rule below says. If they bring up the step you set them (companion.open_trial), talk with them about how it is going."
 ];
 
+/**
+ * Someone who holds no card of this animal (docs/chat-sync/SPEC.md, section
+ * 4): it talks their life through as itself, but steps, its Warmup, Trials
+ * and debates need an animal of their own. Verbatim from the apps'
+ * `ANIMAL_PUBLIC_CHAT_RULES` (AnimalDex df8d2dc0).
+ */
+export const ANIMAL_PUBLIC_CHAT_RULES = [
+    "This person has not captured one of your kind: you are meeting them, and you are nobody's companion here. Talk",
+    "their life through with them as yourself, but set no steps, offer no Warmup, Trials or debates, and send no cards.",
+    "If they ask about those, say in your own words that they come once they capture one of your kind."
+];
+
 /** The owner's cards are in this prompt (3.2): the reader's own animal's one-to-one chat. */
 function hasCards(options: AskPromptOptions): boolean {
     return options.scope === "species" && (options.supportedVisuals ?? []).includes("card");
@@ -775,6 +792,12 @@ function hasCards(options: AskPromptOptions): boolean {
 function companionRules(options: AskPromptOptions): string[] {
     if (options.speakingTo === "visitor") {
         return options.visitorRelay ? [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_RELAY_RULES] : ANIMAL_VISITOR_RULES;
+    }
+    // A public species chat, as the apps' `loopRules` has it: the mode's lines, then these rules.
+    if (options.publicChat) {
+        const publicMode = speciesMode(options);
+        const modeLines = publicMode === "chat" ? ANIMAL_CHAT_MODE_RULES : publicMode === "auto" ? ANIMAL_AUTO_MODE_RULES : [];
+        return [...modeLines, ...(modeLines.length > 0 ? [""] : []), ...ANIMAL_PUBLIC_CHAT_RULES, "", ...ANIMAL_RELATIONSHIP_RULES];
     }
     if (options.groupLines?.length) return askGroupLoopRules(options.groupLines);
     const mode = speciesMode(options);

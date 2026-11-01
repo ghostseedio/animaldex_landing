@@ -19,6 +19,7 @@ import "server-only";
  */
 
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
+import {buildChatTranscript, isMissingRpc, type ChatTranscriptInput} from "@/lib/ask-animaldex/chat-history";
 import {requestAskJSONObject} from "@/lib/ask-animaldex/providers";
 import {parseAskOwnStories, type AskOwnStory} from "@/lib/ask-animaldex/stories";
 import {
@@ -48,6 +49,48 @@ function today(): string {
 }
 
 // MARK: - Everyone signed in
+
+/**
+ * Chat history on every device (docs/chat-sync/SPEC.md, section 2; AnimalDex
+ * df8d2dc0): an answered one-to-one turn's rows, through the service-role
+ * `record_animal_chat_messages_v1`, which checks "Keep my chats on all my
+ * devices", keeps a retry idempotent and prunes. Before that migration the
+ * RPC does not exist: nothing is written, quietly, as before.
+ */
+export async function recordAskChatTranscript(input: ChatTranscriptInput): Promise<void> {
+    try {
+        const transcript = await buildChatTranscript(input);
+        if (!transcript) return;
+        const admin = service();
+        if (!admin) return;
+        const {error} = await admin.rpc("record_animal_chat_messages_v1", transcript);
+        if (error && !isMissingRpc(error)) warn("record_animal_chat_messages_v1", error);
+    } catch (error) {
+        warn("record_animal_chat_messages_v1", error);
+    }
+}
+
+/**
+ * Whether the reader holds a live card of this canonical species, as the
+ * apps' server counts it (`companion_cards`): a species chat with no card
+ * from someone who holds none is a public chat (SPEC section 4). Null when it
+ * could not be checked, which keeps the turn as it always was.
+ */
+export async function holdsLiveCard(userId: string, speciesProfileId: string): Promise<boolean | null> {
+    const admin = service();
+    if (!admin) return null;
+    try {
+        const {data, error} = await admin.rpc("companion_cards", {p_user_id: userId, p_species: speciesProfileId});
+        if (error) {
+            warn("companion_cards", error);
+            return null;
+        }
+        return Array.isArray(data) && data.length > 0;
+    } catch (error) {
+        warn("companion_cards", error);
+        return null;
+    }
+}
 
 /**
  * Notes that this person talked to this animal today, for how popular it is

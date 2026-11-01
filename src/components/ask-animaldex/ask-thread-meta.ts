@@ -84,3 +84,8 @@ export function useTalkThreadMetas(): TalkThreadMetas {
         () => EMPTY
     );
 }
+
+/** Every thread's note gone, with the threads ("Delete chat history"). */
+export function forgetAllTalkThreads() {
+    save({});
+}
