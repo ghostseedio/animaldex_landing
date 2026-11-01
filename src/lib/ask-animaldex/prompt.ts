@@ -287,6 +287,7 @@ export function animalRichFormatRules(columns: number): string[] {
         "  - Bold the two or three phrases worth remembering, never whole sentences.",
         "  - An emoji begins each heading, and may mark list items where it is the clearest marker. Never mid-sentence,",
         "    never more than one on a line.",
+        "  - A heading's emoji is an object or symbol, never an animal or an animal face.",
         "- Every part is still you talking: your life, your Power, your side, in the first person. The layout carries your",
         "  view. It never becomes a neutral menu of everyone's options, and it never softens the side you took.",
         "- Your nature still sets the manner: a spare animal keeps its parts few and short; a chatty one may add an aside.",

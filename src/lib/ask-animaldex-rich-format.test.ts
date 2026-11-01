@@ -94,6 +94,18 @@ test("the rich lead, medium line and rules are the server's, word for word", () 
     sameLines(animalRichFormatRules(72), fixture.rules72, "rules at 72");
 });
 
+test("a heading's emoji is never an animal: it sits next to the species icon art (UX audit JRN-32, WEB-26)", () => {
+    for (const columns of [36, 72]) {
+        const rules = animalRichFormatRules(columns);
+        const heading = rules.findIndex((line) => line.startsWith("  - An emoji begins each heading"));
+        assert.ok(heading >= 0);
+        assert.equal(rules[heading + 1], "    never more than one on a line.");
+        assert.equal(rules[heading + 2], "  - A heading's emoji is an object or symbol, never an animal or an animal face.");
+    }
+    // The server lane's build that added it.
+    assert.equal(fixture.source.commit, "081e9d751097d4c1a635e61892ebffb6a0e44f9f");
+});
+
 test("text_columns is clamped as the server clamps it", () => {
     assert.equal(fixture.textColumns.min, 28);
     assert.equal(fixture.textColumns.max, 80);
