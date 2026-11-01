@@ -25,6 +25,12 @@ export const TALK_WORDS_EN = {
     earlier: "Earlier",
     deleteChat: "Delete this chat",
     keptHere: "Chats are kept in this browser.",
+    /** Signed in, with history kept on the account (docs/chat-sync/SPEC.md, section 3). */
+    syncedHere: "Synced to your account",
+    /** The sidebar with no chats yet (WEB-36). */
+    noChatsYet: "Your chats with animals appear here.",
+    startWith: "Start with",
+    signUpFree: "Sign up free",
     signIn: "Sign in",
     account: "Your account",
     getApp: "Get the app",
@@ -37,31 +43,53 @@ export const TALK_WORDS_EN = {
     searchLabel: "Search animals by name",
     searchEmpty: "No animal by that name yet.",
     popular: "Popular to talk to",
-    mostCaught: "Most caught on AnimalDex",
     disagree: "They'll disagree",
     disagreeHint: "Ask both the same thing.",
+    /** "They'll disagree": what each pair pulls apart on (WEB-5). */
+    disagreeWaitOrGo: "Wait, or go now?",
+    disagreePushOrOutlast: "Push through, or outlast it?",
+    disagreeTogetherOrAlone: "Together, or alone?",
     carried: "Your question",
+    /** "Ask another animal" carries the question; it is never sent for them (DECISIONS section 6). */
+    carriedHint: "Pick an animal. Your question will be ready to send.",
     carriedClear: "Clear",
     loading: "Loading…",
+    loadFailed: "Couldn't load the animals.",
+    tryAgain: "Try again",
     capabilities: "What {name} can do",
     capTalk: "Talk",
     capTalkNote: "Available now",
-    capTrials: "Its Trials",
+    capTrials: "{animal}'s Trials",
     capTrialsNote: "Its own challenges",
     capStep: "Your step",
-    capStepNote: "{animal} gives you one step to try, from your own problem. Catch one to start.",
+    capStepNote: "{animal} gives you one step to try, from your own problem. Capture one in the app to start.",
     capDebates: "Debates",
-    capDebatesNote: "Bring other animals in to argue it out. Once you've earned an animal's Power.",
+    capDebatesNote: "Bring other animals in to argue it out, once you've earned an animal's Power in the app.",
     locked: "Locked",
     createAccount: "Create a free account",
     doTrial: "Do this Trial",
-    catchForTrials: "Catch a {animal} in the app to work on its Trials",
+    catchForTrials: "Capture a {animal} in the app to work on its Trials",
     noTrials: "No Trials for this animal yet.",
     askAnother: "Ask another animal",
-    signUpForMore: "Sign up to set steps and start debates"
+    /** Under the first real answer: steps and debates need a captured animal, so the app (W13). */
+    signUpForMore: "Get the app to set steps and start debates",
+    /** A share card's alt text. */
+    ogAlt: "Talk to animals on AnimalDex"
 };
 
 export type TalkWords = typeof TALK_WORDS_EN;
+
+/** What "What {name} can do" says: all the drawer needs of the Talk page's words (WEB-38). */
+export const TALK_CAPABILITY_KEYS = [
+    "capabilities", "capTalk", "capTalkNote", "capTrials", "capStep", "capStepNote", "capDebates", "capDebatesNote",
+    "locked", "getApp", "catchForTrials", "noTrials"
+] as const;
+
+export type TalkCapabilityWords = Pick<TalkWords, (typeof TALK_CAPABILITY_KEYS)[number]>;
+
+export function talkCapabilityWords(words: TalkWords): TalkCapabilityWords {
+    return Object.fromEntries(TALK_CAPABILITY_KEYS.map((key) => [key, words[key]])) as TalkCapabilityWords;
+}
 
 /** The locale's `talk` words over the English ones. */
 export function talkWords(raw: unknown): TalkWords {
@@ -202,6 +230,43 @@ export function talkRecentChats(threads: AskThreads, metas: TalkThreadMetas, now
     return groups;
 }
 
+/** A thread kept on the reader's account (`/api/ask/history?list=1`), as the sidebar lists it. */
+export type TalkServerChat = {key: string; serverKey: string; slug: string; name: string; captureId: string | null; preview: string; lastAt: number};
+
+/**
+ * Recent chats with the account's threads (docs/chat-sync/SPEC.md, section 3):
+ * this browser's and the account's, one row per thread (the browser's key),
+ * the newer of the two times and the browser's preview while it has one;
+ * each row keeps the account's key, for Delete. Grouped as `talkRecentChats`.
+ */
+export function talkMergeRecentChats(
+    local: TalkRecentGroup[],
+    server: readonly TalkServerChat[],
+    now: number = Date.now()
+): Array<TalkRecentGroup & {chats: Array<TalkRecentChat & {serverKey?: string}>}> {
+    const byKey = new Map<string, TalkRecentChat & {serverKey?: string}>();
+    for (const group of local) for (const chat of group.chats) byKey.set(chat.key, {...chat});
+    for (const remote of server) {
+        const known = byKey.get(remote.key);
+        if (known) {
+            byKey.set(remote.key, {...known, serverKey: remote.serverKey, lastAt: Math.max(known.lastAt, remote.lastAt), preview: known.preview || remote.preview});
+        } else {
+            byKey.set(remote.key, {key: remote.key, slug: remote.slug, name: remote.name, captureId: remote.captureId, preview: remote.preview, lastAt: remote.lastAt, serverKey: remote.serverKey});
+        }
+    }
+    const chats = Array.from(byKey.values()).sort((left, right) => right.lastAt - left.lastAt);
+    const today = startOfDay(now);
+    const yesterday = today - 24 * 60 * 60 * 1000;
+    const groups: Array<TalkRecentGroup & {chats: Array<TalkRecentChat & {serverKey?: string}>}> = [];
+    for (const chat of chats) {
+        const group = chat.lastAt >= today ? "today" : chat.lastAt >= yesterday ? "yesterday" : "earlier";
+        const last = groups[groups.length - 1];
+        if (last?.group === group) last.chats.push(chat);
+        else groups.push({group, chats: [chat]});
+    }
+    return groups;
+}
+
 /** "14:02" today, "Yesterday" and then "12 Oct": when the chat last moved, at a glance. */
 export function talkRelativeTime(at: number, options: {locale: string; yesterday: string; now?: number}): string {
     const now = options.now ?? Date.now();
@@ -223,28 +288,144 @@ export function talkChatPath(chat: {slug: string; captureId: string | null}): st
 
 // MARK: - The picker
 
-export type TalkAnimal = {slug: string; name: string; power: string | null};
+export type TalkAnimal = {
+    slug: string;
+    name: string;
+    power: string | null;
+    /** Its icon art's own address, when the server knows it: no redirect to follow (WEB-18). */
+    icon?: string | null;
+};
 
 function folded(text: string): string {
     return text.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
 }
 
 /**
- * The catalog by common name: a name starting with the query first, then a
- * word in it starting with it, then anywhere in it; shorter names first
- * within each, so "owl" finds the Owl before the Burrowing Owl.
+ * How well a name answers the query (WEB-4), best first: the name itself;
+ * then its last word, the head noun a person types ("wolf" for the Gray Wolf,
+ * "fox" for the Red Fox); then a name starting with it; then a word starting
+ * with it; then anywhere in it. -1 when it does not match at all.
+ */
+export function talkSearchRank(rawName: string, rawQuery: string): number {
+    const name = folded(rawName).trim();
+    const wanted = folded(rawQuery).trim().replace(/\s+/g, " ");
+    if (!wanted || !name) return -1;
+    if (name === wanted) return 0;
+    const words = name.split(/[\s-]+/).filter(Boolean);
+    const tail = words.slice(-wanted.split(" ").length).join(" ");
+    if (tail === wanted) return 1;
+    if (name.startsWith(wanted)) return 2;
+    if (words.some((word) => word.startsWith(wanted))) return 3;
+    return name.includes(wanted) ? 4 : -1;
+}
+
+/**
+ * The catalog by common name, ranked by `talkSearchRank`; within a rank, the
+ * better-known animal first (the order `animals` comes in: most captured
+ * first, as the catalog route sends it), then the shorter name. So "wolf"
+ * finds the Gray Wolf before the Wolf Eel, and "fox" the Red Fox before the
+ * Fox Moth.
  */
 export function talkSearch(animals: readonly TalkAnimal[], query: string, limit = 24): TalkAnimal[] {
-    const wanted = folded(query.trim());
-    if (!wanted) return [];
-    const ranked: Array<{animal: TalkAnimal; rank: number}> = [];
-    for (const animal of animals) {
-        const name = folded(animal.name);
-        const rank = name.startsWith(wanted) ? 0 : name.split(/[\s-]+/).some((word) => word.startsWith(wanted)) ? 1 : name.includes(wanted) ? 2 : -1;
-        if (rank >= 0) ranked.push({animal, rank});
-    }
-    ranked.sort((left, right) => left.rank - right.rank || left.animal.name.length - right.animal.name.length || left.animal.name.localeCompare(right.animal.name));
+    if (!folded(query.trim())) return [];
+    const ranked: Array<{animal: TalkAnimal; rank: number; order: number}> = [];
+    animals.forEach((animal, order) => {
+        const rank = talkSearchRank(animal.name, query);
+        if (rank >= 0) ranked.push({animal, rank, order});
+    });
+    ranked.sort((left, right) => left.rank - right.rank
+        || left.order - right.order
+        || left.animal.name.length - right.animal.name.length
+        || left.animal.name.localeCompare(right.animal.name));
     return ranked.slice(0, limit).map((entry) => entry.animal);
+}
+
+// MARK: - The first animals offered
+
+/**
+ * The first animals offered to someone new, in this order, on the web picker
+ * and in the apps' "Or meet one now" (UX pass, DECISIONS section 7). Each is
+ * kept only with its own species icon art and a Power that reads as a lesson.
+ */
+export const TALK_FEATURED_SLUGS = [
+    "gray-wolf",
+    "common-octopus",
+    "little-owl",
+    "orca",
+    "african-bush-elephant",
+    "western-honey-bee"
+] as const;
+
+/** After the featured six, while too few people have talked to enough animals: well-loved ones whose Powers differ. */
+export const TALK_FEATURED_FILL_SLUGS = [
+    "cheetah",
+    "honey-badger",
+    "gal-pagos-tortoise",
+    "emperor-penguin",
+    "sea-otter",
+    "common-raven"
+] as const;
+
+/**
+ * "They'll disagree" (WEB-5): pairs whose Powers pull apart on one question,
+ * each with that question. Little Owl waits for the moment, the Cheetah goes
+ * all at once; the Honey Badger pushes through, the tortoise outlasts; the
+ * wolf works as a pack, the snow leopard alone.
+ */
+export const TALK_DISAGREE_PAIRS = [
+    {left: "little-owl", right: "cheetah", topic: "disagreeWaitOrGo"},
+    {left: "honey-badger", right: "gal-pagos-tortoise", topic: "disagreePushOrOutlast"},
+    {left: "gray-wolf", right: "snow-leopard", topic: "disagreeTogetherOrAlone"}
+] as const satisfies ReadonlyArray<{left: string; right: string; topic: keyof TalkWords}>;
+
+export type TalkDisagreePair = {left: TalkAnimal; right: TalkAnimal; topic: string | null};
+
+/**
+ * A Power that reads as a lesson, for the curated lists: a phrase ("Night
+ * Focus Strategy", "Memory Path") or a noun of a way of living
+ * ("Cooperation", "Longevity"), never a bare adjective stub ("Urban",
+ * "Uninvited") or nothing.
+ */
+export function talkPowerReadsAsLesson(power: string | null | undefined): boolean {
+    const text = power?.trim() ?? "";
+    if (!text) return false;
+    if (text.split(/\s+/).length >= 2) return true;
+    // One word: a noun of a way of living, not an adjective standing alone.
+    return !/(ed|an|al|ous|ive|ful|less|ic|ish|ent|ant|ary|ile|able|ible)$/i.test(text);
+}
+
+/**
+ * The picker's first rows: the featured animals, then the most talked to,
+ * then the curated fill, each once, only with its own art (`hasArt`) and a
+ * Power that reads as a lesson, at most `max`.
+ */
+export function talkFeaturedAnimals(params: {
+    bySlug: ReadonlyMap<string, TalkAnimal>;
+    talkedTo: readonly string[];
+    hasArt: (slug: string) => boolean;
+    max?: number;
+}): TalkAnimal[] {
+    const max = params.max ?? 12;
+    const picked: TalkAnimal[] = [];
+    const seen = new Set<string>();
+    for (const slug of [...TALK_FEATURED_SLUGS, ...params.talkedTo, ...TALK_FEATURED_FILL_SLUGS]) {
+        if (picked.length >= max) break;
+        if (seen.has(slug) || slug === "human") continue;
+        seen.add(slug);
+        const animal = params.bySlug.get(slug);
+        if (!animal || !params.hasArt(slug) || !talkPowerReadsAsLesson(animal.power)) continue;
+        picked.push(animal);
+    }
+    return picked;
+}
+
+/**
+ * "Ask another animal" under a public chat's reply (SPEC section 4.4; WEB-3):
+ * only under a finished answer to a real problem, and never once today's
+ * messages are spent (it would only lead to the limit card).
+ */
+export function talkAskAnotherOffered(params: {publicChat: boolean; quotaReached: boolean; finished: boolean; realProblem: boolean}): boolean {
+    return params.publicChat && !params.quotaReached && params.finished && params.realProblem;
 }
 
 // MARK: - Capabilities
@@ -252,14 +433,12 @@ export function talkSearch(animals: readonly TalkAnimal[], query: string, limit 
 export type TalkViewer = {signedIn: boolean};
 
 /**
- * What a locked capability offers (section 4.4): sign-up only where the
- * action needs an account. Your step and Debates: a visitor without an
- * account gets "Create a free account", a signed-in one "Get the app" (they
- * need a card, made in the app). A Trial's "Do this Trial": the account, or
- * signed in without the card, catching one in the app.
+ * What a locked capability offers (section 4.4; UX pass JRN-6, WEB-19): Your
+ * step, Debates and a Trial all need an animal of their own, captured in the
+ * app, so each offers the app, signed in or not. An account alone unlocks
+ * none of them: sign-up is offered only for the message budget.
  */
-export function talkCapabilityAction(kind: "step" | "debates" | "trial", viewer: TalkViewer): "signUp" | "app" | "catch" {
-    if (!viewer.signedIn) return "signUp";
+export function talkCapabilityAction(kind: "step" | "debates" | "trial", _viewer: TalkViewer): "app" | "catch" {
     return kind === "trial" ? "catch" : "app";
 }
 
@@ -276,6 +455,9 @@ export type TalkCatalogRow = {
     public_capture_count?: unknown;
     /** The catalog's authored contrasts: animals whose way runs the other way. */
     contrasting_species?: unknown;
+    /** How a species page finds its catalog animal (WEB-1). */
+    species_profile_id?: unknown;
+    normalized_identity_key?: unknown;
 };
 
 /**

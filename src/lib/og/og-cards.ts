@@ -18,6 +18,7 @@ import {
     resolveSpeciesBehaviorProfileForPage
 } from "@/data/species-behavior-lessons";
 import {getUseCase} from "@/data/use-cases";
+import {getTalkPickerRows, resolveTalkPage} from "@/data/talk-animals";
 import {getSupportArticleBySlugs} from "@/lib/support-articles";
 import type {OgCardSpec, OgTile} from "@/lib/og/og-card";
 import {profileOgAnimals, profileOgCard} from "@/lib/og/profile-og-card";
@@ -175,6 +176,33 @@ async function profileCard(handle: string): Promise<OgCardSpec | null> {
     return profileOgCard(profile, named);
 }
 
+/** /talk/<slug> (WEB-14): the animal's own art, its name and its Power, and the promise. */
+async function talkCard(slug: string): Promise<OgCardSpec | null> {
+    const resolution = await resolveTalkPage(slug);
+    const animal = resolution.kind === "catalog" || resolution.kind === "species" ? resolution.animal : null;
+    if (!animal) return null;
+    return {
+        kicker: animal.power ? `Talk to animals · Its Power: ${animal.power}` : "Talk to animals",
+        title: `Talk to the ${animal.name}`,
+        subtitle: "It answers from its own Power. It won't just agree with you.",
+        tiles: [art(animal.slug, animal.name)]
+    };
+}
+
+/** /talk (WEB-14): two animals that see one problem two ways. */
+async function talkHubCard(): Promise<OgCardSpec> {
+    const rows = await getTalkPickerRows().catch(() => ({popular: [], disagree: []}));
+    const pair = rows.disagree[0];
+    const slugs = await withArtwork(pair ? [pair.left.slug, pair.right.slug] : ["little-owl", "cheetah"], 2);
+    return {
+        kicker: "AnimalDex",
+        title: "Talk to animals. They won't just agree with you.",
+        subtitle: "Every animal answers from its own Power, a lesson from how its kind survives.",
+        tiles: slugs.map((slug) => art(slug)),
+        joiner: "↔"
+    };
+}
+
 /**
  * Turns an `/api/og/...` path into the card it should draw. Every key is
  * resolved from site data, so the endpoint can't be made to render arbitrary text.
@@ -202,6 +230,8 @@ export async function resolveOgCard(segments: string[]): Promise<OgCardSpec | nu
             return rest.length === 1 ? profileCard(rest[0]) : null;
         case "page":
             return STATIC_OG_CARDS[rest.join("/")] ?? null;
+        case "talk":
+            return rest.length === 0 ? talkHubCard() : rest.length === 1 ? talkCard(rest[0]) : null;
         default:
             return null;
     }

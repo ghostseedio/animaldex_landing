@@ -4,9 +4,12 @@
  * The Talk page's sidebar (docs/rich-chat/SPEC.md, section 4.2): New chat
  * (the picker); Your animals, signed in with cards, each opening its owner's
  * chat with the whole companion loop; Recent chats, every animal thread in
- * this browser's thread store with a message in it, grouped Today /
- * Yesterday / Earlier, Delete on hover; and at the bottom the account and
- * the app. Faces are species icon art, never a capture photo.
+ * this browser's thread store with a message in it and, signed in, every
+ * thread kept on their account (docs/chat-sync/SPEC.md, section 3), grouped
+ * Today / Yesterday / Earlier, Delete on hover; and at the bottom the account
+ * and the app. With no chats yet, it says where they will be and offers
+ * three animals to start with (WEB-36). Faces are species icon art, never a
+ * capture photo.
  */
 
 import {useEffect, useMemo, useState, useSyncExternalStore} from "react";
@@ -21,18 +24,63 @@ import {useCompanions} from "@/components/companions/use-companions";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {askPathWithoutLocale} from "@/lib/ask-animaldex/subject";
 import {rememberStorePlacement} from "@/lib/store-links";
-import {talkChatPath, talkRecentChats, talkRelativeTime, type TalkWords} from "@/lib/ask-animaldex/talk";
+import {normalizeServerChatThreads} from "@/lib/ask-animaldex/chat-sync";
+import {
+    talkChatPath,
+    talkMergeRecentChats,
+    talkRecentChats,
+    talkRelativeTime,
+    type TalkAnimal,
+    type TalkServerChat,
+    type TalkWords
+} from "@/lib/ask-animaldex/talk";
 import type {AskThreads} from "@/lib/ask-animaldex/thread";
 
 const NO_THREADS: AskThreads = {};
 
-export default function TalkSidebar({locale, words, onClose}: {locale: string; words: TalkWords; onClose?: () => void}) {
+/** The account's threads, once per tab: the sidebar is drawn again on every page of the Talk area. */
+let serverChatsCache: Promise<{available: boolean; threads: TalkServerChat[]}> | null = null;
+
+function loadServerChats() {
+    serverChatsCache ??= fetch("/api/ask/history?list=1", {headers: {Accept: "application/json"}})
+        .then((response) => (response.ok ? response.json() as Promise<{available?: boolean; threads?: unknown}> : null))
+        .then((payload) => ({available: payload?.available === true, threads: normalizeServerChatThreads(payload?.threads)}))
+        .catch(() => {
+            serverChatsCache = null;
+            return {available: false, threads: []};
+        });
+    return serverChatsCache;
+}
+
+export default function TalkSidebar({locale, words, starters = [], onClose}: {
+    locale: string;
+    words: TalkWords;
+    /** Three animals to start with while there are no chats (the featured ones, from the server). */
+    starters?: TalkAnimal[];
+    onClose?: () => void;
+}) {
     const {session} = useHeaderAuth();
     const signedIn = Boolean(session.user);
     const companions = useCompanions(signedIn);
     const threads = useSyncExternalStore(askSessionStore.subscribe, () => askSessionStore.all(), () => NO_THREADS);
     const metas = useTalkThreadMetas();
-    const groups = useMemo(() => talkRecentChats(threads, metas), [threads, metas]);
+    const [server, setServer] = useState<{available: boolean; threads: TalkServerChat[]}>({available: false, threads: []});
+    const [removed, setRemoved] = useState<ReadonlySet<string>>(() => new Set());
+    useEffect(() => {
+        if (!signedIn) return;
+        let cancelled = false;
+        void loadServerChats().then((value) => {
+            if (!cancelled) setServer(value);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [signedIn]);
+    const groups = useMemo(() => {
+        const local = talkRecentChats(threads, metas);
+        const remote = signedIn ? server.threads.filter((chat) => !removed.has(chat.key)) : [];
+        return talkMergeRecentChats(local, remote);
+    }, [threads, metas, server.threads, signedIn, removed]);
     const pathname = usePathname() ?? "/talk";
     const path = askPathWithoutLocale(pathname);
     // Read from the address, not `useSearchParams`, which would render the static /talk page on the client only.
@@ -41,16 +89,36 @@ export default function TalkSidebar({locale, words, onClose}: {locale: string; w
     const current = `${path}${card ? `?card=${card}` : ""}`;
     const groupTitle = {today: words.today, yesterday: words.yesterday, earlier: words.earlier};
     const yourAnimals = signedIn ? companions.rows.filter((row) => row.captureId && row.slug) : [];
+    const synced = signedIn && server.available;
+    const accountHref = `/account?next=${encodeURIComponent(current)}`;
+
+    const deleteChat = (chat: {key: string; serverKey?: string}) => {
+        askSessionStore.clear(chat.key);
+        forgetTalkThread(chat.key);
+        setRemoved((current) => new Set(current).add(chat.key));
+        // On the account too, when it is kept there; an older server keeps nothing to delete.
+        if (chat.serverKey) {
+            serverChatsCache = null;
+            void fetch("/api/ask/history", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "delete", thread: chat.serverKey})
+            }).catch(() => undefined);
+        }
+    };
 
     return (
         <div className="flex min-h-0 flex-1 flex-col" data-testid="talk-sidebar">
             <div className="flex items-center gap-2 px-4 pb-2 pt-4">
-                <Link href="/" aria-label={words.home} className="flex min-w-0 flex-1 items-center gap-2">
-                    <Image src="/images/logo.webp" alt="" aria-hidden="true" width={32} height={32} className="h-7 w-7" />
-                    <Image src="/images/animaldex-logo-text.webp" alt="AnimalDex" width={320} height={76} className="h-[1.3rem] w-auto" />
+                {/* The flat lockup (DECISIONS section 5): the mark at 1.35 × the cap height, 0.35 × it apart. */}
+                <Link href="/" aria-label={words.home} className="flex min-h-11 min-w-0 flex-1 items-center gap-[5px]">
+                    <Image src="/images/logo.webp" alt="" aria-hidden="true" width={40} height={40} className="h-5 w-5" />
+                    <span aria-hidden="true" className="font-display text-[1.35rem] font-extrabold leading-none">
+                        <span className="text-white">Animal</span><span className="text-primary-400">Dex</span>
+                    </span>
                 </Link>
                 {onClose ? (
-                    <button type="button" onClick={onClose} aria-label={words.closeChats} className="grid h-8 w-8 place-items-center rounded-full text-ink-300 hover:bg-white/8 hover:text-white">
+                    <button type="button" onClick={onClose} aria-label={words.closeChats} className="grid h-11 w-11 place-items-center rounded-full text-ink-300 hover:bg-white/8 hover:text-white">
                         <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M5.5 5.5l9 9m0-9l-9 9" /></svg>
                     </button>
                 ) : null}
@@ -58,7 +126,7 @@ export default function TalkSidebar({locale, words, onClose}: {locale: string; w
             <div className="px-3 pb-2 pt-1">
                 <Link
                     href="/talk"
-                    className="flex h-10 w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:border-primary-300/40 hover:bg-white/[0.08]"
+                    className="flex h-11 w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:border-primary-300/40 hover:bg-white/[0.08]"
                     data-testid="talk-new-chat"
                 >
                     <svg viewBox="0 0 20 20" className="h-4 w-4 text-primary-300" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" /></svg>
@@ -81,7 +149,7 @@ export default function TalkSidebar({locale, words, onClose}: {locale: string; w
                                     <AskAnimalFace url={getSpeciesImageRoute(row.slug as string)} size={30} />
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-[13px] font-semibold text-white">{row.nickname ?? row.animal}</span>
-                                        {row.powerName ? <span className="block truncate text-[11px] text-primary-300/90">{row.powerName}</span> : null}
+                                        {row.powerName ? <span className="block truncate text-[11px] text-ink-300">{row.powerName}</span> : null}
                                     </span>
                                 </Link>
                             );
@@ -98,7 +166,7 @@ export default function TalkSidebar({locale, words, onClose}: {locale: string; w
                                     const href = talkChatPath(chat);
                                     return (
                                         <div key={chat.key} className={`group/chat relative flex items-center transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`} style={{borderRadius: 12}}>
-                                            <Link href={href} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 pr-9">
+                                            <Link href={href} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 pr-11">
                                                 <AskAnimalFace url={getSpeciesImageRoute(chat.slug)} size={30} />
                                                 <span className="min-w-0 flex-1">
                                                     <span className="flex items-baseline gap-2">
@@ -110,13 +178,10 @@ export default function TalkSidebar({locale, words, onClose}: {locale: string; w
                                             </Link>
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    askSessionStore.clear(chat.key);
-                                                    forgetTalkThread(chat.key);
-                                                }}
+                                                onClick={() => deleteChat(chat)}
                                                 aria-label={`${words.deleteChat}: ${chat.name}`}
                                                 title={words.deleteChat}
-                                                className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-ink-400 opacity-0 transition-opacity hover:bg-white/10 hover:text-white focus:opacity-100 group-hover/chat:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                                                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-ink-400 opacity-0 transition-opacity hover:bg-white/10 hover:text-white focus:opacity-100 group-hover/chat:opacity-100 [@media(pointer:coarse)]:opacity-100"
                                                 data-testid="talk-delete-chat"
                                             >
                                                 <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -128,26 +193,63 @@ export default function TalkSidebar({locale, words, onClose}: {locale: string; w
                                 })}
                             </div>
                         ))}
-                        <p className="px-2 pt-3 text-[11px] leading-4 text-ink-500">{words.keptHere}</p>
+                        <p className="px-2 pt-3 text-[11px] leading-4 text-ink-500" data-testid="talk-recent-note">{synced ? words.syncedHere : words.keptHere}</p>
+                    </section>
+                ) : yourAnimals.length === 0 ? (
+                    // Nothing yet: where the chats will be, and three animals to start with (WEB-36).
+                    <section className="px-2 pt-4" data-testid="talk-sidebar-empty">
+                        <p className="text-[13px] leading-5 text-ink-200">{words.noChatsYet}</p>
+                        <p className="mt-0.5 text-[11px] leading-4 text-ink-500">{synced ? words.syncedHere : words.keptHere}</p>
+                        {starters.length > 0 ? (
+                            <>
+                                <h2 className="pb-1.5 pt-5 text-[10px] font-black uppercase tracking-[0.14em] text-ink-400">{words.startWith}</h2>
+                                {starters.slice(0, 3).map((animal) => (
+                                    <Link
+                                        key={animal.slug}
+                                        href={`/talk/${animal.slug}`}
+                                        className="-mx-2 flex items-center gap-2.5 px-2 py-2 transition-colors hover:bg-white/[0.05]"
+                                        style={{borderRadius: 12}}
+                                    >
+                                        <AskAnimalFace url={animal.icon ?? getSpeciesImageRoute(animal.slug)} size={30} />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-[13px] font-semibold text-white">{animal.name}</span>
+                                            {animal.power ? <span className="block truncate text-[11px] text-ink-300">{animal.power}</span> : null}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </>
+                        ) : null}
                     </section>
                 ) : null}
             </nav>
             <div className="flex items-center gap-2 border-t border-white/10 px-3 py-3">
-                <Link
-                    href={signedIn ? "/app" : `/account?next=${encodeURIComponent(current)}`}
-                    className="inline-flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full px-2.5 text-[13px] font-semibold text-ink-100 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                    {signedIn && session.avatarUrl ? (
-                        <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/15">
-                            <Image src={session.avatarUrl} alt="" fill sizes="24px" unoptimized className="object-cover" />
-                        </span>
-                    ) : null}
-                    <span className="truncate">{signedIn ? session.displayName ?? session.username ?? words.account : words.signIn}</span>
-                </Link>
+                {signedIn ? (
+                    <Link
+                        href="/app"
+                        className="inline-flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full px-2.5 text-[13px] font-semibold text-ink-100 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    >
+                        {session.avatarUrl ? (
+                            <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/15">
+                                <Image src={session.avatarUrl} alt="" fill sizes="24px" unoptimized className="object-cover" />
+                            </span>
+                        ) : null}
+                        <span className="truncate">{session.displayName ?? session.username ?? words.account}</span>
+                    </Link>
+                ) : (
+                    <span className="flex min-w-0 flex-1 items-center gap-1 text-[13px] font-semibold">
+                        <Link href={accountHref} className="inline-flex h-10 items-center rounded-full px-2.5 text-white transition-colors hover:bg-white/[0.06]" data-testid="talk-sign-up">
+                            {words.signUpFree}
+                        </Link>
+                        <span aria-hidden="true" className="text-ink-500">·</span>
+                        <Link href={accountHref} className="inline-flex h-10 items-center rounded-full px-2.5 text-ink-200 transition-colors hover:bg-white/[0.06] hover:text-white">
+                            {words.signIn}
+                        </Link>
+                    </span>
+                )}
                 <Link
                     href="/#download"
                     onClick={() => rememberStorePlacement("page_talk")}
-                    className="inline-flex h-9 shrink-0 items-center rounded-full bg-primary-400 px-3.5 text-[12px] font-black text-canvas-950 transition-colors hover:bg-primary-300"
+                    className="inline-flex h-10 shrink-0 items-center rounded-full bg-primary-400 px-3.5 text-[12px] font-black text-canvas-950 transition-colors hover:bg-primary-300"
                 >
                     {words.getApp}
                 </Link>

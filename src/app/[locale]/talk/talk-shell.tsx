@@ -9,7 +9,7 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {usePathname} from "next/navigation";
 import TalkSidebar from "@/app/[locale]/talk/talk-sidebar";
-import type {TalkWords} from "@/lib/ask-animaldex/talk";
+import type {TalkAnimal, TalkWords} from "@/lib/ask-animaldex/talk";
 
 type TalkShellValue = {openSidebar: () => void; words: TalkWords; locale: string};
 
@@ -19,7 +19,13 @@ export function useTalkShell() {
     return useContext(TalkShellContext);
 }
 
-export default function TalkShell({locale, words, children}: {locale: string; words: TalkWords; children: React.ReactNode}) {
+export default function TalkShell({locale, words, starters = [], children}: {
+    locale: string;
+    words: TalkWords;
+    /** Animals to start with in an empty sidebar. */
+    starters?: TalkAnimal[];
+    children: React.ReactNode;
+}) {
     const [open, setOpen] = useState(false);
     const pathname = usePathname();
     // A choice in the sidebar is a navigation: the slide-over goes with it.
@@ -38,13 +44,13 @@ export default function TalkShell({locale, words, children}: {locale: string; wo
         <TalkShellContext.Provider value={value}>
             <div className="fixed inset-0 flex h-[100dvh] w-full overflow-hidden bg-canvas-950" data-testid="talk-shell">
                 <aside className="hidden w-[280px] shrink-0 border-r border-white/10 bg-canvas-900 lg:flex lg:flex-col" aria-label={words.recentChats}>
-                    <TalkSidebar locale={locale} words={words} />
+                    <TalkSidebar locale={locale} words={words} starters={starters} />
                 </aside>
                 {open ? (
                     <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={words.recentChats}>
                         <button type="button" aria-label={words.closeChats} onClick={() => setOpen(false)} className="absolute inset-0 bg-canvas-950/70" />
                         <aside className="talk-slide-over absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col border-r border-white/10 bg-canvas-900 shadow-[12px_0_40px_rgba(0,0,0,0.45)]" data-testid="talk-slide-over">
-                            <TalkSidebar locale={locale} words={words} onClose={() => setOpen(false)} />
+                            <TalkSidebar locale={locale} words={words} starters={starters} onClose={() => setOpen(false)} />
                         </aside>
                     </div>
                 ) : null}

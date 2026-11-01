@@ -150,7 +150,7 @@ test("a chat's time: the clock today, Yesterday, then the date", () => {
     assert.match(talkRelativeTime(new Date("2026-10-12T09:00:00").getTime(), {locale: "en", yesterday: "Yesterday", now: NOW}), /12 Oct|Oct 12/);
 });
 
-test("the picker finds an animal by its common name, the name's start first", () => {
+test("the picker finds an animal by its common name: the name, its head noun, then its start, the better known first", () => {
     const animals = [
         {slug: "burrowing-owl", name: "Burrowing Owl", power: "Borrowed Shelter"},
         {slug: "owl", name: "Owl", power: null},
@@ -158,7 +158,8 @@ test("the picker finds an animal by its common name, the name's start first", ()
         {slug: "bowhead-whale", name: "Bowhead Whale", power: null},
         {slug: "gray-wolf", name: "Gray Wolf", power: "Pack Pursuit"}
     ];
-    assert.deepEqual(talkSearch(animals, "owl").map((animal) => animal.slug), ["owl", "snowy-owl", "burrowing-owl"]);
+    // Both end in "owl": the catalog's order (the better known first) decides between them.
+    assert.deepEqual(talkSearch(animals, "owl").map((animal) => animal.slug), ["owl", "burrowing-owl", "snowy-owl"]);
     assert.deepEqual(talkSearch(animals, "  WOLF ").map((animal) => animal.slug), ["gray-wolf"]);
     assert.deepEqual(talkSearch(animals, ""), []);
     assert.equal(talkSearch(animals, "o", 2).length, 2);
@@ -176,10 +177,10 @@ test("They'll disagree: the catalog's own contrasts, best known first, each anim
     assert.deepEqual(talkDisagreePairs(rows, 1), [["red-fox", "koala"]]);
 });
 
-test("locked capabilities offer an account to a visitor without one, the app to one signed in", () => {
-    assert.equal(talkCapabilityAction("step", {signedIn: false}), "signUp");
-    assert.equal(talkCapabilityAction("debates", {signedIn: false}), "signUp");
-    assert.equal(talkCapabilityAction("trial", {signedIn: false}), "signUp");
+test("locked capabilities offer the app: an account alone unlocks neither steps, debates nor Trials (JRN-6)", () => {
+    assert.equal(talkCapabilityAction("step", {signedIn: false}), "app");
+    assert.equal(talkCapabilityAction("debates", {signedIn: false}), "app");
+    assert.equal(talkCapabilityAction("trial", {signedIn: false}), "catch");
     assert.equal(talkCapabilityAction("step", {signedIn: true}), "app");
     assert.equal(talkCapabilityAction("debates", {signedIn: true}), "app");
     assert.equal(talkCapabilityAction("trial", {signedIn: true}), "catch");
