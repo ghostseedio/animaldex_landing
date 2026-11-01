@@ -123,8 +123,8 @@ export default function TalkPicker({words, initial}: {
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="mx-auto w-full max-w-[760px] px-4 pb-16 pt-8 sm:pt-12" data-testid="talk-picker">
+                    {/* The question alone: the faces and their Powers under it say the rest (visual first, no noise). */}
                     <h1 className="font-display text-3xl font-bold leading-9 text-white sm:text-4xl sm:leading-[2.75rem]">{words.pickerTitle}</h1>
-                    <p className="mt-2 max-w-[34rem] text-[15px] leading-6 text-ink-300">{words.pickerHint}</p>
                     {carried ? (
                         <div className="ask-special mt-5 flex items-start gap-3 px-4 py-3" style={{borderRadius: 16}} data-testid="talk-carried">
                             <div className="min-w-0 flex-1">

@@ -114,7 +114,6 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
     const current = `${path}${card ? `?card=${card}` : ""}`;
     const groupTitle = {today: words.today, yesterday: words.yesterday, earlier: words.earlier};
     const yourAnimals = signedIn ? companions.rows.filter((row) => row.captureId && row.slug) : [];
-    const synced = signedIn && server.available;
     const accountHref = `/account?next=${encodeURIComponent(current)}`;
     // The chats most likely opened next (the first of each list), fetched once
     // the page is idle, so switching to them is a paint, not a download.
@@ -237,13 +236,11 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                 })}
                             </div>
                         ))}
-                        <p className="px-2 pt-3 text-[11px] leading-4 text-ink-500" data-testid="talk-recent-note">{synced ? words.syncedHere : words.keptHere}</p>
                     </section>
                 ) : yourAnimals.length === 0 ? (
                     // Nothing yet: where the chats will be, and three animals to start with (WEB-36).
                     <section className="px-2 pt-4" data-testid="talk-sidebar-empty">
                         <p className="text-[13px] leading-5 text-ink-200">{words.noChatsYet}</p>
-                        <p className="mt-0.5 text-[11px] leading-4 text-ink-500">{synced ? words.syncedHere : words.keptHere}</p>
                         {starters.length > 0 ? (
                             <>
                                 <h2 className="pb-1.5 pt-5 text-[10px] font-black uppercase tracking-[0.14em] text-ink-400">{words.startWith}</h2>

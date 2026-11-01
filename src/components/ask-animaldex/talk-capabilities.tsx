@@ -2,12 +2,13 @@
 
 /**
  * What this animal can do, on the public Talk chat (docs/rich-chat/SPEC.md,
- * section 4.4): a quiet row under its card. Talk is available now (its
- * openers are docked above the composer); its Trials are public, opened in
- * the thread as the animal's own Trials section, a tap on a loop enlarging
- * it in place; Your step and Debates are locked, each with one honest line
- * and the action it needs: the app, where they capture one of their own
- * (an account alone unlocks neither: UX pass JRN-6, WEB-19). Never a modal,
+ * section 4.4): a quiet row of two chips under its card, no caption. Its
+ * Trials are public, opened in the thread as the animal's own Trials
+ * section, a tap on a loop enlarging it in place. Steps and debates belong
+ * to the app's own animals: one chip, one honest line and the one action it
+ * needs, the app, where they capture one of their own (an account alone
+ * unlocks neither: UX pass JRN-6, WEB-19). Talk itself is the message bar
+ * under it, not a chip (visual first, no noise, 2026-11-01). Never a modal,
  * never a nag.
  */
 
@@ -22,7 +23,7 @@ import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import type {AnimalTrial} from "@/lib/animal-trials";
 import type {TalkCapabilityWords} from "@/lib/ask-animaldex/talk";
 
-type Capability = "trials" | "step" | "debates";
+type Capability = "trials" | "app";
 
 export default function TalkCapabilities({
     name,
@@ -33,7 +34,6 @@ export default function TalkCapabilities({
     words,
     companionWords,
     appHref,
-    onTalk,
     onReveal
 }: {
     /** As the chat calls it. */
@@ -46,7 +46,6 @@ export default function TalkCapabilities({
     words: TalkCapabilityWords;
     companionWords: CompanionWords;
     appHref: string;
-    onTalk: () => void;
     /** Something opened here: the thread shows it, rather than staying on its newest message. */
     onReveal?: (element: HTMLElement) => void;
 }) {
@@ -82,27 +81,18 @@ export default function TalkCapabilities({
         if (open && rootRef.current) onReveal?.(rootRef.current);
     }, [open, onReveal]);
     const viewer = {signedIn};
-    /** The locked capability's one action: the app, where they capture one of their own. */
-    const action = (kind: "step" | "debates") => {
-        talkCapabilityAction(kind, viewer);
-        return {label: words.getApp, href: appHref, app: true};
-    };
-
-    const lockedPanel = (kind: "step" | "debates") => {
-        const next = action(kind);
+    /** The app's own capabilities' one action: the app, where they capture one of their own. */
+    const appPanel = () => {
+        talkCapabilityAction("step", viewer);
         return (
-            <div className="mx-auto flex max-w-[30rem] flex-col items-center gap-2 px-4 pt-3 text-center" data-testid={`talk-capability-${kind}-panel`}>
-                <p className="text-[13px] leading-5 text-ink-200">
-                    {kind === "step" ? fillWords(words.capStepNote, {animal: name}) : words.capDebatesNote}
-                </p>
+            <div className="mx-auto flex max-w-[30rem] flex-col items-center gap-2 px-4 pt-3 text-center" data-testid="talk-capability-app-panel">
+                <p className="text-[13px] leading-5 text-ink-200">{fillWords(words.capInAppNote, {animal: name})}</p>
                 <Link
-                    href={next.href}
-                    onClick={() => {
-                        if (next.app) rememberStorePlacement("page_talk");
-                    }}
+                    href={appHref}
+                    onClick={() => rememberStorePlacement("page_talk")}
                     className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-canvas-950 transition-colors hover:bg-primary-300"
                 >
-                    {next.label}
+                    {words.getApp}
                 </Link>
             </div>
         );
@@ -111,17 +101,12 @@ export default function TalkCapabilities({
     const trialAction = {label: words.getApp, href: appHref, note: fillWords(words.catchForTrials, {animal: animalName})};
 
     return (
-        <div ref={rootRef} className="flex scroll-mt-3 flex-col pt-4" data-testid="talk-capabilities">
-            <p className="text-center text-[10px] font-black uppercase tracking-[0.14em] text-ink-400">
-                {fillWords(words.capabilities, {name})}
-            </p>
-            <div className="mt-2 flex flex-wrap justify-center gap-1.5 px-2" role="group" aria-label={fillWords(words.capabilities, {name})}>
-                <CapabilityChip icon={<TalkIcon />} label={words.capTalk} detail={words.capTalkNote} onClick={onTalk} />
+        <div ref={rootRef} className="flex scroll-mt-3 flex-col pt-3" data-testid="talk-capabilities">
+            <div className="flex flex-wrap justify-center gap-1.5 px-2" role="group" aria-label={fillWords(words.capabilities, {name})}>
                 <CapabilityChip icon={<FlagIcon />} label={fillWords(words.capTrials, {animal: name})} pressed={open === "trials"} onClick={() => toggle("trials")} testId="talk-capability-trials" />
-                <CapabilityChip icon={<LockIcon />} label={words.capStep} quiet pressed={open === "step"} onClick={() => toggle("step")} title={words.locked} testId="talk-capability-step" />
-                <CapabilityChip icon={<LockIcon />} label={words.capDebates} quiet pressed={open === "debates"} onClick={() => toggle("debates")} title={words.locked} testId="talk-capability-debates" />
+                <CapabilityChip icon={<LockIcon />} label={words.capInApp} quiet pressed={open === "app"} onClick={() => toggle("app")} title={words.locked} testId="talk-capability-app" />
             </div>
-            {open === "step" || open === "debates" ? lockedPanel(open) : null}
+            {open === "app" ? appPanel() : null}
             {open === "trials" ? (
                 // Its Trials, as the animal's own section, under its card.
                 <div className="pt-4" data-testid="talk-trials">
@@ -148,10 +133,9 @@ export default function TalkCapabilities({
     );
 }
 
-function CapabilityChip({icon, label, detail = null, quiet = false, pressed, onClick, title, testId}: {
+function CapabilityChip({icon, label, quiet = false, pressed, onClick, title, testId}: {
     icon: ReactNode;
     label: string;
-    detail?: string | null;
     quiet?: boolean;
     pressed?: boolean;
     onClick: () => void;
@@ -175,7 +159,6 @@ function CapabilityChip({icon, label, detail = null, quiet = false, pressed, onC
         >
             <span className={`shrink-0 ${quiet ? "text-ink-400" : "text-primary-300"}`}>{icon}</span>
             {label}
-            {detail ? <span className="font-medium text-ink-400">· {detail}</span> : null}
         </button>
     );
 }
@@ -188,6 +171,5 @@ function icon(path: ReactNode) {
     );
 }
 
-const TalkIcon = () => icon(<path d="M3.5 5.5h13v8h-7l-4 3v-3h-2Z" />);
 const FlagIcon = () => icon(<path d="M5 17.5V3m0 1h9l-1.6 3.2L14 10.5H5" />);
 const LockIcon = () => icon(<path d="M5.5 9h9v7.5h-9ZM7.5 9V6.5a2.5 2.5 0 0 1 5 0V9" />);

@@ -2526,7 +2526,6 @@ export default function AskConversation({
                                     words={talkWords}
                                     companionWords={words}
                                     appHref={page?.appHref ?? "/#download"}
-                                    onTalk={() => composerRef.current?.focus()}
                                     onReveal={revealInThread}
                                 />
                             ) : null}

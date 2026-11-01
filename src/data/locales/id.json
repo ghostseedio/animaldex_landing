@@ -2915,6 +2915,8 @@
     "capStepNote": "{animal} memberimu satu langkah untuk dicoba, dari masalahmu sendiri. Tangkap satu di aplikasi untuk memulai.",
     "capDebates": "Debat",
     "capDebatesNote": "Ajak hewan lain untuk memperdebatkannya, setelah kamu mendapatkan Kekuatan seekor hewan di aplikasi.",
+    "capInApp": "Langkah dan debat",
+    "capInAppNote": "{animal} bisa memberimu satu langkah dari masalahmu sendiri, dan mengajak hewan lain untuk memperdebatkannya. Tangkap satu di aplikasi untuk memulai.",
     "locked": "Terkunci",
     "createAccount": "Buat akun gratis",
     "doTrial": "Lakukan Uji Coba ini",

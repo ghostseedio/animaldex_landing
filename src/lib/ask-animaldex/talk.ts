@@ -65,6 +65,9 @@ export const TALK_WORDS_EN = {
     capStepNote: "{animal} gives you one step to try, from your own problem. Capture one in the app to start.",
     capDebates: "Debates",
     capDebatesNote: "Bring other animals in to argue it out, once you've earned an animal's Power in the app.",
+    /** The two things only the app's own animals do, as one quiet chip under the contact card (visual first: no caption, no two locks). */
+    capInApp: "Steps and debates",
+    capInAppNote: "{animal} can set you a step from your own problem, and bring other animals in to argue it out. Capture one in the app to start.",
     locked: "Locked",
     createAccount: "Create a free account",
     doTrial: "Do this Trial",
@@ -81,7 +84,7 @@ export type TalkWords = typeof TALK_WORDS_EN;
 
 /** What "What {name} can do" says: all the drawer needs of the Talk page's words (WEB-38). */
 export const TALK_CAPABILITY_KEYS = [
-    "capabilities", "capTalk", "capTalkNote", "capTrials", "capStep", "capStepNote", "capDebates", "capDebatesNote",
+    "capabilities", "capTalk", "capTalkNote", "capTrials", "capStep", "capStepNote", "capDebates", "capDebatesNote", "capInApp", "capInAppNote",
     "locked", "getApp", "catchForTrials", "noTrials"
 ] as const;
 

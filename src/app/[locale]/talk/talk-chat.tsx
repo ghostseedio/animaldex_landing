@@ -173,7 +173,6 @@ function TalkChatShell({name, power, slug, onMenu, words, labels, showsCapabilit
                                 words={words}
                                 companionWords={labels.companions}
                                 appHref="/#download"
-                                onTalk={() => undefined}
                             />
                         ) : null}
                         <div aria-hidden="true" className="min-h-7 flex-1" />

@@ -2931,6 +2931,8 @@
     "capStepNote": "{animal} gives you one step to try, from your own problem. Capture one in the app to start.",
     "capDebates": "Debates",
     "capDebatesNote": "Bring other animals in to argue it out, once you've earned an animal's Power in the app.",
+    "capInApp": "Steps and debates",
+    "capInAppNote": "{animal} can set you a step from your own problem, and bring other animals in to argue it out. Capture one in the app to start.",
     "locked": "Locked",
     "createAccount": "Create a free account",
     "doTrial": "Do this Trial",
