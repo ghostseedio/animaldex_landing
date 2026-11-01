@@ -66,7 +66,9 @@ async function readCatalogRows(): Promise<TalkCatalogRow[]> {
     for (let offset = 0; offset < 6000; offset += 1000) {
         const request = rest(`species_catalog_v1?select=${select}&catalog_status=in.(active,seeded)&animaldex_number=gte.1&landing_page_slug=not.is.null&order=animaldex_number.asc&offset=${offset}&limit=1000`);
         if (!request) return rows;
-        const response = await fetch(request.url, {headers: request.headers, cache: "no-store"});
+        // Kept by the fetch cache for a day: the Talk pages render this in their ISR HTML, and a
+        // no-store read there would turn a cached page dynamic (a 500 on revalidation).
+        const response = await fetch(request.url, {headers: request.headers, next: {revalidate: 86400, tags: ["talk-catalog"]}});
         if (!response.ok) throw new Error(`species_catalog_v1 ${response.status}`);
         const page = await response.json() as TalkCatalogRow[];
         rows.push(...page);
@@ -83,7 +85,7 @@ async function readMostTalkedTo(): Promise<string[]> {
             method: "POST",
             headers: {...request.headers, "Content-Type": "application/json"},
             body: JSON.stringify({p_limit: POPULAR, p_window: "all"}),
-            cache: "no-store"
+            next: {revalidate: 86400, tags: ["talk-catalog"]}
         });
         if (!response.ok) return [];
         const rows = await response.json() as Array<{landing_page_slug?: unknown}>;

@@ -12,6 +12,7 @@
  */
 
 import {memo} from "react";
+import dynamic from "next/dynamic";
 import {
     parseAskInline,
     parseAskMarkdown,
@@ -21,7 +22,11 @@ import {
 } from "@/lib/ask-animaldex/markdown";
 import {askVisualIdentity, type AskVisual} from "@/lib/ask-animaldex/visuals";
 import {askHeadingParts} from "@/lib/ask-animaldex/thread-layout";
-import AskVisualView from "@/components/ask-animaldex/ask-visual";
+
+/** The native drawings, fetched with the first reply that draws one, never with the page (WEB-23). */
+const AskVisualView = dynamic(() => import("@/components/ask-animaldex/ask-visual"), {
+    loading: () => <div className="h-24 bg-white/[0.03]" aria-hidden="true" />
+});
 
 /** The diagram panel (docs/rich-chat/SPEC.md, section 1.4): radius 16, about 14 of padding. */
 const PANEL_STYLE = {borderRadius: 16, backgroundColor: "var(--ask-panel)", padding: 14} as const;

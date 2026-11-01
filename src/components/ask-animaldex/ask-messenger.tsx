@@ -407,20 +407,16 @@ export function AskReplyBubbles({
                                 </div>
                             );
                         }
-                        const ownsControls = !isLive && index === lastBubble && Boolean(trailing);
                         return (
-                            <div key={`b-${index}`} className="flex flex-col">
-                                <div className="flex items-end">
-                                    <div className={`flex min-w-0 flex-col items-start ${carries ? "flex-1" : ""}`}>{bubble}</div>
-                                    {/* From 640 px, room beside every bubble for the reply's controls (its
-                                        voice, its menu), so their far edges line up. On a phone the
-                                        bubbles take the whole width beside the face, the controls under
-                                        the last one (UX pass WEB-27). */}
-                                    <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">
-                                        {ownsControls ? trailing : null}
-                                    </div>
+                            <div key={`b-${index}`} className="flex items-end">
+                                <div className={`flex min-w-0 flex-col items-start ${carries ? "flex-1" : ""}`}>{bubble}</div>
+                                {/* From 640 px, room beside every bubble for the reply's controls (its
+                                    voice, its menu), so their far edges line up. On a phone the
+                                    bubbles take the whole width beside the face, the controls under
+                                    the reply (UX pass WEB-27). */}
+                                <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">
+                                    {!isLive && index === lastBubble ? trailing : null}
                                 </div>
-                                {ownsControls ? <div className="flex items-center gap-0.5 pt-1 sm:hidden" data-testid="reply-controls-under">{trailing}</div> : null}
                             </div>
                         );
                     })}
@@ -433,11 +429,14 @@ export function AskReplyBubbles({
                                 </div>
                                 <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">{trailing}</div>
                             </div>
-                            {trailing ? <div className="flex items-center gap-0.5 pt-1 sm:hidden">{trailing}</div> : null}
                         </div>
                     ) : null}
                 </div>
             </div>
+            {/* A phone's controls: under the reply, beside nothing, so the face stays by the last bubble. */}
+            {!isLive && trailing && (lastBubble >= 0 ? !askPieceIsWide(pieces[lastBubble]) : specialHere !== null) ? (
+                <div className="flex items-center gap-0.5 pl-9 pt-1 sm:hidden" data-testid="reply-controls-under">{trailing}</div>
+            ) : null}
             {after ? <div className="pl-9 pt-2.5">{after}</div> : null}
         </div>
     );

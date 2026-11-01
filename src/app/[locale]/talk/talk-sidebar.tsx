@@ -222,7 +222,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                     </section>
                 ) : null}
             </nav>
-            <div className="flex items-center gap-2 border-t border-white/10 px-3 py-3">
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-white/10 px-2.5 py-3">
                 {signedIn ? (
                     <Link
                         href="/app"
@@ -236,12 +236,12 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                         <span className="truncate">{session.displayName ?? session.username ?? words.account}</span>
                     </Link>
                 ) : (
-                    <span className="flex min-w-0 flex-1 items-center gap-1 text-[13px] font-semibold">
-                        <Link href={accountHref} className="inline-flex h-10 items-center rounded-full px-2.5 text-white transition-colors hover:bg-white/[0.06]" data-testid="talk-sign-up">
+                    <span className="flex items-center whitespace-nowrap text-[13px] font-semibold">
+                        <Link href={accountHref} className="inline-flex h-10 items-center rounded-full px-2 text-white transition-colors hover:bg-white/[0.06]" data-testid="talk-sign-up">
                             {words.signUpFree}
                         </Link>
                         <span aria-hidden="true" className="text-ink-500">·</span>
-                        <Link href={accountHref} className="inline-flex h-10 items-center rounded-full px-2.5 text-ink-200 transition-colors hover:bg-white/[0.06] hover:text-white">
+                        <Link href={accountHref} className="inline-flex h-10 items-center rounded-full px-2 text-ink-200 transition-colors hover:bg-white/[0.06] hover:text-white">
                             {words.signIn}
                         </Link>
                     </span>
@@ -249,7 +249,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                 <Link
                     href="/#download"
                     onClick={() => rememberStorePlacement("page_talk")}
-                    className="inline-flex h-10 shrink-0 items-center rounded-full bg-primary-400 px-3.5 text-[12px] font-black text-canvas-950 transition-colors hover:bg-primary-300"
+                    className="ml-auto inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-full bg-primary-400 px-3 text-[12px] font-black text-canvas-950 transition-colors hover:bg-primary-300"
                 >
                     {words.getApp}
                 </Link>

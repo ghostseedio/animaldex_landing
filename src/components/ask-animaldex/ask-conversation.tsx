@@ -71,6 +71,7 @@
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -128,7 +129,7 @@ import {
     stepReportThumbnail,
     useOpenStepUpdates
 } from "@/components/companions/use-steps";
-import {StepDoneChip, StepReportComposer, type StepReportDraft} from "@/components/companions/step-views";
+import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
 import {
     AskDebateOfferSection,
     AskDoneSection,
@@ -155,10 +156,10 @@ import {
     type AskSpecial
 } from "@/lib/ask-animaldex/special-messages";
 import {bondChipText, decodeChatBond, fillWords, type ChatBond, type CompanionWords} from "@/lib/companion-bond";
-import BondPanel from "@/components/companions/bond-panel";
+
 import {reloadCompanions, useAnimalBond, useChatCaptureId} from "@/components/companions/use-companions";
 import {noteAnimalMessagesMuted, noteAnimalMessagesRead} from "@/components/companions/use-animal-conversations";
-import AnimalNameSheet from "@/components/companions/name-sheet";
+
 import {CAPTURE_NICKNAME_EVENT, type CaptureNicknameDetail} from "@/lib/capture-nickname";
 import {
     AskAnimalFace,
@@ -187,8 +188,7 @@ import {useAnimalSpeech, type AskSpeechAllowance, type AskSpeechNotice, type Ask
 import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
-import DebateSetup, {type DebateEdit, type DebateHost} from "@/components/debates/debate-sheet";
-import DebateThread, {DebateQuietSection} from "@/components/debates/debate-thread";
+import type {DebateEdit, DebateHost} from "@/components/debates/debate-sheet";
 import {useMyDebates} from "@/components/debates/use-debates";
 import {debateSeedProblem, type Debate, type DebateNamedAnimal, type DebateRequest} from "@/lib/debates";
 import {ASK_DIAGRAM_ADVANCE_PX, askCopyText, askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
@@ -200,6 +200,18 @@ import {useDictation} from "@/components/ask-animaldex/use-dictation";
 import {DictationButton, DictationStrip} from "@/components/ask-animaldex/dictation-views";
 import {callCopy, callSpeechLanguage} from "@/lib/ask-animaldex/call-copy";
 import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
+
+/**
+ * What only some chats ever draw, fetched when first drawn rather than with
+ * the page (UX pass WEB-23): the debate setup and its turns, the bond panel,
+ * the naming sheet and the report composer.
+ */
+const DebateSetup = dynamic(() => import("@/components/debates/debate-sheet"));
+const DebateThread = dynamic(() => import("@/components/debates/debate-thread"));
+const DebateQuietSection = dynamic(() => import("@/components/debates/debate-thread").then((module) => module.DebateQuietSection));
+const BondPanel = dynamic(() => import("@/components/companions/bond-panel"));
+const AnimalNameSheet = dynamic(() => import("@/components/companions/name-sheet"));
+const StepReportComposer = dynamic(() => import("@/components/companions/step-views").then((module) => module.StepReportComposer));
 
 export type AskDrawerLabels = {
     title: string;
@@ -2952,7 +2964,7 @@ export default function AskConversation({
                             <ArrowDownIcon />
                         </button>
                     ) : null}
-                    {messenger && context && !ownerChat && !aboutTrial && !hasConversation && !quota.reached && !showingMemory && !showingSoundCredits ? (
+                    {messenger && context && !ownerChat && !aboutTrial && !hasConversation && !quota.reached && !showingMemory && !showingSoundCredits && dictation.phase === "idle" ? (
                         // A visitor's first message: what to ask it about (newcomer UX vet, P0-2).
                         <p className="pb-2 text-[12px] font-semibold leading-4 text-ink-300" data-testid="visitor-hint">
                             {labels.companions.journey.chat.visitorHint}
