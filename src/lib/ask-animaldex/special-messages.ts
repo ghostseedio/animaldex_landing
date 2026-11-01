@@ -38,7 +38,13 @@ export type AskSpecial =
      */
     | {kind: "debate"; problem: string | null; with: DebateNamedAnimal[]}
     /** "DEBATE": the debate started from this offer, the section gone quiet in place. */
-    | {kind: "debateStarted"; debateId: string};
+    | {kind: "debateStarted"; debateId: string}
+    /**
+     * "YOUR STEP" on a public chat (web only, 2026-11-01): the step this reply
+     * set, saved nowhere. [I'll do it] says it is taken on in the app, where
+     * they capture one; [A different step] asks the animal for another.
+     */
+    | {kind: "stepPreview"; step: string};
 
 export type AskSpecialKind = AskSpecial["kind"];
 
@@ -85,6 +91,16 @@ export function askReplySpecials(input: {
         specials.push({kind: "debate", problem: event.debateOffer.problem, with: event.debateOffer.with});
     }
     return specials;
+}
+
+/**
+ * The sections of a finished reply on a public chat: only the step it set,
+ * when it set one (web only). A greeting or a failed reply never has one.
+ */
+export function askPublicReplySpecials(message: Pick<AskMessage, "role" | "status" | "companionEvent">): AskSpecial[] {
+    if (message.role !== "assistant" || message.status !== "complete") return [];
+    const step = message.companionEvent?.stepPreview?.step?.trim();
+    return step ? [{kind: "stepPreview", step}] : [];
 }
 
 /**

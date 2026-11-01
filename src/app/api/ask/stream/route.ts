@@ -398,6 +398,11 @@ export async function POST(request: Request) {
     ]);
     // A public species chat (SPEC section 4): nobody's card, and nothing of theirs to set or offer.
     const publicChat = speaksAsAnimal && !subject.captureId && !aboutTrial && !isVisit && holdsSpecies === false;
+    // Web only (2026-11-01): there too the animal may set one step, which the
+    // chat shows with the app as the way to take it on. Nothing is saved.
+    // ASK_PUBLIC_STEPS=off turns it off.
+    const publicSteps = publicChat && !isCall && !isGreeting && process.env.ASK_PUBLIC_STEPS !== "off"
+        && (!viewer.signedIn || settings.suggestSteps !== false);
     const loop = owner?.loop ?? null;
     // 3.2 Debates: whether the offer may be made in this reply, and on a call whether a yes may be handed over.
     const debate = owner?.debate ?? NO_DEBATE;
@@ -648,6 +653,7 @@ export async function POST(request: Request) {
         mode,
         speakingTo: isVisit ? "visitor" as const : "owner" as const,
         publicChat,
+        publicSteps,
         visitorRelay: relayOn,
         nature,
         nickname: card?.nickname ?? null,
@@ -791,6 +797,9 @@ export async function POST(request: Request) {
             }
             return result;
         }
+        // A public chat's step: drawn under the reply, with the app as the way to take it on.
+        : publicSteps
+        ? async (lines: CompanionLines) => (lines.trial ? {companion: {trial_preview: {step: lines.trial.step}}} : {})
         : loop && owner && ownerSpeciesId && ownerUserId && callDebates
         ? async (lines: CompanionLines): Promise<Record<string, unknown>> => {
             // A call never runs a debate and never starts a public one: a yes is

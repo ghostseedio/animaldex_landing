@@ -170,6 +170,67 @@ export function AskStepSection({
     );
 }
 
+/**
+ * "YOUR STEP" on a public chat (web only, 2026-11-01): the step the animal
+ * just set someone who has not captured one of its kind. It reads as the
+ * owner's does; [I'll do it] opens one honest line and the app, where they
+ * capture one and take it on (the locked capability's own words and action),
+ * and [A different step] asks the animal for another. Saved nowhere.
+ */
+export function AskStepPreviewSection({
+    text,
+    words,
+    live,
+    note,
+    appLabel,
+    appHref,
+    onApp,
+    onOther
+}: {
+    text: string;
+    words: CompanionWords;
+    /** Only the newest reply's step has its buttons. */
+    live: boolean;
+    /** "{animal} gives you one step to try, from your own problem. Capture one in the app to start." */
+    note: string;
+    appLabel: string;
+    appHref: string;
+    onApp: () => void;
+    onOther: () => void;
+}) {
+    const [taking, setTaking] = useState(false);
+    return (
+        <section className="flex flex-col gap-2.5" aria-label={words.journey.step.pinnedLabel} data-testid="special-step-preview">
+            <AskSpecialLabel icon={<AskWalkIcon />}>{words.journey.step.pinnedLabel}</AskSpecialLabel>
+            <p className="text-[15px] font-bold leading-6 text-white">{text}</p>
+            {live ? (
+                taking ? (
+                    <div className="flex flex-col gap-2.5" data-testid="step-preview-app">
+                        <p className="text-[13px] leading-5 text-white/75">{note}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Link href={appHref} onClick={onApp} className={PRIMARY}>
+                                {appLabel}
+                            </Link>
+                            <button type="button" onClick={onOther} className={SECONDARY}>
+                                {words.journey.step.other}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={() => setTaking(true)} className={PRIMARY}>
+                            {words.journey.step.accept}
+                        </button>
+                        <button type="button" onClick={onOther} className={SECONDARY}>
+                            {words.journey.step.other}
+                        </button>
+                    </div>
+                )
+            ) : null}
+        </section>
+    );
+}
+
 // MARK: - Done, and the Power earned
 
 /** Under the done label: "+5 XP for your proof", when the photo or video showed the step. */

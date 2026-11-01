@@ -693,6 +693,10 @@ export type AskPromptOptions = {
     /// no account). The animal meets them, sets and offers nothing
     /// (`ANIMAL_PUBLIC_CHAT_RULES` in place of the step-offer rules).
     publicChat?: boolean;
+    /// Species scope, public chat (web only, 2026-11-01): the animal may set
+    /// one step there too (`ANIMAL_PUBLIC_STEP_RULES`); the chat shows it with
+    /// the app as the way to take it on. Nothing is saved.
+    publicSteps?: boolean;
     /// Visitor only: this animal passes on to its owner who visited and the
     /// gist of what they asked (`visitor-notes.ts`), and the visitor has been told.
     visitorRelay?: boolean;
@@ -750,6 +754,18 @@ function speciesMode(options: AskPromptOptions): AskConversationMode {
     return options.mode ?? (options.aboutTrial ? "training" : "auto");
 }
 
+/** A public chat where the animal may set a step: not a call, not training, and steps not turned off. */
+function publicStepsOn(options: AskPromptOptions): boolean {
+    return Boolean(
+        options.scope === "species"
+        && options.publicChat
+        && options.publicSteps
+        && !options.call
+        && options.suggestSteps !== false
+        && speciesMode(options) !== "training"
+    );
+}
+
 /** On a call there is no screen: nothing is set, offered or drawn. Verbatim from the apps' `ANIMAL_CALL_STEP_RULES` (3.2). */
 const ANIMAL_CALL_STEP_RULES = [
     "This is a voice call: set no steps, offer no Warmup, Trials or debates, and send no cards. If they bring up the",
@@ -772,6 +788,37 @@ export const ANIMAL_PUBLIC_CHAT_RULES = [
     "This person has not captured one of your kind: you are meeting them, and you are nobody's companion here. Talk",
     "their life through with them as yourself, but set no steps, offer no Warmup, Trials or debates, and send no cards.",
     "If they ask about those, say in your own words that they come once they capture one of your kind."
+];
+
+/**
+ * A public chat that may set a step (web only, owner 2026-11-01: "even for
+ * guest users, we should suggest … your step … but when user wants to
+ * actually do them it tells them to download the app"). The apps' public
+ * rules forbid steps; here the animal may set one, as it would for its
+ * owner, and the chat shows it with the app as the way to take it on.
+ * Nothing is saved: the hidden TRIAL line only draws the step under the reply.
+ */
+export const ANIMAL_PUBLIC_STEP_RULES = [
+    "This person has not captured one of your kind: you are meeting them, and you are nobody's companion here. Talk",
+    "their life through with them as yourself.",
+    "- When they bring something real of their own (a problem, a decision, something they keep running into) and you",
+    "  understand it — ask what you need to first, never on the first mention — you may set them one concrete step that",
+    "  does your lesson in their real life: specific to what they told you, small enough to actually do within days,",
+    "  and clearly yours. Say it the way you would, in plain words, as part of the conversation. The app shows it to",
+    "  them under your reply with its own buttons, so never mention a card, a button, tapping or an app, and never call",
+    "  it a Trial, a challenge, a task or homework. One step for a problem: set another only if they ask for a different",
+    "  one or bring a new problem.",
+    "- Never in small talk, never in your first reply, and never while they are telling you about something hard (a",
+    "  loss, fear, feeling alone) unless they ask what to do. If they just want to talk, talk.",
+    "- Offer no Warmup or debates and send no cards. If they ask for a challenge, you may say in a sentence what your",
+    "  Trials ask of them, as yourself. If they ask about the Warmup or debates, say in your own words that they come",
+    "  once they capture one of your kind."
+];
+
+/** The hidden line a public chat's step is read from (never shown). */
+export const PUBLIC_STEP_OUTPUT_LINES = [
+    "5. Then, only if this reply set them a step, one hidden line (never shown to anyone):",
+    "   TRIAL: <the step you just set them, one plain sentence> | <days before you would check how it went, 1-14>"
 ];
 
 /** The owner's cards are in this prompt (3.2): the reader's own animal's one-to-one chat. */
@@ -797,7 +844,8 @@ function companionRules(options: AskPromptOptions): string[] {
     if (options.publicChat) {
         const publicMode = speciesMode(options);
         const modeLines = publicMode === "chat" ? ANIMAL_CHAT_MODE_RULES : publicMode === "auto" ? ANIMAL_AUTO_MODE_RULES : [];
-        return [...modeLines, ...(modeLines.length > 0 ? [""] : []), ...ANIMAL_PUBLIC_CHAT_RULES, "", ...ANIMAL_RELATIONSHIP_RULES];
+        const publicRules = publicStepsOn(options) ? ANIMAL_PUBLIC_STEP_RULES : ANIMAL_PUBLIC_CHAT_RULES;
+        return [...modeLines, ...(modeLines.length > 0 ? [""] : []), ...publicRules, "", ...ANIMAL_RELATIONSHIP_RULES];
     }
     if (options.groupLines?.length) return askGroupLoopRules(options.groupLines);
     const mode = speciesMode(options);
@@ -964,6 +1012,7 @@ export function buildAskStreamingSystemPrompt(options: AskPromptOptions): string
             "3. Then 2-3 follow-ups, one per line, no bullets or numbering.",
             ...(options.stories ? [ANIMAL_STORY_OUTPUT_LINE] : []),
             ...(options.companionLoop && speciesMode(options) !== "training" ? COMPANION_OUTPUT_LINES : []),
+            ...(publicStepsOn(options) ? PUBLIC_STEP_OUTPUT_LINES : []),
             ...(options.call && options.callDebates ? CALL_DEBATE_OUTPUT_LINES : []),
             ...followUpRules(options),
             `Write ${ASK_FOLLOW_UP_SENTINEL} exactly once, and never inside the answer.`,

@@ -381,7 +381,11 @@ export function useAskThread(params: {
     }, []);
 
     const takeCompanion = useCallback((raw: unknown, bond?: unknown): AskCompanionEvent | undefined => {
-        if (!callbacks.current.ownerChat) return undefined;
+        if (!callbacks.current.ownerChat) {
+            // A public chat keeps only the step it was shown (web only): it has no loop.
+            const preview = parseCompanionUpdate(raw)?.event.stepPreview;
+            return preview ? {stepPreview: preview} : undefined;
+        }
         if (bond !== undefined) callbacks.current.onBond?.(bond);
         const update = parseCompanionUpdate(raw);
         if (!update) return undefined;

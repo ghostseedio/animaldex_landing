@@ -67,6 +67,11 @@ export type AskCompanionEvent = {
     referral?: AskCompanionReferral;
     /** The animal offered a debate in this reply, and it was allowed: [Yes, start a debate] [Not now] under it. */
     debateOffer?: DebateOffer;
+    /**
+     * A public chat's step (web only, 2026-11-01): set in this reply, saved
+     * nowhere; the chat shows it with the app as the way to take it on.
+     */
+    stepPreview?: {step: string};
 };
 
 /** `done.companion`: the loop now, and what changed in this reply. */
@@ -143,6 +148,7 @@ export function parseCompanionUpdate(raw: unknown): AskCompanionUpdate | null {
     const referral = referralFrom(row.referral);
     const debateOffer = decodeDebateOffer(row.debate_offer);
     const openStep = decodeAnimalStep(row.open_step);
+    const previewStep = text(object(row.trial_preview)?.step);
     return {
         loop: {
             focus: text(row.focus),
@@ -154,7 +160,8 @@ export function parseCompanionUpdate(raw: unknown): AskCompanionUpdate | null {
             ...(stepDone ? {stepDone} : {}),
             ...(stepSet ? {stepSet} : {}),
             ...(referral ? {referral} : {}),
-            ...(debateOffer ? {debateOffer} : {})
+            ...(debateOffer ? {debateOffer} : {}),
+            ...(previewStep ? {stepPreview: {step: previewStep}} : {})
         }
     };
 }
@@ -200,7 +207,7 @@ export function normalizeCompanionLoop(raw: unknown): AskCompanionLoop | null {
 }
 
 export function isEmptyCompanionEvent(event: AskCompanionEvent | null | undefined): boolean {
-    return !event || (!event.stepDone && !event.stepSet && !event.referral && !event.debateOffer);
+    return !event || (!event.stepDone && !event.stepSet && !event.referral && !event.debateOffer && !event.stepPreview);
 }
 
 /** The stored form, read back tolerantly: a thread saved by an older build has none. */
@@ -240,11 +247,13 @@ export function normalizeCompanionEvent(raw: unknown): AskCompanionEvent | null 
         }
         : null;
     const debateOffer = decodeDebateOffer(row.debateOffer);
+    const previewStep = text(object(row.stepPreview)?.step);
     const event: AskCompanionEvent = {
         ...(stepDone ? {stepDone} : {}),
         ...(stepSet ? {stepSet} : {}),
         ...(referral ? {referral} : {}),
-        ...(debateOffer ? {debateOffer} : {})
+        ...(debateOffer ? {debateOffer} : {}),
+        ...(previewStep ? {stepPreview: {step: previewStep}} : {})
     };
     return isEmptyCompanionEvent(event) ? null : event;
 }

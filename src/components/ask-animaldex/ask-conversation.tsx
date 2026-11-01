@@ -134,6 +134,7 @@ import {
     AskDebateOfferSection,
     AskDoneSection,
     AskEarnedSection,
+    AskStepPreviewSection,
     AskStepSection,
     AskTrialsSection,
     AskWarmupOfferSection,
@@ -144,6 +145,7 @@ import {
     applyWarmupResult,
     askDoneStepIds,
     askEarnedReport,
+    askPublicReplySpecials,
     askReplySpecials,
     askStepCarrierId,
     askStepResolution,
@@ -2261,11 +2263,35 @@ export default function AskConversation({
                 const started = threadDebates.find((debate) => debate.id === special.debateId) ?? null;
                 return started ? <DebateQuietSection key="debate" debate={started} words={words} locale={locale} /> : null;
             }
+            case "stepPreview":
+                return (
+                    <AskStepPreviewSection
+                        key="step-preview"
+                        text={special.step}
+                        words={words}
+                        live={message.id === latestStepPreviewId && !isSending}
+                        note={talkWords ? fillWords(talkWords.capStepNote, {animal: speakerName}) : ""}
+                        appLabel={talkWords?.getApp ?? labels.limitAppCta}
+                        appHref={page?.appHref ?? "/#download"}
+                        onApp={() => rememberStorePlacement("page_talk_step")}
+                        onOther={() => submit(words.journey.step.otherMessage, "chip")}
+                    />
+                );
         }
     };
+    // A public chat's newest step (web only): only it has its buttons.
+    const latestStepPreviewId = publicChat
+        ? [...messages].reverse().find((message) => message.role === "assistant" && message.companionEvent?.stepPreview)?.id ?? null
+        : null;
     const replySpecial = (message: AskMessage) => {
-        if (!ownerChat || message.role !== "assistant" || message.status !== "complete") return null;
+        if (message.role !== "assistant" || message.status !== "complete") return null;
         if (pacer.messageId === message.id && pacer.revealing) return null;
+        if (!ownerChat) {
+            // A public chat: the step this reply set, if it set one (web only).
+            if (!publicChat) return null;
+            const previews = askPublicReplySpecials(message).map((special) => specialSection(message, special)).filter(Boolean);
+            return previews.length > 0 ? <>{previews}</> : null;
+        }
         const sections = askReplySpecials({
             message,
             warmupUnavailable: warmupOfferState === "hidden",
