@@ -8,7 +8,9 @@
  * Only a reply that arrives while the drawer is open is paced: one restored
  * from an earlier visit is simply there. The text a reader sees is never
  * taken back, and a reader who prefers reduced motion gets every word as it
- * arrives, as they did before pacing existed.
+ * arrives, as they did before pacing existed. The first words show as soon
+ * as they arrive, and the clock that bounds the whole reveal (twelve
+ * seconds, `ASK_PACER_BUDGET_SECONDS`) starts with them.
  */
 
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -62,6 +64,8 @@ export function useReplyPacer(params: {
     const [activeId, setActiveId] = useState<string | null>(null);
 
     const shownRef = useRef(0);
+    // When this reply's first words went on screen: the budget runs from then.
+    const startedAtRef = useRef<number | null>(null);
     const skipRef = useRef(false);
     const wordsShownRef = useRef(0);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -89,10 +93,12 @@ export function useReplyPacer(params: {
             sourceDone,
             instant: instant || skipRef.current,
             typingCps: persona?.typing_cps ?? ASK_PACER_DEFAULT.typingCps,
-            pace: persona?.pace ?? ASK_PACER_DEFAULT.pace
+            pace: persona?.pace ?? ASK_PACER_DEFAULT.pace,
+            ...(startedAtRef.current === null ? {} : {elapsed: (Date.now() - startedAtRef.current) / 1000})
         });
         const advanced = step.next > shown;
         if (advanced) {
+            startedAtRef.current ??= Date.now();
             shownRef.current = step.next;
             setVisibleText(text.slice(0, step.next));
             const word = instant || skipRef.current ? null : askPacerWordShown(text.slice(shown, step.next));
@@ -109,6 +115,7 @@ export function useReplyPacer(params: {
     useEffect(() => {
         clearTimer();
         shownRef.current = 0;
+        startedAtRef.current = null;
         skipRef.current = false;
         wordsShownRef.current = 0;
         setVisibleText("");

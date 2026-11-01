@@ -15,8 +15,16 @@
  *   - `instant` (a click on the reply, Stop, reduced motion, a screen reader)
  *     shows everything received at once.
  *
- * One addition for the web, where markdown renders as it is revealed: a bold
- * phrase appears whole, so `**` is never shown waiting for its other half.
+ * Additions for the web, where markdown renders as it is revealed:
+ *   - a bold phrase appears whole, so `**` is never shown waiting for its
+ *     other half;
+ *   - a table appears whole, once the line after it (or the end of the
+ *     reply) has arrived, never a cell at a time;
+ *   - the pace is bounded (UX pass, DECISIONS section 6): the first words show
+ *     as soon as they arrive, and the whole reply finishes revealing within
+ *     `ASK_PACER_BUDGET_SECONDS` of them, each step speeding up in proportion
+ *     to what is left. Past the budget, what has arrived is shown as it
+ *     arrives.
  *
  * Pure: the drawer's hook owns the timer.
  */
@@ -34,6 +42,13 @@ export type AskPacerInput = {
     instant: boolean;
     typingCps: number;
     pace: AskPacerPace;
+    /**
+     * Seconds since this reply's first words were shown; absent before they
+     * are. With it, the step is bounded by `budget`.
+     */
+    elapsed?: number;
+    /** Seconds the whole reveal may take; `ASK_PACER_BUDGET_SECONDS` by default. */
+    budget?: number;
 };
 
 /** Where the next step ends, and how long to wait after it, in seconds. */
@@ -44,6 +59,9 @@ export const ASK_PACER_DEFAULT = {typingCps: 21, pace: "measured" as AskPacerPac
 
 /** How long to look again while waiting for more of the reply. */
 export const ASK_PACER_WAIT_SECONDS = 0.06;
+
+/** A whole reply finishes revealing within this many seconds of its first words (DECISIONS section 6). */
+export const ASK_PACER_BUDGET_SECONDS = 12;
 
 const SENTENCE_END = ".!?…";
 const CLAUSE_END = ",;:—–";
@@ -84,9 +102,49 @@ function wordEnd(target: string, index: number): number {
     return end;
 }
 
+/** Where the table that starts at `index` ends (the end of its last row), once the line after it has arrived. */
+function tableEnd(target: string, index: number, sourceDone: boolean): number | null {
+    let lineStart = index;
+    for (;;) {
+        const lineEnd = target.indexOf("\n", lineStart);
+        if (lineEnd < 0) return sourceDone ? target.length : null;
+        const nextStart = lineEnd + 1;
+        const rest = target.slice(nextStart);
+        // The next line is not here yet (or only its indent is): it may be another row.
+        if (!/\S/.test(rest) && !rest.includes("\n")) return sourceDone ? lineEnd : null;
+        if (rest.startsWith("\n") || !rest.trimStart().startsWith("|")) return lineEnd;
+        lineStart = nextStart;
+    }
+}
+
+/** Nothing but an indent before `index` on its line. */
+function atLineStart(target: string, index: number): boolean {
+    const lineStart = target.lastIndexOf("\n", index - 1) + 1;
+    return /^[ \t]*$/.test(target.slice(lineStart, index));
+}
+
+/**
+ * The step bounded by the budget: its pause shrinks in proportion to what
+ * is still to show, so the rest fits in the time left; past the budget, the
+ * rest of what has arrived shows at once.
+ */
+function withinBudget(input: AskPacerInput, step: AskPacerStep): AskPacerStep {
+    if (input.elapsed === undefined) return step;
+    const budget = input.budget ?? ASK_PACER_BUDGET_SECONDS;
+    const timeLeft = budget - input.elapsed;
+    if (timeLeft <= 0) return {next: input.target.length, pause: 0};
+    const chunk = Math.max(1, step.next - input.shown);
+    const after = Math.max(0, input.target.length - step.next);
+    return {next: step.next, pause: Math.min(step.pause, (chunk * timeLeft) / (chunk + after))};
+}
+
 export function askPacerStep(input: AskPacerInput): AskPacerStep {
     const {target, shown, sourceDone} = input;
     if (input.instant) return {next: target.length, pause: 0};
+    // Past the budget, nothing waits on a word or a fence.
+    if (input.elapsed !== undefined && input.elapsed >= (input.budget ?? ASK_PACER_BUDGET_SECONDS)) {
+        return {next: target.length, pause: 0};
+    }
 
     let index = shown;
     while (index < target.length && isSpace(target[index])) index += 1;
@@ -94,8 +152,15 @@ export function askPacerStep(input: AskPacerInput): AskPacerStep {
     // A card or drawing appears whole once its closing fence has arrived.
     if (target.startsWith("```", index)) {
         const close = closingFence(target, index + 3);
-        if (close !== null) return {next: close, pause: 0.3};
+        if (close !== null) return withinBudget(input, {next: close, pause: 0.3});
         return sourceDone ? {next: target.length, pause: 0} : {next: shown, pause: 0.08};
+    }
+
+    // A table appears whole once it has ended: a block, never a cell at a time.
+    if (target[index] === "|" && atLineStart(target, index)) {
+        const end = tableEnd(target, index, sourceDone);
+        if (end !== null) return withinBudget(input, {next: end, pause: 0.3});
+        return {next: shown, pause: 0.08};
     }
 
     index = wordEnd(target, index);
@@ -130,7 +195,7 @@ export function askPacerStep(input: AskPacerInput): AskPacerStep {
     if (index + 1 < target.length && target[index] === "\n" && target[index + 1] === "\n") {
         pause += 0.16 * scale;
     }
-    return {next: index, pause: Math.min(pause, 0.9)};
+    return withinBudget(input, {next: index, pause: Math.min(pause, 0.9)});
 }
 
 /**
@@ -149,14 +214,25 @@ export function askPacerWordShown(chunk: string): {endsSentence: boolean} | null
  * Runs the steps to the end without waiting, for tests and for a quick look
  * at how long a reply takes to type out at a given pace.
  */
-export function askPacerTimeline(target: string, options: {typingCps: number; pace: AskPacerPace}): AskPacerStep[] {
+export function askPacerTimeline(target: string, options: {typingCps: number; pace: AskPacerPace; budget?: number | null}): AskPacerStep[] {
     const steps: AskPacerStep[] = [];
     let shown = 0;
+    // The clock starts once the first words are on screen, as the hook runs it; `budget: null` runs unbounded.
+    let elapsed: number | undefined;
     while (shown < target.length) {
-        const step = askPacerStep({target, shown, sourceDone: true, instant: false, ...options});
+        const step = askPacerStep({
+            target,
+            shown,
+            sourceDone: true,
+            instant: false,
+            typingCps: options.typingCps,
+            pace: options.pace,
+            ...(options.budget === null ? {} : {elapsed, budget: options.budget})
+        });
         if (step.next <= shown) break;
         steps.push(step);
         shown = step.next;
+        elapsed = (elapsed ?? 0) + step.pause;
     }
     return steps;
 }
