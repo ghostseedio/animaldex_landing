@@ -420,6 +420,28 @@ test("the spoken form of an answer reads as sentences, not as markdown source", 
     assert.match(spoken, /Too little: gives up/);
 });
 
+test("the plain form never doubles a full stop or leaves a bare mark behind (WEB-32)", () => {
+    const plain = askMarkdownPlainText([
+        "Take it. Keep your friends somewhere safe.",
+        "",
+        "## 🌾 Why I'd jump",
+        "Because **grass grows back**.",
+        "",
+        "## ",
+        "",
+        "1. **Say yes.**",
+        "2. Tell them first!",
+        "",
+        "What now?"
+    ].join("\n"));
+    assert.equal(plain, "Take it. Keep your friends somewhere safe. 🌾 Why I'd jump. Because grass grows back. Say yes. Tell them first! What now?");
+    assert.doesNotMatch(plain, /\.\./);
+    assert.doesNotMatch(plain, /#/);
+    // A bold run the model never closed loses its marks, not its words.
+    assert.equal(askMarkdownPlainText("Hold on **for now"), "Hold on for now");
+    assert.equal(askMarkdownPlainText("##"), "");
+});
+
 // MARK: - Lenient visual decoding
 
 test("a chart written freehand still decodes", () => {

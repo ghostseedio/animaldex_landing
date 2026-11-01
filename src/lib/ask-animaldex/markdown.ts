@@ -349,28 +349,49 @@ export function askInlinePlainText(text: string): string {
     return parseAskInline(text).map((segment) => segment.text).join("");
 }
 
+/** One block's words, plain: inline marks gone, and any mark left without its other half (a bare "##", a lone "**") too. */
+function plainPiece(text: string): string {
+    return askInlinePlainText(text)
+        .replace(/^\s*#{1,6}(?=\s|$)\s*/, "")
+        .replace(/\*\*|__/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+/** Sentences joined as prose: a full stop only where the last one has no ending of its own. */
+function joinSentences(parts: Array<string | null>): string {
+    let out = "";
+    for (const part of parts) {
+        const piece = part?.trim();
+        if (!piece) continue;
+        out = !out ? piece : /[.!?…:;]["'”’)\]]*$/.test(out) ? `${out} ${piece}` : `${out}. ${piece}`;
+    }
+    return out;
+}
+
 /**
  * Spoken, copyable form of a whole answer.
  *
  * A screen reader reads a label literally, so handing it the raw source made
  * iOS announce "pound pound Where it comes from" and "star star Trigger star
- * star". Blocks become sentences; inline marks are dropped.
+ * star". Blocks become sentences; inline marks are dropped, and a block that
+ * already ends a sentence is not given a second full stop (WEB-32).
  */
 export function askMarkdownPlainText(raw: string): string {
-    return parseAskMarkdown(raw)
+    return joinSentences(parseAskMarkdown(raw)
         .map((block): string | null => {
             switch (block.kind) {
                 case "heading":
                 case "paragraph":
                 case "quote":
-                    return askInlinePlainText(block.text);
+                    return plainPiece(block.text);
                 case "bulletList":
                 case "numberedList":
-                    return block.items.map((item) => askInlinePlainText(item.text)).join(". ");
+                    return joinSentences(block.items.map((item) => plainPiece(item.text)));
                 case "table": {
-                    const header = block.headers.map(askInlinePlainText).join(", ");
-                    const body = block.rows.map((row) => row.map(askInlinePlainText).join(", "));
-                    return [header, ...body].join(". ");
+                    const header = block.headers.map(plainPiece).join(", ");
+                    const body = block.rows.map((row) => row.map(plainPiece).join(", "));
+                    return joinSentences([header, ...body]);
                 }
                 case "code":
                     return block.text;
@@ -380,8 +401,6 @@ export function askMarkdownPlainText(raw: string): string {
                 case "divider":
                     return null;
             }
-        })
-        .filter((value): value is string => Boolean(value))
-        .join(". ");
+        }));
 }
 
