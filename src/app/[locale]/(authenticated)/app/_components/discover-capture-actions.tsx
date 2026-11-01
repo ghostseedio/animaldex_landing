@@ -2,7 +2,8 @@
 
 import Link from "@/app/[locale]/_components/link";
 import {useEffect, useState} from "react";
-import {giftDisplayName, type GiftCatalog, type GiftDefinition} from "@/lib/capture-gifts";
+import CaptureGiftSheet, {GiftGlyph} from "@/app/[locale]/(authenticated)/app/_components/capture-gift-sheet";
+import {parseGiftCatalog, type GiftCatalog} from "@/lib/capture-gifts";
 
 /** Mirrors `FEED_RAIL_BUTTON_CLASS` in discover-timeline-cards (kept local to avoid an import cycle). */
 const FEED_RAIL_BUTTON_CLASS = "pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] [@media(max-height:760px)]:h-9 [@media(max-height:760px)]:w-9 [&_svg]:h-5 [&_svg]:w-5 [@media(max-height:760px)]:[&_svg]:h-[1.1rem] [@media(max-height:760px)]:[&_svg]:w-[1.1rem]";
@@ -53,18 +54,6 @@ function ActionButton({
     );
 }
 
-function GiftIcon() {
-    return (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
-            <path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" />
-            <path d="M2 7h20v5H2z" />
-            <path d="M12 22V7" />
-            <path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z" />
-            <path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z" />
-        </svg>
-    );
-}
-
 function ThumbsUpIcon({filled}: {filled: boolean}) {
     return (
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
@@ -94,34 +83,13 @@ export default function DiscoverCaptureActions({
     const [error, setError] = useState<string | null>(null);
     const [localStat, setLocalStat] = useState(viewerEndorsementStat);
     const [catalog, setCatalog] = useState<GiftCatalog | null>(null);
-    const [sendingSlug, setSendingSlug] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
         void (async () => {
             const response = await fetch("/api/app/gifts/catalog", {cache: "no-store"});
-            const json = await response.json().catch(() => null);
-            if (cancelled) return;
-            if (json && typeof json.enabled === "boolean") {
-                setCatalog({
-                    enabled: Boolean(json.enabled),
-                    definitions: Array.isArray(json.definitions)
-                        ? json.definitions.map((item: Record<string, unknown>) => ({
-                            id: String(item.id ?? ""),
-                            slug: String(item.slug ?? ""),
-                            displayName: String(item.display_name ?? giftDisplayName(String(item.slug ?? ""))),
-                            description: String(item.description ?? ""),
-                            creditCost: Number(item.credit_cost ?? 0),
-                            captureXpGrant: Number(item.capture_xp_grant ?? 0),
-                            iconKey: String(item.icon_key ?? "gift"),
-                            endorsedStat: item.endorsed_stat as GiftDefinition["endorsedStat"],
-                            sortOrder: Number(item.sort_order ?? 0)
-                        }))
-                        : []
-                });
-            } else {
-                setCatalog({enabled: false, definitions: []});
-            }
+            const next = parseGiftCatalog(await response.json().catch(() => null));
+            if (!cancelled) setCatalog(next);
         })();
         return () => {
             cancelled = true;
@@ -164,66 +132,8 @@ export default function DiscoverCaptureActions({
         }
     }
 
-    async function sendGift(definition: GiftDefinition) {
-        setSendingSlug(definition.slug);
-        setError(null);
-        try {
-            const response = await fetch("/api/app/gifts", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    captureId,
-                    definitionId: definition.id,
-                    clientIdempotencyKey: crypto.randomUUID()
-                })
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                throw new Error(typeof payload.error === "string" ? payload.error : "Could not send Gift.");
-            }
-            setOpen(false);
-        } catch (sendError) {
-            setError(sendError instanceof Error ? sendError.message : "Could not send Gift.");
-        } finally {
-            setSendingSlug(null);
-        }
-    }
-
-    const giftModal = open && showsGift ? (
-        <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 md:items-center"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Send a Gift"
-        >
-            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto border border-white/10 bg-[#1f1f1f] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 className="text-lg font-semibold text-white">Send a Gift</h3>
-                        <p className="mt-2 text-xs font-medium leading-5 text-white/60">
-                            Recognise a stat on this animal. You spend Credits. The recipient does not receive Credits.
-                        </p>
-                    </div>
-                    <button type="button" onClick={() => setOpen(false)} className="text-sm font-semibold text-primary-200">
-                        Cancel
-                    </button>
-                </div>
-                <div className="mt-4 grid gap-2">
-                    {catalog?.definitions.map((definition) => (
-                        <button
-                            key={definition.id}
-                            type="button"
-                            disabled={sendingSlug != null}
-                            onClick={() => void sendGift(definition)}
-                            className="border border-white/10 bg-white/5 px-3 py-2.5 text-left text-xs font-semibold text-white disabled:opacity-40"
-                        >
-                            {definition.displayName} · Supports {definition.endorsedStat ?? "this animal"} · {definition.creditCost} Credits
-                        </button>
-                    ))}
-                </div>
-                {error ? <p className="mt-3 text-xs font-medium text-red-300">{error}</p> : null}
-            </div>
-        </div>
+    const giftModal = open && showsGift && catalog ? (
+        <CaptureGiftSheet captureId={captureId} catalog={catalog} onClose={() => setOpen(false)} />
     ) : null;
 
     const endorsementModal = open && showsEndorse ? (
@@ -278,7 +188,7 @@ export default function DiscoverCaptureActions({
             <>
                 <button
                     type="button"
-                    disabled={pending || sendingSlug != null}
+                    disabled={pending}
                     onClick={() => setOpen(true)}
                     aria-label={showsGift ? "Gift" : endorseLabel}
                     title={showsGift ? "Gift" : endorseLabel}
@@ -286,7 +196,7 @@ export default function DiscoverCaptureActions({
                         showsGift || localStat ? "text-primary-300" : "text-white"
                     }`}
                 >
-                    {showsGift ? <GiftIcon /> : <ThumbsUpIcon filled={Boolean(localStat)} />}
+                    {showsGift ? <GiftGlyph className="h-5 w-5" /> : <ThumbsUpIcon filled={Boolean(localStat)} />}
                 </button>
                 {giftModal}
                 {endorsementModal}
@@ -298,7 +208,7 @@ export default function DiscoverCaptureActions({
         <>
             <div className="-mx-1 flex max-h-10 gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {showsGift ? (
-                    <ActionButton title="Gift" tone="primary" disabled={sendingSlug != null} onClick={() => setOpen(true)} />
+                    <ActionButton title="Gift" tone="primary" onClick={() => setOpen(true)} />
                 ) : null}
                 {showsEndorse ? (
                     <ActionButton

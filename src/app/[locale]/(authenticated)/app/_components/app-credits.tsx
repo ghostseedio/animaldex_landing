@@ -100,6 +100,11 @@ export function AppCreditsProvider({
     );
 }
 
+/** The balance where there is one (inside /app's shell), else null: for parts drawn on both sides. */
+export function useOptionalAppCredits() {
+    return useContext(AppCreditsContext);
+}
+
 export function useAppCredits() {
     const context = useContext(AppCreditsContext);
     if (!context) {
