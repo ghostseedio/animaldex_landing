@@ -47,10 +47,10 @@ export type HowItWorksContent = {
 };
 
 const en: HowItWorksContent = {
-    metaTitle: "How AnimalDex works: every animal sees it differently",
+    metaTitle: "How AnimalDex works: every animal has a lesson",
     metaDescription: "Every animal in AnimalDex answers from its own Power, takes a side and keeps it. How the animals work, and how Your step, Trials and Debates turn a conversation into action.",
     eyebrow: "How it works",
-    title: "Every animal sees it **differently**.",
+    title: "Every animal has a **lesson**.",
     intro: "Ask an owl and a cheetah the same thing and they'll disagree. Each answers from its own Power, the way its kind survives, not from what you want to hear.",
     primaryCta: "Talk to an animal",
     articleCta: "Why it matters: advice fatigue",
@@ -103,10 +103,10 @@ const en: HowItWorksContent = {
 };
 
 const id: HowItWorksContent = {
-    metaTitle: "Cara kerja AnimalDex: setiap hewan melihatnya dengan cara berbeda",
+    metaTitle: "Cara kerja AnimalDex: setiap hewan punya pelajaran",
     metaDescription: "Setiap hewan di AnimalDex menjawab dari Kekuatannya sendiri, memilih satu sisi dan bertahan di sana. Cara kerja hewan-hewannya, dan bagaimana Langkahmu, Uji Coba, dan Debat mengubah percakapan menjadi tindakan.",
     eyebrow: "Cara kerjanya",
-    title: "Setiap hewan melihatnya dengan cara **berbeda**.",
+    title: "Setiap hewan punya **pelajaran**.",
     intro: "Tanyakan hal yang sama pada burung hantu dan cheetah, dan mereka tidak akan sepakat. Masing-masing menjawab dari Kekuatannya sendiri, cara jenisnya bertahan hidup, bukan dari apa yang ingin kamu dengar.",
     primaryCta: "Bicara dengan seekor hewan",
     articleCta: "Mengapa ini penting: lelah nasihat",

@@ -219,7 +219,7 @@ test("every animal is different: the owl says not yet and the cheetah says take 
     assert.equal(example.animals[0].reply, "Not yet. I watch a whole night before I move. Learn the team first.");
     assert.equal(example.animals[1].reply, "Take it. I win by going all in, fast, before the chance is gone.");
     assert.equal(example.animals[1].image, "/art/cheetah.webp");
-    assert.equal(getHowItWorksContent("en").title, "Every animal sees it **differently**.");
+    assert.equal(getHowItWorksContent("en").title, "Every animal has a **lesson**.");
 });
 
 test("Talk is the way in everywhere: the home hero, the article, How it works, the sitemap and llms.txt", () => {
@@ -251,9 +251,9 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
 
     const en = JSON.parse(readRepo("src/data/locales/en.json"));
     const id = JSON.parse(readRepo("src/data/locales/id.json"));
-    assert.equal(en.meta.fullTitle, "AnimalDex: Talk to Animals That Don't Just Agree With You");
+    assert.equal(en.meta.fullTitle, "AnimalDex: Talk to Animals. Every Animal Has a Lesson");
     assert.equal(en.home.heroTalkLead, "Talk to animals.");
-    assert.equal(en.home.heroTalkAccent, "They won't just agree with you.");
+    assert.equal(en.home.heroTalkAccent, "Every animal has a lesson.");
     for (const key of ["heroCta", "heroGetApp", "heroHowItWorks"]) assert.equal(typeof id.home[key], "string", key);
     assert.deepEqual(Object.keys(id.home.fatigue).sort(), Object.keys(en.home.fatigue).sort());
     assert.deepEqual(Object.keys(id.home.different).sort(), Object.keys(en.home.different).sort());

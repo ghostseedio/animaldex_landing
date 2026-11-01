@@ -19,9 +19,9 @@ import ThemeScript from "@/components/theme/theme-script";
 // 192 px rendition of /images/logo.webp (400 px, 132 KB), which every page
 // used to download at high priority as a rel=icon.
 const brandIconUrl = "/icon-192.webp";
-// The brand card (WEB-13): "Talk to animals. They won't just agree with you."
+// The brand card (WEB-13): "Talk to animals. Every animal has a lesson."
 // A new file name, so social networks fetch it afresh rather than reuse the old card.
-const socialImageUrl = "/images/og-talk-to-animals.png";
+const socialImageUrl = "/images/og-every-animal-has-a-lesson.png";
 
 type RootLayoutProps = {
     children: ReactNode;

@@ -91,7 +91,7 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
     },
     "how-it-works": {
         kicker: "How AnimalDex works",
-        title: "Every animal sees it differently",
+        title: "Every animal has a lesson",
         joiner: "vs",
         tiles: [art("little-owl", "Little Owl", "Not yet"), art("cheetah", "Cheetah", "Take it")]
     },

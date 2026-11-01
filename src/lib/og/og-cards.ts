@@ -184,7 +184,7 @@ async function talkCard(slug: string): Promise<OgCardSpec | null> {
     return {
         kicker: animal.power ? `Its Power · ${animal.power}` : "Talk to animals",
         title: `Talk to the ${animal.name}`,
-        subtitle: "It answers from its own Power. It won't just agree with you.",
+        subtitle: "Every animal has a lesson. It answers from its own Power.",
         tiles: [art(animal.slug, animal.name)]
     };
 }
@@ -196,8 +196,8 @@ async function talkHubCard(): Promise<OgCardSpec> {
     const slugs = await withArtwork(pair ? [pair.left.slug, pair.right.slug] : ["little-owl", "cheetah"], 2);
     return {
         kicker: "AnimalDex",
-        title: "Talk to animals. They won't just agree with you.",
-        subtitle: "Every animal answers from its own Power, a lesson from how its kind survives.",
+        title: "Talk to animals. Every animal has a lesson.",
+        subtitle: "Each answers from its own Power, from how its kind survives.",
         tiles: slugs.map((slug) => art(slug)),
         // A word, not an arrow: the card's fonts have no arrows.
         joiner: "or"

@@ -171,7 +171,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Barlow Condensed · Titles, hooks, subtitles</p>
                             <p className="mt-2 text-sm font-medium text-ink-300">SemiBold, Bold, and ExtraBold. Compact, tall, and adventurous without becoming messy.</p>
                             <p className="mt-4 font-display text-5xl font-extrabold uppercase leading-none tracking-tight text-white md:text-7xl">Talk to animals.</p>
-                            <p className="mt-5 font-display text-2xl font-semibold text-ink-200">They won&rsquo;t just agree with you.</p>
+                            <p className="mt-5 font-display text-2xl font-semibold text-ink-200">Every animal has a lesson.</p>
                         </div>
                         <div>
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Inter · Body and UI</p>

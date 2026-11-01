@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Back to AnimalDex homepage",
     "title": "AnimalDex",
-    "description": "Every animal sees it differently.",
+    "description": "Every animal has a lesson.",
     "team": "Who it's for",
     "features": "Features",
     "download": "Get the app",
@@ -89,13 +89,13 @@
     "tagline": "Discover what animals can teach you.",
     "intro": "AnimalDex helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
     "heroTalkLead": "Talk to animals.",
-    "heroTalkAccent": "They won't just agree with you.",
+    "heroTalkAccent": "Every animal has a lesson.",
     "heroSubhead": "Every animal answers from its own Power, a lesson from how its kind survives. Bring a real problem, hear a real side, and take one step.",
     "heroLaurelMadeFor": "Made for",
     "heroLaurelExplorers": "explorers",
     "heroLaurelBuiltFor": "Built for",
     "heroLaurelCurious": "the curious",
-    "supporting": "Talk to animals. They won't just agree with you. Every animal answers from its own Power, a lesson from how its kind survives.",
+    "supporting": "Talk to animals. Every animal has a lesson: its own Power, from how its kind survives.",
     "chatStill": {
       "label": "An example conversation with a Common Octopus in AnimalDex",
       "animal": "Common Octopus",
@@ -335,7 +335,7 @@
     "heroHowItWorks": "How the animals work",
     "different": {
       "eyebrow": "Every animal is different",
-      "title": "Every animal sees it differently.",
+      "title": "Two animals. Two lessons.",
       "body": "Ask an owl and a cheetah the same thing and they'll disagree. Each answers from its own Power, the way its kind survives, not from what you want to hear.",
       "link": "How the animals work"
     },
@@ -361,7 +361,21 @@
         }
       }
     },
-    "marquee": "Capture · Talk · Disagree · Take one step · Earn its Power · Debate ·"
+    "marquee": "Capture · Talk · Disagree · Take one step · Earn its Power · Debate ·",
+    "heroBubble": "Don’t push harder. Reach in another way.",
+    "orbitLabel": "Animals you can talk to",
+    "wall": {
+      "title": "Pick an animal.",
+      "all": "All {count} animals"
+    },
+    "flow": {
+      "capture": "Capture",
+      "talk": "Talk",
+      "grow": "Earn its Power"
+    },
+    "captures": {
+      "title": "Caught by explorers."
+    }
   },
   "blog": {
     "eyebrow": "AnimalDex Blog",
@@ -961,7 +975,7 @@
     "landingButton": "Home",
     "ctaEyebrow": "Start talking",
     "talkButton": "Talk to an animal",
-    "positioningLine": "And then it talks back: every animal answers from its own Power, a lesson from how its kind survives, and won't just agree with you."
+    "positioningLine": "And then it talks back, because every animal has a lesson: its own Power, from how its kind survives."
   },
   "useCases": {
     "eyebrow": "Who it's for",
@@ -2006,15 +2020,15 @@
   "collectorPages": {
     "back": "Back to Use Cases",
     "ctaTitle": "Your collection talks back",
-    "ctaDescription": "Every animal you collect answers from its own Power and won't just agree with you. Try one on the web now, or capture your own in the app.",
+    "ctaDescription": "Every animal has a lesson, and every one you collect answers from its own Power. Try one on the web now, or capture your own in the app.",
     "ctaButton": "Get the app",
     "homeButton": "Home",
     "appButton": "Get the app",
     "talkButton": "Talk to an animal",
-    "positioningLine": "The twist: every animal you collect talks back. It answers from its own Power, a lesson from how its kind survives, and won't just agree with you."
+    "positioningLine": "The twist: every animal you collect talks back. Every animal has a lesson: its own Power, from how its kind survives."
   },
   "account": {
-    "welcomeHeadline": "Talk to animals.\nThey won't just agree with you.",
+    "welcomeHeadline": "Talk to animals.\nEvery animal has a lesson.",
     "welcomeSoundOn": "Turn sound on",
     "welcomeSoundOff": "Turn sound off",
     "signIn": "Sign in",
@@ -2287,7 +2301,7 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Talk to Animals That Don't Just Agree With You",
+    "fullTitle": "AnimalDex: Talk to Animals. Every Animal Has a Lesson",
     "title": "AnimalDex",
     "description": "Talk to real animals with AI. Each one answers from its own Power, a lesson from how its kind survives, and takes a side. Bring a real problem, hear a real side, and take one step.",
     "privacyTitle": "AnimalDex Privacy Policy",

@@ -2,7 +2,7 @@
   "nav": {
     "logo": "Kembali ke beranda AnimalDex",
     "title": "AnimalDex",
-    "description": "Setiap hewan melihatnya dengan cara berbeda.",
+    "description": "Setiap hewan punya pelajaran.",
     "team": "Untuk siapa",
     "features": "Fitur",
     "download": "Dapatkan aplikasinya",
@@ -89,13 +89,13 @@
     "tagline": "Pemindai hewan AI dan aplikasi koleksi satwa liar",
     "intro": "AnimalDex membantu pengguna mengidentifikasi hewan nyata dengan AI, menyimpan penampakan sebagai kartu koleksi, dan mempelajari fakta biologi, makna, dan pelajaran perilaku.",
     "heroTalkLead": "Bicaralah dengan hewan.",
-    "heroTalkAccent": "Mereka tidak sekadar setuju denganmu.",
+    "heroTalkAccent": "Setiap hewan punya pelajaran.",
     "heroSubhead": "Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup. Bawa masalah nyata, dengar sisi yang nyata, dan ambil satu langkah.",
     "heroLaurelMadeFor": "Dibuat untuk",
     "heroLaurelExplorers": "penjelajah",
     "heroLaurelBuiltFor": "Juga untuk",
     "heroLaurelCurious": "si penasaran",
-    "supporting": "Bicaralah dengan hewan. Mereka tidak sekadar setuju denganmu. Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup.",
+    "supporting": "Bicaralah dengan hewan. Setiap hewan punya pelajaran: Kekuatannya sendiri, dari cara jenisnya bertahan hidup.",
     "chatStill": {
       "label": "Contoh percakapan dengan gurita biasa di AnimalDex",
       "animal": "Gurita Biasa",
@@ -335,7 +335,7 @@
     "heroHowItWorks": "Cara kerja hewan-hewannya",
     "different": {
       "eyebrow": "Setiap hewan berbeda",
-      "title": "Setiap hewan melihatnya dengan cara berbeda.",
+      "title": "Dua hewan. Dua pelajaran.",
       "body": "Tanyakan hal yang sama pada burung hantu dan cheetah, dan mereka tidak akan sepakat. Masing-masing menjawab dari Kekuatannya sendiri, cara jenisnya bertahan hidup, bukan dari apa yang ingin kamu dengar.",
       "link": "Cara kerja hewan-hewannya"
     },
@@ -361,7 +361,21 @@
         }
       }
     },
-    "marquee": "Tangkap · Bicara · Berbeda pendapat · Ambil satu langkah · Raih Kekuatannya · Berdebat ·"
+    "marquee": "Tangkap · Bicara · Berbeda pendapat · Ambil satu langkah · Raih Kekuatannya · Berdebat ·",
+    "heroBubble": "Jangan dorong lebih keras. Coba jalan lain.",
+    "orbitLabel": "Hewan yang bisa kamu ajak bicara",
+    "wall": {
+      "title": "Pilih seekor hewan.",
+      "all": "Semua {count} hewan"
+    },
+    "flow": {
+      "capture": "Tangkap",
+      "talk": "Bicara",
+      "grow": "Raih Kekuatannya"
+    },
+    "captures": {
+      "title": "Ditangkap para penjelajah."
+    }
   },
   "blog": {
     "eyebrow": "Blog AnimalDex",
@@ -967,7 +981,7 @@
     "landingButton": "Beranda",
     "ctaEyebrow": "Mulai bicara",
     "talkButton": "Bicara dengan hewan",
-    "positioningLine": "Lalu ia menjawab: setiap hewan berbicara dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan tidak sekadar setuju denganmu."
+    "positioningLine": "Lalu ia menjawab, karena setiap hewan punya pelajaran: Kekuatannya sendiri, dari cara jenisnya bertahan hidup."
   },
   "useCases": {
     "eyebrow": "Untuk siapa",
@@ -1996,15 +2010,15 @@
   "collectorPages": {
     "back": "Kembali ke Use Cases",
     "ctaTitle": "Koleksimu bisa diajak bicara",
-    "ctaDescription": "Setiap hewan yang kamu koleksi menjawab dari Kekuatannya sendiri dan tidak sekadar setuju denganmu. Coba salah satunya di web sekarang, atau tangkap milikmu sendiri di aplikasi.",
+    "ctaDescription": "Setiap hewan punya pelajaran, dan setiap hewan yang kamu koleksi menjawab dari Kekuatannya sendiri. Coba salah satunya di web sekarang, atau tangkap milikmu sendiri di aplikasi.",
     "ctaButton": "Dapatkan aplikasinya",
     "homeButton": "Beranda",
     "appButton": "Dapatkan aplikasinya",
     "talkButton": "Bicara dengan hewan",
-    "positioningLine": "Kejutannya: setiap hewan yang kamu koleksi bisa diajak bicara. Ia menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan tidak sekadar setuju denganmu."
+    "positioningLine": "Kejutannya: setiap hewan yang kamu koleksi bisa diajak bicara. Setiap hewan punya pelajaran: Kekuatannya sendiri, dari cara jenisnya bertahan hidup."
   },
   "account": {
-    "welcomeHeadline": "Bicaralah dengan hewan.\nMereka tidak sekadar setuju denganmu.",
+    "welcomeHeadline": "Bicaralah dengan hewan.\nSetiap hewan punya pelajaran.",
     "welcomeSoundOn": "Nyalakan suara",
     "welcomeSoundOff": "Matikan suara",
     "signIn": "Masuk",
@@ -2276,7 +2290,7 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Bicara dengan Hewan yang Tidak Sekadar Setuju denganmu",
+    "fullTitle": "AnimalDex: Bicara dengan Hewan. Setiap Hewan Punya Pelajaran",
     "title": "AnimalDex",
     "description": "Bicara dengan hewan sungguhan lewat AI. Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan memilih satu sisi. Bawa masalah nyata, dengar sisi yang nyata, dan ambil satu langkah.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
