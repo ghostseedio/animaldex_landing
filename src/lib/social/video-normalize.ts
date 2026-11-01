@@ -3,6 +3,7 @@ import {mkdtemp, readFile, rm, writeFile} from "fs/promises";
 import {tmpdir} from "os";
 import path from "path";
 import {childProcessEnv} from "@/lib/child-process-env";
+import {lowPriority, withFfmpegSlot} from "@/lib/ffmpeg-slot";
 import {needsFrameRateFix, readMp4VideoInfo} from "@/lib/social/mp4-info";
 
 // Story videos first shipped at 15 fps, which TikTok and Instagram/Facebook
@@ -15,14 +16,16 @@ const FFMPEG_TIMEOUT_MS = 8 * 60_000;
 
 export const FRAME_RATE_FIX_ARGS = [
     "-vf", "fps=30",
-    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-profile:v", "high", "-pix_fmt", "yuv420p",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-profile:v", "high", "-pix_fmt", "yuv420p", "-threads", "1",
     "-c:a", "aac", "-b:a", "128k",
     "-movflags", "+faststart"
 ];
 
+/** One at a time with the page-video renders, at the lowest CPU priority (src/lib/ffmpeg-slot.ts). */
 function runFfmpeg(args: string[]) {
-    return new Promise<void>((resolve, reject) => {
-        const child = spawn(process.env.FFMPEG_PATH?.trim() || "ffmpeg", args, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
+    return withFfmpegSlot(() => new Promise<void>((resolve, reject) => {
+        const run = lowPriority(process.env.FFMPEG_PATH?.trim() || "ffmpeg", args);
+        const child = spawn(run.command, run.args, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         const timer = setTimeout(() => child.kill("SIGKILL"), FFMPEG_TIMEOUT_MS);
         child.stderr.on("data", (chunk) => {
@@ -37,7 +40,7 @@ function runFfmpeg(args: string[]) {
             if (code === 0) resolve();
             else reject(new Error(`ffmpeg ${signal ? `was killed (${signal})` : `exited ${code}`}: ${stderr.trim().split("\n").slice(-3).join(" ")}`));
         });
-    });
+    }));
 }
 
 export type NormalizedVideo = {video: Buffer; converted: boolean; fromFps: number | null};

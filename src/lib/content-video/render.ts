@@ -3,6 +3,7 @@ import {readFile, writeFile} from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import {childProcessEnv} from "@/lib/child-process-env";
+import {lowPriority, withFfmpegSlot} from "@/lib/ffmpeg-slot";
 import {AI_CLIP_SECONDS, type BattleFx, battleHitOffsets, type CardSpec, VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH, type TimelineEntry} from "@/lib/content-video/plan";
 
 // The edit, in ffmpeg (installed in the Docker runner stage): one silent
@@ -36,12 +37,14 @@ function ffmpegBinary() {
     return process.env.FFMPEG_PATH?.trim() || "ffmpeg";
 }
 
-/** Runs ffmpeg at low CPU priority (it shares the box with the web server). */
+/**
+ * Runs ffmpeg at the lowest CPU priority, one at a time per server (it shares
+ * the box with the web server; src/lib/ffmpeg-slot.ts). The timeout starts
+ * when this run starts, not while it waits its turn.
+ */
 export function runFfmpeg(args: string[], timeoutMs = 10 * 60_000): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const useNice = process.platform !== "win32" && process.env.CONTENT_VIDEO_NICE !== "0";
-        const command = useNice ? "nice" : ffmpegBinary();
-        const fullArgs = useNice ? ["-n", "15", ffmpegBinary(), "-hide_banner", "-loglevel", "error", "-y", ...args] : ["-hide_banner", "-loglevel", "error", "-y", ...args];
+    return withFfmpegSlot(() => new Promise<void>((resolve, reject) => {
+        const {command, args: fullArgs} = lowPriority(ffmpegBinary(), ["-hide_banner", "-loglevel", "error", "-y", ...args]);
         const child = spawn(command, fullArgs, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
@@ -57,7 +60,7 @@ export function runFfmpeg(args: string[], timeoutMs = 10 * 60_000): Promise<void
             if (code === 0) resolve();
             else reject(new Error(`ffmpeg ${signal ? `was killed (${signal})` : `exited ${code}`}: ${stderr.trim().split("\n").slice(-4).join(" ")}`));
         });
-    });
+    }));
 }
 
 function frames(seconds: number) {
@@ -169,7 +172,7 @@ async function zoomShot(prepared: string, n: number, zoom: string, out: string, 
         "-loop", "1", "-framerate", String(VIDEO_FPS), "-i", prepared,
         "-vf", `zoompan=z='${zoom}':x='iw/2-(iw/zoom/2)${shake.x}':y='ih/2-(ih/zoom/2)${shake.y}':d=${n}:s=${VIDEO_WIDTH}x${VIDEO_HEIGHT}:fps=${VIDEO_FPS},setsar=1,format=yuv420p`,
         "-frames:v", String(n),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "2", "-an", out
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "1", "-an", out
     ]);
 }
 
@@ -263,7 +266,7 @@ async function renderClipScene(source: string, seconds: number, out: string, cli
             "format=yuv420p"
         ].join(","),
         "-frames:v", String(frames(seconds)),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "2", "-an", out
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "1", "-an", out
     ]);
 }
 
@@ -286,7 +289,7 @@ async function renderEndCard(source: string, logoPath: string, seconds: number, 
         "-loop", "1", "-framerate", String(VIDEO_FPS), "-i", card,
         "-vf", "setsar=1,format=yuv420p",
         "-frames:v", String(n),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "2", "-an", out
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-threads", "1", "-an", out
     ]);
 }
 
@@ -371,8 +374,9 @@ const VOICE_COMPRESSOR = "acompressor=threshold=0.1:ratio=3:attack=5:release=120
  * undershoots on speech with pauses).
  */
 function measureLoudness(file: string): Promise<Record<string, string> | null> {
-    return new Promise((resolve) => {
-        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-af", `loudnorm=I=${LOUDNESS.I}:TP=${LOUDNESS.TP}:LRA=${LOUDNESS.LRA}:print_format=json`, "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
+    return withFfmpegSlot(() => new Promise<Record<string, string> | null>((resolve) => {
+        const run = lowPriority(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-af", `loudnorm=I=${LOUDNESS.I}:TP=${LOUDNESS.TP}:LRA=${LOUDNESS.LRA}:print_format=json`, "-f", "null", "-"]);
+        const child = spawn(run.command, run.args, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         child.stderr.on("data", (chunk) => {
             stderr = (stderr + chunk.toString()).slice(-8000);
@@ -387,7 +391,7 @@ function measureLoudness(file: string): Promise<Record<string, string> | null> {
                 resolve(null);
             }
         });
-    });
+    }));
 }
 
 /** Bed level under the voice (~-16 dB), and how much further it dips while someone speaks. */
@@ -443,8 +447,9 @@ async function buildMix(voice: string, music: string | null | undefined, seconds
 
 /** Seconds of audio actually in a file (decoded sample count / rate), or null if it cannot be read. */
 function audioSeconds(file: string): Promise<number | null> {
-    return new Promise((resolve) => {
-        const child = spawn(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-map", "0:a", "-af", "aresample=48000,astats=measure_perchannel=none", "-f", "null", "-"], {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
+    return withFfmpegSlot(() => new Promise<number | null>((resolve) => {
+        const run = lowPriority(ffmpegBinary(), ["-hide_banner", "-nostats", "-i", file, "-map", "0:a", "-af", "aresample=48000,astats=measure_perchannel=none", "-f", "null", "-"]);
+        const child = spawn(run.command, run.args, {stdio: ["ignore", "ignore", "pipe"], env: childProcessEnv()});
         let stderr = "";
         child.stderr.on("data", (chunk) => {
             stderr = (stderr + chunk.toString()).slice(-6000);
@@ -454,7 +459,7 @@ function audioSeconds(file: string): Promise<number | null> {
             const samples = Number(stderr.match(/Number of samples:\s*(\d+)/)?.[1]);
             resolve(Number.isFinite(samples) && samples > 0 ? samples / 48000 : null);
         });
-    });
+    }));
 }
 
 /** Escapes a path for use inside an ffmpeg filter argument. */
