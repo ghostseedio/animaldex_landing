@@ -28,7 +28,7 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {contentThumb} from "@/data/content-thumbnails";
-import {formatAnimalCount} from "@/lib/animal-count";
+import {formatAnimalCount, ROUNDED_ANIMAL_COUNT} from "@/lib/animal-count";
 
 
 export const revalidate = 86400;
@@ -287,7 +287,8 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                         starterAnimals={starterAnimals}
                         defaultAnimalA={defaultAnimalA ?? starterAnimals[0] ?? null}
                         defaultAnimalB={defaultAnimalB ?? starterAnimals[1] ?? null}
-                        animalCount={comparableAnimalCount}
+                        // The same rounded count the stat above shows (WEB-29).
+                        animalCount={ROUNDED_ANIMAL_COUNT}
                         copy={{
                             animalALabel: t("builder.animalA"),
                             animalBLabel: t("builder.animalB"),

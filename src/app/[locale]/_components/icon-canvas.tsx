@@ -73,10 +73,12 @@ export default function IconCanvas({
     const currentFrame = useRef<number>(0);
     const lastFrameTime = useRef<DOMHighResTimeStamp>(0);
     const icons = useRef<Icon[]>([]);
-    // On a phone the field is a quarter of a desktop's width, so it needs a
-    // quarter of the icons for the same density, and 20 frames a second is
-    // smooth enough for icons this slow (WEB-17: most of a phone's idle cost).
+    // Decorative, so 30 frames a second is plenty.
     const frameInterval = useRef(30);
+    // On a phone the field holds still (WEB-17): it is drawn, then the loop stops,
+    // and it is redrawn only when a silhouette finishes loading or the size changes.
+    // A moving 2,000 px canvas was most of a phone's idle main-thread time.
+    const stillField = useRef(false);
     const loadedImages = useRef<Map<string, HTMLImageElement>>(new Map());
     const silhouetteCache = useRef<Map<string, HTMLCanvasElement>>(new Map());
     const useImages = imageSources.length > 0;
@@ -130,14 +132,14 @@ export default function IconCanvas({
 
             if (lastFrameTime.current) {
                 // A long gap (tab hidden, scrolled away) must not fling the icons.
-                const delta = Math.min(time - lastFrameTime.current, 50);
+                const delta = stillField.current ? 0 : Math.min(time - lastFrameTime.current, 50);
 
                 ctx.clearRect(0, 0, c.width, c.height);
 
                 const density = Math.min(1, c.width / 1280);
                 const lacksIcons = icons.current.length < Math.max(8, Math.round(minIcons * density));
 
-                if (Math.random() > 1 - probability * density || lacksIcons) {
+                if (lacksIcons || (!stillField.current && Math.random() > 1 - probability * density)) {
                     const scale = Math.random() * (maxScale - minScale) + minScale;
                     const t = Math.random();
                     const n = t > 0.3 && t < 0.5 ? 0.3 : t < 0.7 && t > 0.5 ? 0.7 : t;
@@ -240,6 +242,17 @@ export default function IconCanvas({
                 });
 
                 deletionQueue.forEach((i) => icons.current.splice(i, 1));
+
+                // A still field stops once every icon is placed and drawn.
+                if (stillField.current && !lacksIcons && icons.current.every((icon) => {
+                    if (!icon.imageSrc) return true;
+                    const image = loadedImages.current.get(icon.imageSrc);
+                    return Boolean(image?.complete);
+                })) {
+                    lastFrameTime.current = time;
+                    currentFrame.current = 0;
+                    return;
+                }
             }
 
             lastFrameTime.current = time;
@@ -269,8 +282,12 @@ export default function IconCanvas({
     const resize = useCallback(() => {
         if (!canvas.current) return;
 
-        canvas.current.width = window.document.body.clientWidth;
-        canvas.current.height = height || window.visualViewport?.height || 1080;
+        // Setting a canvas's size clears it, and phones fire resize as the
+        // toolbar slides away: only touch the size when it really changed.
+        const width = window.document.body.clientWidth;
+        const nextHeight = height || window.visualViewport?.height || 1080;
+        if (canvas.current.width !== width) canvas.current.width = width;
+        if (canvas.current.height !== nextHeight) canvas.current.height = nextHeight;
     }, [height]);
 
     // Runs only while the canvas is on screen and the page is visible, and not
@@ -279,9 +296,8 @@ export default function IconCanvas({
         const element = canvas.current;
         if (!element) return;
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-        frameInterval.current = window.matchMedia("(pointer: coarse)").matches ? 50 : 30;
+        stillField.current = window.matchMedia("(pointer: coarse)").matches;
         resize();
-        window.addEventListener("resize", resize);
 
         let onScreen = false;
         const start = () => {
@@ -293,6 +309,12 @@ export default function IconCanvas({
             cancelAnimationFrame(currentFrame.current);
             currentFrame.current = 0;
         };
+        // A resize that changes the size clears the field: draw it again.
+        const onResize = () => {
+            resize();
+            start();
+        };
+        window.addEventListener("resize", onResize);
         const observer = new IntersectionObserver(([entry]) => {
             onScreen = entry.isIntersecting;
             if (onScreen) start(); else stop();
@@ -305,7 +327,7 @@ export default function IconCanvas({
             stop();
             observer.disconnect();
             document.removeEventListener("visibilitychange", onVisibility);
-            window.removeEventListener("resize", resize);
+            window.removeEventListener("resize", onResize);
         };
     }, [animate, resize]);
 
@@ -333,6 +355,11 @@ export default function IconCanvas({
 
             image.onload = () => {
                 silhouetteCache.current.delete(src);
+                // A still field draws again once, now that this silhouette can be drawn.
+                if (stillField.current && !currentFrame.current && canvas.current) {
+                    lastFrameTime.current = 0;
+                    currentFrame.current = requestAnimationFrame(animate);
+                }
             };
 
             image.src = src;

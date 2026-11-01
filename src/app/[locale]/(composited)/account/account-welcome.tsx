@@ -115,7 +115,7 @@ export default function AccountWelcome({
                         strings={intro.strings}
                         voice={intro.voice}
                     />
-                    <h1 className="mt-7 whitespace-pre-line text-center font-display text-4xl font-bold leading-[1.05] text-white sm:text-5xl">
+                    <h1 className="mt-7 whitespace-pre-line text-center font-display text-4xl font-bold leading-[1.05] text-white [text-wrap:balance] sm:text-5xl">
                         {headline}
                     </h1>
                 </div>

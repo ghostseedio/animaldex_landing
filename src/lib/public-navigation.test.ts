@@ -228,5 +228,5 @@ test("mobile drawer uses an accessible accordion and pins Talk, then Get the app
     assert.ok(menu.indexOf("href={secondaryCtaHref}", pinnedCta) > pinnedCta);
     assert.equal(id.nav.moreNav, "Lainnya");
     assert.equal(id.nav.talkToAnAnimal, "Bicara dengan hewan");
-    assert.equal(id.nav.getTheApp, "Dapatkan aplikasinya");
+    assert.equal(id.nav.getTheApp, "Unduh aplikasi");
 });

@@ -74,7 +74,7 @@
     "webApp": "Aplikasi web",
     "talkToAnimals": "Bicara dengan hewan",
     "talkToAnAnimal": "Bicara dengan hewan",
-    "getTheApp": "Dapatkan aplikasinya",
+    "getTheApp": "Unduh aplikasi",
     "adviceFatigue": "Lelah nasihat",
     "animalsNav": "Hewan",
     "allArticles": "Semua artikel",
@@ -330,7 +330,7 @@
         "a": "Tidak. Siapa pun bisa bicara dengan hewan mana pun di web. Tangkap seekor di aplikasi, dengan memotret atau merekamnya, dan ia jadi milikmu: ia mengingatmu, memberimu langkah, dan bisa memperdebatkan masalahmu bersama hewan-hewanmu yang lain."
       }
     },
-    "heroCta": "Bicara dengan seekor hewan",
+    "heroCta": "Bicara dengan hewan",
     "heroGetApp": "Atau dapatkan aplikasinya",
     "heroHowItWorks": "Cara kerja hewan-hewannya",
     "different": {
