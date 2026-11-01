@@ -40,9 +40,10 @@ test("published EN animal and lesson static params cover the slug index", () => 
         [...lessonSnapshot.entries.map((entry) => entry.slug)].sort((a, b) => a.localeCompare(b))
     );
     assert.match(pageData, /getPublishedEnglishAnimalStaticParams/);
-    assert.match(pageData, /publishedSeoSlugs\.animals\.map/);
+    // People are never public (DECISIONS §11): the human page is filtered out first.
+    assert.match(pageData, /publishedSeoSlugs\.animals\.(filter\(.*?isHumanSlug.*?\)\.)?map/);
     assert.match(pageData, /getPublishedEnglishLessonStaticParams/);
-    assert.match(pageData, /publishedSeoSlugs\.lessons\.map/);
+    assert.match(pageData, /publishedSeoSlugs\.lessons\.(filter\(.*?isHumanSlug.*?\)\.)?map/);
     assert.match(pageData, /getPublishedEnglishComparisonStaticParams/);
     assert.ok((closedSeoNamespaceSlugs.comparisons ?? []).length >= 100);
     assert.ok(

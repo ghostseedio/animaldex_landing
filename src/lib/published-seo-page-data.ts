@@ -47,7 +47,7 @@ export function getSnapshotLessonBySlug(slug: string) {
 }
 
 export function listSnapshotAnimalSlugs() {
-    return animalPages.entries.map((entry) => entry.slug);
+    return animalPages.entries.map((entry) => entry.slug).filter((slug) => !isHumanSlug(slug));
 }
 
 export function listSnapshotLessonSlugs() {
