@@ -20,6 +20,7 @@ import {CallMicrophone, callAudioContext, primeCallAudio} from "@/components/ask
 import {transcribeOnServer} from "@/components/ask-animaldex/voice-call/call-server-listener";
 import {CALL_HEARING, encodeWav} from "@/lib/ask-animaldex/call-hearing";
 import {dictatedText} from "@/lib/ask-animaldex/dictation";
+import {joinHeard, resultTranscripts} from "@/lib/ask-animaldex/heard-text";
 
 export type DictationPhase = "idle" | "starting" | "listening" | "transcribing" | "denied" | "failed";
 
@@ -148,9 +149,8 @@ export function useDictation(params: {
             recognition.maxAlternatives = 1;
             const before = carried;
             recognition.onresult = (event) => {
-                let text = "";
-                for (let index = 0; index < event.results.length; index += 1) text += event.results[index][0]?.transcript ?? "";
-                const heard = `${before} ${text}`.replace(/\s+/g, " ").trim();
+                // One space between results, and nothing said twice (heard-text.ts).
+                const heard = joinHeard([before, ...resultTranscripts(event.results)]);
                 carried = heard;
                 latest.current.setText(dictatedText(beforeRef.current, heard));
             };

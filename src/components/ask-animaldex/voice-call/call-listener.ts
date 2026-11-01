@@ -21,6 +21,7 @@ import {
     heardWordCount
 } from "@/lib/ask-animaldex/call-events";
 import type {CallMicrophone} from "@/components/ask-animaldex/voice-call/call-audio";
+import {joinHeard, resultTranscripts} from "@/lib/ask-animaldex/heard-text";
 
 type RecognitionResult = {isFinal: boolean; 0: {transcript: string}; length: number};
 type RecognitionEvent = {resultIndex: number; results: {length: number; [index: number]: RecognitionResult}};
@@ -30,7 +31,6 @@ type Recognition = {
     interimResults: boolean;
     maxAlternatives: number;
     processLocally?: boolean;
-    phrases?: unknown[];
     onresult: ((event: RecognitionEvent) => void) | null;
     onerror: ((event: {error: string}) => void) | null;
     onend: (() => void) | null;
@@ -173,25 +173,15 @@ export class CallListener implements CallHearing {
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
-        // Told the animal's name, where the browser lets it be.
-        const Phrase = (window as unknown as {SpeechRecognitionPhrase?: new (phrase: string, boost: number) => unknown}).SpeechRecognitionPhrase;
-        if (Phrase && "phrases" in recognition && this.hints.length > 0) {
-            try {
-                recognition.phrases = this.hints.map((hint) => new Phrase(hint, 5));
-            } catch {
-                // Not on this recognizer; the name is still usually heard.
-            }
-        }
+        // Not told the animal's name (2026-11-01): boosted as a phrase, Chrome
+        // heard "Common Octopus" in every pause and over every word. The name
+        // is heard well enough without it.
         const carried = this.carried;
         recognition.onresult = (event) => {
-            let text = "";
-            let settled = true;
-            for (let index = 0; index < event.results.length; index++) {
-                const result = event.results[index];
-                text += result[0]?.transcript ?? "";
-                settled = result.isFinal;
-            }
-            const heard = `${carried} ${text}`.replace(/\s+/g, " ").trim();
+            const transcripts = resultTranscripts(event.results);
+            const text = transcripts.join(" ");
+            const settled = event.results.length === 0 || event.results[event.results.length - 1].isFinal;
+            const heard = joinHeard([carried, ...transcripts]);
             if (/[.?!…,]/.test(text)) this.punctuates = true;
             if (heard && heard !== this.transcript) {
                 this.transcript = heard;
