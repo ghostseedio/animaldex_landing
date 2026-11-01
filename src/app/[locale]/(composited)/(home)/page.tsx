@@ -410,6 +410,8 @@ export default async function Home({params}: HomePageProps) {
                             alt=""
                             width={720}
                             height={180}
+                            // It is drawn at most 24rem wide: without sizes the browser fetched the 1920 px rendition.
+                            sizes="(min-width: 768px) 24rem, (min-width: 640px) 21rem, 18rem"
                             className="h-auto w-full select-none opacity-85"
                             aria-hidden="true"
                         />
