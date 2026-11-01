@@ -252,8 +252,9 @@ export function AskTypingBubble({avatarUrl, label}: {avatarUrl: string | null; l
     return (
         <div className="flex items-end gap-2" role="status" aria-label={label}>
             <AskAnimalFace url={avatarUrl} size={28} />
+            {/* Exactly a one-line bubble's height (8 + 24 + 8), so the first words replace the dots without moving the thread. */}
             <span
-                className="flex h-[38px] w-[58px] items-center justify-center gap-[5px]"
+                className="flex h-[40px] w-[58px] items-center justify-center gap-[5px]"
                 style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: bubbleRadius({fromAnimal: true, groupStart: true, groupEnd: true})}}
                 aria-hidden="true"
             >

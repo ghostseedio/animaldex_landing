@@ -3210,9 +3210,11 @@ export default function AskConversation({
                         </>
                     )}
                     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-ink-400">
-                        {/* Only a free budget is counted down: a Pro one is large
-                            enough that a meter reads as stingy (as in the apps). */}
-                        {remainingCopy && (quota.paying || !quota.isPro) ? <span>{remainingCopy}</span> : null}
+                        {/* The count is there when it matters: the last few of a free budget, or what
+                            each message costs while paying with Credits. Not after every reply (a counter
+                            is noise, and its arrival moved the message bar on phones); a Pro budget is
+                            large enough that a meter reads as stingy (as in the apps). */}
+                        {remainingCopy && (quota.paying || (!quota.isPro && quota.remaining !== null && quota.remaining <= ASK_REMAINING_SHOWN_FROM)) ? <span>{remainingCopy}</span> : null}
                         <span className="min-w-0">{labels.disclaimer}</span>
                     </p>
                     </div>
@@ -3388,6 +3390,8 @@ type AskRowActions = {
 
 const IDLE_PHASE: AskSpeechPhase = {kind: "idle"};
 const NO_PHASES: string[] = [];
+/** "N of M messages left today" shows under the message bar from this many left, not before. */
+const ASK_REMAINING_SHOWN_FROM = 3;
 
 const AnimalMessageRow = memo(function AnimalMessageRow({
     voicePhase = null,
