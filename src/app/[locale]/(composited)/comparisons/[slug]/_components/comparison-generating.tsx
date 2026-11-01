@@ -215,7 +215,7 @@ export default function ComparisonGenerating({
     const failed = status === "error" || status === "rate-limited";
 
     return (
-        <main className="mx-auto flex w-full max-w-[52rem] flex-col items-center px-4 py-20 text-center md:py-28">
+        <div className="mx-auto flex w-full max-w-[52rem] flex-col items-center px-4 py-20 text-center md:py-28">
             <div className="flex w-full items-center justify-center gap-4 md:gap-8">
                 <figure className="flex flex-col items-center gap-3">
                     <span className={`relative h-24 w-24 overflow-hidden  border border-white/12 bg-surface-800/70 md:h-32 md:w-32 ${status === "working" ? "animate-pulse" : ""}`}>
@@ -301,6 +301,6 @@ export default function ComparisonGenerating({
                     <style>{"@keyframes comparisonProgress{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}"}</style>
                 </>
             )}
-        </main>
+        </div>
     );
 }

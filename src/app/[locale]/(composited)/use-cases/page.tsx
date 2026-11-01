@@ -154,7 +154,7 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
     const remainingUseCases = useCases.slice(1);
 
     return (
-        <main className="relative w-full overflow-hidden bg-surface-950">
+        <div className="relative w-full overflow-hidden bg-surface-950">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
             <section className="mx-auto flex w-full max-w-[80rem] flex-col gap-16 px-4 py-12 md:px-8 md:py-20">
@@ -400,7 +400,7 @@ export default async function UseCasesIndexPage({params}: {params: {locale: stri
                     </div>
                 </section>
             </section>
-        </main>
+        </div>
     );
 }
 

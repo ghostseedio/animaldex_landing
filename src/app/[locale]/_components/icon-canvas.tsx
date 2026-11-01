@@ -73,6 +73,10 @@ export default function IconCanvas({
     const currentFrame = useRef<number>(0);
     const lastFrameTime = useRef<DOMHighResTimeStamp>(0);
     const icons = useRef<Icon[]>([]);
+    // On a phone the field is a quarter of a desktop's width, so it needs a
+    // quarter of the icons for the same density, and 20 frames a second is
+    // smooth enough for icons this slow (WEB-17: most of a phone's idle cost).
+    const frameInterval = useRef(30);
     const loadedImages = useRef<Map<string, HTMLImageElement>>(new Map());
     const silhouetteCache = useRef<Map<string, HTMLCanvasElement>>(new Map());
     const useImages = imageSources.length > 0;
@@ -119,7 +123,7 @@ export default function IconCanvas({
             if (!ctx || !c) return;
 
             // Decorative: 30 frames a second is plenty, and halves the cost.
-            if (lastFrameTime.current && time - lastFrameTime.current < 30) {
+            if (lastFrameTime.current && time - lastFrameTime.current < frameInterval.current) {
                 currentFrame.current = requestAnimationFrame(animate);
                 return;
             }
@@ -130,9 +134,10 @@ export default function IconCanvas({
 
                 ctx.clearRect(0, 0, c.width, c.height);
 
-                const lacksIcons = icons.current.length < minIcons;
+                const density = Math.min(1, c.width / 1280);
+                const lacksIcons = icons.current.length < Math.max(8, Math.round(minIcons * density));
 
-                if (Math.random() > 1 - probability || lacksIcons) {
+                if (Math.random() > 1 - probability * density || lacksIcons) {
                     const scale = Math.random() * (maxScale - minScale) + minScale;
                     const t = Math.random();
                     const n = t > 0.3 && t < 0.5 ? 0.3 : t < 0.7 && t > 0.5 ? 0.7 : t;
@@ -274,6 +279,7 @@ export default function IconCanvas({
         const element = canvas.current;
         if (!element) return;
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        frameInterval.current = window.matchMedia("(pointer: coarse)").matches ? 50 : 30;
         resize();
         window.addEventListener("resize", resize);
 

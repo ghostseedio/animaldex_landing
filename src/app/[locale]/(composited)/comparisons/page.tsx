@@ -261,7 +261,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
         .slice(0, 6);
 
     return (
-        <main className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
+        <div className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema, faqSchema])}} />
 
             <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-12">
@@ -447,6 +447,6 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                     <StoreLinks />
                 </div>
             </section>
-        </main>
+        </div>
     );
 }

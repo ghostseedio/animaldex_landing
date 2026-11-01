@@ -314,7 +314,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                     </div>
                 </aside>
 
-                <main className="flex flex-col gap-6">
+                <div className="flex flex-col gap-6">
                     <section
                         id="overview"
                         className="  border border-line-300 bg-surface-900/70 backdrop-blur overflow-hidden"
@@ -533,7 +533,7 @@ export default async function UseCasePage({params}: UseCasePageProps) {
                             ) : null}
                         </div>
                     </section>
-                </main>
+                </div>
             </div>
         </article>
     );

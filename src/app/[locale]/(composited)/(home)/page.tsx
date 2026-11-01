@@ -330,7 +330,7 @@ export default async function Home({params}: HomePageProps) {
                     <div className="mt-8 flex w-full max-w-xl flex-col items-center gap-4 lg:items-start">
                         <Link
                             href={TALK_HREF}
-                            className="group/talk relative flex min-h-[4.25rem] w-full items-center gap-3 overflow-hidden rounded-[1.35rem] border border-primary-200/40 bg-primary-400 px-5 py-3.5 text-left text-canvas-950 shadow-[0_18px_50px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.38)] transition-[transform,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:bg-primary-300 hover:shadow-[0_26px_74px_rgba(167,244,50,0.32)] sm:w-auto sm:min-w-[22rem]"
+                            className="group/talk relative flex min-h-[4.25rem] w-full items-center gap-3 overflow-hidden rounded-full border border-primary-200/40 bg-primary-400 py-3.5 pl-4 pr-6 text-left text-canvas-950 shadow-[0_18px_50px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.38)] transition-[transform,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:bg-primary-300 hover:shadow-[0_26px_74px_rgba(167,244,50,0.32)] sm:w-auto sm:min-w-[22rem]"
                         >
                             <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
                                 <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -435,7 +435,7 @@ export default async function Home({params}: HomePageProps) {
                         {t("different.title")}
                     </h2>
                     <p className="max-w-xl text-lg leading-8 text-ink-200">{t("different.body")}</p>
-                    <Link href={HOW_IT_WORKS_HREF} className="mt-1 inline-flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.14em] text-primary-200 transition-colors hover:text-white">
+                    <Link href={HOW_IT_WORKS_HREF} className="mt-1 inline-flex items-center gap-2 text-base font-bold text-primary-200 transition-colors hover:text-white">
                         {t("different.link")} <span aria-hidden="true">→</span>
                     </Link>
                 </div>
@@ -468,7 +468,7 @@ export default async function Home({params}: HomePageProps) {
                             <div className="flex flex-wrap items-center justify-start gap-3">
                                 <Link
                                     href={ADVICE_FATIGUE_HREF}
-                                    className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300"
+                                    className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-primary-400 px-6 text-base font-bold text-canvas-950 transition-colors hover:bg-primary-300"
                                 >
                                     {t("fatigue.cta")} <span aria-hidden="true">→</span>
                                 </Link>
@@ -696,7 +696,7 @@ export default async function Home({params}: HomePageProps) {
                                         placement="home_more"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="group/store relative flex min-h-[4.75rem] items-center gap-3 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-white/[0.045] px-4 py-3 text-left text-white transition-[transform,border-color,background-color,color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-primary-200/55 hover:bg-primary-400 hover:text-canvas-950 hover:shadow-[0_18px_50px_rgba(167,244,50,0.16)]"
+                                        className="group/store relative flex min-h-[4.75rem] items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.045] px-4 py-3 text-left text-white transition-[transform,border-color,background-color,color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-primary-200/55 hover:bg-primary-400 hover:text-canvas-950 hover:shadow-[0_18px_50px_rgba(167,244,50,0.16)]"
                                     >
                                         <span className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-70 group-hover/store:via-canvas-950/20" />
                                         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas-950 text-primary-100 transition-colors duration-300 group-hover/store:bg-canvas-950 group-hover/store:text-primary-200">
@@ -782,7 +782,7 @@ export default async function Home({params}: HomePageProps) {
                 </ul>
                 <p className="px-4 text-center text-sm text-ink-400">
                     {t("team.guidesPrompt")}{" "}
-                    <Link href="/wildlife-guides" className="text-primary-200 hover:text-white">
+                    <Link href="/wildlife-guides" className="text-primary-200 underline underline-offset-4 hover:text-white">
                         {t("team.guidesLink")}
                     </Link>
                     {t("team.guidesTail")}
@@ -847,7 +847,7 @@ export default async function Home({params}: HomePageProps) {
                                         inheritPlacement
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="group/store flex min-h-[5.25rem] items-center gap-4 rounded-[1.45rem] border border-white/10 bg-[#07100B]/88 light:bg-surface-800 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[transform,border-color,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-200/45 hover:bg-[#0D2A16] light:hover:bg-surface-700 hover:shadow-[0_22px_70px_rgba(33,192,94,0.12),inset_0_1px_0_rgba(255,255,255,0.10)]"
+                                        className="group/store flex min-h-[5.25rem] items-center gap-4 rounded-2xl border border-white/10 bg-[#07100B]/88 light:bg-surface-800 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[transform,border-color,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-200/45 hover:bg-[#0D2A16] light:hover:bg-surface-700 hover:shadow-[0_22px_70px_rgba(33,192,94,0.12),inset_0_1px_0_rgba(255,255,255,0.10)]"
                                     >
                                         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.055] text-primary-100 transition-colors duration-300 group-hover/store:border-primary-200/30 group-hover/store:text-white">
                                             {name === "App Store" ? (
@@ -889,7 +889,7 @@ export default async function Home({params}: HomePageProps) {
                             {t("explore.description")}
                         </p>
                     </div>
-                    <div className="grid auto-rows-[17rem] grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[15rem]">
+                    <div className="grid auto-rows-[17rem] grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[16.5rem]">
                         {keepExploringCards.map((item) => {
                             const isFeatured = item.layout === "featured";
                             const isMedium = item.layout === "medium";

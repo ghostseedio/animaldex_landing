@@ -85,7 +85,7 @@ export default function ExplainerShell({
                 <button
                     type="button"
                     onClick={() => setPlaying((value) => !value)}
-                    className="inline-flex h-9 w-fit shrink-0 items-center gap-2 rounded-[2px] border border-line-300 px-3 text-xs font-bold uppercase tracking-[0.12em] text-ink-200 transition-colors hover:border-primary-400 hover:text-white"
+                    className="inline-flex h-9 w-fit shrink-0 items-center gap-2 rounded-full border border-line-300 px-3 text-xs font-bold uppercase tracking-[0.12em] text-ink-200 transition-colors hover:border-primary-400 hover:text-white"
                 >
                     <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
                     {playing ? pauseLabel : playLabel}

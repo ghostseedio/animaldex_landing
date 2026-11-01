@@ -52,7 +52,7 @@ export default async function AnimalSearchPage({params, searchParams}: Props) {
     }));
 
     return (
-        <main className="mx-auto w-full max-w-[80rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
+        <div className="mx-auto w-full max-w-[80rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
             <Link
                 href="/animals"
                 className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-primary-200 hover:text-primary-100"
@@ -137,6 +137,6 @@ export default async function AnimalSearchPage({params, searchParams}: Props) {
                     </p>
                 )}
             </div>
-        </main>
+        </div>
     );
 }

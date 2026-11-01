@@ -273,7 +273,7 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
     };
 
     return (
-        <main className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
+        <div className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
             <header className="max-w-[48rem]">
@@ -386,6 +386,6 @@ export default async function AnimalLessonsPage({params}: AnimalLessonsPageProps
             <div className="mt-10">
                 <ExploreKnowledgeLinks title={t("exploreTitle")} description={t("exploreDescription")} labels={{species: t("exploreSpecies"), lessons: t("exploreLessons"), symbolism: t("exploreSymbolism")}} />
             </div>
-        </main>
+        </div>
     );
 }

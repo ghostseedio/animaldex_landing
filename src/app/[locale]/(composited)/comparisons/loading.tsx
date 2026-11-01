@@ -5,7 +5,7 @@
  */
 export default function ComparisonsIndexLoading() {
     return (
-        <main className="mx-auto w-full max-w-[92rem] animate-pulse px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
+        <div className="mx-auto w-full max-w-[92rem] animate-pulse px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-12">
                 <div className="max-w-[42rem]">
                     <div className="h-3 w-40 rounded bg-white/10" />
@@ -62,6 +62,6 @@ export default function ComparisonsIndexLoading() {
                     ))}
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

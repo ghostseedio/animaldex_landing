@@ -1,4 +1,5 @@
 import "server-only";
+import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {speciesEntries as staticSpeciesEntries} from "@/data/species";
@@ -701,7 +702,8 @@ async function fetchProfilePets(
         limit: String(PROFILE_PET_LIMIT)
     })).catch(() => []);
 
-    return rows.map((row) => {
+    // People are never public (DECISIONS §11).
+    return rows.filter((row) => !isHumanSpecies({identityKey: row.normalized_identity_key})).map((row) => {
         const capture = mapCaptureRow(row);
         return {
             captureId: capture.id,
@@ -856,7 +858,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
             capture_id: `in.(${missingInsightIds.join(",")})`,
             limit: String(missingInsightIds.length)
         });
-        for (const row of await fetchRows<PublicCaptureRow>("discover_feed_v1", insightCaptureParams)) {
+        for (const row of (await fetchRows<PublicCaptureRow>("discover_feed_v1", insightCaptureParams)).filter(animalRow)) {
             const capture = mapCaptureRow(row);
             insightCapturesById.set(capture.id, capture);
         }

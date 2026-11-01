@@ -187,7 +187,7 @@ export default function WelcomeLanguageSwitcher({
                 id={listId}
                 hidden={!open}
                 aria-label={label}
-                className="absolute right-0 top-full z-20 mt-2 max-h-[min(60vh,27rem)] min-w-[14rem] overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.14] bg-[#0b100d] py-1 shadow-[0_18px_28px_-12px_rgba(0,0,0,0.95)]"
+                className="absolute right-0 top-full z-20 mt-2 max-h-[min(60vh,27rem)] min-w-[14rem] overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.14] bg-[#0b100d] py-1 shadow-[0_18px_28px_-12px_rgba(0,0,0,0.95)]"
             >
                 {languages.map((code) => {
                     const selected = code === displayLanguage;

@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {isHumanComparisonSlug} from "@/lib/people-are-never-public";
 import {notFound, redirect} from "next/navigation";
 import {renderComparisonArticle} from "@/app/[locale]/(composited)/comparisons/_components/comparison-article";
 import {renderComparisonGenerating} from "@/app/[locale]/(composited)/comparisons/_components/comparison-generating-screen";
@@ -65,6 +66,8 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 export default async function LiveComparisonPage({params}: Props) {
     const {locale} = params;
+    // People are never public (DECISIONS §11): no side by side with a person.
+    if (isHumanComparisonSlug(params.slug)) notFound();
     const resolution = await resolveLiveComparison(params.slug);
     if (resolution.kind === "missing") notFound();
     if (resolution.kind === "redirect") redirect(getLocalePath(locale, resolution.path));

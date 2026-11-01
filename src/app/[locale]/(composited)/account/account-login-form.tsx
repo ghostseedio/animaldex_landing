@@ -27,8 +27,8 @@ type AccountLoginFormProps = {
 };
 
 /** Square edges throughout, as on the hub pages: no rounded containers. */
-const FIELD_CLASS = "flex h-12 items-center gap-3 border border-line-300 bg-transparent px-4 transition-colors focus-within:border-primary-400";
-const OAUTH_CLASS = "flex h-12 items-center justify-center gap-3 rounded-[2px] px-5 text-[0.9375rem] font-bold transition-colors disabled:cursor-wait disabled:opacity-60";
+const FIELD_CLASS = "flex h-12 items-center gap-3 rounded-xl border border-line-300 bg-transparent px-4 transition-colors focus-within:border-primary-400";
+const OAUTH_CLASS = "flex h-12 items-center justify-center gap-3 rounded-full px-5 text-[0.9375rem] font-bold transition-colors disabled:cursor-wait disabled:opacity-60";
 
 function FieldIcon({path}: {path: string}) {
     return (
@@ -231,7 +231,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                     </label>
 
                     {displayedError ? (
-                        <p role="alert" className="border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-100">
+                        <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-100 light:text-rose-800">
                             {displayedError}
                         </p>
                     ) : null}
@@ -239,7 +239,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="inline-flex h-12 items-center justify-center rounded-[2px] bg-primary-400 px-5 text-[0.9375rem] font-black uppercase tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
+                        className="inline-flex h-12 items-center justify-center rounded-full bg-primary-400 px-5 text-[0.9375rem] font-bold text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
                     >
                         {isSubmitting ? labels.loading : labels.submit}
                     </button>
@@ -252,7 +252,7 @@ export default function AccountLoginForm({labels, redirectTo}: AccountLoginFormP
                     <p className="w-full text-sm text-ink-300">{labels.downloadPrompt}</p>
                     <Link
                         href="/#download"
-                        className="inline-flex h-10 items-center rounded-[2px] border border-line-300 px-4 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100"
+                        className="inline-flex h-11 items-center rounded-full border border-line-300 px-4 text-sm font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-100"
                     >
                         {labels.downloadApp}
                     </Link>

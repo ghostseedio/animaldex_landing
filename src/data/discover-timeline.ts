@@ -1,4 +1,5 @@
 import "server-only";
+import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import {
     getCaptureCardCatalogEnrichment,
@@ -61,6 +62,11 @@ export type DiscoverMediaAsset = {
     hasIndependentAnalysis?: boolean;
     createdAt?: string | null;
 };
+
+/** People are never public (DECISIONS §11): a capture of a person never leaves the server's hands. */
+export function isHumanCapture(item: Pick<DiscoverCaptureItem, "speciesSlug" | "normalizedIdentityKey"> & {scientificName?: string | null}): boolean {
+    return isHumanSpecies({slug: item.speciesSlug, scientificName: item.scientificName ?? null, identityKey: item.normalizedIdentityKey});
+}
 
 export type DiscoverCaptureItem = {
     kind: "capture";
@@ -1363,7 +1369,7 @@ export function buildDiscoverTimeline(
 ): DiscoverTimelineItem[] {
     const excluded = excludedCaptureIds(captures, alignments, fusions);
     const captureItems = captures
-        .filter((item) => !excluded.has(item.captureId))
+        .filter((item) => !excluded.has(item.captureId) && !isHumanCapture(item))
         .map((item) => item as DiscoverTimelineItem);
 
     const items: DiscoverTimelineItem[] = [
@@ -1428,7 +1434,7 @@ function itemIsAfterTimelineCursor(item: DiscoverTimelineItem, cursor: DiscoverT
 }
 
 export function buildDiscoverFeatured(captures: DiscoverCaptureItem[]): DiscoverFeaturedItem[] {
-    const topEndorsed = [...captures]
+    const topEndorsed = captures.filter((item) => !isHumanCapture(item))
         .filter((item) => item.endorsementCount > 0)
         .sort((left, right) => {
             if (left.endorsementCount !== right.endorsementCount) return right.endorsementCount - left.endorsementCount;
@@ -1896,7 +1902,7 @@ export async function getDiscoverCaptureById(captureId: string): Promise<Discove
     // People are never public (DECISIONS section 11).
     if (!row || rowIsHomoSapiens(row)) return null;
     const [item] = await mapCaptureRowsForKeys([row]);
-    return item ?? null;
+    return item && !isHumanCapture(item) ? item : null;
 }
 
 const DISCOVER_POST_TTL_MS = 15_000;
@@ -2053,7 +2059,7 @@ export async function getDiscoverRankingSiblings(options: {
 
     const mapped = hydrated
         .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
-        .filter((item) => Boolean(item.captureId));
+        .filter((item) => Boolean(item.captureId) && !isHumanCapture(item));
 
     // Keep cohort identity tight when filtering by profile id alone.
     const cohort = identityKey
@@ -2136,6 +2142,7 @@ async function loadRecentPublicCaptures(limit: number): Promise<DiscoverCaptureI
             .map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples))
             .filter((item) =>
                 item.imageSrc
+                && !isHumanCapture(item)
                 && !item.isUncertain
                 && item.mediaAssets.length > 0
                 && Boolean(item.coreLesson?.trim())
@@ -2177,7 +2184,7 @@ export async function getRecentPublicCaptures(
     return animals.map((capture) => ({...capture, imageSrc: toCaptureCardThumbnailRoute(capture.imageSrc)}));
 }
 
-const sitemapFeedSelect = "capture_id,feed_activity_at,capture_created_at,media_assets";
+const sitemapFeedSelect = "capture_id,feed_activity_at,capture_created_at,media_assets,scientific_name,normalized_identity_key";
 
 async function fetchDiscoverSitemapRows(supabase: DiscoverSupabaseClient, limit: number) {
     const capped = Math.max(24, Math.min(limit, 500));
@@ -2204,7 +2211,8 @@ export async function getDiscoverCapturePostsForSitemap(limit = 500): Promise<Di
     const supabase = createSupabasePublicClient() ?? createSupabaseServerClient();
     if (!supabase) return [];
 
-    const rows = await fetchDiscoverSitemapRows(supabase, limit);
+    const rows = (await fetchDiscoverSitemapRows(supabase, limit))
+        .filter((row) => !isHumanSpecies({scientificName: readString(row, "scientific_name"), identityKey: readString(row, "normalized_identity_key")}));
 
     return rows.map((row) => {
         const captureId = readString(row, "capture_id") ?? "";

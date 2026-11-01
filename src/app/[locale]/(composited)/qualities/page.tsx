@@ -213,7 +213,7 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
     };
 
     return (
-        <main className="mx-auto flex w-full max-w-[88rem] flex-col gap-16 px-4 py-12 md:gap-24 md:px-8 md:py-20">
+        <div className="mx-auto flex w-full max-w-[88rem] flex-col gap-16 px-4 py-12 md:gap-24 md:px-8 md:py-20">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, faqSchema, breadcrumbSchema])}}
@@ -340,6 +340,6 @@ export default async function PrinciplesIndexPage({params}: PrinciplesIndexPageP
                     {t("browseLessons")}
                 </Link>
             </section>
-        </main>
+        </div>
     );
 }

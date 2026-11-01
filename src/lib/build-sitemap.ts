@@ -1,4 +1,5 @@
 import {animalTrials, behaviourSignatures} from "@/data/animal-behaviours";
+import {isHumanComparisonSlug, isHumanSlug} from "@/lib/people-are-never-public";
 import {animalFrequenciesPagination, animalHybridsPagination, animalTrialsPagination, tierListPagination, type HubPagination} from "@/data/hub-pagination";
 import {getAnimalHybridCards} from "@/data/animal-hybrid-cards";
 import {WHAT_ANIMAL_AM_I_UPDATED_AT} from "@/data/what-animal-am-i-page";
@@ -58,10 +59,11 @@ function isPermanentlyRedirected(path: string) {
 }
 
 function getSitemapChallengeEntries() {
-    const allow = new Set(closedSeoNamespaceSlugs.comparisons ?? []);
+    const allow = new Set((closedSeoNamespaceSlugs.comparisons ?? []).filter((slug) => !isHumanComparisonSlug(slug)));
     const bySlug = new Map<string, {slug: string; updatedAt: string}>();
 
     for (const entry of challengeEntries) {
+        if (isHumanComparisonSlug(entry.slug)) continue;
         if (allow.size > 0 && !allow.has(entry.slug)) {
             continue;
         }
@@ -72,6 +74,7 @@ function getSitemapChallengeEntries() {
     }
 
     for (const entry of comparisonSnapshot.entries as Array<{slug: string; updatedAt?: string; publishedAt?: string}>) {
+        if (isHumanComparisonSlug(entry.slug)) continue;
         if (allow.size > 0 && !allow.has(entry.slug)) {
             continue;
         }
@@ -120,11 +123,12 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     // Oct snapshot), and only those whose page is indexable. The live catalog
     // listed newer species the route 404s and thin ones it noindexes.
     const speciesUpdatedAt = new Map(sitemapSpeciesEntries.map((entry) => [entry.slug, entry.updatedAt]));
-    const indexableSpeciesSlugs = Array.from(new Set(publishedSeoSlugs.animals)).filter((slug) => {
+    // People are never public (DECISIONS §11): no human page in the sitemap.
+    const indexableSpeciesSlugs = Array.from(new Set(publishedSeoSlugs.animals)).filter((slug) => !isHumanSlug(slug)).filter((slug) => {
         const entry = getPublishedSpeciesForContent(slug);
         return entry !== null && entry.slug === slug && isSpeciesPageIndexable(entry, slug);
     });
-    const servedLessonSlugs = new Set(publishedSeoSlugs.lessons);
+    const servedLessonSlugs = new Set(publishedSeoSlugs.lessons.filter((slug) => !isHumanSlug(slug)));
     // Each page video's watch page (/videos/<type>/<slug>) and the /videos hub; English only.
     const watchPages = (await listPublishedContentVideos().catch(() => [])).filter((video) => video.posterUrl);
 

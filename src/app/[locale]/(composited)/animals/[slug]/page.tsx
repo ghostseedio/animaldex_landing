@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {isHumanSpecies} from "@/lib/people-are-never-public";
 import Image from "next/image";
 import {notFound, permanentRedirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -438,7 +439,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const companionWords = await getCompanionWords(locale);
     const entry = await getSpeciesPageData(slug);
 
-    if (!entry) {
+    // People are never public (DECISIONS §11).
+    if (!entry || isHumanSpecies({slug: entry.slug, scientificName: entry.analysis.scientificName, identityKey: entry.normalizedIdentityKey})) {
         notFound();
     }
 
@@ -965,14 +967,16 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     // The hero shows the animal itself, in its full-colour species art (WEB-6),
     // not a locked silhouette. Under a story video it is the video's fallback.
     const heroArt = (
-        <div className="relative mx-auto flex aspect-square w-full max-w-[17rem] items-center justify-center overflow-hidden rounded-[2rem] border border-primary-400/15 bg-[radial-gradient(circle_at_50%_42%,rgba(167,244,50,0.16),transparent_62%)] sm:max-w-xs lg:max-w-sm light:border-line-200 light:bg-[radial-gradient(circle_at_50%_42%,rgba(63,122,10,0.12),transparent_62%)]">
+        <div className="relative mx-auto flex aspect-square w-full max-w-[13rem] items-center justify-center overflow-hidden rounded-[2rem] border border-primary-400/15 bg-[radial-gradient(circle_at_50%_42%,rgba(167,244,50,0.16),transparent_62%)] sm:max-w-xs lg:max-w-sm light:border-line-200 light:bg-[radial-gradient(circle_at_50%_42%,rgba(63,122,10,0.12),transparent_62%)]">
+            {/* Through the image optimizer when the storage file is known: a small,
+                same-origin WebP is the page's LCP image on a phone. */}
             <Image
                 src={heroArtSrc}
                 alt={getSpeciesImageAltText(entry, "thumbnail")}
                 fill
-                unoptimized
+                unoptimized={!heroArtSrc.startsWith("http")}
                 priority
-                sizes="(min-width: 1024px) 24rem, 18rem"
+                sizes="(min-width: 1024px) 24rem, (min-width: 640px) 20rem, 13rem"
                 className="object-contain p-[10%] drop-shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
             />
         </div>
@@ -983,7 +987,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         <section aria-labelledby="capture-your-own" className="flex flex-col items-start gap-5 border-y border-line-200 py-8 md:flex-row md:items-center md:justify-between md:gap-10">
             <div className="flex items-center gap-5">
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-primary-400/20 bg-primary-400/[0.06]">
-                    <Image src={heroArtSrc} alt="" aria-hidden="true" fill unoptimized sizes="80px" className="object-contain p-2" />
+                    <Image src={heroArtSrc} alt="" aria-hidden="true" fill unoptimized={!heroArtSrc.startsWith("http")} sizes="80px" className="object-contain p-2" />
                 </div>
                 <div className="flex max-w-2xl flex-col gap-1.5">
                     <h2 id="capture-your-own" className="font-display text-2xl font-bold text-white md:text-3xl">{t("unlockCardTitle", {animal: entry.name})}</h2>

@@ -83,7 +83,7 @@ export default function HeaderAuthLink({signInLabel, myAnimalsLabel, mobile = fa
     return (
         <Link
             href={SIGN_IN_HREF}
-            className="hidden h-9 items-center rounded-full px-3.5 text-[0.8125rem] font-bold leading-none text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:border-primary-400 focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 xl:inline-flex motion-reduce:transition-none"
+            className="hidden h-9 items-center rounded-full px-3.5 font-sans text-[0.8125rem] font-semibold leading-none text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:border-primary-400 focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 xl:inline-flex motion-reduce:transition-none"
         >
             {signInLabel}
         </Link>

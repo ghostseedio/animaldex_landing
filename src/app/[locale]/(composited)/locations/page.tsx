@@ -185,7 +185,7 @@ export default async function LocationsIndexPage({params}: {params: {locale: str
     };
 
     return (
-        <main className="w-full max-w-[88rem] mx-auto px-4 py-10 md:px-8 md:py-16">
+        <div className="w-full max-w-[88rem] mx-auto px-4 py-10 md:px-8 md:py-16">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema])}} />
 
             <header className="mb-8 max-w-[46rem]">
@@ -313,6 +313,6 @@ export default async function LocationsIndexPage({params}: {params: {locale: str
                     showAllGuides: safeText("showAllGuides", "Show all guides")
                 }}
             />
-        </main>
+        </div>
     );
 }

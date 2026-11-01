@@ -28,7 +28,7 @@ function translateLinks(t: (key: string) => string, links: PublicNavLink[]) {
 }
 
 /** Controls are pills (WEB-25): one shape, sentence case, a visible focus ring. */
-const pill = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full px-4 text-[0.8125rem] font-bold leading-none transition-colors duration-200 [transition-timing-function:cubic-bezier(.2,.8,.2,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none";
+const pill = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full px-4 font-sans text-[0.8125rem] font-semibold leading-none transition-colors duration-200 [transition-timing-function:cubic-bezier(.2,.8,.2,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none";
 
 export default function Header({locale, t}: {locale: string; t: ScopedTranslator}) {
     // The primary action on every page is talking (docs/rich-chat/SPEC.md §4.5),

@@ -92,7 +92,7 @@ export default function LocationPlacesPage({locale, location, places, kind, labe
     };
 
     return (
-        <main className="w-full max-w-[88rem] mx-auto px-4 py-10 md:px-8 md:py-16">
+        <div className="w-full max-w-[88rem] mx-auto px-4 py-10 md:px-8 md:py-16">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, breadcrumbSchema, ...(itemListSchema ? [itemListSchema] : [])])}} />
             <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-ink-300">
                 <Link href="/locations" className="hover:text-primary-100">{labels.locations}</Link><span aria-hidden="true">→</span>
@@ -176,6 +176,6 @@ export default function LocationPlacesPage({locale, location, places, kind, labe
                     <Link href="/animals" className="mt-5 inline-flex min-h-11 items-center text-primary-200 hover:text-primary-100">{labels.browseAnimals} →</Link>
                 </section>
             </div>
-        </main>
+        </div>
     );
 }

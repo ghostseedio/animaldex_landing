@@ -141,7 +141,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         <div className="mt-8 grid gap-3 text-sm text-ink-300 sm:grid-cols-3">
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                 <strong className="block text-2xl text-white">{quizQuestions.length}</strong>
-                                <span>Test questions</span>
+                                <span>Questions</span>
                             </div>
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                 <strong className="block text-2xl text-white">{quizAnimals.length}</strong>
@@ -155,7 +155,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
                             <a
                                 href="#quiz"
-                                className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
+                                className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 text-base font-bold text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
                             >
                                 Start the quiz
                             </a>
@@ -325,7 +325,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 lg:justify-start">
                             <Link
                                 href={WILD_PROFILE_INTERVIEW_PATH}
-                                className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 font-display text-sm font-bold uppercase tracking-[0.12em] text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
+                                className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-400 px-6 text-base font-bold text-canvas-950 transition-colors hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-200"
                             >
                                 {t("ctaWebButton")}
                             </Link>

@@ -90,7 +90,7 @@ export function StatLessonsSection({t}: {t: ScopedTranslator}) {
                     </div>
                     <Link
                         href={START_COLLECTION_HREF}
-                        className="inline-flex h-11 w-fit items-center rounded-[2px] bg-primary-400 px-4 text-[0.8125rem] font-black uppercase tracking-[0.04em] text-canvas-950 transition-colors hover:bg-primary-100"
+                        className="inline-flex h-11 w-fit items-center rounded-full bg-primary-400 px-5 text-[0.8125rem] font-black uppercase tracking-[0.04em] text-canvas-950 transition-colors hover:bg-primary-100"
                     >
                         {t("ctaButton")}
                     </Link>

@@ -1000,7 +1000,7 @@ function BeatRail({beat, run, width}: {beat: WelcomeIntroBeat; run: {key: number
         <div aria-hidden="true" className="flex gap-2" style={{width}}>
             {WELCOME_INTRO_BEATS.map((step, i) => (
                 <div key={step.id} className="flex flex-1 flex-col gap-2">
-                    <span className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-200 ${i === current ? "text-white" : "text-white/40"}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-200 ${i === current ? "text-white" : "text-white/60"}`}>
                         {t(step.title)}
                     </span>
                     <span className="relative h-0.5 overflow-hidden bg-white/[0.14]">

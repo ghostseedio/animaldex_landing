@@ -47,9 +47,11 @@ test("ranking aliases preserve /tier-list as the successful canonical", () => {
     assert.match(site, /return `\/\$\{locale\}\$\{normalisedPath\}`/);
 });
 
-test("homepage featured ranking card points at the canonical tier-list path", () => {
+test("the homepage no longer features the tier lists, and never links the old /rankings path", () => {
     const home = readRepo("src/app/[locale]/(composited)/(home)/page.tsx");
 
-    assert.match(home, /\$\{RANKING_CANONICAL_BASE_PATH\}\/rarest-animals/);
+    // DECISIONS §8 (2026-11-01): tier lists and other search hubs leave the
+    // home page and the header; they stay in the footer and the sitemap.
+    assert.doesNotMatch(home, /RANKING_CANONICAL_BASE_PATH/);
     assert.doesNotMatch(home, /\/rankings\/rarest-animals/);
 });

@@ -175,7 +175,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                 {t("back")}
             </Link>
 
-            <ChallengeHero challenge={challenge} title={sideBySideTitle} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
+            <ChallengeHero challenge={challenge} title={sideBySideTitle} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("twoWaysEyebrow")} />
 
             {locale === "en" ? (
                 <div className="editorial [&>section]:mb-0">

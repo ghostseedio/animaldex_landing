@@ -30,19 +30,31 @@ const ANIMALS_WORK_POINTS: Record<PerspectiveLocale, AnimalsWorkPoint[]> = {
         {id: "power", title: "A Power", text: "Every animal has a Power: a lesson from how its kind survives."},
         {id: "side", title: "Its own side", text: "It answers from its own life. It takes a side and keeps it, even when it isn't what you hoped to hear."},
         {id: "disagree", title: "Different sides", text: "Different animals disagree. That's the point: ask two, and you see your problem from two sides."},
-        {id: "step", title: "Your step", text: "Bring it a real problem and it gives you one step to try. Do it, and its Power is yours."},
-        {id: "debates", title: "Debates", text: "Once its Power is yours, it can bring other animals in to argue your problem, privately or in public."},
-        {id: "trials", title: "Trials", text: "Each animal's own challenges: one more way to get a step."}
+        {id: "step", title: "Your step", text: "Your step: bring it a real problem and it gives you one step to try. Do it, and its Power is yours."},
+        {id: "debates", title: "Debates", text: "Debates: once its Power is yours, it can bring other animals in to argue your problem, privately or in public."},
+        {id: "trials", title: "Trials", text: "Trials: each animal's own challenges, one more way to get a step."}
     ],
     id: [
         {id: "power", title: "Sebuah Kekuatan", text: "Setiap hewan punya Kekuatan: pelajaran dari cara jenisnya bertahan hidup."},
         {id: "side", title: "Sisinya sendiri", text: "Ia menjawab dari hidupnya sendiri. Ia memilih satu sisi dan bertahan di sana, meski itu bukan yang kamu harapkan."},
         {id: "disagree", title: "Sisi yang berbeda", text: "Hewan yang berbeda punya pendapat berbeda. Justru itu intinya: tanyakan pada dua hewan, dan kamu melihat masalahmu dari dua sisi."},
-        {id: "step", title: "Langkahmu", text: "Bawakan ia masalah yang nyata, dan ia memberimu satu langkah untuk dicoba. Lakukan, dan Kekuatannya jadi milikmu."},
-        {id: "debates", title: "Debat", text: "Setelah Kekuatannya jadi milikmu, ia bisa mengajak hewan lain memperdebatkan masalahmu, secara privat atau di depan publik."},
-        {id: "trials", title: "Uji Coba", text: "Tantangan milik setiap hewan: satu cara lagi untuk mendapatkan langkah."}
+        {id: "step", title: "Langkahmu", text: "Langkahmu: bawakan ia masalah yang nyata, dan ia memberimu satu langkah untuk dicoba. Lakukan, dan Kekuatannya jadi milikmu."},
+        {id: "debates", title: "Debat", text: "Debat: setelah Kekuatannya jadi milikmu, ia bisa mengajak hewan lain memperdebatkan masalahmu, secara privat atau di depan publik."},
+        {id: "trials", title: "Uji Coba", text: "Uji Coba: tantangan milik setiap hewan, satu cara lagi untuk mendapatkan langkah."}
     ]
 };
+
+/**
+ * A point's text without its own "Your step: " lead-in, for cards that already
+ * show the title above it (WEB-43), so the card does not say it twice. The
+ * spec's full sentence stays the source (Help, llms.txt, the apps).
+ */
+export function animalsWorkPointBody(point: AnimalsWorkPoint): string {
+    const prefix = `${point.title}:`;
+    if (!point.text.toLowerCase().startsWith(prefix.toLowerCase())) return point.text;
+    const rest = point.text.slice(prefix.length).trim();
+    return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
 
 export function getAnimalsWorkPoints(locale: string): AnimalsWorkPoint[] {
     return ANIMALS_WORK_POINTS[perspectiveLocale(locale)];

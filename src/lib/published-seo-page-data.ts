@@ -7,6 +7,7 @@ import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import {withReadableRangeText} from "@/data/native-range";
+import {isHumanComparisonSlug, isHumanSlug} from "@/lib/people-are-never-public";
 
 type SnapshotFile<T> = {
     generatedAt: string;
@@ -31,12 +32,13 @@ const snapshotComparisonsBySlug = new Map(
 
 export function getSnapshotSpeciesBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
+    if (isHumanSlug(normalized)) return null;
     return snapshotAnimalsBySlug.get(normalized) ?? null;
 }
 
 /** Every database catalog species in the published snapshot (not the hand-coded ones). */
 export function listSnapshotSpecies() {
-    return Array.from(snapshotAnimalsBySlug.values());
+    return Array.from(snapshotAnimalsBySlug.values()).filter((entry) => !isHumanSlug(entry.slug));
 }
 
 export function getSnapshotLessonBySlug(slug: string) {
@@ -53,25 +55,27 @@ export function listSnapshotLessonSlugs() {
 }
 
 export function getPublishedEnglishAnimalStaticParams() {
-    return publishedSeoSlugs.animals.map((slug) => ({locale: "en", slug}));
+    // People are never public (DECISIONS §11).
+    return publishedSeoSlugs.animals.filter((slug) => !isHumanSlug(slug)).map((slug) => ({locale: "en", slug}));
 }
 
 export function getPublishedEnglishLessonStaticParams() {
-    return publishedSeoSlugs.lessons.map((slug) => ({locale: "en", slug}));
+    return publishedSeoSlugs.lessons.filter((slug) => !isHumanSlug(slug)).map((slug) => ({locale: "en", slug}));
 }
 
 export function getSnapshotComparisonBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
+    if (isHumanComparisonSlug(normalized)) return null;
     return snapshotComparisonsBySlug.get(normalized) ?? null;
 }
 
 /** Published DB comparisons (generated pairs promoted by the last snapshot refresh). */
 export function listSnapshotComparisons(): ChallengeEntry[] {
-    return comparisonPages.entries;
+    return comparisonPages.entries.filter((entry) => !isHumanComparisonSlug(entry.slug));
 }
 
 export function getPublishedEnglishComparisonStaticParams() {
-    const slugs = closedSeoNamespaceSlugs.comparisons ?? [];
+    const slugs = (closedSeoNamespaceSlugs.comparisons ?? []).filter((slug) => !isHumanComparisonSlug(slug));
     return slugs.map((slug) => ({locale: "en", slug}));
 }
 

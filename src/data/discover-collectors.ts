@@ -1,4 +1,5 @@
 import "server-only";
+import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {resolvePublicOverallScore} from "@/data/public-profiles";
@@ -39,7 +40,7 @@ const SUMMARY_SELECT = [
 ].join(",");
 
 const PROFILE_SELECT = "id,username,display_name,avatar_url,bio,is_pro";
-const BEST_FIND_SELECT = "capture_id,animal_name,image_bucket,image_path,image_mime_type,image_media_kind";
+const BEST_FIND_SELECT = "capture_id,animal_name,normalized_identity_key,scientific_name,image_bucket,image_path,image_mime_type,image_media_kind";
 const POWER_SET_SELECT = "user_id,reward_points";
 
 function readString(row: QueryRow, key: string) {
@@ -152,7 +153,10 @@ async function loadAllDiscoverCollectors() {
     const catalogSpeciesCount = unifiedSpeciesEntries.length;
 
     const profilesById = new Map(profileRows.map((row) => [readString(row, "id") ?? "", row]));
-    const bestFindsById = new Map(bestFindRows.map((row) => [readString(row, "capture_id") ?? "", row]));
+    // People are never public (DECISIONS §11): a person is never anyone's best find.
+    const bestFindsById = new Map(bestFindRows
+        .filter((row) => !isHumanSpecies({identityKey: readString(row, "normalized_identity_key"), scientificName: readString(row, "scientific_name")}))
+        .map((row) => [readString(row, "capture_id") ?? "", row]));
     const powerSetsByUser = new Map<string, Array<{reward_points: number | null}>>();
 
     for (const row of powerSetRows) {

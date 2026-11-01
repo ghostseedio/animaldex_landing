@@ -230,7 +230,7 @@
         "indexes": "{count} animals",
         "capturesLabel": "Captures",
         "usersLabel": "Explorers",
-        "indexesLabel": "Animals to talk to"
+        "indexesLabel": "Animals"
       },
       "blogPrompt": "Get sharper on animal ID, rarity, travel spotting, and wildlife-friendly guides.",
       "blogLink": "Read the Blog",
@@ -2000,7 +2000,8 @@
     "ctaAskBothDescription": "Bring the same problem to the {animalA} and the {animalB}. Each answers from its own Power, and they won't agree.",
     "ctaTalkTo": "Talk to the {animal}",
     "sideBySideTitle": "{animalA} and {animalB}, side by side",
-    "pairTitle": "{animalA} and {animalB}"
+    "pairTitle": "{animalA} and {animalB}",
+    "twoWaysEyebrow": "Two ways of surviving"
   },
   "collectorPages": {
     "back": "Back to Use Cases",

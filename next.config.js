@@ -49,6 +49,8 @@ if (process.env.NEXT_PHASE === "phase-production-build" || process.argv.includes
 
 module.exports = withNextIntl({
     output: 'standalone',
+    // No X-Powered-By: Next.js on every response (WEB-22).
+    poweredByHeader: false,
     // Stable SEO pages SSG from checked-in snapshots. Sitemap stays a
     // request-time route so it does not block static generation.
     staticPageGenerationTimeout: 600,
@@ -353,6 +355,19 @@ module.exports = withNextIntl({
                     {key: "X-Robots-Tag", value: "noindex, nofollow"},
                     {key: "Cache-Control", value: "private, no-store"}
                 ]
+            })),
+            // Signed-in and per-person pages (WEB-22). Next sends no Cache-Control
+            // on these dynamic routes, and a CDN rule that caches HTML would then
+            // fall back to its own default TTL and could serve one person's page
+            // to another. Say it outright: never stored in a shared cache.
+            ...[
+                "/app", "/app/:path*", "/id/app", "/id/app/:path*",
+                "/account", "/account/:path*", "/id/account", "/id/account/:path*",
+                "/auth/:path*", "/checkout", "/checkout/:path*", "/id/checkout", "/id/checkout/:path*"
+                // API routes set their own Cache-Control (the chat stream needs no-transform).
+            ].map((source) => ({
+                source,
+                headers: [{key: "Cache-Control", value: "private, no-store"}]
             })),
             {
                 // Static art under /public/images is not content-hashed, so keep

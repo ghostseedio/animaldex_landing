@@ -7,7 +7,6 @@ import {animalIcons} from "@/loaders/icons";
 import {animalSilhouetteImages} from "@/data/animal-silhouettes";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Link from "@/app/[locale]/_components/link";
-import Button from "@/app/[locale]/_components/button";
 import StoreGlyph from "@/components/store/store-glyph";
 import StoreLink from "@/components/store/store-link";
 import {storeLinks} from "@/lib/store-links";
@@ -88,12 +87,10 @@ export default function NotFoundBody() {
                 </div>
                 {/* Talking first (WEB-35), home second. */}
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-                    <Link href="/talk">
-                        <Button as="span">
-                            {talkName ? t.talkFind.replace("{animal}", talkName) : t.talk}
-                        </Button>
+                    <Link href="/talk" className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary-400 px-6 text-base font-bold text-canvas-950 transition-colors duration-200 hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300">
+                        {talkName ? t.talkFind.replace("{animal}", talkName) : t.talk}
                     </Link>
-                    <Link href="/" className="inline-flex min-h-12 items-center rounded-full border border-line-200 px-5 text-sm font-bold text-ink-100 transition-colors hover:border-primary-300 hover:text-white">
+                    <Link href="/" className="inline-flex min-h-12 items-center justify-center rounded-full border border-line-200 px-6 text-base font-bold text-ink-100 transition-colors hover:border-primary-300 hover:text-white">
                         {t.button}
                     </Link>
                 </div>

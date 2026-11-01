@@ -135,7 +135,8 @@ export default function FeaturesOverview({
             <div className="relative min-h-0 flex-1">
                 <div className="relative flex h-full min-h-0 flex-row overflow-hidden" ref={contents}>
                     {features.map(({content}, i) => (
-                        <div key={i} className="box-border h-full min-w-full px-10 lg:px-12" aria-hidden={slide === i ? undefined : true}>
+                        // Slides out of view are inert: hidden from screen readers and out of the tab order.
+                        <div key={i} className="box-border h-full min-w-full px-10 lg:px-12" {...(slide === i ? {} : {inert: ""} as Record<string, string>)}>
                             {content}
                         </div>
                     ))}

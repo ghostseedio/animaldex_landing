@@ -36,7 +36,9 @@ test("comparison detail articles are English DB bodies, so /id twins may consoli
     // The article body is the shared component the page renders.
     const article = read("app/[locale]/(composited)/comparisons/_components/comparison-article.tsx");
     assert.match(page, /renderComparisonArticle/);
-    assert.match(article, /headline: challenge\.title/);
+    // The page's own headline is "{A} and {B}, side by side" (WEB-9): the
+    // searchers' "who would win" stays in the meta title, not the JSON-LD.
+    assert.match(article, /headline: sideBySideTitle/);
     assert.match(article, /summary=\{challenge\.quickVerdict\}/);
     assert.match(article, /paragraphs=\{challenge\.shortAnswer\}/);
     assert.match(article, /challenge\.faq\.map/);

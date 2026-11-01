@@ -7,6 +7,7 @@ import DisagreeStill from "@/app/[locale]/(composited)/_components/disagree-stil
 import TextDiagramPanel from "@/app/[locale]/(composited)/_components/text-diagram-panel";
 import HomeChatStill from "@/app/[locale]/(composited)/(home)/_components/home-chat-still";
 import {
+    animalsWorkPointBody,
     getAnimalsWorkPoints,
     getDisagreeExample,
     getPerspectiveFlow,
@@ -204,7 +205,7 @@ export default async function HowItWorksPage({params}: PageProps) {
                                     <span aria-hidden="true" className="font-mono text-xs tabular-nums text-primary-400/70">{String(index + 1).padStart(2, "0")}</span>
                                 </div>
                                 <h3 className="font-display text-2xl font-bold uppercase tracking-[0.03em] text-white">{point.title}</h3>
-                                <p className="text-base leading-7 text-ink-200">{point.text}</p>
+                                <p className="text-base leading-7 text-ink-200">{animalsWorkPointBody(point)}</p>
                                 {point.id === "power" ? (
                                     <p className="mt-auto border-t border-line-300 pt-3 text-sm leading-6 text-primary-200">{content.powerExample}</p>
                                 ) : null}

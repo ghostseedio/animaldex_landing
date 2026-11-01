@@ -230,7 +230,7 @@
         "indexes": "{count} hewan",
         "capturesLabel": "Tangkapan",
         "usersLabel": "Penjelajah",
-        "indexesLabel": "Hewan untuk diajak bicara"
+        "indexesLabel": "Hewan"
       },
       "blogPrompt": "Perjelas pemahaman soal ID hewan, rarity, spotting saat travel, dan panduan ramah satwa liar.",
       "blogLink": "Baca Blog",
@@ -1990,7 +1990,8 @@
     "ctaAskBothDescription": "Bawa masalah yang sama ke {animalA} dan {animalB}. Masing-masing menjawab dari Kekuatannya sendiri, dan mereka tidak akan sepakat.",
     "ctaTalkTo": "Bicara dengan {animal}",
     "sideBySideTitle": "{animalA} dan {animalB}, berdampingan",
-    "pairTitle": "{animalA} dan {animalB}"
+    "pairTitle": "{animalA} dan {animalB}",
+    "twoWaysEyebrow": "Dua cara bertahan hidup"
   },
   "collectorPages": {
     "back": "Kembali ke Use Cases",

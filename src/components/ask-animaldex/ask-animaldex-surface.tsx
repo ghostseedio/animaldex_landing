@@ -10,8 +10,9 @@
  * - Elsewhere, only where the header hides its own Talk button (below
  *   1280 px), a "Talk to an animal" pill links to /talk, once the hero has
  *   scrolled away.
- * - Either pill steps aside whenever it would sit over something tappable,
- *   so it never covers a link, a button or a field.
+ * - Either pill appears once the first screen has scrolled away (the hero
+ *   carries its own Talk button), and steps aside whenever it would sit over
+ *   something tappable, so it never covers a link, a button or a field.
  *
  * Mounted once for the whole site. The panel itself is loaded on demand, so a
  * reader who never opens it never downloads the markdown renderer, the visual
@@ -230,7 +231,8 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
         || QUIET_PATHS.some((pattern) => pattern.test(subject.path))
         // A species page, before it has said which animal it is: nothing, not the generic pill.
         || (subject.kind === "species" && !speaksAsAnimal);
-    const placement = usePillPlacement(mounted && !quiet, !speaksAsAnimal);
+    // Both pills wait for the first screen to scroll away: the hero carries its own Talk button.
+    const placement = usePillPlacement(mounted && !quiet, true);
     const setPillRef = useCallback((element: HTMLElement | null) => {
         placement.ref.current = element;
     }, [placement.ref]);
