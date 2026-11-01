@@ -10,6 +10,8 @@ type ChallengeVerdictCardProps = {
     confidence?: number;
     confidenceLabel?: string;
     fullAnalysisLabel?: string;
+    /** The in-page anchor; only the first card on a page carries it (ids are unique). */
+    id?: string;
 };
 
 export default function ChallengeVerdictCard({
@@ -21,10 +23,11 @@ export default function ChallengeVerdictCard({
     winnerLabel,
     confidence = 78,
     confidenceLabel,
-    fullAnalysisLabel
+    fullAnalysisLabel,
+    id
 }: ChallengeVerdictCardProps) {
     return (
-        <section id="winner" className="overflow-hidden  border border-primary-500/25 bg-gradient-to-br from-primary-500/12 via-surface-900 to-surface-900 shadow-xl">
+        <section id={id} className="overflow-hidden  border border-primary-500/25 bg-gradient-to-br from-primary-500/12 via-surface-900 to-surface-900 shadow-xl">
             <div className={winner ? "grid lg:grid-cols-[19rem_1fr]" : "grid"}>
                 {winner ? (
                     <div className="relative min-h-64 lg:min-h-full">

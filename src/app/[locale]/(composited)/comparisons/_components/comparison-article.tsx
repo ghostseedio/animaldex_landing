@@ -192,7 +192,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
 
             <ComparisonPageNavigation title={sideBySideTitle} labels={{compareAnother: t("compareAnother"), meetAnimals: t("meetAnimalsAction"), jumpStats: t("jumpStats"), share: t("share"), overview: t("navOverview"), winner: t("navWinner"), stats: t("navStats"), scenarios: t("navScenarios"), faq: t("navFaq"), related: t("navRelated")}} />
 
-            <ChallengeVerdictCard title={t("quickVerdictTitle")} description={t("quickVerdictDescription")} summary={challenge.quickVerdict} paragraphs={challenge.shortAnswer} fullAnalysisLabel={t("fullAnalysis")} />
+            <ChallengeVerdictCard id="winner" title={t("quickVerdictTitle")} description={t("quickVerdictDescription")} summary={challenge.quickVerdict} paragraphs={challenge.shortAnswer} fullAnalysisLabel={t("fullAnalysis")} />
 
 
             <ComparisonVotePanel

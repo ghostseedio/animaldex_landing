@@ -764,7 +764,7 @@ button {
 /* Light theme, dim text (WEB-20). The dark design dims text with alpha
    (text-white/40, text-primary-200/70), which on a light page falls under
    4.5:1. In light, those steps resolve to solid ink and green tokens instead. */
-:root[data-theme="light"] :is(.text-white\/30, .text-white\/35, .text-white\/40, .text-white\/45, .text-white\/50, .text-white\/55, .text-white\/\[0\.42\]):not(.theme-dark *) { color: rgb(var(--c-ink-400)); }
+:root[data-theme="light"] :is(.text-white\/30, .text-white\/35, .text-white\/40, .text-white\/45, .text-white\/50, .text-white\/55, .text-white\/\[0\.42\], .text-white\/\[0\.55\]):not(.theme-dark *) { color: rgb(var(--c-ink-400)); }
 :root[data-theme="light"] :is(.text-white\/60, .text-white\/65, .text-white\/70, .text-white\/75, .text-white\/80, .text-white\/\[0\.7\]):not(.theme-dark *) { color: rgb(var(--c-ink-300)); }
 :root[data-theme="light"] :is(.text-primary-200\/70, .text-primary-200\/80, .text-primary-200\/85, .text-primary-200\/90, .text-primary-300\/70, .text-primary-400\/60, .text-primary-400\/70, .text-primary-400\/80):not(.theme-dark *) { color: rgb(var(--c-primary-text-200)); }
 

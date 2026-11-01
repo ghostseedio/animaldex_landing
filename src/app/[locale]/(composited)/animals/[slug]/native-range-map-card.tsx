@@ -290,7 +290,8 @@ export default function NativeRangeMapCard({entry, labels, variant = "default", 
                             className="rounded-full border px-3 py-1 text-sm"
                             style={{
                                 borderColor: isRendered ? `${getNativeRangeAccent(region)}` : "rgb(var(--c-white) / 0.08)",
-                                color: isRendered ? getNativeRangeAccent(region) : "rgb(var(--range-muted-text, 214 223 238) / 0.75)",
+                                // Light pages darken the accent for text, as the Trial frequencies do (WEB-20).
+                                color: isRendered ? `color-mix(in srgb, ${getNativeRangeAccent(region)}, black var(--accent-ink-mix, 0%))` : "rgb(var(--range-muted-text, 214 223 238) / 0.75)",
                                 backgroundColor: isRendered ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)"
                             }}
                         >

@@ -101,24 +101,24 @@ export default async function BrandingPage({params}: {params: {locale: string}})
 
                     <div className="grid gap-5 lg:grid-cols-2">
                         <article className="theme-dark flex min-h-[18rem] flex-col justify-between gap-8 bg-canvas-950 p-7 md:col-span-2 md:p-10 lg:col-span-2">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Lockup · dark background (preferred)</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Lockup · dark background (preferred)</p>
                             <div className="flex justify-center">
                                 <BrandLockup size={null} large className="max-w-full [--brand-size:52px] sm:[--brand-size:84px]" />
                             </div>
                             <p className="max-w-2xl text-sm leading-6 text-ink-300">The spiral-paw mark, then AnimalDex in Barlow Condensed ExtraBold: &ldquo;Animal&rdquo; in the page&rsquo;s ink, &ldquo;Dex&rdquo; in lime. Flat, with no outline, bevel or shadow. The mark is the capital height &times; 1.35, set 0.35 &times; the capital height from the word.</p>
                         </article>
                         <article className="flex min-h-[25rem] flex-col justify-between bg-canvas-950 p-7 md:p-10">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · dark background</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Symbol · dark background</p>
                             <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a dark background" width={512} height={512} priority className="mx-auto h-auto w-full max-w-[15rem]" />
                             <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
                         <article className="flex min-h-[25rem] flex-col justify-between bg-surface-900 p-7 md:p-10">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · on its own ground (light pages, app icon)</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Symbol · on its own ground (light pages, app icon)</p>
                             <Image src="/images/brand/tile-512.webp" alt="Official AnimalDex spiral paw logo on its dark green ground" width={512} height={512} className="mx-auto h-auto w-full max-w-[15rem] rounded-[24%]" />
                             <a href="/images/brand/tile-512.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
                         <article className="flex flex-col gap-3 border-t border-line-200 pt-6 md:col-span-2 lg:col-span-2">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Retired</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Retired</p>
                             <p className="max-w-3xl text-sm leading-6 text-ink-300">The chrome, bevelled AnimalDex wordmark is retired: please don&rsquo;t use it in new work. The file stays at its old address so existing links keep working.</p>
                         </article>
                     </div>
@@ -168,13 +168,13 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     <h2 id="typography" className="mt-3 font-display text-4xl font-extrabold text-white md:text-6xl">Compact headlines. Clean reading.</h2>
                     <div className="mt-10 grid gap-10 lg:grid-cols-2">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Barlow Condensed · Titles, hooks, subtitles</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Barlow Condensed · Titles, hooks, subtitles</p>
                             <p className="mt-2 text-sm font-medium text-ink-300">SemiBold, Bold, and ExtraBold. Compact, tall, and adventurous without becoming messy.</p>
                             <p className="mt-4 font-display text-5xl font-extrabold uppercase leading-none tracking-tight text-white md:text-7xl">Talk to animals.</p>
                             <p className="mt-5 font-display text-2xl font-semibold text-ink-200">They won&rsquo;t just agree with you.</p>
                         </div>
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Inter · Body and UI</p>
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-300">Inter · Body and UI</p>
                             <p className="mt-2 text-sm font-medium text-ink-300">Medium and SemiBold. Clean, modern, and aligned with the AnimalDex app UI.</p>
                             <p className="mt-4 text-xl font-medium leading-9 text-white">Inter keeps field guides, animal profiles, and product interfaces readable across screen sizes.</p>
                             <p className="mt-3 text-base font-semibold text-ink-200">Buttons, navigation, and supporting copy stay in Inter so the condensed display type can do the work of the hook.</p>
