@@ -5,8 +5,9 @@
  * one-to-one thread from, as the apps have it since AnimalDex bdfaccde.
  *
  *   - the animal's card at the top of the thread, like a contact card at the
- *     top of a message thread: its icon art, its name, its temperament, how
- *     many people have talked to it, and on the owner's chat their bond;
+ *     top of a message thread: its icon art, its name, its traits, how many
+ *     people have talked with it, its one Power line and on the owner's chat
+ *     their bond; nothing more (UX pass JRN-31);
  *   - Messages bubbles, one per thought: a reply is split into paragraphs
  *     (`askReplyPieces`), each its own bubble, with the drawings it offers
  *     beside the bubbles rather than inside them, and the animal's face
@@ -86,7 +87,7 @@ export function AskAnimalHero({
     name: string;
     subtitle: string | null;
     avatarUrl: string | null;
-    /** "1,240 people have talked to me", once enough have. */
+    /** "1,240 people have talked with Red Fox", once enough have. */
     popularity: string | null;
     /** "Level 4 · Working together" on the owner's chat. */
     bondLabel?: string | null;
@@ -401,29 +402,38 @@ export function AskReplyBubbles({
                                 <div key={`b-${index}`} className="flex min-w-0 flex-col" data-testid="wide-bubble">
                                     {bubble}
                                     {!isLive && index === lastBubble && trailing ? (
-                                        <div className="flex items-center justify-end gap-0.5 pt-1">{trailing}</div>
+                                        <div className="flex items-center justify-start gap-0.5 pt-1 sm:justify-end">{trailing}</div>
                                     ) : null}
                                 </div>
                             );
                         }
+                        const ownsControls = !isLive && index === lastBubble && Boolean(trailing);
                         return (
-                            <div key={`b-${index}`} className="flex items-end">
-                                <div className={`flex min-w-0 flex-col items-start ${carries ? "flex-1" : ""}`}>{bubble}</div>
-                                {/* Room beside every bubble for the reply's controls (its voice, its
-                                    menu), so their far edges line up. */}
-                                <div className="flex w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1">
-                                    {!isLive && index === lastBubble ? trailing : null}
+                            <div key={`b-${index}`} className="flex flex-col">
+                                <div className="flex items-end">
+                                    <div className={`flex min-w-0 flex-col items-start ${carries ? "flex-1" : ""}`}>{bubble}</div>
+                                    {/* From 640 px, room beside every bubble for the reply's controls (its
+                                        voice, its menu), so their far edges line up. On a phone the
+                                        bubbles take the whole width beside the face, the controls under
+                                        the last one (UX pass WEB-27). */}
+                                    <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">
+                                        {ownsControls ? trailing : null}
+                                    </div>
                                 </div>
+                                {ownsControls ? <div className="flex items-center gap-0.5 pt-1 sm:hidden" data-testid="reply-controls-under">{trailing}</div> : null}
                             </div>
                         );
                     })}
                     {specialHere !== null && lastBubble < 0 ? (
                         // Only drawings in the reply: what it carries is a special message of its own.
-                        <div className="flex items-end">
-                            <div className="flex min-w-0 flex-1 flex-col items-start">
-                                <AskSpecialShell>{specialHere}</AskSpecialShell>
+                        <div className="flex flex-col">
+                            <div className="flex items-end">
+                                <div className="flex min-w-0 flex-1 flex-col items-start">
+                                    <AskSpecialShell>{specialHere}</AskSpecialShell>
+                                </div>
+                                <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">{trailing}</div>
                             </div>
-                            <div className="flex w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1">{trailing}</div>
+                            {trailing ? <div className="flex items-center gap-0.5 pt-1 sm:hidden">{trailing}</div> : null}
                         </div>
                     ) : null}
                 </div>
@@ -470,7 +480,7 @@ export function AskSpecialBubble({avatarUrl, showsFace = true, children, testId}
                 <div className="flex min-w-0 flex-1 flex-col items-start">
                     <AskSpecialShell testId={testId}>{children}</AskSpecialShell>
                 </div>
-                <div className="w-[60px] shrink-0" />
+                <div className="hidden w-[60px] shrink-0 sm:block" />
             </div>
         </div>
     );

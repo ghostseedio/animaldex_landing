@@ -1,6 +1,8 @@
 import "server-only";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getCompanionWords} from "@/loaders/companion-words";
+import {loadLocaleMessages} from "@/loaders/locale";
+import {talkCapabilityWords, talkWords} from "@/lib/ask-animaldex/talk";
 import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
 
 /**
@@ -10,10 +12,12 @@ import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation"
  * through a context, so both the root layout and the Talk pages read them here.
  */
 export async function getAskDrawerLabels(locale: string): Promise<AskDrawerLabels & {launcher: string}> {
-    const [askT, companionWords] = await Promise.all([
+    const [askT, companionWords, messages] = await Promise.all([
         getScopedTranslator(locale, "askAnimalDex"),
         // The bond sheet the chat's bond chip opens.
-        getCompanionWords(locale)
+        getCompanionWords(locale),
+        // What an animal can do, on the public chat in the drawer too (WEB-38).
+        loadLocaleMessages(locale).catch(() => null)
     ]);
     return {
         launcher: askT("launcher"),
@@ -158,6 +162,12 @@ export async function getAskDrawerLabels(locale: string): Promise<AskDrawerLabel
         fullScreen: askT("fullScreen"),
         answersFromPower: askT("answersFromPower"),
         openOnCard: askT("openOnCard"),
-        companions: companionWords
+        prefHistorySync: askT("prefHistorySync"),
+        prefHistorySyncDetail: askT("prefHistorySyncDetail"),
+        deleteHistory: askT("deleteHistory"),
+        deleteHistoryConfirm: askT("deleteHistoryConfirm"),
+        deleteHistoryDone: askT("deleteHistoryDone"),
+        companions: companionWords,
+        talk: talkCapabilityWords(talkWords((messages as {talkPage?: unknown} | null)?.talkPage))
     };
 }

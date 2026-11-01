@@ -1,7 +1,9 @@
 /**
  * What the call screen says, in the site's two languages. The iOS call's
  * strings (AnimalVoiceCallView.swift), with the web's own wording only where
- * the app's points at a phone's Settings.
+ * the app's points at a phone's Settings. Also the chat's dictation (UX pass,
+ * DECISIONS section 9): the mic in the message bar, which only dictates; the
+ * call has its own button, "Call {animal}".
  */
 
 export type CallCopy = {
@@ -29,6 +31,17 @@ export type CallCopy = {
     microphoneUnavailable: string;
     recognitionStopped: string;
     ellipsis: string;
+    /** The chat header's call button. */
+    call: string;
+    /** The message bar's mic: dictation only. */
+    dictate: string;
+    stopDictating: string;
+    cancelDictation: string;
+    /** One line above the browser's microphone ask, the first time. */
+    dictationPrimer: string;
+    dictationDenied: string;
+    dictationFailed: string;
+    transcribing: string;
 };
 
 const EN: CallCopy = {
@@ -55,7 +68,15 @@ const EN: CallCopy = {
     allowMicrophone: "Allow the microphone for this site to call.",
     microphoneUnavailable: "The microphone is not available right now.",
     recognitionStopped: "Speech recognition stopped. Try calling again.",
-    ellipsis: "…"
+    ellipsis: "…",
+    call: "Call {animal}",
+    dictate: "Dictate",
+    stopDictating: "Stop dictating",
+    cancelDictation: "Cancel dictation",
+    dictationPrimer: "Let {name} hear you: AnimalDex uses speech recognition to turn your voice into text.",
+    dictationDenied: "The microphone is off for this site. Turn it on in your browser's site settings to dictate.",
+    dictationFailed: "Couldn't hear that. Try again.",
+    transcribing: "Turning your words into text…"
 };
 
 const ID: CallCopy = {
@@ -82,7 +103,15 @@ const ID: CallCopy = {
     allowMicrophone: "Izinkan mikrofon untuk situs ini agar bisa menelepon.",
     microphoneUnavailable: "Mikrofon tidak tersedia saat ini.",
     recognitionStopped: "Pengenalan suara berhenti. Coba telepon lagi.",
-    ellipsis: "…"
+    ellipsis: "…",
+    call: "Telepon {animal}",
+    dictate: "Dikte",
+    stopDictating: "Berhenti mendikte",
+    cancelDictation: "Batalkan dikte",
+    dictationPrimer: "Biarkan {name} mendengarmu: AnimalDex memakai pengenalan suara untuk mengubah suaramu menjadi teks.",
+    dictationDenied: "Mikrofon mati untuk situs ini. Nyalakan di pengaturan situs browsermu untuk mendikte.",
+    dictationFailed: "Suaramu tidak terdengar. Coba lagi.",
+    transcribing: "Mengubah kata-katamu menjadi teks…"
 };
 
 export function callCopy(locale: string): CallCopy {

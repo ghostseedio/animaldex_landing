@@ -35,12 +35,16 @@ export function debateFaceUrl(participant: Pick<DebateParticipant, "slug"> | nul
     return participant?.slug ? getSpeciesImageRoute(participant.slug) : null;
 }
 
-/** Each animal's colour, by its seat: the host first. Never by card, which only its owner is sent. */
+/**
+ * Each animal's colour, by its seat: the host first. Never by card, which
+ * only its owner is sent. Used on its name only, never on an edge, a ring or
+ * a bubble (UX pass, DECISIONS section 2).
+ */
 export function debateColor(participant: Pick<DebateParticipant, "seat"> | null | undefined): string {
     return participant ? ASK_GROUP_COLORS[Math.max(0, participant.seat) % ASK_GROUP_COLORS.length] : "rgb(var(--c-ink-300))";
 }
 
-/** The animals' faces, overlapping, each ringed in its colour. */
+/** The animals' faces, overlapping, each set off from the next by the page's own colour. */
 export function DebateFaces({debate, size = 26}: {debate: Debate; size?: number}) {
     return (
         <span className="flex shrink-0 items-center">
@@ -48,7 +52,7 @@ export function DebateFaces({debate, size = 26}: {debate: Debate; size?: number}
                 <span
                     key={participant.id}
                     className="rounded-full bg-canvas-950"
-                    style={{marginLeft: index === 0 ? 0 : -size * 0.3, boxShadow: `0 0 0 1.5px ${debateColor(participant)}cc`}}
+                    style={{marginLeft: index === 0 ? 0 : -size * 0.3, boxShadow: "0 0 0 1.5px rgb(var(--c-canvas-950))"}}
                 >
                     <AskAnimalFace url={debateFaceUrl(participant)} size={size} />
                 </span>
@@ -61,7 +65,7 @@ function ReportLine({label, text}: {label: string; text: string | null}) {
     if (!text) return null;
     return (
         <p className="text-[13px] leading-5 text-white/75">
-            <span className="font-bold text-white/45">{label} · </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{label} · </span>
             {text}
         </p>
     );
@@ -72,7 +76,7 @@ function ReportLine({label, text}: {label: string; text: string | null}) {
  * lesson behind it, where it fits and what it costs, and what to try first.
  * It never picks a winner. The asker gets "Try {name}'s way" on each animal
  * (their private choice, never a vote); on an animal that is not theirs,
- * "Catch a {species} to earn its Power."
+ * "Capture a {species} to earn its Power."
  */
 export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay, choosing, chosenId, problem}: {
     debate: Debate;
@@ -102,9 +106,7 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
                     return (
                         <div key={participant.id} className="flex flex-col gap-1.5 py-3">
                             <div className="flex items-center gap-2">
-                                <span className="shrink-0 rounded-full" style={{boxShadow: `0 0 0 1.5px ${color}cc`}}>
-                                    <AskAnimalFace url={debateFaceUrl(participant)} size={26} />
-                                </span>
+                                <AskAnimalFace url={debateFaceUrl(participant)} size={26} />
                                 <span className="text-sm font-bold" style={{color}}>{name}</span>
                                 {participant.powerName ? <span className="min-w-0 truncate text-[11px] font-semibold text-white/40">{participant.powerName}</span> : null}
                             </div>
@@ -136,7 +138,7 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
             </div>
             {report.tryFirst ? (
                 <p className="mt-2 border-t border-white/[0.08] pt-3 text-sm leading-6 text-white/85">
-                    <span className="font-bold text-primary-200">{web.reportTryFirst} · </span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{web.reportTryFirst} · </span>
                     {report.tryFirst}
                 </p>
             ) : null}
@@ -205,7 +207,7 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
                     const won = debate.status === "settled" && debate.winnerParticipantId === participant.id;
                     return (
                         <div key={participant.id} className="flex items-center gap-2.5">
-                            <span className="shrink-0 rounded-full" style={{boxShadow: `0 0 0 1.5px ${debateColor(participant)}cc`}}>
+                            <span className="shrink-0 rounded-full">
                                 <AskAnimalFace url={debateFaceUrl(participant)} size={28} />
                             </span>
                             <span className="min-w-0 flex-1">
@@ -402,7 +404,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                         <span className="text-[13px] font-bold text-white">{debateAnimalName(participant)}</span>
                                         {participant.powerName ? <span className="min-w-0 truncate text-[11px] font-semibold text-white/45">{participant.powerName}</span> : null}
                                     </div>
-                                    <p className="text-[14px] leading-[22px] text-white"><span className="font-bold text-primary-200">{words.debate.itsWay}</span> {way?.way}</p>
+                                    <p className="text-[14px] leading-[22px] text-white"><span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{words.debate.itsWay}</span> {way?.way}</p>
                                     {way?.lesson ? <p className="text-[13px] leading-5 text-white/70">{way.lesson}</p> : null}
                                     {way?.fits ? <p className="text-[13px] leading-5 text-white/70">{fillWords(words.debate.fitsWhen, {text: way.fits})}</p> : null}
                                     {way?.costs ? <p className="text-[13px] leading-5 text-white/70">{fillWords(words.debate.costs, {text: way.costs})}</p> : null}
@@ -412,7 +414,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                     )}
                     {report.tryFirst ? (
                         <p className="text-[14px] leading-[22px] text-white" data-testid="debate-try-first">
-                            <span className="font-bold text-primary-200">{fillWords(words.debate.tryFirst, {text: ""}).trim()}</span>{" "}{report.tryFirst}
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{fillWords(words.debate.tryFirst, {text: ""}).trim()}</span>{" "}{report.tryFirst}
                         </p>
                     ) : null}
                     {onTryWay ? (

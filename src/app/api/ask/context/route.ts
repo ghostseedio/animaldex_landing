@@ -30,8 +30,11 @@ import {
     resolveAskSubject,
     resolveAskViewer
 } from "@/lib/ask-animaldex/request";
-import {askSuggestions, EMPTY_ASK_HINTS} from "@/lib/ask-animaldex/subject";
+import {askOpenerWords, askSuggestions, EMPTY_ASK_HINTS} from "@/lib/ask-animaldex/subject";
 import {availableAskProviders} from "@/lib/ask-animaldex/providers";
+import {getScopedTranslator} from "@/loaders/translation";
+import {localeConfig} from "@/i18n";
+import {talkSlugForSpeciesPage} from "@/data/talk-animals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,9 +60,14 @@ export async function POST(request: Request) {
     const speciesProfileId = species ? await resolveAskCanonicalSpeciesId(species.speciesProfileId ?? null) : null;
     // A card someone else holds: the animal is theirs, and says so.
     const isVisit = Boolean(card && card.ownerId !== viewer.userId);
-    const [talkCount, ownerName] = await Promise.all([
+    // The openers in the reader's language (WEB-21).
+    const locale = typeof body.locale === "string" && (localeConfig.locales as readonly string[]).includes(body.locale) ? body.locale : localeConfig.defaultLocale;
+    const [talkCount, ownerName, openerTranslate, talkSlug] = await Promise.all([
         loadAskTalkCount(speciesProfileId),
-        isVisit && card ? loadAskOwnerName(card.ownerId) : Promise.resolve(null)
+        isVisit && card ? loadAskOwnerName(card.ownerId) : Promise.resolve(null),
+        getScopedTranslator(locale, "askAnimalDex").catch(() => null),
+        // This animal's chat on the Talk page, by the catalog's slug (WEB-1): where Full screen goes.
+        species && subject.slug ? talkSlugForSpeciesPage(subject.slug).catch(() => subject.slug) : Promise.resolve(null)
     ]);
 
     // A slug that resolves to nothing is a species page for an animal the
@@ -73,7 +81,7 @@ export async function POST(request: Request) {
         ok: true,
         subject: resolvedSubject,
         hints,
-        suggestions: askSuggestions(resolvedSubject, hints),
+        suggestions: askSuggestions(resolvedSubject, hints, {words: askOpenerWords(openerTranslate)}),
         limit: allowance.limit,
         remaining: allowance.remaining,
         signedIn: viewer.signedIn,
@@ -84,6 +92,7 @@ export async function POST(request: Request) {
         // The owner's own name for the animal, on their own card only.
         nickname: card && !isVisit ? card.nickname : null,
         ownerName: isVisit ? ownerName : null,
+        talkSlug,
         // Claude counts on a species page, where the animal itself speaks.
         available: availableAskProviders({animalVoice: resolvedSubject.scope === "species"}).length > 0
     }, {headers: ASK_RESPONSE_HEADERS});

@@ -32,8 +32,11 @@ export function askTurnVisuals(params: {
  * `advance` is null (or zero) before the font could be measured: then the
  * width is read at 13 px JetBrains Mono's 7.8 px.
  */
+/** The diagram font's advance at the panel's size: JetBrains Mono's fixed 600/1000 em at 13 px (WEB-16). */
+export const ASK_DIAGRAM_ADVANCE_PX = 13 * 0.6;
+
 export function askTextColumns(width: number, advance: number | null = null): number {
-    const step = advance && advance > 0 ? advance : 7.8;
+    const step = advance && advance > 0 ? advance : ASK_DIAGRAM_ADVANCE_PX;
     const columns = Math.floor(Math.max(0, width) / step);
     return Math.min(ASK_RICH_COLUMNS_MAX, Math.max(ASK_RICH_COLUMNS_MIN, columns));
 }

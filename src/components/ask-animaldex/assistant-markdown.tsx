@@ -4,10 +4,11 @@
  * Renders an assistant answer as real blocks: headings, lists, quotes, tables,
  * and the four native visual mediums.
  *
- * The web counterpart of `AssistantMarkdownView`. Bold runs are tinted, because
- * the prompt tells the model to bold the two or three phrases that carry the
- * point — tinting those is what turns a uniform slab of text into something you
- * can scan, and it is the reason a generic markdown renderer is not enough here.
+ * The web counterpart of `AssistantMarkdownView`. Bold runs carry weight, not
+ * colour (UX pass, DECISIONS section 2): the prompt bolds the two or three
+ * phrases that make the point, and a semibold in the text colour is what lets
+ * them be scanned while neon stays for what you can act on (special messages'
+ * edges and labels, buttons and chips, links, progress).
  */
 
 import {memo} from "react";
@@ -52,12 +53,12 @@ function Inline({text}: {text: string}) {
 function InlineSegment({segment}: {segment: AskInlineSegment}) {
     switch (segment.kind) {
         case "bold":
-            return <strong className="font-semibold text-primary-200">{segment.text}</strong>;
+            return <strong className="font-semibold text-white">{segment.text}</strong>;
         case "italic":
             return <em className="italic text-white">{segment.text}</em>;
         case "code":
             return (
-                <code className="bg-white/8 px-1 py-0.5 font-mono text-[0.9em] text-primary-100">
+                <code className="bg-white/8 px-1 py-0.5 font-mono text-[0.9em] text-ink-100">
                     {segment.text}
                 </code>
             );
@@ -87,8 +88,8 @@ function ListItems({items, ordered}: {items: AskMarkdownListItem[]; ordered: boo
                         aria-hidden="true"
                         className={
                             ordered
-                                ? "w-4 shrink-0 text-right text-[13px] font-bold leading-7 text-primary-300"
-                                : "mt-[0.85rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400/70"
+                                ? "w-4 shrink-0 text-right text-[13px] font-bold leading-7 text-ink-300"
+                                : "mt-[0.85rem] h-1.5 w-1.5 shrink-0 rounded-full bg-ink-400"
                         }
                     >
                         {ordered ? `${index + 1}.` : null}
@@ -144,7 +145,7 @@ function Block({block, photoUrl, photoAlt}: {
             return <ListItems items={block.items} ordered />;
         case "quote":
             return (
-                <blockquote className="border-l-2 border-primary-400/50 pl-3.5 text-[15px] leading-7 text-ink-200">
+                <blockquote className="border-l-2 border-white/20 pl-3.5 text-[15px] leading-7 text-ink-200">
                     <Inline text={block.text} />
                 </blockquote>
             );

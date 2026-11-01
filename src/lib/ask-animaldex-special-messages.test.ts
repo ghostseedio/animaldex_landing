@@ -81,7 +81,7 @@ test("the Warmup, the Trials and the debate offer come from the reply's cards an
         {kind: "warmup"},
         {kind: "debate", problem: "My boss", with: []}
     ]);
-    // Taken, unavailable, Debates off: each goes. Yes, compare grows the offer into the setup in place: it stays.
+    // Taken, unavailable, Debates off: each goes. Yes, start a debate grows the offer into the setup in place: it stays.
     assert.deepEqual(askReplySpecials({...context, message, warmupStarted: true, trialsUnavailable: true}), [{kind: "debate", problem: "My boss", with: []}]);
     // Started from it, the section goes quiet in place (docs/rich-chat/SPEC.md, section 2.2).
     const debateId = "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f";

@@ -6,8 +6,9 @@
  * openers are docked above the composer); its Trials are public, opened in
  * the thread as the animal's own Trials section, a tap on a loop enlarging
  * it in place; Your step and Debates are locked, each with one honest line
- * and the action it needs: an account for a reader without one, the app
- * (a card of the animal) for one signed in. Never a modal, never a nag.
+ * and the action it needs: the app, where they capture one of their own
+ * (an account alone unlocks neither: UX pass JRN-6, WEB-19). Never a modal,
+ * never a nag.
  */
 
 import {useEffect, useRef, useState, type ReactNode} from "react";
@@ -19,7 +20,7 @@ import {rememberStorePlacement} from "@/lib/store-links";
 import {talkCapabilityAction} from "@/lib/ask-animaldex/talk";
 import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import type {AnimalTrial} from "@/lib/animal-trials";
-import type {TalkWords} from "@/lib/ask-animaldex/talk";
+import type {TalkCapabilityWords} from "@/lib/ask-animaldex/talk";
 
 type Capability = "trials" | "step" | "debates";
 
@@ -31,7 +32,6 @@ export default function TalkCapabilities({
     signedIn,
     words,
     companionWords,
-    signUpHref,
     appHref,
     onTalk,
     onReveal
@@ -43,9 +43,8 @@ export default function TalkCapabilities({
     faceUrl: string | null;
     speciesProfileId: string | null;
     signedIn: boolean;
-    words: TalkWords;
+    words: TalkCapabilityWords;
     companionWords: CompanionWords;
-    signUpHref: string;
     appHref: string;
     onTalk: () => void;
     /** Something opened here: the thread shows it, rather than staying on its newest message. */
@@ -83,10 +82,11 @@ export default function TalkCapabilities({
         if (open && rootRef.current) onReveal?.(rootRef.current);
     }, [open, onReveal]);
     const viewer = {signedIn};
-    /** The locked capability's one action: an account, or the app. */
-    const action = (kind: "step" | "debates") => (talkCapabilityAction(kind, viewer) === "signUp"
-        ? {label: words.createAccount, href: signUpHref, app: false}
-        : {label: words.getApp, href: appHref, app: true});
+    /** The locked capability's one action: the app, where they capture one of their own. */
+    const action = (kind: "step" | "debates") => {
+        talkCapabilityAction(kind, viewer);
+        return {label: words.getApp, href: appHref, app: true};
+    };
 
     const lockedPanel = (kind: "step" | "debates") => {
         const next = action(kind);
@@ -108,9 +108,7 @@ export default function TalkCapabilities({
         );
     };
 
-    const trialAction = talkCapabilityAction("trial", viewer) === "signUp"
-        ? {label: words.createAccount, href: signUpHref, note: null}
-        : {label: words.getApp, href: appHref, note: fillWords(words.catchForTrials, {animal: animalName})};
+    const trialAction = {label: words.getApp, href: appHref, note: fillWords(words.catchForTrials, {animal: animalName})};
 
     return (
         <div ref={rootRef} className="flex scroll-mt-3 flex-col pt-4" data-testid="talk-capabilities">
@@ -119,7 +117,7 @@ export default function TalkCapabilities({
             </p>
             <div className="mt-2 flex flex-wrap justify-center gap-1.5 px-2" role="group" aria-label={fillWords(words.capabilities, {name})}>
                 <CapabilityChip icon={<TalkIcon />} label={words.capTalk} detail={words.capTalkNote} onClick={onTalk} />
-                <CapabilityChip icon={<FlagIcon />} label={words.capTrials} pressed={open === "trials"} onClick={() => toggle("trials")} testId="talk-capability-trials" />
+                <CapabilityChip icon={<FlagIcon />} label={fillWords(words.capTrials, {animal: name})} pressed={open === "trials"} onClick={() => toggle("trials")} testId="talk-capability-trials" />
                 <CapabilityChip icon={<LockIcon />} label={words.capStep} quiet pressed={open === "step"} onClick={() => toggle("step")} title={words.locked} testId="talk-capability-step" />
                 <CapabilityChip icon={<LockIcon />} label={words.capDebates} quiet pressed={open === "debates"} onClick={() => toggle("debates")} title={words.locked} testId="talk-capability-debates" />
             </div>

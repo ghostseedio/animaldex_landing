@@ -46,7 +46,7 @@ test("what is sent to the animal is the person's own message, in their language"
 
 test("every refusal is said calmly, in the reader's language, never as a code or a lock", () => {
     assert.equal(stepProblemText("step_not_open", COMPANION_WORDS_EN), "That step isn't open any more.");
-    assert.equal(stepProblemText("species_not_unlocked", COMPANION_WORDS_EN), "Catch this animal first to make one of its Trials your step.");
+    assert.equal(stepProblemText("species_not_unlocked", COMPANION_WORDS_EN), "Capture this animal first to make one of its Trials your step.");
     assert.equal(stepProblemText("account_too_short", indonesian), "Tulis sedikit lagi: beberapa kata tentang apa yang terjadi.");
     assert.equal(stepProblemText("too_many_media", COMPANION_WORDS_EN), "Add one photo or video at most.");
     assert.equal(stepProblemText("media_path_not_owned", COMPANION_WORDS_EN), stepProblemText("upload_failed", COMPANION_WORDS_EN));

@@ -21,7 +21,7 @@
  *   - the Warmup offer: what it is, then [Take the warmup (+5 XP)] [Skip];
  *     each question its own special message, "WARMUP · 1 OF 2", its choices as
  *     chips, the result line on the last;
- *   - the debate offer: [Yes, compare] [Not now].
+ *   - the debate offer: [Yes, start a debate] [Not now].
  *
  * The label is UI; the words above it stay the animal's own. Every word here
  * is the SPEC's, in the reader's language.
@@ -538,7 +538,7 @@ const CHOICE_CLASS: Record<ReturnType<typeof askWarmupChoiceMark>, string> = {
 
 /**
  * The animal asked in its own words (docs/debates/SPEC.md section 6): its
- * message carries [Yes, compare] [Not now]. "Not now" puts them away; the
+ * message carries [Yes, start a debate] [Not now]. "Not now" puts them away; the
  * server will not offer again for this problem.
  */
 export function AskDebateOfferSection({words, disabled, onYes, onNotNow}: {

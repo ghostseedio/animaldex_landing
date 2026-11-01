@@ -195,12 +195,12 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(fillWords(DEBATE_COPY.stakeNote, {credits: 4}), "Each animal puts 1 heart on it. The winner's owner gets 4 Credits.");
     assert.equal(DEBATE_COPY.notPublic, "This one stays private. It's too personal to post.");
     assert.equal(fillWords(DEBATE_COPY.tryWay, {name: "Leo"}), "Try Leo's way");
-    assert.equal(fillWords(DEBATE_COPY.catchToEarn, {species: "Gray Wolf"}), "Catch a Gray Wolf to earn its Power.");
+    assert.equal(fillWords(DEBATE_COPY.catchToEarn, {species: "Gray Wolf"}), "Capture a Gray Wolf to earn its Power.");
     assert.equal(fillWords(DEBATE_COPY.won, {name: "Leo", credits: 9}), "Leo's way won. +9 Credits");
     assert.equal(DEBATE_COPY.draw, "Not enough votes came in. No hearts or Credits moved.");
     assert.equal(DEBATE_COPY.cantVoteOwn, "You can't vote on a debate you're in.");
     // SPEC section 6.
-    assert.equal(DEBATE_COPY.yes, "Yes, compare");
+    assert.equal(DEBATE_COPY.yes, "Yes, start a debate");
     assert.equal(DEBATE_COPY.notNow, "Not now");
     assert.equal(fillWords(DEBATE_COPY.privateLine, {names: "Luna and Pip"}), "Luna and Pip: private debate");
     assert.equal(fillWords(DEBATE_COPY.publicLine, {names: "Luna and Pip"}), "Luna and Pip: public debate");

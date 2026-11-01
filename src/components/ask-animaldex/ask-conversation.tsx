@@ -59,9 +59,9 @@
  * 3.2 Debates (docs/debates/SPEC.md, sections 1, 4 and 6): the animal offers
  * a debate in its own words; its `debate` card is a hidden marker, never
  * drawn, and under that reply, when the server allowed the offer
- * (`done.companion.debate_offer`), the app offers [Yes, compare] [Not now],
- * the animals it named pre-selected in the setup. "Yes,
- * compare", "Compare with other animals" in the ••• menu and on the Bond tab,
+ * (`done.companion.debate_offer`), the app offers [Yes, start a debate]
+ * [Not now], the animals it named pre-selected in the setup. "Yes, start a
+ * debate", "Start a debate" in the ••• menu and on the Bond tab,
  * and a call that ended on a yes (`debate_request`), open the setup as a band
  * in the thread itself (the modal sheet only at very small widths). Started,
  * the debate runs in the thread where it was asked, its setup one line
@@ -191,9 +191,14 @@ import DebateSetup, {type DebateEdit, type DebateHost} from "@/components/debate
 import DebateThread, {DebateQuietSection} from "@/components/debates/debate-thread";
 import {useMyDebates} from "@/components/debates/use-debates";
 import {debateSeedProblem, type Debate, type DebateNamedAnimal, type DebateRequest} from "@/lib/debates";
-import {askCopyText, askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
-import {talkChatPath, talkSignUpHref, type TalkWords} from "@/lib/ask-animaldex/talk";
-import {rememberTalkThread} from "@/components/ask-animaldex/ask-thread-meta";
+import {ASK_DIAGRAM_ADVANCE_PX, askCopyText, askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
+import {talkAskAnotherOffered, talkChatPath, type TalkCapabilityWords, type TalkWords} from "@/lib/ask-animaldex/talk";
+import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
+import {forgetAllTalkThreads, rememberTalkThread} from "@/components/ask-animaldex/ask-thread-meta";
+import {mergeServerThread, normalizeServerChatRows, serverThreadKey} from "@/lib/ask-animaldex/chat-sync";
+import {useDictation} from "@/components/ask-animaldex/use-dictation";
+import {DictationButton, DictationStrip} from "@/components/ask-animaldex/dictation-views";
+import {callCopy, callSpeechLanguage} from "@/lib/ask-animaldex/call-copy";
 import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
 
 export type AskDrawerLabels = {
@@ -378,6 +383,14 @@ export type AskDrawerLabels = {
     openOnCard: string;
     /** The bond screen's words (and the bond chip's stage), in the reader's language. */
     companions: CompanionWords;
+    /** The Talk page's words for what an animal can do, on the public chat in the drawer too (WEB-38). */
+    talk?: TalkCapabilityWords;
+    /** Chat history on every device (docs/chat-sync/SPEC.md, section 3), in the memory panel. */
+    prefHistorySync: string;
+    prefHistorySyncDetail: string;
+    deleteHistory: string;
+    deleteHistoryConfirm: string;
+    deleteHistoryDone: string;
 };
 
 /**
@@ -390,7 +403,7 @@ export type AskConversationPage = {
     words: TalkWords;
     /** "Ask another animal": the picker, with the question the reply answered carried over. */
     onAskAnother: (question: string) => void;
-    /** A question carried over from another animal's chat: sent once, when the chat is ready. */
+    /** A question carried over from another animal's chat: put in the composer, ready to send, never sent for them. */
     initialQuestion: string | null;
     /** Where the app is ("Get the app"). */
     appHref: string;
@@ -405,6 +418,8 @@ type AskMemorySettings = {
     followUpsEnabled: boolean | null;
     shareJourney: boolean | null;
     animalMessagesEnabled: boolean | null;
+    /** "Keep my chats on all my devices"; null before the chat history migration. */
+    historySync?: boolean | null;
 };
 
 /** What Pro adds to the chat, as the apps' introduction says it (`CreditStoreCatalog`). */
@@ -450,6 +465,8 @@ type AskContextPayload = {
     nickname?: string | null;
     /** Whose animal it is, on someone else's card. */
     ownerName?: string | null;
+    /** This animal's chat on the Talk page (its catalog slug), for Full screen (WEB-1). */
+    talkSlug?: string | null;
 };
 
 const THINKING_PHASE_MS = 2200;
@@ -531,24 +548,22 @@ export default function AskConversation({
 
     /**
      * Rich answers (docs/rich-chat/SPEC.md, section 1.1): how many diagram
-     * characters fit across the reply column, measured on a hidden copy of a
-     * wide bubble's diagram panel (`AskColumnsProbe`) at the panel's own font,
-     * again when the column resizes and once the font has loaded.
+     * characters fit across the reply column, from a hidden copy of a wide
+     * bubble's diagram panel (`AskColumnsProbe`): its inner width over the
+     * diagram font's fixed advance (JetBrains Mono, 0.6 em at 13 px: 7.8 px),
+     * again when the column resizes. Never drawn in that font, so the font
+     * loads only once a diagram panel is (WEB-16).
      */
     const [richColumns, setRichColumns] = useState<number | null>(null);
     const columnsProbeRef = useRef<HTMLDivElement | null>(null);
-    const columnsGlyphsRef = useRef<HTMLSpanElement | null>(null);
     useLayoutEffect(() => {
         const probe = columnsProbeRef.current;
-        const glyphs = columnsGlyphsRef.current;
-        if (!probe || !glyphs) return;
+        if (!probe) return;
         const measure = () => {
             const width = probe.clientWidth - 28;
-            const advance = glyphs.getBoundingClientRect().width / 10;
-            if (width > 0) setRichColumns(askTextColumns(width, advance));
+            if (width > 0) setRichColumns(askTextColumns(width, ASK_DIAGRAM_ADVANCE_PX));
         };
         measure();
-        void document.fonts?.ready.then(measure).catch(() => undefined);
         if (typeof ResizeObserver === "undefined") return;
         const observer = new ResizeObserver(measure);
         observer.observe(probe);
@@ -571,8 +586,12 @@ export default function AskConversation({
         && resolvedSubject.scope === "species"
         && !resolvedSubject.trialContext
     );
-    // The public Talk chat: anyone on the Talk page not on their own card (SPEC section 4.4).
-    const publicTalkChat = onPage && messenger && !ownerChat && !resolvedSubject.trialContext;
+    // The public chat: anyone not on their own card, on the Talk page and in
+    // the drawer alike (SPEC section 4.4; WEB-38). The owner's own card is never
+    // shown as public while its context is still on its way.
+    const publicChat = messenger && !ownerChat && !(companionSpeciesProfileId && context === null) && !resolvedSubject.trialContext;
+    const publicTalkChat = onPage && publicChat;
+    const talkWords = page?.words ?? labels.talk ?? null;
     // What the animal is helping them with, and the step it set.
     const [companionLoop, setCompanionLoop] = useState<AskCompanionLoop | null>(null);
     // The loop's first read has answered (or failed): a pending "I did it" can be settled.
@@ -743,6 +762,7 @@ export default function AskConversation({
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
+                locale,
                 subject: {
                     scope: subject.scope,
                     slug: subject.slug,
@@ -765,7 +785,35 @@ export default function AskConversation({
         return () => {
             cancelled = true;
         };
-    }, [subject]);
+    }, [subject, locale]);
+
+    /**
+     * Chat history on every device (docs/chat-sync/SPEC.md, section 3): a
+     * signed-in reader's thread is read from their account in the background
+     * and merged into this browser's (`mergeServerThread`): an empty thread
+     * takes the account's, otherwise only what is missing joins, in time
+     * order. Never waits for the hello, never touches a turn in flight, and
+     * with nothing missing (or before the migration) nothing changes. The
+     * thread follows to its end only when the reader was already there.
+     */
+    const historyKey = context?.signedIn && context.subject.scope === "species" && !subject.trialContext
+        ? serverThreadKey({captureId: subject.captureId ?? null, speciesProfileId: context.speciesProfileId ?? null})
+        : null;
+    useEffect(() => {
+        if (!historyKey) return;
+        let cancelled = false;
+        void fetch(`/api/ask/history?thread=${encodeURIComponent(historyKey)}`, {headers: {Accept: "application/json"}})
+            .then((response) => (response.ok ? response.json() as Promise<{available?: boolean; messages?: unknown}> : null))
+            .then((payload) => {
+                if (cancelled || !payload?.available) return;
+                const rows = normalizeServerChatRows(payload.messages);
+                transformThread((current) => mergeServerThread(current, rows) ?? current);
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [historyKey, transformThread]);
 
     // A question the launcher was opened with is sent once, and only once the
     // subject has resolved — otherwise it would be answered from the wrong
@@ -777,14 +825,27 @@ export default function AskConversation({
         // `questionRequest`: a question asked while the drawer is already open.
     }, [context, questionRequest, takePendingQuestion, send]);
     // On the Talk page, a question carried over from another animal's chat
-    // ("Ask another animal"), once, as the reader's own first message.
+    // ("Ask another animal"): in the composer, ready to send, once. Never
+    // sent for them (UX pass WEB-3, DECISIONS section 6): sending spends a
+    // message, and that is theirs to choose.
     const initialQuestion = page?.initialQuestion ?? null;
-    const sentInitialRef = useRef(false);
+    const carriedInitialRef = useRef(false);
     useEffect(() => {
-        if (!context || !initialQuestion || sentInitialRef.current) return;
-        sentInitialRef.current = true;
-        void send(initialQuestion);
-    }, [context, initialQuestion, send]);
+        if (!initialQuestion || carriedInitialRef.current) return;
+        carriedInitialRef.current = true;
+        setComposer((current) => (current.trim() ? current : initialQuestion));
+        requestAnimationFrame(() => {
+            const node = composerRef.current;
+            if (!node) return;
+            node.style.height = "auto";
+            node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+            // A phone's keyboard would cover the animal's hello: there they tap in when ready.
+            if (!window.matchMedia?.("(pointer: coarse)").matches) {
+                node.focus();
+                node.setSelectionRange(node.value.length, node.value.length);
+            }
+        });
+    }, [initialQuestion]);
 
     // The animal speaks first: an empty species thread opens on its greeting.
     // Runs after the pending question above, which takes precedence. Opened
@@ -952,8 +1013,13 @@ export default function AskConversation({
     // (not while the voice loads, so its opening call is not cut short).
     // On a call the animal's voice is the call's; the thread stays quiet.
     const [onCall, setOnCall] = useState(false);
+    // Its sounds are fetched once it starts talking (a message sent, the hello on its way), never as the chat opens (WEB-42).
+    const [soundsWanted, setSoundsWanted] = useState(false);
+    useEffect(() => {
+        if (isSending) setSoundsWanted(true);
+    }, [isSending]);
     const sounds = useAnimalSounds({
-        speciesProfileId: messenger ? context?.speciesProfileId ?? null : null,
+        speciesProfileId: messenger && soundsWanted ? context?.speciesProfileId ?? null : null,
         pace: persona?.pace ?? null,
         held: speech.isPlaying || onCall
     });
@@ -980,6 +1046,15 @@ export default function AskConversation({
         if (onCall) return;
         speech.speakAutomatically(pacedComplete.id, pacedComplete.text);
     }, [pacedComplete, speech, onCall]);
+    // "You're offline. We'll try again when you're back." (DECISIONS section 4): and it does.
+    useEffect(() => {
+        const onOnline = () => {
+            const last = messages[messages.length - 1];
+            if (last?.role === "assistant" && last.status === "failed" && last.failureKind === "offline") retry(last.id);
+        };
+        window.addEventListener("online", onOnline);
+        return () => window.removeEventListener("online", onOnline);
+    }, [messages, retry]);
     // Typing counts as talking: Stop stays until the last word is shown.
     const animalTalking = isSending || pacer.revealing;
     // With something typed the button sends, over a greeting or a reply that
@@ -1141,10 +1216,35 @@ export default function AskConversation({
         };
     }, [messenger, onPage]);
 
+    /**
+     * Dictation (DECISIONS section 9): the mic beside Send puts what they say
+     * in the field as it is heard; it never sends.
+     */
+    const dictationCopy = useMemo(() => callCopy(locale), [locale]);
+    const dictation = useDictation({
+        language: callSpeechLanguage(locale),
+        serverHearing: context?.signedIn === true,
+        getText: () => composerValueRef.current,
+        setText: (text) => {
+            setComposer(text);
+            requestAnimationFrame(() => {
+                const node = composerRef.current;
+                if (!node) return;
+                node.style.height = "auto";
+                node.style.height = `${Math.min(node.scrollHeight, 132)}px`;
+                node.scrollTop = node.scrollHeight;
+            });
+        }
+    });
+    const dictationStop = dictation.stop;
+    const dictationActive = dictation.active;
+
     const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
         // The reader may talk over the animal's greeting (it keeps what it
         // had said); any other reply in flight has to finish or be stopped.
         if (!question.trim() || (isSending && greetingState !== "loading")) return;
+        // Sent while dictating: the mic stops with it, nothing more is added.
+        if (dictationActive) void dictationStop();
         // The one chip that is a destination rather than a question: it opens
         // the questionnaire instead of asking the model about it.
         if (source === "followup" && isWildProfileFollowUp(question)) {
@@ -1169,7 +1269,7 @@ export default function AskConversation({
         speech.stop();
         speech.prime();
         void send(question);
-    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech]);
+    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech, dictationActive, dictationStop]);
 
     const loadMemory = useCallback(async () => {
         setMemoryState("loading");
@@ -1252,6 +1352,32 @@ export default function AskConversation({
             setSavingPreference(false);
         }
     }, []);
+
+    /**
+     * "Delete chat history" (docs/chat-sync/SPEC.md, section 3): every thread
+     * on the account (`delete_animal_chat_history_v1`), then this browser's
+     * too. Their memory stays; that is "Forget everything".
+     */
+    const [historyDeletion, setHistoryDeletion] = useState<"idle" | "confirming" | "deleting" | "done" | "failed">("idle");
+    const deleteHistory = useCallback(async () => {
+        setHistoryDeletion("deleting");
+        try {
+            const response = await fetch("/api/ask/history", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "deleteAll"})
+            });
+            const payload = await response.json().catch(() => null) as {ok?: boolean} | null;
+            if (!response.ok || payload?.ok !== true) throw new Error(String(response.status));
+            speech.stop();
+            askSessionStore.clearAnimalThreads();
+            forgetAllTalkThreads();
+            setHistoryDeletion("done");
+        } catch (error) {
+            console.warn("[ask-animaldex] chat history delete failed", error instanceof Error ? error.message : "unknown");
+            setHistoryDeletion("failed");
+        }
+    }, [speech]);
 
     const forgetEverything = useCallback(async () => {
         setConfirmingForgetAll(false);
@@ -1403,7 +1529,7 @@ export default function AskConversation({
             ? labels.ownersAnimal.replace("{owner}", ownerName).replace("{animal}", animalName)
             : persona?.tagline ?? (nickname ? animalName : labels.inOwnWords);
     const popularity = context?.talkCount
-        ? labels.talkCount.replace("{count}", shortCount(context.talkCount.people, locale))
+        ? fillWords(labels.talkCount, {count: shortCount(context.talkCount.people, locale), name: speakerName})
         : null;
     // Under the name in the header: typing while it answers, else how it is.
     const headerStatus = ownerName && animalName
@@ -1784,18 +1910,6 @@ export default function AskConversation({
     const hostCaptureId = ownerChat ? resolvedSubject.captureId ?? null : null;
     const myDebates = useMyDebates({captureId: hostCaptureId, active: Boolean(hostCaptureId)});
     const powerEarned = animalBond.bond?.power.earned === true;
-    /**
-     * Under the animal's header in the owner's chat, until the first step
-     * done with it: what the chat is for (newcomer UX vet, P0-2). Only once
-     * the bond and the loop are read, so it never flashes for an owner who
-     * has done one.
-     */
-    const showsLoopCaption = ownerChat
-        && animalBond.didLoad
-        && loopLoaded
-        && !powerEarned
-        && (companionLoop?.yourTrialsDone ?? 0) === 0
-        && !messages.some((message) => message.companionEvent?.stepDone);
     const debatesOffered = Boolean(ownerChat && hostCaptureId && myDebates.enabled && powerEarned && !aboutTrial);
     const debateHost: DebateHost | null = hostCaptureId ? {
         captureId: hostCaptureId,
@@ -2116,7 +2230,7 @@ export default function AskConversation({
                     />
                 );
             case "debate":
-                // "Yes, compare" grows the offer into the setup, in this same section.
+                // "Yes, start a debate" grows the offer into the setup, in this same section.
                 if (!narrow && debateSheet?.messageId === message.id) {
                     return <div key="debate">{debateSetup("section")}</div>;
                 }
@@ -2237,15 +2351,16 @@ export default function AskConversation({
     // The page's reply column is centered and capped like an LLM app's; the drawer's is the panel.
     const column = onPage ? "mx-auto w-full max-w-[760px]" : "";
     // The same conversation, full screen: its thread key goes with it (the card's, or the animal's).
-    const fullScreenHref = !onPage && messenger && resolvedSubject.slug && !aboutTrial
-        ? talkChatPath({slug: resolvedSubject.slug, captureId: resolvedSubject.captureId ?? null})
+    const fullScreenSlug = context?.talkSlug ?? resolvedSubject.slug;
+    const fullScreenHref = !onPage && messenger && fullScreenSlug && !aboutTrial
+        ? talkChatPath({slug: fullScreenSlug, captureId: resolvedSubject.captureId ?? null})
         : null;
     const publicTalk = publicTalkChat;
 
     // The thread itself: the bond, the memory or the sound credits in its place when open.
     const threadContent = (
         <>
-                    <AskColumnsProbe probeRef={columnsProbeRef} glyphsRef={columnsGlyphsRef} />
+                    <AskColumnsProbe probeRef={columnsProbeRef} />
                     {showingBond && ownerChat ? (
                         <div className="-mx-4 -my-4">
                             <BondPanel
@@ -2301,6 +2416,10 @@ export default function AskConversation({
                             savingPreference={savingPreference}
                             preferenceFailed={preferenceFailed}
                             onSetPreference={(patch) => void setPreference(patch)}
+                            historyDeletion={historyDeletion}
+                            onAskDeleteHistory={() => setHistoryDeletion("confirming")}
+                            onCancelDeleteHistory={() => setHistoryDeletion("idle")}
+                            onDeleteHistory={() => void deleteHistory()}
                         />
                     ) : showingSoundCredits && sounds.bank ? (
                         <AskSoundCreditsPanel
@@ -2325,24 +2444,25 @@ export default function AskConversation({
                                 }}
                                 nameLabel={nameTitle}
                                 onName={() => setShowingNameSheet(true)}
-                                caption={showsLoopCaption ? labels.companions.journey.chat.caption : null}
+                                // The contact card is the traits, its one Power line and the bond (JRN-31): what
+                                // the chat is for is in the message bar's own words.
+                                caption={null}
                                 // Every animal is different (SPEC section 3.3): in a chat with no
                                 // history yet, and always on the public Talk chat.
-                                differenceLine={!aboutTrial && (publicTalk || !hasConversation)
+                                differenceLine={!aboutTrial && (publicChat || !hasConversation)
                                     ? labels.answersFromPower.replace("{name}", speakerName)
                                     : null}
                             />
-                            {publicTalk && page && context ? (
+                            {publicChat && talkWords ? (
                                 <TalkCapabilities
                                     name={speakerName}
                                     animalName={animalName ?? speakerName}
                                     faceUrl={faceUrl}
-                                    speciesProfileId={context.speciesProfileId ?? null}
-                                    signedIn={context.signedIn}
-                                    words={page.words}
+                                    speciesProfileId={context?.speciesProfileId ?? null}
+                                    signedIn={context?.signedIn ?? false}
+                                    words={talkWords}
                                     companionWords={words}
-                                    signUpHref={talkSignUpHref(currentPath)}
-                                    appHref={page.appHref}
+                                    appHref={page?.appHref ?? "/#download"}
                                     onTalk={() => composerRef.current?.focus()}
                                     onReveal={revealInThread}
                                 />
@@ -2395,11 +2515,17 @@ export default function AskConversation({
                                                 onToggle: () => speech.toggle(message.id, message.text)
                                             } : null}
                                             spokenWord={speech.cursor?.messageId === message.id ? speech.cursor.word : null}
-                                            askAnother={page && publicTalk && message.role === "assistant" && message.status === "complete" && askReplyIsRealProblem(message.text) ? {
+                                            askAnother={page && message.role === "assistant" && talkAskAnotherOffered({
+                                                publicChat: publicTalk,
+                                                quotaReached: quota.reached,
+                                                finished: message.status === "complete",
+                                                realProblem: askReplyIsRealProblem(message.text)
+                                            }) ? {
                                                 label: page.words.askAnother,
                                                 onAsk: () => page.onAskAnother(askedBefore(message.id) ?? ""),
-                                                signUp: !context?.signedIn && message.id === firstRealProblemId
-                                                    ? {text: page.words.signUpForMore, href: talkSignUpHref(currentPath)}
+                                                // Steps and debates need an animal of their own, captured in the app (W13, JRN-6).
+                                                signUp: message.id === firstRealProblemId
+                                                    ? {text: page.words.signUpForMore, href: page.appHref}
                                                     : null
                                             } : null}
                                         />
@@ -2617,8 +2743,8 @@ export default function AskConversation({
                                 <p className="truncate text-[11px] leading-4 text-ink-300" title={companionLoop.focus} data-testid="header-focus">
                                     {labels.workingOn.replace("{focus}", companionLoop.focus)}
                                 </p>
-                            ) : onPage && speaksAsAnimal && hints.principleName ? (
-                                // The Talk page's header: its face, its name and its Power.
+                            ) : speaksAsAnimal && hints.principleName && !ownerName ? (
+                                // Its face, its name and its Power, in the drawer as on the Talk page (WEB-38).
                                 <p className="truncate text-[11px] font-semibold leading-4 text-primary-300" data-testid="talk-header-power">{hints.principleName}</p>
                             ) : speaksAsAnimal ? (
                                 // Whose it is, or its temperament once it has spoken, as in the app's header.
@@ -2748,6 +2874,10 @@ export default function AskConversation({
                             onClick={() => {
                                 speech.stop();
                                 sounds.stop();
+                                // The Talk page files it under the catalog's slug: the same conversation goes with it.
+                                if (fullScreenSlug && !resolvedSubject.captureId && fullScreenSlug !== resolvedSubject.slug) {
+                                    askSessionStore.move(threadKey, askThreadKey({scope: "species", slug: fullScreenSlug}));
+                                }
                                 close();
                                 router.push(getLocalePath(locale, fullScreenHref));
                             }}
@@ -2901,6 +3031,18 @@ export default function AskConversation({
                                     </button>
                                 </div>
                             ) : null}
+                            {!debateEdit ? (
+                                <DictationStrip
+                                    phase={dictation.phase}
+                                    priming={dictation.priming}
+                                    startedAt={dictation.startedAt}
+                                    name={speakerName}
+                                    copy={dictationCopy}
+                                    level={dictation.level}
+                                    onCancel={dictation.cancel}
+                                    onDismiss={dictation.dismiss}
+                                />
+                            ) : null}
                             {debateEdit ? (
                                 // Edit mode (docs/rich-chat/SPEC.md, section 2.2): what is being edited, and ✕ to leave it.
                                 <div
@@ -2931,6 +3073,8 @@ export default function AskConversation({
                                     else submit(composer, "form");
                                 }}
                                 className={`flex items-end gap-2 border border-white/12 bg-white/[0.05] ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
+                                // The message bar is a control, a capsule like the apps' composer: never a square box.
+                                style={{borderRadius: 22}}
                             >
                                 {reporting ? (
                                     <>
@@ -2982,6 +3126,15 @@ export default function AskConversation({
                                     }}
                                     className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
                                 />
+                                {messenger && dictation.available && !debateEdit && !showStop ? (
+                                    <DictationButton
+                                        active={dictation.phase === "starting" || dictation.phase === "listening"}
+                                        busy={dictation.phase === "transcribing"}
+                                        copy={dictationCopy}
+                                        onStart={() => void dictation.start()}
+                                        onStop={() => void dictation.stop()}
+                                    />
+                                ) : null}
                                 {debateEdit ? (
                                     <button
                                         type="submit"
@@ -3764,23 +3917,19 @@ function AskFitText({full, short}: {full: string; short: string}) {
 }
 
 /**
- * A hidden copy of a wide bubble's diagram panel, at the panel's font: its
- * inner width over the advance of "M" is `text_columns` (SPEC section 1.1).
- * Laid out as `AskReplyBubbles` lays a wide bubble out: the face's room, the
- * bubble's padding, the panel's.
+ * A hidden copy of a wide bubble's diagram panel: its inner width over the
+ * diagram font's advance is `text_columns` (SPEC section 1.1). Laid out as
+ * `AskReplyBubbles` lays a wide bubble out: the face's room, the bubble's
+ * padding, the panel's. It holds no text, so the diagram font is fetched
+ * only once a real panel is drawn (WEB-16).
  */
-function AskColumnsProbe({probeRef, glyphsRef}: {
-    probeRef: React.RefObject<HTMLDivElement>;
-    glyphsRef: React.RefObject<HTMLSpanElement>;
-}) {
+function AskColumnsProbe({probeRef}: {probeRef: React.RefObject<HTMLDivElement>}) {
     return (
         <div aria-hidden="true" className="pointer-events-none invisible h-0 overflow-hidden">
             <div className="flex gap-2 pr-2">
                 <span className="w-7 shrink-0" />
                 <div className="min-w-0 flex-1 px-3.5">
-                    <div ref={probeRef} style={{paddingLeft: 14, paddingRight: 14}}>
-                        <span ref={glyphsRef} className="ask-diagram">MMMMMMMMMM</span>
-                    </div>
+                    <div ref={probeRef} style={{paddingLeft: 14, paddingRight: 14}} />
                 </div>
             </div>
         </div>
@@ -3871,7 +4020,11 @@ function AskMemoryPanel({
     settings,
     savingPreference,
     preferenceFailed,
-    onSetPreference
+    onSetPreference,
+    historyDeletion,
+    onAskDeleteHistory,
+    onCancelDeleteHistory,
+    onDeleteHistory
 }: {
     labels: AskDrawerLabels;
     facts: AskMemoryFact[];
@@ -3890,8 +4043,13 @@ function AskMemoryPanel({
     savingPreference: boolean;
     preferenceFailed: boolean;
     onSetPreference: (patch: Partial<AskMemorySettings>) => void;
+    historyDeletion: "idle" | "confirming" | "deleting" | "done" | "failed";
+    onAskDeleteHistory: () => void;
+    onCancelDeleteHistory: () => void;
+    onDeleteHistory: () => void;
 }) {
     const [editing, setEditing] = useState<string | null>(null);
+    const syncKnown = settings?.historySync !== null && settings?.historySync !== undefined;
     const [editText, setEditText] = useState("");
     const busy = forgettingFact !== null;
     // What the Wild Profile learned comes first; the rest keep their order.
@@ -4078,8 +4236,57 @@ function AskMemoryPanel({
                             onChange={(value) => onSetPreference({shareJourney: value})}
                         />
                     ) : null}
+                    {syncKnown && settings ? (
+                        // Chat history on every device (docs/chat-sync/SPEC.md, section 3).
+                        <PreferenceRow
+                            title={labels.prefHistorySync}
+                            detail={labels.prefHistorySyncDetail}
+                            value={settings.historySync === true}
+                            disabled={savingPreference}
+                            onChange={(value) => onSetPreference({historySync: value})}
+                        />
+                    ) : null}
                     {preferenceFailed ? <p className="px-4 pb-3 text-[11px] text-ink-400">{labels.prefFailed}</p> : null}
                 </div>
+            ) : null}
+
+            {syncKnown ? (
+                historyDeletion === "confirming" || historyDeletion === "deleting" ? (
+                    <div className="-mx-4 border-y border-white/10 bg-white/[0.03] px-4 py-3" data-testid="delete-history-confirm">
+                        <p className="text-sm font-semibold text-ink-100">{labels.deleteHistoryConfirm}</p>
+                        <div className="mt-2.5 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={onDeleteHistory}
+                                disabled={historyDeletion === "deleting"}
+                                className="inline-flex min-h-9 items-center rounded-full bg-red-500 px-4 text-xs font-bold text-white transition-colors hover:bg-red-400 disabled:opacity-60"
+                            >
+                                {historyDeletion === "deleting" ? labels.sending : labels.deleteHistory}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onCancelDeleteHistory}
+                                disabled={historyDeletion === "deleting"}
+                                className="inline-flex min-h-9 items-center rounded-full border border-white/12 px-4 text-xs font-semibold text-ink-200 transition-colors hover:text-white"
+                            >
+                                {labels.clearCancel}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-start gap-1.5">
+                        <button
+                            type="button"
+                            onClick={onAskDeleteHistory}
+                            className="inline-flex min-h-9 items-center text-xs font-semibold text-red-300 transition-colors hover:text-red-200"
+                            data-testid="delete-history"
+                        >
+                            {labels.deleteHistory}
+                        </button>
+                        {historyDeletion === "done" ? <p className="text-[11px] text-ink-300" role="status">{labels.deleteHistoryDone}</p> : null}
+                        {historyDeletion === "failed" ? <p className="text-[11px] text-ink-300" role="alert">{labels.errorGeneric}</p> : null}
+                    </div>
+                )
             ) : null}
 
             <button

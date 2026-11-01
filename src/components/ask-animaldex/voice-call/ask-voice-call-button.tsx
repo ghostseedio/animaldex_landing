@@ -21,7 +21,7 @@ import dynamic from "next/dynamic";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {primeCallAudio} from "@/components/ask-animaldex/voice-call/call-audio";
 import {browserCanCall} from "@/components/ask-animaldex/voice-call/call-listener";
-import {MicIcon} from "@/components/ask-animaldex/voice-call/call-icons";
+import {PhoneIcon} from "@/components/ask-animaldex/voice-call/call-icons";
 import {callCopy} from "@/lib/ask-animaldex/call-copy";
 import {callClipSource, type CallClip} from "@/lib/ask-animaldex/call-events";
 import {
@@ -138,7 +138,8 @@ export default function AskVoiceCallButton({
 
     if (!asset) return null;
     const copy = callCopy(locale);
-    const label = copy.talkTo.replace("{animal}", animalName);
+    // "Call Luna": the header's call (the message bar's mic only dictates, DECISIONS section 9).
+    const label = copy.call.replace("{animal}", animalName);
 
     return (
         <>
@@ -154,9 +155,9 @@ export default function AskVoiceCallButton({
                 aria-label={label}
                 title={label}
                 data-testid="ask-voice-call"
-                className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-35"
+                className="grid h-9 w-9 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-35"
             >
-                <MicIcon size={15} />
+                <PhoneIcon size={16} />
             </button>
             {open && typeof document !== "undefined"
                 ? createPortal(

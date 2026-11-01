@@ -65,7 +65,7 @@ export type AskCompanionEvent = {
     stepDone?: AskCompanionStepDone;
     stepSet?: AskCompanionStepSet;
     referral?: AskCompanionReferral;
-    /** The animal offered a debate in this reply, and it was allowed: [Yes, compare] [Not now] under it. */
+    /** The animal offered a debate in this reply, and it was allowed: [Yes, start a debate] [Not now] under it. */
     debateOffer?: DebateOffer;
 };
 

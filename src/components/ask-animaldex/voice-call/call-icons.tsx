@@ -51,3 +51,6 @@ export const EllipsisIcon = ({size}: IconProps) => fill(size, <>
     <circle cx="12" cy="12" r="2" />
     <circle cx="18.5" cy="12" r="2" />
 </>);
+
+/** The call button (SF Symbols phone.fill): the mic glyph means dictation only (DECISIONS section 9). */
+export const PhoneIcon = ({size}: IconProps) => fill(size, <path d="M6.6 3.2c.5-.4 1.2-.4 1.7 0l2.3 2.3c.5.5.5 1.2.1 1.7l-1.2 1.6a.9.9 0 0 0-.1.9 11.6 11.6 0 0 0 4.9 4.9c.3.1.6.1.9-.1l1.6-1.2c.5-.4 1.2-.4 1.7.1l2.3 2.3c.5.5.5 1.2 0 1.7l-1.4 1.4c-1 1-2.6 1.4-4 .9A18.4 18.4 0 0 1 4.3 8.6c-.5-1.4-.1-3 .9-4Z" />);

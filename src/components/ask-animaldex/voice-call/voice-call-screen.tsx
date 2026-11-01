@@ -226,15 +226,14 @@ export default function VoiceCallScreen({
                         {state.heard ? (
                             <div className="flex flex-col gap-[3px]">
                                 <p className="text-[11px] font-bold uppercase tracking-[0.07em] text-white/45">{copy.you}</p>
-                                <p className="line-clamp-2 text-[15px] leading-snug text-white/[0.72]">{state.heard}</p>
+                                {/* Everything they say, in full, as live captions (owner, 2026-11-01). */}
+                                <LiveCaption text={state.heard} className="max-h-[84px] text-[15px] leading-snug text-white/[0.72]" testId="animal-voice-call-heard" />
                             </div>
                         ) : null}
                         <div className="flex flex-col gap-[3px]">
                             <p className="text-[11px] font-bold uppercase tracking-[0.07em]" style={{color: LIME}}>{animalName}</p>
                             {state.spokenWords.length === 0 ? (
-                                <p className="line-clamp-4 text-[17px] font-medium leading-snug text-white">
-                                    {state.said || t(copy.sayHello)}
-                                </p>
+                                <LiveCaption text={state.said || t(copy.sayHello)} className="max-h-[100px] text-[17px] font-medium leading-snug text-white" />
                             ) : (
                                 <SpokenText words={state.spokenWords} heard={() => controller?.voice.heardSeconds() ?? null} />
                             )}
@@ -358,6 +357,33 @@ function LiveClock({startedAt, format}: {startedAt: number; format: string}) {
  * the words already said stay bright and those to come are dim, and the
  * text scrolls to keep the word being said in view, however long it runs.
  */
+/**
+ * A caption that shows all of what was said: it grows to its area, then
+ * scrolls inside it, always resting on the newest words, with the older
+ * lines fading out at the top. Never clamped, never cut with an ellipsis.
+ */
+function LiveCaption({text, className, testId}: {text: string; className: string; testId?: string}) {
+    const ref = useRef<HTMLDivElement | null>(null);
+    const [overflows, setOverflows] = useState(false);
+    useEffect(() => {
+        const box = ref.current;
+        if (!box) return;
+        box.scrollTop = box.scrollHeight;
+        setOverflows(box.scrollHeight > box.clientHeight + 1);
+    }, [text]);
+    return (
+        <div
+            ref={ref}
+            className={`overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+            style={overflows ? {WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 18px)", maskImage: "linear-gradient(to bottom, transparent 0, black 18px)"} : undefined}
+            aria-live="polite"
+            data-testid={testId}
+        >
+            <p className="whitespace-pre-wrap break-words">{text}</p>
+        </div>
+    );
+}
+
 function SpokenText({words, heard}: {words: CallSpokenWord[]; heard: () => number | null}) {
     const [current, setCurrent] = useState(-1);
     const [finished, setFinished] = useState(false);
@@ -406,7 +432,7 @@ function SpokenText({words, heard}: {words: CallSpokenWord[]; heard: () => numbe
     }, [current]);
 
     return (
-        <div ref={scrollRef} className="relative max-h-[100px] overflow-hidden" data-testid="animal-voice-call-words">
+        <div ref={scrollRef} className="relative max-h-[100px] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="animal-voice-call-words">
             {/* A normal space between words; the highlight reaches past the word without pushing its neighbours away. */}
             <p className="flex flex-wrap gap-x-[4.5px] py-0.5 text-[17px] font-medium leading-snug">
                 {words.map((word, index) => (

@@ -47,7 +47,7 @@ export default function DebatePost({debate: seed, words, signedIn, pinned = fals
                     const opening = openings.get(participant.seat);
                     return (
                         <div key={participant.id} className="flex items-start gap-2.5 px-5 py-3">
-                            <span className="shrink-0 rounded-full" style={{boxShadow: `0 0 0 1.5px ${color}cc`}}>
+                            <span className="shrink-0 rounded-full">
                                 <AskAnimalFace url={debateFaceUrl(participant)} size={32} />
                             </span>
                             <span className="min-w-0 flex-1">

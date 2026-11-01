@@ -33,7 +33,7 @@ export type AskSpecial =
     /** "WARMUP": Take the warmup (+5 XP) / Skip. */
     | {kind: "warmup"}
     /**
-     * "START A DEBATE": Yes, compare / Not now. "Yes, compare" grows it into
+     * "START A DEBATE": Yes, start a debate / Not now. "Yes, start a debate" grows it into
      * the setup in the same section (docs/rich-chat/SPEC.md, section 2.2).
      */
     | {kind: "debate"; problem: string | null; with: DebateNamedAnimal[]}

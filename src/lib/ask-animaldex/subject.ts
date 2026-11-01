@@ -153,10 +153,35 @@ export type AskSuggestion = {
  * callers that ask for them with `{dynamicsFirst: true}`; they read as jargon
  * at the top of a conversation, so the drawer no longer leads with them.
  */
+/**
+ * The three openers an animal's chat offers, in the reader's language
+ * (WEB-21): the English here, the locale's `askAnimalDex` words over them.
+ */
+export const ASK_OPENER_WORDS_EN = {
+    openerWhoTitle: "Who are you?",
+    openerWhoPrompt: "Tell me about yourself. How do you actually live, day to day?",
+    openerDecideTitle: "Help me decide",
+    openerDecidePrompt: "I've got a decision I keep putting off. How would you handle it?",
+    openerPowerTitle: "Your Power",
+    openerPowerPromptNamed: "What's your Power, {power}, in plain words?",
+    openerPowerPrompt: "What's your Power, in plain words?"
+};
+
+export type AskOpenerWords = typeof ASK_OPENER_WORDS_EN;
+
+export function askOpenerWords(translate: ((key: string) => string) | null): AskOpenerWords {
+    if (!translate) return ASK_OPENER_WORDS_EN;
+    return Object.fromEntries(Object.entries(ASK_OPENER_WORDS_EN).map(([key, value]) => {
+        const translated = translate(key);
+        // A translator answers a missing key with the key itself: the English, then.
+        return [key, translated && translated !== key && !translated.endsWith(`.${key}`) ? translated : value];
+    })) as AskOpenerWords;
+}
+
 export function askSuggestions(
     subject: AskSubject,
     hints: AskHints,
-    options: {dynamicsFirst?: boolean} = {}
+    options: {dynamicsFirst?: boolean; words?: AskOpenerWords} = {}
 ): AskSuggestion[] {
     // A Trial thread opens on the Trial, whatever the page is about.
     if (subject.trialContext) return TRIAL_ASK_SUGGESTIONS;
@@ -164,22 +189,17 @@ export function askSuggestions(
 
     const name = hints.animalName?.trim() || subject.name?.trim() || "this animal";
     const principleName = hints.principleName?.trim() || null;
+    const words = options.words ?? ASK_OPENER_WORDS_EN;
 
     if (!hints.hasDynamics || !options.dynamicsFirst) {
         return [
+            {title: words.openerWhoTitle, prompt: words.openerWhoPrompt},
+            {title: words.openerDecideTitle, prompt: words.openerDecidePrompt},
             {
-                title: "Who are you?",
-                prompt: "Tell me about yourself. How do you actually live, day to day?"
-            },
-            {
-                title: "Help me decide",
-                prompt: "I've got a decision I keep putting off. How would you handle it?"
-            },
-            {
-                title: "Your Power",
+                title: words.openerPowerTitle,
                 prompt: principleName
-                    ? `What's your Power, ${principleName}, in plain words?`
-                    : "What's your Power, in plain words?"
+                    ? words.openerPowerPromptNamed.replace("{power}", principleName)
+                    : words.openerPowerPrompt
             }
         ];
     }

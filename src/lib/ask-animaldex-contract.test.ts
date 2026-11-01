@@ -134,7 +134,9 @@ test("the answer renderer is the block renderer, not a markdown drop-in", () => 
     assert.match(renderer, /pendingVisual/);
     // Bold carries the point, and the renderer tints it — that is what makes an
     // answer scannable rather than a uniform slab.
-    assert.match(renderer, /text-primary-200/);
+    // Bold carries weight, not colour (UX pass, DECISIONS section 2): semibold in the text colour, never neon.
+    assert.match(renderer, /<strong className="font-semibold text-white">/);
+    assert.doesNotMatch(renderer, /<strong[^>]*text-primary/);
     for (const kind of ["flow", "scale", "chart", "photo"]) {
         assert.match(visual, new RegExp(`case "${kind}"`), `${kind} medium must render`);
     }

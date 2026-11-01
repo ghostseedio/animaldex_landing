@@ -46,11 +46,15 @@ export const barlowCondensed = localFont({
  * Mono (OFL, licence beside it), because a text diagram only lines up when
  * the box-drawing characters and arrows have the letters' advance, and
  * Android's monospace (Droid Sans Mono) has none of them. Never preloaded:
- * the browser fetches it only once a panel is drawn. No size-adjusted Arial
- * fallback either, which would misalign the diagram while it loads.
+ * the browser fetches it only once a panel is drawn (the chat measures its
+ * columns from the font's fixed 0.6 em advance, never by drawing it). No
+ * size-adjusted Arial fallback either, which would misalign the diagram while
+ * it loads. A 16 KB woff2 subset of the 267 KB TTF beside it (WEB-16): Latin,
+ * punctuation, arrows, maths, box drawing, blocks and shapes, unhinted, no
+ * layout features (a diagram wants no ligatures).
  */
 export const diagramMono = localFont({
-    src: [{path: "./font-files/jetbrains-mono-latin-400-normal.ttf", weight: "400", style: "normal"}],
+    src: [{path: "./font-files/jetbrains-mono-diagram-400-normal.woff2", weight: "400", style: "normal"}],
     variable: "--font-diagram-mono",
     display: "swap",
     preload: false,
