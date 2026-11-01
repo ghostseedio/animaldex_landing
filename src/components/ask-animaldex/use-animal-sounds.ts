@@ -145,21 +145,34 @@ export function useAnimalSounds(params: {
         if (!speciesProfileId) return;
         let cancelled = false;
         const id = speciesProfileId.toLowerCase();
-        let pending = decodedBanks.get(id);
-        if (!pending) {
-            pending = loadBank(id);
-            decodedBanks.set(id, pending);
-        }
-        void pending.then((decoded) => {
-            // Nothing came of it (offline, a failed decode): tried again next time.
-            if (!decoded) decodedBanks.delete(id);
-            if (cancelled || !decoded) return;
-            buffersRef.current = decoded.buffers;
-            schedulerRef.current = new AskVoiceScheduler(decoded.bank, "measured");
-            setBank(decoded.bank);
-        });
+        const take = () => {
+            let pending = decodedBanks.get(id);
+            if (!pending) {
+                pending = loadBank(id);
+                decodedBanks.set(id, pending);
+            }
+            void pending.then((decoded) => {
+                // Nothing came of it (offline, a failed decode): tried again next time.
+                if (!decoded) decodedBanks.delete(id);
+                if (cancelled || !decoded) return;
+                buffersRef.current = decoded.buffers;
+                schedulerRef.current = new AskVoiceScheduler(decoded.bank, "measured");
+                setBank(decoded.bank);
+            });
+        };
+        // Starting the audio engine and cutting the bank is a long task: when the page is idle,
+        // never in the middle of a word appearing (WEB-42).
+        const scheduler = window as unknown as {
+            requestIdleCallback?: (callback: () => void, options?: {timeout: number}) => number;
+            cancelIdleCallback?: (handle: number) => void;
+        };
+        const idle = scheduler.requestIdleCallback
+            ? scheduler.requestIdleCallback(take, {timeout: 2000})
+            : globalThis.setTimeout(take, 200) as unknown as number;
         return () => {
             cancelled = true;
+            if (scheduler.cancelIdleCallback) scheduler.cancelIdleCallback(idle);
+            else globalThis.clearTimeout(idle);
         };
     }, [speciesProfileId]);
 
