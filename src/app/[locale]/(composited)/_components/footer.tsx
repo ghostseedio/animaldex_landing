@@ -1,4 +1,3 @@
-import Image from "next/image";
 import FooterLink from "@/app/[locale]/(composited)/_components/footer-link";
 import FooterBackToTop from "@/app/[locale]/(composited)/_components/footer-back-to-top";
 import Link from "@/app/[locale]/_components/link";
@@ -6,6 +5,7 @@ import {FacebookIcon, InstagramIcon, RedditIcon, SubstackIcon, TikTokIcon, XIcon
 import type {ScopedTranslator} from "@/loaders/translation";
 import {socialProfileUrls} from "@/lib/social-links";
 import {footerColumns, type PublicNavLink} from "@/data/public-navigation";
+import BrandLockup from "@/components/brand/brand-lockup";
 
 const socialLinks = [
     {href: socialProfileUrls.facebook, label: "Facebook", icon: FacebookIcon},
@@ -42,24 +42,15 @@ export default function Footer({t}: {t: ScopedTranslator}) {
         <footer className="mt-16 border-t border-line-400 bg-canvas-900">
             <div className="mx-auto flex w-full max-w-[88rem] flex-col px-4 md:px-8">
                 <div className="grid grid-cols-1 gap-10 py-12 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:gap-16 lg:py-14">
-                    {/* Signature block: mark, wordmark, rule, promise — read as one object. */}
+                    {/* Signature block: the lockup, rule, promise — read as one object. */}
                     {/* Between tablet and desktop the brand block owns a full-width
                         row, so it runs horizontally there and stacks again once it
                         becomes the left column. */}
                     <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8 lg:flex-col lg:items-stretch lg:gap-5">
                         <div className="flex flex-col gap-5">
-                        <Link href="/" aria-label={t("logo")} className="flex w-fit items-center gap-3">
-                            {/* The header's mark, so the two signatures match. The
-                                SVG in _assets is 600KB and arrives late through the
-                                image optimizer. */}
-                            <Image src="/images/logo.webp" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0" />
-                            <Image
-                                src="/images/animaldex-logo-text.webp"
-                                alt={t("title")}
-                                width={320}
-                                height={76}
-                                className="h-7 w-auto"
-                            />
+                        <Link href="/" aria-label={t("logo")} className="flex w-fit items-center">
+                            {/* The one lockup (DECISIONS §5), as in the header. */}
+                            <BrandLockup size={32} />
                         </Link>
 
                         <div className="flex flex-col gap-3">
@@ -139,7 +130,7 @@ export default function Footer({t}: {t: ScopedTranslator}) {
                             <span className="sr-only">{t("credits.status")}: </span>
                             {t("credits.statusValue")}
                         </p>
-                        <FooterBackToTop label="Back to top" />
+                        <FooterBackToTop label={t("backToTop")} />
                     </div>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import {perspectiveLocale, type PerspectiveLocale} from "@/data/animal-perspective";
+import {formatAnimalCount} from "@/lib/animal-count";
 
 /**
  * /how-it-works: every animal is different, and how the animals work
@@ -55,7 +56,7 @@ const en: HowItWorksContent = {
     articleCta: "Why it matters: advice fatigue",
     pointsEyebrow: "How the animals work",
     pointsTitle: "Six things every animal does",
-    pointsDescription: "The same six hold for all 2,500+ animals, from a garden snail to a snow leopard.",
+    pointsDescription: `The same six hold for all ${formatAnimalCount("en")} animals, from a garden snail to a snow leopard.`,
     powerExample: "Common Octopus · Flexible Intelligence: change the method when the environment changes.",
     loopEyebrow: "The loop",
     loopTitle: "From a photo to a Power",
@@ -96,14 +97,14 @@ const en: HowItWorksContent = {
     safetyBody: "Whatever an animal's nature, when someone is controlling, threatening or hurting you, it puts your safety first. On health, money or the law it tells you to ask a person who knows. If you're in danger, contact local emergency services or a crisis line.",
     collectionEyebrow: "The collection is the engine",
     collectionTitle: "Every animal you meet adds a new way of seeing.",
-    collectionBody: "Photograph a real animal with the app's camera, or pick a photo or video you took yourself. AnimalDex identifies it, and it becomes yours to talk to. More than 2,500 species, each with its own Power.",
+    collectionBody: `Photograph a real animal with the app's camera, or pick a photo or video you took yourself. AnimalDex identifies it, and it becomes yours to talk to. ${formatAnimalCount("en")} animals, each with its own Power.`,
     ctaTitle: "Bring an animal a real problem.",
     ctaBody: "Anyone can talk to an animal on the web, with no account. Your step and debates need an animal you've caught in the app."
 };
 
 const id: HowItWorksContent = {
     metaTitle: "Cara kerja AnimalDex: setiap hewan melihatnya dengan cara berbeda",
-    metaDescription: "Setiap hewan di AnimalDex menjawab dari Kekuatannya sendiri, memilih satu sisi dan bertahan di sana. Cara kerja hewan-hewannya, dan bagaimana Langkah Anda, Uji Coba, dan Debat mengubah percakapan menjadi tindakan.",
+    metaDescription: "Setiap hewan di AnimalDex menjawab dari Kekuatannya sendiri, memilih satu sisi dan bertahan di sana. Cara kerja hewan-hewannya, dan bagaimana Langkahmu, Uji Coba, dan Debat mengubah percakapan menjadi tindakan.",
     eyebrow: "Cara kerjanya",
     title: "Setiap hewan melihatnya dengan cara **berbeda**.",
     intro: "Tanyakan hal yang sama pada burung hantu dan cheetah, dan mereka tidak akan sepakat. Masing-masing menjawab dari Kekuatannya sendiri, cara jenisnya bertahan hidup, bukan dari apa yang ingin kamu dengar.",
@@ -111,7 +112,7 @@ const id: HowItWorksContent = {
     articleCta: "Mengapa ini penting: lelah nasihat",
     pointsEyebrow: "Cara kerja hewan-hewannya",
     pointsTitle: "Enam hal yang dilakukan setiap hewan",
-    pointsDescription: "Keenamnya berlaku untuk lebih dari 2.500 hewan, dari siput kebun sampai macan tutul salju.",
+    pointsDescription: `Keenamnya berlaku untuk semua ${formatAnimalCount("id")} hewan, dari siput kebun sampai macan tutul salju.`,
     powerExample: "Gurita Biasa · Kecerdasan Lentur: ganti caranya saat lingkungannya berubah.",
     loopEyebrow: "Alurnya",
     loopTitle: "Dari sebuah foto sampai sebuah Kekuatan",
@@ -119,7 +120,7 @@ const id: HowItWorksContent = {
     details: [
         {
             id: "your-step",
-            eyebrow: "Langkah Anda",
+            eyebrow: "Langkahmu",
             title: "Nasihat yang dilakukan, bukan sekadar dibaca",
             paragraphs: [
                 "Bawakan hewan yang sudah kamu tangkap sesuatu yang nyata: keputusan, kebiasaan, percakapan yang terus kamu tunda. Ia mengatakan ke arah mana ia akan pergi dan mengapa, dari hidupnya sendiri, lalu memberimu satu langkah untuk dicoba di duniamu sendiri.",
@@ -152,9 +153,9 @@ const id: HowItWorksContent = {
     safetyBody: "Apa pun sifat seekor hewan, saat seseorang mengendalikan, mengancam, atau menyakitimu, ia mendahulukan keselamatanmu. Untuk kesehatan, uang, atau hukum ia akan memintamu bertanya kepada orang yang paham. Jika kamu dalam bahaya, hubungi layanan darurat setempat atau layanan krisis.",
     collectionEyebrow: "Koleksi adalah mesinnya",
     collectionTitle: "Setiap hewan yang kamu temui menambah satu cara pandang baru.",
-    collectionBody: "Foto hewan sungguhan dengan kamera aplikasi, atau pilih foto atau video yang kamu ambil sendiri. AnimalDex mengenalinya, dan ia jadi milikmu untuk diajak bicara. Lebih dari 2.500 spesies, masing-masing dengan Kekuatannya sendiri.",
+    collectionBody: `Foto hewan sungguhan dengan kamera aplikasi, atau pilih foto atau video yang kamu ambil sendiri. AnimalDex mengenalinya, dan ia jadi milikmu untuk diajak bicara. ${formatAnimalCount("id")} hewan, masing-masing dengan Kekuatannya sendiri.`,
     ctaTitle: "Bawakan seekor hewan masalah yang nyata.",
-    ctaBody: "Siapa pun bisa bicara dengan seekor hewan di web, tanpa akun. Langkah Anda dan debat membutuhkan hewan yang sudah kamu tangkap di aplikasi."
+    ctaBody: "Siapa pun bisa bicara dengan seekor hewan di web, tanpa akun. Langkahmu dan debat membutuhkan hewan yang sudah kamu tangkap di aplikasi."
 };
 
 const CONTENT: Record<PerspectiveLocale, HowItWorksContent> = {en, id};

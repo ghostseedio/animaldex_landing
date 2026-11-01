@@ -38,11 +38,6 @@ export default function HomeFeatureCaptureCard({capture, locale}: {capture: Disc
                                 {capture.contextLabel}
                             </span>
                         ) : null}
-                        {capture.captureGrade != null ? (
-                            <span className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[0.68rem] font-bold text-white/75 backdrop-blur-sm">
-                                Grade {capture.captureGrade}
-                            </span>
-                        ) : null}
                         {date ? (
                             <span className="inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[0.68rem] font-bold text-white/75 backdrop-blur-sm">
                                 {date}

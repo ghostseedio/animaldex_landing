@@ -6,13 +6,15 @@ import {type HeaderAuthSession, useHeaderAuth} from "@/app/[locale]/(composited)
 import {useContext, useState} from "react";
 
 type HeaderAuthLinkProps = {
-    /** Shown to signed-out visitors: this is a doorway to the web app, not a login wall. */
-    webAppLabel: string;
+    /** Shown to signed-out visitors: "Sign in", to the account page and back into the web app. */
+    signInLabel: string;
     myAnimalsLabel: string;
     mobile?: boolean;
 };
 
 const WEB_APP_HREF = "/app";
+// "Web app" meant nothing to a newcomer; "Sign in" says what the button does.
+const SIGN_IN_HREF = `/account?next=${encodeURIComponent(WEB_APP_HREF)}`;
 
 function accountName(session: HeaderAuthSession, fallback: string) {
     return session.username ? `@${session.username}` : session.displayName ?? fallback;
@@ -55,23 +57,23 @@ export function HeaderAvatar({session, size}: {session: HeaderAuthSession; size:
 }
 
 /**
- * Signed out: "Web app" beside the header CTA (desktop) or in the drawer
+ * Signed out: "Sign in" beside the header CTA (desktop) or in the drawer
  * (mobile). Signed in, the drawer shows the account with its avatar, and the
  * desktop link steps aside for `HeaderAccountButton` at the top right.
  */
-export default function HeaderAuthLink({webAppLabel, myAnimalsLabel, mobile = false}: HeaderAuthLinkProps) {
+export default function HeaderAuthLink({signInLabel, myAnimalsLabel, mobile = false}: HeaderAuthLinkProps) {
     const {setOpen} = useContext(MenuContext);
     const {session} = useHeaderAuth();
 
     if (mobile) {
         return (
             <Link
-                href={WEB_APP_HREF}
+                href={session.user ? WEB_APP_HREF : SIGN_IN_HREF}
                 onClick={() => setOpen(false)}
-                className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[2px] border border-line-100 bg-transparent px-3 text-center text-sm font-bold leading-snug text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full border border-line-100 bg-transparent px-3 text-center text-sm font-bold leading-snug text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
             >
                 {session.user ? <HeaderAvatar session={session} size={26} /> : null}
-                <span className="truncate">{session.user ? accountName(session, myAnimalsLabel) : webAppLabel}</span>
+                <span className="truncate">{session.user ? accountName(session, myAnimalsLabel) : signInLabel}</span>
             </Link>
         );
     }
@@ -80,10 +82,10 @@ export default function HeaderAuthLink({webAppLabel, myAnimalsLabel, mobile = fa
 
     return (
         <Link
-            href={WEB_APP_HREF}
-            className="hidden h-9 items-center rounded-[2px] border border-line-100 px-3.5 text-[0.8125rem] font-bold leading-none text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:border-primary-400 focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 xl:inline-flex motion-reduce:transition-none"
+            href={SIGN_IN_HREF}
+            className="hidden h-9 items-center rounded-full px-3.5 text-[0.8125rem] font-bold leading-none text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:border-primary-400 focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 xl:inline-flex motion-reduce:transition-none"
         >
-            {webAppLabel}
+            {signInLabel}
         </Link>
     );
 }
@@ -109,7 +111,7 @@ export function HeaderAccountButton({myAnimalsLabel, compact = false}: {myAnimal
                 // The header hides its wordmark on narrow phones while this is
                 // shown, so the bar still fits beside the menu button.
                 data-account-button=""
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[2px] border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
             >
                 <HeaderAvatar session={session} size={28} />
             </Link>
@@ -121,7 +123,7 @@ export function HeaderAccountButton({myAnimalsLabel, compact = false}: {myAnimal
             href={WEB_APP_HREF}
             aria-label={`${name}: open the web app`}
             title={name}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border border-line-100 transition-colors duration-150 hover:border-primary-400 focus-visible:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-100 transition-colors duration-150 hover:border-primary-400 focus-visible:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
         >
             <HeaderAvatar session={session} size={26} />
         </Link>

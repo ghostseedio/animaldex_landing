@@ -20,8 +20,9 @@ type MobileNavSection = {
 };
 
 type HeaderMobileNavProps = {
+    /** A page of its own, above the menus (JRN-35). */
+    howItWorks: MobileNavItem;
     sections: MobileNavSection[];
-    blog: MobileNavItem;
     moreTitle: string;
     moreGroups: MobileNavItem[][];
 };
@@ -75,8 +76,8 @@ function AccordionPanel({
 }
 
 export default function HeaderMobileNav({
+    howItWorks,
     sections,
-    blog,
     moreTitle,
     moreGroups
 }: HeaderMobileNavProps) {
@@ -102,6 +103,10 @@ export default function HeaderMobileNav({
 
     return (
         <div className="flex flex-col">
+            <HeaderLink href={howItWorks.href} mobile topLevel>
+                {howItWorks.label}
+            </HeaderLink>
+
             {sections.map((section) => {
                 const open = openSection === section.id;
                 return (
@@ -123,10 +128,6 @@ export default function HeaderMobileNav({
                     </AccordionPanel>
                 );
             })}
-
-            <HeaderLink href={blog.href} mobile topLevel>
-                {blog.label}
-            </HeaderLink>
 
             <AccordionPanel
                 id="more"

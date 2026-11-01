@@ -77,7 +77,7 @@ export function buildSymbolismSections(input: SymbolismPostInput): BlogSection[]
             pullQuote: input.pullQuote
         },
         {
-            title: `What Is a ${displayName}?`,
+            title: `What Is ${withIndefiniteArticle(displayName)}?`,
             paragraphs: input.whatIs,
             media: {
                 type: "image",
@@ -149,13 +149,25 @@ export function buildSymbolismSections(input: SymbolismPostInput): BlogSection[]
     return sections;
 }
 
+/**
+ * "a Wolf", "an Owl", "an Eagle", "a Unicorn Fish" (WEB-30): "an" before a vowel
+ * sound, judged from the spelling with the common English exceptions.
+ */
+export function withIndefiniteArticle(name: string): string {
+    const word = name.trim().toLowerCase();
+    const consonantSound = /^(uni|use|usu|ura|uro|eu|ewe|one|once)/.test(word);
+    const silentH = /^(hour|honest|honou?r|heir)/.test(word);
+    const vowel = /^[aeiou]/.test(word);
+    return `${(vowel && !consonantSound) || silentH ? "an" : "a"} ${name.trim()}`;
+}
+
 export function createSymbolismPost(input: SymbolismPostInput): BlogPost {
     const slug = `${input.speciesSlug}-symbolism`;
     const displayLower = input.displayName.toLowerCase();
     const themeTitles = input.themes.map((t) => t.title);
     const tableOfContents = [
         "Quick Answer",
-        `What Is a ${input.displayName}?`,
+        `What Is ${withIndefiniteArticle(input.displayName)}?`,
         "Biological Basis of the Symbol",
         ...themeTitles,
         `What the ${input.displayName} Teaches`,

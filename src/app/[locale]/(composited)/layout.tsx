@@ -20,7 +20,7 @@ export default async function CompositedLayout(
     return (
         <HeaderAuthProvider>
             <Header locale={params.locale} t={t} />
-            <main className="min-h-screen w-full">
+            <main id="main" tabIndex={-1} className="min-h-screen w-full focus:outline-none">
                 {children}
             </main>
             <Footer t={t} />

@@ -467,7 +467,7 @@ const id: AdviceFatigueContent = {
                 {kind: "p", text: "Naluri sebagian hewan akan jadi nasihat yang berbahaya. Jenis anjing tetap bertahan dengan tangan yang menyakitinya, dan tidak ada hewan yang seharusnya menyuruhmu begitu. Saat seseorang mengendalikan, mengancam, atau menyakitimu, setiap hewan diminta mendahulukan keselamatanmu: langkahnya menjadi bagaimana kamu bisa aman dan kepada siapa kamu meminta bantuan."},
                 {kind: "p", text: "Saat taruhannya nyata (pekerjaan, uang, tempat tinggal, hubungan, kesehatanmu), seekor hewan tetap mengatakan ke arah mana ia akan pergi, tetapi langkah yang ia berikan hari ini adalah langkah yang masih bisa kamu tarik kembali. Dan karena seekor hewan mengenal hidupnya sendiri, bukan fakta-fakta manusia, untuk urusan kesehatan, uang, atau hukum ia akan memintamu bertanya kepada orang yang paham."},
                 {kind: "h3", id: "action-not-comfort", text: "Tindakan, bukan sekadar hiburan"},
-                {kind: "p", text: "Lelah nasihat berakhir saat sesuatu berubah dalam hidupmu, bukan di dalam obrolan. Jadi saat kamu membawa masalah nyata ke hewan yang sudah kamu tangkap, ia memberimu **Langkah Anda**: satu hal nyata untuk dicoba di duniamu sendiri, dari cara hidupnya sendiri. Lakukan, ketuk Sudah saya lakukan, lalu ceritakan hasilnya kepada hewan itu. Langkah pertama yang kalian selesaikan bersama memberimu Kekuatannya. Kekuatan tidak bisa didapat hanya dengan membaca tentangnya."},
+                {kind: "p", text: "Lelah nasihat berakhir saat sesuatu berubah dalam hidupmu, bukan di dalam obrolan. Jadi saat kamu membawa masalah nyata ke hewan yang sudah kamu tangkap, ia memberimu **Langkahmu**: satu hal nyata untuk dicoba di duniamu sendiri, dari cara hidupnya sendiri. Lakukan, ketuk Sudah saya lakukan, lalu ceritakan hasilnya kepada hewan itu. Langkah pertama yang kalian selesaikan bersama memberimu Kekuatannya. Kekuatan tidak bisa didapat hanya dengan membaca tentangnya."},
                 {kind: "p", text: "Kalau hari ini kamu tidak punya sesuatu untuk dibawa, setiap hewan juga punya **Uji Coba**: tantangannya sendiri, dibangun dari cara jenisnya bertahan hidup, dan satu cara lagi untuk mendapatkan langkah."},
                 {kind: "h3", id: "the-collection", text: "Koleksi adalah mesinnya"},
                 {kind: "p", text: "Inilah sebabnya AnimalDex juga sebuah game koleksi. Setiap hewan yang kamu foto, di kebun binatang, saat berjalan-jalan, atau di halamanmu, menjadi milikmu untuk diajak bicara, dan masing-masing menambah satu cara pandang baru. Koleksi dua puluh hewan berarti dua puluh putusan berbeda atas hal berikutnya yang membuatmu buntu. Game-nya memberimu alasan untuk keluar dan bertemu lebih banyak hewan, dan percakapannya memberi koleksi itu alasan untuk ada."}
@@ -479,7 +479,7 @@ const id: AdviceFatigueContent = {
             blocks: [
                 {kind: "p", text: "Seluruh alurnya muat dalam satu gambar."},
                 {kind: "panel", panel: "flow"},
-                {kind: "p", text: "Kamu bisa mulai tanpa semua itu. Di web, siapa pun bisa [bicara dengan seekor hewan](/talk), tanpa akun. Langkah Anda, Kekuatan, dan debat membutuhkan akun dan hewan yang sudah kamu tangkap di aplikasi, karena semuanya tentang hewan-hewanmu dan hidupmu sendiri. [Cara kerjanya](/how-it-works) menjelaskan setiap bagiannya."}
+                {kind: "p", text: "Kamu bisa mulai tanpa semua itu. Di web, siapa pun bisa [bicara dengan seekor hewan](/talk), tanpa akun. Langkahmu, Kekuatan, dan debat membutuhkan akun dan hewan yang sudah kamu tangkap di aplikasi, karena semuanya tentang hewan-hewanmu dan hidupmu sendiri. [Cara kerjanya](/how-it-works) menjelaskan setiap bagiannya."}
             ]
         },
         {
@@ -531,12 +531,12 @@ const id: AdviceFatigueContent = {
             ["Saat kamu membantah", "Cenderung mengalah", "Bertahan, kecuali fakta baru mengubahnya"],
             ["Pilihan sulit", "Jalan tengah: \"tergantung\"", "Sisi yang jelas: pergi atau bertahan, ya atau tidak"],
             ["Dua jawaban", "Terdengar sama", "Bisa tidak sepakat, dengan sengaja"],
-            ["Berakhir pada", "Rasa tenang", "Satu langkah nyata: Langkah Anda"],
+            ["Berakhir pada", "Rasa tenang", "Satu langkah nyata: Langkahmu"],
             ["Kamu pulang dengan", "Lega, tapi tetap buntu", "Satu sisi untuk diuji dalam hidupmu"]
         ]
     },
     flow: {
-        label: "Alur pengguna AnimalDex: tangkap, bawa masalah nyata, hewan memilih sisi, Langkah Anda, Kekuatan didapat, dengan debat sebagai cabangnya. Langkah yang sama ada di daftar berikut.",
+        label: "Alur pengguna AnimalDex: tangkap, bawa masalah nyata, hewan memilih sisi, Langkahmu, Kekuatan didapat, dengan debat sebagai cabangnya. Langkah yang sama ada di daftar berikut.",
         caption: "Dari sebuah foto sampai sebuah Kekuatan, dengan debat sebagai cabangnya.",
         listLabel: "Baca sebagai daftar"
     },
@@ -565,7 +565,7 @@ const id: AdviceFatigueContent = {
                 step: "Sebelum menjawab, tulis apa yang akan dihabiskan peran ini setiap minggu dan apa yang tersisa untukmu, lalu tanyakan pada manajermu seperti apa pekerjaan desain senior sebagai gantinya."
             }
         ],
-        stepLabel: "Langkah Anda",
+        stepLabel: "Langkahmu",
         accept: "Akan saya lakukan",
         other: "Langkah yang lain",
         caption: "Percakapan ilustrasi, dipersingkat. Di aplikasi, setiap jawaban ditulis saat itu juga, jadi kata-katanya berbeda dari satu obrolan ke obrolan lain. Sisinya adalah sisi yang diambil kedua hewan ini dalam pengujian kami."
@@ -578,7 +578,7 @@ const id: AdviceFatigueContent = {
         {question: "Apakah hewan yang sama selalu memberi jawaban yang sama?", answer: "Kata-katanya berubah setiap kali; sisinya seharusnya tidak. Dalam pengujian AnimalDex sendiri tentang seorang desainer yang ditawari posisi manajer, seekor landak berkata terima 10 dari 10 kali dan seekor groundhog berkata bertahan 9 dari 10 kali. Dalam satu percakapan, seekor hewan diminta hanya berubah pikiran karena fakta baru."},
         {question: "Apakah ini pengganti terapi atau nasihat profesional?", answer: "Bukan. Hewan-hewan itu mengenal hidup mereka sendiri, bukan fakta-fakta manusia. Untuk kesehatan, uang, atau hukum mereka akan memintamu bertanya kepada orang yang paham. Jika kamu dalam bahaya atau berpikir untuk menyakiti diri sendiri, hubungi layanan darurat setempat atau layanan krisis lebih dulu."},
         {question: "Apa itu Kekuatan?", answer: "Setiap hewan punya Kekuatan: satu hal yang dikuasai jenisnya untuk bertahan hidup, dijadikan pelajaran untuk hidupmu sendiri, seperti Kecerdasan Lentur milik gurita biasa: ganti caranya saat lingkungannya berubah. Hewan itu menjawab dari Kekuatannya, dan kamu mendapatkannya dengan menyelesaikan satu langkah yang ia berikan."},
-        {question: "Apakah aku perlu aplikasinya untuk mencoba?", answer: "Tidak. Kamu bisa bicara dengan seekor hewan di web di animaldex.app/talk tanpa akun. Untuk mendapat Langkah Anda, mendapatkan Kekuatan, dan memulai debat, tangkap hewan itu di aplikasi AnimalDex."}
+        {question: "Apakah aku perlu aplikasinya untuk mencoba?", answer: "Tidak. Kamu bisa bicara dengan seekor hewan di web di animaldex.app/talk tanpa akun. Untuk mendapat Langkahmu, mendapatkan Kekuatan, dan memulai debat, tangkap hewan itu di aplikasi AnimalDex."}
     ],
     referencesTitle: "Referensi",
     references: REFERENCES,

@@ -72,13 +72,10 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
     const animalAStatsResult = resolveLocalSpeciesStats(animalA);
     const animalBStatsResult = resolveLocalSpeciesStats(animalB);
 
-    const decisiveScenarios = challenge.scenarioBreakdown.filter((item) => item.winner === "animalA" || item.winner === "animalB");
-    const aWins = decisiveScenarios.filter((item) => item.winner === "animalA").length;
-    const bWins = decisiveScenarios.filter((item) => item.winner === "animalB").length;
-    const winnerSide = aWins === bWins ? challenge.scenarioBreakdown.find((item) => item.winner === "animalA" || item.winner === "animalB")?.winner : aWins > bWins ? "animalA" : "animalB";
-    const winner = winnerSide === "animalA" ? animalA : winnerSide === "animalB" ? animalB : null;
-    const winnerLabel = winner ? t("winner", {animal: winner.name}) : t("winnerLabels.depends");
-    const confidence = winner ? Math.min(94, 66 + Math.round((Math.max(aWins, bWins) / Math.max(1, decisiveScenarios.length)) * 26)) : 55;
+    // Side by side, not a fight (WEB-9, DECISIONS §8): the page names no winner
+    // and gives no confidence score. Searchers' words ("who would win") stay in
+    // the meta title and description only.
+    const sideBySideTitle = t("sideBySideTitle", {animalA: animalA.name, animalB: animalB.name});
     const readMinutes = getReadMinutes([challenge.description, challenge.quickVerdict, ...challenge.shortAnswer, ...challenge.whyThisMatchupIsInteresting, ...challenge.statCategories.flatMap((item) => [item.animalAValue, item.animalBValue, item.takeaway]), ...challenge.scenarioBreakdown.flatMap((item) => [item.verdict, item.explanation]), ...challenge.finalTake, ...challenge.faq.flatMap((item) => [item.question, item.answer])]);
 
     const relatedSource = getRelatedLocalChallenges(challenge.slug, 4);
@@ -88,7 +85,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
         if (!relatedA || !relatedB) {
             return [{
                 slug: entry.slug,
-                title: entry.title,
+                title: t("pairTitle", {animalA: entry.animalASlug.replace(/-/g, " "), animalB: entry.animalBSlug.replace(/-/g, " ")}),
                 quickVerdict: entry.quickVerdict,
                 animalAName: entry.animalASlug.replace(/-/g, " "),
                 animalBName: entry.animalBSlug.replace(/-/g, " "),
@@ -96,7 +93,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                 image: entry.featuredImage
             }];
         }
-        return [{slug: entry.slug, title: entry.title, quickVerdict: entry.quickVerdict, animalAName: relatedA.name, animalBName: relatedB.name, comparisonTypeLabel: t(`comparisonTypes.${entry.comparisonType}`), image: entry.featuredImage}];
+        return [{slug: entry.slug, title: t("pairTitle", {animalA: relatedA.name, animalB: relatedB.name}), quickVerdict: entry.quickVerdict, animalAName: relatedA.name, animalBName: relatedB.name, comparisonTypeLabel: t(`comparisonTypes.${entry.comparisonType}`), image: entry.featuredImage}];
     });
     const staticSystemsItems = getSystemsIntelligenceEntriesForSpeciesSlugs(challenge.systemsSpeciesSlugs || challenge.speciesSlugs).flatMap(({slug: speciesSlug, entry}) => {
         const species = getSpeciesBySlug(speciesSlug);
@@ -119,7 +116,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            headline: challenge.title,
+            headline: sideBySideTitle,
             description: challenge.description,
             datePublished: challenge.publishedAt,
             dateModified: challenge.updatedAt,
@@ -141,7 +138,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                 : {})
         },
         {"@context": "https://schema.org", "@type": "FAQPage", mainEntity: challenge.faq.map((item) => ({"@type": "Question", name: item.question, acceptedAnswer: {"@type": "Answer", text: item.answer}}))},
-        {"@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl(locale)}, {"@type": "ListItem", position: 2, name: t("title"), item: getAbsoluteUrl(locale, "/comparisons")}, {"@type": "ListItem", position: 3, name: challenge.title, item: pageUrl}]}
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl(locale)}, {"@type": "ListItem", position: 2, name: t("title"), item: getAbsoluteUrl(locale, "/comparisons")}, {"@type": "ListItem", position: 3, name: sideBySideTitle, item: pageUrl}]}
     ];
 
     const speciesCards = [
@@ -164,8 +161,8 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                 question decides which one the answer is about. */}
             <AskSubjectBridge
                 slug={animalA.slug}
-                title={`${animalA.name} vs ${animalB.name}`}
-                summary={`A head-to-head between ${animalA.name} and ${animalB.name}.`}
+                title={sideBySideTitle}
+                summary={`${animalA.name} and ${animalB.name}: two ways of surviving.`}
             />
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
             <Link
@@ -178,7 +175,7 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                 {t("back")}
             </Link>
 
-            <ChallengeHero challenge={challenge} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} winnerLabel={winnerLabel} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
+            <ChallengeHero challenge={challenge} title={sideBySideTitle} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("quickVerdictBadge")} />
 
             {locale === "en" ? (
                 <div className="editorial [&>section]:mb-0">
@@ -188,14 +185,14 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
                         pageTitle={challenge.title}
                         pageDescription={challenge.description}
                         pageUrl={pageUrl}
-                        copy={{kicker: "Watch the battle", blurb: `${animalA.name} vs ${animalB.name} in 20 seconds: the fight, played out from the stats and verdict on this page.`, footnote: "AI-generated battle. The full stats and analysis are below."}}
+                        copy={{kicker: "Watch them side by side", blurb: `${animalA.name} and ${animalB.name} in 20 seconds, drawn from the stats on this page.`, footnote: "AI-generated video. The full stats and analysis are below."}}
                     />
                 </div>
             ) : null}
 
-            <ComparisonPageNavigation title={challenge.title} labels={{compareAnother: t("compareAnother"), meetAnimals: t("meetAnimalsAction"), jumpStats: t("jumpStats"), share: t("share"), overview: t("navOverview"), winner: t("navWinner"), stats: t("navStats"), scenarios: t("navScenarios"), faq: t("navFaq"), related: t("navRelated")}} />
+            <ComparisonPageNavigation title={sideBySideTitle} labels={{compareAnother: t("compareAnother"), meetAnimals: t("meetAnimalsAction"), jumpStats: t("jumpStats"), share: t("share"), overview: t("navOverview"), winner: t("navWinner"), stats: t("navStats"), scenarios: t("navScenarios"), faq: t("navFaq"), related: t("navRelated")}} />
 
-            <ChallengeVerdictCard title={t("quickVerdictTitle")} description={t("quickVerdictDescription")} summary={challenge.quickVerdict} paragraphs={challenge.shortAnswer} winner={winner ? {slug: winner.slug, name: winner.name} : undefined} winnerLabel={t("winnerBadge")} confidence={confidence} confidenceLabel={t("confidence")} fullAnalysisLabel={t("fullAnalysis")} />
+            <ChallengeVerdictCard title={t("quickVerdictTitle")} description={t("quickVerdictDescription")} summary={challenge.quickVerdict} paragraphs={challenge.shortAnswer} fullAnalysisLabel={t("fullAnalysis")} />
 
 
             <ComparisonVotePanel
@@ -286,7 +283,14 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
 
             <ChallengeVerdictCard title={t("finalTakeTitle")} summary={challenge.finalTake[0]} paragraphs={challenge.finalTake.slice(1)} fullAnalysisLabel={t("fullAnalysis")} />
 
-            <IntentCtaCard title={t(challenge.comparisonType === "battle" ? "ctaBattleTitle" : challenge.comparisonType === "speed" ? "ctaSpeedTitle" : "ctaDefaultTitle")} description={t(challenge.comparisonType === "battle" ? "ctaBattleDescription" : challenge.comparisonType === "speed" ? "ctaSpeedDescription" : "ctaDefaultDescription")} buttonLabel={t(challenge.comparisonType === "battle" ? "ctaBattleButton" : challenge.comparisonType === "speed" ? "ctaSpeedButton" : "ctaDefaultButton")} supportItems={[t("ctaSupportOne"), t("ctaSupportTwo"), t("ctaSupportThree")]} secondaryLinks={secondaryLinks} />
+            {/* Ask them both (WEB-9): the same problem to each animal, and they won't agree. */}
+            <IntentCtaCard
+                title={t("ctaAskBothTitle")}
+                description={t("ctaAskBothDescription", {animalA: animalA.name, animalB: animalB.name})}
+                buttonLabel={t("ctaTalkTo", {animal: animalA.name})}
+                buttonHref={`/talk/${animalA.slug}`}
+                secondaryLinks={[{href: `/talk/${animalB.slug}`, label: t("ctaTalkTo", {animal: animalB.name})}, ...secondaryLinks]}
+            />
 
 
             <ComparisonComments

@@ -1,7 +1,6 @@
 import {remark} from "remark";
 import html from "remark-html";
 import policy from "@/data/refund-policy.md";
-import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import Image from "next/image";
 import {Metadata} from "next";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -23,7 +22,7 @@ export default async function RefundPolicy() {
     return (
         <div className="mx-auto my-16 w-full max-w-3xl px-4 text-center text-ink-200">
             <aside className="mb-8 flex items-center justify-center gap-4 text-primary-500">
-                <Image src={logo} alt="AnimalDex logo" width={64} height={64} />
+                <Image src="/images/brand/mark-192.webp" alt="AnimalDex" width={64} height={64} unoptimized className="h-16 w-16" />
                 <ShieldUserIcon size={64} />
                 <DatabaseIcon size={64} />
             </aside>

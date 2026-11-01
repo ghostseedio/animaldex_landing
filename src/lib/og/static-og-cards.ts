@@ -1,4 +1,5 @@
 import type {OgCardSpec, OgTile} from "@/lib/og/og-card";
+import {formatAnimalCount} from "@/lib/animal-count";
 
 function art(slug: string, label: string, caption?: string): OgTile {
     return {image: {artwork: slug}, label, caption};
@@ -14,7 +15,7 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
     // Hubs
     "animals": {
         kicker: "Animal encyclopedia",
-        title: "Explore 2,500+ real animals",
+        title: `Explore ${formatAnimalCount("en")} real animals`,
         tiles: [art("snow-leopard", "Snow Leopard"), art("red-panda", "Red Panda"), art("scarlet-macaw", "Scarlet Macaw")]
     },
     "blog": {

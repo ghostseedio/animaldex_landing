@@ -1,7 +1,17 @@
 "use client";
 
 /**
- * The launcher, and the conversation it opens.
+ * The floating "Talk to…" pill, and the conversation it opens.
+ *
+ * One concept (DECISIONS §8, 2026-11-01): the generic "Ask AnimalDex"
+ * assistant is retired from public pages.
+ * - A species page keeps its animal's pill, "Talk to the {animal}", which
+ *   opens the drawer.
+ * - Elsewhere, only where the header hides its own Talk button (below
+ *   1280 px), a "Talk to an animal" pill links to /talk, once the hero has
+ *   scrolled away.
+ * - Either pill steps aside whenever it would sit over something tappable,
+ *   so it never covers a link, a button or a field.
  *
  * Mounted once for the whole site. The panel itself is loaded on demand, so a
  * reader who never opens it never downloads the markdown renderer, the visual
@@ -12,9 +22,10 @@
  * conversation without that page knowing anything about this component.
  */
 
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import Link from "@/app/[locale]/_components/link";
 import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {SPECIES_ASK_EVENT} from "@/lib/ask-animaldex/events";
 import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-drawer";
@@ -69,6 +80,119 @@ function AskDrawerShell() {
     );
 }
 
+/** What a person can tap: a pill resting over any of these would hide it. */
+const TAPPABLE = "a[href], button, input, select, textarea, summary, label, video[controls], [role='button'], [role='link'], [role='tab'], [tabindex]:not([tabindex='-1'])";
+
+/** Pages where a floating pill would compete with the page's own task. */
+const QUIET_PATHS = [/^\/account(\/|$)/, /^\/checkout(\/|$)/, /^\/billing(\/|$)/, /^\/legal(\/|$)/, /^\/admin(\/|$)/];
+
+/**
+ * Whether a pill at `rect` would rest over tappable content. Samples a grid
+ * of points across the pill and asks what lies beneath, ignoring the pill.
+ */
+function coversTappable(pill: HTMLElement): boolean {
+    const rect = pill.getBoundingClientRect();
+    if (rect.width === 0) return false;
+    const inset = 4;
+    const xs = [rect.left + inset, rect.left + rect.width / 2, rect.right - inset];
+    const ys = [rect.top + inset, rect.top + rect.height / 2, rect.bottom - inset];
+    for (const x of xs) {
+        for (const y of ys) {
+            for (const element of document.elementsFromPoint(x, y)) {
+                if (element === pill || pill.contains(element)) continue;
+                if (element.closest(TAPPABLE)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Shown or hidden, for a pill that must never cover tappable content: checked
+ * when scrolling settles, on resize and when focus moves; `afterHero` holds it
+ * back until the first screen has scrolled away.
+ */
+function usePillPlacement(enabled: boolean, afterHero: boolean) {
+    const ref = useRef<HTMLElement | null>(null);
+    const [shown, setShown] = useState(false);
+    const evaluate = useCallback(() => {
+        const pill = ref.current;
+        if (!pill) return;
+        const active = document.activeElement;
+        const typing = active instanceof HTMLElement && (active.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName));
+        const pastHero = !afterHero || window.scrollY > window.innerHeight * 0.75;
+        setShown(pastHero && !typing && !coversTappable(pill));
+    }, [afterHero]);
+
+    useEffect(() => {
+        if (!enabled) return;
+        let timer = 0;
+        const settle = () => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(evaluate, 140);
+        };
+        evaluate();
+        // Content that loads in after the first paint (images, embeds) moves things under the pill.
+        const late = window.setTimeout(evaluate, 1200);
+        window.addEventListener("scroll", settle, {passive: true});
+        window.addEventListener("resize", settle);
+        document.addEventListener("focusin", settle);
+        document.addEventListener("focusout", settle);
+        return () => {
+            window.clearTimeout(timer);
+            window.clearTimeout(late);
+            window.removeEventListener("scroll", settle);
+            window.removeEventListener("resize", settle);
+            document.removeEventListener("focusin", settle);
+            document.removeEventListener("focusout", settle);
+        };
+    }, [enabled, evaluate]);
+
+    return {ref, shown};
+}
+
+/**
+ * The pill's shell. Hidden, it stays in place (to be measured) but fades out,
+ * takes no pointer and leaves the tab order. Motion is the site's state-change
+ * curve; under reduced motion it only fades.
+ */
+function FloatingPill({
+    shown,
+    pillRef,
+    className = "",
+    children
+}: {
+    shown: boolean;
+    pillRef: (element: HTMLElement | null) => void;
+    className?: string;
+    children: (props: {tabIndex: number; className: string}) => ReactNode;
+}) {
+    return (
+        <div
+            ref={pillRef}
+            aria-hidden={shown ? undefined : true}
+            className={`fixed right-4 z-[55] bottom-[calc(1.25rem+env(safe-area-inset-bottom))] transition-[opacity,transform] duration-[240ms] [transition-timing-function:cubic-bezier(.2,.8,.2,1)] motion-reduce:translate-y-0 motion-reduce:transition-opacity lg:right-6 lg:bottom-6 ${
+                shown ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
+            } ${className}`}
+        >
+            {children({
+                tabIndex: shown ? 0 : -1,
+                className: "group flex min-h-12 items-center gap-2 rounded-full border border-primary-300/35 bg-canvas-950 py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-colors hover:border-primary-300/70 hover:bg-canvas-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+            })}
+        </div>
+    );
+}
+
+function TalkGlyph() {
+    return (
+        <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-400 text-canvas-950">
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" />
+            </svg>
+        </span>
+    );
+}
+
 export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels & {launcher: string}}) {
     const {isOpen, open, close, subject, avatarUrl} = useAskAnimalDex();
     // On the Talk page the page is the chat: a drawer left open elsewhere closes, so it doesn't reopen on the next page.
@@ -92,6 +216,25 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
         return () => window.removeEventListener(SPECIES_ASK_EVENT, onAsk);
     }, [open]);
 
+    // On a species page the animal itself answers, so the pill is the
+    // animal: its picture and its name.
+    const speaksAsAnimal = subject.scope === "species" && Boolean(subject.name);
+    const quiet = onTalk
+        || isOpen
+        // A card has its own Talk to it button in its action bar (docs/companion-loop/SPEC.md, phase 3).
+        || subject.kind === "capture"
+        // The web app has its own Companions tab and a tab bar at the foot of the screen.
+        || subject.kind === "collection"
+        // A shared post (/p/…) carries its own "Talk to the …" beside the store buttons.
+        || subject.path.startsWith("/p/")
+        || QUIET_PATHS.some((pattern) => pattern.test(subject.path))
+        // A species page, before it has said which animal it is: nothing, not the generic pill.
+        || (subject.kind === "species" && !speaksAsAnimal);
+    const placement = usePillPlacement(mounted && !quiet, !speaksAsAnimal);
+    const setPillRef = useCallback((element: HTMLElement | null) => {
+        placement.ref.current = element;
+    }, [placement.ref]);
+
     if (!mounted) return null;
 
     // The Talk page is the conversation itself: no launcher and no drawer over it.
@@ -99,57 +242,43 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
 
     if (isOpen) return <AskDrawer labels={labels} />;
 
-    // A card has its own Talk to it button in its action bar, which replaces
-    // this one there (docs/companion-loop/SPEC.md, phase 3).
-    if (subject.kind === "capture") return null;
-    // A shared post (/p/…) carries its own "Speak to the …" beside the store
-    // buttons; this one would sit on the feed's tab bar and action rail.
-    if (subject.path.startsWith("/p/")) return null;
+    if (quiet) return null;
 
-    // The authenticated app carries a floating tab bar at the bottom of the
-    // screen on mobile, so the launcher clears it there rather than sitting on
-    // top of it.
-    const inAppShell = subject.kind === "collection";
+    if (speaksAsAnimal) {
+        const label = labels.speakLauncher.replace("{animal}", subject.name ?? "");
+        return (
+            <FloatingPill shown={placement.shown} pillRef={setPillRef}>
+                {({tabIndex, className}) => (
+                    <button type="button" onClick={() => open()} tabIndex={tabIndex} className={className}>
+                        {avatarUrl ? (
+                            <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/15">
+                                <Image src={avatarUrl} unoptimized alt="" fill sizes="32px" className="object-cover" />
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-primary-400 text-canvas-950"
+                                >
+                                    <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor">
+                                        <path d="M3 4h14v9H8l-4 3v-3H3z" />
+                                    </svg>
+                                </span>
+                            </span>
+                        ) : <TalkGlyph />}
+                        {label}
+                    </button>
+                )}
+            </FloatingPill>
+        );
+    }
 
-    // On a species page the animal itself answers, so the launcher is the
-    // animal: its picture and its name, not the site-wide assistant.
-    const speaksAsAnimal = subject.scope === "species" && Boolean(subject.name);
-    const label = speaksAsAnimal
-        ? labels.speakLauncher.replace("{animal}", subject.name ?? "")
-        : labels.launcher;
-
+    // Everywhere else: only where the header's own Talk button is hidden.
     return (
-        <button
-            type="button"
-            onClick={() => open()}
-            aria-label={label}
-            className={`group fixed right-4 z-[55] flex items-center gap-2 rounded-full border border-primary-300/35 bg-canvas-950 py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-colors hover:border-primary-300/70 hover:bg-canvas-900 lg:right-6 ${
-                inAppShell ? "bottom-[5.75rem] lg:bottom-6" : "bottom-5 lg:bottom-6"
-            }`}
-        >
-            {speaksAsAnimal && avatarUrl ? (
-                <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/15">
-                    <Image src={avatarUrl} unoptimized alt="" fill sizes="32px" className="object-cover" />
-                    <span
-                        aria-hidden="true"
-                        className="absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-primary-400 text-canvas-950"
-                    >
-                        <svg viewBox="0 0 20 20" className="h-2 w-2" fill="currentColor">
-                            <path d="M3 4h14v9H8l-4 3v-3H3z" />
-                        </svg>
-                    </span>
-                </span>
-            ) : (
-                <span
-                    aria-hidden="true"
-                    className="ml-1 grid h-6 w-6 place-items-center rounded-full bg-primary-400/16 text-primary-200 transition-colors group-hover:bg-primary-400/24"
-                >
-                    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10 3.5 11.4 8 16 9.4 11.4 10.8 10 15.4 8.6 10.8 4 9.4 8.6 8Z" />
-                    </svg>
-                </span>
+        <FloatingPill shown={placement.shown} pillRef={setPillRef} className="xl:hidden">
+            {({tabIndex, className}) => (
+                <Link href="/talk" tabIndex={tabIndex} className={className}>
+                    <TalkGlyph />
+                    {labels.launcher}
+                </Link>
             )}
-            {label}
-        </button>
+        </FloatingPill>
     );
 }

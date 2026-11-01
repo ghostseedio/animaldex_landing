@@ -54,7 +54,7 @@ export default function HeaderLink({href, children, mobile = false, child = fals
                 {...props}
             >
                 <span className="flex min-w-0 items-center gap-3">
-                    {icon ? <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[2px] bg-primary-500/10 text-primary-200">{icon}</span> : null}
+                    {icon ? <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary-500/10 text-primary-200">{icon}</span> : null}
                     <span className="min-w-0 whitespace-normal">{children}</span>
                 </span>
                 <span

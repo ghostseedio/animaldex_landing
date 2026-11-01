@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import Image from "next/image";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -74,7 +75,7 @@ export async function generateMetadata({params}: BlogIndexPageProps): Promise<Me
         : `${title} – ${(messages.blog?.metaPageTitle || "Page {page}").replace("{page}", String(currentPage))}`;
 
     return withOgCard({
-        title: pageTitle,
+        title: templateSafeTitle(pageTitle),
         description,
         keywords: [...baseKeywords, ...postKeywords],
         alternates: {
@@ -89,13 +90,13 @@ export async function generateMetadata({params}: BlogIndexPageProps): Promise<Me
         openGraph: {
             type: "website",
             locale: getMetadataLocale(locale),
-            title: `${pageTitle} | AnimalDex`,
+            title: withBrandSuffix(pageTitle),
             description,
             url: getLocalePath(locale, pagePath)
         },
         twitter: {
             card: "summary_large_image",
-            title: `${pageTitle} | AnimalDex`,
+            title: withBrandSuffix(pageTitle),
             description
         }
     }, "AnimalDex blog", "page", "blog");

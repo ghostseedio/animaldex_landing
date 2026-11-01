@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import Link from "@/app/[locale]/_components/link";
 import {EarnContentLink} from "@/app/[locale]/(composited)/_components/earn/earn-chrome";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
@@ -29,7 +30,7 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
     const content = getSupportContent(locale);
 
     return withOgCard({
-        title: content.metaTitle,
+        title: templateSafeTitle(content.metaTitle),
         description: content.metaDescription,
         alternates: {
             canonical: getLocalePath(locale, supportPath),
@@ -41,13 +42,13 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
         openGraph: {
             type: "website",
             locale: getMetadataLocale(locale),
-            title: content.metaTitle,
+            title: withBrandSuffix(content.metaTitle),
             description: content.metaDescription,
             url: getLocalePath(locale, supportPath)
         },
         twitter: {
             card: "summary_large_image",
-            title: content.metaTitle,
+            title: withBrandSuffix(content.metaTitle),
             description: content.metaDescription
         }
     }, "AnimalDex Help Center", "page", "support");
@@ -176,7 +177,8 @@ export default async function SupportPage({params}: {params: {locale: string}}) 
                                 {section.items.map((item) => {
                                     const articleHref = getSupportArticlePath({
                                         categorySlug: section.id,
-                                        slug: slugifySupportText(item.question)
+                                        // An item's own slug wins, as on the article route (WEB-2).
+                                        slug: item.slug ?? slugifySupportText(item.question)
                                     });
 
                                     return (

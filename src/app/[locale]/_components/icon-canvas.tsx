@@ -118,8 +118,15 @@ export default function IconCanvas({
 
             if (!ctx || !c) return;
 
+            // Decorative: 30 frames a second is plenty, and halves the cost.
+            if (lastFrameTime.current && time - lastFrameTime.current < 30) {
+                currentFrame.current = requestAnimationFrame(animate);
+                return;
+            }
+
             if (lastFrameTime.current) {
-                const delta = time - lastFrameTime.current;
+                // A long gap (tab hidden, scrolled away) must not fling the icons.
+                const delta = Math.min(time - lastFrameTime.current, 50);
 
                 ctx.clearRect(0, 0, c.width, c.height);
 
@@ -261,14 +268,37 @@ export default function IconCanvas({
         canvas.current.height = height || window.visualViewport?.height || 1080;
     }, [height]);
 
+    // Runs only while the canvas is on screen and the page is visible, and not
+    // at all under reduced motion (WEB-17): an idle page costs nothing.
     useEffect(() => {
+        const element = canvas.current;
+        if (!element) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
         resize();
         window.addEventListener("resize", resize);
 
-        currentFrame.current = requestAnimationFrame(animate);
+        let onScreen = false;
+        const start = () => {
+            if (currentFrame.current || !onScreen || document.hidden) return;
+            lastFrameTime.current = 0;
+            currentFrame.current = requestAnimationFrame(animate);
+        };
+        const stop = () => {
+            cancelAnimationFrame(currentFrame.current);
+            currentFrame.current = 0;
+        };
+        const observer = new IntersectionObserver(([entry]) => {
+            onScreen = entry.isIntersecting;
+            if (onScreen) start(); else stop();
+        });
+        observer.observe(element);
+        const onVisibility = () => (document.hidden ? stop() : start());
+        document.addEventListener("visibilitychange", onVisibility);
 
         return () => {
-            cancelAnimationFrame(currentFrame.current);
+            stop();
+            observer.disconnect();
+            document.removeEventListener("visibilitychange", onVisibility);
             window.removeEventListener("resize", resize);
         };
     }, [animate, resize]);
@@ -281,6 +311,7 @@ export default function IconCanvas({
         }
 
         const nextImages = new Map<string, HTMLImageElement>();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
         imageSources.forEach((src) => {
             const image = new window.Image();

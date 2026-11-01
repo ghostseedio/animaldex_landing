@@ -18,6 +18,9 @@ import {getManagedPage} from "@/lib/admin-content";
 import {canRenderCodeBlock, getRenderedCodeDocument} from "@/lib/rendered-code-block";
 import RenderedCodeFrame from "@/app/_components/rendered-code-frame";
 
+/** Search landings for the old collection-game framing: they keep their URL and gain the positioning line. */
+const POSITIONING_BRIDGE_SLUGS = new Set(["pokemon-like-animal-app", "talk-to-animals", "animal-collection-app", "what-is-animal-collecting"]);
+
 type AnswerPageProps = {
     slug: string;
     locale: string;
@@ -320,15 +323,13 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                                 {entry.heroTitle}
                             </h1>
                             <p className="mt-5 max-w-3xl text-lg leading-8 text-ink-200 md:text-xl">{entry.intro}</p>
+                            {POSITIONING_BRIDGE_SLUGS.has(entry.slug) ? (
+                                // The positioning in one line, and the way in (DECISIONS §8).
+                                <p className="mt-4 max-w-3xl border-l-2 border-primary-400 pl-4 text-lg font-semibold leading-8 text-white">{t("positioningLine")}</p>
+                            ) : null}
                         </div>
                         <div className="mt-8 flex flex-col gap-5">
-                            <div className="flex flex-wrap gap-2">
-                                {entry.searchIntents.slice(0, 6).map((intent) => (
-                                    <span key={intent} className="rounded-md border border-white/10 bg-canvas-950/35 px-3 py-1.5 text-xs text-ink-200">
-                                        {intent}
-                                    </span>
-                                ))}
-                            </div>
+                            {/* Search phrases stay in the metadata; readers never see them as chips (WEB-11). */}
                             <div className="grid gap-3 text-sm text-ink-300 sm:grid-cols-3">
                                 <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                     <span className="block text-2xl font-bold text-white">{entry.features.length}</span>
@@ -589,13 +590,19 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary-200/50 to-transparent" />
                         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
                             <div className="relative z-10 p-6 text-center md:p-10 lg:p-12 lg:text-left">
-                                <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">Start collecting</p>
+                                <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">{t("ctaEyebrow")}</p>
                                 <h2 className="mt-3 font-display text-4xl font-bold leading-[0.98] text-white md:text-5xl">{t("ctaTitle")}</h2>
                                 <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-200">{t("ctaDescription")}</p>
                                 <div className="mt-7 flex flex-col items-center gap-4 lg:items-start">
+                                    {/* Talking is the way in on every page (DECISIONS §8); the app beside it. */}
+                                    <Link
+                                        href="/talk"
+                                        className="inline-flex min-h-[3.5rem] items-center justify-center gap-2 rounded-full bg-primary-400 px-7 text-lg font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                    >
+                                        {t("talkButton")} <span aria-hidden="true">→</span>
+                                    </Link>
                                     <StoreLinks
                                         className="!mt-0 !justify-start"
-                                        buttonClassName="!h-16 !min-w-[13.5rem] !  !bg-primary-400 !px-7 !text-xl !shadow-[0_18px_55px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.35)] hover:!bg-primary-300 hover:!shadow-[0_24px_70px_rgba(167,244,50,0.32),inset_0_1px_0_rgba(255,255,255,0.45)]"
                                     />
                                     {entry.slug === "wildlife-discovery-app" ? (
                                         <>

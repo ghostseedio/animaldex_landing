@@ -3,33 +3,33 @@
     "logo": "Kembali ke beranda AnimalDex",
     "title": "AnimalDex",
     "description": "Setiap hewan melihatnya dengan cara berbeda.",
-    "team": "Untuk Siapa",
+    "team": "Untuk siapa",
     "features": "Fitur",
-    "download": "Dapatkan app",
-    "privacy": "Kebijakan Privasi",
-    "terms": "Ketentuan Penggunaan",
-    "refunds": "Kebijakan Pengembalian Dana",
+    "download": "Dapatkan aplikasinya",
+    "privacy": "Kebijakan privasi",
+    "terms": "Ketentuan penggunaan",
+    "refunds": "Kebijakan pengembalian dana",
     "contact": "Kontak",
     "discover": "Temukan",
     "collection": "Koleksi",
-    "support": "Pusat Bantuan",
+    "support": "Pusat bantuan",
     "blog": "Artikel",
-    "useCases": "Untuk Siapa",
-    "animals": "Ensiklopedia Hewan",
-    "qualities": "Kualitas Hewan",
-    "animalMeanings": "Makna Hewan",
-    "animalSymbolism": "Artikel Simbolisme Hewan",
+    "useCases": "Untuk siapa",
+    "animals": "Ensiklopedia hewan",
+    "qualities": "Kualitas hewan",
+    "animalMeanings": "Makna hewan",
+    "animalSymbolism": "Simbolisme hewan",
     "animalPowers": "Kekuatan Hewan",
-    "whatAnimalAmI": "Hewan Apa Aku?",
+    "whatAnimalAmI": "Hewan mana yang melihat dunia sepertimu?",
     "pokemonAnimals": "Pokemon Animals",
-    "animalHybrids": "Animal Hybrids",
-    "locations": "Lokasi Satwa Liar",
+    "animalHybrids": "Hibrida hewan",
+    "locations": "Lokasi satwa liar",
     "wildlifeGuides": "Wildlife Guides",
-    "challenges": "Comparisons",
+    "challenges": "Berdampingan",
     "rankings": "Tier List",
-    "animalWisdom": "Kebijaksanaan Hewan",
-    "howItWorks": "Cara Kerjanya",
-    "browseAnimals": "Jelajahi Hewan",
+    "animalWisdom": "Kebijaksanaan hewan",
+    "howItWorks": "Cara kerjanya",
+    "browseAnimals": "Jelajahi hewan",
     "signIn": "Masuk",
     "myAnimals": "Hewan saya",
     "themeToLight": "Beralih ke tema terang",
@@ -38,28 +38,28 @@
     "earnOnAnimalDex": "Hasilkan di AnimalDex",
     "becomeAWildlifeGuide": "Jadi Wildlife Guide",
     "creatorRewards": "Creator Rewards",
-    "sponsorAChallenge": "Sponsor Challenge",
+    "sponsorAChallenge": "Sponsori sebuah event",
     "wildlifeExperiences": "Pengalaman Satwa Liar",
-    "exploreAnimals": "Eksplorasi Hewan",
+    "exploreAnimals": "Jelajahi hewan",
     "experiences": "Pengalaman",
     "earn": "Hasilkan",
-    "compareAnimals": "Bandingkan Hewan",
-    "animalTierLists": "Tier List Hewan",
+    "compareAnimals": "Berdampingan",
+    "animalTierLists": "Tier list hewan",
     "instagramWildlifeArchive": "Impor dari Instagram",
-    "discoverAnimalWisdom": "Pelajaran dari Hewan",
-    "animalQualities": "Kualitas Hewan",
-    "animalFrequencies": "Frekuensi Hewan",
+    "discoverAnimalWisdom": "Pelajaran dari hewan",
+    "animalQualities": "Kualitas hewan",
+    "animalFrequencies": "Frekuensi hewan",
     "animalTrials": "Ujian Hewan",
     "findAWildlifeGuide": "Cari Wildlife Guide",
-    "howAnimalDexWorks": "Cara Kerja AnimalDex",
-    "appFeatures": "Fitur Aplikasi",
-    "whosItFor": "Untuk Siapa",
-    "brandAssets": "Aset Merek",
+    "howAnimalDexWorks": "Cara kerjanya",
+    "appFeatures": "Fitur aplikasi",
+    "whosItFor": "Untuk siapa",
+    "brandAssets": "Aset merek",
     "moreNav": "Lainnya",
     "footerGroups": {
       "product": "AnimalDex",
-      "explore": "Jelajahi Hewan",
-      "wisdom": "Kebijaksanaan Hewan",
+      "explore": "Jelajahi hewan",
+      "wisdom": "Kebijaksanaan hewan",
       "resources": "Sumber",
       "earn": "Hasilkan",
       "experienceAndEarn": "Pengalaman & Hasilkan",
@@ -72,10 +72,17 @@
       "statusValue": "GHOSTSEED LTD · No. 17287552"
     },
     "webApp": "Aplikasi web",
-    "talkToAnimals": "Bicara dengan Hewan",
-    "talkToAnAnimal": "Bicara dengan Seekor Hewan",
-    "getTheApp": "Dapatkan Aplikasinya",
-    "adviceFatigue": "Lelah Nasihat"
+    "talkToAnimals": "Bicara dengan hewan",
+    "talkToAnAnimal": "Bicara dengan hewan",
+    "getTheApp": "Dapatkan aplikasinya",
+    "adviceFatigue": "Lelah nasihat",
+    "animalsNav": "Hewan",
+    "allArticles": "Semua artikel",
+    "skipToContent": "Langsung ke konten",
+    "language": "Bahasa",
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup menu",
+    "backToTop": "Kembali ke atas"
   },
   "home": {
     "title": "AnimalDex",
@@ -88,16 +95,16 @@
     "heroLaurelExplorers": "penjelajah",
     "heroLaurelBuiltFor": "Juga untuk",
     "heroLaurelCurious": "si penasaran",
-    "supporting": "Gunakan pemindai AI untuk identifikasi instan, lalu pelajari meaning, symbolism, dan pelajaran hewan yang didukung biologi dan perilaku nyata.",
+    "supporting": "Bicaralah dengan hewan. Mereka tidak sekadar setuju denganmu. Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup.",
     "chatStill": {
       "label": "Contoh percakapan dengan gurita biasa di AnimalDex",
       "animal": "Gurita Biasa",
       "power": "Kekuatannya · Kecerdasan Lentur",
       "you": "Aku sudah melamar dua puluh pekerjaan dan tidak ada kabar sama sekali.",
       "reply": "Saat kepiting bersembunyi di celah, aku tidak mendorong lebih keras. Aku meraihnya dengan cara lain: lengan lain, sudut lain. Kepiting yang sama, cara yang baru.",
-      "stepLabel": "Langkah Anda",
+      "stepLabel": "Langkahmu",
       "step": "Ubah satu hal dalam caramu melamar minggu ini: lewat rekomendasi, posisi yang berbeda, atau kalimat pembuka yang baru. Tujuannya tetap.",
-      "accept": "Akan saya lakukan",
+      "accept": "Akan kulakukan",
       "other": "Langkah yang lain",
       "caption": "Lakukan langkahnya, dan Kekuatannya jadi milikmu."
     },
@@ -107,96 +114,71 @@
       "titleAccentLine": "mengajari",
       "titleAccentEnd": "ku?",
       "description": "Tentu saja.",
-      "settings": "DISCOVER|Pelajaran",
-      "music": "TEST|Skenario Kehidupan Nyata",
-      "customization": "MATCH|Pikiran Hewan",
-      "wisdom": "EXPLORE|Panduan Lapangan",
+      "settings": "BICARA|Hewan yang menjawab",
+      "music": "LAKUKAN|Langkahmu di hidupmu sendiri",
+      "customization": "BERBEDA PENDAPAT|Setiap hewan memihak",
+      "wisdom": "PELAJARI|Cara jenisnya bertahan",
       "wisdomDescription": "Setiap hewan punya strategi untuk bertahan hidup.",
       "appliedInsight": "Tangkap satu. Temukan apa yang bisa dia ajarkan.",
       "appliedInsightLead": "Tangkap satu.",
       "appliedInsightBody": "Setiap hewan yang kamu temui menambah satu cara pandang baru.",
-      "more": "THE FULL|AnimalDex",
-      "button": "Jelajahi"
+      "more": "DAN LAINNYA|AnimalDex",
+      "button": "Lihat lainnya",
+      "showLabel": "Tampilkan {name}, {index} dari {count}"
     },
     "archive": {
       "line": "Kamu mungkin sudah mulai.",
       "cta": "Periksa Instagram saya"
     },
     "more": {
-      "title": "Semua yang terjadi setelah scan",
-      "description": "Beranjak dari ID cepat ke detail field guide, progres koleksi, dan spotting yang lebih cerdas dalam hitungan detik.",
+      "title": "Temui mereka di alam liar.",
+      "description": "Potret atau rekam hewan yang kamu temui. AnimalDex mengenali masing-masing, dan sejak itu ia milikmu untuk diajak bicara.",
       "theme": {
-        "headlineLead": "Buat pertemuan",
-        "headlineAccent": "berkesan.",
-        "eyebrow": "Buat pertemuan berkesan.",
-        "line1": "Setiap hewan punya cerita.",
-        "line2": "Tangkap. Pahami. Ingat selamanya.",
-        "title": "Analisis hewan dengan AI",
-        "description": "Dapatkan ID cepat dengan petunjuk yang berguna, lalu simpan penemuan itu sebagai kartu premium.",
-        "note": "*artwork ini masih placeholder sampai screenshot final aplikasi diganti",
-        "alt": "Visual placeholder untuk analisis scan AI AnimalDex"
+        "headlineLead": "Setiap pertemuan adalah",
+        "headlineAccent": "cara pandang baru.",
+        "eyebrow": "Setiap pertemuan adalah cara pandang baru.",
+        "line1": "Tangkap seekor hewan, dan ia milikmu untuk diajak bicara.",
+        "line2": "Potret atau rekam, lalu AnimalDex mengenalinya dan menyebut Kekuatannya dalam hitungan detik.",
+        "title": "Setiap pertemuan adalah cara pandang baru.",
+        "description": "Tangkap seekor hewan, dan ia milikmu untuk diajak bicara.",
+        "note": "",
+        "alt": "Rubah merah yang baru dikenali di AnimalDex, dengan Kekuatannya",
+        "stillLabel": "Baru dikenali",
+        "stillTalk": "Bicara dengannya",
+        "stillStars": "Foto: 4 dari 5 bintang"
       },
       "ui": {
-        "headlineLead": "Tumbuh bersama",
-        "headlineAccent": "alam.",
-        "eyebrow": "Tumbuh bersama alam.",
-        "line1": "Temukan bagaimana hewan bertahan, beradaptasi, dan menang.",
-        "line2": "Lalu lihat apa yang bisa diajarkan alam liar.",
-        "title": "Discovery yang menghargai rasa ingin tahu",
-        "description": "Ikuti penemuan terbaik, lihat apa yang ingin kamu pelajari berikutnya, dan jaga discovery tetap hidup.",
-        "alt": "Visual placeholder untuk feed discovery AnimalDex"
+        "headlineLead": "Tumbuh bersama setiap",
+        "headlineAccent": "hewan yang kamu temui.",
+        "eyebrow": "Tumbuh bersama setiap hewan yang kamu temui.",
+        "line1": "Lakukan langkahnya, dan Kekuatannya jadi milikmu.",
+        "line2": "Ceritakan hasilnya. Begitu sebuah Kekuatan jadi milikmu, hewan-hewanmu bisa memperdebatkan masalahmu, secara pribadi atau di depan publik.",
+        "title": "Tumbuh bersama setiap hewan yang kamu temui.",
+        "description": "Lakukan langkahnya, dan Kekuatannya jadi milikmu.",
+        "alt": "Langkah yang sudah selesai dalam obrolan dengan serigala abu-abu",
+        "you": "Aku minta tim membagi pekerjaan peluncuran, bukan kutanggung sendiri. Dua orang langsung bilang iya.",
+        "reply": "Begitulah kawanan berburu: tak ada yang mengejar mangsa sendirian. Kamu sudah mengambil langkah pertamanya.",
+        "doneLabel": "Selesai bersama",
+        "doneText": "Kerja sama kini milikmu."
       },
       "design": {
-        "title": "Jurnal satwa liar yang kolektibel",
-        "description": "Simpan perjalanan, habitat, dan penemuan harian dalam koleksi yang ingin kamu buka lagi.",
-        "alt": "Visual placeholder untuk album koleksi AnimalDex"
+        "title": "Simpan setiap hewan yang kamu temui",
+        "description": "Hewan-hewanmu tetap bersamamu, diurutkan menurut taksonomi yang sebenarnya.",
+        "alt": "Binder koleksi AnimalDex"
       },
       "speed": {
-        "title": "Progres, battle, dan trade",
-        "description": "Tambahkan battle, trade, dan progres tanpa kehilangan sisi belajar tentang hewan nyata.",
-        "alt": "Visual placeholder untuk sistem challenge dan trade AnimalDex"
+        "title": "Debat, secara pribadi atau di depan publik",
+        "description": "Biarkan hewan-hewanmu memperdebatkan masalahmu, dan lihat pendapat komunitas.",
+        "alt": "Debat antara dua hewan di AnimalDex"
       },
-      "download": "Download"
+      "download": "Dapatkan aplikasinya"
     },
     "team": {
-      "eyebrow": "Temukan tempatmu di AnimalDex",
-      "title": "Kamu penjelajah tipe apa?",
-      "descriptionLead": "Temui. Bicara. Jelajahi. Ciptakan.",
-      "descriptionBody": "Ada lebih dari satu cara untuk merasakan alam liar.",
-      "explore": "Jelajahi",
-      "contact": "Lihat alasannya",
-      "personas": {
-        "collectors": {
-          "title": "Kolektor",
-          "tagline": "Setiap hewan yang kamu temukan jadi milikmu untuk diajak bicara.",
-          "description": "Kejar temuan langka, simpan masing-masing sebagai kartu, dan dengarkan apa yang ingin ia katakan.",
-          "alt": "Grid spesies satwa liar yang terkumpul"
-        },
-        "explorers": {
-          "title": "Fotografer Satwa Liar",
-          "tagline": "Impor & ID karya yang sudah kamu punya",
-          "description": "Bepergian, temukan satwa liar, dan ubah setiap perjalanan jadi perburuan — termasuk herping, birding, catatan lapangan, dan pengalaman satwa liar yang bisa dipesan.",
-          "alt": "Penjelajah memotret satwa liar di hutan"
-        },
-        "animalLovers": {
-          "title": "Pecinta Hewan",
-          "tagline": "Untuk yang mencari inspirasi dari alam",
-          "description": "Temukan perilaku, strategi, dan cerita mereka.",
-          "alt": "Potret intim hewan liar"
-        },
-        "creators": {
-          "title": "Kreator",
-          "tagline": "Dapatkan penghasilan dari keahlian melacak hewan",
-          "description": "Fotografer satwa liar, pembuat film, dan kreator lapangan. Bawa arsip satwa liarmu — atau ikuti pengalaman fotografi lokal.",
-          "alt": "Fotografer satwa liar dengan kamera di alam"
-        },
-        "competitors": {
-          "title": "Gamer",
-          "tagline": "Setiap hewan punya statistik untuk dibandingkan",
-          "description": "Bandingkan statistik hewan, menangkan debat publik, dan naik peringkat.",
-          "alt": "Dua hewan yang saling berhadapan"
-        }
-      },
+      "eyebrow": "Bawa masalah nyata",
+      "title": "Apa yang ingin kamu tanyakan?",
+      "descriptionLead": "Pilih satu, pilih seekor hewan, dan dengar sisi yang nyata.",
+      "descriptionBody": "Atau bawa masalahmu sendiri. Setiap hewan menjawabnya dengan cara berbeda.",
+      "explore": "Tanya seekor hewan",
       "roles": {
         "collector": "Kolektor",
         "traveler": "Traveler",
@@ -208,11 +190,29 @@
         "animalLover": "Pecinta hewan",
         "breeders": "Peternak & breeder",
         "progress": "Pemburu progres"
-      }
+      },
+      "pairLabel": "Dua hewan yang akan menjawabnya secara berbeda",
+      "problems": {
+        "work": {
+          "title": "Keputusan di tempat kerja",
+          "question": "Aku ditawari promosi, tapi artinya aku harus memimpin teman-temanku sendiri. Haruskah kuterima?"
+        },
+        "clash": {
+          "title": "Seseorang yang terus berselisih denganku",
+          "question": "Aku dan teman serumahku meributkan hal kecil yang sama setiap minggu. Bagaimana supaya tidak selalu jadi pertengkaran?"
+        },
+        "habit": {
+          "title": "Kebiasaan yang tak bisa kupertahankan",
+          "question": "Aku mulai lari pagi, lalu berhenti setelah seminggu. Apa yang salah?"
+        }
+      },
+      "guidesPrompt": "Merencanakan perjalanan, bukan sekadar jalan-jalan?",
+      "guidesLink": "Jelajahi Wildlife Guides virtual",
+      "guidesTail": ": catatan tentang setiap hewan dari penjelajah yang mencatat satwa liar di suatu tempat, lengkap dengan obrolan bersama penulisnya."
     },
     "download": {
-      "title": "Mulai penemuan berikutnya dengan AnimalDex",
-      "description": "Download AnimalDex di App Store atau Google Play dan ubah hasil scan jadi kartu, koleksi, dan pembelajaran field guide.",
+      "title": "Temui mereka semua.",
+      "description": "Di mana pun ada hewan, selalu ada yang bisa ditanya.",
       "launch": "Download di",
       "available": "Tersedia di",
       "beta": "Aplikasi live",
@@ -220,17 +220,17 @@
       "contact": "Tanyakan soal",
       "unavailable": "Tersedia di",
       "trust": {
-        "scanner": "AI Animal Scanner",
-        "collect": "Bicara dengan Hewan Nyata",
-        "learn": "Belajar Dari Alam"
+        "scanner": "Kenali hewan apa pun",
+        "collect": "Bicara dengan hewan nyata",
+        "learn": "Belajar dari alam"
       },
       "stats": {
-        "captures": "{count} Capture",
-        "users": "{count} Pengguna",
-        "indexes": "{count} Indeks",
+        "captures": "{count} tangkapan",
+        "users": "{count} penjelajah",
+        "indexes": "{count} hewan",
         "capturesLabel": "Tangkapan",
         "usersLabel": "Penjelajah",
-        "indexesLabel": "Hewan terindeks"
+        "indexesLabel": "Hewan untuk diajak bicara"
       },
       "blogPrompt": "Perjelas pemahaman soal ID hewan, rarity, spotting saat travel, dan panduan ramah satwa liar.",
       "blogLink": "Baca Blog",
@@ -254,83 +254,80 @@
       "symbolismLink": "Simbolisme Hewan"
     },
     "explore": {
-      "title": "Terus Jelajahi",
-      "description": "Kamu baru melihat permukaannya. Ikuti pertanyaan yang membuat hewan terasa makin menarik.",
+      "title": "Terus jelajahi",
+      "description": "Cara hewan melihat masalah yang dibawa orang kepada mereka, dan cara masing-masing bertahan hidup.",
       "cards": {
         "tigerLion": {
-          "eyebrow": "Perbandingan hewan",
-          "title": "Harimau vs Singa",
-          "description": "Siapa yang menang saat biologi, medan, dan tekanan sosial bertemu?",
-          "cta": "Bandingkan",
-          "alt": "Potret harimau untuk perbandingan Harimau vs Singa"
+          "eyebrow": "Berdampingan",
+          "title": "Harimau dan singa",
+          "description": "Dua cara bertahan hidup di puncak: sendirian, atau bersama kawanan.",
+          "cta": "Lihat berdampingan",
+          "alt": "Potret harimau, untuk harimau dan singa berdampingan"
         },
         "wolfLessons": {
           "eyebrow": "Kekuatan hewan",
-          "title": "Apa yang Bisa Serigala Ajarkan?",
+          "title": "Apa yang bisa diajarkan serigala?",
           "description": "Kecerdasan kelompok, daya tahan, dan disiplin bergerak bersama.",
           "cta": "Pelajari",
           "alt": "Serigala dalam cahaya wildlife dramatis"
         },
         "owlSymbolism": {
           "eyebrow": "Simbolisme hewan",
-          "title": "Apa Makna Burung Hantu?",
+          "title": "Apa makna burung hantu?",
           "description": "Penglihatan malam, observasi sabar, dan kebijaksanaan dalam gelap.",
           "cta": "Temukan",
           "alt": "Potret burung hantu dengan cahaya atmosferik gelap"
         },
-        "scannerGuide": {
-          "eyebrow": "Panduan scanner",
-          "title": "Cara AI Mengenali Hewan",
-          "description": "Apa yang bisa dilihat scanner hewan yang baik, dan apa yang tetap butuh penilaian manusia.",
-          "cta": "Baca",
-          "alt": "Seorang pelancong memotret jerapah dengan ponsel dari kendaraan safari"
-        },
-        "rareAnimals": {
-          "eyebrow": "Hewan langka",
-          "title": "Spesies Terlangka di Dunia",
-          "description": "Kelangkaan, tekanan konservasi, dan hewan yang jarang dilihat manusia.",
-          "cta": "Jelajahi",
-          "alt": "Badak hitam sebagai representasi hewan langka"
-        },
         "lionProfile": {
           "eyebrow": "Profil spesies",
-          "title": "Kenali Singa",
+          "title": "Kenali singa",
           "description": "Predator sosial yang dibentuk oleh kesabaran, tekanan, dan struktur pride.",
           "cta": "Kenali",
           "alt": "Potret singa untuk profil spesies"
         },
         "octopusMind": {
           "eyebrow": "Pikiran hewan",
-          "title": "Masalah Gurita",
+          "title": "Masalah gurita",
           "description": "Kamuflase, kecerdasan meloloskan diri, dan tubuh yang berpikir berbeda.",
           "cta": "Pahami",
           "alt": "Gurita biasa yang berkamuflase di antara rumput laut merah di terumbu"
+        },
+        "adviceFatigue": {
+          "eyebrow": "Mengapa ini penting",
+          "title": "Lelah nasihat",
+          "description": "Kebanyakan AI setuju denganmu. Mengapa itu membuatmu terhibur, bukan terbantu, dan apa bedanya hewan yang memihak.",
+          "cta": "Baca artikelnya",
+          "alt": "Burung hantu kecil dan cheetah, dua hewan yang akan berbeda pendapat"
         }
       }
     },
     "faq": {
       "title": "Masih penasaran?",
-      "description": "Beberapa jawaban tenang sebelum kamu mulai scan, mengoleksi, dan belajar dari hewan nyata.",
+      "description": "Yang biasa ditanyakan orang sebelum obrolan pertama mereka.",
       "trust": {
         "beginner": "Ramah untuk pemula",
         "families": "Dibuat untuk keluarga",
         "behavior": "Berdasar perilaku hewan nyata"
       },
-      "identify": {
-        "q": "Apakah AnimalDex aplikasi identifikasi hewan?",
-        "a": "Ya. AnimalDex bekerja sebagai animal scanner AI tool dan aplikasi identifikasi yang membantu konteks spesies maupun ras, lalu menyimpan setiap penemuan sebagai entri kolektibel."
+      "free": {
+        "q": "Apakah AnimalDex gratis?",
+        "a": "Ya. Kamu bisa bicara dengan hewan mana pun di web secara gratis, dan akun baru mendapat Kredit gratis untuk tangkapan pertamanya. AnimalDex Pro menambahkan suara setiap hewan, lebih banyak pesan per hari, dan 42 Kredit setiap bulan."
       },
-      "family": {
-        "q": "Apakah AnimalDex cocok untuk anak dan keluarga?",
-        "a": "Ya. AnimalDex dibuat agar ramah keluarga, berbasis rasa ingin tahu, dan berguna untuk kebun binatang, safari, serta jalan alam saat anak dan orang dewasa belajar bersama."
+      "agree": {
+        "q": "Apakah ia cuma setuju denganku?",
+        "a": "Tidak. Setiap hewan menjawab dari Kekuatannya sendiri, cara jenisnya bertahan hidup, dan memihak. Tanyakan hal yang sama pada burung hantu dan cheetah, dan sering kali mereka tidak sepakat. Justru itu intinya: kamu mendapat sudut pandang yang nyata, bukan gema."
       },
-      "game": {
-        "q": "Apakah ini hanya edukasi, atau juga game koleksi?",
-        "a": "Keduanya. AnimalDex menggabungkan pembelajaran field guide dengan kartu koleksi, set, misi, challenge, dan trading sehingga bisa terasa seperti animal card game atau Pokémon-like animal app sambil tetap bermanfaat untuk belajar hewan nyata."
+      "ai": {
+        "q": "Apakah ini AI? Dari mana jawaban hewan-hewannya?",
+        "a": "Ya. Hewan-hewannya adalah karakter yang disuarakan AI dan berakar pada sejarah alam yang nyata: Kekuatan setiap hewan ditulis dari cara spesiesnya benar-benar hidup. Biologinya fakta; cara seekor hewan membaca masalahmu adalah tafsiran AnimalDex. Keselamatan selalu nomor satu, hewan mana pun yang kamu tanya."
       },
-      "respect": {
-        "q": "Apakah AnimalDex mendorong observasi satwa liar yang penuh hormat?",
-        "a": "Ya. AnimalDex mendorong curiosity over cruelty lewat spotting yang tidak invasif, kesadaran habitat, dan pembelajaran tanpa menyakiti atau menekan hewan."
+      "power": {
+        "q": "Apa itu Kekuatan?",
+        "a": "Pelajaran dari cara jenis seekor hewan bertahan hidup, seperti Kelicikan rubah merah atau Kecerdasan Lentur gurita biasa. Setiap hewan menjawab dari Kekuatannya. Lakukan satu langkah yang ia berikan di hidupmu sendiri, dan Kekuatannya jadi milikmu."
+      },
+      "capture": {
+        "q": "Apakah aku harus menangkap hewan untuk bisa bicara?",
+        "a": "Tidak. Siapa pun bisa bicara dengan hewan mana pun di web. Tangkap seekor di aplikasi, dengan memotret atau merekamnya, dan ia jadi milikmu: ia mengingatmu, memberimu langkah, dan bisa memperdebatkan masalahmu bersama hewan-hewanmu yang lain."
       }
     },
     "heroCta": "Bicara dengan seekor hewan",
@@ -363,14 +360,15 @@
           "label": "peserta dalam tiga eksperimen yang didaftarkan sebelumnya"
         }
       }
-    }
+    },
+    "marquee": "Tangkap · Bicara · Berbeda pendapat · Ambil satu langkah · Raih Kekuatannya · Berdebat ·"
   },
   "blog": {
     "eyebrow": "Blog AnimalDex",
-    "title": "Panduan discovery hewan, tips spotting saat travel, dan strategi koleksi",
-    "description": "Artikel praktis untuk identifikasi hewan, memahami rarity, merencanakan perjalanan berbasis satwa liar, dan membangun koleksi hewan nyata yang lebih cerdas.",
+    "title": "Artikel tentang cara hewan hidup, dan apa yang mereka ajarkan",
+    "description": "Artikel ala buku panduan lapangan tentang cara mengenali hewan, tempat melihatnya, maknanya, dan cara masing-masing bertahan hidup.",
     "metaTitle": "Blog AnimalDex",
-    "metaDescription": "Baca artikel blog AnimalDex tentang identifikasi hewan, spotting satwa liar, rarity, pembelajaran ramah keluarga, dan discovery spesies kolektibel.",
+    "metaDescription": "Artikel AnimalDex tentang cara hewan hidup dan bertahan, maknanya, cara mengenalinya, dan tempat melihatnya.",
     "rssLabel": "RSS feed",
     "paginationLabel": "Halaman blog",
     "previousPage": "Sebelumnya",
@@ -963,19 +961,22 @@
     "readArticle": "Baca artikel",
     "faqTitle": "Pertanyaan yang sering diajukan",
     "faqDescription": "Jawaban singkat dan langsung untuk pertanyaan umum pada topik ini.",
-    "ctaTitle": "Siap memindai dan mulai mengoleksi?",
-    "ctaDescription": "Buka AnimalDex untuk mengidentifikasi hewan, membangun koleksi, dan terus belajar dari setiap penemuan.",
-    "ctaButton": "Dapatkan AnimalDex",
-    "landingButton": "Halaman utama"
+    "ctaTitle": "Bawa masalah nyata ke hewan nyata",
+    "ctaDescription": "Setiap hewan menjawab dari Kekuatannya sendiri, memihak, dan memberimu satu langkah. Bicaralah dengan salah satunya di web sekarang, atau tangkap milikmu sendiri di aplikasi.",
+    "ctaButton": "Dapatkan aplikasinya",
+    "landingButton": "Beranda",
+    "ctaEyebrow": "Mulai bicara",
+    "talkButton": "Bicara dengan hewan",
+    "positioningLine": "Lalu ia menjawab: setiap hewan berbicara dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan tidak sekadar setuju denganmu."
   },
   "useCases": {
-    "eyebrow": "Jalur Audiens",
-    "title": "Use case AnimalDex untuk intent pencarian nyata",
-    "description": "Jelajahi halaman niche berdasarkan cara orang benar-benar mencari AnimalDex: scanner, koleksi, belajar keluarga, fotografi, discovery ras, dan permainan kompetitif.",
-    "coverageTitle": "Dibuat untuk discoverability luas dan niche",
-    "coverageDescription": "Setiap halaman menargetkan cluster audiens bernilai tinggi dan menjelaskan apa itu AnimalDex, untuk siapa, serta apa pembeda utamanya.",
+    "eyebrow": "Untuk siapa",
+    "title": "Untuk siapa AnimalDex",
+    "description": "Temukan jalan masuk yang cocok untukmu: membawa masalah nyata ke hewan yang memihak, mengenali yang kamu lihat, belajar bersama keluarga, fotografi, dan lainnya.",
+    "coverageTitle": "Setiap jalan masuk",
+    "coverageDescription": "Setiap halaman menjelaskan apa yang AnimalDex lakukan untuk kebutuhan itu, dan bedanya dari aplikasi biasa.",
     "metaTitle": "Use Cases AnimalDex",
-    "metaDescription": "Jelajahi use case AnimalDex untuk pemindaian hewan, koleksi satwa liar, pembelajaran keluarga, discovery kebun binatang dan safari, fotografi, identifikasi ras, dan permainan kompetitif.",
+    "metaDescription": "Untuk siapa AnimalDex: orang yang membawa masalah nyata ke hewan yang memihak, identifikasi satwa liar, belajar bersama keluarga, perjalanan ke kebun binatang dan safari, fotografi, dan lainnya.",
     "back": "Kembali ke Use Cases",
     "audienceLabel": "Audiens",
     "updatedLabel": "Diperbarui",
@@ -984,11 +985,11 @@
     "differenceTitle": "Kenapa AnimalDex berbeda",
     "faqTitle": "Pertanyaan umum",
     "relatedTitle": "Use case terkait",
-    "collectorTitle": "Halaman fokus kolektor dan game",
-    "collectorDescription": "Halaman ini menargetkan intent pencarian card-collection dan creature-game sambil menjaga nilai hewan nyata tetap jelas.",
-    "ctaTitle": "Siap memulai sesuai use case kamu?",
-    "ctaDescription": "Pilih jalur yang paling cocok dengan tujuanmu, lalu mulai AnimalDex dari penemuan pertamamu.",
-    "ctaButton": "Download",
+    "collectorTitle": "Untuk kolektor dan pemain",
+    "collectorDescription": "Mengoleksi hewan nyata, dengan satu kejutan: setiap hewan yang kamu koleksi bisa diajak bicara.",
+    "ctaTitle": "Siap mulai?",
+    "ctaDescription": "Bicaralah dengan seekor hewan di web sekarang, atau tangkap yang pertama di aplikasi.",
+    "ctaButton": "Dapatkan aplikasinya",
     "metaSection": "Use Cases"
   },
   "animals": {
@@ -997,12 +998,12 @@
     "description": "Jelajahi koleksi panduan hewan yang terus berkembang, dari identifikasi dan habitat hingga perilaku, rarity, simbolisme, dan pelajaran dari alam.",
     "heroSupporting": "Gunakan AnimalDex untuk memindai hewan di dunia nyata, membuka profil spesies, dan membangun koleksi satwa liarmu sendiri.",
     "browseAnimals": "Jelajahi hewan",
-    "getAnimalDex": "Dapatkan AnimalDex",
+    "getAnimalDex": "Dapatkan aplikasinya",
     "fieldGuideLabel": "Panduan lapangan hewan",
     "profileDescription": "Identifikasi, habitat, rarity, perilaku, simbolisme, fakta, dan pelajaran praktis dari alam.",
     "animalDexCardLabel": "Kartu AnimalDex",
-    "unlockCardTitle": "Buka kartu hewan ini",
-    "unlockCardDescription": "Pindai atau tangkap hewan ini dengan AnimalDex untuk membuka kartu koleksi dan menambahkannya ke koleksi satwa liarmu.",
+    "unlockCardTitle": "Tangkap {animal} milikmu sendiri",
+    "unlockCardDescription": "Potret atau rekam seekor di alam liar, di kebun binatang, atau di rumah dengan aplikasinya. Ia jadi milikmu: ia mengingatmu, memberimu langkah, dan bisa memperdebatkan masalahmu bersama hewan-hewanmu yang lain.",
     "quickFactsTitle": "Fakta singkat",
     "lessonFromLabel": "Kekuatan {animal}",
     "searchTitle": "Temukan hewan",
@@ -1030,7 +1031,7 @@
     "whatIsTitle": "Apa itu {animal}?",
     "principleTitle": "Apa yang diajarkan {animal} kepada kita?",
     "principleLabel": "Prinsip",
-    "coreLessonLabel": "Kekuatan inti",
+    "coreLessonLabel": "Kekuatannya",
     "biologicalBasisLabel": "Dasar biologis",
     "applicationExampleLabel": "Terapkan dalam kehidupan",
     "bestForTitle": "Paling berguna untuk",
@@ -1041,8 +1042,8 @@
     "symbolismQuestionThree": "Bagaimana perilaku hewan ini di alam?",
     "symbolismQuestionFour": "Mengapa AnimalDex memberi prinsip ini?",
     "principleHubLabel": "Halaman prinsip",
-    "lessonPageLabel": "Kekuatan hewan",
-    "lessonPageLink": "Temukan kekuatan {animal}",
+    "lessonPageLabel": "Kekuatan Hewan",
+    "lessonPageLink": "Temukan Kekuatan {animal}",
     "tabStory": "Pelajari",
     "tabProgress": "Statistik",
     "tabPlay": "Main",
@@ -1085,10 +1086,10 @@
     "understandLookalikes": "Hewan mirip",
     "understandNav": "Pahami",
     "askNav": "Bicara dengannya",
-    "compareNav": "Bandingkan",
+    "compareNav": "Berdampingan",
     "whereNav": "Di mana menemukannya",
     "askWhy": "Mengapa?",
-    "collectCta": "Temui {animal} di AnimalDex",
+    "collectCta": "Bicara dengan {animal}",
     "powerPattern": "Polanya",
     "powerObservation": "Pengamatan",
     "powerFunction": "Fungsi",
@@ -1133,9 +1134,9 @@
     "askLimitReached": "Pesan hari ini sudah habis. Mulai koleksimu untuk terus berbicara, buka Animal Power lengkap, dan simpan hewan yang kamu sukai.",
     "askCollectCta": "Mulai koleksi AnimalDex-mu",
     "askError": "AnimalDex belum bisa menjawab. Coba pertanyaan yang lebih singkat.",
-    "compareEyebrow": "Bandingkan",
-    "compareTitle": "Bandingkan {animal}",
-    "compareCardsEmpty": "Belum ada perbandingan untuk {animal}. Pilih hewan apa saja untuk diadu.",
+    "compareEyebrow": "Berdampingan",
+    "compareTitle": "{animal}, berdampingan",
+    "compareCardsEmpty": "Belum ada perbandingan berdampingan untuk {animal}. Pilih hewan apa saja untuk dibandingkan.",
     "compareAnyAnimal": "Bandingkan dengan hewan apa saja",
     "whereEyebrow": "Di mana menemukannya",
     "whereTitle": "Di mana menemukan {animal}",
@@ -1162,10 +1163,10 @@
     "growthEmptyCapturesDescription": "Pindai hewan ini di AnimalDex untuk menambahkan kartu pertamamu.",
     "growthSignInPrompt": "Masuk dengan akun AnimalDex yang sama seperti di aplikasi untuk melihat koleksimu di web.",
     "growthSignInButton": "Masuk",
-    "growthOpenLesson": "Buka kekuatan {animal}",
+    "growthOpenLesson": "Buka Kekuatan {animal}",
     "growthOpenPower": "Jelajahi {power}",
     "growthDownloadAppTitle": "Apex Insight ada di aplikasi",
-    "growthDownloadAppDescription": "Tantangan pertumbuhan, power fusion, dan alat refleksi lebih dalam tersedia di AnimalDex mobile.",
+    "growthDownloadAppDescription": "Langkah, debat, dan Ujian bersama hewan-hewanmu sendiri ada di aplikasi AnimalDex.",
     "growthScoreLabel": "Skor {score}",
     "growthApexPathEyebrow": "Jalur Apex",
     "growthApexInsightTitle": "Apex Insight",
@@ -1181,7 +1182,7 @@
     "growthPowerFusionTitle": "Power Fusion",
     "growthPowerFusionDescription": "Gabungkan kekuatan hewan untuk mempelajari sub-prinsip tambahan pada tangkapan ini.",
     "growthFusePowers": "Gabungkan Kekuatan",
-    "growthFusionCostLabel": "Biaya {cost} kredit",
+    "growthFusionCostLabel": "Biaya {cost} Kredit",
     "growthFusionLearnedCount": "{count} pelajaran tambahan dipelajari",
     "growthFusionNoDonors": "Tangkap lebih banyak hewan yang memenuhi syarat untuk membuka guru fusion.",
     "growthFusionSelectDonor": "Pilih hewan pengajar",
@@ -1197,7 +1198,7 @@
     "moreWithPrincipleTitle": "Lebih banyak hewan dengan kekuatan {principle}",
     "moreWithPrincipleHubLink": "Jelajahi semua hewan {principle}",
     "faqWhatSymbolize": "Apa yang disimbolkan oleh {animal}?",
-    "faqCoreLesson": "Apa kekuatan inti {animal}?",
+    "faqCoreLesson": "Apa Kekuatan {animal}?",
     "faqBiologicalBasis": "Apa dasar biologis untuk makna ini?",
     "faqWhereFound": "Di mana {animal} ditemukan?",
     "identifyTitle": "Cara mengidentifikasi {animal}",
@@ -1301,7 +1302,9 @@
     "ctaButton": "Lacak hewan ini",
     "ctaSupportOne": "Koleksi dunia nyata",
     "ctaSupportTwo": "Konteks spesies",
-    "ctaSupportThree": "Riwayat spotting"
+    "ctaSupportThree": "Riwayat spotting",
+    "getTheApp": "Dapatkan aplikasinya",
+    "exploreSideBySide": "Hewan berdampingan"
   },
   "qualities": {
     "eyebrow": "Kualitas Hewan",
@@ -1721,13 +1724,13 @@
     "mapEmptyBody": "Bagikan lokasimu atau ketik nama tempat di atas, dan kami petakan apa yang hidup di sekitarmu."
   },
   "comparisons": {
-    "eyebrow": "Perbandingan Hewan",
-    "title": "Bandingkan dua hewan apa pun",
-    "description": "Pilih dua spesies dan kami langsung menyusun perbandingan lengkapnya: pemenang yang jelas, tabel stat, breakdown skenario, dan biologi nyata — tidak ada matchup yang terlalu asing.",
+    "eyebrow": "Berdampingan",
+    "title": "Dua hewan, berdampingan",
+    "description": "Pilih dua spesies dan lihat cara masing-masing bertahan hidup: tabel statistik, situasi tempat masing-masing unggul, dan biologi yang berdasar. Pasangan apa pun bisa.",
     "metaTitle": "Bandingkan Dua Hewan Apa Pun — Siapa yang Menang? | AnimalDex",
     "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan. Pilih dua spesies dari ribuan pilihan dan dapatkan verdict langsung dengan stat, breakdown skenario, tingkat keyakinan, dan FAQ — dibangun dari biologi nyata.",
     "statAnimals": "Hewan untuk dibandingkan",
-    "statComparisons": "Matchup terbit",
+    "statComparisons": "Perbandingan yang terbit",
     "builder": {
       "animalA": "Hewan pertama",
       "animalB": "Hewan kedua",
@@ -1739,7 +1742,7 @@
       "random": "Acak saja",
       "compare": "Bandingkan",
       "comparing": "Membuka…",
-      "sameAnimal": "Pilih dua hewan berbeda untuk menjalankan matchup.",
+      "sameAnimal": "Pilih dua hewan yang berbeda untuk melihatnya berdampingan.",
       "searchAll": "Cari semua {count} hewan",
       "popular": "Populer",
       "results": "{count} hasil",
@@ -1757,27 +1760,27 @@
         "detail": "Pasangan baru? Analisis lengkapnya ditulis saat itu juga."
       },
       "read": {
-        "title": "Dapatkan verdict yang jelas",
-        "detail": "Pemenang, skor keyakinan, tabel stat, skenario, dan FAQ — lalu tetap tayang untuk semua orang."
+        "title": "Lihat dua cara bertahan hidup",
+        "detail": "Tabel statistik, situasi tempat masing-masing unggul, dan FAQ. Lalu halamannya tetap tayang untuk semua orang."
       }
     },
     "browseEyebrow": "Atau jelajahi yang sudah terbit",
     "browseTitle": "Perpustakaan perbandingan",
-    "browseDescription": "{count} matchup sudah ditulis, dari rivalitas klasik sampai pasangan tak terduga.",
+    "browseDescription": "{count} pasangan sudah ditulis, dari pasangan klasik sampai yang tak terduga.",
     "indexFaqTitle": "Pertanyaan seputar membandingkan hewan",
-    "indexFaqDescription": "Cara kerja alat perbandingan ini, dan dasar dari setiap verdict.",
+    "indexFaqDescription": "Cara kerja perbandingan, dan dasarnya.",
     "faqEntries": {
       "anyPair": {
         "question": "Apakah saya bisa membandingkan dua hewan apa pun?",
-        "answer": "Bisa. Dua spesies mana pun di katalog AnimalDex dapat diadu — jumlahnya ribuan hewan, jadi pasangan tak biasa seperti honey badger melawan wolverine sama mudahnya dengan singa melawan harimau."
+        "answer": "Ya. Dua spesies apa pun di katalog AnimalDex bisa dibandingkan berdampingan, jadi pasangan tak biasa seperti musang madu dan wolverine bisa sama baiknya dengan singa dan harimau."
       },
       "howItWorks": {
         "question": "Bagaimana perbandingannya disusun?",
-        "answer": "Setiap matchup dibangun dari data spesies yang sama dengan aplikasi AnimalDex: rating ukuran, kecepatan, dominansi, dan kecerdasan kanonik, ditambah profil habitat dan perilaku. Jika pasangan itu belum pernah dijalankan, breakdown-nya dibuat saat itu juga dalam waktu kurang dari satu menit, lalu diterbitkan untuk semua orang."
+        "answer": "Setiap perbandingan dibangun dari data spesies yang sama dengan aplikasi AnimalDex: peringkat ukuran, kecepatan, dominasi, dan kecerdasan, ditambah profil habitat dan perilaku. Jika belum ada yang membandingkan pasangan itu, perbandingannya ditulis saat itu juga dalam kurang dari semenit lalu diterbitkan untuk semua orang."
       },
       "accuracy": {
-        "question": "Seberapa akurat pemenangnya?",
-        "answer": "Setiap verdict menyebut pemenang yang jelas beserta skor keyakinan, dan diargumentasikan per skenario — lapangan terbuka, penyergapan, air, daya tahan — karena jawabannya memang berubah menurut situasi. Perjumpaan nyata antar hewan liar jarang terjadi dan sangat situasional, jadi anggap verdict ini sebagai pembacaan biologi yang beralasan, bukan ramalan."
+        "question": "Apakah ia memilih pemenang?",
+        "answer": "Ia menunjukkan di mana masing-masing hewan unggul, situasi demi situasi (lapangan terbuka, penyergapan, air, daya tahan), karena jawabannya memang berubah sesuai situasi. Pertemuan nyata antara hewan liar jarang dan situasional, jadi bacalah sebagai dua cara bertahan hidup, bukan prediksi."
       },
       "missing": {
         "question": "Bagaimana jika suatu hewan tidak ada?",
@@ -1786,12 +1789,12 @@
     },
     "vote": {
       "eyebrow": "Suara pembaca",
-      "title": "Menurutmu siapa yang menang?",
+      "title": "Cara siapa yang akan kamu pilih?",
       "description": "Pilih satu sisi — tanpa perlu akun. Hasilnya diperbarui langsung.",
       "changeHint": "Terima kasih sudah memilih. Ketuk hewan satunya untuk mengubah pilihanmu.",
       "voted": "Pilihanmu",
       "totalVotes": "{count} pembaca sudah memilih",
-      "noVotesYet": "Belum ada suara — jadilah yang pertama menentukan.",
+      "noVotesYet": "Belum ada suara. Jadilah yang pertama memilih.",
       "prompt": "Ketuk untuk memilih",
       "error": "Suaramu gagal tersimpan. Coba lagi.",
       "rateLimited": "Terlalu banyak suara dalam waktu singkat. Coba lagi sebentar lagi."
@@ -1800,7 +1803,7 @@
       "eyebrow": "Diskusi",
       "title": "Bagaimana menurutmu?",
       "description": "Bagikan alasanmu dengan pembaca lain. Tetap sopan dan fokus ke hewannya.",
-      "placeholder": "Tambahkan pendapatmu soal matchup ini…",
+      "placeholder": "Tambahkan pendapatmu tentang keduanya…",
       "submit": "Kirim komentar",
       "submitting": "Mengirim…",
       "signedOutPrompt": "Masuk untuk ikut berdiskusi.",
@@ -1817,25 +1820,25 @@
     },
     "generating": {
       "idleEyebrow": "Belum ditulis",
-      "idleDescription": "Belum ada yang menjalankan matchup ini. Tekan Buat dan kami akan menulisnya sekarang. Butuh waktu sampai satu menit, dan halaman jadinya tetap tayang di alamat ini.",
+      "idleDescription": "Belum ada yang membandingkan keduanya. Tekan Buat dan kami akan menulisnya sekarang. Butuh hingga semenit, dan halamannya tetap tayang di alamat ini.",
       "start": "Buat perbandingan ini",
       "eyebrow": "Menyusun perbandinganmu",
-      "title": "{animalA} vs {animalB}",
-      "description": "Belum ada yang menjalankan matchup ini, jadi kami menulisnya sekarang. Butuh waktu sampai satu menit, dan halaman jadinya tetap tayang di alamat ini.",
+      "title": "{animalA} dan {animalB}",
+      "description": "Belum ada yang membandingkan keduanya, jadi kami menulisnya sekarang. Butuh hingga semenit, dan halamannya tetap tayang di alamat ini.",
       "stepOne": "Mengambil profil kedua spesies…",
       "stepTwo": "Menimbang ukuran, kecepatan, kekuatan, dan kecerdasan…",
       "stepThree": "Menjalankan breakdown skenario…",
-      "stepFour": "Melukis artwork matchup…",
+      "stepFour": "Melukis gambarnya…",
       "elapsed": "{seconds} detik berjalan",
-      "errorTitle": "Matchup itu tidak selesai",
-      "errorDescription": "Ada yang gagal saat menyusun perbandingan ini. Coba lagi, atau jelajahi matchup yang sudah terbit.",
+      "errorTitle": "Perbandingan itu tidak selesai",
+      "errorDescription": "Ada yang gagal saat membuat perbandingan ini. Coba lagi, atau jelajahi perbandingan yang sudah terbit.",
       "rateLimitTitle": "Tunggu sebentar",
-      "rateLimitDescription": "Kamu membuat banyak matchup baru dalam waktu singkat. Perbandingan yang sudah ada tetap terbuka seketika — coba lagi sebentar lagi.",
+      "rateLimitDescription": "Kamu sudah membuat banyak perbandingan baru dalam waktu singkat. Yang sudah terbit tetap langsung terbuka. Coba lagi sebentar lagi.",
       "retry": "Coba lagi",
       "browse": "Jelajahi perbandingan"
     },
     "searchLabel": "Cari comparison",
-    "searchPlaceholder": "Cari berdasarkan hewan, matchup, atau kata kunci",
+    "searchPlaceholder": "Cari berdasarkan hewan atau kata kunci",
     "comparisonCount": "{count} perbandingan",
     "featuredLabel": "Perbandingan unggulan",
     "winner": "Pemenang: {animal}",
@@ -1881,11 +1884,11 @@
     "pageLabel": "Halaman {page} dari {totalPages}",
     "noResultsTitle": "Tidak ada comparison yang cocok",
     "noResultsDescription": "Coba kata kunci lain atau reset filter untuk melihat seluruh kumpulan comparison.",
-    "back": "Kembali ke Comparisons",
+    "back": "Kembali ke perbandingan",
     "published": "Dipublikasikan",
     "updated": "Diperbarui",
     "minuteRead": "Baca {minutes} menit",
-    "quickVerdictBadge": "Verdict cepat",
+    "quickVerdictBadge": "Singkatnya",
     "winnerBadge": "Pemenang matchup",
     "confidence": "Keyakinan verdict",
     "fullAnalysis": "Baca penjelasan lengkap",
@@ -1894,24 +1897,24 @@
     "jumpStats": "Lihat stat",
     "share": "Bagikan",
     "navOverview": "Ringkasan",
-    "navWinner": "Pemenang",
+    "navWinner": "Singkatnya",
     "navStats": "Stat",
     "navScenarios": "Skenario",
     "navFaq": "FAQ",
     "navRelated": "Terkait",
     "editorialNote": "Catatan editorial",
     "whyDisagreeTitle": "Kenapa orang berbeda pendapat",
-    "verdictTimelineEyebrow": "Bagaimana verdict terbentuk",
-    "verdictTimelineTitle": "Timeline verdict",
+    "verdictTimelineEyebrow": "Sifat demi sifat",
+    "verdictTimelineTitle": "Di mana masing-masing unggul",
     "selectScenario": "Ubah kondisinya",
     "fieldProfiles": "Profil lapangan AnimalDex",
     "animalCategory": "Kategori",
     "readChallenge": "Baca comparison",
-    "quickVerdictTitle": "Verdict cepat",
-    "quickVerdictDescription": "Mulai dari jawaban langsung, lalu gunakan perbandingan terstruktur di bawah untuk melihat apa yang mengubah hasilnya.",
-    "whyInterestingTitle": "Kenapa matchup ini menarik",
-    "speciesStatsTitle": "Stat spesies head-to-head",
-    "speciesStatsDescription": "Ini memakai dimensi stat inti AnimalDex yang sama seperti di halaman hewan, lalu menampilkannya berdampingan supaya matchup lebih cepat dibaca.",
+    "quickVerdictTitle": "Singkatnya",
+    "quickVerdictDescription": "Versi singkatnya dulu. Perbandingan di bawah menunjukkan apa yang berubah sesuai situasi.",
+    "whyInterestingTitle": "Mengapa keduanya layak dibandingkan",
+    "speciesStatsTitle": "Statistik mereka, berdampingan",
+    "speciesStatsDescription": "Statistik inti AnimalDex yang sama dengan halaman masing-masing hewan, berdampingan agar keduanya lebih cepat dibandingkan.",
     "statsSourceLabel": "Sumber stat",
     "dominanceStat": "Dominance",
     "speedStat": "Speed",
@@ -1925,20 +1928,20 @@
     "statsSourceGenerated": "Generated canonical stats",
     "statsSourceNone": "Belum ada stat",
     "statsTitle": "Perbandingan sifat demi sifat",
-    "statsDescription": "Hanya kategori yang benar-benar relevan untuk matchup ini yang dimasukkan. Tujuannya bukan filler stats, tetapi perbedaan desain nyata yang mengubah hasil.",
+    "statsDescription": "Hanya kategori yang penting untuk keduanya: perbedaan rancangan yang nyata, bukan statistik pengisi.",
     "advantageLabel": "Edge",
     "takeawayLabel": "Kenapa ini penting",
     "scenarioTitle": "Scenario breakdown",
-    "scenarioDescription": "Di titik inilah konten battle dangkal biasanya gagal. Terrain, spacing, timing, dan gaya engagement bisa mengubah jawabannya.",
-    "scenarioWinnerLabel": "Arah skenario",
-    "jumpToSpeciesTitle": "Kenali hewan di balik matchup ini",
+    "scenarioDescription": "Situasi mengubah segalanya: medan, jarak, waktu, dan pendekatan menentukan cara bertahan hidup mana yang berhasil.",
+    "scenarioWinnerLabel": "Unggul di sini",
+    "jumpToSpeciesTitle": "Kenali kedua hewan",
     "jumpToSpeciesDescription": "Masuk langsung ke panduan spesies di balik perbandingan ini untuk identifikasi, habitat, rarity, dan konteks AnimalDex yang lebih dalam.",
-    "speciesTitle": "Lacak spesies di balik matchup ini",
+    "speciesTitle": "Kenali kedua spesies",
     "speciesDescription": "Lanjut dari halaman perbandingan ke panduan spesies AnimalDex lengkap untuk ID, habitat, rarity, dan konteks systems.",
     "exploreAnimalsTitle": "Jelajahi hewan-hewan ini",
-    "exploreAnimalsDescription": "Gunakan halaman spesies lengkap untuk masuk lebih dalam ke biologi, kecocokan habitat, dan sifat nyata di balik verdict ini.",
+    "exploreAnimalsDescription": "Gunakan halaman spesies lengkap untuk mendalami biologi, kecocokan habitat, dan sifat nyata di balik perbandingan ini.",
     "systemsIntelligenceTitle": "Systems Intelligence & Hidden Purpose",
-    "systemsIntelligenceDescription": "Lihat hewan di balik comparison ini sebagai sistem biologis yang dirancang: apa fungsi utamanya, di mana ia mendapat leverage, dan kenapa hasil matchup berubah menurut skenario.",
+    "systemsIntelligenceDescription": "Lihat kedua hewan sebagai sistem biologis yang direkayasa alam: apa yang dirancang untuk dilakukan masing-masing, di mana ia mendapat keunggulan, dan mengapa jawabannya berubah sesuai situasi.",
     "systemRoleLabel": "System Role",
     "specializedHardwareLabel": "Specialized Hardware",
     "systemsScriptLabel": "Systems Script",
@@ -1947,15 +1950,15 @@
     "readSpecies": "Baca panduan spesies",
     "finalTakeTitle": "Kesimpulan akhir",
     "faqTitle": "FAQ comparison",
-    "faqDescription": "Jawaban singkat dan langsung untuk pertanyaan lanjutan yang biasanya muncul setelah verdict utama.",
+    "faqDescription": "Jawaban singkat dan langsung untuk pertanyaan berikutnya yang biasa diajukan pembaca.",
     "relatedTitle": "Comparisons terkait",
     "relatedArticlesTitle": "Baca lebih dalam",
-    "relatedArticlesDescription": "Panduan yang membahas duel yang sama dari sudut berbeda.",
+    "relatedArticlesDescription": "Panduan yang membahas keduanya dari sudut lain.",
     "readArticle": "Baca artikel",
-    "relatedDescription": "Lanjutkan ke matchup terdekat untuk membandingkan sifat hewan nyata lebih jauh tanpa jatuh ke filler siapa-menang yang murahan.",
-    "ctaTitle": "Bandingkan hewan nyata di alam",
-    "ctaDescription": "Buka AnimalDex untuk melacak spesies di balik matchup ini, mengoleksi kedua sisinya, dan menjaga perbandingan tetap berpijak pada hewan nyata.",
-    "ctaButton": "Bandingkan hewan nyata di alam",
+    "relatedDescription": "Pasangan lain, dibandingkan dari sifat-sifat nyata.",
+    "ctaTitle": "Tanyakan pada keduanya",
+    "ctaDescription": "Bawa satu masalah ke dua hewan. Masing-masing menjawab dari Kekuatannya sendiri, dan mereka tidak akan sepakat.",
+    "ctaButton": "Bicara dengan hewan",
     "ctaBattleTitle": "Koleksi kedua hewan ini di AnimalDex",
     "ctaBattleDescription": "Lacak spesies di balik matchup ini, bandingkan sifat nyatanya, dan ubah rivalitas ini jadi bagian dari koleksi AnimalDex kamu.",
     "ctaBattleButton": "Koleksi kedua hewan ini di AnimalDex",
@@ -1968,9 +1971,9 @@
     "ctaSupportOne": "Bandingkan spesies nyata",
     "ctaSupportTwo": "Koleksi kedua sisi",
     "ctaSupportThree": "Lacak spotting dan stat",
-    "trackSpecies": "Lacak {animal}",
+    "trackSpecies": "Baca tentang {animal}",
     "comparisonTypes": {
-      "battle": "Battle",
+      "battle": "Berdampingan",
       "speed": "Speed",
       "strength": "Strength",
       "intelligence": "Intelligence",
@@ -1982,18 +1985,25 @@
       "even": "Seimbang",
       "draw": "Imbang",
       "depends": "Tergantung konteks"
-    }
+    },
+    "ctaAskBothTitle": "Tanyakan pada keduanya",
+    "ctaAskBothDescription": "Bawa masalah yang sama ke {animalA} dan {animalB}. Masing-masing menjawab dari Kekuatannya sendiri, dan mereka tidak akan sepakat.",
+    "ctaTalkTo": "Bicara dengan {animal}",
+    "sideBySideTitle": "{animalA} dan {animalB}, berdampingan",
+    "pairTitle": "{animalA} dan {animalB}"
   },
   "collectorPages": {
     "back": "Kembali ke Use Cases",
-    "ctaTitle": "Ubah gaya koleksi ini jadi discovery hewan nyata",
-    "ctaDescription": "Gunakan AnimalDex untuk memindai, mengoleksi, dan progres lewat spesies nyata dengan polish aplikasi premium.",
-    "ctaButton": "Download",
-    "homeButton": "Kembali ke landing utama",
-    "appButton": "Dapatkan aplikasinya"
+    "ctaTitle": "Koleksimu bisa diajak bicara",
+    "ctaDescription": "Setiap hewan yang kamu koleksi menjawab dari Kekuatannya sendiri dan tidak sekadar setuju denganmu. Coba salah satunya di web sekarang, atau tangkap milikmu sendiri di aplikasi.",
+    "ctaButton": "Dapatkan aplikasinya",
+    "homeButton": "Beranda",
+    "appButton": "Dapatkan aplikasinya",
+    "talkButton": "Bicara dengan hewan",
+    "positioningLine": "Kejutannya: setiap hewan yang kamu koleksi bisa diajak bicara. Ia menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan tidak sekadar setuju denganmu."
   },
   "account": {
-    "welcomeHeadline": "Temui hewan apa saja.\nTanyakan soal hidupmu.",
+    "welcomeHeadline": "Bicaralah dengan hewan.\nMereka tidak sekadar setuju denganmu.",
     "welcomeSoundOn": "Nyalakan suara",
     "welcomeSoundOff": "Matikan suara",
     "signIn": "Masuk",
@@ -2098,7 +2108,7 @@
     "settingsMissionsDetail": "Misi harian dan mingguan AnimalDex",
     "settingsCreditsUnlocks": "Kredit & Unlock",
     "settingsCreditsUnlocksCount": "Kredit & Unlock ({count})",
-    "settingsCreditsDetail": "Beli kredit, pulihkan pembelian, dan unlock Pro di AnimalDex",
+    "settingsCreditsDetail": "Beli Kredit, pulihkan pembelian, dan buka AnimalDex Pro",
     "settingsEarningsDetail": "Pelajari cara earning dengan AnimalDex",
     "settingsWidgets": "Widget",
     "settingsWidgetsDetail": "Tambahkan Friend dan Travel ke Home Screen",
@@ -2277,6 +2287,7 @@
     "keywords": [
       "bicara dengan hewan",
       "aplikasi bicara dengan hewan",
+      "aplikasi kebijaksanaan hewan",
       "AI yang tidak selalu setuju",
       "lelah nasihat",
       "advice fatigue",
@@ -2306,12 +2317,11 @@
       "game koleksi hewan",
       "aplikasi debat hewan",
       "aplikasi trade hewan",
-      "observasi satwa liar yang penuh hormat",
-      "koleksi hewan nyata"
+      "observasi satwa liar yang penuh hormat"
     ]
   },
   "askAnimalDex": {
-    "launcher": "Tanya AnimalDex",
+    "launcher": "Bicara dengan hewan",
     "title": "Tanya AnimalDex",
     "aboutAnimal": "Mengobrol dengan {animal}",
     "aboutSite": "Tanya tentang hewan apa pun",
@@ -2361,7 +2371,7 @@
     "failedLimitAnon": "Pertanyaan hari ini sudah habis. Masuk untuk mendapatkan lebih banyak, atau kembali lagi besok.",
     "failedLimitSignedIn": "Pesan hari ini sudah habis. Pesan kembali besok, atau pilih Pro untuk 100 per hari.",
     "failedLimitPro": "Pesan hari ini sudah habis. Pesan kembali besok.",
-    "failedNoCredits": "Kredit kamu tidak cukup untuk pesan berikutnya. Pesan gratismu kembali besok.",
+    "failedNoCredits": "Kreditmu tidak cukup untuk pesan berikutnya. Pesan gratismu kembali besok.",
     "memoryOpen": "Yang saya ingat tentang Anda",
     "memoryHint": "Apa pun yang Anda ceritakan ke satu hewan, semua hewan mengingatnya. Hanya Anda yang bisa melihat ini, dan Anda bisa menghapusnya kapan saja.",
     "memoryEmptyTitle": "Saya belum tahu apa-apa tentang Anda.",
@@ -2555,7 +2565,7 @@
       "workingOnTitle": "Sedang kita kerjakan",
       "noFocus": "Ceritakan kepada {name} apa yang sedang terjadi dalam hidup Anda, dan ia akan memilih sesuatu untuk dikerjakan bersama Anda.",
       "notThisAnyMore": "Bukan ini lagi",
-      "yourStep": "Langkah Anda",
+      "yourStep": "Langkahmu",
       "itsPower": "Kekuatannya",
       "talkToIt": "Bicara dengannya"
     },
@@ -2564,7 +2574,7 @@
       "empty": "Tangkap seekor hewan untuk bertemu teman pertama Anda.",
       "capture": "Tangkap",
       "referralWaiting": "Dikirim untuk Anda: ketuk untuk mendengar pendapatnya",
-      "yourStep": "Langkah Anda: {step}",
+      "yourStep": "Langkahmu: {step}",
       "workingOn": "Sedang kita kerjakan: {focus}",
       "sayHello": "Bicara dengannya",
       "mastered": "Dikuasai",
@@ -2588,12 +2598,12 @@
     },
     "journey": {
       "step": {
-        "eyebrow": "Langkah Anda bersama {name}",
+        "eyebrow": "Langkahmu bersama {name}",
         "accept": "Akan saya lakukan",
         "other": "Langkah yang lain",
         "didIt": "Sudah saya lakukan",
         "otherMessage": "Boleh aku dapat langkah yang lain?",
-        "pinnedLabel": "Langkah Anda"
+        "pinnedLabel": "Langkahmu"
       },
       "report": {
         "title": "Apa yang terjadi?",
@@ -2622,7 +2632,7 @@
         "proof": "Bukti"
       },
       "steps": {
-        "sectionTitle": "Langkah Anda",
+        "sectionTitle": "Langkahmu",
         "row": "{name}: {step}"
       },
       "warmup": {

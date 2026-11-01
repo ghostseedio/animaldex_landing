@@ -16,6 +16,8 @@ import {
     YouTubeIcon
 } from "@/app/[locale]/_components/icons";
 import {socialProfileUrls} from "@/lib/social-links";
+import BrandLockup from "@/components/brand/brand-lockup";
+import {useTalkHref} from "@/app/[locale]/(composited)/_components/header-talk-link";
 
 export const MenuContext = createContext({
     open: false,
@@ -25,7 +27,6 @@ export const MenuContext = createContext({
 type HeaderMenuProps = {
     logoHref?: string;
     logoLabel: string;
-    brandTitle: string;
     children: ReactNode;
     actions: ReactNode;
     mobileLocale: ReactNode;
@@ -38,12 +39,13 @@ type HeaderMenuProps = {
     secondaryCtaLabel?: string;
     navigationLabel: string;
     followLabel: string;
+    openMenuLabel: string;
+    closeMenuLabel: string;
 };
 
 export default function HeaderMenu({
     logoHref = "/",
     logoLabel,
-    brandTitle,
     children,
     actions,
     mobileLocale,
@@ -54,9 +56,13 @@ export default function HeaderMenu({
     secondaryCtaHref,
     secondaryCtaLabel,
     navigationLabel,
-    followLabel
+    followLabel,
+    openMenuLabel,
+    closeMenuLabel
 }: HeaderMenuProps) {
     const [open, setOpen] = useState(false);
+    // On a species page the drawer's Talk button talks to that animal.
+    const talkHref = useTalkHref(ctaHref);
     const [mounted, setMounted] = useState(false);
     const openButtonRef = useRef<HTMLButtonElement>(null);
     const drawerRef = useRef<HTMLElement>(null);
@@ -127,9 +133,9 @@ export default function HeaderMenu({
                 <button
                     ref={openButtonRef}
                     type="button"
-                    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[2px] border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                     onClick={() => setOpen(true)}
-                    aria-label="Open menu"
+                    aria-label={openMenuLabel}
                     aria-expanded={open}
                     aria-controls="mobile-navigation-drawer"
                 >
@@ -159,7 +165,7 @@ export default function HeaderMenu({
                     type="button"
                     tabIndex={open ? 0 : -1}
                     className={`absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 motion-reduce:transition-none ${open ? "opacity-100" : "opacity-0"}`}
-                    aria-label="Close menu"
+                    aria-label={closeMenuLabel}
                     onClick={closeMenu}
                 />
                 <nav
@@ -178,28 +184,14 @@ export default function HeaderMenu({
                             aria-label={logoLabel}
                             onClick={closeMenu}
                         >
-                            <img
-                                src="/icon-192.webp"
-                                alt=""
-                                aria-hidden="true"
-                                width={40}
-                                height={40}
-                                className="h-9 w-9"
-                            />
-                            <Image
-                                src="/images/animaldex-logo-text.webp"
-                                alt={brandTitle}
-                                width={320}
-                                height={76}
-                                className="h-[1.625rem] w-auto max-w-[7.25rem]"
-                            />
+                            <BrandLockup size={25} />
                         </Link>
                         <button
                             ref={closeButtonRef}
                             type="button"
-                            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[2px] border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-line-200 bg-white/[0.02] transition-colors duration-150 hover:border-primary-400 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                             onClick={closeMenu}
-                            aria-label="Close menu"
+                            aria-label={closeMenuLabel}
                         >
                             <Image src={CloseIcon} alt="" width={26} height={26} className="light:invert" />
                         </button>
@@ -226,7 +218,7 @@ export default function HeaderMenu({
                                         rel="noopener noreferrer"
                                         aria-label={link.label}
                                         title={link.label}
-                                        className="grid h-11 w-11 place-items-center rounded-[2px] border border-line-200 bg-white/[0.02] text-ink-300 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                                        className="grid h-11 w-11 place-items-center rounded-full border border-line-200 bg-white/[0.02] text-ink-300 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                                     >
                                         <link.icon size={19} />
                                     </a>
@@ -237,9 +229,9 @@ export default function HeaderMenu({
 
                     <div className="shrink-0 space-y-2 border-t border-line-200 bg-canvas-950 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
                         <Link
-                            href={ctaHref}
+                            href={talkHref}
                             onClick={closeMenu}
-                            className="flex min-h-12 w-full items-center justify-center rounded-[2px] bg-primary-400 px-4 text-center text-sm font-black uppercase leading-tight tracking-[0.04em] text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                            className="flex min-h-12 w-full items-center justify-center rounded-full bg-primary-400 px-4 text-center text-base font-bold leading-tight text-canvas-950 transition-colors duration-150 hover:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                         >
                             {ctaLabel}
                         </Link>
@@ -248,7 +240,7 @@ export default function HeaderMenu({
                                 <Link
                                     href={secondaryCtaHref}
                                     onClick={closeMenu}
-                                    className="flex min-h-12 w-full items-center justify-center rounded-[2px] border border-line-100 bg-transparent px-3 text-center text-sm font-bold leading-snug text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                                    className="flex min-h-12 w-full items-center justify-center rounded-full border border-line-100 bg-transparent px-3 text-center text-sm font-bold leading-snug text-ink-100 transition-colors duration-150 hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
                                 >
                                     {secondaryCtaLabel}
                                 </Link>

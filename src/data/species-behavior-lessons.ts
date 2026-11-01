@@ -12,6 +12,7 @@ import {getSystemsIntelligenceBySpeciesSlug, speciesSystemsIntelligence} from "@
 import {buildUsefulApplicationSentence} from "@/data/species-useful-application";
 import {isPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getSnapshotLessonBySlug} from "@/lib/published-seo-page-data";
+import {getCatalogSpeciesPower} from "@/lib/species-power";
 import {assertNoRemoteDuringSeoSsg} from "@/lib/seo-ssg-remote-guard";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
@@ -747,14 +748,25 @@ export function resolveLocalSpeciesBehaviorProfile(slug: string): ResolvedSpecie
 }
 
 /**
- * Build-time principle profile for a species page: the local profile, else the
- * catalog lesson from the checked-in snapshot. No network, so SSG species
+ * Build-time principle profile for a species page: the local profile (with the
+ * catalog's Power over its cluster name), else the catalog lesson from the
+ * checked-in snapshot. No network, so SSG species
  * pages for the ~1,400 database-only species show their principle too.
  */
 export function resolveSpeciesBehaviorProfileForPage(slug: string): ResolvedSpeciesBehaviorProfile | null {
     const local = resolveLocalSpeciesBehaviorProfile(slug);
     if (local) {
-        return local;
+        // One Power per animal (WEB-7): the catalog's authored Power, the one
+        // Talk and the chat answer from, over the local browse cluster
+        // ("Adaptability"), which stays only for grouping (`browseCluster`).
+        const catalog = getCatalogSpeciesPower(slug);
+        return catalog ? {
+            ...local,
+            principle: catalog.name,
+            principleExpression: catalog.expression ?? local.principleExpression,
+            coreLesson: catalog.lesson ?? local.coreLesson,
+            motto: catalog.motto ?? local.motto
+        } : local;
     }
 
     const lesson = getSnapshotLessonBySlug(slug);

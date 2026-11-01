@@ -3,6 +3,7 @@ import Image from "next/image";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {withOgCard} from "@/lib/og/og-image";
+import BrandLockup from "@/components/brand/brand-lockup";
 
 const path = "/branding";
 
@@ -90,7 +91,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                 </div>
             </header>
 
-            <main className="mx-auto flex max-w-7xl flex-col gap-24 px-4 pb-24 md:px-8 md:pb-32">
+            <div className="mx-auto flex max-w-7xl flex-col gap-24 px-4 pb-24 md:px-8 md:pb-32">
                 <section aria-labelledby="official-logo">
                     <div className="mb-8 max-w-3xl">
                         <p className="text-xs font-bold uppercase tracking-[.22em] text-primary-200">01 · Official assets</p>
@@ -99,20 +100,26 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     </div>
 
                     <div className="grid gap-5 lg:grid-cols-2">
-                        <article className="theme-dark flex min-h-[25rem] flex-col justify-between  bg-canvas-950 p-7 md:p-10">
+                        <article className="theme-dark flex min-h-[18rem] flex-col justify-between gap-8 bg-canvas-950 p-7 md:col-span-2 md:p-10 lg:col-span-2">
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Lockup · dark background (preferred)</p>
+                            <div className="flex justify-center">
+                                <BrandLockup size={null} large className="max-w-full [--brand-size:52px] sm:[--brand-size:84px]" />
+                            </div>
+                            <p className="max-w-2xl text-sm leading-6 text-ink-300">The spiral-paw mark, then AnimalDex in Barlow Condensed ExtraBold: &ldquo;Animal&rdquo; in the page&rsquo;s ink, &ldquo;Dex&rdquo; in lime. Flat, with no outline, bevel or shadow. The mark is the capital height &times; 1.35, set 0.35 &times; the capital height from the word.</p>
+                        </article>
+                        <article className="flex min-h-[25rem] flex-col justify-between bg-canvas-950 p-7 md:p-10">
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · dark background</p>
-                            <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a dark background" width={400} height={400} priority className="mx-auto h-auto w-full max-w-[15rem]" />
+                            <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a dark background" width={512} height={512} priority className="mx-auto h-auto w-full max-w-[15rem]" />
                             <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
-                        <article className="flex min-h-[25rem] flex-col justify-between  bg-white p-7 md:p-10">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · light background</p>
-                            <Image src="/images/logo.webp" alt="Official AnimalDex green spiral paw logo on a light background" width={400} height={400} className="mx-auto h-auto w-full max-w-[15rem]" />
-                            <a href="/images/logo.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-600 hover:text-canvas-950"><DownloadIcon /> Download WebP</a>
+                        <article className="flex min-h-[25rem] flex-col justify-between bg-surface-900 p-7 md:p-10">
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Symbol · on its own ground (light pages, app icon)</p>
+                            <Image src="/images/brand/tile-512.webp" alt="Official AnimalDex spiral paw logo on its dark green ground" width={512} height={512} className="mx-auto h-auto w-full max-w-[15rem] rounded-[24%]" />
+                            <a href="/images/brand/tile-512.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
                         </article>
-                        <article className="flex min-h-[18rem] flex-col justify-between  bg-surface-900 p-7 md:col-span-2 md:p-10">
-                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Wordmark · preferred lockup</p>
-                            <Image src="/images/animaldex-logo-text.webp" alt="Official AnimalDex wordmark logo" width={1250} height={274} className="mx-auto h-auto w-full max-w-2xl" />
-                            <a href="/images/animaldex-logo-text.webp" download className="inline-flex items-center gap-2 self-start font-bold text-primary-200 hover:text-primary-100"><DownloadIcon /> Download WebP</a>
+                        <article className="flex flex-col gap-3 border-t border-line-200 pt-6 md:col-span-2 lg:col-span-2">
+                            <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Retired</p>
+                            <p className="max-w-3xl text-sm leading-6 text-ink-300">The chrome, bevelled AnimalDex wordmark is retired: please don&rsquo;t use it in new work. The file stays at its old address so existing links keep working.</p>
                         </article>
                     </div>
                 </section>
@@ -121,7 +128,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     <div>
                         <p className="text-xs font-bold uppercase tracking-[.22em] text-primary-200">02 · Usage</p>
                         <h2 id="logo-rules" className="mt-3 font-display text-4xl font-bold text-white md:text-6xl">Give it room to breathe.</h2>
-                        <p className="mt-5 text-lg leading-8 text-ink-200">Keep clear space around the mark equal to at least one outer paw pad. At small sizes, use the symbol rather than forcing the full wordmark into limited space.</p>
+                        <p className="mt-5 text-lg leading-8 text-ink-200">Keep clear space around the mark equal to at least one outer paw pad. At small sizes, use the symbol rather than forcing the full lockup into limited space.</p>
                     </div>
                     <div className="grid gap-5 sm:grid-cols-2">
                         <article className="  bg-surface-900/70 p-7">
@@ -163,8 +170,8 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                         <div>
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Barlow Condensed · Titles, hooks, subtitles</p>
                             <p className="mt-2 text-sm font-medium text-ink-300">SemiBold, Bold, and ExtraBold. Compact, tall, and adventurous without becoming messy.</p>
-                            <p className="mt-4 font-display text-5xl font-extrabold uppercase leading-none tracking-tight text-white md:text-7xl">Discover. Collect. Conquer.</p>
-                            <p className="mt-5 font-display text-2xl font-semibold text-ink-200">Scan animals in the wild and level up your discoveries.</p>
+                            <p className="mt-4 font-display text-5xl font-extrabold uppercase leading-none tracking-tight text-white md:text-7xl">Talk to animals.</p>
+                            <p className="mt-5 font-display text-2xl font-semibold text-ink-200">They won&rsquo;t just agree with you.</p>
                         </div>
                         <div>
                             <p className="text-xs font-bold uppercase tracking-[.18em] text-ink-400">Inter · Body and UI</p>
@@ -182,7 +189,7 @@ export default async function BrandingPage({params}: {params: {locale: string}})
                     </div>
                     <a href="mailto:support@animaldex.app?subject=AnimalDex%20brand%20asset%20request" className="shrink-0 rounded-full bg-white px-6 py-3.5 font-bold text-canvas-950 hover:bg-primary-200">Request brand assets</a>
                 </section>
-            </main>
+            </div>
         </div>
     );
 }

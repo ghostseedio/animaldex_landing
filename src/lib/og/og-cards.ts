@@ -59,7 +59,7 @@ async function speciesCard(slug: string): Promise<OgCardSpec | null> {
     if (!entry) return null;
     const profile = resolveSpeciesBehaviorProfileForPage(entry.slug);
     return {
-        kicker: profile ? `Animal meaning · ${profile.principle}` : "Animal guide",
+        kicker: profile ? `Its Power · ${profile.principle}` : "Animal guide",
         title: entry.name,
         subtitle: profile?.motto || entry.analysis.scientificName || undefined,
         tiles: [art(entry.slug)]

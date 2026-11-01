@@ -20,9 +20,19 @@ export default function Marquee(
     const reference = useRef<HTMLSpanElement>(null);
     const currentVelocity = useRef(baseVelocity);
 
+    // Runs only while on screen, and not at all under reduced motion (WEB-17):
+    // the band then sits still at its rotation.
     useEffect(() => {
+        const element = marquee.current;
+        if (!element) return;
+        element.style.transform = `rotate(${rotation}deg) translateX(${-marqueeScroll.current}px)`;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
         let currentFrame = 0;
+        let visible = false;
         const update = () => {
+            currentFrame = 0;
+            if (!visible) return;
             if (marquee.current && reference.current) {
                 const pageScroll = window.scrollY;
                 const pageScrollDelta = (pageScroll - previousPageScroll.current) * scrollBoost;
@@ -46,10 +56,20 @@ export default function Marquee(
                 marquee.current.style.transform = `rotate(${rotation}deg) translateX(${-marqueeScroll.current}px)`;
             }
             currentFrame = requestAnimationFrame(update);
-        }
-        currentFrame = requestAnimationFrame(update);
+        };
+        const observer = new IntersectionObserver(([entry]) => {
+            visible = entry.isIntersecting;
+            if (visible) {
+                previousPageScroll.current = window.scrollY;
+                if (!currentFrame) currentFrame = requestAnimationFrame(update);
+            }
+        });
+        observer.observe(element);
 
-        return () => cancelAnimationFrame(currentFrame);
+        return () => {
+            observer.disconnect();
+            cancelAnimationFrame(currentFrame);
+        };
     }, [baseVelocity, scrollBoost, rotation]);
 
     return (

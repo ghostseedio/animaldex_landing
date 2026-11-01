@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {Fragment} from "react";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
@@ -46,7 +47,7 @@ export async function generateMetadata({params}: PageProps): Promise<Metadata> {
     const url = getLocalePath(locale, ADVICE_FATIGUE_PATH);
 
     return withOgCard({
-        title: content.metaTitle,
+        title: templateSafeTitle(content.metaTitle),
         description: content.metaDescription,
         keywords: content.keywords,
         alternates: {
@@ -59,7 +60,7 @@ export async function generateMetadata({params}: PageProps): Promise<Metadata> {
         openGraph: {
             type: "article",
             locale: getMetadataLocale(locale),
-            title: `${content.metaTitle} | AnimalDex`,
+            title: withBrandSuffix(content.metaTitle),
             description: content.metaDescription,
             url,
             siteName: "AnimalDex",
@@ -70,7 +71,7 @@ export async function generateMetadata({params}: PageProps): Promise<Metadata> {
         },
         twitter: {
             card: "summary_large_image",
-            title: `${content.metaTitle} | AnimalDex`,
+            title: withBrandSuffix(content.metaTitle),
             description: content.metaDescription
         }
     }, content.metaTitle, "page", "advice-fatigue");

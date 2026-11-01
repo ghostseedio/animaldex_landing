@@ -47,6 +47,7 @@ import {getPublicSpeciesSightings, getPublicWildlifeGuides, type SpeciesSighting
 import {formatGuidePrice, guidePath} from "@/lib/virtual-wildlife-guides";
 import {ogContentImage} from "@/lib/og/og-image";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
+import {getSpeciesArtworkDirectUrl} from "@/data/species-artwork-index";
 import {
     getSpeciesImageAltText,
     getSpeciesImageRoute
@@ -141,14 +142,22 @@ function nameLead(name: string, scientificName: string, sentence: string) {
 }
 
 function buildSpeciesDescription(name: string, scientificName: string, summary: string, principle: string | null) {
-    const tail = `${principle ? ` Symbol of ${principle.toLowerCase()}.` : ""} Ask the ${name} anything: it answers as itself.`;
-    let lead = nameLead(name, scientificName, firstSentence(summary));
+    const tail = `${principle ? ` Its Power: ${principle}.` : ""} Talk to the ${name}: it answers as itself.`;
     const room = 155 - tail.length;
+    let lead = nameLead(name, scientificName, firstSentence(summary));
+    // Never cut a sentence mid-word (WEB-33): fall back to its first clause,
+    // then to the name alone.
     if (lead.length > room) {
-        const cut = lead.slice(0, Math.max(room - 1, 40));
-        lead = `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
+        const clauses = lead.split(/(?:,|;| —| –)\s/);
+        let shortened = "";
+        for (const clause of clauses) {
+            const next = shortened ? `${shortened}, ${clause}` : clause;
+            if (next.length + 1 > room) break;
+            shortened = next;
+        }
+        lead = shortened.length >= 40 ? `${shortened.replace(/[,;:.\s]+$/, "")}.` : nameLead(name, scientificName, "").replace(/:\s*$/, ".");
     }
-    return `${lead}${tail}`.slice(0, 160);
+    return `${lead}${tail}`;
 }
 
 /** Leads with the meaning (for animals with no field-guide summary); trimmed to 155 at a word boundary. */
@@ -439,14 +448,17 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
     // Daily ISR: these fetches' revalidate lowers the route's `revalidate = false`.
     // The Power icons share the story media's window, so they add no extra rebuilds.
-    const [storyMedia, powerIconIndex, sightings, speciesGuides] = await Promise.all([
+    const [storyMedia, powerIconIndex, sightings, speciesGuides, heroArtSrc] = await Promise.all([
         getSpeciesStoryMedia(entry.slug, locale),
         fetchAnimalPowerIconIndex({revalidate: STORY_MEDIA_REVALIDATE_SECONDS}),
         // Where explorers saw it, and the guides that cover it: both daily, like the page.
         entry.speciesProfileId ? getPublicSpeciesSightings(entry.speciesProfileId) : Promise.resolve(null),
         entry.speciesProfileId
             ? getPublicWildlifeGuides({speciesProfileId: entry.speciesProfileId, limit: 3, revalidate: 86400})
-            : Promise.resolve([])
+            : Promise.resolve([]),
+        // The hero's species art as the storage file itself (the committed
+        // snapshot during the static build), so it skips the artwork route's 307.
+        getSpeciesArtworkDirectUrl(entry.slug)
     ]);
     const sightingPlaces = describeSightingPlaces(sightings, locale);
     const legendaryBeast = getLegendaryEarthBeast(entry.slug);
@@ -950,25 +962,38 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         }
     ];
 
-    const unlockCard = (
-        <div className="flex aspect-[4/5] flex-col items-center justify-center border border-amber-200/20 bg-[radial-gradient(circle_at_50%_35%,rgba(180,139,72,0.18),transparent_34%),rgba(5,10,7,0.72)] p-8 text-center shadow-2xl shadow-black/30">
-            <div className="relative mb-6 h-28 w-28 overflow-hidden border border-amber-200/20 bg-amber-200/[0.06] p-3">
-                <Image
-                    src={getSpeciesArtworkRoute(entry.slug)}
-                    alt={getSpeciesImageAltText(entry, "thumbnail")}
-                    fill
-                    unoptimized
-                    sizes="112px"
-                    className="object-contain p-2 brightness-0 invert opacity-80 light:invert-0 light:opacity-35"
-                />
+    // The hero shows the animal itself, in its full-colour species art (WEB-6),
+    // not a locked silhouette. Under a story video it is the video's fallback.
+    const heroArt = (
+        <div className="relative mx-auto flex aspect-square w-full max-w-[17rem] items-center justify-center overflow-hidden rounded-[2rem] border border-primary-400/15 bg-[radial-gradient(circle_at_50%_42%,rgba(167,244,50,0.16),transparent_62%)] sm:max-w-xs lg:max-w-sm light:border-line-200 light:bg-[radial-gradient(circle_at_50%_42%,rgba(63,122,10,0.12),transparent_62%)]">
+            <Image
+                src={heroArtSrc}
+                alt={getSpeciesImageAltText(entry, "thumbnail")}
+                fill
+                unoptimized
+                priority
+                sizes="(min-width: 1024px) 24rem, 18rem"
+                className="object-contain p-[10%] drop-shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
+            />
+        </div>
+    );
+
+    // Capturing your own comes after the Power (WEB-6): what the app adds.
+    const captureYourOwn = (
+        <section aria-labelledby="capture-your-own" className="flex flex-col items-start gap-5 border-y border-line-200 py-8 md:flex-row md:items-center md:justify-between md:gap-10">
+            <div className="flex items-center gap-5">
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-primary-400/20 bg-primary-400/[0.06]">
+                    <Image src={heroArtSrc} alt="" aria-hidden="true" fill unoptimized sizes="80px" className="object-contain p-2" />
+                </div>
+                <div className="flex max-w-2xl flex-col gap-1.5">
+                    <h2 id="capture-your-own" className="font-display text-2xl font-bold text-white md:text-3xl">{t("unlockCardTitle", {animal: entry.name})}</h2>
+                    <p className="text-base leading-7 text-ink-200">{t("unlockCardDescription", {animal: entry.name})}</p>
+                </div>
             </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{t("animalDexCardLabel")}</p>
-            <h2 className="mt-3 font-display text-3xl font-bold text-white">{t("unlockCardTitle")}</h2>
-            <p className="mt-3 max-w-sm text-base leading-7 text-ink-200">{t("unlockCardDescription")}</p>
-            <AppDownloadLink placement="species_card" className="mt-7 rounded-2xl border border-primary-400/35 px-5 py-3 font-semibold text-primary-100 hover:border-primary-300 hover:text-white">
+            <AppDownloadLink placement="species_card" className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full border border-primary-400/40 px-6 font-bold text-primary-100 transition-colors hover:border-primary-300 hover:text-white">
                 {t("getAnimalDex")}
             </AppDownloadLink>
-        </div>
+        </section>
     );
 
     return (
@@ -1024,13 +1049,15 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                             <p className="text-lg italic text-ink-300 md:text-xl">{entry.analysis.scientificName}</p>
                             <p className="max-w-2xl text-lg leading-8 text-ink-200 md:text-xl">{entry.analysis.summary}</p>
                         </div>
+                        {/* Talking to this animal first (JRN-5, DECISIONS §8); the app second. */}
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-                            <AppDownloadLink placement="species_hero" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl bg-primary-400 px-7 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
+                            <Link href={`/talk/${entry.slug}`} className="inline-flex min-h-[3.5rem] items-center justify-center gap-2.5 rounded-full bg-primary-400 px-7 font-bold text-canvas-950 transition-colors duration-200 hover:bg-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" /></svg>
                                 {t("collectCta", {animal: entry.name})}
-                            </AppDownloadLink>
-                            <Link href="/animals" className="flex min-h-[3.5rem] items-center justify-center rounded-2xl border border-white/15 px-7 font-bold text-white transition-colors hover:border-primary-400 hover:text-primary-100">
-                                {t("browseAnimals")}
                             </Link>
+                            <AppDownloadLink placement="species_hero" className="inline-flex min-h-[3.5rem] items-center justify-center rounded-full border border-white/15 px-7 font-bold text-white transition-colors duration-200 hover:border-primary-400 hover:text-primary-100">
+                                {t("getTheApp")}
+                            </AppDownloadLink>
                         </div>
                     </div>
 
@@ -1041,7 +1068,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     item={storyMedia.storyVideo}
                                     poster={storyMedia.stills[0]?.stable_url}
                                     label={t("storyMediaStoryVideoLabel", {animal: entry.name})}
-                                    fallback={unlockCard}
+                                    fallback={heroArt}
                                 />
                             </div>
                         ) : storyMedia?.hook ? (
@@ -1051,10 +1078,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                     poster={storyMedia.stills[0]?.stable_url}
                                     label={t("storyMediaHookLabel", {animal: entry.name})}
                                     eager
-                                    fallback={unlockCard}
+                                    fallback={heroArt}
                                 />
                             </div>
-                        ) : unlockCard}
+                        ) : heroArt}
                     </div>
                 </div>
             </section>
@@ -1162,6 +1189,8 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 />
             ) : null}
 
+            {captureYourOwn}
+
             <SpeciesDetailTabs
                 defaultTab="learn"
                 eyebrow={t("fieldGuideLabel")}
@@ -1173,7 +1202,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 }}
                 learn={(
                     <div
-                        id="meaning"
+                        id="story"
                         className="flex scroll-mt-40 flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:items-start lg:gap-6"
                     >
                         <div className="flex min-w-0 flex-col gap-5">
@@ -1421,7 +1450,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                                 />
                             </span>
                             <span className="min-w-0">
-                                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">VS</span>
+                                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-primary-200">{t("compareEyebrow")}</span>
                                 <span className="mt-1 block font-display text-2xl font-bold text-white">{item.otherName}</span>
                                 <span className="mt-1 block text-sm text-ink-300">{t("compareWithLink", {animal: item.otherName})}</span>
                             </span>

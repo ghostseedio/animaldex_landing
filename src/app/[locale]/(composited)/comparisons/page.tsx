@@ -28,6 +28,7 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {contentThumb} from "@/data/content-thumbnails";
+import {formatAnimalCount} from "@/lib/animal-count";
 
 
 export const revalidate = 86400;
@@ -141,17 +142,6 @@ function getPopularityScore(entry: ChallengeEntry) {
     return featuredScore + (entry.relatedChallengeSlugs?.length || 0) * 5 + entry.searchIntents.length;
 }
 
-function getWinner(entry: ChallengeEntry) {
-    const scenario = entry.scenarioBreakdown.find((item) => item.slug.includes("broad") || item.slug.includes("overall"))
-        || entry.scenarioBreakdown.at(-1);
-    const animalA = getSpeciesBySlug(entry.animalASlug);
-    const animalB = getSpeciesBySlug(entry.animalBSlug);
-
-    if (scenario?.winner === "animalA") return {kind: "winner" as const, label: animalA?.name || entry.animalASlug};
-    if (scenario?.winner === "animalB") return {kind: "winner" as const, label: animalB?.name || entry.animalBSlug};
-    return {kind: scenario?.winner === "draw" ? "draw" as const : "depends" as const, label: ""};
-}
-
 export async function generateMetadata({params}: ComparisonsIndexPageProps): Promise<Metadata> {
     const locale = params.locale;
     const messages = await loadLocaleMessages(locale);
@@ -199,14 +189,17 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
             || allEntries.find((entry) => entry.animalBSlug === slug)?.animalBDisplayName
             || slug.replace(/-/g, " ")
     }));
+    // Visible titles say "{A} and {B}" (WEB-9); the search words stay in the meta.
+    const pairTitle = (entry: (typeof allEntries)[number]) => t("pairTitle", {
+        animalA: getSpeciesBySlug(entry.animalASlug)?.name || entry.animalADisplayName || entry.animalASlug.replace(/-/g, " "),
+        animalB: getSpeciesBySlug(entry.animalBSlug)?.name || entry.animalBDisplayName || entry.animalBSlug.replace(/-/g, " ")
+    });
     const directoryCards: DirectoryCard[] = allEntries.map((entry) => {
-        const winner = getWinner(entry);
         return {
             slug: entry.slug,
-            title: entry.title,
+            title: pairTitle(entry),
             comparisonType: entry.comparisonType,
             typeLabel: t(`comparisonTypes.${entry.comparisonType}`),
-            winnerLabel: winner.kind === "winner" ? t("winnerShort", {animal: winner.label}) : t(`winnerLabels.${winner.kind}`),
             image: {src: entry.featuredImage.src, alt: entry.featuredImage.alt, width: entry.featuredImage.width, height: entry.featuredImage.height},
             statLabels: entry.statCategories.slice(0, 3).map((stat) => stat.label),
             search: getCardSearchText(entry),
@@ -232,7 +225,6 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
     const categoryCount = new Set(allEntries.map((entry) => entry.comparisonType)).size;
     const featuredCandidates = POPULAR_SLUGS.map((slug) => allEntries.find((entry) => entry.slug === slug)).filter((entry): entry is ChallengeEntry => Boolean(entry));
     const featured = featuredCandidates[Math.floor(Math.random() * featuredCandidates.length)] || allEntries[0];
-    const featuredWinner = featured ? getWinner(featured) : null;
     const recentEntries = [...allEntries]
         .sort((left, right) => (right.updatedAt || right.publishedAt).localeCompare(left.updatedAt || left.publishedAt))
         .slice(0, 3);
@@ -247,7 +239,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
             "@type": "ListItem",
             position: index + 1,
             url: getAbsoluteUrl(locale, `/comparisons/${entry.slug}`),
-            name: entry.title
+            name: pairTitle(entry)
         }))
     };
     const faqEntries = FAQ_KEYS.map((key) => ({
@@ -280,7 +272,7 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                     <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
                         <div>
                             <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statAnimals")}</dt>
-                            <dd className="font-display text-2xl font-bold text-white">{comparableAnimalCount.toLocaleString(locale)}</dd>
+                            <dd className="font-display text-2xl font-bold text-white">{formatAnimalCount(locale)}</dd>
                         </div>
                         <div>
                             <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statComparisons")}</dt>
@@ -370,11 +362,8 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                             <div className="max-w-3xl">
                                 <div className="flex flex-wrap gap-2">
                                     <span className="rounded-full bg-primary-400 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-black">{t("featuredLabel")}</span>
-                                    <span className="rounded-full border border-white/20 bg-black/45 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
-                                        {featuredWinner?.kind === "winner" ? t("winner", {animal: featuredWinner.label}) : t(`winnerLabels.${featuredWinner?.kind ?? "depends"}`)}
-                                    </span>
                                 </div>
-                                <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-white md:text-5xl">{featured.title}</h2>
+                                <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-white md:text-5xl">{pairTitle(featured)}</h2>
                             </div>
                             <Link href={`/comparisons/${featured.slug}`} className="inline-flex w-fit items-center rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-primary-100">
                                 {t("readChallenge")} <span className="ml-2" aria-hidden="true">→</span>
@@ -393,13 +382,13 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
                             <div>
                                 <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("mostViewed")}</h2>
                                 <ol className="mt-3 divide-y divide-white/10">
-                                    {mostViewed.map((entry, index) => <li key={entry.slug}><Link href={`/comparisons/${entry.slug}`} className="flex gap-3 py-3 text-sm font-semibold leading-5 text-ink-200 hover:text-primary-100"><span className="text-ink-500">0{index + 1}</span><span>{entry.title}</span></Link></li>)}
+                                    {mostViewed.map((entry, index) => <li key={entry.slug}><Link href={`/comparisons/${entry.slug}`} className="flex gap-3 py-3 text-sm font-semibold leading-5 text-ink-200 hover:text-primary-100"><span className="text-ink-500">0{index + 1}</span><span>{pairTitle(entry)}</span></Link></li>)}
                                 </ol>
                             </div>
                             <div>
                                 <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-400">{t("recentlyAdded")}</h2>
                                 <div className="mt-3 space-y-3">
-                                    {recentEntries.map((entry) => <Link key={entry.slug} href={`/comparisons/${entry.slug}`} className="block text-sm font-semibold leading-5 text-ink-200 hover:text-primary-100">{entry.title}</Link>)}
+                                    {recentEntries.map((entry) => <Link key={entry.slug} href={`/comparisons/${entry.slug}`} className="block text-sm font-semibold leading-5 text-ink-200 hover:text-primary-100">{pairTitle(entry)}</Link>)}
                                 </div>
                             </div>
                         </div>
@@ -451,9 +440,12 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
             </section>
 
             <section className="mt-16  border border-white/10 bg-gradient-to-br from-white/[0.055] to-primary-400/[0.035] px-6 py-9 text-center md:px-10">
-                <h2 className="font-display text-3xl font-bold text-white">{t("ctaTitle")}</h2>
+                <h2 className="font-display text-3xl font-bold text-white">{t("ctaAskBothTitle")}</h2>
                 <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-ink-200">{t("ctaDescription")}</p>
-                <StoreLinks className="mt-6" />
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <Link href="/talk" className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary-400 px-6 font-bold text-canvas-950 transition-colors hover:bg-primary-300">{t("ctaButton")}</Link>
+                    <StoreLinks />
+                </div>
             </section>
         </main>
     );

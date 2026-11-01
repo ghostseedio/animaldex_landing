@@ -84,16 +84,11 @@ export default async function CollectorLandingPage({slug, locale}: PositioningPa
                 </Link>
                 <h1 className="font-display font-bold text-5xl md:text-6xl text-white">{entry.heroTitle}</h1>
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200">{entry.description}</p>
-                <div className="flex flex-wrap gap-2">
-                    {entry.searchIntents.map((intent) => (
-                        <span key={intent} className="rounded-full border border-primary-500/30 px-3 py-1 text-primary-200 text-xs">
-                            {intent}
-                        </span>
-                    ))}
-                </div>
+                {/* The positioning, in one line (DECISIONS §8): the collection talks back. */}
+                <p className="max-w-3xl border-l-2 border-primary-400 pl-4 text-lg font-semibold leading-8 text-white">{t("positioningLine")}</p>
                 <div className="flex flex-wrap gap-3 pt-2">
-                    <Link href="/">
-                        <Button as="span">{t("homeButton")}</Button>
+                    <Link href="/talk">
+                        <Button as="span">{t("talkButton")}</Button>
                     </Link>
                     <StoreLinks />
                 </div>
@@ -116,8 +111,8 @@ export default async function CollectorLandingPage({slug, locale}: PositioningPa
                 <h2 className="font-display font-bold text-3xl md:text-4xl text-white">{t("ctaTitle")}</h2>
                 <p className="text-ink-200 text-lg md:text-xl">{t("ctaDescription")}</p>
                 <div className="flex justify-center flex-wrap gap-3">
-                    <Link href="/">
-                        <Button as="span">{t("homeButton")}</Button>
+                    <Link href="/talk">
+                        <Button as="span">{t("talkButton")}</Button>
                     </Link>
                     <StoreLinks />
                 </div>

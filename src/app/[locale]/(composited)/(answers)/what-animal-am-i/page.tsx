@@ -107,7 +107,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
         "@type": "BreadcrumbList",
         itemListElement: [
             {"@type": "ListItem", position: 1, name: "AnimalDex", item: getAbsoluteUrl(params.locale, "/")},
-            {"@type": "ListItem", position: 2, name: "Animal personality test", item: pageUrl}
+            {"@type": "ListItem", position: 2, name: page.heroTitle, item: pageUrl}
         ]
     };
     const howToSchema = {
@@ -137,13 +137,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                         <h1 className="mt-4 max-w-5xl font-display text-4xl font-bold leading-[1.02] text-white md:text-6xl lg:text-7xl">{page.heroTitle}</h1>
                         <p className="mt-5 max-w-3xl text-lg leading-8 text-ink-100 md:text-xl">{page.heroSubtitle}</p>
                         <p className="mt-4 max-w-3xl text-base leading-7 text-ink-300 md:text-lg">{page.intro}</p>
-                        <div className="mt-7 flex flex-wrap gap-2">
-                            {page.searchIntents.slice(0, 6).map((intent) => (
-                                <span key={intent} className="rounded-md border border-white/10 bg-canvas-950/35 px-3 py-1.5 text-xs text-ink-200">
-                                    {intent}
-                                </span>
-                            ))}
-                        </div>
+                        {/* Search phrases stay in the metadata; readers never see them as chips (WEB-11). */}
                         <div className="mt-8 grid gap-3 text-sm text-ink-300 sm:grid-cols-3">
                             <div className="rounded-md border border-white/10 bg-canvas-950/35 p-3">
                                 <strong className="block text-2xl text-white">{quizQuestions.length}</strong>
@@ -173,7 +167,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                     <div className="relative min-h-[27rem] border-t border-line-300 bg-canvas-950/35 lg:border-l lg:border-t-0">
                         <Image
                             src="/images/blog/what-animal-am-i/wild-profile-triad.webp"
-                            alt="Example animal personality test result: Gray Wolf as Origin, Honey Badger as Apex and Octopus as Active"
+                            alt="Example result: Gray Wolf as Origin, Honey Badger as Apex and Octopus as Active"
                             fill
                             priority
                             sizes="(min-width: 1024px) 36rem, 100vw"
@@ -211,7 +205,7 @@ export default async function WhatAnimalAmIPage({params}: WhatAnimalAmIPageProps
                 <div className="mb-6 max-w-4xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-200">{page.quiz.resultsEyebrow}</p>
                     <h2 id="quiz-results-title" className="mt-2 font-display text-3xl font-bold text-white md:text-5xl">
-                        All {quizAnimals.length} possible animal personality test results
+                        All {quizAnimals.length} animals you could meet
                     </h2>
                     <p className="mt-3 text-lg leading-8 text-ink-200 md:text-xl">{page.quiz.resultsDescription}</p>
                 </div>

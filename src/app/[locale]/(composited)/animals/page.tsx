@@ -327,9 +327,11 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
              *  always replaces the server-rendered grid with the database catalog on mount.
              *  Preloading that first page lets the browser start the request while it is
              *  still parsing this document, instead of after hydration. The href has to stay
-             *  byte-identical to buildDirectoryRequestUrl(defaults, 1) and must not carry
-             *  crossorigin, or the fetch will miss this entry and request the page twice. */}
-            <link rel="preload" as="fetch" href={`${DIRECTORY_API_PATH}?page=1`} />
+             *  byte-identical to buildDirectoryRequestUrl(defaults, 1). A fetch preload
+             *  must carry crossorigin="anonymous": fetch() runs in CORS mode, and a
+             *  preload without it is a no-cors request the fetch can't reuse, so the
+             *  page was fetched twice with a console warning (WEB-34). */}
+            <link rel="preload" as="fetch" href={`${DIRECTORY_API_PATH}?page=1`} crossOrigin="anonymous" />
 
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
 
@@ -510,7 +512,8 @@ export default async function AnimalsIndexPage({params}: AnimalsIndexPageProps) 
                 <SectionHeading title={t("exploreMoreTitle")} description={t("exploreMoreDescription")} />
                 <div className="grid grid-cols-1 gap-px overflow-hidden bg-line-300 sm:grid-cols-3">
                     {[
-                        {href: "/pokemon-animals", label: t("explorePokemon"), icon: "gem" as const},
+                        // The Pokémon counterparts page keeps its URL and sitemap entry, out of the hub (DECISIONS §8).
+                        {href: "/comparisons", label: t("exploreSideBySide"), icon: "gem" as const},
                         {href: "/animal-hybrids", label: t("exploreHybrids"), icon: "paw" as const},
                         {href: "/tier-list", label: t("exploreTierLists"), icon: "bolt" as const}
                     ].map((collection) => (

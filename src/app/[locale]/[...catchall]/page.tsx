@@ -24,7 +24,8 @@ async function resolvePage(params: ManagedPageProps["params"]) {
 
 export async function generateMetadata({params}: ManagedPageProps): Promise<Metadata> {
     const page = await resolvePage(params);
-    if (!page) return {};
+    // A miss renders the 404 page: say so in the title, and keep it out of the index (WEB-35).
+    if (!page) return {title: params.locale === "id" ? "Halaman tidak ditemukan" : "Page not found", robots: {index: false, follow: true}};
 
     return buildContentMetadata({
         locale: params.locale,

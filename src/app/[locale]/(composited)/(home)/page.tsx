@@ -2,23 +2,21 @@ import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Image from "next/image";
-import DragSlider from "@/app/[locale]/_components/drag-slider";
-import TeamMember from "@/app/[locale]/(composited)/(home)/_components/team-member";
 import HomeFeatureCaptureCard from "@/app/[locale]/(composited)/(home)/_components/home-feature-capture-card";
 import FeaturesOverview from "@/app/[locale]/(composited)/(home)/_components/features-overview";
 import HomeArchiveModule from "@/app/[locale]/(composited)/(home)/_components/home-archive-module";
 import FaqSection from "@/app/[locale]/(composited)/(home)/_components/faq-section";
 import HomeChatStill from "@/app/[locale]/(composited)/(home)/_components/home-chat-still";
+import {HomeDoneStill, HomeRevealStill} from "@/app/[locale]/(composited)/(home)/_components/home-stills";
 import {checkedIcons} from "@/loaders/icons";
 import {animalSilhouetteImages} from "@/data/animal-silhouettes";
 import Marquee from "@/app/[locale]/_components/marquee";
 import {default as features} from "@/data/features.json";
 import {default as moreFeatures} from "@/data/more.json";
-import {default as splashes} from "@/data/splashes.json";
-import {default as team} from "@/data/team.json";
 import {default as downloads} from "@/data/downloads.json";
 import {localisePath} from "@/loaders/path";
 import {unsafelyLoadSVG} from "@/loaders/svg";
+import {formatAnimalCount} from "@/lib/animal-count";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
 import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
@@ -31,7 +29,6 @@ import {getScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
 import {getRecentPublicCaptures} from "@/data/discover-timeline";
-import {RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
 import {TRY_TALKING_SPECIES} from "@/lib/try-talking";
 import {ADVICE_FATIGUE_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
 import DisagreeStill from "@/app/[locale]/(composited)/_components/disagree-still";
@@ -43,6 +40,22 @@ import {drawGrid} from "@/lib/text-diagram";
 
 const heroBackgroundImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
+
+// The hero word's texture is the same photo at the size a phone's background
+// already fetched (w=828 through the image optimizer), so it costs no second download.
+const heroTextureImage = `/_next/image?url=${encodeURIComponent(
+    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif"
+)}&w=828&q=75`;
+
+/**
+ * Three problems people bring (W2), each opening the Talk picker with the
+ * question carried, and two animals who would answer it differently.
+ */
+const homeProblems = [
+    {id: "work", animals: ["little-owl", "cheetah"]},
+    {id: "clash", animals: ["gray-wolf", "common-octopus"]},
+    {id: "habit", animals: ["western-honey-bee", "african-bush-elephant"]}
+] as const;
 
 const heroLaurelWreathImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/laurel-wreath-ede0a9b0-7b2e-45c3-a4fa-12bf9615c29d.webp";
@@ -84,7 +97,7 @@ export async function generateMetadata({params}: HomePageProps): Promise<Metadat
             title: fullTitle,
             description,
             siteName: "AnimalDex",
-            images: [{url: "/images/og.png", width: 1200, height: 630, alt: fullTitle}]
+            images: [{url: "/images/og-talk-to-animals.png", width: 1200, height: 630, alt: fullTitle}]
         }
     };
 }
@@ -98,15 +111,16 @@ export default async function Home({params}: HomePageProps) {
     const siteUrl = getAbsoluteUrl(locale);
     const rootSiteUrl = getSiteUrl();
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
-    const socialImageUrl = new URL("/images/og.png", rootSiteUrl).toString();
-    const appSchemaDescription = "Talk to real animals with AI. Each of 2,500+ species answers from its own Power, a lesson from how its kind survives, takes a side on your problem and keeps it. Bring a real problem, hear a real side, and take one step. Photograph the animals you meet to collect them, and let them debate your problems.";
+    const socialImageUrl = new URL("/images/og-talk-to-animals.png", rootSiteUrl).toString();
+    const animalCount = formatAnimalCount(locale);
+    const appSchemaDescription = `Talk to real animals with AI. Each of ${formatAnimalCount("en")} species answers from its own Power, a lesson from how its kind survives, takes a side on your problem and keeps it. Bring a real problem, hear a real side, and take one step. Photograph the animals you meet to collect them, and let them debate your problems.`;
     const disagree = getDisagreeExample(locale, getSpeciesArtworkUrl);
     const paradox = getAdviceFatigueContent(locale).paradox;
     const fatigueStats = ["models", "affirm", "people"].map((id) => ({
         value: t(`fatigue.stats.${id}.value`),
         label: t(`fatigue.stats.${id}.label`)
     }));
-    const faqItems = ["identify", "family", "game", "respect"].map((id) => ({
+    const faqItems = ["free", "agree", "ai", "power", "capture"].map((id) => ({
         question: t(`faq.${id}.q`),
         answer: t(`faq.${id}.a`)
     }));
@@ -120,10 +134,12 @@ export default async function Home({params}: HomePageProps) {
         ]),
         {featureCount: features.length}
     );
+    // One label set for the same three numbers, here and in the download band
+    // (WEB-28), and the one honest animal count every page quotes (WEB-29).
     const downloadHeroStats = [
-        {value: downloadStatCounts.captures, label: t("download.stats.capturesLabel")},
-        {value: downloadStatCounts.users, label: t("download.stats.usersLabel")},
-        {value: downloadStatCounts.indexes, label: t("download.stats.indexesLabel")}
+        {value: downloadStatCounts.captures === null ? null : downloadStatCounts.captures.toLocaleString(locale), label: t("download.stats.capturesLabel")},
+        {value: downloadStatCounts.users === null ? null : downloadStatCounts.users.toLocaleString(locale), label: t("download.stats.usersLabel")},
+        {value: animalCount, label: t("download.stats.indexesLabel")}
     ];
     const downloadTrustItems = [
         downloadStatCounts.captures === null
@@ -132,54 +148,18 @@ export default async function Home({params}: HomePageProps) {
         downloadStatCounts.users === null
             ? t("download.trust.collect")
             : t("download.stats.users", {count: downloadStatCounts.users.toLocaleString(locale)}),
-        downloadStatCounts.indexes === null
-            ? t("download.trust.learn")
-            : t("download.stats.indexes", {count: downloadStatCounts.indexes.toLocaleString(locale)})
+        t("download.stats.indexes", {count: animalCount})
     ];
     const downloadStoreLinks = downloads.filter(({name}) => name === "App Store" || name === "Google Play");
-    const keepExploringCards = [
-        {
-            id: "tigerLion",
-            href: "/comparisons/tiger-vs-lion",
-            image: "/images/blog/tiger-symbolism/tiger-symbolism-hero.webp",
-            layout: "featured"
-        },
-        {
-            id: "wolfLessons",
-            href: "/animal-powers/wolf",
-            image: "/images/blog/wolf-symbolism/wolf-symbolism-hero.webp",
-            layout: "medium"
-        },
-        {
-            id: "owlSymbolism",
-            href: "/blog/owl-symbolism",
-            image: "/images/blog/owl-symbolism/owl-symbolism-hero.webp",
-            layout: "medium"
-        },
-        {
-            id: "scannerGuide",
-            href: "/best-animal-identification-app",
-            image: "/images/blog/answer-best-animal-identification-app/hero.webp",
-            layout: "small"
-        },
-        {
-            id: "rareAnimals",
-            href: `${RANKING_CANONICAL_BASE_PATH}/rarest-animals`,
-            image: "/images/blog/black-rhinoceros-symbolism/black-rhinoceros-symbolism-hero.webp",
-            layout: "small"
-        },
-        {
-            id: "lionProfile",
-            href: "/animals/lion",
-            image: "/images/blog/lion-symbolism/lion-symbolism-hero.webp",
-            layout: "small"
-        },
-        {
-            id: "octopusMind",
-            href: "/blog/octopus-symbolism",
-            image: "/images/blog/how-octopus-intelligence-works/common-octopus.webp",
-            layout: "wide"
-        }
+    // Six cards fill the 4-column bento exactly (WEB-28): the article on why an
+    // animal that takes a side matters leads, side by side comes last (W6).
+    const keepExploringCards: Array<{id: string; href: string; image: string | null; layout: "featured" | "medium" | "small" | "wide"}> = [
+        {id: "adviceFatigue", href: ADVICE_FATIGUE_HREF, image: null, layout: "featured"},
+        {id: "wolfLessons", href: "/animal-powers/wolf", image: "/images/blog/wolf-symbolism/wolf-symbolism-hero.webp", layout: "medium"},
+        {id: "owlSymbolism", href: "/blog/owl-symbolism", image: "/images/blog/owl-symbolism/owl-symbolism-hero.webp", layout: "medium"},
+        {id: "octopusMind", href: "/blog/octopus-symbolism", image: "/images/blog/how-octopus-intelligence-works/common-octopus.webp", layout: "small"},
+        {id: "lionProfile", href: "/animals/lion", image: "/images/blog/lion-symbolism/lion-symbolism-hero.webp", layout: "small"},
+        {id: "tigerLion", href: "/comparisons/tiger-vs-lion", image: "/images/blog/tiger-symbolism/tiger-symbolism-hero.webp", layout: "wide"}
     ];
     const webSiteSchema = {
         "@context": "https://schema.org",
@@ -226,7 +206,6 @@ export default async function Home({params}: HomePageProps) {
             {"@type": "Audience", "audienceType": "Travelers"},
             {"@type": "Audience", "audienceType": "Photographers"},
             {"@type": "Audience", "audienceType": "Collectors"},
-            {"@type": "Audience", "audienceType": "Competitive players"},
             {"@type": "Audience", "audienceType": "Breeders and breed researchers"},
             {"@type": "Audience", "audienceType": "Animal card creators"},
             {"@type": "Audience", "audienceType": "Self-improvement learners"}
@@ -339,7 +318,7 @@ export default async function Home({params}: HomePageProps) {
                     <h1 className="font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white">
                         <span
                             className="hero-wild-textured block text-6xl font-semibold leading-[0.85] sm:text-7xl lg:text-[5.25rem] xl:text-[6.25rem]"
-                            style={{"--hero-wild-texture": `url(${heroBackgroundImage})`} as React.CSSProperties}
+                            style={{"--hero-wild-texture": `url(${heroTextureImage})`} as React.CSSProperties}
                         >
                             {t("heroTalkLead")}
                         </span>
@@ -397,7 +376,7 @@ export default async function Home({params}: HomePageProps) {
                                         </svg>
                                     </span>
                                     <span className="font-display text-3xl font-extrabold leading-none tracking-tight text-white sm:text-4xl">
-                                        {item.value === null ? "—" : item.value.toLocaleString(locale)}
+                                        {item.value === null ? "—" : item.value}
                                     </span>
                                     <span className="col-start-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:text-[11px]">
                                         {item.label}
@@ -591,7 +570,7 @@ export default async function Home({params}: HomePageProps) {
                                 <div className="flex h-full w-full flex-col items-center justify-start gap-6 pt-6 sm:pt-8 lg:gap-8 lg:pt-10">
                                     <Link
                                         href="/#more"
-                                        role="button"
+                                        aria-label={t("features.button")}
                                         className="w-32 h-32 aspect-square hover:bg-primary-400 flex-col hover:text-canvas-950
                                         rounded-full bg-surface-900 text-primary-500 flex justify-center items-center transition-colors
                                         active:bg-primary-400 active:text-canvas-950 duration-300 ease-in-out border border-primary-500/40"
@@ -605,13 +584,14 @@ export default async function Home({params}: HomePageProps) {
                     ]}
                     className="flex min-h-[30rem] flex-col border border-line-400 light:border-line-200 bg-canvas-950 light:bg-surface-900 text-white sm:min-h-[34rem] lg:h-[40rem] lg:min-h-[40rem] lg:w-[40rem] xl:w-[44rem] rounded-3xl shadow-[0_30px_120px_rgba(0,0,0,0.35)]"
                     leftOffset={0}
+                    showLabel={t("features.showLabel")}
                 />
             </section>
 
             <Anchor id="more" />
             <section className="relative mb-16 w-full-no-offset overflow-hidden bg-[#071B0F] light:bg-canvas-900 mx-offset o-4 md:o-16">
                 <div className="relative">
-                    {moreFeatures.slice(0, 2).map(({img, id, icon}, i) => {
+                    {moreFeatures.slice(0, 2).map(({id, icon}, i) => {
                         const iconMarkup = unsafelyLoadSVG(localisePath(icon, locale));
                         const reversed = i % 2 === 1;
 
@@ -638,15 +618,34 @@ export default async function Home({params}: HomePageProps) {
                                 >
                                     <div className="relative w-full min-w-0 lg:justify-self-stretch">
                                         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[78%] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(167,244,50,0.16)_0%,rgba(7,27,15,0)_70%)] blur-3xl" />
-                                        <Image
-                                            src={localisePath(img.src, locale)}
-                                            alt={t(`more.${id}.alt`)}
-                                            width={img.width}
-                                            height={img.height}
-                                            quality={100}
-                                            unoptimized={img.src.endsWith(".svg")}
-                                            className="relative z-10 h-auto w-full rounded-3xl border border-white/[0.07] shadow-[0_32px_100px_rgba(0,0,0,0.55),0_0_0_1px_rgba(167,244,50,0.04),inset_0_1px_0_rgba(255,255,255,0.05)]"
-                                        />
+                                        {id === "theme" ? (
+                                            <HomeRevealStill
+                                                image={getSpeciesArtworkUrl("red-fox")}
+                                                words={{
+                                                    label: t("more.theme.alt"),
+                                                    eyebrow: t("more.theme.stillLabel"),
+                                                    animal: "Red Fox",
+                                                    scientificName: "Vulpes vulpes",
+                                                    power: `${t("chatStill.power").split("·")[0].trim()} · Cunning`,
+                                                    motto: "Work the edges.",
+                                                    talk: t("more.theme.stillTalk"),
+                                                    stars: t("more.theme.stillStars")
+                                                }}
+                                            />
+                                        ) : (
+                                            <HomeDoneStill
+                                                image={getSpeciesArtworkUrl("gray-wolf")}
+                                                words={{
+                                                    label: t("more.ui.alt"),
+                                                    animal: "Gray Wolf",
+                                                    power: `${t("chatStill.power").split("·")[0].trim()} · Cooperation`,
+                                                    you: t("more.ui.you"),
+                                                    reply: t("more.ui.reply"),
+                                                    doneLabel: t("more.ui.doneLabel"),
+                                                    doneText: t("more.ui.doneText")
+                                                }}
+                                            />
+                                        )}
                                     </div>
                                     <figcaption className="flex min-w-0 flex-col justify-center gap-5 text-center lg:max-w-[22rem] lg:justify-self-start lg:gap-6 lg:text-left xl:max-w-[24rem]">
                                         {iconMarkup ? (
@@ -733,21 +732,22 @@ export default async function Home({params}: HomePageProps) {
                 word-spacing-6 text-6xl sm:text-8xl md:text-9xl font-bold font-display"
             >
                 <Marquee rotation={8} className="text-line-300" scrollBoost={0.25}>
-                    {splashes.join(" ")}
+                    {t("marquee")}
                 </Marquee>
                 <div className="h-4 md:h-12" />
                 <Marquee rotation={8} baseVelocity={-1} className="text-white text-outline-line-300" scrollBoost={0.25}>
-                    {splashes.join(" ")}
+                    {t("marquee")}
                 </Marquee>
             </div>
 
             <Anchor id="team" />
-            <section className="mb-32 flex w-full flex-col items-center gap-10 md:gap-12">
+            {/* Three problems people bring (W2): each opens the picker with the question carried. */}
+            <section aria-labelledby="home-problems-title" className="mb-32 flex w-full flex-col items-center gap-10 md:gap-12">
                 <div className="flex max-w-4xl flex-col items-center gap-4 px-4 text-center">
                     <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">
                         {t("team.eyebrow")}
                     </p>
-                    <h2 className="max-w-3xl font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.04em] text-white md:text-5xl lg:text-6xl">
+                    <h2 id="home-problems-title" className="max-w-3xl font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.04em] text-white md:text-5xl lg:text-6xl">
                         {t("team.title")}
                     </h2>
                     <div className="max-w-2xl space-y-1 text-lg md:text-xl">
@@ -755,27 +755,37 @@ export default async function Home({params}: HomePageProps) {
                         <p className="text-ink-300">{t("team.descriptionBody")}</p>
                     </div>
                 </div>
-                <DragSlider showHint>
-                    {team.map(({id, href, image}, i) => (
-                        <TeamMember
-                            key={id}
-                            href={href}
-                            index={i + 1}
-                            title={t(`team.personas.${id}.title`)}
-                            tagline={t(`team.personas.${id}.tagline`)}
-                            description={t(`team.personas.${id}.description`)}
-                            exploreLabel={t("team.explore")}
-                            image={image}
-                            imageAlt={t(`team.personas.${id}.alt`)}
-                        />
+                <ul className="grid w-full max-w-6xl grid-cols-1 gap-4 px-4 md:grid-cols-3 md:px-8">
+                    {homeProblems.map((problem) => (
+                        <li key={problem.id} className="flex">
+                            <Link
+                                href={`${TALK_HREF}?ask=${encodeURIComponent(t(`team.problems.${problem.id}.question`))}`}
+                                className="group flex w-full flex-col gap-5 rounded-3xl border border-line-200 bg-surface-900/60 p-6 transition-[transform,border-color,background-color] duration-[240ms] [transition-timing-function:cubic-bezier(.2,.8,.2,1)] hover:-translate-y-1 hover:border-primary-400/45 hover:bg-surface-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-colors motion-reduce:hover:translate-y-0 md:p-7"
+                            >
+                                <span className="font-display text-2xl font-bold leading-tight text-white">{t(`team.problems.${problem.id}.title`)}</span>
+                                <span className="flex-1 text-lg leading-8 text-ink-200">&ldquo;{t(`team.problems.${problem.id}.question`)}&rdquo;</span>
+                                <span className="flex items-center justify-between gap-3">
+                                    <span className="flex -space-x-2" role="img" aria-label={t("team.pairLabel")}>
+                                        {problem.animals.map((slug) => (
+                                            <span key={slug} className="relative h-10 w-10 overflow-hidden rounded-full border border-line-200 bg-canvas-950">
+                                                <Image src={getSpeciesArtworkUrl(slug)} alt="" fill sizes="40px" className="object-contain p-1" />
+                                            </span>
+                                        ))}
+                                    </span>
+                                    <span className="inline-flex items-center gap-2 text-sm font-bold text-primary-200 transition-colors group-hover:text-primary-100">
+                                        {t("team.explore")} <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+                                    </span>
+                                </span>
+                            </Link>
+                        </li>
                     ))}
-                </DragSlider>
+                </ul>
                 <p className="px-4 text-center text-sm text-ink-400">
-                    Planning a trip, not only a walk?{" "}
+                    {t("team.guidesPrompt")}{" "}
                     <Link href="/wildlife-guides" className="text-primary-200 hover:text-white">
-                        Browse virtual Wildlife Guides
+                        {t("team.guidesLink")}
                     </Link>
-                    {" — notes on every animal from explorers who logged wildlife at a place, with a chat with the author."}
+                    {t("team.guidesTail")}
                 </p>
             </section>
 
@@ -898,13 +908,24 @@ export default async function Home({params}: HomePageProps) {
                                     href={item.href}
                                     className={`group relative flex overflow-hidden rounded-3xl bg-surface-900 text-white shadow-[0_22px_80px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_30px_100px_rgba(0,0,0,0.32)] ${cardClassName}`}
                                 >
-                                    <Image
-                                        src={item.image}
-                                        alt={t(`explore.cards.${item.id}.alt`)}
-                                        fill
-                                        sizes={isFeatured ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"}
-                                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                                    />
+                                    {item.image ? (
+                                        <Image
+                                            src={item.image}
+                                            alt={t(`explore.cards.${item.id}.alt`)}
+                                            fill
+                                            sizes={isFeatured ? "(min-width: 1024px) 50vw, 100vw" : isWide ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"}
+                                            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                                        />
+                                    ) : (
+                                        // The article has no photograph: two animals who would disagree, facing each other.
+                                        <div role="img" aria-label={t(`explore.cards.${item.id}.alt`)} className="absolute inset-0 flex items-start justify-center gap-[6%] bg-[radial-gradient(circle_at_30%_30%,rgba(167,244,50,0.18),transparent_45%),radial-gradient(circle_at_75%_35%,rgba(33,192,94,0.14),transparent_45%)] px-8 pt-10 md:pt-14">
+                                            {["little-owl", "cheetah"].map((slug, index) => (
+                                                <span key={slug} className={`relative aspect-square w-[34%] max-w-[13rem] ${index === 1 ? "-scale-x-100" : ""}`}>
+                                                    <Image src={getSpeciesArtworkUrl(slug)} alt="" fill sizes="(min-width: 1024px) 14rem, 34vw" className="object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)]" />
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-canvas-950 via-canvas-950/58 to-canvas-950/4 light:bg-[linear-gradient(to_top,rgb(var(--c-canvas-950))_0%,rgb(var(--c-canvas-950)/0.92)_40%,rgb(var(--c-canvas-950)/0.6)_68%,rgb(var(--c-canvas-950)/0.1)_100%)] transition-opacity duration-500 group-hover:opacity-95" />
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(167,244,50,0.22),transparent_34%)] opacity-60 light:opacity-0 transition-opacity duration-500 group-hover:opacity-90" />
                                     <div className={`relative mt-auto flex w-full flex-col ${isFeatured ? "gap-5 p-6 md:p-8" : "gap-3 p-5 md:p-6"}`}>

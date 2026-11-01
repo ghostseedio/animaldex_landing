@@ -760,6 +760,65 @@ button {
     }
 }
 
+/* The trailing cursor (src/app/[locale]/_components/cursor.tsx): a small dot, a
+   thin ring over links so their labels stay readable (WEB-37), and the filled
+   "PULL" disc over draggable rows. */
+.cursor-trail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    opacity: 0;
+    will-change: transform;
+    transition: background-color 200ms cubic-bezier(.2, .8, .2, 1), box-shadow 200ms cubic-bezier(.2, .8, .2, 1);
+}
+.cursor-trail[data-shape="dot"],
+.cursor-trail[data-shape="pull"] { background-color: rgb(var(--c-primary-400)); }
+.cursor-trail[data-shape="ring"] {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1.5px rgb(var(--c-primary-text-400));
+}
+
+/* The AnimalDex lockup (src/components/brand/brand-lockup.tsx, DECISIONS §5).
+   Barlow Condensed's cap height is 0.7 em: the mark is that × 1.35, and the gap
+   that × 0.35. */
+.brand-lockup {
+    --brand-cap: calc(var(--brand-size, 28px) * 0.7);
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--brand-cap) * 0.35);
+    font-size: var(--brand-size, 28px);
+    line-height: 1;
+}
+.brand-mark {
+    flex: none;
+    width: calc(var(--brand-cap) * 1.35);
+    height: calc(var(--brand-cap) * 1.35);
+    background: url("/images/brand/mark-64.webp") center / contain no-repeat;
+}
+.brand-lockup--lg .brand-mark { background-image: url("/images/brand/mark-192.webp"); }
+/* On a light page the art's dark shading would wash out, so the mark sits on its
+   own ground: the app icon. */
+:root[data-theme="light"] .brand-lockup:not(.theme-dark *) .brand-mark {
+    background-image: url("/images/brand/tile-96.webp");
+    background-size: cover;
+    border-radius: 24%;
+}
+:root[data-theme="light"] .brand-lockup--lg:not(.theme-dark *) .brand-mark { background-image: url("/images/brand/tile-512.webp"); }
+.brand-word {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+    /* Optical centring: the word's box is taller than its capitals. */
+    padding-top: 0.06em;
+}
+.brand-word-animal { color: rgb(var(--c-ink-100)); }
+.brand-word-dex { color: rgb(var(--c-primary-text-400)); }
+
 /* Sign-in page welcome card (src/components/welcome/welcome-intro-stage.tsx),
    ported from iOS WelcomeIntroStage. */
 @keyframes welcome-card-drift {

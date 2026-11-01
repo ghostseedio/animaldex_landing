@@ -11,6 +11,7 @@ import {
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {withOgCard} from "@/lib/og/og-image";
+import {getScopedTranslator} from "@/loaders/translation";
 
 export const revalidate = 86400;
 
@@ -65,6 +66,7 @@ export async function generateMetadata({params}: PokemonAnimalsIndexPageProps): 
 
 export default async function PokemonAnimalsIndexPage({params}: PokemonAnimalsIndexPageProps) {
     const {locale} = params;
+    const t = await getScopedTranslator(locale, "collectorPages");
     const summary = getPokemonAnimalSummary();
     const pageUrl = getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH);
     const collectionSchema = {
@@ -94,6 +96,11 @@ export default async function PokemonAnimalsIndexPage({params}: PokemonAnimalsIn
                 <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">Explore</p>
                 <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white max-w-5xl">{title}</h1>
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200 max-w-4xl">{description}</p>
+                {/* The positioning, in one line, and the way in (DECISIONS §8). */}
+                <p className="max-w-3xl text-lg font-semibold leading-8 text-white">{t("positioningLine")}</p>
+                <Link href="/talk" className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary-400 px-6 font-bold text-canvas-950 transition-colors hover:bg-primary-300">
+                    {t("talkButton")}
+                </Link>
             </section>
 
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Pokemon animal counterpart summary">

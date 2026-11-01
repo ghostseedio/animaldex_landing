@@ -104,7 +104,6 @@ export default function AnimalTrialsView({locale, page}: {locale: string; page: 
     const rangeEnd = rangeStart + pageTrials.length - 1;
     const totals = countByFrequency(animalTrials);
     const species = new Set(animalTrials.map((trial) => trial.slug)).size;
-    const principles = new Set(animalTrials.map((trial) => trial.principleName).filter(Boolean)).size;
 
     const faqSchema = {
         "@context": "https://schema.org",
@@ -116,11 +115,13 @@ export default function AnimalTrialsView({locale, page}: {locale: string; page: 
         }))
     };
 
+    // Four different numbers (WEB-29): every species has one Power and every
+    // Trial a tempo, so "Powers" and "Classified by tempo" only repeated the first two.
     const stats = [
         {value: animalTrials.length, label: "Trials"},
         {value: species, label: "Species"},
-        {value: principles, label: "Powers"},
-        {value: totals.LOW + totals.MID + totals.HIGH, label: "Classified by tempo"}
+        {value: totals.LOW, label: "Slow and steady"},
+        {value: totals.HIGH, label: "Fast and intense"}
     ];
 
     return (

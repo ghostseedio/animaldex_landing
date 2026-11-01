@@ -3,18 +3,22 @@ import {ChallengeEntry} from "@/data/challenges";
 
 type ChallengeHeroProps = {
     challenge: ChallengeEntry;
+    /** The visible headline: "{A} and {B}, side by side" (the SEO title stays in the meta). */
+    title?: string;
     comparisonTypeLabel: string;
     animalAName: string;
     animalBName: string;
     updatedLabel: string;
     updatedValue: string;
-    winnerLabel: string;
+    /** Retired from comparison pages (WEB-9); kept optional for older callers. */
+    winnerLabel?: string;
     readTimeLabel: string;
     quickVerdictLabel: string;
 };
 
 export default function ChallengeHero({
     challenge,
+    title,
     comparisonTypeLabel,
     animalAName,
     animalBName,
@@ -46,7 +50,7 @@ export default function ChallengeHero({
                     <span className="rounded-full border border-primary-300/30 bg-primary-500/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-primary-100 backdrop-blur">
                         {comparisonTypeLabel}
                     </span>
-                    <span className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">{winnerLabel}</span>
+                    {winnerLabel ? <span className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">{winnerLabel}</span> : null}
                     <span className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs text-ink-100 backdrop-blur">{readTimeLabel}</span>
                     <span className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs text-ink-100 backdrop-blur">{updatedLabel} {updatedValue}</span>
                 </div>
@@ -54,13 +58,13 @@ export default function ChallengeHero({
                 <div className="max-w-4xl space-y-4">
                     <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-surface-950">{quickVerdictLabel}</span>
                     <h1 className="font-display text-4xl font-bold leading-[0.98] text-white md:text-6xl lg:text-7xl">
-                        {challenge.title}
+                        {title ?? challenge.title}
                     </h1>
                     <p className="max-w-3xl text-base leading-7 text-ink-100 md:text-xl md:leading-8">
                         {challenge.description}
                     </p>
                     <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary-100">
-                        {animalAName} <span className="mx-2 text-white/50">vs</span> {animalBName}
+                        {animalAName} <span aria-hidden="true" className="mx-2 text-white/50">·</span> {animalBName}
                     </p>
                 </div>
             </div>

@@ -1,7 +1,6 @@
 import {remark} from "remark";
 import html from "remark-html";
 import Image from "next/image";
-import logo from "@/app/[locale]/_assets/logos/logo.svg";
 import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
 
 export type LegalPageProps = {
@@ -18,7 +17,7 @@ export default function LegalPage({content}: LegalPageProps) {
         <main className="min-h-screen w-full bg-canvas-950 text-ink-200">
             <div className="w-full text-center max-w-3xl px-4 mx-auto py-16">
                 <aside className="flex items-center justify-center gap-4 text-primary-500 mb-8">
-                    <Image src={logo} alt="AnimalDex logo" width={64} height={64} priority />
+                    <Image src="/images/brand/mark-192.webp" alt="AnimalDex" width={64} height={64} priority unoptimized className="h-16 w-16" />
                     <ShieldUserIcon size={64} />
                     <DatabaseIcon size={64} />
                 </aside>

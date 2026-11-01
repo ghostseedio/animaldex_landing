@@ -50,16 +50,20 @@ export const WILDLIFE_GUIDES_HREF = "/wildlife-guides";
  */
 export const productLinks: PublicNavLink[] = [
     {href: TALK_HREF, labelKey: "talkToAnAnimal"},
-    {href: HOW_IT_WORKS_HREF, labelKey: "howAnimalDexWorks"},
+    {href: HOW_IT_WORKS_HREF, labelKey: "howItWorks"},
     {href: ADVICE_FATIGUE_HREF, labelKey: "adviceFatigue"},
-    {href: "/#features", labelKey: "appFeatures"},
     {href: "/use-cases", labelKey: "whosItFor"},
     {href: START_COLLECTION_HREF, labelKey: "getTheApp"},
     {href: INSTAGRAM_WILDLIFE_ARCHIVE_HREF, labelKey: "instagramWildlifeArchive"},
     {href: EARN_ON_ANIMALDEX_HREF, labelKey: "earnOnAnimalDex"}
 ];
 
-/** 02 — Explore Animals: the catalogue and the places to use it. */
+/**
+ * 02 — Explore Animals: the catalog and the places to use it. The footer
+ * carries the whole column, including the search-traffic hubs (side by side,
+ * tier lists, hybrids); the header's Animals menu keeps only the pages a
+ * newcomer to the talking animals needs (DECISIONS §8, JRN-35).
+ */
 export const exploreAnimalLinks: PublicNavLink[] = [
     {href: "/animals", labelKey: "browseAnimals", preview: "browse"},
     {href: "/comparisons", labelKey: "compareAnimals", preview: "compare"},
@@ -73,14 +77,14 @@ export const exploreAnimalLinks: PublicNavLink[] = [
 /**
  * 03 — Animal Wisdom: what an animal teaches, rather than what it is.
  *
- * `/what-animal-am-i` lives here rather than in Explore Animals: it answers a
- * question about the reader, not a question about the catalogue. The Oct 2026
- * rename (Lessons → Powers, Traits → Qualities, Behaviours → Frequencies,
- * Challenge Yourself → Trials) moved every URL here; next.config.js 301s the old ones.
+ * The Oct 2026 rename (Lessons → Powers, Traits → Qualities, Behaviours →
+ * Frequencies, Challenge Yourself → Trials) moved every URL here;
+ * next.config.js 301s the old ones. `/talk-to-animals` (a search landing that
+ * points to /talk) is no longer listed beside the real Talk page, and
+ * `/what-animal-am-i` keeps its URL under its new name.
  */
 export const animalWisdomLinks: PublicNavLink[] = [
     {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom", preview: "ask"},
-    {href: "/talk-to-animals", labelKey: "talkToAnimals", preview: "ask"},
     {href: "/animal-powers", labelKey: "animalPowers", preview: "lessons"},
     {href: "/qualities", labelKey: "animalQualities", preview: "powers"},
     {href: ANIMAL_FREQUENCIES_HREF, labelKey: "animalFrequencies", preview: "behaviours"},
@@ -99,40 +103,60 @@ export const resourceLinks: PublicNavLink[] = [
 ];
 
 /**
- * Articles keeps its own top-level slot in the header, as it always has, so the
- * Resources dropdown must not repeat it — the mobile drawer renders both and a
- * link appearing twice is a duplicate tap target, not a shortcut. The footer
- * column is unfiltered, since it has no standalone Articles entry.
+ * The header (JRN-35): How it works · Animals · Articles, then Talk to an
+ * animal and Get the app. Animals holds the catalog and what each animal
+ * teaches; Articles the reading and help. The search-traffic hubs live in
+ * the footer.
  */
-export const headerResourceLinks: PublicNavLink[] = resourceLinks.filter(
-    (link) => link.href !== BLOG_HREF
-);
+export const headerAnimalLinks: PublicNavLink[] = [
+    {href: "/animals", labelKey: "browseAnimals", preview: "browse"},
+    {href: "/animal-powers", labelKey: "animalPowers", preview: "lessons"},
+    {href: ANIMAL_TRIALS_HREF, labelKey: "animalTrials", preview: "challenge"},
+    {href: "/qualities", labelKey: "animalQualities", preview: "powers"},
+    {href: ANIMAL_FREQUENCIES_HREF, labelKey: "animalFrequencies", preview: "behaviours"},
+    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"},
+    {href: WILDLIFE_GUIDES_HREF, labelKey: "wildlifeGuides", preview: "experiences"}
+];
+
+export const headerArticleLinks: PublicNavLink[] = [
+    {href: BLOG_HREF, labelKey: "allArticles", preview: "symbolism"},
+    {href: ADVICE_FATIGUE_HREF, labelKey: "adviceFatigue", preview: "ask"},
+    {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom", preview: "lessons"},
+    {href: "/animal-symbolism", labelKey: "animalSymbolism", preview: "symbolism"},
+    {href: "/support", labelKey: "support", preview: "support"}
+];
+
+/** How it works is a page of its own in the header, before the two menus. */
+export const howItWorksNavLink: PublicNavLink = {href: HOW_IT_WORKS_HREF, labelKey: "howItWorks"};
 
 export const headerDropdowns: PublicNavSection[] = [
-    // Catalogue above the rule, the places to go and use it below.
-    {id: "explore", titleKey: "exploreAnimals", links: exploreAnimalLinks, ruleAfterHref: "/animal-hybrids"},
-    // Reading above the rule, the interactive pages below.
-    {id: "lessons", titleKey: "animalWisdom", links: animalWisdomLinks, ruleAfterHref: "/qualities"},
-    {id: "resources", titleKey: "footerGroups.resources", links: headerResourceLinks, ruleAfterHref: "/support"}
+    // The catalog above the rule, the places to go and use it below.
+    {id: "explore", titleKey: "animalsNav", links: headerAnimalLinks, ruleAfterHref: ANIMAL_FREQUENCIES_HREF},
+    // Reading above the rule, help below.
+    {id: "articles", titleKey: "blog", links: headerArticleLinks, ruleAfterHref: "/animal-symbolism"}
 ];
 
 export const DEFAULT_MOBILE_ACCORDION_ID = "explore";
 
 export const mobileAccordionSections: PublicNavSection[] = headerDropdowns;
 
-/** The drawer pins these at its foot: Talk to an animal, then Get the app beside Web app. */
+/** The drawer pins these at its foot: Talk to an animal, then Get the app beside the account. */
 export const PINNED_DRAWER_HREFS = [TALK_HREF, START_COLLECTION_HREF];
 
 /**
- * The mobile drawer's "More" group: everything the accordions do not already
- * carry. The pinned actions are excluded because the drawer's foot carries
- * them, and the resource links are excluded because they are an accordion of
- * their own — leaving the rest of the product links.
+ * The mobile drawer's "More" group: what neither the top-level How it works
+ * nor the two accordions carry, and not the pinned actions at its foot.
  */
 export const moreNavGroups: PublicNavLink[][] = [
-    productLinks.filter((link) => !PINNED_DRAWER_HREFS.includes(link.href))
+    [
+        ...productLinks.filter((link) => !PINNED_DRAWER_HREFS.includes(link.href)
+            && link.href !== HOW_IT_WORKS_HREF
+            && !headerDropdowns.some((section) => section.links.some((item) => item.href === link.href))),
+        {href: "/contact", labelKey: "contact"}
+    ]
 ];
 
+/** Kept for the footer and older callers: Articles' own link. */
 export const blogNavLink: PublicNavLink = {href: BLOG_HREF, labelKey: "blog"};
 
 export const footerColumns: Array<{

@@ -6,116 +6,169 @@ export type CursorProps = {
     smoothnessCoefficient?: number;
 }
 
-export default function Cursor({smoothnessCoefficient = 0.9}: CursorProps) {
+/** A fine pointer that can hover, and a reader who has not asked for less motion. */
+const CURSOR_QUERY = "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+
+type Target = {
+    x: number;
+    y: number;
+    size: number;
+    /** "dot" follows the pointer; "ring" outlines a link without covering it; "pull" is the drag affordance. */
+    shape: "dot" | "ring" | "pull" | "hidden";
+    text: string;
+};
+
+/**
+ * The trailing cursor (WEB-17, WEB-37).
+ *
+ * - Mounted only where it can be seen: a mouse or trackpad, and no reduced
+ *   motion. Touch devices and reduced-motion readers run nothing at all.
+ * - The hover target is read once per pointer move, never per frame, and the
+ *   animation loop stops as soon as the trail has caught up, so an idle page
+ *   costs no main-thread time.
+ * - Over a link it is a thin ring, not a solid disc, so the label underneath
+ *   stays readable; over a text field it steps aside.
+ * - No React state per frame: the trail is written to the DOM directly.
+ */
+export default function Cursor({smoothnessCoefficient = 0.82}: CursorProps) {
+    const [enabled, setEnabled] = useState(false);
+
+    useEffect(() => {
+        const media = window.matchMedia(CURSOR_QUERY);
+        const update = () => setEnabled(media.matches);
+        update();
+        media.addEventListener("change", update);
+        return () => media.removeEventListener("change", update);
+    }, []);
+
+    if (!enabled) return null;
+    return <CursorTrail smoothnessCoefficient={smoothnessCoefficient} />;
+}
+
+function CursorTrail({smoothnessCoefficient}: {smoothnessCoefficient: number}) {
     const trail = useRef<HTMLDivElement>(null);
-    const mousePosition = useRef<{ x: number, y: number }>({x: 0, y: 0});
-    const trailPosition = useRef<{ x: number, y: number }>({x: 0, y: 0});
-    const trailSize = useRef<{ width: number, height: number }>({width: 0, height: 0});
-    const pullOpacity = useRef(0);
-    const pullText = useRef<HTMLDivElement>(null);
-    const hoveredElement = useRef<Element | null>(null);
-    const [light, setLight] = useState(false);
-    const [text, setText] = useState("");
+    const label = useRef<HTMLSpanElement>(null);
 
     useEffect(() => {
-        let currentFrame: number;
-        const move = () => {
-            hoveredElement.current = document.elementFromPoint(mousePosition.current.x, mousePosition.current.y);
-            const customTextParent = hoveredElement.current?.closest("[data-cursor-text]");
-            if (trail.current && pullText.current) {
-                const computedStyle = hoveredElement.current ? getComputedStyle(hoveredElement.current) : null;
-                const cursorStyle = computedStyle?.cursor || "default";
-                const parentBoundingRect = customTextParent?.getBoundingClientRect();
-                const maxParentDimension = Math.max(parentBoundingRect?.width || 0, parentBoundingRect?.height || 0);
+        const element = trail.current;
+        const text = label.current;
+        if (!element || !text) return;
 
-                // Trail position
-                const targetPosition = customTextParent ?
-                    {
-                        x: (parentBoundingRect?.left || 0) + (parentBoundingRect?.width || 0) / 2,
-                        y: (parentBoundingRect?.top || 0) + (parentBoundingRect?.height || 0) / 2
-                    } :
-                    {x: mousePosition.current.x, y: mousePosition.current.y};
+        const position = {x: -100, y: -100};
+        let size = 8;
+        let opacity = 0;
+        let target: Target = {x: -100, y: -100, size: 8, shape: "hidden", text: ""};
+        let shape: Target["shape"] = "hidden";
+        let frame = 0;
+        let pendingRead = 0;
+        let pointer = {x: -100, y: -100};
 
-                trailPosition.current.x = trailPosition.current.x * smoothnessCoefficient + targetPosition.x * (1 - smoothnessCoefficient);
-                trailPosition.current.y = trailPosition.current.y * smoothnessCoefficient + targetPosition.y * (1 - smoothnessCoefficient);
-
-                trail.current.style.left = trailPosition.current.x + "px";
-                trail.current.style.top = trailPosition.current.y + "px";
-
-                // Trail size
-                const trailSizeTarget =
-                    customTextParent ? {width: maxParentDimension + 16, height: maxParentDimension + 16} :
-                        cursorStyle === "pointer" ? {width: 24, height: 24} :
-                            cursorStyle === "grab" ? {width: 64, height: 64} :
-                                {width: 12, height: 12};
-
-                trailSize.current.width = trailSize.current.width * smoothnessCoefficient + trailSizeTarget.width * (1 - smoothnessCoefficient);
-                trailSize.current.height = trailSize.current.height * smoothnessCoefficient + trailSizeTarget.height * (1 - smoothnessCoefficient);
-
-                trail.current.style.width = trailSize.current.width + "px";
-                trail.current.style.height = trailSize.current.height + "px";
-
-                // Light
-                const linkParent = hoveredElement.current?.closest("button, a");
-                const isLight = (cursorStyle === "pointer" &&
-                    linkParent?.className.includes("bg-primary-500")
-                ) || cursorStyle === "grab";
-                setLight(isLight);
-
-                // Text
-                const textTarget = cursorStyle === 'grab' ? 'PULL' :
-                    (customTextParent?.getAttribute("data-cursor-text") || "");
-                const textTargetChanged = textTarget !== text;
-                if (textTargetChanged) {
-                    setText(textTarget);
-                }
-
-                // Pull text opacity
-                const pullOpacityTarget = textTarget !== '' ? 1 : 0;
-                pullOpacity.current = pullOpacityTarget < 0.001 ? 0 : pullOpacity.current * smoothnessCoefficient + pullOpacityTarget * (1 - smoothnessCoefficient);
-
-                pullText.current.style.opacity = pullOpacity.current + "";
+        const readTarget = () => {
+            pendingRead = 0;
+            const hovered = document.elementFromPoint(pointer.x, pointer.y);
+            if (!hovered) {
+                target = {...target, x: pointer.x, y: pointer.y, shape: "hidden", text: ""};
+                return;
             }
-            currentFrame = requestAnimationFrame(move);
-        }
-        currentFrame = requestAnimationFrame(move);
-
-        return () => {
-            cancelAnimationFrame(currentFrame)
+            const custom = hovered.closest("[data-cursor-text]");
+            if (custom) {
+                const rect = custom.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height) + 16;
+                target = {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, size, shape: "pull", text: custom.getAttribute("data-cursor-text") || ""};
+                return;
+            }
+            if (hovered.closest("input, textarea, select, [contenteditable='true']")) {
+                target = {x: pointer.x, y: pointer.y, size: 8, shape: "hidden", text: ""};
+                return;
+            }
+            const cursor = getComputedStyle(hovered).cursor;
+            if (cursor === "grab" || cursor === "grabbing") {
+                target = {x: pointer.x, y: pointer.y, size: 64, shape: "pull", text: "PULL"};
+            } else if (cursor === "pointer") {
+                target = {x: pointer.x, y: pointer.y, size: 30, shape: "ring", text: ""};
+            } else {
+                target = {x: pointer.x, y: pointer.y, size: 8, shape: "dot", text: ""};
+            }
         };
-    }, [smoothnessCoefficient, text]);
 
-    useEffect(() => {
-        const mouseMoveHandler = (e: MouseEvent) => {
-            mousePosition.current = {
-                x: e.clientX,
-                y: e.clientY
+        const applyShape = (next: Target["shape"]) => {
+            if (next === shape) return;
+            shape = next;
+            element.dataset.shape = next;
+            text.textContent = next === "pull" ? target.text : "";
+        };
+
+        const step = () => {
+            frame = 0;
+            const keep = smoothnessCoefficient;
+            position.x = position.x * keep + target.x * (1 - keep);
+            position.y = position.y * keep + target.y * (1 - keep);
+            size = size * keep + target.size * (1 - keep);
+            const opacityTarget = target.shape === "hidden" ? 0 : 1;
+            opacity = opacity * keep + opacityTarget * (1 - keep);
+            applyShape(target.shape === "hidden" ? shape : target.shape);
+            element.style.transform = `translate3d(${position.x - size / 2}px, ${position.y - size / 2}px, 0)`;
+            element.style.width = `${size}px`;
+            element.style.height = `${size}px`;
+            element.style.opacity = String(opacity < 0.01 ? 0 : opacity);
+            const settled = Math.abs(position.x - target.x) < 0.2
+                && Math.abs(position.y - target.y) < 0.2
+                && Math.abs(size - target.size) < 0.2
+                && Math.abs(opacity - opacityTarget) < 0.01;
+            if (!settled) frame = requestAnimationFrame(step);
+        };
+
+        const wake = () => {
+            if (!frame) frame = requestAnimationFrame(step);
+        };
+
+        const onMove = (event: MouseEvent) => {
+            pointer = {x: event.clientX, y: event.clientY};
+            if (position.x < -50) {
+                position.x = pointer.x;
+                position.y = pointer.y;
             }
-        }
+            // One hit test per frame at most, however fast the pointer moves.
+            if (!pendingRead) {
+                pendingRead = requestAnimationFrame(() => {
+                    readTarget();
+                    wake();
+                });
+            }
+            target = {...target, x: target.shape === "pull" && target.text !== "PULL" ? target.x : pointer.x, y: target.shape === "pull" && target.text !== "PULL" ? target.y : pointer.y};
+            wake();
+        };
+        const onLeave = () => {
+            target = {...target, shape: "hidden"};
+            wake();
+        };
+        // Scrolling moves the page under a still pointer.
+        const onScroll = () => {
+            if (!pendingRead) {
+                pendingRead = requestAnimationFrame(() => {
+                    readTarget();
+                    wake();
+                });
+            }
+        };
 
-        document.addEventListener("mousemove", mouseMoveHandler);
-
-        return () => document.removeEventListener("mousemove", mouseMoveHandler);
-    }, [])
+        document.addEventListener("mousemove", onMove, {passive: true});
+        document.documentElement.addEventListener("mouseleave", onLeave);
+        window.addEventListener("scroll", onScroll, {passive: true});
+        return () => {
+            cancelAnimationFrame(frame);
+            cancelAnimationFrame(pendingRead);
+            document.removeEventListener("mousemove", onMove);
+            document.documentElement.removeEventListener("mouseleave", onLeave);
+            window.removeEventListener("scroll", onScroll);
+        };
+    }, [smoothnessCoefficient]);
 
     return (
-        <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-50 cannot-hover:hidden">
-            <div
-                className={`absolute transform -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none
-                ${light ? "bg-primary-100" : "bg-primary-400"} transition-colors duration-300 ease-in-out`}
-                ref={trail}
-            >
-                <div
-                    className="relative flex items-center justify-center w-full h-full"
-                    ref={pullText}
-                >
-                    <span
-                        className="text-sm font-bold text-canvas-950 transition-colors duration-300 ease-in-out"
-                    >
-                        {text}
-                    </span>
-                </div>
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+            <div ref={trail} data-shape="hidden" className="cursor-trail">
+                <span ref={label} className="text-sm font-bold text-canvas-950" />
             </div>
         </div>
-    )
+    );
 }

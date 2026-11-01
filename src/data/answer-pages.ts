@@ -1598,6 +1598,15 @@ export function getAnswerPage(slug: string) {
     return answerPages.find((entry) => entry.slug === slug);
 }
 
+/**
+ * Guides whose route next.config.js permanently redirects (consolidated into
+ * /animal-identifier-app). Never link them: a link should land on the final
+ * URL, not a 308 (WEB-33). Mirrors build-sitemap's list.
+ */
+const REDIRECTED_ANSWER_SLUGS = new Set(["ai-animal-scanner"]);
+
+const linkableAnswerPages = () => answerPages.filter((entry) => !REDIRECTED_ANSWER_SLUGS.has(entry.slug));
+
 /** The og.png / placeholder seed a CMS copy of a guide inherits is not a real image. */
 export function isRealAnswerImage(image: Partial<ContentImage> | null | undefined): image is ContentImage {
     const src = image?.src ?? "";
@@ -1616,7 +1625,7 @@ export function getRelatedAnswerPages(slug: string, limit = 5) {
         return [];
     }
 
-    return answerPages
+    return linkableAnswerPages()
         .filter((entry) => entry.slug !== slug)
         .map((entry) => {
             const sharedIntents = entry.searchIntents.filter((intent) => current.searchIntents.includes(intent)).length;
@@ -1633,7 +1642,7 @@ export function getRelatedAnswerPages(slug: string, limit = 5) {
 export function getAnswerPagesForIntents(intents: string[], limit = 3) {
     const normalized = intents.map((intent) => intent.toLowerCase());
 
-    const scored = answerPages
+    const scored = linkableAnswerPages()
         .map((entry) => {
             const score = entry.searchIntents.reduce((acc, intent) => {
                 const lowerIntent = intent.toLowerCase();
@@ -1661,5 +1670,5 @@ export function getAnswerPagesForIntents(intents: string[], limit = 3) {
         return matching;
     }
 
-    return answerPages.slice(0, limit);
+    return linkableAnswerPages().slice(0, limit);
 }

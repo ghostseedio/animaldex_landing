@@ -14,6 +14,7 @@
 
 import {useEffect, useMemo, useState, useSyncExternalStore} from "react";
 import Image from "next/image";
+import BrandLockup from "@/components/brand/brand-lockup";
 import {usePathname} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
@@ -110,12 +111,9 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
     return (
         <div className="flex min-h-0 flex-1 flex-col" data-testid="talk-sidebar">
             <div className="flex items-center gap-2 px-4 pb-2 pt-4">
-                {/* The flat lockup (DECISIONS section 5): the mark at 1.35 × the cap height, 0.35 × it apart. */}
-                <Link href="/" aria-label={words.home} className="flex min-h-11 min-w-0 flex-1 items-center gap-[5px]">
-                    <Image src="/images/logo.webp" alt="" aria-hidden="true" width={40} height={40} className="h-5 w-5" />
-                    <span aria-hidden="true" className="font-display text-[1.35rem] font-extrabold leading-none">
-                        <span className="text-white">Animal</span><span className="text-primary-400">Dex</span>
-                    </span>
+                {/* The shared flat lockup (DECISIONS section 5): src/components/brand/brand-lockup.tsx. */}
+                <Link href="/" aria-label={words.home} className="flex min-h-11 min-w-0 flex-1 items-center">
+                    <BrandLockup size={22} />
                 </Link>
                 {onClose ? (
                     <button type="button" onClick={onClose} aria-label={words.closeChats} className="grid h-11 w-11 place-items-center rounded-full text-ink-300 hover:bg-white/8 hover:text-white">

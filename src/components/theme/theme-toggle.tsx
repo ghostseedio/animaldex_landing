@@ -39,7 +39,7 @@ export default function ThemeToggle({toLightLabel, toDarkLabel, className = ""}:
             }}
             aria-label={label}
             title={label}
-            className={"inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border border-line-200 bg-white/[0.02] text-ink-200 transition-colors duration-150 hover:border-line-100 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none " + className}
+            className={"inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-200 bg-white/[0.02] text-ink-200 transition-colors duration-150 hover:border-line-100 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none " + className}
         >
             {/* The icon follows data-theme through CSS rather than state, so it is right
                 from first paint, before hydration has read the saved choice. Moon shows

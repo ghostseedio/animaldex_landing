@@ -3020,7 +3020,7 @@ const blogPostsData: BlogPost[] = [
                     }
                 },
                 inlineLinks: [
-                    {text: "AI animal scanner and identification app", slug: "ai-animal-scanner-identification-app", href: "/use-cases/ai-animal-scanner-identification-app"},
+                    {text: "AI animal scanner and identification app", slug: "animal-identifier-app", href: "/animal-identifier-app"},
                     {text: "How AnimalDex indexes animals", slug: "how-animaldex-indexes-animals", href: "/blog/how-animaldex-indexes-animals"}
                 ],
                 speciesSlugs: ["bald-eagle"]

@@ -23,14 +23,14 @@ export const WILD_PROFILE_INTERVIEW_PATH = "/app/train/wild-profile/interview";
 export const whatAnimalAmIPage = {
     slug: WHAT_ANIMAL_AM_I_SLUG,
     // The root layout's title template appends " | AnimalDex".
-    metaTitle: "What Animal Am I? Free Animal Personality Test",
-    metaDescription: "Free animal personality test: 10 quick questions, no sign-up. Get your Origin, Apex and Active animals instantly, based on how 14 real species behave.",
-    heroTitle: "What animal am I?",
-    heroSubtitle: "Take the free 10-question animal personality test below and get your answer instantly: three animals — Origin, Apex and Active — and why they fit.",
+    metaTitle: "What Animal Am I? Which Animal Sees the World Like You",
+    metaDescription: "10 quick questions, no sign-up: meet the three real animals whose way of living is closest to yours (Origin, Apex and Active), and why. Based on how 14 real species behave.",
+    heroTitle: "Which animal sees the world like you?",
+    heroSubtitle: "Answer 10 quick questions and meet three real animals whose way of living is closest to yours: Origin, Apex and Active, and why each one fits.",
     intro: "Every result is a real species, matched on how you recharge, handle conflict, work with others and react under pressure. Want the deeper version? Take the adaptive Wild Profile interview here on the web or in the AnimalDex app, and AnimalDex matches you against its full species catalog.",
     quiz: {
-        eyebrow: "Animal personality test",
-        title: "Take the animal personality test",
+        eyebrow: "Ten questions",
+        title: "Find the animals that see it like you",
         description: "10 quick questions, no sign-up. Pick the answer that sounds most like you — not who you'd like to be.",
         submitLabel: "Show my animal",
         answeredLabel: "answered",
@@ -52,10 +52,9 @@ export const whatAnimalAmIPage = {
         resultsDescription: "The quiz scores you against these real species. Each description is based on documented behaviour of the animal — not astrology.",
         progressLabel: "Quiz progress"
     },
-    // The first six render as chips in the hero.
     measures: {
-        eyebrow: "Inside the test",
-        title: "What this animal personality test measures",
+        eyebrow: "Inside the quiz",
+        title: "What the questions look at",
         description: "Each of the 10 questions looks at one everyday trait. Every answer adds points to the animals whose real, documented behaviour matches it.",
         scoring: "Your Origin animal is the best match across all ten answers. Your Apex animal is the best match on conflict, pressure, protection and blind spots. Your Active animal is the best match on how you recharge, learn, keep your rhythm and handle change. The three are always different species, and the same answers always give the same result."
     },
@@ -103,12 +102,12 @@ export const whatAnimalAmIPage = {
     ],
     faq: [
         {
-            question: "What is an animal personality test?",
-            answer: "An animal personality test matches your habits and instincts to an animal that behaves the same way. This one asks 10 multiple-choice questions about how you recharge, handle conflict, plan, learn, show care and react under pressure, then scores your answers against 14 real species and gives you three animals: Origin, Apex and Active."
+            question: "What does this quiz do?",
+            answer: "It matches how you live to animals that live the same way. It asks 10 multiple-choice questions about how you recharge, handle conflict, plan, learn, show care and react under pressure, then scores your answers against 14 real species and gives you three animals: Origin, Apex and Active."
         },
         {
-            question: "Is this animal personality test free?",
-            answer: "Yes. The 10-question test on this page is free, needs no sign-up and shows your result instantly. The longer adaptive Wild Profile interview is also free; it only needs a free AnimalDex account so your result can be saved."
+            question: "Is it free?",
+            answer: "Yes. The 10-question quiz on this page is free, needs no sign-up and shows your result instantly. The longer adaptive Wild Profile interview is also free; it only needs a free AnimalDex account so your result can be saved."
         },
         {
             question: "What animal am I?",
@@ -119,8 +118,8 @@ export const whatAnimalAmIPage = {
             answer: "Each of the 10 questions has four answers, and every answer adds points to the animals whose real-world behaviour matches it. Your Origin is the animal with the most points overall, your Apex is the best match on the pressure and conflict questions, and your Active is the best match on how you recharge, learn and handle change. Scoring is fixed, so the same answers always give the same result."
         },
         {
-            question: "Is this animal personality test scientific?",
-            answer: "No. It is a fun, self-report personality reflection, not a validated psychological test. What is grounded in science is the animal side: each description is based on documented behaviour of that species, such as wolf pack cooperation, crow face recognition or bear hyperphagia before winter."
+            question: "Is it scientific?",
+            answer: "No. It is a fun self-reflection, not a validated psychological test. What is grounded in science is the animal side: each description is based on documented behaviour of that species, such as wolf pack cooperation, crow face recognition or bear hyperphagia before winter."
         },
         {
             question: "What is my spirit animal based on my personality?",

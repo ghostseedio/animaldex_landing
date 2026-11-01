@@ -3,66 +3,66 @@
     "logo": "Back to AnimalDex homepage",
     "title": "AnimalDex",
     "description": "Every animal sees it differently.",
-    "team": "Who It's For",
+    "team": "Who it's for",
     "features": "Features",
-    "download": "Get app",
-    "privacy": "Privacy Policy",
-    "terms": "Terms of Use",
-    "refunds": "Refund Policy",
+    "download": "Get the app",
+    "privacy": "Privacy policy",
+    "terms": "Terms of use",
+    "refunds": "Refund policy",
     "contact": "Contact",
     "discover": "Discover",
     "collection": "Collection",
-    "support": "Help Center",
+    "support": "Help center",
     "blog": "Articles",
-    "useCases": "Who It's For",
-    "animals": "Animal Encyclopedia",
-    "qualities": "Animal Qualities",
-    "animalMeanings": "Animal Meanings",
-    "animalSymbolism": "Animal Symbolism Articles",
+    "useCases": "Who it's for",
+    "animals": "Animal encyclopedia",
+    "qualities": "Animal qualities",
+    "animalMeanings": "Animal meanings",
+    "animalSymbolism": "Animal symbolism",
     "animalPowers": "Animal Powers",
-    "whatAnimalAmI": "What Animal Am I?",
+    "whatAnimalAmI": "Which animal sees the world like you?",
     "pokemonAnimals": "Pokemon Animals",
-    "animalHybrids": "Animal Hybrids",
-    "locations": "Wildlife Locations",
-    "wildlifeGuides": "Wildlife Guides",
-    "challenges": "Comparisons",
-    "rankings": "Tier Lists",
-    "animalWisdom": "Animal Wisdom",
-    "howItWorks": "How It Works",
-    "browseAnimals": "Browse Animals",
+    "animalHybrids": "Animal hybrids",
+    "locations": "Wildlife locations",
+    "wildlifeGuides": "Wildlife guides",
+    "challenges": "Side by side",
+    "rankings": "Tier lists",
+    "animalWisdom": "Animal wisdom",
+    "howItWorks": "How it works",
+    "browseAnimals": "Browse animals",
     "signIn": "Sign in",
     "myAnimals": "My animals",
     "themeToLight": "Switch to light theme",
     "themeToDark": "Switch to dark theme",
-    "articlesGuides": "Articles & Guides",
+    "articlesGuides": "Articles and guides",
     "earnOnAnimalDex": "Earn on AnimalDex",
-    "becomeAWildlifeGuide": "Become a Wildlife Guide",
-    "creatorRewards": "Creator Rewards",
-    "sponsorAChallenge": "Sponsor a Challenge",
-    "wildlifeExperiences": "Wildlife Experiences",
-    "exploreAnimals": "Explore Animals",
+    "becomeAWildlifeGuide": "Become a wildlife guide",
+    "creatorRewards": "Creator rewards",
+    "sponsorAChallenge": "Sponsor an event",
+    "wildlifeExperiences": "Wildlife experiences",
+    "exploreAnimals": "Explore animals",
     "experiences": "Experiences",
     "earn": "Earn",
-    "compareAnimals": "Compare Animals",
-    "animalTierLists": "Animal Tier Lists",
+    "compareAnimals": "Side by side",
+    "animalTierLists": "Animal tier lists",
     "instagramWildlifeArchive": "Import from Instagram",
-    "discoverAnimalWisdom": "Lessons from Animals",
-    "animalQualities": "Animal Qualities",
-    "animalFrequencies": "Animal Frequencies",
+    "discoverAnimalWisdom": "Lessons from animals",
+    "animalQualities": "Animal qualities",
+    "animalFrequencies": "Animal frequencies",
     "animalTrials": "Animal Trials",
-    "findAWildlifeGuide": "Find a Wildlife Guide",
-    "howAnimalDexWorks": "How AnimalDex Works",
-    "appFeatures": "App Features",
-    "whosItFor": "Who's It For",
-    "brandAssets": "Brand Assets",
+    "findAWildlifeGuide": "Find a wildlife guide",
+    "howAnimalDexWorks": "How it works",
+    "appFeatures": "App features",
+    "whosItFor": "Who it's for",
+    "brandAssets": "Brand assets",
     "moreNav": "More",
     "footerGroups": {
       "product": "AnimalDex",
-      "explore": "Explore Animals",
-      "wisdom": "Animal Wisdom",
+      "explore": "Explore animals",
+      "wisdom": "Animal wisdom",
       "resources": "Resources",
       "earn": "Earn",
-      "experienceAndEarn": "Experience & Earn",
+      "experienceAndEarn": "Experience and earn",
       "follow": "Follow"
     },
     "credits": {
@@ -72,10 +72,17 @@
       "statusValue": "GHOSTSEED LTD · No. 17287552"
     },
     "webApp": "Web app",
-    "talkToAnimals": "Talk to Any Animal",
-    "talkToAnAnimal": "Talk to an Animal",
-    "getTheApp": "Get the App",
-    "adviceFatigue": "Advice Fatigue"
+    "talkToAnimals": "Talking to animals",
+    "talkToAnAnimal": "Talk to an animal",
+    "getTheApp": "Get the app",
+    "adviceFatigue": "Advice fatigue",
+    "animalsNav": "Animals",
+    "allArticles": "All articles",
+    "skipToContent": "Skip to content",
+    "language": "Language",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "backToTop": "Back to top"
   },
   "home": {
     "title": "AnimalDex",
@@ -88,7 +95,7 @@
     "heroLaurelExplorers": "explorers",
     "heroLaurelBuiltFor": "Built for",
     "heroLaurelCurious": "the curious",
-    "supporting": "Every encounter is a chance to learn how they succeed.",
+    "supporting": "Talk to animals. They won't just agree with you. Every animal answers from its own Power, a lesson from how its kind survives.",
     "chatStill": {
       "label": "An example conversation with a Common Octopus in AnimalDex",
       "animal": "Common Octopus",
@@ -107,96 +114,71 @@
       "titleAccentLine": "teach",
       "titleAccentEnd": "me?",
       "description": "Absolutely.",
-      "settings": "DISCOVER|Lessons",
-      "music": "TEST|Real-life Scenarios",
-      "customization": "MATCH|Animal Mind",
-      "wisdom": "EXPLORE|Field Guide",
+      "settings": "TALK|Animals that answer back",
+      "music": "DO|Your step in your own life",
+      "customization": "DISAGREE|Every animal takes a side",
+      "wisdom": "LEARN|How its kind survives",
       "wisdomDescription": "Every animal has a strategy for survival.",
       "appliedInsight": "Capture one. Discover what it can teach you.",
       "appliedInsightLead": "Capture one.",
       "appliedInsightBody": "Every animal you meet adds a new way of seeing.",
-      "more": "THE FULL|AnimalDex",
-      "button": "Explore"
+      "more": "AND MORE|AnimalDex",
+      "button": "See more",
+      "showLabel": "Show {name}, {index} of {count}"
     },
     "archive": {
       "line": "You’ve probably already started.",
       "cta": "Check my Instagram"
     },
     "more": {
-      "title": "Where will you go?",
-      "description": "Take us on your next adventure!",
+      "title": "Meet them in the wild.",
+      "description": "Photograph or film the animals you meet. AnimalDex identifies each one, and from then on it's yours to talk to.",
       "theme": {
-        "headlineLead": "Make encounters",
-        "headlineAccent": "Memorable.",
-        "eyebrow": "Make encounters memorable.",
-        "line1": "Every animal has a story.",
-        "line2": "Capture it. Understand it. Remember it.",
-        "title": "Make encounters Memorable.",
-        "description": "Every animal has a story to tell.",
+        "headlineLead": "Every encounter is",
+        "headlineAccent": "a new way of seeing.",
+        "eyebrow": "Every encounter is a new way of seeing.",
+        "line1": "Capture an animal, and it's yours to talk to.",
+        "line2": "Photograph or film it, and AnimalDex identifies it and names its Power in seconds.",
+        "title": "Every encounter is a new way of seeing.",
+        "description": "Capture an animal, and it's yours to talk to.",
         "note": "",
-        "alt": "AnimalDex capture detail for Red-lipped Batfish"
+        "alt": "A red fox, just identified in AnimalDex, with its Power",
+        "stillLabel": "Just identified",
+        "stillTalk": "Talk to it",
+        "stillStars": "Photo: 4 of 5 stars"
       },
       "ui": {
-        "headlineLead": "Grow with",
-        "headlineAccent": "Nature.",
-        "eyebrow": "Grow with nature.",
-        "line1": "Discover how animals survive, adapt and win.",
-        "line2": "Then see what the wild can teach you.",
-        "title": "Grow with Nature",
-        "description": "Learn how animals win.",
-        "alt": "AnimalDex community discovery feed"
+        "headlineLead": "Grow with every",
+        "headlineAccent": "animal you meet.",
+        "eyebrow": "Grow with every animal you meet.",
+        "line1": "Do the step, and its Power is yours.",
+        "line2": "Tell it how it went. Once a Power is yours, your animals can debate your problems, in private or in public.",
+        "title": "Grow with every animal you meet.",
+        "description": "Do the step, and its Power is yours.",
+        "alt": "A finished step in a chat with a gray wolf",
+        "you": "I asked the team to split the launch work instead of taking it all on myself. Two people said yes straight away.",
+        "reply": "That's how a pack hunts: nobody runs the whole chase alone. You took the first step of it.",
+        "doneLabel": "Done together",
+        "doneText": "Cooperation is yours now."
       },
       "design": {
-        "title": "Make exploring Fun",
-        "description": "Collecting gets addictive!",
-        "alt": "Placeholder visual for AnimalDex collection albums"
+        "title": "Keep every animal you meet",
+        "description": "Your animals stay with you, sorted by real taxonomy.",
+        "alt": "AnimalDex collection binders"
       },
       "speed": {
-        "title": "Become your Collection",
-        "description": "Whatever you collect, you gain in knowledge.",
-        "alt": "Placeholder visual for AnimalDex challenge and trading systems"
+        "title": "Debates, in private or in public",
+        "description": "Let your animals argue your problem, and see what the community thinks.",
+        "alt": "A debate between two animals in AnimalDex"
       },
-      "download": "Download"
+      "download": "Get the app"
     },
     "team": {
-      "eyebrow": "Find your place in AnimalDex",
-      "title": "Which explorer are you?",
-      "descriptionLead": "Meet. Talk. Explore. Create.",
-      "descriptionBody": "There's more than one way to experience the wild.",
-      "explore": "Explore",
-      "contact": "See why",
-      "personas": {
-        "collectors": {
-          "title": "Collectors",
-          "tagline": "Every animal you find becomes yours to talk to.",
-          "description": "Chase rare finds, keep each one as a card, and hear what it has to say.",
-          "alt": "Grid of collected wildlife species"
-        },
-        "explorers": {
-          "title": "Wildlife Photographers",
-          "tagline": "Import & ID your existing work",
-          "description": "Travel, discover wildlife and turn every trip into a hunt — including herping, birding, field notes, and bookable local wildlife experiences.",
-          "alt": "Explorer photographing wildlife in the jungle"
-        },
-        "animalLovers": {
-          "title": "Animal Lovers",
-          "tagline": "For those who look to nature for inspiration",
-          "description": "Discover their behaviour, strategies and stories.",
-          "alt": "Intimate portrait of a wild animal"
-        },
-        "creators": {
-          "title": "Creators",
-          "tagline": "Earn from your animal tracking expertise",
-          "description": "Wildlife photographers, filmmakers and field creators. Bring your wildlife archive with you — or join a photography-focused local experience.",
-          "alt": "Wildlife photographer with camera in nature"
-        },
-        "competitors": {
-          "title": "Gamers",
-          "tagline": "Every animal has stats to compare",
-          "description": "Compare animals' stats, win public debates and climb the rankings.",
-          "alt": "Two striking animals facing one another"
-        }
-      },
+      "eyebrow": "Bring a real problem",
+      "title": "What will you ask?",
+      "descriptionLead": "Pick one, choose an animal, and hear a real side.",
+      "descriptionBody": "Or bring your own. Every animal answers it differently.",
+      "explore": "Ask an animal",
       "roles": {
         "collector": "Collectors",
         "traveler": "Travelers",
@@ -208,11 +190,29 @@
         "animalLover": "Animal lovers",
         "progress": "Progress Hunters",
         "breeders": "Breeders"
-      }
+      },
+      "pairLabel": "Two animals who would answer it differently",
+      "problems": {
+        "work": {
+          "title": "A decision at work",
+          "question": "I've been offered a promotion, but it means managing my friends. Should I take it?"
+        },
+        "clash": {
+          "title": "Someone I keep clashing with",
+          "question": "My flatmate and I argue about the same small things every week. How do I stop it turning into a fight?"
+        },
+        "habit": {
+          "title": "A habit I can't keep",
+          "question": "I start running in the mornings, then stop after a week. What am I getting wrong?"
+        }
+      },
+      "guidesPrompt": "Planning a trip, not only a walk?",
+      "guidesLink": "Browse virtual Wildlife Guides",
+      "guidesTail": ": notes on every animal from explorers who logged wildlife at a place, with a chat with the author."
     },
     "download": {
       "title": "Meet them all.",
-      "description": "Wherever there's animals. There's opportunity.",
+      "description": "Wherever there are animals, there's someone to ask.",
       "launch": "Download on",
       "available": "Available on the",
       "beta": "Live app",
@@ -220,17 +220,17 @@
       "contact": "Ask about",
       "unavailable": "Available on",
       "trust": {
-        "scanner": "AI Animal Scanner",
-        "collect": "Talk to Real Animals",
-        "learn": "Learn From Nature"
+        "scanner": "Identify any animal",
+        "collect": "Talk to real animals",
+        "learn": "Learn from nature"
       },
       "stats": {
-        "captures": "{count} Captures",
-        "users": "{count} Users",
-        "indexes": "{count} Indexes",
+        "captures": "{count} captures",
+        "users": "{count} explorers",
+        "indexes": "{count} animals",
         "capturesLabel": "Captures",
         "usersLabel": "Explorers",
-        "indexesLabel": "Indexed Animals"
+        "indexesLabel": "Animals to talk to"
       },
       "blogPrompt": "Get sharper on animal ID, rarity, travel spotting, and wildlife-friendly guides.",
       "blogLink": "Read the Blog",
@@ -254,83 +254,80 @@
       "symbolismLink": "Animal Symbolism"
     },
     "explore": {
-      "title": "Keep Exploring",
-      "description": "Adventure more into the wild. Your journey awaits.",
+      "title": "Keep exploring",
+      "description": "How animals see the problems people bring them, and how each one survives.",
       "cards": {
         "tigerLion": {
-          "eyebrow": "Animal comparison",
-          "title": "Tiger vs Lion",
-          "description": "Who actually wins when biology, terrain, and social pressure collide?",
-          "cta": "Compare",
-          "alt": "Tiger portrait for a Tiger vs Lion comparison"
+          "eyebrow": "Side by side",
+          "title": "Tiger and lion",
+          "description": "Two ways of surviving at the top: alone, or as a pride.",
+          "cta": "See them side by side",
+          "alt": "A tiger portrait, for tiger and lion side by side"
         },
         "wolfLessons": {
-          "eyebrow": "Animal powers",
-          "title": "What Wolves Can Teach Us",
+          "eyebrow": "Animal Powers",
+          "title": "What wolves can teach us",
           "description": "Pack intelligence, endurance, and the discipline of moving together.",
           "cta": "Learn",
           "alt": "Wolf in dramatic wildlife light"
         },
         "owlSymbolism": {
           "eyebrow": "Animal symbolism",
-          "title": "What Does an Owl Represent?",
+          "title": "What does an owl represent?",
           "description": "Night vision, patient observation, and wisdom that begins in darkness.",
           "cta": "Discover",
           "alt": "Owl portrait in dark atmospheric light"
         },
-        "scannerGuide": {
-          "eyebrow": "Scanner guide",
-          "title": "AI Animal Scanner",
-          "description": "What a good animal scanner can see.",
-          "cta": "Read",
-          "alt": "A traveller photographs a giraffe with a phone from a safari vehicle"
-        },
-        "rareAnimals": {
-          "eyebrow": "Rare animals",
-          "title": "The World’s Rarest Species",
-          "description": "Scarcity, and animals most people never see.",
-          "cta": "Explore",
-          "alt": "Black rhinoceros representing rare animals"
-        },
         "lionProfile": {
           "eyebrow": "Species profile",
-          "title": "Meet the Lion",
+          "title": "Meet the lion",
           "description": "A social predator built around patience, pressure, and pride structure.",
           "cta": "Meet",
           "alt": "Lion portrait for a species profile"
         },
         "octopusMind": {
           "eyebrow": "Animal mind",
-          "title": "The Octopus Problem",
+          "title": "The octopus problem",
           "description": "Camouflage, escape intelligence, and a body that thinks differently.",
           "cta": "Decode",
           "alt": "A common octopus camouflaged among red seaweed on a reef"
+        },
+        "adviceFatigue": {
+          "eyebrow": "Why it matters",
+          "title": "Advice fatigue",
+          "description": "Most AI agrees with you. Why that leaves you comforted rather than helped, and what an animal that takes a side changes.",
+          "cta": "Read the article",
+          "alt": "A little owl and a cheetah, two animals who would disagree"
         }
       }
     },
     "faq": {
       "title": "Still curious?",
-      "description": "Frequently asked questions from our users.",
+      "description": "What people ask before their first chat.",
       "trust": {
         "beginner": "Beginner friendly",
         "families": "Built for families",
-        "behavior": "Based on real animal behaviour"
+        "behavior": "Based on real animal behavior"
       },
-      "identify": {
-        "q": "Can I upload from my camera roll?",
-        "a": "Yes. In the camera, tap the gallery button and pick a photo or video of a real animal that you took yourself. Screenshots and photos of screens aren't allowed, and AnimalDex checks for them."
+      "free": {
+        "q": "Is AnimalDex free?",
+        "a": "Yes. You can talk to any animal on the web for free, and new accounts get free Credits for their first captures. AnimalDex Pro adds every animal's voice, more messages a day and 42 Credits a month."
       },
-      "family": {
-        "q": "How do you stop people from cheating?",
-        "a": "We do not disclose the full system, but AnimalDex has anti-cheat checks in place to help protect real captures, collection value, and fair progression."
+      "agree": {
+        "q": "Does it just agree with me?",
+        "a": "No. Each animal answers from its own Power, the way its kind survives, and takes a side. Ask an owl and a cheetah the same thing and they'll often disagree. That's the point: you get a real view, not an echo."
       },
-      "game": {
-        "q": "Is AnimalDex an animal identification app?",
-        "a": "Yes. AnimalDex works as an animal scanner AI tool and identification app that helps with species and breed context, then keeps each sighting as a collectible entry."
+      "ai": {
+        "q": "Is this AI? Where do the animals' answers come from?",
+        "a": "Yes. The animals are characters voiced by AI and grounded in real natural history: each one's Power is written from how its species actually lives. The biology is fact; the way an animal reads your problem is AnimalDex's interpretation. Safety comes first, whichever animal you ask."
       },
-      "respect": {
-        "q": "Is it Free to Play?",
-        "a": "Yes. AnimalDex offers free credits when you start, you can then complete missions and earn more free credits. Paid plans are affordable and allow users to scan animals without limits."
+      "power": {
+        "q": "What's a Power?",
+        "a": "A lesson from how an animal's kind survives, like the red fox's Cunning or the common octopus's Flexible Intelligence. Every animal answers from its Power. Do a step it gives you in your own life, and its Power is yours."
+      },
+      "capture": {
+        "q": "Do I need to capture animals to talk?",
+        "a": "No. Anyone can talk to any animal on the web. Capture one in the app, by photographing or filming it, and it becomes yours: it remembers you, gives you steps, and can debate your problems with your other animals."
       }
     },
     "heroCta": "Talk to an animal",
@@ -363,14 +360,15 @@
           "label": "participants in three preregistered experiments"
         }
       }
-    }
+    },
+    "marquee": "Capture · Talk · Disagree · Take one step · Earn its Power · Debate ·"
   },
   "blog": {
     "eyebrow": "AnimalDex Blog",
-    "title": "Animal discovery guides, travel spotting tips, and collection strategy",
-    "description": "Practical articles for identifying animals, understanding rarity, planning wildlife-focused trips, and building a smarter real-animal collection.",
+    "title": "Articles on how animals live, and what they teach",
+    "description": "Field-guide articles on identifying animals, where to see them, what they mean, and how each one survives.",
     "metaTitle": "AnimalDex Blog",
-    "metaDescription": "Read AnimalDex blog articles on animal identification, wildlife spotting, rarity, family-friendly learning, and collectible species discovery.",
+    "metaDescription": "AnimalDex articles on how animals live and survive, what they mean, how to identify them and where to see them.",
     "rssLabel": "RSS feed",
     "paginationLabel": "Blog pages",
     "previousPage": "Previous",
@@ -957,19 +955,22 @@
     "readArticle": "Read article",
     "faqTitle": "Frequently asked questions",
     "faqDescription": "Short, direct answers to common questions on this topic.",
-    "ctaTitle": "Ready to scan and start collecting?",
-    "ctaDescription": "Open AnimalDex to identify animals, build your collection, and keep learning from every sighting.",
-    "ctaButton": "Get AnimalDex",
-    "landingButton": "Main landing page"
+    "ctaTitle": "Bring a real problem to a real animal",
+    "ctaDescription": "Every animal answers from its own Power, takes a side, and gives you one step. Talk to one on the web now, or capture your own in the app.",
+    "ctaButton": "Get the app",
+    "landingButton": "Home",
+    "ctaEyebrow": "Start talking",
+    "talkButton": "Talk to an animal",
+    "positioningLine": "And then it talks back: every animal answers from its own Power, a lesson from how its kind survives, and won't just agree with you."
   },
   "useCases": {
-    "eyebrow": "Audience Paths",
-    "title": "AnimalDex use cases for real search intent",
-    "description": "Explore niche pages built around how people actually search for AnimalDex: scanner, collection, family learning, photography, breed discovery, and competitive play.",
-    "coverageTitle": "Built for broad and niche discoverability",
-    "coverageDescription": "Each page targets a high-intent audience cluster and explains what AnimalDex is, who it is for, and why it is different.",
+    "eyebrow": "Who it's for",
+    "title": "Who AnimalDex is for",
+    "description": "Find the way in that fits you: bringing real problems to animals that take a side, identifying what you see, learning as a family, photography, and more.",
+    "coverageTitle": "Every way in",
+    "coverageDescription": "Each page explains what AnimalDex does for that need, and how it differs from the usual apps.",
     "metaTitle": "AnimalDex Use Cases",
-    "metaDescription": "Explore AnimalDex use cases for animal scanning, wildlife collection, family learning, zoo and safari discovery, photography, breed identification, and competitive play.",
+    "metaDescription": "Who AnimalDex is for: people bringing real problems to animals that take a side, wildlife identification, family learning, zoo and safari trips, photography and more.",
     "back": "Back to Use Cases",
     "audienceLabel": "Audience",
     "updatedLabel": "Updated",
@@ -978,11 +979,11 @@
     "differenceTitle": "Why AnimalDex stands out",
     "faqTitle": "Common questions",
     "relatedTitle": "Related use cases",
-    "collectorTitle": "Collector and game-focused pages",
-    "collectorDescription": "These pages target card-collection and creature-game search intents while keeping the real-animal value proposition clear.",
-    "ctaTitle": "Ready to start with your use case?",
-    "ctaDescription": "Pick the path that fits your goals, then launch AnimalDex and build from your first sighting.",
-    "ctaButton": "Download",
+    "collectorTitle": "For collectors and players",
+    "collectorDescription": "Collecting real animals, with a twist: every one you collect talks back.",
+    "ctaTitle": "Ready to start?",
+    "ctaDescription": "Talk to an animal on the web now, or capture your first one in the app.",
+    "ctaButton": "Get the app",
     "metaSection": "Use Cases"
   },
   "animals": {
@@ -991,14 +992,14 @@
     "description": "Explore a growing collection of animal guides covering identification, habitat, behavior, rarity, symbolism, and lessons from nature.",
     "heroSupporting": "Use AnimalDex to scan animals in the real world, unlock species profiles, and build your own wildlife collection.",
     "browseAnimals": "Browse animals",
-    "getAnimalDex": "Get AnimalDex",
+    "getAnimalDex": "Get the app",
     "fieldGuideLabel": "Animal field guide",
     "profileDescription": "Identification, habitat, rarity, behavior, symbolism, facts, and practical lessons from nature.",
     "animalDexCardLabel": "AnimalDex card",
-    "unlockCardTitle": "Unlock this animal card",
-    "unlockCardDescription": "Scan or capture this animal with AnimalDex to reveal its collectible card and add it to your wildlife collection.",
+    "unlockCardTitle": "Capture your own {animal}",
+    "unlockCardDescription": "Photograph or film one in the wild, at a zoo or at home with the app. It becomes yours: it remembers you, gives you steps, and can debate your problems with your other animals.",
     "quickFactsTitle": "Quick facts",
-    "lessonFromLabel": "The power of the {animal}",
+    "lessonFromLabel": "The {animal}'s Power",
     "searchTitle": "Find an animal",
     "searchDescription": "Search by animal name, species, trait, habitat, or location.",
     "searchButton": "Search",
@@ -1024,7 +1025,7 @@
     "whatIsTitle": "What is a {animal}?",
     "principleTitle": "What does the {animal} teach us?",
     "principleLabel": "Principle",
-    "coreLessonLabel": "Core power",
+    "coreLessonLabel": "Its Power",
     "biologicalBasisLabel": "Biological basis",
     "applicationExampleLabel": "Put it into practice",
     "bestForTitle": "Best for",
@@ -1035,8 +1036,8 @@
     "symbolismQuestionThree": "How does the animal behave in nature?",
     "symbolismQuestionFour": "Why did AnimalDex assign this principle?",
     "principleHubLabel": "Principle page",
-    "lessonPageLabel": "Animal power",
-    "lessonPageLink": "Discover the {animal} power",
+    "lessonPageLabel": "Animal Power",
+    "lessonPageLink": "Discover the {animal}'s Power",
     "tabStory": "Learn",
     "tabProgress": "Stats",
     "tabPlay": "Play",
@@ -1079,10 +1080,10 @@
     "understandLookalikes": "Lookalikes",
     "understandNav": "Understand",
     "askNav": "Talk to it",
-    "compareNav": "Compare",
+    "compareNav": "Side by side",
     "whereNav": "Where to find",
     "askWhy": "Why?",
-    "collectCta": "Meet the {animal} in AnimalDex",
+    "collectCta": "Talk to the {animal}",
     "powerPattern": "The Pattern",
     "powerObservation": "Observation",
     "powerFunction": "Function",
@@ -1127,9 +1128,9 @@
     "askLimitReached": "You’ve used today’s messages. Start a collection to keep talking, unlock the full Animal Power, and save the animals you care about.",
     "askCollectCta": "Start your AnimalDex collection",
     "askError": "AnimalDex could not answer just now. Try a shorter question.",
-    "compareEyebrow": "Compare",
-    "compareTitle": "Compare the {animal}",
-    "compareCardsEmpty": "No matchups written for the {animal} yet. Pick any animal to put it up against.",
+    "compareEyebrow": "Side by side",
+    "compareTitle": "The {animal}, side by side",
+    "compareCardsEmpty": "Nothing written side by side for the {animal} yet. Pick any animal to compare it with.",
     "compareAnyAnimal": "Compare with any animal",
     "whereEyebrow": "Where to find them",
     "whereTitle": "Where to find {animal}",
@@ -1156,10 +1157,10 @@
     "growthEmptyCapturesDescription": "Scan this animal in AnimalDex to add your first card, then come back here to track your progress.",
     "growthSignInPrompt": "Sign in with the same AnimalDex account you use in the app to see your collection on the web.",
     "growthSignInButton": "Sign in",
-    "growthOpenLesson": "Open {animal} power",
+    "growthOpenLesson": "Open the {animal}'s Power",
     "growthOpenPower": "Explore {power}",
     "growthDownloadAppTitle": "Apex Insight lives in the app",
-    "growthDownloadAppDescription": "Growth challenges, power fusion, and deeper reflection tools are available in AnimalDex mobile today.",
+    "growthDownloadAppDescription": "Steps, debates and Trials with your own animals are in the AnimalDex app.",
     "growthScoreLabel": "Score {score}",
     "growthApexPathEyebrow": "Apex path",
     "growthApexInsightTitle": "Apex Insight",
@@ -1175,7 +1176,7 @@
     "growthPowerFusionTitle": "Power Fusion",
     "growthPowerFusionDescription": "Fuse animal powers together to learn extra sub-principles on this capture.",
     "growthFusePowers": "Fuse Powers",
-    "growthFusionCostLabel": "Costs {cost} credits",
+    "growthFusionCostLabel": "Costs {cost} Credits",
     "growthFusionLearnedCount": "{count} extra lessons learned",
     "growthFusionNoDonors": "Capture more eligible animals in your collection to unlock fusion teachers.",
     "growthFusionSelectDonor": "Choose a teacher animal",
@@ -1191,7 +1192,7 @@
     "moreWithPrincipleTitle": "More animals with {principle}",
     "moreWithPrincipleHubLink": "Browse all {principle} animals",
     "faqWhatSymbolize": "What does a {animal} symbolize?",
-    "faqCoreLesson": "What is the core power of a {animal}?",
+    "faqCoreLesson": "What is the {animal}'s Power?",
     "faqBiologicalBasis": "What is the biological basis for this meaning?",
     "faqWhereFound": "Where are {animal} found?",
     "identifyTitle": "How to identify a {animal}",
@@ -1253,7 +1254,7 @@
     "featuredRankingsTitle": "Featured in tier lists",
     "featuredRankingsDescription": "See where this species appears in AnimalDex tier-list pages built around structured comparison and methodology.",
     "compareWithTitle": "Compare with",
-    "compareWithLink": "Compare with {animal}",
+    "compareWithLink": "Compare with the {animal}",
     "readSpecies": "Read species guide",
     "searchPlaceholder": "Search owl, wolf, arctic, nocturnal, rare...",
     "locationLabel": "Location",
@@ -1311,7 +1312,9 @@
     "ctaButton": "Track this animal",
     "ctaSupportOne": "Real-world collection",
     "ctaSupportTwo": "Species context",
-    "ctaSupportThree": "Sighting history"
+    "ctaSupportThree": "Sighting history",
+    "getTheApp": "Get the app",
+    "exploreSideBySide": "Animals side by side"
   },
   "qualities": {
     "eyebrow": "Animal Qualities",
@@ -1731,13 +1734,13 @@
     "mapEmptyBody": "Share your location or type a place above, and we'll map what lives around you."
   },
   "comparisons": {
-    "eyebrow": "Animal Comparisons",
-    "title": "Compare any two animals",
-    "description": "Pick two species and we build the full head-to-head instantly: a clear winner, stat-by-stat tables, scenario breakdowns and grounded biology — no matchup is too obscure.",
+    "eyebrow": "Side by side",
+    "title": "Two animals, side by side",
+    "description": "Pick two species and see how each one survives: stat-by-stat tables, the settings where each has the edge, and grounded biology. Any pairing works.",
     "metaTitle": "Compare Any Two Animals — Who Would Win? | AnimalDex",
     "metaDescription": "Compare any two animals side by side. Pick two species from thousands and get an instant head-to-head verdict with stats, scenario breakdowns, a confidence rating and FAQ — built from real biology.",
     "statAnimals": "Animals to compare",
-    "statComparisons": "Published matchups",
+    "statComparisons": "Published side-by-sides",
     "builder": {
       "animalA": "First animal",
       "animalB": "Second animal",
@@ -1749,7 +1752,7 @@
       "random": "Surprise me",
       "compare": "Compare",
       "comparing": "Opening…",
-      "sameAnimal": "Pick two different animals to run a matchup.",
+      "sameAnimal": "Pick two different animals to see them side by side.",
       "searchAll": "Search all {count} animals",
       "popular": "Popular",
       "results": "{count} results",
@@ -1767,27 +1770,27 @@
         "detail": "First time for a pairing? The full analysis is written on the spot."
       },
       "read": {
-        "title": "Get a clear verdict",
-        "detail": "Winner, confidence score, stat tables, scenarios and FAQ — then it stays live for everyone."
+        "title": "See two ways of surviving",
+        "detail": "Stat tables, the settings where each has the edge, and an FAQ. Then it stays live for everyone."
       }
     },
     "browseEyebrow": "Or browse what's already published",
-    "browseTitle": "Comparison library",
-    "browseDescription": "{count} matchups already written up, from classic rivalries to unexpected pairings.",
+    "browseTitle": "The side-by-side library",
+    "browseDescription": "{count} pairs already written up, from the classic pairings to unexpected ones.",
     "indexFaqTitle": "Questions about comparing animals",
-    "indexFaqDescription": "How the comparison tool works, and what the verdicts are actually based on.",
+    "indexFaqDescription": "How the comparisons work, and what they are based on.",
     "faqEntries": {
       "anyPair": {
         "question": "Can I compare any two animals?",
-        "answer": "Yes. Any two species in the AnimalDex catalog can be matched up — that is thousands of animals, so obscure pairings like a honey badger against a wolverine work just as well as lion versus tiger."
+        "answer": "Yes. Any two species in the AnimalDex catalog can be put side by side, so obscure pairings like a honey badger and a wolverine work just as well as a lion and a tiger."
       },
       "howItWorks": {
         "question": "How does the comparison get written?",
-        "answer": "Every matchup is built from the same species data behind the AnimalDex app: canonical size, speed, dominance and intelligence ratings, plus habitat and behaviour profiles. If nobody has run that pairing before, the breakdown is generated on the spot in under a minute and then published for everyone."
+        "answer": "Every side-by-side is built from the same species data behind the AnimalDex app: canonical size, speed, dominance and intelligence ratings, plus habitat and behavior profiles. If nobody has compared a pair before, it's written on the spot in under a minute and then published for everyone."
       },
       "accuracy": {
-        "question": "How accurate is the winner?",
-        "answer": "Each verdict names a clear winner with a confidence score, and it is argued scenario by scenario — open ground, ambush, water, endurance — because the answer genuinely changes with the setting. Real encounters between wild animals are rare and situational, so treat the verdict as a well-reasoned read of the biology rather than a prediction."
+        "question": "Does it pick a winner?",
+        "answer": "It shows where each animal has the edge, setting by setting (open ground, ambush, water, endurance), because the answer genuinely changes with the setting. Real encounters between wild animals are rare and situational, so read it as two ways of surviving rather than a prediction."
       },
       "missing": {
         "question": "What if an animal is missing?",
@@ -1796,12 +1799,12 @@
     },
     "vote": {
       "eyebrow": "Reader vote",
-      "title": "Who do you think wins?",
+      "title": "Whose way would you take?",
       "description": "Pick a side — no account needed. Results update live.",
       "changeHint": "Thanks for voting. Tap the other animal to change your pick.",
       "voted": "Your pick",
       "totalVotes": "{count} readers have voted",
-      "noVotesYet": "No votes yet — be the first to call it.",
+      "noVotesYet": "No votes yet. Be the first to pick.",
       "prompt": "Tap to vote",
       "error": "Your vote didn't save. Try again.",
       "rateLimited": "That's a lot of votes in a short time. Try again shortly."
@@ -1810,7 +1813,7 @@
       "eyebrow": "Discussion",
       "title": "What do you think?",
       "description": "Share your reasoning with other readers. Be civil and stick to the animals.",
-      "placeholder": "Add your take on this matchup…",
+      "placeholder": "Add your take on these two…",
       "submit": "Post comment",
       "submitting": "Posting…",
       "signedOutPrompt": "Sign in to join the discussion.",
@@ -1827,25 +1830,25 @@
     },
     "generating": {
       "idleEyebrow": "Not written yet",
-      "idleDescription": "Nobody has run this matchup yet. Press Generate and we'll write it now. It takes up to a minute, and the finished page stays live at this address.",
+      "idleDescription": "Nobody has put these two side by side yet. Press Generate and we'll write it now. It takes up to a minute, and the finished page stays live at this address.",
       "start": "Generate this comparison",
       "eyebrow": "Building your comparison",
-      "title": "{animalA} vs {animalB}",
-      "description": "Nobody has run this matchup yet, so we're writing it now. This takes up to a minute, and the finished page stays live at this address.",
+      "title": "{animalA} and {animalB}",
+      "description": "Nobody has put these two side by side yet, so we're writing it now. This takes up to a minute, and the finished page stays live at this address.",
       "stepOne": "Pulling both species profiles…",
       "stepTwo": "Weighing size, speed, power and intelligence…",
       "stepThree": "Running the scenario breakdowns…",
-      "stepFour": "Painting the matchup artwork…",
+      "stepFour": "Painting the artwork…",
       "elapsed": "{seconds}s elapsed",
-      "errorTitle": "That matchup didn't finish",
-      "errorDescription": "Something failed while building this comparison. Try again, or browse the matchups that are already published.",
+      "errorTitle": "That side-by-side didn't finish",
+      "errorDescription": "Something failed while building this comparison. Try again, or browse the side-by-sides already published.",
       "rateLimitTitle": "Give it a minute",
-      "rateLimitDescription": "You've generated a lot of new matchups in a short window. Existing comparisons still open instantly — try again shortly.",
+      "rateLimitDescription": "You've generated a lot of new side-by-sides in a short window. Published ones still open instantly. Try again shortly.",
       "retry": "Try again",
       "browse": "Browse comparisons"
     },
     "searchLabel": "Search comparisons",
-    "searchPlaceholder": "Search by animal, matchup, or keyword",
+    "searchPlaceholder": "Search by animal or keyword",
     "comparisonCount": "{count} comparisons",
     "featuredLabel": "Featured comparison",
     "winner": "Winner: {animal}",
@@ -1891,11 +1894,11 @@
     "pageLabel": "Page {page} of {totalPages}",
     "noResultsTitle": "No matching comparisons",
     "noResultsDescription": "Try a different search term or reset the filters to browse the full comparison set.",
-    "back": "Back to Comparisons",
+    "back": "Back to side by side",
     "published": "Published",
     "updated": "Updated",
     "minuteRead": "{minutes} min read",
-    "quickVerdictBadge": "Quick verdict",
+    "quickVerdictBadge": "In short",
     "winnerBadge": "Matchup winner",
     "confidence": "Verdict confidence",
     "fullAnalysis": "Read the full explanation",
@@ -1904,24 +1907,24 @@
     "jumpStats": "Jump to stats",
     "share": "Share",
     "navOverview": "Overview",
-    "navWinner": "Winner",
+    "navWinner": "In short",
     "navStats": "Stats",
     "navScenarios": "Scenarios",
     "navFaq": "FAQ",
     "navRelated": "Related",
     "editorialNote": "Editorial note",
     "whyDisagreeTitle": "Why people disagree",
-    "verdictTimelineEyebrow": "How the verdict forms",
-    "verdictTimelineTitle": "Verdict timeline",
+    "verdictTimelineEyebrow": "Trait by trait",
+    "verdictTimelineTitle": "Where each one has the edge",
     "selectScenario": "Change the conditions",
     "fieldProfiles": "AnimalDex field profiles",
     "animalCategory": "Category",
     "readChallenge": "Read comparison",
-    "quickVerdictTitle": "Quick verdict",
-    "quickVerdictDescription": "Start with the direct answer, then use the structured comparison below to see what changes the outcome.",
-    "whyInterestingTitle": "Why this matchup is interesting",
-    "speciesStatsTitle": "Head-to-head species stats",
-    "speciesStatsDescription": "These are the same core AnimalDex stat dimensions used on the dedicated animal pages, pulled side by side so the matchup is faster to scan.",
+    "quickVerdictTitle": "In short",
+    "quickVerdictDescription": "The short version first. The comparison below shows what changes with the setting.",
+    "whyInterestingTitle": "Why these two are worth comparing",
+    "speciesStatsTitle": "Their stats, side by side",
+    "speciesStatsDescription": "The same core AnimalDex stats used on each animal's own page, side by side so the two are faster to compare.",
     "statsSourceLabel": "Stats source",
     "dominanceStat": "Dominance",
     "speedStat": "Speed",
@@ -1935,20 +1938,20 @@
     "statsSourceGenerated": "Generated canonical stats",
     "statsSourceNone": "No stats available",
     "statsTitle": "Trait-by-trait comparison",
-    "statsDescription": "Only the categories that matter to this matchup are included. The goal is not filler stats, but the real design differences that change the result.",
+    "statsDescription": "Only the categories that matter for these two: the real design differences, not filler stats.",
     "advantageLabel": "Edge",
     "takeawayLabel": "Why it matters",
     "scenarioTitle": "Scenario breakdown",
-    "scenarioDescription": "This is where shallow battle content usually fails. Terrain, spacing, timing, and engagement style can change the answer.",
-    "scenarioWinnerLabel": "Scenario lean",
-    "jumpToSpeciesTitle": "Meet the animals in this matchup",
+    "scenarioDescription": "The setting changes everything: terrain, spacing, timing and approach decide which way of surviving works.",
+    "scenarioWinnerLabel": "Has the edge here",
+    "jumpToSpeciesTitle": "Meet the two animals",
     "jumpToSpeciesDescription": "Go straight to the species guides behind this comparison for identification, habitat, rarity, and deeper AnimalDex context.",
-    "speciesTitle": "Track the species behind this matchup",
+    "speciesTitle": "Meet the two species",
     "speciesDescription": "Move from the comparison page into full AnimalDex species guides for ID, habitat, rarity, and systems context.",
     "exploreAnimalsTitle": "Explore these animals",
-    "exploreAnimalsDescription": "Use the full species pages to go deeper on biology, habitat fit, and the real traits behind this verdict.",
+    "exploreAnimalsDescription": "Use the full species pages to go deeper on biology, habitat fit, and the real traits behind this comparison.",
     "systemsIntelligenceTitle": "Systems Intelligence & Hidden Purpose",
-    "systemsIntelligenceDescription": "See the animals behind this comparison as engineered biological systems: what each one is built to do, where it gains leverage, and why the matchup changes by scenario.",
+    "systemsIntelligenceDescription": "See the two animals as engineered biological systems: what each one is built to do, where it gains leverage, and why the answer changes with the setting.",
     "systemRoleLabel": "System Role",
     "specializedHardwareLabel": "Specialized Hardware",
     "systemsScriptLabel": "Systems Script",
@@ -1957,15 +1960,15 @@
     "readSpecies": "Read species guide",
     "finalTakeTitle": "Final take",
     "faqTitle": "Comparison FAQ",
-    "faqDescription": "Short, direct answers to the next questions readers usually ask after the headline verdict.",
+    "faqDescription": "Short, direct answers to the next questions readers usually ask.",
     "relatedTitle": "Related comparisons",
     "relatedArticlesTitle": "Go deeper",
-    "relatedArticlesDescription": "Guides that cover the same matchup from a different angle.",
+    "relatedArticlesDescription": "Guides that cover these two from a different angle.",
     "readArticle": "Read the article",
-    "relatedDescription": "Continue with nearby matchups to compare more real-world animal traits without dropping into junky who-wins filler.",
-    "ctaTitle": "Compare real animals in the wild",
-    "ctaDescription": "Open AnimalDex to track the species behind these matchups, collect both sides, and keep your comparisons grounded in real animals.",
-    "ctaButton": "Compare real animals in the wild",
+    "relatedDescription": "More pairs, compared on real-world traits.",
+    "ctaTitle": "Ask them both",
+    "ctaDescription": "Bring one problem to two animals. Each answers from its own Power, and they won't agree.",
+    "ctaButton": "Talk to an animal",
     "ctaBattleTitle": "Collect both animals in AnimalDex",
     "ctaBattleDescription": "Track the species behind this matchup, compare their real traits, and build the rivalry into your AnimalDex collection.",
     "ctaBattleButton": "Collect both animals in AnimalDex",
@@ -1978,9 +1981,9 @@
     "ctaSupportOne": "Compare real species",
     "ctaSupportTwo": "Collect both sides",
     "ctaSupportThree": "Track sightings and stats",
-    "trackSpecies": "Track {animal}",
+    "trackSpecies": "Read about the {animal}",
     "comparisonTypes": {
-      "battle": "Battle",
+      "battle": "Side by side",
       "speed": "Speed",
       "strength": "Strength",
       "intelligence": "Intelligence",
@@ -1992,18 +1995,25 @@
       "even": "Even",
       "draw": "Draw",
       "depends": "Depends on context"
-    }
+    },
+    "ctaAskBothTitle": "Ask them both",
+    "ctaAskBothDescription": "Bring the same problem to the {animalA} and the {animalB}. Each answers from its own Power, and they won't agree.",
+    "ctaTalkTo": "Talk to the {animal}",
+    "sideBySideTitle": "{animalA} and {animalB}, side by side",
+    "pairTitle": "{animalA} and {animalB}"
   },
   "collectorPages": {
     "back": "Back to Use Cases",
-    "ctaTitle": "Turn this collection style into real animal discovery",
-    "ctaDescription": "Use AnimalDex to scan, collect, and progress through real species with premium app polish.",
-    "ctaButton": "Download",
-    "homeButton": "Back to main landing",
-    "appButton": "Get the app"
+    "ctaTitle": "Your collection talks back",
+    "ctaDescription": "Every animal you collect answers from its own Power and won't just agree with you. Try one on the web now, or capture your own in the app.",
+    "ctaButton": "Get the app",
+    "homeButton": "Home",
+    "appButton": "Get the app",
+    "talkButton": "Talk to an animal",
+    "positioningLine": "The twist: every animal you collect talks back. It answers from its own Power, a lesson from how its kind survives, and won't just agree with you."
   },
   "account": {
-    "welcomeHeadline": "Meet any animal.\nAsk it about your life.",
+    "welcomeHeadline": "Talk to animals.\nThey won't just agree with you.",
     "welcomeSoundOn": "Turn sound on",
     "welcomeSoundOff": "Turn sound off",
     "signIn": "Sign in",
@@ -2109,7 +2119,7 @@
     "settingsMissionsDetail": "Daily and weekly AnimalDex missions",
     "settingsCreditsUnlocks": "Credits & Unlocks",
     "settingsCreditsUnlocksCount": "Credits & Unlocks ({count})",
-    "settingsCreditsDetail": "Buy credits, restore purchases, and unlock Pro in AnimalDex",
+    "settingsCreditsDetail": "Buy Credits, restore purchases, and unlock AnimalDex Pro",
     "settingsEarningsDetail": "See how earning with AnimalDex works",
     "settingsWidgets": "Widgets",
     "settingsWidgetsDetail": "Add Friend and Travel to your Home Screen",
@@ -2288,6 +2298,8 @@
     "keywords": [
       "talk to animals",
       "talk to animals app",
+      "animal wisdom app",
+      "talk to an animal",
       "AI that disagrees with you",
       "perspective-driven AI",
       "advice fatigue",
@@ -2321,15 +2333,11 @@
       "animal set collection game",
       "animal debate app",
       "animal trading app",
-      "Pokemon-like animal app",
-      "Top Trumps-like animal app",
-      "animal grading app",
-      "respectful wildlife observation",
-      "collect real animals"
+      "respectful wildlife observation"
     ]
   },
   "askAnimalDex": {
-    "launcher": "Ask AnimalDex",
+    "launcher": "Talk to an animal",
     "title": "Ask AnimalDex",
     "aboutAnimal": "Talking with {animal}",
     "aboutSite": "Ask about any animal",

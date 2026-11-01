@@ -13,7 +13,6 @@ export type DirectoryCard = {
     title: string;
     comparisonType: string;
     typeLabel: string;
-    winnerLabel: string;
     image: {src: string; alt: string; width: number; height: number};
     statLabels: string[];
     /** Lower-cased text the search box matches against. */
@@ -260,8 +259,6 @@ export default function ComparisonsDirectory({
                                         <Image src={card.image.src} alt={card.image.alt} width={card.image.width} height={card.image.height} sizes={wide ? "(min-width:1280px) 60vw, 100vw" : "(min-width:1280px) 30vw, (min-width:768px) 50vw, 100vw"} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${wide ? "h-72 md:h-96" : "h-64 md:h-72"}`} />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-black/30" />
                                         <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white backdrop-blur">{card.typeLabel}</span>
-                                        <span className="absolute right-4 top-4 rounded-full bg-primary-400/90 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-black">{card.winnerLabel}</span>
-                                        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl font-black italic tracking-[-0.08em] text-white/90 drop-shadow-xl" aria-hidden="true">VS</span>
                                         <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
                                             <h3 className={`font-display font-bold leading-tight text-white ${wide ? "text-3xl md:text-4xl" : "text-2xl"}`}>{card.title}</h3>
                                         </div>
