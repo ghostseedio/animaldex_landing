@@ -342,7 +342,9 @@ export default async function Home({params}: HomePageProps) {
                             <span aria-hidden="true" className="text-2xl transition-transform duration-300 group-hover/talk:translate-x-1">→</span>
                         </Link>
                         <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-                            <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">{t("heroGetApp")}</span>
+                            {/* Its own line on a phone, so the row never rewraps when the web font
+                                arrives (it shifted the hero by 48 px: CLS 0.043). */}
+                            <span className="mr-1 basis-full text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 sm:basis-auto sm:text-left">{t("heroGetApp")}</span>
                             {downloadStoreLinks.map(({name}) => (
                                 <StoreLink
                                     key={name}

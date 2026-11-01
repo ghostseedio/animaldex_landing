@@ -21,20 +21,18 @@ export const inter = localFont({
  *   `font-medium`.
  * - 600 normal: the home hero "WILD" word (`font-semibold`).
  * - 700 normal: the default heading weight (`font-bold`, editorial-prose).
- * - 700 italic: the home hero tagline wraps `italic` spans inside a `font-bold`
- *   display paragraph.
  * - 800 normal: `font-extrabold` and `font-black` headings (900 resolves to 800).
- * No 400 face or 500/600 italic is used anywhere in src. The 800 italic face
- * was dropped too: its only use is two decorative, aria-hidden "VS" marks on
- * comparison pages, which the browser now renders as a synthesized oblique of
- * the 800 face. Adding a face back means one more preload on every page.
+ * No 400 face or any italic is preloaded. The 700 italic face went in the
+ * 2026-11-01 performance pass (WEB-17/LCP): the home tagline that used it is
+ * gone, and the one remaining italic display mark (the side-by-side generating
+ * screen) renders as a synthesized oblique, as the 800 italic "VS" marks did.
+ * Adding a face back means one more preload on every page.
  */
 export const barlowCondensed = localFont({
     src: [
         {path: "./font-files/barlow-condensed-latin-500-normal.woff2", weight: "500", style: "normal"},
         {path: "./font-files/barlow-condensed-latin-600-normal.woff2", weight: "600", style: "normal"},
         {path: "./font-files/barlow-condensed-latin-700-normal.woff2", weight: "700", style: "normal"},
-        {path: "./font-files/barlow-condensed-latin-700-italic.woff2", weight: "700", style: "italic"},
         {path: "./font-files/barlow-condensed-latin-800-normal.woff2", weight: "800", style: "normal"}
     ],
     variable: "--font-barlow-condensed",
