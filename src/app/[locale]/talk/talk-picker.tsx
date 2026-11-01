@@ -20,6 +20,7 @@ import {onIdle} from "@/lib/on-idle";
 import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
 import {askContextIntentHandlers, prefetchAskContext} from "@/components/ask-animaldex/ask-context-prefetch";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {talkSearch, type TalkAnimal, type TalkDisagreePair, type TalkWords} from "@/lib/ask-animaldex/talk";
 import {useTalkShell} from "@/app/[locale]/talk/talk-shell";
 
@@ -254,7 +255,7 @@ function AnimalCard({animal, href, compact = false}: {animal: TalkAnimal; href: 
             style={{borderRadius: 14}}
             data-testid="talk-animal"
         >
-            <AskAnimalFace url={animal.icon ?? getSpeciesImageRoute(animal.slug)} size={compact ? 36 : 40} />
+            <AskAnimalFace url={animal.icon ?? (animal.iconFile ? getSpeciesArtworkUrl(animal.slug, animal.iconFile) : getSpeciesImageRoute(animal.slug))} size={compact ? 36 : 40} />
             <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 block text-[14px] font-semibold leading-5 text-white">{animal.name}</span>
                 {animal.power ? <span className="line-clamp-2 block text-[12px] leading-4 text-ink-300">{animal.power}</span> : null}

@@ -310,6 +310,8 @@ export type TalkAnimal = {
     power: string | null;
     /** Its icon art's own address, when the server knows it: no redirect to follow (WEB-18). */
     icon?: string | null;
+    /** The file its icon art is in the bucket (the search index carries this, a few bytes, instead of a full address). */
+    iconFile?: string | null;
 };
 
 function folded(text: string): string {

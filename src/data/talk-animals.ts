@@ -124,8 +124,14 @@ async function load(): Promise<TalkCatalogState> {
         if (identity && !byIdentity.has(identity)) byIdentity.set(identity, slug);
     }
     // Most captured first, so the search ranks the better-known of two equal matches first (WEB-4).
-    const ordered = Array.from(animals.values()).sort((left, right) => (caughtBySlug.get(right.slug) ?? 0) - (caughtBySlug.get(left.slug) ?? 0)
+    const sorted = Array.from(animals.values()).sort((left, right) => (caughtBySlug.get(right.slug) ?? 0) - (caughtBySlug.get(left.slug) ?? 0)
         || left.name.localeCompare(right.name));
+    // Each animal's icon file, so a search result's face loads from its own address, with no redirect to follow first.
+    const iconFiles = await resolveSpeciesArtworkFiles(sorted.map((animal) => animal.slug)).catch(() => new Map<string, string | null>());
+    const ordered = sorted.map((animal) => {
+        const file = iconFiles.get(animal.slug);
+        return file ? {...animal, iconFile: file} : animal;
+    });
     const talked = talkedTo.filter((slug) => animals.has(slug));
     // The curated lists show only animals with their own art (DECISIONS section 7).
     const candidates = Array.from(new Set([
