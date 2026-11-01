@@ -5,6 +5,7 @@ import {resolvePublicOverallScore} from "@/data/public-profiles";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {getCollectorScoreBand} from "@/lib/collector-score";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
+import {rowIsHomoSapiens} from "@/lib/people-never-public";
 
 type QueryRow = Record<string, unknown>;
 
@@ -175,7 +176,9 @@ async function loadAllDiscoverCollectors() {
             powerSetsByUser.get(userId) ?? []
         );
         const bestFindId = readString(summary, "best_find_id");
-        const bestFind = bestFindId ? bestFindsById.get(bestFindId) : null;
+        const found = bestFindId ? bestFindsById.get(bestFindId) : null;
+        // People are never public (DECISIONS section 11): a person is nobody's best find.
+        const bestFind = found && !rowIsHomoSapiens(found) ? found : null;
         const indexedSpeciesCount = readNumber(summary, "indexed_species_count")
             || readNumber(summary, "unique_species");
 
@@ -193,7 +196,7 @@ async function loadAllDiscoverCollectors() {
             catalogSpeciesCount,
             rareFinds: readNumber(summary, "rare_finds"),
             bestFindAnimalName: readString(bestFind ?? {}, "animal_name"),
-            bestFindImageSrc: resolveBestFindImage(bestFindId, bestFind),
+            bestFindImageSrc: bestFind ? resolveBestFindImage(bestFindId, bestFind) : null,
             href: `/u/${encodeURIComponent(username)}`
         };
     })

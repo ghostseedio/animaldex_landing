@@ -44,7 +44,7 @@ export function AppSurface({children, className = "", padding = true}: {children
 }
 
 export function AppMetric({label, value, accent = "green", detail}: {label: string; value: string | number; accent?: "green" | "violet" | "gold" | "blue"; detail?: string}) {
-    const accents = {green: "from-primary-400/80 to-primary-400/20", violet: "from-violet-400/80 to-violet-400/20", gold: "from-amber-400/80 to-amber-400/20", blue: "from-sky-400/80 to-sky-400/20"};
+    const accents = {green: "from-primary-400/80 to-primary-400/20", violet: "from-sky-400/80 to-sky-400/20", gold: "from-amber-400/80 to-amber-400/20", blue: "from-sky-400/80 to-sky-400/20"};
     return (
         <div className="border border-white/[0.08] bg-white/[0.03] p-4 transition hover:border-white/15">
             <p className="text-[0.65rem] font-black uppercase tracking-[0.15em] text-white/35">{label}</p>
@@ -56,7 +56,7 @@ export function AppMetric({label, value, accent = "green", detail}: {label: stri
 }
 
 export function AppProgress({value, accent = "green"}: {value: number; accent?: "green" | "violet" | "gold"}) {
-    const fill = accent === "violet" ? "bg-violet-500" : accent === "gold" ? "bg-amber-400" : "bg-primary-400";
+    const fill = accent === "violet" ? "bg-sky-500" : accent === "gold" ? "bg-amber-400" : "bg-primary-400";
     return (
         <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
             <div className={`h-full rounded-full transition-all duration-500 ${fill}`} style={{width: `${Math.max(value > 0 ? 2 : 0, Math.min(100, value))}%`}} />
@@ -87,7 +87,7 @@ export function AppBadge({children, tone = "neutral"}: {children: React.ReactNod
         primary: "bg-primary-400/15 text-primary-100",
         success: "bg-primary-400 text-black",
         warning: "bg-amber-400/15 text-amber-200",
-        violet: "bg-violet-400/15 text-violet-200"
+        violet: "bg-sky-400/15 text-sky-200"
     };
     return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[0.68rem] font-black uppercase tracking-[0.08em] ${tones[tone]}`}>{children}</span>;
 }

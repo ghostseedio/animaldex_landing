@@ -131,14 +131,14 @@ export default function TradesClient({
     return (
         <div className="space-y-4">
             {canCreateAnimalOffer ? (
-                <AppSurface className="border-violet-400/15 bg-gradient-to-br from-violet-500/10 to-[#121212]">
+                <AppSurface className="border-sky-400/15 bg-gradient-to-br from-sky-500/10 to-[#121212]">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/10">
+                            <span className="flex h-11 w-11 items-center justify-center bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/10">
                                 <AppIcon name="trade" />
                             </span>
                             <div>
-                                <p className="text-[0.63rem] font-black uppercase tracking-wider text-violet-300">New exchange</p>
+                                <p className="text-[0.63rem] font-black uppercase tracking-wider text-sky-300">New exchange</p>
                                 <h2 className="font-display text-xl font-bold text-white">Create offer</h2>
                             </div>
                         </div>
@@ -165,7 +165,7 @@ export default function TradesClient({
                                     value={myCapture}
                                     onChange={setMyCapture}
                                 />
-                                <AppIcon name="trade" className="mx-auto hidden h-6 w-6 text-violet-300 md:mt-12 md:block" />
+                                <AppIcon name="trade" className="mx-auto hidden h-6 w-6 text-sky-300 md:mt-12 md:block" />
                                 <TradeCapturePicker
                                     label="Collector animal"
                                     placeholder="Choose a public capture"
@@ -269,7 +269,7 @@ export default function TradesClient({
                                     <h2 className="mt-2 font-display text-xl font-bold text-white">{trade.offererName}</h2>
                                     <p className="mt-1 text-xs font-bold text-primary-200">Value {trade.offererValue}</p>
                                 </div>
-                                <AppIcon name="trade" className="h-6 w-6 text-violet-300" />
+                                <AppIcon name="trade" className="h-6 w-6 text-sky-300" />
                                 <div className="bg-white/[0.04] p-4 ring-1 ring-white/[0.04]">
                                     <p className="text-xs text-white/35">{incoming ? "For your" : "For their"}</p>
                                     <h2 className="mt-2 font-display text-xl font-bold text-white">{trade.receiverName}</h2>

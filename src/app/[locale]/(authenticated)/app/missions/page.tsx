@@ -2,6 +2,8 @@ import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppMetric, AppPage, AppPageHeader, AppProgress, AppSectionTitle, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
 import {getAppProgression, getAppSponsoredCampaigns, type AppSponsoredCampaign} from "@/data/authenticated-app";
+import {loadLocaleMessages} from "@/loaders/locale";
+import {appShellWords, type AppShellWords} from "@/lib/app-shell-words";
 import {formatEarningsMinor} from "@/lib/earnings";
 
 const shelves = [
@@ -70,7 +72,7 @@ function campaignWindow(campaign: AppSponsoredCampaign) {
     return `${start.toLocaleDateString("en-US", options)}-${end.toLocaleDateString("en-US", options)}`;
 }
 
-function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
+function SponsoredCampaignCard({campaign, words}: {campaign: AppSponsoredCampaign; words: AppShellWords}) {
     const progress = Math.max(0, campaign.participant?.progressCount ?? 0);
     const percent = Math.round(progress / Math.max(1, campaign.targetCount) * 100);
     const presentedBy = campaign.presenterName?.trim() || null;
@@ -87,7 +89,7 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/30" />
                     <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                         <span className={`rounded-full px-3 py-1 text-[0.65rem] font-black ${emphasised ? "bg-primary-400 text-black" : "bg-black/70 text-white/80"}`}>{campaignStatus(campaign)}</span>
-                        {campaign.sponsorOrganizationId ? <span className="rounded-full bg-black/70 px-3 py-1 text-[0.65rem] font-black text-white">Sponsored</span> : null}
+                        {campaign.sponsorOrganizationId ? <span className="rounded-full bg-black/70 px-3 py-1 text-[0.65rem] font-black text-white">{words.eventSponsored}</span> : null}
                         {remaining ? <span className="rounded-full bg-black/70 px-3 py-1 text-[0.65rem] font-black text-white/80">{remaining}</span> : null}
                     </div>
                 </div>
@@ -97,9 +99,9 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
                     {!campaign.thumbnailUrl ? <span className={`rounded-full px-3 py-1 text-[0.65rem] font-black ${emphasised ? "bg-primary-400 text-black" : "bg-white/[0.08] text-white/80"}`}>{campaignStatus(campaign)}</span> : null}
                     {!campaign.thumbnailUrl && remaining ? <span className="text-xs font-bold text-white/35">{remaining}</span> : null}
                     {campaign.sponsorOrganizationId && presentedBy ? (
-                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">Presented by {presentedBy}</span>
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">{words.eventPresentedBy.replace("{name}", presentedBy)}</span>
                     ) : (
-                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">AnimalDex Challenge</span>
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[0.65rem] font-black text-white/65">{words.eventByAnimalDex}</span>
                     )}
                     {campaignWindow(campaign) ? <span className="text-xs font-bold text-white/35">{campaignWindow(campaign)}</span> : null}
                 </div>
@@ -112,7 +114,7 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
                         <span>{campaignObjective(campaign)}</span>
                     </div>
                     {isPast && !participantIsComplete(campaign) ? (
-                        <p className="mt-2 text-xs font-bold text-white/45">This Challenge has ended.</p>
+                        <p className="mt-2 text-xs font-bold text-white/45">{words.eventEnded}</p>
                     ) : !isPast && campaign.participant && left > 0 ? (
                         <p className="mt-2 text-xs font-bold text-white/45">{left === 1 ? "1 more to go" : `${left} more to go`}</p>
                     ) : null}
@@ -122,17 +124,19 @@ function SponsoredCampaignCard({campaign}: {campaign: AppSponsoredCampaign}) {
                     <p className="mt-1 text-sm font-bold text-amber-100">{campaignReward(campaign)}</p>
                     {campaign.cashReward ? <p className="mt-1 text-xs text-amber-100/45">{campaign.cashReward.remainingRecipients} cash rewards remaining</p> : null}
                 </div>
-                <p className="mt-4 text-xs leading-5 text-white/30">Apple is not a sponsor of this Challenge and is not involved in any way.</p>
+                <p className="mt-4 text-xs leading-5 text-white/30">{words.eventAppleDisclaimer}</p>
             </div>
         </AppSurface>
     );
 }
 
-export default async function MissionsPage() {
-    const [progression, sponsoredCampaigns] = await Promise.all([
+export default async function MissionsPage({params}: {params: {locale: string}}) {
+    const [progression, sponsoredCampaigns, messages] = await Promise.all([
         getAppProgression(),
-        getAppSponsoredCampaigns()
+        getAppSponsoredCampaigns(),
+        loadLocaleMessages(params.locale).catch(() => null)
     ]);
+    const words = appShellWords(messages?.appShell);
     const liveCampaigns = sponsoredCampaigns.filter((campaign) => !isPastCampaign(campaign));
     const pastCampaigns = sponsoredCampaigns
         .filter((campaign) => isPastCampaign(campaign))
@@ -156,30 +160,32 @@ export default async function MissionsPage() {
                 <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
             </section>
 
-            {liveCampaigns.length ? (
-                <section className="space-y-4">
-                    <AppSectionTitle
-                        icon="arena"
-                        title="Sponsored Challenges"
-                        detail="Live and upcoming campaigns with clear rules, sponsor disclosure, and deterministic rewards."
-                    />
-                    <div className="grid gap-4 xl:grid-cols-2">
-                        {liveCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} />)}
-                    </div>
-                </section>
-            ) : pastCampaigns.length ? (
-                <p className="text-sm text-white/45">No live Challenges right now.</p>
-            ) : null}
+            {/* Events: what the drawer's "Events" opens (JRN-1). */}
+            <div id="events" className="scroll-mt-24 space-y-8">
+                {liveCampaigns.length ? (
+                    <section className="space-y-4">
+                        <AppSectionTitle icon="arena" title={words.events} detail={words.eventsDetail} />
+                        <div className="grid gap-4 xl:grid-cols-2">
+                            {liveCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} words={words} />)}
+                        </div>
+                    </section>
+                ) : (
+                    <section className="space-y-3">
+                        <AppSectionTitle icon="arena" title={words.events} detail={words.eventsDetail} />
+                        <p className="text-sm text-white/45">{pastCampaigns.length ? words.eventsNoneLive : words.eventsNone}</p>
+                    </section>
+                )}
 
-            {/* Challenges whose window has closed, kept out of the live list. */}
-            {pastCampaigns.length ? (
-                <section className="space-y-4">
-                    <AppSectionTitle icon="arena" title="Past events" detail="Challenges whose window has closed." />
-                    <div className="grid gap-4 xl:grid-cols-2">
-                        {pastCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} />)}
-                    </div>
-                </section>
-            ) : null}
+                {/* Events whose window has closed, kept out of the live list. */}
+                {pastCampaigns.length ? (
+                    <section className="space-y-4">
+                        <AppSectionTitle icon="arena" title={words.pastEvents} detail={words.pastEventsDetail} />
+                        <div className="grid gap-4 xl:grid-cols-2">
+                            {pastCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} words={words} />)}
+                        </div>
+                    </section>
+                ) : null}
+            </div>
 
             <AppSurface>
                 <div className="flex items-center gap-3">

@@ -28,6 +28,7 @@ import {logDevPerfEvent, timeDevAsync, timeDevStep} from "@/lib/dev-request-timi
 import {devCacheTtlMs, withServerMemoryCache} from "@/lib/server-memory-cache";
 import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
 import {animalLevel} from "@/lib/animal-level";
+import {isHomoSapiens, rowIsHomoSapiens} from "@/lib/people-never-public";
 
 type DiscoverSupabaseClient = NonNullable<
     ReturnType<typeof createSupabaseServerClient> | ReturnType<typeof createSupabasePublicClient>
@@ -1811,7 +1812,8 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         buildSpeciesHrefResolver()
     ]);
 
-    const captures = feedRows.map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples));
+    // People are never public (DECISIONS section 11): a Homo sapiens capture is never in the feed or featured.
+    const captures = feedRows.filter((row) => !rowIsHomoSapiens(row)).map((row) => mapCaptureRow(row, animalDexNumbers, behaviorPrinciples));
     const alignments = ((alignmentResult.data ?? []) as unknown as QueryRow[]).map(mapAlignmentRow);
     const fusions = ((fusionResult.data ?? []) as unknown as QueryRow[]).map(mapFusionRow);
     // 3.2 Debates replace battles: an old battle post is no longer in the feed
@@ -1891,7 +1893,8 @@ export async function getDiscoverCaptureById(captureId: string): Promise<Discove
     if (!supabase) return null;
 
     const row = await fetchDiscoverFeedRowByCaptureId(supabase, normalizedCaptureId);
-    if (!row) return null;
+    // People are never public (DECISIONS section 11).
+    if (!row || rowIsHomoSapiens(row)) return null;
     const [item] = await mapCaptureRowsForKeys([row]);
     return item ?? null;
 }
@@ -2168,8 +2171,10 @@ export async function getRecentPublicCaptures(
         devCacheTtlMs(5 * 60 * 1000),
         () => loadRecentPublicCaptures(limit)
     );
-    if ((options.imageVariant ?? "route") !== "card-thumbnail") return captures;
-    return captures.map((capture) => ({...capture, imageSrc: toCaptureCardThumbnailRoute(capture.imageSrc)}));
+    // People are never public (DECISIONS section 11).
+    const animals = captures.filter((capture) => !isHomoSapiens({scientificName: capture.scientificName, animalName: capture.animalName}));
+    if ((options.imageVariant ?? "route") !== "card-thumbnail") return animals;
+    return animals.map((capture) => ({...capture, imageSrc: toCaptureCardThumbnailRoute(capture.imageSrc)}));
 }
 
 const sitemapFeedSelect = "capture_id,feed_activity_at,capture_created_at,media_assets";

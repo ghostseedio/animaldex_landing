@@ -132,7 +132,7 @@ function FeedPill({
     neutral: "bg-white/[0.06] text-white/60",
     green: "bg-primary-400/10 text-primary-200",
     cyan: "bg-cyan-400/10 text-cyan-200",
-    violet: "bg-violet-400/10 text-violet-200",
+    violet: "bg-sky-400/10 text-sky-200",
     amber: "bg-amber-400/10 text-amber-200",
   };
   return (
@@ -781,7 +781,7 @@ function CaptureChip({
     green: "bg-primary-400/15 text-primary-100 ring-primary-400/20",
     cyan: "bg-cyan-400/15 text-cyan-100 ring-cyan-400/20",
     amber: "bg-amber-400/15 text-amber-100 ring-amber-400/20",
-    violet: "bg-violet-400/15 text-violet-100 ring-violet-400/20",
+    violet: "bg-sky-400/15 text-sky-100 ring-sky-400/20",
   };
   return (
     <span className={`inline-flex h-[26px] shrink-0 items-center rounded-full px-2.5 text-[0.68rem] font-black ring-1 ${tones[tone]}`}>

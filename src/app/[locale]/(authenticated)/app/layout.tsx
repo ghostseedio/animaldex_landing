@@ -4,16 +4,17 @@ import {WebStoreAvailabilityProvider} from "@/app/[locale]/(authenticated)/app/_
 import {paddleProductAvailability} from "@/lib/paddle-server";
 import {getAuthenticatedAppShellData} from "@/data/authenticated-app";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
+import {loadLocaleMessages} from "@/loaders/locale";
+import {appShellWords} from "@/lib/app-shell-words";
 
 export const metadata = {robots: {index: false, follow: false}};
 
-export default async function AuthenticatedAppLayout({children}: {children: React.ReactNode; params: {locale: string}}) {
+export default async function AuthenticatedAppLayout({children, params}: {children: React.ReactNode; params: {locale: string}}) {
     const timer = createDevRequestTimer("app.layout");
-    const {context, notifications, unreadMessageCount, creditBalance} = await timeDevStep(
-        timer,
-        "shell-data",
-        () => getAuthenticatedAppShellData()
-    );
+    const [{context, notifications, unreadMessageCount, creditBalance}, messages] = await Promise.all([
+        timeDevStep(timer, "shell-data", () => getAuthenticatedAppShellData()),
+        loadLocaleMessages(params.locale).catch(() => null)
+    ]);
     finishDevRequestTimer(timer, {authenticated: Boolean(context)});
 
     return (
@@ -24,6 +25,7 @@ export default async function AuthenticatedAppLayout({children}: {children: Reac
                     isAuthenticated={Boolean(context)}
                     unreadCount={notifications.filter((item) => !item.readAt).length}
                     unreadMessageCount={unreadMessageCount}
+                    words={appShellWords(messages?.appShell)}
                 >
                     {children}
                 </AppShell>

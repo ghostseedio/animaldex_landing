@@ -295,7 +295,7 @@ function Metric({label, value, detail, accent}: {label: string; value: number | 
     const colors = {
         green: "from-primary-400/80 to-primary-400/20",
         orange: "from-orange-400/80 to-orange-400/20",
-        violet: "from-violet-400/80 to-violet-400/20"
+        violet: "from-sky-400/80 to-sky-400/20"
     };
 
     return (
@@ -423,7 +423,7 @@ function BuildPackCallout({eligibleCount, onBuild}: {eligibleCount: number; onBu
 
     return (
         <article className="overflow-hidden border border-white/[0.08] bg-[#121212]">
-            <div className="relative h-48 overflow-hidden bg-gradient-to-br from-[#181818] via-orange-400/10 to-violet-500/10">
+            <div className="relative h-48 overflow-hidden bg-gradient-to-br from-[#181818] via-orange-400/10 to-sky-500/10">
                 <img src={`${STORAGE_BASE}/${SLIDESHOW_IMAGES[index]}`} alt="" className="h-full w-full object-contain p-10" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4">
                     <div className="flex items-end justify-between gap-4">
@@ -510,7 +510,7 @@ function PackBuilderSheet({
                 </header>
 
                 <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4 pb-32">
-                    <section className="border border-white/10 bg-gradient-to-br from-[#171717] via-orange-400/10 to-violet-500/10 p-4">
+                    <section className="border border-white/10 bg-gradient-to-br from-[#171717] via-orange-400/10 to-sky-500/10 p-4">
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-orange-200">Sealed listing</p>

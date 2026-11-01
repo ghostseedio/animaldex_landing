@@ -7,6 +7,8 @@ import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/
 import {AppAvatar, AppPage, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import type {DirectMessage, DirectMessageAttachment, DirectMessageProfile} from "@/data/direct-messages";
 import {formatAppShortDateTime} from "@/lib/app-dates";
+import {AppRequestError} from "@/lib/user-facing-error";
+import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 
 function formatWhen(value: string, locale: string) {
     return formatAppShortDateTime(value, locale);
@@ -82,6 +84,7 @@ export default function ConversationClient({
     initialDraft?: string;
     locale: string;
 }) {
+    const describeError = useUserFacingError();
     const [messages, setMessages] = useState(initialMessages);
     const [draft, setDraft] = useState(initialDraft);
     const [error, setError] = useState<string | null>(null);
@@ -116,13 +119,13 @@ export default function ConversationClient({
             const payload = await response.json() as {message?: DirectMessage; error?: string};
 
             if (!response.ok || !payload.message) {
-                throw new Error(payload.error || "Message could not be sent.");
+                throw new AppRequestError(response.status, payload.error ?? null);
             }
 
             setMessages((current) => [...current, payload.message!]);
             setDraft("");
         } catch (sendError) {
-            setError(sendError instanceof Error ? sendError.message : "Message could not be sent.");
+            setError(describeError(sendError));
         } finally {
             setSending(false);
         }

@@ -13,6 +13,8 @@ import {
     normalizeUsername,
     usernameFormatProblem
 } from "@/lib/profile-editor";
+import {AppRequestError} from "@/lib/user-facing-error";
+import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 
 type Draft = {
     displayName: string;
@@ -38,6 +40,7 @@ function SectionTitle({children}: {children: React.ReactNode}) {
  * then the basic info, saved together. Leaving with unsaved changes asks first.
  */
 export default function ProfileEditor({initial, isRequired}: {initial: Draft; isRequired: boolean}) {
+    const describeError = useUserFacingError();
     const router = useRouter();
     const [draft, setDraft] = useState<Draft>(initial);
     const [usernameState, setUsernameState] = useState<UsernameState>({kind: "unchanged"});
@@ -112,10 +115,10 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
             form.append("avatar", file);
             const response = await fetch("/api/app/profile/avatar", {method: "POST", body: form});
             const payload = await response.json().catch(() => ({})) as {avatarUrl?: string; error?: string};
-            if (!response.ok || !payload.avatarUrl) throw new Error(payload.error ?? "Could not load that photo.");
+            if (!response.ok || !payload.avatarUrl) throw new AppRequestError(response.status, payload.error ?? null);
             setDraft((current) => ({...current, avatarUrl: payload.avatarUrl!}));
         } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "Could not load that photo.");
+            setError(describeError(failure));
         } finally {
             setAvatarBusy(false);
         }
@@ -139,11 +142,11 @@ export default function ProfileEditor({initial, isRequired}: {initial: Draft; is
                 body: JSON.stringify({action: "update", ...draft})
             });
             const payload = await response.json().catch(() => ({})) as {error?: string};
-            if (!response.ok) throw new Error(payload.error ?? "Couldn't save your profile.");
+            if (!response.ok) throw new AppRequestError(response.status, payload.error ?? null);
             router.push("/app/profile");
             router.refresh();
         } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "Couldn't save your profile.");
+            setError(describeError(failure));
             setSaving(false);
         }
     }

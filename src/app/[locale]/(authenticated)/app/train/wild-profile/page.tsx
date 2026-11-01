@@ -25,7 +25,7 @@ function RoleCard({
 }) {
     return (
         <div className="border border-white/10 bg-[#151515] p-4">
-            <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">{label}</p>
+            <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-sky-300">{label}</p>
             {speciesSlug ? (
                 <Link href={`/animals/${speciesSlug}`} className="mt-2 block font-display text-2xl font-bold text-white hover:text-primary-200">
                     {name}
@@ -72,7 +72,7 @@ export default async function WildProfilePage({params}: {params: {locale: string
                     <Image src={HERO_IMAGE} alt="" fill unoptimized className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-5">
-                        <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">{t("heroEyebrow")}</p>
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-sky-300">{t("heroEyebrow")}</p>
                         <h2 className="mt-1 font-display text-3xl font-bold text-white">
                             {profile.hasInProgressInterview
                                 ? t("heroContinue")
@@ -112,7 +112,7 @@ export default async function WildProfilePage({params}: {params: {locale: string
                 <section className="space-y-5">
                     {profile.lifePurpose ? (
                         <div className="border border-white/10 bg-[#151515] p-5">
-                            <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-violet-300">{t("lifePurposeTitle")}</p>
+                            <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-sky-300">{t("lifePurposeTitle")}</p>
                             <p className="mt-2 font-display text-2xl font-bold leading-snug text-white">{profile.lifePurpose.statement}</p>
                             {profile.lifePurpose.explanation ? (
                                 <p className="mt-3 text-sm leading-7 text-white/55">{profile.lifePurpose.explanation}</p>

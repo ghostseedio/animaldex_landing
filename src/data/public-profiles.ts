@@ -7,6 +7,7 @@ import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-setting-label";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {animalLevel} from "@/lib/animal-level";
+import {isHomoSapiens} from "@/lib/people-never-public";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,28}[a-z0-9])?$/;
@@ -834,8 +835,10 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         return toPublicCapture(row, slug, number);
     };
 
-    const topCaptures = topRows.map(mapCaptureRow);
-    const recentCaptures = recentRows.map(mapCaptureRow);
+    // People are never public (DECISIONS section 11).
+    const animalRow = (row: PublicCaptureRow) => !isHomoSapiens({identityKey: row.normalized_identity_key, animalName: row.animal_name});
+    const topCaptures = topRows.filter(animalRow).map(mapCaptureRow);
+    const recentCaptures = recentRows.filter(animalRow).map(mapCaptureRow);
     const pets = await fetchProfilePets(profile.id, captureSelect, mapCaptureRow);
     const allCaptures = recentCaptures.length > 0 ? recentCaptures : topCaptures;
 

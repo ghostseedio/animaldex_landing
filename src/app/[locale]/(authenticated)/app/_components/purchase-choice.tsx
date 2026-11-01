@@ -13,6 +13,8 @@ import {
     WEB_STORE_PRODUCTS,
     type WebStoreProductCode
 } from "@/lib/web-store-catalog";
+import {AppRequestError} from "@/lib/user-facing-error";
+import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 
 /**
  * Opens Paddle for one product. `appReturnPath` is the page that started it
@@ -41,10 +43,10 @@ export async function startWebCheckout(productCode: WebStoreProductCode, appRetu
         error?: string;
     };
     if (!response.ok || !payload.clientToken || !payload.priceId || !payload.purchaseId) {
-        throw new Error(payload.error || "Checkout could not start.");
+        throw new AppRequestError(response.status, payload.error ?? null);
     }
     if (payload.environment !== "production" && payload.environment !== "sandbox") {
-        throw new Error("Checkout is not available.");
+        throw new AppRequestError(503, null);
     }
     return new Promise<"closed">((resolve, reject) => {
         void openPaddleCheckout({
@@ -85,6 +87,7 @@ export function PurchaseChoice({
     source: string;
     onRefresh: () => void;
 }) {
+    const describeError = useUserFacingError();
     const deficit = Math.max(0, needed - balance);
     const availability = useWebStoreAvailability();
     // The pack that covers the shortfall, or the other one when only it is on sale.
@@ -102,7 +105,7 @@ export function PurchaseChoice({
             await startWebCheckout(code, returnPath, source);
             setBusy(null);
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Checkout could not start.");
+            setError(describeError(caught));
             setBusy(null);
         }
     }

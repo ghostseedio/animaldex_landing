@@ -28,6 +28,8 @@ import {
     SettingsSection,
     SettingsToggleRow
 } from "@/app/[locale]/(authenticated)/app/settings/_components/settings-ui";
+import {AppRequestError} from "@/lib/user-facing-error";
+import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 
 async function postSetting(body: Record<string, unknown>) {
     const response = await fetch("/api/app/settings", {
@@ -37,7 +39,7 @@ async function postSetting(body: Record<string, unknown>) {
     });
     if (!response.ok) {
         const payload = await response.json().catch(() => ({})) as {error?: string};
-        throw new Error(payload.error ?? "Couldn't save that setting.");
+        throw new AppRequestError(response.status, payload.error ?? null);
     }
 }
 
@@ -133,6 +135,7 @@ export function InstagramRow() {
 // MARK: - Location privacy
 
 export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
+    const describeError = useUserFacingError();
     const [visibility, setVisibility] = useState(initial);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -147,7 +150,7 @@ export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
             await postSetting({action: "locationVisibility", value: next});
         } catch (failure) {
             setVisibility(previous);
-            setError(failure instanceof Error ? failure.message : "Couldn't save that setting.");
+            setError(describeError(failure));
         } finally {
             setSaving(false);
         }
@@ -176,6 +179,7 @@ export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
 // MARK: - Notifications
 
 export function PushPreferencesList({initial}: {initial: PushPreferences}) {
+    const describeError = useUserFacingError();
     const [preferences, setPreferences] = useState(initial);
     const [error, setError] = useState<string | null>(null);
     const icons: Record<keyof PushPreferences, React.ReactNode> = {
@@ -193,7 +197,7 @@ export function PushPreferencesList({initial}: {initial: PushPreferences}) {
             await postSetting({action: "push", key, enabled});
         } catch (failure) {
             setPreferences(previous);
-            setError(failure instanceof Error ? failure.message : "Couldn't save that setting.");
+            setError(describeError(failure));
         }
     }
 
@@ -259,6 +263,7 @@ export function CurrencyList({preference, systemCurrency}: {preference: string; 
 // MARK: - Account
 
 export function ChangePasswordForm() {
+    const describeError = useUserFacingError();
     const [current, setCurrent] = useState("");
     const [next, setNext] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -282,13 +287,13 @@ export function ChangePasswordForm() {
                 body: JSON.stringify({current, next, confirm})
             });
             const payload = await response.json().catch(() => ({})) as {error?: string};
-            if (!response.ok) throw new Error(payload.error ?? "Couldn't update your password.");
+            if (!response.ok) throw new AppRequestError(response.status, payload.error ?? null);
             setDone(true);
             setCurrent("");
             setNext("");
             setConfirm("");
         } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "Couldn't update your password.");
+            setError(describeError(failure));
         } finally {
             setSaving(false);
         }
@@ -312,6 +317,7 @@ export function ChangePasswordForm() {
 }
 
 export function SignOutRow() {
+    const describeError = useUserFacingError();
     const router = useRouter();
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -327,11 +333,11 @@ export function SignOutRow() {
                     setError(null);
                     try {
                         const response = await fetch("/api/auth/logout", {method: "POST"});
-                        if (!response.ok) throw new Error("Couldn't sign out.");
+                        if (!response.ok) throw new AppRequestError(response.status, null);
                         router.push("/account");
                         router.refresh();
                     } catch (failure) {
-                        setError(failure instanceof Error ? failure.message : "Couldn't sign out.");
+                        setError(describeError(failure));
                         setBusy(false);
                     }
                 }}
@@ -341,6 +347,7 @@ export function SignOutRow() {
 }
 
 export function DeleteAccountRow() {
+    const describeError = useUserFacingError();
     const router = useRouter();
     const [confirming, setConfirming] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -353,12 +360,12 @@ export function DeleteAccountRow() {
         try {
             const response = await fetch("/api/app/account/delete", {method: "POST"});
             const payload = await response.json().catch(() => ({})) as {error?: string};
-            if (!response.ok) throw new Error(payload.error ?? "Account deletion failed.");
+            if (!response.ok) throw new AppRequestError(response.status, payload.error ?? null);
             await fetch("/api/auth/logout", {method: "POST"}).catch(() => undefined);
             router.push("/");
             router.refresh();
         } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "Account deletion failed.");
+            setError(describeError(failure));
             setBusy(false);
         }
     }

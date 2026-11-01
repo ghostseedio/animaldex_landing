@@ -24,7 +24,7 @@ function tierBadge(album: PowerSetAlbum) {
     if (album.activeTier) {
         return {
             label: album.activeTier.tier.charAt(0).toUpperCase() + album.activeTier.tier.slice(1),
-            className: "bg-violet-400/90 text-black"
+            className: "bg-sky-400/90 text-black"
         };
     }
 
@@ -73,7 +73,7 @@ export default function PowerSetDetailView({album, catalogSuggestions}: PowerSet
                             <p className="text-xs text-white/35">collector score</p>
                         </div>
                     ) : album.isNearComplete ? (
-                        <span className="rounded-full bg-violet-400/15 px-3 py-1.5 text-xs font-bold text-violet-200">Almost there</span>
+                        <span className="rounded-full bg-sky-400/15 px-3 py-1.5 text-xs font-bold text-sky-200">Almost there</span>
                     ) : null}
                 </div>
 

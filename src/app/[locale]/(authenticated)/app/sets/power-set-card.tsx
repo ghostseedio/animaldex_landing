@@ -20,7 +20,7 @@ function tierBadge(album: PowerSetAlbum) {
     }
 
     if (album.activeTier) {
-        return {label: album.activeTier.tier.charAt(0).toUpperCase() + album.activeTier.tier.slice(1), className: "bg-violet-400/90 text-black"};
+        return {label: album.activeTier.tier.charAt(0).toUpperCase() + album.activeTier.tier.slice(1), className: "bg-sky-400/90 text-black"};
     }
 
     return {label: "Building", className: "bg-white/5 text-white/55"};
@@ -32,7 +32,7 @@ export default function PowerSetCard({album}: PowerSetCardProps) {
 
     return (
         <Link href={`/app/sets/${encodeURIComponent(album.key)}`} className="block">
-            <article className={`overflow-hidden border bg-gradient-to-br from-primary-400/[0.08] to-[#141414] p-5 transition hover:-translate-y-0.5 hover:border-primary-400/35 ${album.isCompleted ? "border-primary-400/30" : album.isNearComplete ? "border-violet-400/30" : "border-white/10"}`}>
+            <article className={`overflow-hidden border bg-gradient-to-br from-primary-400/[0.08] to-[#141414] p-5 transition hover:-translate-y-0.5 hover:border-primary-400/35 ${album.isCompleted ? "border-primary-400/30" : album.isNearComplete ? "border-sky-400/30" : "border-white/10"}`}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <p className="text-[0.63rem] font-black uppercase tracking-wider text-primary-200">Power collection</p>
