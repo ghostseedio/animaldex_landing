@@ -41,7 +41,7 @@ export async function requestAskKindVerdict(params: {
         });
         const response = await client.messages.create({
             model: params.model ?? (process.env.CLAUDE_ANIMAL_CALL_MODEL?.trim() || DEFAULT_VERDICT_MODEL),
-            max_tokens: 400,
+            max_tokens: 600,
             thinking: {type: "disabled"},
             messages: [{role: "user", content: buildAskKindVerdictPrompt(params.input)}]
         });

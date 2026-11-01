@@ -326,6 +326,10 @@ export async function POST(request: Request) {
                 scientificName: basePacket.species.scientificName,
                 powerName: basePacket.species.power?.principleName ?? null,
                 coreLesson: basePacket.species.power?.coreLesson ?? null,
+                principleExpression: basePacket.species.power?.principleExpression ?? null,
+                shortMotto: basePacket.species.power?.shortMotto ?? null,
+                biologicalBasis: basePacket.species.power?.biologicalBasis ?? null,
+                applicationExample: basePacket.species.power?.applicationExample ?? null,
                 adviceStyle: companion?.voice?.advice_style ?? null,
                 message: question,
                 history
