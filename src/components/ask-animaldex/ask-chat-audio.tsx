@@ -67,7 +67,7 @@ export function AskChatOptions({
                     aria-label={autoplay ? labels.voiceOff : labels.voiceOn}
                     title={autoplay ? labels.voiceOff : labels.voiceOn}
                     aria-pressed={autoplay}
-                    className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                    className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                 >
                     {autoplay ? <SpeakerIcon /> : <SpeakerOffIcon />}
                 </button>
@@ -76,7 +76,7 @@ export function AskChatOptions({
                 <AskMenu
                     label={labels.chatOptions}
                     items={items}
-                    buttonClassName="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                    buttonClassName="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                 >
                     <MoreIcon />
                 </AskMenu>

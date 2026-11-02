@@ -50,8 +50,8 @@ import {
 } from "@/lib/your-step-words";
 
 const CHIP = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-[14px] py-1.5 text-left text-xs leading-4 transition-colors disabled:opacity-50";
-const PRIMARY = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300`;
-const SECONDARY = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10`;
+const PRIMARY = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300 active:bg-primary-500`;
+const SECONDARY = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10 active:bg-white/15`;
 /** Media inside a bubble: the panel radius token, as every inner block of a special section. */
 const MEDIA_RADIUS: CSSProperties = {borderRadius: "var(--r-panel)"};
 
@@ -588,7 +588,7 @@ export function AskWarmupQuestion({
 }
 
 const CHOICE_CLASS: Record<ReturnType<typeof askWarmupChoiceMark>, string> = {
-    open: "border-white/12 bg-white/[0.06] font-normal text-white hover:bg-white/10",
+    open: "border-white/12 bg-white/[0.06] font-normal text-white hover:bg-white/10 active:bg-white/15",
     chosen: "border-primary-400/60 bg-primary-400/[0.16] font-semibold text-white",
     right: "border-primary-400/60 bg-primary-400/[0.16] font-semibold text-white",
     wrong: "border-amber-300/50 bg-amber-300/[0.12] font-semibold text-white",

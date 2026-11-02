@@ -378,7 +378,7 @@ export default function DebateThread({
                         <button
                             type="button"
                             onClick={() => void runDebate()}
-                            className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.07] px-[14px] text-xs font-bold text-white hover:bg-white/10"
+                            className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.07] px-[14px] text-xs font-bold text-white hover:bg-white/10 active:bg-white/15"
                         >
                             {words.debateWeb.tryAgain}
                         </button>
@@ -392,7 +392,7 @@ export default function DebateThread({
                         <button
                             type="button"
                             onClick={() => onApprove(debate)}
-                            className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-[14px] text-xs font-black text-black hover:bg-primary-300"
+                            className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-[14px] text-xs font-black text-black hover:bg-primary-300 active:bg-primary-500"
                         >
                             {words.debate.publicText}
                         </button>

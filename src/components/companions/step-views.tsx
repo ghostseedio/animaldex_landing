@@ -80,7 +80,7 @@ export function StepCard({
                     type="button"
                     onClick={onPrimary}
                     disabled={busy}
-                    className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
+                    className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-50"
                 >
                     {busy ? "…" : stepPrimaryLabel(step, name, words)}
                 </button>
@@ -88,7 +88,7 @@ export function StepCard({
                     type="button"
                     onClick={onOther}
                     disabled={busy}
-                    className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                    className="inline-flex min-h-9 items-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15 disabled:opacity-50"
                 >
                     {words.journey.step.other}
                 </button>
@@ -215,7 +215,7 @@ export function StepReportComposer({
                             <button
                                 type="button"
                                 onClick={() => inputRef.current?.click()}
-                                className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                                className="inline-flex min-h-10 w-fit items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15"
                             >
                                 <span aria-hidden="true">＋</span>
                                 {words.journey.report.attachBonus}
@@ -230,7 +230,7 @@ export function StepReportComposer({
                             type="button"
                             onClick={() => void submit()}
                             disabled={!ready}
-                            className="flex min-h-12 w-full items-center justify-center rounded-full bg-primary-400 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:bg-white/8 disabled:text-ink-400"
+                            className="flex min-h-12 w-full items-center justify-center rounded-full bg-primary-400 text-sm font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:bg-white/8 disabled:text-ink-400"
                         >
                             {sending ? sendingLabel : fillWords(words.journey.report.send, {name})}
                         </button>
@@ -347,7 +347,7 @@ export function TrialRows({
                                 type="button"
                                 onClick={() => onMakeStep(trial)}
                                 disabled={busyFrequency !== null}
-                                className="inline-flex min-h-10 w-fit items-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50"
+                                className="inline-flex min-h-10 w-fit items-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-50"
                             >
                                 {busyFrequency === trial.frequency ? "…" : words.journey.trial.makeStep}
                             </button>

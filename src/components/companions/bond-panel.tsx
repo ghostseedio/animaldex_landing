@@ -301,7 +301,7 @@ export default function BondPanel({
                 <button
                     type="button"
                     onClick={onTalk}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500"
                 >
                     {words.bond.talkToIt}
                 </button>
@@ -309,7 +309,7 @@ export default function BondPanel({
                     <button
                         type="button"
                         onClick={onDebate}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-5 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-5 text-sm font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15"
                     >
                         {words.debate.start}
                     </button>
@@ -324,7 +324,7 @@ export default function BondPanel({
                         <button
                             type="button"
                             onClick={warmup.onTake}
-                            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-5 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-5 text-sm font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15"
                         >
                             {words.journey.warmup.take}
                         </button>

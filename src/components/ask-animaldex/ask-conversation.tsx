@@ -2362,7 +2362,7 @@ export default function AskConversation({
                         type="button"
                         onClick={continueWithCredits}
                         disabled={isSending}
-                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 disabled:opacity-50"
+                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-50"
                     >
                         {labels.creditsContinue}
                     </button>
@@ -2373,7 +2373,7 @@ export default function AskConversation({
                     <Link
                         href={CREDITS_HREF}
                         onClick={() => trackLimitStep("drawer_limit_credits")}
-                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                        className="mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
                     >
                         {labels.creditsGet}
                     </Link>
@@ -2383,7 +2383,7 @@ export default function AskConversation({
                 <Link
                     href={labels.limitHrefSignedIn}
                     onClick={() => trackLimitStep("drawer_limit_pro")}
-                    className={`${outOfCredits ? "ml-2 " : ""}mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300`}
+                    className={`${outOfCredits ? "ml-2 " : ""}mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500`}
                 >
                     {labels.limitCtaSignedIn}
                 </Link>
@@ -2392,7 +2392,7 @@ export default function AskConversation({
                     <Link
                         href={signInHref}
                         onClick={() => trackLimitStep("drawer_limit_sign_in")}
-                        className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                        className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
                     >
                         {labels.limitCta}
                     </Link>
@@ -2711,7 +2711,7 @@ export default function AskConversation({
                             onClick={page.onMenu}
                             aria-label={page.words.openChats}
                             title={page.words.openChats}
-                            className="-ml-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-200 transition-colors hover:bg-white/8 hover:text-white lg:hidden"
+                            className="-ml-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-200 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 lg:hidden"
                             data-testid="talk-menu"
                         >
                             <MenuIcon />
@@ -2816,7 +2816,7 @@ export default function AskConversation({
                             aria-label={labels.memoryOpen}
                             aria-pressed={showingMemory}
                             title={labels.memoryOpen}
-                            className={`grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-white/8 hover:text-white ${showingMemory ? "bg-white/10 text-white" : "text-ink-300"}`}
+                            className={`grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 ${showingMemory ? "bg-white/10 text-white" : "text-ink-300"}`}
                         >
                             <MemoryIcon />
                         </button>
@@ -2827,7 +2827,7 @@ export default function AskConversation({
                         disabled={!hasConversation}
                         aria-label={labels.newConversation}
                         title={labels.newConversation}
-                        className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-35"
+                        className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 disabled:pointer-events-none disabled:opacity-35"
                     >
                         <PencilIcon />
                     </button>}
@@ -2925,7 +2925,7 @@ export default function AskConversation({
                             onFocus={() => router.prefetch(getLocalePath(locale, fullScreenHref))}
                             aria-label={labels.fullScreen}
                             title={labels.fullScreen}
-                            className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                            className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                             data-testid="ask-full-screen"
                         >
                             <ExpandIcon />
@@ -2936,7 +2936,7 @@ export default function AskConversation({
                             type="button"
                             onClick={close}
                             aria-label={labels.close}
-                            className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                            className="grid h-8 w-8 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                         >
                             <CloseIcon />
                         </button>
@@ -2963,7 +2963,7 @@ export default function AskConversation({
                                     setConfirmingClear(false);
                                     composerRef.current?.focus();
                                 }}
-                                className="rounded-full bg-primary-400 px-3.5 py-1.5 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                className="rounded-full bg-primary-400 px-3.5 py-1.5 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
                             >
                                 {labels.clearConfirmAction}
                             </button>
@@ -3061,7 +3061,7 @@ export default function AskConversation({
                                         onClick={leaveReportMode}
                                         disabled={reporting.sending}
                                         aria-label={labels.close}
-                                        className="-mr-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                                        className="-mr-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 disabled:opacity-40"
                                     >
                                         <CloseIcon />
                                     </button>
@@ -3095,7 +3095,7 @@ export default function AskConversation({
                                         type="button"
                                         onClick={leaveDebateEdit}
                                         aria-label={labels.close}
-                                        className="-mr-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                                        className="-mr-1.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                                     >
                                         <CloseIcon />
                                     </button>
@@ -3174,7 +3174,7 @@ export default function AskConversation({
                                     <button
                                         type="submit"
                                         disabled={!sendReady}
-                                        className={`mb-0.5 inline-flex h-9 shrink-0 items-center rounded-full px-4 text-xs font-black transition-colors ${sendReady ? "bg-primary-400 text-canvas-950 hover:bg-primary-300" : "bg-white/8 text-ink-400"}`}
+                                        className={`mb-0.5 inline-flex h-9 shrink-0 items-center rounded-full px-4 text-xs font-black transition-colors ${sendReady ? "bg-primary-400 text-canvas-950 hover:bg-primary-300 active:bg-primary-500" : "bg-white/8 text-ink-400"}`}
                                         data-testid="debate-edit-save"
                                     >
                                         {words.debate.save}
@@ -3187,7 +3187,7 @@ export default function AskConversation({
                                         aria-label={showStop ? labels.stop : reporting ? fillWords(words.journey.report.send, {name: speakerName}) : labels.send}
                                         className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
                                             showStop || sendReady
-                                                ? "bg-primary-400 text-canvas-950 hover:bg-primary-300"
+                                                ? "bg-primary-400 text-canvas-950 hover:bg-primary-300 active:bg-primary-500"
                                                 : "bg-white/8 text-ink-400"
                                         }`}
                                     >
@@ -3611,7 +3611,7 @@ const AnimalMessageRow = memo(function AnimalMessageRow({
                                     <button
                                         type="button"
                                         onClick={askAnother.onAsk}
-                                        className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-primary-300/40"
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-primary-300/40 active:bg-white/10"
                                     >
                                         <ReferralIcon />
                                         {askAnother.label}
@@ -3708,7 +3708,7 @@ function AskProIntroBand({
                     type="button"
                     onClick={onDismiss}
                     aria-label={labels.notNow}
-                    className="grid h-7 w-7 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white"
+                    className="grid h-7 w-7 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                 >
                     <CloseIcon />
                 </button>
@@ -3723,7 +3723,7 @@ function AskProIntroBand({
                 <Link
                     href={href}
                     onClick={onSeePro}
-                    className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                    className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
                 >
                     {labels.proIntroCta}
                 </Link>
@@ -3930,7 +3930,7 @@ function CompanionEventBlock({event, name, labels}: {event: AskCompanionEvent; n
                 <Link
                     href={referralHref}
                     title={labels.talkToHint}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40 active:bg-white/10"
                 >
                     <ReferralIcon />
                     {labels.talkTo.replace("{name}", companionDisplayName(referral.nickname, referral.animal, labels.companions.displayName))}
@@ -4012,7 +4012,7 @@ function ActionButton({children, label, onClick, disabled}: {
             onClick={onClick}
             disabled={disabled}
             aria-label={label}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-ink-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-ink-300 transition-colors hover:bg-white/10 active:bg-white/15 hover:text-white disabled:opacity-40"
         >
             {children}
             {label}
@@ -4191,7 +4191,7 @@ function AskMemoryPanel({
                                         disabled={busy}
                                         aria-label={`${labels.memoryCorrect}: ${item.fact}`}
                                         title={labels.memoryCorrect}
-                                        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                                        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 disabled:opacity-40"
                                     >
                                         <PencilIcon />
                                     </button>
@@ -4202,7 +4202,7 @@ function AskMemoryPanel({
                                     disabled={busy}
                                     aria-label={`${labels.memoryForget}: ${item.fact}`}
                                     title={labels.memoryForget}
-                                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40"
+                                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 disabled:opacity-40"
                                 >
                                     {forgettingFact === item.fact ? <span className="text-[10px]">…</span> : <CloseIcon />}
                                 </button>
@@ -4217,7 +4217,7 @@ function AskMemoryPanel({
                                 <button
                                     type="button"
                                     onClick={onForgetAll}
-                                    className="rounded-full bg-primary-400 px-3.5 py-1.5 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                                    className="rounded-full bg-primary-400 px-3.5 py-1.5 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
                                 >
                                     {labels.memoryForgetAll}
                                 </button>

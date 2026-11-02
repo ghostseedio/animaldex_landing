@@ -122,7 +122,7 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
                                         disabled={Boolean(choosing)}
                                         aria-pressed={chosen}
                                         className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-[13px] font-black transition-colors disabled:opacity-60 ${
-                                            chosen ? "bg-white text-black" : "bg-primary-400 text-black hover:bg-primary-300"
+                                            chosen ? "bg-white text-black" : "bg-primary-400 text-black hover:bg-primary-300 active:bg-primary-500"
                                         }`}
                                     >
                                         {choosing === participant.id ? web.choosing : fillWords(words.debate.tryWay, {name})}
@@ -224,7 +224,7 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
                                     onClick={() => vote(participant)}
                                     disabled={Boolean(voting)}
                                     aria-label={`${words.debate.vote}: ${name}`}
-                                    className="min-h-9 shrink-0 rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-60"
+                                    className="min-h-9 shrink-0 rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-60"
                                 >
                                     {words.debate.vote}
                                 </button>
@@ -433,7 +433,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                         type="button"
                                         onClick={() => onTryWay(participant)}
                                         disabled={Boolean(choosing)}
-                                        className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-[14px] text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-60"
+                                        className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-[14px] text-xs font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-60"
                                     >
                                         {choosing === participant.id ? web.choosing : fillWords(words.debate.tryWay, {name: debateAnimalName(participant)})}
                                     </button>
@@ -522,7 +522,7 @@ export function DebateVoteSection({debate, words, locale, signedIn, onChange}: {
                                         onClick={() => vote(participant)}
                                         disabled={Boolean(voting)}
                                         aria-label={`${words.debate.vote}: ${name}`}
-                                        className="min-h-8 shrink-0 rounded-full bg-primary-400 px-3.5 text-xs font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-60"
+                                        className="min-h-8 shrink-0 rounded-full bg-primary-400 px-3.5 text-xs font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-60"
                                     >
                                         {words.debate.vote}
                                     </button>

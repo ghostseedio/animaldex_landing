@@ -90,7 +90,7 @@ export default function TalkCapabilities({
                 <Link
                     href={appHref}
                     onClick={() => rememberStorePlacement("page_talk")}
-                    className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-canvas-950 transition-colors hover:bg-primary-300"
+                    className="inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
                 >
                     {words.getApp}
                 </Link>
@@ -155,7 +155,7 @@ function CapabilityChip({icon, label, quiet = false, pressed, onClick, title, te
                     ? "border-primary-300/55 bg-primary-400/[0.12] text-white"
                     : quiet
                         ? "border-white/10 bg-transparent text-ink-300 hover:border-white/20 hover:text-white"
-                        : "border-white/12 bg-white/[0.05] text-white hover:border-primary-300/40"
+                        : "border-white/12 bg-white/[0.05] text-white hover:border-primary-300/40 active:bg-white/10"
             }`}
         >
             <span className={`shrink-0 ${quiet ? "text-ink-400" : "text-primary-300"}`}>{icon}</span>

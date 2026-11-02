@@ -155,7 +155,7 @@ export default function AskVoiceCallButton({
                 aria-label={label}
                 title={label}
                 data-testid="ask-voice-call"
-                className="grid h-9 w-9 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-35"
+                className="grid h-9 w-9 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 disabled:pointer-events-none disabled:opacity-35"
             >
                 <PhoneIcon size={16} />
             </button>

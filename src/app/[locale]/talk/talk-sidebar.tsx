@@ -216,7 +216,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                                 onClick={() => deleteChat(chat)}
                                                 aria-label={`${words.deleteChat}: ${chat.name}`}
                                                 title={words.deleteChat}
-                                                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-ink-400 opacity-0 transition-opacity hover:bg-white/10 hover:text-white focus:opacity-100 group-hover/chat:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                                                className="absolute right-0.5 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-ink-400 opacity-0 transition-opacity hover:bg-white/10 active:bg-white/15 hover:text-white focus:opacity-100 group-hover/chat:opacity-100 [@media(pointer:coarse)]:opacity-100"
                                                 data-testid="talk-delete-chat"
                                             >
                                                 <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -81,7 +81,13 @@ function CompanionRow({row, href, line, time, locale, words}: {
             <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={48} className={needsYou ? "ring-2 ring-primary-400/80" : ""} />
             <span className="flex h-full min-w-0 flex-1 items-center gap-3 border-b border-white/[0.08] pr-4">
                 <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-[17px] leading-6 text-white ${unread ? "font-bold" : "font-semibold"}`}>{row.displayName}</span>
+                    {/* The time sits on the name's baseline (baselines aligned across a row, DESIGN.md section 4). */}
+                    <span className="flex items-baseline gap-2">
+                        <span className={`min-w-0 flex-1 truncate text-[17px] leading-6 text-white ${unread ? "font-bold" : "font-semibold"}`}>{row.displayName}</span>
+                        {time !== null ? (
+                            <span className="shrink-0 text-[11px] leading-4 text-white/40">{talkRelativeTime(time, {locale, yesterday: yesterdayWord(locale)})}</span>
+                        ) : null}
+                    </span>
                     <span
                         className={`mt-0.5 flex items-center gap-1 text-[13px] leading-[18px] ${
                             line.neon ? "font-semibold text-primary-300" : line.kind === "power" || line.kind === "hello" ? "text-white/40" : unread ? "text-white/85" : "text-white/60"
@@ -97,9 +103,6 @@ function CompanionRow({row, href, line, time, locale, words}: {
                         {row.muted ? `, ${words.tab.muted}` : ""}
                     </span>
                 </span>
-                {time !== null ? (
-                    <span className="shrink-0 text-[11px] leading-4 text-white/40">{talkRelativeTime(time, {locale, yesterday: yesterdayWord(locale)})}</span>
-                ) : null}
                 {unread ? (
                     <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor: row.muted ? "rgb(255 255 255 / 0.35)" : NEON}} />
                 ) : null}

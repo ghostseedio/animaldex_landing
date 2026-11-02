@@ -93,7 +93,7 @@ export default function HeartsBand({captureId, hearts: initialHearts, powerEarne
                         type="button"
                         onClick={healOne}
                         disabled={healing}
-                        className="inline-flex min-h-10 items-center gap-2 self-start rounded-full bg-primary-400 px-4 text-[13px] font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-60"
+                        className="inline-flex min-h-10 items-center gap-2 self-start rounded-full bg-primary-400 px-4 text-[13px] font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-60"
                     >
                         {healing ? web.healing : words.heal.one}
                     </button>

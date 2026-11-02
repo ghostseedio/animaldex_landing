@@ -77,12 +77,12 @@ const DRAFT_POLLS = 20;
 
 const NO_NAMED: readonly DebateNamedAnimal[] = [];
 
-const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 disabled:opacity-50";
-const quietButton = "inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50";
+const primaryButton = "inline-flex min-h-11 items-center justify-center rounded-full bg-primary-400 px-5 text-sm font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-50";
+const quietButton = "inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.05] px-4 text-sm font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15 disabled:opacity-50";
 // Inside the bubble: the special message's own chips (ask-special.tsx).
 const CHIP = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-[14px] py-1.5 text-left text-xs leading-4 transition-colors disabled:opacity-50";
-const PRIMARY_CHIP = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300`;
-const SECONDARY_CHIP = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10`;
+const PRIMARY_CHIP = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300 active:bg-primary-500`;
+const SECONDARY_CHIP = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10 active:bg-white/15`;
 /** The roster rows: the panel radius token (globals.css). */
 const ROW_RADIUS = {borderRadius: "var(--r-panel)"} as const;
 
@@ -823,7 +823,9 @@ function SectionAnimalRow({candidate, on, taken, full, words, onToggle}: {
             disabled={taken || full}
             aria-pressed={on}
             title={taken ? words.picker.alreadyHereHint : undefined}
-            className={`flex w-full items-center gap-2.5 border px-2.5 py-2 text-left transition-colors disabled:opacity-45 ${on ? "bg-primary-400/[0.1]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"}`}
+            // Inside the special message's own hairline, a row carries no border of its own at rest (no double
+            // borders, DESIGN.md section 4); picked, its neon outline is the mark.
+            className={`flex w-full items-center gap-2.5 border px-2.5 py-2 text-left transition-colors active:bg-white/[0.09] disabled:opacity-45 ${on ? "bg-primary-400/[0.1]" : "border-transparent bg-white/[0.04] hover:bg-white/[0.07]"}`}
             style={{...ROW_RADIUS, ...(on ? {borderColor: "var(--ask-special-edge)"} : {})}}
             data-testid="debate-animal-row"
         >
@@ -832,7 +834,7 @@ function SectionAnimalRow({candidate, on, taken, full, words, onToggle}: {
                 <span className="flex min-w-0 items-baseline gap-1.5">
                     <span className="min-w-0 truncate text-[13px] font-bold leading-5 text-white">{taken ? words.picker.alreadyHere : debateAnimalName(candidate)}</span>
                     {candidate.fits ? (
-                        <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.08em] text-primary-300" data-testid="debate-fits">{words.debate.suggested}</span>
+                        <span className="shrink-0 text-[11px] font-black uppercase leading-4 tracking-[0.08em] text-primary-300" data-testid="debate-fits">{words.debate.suggested}</span>
                     ) : null}
                 </span>
                 <span className="block truncate text-[11px] font-semibold leading-4 text-white/50">{candidate.powerName ?? candidate.animal}</span>

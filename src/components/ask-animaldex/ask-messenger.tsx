@@ -82,7 +82,7 @@ export function AskAnimalFace({url, size, className = ""}: {url: string | null; 
                     alt=""
                     fill
                     sizes={`${size}px`}
-                    className={`object-contain p-[8%] transition-opacity duration-200 ease-out motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
+                    className={`object-contain p-[8%] transition-opacity duration-[180ms] ease-out motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
                     onLoad={() => setShown(true)}
                     onError={() => setFailed(true)}
                 />
@@ -698,7 +698,7 @@ export function AskMenu({
                     setUpwards(Boolean(rect && rect.bottom > window.innerHeight * 0.55));
                     setOpen((current) => !current);
                 }}
-                className={buttonClassName ?? "grid h-7 w-7 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white"}
+                className={buttonClassName ?? "grid h-7 w-7 place-items-center rounded-full text-ink-400 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"}
             >
                 {children}
             </button>
@@ -720,7 +720,7 @@ export function AskMenu({
                                 // Whatever it opens, it opens once this menu has gone.
                                 setTimeout(item.onSelect, 0);
                             }}
-                            className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13px] text-ink-100 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+                            className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13px] text-ink-100 transition-colors hover:bg-white/[0.06] hover:text-white active:bg-white/10 disabled:opacity-40"
                         >
                             {item.icon ? <span className="shrink-0 text-ink-300">{item.icon}</span> : null}
                             <span className="min-w-0 flex-1">

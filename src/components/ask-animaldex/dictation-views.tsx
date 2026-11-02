@@ -100,7 +100,7 @@ export function DictationStrip({phase, priming, startedAt, name, copy, level, on
                 onClick={quiet ? onDismiss : onCancel}
                 aria-label={copy.cancelDictation}
                 title={copy.cancelDictation}
-                className="-mr-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white"
+                className="-mr-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
             >
                 <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M5.5 5.5l9 9m0-9l-9 9" /></svg>
             </button>
@@ -125,7 +125,7 @@ export function DictationButton({active, busy, copy, onStart, onStop}: {
             aria-label={active ? copy.stopDictating : copy.dictate}
             aria-pressed={active}
             title={active ? copy.stopDictating : copy.dictate}
-            className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-40 ${active ? "bg-primary-400/[0.16] text-primary-300" : "text-ink-300 hover:bg-white/8 hover:text-white"}`}
+            className={`mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-40 ${active ? "bg-primary-400/[0.16] text-primary-300" : "text-ink-300 hover:bg-white/8 hover:text-white active:bg-white/12"}`}
             data-testid="dictation-button"
         >
             {active ? (

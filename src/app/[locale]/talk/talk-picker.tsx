@@ -226,7 +226,8 @@ function LoadFailed({words, onRetry}: {words: TalkWords; onRetry: () => void}) {
 
 function AnimalGrid({animals, href}: {animals: TalkAnimal[]; href: (animal: TalkAnimal) => string}) {
     return (
-        <div className={GRID}>
+        // The tiles fade in once, when the grid first mounts (DESIGN.md section 4).
+        <div className={`${GRID} rows-in`}>
             {animals.map((animal) => <AnimalCard key={animal.slug} animal={animal} href={href(animal)} />)}
         </div>
     );
