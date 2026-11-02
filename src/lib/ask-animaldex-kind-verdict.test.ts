@@ -77,6 +77,11 @@ test("its own lens finds the detail, and the move is never an obvious one, in an
     assert.ok(ASK_KIND_VERDICT_MAX_TOKENS >= 200 && ASK_KIND_VERDICT_MAX_TOKENS <= 320);
 });
 
+test("the one exception: the only kind or safe move for someone vulnerable is kept, with its own twist", () => {
+    assert.ok(flat(buildAskKindVerdictPrompt(input)).includes("keep it, and make the verdict the reason and the twist only this animal would add"));
+    assert.ok(flat(askKindVerdictPromptSection(verdict)).includes("lead with your own reason for it and the twist only you would add."));
+});
+
 test("the Power is read at its word and wins where the kind's life points both ways", () => {
     const prompt = flat(buildAskKindVerdictPrompt(input));
     assert.ok(prompt.includes("4. power_says: its Power is the part of its life it lives by"));

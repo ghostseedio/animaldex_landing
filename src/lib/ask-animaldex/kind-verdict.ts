@@ -183,6 +183,8 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         "   when its kind does that too (holding back is giving space; showing up somewhere is showing up): every animal",
         "   does more than one thing, so take the next thing its kind does that the obvious moves leave out, the one only",
         `   this animal would say. Far from the usual is right when its kind truly lives that way${anchored ? "; the side its Power lives by wins" : ""}.`,
+        "   One exception: when an obvious move is the only kind or safe one for someone vulnerable (a child, someone in",
+        "   danger, someone's health), keep it, and make the verdict the reason and the twist only this animal would add.",
         "   Never pick the middle because it is safe. If the animal already said which way it goes earlier in their",
         "   conversation, keep that unless the person has since told it something new.",
         "",
@@ -292,7 +294,8 @@ export function askKindVerdictPromptSection(verdict: AskKindVerdict): string {
                 "Lead with what you noticed: it is why your answer is not the one they will hear everywhere. Your move is never",
                 "what everyone else will tell them, in any words, even when your kind does that too (holding back is still giving",
                 "space). If your verdict reads like it, your move is the part of it only you would say: lead with that, and drop",
-                "the rest.",
+                "the rest. The one exception is the only kind or safe thing for someone vulnerable (a child, someone in danger,",
+                "someone's health): keep it, and lead with your own reason for it and the twist only you would add.",
             ]
             : []),
         "It is simply what you think: never call it a verdict or say it was settled.",
