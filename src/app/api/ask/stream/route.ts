@@ -130,8 +130,8 @@ import {
     type AnswerDeltaSource,
     type AskProviderName
 } from "@/lib/ask-animaldex/providers";
-import {askKindVerdictEnabled} from "@/lib/ask-animaldex/kind-verdict";
-import {requestAskKindVerdict} from "@/lib/ask-animaldex/kind-verdict-server";
+import {askKindVerdictEnabled, askStanceMemoryConfig} from "@/lib/ask-animaldex/kind-verdict";
+import {loadAskHeldStances, rememberAskStance, requestAskKindVerdict} from "@/lib/ask-animaldex/kind-verdict-server";
 import {
     askPersonaDials,
     askPersonaFrame,
@@ -330,10 +330,19 @@ export async function POST(request: Request) {
     // call, and not on a report on their step: that is not a problem to take a side on.
     const verdictKey = claudeAskKey();
     const verdictSpecies = basePacket.species;
+    // The animal keeps one stance per kind of problem across everyone (the
+    // apps' animal_species_stances): what it already holds comes in beside the
+    // companion read, and what it settles is kept after.
+    const stanceMemory = askStanceMemoryConfig();
     const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && verdictSpecies && question &&
             !isVisit && !isCall && !stepReportId && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
-        ? companionPending.then(
-            (companion) => requestAskKindVerdict({
+        ? Promise.all([
+            companionPending,
+            stanceMemory
+                ? speciesIdPending.then((speciesId) => (speciesId ? loadAskHeldStances(speciesId, question, stanceMemory.source) : []))
+                : Promise.resolve([])
+        ]).then(
+            ([companion, held]) => requestAskKindVerdict({
                 key: verdictKey,
                 input: {
                     animalName: verdictSpecies.name,
@@ -345,9 +354,18 @@ export async function POST(request: Request) {
                     biologicalBasis: verdictSpecies.power?.biologicalBasis ?? null,
                     applicationExample: verdictSpecies.power?.applicationExample ?? null,
                     adviceStyle: companion?.voice?.advice_style ?? null,
+                    // Only a real voice card's lens: the stand-in card has no first question.
+                    stance: companion?.voice?.first_question ? companion.voice.stance : null,
+                    firstQuestion: companion?.voice?.first_question ?? null,
                     message: question,
-                    history
+                    history,
+                    held
                 }
+            }).then((verdict) => {
+                if (verdict && stanceMemory) {
+                    void speciesIdPending.then((speciesId) => (speciesId ? rememberAskStance(speciesId, verdict, stanceMemory.source) : undefined));
+                }
+                return verdict;
             }),
             () => null
         )

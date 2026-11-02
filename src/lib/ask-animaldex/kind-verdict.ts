@@ -35,6 +35,29 @@ export type AskKindVerdict = {
     power_says: string;
     /** Which way it goes on their question, and the one thing its kind does that shows it. */
     verdict: string;
+    /** The moves any sensible adviser would give: the ones this animal's is not. */
+    obvious?: string;
+    /** The detail of their message this Power fastens onto, which those moves treat as background. */
+    angle?: string;
+    /** The kind of problem in general words, nothing of this person: the key its stance is kept under. */
+    problem?: string;
+    /**
+     * Set when this is a stance the animal already held (another person's same
+     * kind of problem): the same animal answers the same way.
+     */
+    held_id?: string;
+    /** When held: how this person's problem was put, to check the match against. */
+    asked_problem?: string;
+};
+
+/** A stance this animal settled before, on a kind of problem, with anyone. */
+export type AskHeldStance = {
+    id: string;
+    problem: string;
+    power_says?: string;
+    obvious?: string;
+    angle?: string;
+    verdict: string;
 };
 
 export type AskKindVerdictInput = {
@@ -52,10 +75,30 @@ export type AskKindVerdictInput = {
     applicationExample?: string | null;
     /** The voice card's advice style: how it would tell anyone to act. */
     adviceStyle?: string | null;
+    /**
+     * The voice card's stance and the question it always asks first: the
+     * Power's own lens, which finds a different detail in the same message.
+     */
+    stance?: string | null;
+    firstQuestion?: string | null;
     message: string;
     /** Earlier turns, oldest first, so the verdict holds across a conversation. */
     history?: Array<{role: string; content: string}>;
+    /**
+     * Stances this animal already holds on kinds of problems, from anyone: if
+     * theirs is the same kind, the animal keeps that answer.
+     */
+    held?: AskHeldStance[];
 };
+
+/**
+ * The animal's stances, kept across everyone it talks to: off with
+ * ANIMAL_STANCE_MEMORY=off; ANIMAL_STANCE_SOURCE=lab keeps a lab apart.
+ */
+export function askStanceMemoryConfig(env: Record<string, string | undefined> = process.env): {source: "app" | "lab"} | null {
+    if (env.ANIMAL_STANCE_MEMORY?.trim().toLowerCase() === "off") return null;
+    return {source: env.ANIMAL_STANCE_SOURCE?.trim().toLowerCase() === "lab" ? "lab" : "app"};
+}
 
 /** Off with ANIMAL_CHAT_KIND_VERDICT=off; on by default. */
 export function askKindVerdictEnabled(env: Record<string, string | undefined> = process.env): boolean {
@@ -67,7 +110,7 @@ export function askKindVerdictEnabled(env: Record<string, string | undefined> = 
  * word limits by about half; 84 tokens median, 100 at most over 10 lab
  * calls); a longer answer is cut and the reply goes ahead without a verdict.
  */
-export const ASK_KIND_VERDICT_MAX_TOKENS = 160;
+export const ASK_KIND_VERDICT_MAX_TOKENS = 260;
 
 function clip(value: string | null | undefined, max: number): string {
     const text = (value ?? "").replace(/\s+/g, " ").trim();
@@ -85,13 +128,16 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         input.shortMotto ? `Its motto: "${clip(input.shortMotto, 120)}"` : "",
         input.biologicalBasis ? `The biology: ${clip(input.biologicalBasis, 300)}` : "",
         input.applicationExample ? `One person living by it: ${clip(input.applicationExample, 200)}` : "",
-        input.adviceStyle ? `How it would tell anyone to act: ${clip(input.adviceStyle, 300)}` : ""
+        input.adviceStyle ? `How it would tell anyone to act: ${clip(input.adviceStyle, 300)}` : "",
+        input.stance ? `With a person it ${clip(input.stance, 160)}.`.replace(/([.!?…])\.$/, "$1") : "",
+        input.firstQuestion ? `The question it asks first, about anything: "${clip(input.firstQuestion, 200)}"` : "",
     ].filter(Boolean).join(" ");
     const earlier = (input.history ?? [])
-        .map((turn) => ({who: turn.role === "user" ? "person" : "animal", said: clip(turn.content, 400)}))
+        .map((turn) => ({ who: turn.role === "user" ? "person" : "animal", said: clip(turn.content, 400) }))
         .filter((turn) => turn.said.length > 0)
         .slice(-4);
     const anchored = Boolean(input.powerName);
+    const held = (input.held ?? []).slice(0, 8);
     return [
         `You are a field biologist who knows ${species} well. You are not advising anyone and you do not care what would`,
         "be good for a person. In AnimalDex, people bring their lives to animals, and each animal answers from how its",
@@ -101,39 +147,124 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         earlier.length > 0 ? `Earlier in their conversation:\n${JSON.stringify(earlier)}` : "",
         `The person just said: <message>${clip(input.message, 900)}</message>`,
         "",
+        ...(held.length > 0
+            ? [
+                "This animal has already settled its answer to these kinds of problems, with other people:",
+                ...held.map((stance, index) => `${index + 1}. ${clip(stance.problem, 140)}: ${clip(stance.verdict, 220)}`),
+                "",
+            ]
+            : []),
         "1. decision: is the person asking what to do, or facing a choice or a problem about what to do? Talking, asking",
         "   about the animal, or sharing news is not.",
         "2. safety: is someone controlling, threatening or hurting them, or are they in danger?",
+        "3. If decision is true: problem, the kind of problem in general words anyone could have, with nothing of this",
+        "   person in it.",
+        ...(held.length > 0
+            ? [
+                "   same_as: if that is the same kind as one of the settled problems above, its number, and nothing after it: the",
+                "   animal keeps that answer. Same kind means the same situation and the same question, not a shared topic or word:",
+                "   a product nobody notices and a shop losing customers to a rival are different kinds. When unsure, 0.",
+                "   If same_as is 0, go on.",
+            ]
+            : []),
+        "   obvious: the two or three moves any sensible adviser, or ChatGPT, would give them. They will hear those",
+        "   everywhere; this animal never gives them.",
         ...(anchored
             ? [
-                "3. If decision is true, power_says: its Power is the part of its life it lives by and answers every question",
-                "   through. Read it at its word and say what it tells the person to do on their question. Never bend it towards",
-                "   growth, courage or what a sensible person would do: if, read plainly, it says stay, no, alone or wait, say so.",
-                "4. verdict: which way it goes on their question, its Power's way, and the one thing its kind actually does, in",
-                "   the moment of its own life most like theirs, that shows it. Its kind often does more than one thing: the side",
-                "   its Power lives by wins, and no other habit of its kind overturns it."
+                "4. power_says: its Power is the part of its life it lives by and answers every question through. Read it at its",
+                "   word and say what it tells the person to do. Never bend it towards growth, courage or what a sensible person",
+                "   would do: if, read plainly, it says stay, no, alone or wait, say so.",
             ]
-            : [
-                "3. If decision is true, verdict: which way it goes on their question, and the one thing its kind actually does,",
-                "   in the moment of its own life most like theirs, that shows it."
-            ]),
-        "   Never pick the middle because it is safe, and never pick what a sensible person would do because it is",
-        "   sensible: that is the answer they can get anywhere. If real behaviour points to an extreme, say the extreme. If",
-        "   the animal already said which way it goes earlier in their conversation, keep that unless the person has since",
-        "   told it something new.",
+            : []),
+        `${anchored ? 5 : 4}. angle: ask their message the question this animal asks first, and say what the answer points at: the`,
+        "   detail its own lens picks out, in what they said or left out. Another animal's lens would pick out another.",
+        `${anchored ? 6 : 5}. verdict: which way it goes, and its move, built from what the angle found, in plain human words: what they`,
+        "   do this week, the human version of what its kind actually does. Never one of the obvious moves in any words, even",
+        "   when its kind does that too (holding back is giving space; showing up somewhere is showing up): every animal",
+        "   does more than one thing, so take the next thing its kind does that the obvious moves leave out, the one only",
+        `   this animal would say. Far from the usual is right when its kind truly lives that way${anchored ? "; the side its Power lives by wins" : ""}.`,
+        "   Never pick the middle because it is safe. If the animal already said which way it goes earlier in their",
+        "   conversation, keep that unless the person has since told it something new.",
         "",
-        'Return JSON only, on one line: {"decision": true or false, "safety": true or false,',
-        `${anchored ? '"power_says": "max 8 words", ' : ""}"verdict": "the side, then the one thing its kind does, max 15 words"}`
+        "problem, angle and verdict never name a person, place, company or product.",
+        "",
+        `Return JSON only, on one line: {"decision": true or false, "safety": true or false, "problem": "max 8 words",${held.length > 0 ? ' "same_as": number,' : ""}`,
+        `"obvious": "max 10 words", ${anchored ? '"power_says": "max 8 words", ' : ""}"angle": "max 8 words", "verdict": "the side and the move, max 16 words"}`,
     ].filter((line, index, lines) => line !== "" || lines[index - 1] !== "").join("\n");
 }
 
-/** A verdict only for a decision with nothing dangerous in it. */
-export function parseAskKindVerdict(raw: Record<string, unknown>): AskKindVerdict | null {
+/**
+ * How alike two short problem descriptions read, as Postgres pg_trgm counts it:
+ * shared three-letter pieces of their words over all of them (0 to 1).
+ */
+export function askProblemSimilarity(a: string, b: string): number {
+    const grams = (text: string) => {
+        const out = new Set<string>();
+        for (const word of text.toLowerCase().match(/[a-z0-9]+/g) ?? []) {
+            const padded = `  ${word} `;
+            for (let i = 0; i + 3 <= padded.length; i++) out.add(padded.slice(i, i + 3));
+        }
+        return out;
+    };
+    const left = grams(a);
+    const right = grams(b);
+    let shared = 0;
+    left.forEach((gram) => {
+        if (right.has(gram)) shared++;
+    });
+    const union = left.size + right.size - shared;
+    return union === 0 ? 0 : shared / union;
+}
+
+/**
+ * Below this, the model's own words for the new problem do not read like the
+ * held one, so its "same kind" is not trusted (lab, 2026-11-02: every kept
+ * paraphrase scored 0.12 or more, every wrong match 0.10 or less).
+ */
+export const ASK_HELD_MATCH_FLOOR = 0.11;
+
+/**
+ * A verdict only for a decision with nothing dangerous in it. A same_as that
+ * names a held stance returns that stance: the animal's earlier answer.
+ */
+export function parseAskKindVerdict(raw: Record<string, unknown>, held: AskHeldStance[] = []): AskKindVerdict | null {
     if (raw.decision !== true || raw.safety !== false) return null;
+    const sameAs = typeof raw.same_as === "number" ? raw.same_as : Number(raw.same_as);
+    const kept = Number.isInteger(sameAs) && sameAs >= 1 ? held[sameAs - 1] : undefined;
+    if (kept) {
+        return {
+            power_says: kept.power_says ?? "",
+            verdict: kept.verdict,
+            obvious: kept.obvious || undefined,
+            angle: kept.angle || undefined,
+            problem: kept.problem,
+            held_id: kept.id,
+            asked_problem: typeof raw.problem === "string" ? clip(raw.problem, 140) : undefined,
+        };
+    }
     const field = (key: string, max: number) => (typeof raw[key] === "string" ? clip(raw[key] as string, max) : "");
     const verdict = field("verdict", 220);
     if (!verdict) return null;
-    return {power_says: field("power_says", 160), verdict};
+    return {
+        power_says: field("power_says", 160),
+        verdict,
+        obvious: field("obvious", 160) || undefined,
+        angle: field("angle", 120) || undefined,
+        problem: field("problem", 140) || undefined,
+    };
+}
+
+export function askHeldStances(rows: unknown): AskHeldStance[] {
+    if (!Array.isArray(rows)) return [];
+    return rows.flatMap((row) => {
+        const value = row as { id?: unknown; problem?: unknown; stance?: Record<string, unknown> | null };
+        const stance = value.stance ?? {};
+        const text = (key: string) => (typeof stance[key] === "string" ? stance[key] as string : undefined);
+        const verdict = text("verdict");
+        return typeof value.id === "string" && typeof value.problem === "string" && verdict
+            ? [{ id: value.id, problem: value.problem, verdict, power_says: text("power_says"), obvious: text("obvious"), angle: text("angle") }]
+            : [];
+    });
 }
 
 /**
@@ -147,13 +278,23 @@ export function askKindVerdictPromptSection(verdict: AskKindVerdict): string {
         "verdict on what they asked:",
         JSON.stringify({
             what_your_power_says: verdict.power_says || undefined,
-            verdict: verdict.verdict
+            what_you_noticed: verdict.angle || undefined,
+            verdict: verdict.verdict,
+            what_everyone_else_will_tell_them: verdict.obvious || undefined,
         }),
         "Take it as yours: say it plainly near the start, argue it from your own life, put it in their world as one real",
         "thing to do, and never soften it into the middle or towards what they lean to. Only their safety overrides it.",
         "That one real thing has the same shape as what your kind does, done literally in their life this week: if your",
         "kind waits, they wait; if it leaves, they leave; if it shows itself, they show themselves. Leave out any step",
         "another animal could have given, and never make what everyone else would tell them one of your steps.",
-        "It is simply what you think: never call it a verdict or say it was settled."
+        ...(verdict.angle
+            ? [
+                "Lead with what you noticed: it is why your answer is not the one they will hear everywhere. Your move is never",
+                "what everyone else will tell them, in any words, even when your kind does that too (holding back is still giving",
+                "space). If your verdict reads like it, your move is the part of it only you would say: lead with that, and drop",
+                "the rest.",
+            ]
+            : []),
+        "It is simply what you think: never call it a verdict or say it was settled.",
     ].join("\n");
 }
