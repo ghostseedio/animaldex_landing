@@ -101,8 +101,9 @@ export default function TalkCapabilities({
     const trialAction = {label: words.getApp, href: appHref, note: fillWords(words.catchForTrials, {animal: animalName})};
 
     return (
-        <div ref={rootRef} className="flex scroll-mt-3 flex-col pt-3" data-testid="talk-capabilities">
-            <div className="flex flex-wrap justify-center gap-1.5 px-2" role="group" aria-label={fillWords(words.capabilities, {name})}>
+        <div ref={rootRef} className="flex scroll-mt-3 flex-col pt-2" data-testid="talk-capabilities">
+            {/* One scrolling row of starter chips under the contact card (DESIGN.md section 3), never a second line. */}
+            <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:justify-center" role="group" aria-label={fillWords(words.capabilities, {name})}>
                 <CapabilityChip icon={<FlagIcon />} label={fillWords(words.capTrials, {animal: name})} pressed={open === "trials"} onClick={() => toggle("trials")} testId="talk-capability-trials" />
                 <CapabilityChip icon={<LockIcon />} label={words.capInApp} quiet pressed={open === "app"} onClick={() => toggle("app")} title={words.locked} testId="talk-capability-app" />
             </div>
@@ -149,7 +150,7 @@ function CapabilityChip({icon, label, quiet = false, pressed, onClick, title, te
             aria-pressed={pressed}
             title={title}
             data-testid={testId}
-            className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors ${
+            className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-semibold leading-4 transition-colors active:opacity-70 ${
                 pressed
                     ? "border-primary-300/55 bg-primary-400/[0.12] text-white"
                     : quiet

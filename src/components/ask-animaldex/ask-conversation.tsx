@@ -1550,9 +1550,6 @@ export default function AskConversation({
         : ownerName && animalName
             ? labels.ownersAnimal.replace("{owner}", ownerName).replace("{animal}", animalName)
             : persona?.tagline ?? (nickname ? animalName : labels.inOwnWords);
-    const popularity = context?.talkCount
-        ? fillWords(labels.talkCount, {count: shortCount(context.talkCount.people, locale), name: speakerName})
-        : null;
     // Under the name in the header: typing while it answers, else how it is.
     const headerStatus = ownerName && animalName
         ? labels.ownersAnimal.replace("{owner}", ownerName).replace("{animal}", animalName)
@@ -2501,20 +2498,15 @@ export default function AskConversation({
                         <div className="flex min-h-full flex-1 flex-col">
                             <AskAnimalHero
                                 name={speakerName}
-                                subtitle={heroSubtitle}
+                                // Its Power on one line under the name (DESIGN.md section 3); how it is, when it has none.
+                                subtitle={hints.principleName?.trim() || heroSubtitle}
                                 avatarUrl={faceUrl}
-                                popularity={popularity}
                                 bondLabel={ownerChat && chipBond ? bondChip(chipBond, labels) : null}
                                 onBond={() => {
                                     setShowingMemory(false);
                                     setShowingBond(true);
                                     void animalBond.reload();
                                 }}
-                                nameLabel={nameTitle}
-                                onName={() => setShowingNameSheet(true)}
-                                // The contact card is the traits, its one Power line and the bond (JRN-31): what
-                                // the chat is for is in the message bar's own words.
-                                caption={null}
                                 // Every animal is different (SPEC section 3.3): in a chat with no
                                 // history yet, and always on the public Talk chat.
                                 differenceLine={!aboutTrial && (publicChat || !hasConversation)
@@ -2542,8 +2534,8 @@ export default function AskConversation({
                                     index === threadStepAt ? threadStepMessage : null,
                                     <div
                                         key={message.id}
-                                        // Tight between two messages from one side, wider when the other speaks.
-                                        className={index === 0 && threadStepAt !== 0 ? "" : (index === threadStepAt ? "assistant" : messages[index - 1].role) === message.role ? "pt-1.5" : "pt-3.5"}
+                                        // Tight (4) between two messages from one side, 10 when the other speaks (DESIGN.md section 3).
+                                        className={index === 0 && threadStepAt !== 0 ? "" : (index === threadStepAt ? "assistant" : messages[index - 1].role) === message.role ? "pt-1" : "pt-2.5"}
                                     >
                                         {labelledIndices.has(index) ? (
                                             <AskTimeLabel
@@ -2756,7 +2748,7 @@ export default function AskConversation({
                             stage, which opens the bond); else what the two of you are working on;
                             else its temperament. "Not this any more" is in the ••• menu. */}
                         <div className="min-w-0 flex-1">
-                            <p className="min-w-0 truncate text-sm font-semibold text-white">
+                            <p className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
                                 {messenger ? speakerName : animalName ?? labels.title}
                             </p>
                             {messenger && animalTalking ? (
@@ -3293,15 +3285,6 @@ export default function AskConversation({
     );
 }
 
-/** "8", "1,240", "12K": a count that reads at a glance, as the apps show it. */
-function shortCount(count: number, locale: string): string {
-    try {
-        return new Intl.NumberFormat(locale, count >= 10_000 ? {notation: "compact", maximumFractionDigits: 1} : {}).format(count);
-    } catch {
-        return String(count);
-    }
-}
-
 function lastQuestion(messages: AskMessage[]): string {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
         if (messages[index].role === "user") return messages[index].text;
@@ -3386,8 +3369,8 @@ type AskRowActions = {
 
 const IDLE_PHASE: AskSpeechPhase = {kind: "idle"};
 const NO_PHASES: string[] = [];
-/** "N of M messages left today" shows under the message bar from this many left, not before. */
-const ASK_REMAINING_SHOWN_FROM = 3;
+/** "N of M messages left today" shows under the message bar from this many left, not before (DESIGN.md section 3). */
+const ASK_REMAINING_SHOWN_FROM = 5;
 
 const AnimalMessageRow = memo(function AnimalMessageRow({
     voicePhase = null,

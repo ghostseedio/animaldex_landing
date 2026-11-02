@@ -96,83 +96,52 @@ export function AskAnimalFace({url, size, className = ""}: {url: string | null; 
 }
 
 /**
- * The top of the conversation: the animal, its name and how it is, and the
- * owner's bond to open. It is there before the hello, which follows as the
- * first message.
+ * The contact card at the top of the conversation (polish pass, DESIGN.md
+ * section 3): the art at 72 in a thin neon ring, the name on one line, its
+ * Power on one line under it, the one positioning line, and on the owner's
+ * chat the bond line. Nothing else above the first message; the count of
+ * people who talked with it and "Name your…" live in the ••• menu and the
+ * header. It is there before the hello, which follows as the first message.
  */
 export function AskAnimalHero({
     name,
     subtitle,
     avatarUrl,
-    popularity,
     bondLabel,
     onBond,
-    nameLabel,
-    onName,
-    caption = null,
     differenceLine = null
 }: {
     name: string;
+    /** Its Power, on one line; else how it is. */
     subtitle: string | null;
     avatarUrl: string | null;
-    /** "1,240 people have talked with Red Fox", once enough have. */
-    popularity: string | null;
     /** "Level 4 · Working together" on the owner's chat. */
     bondLabel?: string | null;
     onBond?: () => void;
-    /** "Name your Eurasian Otter", while the owner has not named it (iOS AnimalChatHero). */
-    nameLabel?: string | null;
-    onName?: () => void;
-    /** What the chat is for, under the header, until the owner's first step done with it (UI, not the animal speaking). */
-    caption?: string | null;
     /** "{name} answers from its own Power. Another animal may tell you the opposite." (SPEC section 3.3). */
     differenceLine?: string | null;
 }) {
     const showsBond = Boolean(bondLabel && onBond);
-    const showsName = Boolean(nameLabel && onName);
     return (
-        <div className="flex flex-col items-center px-6 pt-5 text-center">
-            <div className="relative grid h-28 w-28 place-items-center">
-                <span aria-hidden="true" className="ask-hero-glow absolute h-[124px] w-[124px] rounded-full bg-primary-400/[0.12] blur-xl" />
-                <AskAnimalFace url={avatarUrl} size={96} className="ring-[1.5px] ring-primary-400/40" />
+        <div className="flex flex-col items-center px-6 pt-3 text-center" data-testid="contact-card">
+            <div className="relative grid h-[72px] w-[72px] place-items-center">
+                <span aria-hidden="true" className="ask-hero-glow absolute h-[88px] w-[88px] rounded-full bg-primary-400/[0.12] blur-xl" />
+                <AskAnimalFace url={avatarUrl} size={72} className="ring-1 ring-primary-400/60" />
             </div>
-            <h2 className="mt-3 font-display text-2xl font-bold leading-8 text-white">{name}</h2>
-            {subtitle ? <p className="mt-1 text-sm leading-6 text-ink-300">{subtitle}</p> : null}
-            {popularity ? (
-                <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-400">
-                    <BubblesIcon />
-                    {popularity}
-                </p>
-            ) : null}
-            {showsBond || showsName ? (
-                <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-[18px] gap-y-1">
-                    {showsBond ? (
-                        <button
-                            type="button"
-                            onClick={onBond}
-                            className="inline-flex items-center gap-1.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:text-primary-200"
-                        >
-                            <LinkIcon />
-                            {bondLabel}
-                        </button>
-                    ) : null}
-                    {showsName ? (
-                        <button
-                            type="button"
-                            onClick={onName}
-                            className="inline-flex items-center gap-1.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:text-primary-200"
-                        >
-                            <HeroPencilIcon />
-                            {nameLabel}
-                        </button>
-                    ) : null}
-                </div>
-            ) : null}
-            {caption ? (
-                <p className="mt-3 max-w-[19rem] text-[13px] leading-5 text-ink-300" data-testid="hero-caption">{caption}</p>
+            <h2 className="mt-2 max-w-full truncate font-display text-[17px] font-semibold leading-6 text-white">{name}</h2>
+            {subtitle ? <p className="mt-0.5 max-w-full truncate text-[13px] leading-[18px] text-ink-300">{subtitle}</p> : null}
+            {showsBond ? (
+                <button
+                    type="button"
+                    onClick={onBond}
+                    className="mt-1 inline-flex min-h-7 items-center gap-1.5 text-[13px] font-semibold text-primary-300 transition-colors hover:text-primary-200 active:opacity-70"
+                >
+                    <LinkIcon />
+                    {bondLabel}
+                </button>
             ) : null}
             {differenceLine ? (
-                <p className="mt-2.5 max-w-[22rem] text-[12px] leading-[18px] text-ink-400" data-testid="hero-difference">{differenceLine}</p>
+                <p className="mt-1.5 max-w-[24rem] text-[13px] leading-[18px] text-ink-400" data-testid="hero-difference">{differenceLine}</p>
             ) : null}
         </div>
     );
@@ -202,11 +171,12 @@ export function AskUserBubble({
     report?: {label: string; thumbUrl: string | null; kind: "photo" | "video" | null} | null;
 }) {
     const radius = bubbleRadius({fromAnimal: false, groupStart: true, groupEnd: true});
+    // The far-side inset: on a phone the bubble never takes more than 82 % of the column.
     if (!report) {
         return (
-            <div className="flex justify-end pl-11" aria-label={`${label} ${text}`}>
+            <div className="flex justify-end pl-[18%] sm:pl-11" aria-label={`${label} ${text}`}>
                 <p
-                    className="max-w-full whitespace-pre-wrap break-words px-3.5 py-2 text-[15px] leading-6 text-white"
+                    className="max-w-full whitespace-pre-wrap break-words px-3.5 py-2.5 text-[15px] leading-6 text-white"
                     style={{backgroundColor: ASK_BUBBLE_OUTGOING, borderRadius: radius}}
                 >
                     {text}
@@ -215,9 +185,9 @@ export function AskUserBubble({
         );
     }
     return (
-        <div className="flex justify-end pl-11" aria-label={`${report.label}. ${text}`} data-testid="step-report-bubble">
+        <div className="flex justify-end pl-[18%] sm:pl-11" aria-label={`${report.label}. ${text}`} data-testid="step-report-bubble">
             <div className="flex max-w-full flex-col gap-2 px-3.5 py-2.5" style={{backgroundColor: ASK_BUBBLE_OUTGOING, borderRadius: radius}}>
-                <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-primary-300">
+                <p className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300">
                     <AskWalkIcon />
                     {report.label}
                 </p>
@@ -253,9 +223,9 @@ export function AskTypingBubble({avatarUrl, label}: {avatarUrl: string | null; l
     return (
         <div className="flex items-end gap-2" role="status" aria-label={label}>
             <AskAnimalFace url={avatarUrl} size={28} />
-            {/* Exactly a one-line bubble's height (8 + 24 + 8), so the first words replace the dots without moving the thread. */}
+            {/* Exactly a one-line bubble's height (10 + 24 + 10), so the first words replace the dots without moving the thread. */}
             <span
-                className="flex h-[40px] w-[58px] items-center justify-center gap-[5px]"
+                className="flex h-[44px] w-[58px] items-center justify-center gap-[5px]"
                 style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: bubbleRadius({fromAnimal: true, groupStart: true, groupEnd: true})}}
                 aria-hidden="true"
             >
@@ -391,11 +361,12 @@ export function AskReplyBubbles({
                 onClick={isLive ? onSkip : undefined}
             >
                 <AskAnimalFace url={avatarUrl} size={28} />
-                <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                {/* 4 between the pieces of one reply (DESIGN.md section 3). */}
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
                     {pieces.map((piece, index) => {
                         if (piece.kind === "visual") {
                             return (
-                                <div key={`v-${index}`} className="py-[5px] pr-9">
+                                <div key={`v-${index}`} className="py-1 pr-9">
                                     <AssistantMarkdown compact text={piece.source} photoUrl={photoUrl} photoAlt={photoAlt} streaming={isLive} />
                                 </div>
                             );
@@ -409,7 +380,8 @@ export function AskReplyBubbles({
                         const wide = askPieceIsWide(piece);
                         const bubble = (
                             <div
-                                className={`min-w-0 max-w-full break-words text-[15px] leading-6 text-white ${carries ? "ask-special w-full py-[11px] pl-[17px] pr-3.5" : wide ? "w-full px-3.5 py-2.5" : "px-3.5 py-2"}`}
+                                // 10 × 14 of padding on every bubble; the special one keeps 14 past its 3 px neon edge.
+                                className={`min-w-0 max-w-full break-words py-2.5 text-[15px] leading-6 text-white ${carries ? "ask-special w-full pl-[17px] pr-3.5" : wide ? "w-full px-3.5" : "px-3.5"}`}
                                 style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: radius}}
                                 data-testid={carries ? "special-message" : undefined}
                             >
@@ -480,7 +452,7 @@ function AskSpecialSections({children}: {children: ReactNode}) {
 export function AskSpecialShell({children, testId = "special-message"}: {children: ReactNode; testId?: string}) {
     return (
         <div
-            className="ask-special flex w-full min-w-0 flex-col gap-2.5 break-words py-[11px] pl-[17px] pr-3.5 text-[15px] leading-6 text-white"
+            className="ask-special flex w-full min-w-0 flex-col gap-2.5 break-words py-2.5 pl-[17px] pr-3.5 text-[15px] leading-6 text-white"
             style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: bubbleRadius({fromAnimal: true, groupStart: true, groupEnd: true})}}
             data-testid={testId}
         >
@@ -525,7 +497,7 @@ export function AskSpecialLabel({icon, children, trailing = null}: {
     trailing?: {text: string; color: string} | null;
 }) {
     return (
-        <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[10px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300">
+        <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300">
             {icon}
             <span className="min-w-0">{children}</span>
             {trailing ? <span className="shrink-0 font-bold normal-case tracking-normal" style={{color: trailing.color}}>{trailing.text}</span> : null}
@@ -567,7 +539,7 @@ export function AskSuggestionBar({
                     disabled={disabled}
                     onClick={() => onPick(prompt)}
                     aria-label={sayLabel.replace("{text}", prompt)}
-                    className="shrink-0 whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                    className="inline-flex min-h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-3.5 text-[13px] font-semibold leading-4 text-white transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-40"
                     style={{borderColor: ASK_BUBBLE_OUTGOING, backgroundColor: "var(--ask-bubble-out-soft)"}}
                 >
                     {prompt}
@@ -786,6 +758,4 @@ export const MoreIcon = () => (
         <circle cx="15.5" cy="10" r="1.6" />
     </svg>
 );
-const BubblesIcon = () => icon(<path d="M3.5 12.5V5.8A1.8 1.8 0 0 1 5.3 4h6.4a1.8 1.8 0 0 1 1.8 1.8v3.4a1.8 1.8 0 0 1-1.8 1.8H6Zm10-3h1.2a1.8 1.8 0 0 1 1.8 1.8V16l-2.5-2H9.3a1.8 1.8 0 0 1-1.8-1.8V11" />);
 const LinkIcon = () => icon(<path d="M8.5 11.5a3 3 0 0 0 4.2 0l2.3-2.3a3 3 0 0 0-4.2-4.2l-1 1m1.7 3.5a3 3 0 0 0-4.2 0L5 11.8A3 3 0 0 0 9.2 16l1-1" />);
-const HeroPencilIcon = () => icon(<path d="M4 16h3.5l8-8a2.1 2.1 0 0 0-3-3l-8 8V16Z" />);

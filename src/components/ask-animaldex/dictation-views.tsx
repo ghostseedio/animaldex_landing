@@ -89,11 +89,11 @@ export function DictationStrip({phase, priming, startedAt, name, copy, level, on
             {phase === "listening" ? (
                 <>
                     <DictationLevel level={level} />
-                    <span className="text-[12px] font-semibold tabular-nums text-white/80">{dictationClock(startedAt ? (now - startedAt) / 1000 : 0)}</span>
+                    <span className="text-[13px] font-semibold leading-4 tabular-nums text-white/80">{dictationClock(startedAt ? (now - startedAt) / 1000 : 0)}</span>
                     <span className="min-w-0 flex-1" />
                 </>
             ) : (
-                <p className={`min-w-0 flex-1 text-[12px] leading-4 ${quiet ? "text-ink-200" : "text-primary-300"}`}>{line}</p>
+                <p className={`min-w-0 flex-1 text-[13px] leading-4 ${quiet ? "text-ink-200" : "text-primary-300"}`}>{line}</p>
             )}
             <button
                 type="button"

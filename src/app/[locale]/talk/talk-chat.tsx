@@ -147,7 +147,7 @@ function TalkChatShell({name, power, slug, onMenu, words, labels, showsCapabilit
                         <span aria-hidden="true" className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-2 border-canvas-950 bg-primary-400" />
                     </span>
                     <div className="min-w-0 flex-1">
-                        <p className="min-w-0 truncate text-sm font-semibold text-white">{name}</p>
+                        <p className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">{name}</p>
                         {power ? <p className="truncate text-[11px] font-semibold leading-4 text-primary-300">{power}</p> : null}
                     </div>
                 </div>
@@ -158,9 +158,8 @@ function TalkChatShell({name, power, slug, onMenu, words, labels, showsCapabilit
                     <div className="flex min-h-full flex-1 flex-col">
                         <AskAnimalHero
                             name={name}
-                            subtitle={labels.inOwnWords}
+                            subtitle={power ?? labels.inOwnWords}
                             avatarUrl={face}
-                            popularity={null}
                             differenceLine={labels.answersFromPower.replace("{name}", name)}
                         />
                         {showsCapabilities ? (

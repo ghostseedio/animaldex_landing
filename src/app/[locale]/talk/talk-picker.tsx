@@ -6,13 +6,14 @@
  * most) and "They'll disagree", pairs whose Powers pull apart on one
  * question, both drawn by the server into the page (WEB-18, WEB-24); a search
  * over the whole catalog by common name, whose index loads only once someone
- * searches. Each card is the animal's icon art, its name and its Power; a tap
- * starts its chat. Opened from "Ask another animal", the question rides
- * along into the new chat's composer, ready to send, never sent for them
- * (DECISIONS section 6).
+ * searches. Each card is a tile: the animal's icon art at 56, its name and
+ * its Power, two to a row on a phone and four on a desktop, no paragraphs
+ * (polish pass, DESIGN.md section 3); a tap starts its chat. Opened from
+ * "Ask another animal", the question rides along into the new chat's
+ * composer, ready to send, never sent for them (DECISIONS section 6).
  */
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState, type ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {getLocalePath} from "@/lib/site";
@@ -42,6 +43,14 @@ function loadCatalog(): Promise<Catalog> {
             throw error;
         });
     return catalogCache;
+}
+
+/** Two tiles to a row on a phone, three on a tablet, four on a desktop. */
+const GRID = "grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4";
+
+/** A section's label: 36 tall, 11 px capitals, tertiary. */
+function SectionLabel({children}: {children: ReactNode}) {
+    return <h2 className="flex h-9 items-center text-[11px] font-bold uppercase tracking-[0.08em] text-ink-400">{children}</h2>;
 }
 
 export default function TalkPicker({words, initial}: {
@@ -109,34 +118,33 @@ export default function TalkPicker({words, initial}: {
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <header className="flex shrink-0 items-center gap-2 border-b border-white/10 px-4 py-3 lg:hidden">
+            <header className="flex shrink-0 items-center gap-2 border-b border-white/10 px-4 py-2 lg:hidden">
                 <button
                     type="button"
                     onClick={openSidebar}
                     aria-label={words.openChats}
-                    className="-ml-1.5 grid h-11 w-11 place-items-center rounded-full text-ink-200 hover:bg-white/8 hover:text-white"
+                    className="-ml-1.5 grid h-11 w-11 place-items-center rounded-full text-ink-200 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12"
                     data-testid="talk-menu"
                 >
                     <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" aria-hidden="true"><path d="M3.5 6h13M3.5 10h13M3.5 14h9" /></svg>
                 </button>
-                <p className="text-sm font-semibold text-white">{words.newChat}</p>
+                <p className="text-[15px] font-semibold leading-5 text-white">{words.newChat}</p>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="mx-auto w-full max-w-[760px] px-4 pb-16 pt-8 sm:pt-12" data-testid="talk-picker">
+                <div className="mx-auto w-full max-w-[760px] px-4 pb-16 pt-6 sm:pt-10" data-testid="talk-picker">
                     {/* The question alone: the faces and their Powers under it say the rest (visual first, no noise). */}
-                    <h1 className="font-display text-3xl font-bold leading-9 text-white sm:text-4xl sm:leading-[2.75rem]">{words.pickerTitle}</h1>
+                    <h1 className="font-display text-[24px] font-bold leading-8 text-white sm:text-[28px] sm:leading-9">{words.pickerTitle}</h1>
                     {carried ? (
-                        <div className="ask-special mt-5 flex items-start gap-3 rounded-card px-4 py-3" data-testid="talk-carried">
+                        <div className="ask-special mt-4 flex items-start gap-3 rounded-card px-4 py-3" data-testid="talk-carried">
                             <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary-300">{words.carried}</p>
-                                <p className="mt-0.5 line-clamp-3 text-sm leading-6 text-white">{carried}</p>
-                                <p className="mt-1 text-[12px] leading-4 text-ink-300">{words.carriedHint}</p>
+                                <p className="text-[11px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300">{words.carried}</p>
+                                <p className="mt-0.5 line-clamp-3 text-[15px] leading-6 text-white">{carried}</p>
                             </div>
-                            <button type="button" onClick={() => setCarried(null)} className="-mr-1 shrink-0 rounded-full px-2 py-1.5 text-xs font-semibold text-ink-300 hover:text-white">{words.carriedClear}</button>
+                            <button type="button" onClick={() => setCarried(null)} className="-mr-1 inline-flex min-h-8 shrink-0 items-center rounded-pill px-2 text-[13px] font-semibold text-ink-300 transition-colors hover:text-white active:opacity-70">{words.carriedClear}</button>
                         </div>
                     ) : null}
                     <label className="sr-only" htmlFor="talk-search">{words.searchLabel}</label>
-                    <div className="mt-6 flex items-center gap-2 rounded-pill border border-white/12 bg-white/[0.05] px-4 focus-within:border-primary-300/45">
+                    <div className="mt-4 flex h-12 items-center gap-2 rounded-pill border border-white/12 bg-white/[0.05] px-4 transition-colors focus-within:border-primary-300/45">
                         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-ink-400" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="9" cy="9" r="5.5" /><path d="m13.2 13.2 3.3 3.3" /></svg>
                         <input
                             ref={searchRef}
@@ -151,48 +159,46 @@ export default function TalkPicker({words, initial}: {
                             }}
                             placeholder={words.searchPlaceholder}
                             autoComplete="off"
-                            className="h-12 min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-ink-400"
+                            className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-ink-400"
                             data-testid="talk-search"
                         />
                     </div>
                     {searching ? (
-                        <section className="pt-6" aria-live="polite" aria-busy={catalogState === "loading"}>
+                        <section className="pt-4" aria-live="polite" aria-busy={catalogState === "loading"}>
                             {catalogState === "failed" ? (
                                 <LoadFailed words={words} onRetry={fetchCatalog} />
                             ) : catalog === null ? (
-                                <AnimalGridSkeleton count={6} />
+                                <AnimalGridSkeleton count={8} />
                             ) : results.length === 0 ? (
-                                <p className="text-sm text-ink-300">{words.searchEmpty}</p>
+                                <p className="text-[13px] leading-[18px] text-ink-300">{words.searchEmpty}</p>
                             ) : (
                                 <AnimalGrid animals={results} href={href} />
                             )}
                         </section>
                     ) : (
                         <>
-                            <section className="pt-8" aria-busy={firstRowsLoading}>
-                                <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-ink-400">{words.popular}</h2>
-                                <div className="pt-3">
-                                    {popular.length > 0
-                                        ? <AnimalGrid animals={popular} href={href} />
-                                        : catalogState === "failed"
-                                            ? <LoadFailed words={words} onRetry={fetchCatalog} />
-                                            : <AnimalGridSkeleton count={6} />}
-                                </div>
+                            <section className="pt-4" aria-busy={firstRowsLoading}>
+                                <SectionLabel>{words.popular}</SectionLabel>
+                                {popular.length > 0
+                                    ? <AnimalGrid animals={popular} href={href} />
+                                    : catalogState === "failed"
+                                        ? <LoadFailed words={words} onRetry={fetchCatalog} />
+                                        : <AnimalGridSkeleton count={8} />}
                             </section>
                             {pairs.length > 0 ? (
-                                <section className="pt-9" data-testid="talk-disagree">
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-ink-400">{words.disagree}</h2>
-                                    <p className="mt-1 text-[13px] text-ink-300">{words.disagreeHint}</p>
-                                    <div className="mt-3 grid gap-2.5">
+                                <section className="pt-6" data-testid="talk-disagree">
+                                    <SectionLabel>{words.disagree}</SectionLabel>
+                                    <div className="grid gap-2 sm:grid-cols-2">
                                         {pairs.map((pair) => (
+                                            // One bordered card; the two tiles inside lose their borders (no double borders).
                                             <div key={`${pair.left.slug}-${pair.right.slug}`} className="rounded-card border border-white/10 bg-white/[0.02] p-1.5">
                                                 {topicText(pair.topic) ? (
-                                                    <p className="px-2 pb-1.5 pt-1 text-[13px] font-semibold text-white">{topicText(pair.topic)}</p>
+                                                    <p className="px-2 pb-1.5 pt-1 text-[13px] font-semibold leading-[18px] text-white">{topicText(pair.topic)}</p>
                                                 ) : null}
                                                 <div className="flex items-stretch gap-1.5">
-                                                    <AnimalCard animal={pair.left} href={href(pair.left)} compact />
-                                                    <span aria-hidden="true" className="grid w-5 shrink-0 place-items-center text-xs font-black text-ink-400">↔</span>
-                                                    <AnimalCard animal={pair.right} href={href(pair.right)} compact />
+                                                    <AnimalCard animal={pair.left} href={href(pair.left)} inset />
+                                                    <span aria-hidden="true" className="grid w-4 shrink-0 place-items-center text-[13px] font-black text-ink-400">↔</span>
+                                                    <AnimalCard animal={pair.right} href={href(pair.right)} inset />
                                                 </div>
                                             </div>
                                         ))}
@@ -210,8 +216,8 @@ export default function TalkPicker({words, initial}: {
 function LoadFailed({words, onRetry}: {words: TalkWords; onRetry: () => void}) {
     return (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2" role="alert" data-testid="talk-load-failed">
-            <p className="text-sm text-ink-200">{words.loadFailed}</p>
-            <button type="button" onClick={onRetry} className="inline-flex min-h-9 items-center rounded-full border border-white/15 px-4 text-xs font-bold text-white transition-colors hover:border-primary-300/45">
+            <p className="text-[13px] leading-[18px] text-ink-200">{words.loadFailed}</p>
+            <button type="button" onClick={onRetry} className="inline-flex min-h-9 items-center rounded-pill border border-white/15 px-4 text-[13px] font-bold text-white transition-colors hover:border-primary-300/45 active:bg-white/10">
                 {words.tryAgain}
             </button>
         </div>
@@ -220,30 +226,32 @@ function LoadFailed({words, onRetry}: {words: TalkWords; onRetry: () => void}) {
 
 function AnimalGrid({animals, href}: {animals: TalkAnimal[]; href: (animal: TalkAnimal) => string}) {
     return (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+        <div className={GRID}>
             {animals.map((animal) => <AnimalCard key={animal.slug} animal={animal} href={href(animal)} />)}
         </div>
     );
 }
 
-/** Cards the size of the real ones while the animals arrive: shimmer, never a word "Loading…". */
+/** Tiles the size of the real ones while the animals arrive: shimmer, never a word "Loading…". */
 function AnimalGridSkeleton({count}: {count: number}) {
     return (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3" aria-hidden="true" data-testid="talk-skeleton">
+        <div className={GRID} aria-hidden="true" data-testid="talk-skeleton">
             {Array.from({length: count}, (_, index) => (
-                <div key={index} className="flex items-center gap-2.5 rounded-card border border-white/[0.06] bg-white/[0.025] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3">
-                    <span className="h-10 w-10 shrink-0 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
-                    <span className="min-w-0 flex-1">
-                        <span className="block h-3.5 w-3/4 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
-                        <span className="mt-2 block h-2.5 w-1/2 rounded-full bg-white/[0.05] motion-safe:animate-pulse" />
-                    </span>
+                <div key={index} className="flex min-h-[9.5rem] flex-col items-center rounded-card border border-white/[0.06] bg-white/[0.025] px-3 pb-3.5 pt-4">
+                    <span className="h-14 w-14 shrink-0 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
+                    <span className="mt-3 block h-3.5 w-3/4 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
+                    <span className="mt-2 block h-3 w-1/2 rounded-full bg-white/[0.05] motion-safe:animate-pulse" />
                 </div>
             ))}
         </div>
     );
 }
 
-function AnimalCard({animal, href, compact = false}: {animal: TalkAnimal; href: string; compact?: boolean}) {
+/**
+ * One tile: the art at 56, the name, its Power. `inset` inside a bordered
+ * pair card: the wash without a border of its own.
+ */
+function AnimalCard({animal, href, inset = false}: {animal: TalkAnimal; href: string; inset?: boolean}) {
     const {locale} = useTalkShell();
     // Intent on a card starts its chat's context read, so the chat opens with it in flight (the link prefetches its page the same way).
     const intent = useMemo(() => askContextIntentHandlers(() => prefetchAskContext(locale, animal.slug, animal.name)), [locale, animal.slug, animal.name]);
@@ -251,14 +259,14 @@ function AnimalCard({animal, href, compact = false}: {animal: TalkAnimal; href: 
         <Link
             href={href}
             {...intent}
-            className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-card border border-white/10 bg-white/[0.035] transition-colors hover:border-primary-300/40 hover:bg-white/[0.06] sm:gap-3 ${compact ? "min-h-[52px] px-2.5 py-2" : "min-h-[60px] px-2.5 py-2.5 sm:px-3 sm:py-3"}`}
+            className={`flex min-h-[9.5rem] min-w-0 flex-1 flex-col items-center rounded-card px-3 pb-3.5 pt-4 text-center transition-colors active:bg-white/[0.09] ${
+                inset ? "bg-white/[0.03] hover:bg-white/[0.06]" : "border border-white/10 bg-white/[0.035] hover:border-primary-300/40 hover:bg-white/[0.06]"
+            }`}
             data-testid="talk-animal"
         >
-            <AskAnimalFace url={animal.icon ?? (animal.iconFile ? getSpeciesArtworkUrl(animal.slug, animal.iconFile) : getSpeciesImageRoute(animal.slug))} size={compact ? 36 : 40} />
-            <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 block text-[14px] font-semibold leading-5 text-white">{animal.name}</span>
-                {animal.power ? <span className="line-clamp-2 block text-[12px] leading-4 text-ink-300">{animal.power}</span> : null}
-            </span>
+            <AskAnimalFace url={animal.icon ?? (animal.iconFile ? getSpeciesArtworkUrl(animal.slug, animal.iconFile) : getSpeciesImageRoute(animal.slug))} size={56} />
+            <span className="mt-2.5 line-clamp-2 w-full text-[15px] font-semibold leading-5 text-white">{animal.name}</span>
+            {animal.power ? <span className="mt-0.5 line-clamp-2 w-full text-[13px] leading-[18px] text-ink-300">{animal.power}</span> : null}
         </Link>
     );
 }
