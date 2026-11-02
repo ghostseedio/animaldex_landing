@@ -1,8 +1,8 @@
 /**
  * What the animal's own kind does in the moment of its life most like the
  * reader's, settled before the animal answers them. The apps'
- * `animal-kind-verdict.ts` (AnimalDex 05ea6cdd and its Power anchor); the
- * prompts are verbatim.
+ * `animal-kind-verdict.ts` (AnimalDex 05ea6cdd, its Power anchor, and the
+ * four-field form of 2026-11-02); the prompts are verbatim.
  *
  * Asked to advise, an animal on its own gives the answer that is best for the
  * person and finds its biology afterwards, so five animals agree in five
@@ -12,8 +12,13 @@
  * or a verdict: the split comes from each record.
  *
  * Pure: the request lives in `kind-verdict-server.ts`. A fast model with
- * thinking off (about 2 s), started while the rest of the turn loads. No verdict when the message is not about what to do, when
- * someone is controlling or hurting them (their safety decides, not the
+ * thinking off, started while the rest of the turn loads; the first word
+ * waits for it on every turn, so it is kept short: the usual advice to depart
+ * from, the Power at its word, the side with the one thing its kind does that
+ * shows it, and the move in their life (about 130 output tokens; the
+ * eight-field version of 2026-11-01 wrote about 310 and took 2.5 s, the floor
+ * under every reply). No verdict when the message is not about what to do,
+ * when someone is controlling or hurting them (their safety decides, not the
  * animal's nature), or when the call fails.
  *
  * The Power comes first and settles which way the animal's life points: a
@@ -23,20 +28,16 @@
  *
  * The move is the Power's own shape, done in their life (lab, 2026-11-01: on
  * open problems the verdicts split but the replies turned each one into the
- * usual best practice, so 73% of 120 replies were ChatGPT's plan in costume).
- * The sensible answer is named first, as the one to depart from; the part of
- * the problem the Power goes to comes next; the move last.
+ * usual best practice). The sensible answer is named first, as the one to
+ * depart from; the move last.
  */
 
 
 export type AskKindVerdict = {
     /** What the Power, read at its word, tells them to do; empty without a Power. */
     power_says: string;
-    nearest_situation: string;
-    what_it_does: string;
+    /** Which way it goes on their question, and the one thing its kind does that shows it. */
     verdict: string;
-    /** How the animal's life reads their situation; their own diagnosis is a lean. */
-    their_problem: string;
     /** The human version of what its kind does, the same shape, in their life. */
     their_move: string;
     /** What a sensible adviser would tell them: the move this animal's isn't. */
@@ -67,6 +68,12 @@ export type AskKindVerdictInput = {
 export function askKindVerdictEnabled(env: Record<string, string | undefined> = process.env): boolean {
     return env.ANIMAL_CHAT_KIND_VERDICT?.trim().toLowerCase() !== "off";
 }
+
+/**
+ * Room for the JSON above with its keys and quoting; a longer answer is cut
+ * and the reply goes ahead without a verdict.
+ */
+export const ASK_KIND_VERDICT_MAX_TOKENS = 260;
 
 function clip(value: string | null | undefined, max: number): string {
     const text = (value ?? "").replace(/\s+/g, " ").trim();
@@ -110,35 +117,26 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
                 "4. power_says: its Power is the part of its life it lives by and answers every question through. Read it at its",
                 "   word and say what it tells the person to do on their question. Never bend it towards growth, courage or what",
                 "   a sensible person would do: if, read plainly, it says stay, no, alone or wait, say so.",
-                "5. their_problem: a problem has several parts (what they made, who sees it, money, time, who is with them, what",
-                "   they assume, how they feel). Which part does this Power go to first, the part its life is built for? That is",
-                "   what is really wrong, as this animal sees it, even if the person named another: what they think is wrong is",
-                "   a lean like any other.",
-                "6. Then find the moment in this animal's own life most like theirs, say what this animal actually does then,",
-                "   from real behaviour of its kind, and which way that points on their question. Its kind often does more than",
-                "   one thing: the side its Power lives by wins, and no other habit of its kind overturns it."
+                "5. verdict: which way it goes on their question, its Power's way, and the one thing its kind actually does, in",
+                "   the moment of its own life most like theirs, that shows it. Its kind often does more than one thing: the side",
+                "   its Power lives by wins, and no other habit of its kind overturns it."
             ]
             : [
-                "4. their_problem: a problem has several parts (what they made, who sees it, money, time, who is with them, what",
-                "   they assume, how they feel). Which part does this animal's life go to first? That is what is really wrong,",
-                "   as this animal sees it, even if the person named another: what they think is wrong is a lean like any other.",
-                "5. Then find the moment in this animal's own life most like theirs, say what this animal actually does then,",
-                "   from real behaviour of its kind, and which way that points on their question."
+                "4. verdict: which way it goes on their question, and the one thing its kind actually does, in the moment of its",
+                "   own life most like theirs, that shows it."
             ]),
         "   Never pick the middle because it is safe, and never pick what a sensible person would do because it is",
         "   sensible. If real behaviour points to an extreme, say the extreme. If the animal already said which way it goes",
         "   earlier in their conversation, keep that unless the person has since told it something new.",
-        `${anchored ? 7 : 6}. their_move: ${anchored ? "the Power's own way, done literally" : "what this animal does, done literally"} in their life, on that part, in the same`,
-        "   shape. If it waits, they wait; if it borrows, they borrow; if it copies, they copy; if it leaves, they leave; if",
-        "   it shows itself, they show themselves. Say what they do this week, with whom or where. It is never usual_advice",
-        `   or a step of it; if it comes out that way, ${anchored ? "the Power was bent towards good sense: read it at its word again" : "look again at what this animal does"}.`,
-        "   The person asks many animals the same thing. Their move is worth hearing only if an animal that lives",
-        `   differently could not have given it: if one could, make it more ${anchored ? "literally this Power's" : "literally this animal's"}.`,
+        `${anchored ? 6 : 5}. their_move: ${anchored ? "the Power's own way, done literally" : "what this animal does, done literally"} in their life, in the same shape, on the`,
+        `   part of their problem ${anchored ? "this Power" : "this animal's life"} goes to first (what they think is wrong is a lean like any other). If it`,
+        "   waits, they wait; if it borrows, they borrow; if it leaves, they leave; if it shows itself, they show themselves.",
+        "   Say what they do this week, with whom or where. It is never usual_advice or a step of it; if it comes out that",
+        `   way, ${anchored ? "the Power was bent towards good sense: read it at its word again" : "look again at what this animal does"}. The person asks many animals the`,
+        `   same thing: an animal that lives differently could not have given this move; if one could, make it more ${anchored ? "literally this Power's" : "literally this animal's"}.`,
         "",
-        'Return JSON only: {"decision": true or false, "safety": true or false, "usual_advice": "max 15 words",',
-        `${anchored ? '"power_says": "max 20 words", ' : ""}"their_problem": "max 15 words", "nearest_situation": "max 20 words",`,
-        `"what_it_does": "max 25 words", "verdict": "which way it goes on their question${anchored ? ", its Power's way" : ""}, max 12 words",`,
-        '"their_move": "max 30 words"}'
+        'Return JSON only, on one line: {"decision": true or false, "safety": true or false, "usual_advice": "max 8 words",',
+        `${anchored ? '"power_says": "max 12 words", ' : ""}"verdict": "the side and the one thing its kind does, max 20 words", "their_move": "max 20 words"}`
     ].filter((line, index, lines) => line !== "" || lines[index - 1] !== "").join("\n");
 }
 
@@ -146,17 +144,13 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
 export function parseAskKindVerdict(raw: Record<string, unknown>): AskKindVerdict | null {
     if (raw.decision !== true || raw.safety !== false) return null;
     const field = (key: string, max: number) => (typeof raw[key] === "string" ? clip(raw[key] as string, max) : "");
-    const verdict = field("verdict", 160);
-    const whatItDoes = field("what_it_does", 260);
-    if (!verdict || !whatItDoes) return null;
+    const verdict = field("verdict", 220);
+    if (!verdict) return null;
     return {
-        power_says: field("power_says", 220),
-        nearest_situation: field("nearest_situation", 220),
-        what_it_does: whatItDoes,
+        power_says: field("power_says", 160),
         verdict,
-        their_problem: field("their_problem", 180),
-        their_move: field("their_move", 320),
-        usual_advice: field("usual_advice", 180)
+        their_move: field("their_move", 220),
+        usual_advice: field("usual_advice", 120)
     };
 }
 
@@ -167,10 +161,7 @@ export function askKindVerdictPromptSection(verdict: AskKindVerdict): string {
         "verdict on what they asked:",
         JSON.stringify({
             what_your_power_says: verdict.power_says || undefined,
-            the_moment_in_your_life_most_like_theirs: verdict.nearest_situation,
-            what_your_kind_does: verdict.what_it_does,
             verdict: verdict.verdict,
-            the_problem_as_you_see_it: verdict.their_problem || undefined,
             your_move_in_their_life: verdict.their_move || undefined,
             what_everyone_else_will_tell_them: verdict.usual_advice || undefined
         }),

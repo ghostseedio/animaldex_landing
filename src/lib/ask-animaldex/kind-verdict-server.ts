@@ -5,7 +5,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import {buildAskKindVerdictPrompt, parseAskKindVerdict, type AskKindVerdict, type AskKindVerdictInput} from "@/lib/ask-animaldex/kind-verdict";
+import {ASK_KIND_VERDICT_MAX_TOKENS, buildAskKindVerdictPrompt, parseAskKindVerdict, type AskKindVerdict, type AskKindVerdictInput} from "@/lib/ask-animaldex/kind-verdict";
 
 /** The call model's default (`call-voice.ts`): fast, and good with thinking off. */
 const DEFAULT_VERDICT_MODEL = "claude-haiku-5-5";
@@ -41,7 +41,7 @@ export async function requestAskKindVerdict(params: {
         });
         const response = await client.messages.create({
             model: params.model ?? (process.env.CLAUDE_ANIMAL_CALL_MODEL?.trim() || DEFAULT_VERDICT_MODEL),
-            max_tokens: 600,
+            max_tokens: ASK_KIND_VERDICT_MAX_TOKENS,
             thinking: {type: "disabled"},
             messages: [{role: "user", content: buildAskKindVerdictPrompt(params.input)}]
         });
