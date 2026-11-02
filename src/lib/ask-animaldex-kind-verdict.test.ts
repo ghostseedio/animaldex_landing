@@ -24,9 +24,7 @@ const input = {
 
 const verdict = {
     power_says: "Keep your own hours; do not take charge of others.",
-    verdict: "Decline: two cats on one garden wall keep their own hours and never take charge.",
-    their_move: "Tell the manager no this week, and keep your own hours beside your friends.",
-    usual_advice: "Take it, and set clear boundaries with your friends."
+    verdict: "Decline: two cats on one garden wall keep their own hours and never take charge."
 };
 
 test("the verdict prompt asks for natural history, not advice, and names only this animal", () => {
@@ -38,40 +36,28 @@ test("the verdict prompt asks for natural history, not advice, and names only th
     assert.ok(prompt.includes("The biology: Cats hunt alone and choose when to engage."));
     assert.ok(prompt.includes("One person living by it: A writer who answers email only at four."));
     assert.ok(prompt.includes("Never pick the middle"));
+    assert.ok(prompt.includes("that is the answer they can get anywhere"));
     assert.ok(!prompt.includes(".."));
     assert.ok(!/wolf|dog|dolphin|octopus/i.test(prompt));
 });
 
 test("the Power is read at its word first and wins where the kind's life points both ways", () => {
     const prompt = buildAskKindVerdictPrompt(input);
-    assert.ok(prompt.includes("4. power_says: its Power is the part of its life it lives by"));
-    assert.ok(prompt.includes("5. verdict: which way it goes on their question, its Power's way"));
+    assert.ok(prompt.includes("3. If decision is true, power_says: its Power is the part of its life it lives by"));
+    assert.ok(prompt.includes("4. verdict: which way it goes on their question, its Power's way"));
     assert.ok(prompt.includes("the side\n   its Power lives by wins, and no other habit of its kind overturns it"));
-    assert.ok(prompt.includes('"power_says": "max 12 words"'));
+    assert.ok(prompt.includes('"power_says": "max 8 words"'));
     const unanchored = buildAskKindVerdictPrompt({...input, powerName: null});
     assert.ok(!/power_says|its Power/.test(unanchored));
-    assert.ok(unanchored.includes("4. verdict: which way it goes on their question, and the one thing its kind actually does"));
-    assert.ok(unanchored.includes("5. their_move: what this animal does, done literally in their life"));
+    assert.ok(unanchored.includes("3. If decision is true, verdict: which way it goes on their question, and the one thing its kind actually does"));
 });
 
-test("the sensible answer is named first, and the move is the Power's own shape, not that answer", () => {
+test("the verdict is two short fields on one line, with room for no more", () => {
     const prompt = buildAskKindVerdictPrompt(input);
-    assert.ok(prompt.includes("3. If decision is true, usual_advice: what a careful, sensible human adviser would tell them."));
-    assert.ok(prompt.includes("6. their_move: the Power's own way, done literally in their life, in the same shape, on the\n   part of their problem this Power goes to first"));
-    assert.ok(prompt.includes("if it borrows, they borrow"));
-    // The JSON is written in this order, so the move comes after the answer it departs from.
-    const json = prompt.slice(prompt.indexOf("Return JSON only"));
-    const order = ["usual_advice", "power_says", "verdict", "their_move"].map((key) => json.indexOf(`"${key}"`));
-    assert.ok(order.every((at, i) => at > 0 && (i === 0 || at > order[i - 1])));
-});
-
-test("the verdict is short: four short fields, one line, and room for no more", () => {
-    const json = buildAskKindVerdictPrompt(input).slice(buildAskKindVerdictPrompt(input).indexOf("Return JSON only, on one line"));
-    assert.ok(!/nearest_situation|what_it_does|their_problem/.test(json));
-    assert.ok(json.includes('"usual_advice": "max 8 words"'));
-    assert.ok(json.includes('"verdict": "the side and the one thing its kind does, max 20 words"'));
-    assert.ok(json.includes('"their_move": "max 20 words"'));
-    assert.ok(ASK_KIND_VERDICT_MAX_TOKENS >= 200 && ASK_KIND_VERDICT_MAX_TOKENS <= 300);
+    const json = prompt.slice(prompt.indexOf("Return JSON only, on one line"));
+    assert.ok(!/usual_advice|their_problem|nearest_situation|what_it_does|their_move/.test(json));
+    assert.ok(json.includes('"verdict": "the side, then the one thing its kind does, max 15 words"'));
+    assert.ok(ASK_KIND_VERDICT_MAX_TOKENS >= 120 && ASK_KIND_VERDICT_MAX_TOKENS <= 200);
 });
 
 test("only a decision with nothing dangerous in it gives a verdict", () => {
@@ -83,7 +69,7 @@ test("only a decision with nothing dangerous in it gives a verdict", () => {
     assert.equal(parseAskKindVerdict({...raw, safety: undefined}), null);
     assert.equal(parseAskKindVerdict({...raw, verdict: "  "}), null);
     // The old eight-field answer still reads: the fields the prompt no longer asks for are ignored.
-    assert.deepEqual(parseAskKindVerdict({...raw, nearest_situation: "Two cats on a wall.", what_it_does: "Keeps its hours.", their_problem: "Their clock."}), verdict);
+    assert.deepEqual(parseAskKindVerdict({...raw, usual_advice: "Take it.", their_problem: "Their clock.", nearest_situation: "A wall.", what_it_does: "Keeps its hours.", their_move: "Say no."}), verdict);
 });
 
 test("the verdict can be switched off", () => {
@@ -98,15 +84,14 @@ test("the animal reads its verdict as its own, and never calls it one", () => {
     assert.ok(section.includes("never call it a verdict"));
     assert.ok(section.includes('"what_your_power_says":"Keep your own hours; do not take charge of others."'));
     assert.ok(!askKindVerdictPromptSection({...verdict, power_says: ""}).includes("what_your_power_says"));
-    assert.ok(!/the_moment_in_your_life|what_your_kind_does|the_problem_as_you_see_it/.test(section));
+    assert.ok(!/the_moment_in_your_life|what_your_kind_does|the_problem_as_you_see_it|your_move_in_their_life|what_everyone_else/.test(section));
 });
 
-test("the move in their life reaches the animal, and the usual advice is never its step", () => {
+test("the move in their life is the animal's own, in the shape of what its kind does, never the usual advice", () => {
     const section = askKindVerdictPromptSection(verdict);
-    assert.ok(section.includes('"your_move_in_their_life":"Tell the manager no this week'));
-    assert.ok(section.includes('"what_everyone_else_will_tell_them":"Take it, and set clear boundaries'));
-    const older = askKindVerdictPromptSection({...verdict, their_move: "", usual_advice: ""});
-    assert.ok(!/your_move_in_their_life|what_everyone_else|it leads/.test(older));
+    assert.ok(section.includes("That one real thing has the same shape as what your kind does, done literally in their life this week"));
+    assert.ok(section.includes("Leave out any step\nanother animal could have given"));
+    assert.ok(section.includes("never make what everyone else would tell them one of your steps"));
 });
 
 test("the request runs with thinking off and a short cap, and a failure gives no verdict", async () => {
@@ -116,7 +101,7 @@ test("the request runs with thinking off and a short cap, and a failure gives no
         return new Response(JSON.stringify({
             id: "msg_1", type: "message", role: "assistant", model: "claude-haiku-5-5",
             content: [{type: "text", text: JSON.stringify({decision: true, safety: false, ...verdict})}],
-            stop_reason: "end_turn", stop_sequence: null, usage: {input_tokens: 700, output_tokens: 120}
+            stop_reason: "end_turn", stop_sequence: null, usage: {input_tokens: 700, output_tokens: 80}
         }), {status: 200, headers: {"Content-Type": "application/json"}});
     }) as typeof fetch;
     assert.deepEqual(await requestAskKindVerdict({key: "k", input, model: "claude-haiku-5-5", fetchImpl: ok}), verdict);

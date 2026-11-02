@@ -2,7 +2,7 @@
  * What the animal's own kind does in the moment of its life most like the
  * reader's, settled before the animal answers them. The apps'
  * `animal-kind-verdict.ts` (AnimalDex 05ea6cdd, its Power anchor, and the
- * four-field form of 2026-11-02); the prompts are verbatim.
+ * two-field form of 2026-11-02); the prompts are verbatim.
  *
  * Asked to advise, an animal on its own gives the answer that is best for the
  * person and finds its biology afterwards, so five animals agree in five
@@ -12,24 +12,21 @@
  * or a verdict: the split comes from each record.
  *
  * Pure: the request lives in `kind-verdict-server.ts`. A fast model with
- * thinking off, started while the rest of the turn loads; the first word
- * waits for it on every turn, so it is kept short: the usual advice to depart
- * from, the Power at its word, the side with the one thing its kind does that
- * shows it, and the move in their life (about 130 output tokens; the
- * eight-field version of 2026-11-01 wrote about 310 and took 2.5 s, the floor
- * under every reply). No verdict when the message is not about what to do,
- * when someone is controlling or hurting them (their safety decides, not the
- * animal's nature), or when the call fails.
+ * thinking off, started while the rest of the turn loads. The first word waits
+ * for it on every turn, so it says only what the reply cannot work out for
+ * itself: the side, with the one thing its kind does that shows it, and the
+ * Power read at its word. About 85 output tokens, 1.2 s streamed (lab,
+ * 2026-11-02); the eight-field version of 2026-11-01 wrote about 310 and took
+ * 2.9 s, the floor under every reply, and the replies read the same without
+ * it: the stance rules and the prompt section's lines below carry the move.
+ * No verdict when the message is not about what to do, when someone is
+ * controlling or hurting them (their safety decides, not the animal's
+ * nature), or when the call fails.
  *
  * The Power comes first and settles which way the animal's life points: a
  * kind's life often points both ways (lab, 2026-10-30: the European
  * Hedgehog's verdict on a management offer split 16 stay to 14 take over 30
  * runs, half of them against its own Power of going out defended).
- *
- * The move is the Power's own shape, done in their life (lab, 2026-11-01: on
- * open problems the verdicts split but the replies turned each one into the
- * usual best practice). The sensible answer is named first, as the one to
- * depart from; the move last.
  */
 
 
@@ -38,10 +35,6 @@ export type AskKindVerdict = {
     power_says: string;
     /** Which way it goes on their question, and the one thing its kind does that shows it. */
     verdict: string;
-    /** The human version of what its kind does, the same shape, in their life. */
-    their_move: string;
-    /** What a sensible adviser would tell them: the move this animal's isn't. */
-    usual_advice: string;
 };
 
 export type AskKindVerdictInput = {
@@ -70,10 +63,11 @@ export function askKindVerdictEnabled(env: Record<string, string | undefined> = 
 }
 
 /**
- * Room for the JSON above with its keys and quoting; a longer answer is cut
- * and the reply goes ahead without a verdict.
+ * Room for the JSON below with its keys and quoting (the model runs past its
+ * word limits by about half; 84 tokens median, 100 at most over 10 lab
+ * calls); a longer answer is cut and the reply goes ahead without a verdict.
  */
-export const ASK_KIND_VERDICT_MAX_TOKENS = 260;
+export const ASK_KIND_VERDICT_MAX_TOKENS = 160;
 
 function clip(value: string | null | undefined, max: number): string {
     const text = (value ?? "").replace(/\s+/g, " ").trim();
@@ -110,33 +104,26 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         "1. decision: is the person asking what to do, or facing a choice or a problem about what to do? Talking, asking",
         "   about the animal, or sharing news is not.",
         "2. safety: is someone controlling, threatening or hurting them, or are they in danger?",
-        "3. If decision is true, usual_advice: what a careful, sensible human adviser would tell them. That is the answer",
-        "   they can get anywhere, and the one this animal must not simply repeat.",
         ...(anchored
             ? [
-                "4. power_says: its Power is the part of its life it lives by and answers every question through. Read it at its",
-                "   word and say what it tells the person to do on their question. Never bend it towards growth, courage or what",
-                "   a sensible person would do: if, read plainly, it says stay, no, alone or wait, say so.",
-                "5. verdict: which way it goes on their question, its Power's way, and the one thing its kind actually does, in",
+                "3. If decision is true, power_says: its Power is the part of its life it lives by and answers every question",
+                "   through. Read it at its word and say what it tells the person to do on their question. Never bend it towards",
+                "   growth, courage or what a sensible person would do: if, read plainly, it says stay, no, alone or wait, say so.",
+                "4. verdict: which way it goes on their question, its Power's way, and the one thing its kind actually does, in",
                 "   the moment of its own life most like theirs, that shows it. Its kind often does more than one thing: the side",
                 "   its Power lives by wins, and no other habit of its kind overturns it."
             ]
             : [
-                "4. verdict: which way it goes on their question, and the one thing its kind actually does, in the moment of its",
-                "   own life most like theirs, that shows it."
+                "3. If decision is true, verdict: which way it goes on their question, and the one thing its kind actually does,",
+                "   in the moment of its own life most like theirs, that shows it."
             ]),
         "   Never pick the middle because it is safe, and never pick what a sensible person would do because it is",
-        "   sensible. If real behaviour points to an extreme, say the extreme. If the animal already said which way it goes",
-        "   earlier in their conversation, keep that unless the person has since told it something new.",
-        `${anchored ? 6 : 5}. their_move: ${anchored ? "the Power's own way, done literally" : "what this animal does, done literally"} in their life, in the same shape, on the`,
-        `   part of their problem ${anchored ? "this Power" : "this animal's life"} goes to first (what they think is wrong is a lean like any other). If it`,
-        "   waits, they wait; if it borrows, they borrow; if it leaves, they leave; if it shows itself, they show themselves.",
-        "   Say what they do this week, with whom or where. It is never usual_advice or a step of it; if it comes out that",
-        `   way, ${anchored ? "the Power was bent towards good sense: read it at its word again" : "look again at what this animal does"}. The person asks many animals the`,
-        `   same thing: an animal that lives differently could not have given this move; if one could, make it more ${anchored ? "literally this Power's" : "literally this animal's"}.`,
+        "   sensible: that is the answer they can get anywhere. If real behaviour points to an extreme, say the extreme. If",
+        "   the animal already said which way it goes earlier in their conversation, keep that unless the person has since",
+        "   told it something new.",
         "",
-        'Return JSON only, on one line: {"decision": true or false, "safety": true or false, "usual_advice": "max 8 words",',
-        `${anchored ? '"power_says": "max 12 words", ' : ""}"verdict": "the side and the one thing its kind does, max 20 words", "their_move": "max 20 words"}`
+        'Return JSON only, on one line: {"decision": true or false, "safety": true or false,',
+        `${anchored ? '"power_says": "max 8 words", ' : ""}"verdict": "the side, then the one thing its kind does, max 15 words"}`
     ].filter((line, index, lines) => line !== "" || lines[index - 1] !== "").join("\n");
 }
 
@@ -146,36 +133,27 @@ export function parseAskKindVerdict(raw: Record<string, unknown>): AskKindVerdic
     const field = (key: string, max: number) => (typeof raw[key] === "string" ? clip(raw[key] as string, max) : "");
     const verdict = field("verdict", 220);
     if (!verdict) return null;
-    return {
-        power_says: field("power_says", 160),
-        verdict,
-        their_move: field("their_move", 220),
-        usual_advice: field("usual_advice", 120)
-    };
+    return {power_says: field("power_says", 160), verdict};
 }
 
-/** The verdict as the animal reads it, after everything else about the turn. */
+/**
+ * The verdict as the animal reads it, after everything else about the turn.
+ * The move in their life is the animal's to write, in the shape of what its
+ * kind does; what everyone else would tell them is never one of its steps.
+ */
 export function askKindVerdictPromptSection(verdict: AskKindVerdict): string {
     return [
         "your_kinds_verdict — settled before this reply, from your Power and how your kind actually lives. It is your",
         "verdict on what they asked:",
         JSON.stringify({
             what_your_power_says: verdict.power_says || undefined,
-            verdict: verdict.verdict,
-            your_move_in_their_life: verdict.their_move || undefined,
-            what_everyone_else_will_tell_them: verdict.usual_advice || undefined
+            verdict: verdict.verdict
         }),
         "Take it as yours: say it plainly near the start, argue it from your own life, put it in their world as one real",
         "thing to do, and never soften it into the middle or towards what they lean to. Only their safety overrides it.",
-        ...(verdict.their_move
-            ? [
-                "Your move in their life has the same shape as what your kind does, and it leads: your first two sentences say",
-                "what they do, in plain words, not only which way you go. Every step you give is part of that move; leave out any",
-                "step another animal could have given. What everyone else will tell them they can get anywhere: it is never your",
-                "move or one of your steps, though you may name it once to say why you would not. Before you finish, take your",
-                "pictures out and read what is left: if it is what everyone else will tell them, rewrite it as your move."
-            ]
-            : []),
+        "That one real thing has the same shape as what your kind does, done literally in their life this week: if your",
+        "kind waits, they wait; if it leaves, they leave; if it shows itself, they show themselves. Leave out any step",
+        "another animal could have given, and never make what everyone else would tell them one of your steps.",
         "It is simply what you think: never call it a verdict or say it was settled."
     ].join("\n");
 }
