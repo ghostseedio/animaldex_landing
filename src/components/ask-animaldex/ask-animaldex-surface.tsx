@@ -23,7 +23,7 @@
  * conversation without that page knowing anything about this component.
  */
 
-import {useCallback, useEffect, useRef, useState, type ReactNode} from "react";
+import {startTransition, useCallback, useEffect, useRef, useState, type ReactNode} from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
@@ -240,6 +240,18 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
         || QUIET_PATHS.some((pattern) => pattern.test(subject.path))
         // A species page, before it has said which animal it is: nothing, not the generic pill.
         || (subject.kind === "species" && !speaksAsAnimal);
+    // The tap paints the drawer's frame in its own frame; the conversation (a
+    // large component) mounts in the next one, as a transition, so the tap is
+    // never kept waiting on its render (INP 700 ms on a 4x-slowed phone before).
+    const [conversationReady, setConversationReady] = useState(false);
+    useEffect(() => {
+        if (!isOpen) {
+            setConversationReady(false);
+            return;
+        }
+        const frame = requestAnimationFrame(() => startTransition(() => setConversationReady(true)));
+        return () => cancelAnimationFrame(frame);
+    }, [isOpen]);
     // Both pills wait for the first screen to scroll away: the hero carries its own Talk button.
     const placement = usePillPlacement(mounted && !quiet, true);
     // A species page's primary action is its animal's chat: once the page is
@@ -260,7 +272,7 @@ export default function AskAnimalDexSurface({labels}: {labels: AskDrawerLabels &
     // The Talk page is the conversation itself: no launcher and no drawer over it.
     if (onTalk) return null;
 
-    if (isOpen) return <AskDrawer labels={labels} />;
+    if (isOpen) return conversationReady ? <AskDrawer labels={labels} /> : <AskDrawerShell />;
 
     if (quiet) return null;
 
