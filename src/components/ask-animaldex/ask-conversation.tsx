@@ -1452,10 +1452,15 @@ export default function AskConversation({
             : animalName
                 ? labels.placeholderAnimal.replace("{animal}", animalName)
                 : labels.placeholderGeneral;
+    // A visitor's first message: what to ask it about (newcomer UX vet, P0-2), said by the
+    // empty field itself, never as a line above it that comes and goes (it moved the bar).
+    const visitorPlaceholder = messenger && context && !ownerChat && !aboutTrial && !hasConversation && !quota.reached
+        ? labels.companions.journey.chat.visitorHint
+        : null;
     // Report mode: "Tell Leo how it went", and send once there are three characters.
     const fieldPlaceholder = debateEdit
         ? words.debateWeb.problemPlaceholder
-        : reporting ? fillWords(labels.companions.journey.report.placeholder, {name: speakerName}) : placeholder;
+        : reporting ? fillWords(labels.companions.journey.report.placeholder, {name: speakerName}) : visitorPlaceholder ?? placeholder;
     const sendReady = debateEdit
         ? composer.trim().length >= debateEdit.min
         : reporting ? !reporting.sending && stepReportReady(composer) : composer.trim().length > 0;
@@ -2996,14 +3001,6 @@ export default function AskConversation({
                             {labels.latestMessages}
                             <ArrowDownIcon />
                         </button>
-                    ) : null}
-                    {messenger && context && !ownerChat && !aboutTrial && !hasConversation && !awaitingGreeting && greetingState !== "loading" && !quota.reached && !showingMemory && !showingSoundCredits && dictation.phase === "idle" ? (
-                        // A visitor's first message: what to ask it about (newcomer UX vet, P0-2). Only
-                        // once the hello could not be had: while it is coming, the hello says it, and the
-                        // line would flash in and out under the message bar (a layout shift on mobile).
-                        <p className="pb-2 text-[12px] font-semibold leading-4 text-ink-300" data-testid="visitor-hint">
-                            {labels.companions.journey.chat.visitorHint}
-                        </p>
                     ) : null}
                     {messenger && !showingMemory && !showingBond && !showingSoundCredits && !reporting && !debateEdit ? (
                         <AskSuggestionBar

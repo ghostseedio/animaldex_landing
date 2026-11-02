@@ -15,6 +15,7 @@ import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore}
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {askConversationHistory} from "@/lib/ask-animaldex/grounding";
 import {splitStreamedReply, visibleAnswerSoFar} from "@/lib/ask-animaldex/prompt";
+import {askStoppedReplyText} from "@/lib/ask-animaldex/stopped-reply";
 import {
     createAskMessage,
     newAskMessageId,
@@ -692,7 +693,8 @@ export function useAskThread(params: {
                 // already saw of the reply is theirs to keep, as in the app;
                 // with nothing shown, the placeholder goes and the question
                 // stays standing so it can be sent again.
-                const kept = keepOnStopRef.current;
+                // Leaving the chat mid-reply keeps what had arrived (`askStoppedReplyText`), as the hello does.
+                const kept = askStoppedReplyText({kept: keepOnStopRef.current, closing: closingRef.current, received: splitStreamedReply(answer).answer});
                 keepOnStopRef.current = null;
                 if (kept) settle(kept, [], false);
                 else drop();
