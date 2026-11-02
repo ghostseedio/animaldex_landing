@@ -414,7 +414,9 @@ export const COMPANION_WORDS_EN = {
         /** Signed out (newcomer UX vet, 2026-10-30, P1-10): the tab says what to do instead of showing nothing. */
         signedOut: "Sign in to meet your animals, or try talking to one now.",
         signIn: "Sign in",
-        tryTalking: "Try talking to one now"
+        tryTalking: "Try talking to one now",
+        /** The empty tab's second way in (DESIGN.md section 1): the public chats. */
+        meetOneNow: "Or meet one now"
     },
     /**
      * Naming your animal: "Name your {animal}" in its chat (iOS

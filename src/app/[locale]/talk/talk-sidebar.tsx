@@ -16,7 +16,7 @@
  * section 3).
  */
 
-import {useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode} from "react";
+import {useEffect, useMemo, useState, type ReactNode} from "react";
 import Image from "next/image";
 import BrandLockup from "@/components/brand/brand-lockup";
 import {usePathname, useRouter} from "next/navigation";
@@ -28,6 +28,7 @@ import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
 import {askContextIntentHandlers, prefetchAskContext} from "@/components/ask-animaldex/ask-context-prefetch";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {forgetTalkThread, useTalkThreadMetas} from "@/components/ask-animaldex/ask-thread-meta";
+import {useTalkThreads} from "@/components/ask-animaldex/use-talk-threads";
 import {useCompanions} from "@/components/companions/use-companions";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {askPathWithoutLocale} from "@/lib/ask-animaldex/subject";
@@ -37,37 +38,13 @@ import {
     talkMergeRecentChats,
     talkRecentChats,
     talkRelativeTime,
-    talkThreadsDigest,
     type TalkAnimal,
     type TalkServerChat,
     type TalkWords
 } from "@/lib/ask-animaldex/talk";
-import type {AskThreads} from "@/lib/ask-animaldex/thread";
-
-const NO_THREADS: AskThreads = {};
 
 /** A row's hover wash on its card radius; a press darkens it a step (no scale on the web). */
 const ROW = "flex h-12 items-center gap-2.5 rounded-card px-2 transition-colors hover:bg-white/[0.05] active:bg-white/[0.08]";
-
-/**
- * The thread store, as far as the sidebar is concerned: the same object back
- * while no message has landed or gone (`talkThreadsDigest`), so a reply
- * typing out in the main pane does not draw the sidebar again on every step.
- */
-function useTalkThreads(): AskThreads {
-    const last = useRef<{digest: string; threads: AskThreads} | null>(null);
-    return useSyncExternalStore(
-        askSessionStore.subscribe,
-        () => {
-            const threads = askSessionStore.all();
-            const digest = talkThreadsDigest(threads);
-            if (last.current && last.current.digest === digest) return last.current.threads;
-            last.current = {digest, threads};
-            return threads;
-        },
-        () => NO_THREADS
-    );
-}
 
 /** The account's threads, once per tab: the sidebar is drawn again on every page of the Talk area. */
 let serverChatsCache: Promise<{available: boolean; threads: TalkServerChat[]}> | null = null;

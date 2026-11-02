@@ -1,27 +1,22 @@
 /**
- * What each row of the Companions tab says (docs/companion-loop/SPEC.md,
+ * What each row of the Companions tab knows (docs/companion-loop/SPEC.md,
  * phase 4; iOS `CompanionRows`, b933e6bd). Animal messages live here, not in
- * Messages: the animals that wrote to you, their newest unread line, the
- * unread dot and whether you muted them come from `animal_conversations`.
+ * Messages: the animals that wrote to you, their newest line, the unread
+ * count and whether you muted them come from `animal_conversations`.
  *
- * With the bond loaded, the rows are in the server's order (an unread
+ * With the bond loaded, the rows come in the server's order (an unread
  * message first, then a referral, then an open step, then recent activity).
  * An animal you hold that the bond list does not have (not loaded, the server
  * has no bond yet, or caught since it loaded) follows, one row per species,
- * unread first, then the most recent activity, with no bond parts. Pure.
+ * unread first, then the most recent activity, with no bond parts. The
+ * roster's own order and each row's one line are `companion-roster.ts`.
+ * Pure.
  */
 
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {companionDisplayName} from "@/lib/ask-animaldex/companion-loop";
 import type {CompanionCard} from "@/lib/companion-cards";
-import {
-    COMPANION_WORDS_EN,
-    bondStageText,
-    companionStatusLine,
-    companionSummaryName,
-    type CompanionSummary,
-    type CompanionWords
-} from "@/lib/companion-bond";
+import {COMPANION_WORDS_EN, companionSummaryName, type CompanionSummary, type CompanionWords} from "@/lib/companion-bond";
 
 /** One animal you talk with, or one that wrote to you (`animal_conversations`). */
 export type AnimalConversation = {
@@ -40,9 +35,6 @@ export type AnimalConversation = {
     muted: boolean;
 };
 
-/** Which of the status line's cases a row shows, for its colour. */
-export type CompanionStatusKind = "unread" | "referral" | "step" | "focus" | "hello";
-
 export type CompanionTabRow = {
     speciesProfileId: string;
     /** The card the server names for it (its newest); the chat may open on another. */
@@ -52,17 +44,21 @@ export type CompanionTabRow = {
     displayName: string;
     /** The species' icon-art slug: the animal is drawn as its art, never a photo. */
     slug: string | null;
-    /** "Level 4 · Working together"; null until the bond has it. */
-    bondText: string | null;
-    mastered: boolean;
-    status: {text: string; kind: CompanionStatusKind};
+    /** Its Power's name, when the bond has it: the line of a row never talked to. */
+    powerName: string | null;
+    /** The open step's words, while one is open. */
+    openStep: string | null;
+    /** The animal's own latest message, as one plain line, and when it came. */
+    lastMessage: {text: string; at: number} | null;
+    /** When the row last moved on the server (a message, a chat, the bond); null when it never did. */
+    lastActivityAt: number | null;
     /** Drives the dot, even when there is no line to preview. */
     unreadCount: number;
     muted: boolean;
     /** The referral another animal sent you here with, while the row says so. */
     referralWaiting: boolean;
     referralId: string | null;
-    /** There is a conversation to mute. */
+    /** There is a conversation on the server. */
     hasConversation: boolean;
 };
 
@@ -77,6 +73,11 @@ function str(value: unknown): string | null {
 function time(raw: string | null | undefined): number {
     const at = raw ? Date.parse(raw) : Number.NaN;
     return Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
+}
+
+function timeOrNull(...raws: Array<string | null | undefined>): number | null {
+    const at = Math.max(...raws.map(time));
+    return Number.isFinite(at) ? at : null;
 }
 
 /** Rows of `animal_conversations`, one per species. */
@@ -117,21 +118,12 @@ export function animalMessagePreviewText(raw: string): string {
         .join(" ");
 }
 
-/** The animal's latest message, which is the unread one while any are. */
-function unreadPreview(conversation: AnimalConversation | undefined): string | null {
-    if (!conversation || conversation.unreadCount <= 0 || !conversation.lastMessageBody) return null;
-    return animalMessagePreviewText(conversation.lastMessageBody) || null;
-}
-
-function statusKind(
-    row: {unread: number; referralWaiting: boolean; openTrial: string | null; focus: string | null},
-    preview: string | null
-): CompanionStatusKind {
-    if (row.unread > 0 && preview) return "unread";
-    if (row.referralWaiting) return "referral";
-    if (row.openTrial) return "step";
-    if (row.focus) return "focus";
-    return "hello";
+/** The animal's latest message as the row's line, with its time. */
+function lastMessageOf(conversation: AnimalConversation | undefined): CompanionTabRow["lastMessage"] {
+    if (!conversation?.lastMessageBody) return null;
+    const text = animalMessagePreviewText(conversation.lastMessageBody);
+    const at = timeOrNull(conversation.lastMessageAt, conversation.lastTalkedAt);
+    return text && at !== null ? {text, at} : text ? {text, at: 0} : null;
 }
 
 type Seed = {speciesProfileId: string; captureId: string; animal: string; nickname: string | null; slug: string | null; capturedAt: string | null};
@@ -162,8 +154,6 @@ export function buildCompanionRows({
         // The browser's own count wins: it drops the moment the chat is read,
         // before the bond list is fetched again.
         const unread = conversation?.unreadCount ?? companion.unread;
-        const preview = unreadPreview(conversation);
-        const line = {unread, referralWaiting: companion.referralWaiting, openTrial: companion.openTrial, focus: companion.focus};
         const animal = companion.animal || conversation?.animalName || "";
         return [{
             speciesProfileId: species,
@@ -173,10 +163,10 @@ export function buildCompanionRows({
                 ? companionSummaryName(companion, words)
                 : companionDisplayName(conversation?.nickname, animal, words.displayName),
             slug: companion.slug ?? slugOf.get(species) ?? null,
-            // The stage alone; the level is the Bond tab's (newcomer UX vet, P1-2).
-            bondText: bondStageText(companion, words),
-            mastered: companion.mastered,
-            status: {text: companionStatusLine(line, preview, words).text, kind: statusKind(line, preview)},
+            powerName: companion.powerName,
+            openStep: companion.openTrial,
+            lastMessage: lastMessageOf(conversation),
+            lastActivityAt: timeOrNull(companion.lastActivity, conversation?.lastMessageAt, conversation?.lastTalkedAt),
             unreadCount: unread,
             muted: conversation?.muted ?? false,
             referralWaiting: companion.referralWaiting,
@@ -209,9 +199,6 @@ export function buildCompanionRows({
 
     const unbonded = Array.from(newest.values()).map((seed) => {
         const conversation = conversationOf.get(seed.speciesProfileId);
-        const unread = conversation?.unreadCount ?? 0;
-        const preview = unreadPreview(conversation);
-        const line = {unread, referralWaiting: false, openTrial: null, focus: null};
         const activity = Math.max(time(conversation?.lastMessageAt), time(conversation?.lastTalkedAt), time(seed.capturedAt));
         const row: CompanionTabRow = {
             speciesProfileId: seed.speciesProfileId,
@@ -219,10 +206,11 @@ export function buildCompanionRows({
             animal: seed.animal,
             displayName: companionDisplayName(conversation?.nickname ?? seed.nickname, seed.animal, words.displayName),
             slug: seed.slug ?? slugOf.get(seed.speciesProfileId) ?? null,
-            bondText: null,
-            mastered: false,
-            status: {text: companionStatusLine(line, preview, words).text, kind: statusKind(line, preview)},
-            unreadCount: unread,
+            powerName: null,
+            openStep: null,
+            lastMessage: lastMessageOf(conversation),
+            lastActivityAt: timeOrNull(conversation?.lastMessageAt, conversation?.lastTalkedAt),
+            unreadCount: conversation?.unreadCount ?? 0,
             muted: conversation?.muted ?? false,
             referralWaiting: false,
             referralId: null,

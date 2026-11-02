@@ -14,5 +14,5 @@ export default async function AppHomePage({
     params: {locale: string};
 }) {
     if (searchParams?.view === "collectors") redirect(getLocalePath(params.locale, "/app/explore?view=collectors"));
-    return <CompanionsPage words={await getCompanionWords(params.locale)} />;
+    return <CompanionsPage words={await getCompanionWords(params.locale)} locale={params.locale} />;
 }

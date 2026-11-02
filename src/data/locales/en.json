@@ -2720,7 +2720,8 @@
       "collection": "Collection",
       "signedOut": "Sign in to meet your animals, or try talking to one now.",
       "signIn": "Sign in",
-      "tryTalking": "Try talking to one now"
+      "tryTalking": "Try talking to one now",
+      "meetOneNow": "Or meet one now"
     },
     "naming": {
       "nameYour": "Name your {animal}",
