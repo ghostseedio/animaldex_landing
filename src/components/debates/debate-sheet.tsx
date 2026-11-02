@@ -83,7 +83,8 @@ const quietButton = "inline-flex min-h-11 items-center justify-center rounded-fu
 const CHIP = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-[14px] py-1.5 text-left text-xs leading-4 transition-colors disabled:opacity-50";
 const PRIMARY_CHIP = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300`;
 const SECONDARY_CHIP = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10`;
-const ROW_RADIUS = {borderRadius: 12} as const;
+/** The roster rows: the panel radius token (globals.css). */
+const ROW_RADIUS = {borderRadius: "var(--r-panel)"} as const;
 
 export default function DebateSetup({
     layout = "sheet",

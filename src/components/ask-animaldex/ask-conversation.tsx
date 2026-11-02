@@ -3045,7 +3045,7 @@ export default function AskConversation({
                                     {/* The photo or video they added, after the words, with ✕ to take it out (iOS AnimalStepReportStrip). */}
                                     {reporting.file && reporting.previewUrl ? (
                                         <span className="relative mr-1 mt-0.5 h-[46px] w-[46px] shrink-0">
-                                            <span className="absolute inset-0 overflow-hidden bg-white/[0.05]" style={{borderRadius: 9}}>
+                                            <span className="absolute inset-0 overflow-hidden rounded-panel bg-white/[0.05]">
                                                 {isStepVideoFile(reporting.file) ? (
                                                     <video src={reporting.previewUrl} muted playsInline className="h-full w-full object-cover" />
                                                 ) : (
@@ -3116,9 +3116,8 @@ export default function AskConversation({
                                     else if (reporting) void sendReportFromBar();
                                     else submit(composer, "form");
                                 }}
-                                className={`flex items-end gap-2 border border-white/12 bg-white/[0.05] ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
                                 // The message bar is a control, a capsule like the apps' composer: never a square box.
-                                style={{borderRadius: 22}}
+                                className={`flex items-end gap-2 rounded-pill border border-white/12 bg-white/[0.05] ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
                             >
                                 {reporting ? (
                                     <>
@@ -3508,8 +3507,8 @@ const AnimalMessageRow = memo(function AnimalMessageRow({
             <div className="flex items-end gap-2 pr-11">
                 <AskAnimalFace url={faceUrl} size={28} className="opacity-55" />
                 <div
-                    className="min-w-0 border px-3.5 py-2.5"
-                    style={{borderColor: ASK_BUBBLE_INCOMING, borderRadius: "19px"}}
+                    className="min-w-0 rounded-bubble border px-3.5 py-2.5"
+                    style={{borderColor: ASK_BUBBLE_INCOMING}}
                 >
                     <p className="text-sm leading-6 text-ink-200">{limit?.text ?? failureText(message, labels)}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">

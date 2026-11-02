@@ -28,9 +28,9 @@ const AskVisualView = dynamic(() => import("@/components/ask-animaldex/ask-visua
     loading: () => <div className="h-24 bg-white/[0.03]" aria-hidden="true" />
 });
 
-/** The diagram panel (docs/rich-chat/SPEC.md, section 1.4): radius 16, about 14 of padding. */
-const PANEL_STYLE = {borderRadius: 16, backgroundColor: "var(--ask-panel)", padding: 14} as const;
-const TABLE_STYLE = {borderRadius: 12, boxShadow: "inset 0 0 0 1px var(--ask-hairline)"} as const;
+/** The diagram panel and a table (docs/rich-chat/SPEC.md, section 1.4): the panel radius token, about 14 of padding. */
+const PANEL_STYLE = {borderRadius: "var(--r-panel)", backgroundColor: "var(--ask-panel)", padding: 14} as const;
+const TABLE_STYLE = {borderRadius: "var(--r-panel)", boxShadow: "inset 0 0 0 1px var(--ask-hairline)"} as const;
 const HAIRLINE = {borderColor: "var(--ask-hairline)"} as const;
 
 const DEPTH_INDENT = ["", "pl-4", "pl-8"] as const;

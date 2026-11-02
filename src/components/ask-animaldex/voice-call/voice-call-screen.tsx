@@ -443,7 +443,7 @@ function SpokenText({words, heard}: {words: CallSpokenWord[]; heard: () => numbe
                         style={{color: finished || index <= current ? "#fff" : "rgba(255, 255, 255, 0.45)"}}
                     >
                         {index === current ? (
-                            <span aria-hidden="true" className="absolute -inset-x-[3px] -inset-y-px rounded-[2px]" style={{backgroundColor: "rgba(167, 244, 50, 0.28)"}} />
+                            <span aria-hidden="true" className="absolute -inset-x-[3px] -inset-y-px" style={{backgroundColor: "rgba(167, 244, 50, 0.28)"}} />
                         ) : null}
                         <span className="relative">{word.text}</span>
                     </span>

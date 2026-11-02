@@ -631,6 +631,45 @@ button {
 }
 
 /* ==========================================================================
+   One radius scale and one motion curve (polish pass, DESIGN.md sections 2
+   and 4), the same on iOS (AnimalDexRadius) and Android (AnimalDexShapes).
+   --------------------------------------------------------------------------
+   pill          chips, buttons, the composer, the dictation strip, tags
+   bubble        a message bubble's outer corners; bubble-tight the grouped
+                 corner on the speaker's side
+   panel         tables, diagram panels, a special section's inner blocks,
+                 the debate roster rows, the call transcript box
+   card          picker cards, tiles, sidebar hover rows, sheet top corners
+   Every avatar and icon button is a circle (rounded-full on a square).
+   Tailwind: rounded-pill / -bubble / -bubble-tight / -panel / -card.
+   The guard test (src/lib/app-design-guards.test.ts) allows nothing else
+   in the chat, Talk, debates and Companions folders.
+   ========================================================================== */
+
+:root {
+    --r-pill: 9999px;
+    --r-bubble: 20px;
+    --r-bubble-tight: 6px;
+    --r-panel: 14px;
+    --r-card: 16px;
+    /* The state-change curve (DECISIONS section 3): 200–280 ms, never linear. */
+    --ease-spring: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Rows fade in once, when a list first mounts; a refresh keeps its rows and
+   does not run it again (DESIGN.md section 4). */
+@keyframes rowsIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+.rows-in { animation: rowsIn 240ms var(--ease-spring) both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .rows-in { animation: none; }
+}
+
+/* ==========================================================================
    Ask AnimalDex — drawer
    --------------------------------------------------------------------------
    The panel is a docked side panel on desktop and a bottom sheet on mobile, and
@@ -649,10 +688,10 @@ button {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.ask-panel { animation: askPanelInBottom 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+.ask-panel { animation: askPanelInBottom 240ms var(--ease-spring); }
 
 @media (min-width: 1024px) {
-    .ask-panel { animation: askPanelInRight 200ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+    .ask-panel { animation: askPanelInRight 240ms var(--ease-spring); }
 }
 
 @media (prefers-reduced-motion: reduce) {

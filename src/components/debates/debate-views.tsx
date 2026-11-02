@@ -363,7 +363,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                     <AskSpecialLabel icon={<ReportIcon />}>{words.debate.reportTitle}</AskSpecialLabel>
                     {report.problem ? <p className="text-[15px] font-bold leading-6 text-white">{report.problem}</p> : null}
                     {wide ? (
-                        <div className="max-w-full overflow-x-auto" style={{borderRadius: 12, boxShadow: "inset 0 0 0 1px var(--ask-hairline)"}} data-testid="debate-report-table">
+                        <div className="max-w-full overflow-x-auto rounded-panel" style={{boxShadow: "inset 0 0 0 1px var(--ask-hairline)"}} data-testid="debate-report-table">
                             <table className="w-full border-collapse text-left text-[13px] leading-5">
                                 <thead>
                                     <tr style={{backgroundColor: "var(--ask-panel)"}}>

@@ -181,8 +181,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                     key={row.speciesProfileId}
                                     href={href}
                                     {...askContextIntentHandlers(() => prefetchAskContext(locale, row.slug as string, row.animal, row.captureId))}
-                                    className={`flex items-center gap-2.5 px-2 py-2 transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`}
-                                    style={{borderRadius: 12}}
+                                    className={`flex items-center gap-2.5 rounded-card px-2 py-2 transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`}
                                 >
                                     <AskAnimalFace url={getSpeciesImageRoute(row.slug as string)} size={30} />
                                     <span className="min-w-0 flex-1">
@@ -203,7 +202,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                 {group.chats.map((chat) => {
                                     const href = talkChatPath(chat);
                                     return (
-                                        <div key={chat.key} className={`group/chat relative flex items-center transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`} style={{borderRadius: 12}}>
+                                        <div key={chat.key} className={`group/chat relative flex items-center rounded-card transition-colors hover:bg-white/[0.05] ${current === href ? "bg-white/[0.07]" : ""}`}>
                                             <Link
                                                 href={href}
                                                 // Intent on a chat starts its context read, so it opens with it in flight.
@@ -248,8 +247,7 @@ export default function TalkSidebar({locale, words, starters = [], onClose}: {
                                     <Link
                                         key={animal.slug}
                                         href={`/talk/${animal.slug}`}
-                                        className="-mx-2 flex items-center gap-2.5 px-2 py-2 transition-colors hover:bg-white/[0.05]"
-                                        style={{borderRadius: 12}}
+                                        className="-mx-2 flex items-center gap-2.5 rounded-card px-2 py-2 transition-colors hover:bg-white/[0.05]"
                                     >
                                         <AskAnimalFace url={animal.icon ?? getSpeciesImageRoute(animal.slug)} size={30} />
                                         <span className="min-w-0 flex-1">

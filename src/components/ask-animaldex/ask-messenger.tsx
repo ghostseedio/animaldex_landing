@@ -36,8 +36,9 @@ import {ASK_REPORT_CHOICES, type AskReportChoice} from "@/lib/ask-animaldex/repo
 export const ASK_BUBBLE_OUTGOING = "var(--ask-bubble-out)";
 export const ASK_BUBBLE_INCOMING = "var(--ask-bubble-in)";
 
-const BIG = "19px";
-const SMALL = "6px";
+// The bubble tokens (globals.css): the outer corners, and the grouped corner on the speaker's side.
+const BIG = "var(--r-bubble)";
+const SMALL = "var(--r-bubble-tight)";
 
 /** Before the first paint in the browser; a plain effect on the server, where there is no paint. */
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -221,7 +222,7 @@ export function AskUserBubble({
                     {report.label}
                 </p>
                 {report.thumbUrl ? (
-                    <span className="relative block h-[132px] w-[180px] max-w-full overflow-hidden bg-black/20" style={{borderRadius: 12}}>
+                    <span className="relative block h-[132px] w-[180px] max-w-full overflow-hidden rounded-panel bg-black/20">
                         {/* A small data URL drawn in the browser: nothing for the image optimiser to do. */}
                         <Image src={report.thumbUrl} alt="" fill sizes="180px" unoptimized className="object-cover" />
                         {report.kind === "video" ? (

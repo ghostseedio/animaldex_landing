@@ -126,7 +126,7 @@ export default function TalkPicker({words, initial}: {
                     {/* The question alone: the faces and their Powers under it say the rest (visual first, no noise). */}
                     <h1 className="font-display text-3xl font-bold leading-9 text-white sm:text-4xl sm:leading-[2.75rem]">{words.pickerTitle}</h1>
                     {carried ? (
-                        <div className="ask-special mt-5 flex items-start gap-3 px-4 py-3" style={{borderRadius: 16}} data-testid="talk-carried">
+                        <div className="ask-special mt-5 flex items-start gap-3 rounded-card px-4 py-3" data-testid="talk-carried">
                             <div className="min-w-0 flex-1">
                                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary-300">{words.carried}</p>
                                 <p className="mt-0.5 line-clamp-3 text-sm leading-6 text-white">{carried}</p>
@@ -136,7 +136,7 @@ export default function TalkPicker({words, initial}: {
                         </div>
                     ) : null}
                     <label className="sr-only" htmlFor="talk-search">{words.searchLabel}</label>
-                    <div className="mt-6 flex items-center gap-2 border border-white/12 bg-white/[0.05] px-4 focus-within:border-primary-300/45" style={{borderRadius: 999}}>
+                    <div className="mt-6 flex items-center gap-2 rounded-pill border border-white/12 bg-white/[0.05] px-4 focus-within:border-primary-300/45">
                         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-ink-400" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="9" cy="9" r="5.5" /><path d="m13.2 13.2 3.3 3.3" /></svg>
                         <input
                             ref={searchRef}
@@ -185,7 +185,7 @@ export default function TalkPicker({words, initial}: {
                                     <p className="mt-1 text-[13px] text-ink-300">{words.disagreeHint}</p>
                                     <div className="mt-3 grid gap-2.5">
                                         {pairs.map((pair) => (
-                                            <div key={`${pair.left.slug}-${pair.right.slug}`} className="border border-white/10 bg-white/[0.02] p-1.5" style={{borderRadius: 16}}>
+                                            <div key={`${pair.left.slug}-${pair.right.slug}`} className="rounded-card border border-white/10 bg-white/[0.02] p-1.5">
                                                 {topicText(pair.topic) ? (
                                                     <p className="px-2 pb-1.5 pt-1 text-[13px] font-semibold text-white">{topicText(pair.topic)}</p>
                                                 ) : null}
@@ -231,7 +231,7 @@ function AnimalGridSkeleton({count}: {count: number}) {
     return (
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3" aria-hidden="true" data-testid="talk-skeleton">
             {Array.from({length: count}, (_, index) => (
-                <div key={index} className="flex items-center gap-2.5 border border-white/[0.06] bg-white/[0.025] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3" style={{borderRadius: 14}}>
+                <div key={index} className="flex items-center gap-2.5 rounded-card border border-white/[0.06] bg-white/[0.025] px-2.5 py-2.5 sm:gap-3 sm:px-3 sm:py-3">
                     <span className="h-10 w-10 shrink-0 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
                     <span className="min-w-0 flex-1">
                         <span className="block h-3.5 w-3/4 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
@@ -251,8 +251,7 @@ function AnimalCard({animal, href, compact = false}: {animal: TalkAnimal; href: 
         <Link
             href={href}
             {...intent}
-            className={`flex min-w-0 flex-1 items-center gap-2.5 border border-white/10 bg-white/[0.035] transition-colors hover:border-primary-300/40 hover:bg-white/[0.06] sm:gap-3 ${compact ? "min-h-[52px] px-2.5 py-2" : "min-h-[60px] px-2.5 py-2.5 sm:px-3 sm:py-3"}`}
-            style={{borderRadius: 14}}
+            className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-card border border-white/10 bg-white/[0.035] transition-colors hover:border-primary-300/40 hover:bg-white/[0.06] sm:gap-3 ${compact ? "min-h-[52px] px-2.5 py-2" : "min-h-[60px] px-2.5 py-2.5 sm:px-3 sm:py-3"}`}
             data-testid="talk-animal"
         >
             <AskAnimalFace url={animal.icon ?? (animal.iconFile ? getSpeciesArtworkUrl(animal.slug, animal.iconFile) : getSpeciesImageRoute(animal.slug))} size={compact ? 36 : 40} />

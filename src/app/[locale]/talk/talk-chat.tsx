@@ -182,7 +182,7 @@ function TalkChatShell({name, power, slug, onMenu, words, labels, showsCapabilit
             </div>
             <div className="relative shrink-0 border-t border-white/10 pb-4 pt-3">
                 <div className="relative mx-auto w-full max-w-[760px] px-4">
-                    <div className="flex items-end gap-2 border border-white/12 bg-white/[0.05] py-1.5 pl-4 pr-1.5" style={{borderRadius: 22}}>
+                    <div className="flex items-end gap-2 rounded-pill border border-white/12 bg-white/[0.05] py-1.5 pl-4 pr-1.5">
                         <p className="min-h-[2.25rem] flex-1 py-1.5 text-[15px] leading-6 text-ink-400">{labels.placeholderFollowUpAnimal.replace("{animal}", name)}</p>
                         <span aria-hidden="true" className="mb-0.5 h-9 w-9 shrink-0 rounded-full bg-white/8" />
                     </div>

@@ -122,6 +122,17 @@ module.exports = {
                 '4xl': '2rem',
                 '5xl': '2.5rem',
                 '6xl': '3rem',
+                // The one radius scale (globals.css): the only radii the chat, Talk,
+                // debates and Companions folders may use (app-design-guards.test.ts).
+                'pill': 'var(--r-pill)',
+                'bubble': 'var(--r-bubble)',
+                'bubble-tight': 'var(--r-bubble-tight)',
+                'panel': 'var(--r-panel)',
+                'card': 'var(--r-card)',
+            },
+            transitionTimingFunction: {
+                // The state-change curve (DECISIONS section 3).
+                'spring': 'var(--ease-spring)',
             },
             margin: {
                 'offset': 'var(--tw-offset)',

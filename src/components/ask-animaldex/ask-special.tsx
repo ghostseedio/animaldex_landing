@@ -52,8 +52,8 @@ import {
 const CHIP = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-[14px] py-1.5 text-left text-xs leading-4 transition-colors disabled:opacity-50";
 const PRIMARY = `${CHIP} bg-primary-400 font-black text-black hover:bg-primary-300`;
 const SECONDARY = `${CHIP} border border-white/12 bg-white/[0.07] font-bold text-white hover:bg-white/10`;
-/** Media inside a bubble keeps the bubble's softness (iOS 12 pt). */
-const MEDIA_RADIUS: CSSProperties = {borderRadius: 12};
+/** Media inside a bubble: the panel radius token, as every inner block of a special section. */
+const MEDIA_RADIUS: CSSProperties = {borderRadius: "var(--r-panel)"};
 
 function Problem({children}: {children: ReactNode}) {
     return <p role="alert" className="text-[11px] leading-4 text-white/60">{children}</p>;
@@ -506,7 +506,7 @@ export function AskWarmupOfferSection({
     );
 }
 
-const CHOICE_RADIUS: CSSProperties = {borderRadius: 14};
+const CHOICE_RADIUS: CSSProperties = {borderRadius: "var(--r-panel)"};
 
 /**
  * A Warmup question, as the animal's message: "WARMUP · 1 OF 2", the
