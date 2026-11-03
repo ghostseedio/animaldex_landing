@@ -4,6 +4,7 @@
  * apart from `your-step.ts` so the chat's decoders import no words.
  */
 
+import type {StepOutcome} from "@/lib/ask-animaldex/companion-loop";
 import {fillWords, trialDifficulty, trialDifficultyText, type CompanionWords} from "@/lib/companion-bond";
 import {stepCardState, type AnimalStep, type StepProblemCode} from "@/lib/your-step";
 
@@ -67,9 +68,14 @@ export function stepReportStripText(name: string, words: CompanionWords): string
     return fillWords(words.journey.report.strip, {name});
 }
 
-/** The done special message's label: "Done together · +5 XP", or "Done together" when it paid nothing. */
-export function stepDoneLabel(xp: number, words: CompanionWords): string {
-    return xp > 0 ? `${words.journey.done.chip} · ${fillWords(words.journey.done.xp, {xp})}` : words.journey.done.chip;
+/**
+ * The done special message's label: "Done together · +5 XP", or "Done together" when it paid nothing; when it
+ * did not quite work, how it went ("Didn't work this time · +5 XP"): the attempt still counts.
+ */
+export function stepDoneLabel(xp: number, words: CompanionWords, outcome?: StepOutcome | null): string {
+    const done = words.journey.done;
+    const head = outcome === "partly" ? done.partly : outcome === "didnt_work" ? done.didntWork : done.chip;
+    return xp > 0 ? `${head} · ${fillWords(done.xp, {xp})}` : head;
 }
 
 /** Under the done label when the proof showed the step: "+5 XP for your proof"; null without a bonus. */

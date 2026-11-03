@@ -2638,6 +2638,8 @@
       },
       "done": {
         "chip": "Selesai bersama",
+        "partly": "Berhasil sebagian",
+        "didntWork": "Kali ini belum berhasil",
         "xp": "+{xp} XP",
         "proofBonus": "+{n} XP untuk bukti Anda"
       },
@@ -2769,6 +2771,8 @@
       "communityVote": "Voting komunitas",
       "votingClosesIn": "Voting ditutup dalam {time}",
       "youChose": "Kamu memilih cara {name}",
+      "wayDidntWork": "Cara {name} belum berhasil untukmu",
+      "didntWorkForYou": "Belum berhasil untukmu",
       "tryFirst": "Coba dulu: {text}",
       "itsWay": "Caranya:",
       "fitsWhen": "Cocok saat {text}",

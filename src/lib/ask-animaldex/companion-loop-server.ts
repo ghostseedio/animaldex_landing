@@ -22,12 +22,14 @@ import {
     type DebateChatState,
     parseCompanionRoster,
     parseCompanionState,
+    parseCompanionStepDebate,
     resolveReferral,
     type CompanionBond,
     type CompanionLines,
     type CompanionOpenTrial,
     type CompanionRosterEntry,
     type CompanionState,
+    type CompanionStepDebate,
     type CompanionStepReport
 } from "@/lib/ask-animaldex/companion-focus";
 
@@ -116,6 +118,9 @@ async function readStepReport(service: Service, userId: string, open: CompanionO
         return null;
     }
     let media: string | null = null;
+    // The debate the step came from, if any: the animal may point back to the
+    // other ways when it did not work. Read alongside the media and the proof.
+    const debate = readStepDebate(service, userId, open.id);
     try {
         const {data, error} = await service
             .from("animal_companion_trials")
@@ -126,16 +131,31 @@ async function readStepReport(service: Service, userId: string, open: CompanionO
             .maybeSingle();
         if (error) {
             warn("step report read", error);
-            return {stepId: open.id, media: null};
+            return {stepId: open.id, media: null, debate: await debate};
         }
         const raw: unknown = data?.media_paths;
         const paths = Array.isArray(raw) ? raw.filter((path): path is string => typeof path === "string") : [];
         media = describeStepMedia(paths);
-        if (!media) return {stepId: open.id, media: null};
-        return {stepId: open.id, media, proof: await askStepProof(open.id)};
+        if (!media) return {stepId: open.id, media: null, debate: await debate};
+        return {stepId: open.id, media, proof: await askStepProof(open.id), debate: await debate};
     } catch (error) {
         warn("step report read", error);
-        return {stepId: open.id, media};
+        return {stepId: open.id, media, debate: await debate};
+    }
+}
+
+/** `animal_step_debate_context_v1`: the way they chose and the others still there; null when the step was not a debate's way. */
+async function readStepDebate(service: Service, userId: string, stepId: string): Promise<CompanionStepDebate | null> {
+    try {
+        const {data, error} = await service.rpc("animal_step_debate_context_v1", {p_user_id: userId, p_trial_id: stepId});
+        if (error) {
+            warn("animal_step_debate_context_v1", error);
+            return null;
+        }
+        return parseCompanionStepDebate(data);
+    } catch (error) {
+        warn("animal_step_debate_context_v1", error);
+        return null;
     }
 }
 
@@ -346,6 +366,22 @@ export async function applyCompanionLines(params: {
                     xp: Number(result.xp) || 0,
                     proof_bonus: Number(result.proof_bonus) || 0
                 };
+                // How it went: kept on the step; a debate's way that did not
+                // work reopens that debate, so its other ways can be tried.
+                if (lines.doneOutcome) {
+                    const trialDone = event.trial_done as Record<string, unknown>;
+                    trialDone.outcome = lines.doneOutcome;
+                    const recorded = await service.rpc("record_animal_step_outcome_v1", {
+                        p_user_id: userId,
+                        p_trial_id: trialDone.id,
+                        p_outcome: lines.doneOutcome
+                    });
+                    if (recorded.error) warn("record_animal_step_outcome_v1", recorded.error);
+                    else if (recorded.data && typeof recorded.data === "object") {
+                        const row = recorded.data as Record<string, unknown>;
+                        if (row.debate_reopened === true && typeof row.debate_id === "string") trialDone.debate_reopened = row.debate_id;
+                    }
+                }
                 done = Number(result.your_trials_done) || done + 1;
                 openStep = null;
                 if (result.bond && typeof result.bond === "object") bond = result.bond as CompanionBond;

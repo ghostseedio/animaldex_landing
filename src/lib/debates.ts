@@ -119,6 +119,11 @@ export type Debate = {
     voteBlockedCode: string | null;
     /** The way the asker chose to try (private; never a vote). */
     chosenParticipantId: string | null;
+    /**
+     * The ways the asker tried that did not work (`tried_ways`, 2026-11-03): the
+     * debate opened again after each, its other ways there to try.
+     */
+    triedParticipantIds: string[];
     /** Why it ended unargued: `not_public` (too personal to post), `asker_cancelled`, … */
     cancelReason: string | null;
     /** The report's state: none | writing | ready | failed. */
@@ -411,6 +416,13 @@ export function decodeDebate(raw: unknown): Debate | null {
         voteBlockedCode: firstText(row, "voteBlockedCode", "cant_vote_reason", "viewer_cant_vote_reason", "vote_block", "vote_blocked", "cannot_vote_reason", "vote_blocked_reason")
             ?? (bool(row.viewer_is_participant) ? "own_debate" : null),
         chosenParticipantId: debateUuid(first(row, "my_way", "chosen_participant_id", "asker_choice", "chosenParticipantId")),
+        triedParticipantIds: Array.isArray(row.tried_ways)
+            ? row.tried_ways
+                .map((way) => (way && typeof way === "object" ? debateUuid((way as Record<string, unknown>).participant_id) : null))
+                .filter((id): id is string => Boolean(id))
+            : Array.isArray(row.triedParticipantIds)
+            ? row.triedParticipantIds.filter((id): id is string => typeof id === "string")
+            : [],
         cancelReason: firstText(row, "cancel_reason", "cancelReason"),
         reportStatus: firstText(row, "report_status", "reportStatus") ?? (row.report_ready === true ? "ready" : null),
         creditsForWinner: int(first(row, "credits_for_winner", "creditsForWinner")),

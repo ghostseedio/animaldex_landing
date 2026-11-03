@@ -42,7 +42,14 @@ export type AskCompanionStepDone = {
     xp: number;
     /** Of `xp`, the proof bonus (`trial_done.proof_bonus`, 5): the photo or video showed the step. Absent when none. */
     proofBonus?: number;
+    /** How it went (`trial_done.outcome`, 2026-11-03); absent when the animal did not say. */
+    outcome?: StepOutcome;
+    /** A debate's way that did not work: that debate is open again (`trial_done.debate_reopened`). */
+    reopenedDebateId?: string;
 };
+
+/** How a step went: an honest attempt counts whichever it is; only "worked" settles the problem. */
+export type StepOutcome = "worked" | "partly" | "didnt_work";
 
 /** The step the animal set in this reply: the card goes under it. */
 export type AskCompanionStepSet = {
@@ -116,7 +123,17 @@ function stepDoneFrom(raw: unknown): AskCompanionStepDone | null {
     const xp = count(row.xp ?? row.xp_awarded);
     // Never more than the step paid: an old server sends none, so 0.
     const proofBonus = Math.min(xp, count(row.proof_bonus ?? row.proof_bonus_xp));
-    return {...(id ? {id} : {}), step, powerEarned: row.power_earned === true, xp, ...(proofBonus > 0 ? {proofBonus} : {})};
+    const outcome = row.outcome === "worked" || row.outcome === "partly" || row.outcome === "didnt_work" ? row.outcome : null;
+    const reopenedDebateId = uuid(row.debate_reopened);
+    return {
+        ...(id ? {id} : {}),
+        step,
+        powerEarned: row.power_earned === true,
+        xp,
+        ...(proofBonus > 0 ? {proofBonus} : {}),
+        ...(outcome ? {outcome} : {}),
+        ...(reopenedDebateId ? {reopenedDebateId} : {})
+    };
 }
 
 function stepSetFrom(raw: unknown): AskCompanionStepSet | null {

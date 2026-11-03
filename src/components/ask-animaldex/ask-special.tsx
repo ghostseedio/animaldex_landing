@@ -27,6 +27,7 @@
  * is the SPEC's, in the reader's language.
  */
 
+import type {StepOutcome} from "@/lib/ask-animaldex/companion-loop";
 import {useState, type CSSProperties, type ReactNode} from "react";
 import Image from "next/image";
 import Link from "@/app/[locale]/_components/link";
@@ -246,7 +247,8 @@ export function AskDoneSection({
     step,
     words,
     shareLabel,
-    onShare
+    onShare,
+    outcome
 }: {
     xp: number;
     /** Of `xp`, the proof bonus (0 or 5). */
@@ -255,13 +257,16 @@ export function AskDoneSection({
     words: CompanionWords;
     shareLabel: string;
     onShare: () => void;
+    /** How it went; absent when the animal did not say. */
+    outcome?: StepOutcome;
 }) {
     return (
         <section className="flex flex-col gap-2" data-testid="special-done">
-            <AskSpecialLabel icon={<SealIcon />}>{stepDoneLabel(xp, words)}</AskSpecialLabel>
+            <AskSpecialLabel icon={<SealIcon />}>{stepDoneLabel(xp, words, outcome)}</AskSpecialLabel>
             <ProofBonusLine bonus={proofBonus} words={words} />
             <p className="line-clamp-3 text-[13px] leading-5 text-white/65">{step}</p>
-            <ShareChip label={shareLabel} onShare={onShare} />
+            {/* Nothing to show off when it did not work. */}
+            {outcome === "didnt_work" ? null : <ShareChip label={shareLabel} onShare={onShare} />}
         </section>
     );
 }

@@ -129,6 +129,9 @@ export const YOUR_STEP_COPY = {
     },
     done: {
         chip: "Done together",
+        /** How it went, when it did not quite work (2026-11-03): the attempt still counts, so its XP stays. */
+        partly: "Partly worked",
+        didntWork: "Didn't work this time",
         xp: "+{xp} XP",
         /** Under the done label when the photo or video showed the step: "+5 XP for your proof". */
         proofBonus: "+{n} XP for your proof"
@@ -251,6 +254,9 @@ export const DEBATE_COPY = {
     communityVote: "Community vote",
     votingClosesIn: "Voting closes in {time}",
     youChose: "You chose {name}'s way",
+    /** A way they tried that did not work (2026-11-03): the others are there to try. */
+    wayDidntWork: "{name}'s way didn't work for you",
+    didntWorkForYou: "Didn't work for you",
     tryFirst: "Try first: {text}",
     itsWay: "Its way:",
     fitsWhen: "Fits when {text}",

@@ -13,6 +13,7 @@
  * Pure, so the drawer and the tests share it.
  */
 
+import type {StepOutcome} from "@/lib/ask-animaldex/companion-loop";
 import {askReplyCards} from "@/lib/ask-animaldex/chat-cards";
 import type {AskCompanionStepSet} from "@/lib/ask-animaldex/companion-loop";
 import type {AskMessage, AskWarmupItem} from "@/lib/ask-animaldex/thread";
@@ -25,7 +26,16 @@ import type {SpeciesTraining, SpeciesTrainingResult} from "@/lib/species-trainin
 /** One thing a reply carries to do, drawn as a section of its last bubble. */
 export type AskSpecial =
     /** "DONE TOGETHER · +5 XP": the animal saw a step done; the first one earned the Power. */
-    | {kind: "done"; xp: number; step: string; powerEarned: boolean; /** Of `xp`, the proof bonus; absent when none. */ proofBonus?: number}
+    | {
+        kind: "done";
+        xp: number;
+        step: string;
+        powerEarned: boolean;
+        /** Of `xp`, the proof bonus; absent when none. */
+        proofBonus?: number;
+        /** How it went; absent when the animal did not say (it worked, as before). */
+        outcome?: StepOutcome;
+    }
     /** "YOUR STEP": the step this reply set (or the Trial picked from it). */
     | {kind: "step"; stepSet: AskCompanionStepSet}
     /** "{NAME}'S TRIALS": the picker. */
@@ -71,8 +81,8 @@ export function askReplySpecials(input: {
     const kinds = new Set(askReplyCards(message.text).map((card) => card.kind));
     const specials: AskSpecial[] = [];
     if (event?.stepDone) {
-        const {xp, step, powerEarned, proofBonus} = event.stepDone;
-        specials.push({kind: "done", xp, step, powerEarned, ...(proofBonus ? {proofBonus} : {})});
+        const {xp, step, powerEarned, proofBonus, outcome} = event.stepDone;
+        specials.push({kind: "done", xp, step, powerEarned, ...(proofBonus ? {proofBonus} : {}), ...(outcome ? {outcome} : {})});
     }
     if (event?.stepSet) {
         specials.push({kind: "step", stepSet: event.stepSet});

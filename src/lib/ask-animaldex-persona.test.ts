@@ -326,7 +326,8 @@ test("follow-ups are written as the person, because a click sends them as the pe
 test("the greeting speaks first and offers replies in the person's voice", () => {
     const greeting = buildAskGreetingUserPrompt({packet: mantaPacket(), recordInSystem: true});
     assert.ok(greeting.includes("Speak first"));
-    assert.ok(greeting.includes("under 45 words"));
+    // A hello is 0.7 of the animal's short length (the apps' greeting, Debates v2).
+    assert.ok(greeting.includes("under 31 words"));
     assert.ok(greeting.includes("Never 'I missed you'"));
     assert.ok(greeting.includes("written AS"));
     assert.equal(greeting.includes("user_message"), false);
@@ -334,7 +335,7 @@ test("the greeting speaks first and offers replies in the person's voice", () =>
     // Not on someone else's card: nothing about an owner is in the turn.
     assert.equal(greeting.includes("your_owner —"), false);
     // A hello is as short as this animal's: the words come from its size.
-    assert.ok(buildAskGreetingUserPrompt({packet: mantaPacket({shortWords: 24}), recordInSystem: true}).includes("under 24 words"));
+    assert.ok(buildAskGreetingUserPrompt({packet: mantaPacket({shortWords: 24}), recordInSystem: true}).includes("under 17 words"));
     // A signed-in reader's memory rides along, so a known reader is greeted as known.
     const known = buildAskGreetingUserPrompt({
         packet: mantaPacket({

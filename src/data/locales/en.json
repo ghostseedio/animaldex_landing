@@ -2654,6 +2654,8 @@
       },
       "done": {
         "chip": "Done together",
+        "partly": "Partly worked",
+        "didntWork": "Didn't work this time",
         "xp": "+{xp} XP",
         "proofBonus": "+{n} XP for your proof"
       },
@@ -2785,6 +2787,8 @@
       "communityVote": "Community vote",
       "votingClosesIn": "Voting closes in {time}",
       "youChose": "You chose {name}'s way",
+      "wayDidntWork": "{name}'s way didn't work for you",
+      "didntWorkForYou": "Didn't work for you",
       "tryFirst": "Try first: {text}",
       "itsWay": "Its way:",
       "fitsWhen": "Fits when {text}",

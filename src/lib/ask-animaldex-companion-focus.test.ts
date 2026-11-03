@@ -177,7 +177,7 @@ test("the step rules: plain words, no proof, no refusal, no lesson check, Trials
     assert.equal(/never mention a card, a\s+button or tapping/.test(rules), true);
     assert.equal(rules.includes("Never ask for proof or to see anything"), true);
     assert.equal(/Never refuse it, never say it does not count, and never mention attempts, limits, waiting or\s+tomorrow/.test(rules), true);
-    assert.equal(/something else that still does your lesson, it counts the same/.test(rules), true);
+    assert.equal(/something else that still does your\s+lesson, it counts the same/.test(rules), true);
     assert.equal(/ask them one specific question/.test(rules), true);
     assert.equal(/offer\s+your own Trials instead, with the trial card/.test(rules), true);
     assert.equal(/may offer it once, with the training card/.test(rules), true);

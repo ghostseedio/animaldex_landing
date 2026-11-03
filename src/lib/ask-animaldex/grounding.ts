@@ -594,19 +594,22 @@ function pageContextLine(packet: AskGroundingPacket): string {
 
 /**
  * The first thing the animal says, before the person has said anything.
- * Verbatim from the apps' `ANIMAL_GREETING_RULES` (3.2): one to three sentences, as
- * short as this animal's hello is (`{words}`, from `shortWordsFor`).
+ * Verbatim from the apps' `ANIMAL_GREETING_RULES` (Debates v2, 2026-11-03): one
+ * or two sentences, shorter than this animal's other messages (`{words}`,
+ * `shortWordsFor` scaled by 0.7), and open to anything on their mind.
  */
 export const ANIMAL_GREETING_RULES = [
     "greeting_request — the person has just opened a conversation with you. Nobody has said anything yet. Speak first.",
-    "- One to three short sentences, under {words} words. Say hello the way only you would — your rhythm, your world, your",
-    "  temperament. This first line is how they will know you are not any other animal.",
+    "- One or two short sentences, under {words} words: they are waiting to talk. Say hello the way only you would — your",
+    "  rhythm, your world, your temperament. This first line is how they will know you are not any other animal.",
     "- If you have not met (relationship is missing or 'met', and nothing in what_you_remember_about_them was told to",
     "  you): introduce yourself in one line only you could say, with what your lesson is in your own words, then ask",
-    "  them one thing about their life in the spirit of the kind of question you ask.",
+    "  what is on their mind, anything at all, in the spirit of the kind of question you ask.",
     "- If you know them (a later relationship stage, or things they told you): greet them like you know them. Pick up",
-    "  one remembered thing that matters — or invited_follow_up, if present — lightly. Never 'I missed you', never how",
-    "  long it has been.",
+    "  one remembered thing that matters — or invited_follow_up, if present — lightly, in a clause, and make your one",
+    "  question open both ways in the same breath: how that went, or anything new on their mind, in your own words. Never",
+    "  a question only about the old thing: they may have come with something new. Never 'I missed you', never how long",
+    "  it has been.",
     "- If how_you_met is given, you may say where they found you, in a few words.",
     "- To a visitor: say whose you are (your owner's name from your_owner) and invite them to ask about your time with",
     "  your owner, or about you. Never ask about the visitor's own life. Their 3 replies below: one about your owner,",
@@ -628,8 +631,9 @@ export function shortWordsFor(wordBudget: number): number {
     return Math.max(15, Math.min(45, Math.round(wordBudget * 0.55)));
 }
 
-function withWords(rules: string[], shortWords: number | null | undefined): string[] {
-    const words = Math.max(12, Math.round(shortWords ?? 45));
+/** The apps' `withWords`: a hello is 0.7 of the animal's short length (at least 12 words). */
+function withWords(rules: string[], shortWords: number | null | undefined, scale = 1): string[] {
+    const words = Math.max(12, Math.round((shortWords ?? 45) * scale));
     return rules.map((line) => line.replace("{words}", String(words)));
 }
 
@@ -647,7 +651,7 @@ export function buildAskGreetingUserPrompt(params: AskSpeciesPromptParams & {
         ...(params.recordInSystem ? [] : [`animal_name: ${packet.species.name}`]),
         ...speciesContextLines({...params, pageLine: pageContextLine(packet)}),
         "",
-        ...(params.referral ? REFERRAL_OPENING_RULES : withWords(ANIMAL_GREETING_RULES, packet.shortWords))
+        ...(params.referral ? REFERRAL_OPENING_RULES : withWords(ANIMAL_GREETING_RULES, packet.shortWords, 0.7))
     ].filter(Boolean).join("\n");
 }
 

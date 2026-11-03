@@ -76,6 +76,8 @@ export type CompanionLines = {
     focus: string | null;
     trial: {step: string; checkInAfterDays: number} | null;
     done: string | null;
+    /** How the step went, from the DONE line's second part (owner, 2026-11-03); null when the animal did not say. */
+    doneOutcome: StepOutcome | null;
     refer: {key: string; problem: string} | null;
     /** A call (3.2 Debates): they said yes to other animals' ways; the chat opens its setup with this problem. `keys` name other_animals entries. */
     debate: {problem: string; keys: string[]} | null;
@@ -96,6 +98,19 @@ export type CompanionBond = {
 
 const PREFIXES = ["FOCUS:", "TRIAL:", "DONE:", "REFER:", "DEBATE_OFFER:", "DEBATE:"] as const;
 
+/** How a step went: it worked, it partly did, or it did not work. An honest attempt counts whichever it is; only "worked" settles the problem. */
+export type StepOutcome = "worked" | "partly" | "didnt_work";
+
+/** The DONE line's outcome, however the model spelled it. */
+export function parseStepOutcome(raw: string | null | undefined): StepOutcome | null {
+    const word = (raw ?? "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!word) return null;
+    if (word.startsWith("didnt") || word.startsWith("didnot") || word.startsWith("notwork") || word === "failed") return "didnt_work";
+    if (word.startsWith("partly") || word.startsWith("partial") || word.startsWith("somewhat")) return "partly";
+    if (word.startsWith("worked") || word === "yes") return "worked";
+    return null;
+}
+
 function text(value: unknown, max: number): string | null {
     if (typeof value !== "string") return null;
     const cleaned = value.replace(/\s+/g, " ").trim().replace(/^["“]|["”]$/g, "").trim();
@@ -107,7 +122,7 @@ function text(value: unknown, max: number): string | null {
  * sentinel only), so they are neither shown nor turned into chips.
  */
 export function extractCompanionLines(raw: string): {raw: string; lines: CompanionLines} {
-    const lines: CompanionLines = {focus: null, trial: null, done: null, refer: null, debate: null, debateOffered: false};
+    const lines: CompanionLines = {focus: null, trial: null, done: null, doneOutcome: null, refer: null, debate: null, debateOffered: false};
     const at = raw.indexOf(ASK_FOLLOW_UP_SENTINEL);
     if (at < 0) return {raw, lines};
     const head = raw.slice(0, at + ASK_FOLLOW_UP_SENTINEL.length);
@@ -119,7 +134,11 @@ export function extractCompanionLines(raw: string): {raw: string; lines: Compani
         if (prefix === "FOCUS:") {
             lines.focus ??= text(body, 300);
         } else if (prefix === "DONE:") {
-            lines.done ??= text(body, 400) ?? "done";
+            if (lines.done === null) {
+                const bar = body.lastIndexOf("|");
+                lines.done = text(bar >= 0 ? body.slice(0, bar) : body, 400) ?? "done";
+                lines.doneOutcome = bar >= 0 ? parseStepOutcome(body.slice(bar + 1)) : null;
+            }
         } else if (prefix === "DEBATE_OFFER:") {
             lines.debateOffered = true;
         } else if (prefix === "DEBATE:") {
@@ -267,15 +286,25 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
                 "  ask for one in this message."
             ]),
         "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
-        "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — tell them well",
-        "  done, in your own way and as only you would, and what it shows about them through your lesson. If what they did",
-        "  was something else that still does your lesson, it counts the same. Either way, write the DONE line.",
+        "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — it counts:",
+        "  write the DONE line, with how it went for them. If what they did was something else that still does your",
+        "  lesson, it counts the same. Then answer how it went:",
+        "  - It worked: tell them well done, in your own way and as only you would, and what it shows about them through",
+        "    your lesson.",
+        "  - It partly worked: say plainly what moved and what did not, and set them the next step in this same reply,",
+        "    shaped by what happened, that takes it further.",
+        "  - It did not work: never say well done or talk as if it were solved. Say plainly that it did not work, and",
+        "    that doing it still counts. Name what they said got in the way, or ask the one question that finds it, and",
+        "    set them the next step in this same reply: your way again, changed by what happened, or a different angle on",
+        "    it. When step_report has debate_way, this step was the way they chose in a debate: you may say that the other",
+        "    animals' ways (debate_way.others) are still there to try, by name, in a sentence; the app shows them.",
         "  If what they say is too vague to tell what happened, ask them one specific question about it, the one only you",
         "  would ask. Never refuse it, never say it does not count, and never mention attempts, limits, waiting or",
         "  tomorrow. If they have not done it yet, encourage them, or change the step if it does not fit.",
         "- companion.your_power says where your Power stands. Until it is earned, the first step they finish with you",
-        "  earns it. When power_just_earned is true, they have just earned it: tell them, as yourself, once. After a step",
-        "  is done, talk about what it showed; do not reach for your Warmup or any card as the next thing.",
+        "  earns it, whether or not it worked. When power_just_earned is true, they have just earned it: tell them, as",
+        "  yourself, once. After a step that worked, talk about what it showed; do not reach for your Warmup or any card as",
+        "  the next thing.",
         "- When the heart of a problem is really another animal's lesson: give your own take from your lesson first. Then,",
         "  only if one of other_animals has a lesson that clearly fits it better, suggest they talk to that one — by its",
         "  name, in a sentence, saying why its way fits — and that you'll tell it what is going on so they don't have to",
@@ -287,9 +316,9 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
         "  them, in your own words, and say the step starts with that animal's way.",
         ...(params.debates && params.offersSteps
             ? [
-                "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — your Power is earned",
-                "  and they have brought a real problem of their own, a decision, a conflict or something they keep running",
-                "  into — you may offer once, after giving your own verdict, to let other animals weigh in. In a reply where you",
+                "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true — they have brought a",
+                "  real problem of their own, a decision, a conflict or something they keep running into (your Power need not be",
+                "  earned) — you may offer once, after giving your own verdict, to let other animals weigh in. In a reply where you",
                 "  may, this offer comes first: make it instead of setting a new step or offering your Trials or Warmup in that",
                 "  reply; those can wait. The offer is yours:",
                 "  ask in your own words, inside your reply, whether they would like to hear how other animals would handle it.",
@@ -314,7 +343,7 @@ export const COMPANION_OUTPUT_LINES = [
     "5. Then, only for what this reply actually did, one hidden line each (never shown to anyone):",
     "   FOCUS: <what you are helping them with, a few words from their side, e.g. 'Speaking up first in meetings'>",
     "   TRIAL: <the step you just set them, one plain sentence> | <days before you would check how it went, 1-14>",
-    "   DONE: <what they did on companion.open_trial, one sentence, third person>",
+    "   DONE: <what they did on companion.open_trial, one sentence, third person> | <worked, partly or didnt_work>",
     "   REFER: <the key from other_animals> | <the problem in one or two sentences, third person, all the other animal",
     "   needs so they never have to explain it again>"
 ];
@@ -387,7 +416,39 @@ export function describeStepMedia(paths: readonly string[] | null | undefined): 
  * docs/your-step/PROOF.md); absent or `failed` when nobody could look at it.
  */
 export type CompanionStepProof = {status: StepProofStatus; seen: string | null};
-export type CompanionStepReport = {media: string | null; proof?: CompanionStepProof | null};
+export type CompanionStepReport = {
+    media: string | null;
+    proof?: CompanionStepProof | null;
+    /** The step was the way they chose in a debate (`animal_step_debate_context_v1`): that animal, and the ways still there to try. */
+    debate?: CompanionStepDebate | null;
+};
+
+export type CompanionStepDebate = {chosen: string | null; others: string[]; tried_before: string[]};
+
+export function parseCompanionStepDebate(raw: unknown): CompanionStepDebate | null {
+    if (!raw || typeof raw !== "object") return null;
+    const row = raw as Record<string, unknown>;
+    const names = (value: unknown) =>
+        Array.isArray(value) ? value.filter((name): name is string => typeof name === "string" && name.trim().length > 0) : [];
+    return {
+        chosen: typeof row.chosen === "string" && row.chosen.trim() ? row.chosen.trim() : null,
+        others: names(row.others),
+        tried_before: names(row.tried_before)
+    };
+}
+
+/** The step_report line's sentence about the debate the step came from. */
+export function stepReportDebateLine(report: CompanionStepReport): string {
+    const debate = report.debate;
+    if (!debate || (!debate.chosen && debate.others.length === 0)) return "";
+    return ` This step was the way they chose in a debate: debate_way ${
+        JSON.stringify({
+            chosen: debate.chosen,
+            others: debate.others,
+            ...(debate.tried_before.length > 0 ? {tried_before: debate.tried_before} : {})
+        })
+    }.`;
+}
 
 /** The step_report line's sentence about their photo or video. Verbatim from the apps' `stepReportMediaLine`. */
 export function stepReportMediaLine(report: CompanionStepReport): string {
@@ -445,7 +506,7 @@ export function companionPromptLines(params: {
     const report = params.stepReport && open
         ? `step_report — they have just tapped "I did it" on companion.open_trial: their message is how it went, in their own words.${
             stepReportMediaLine(params.stepReport)
-        } Judge it as the rules for reporting back say.`
+        }${stepReportDebateLine(params.stepReport)} Judge it as the rules for reporting back say.`
         : "";
     return [
         companion ? `companion — what you and your owner are working on:\n${JSON.stringify(companion)}` : "",

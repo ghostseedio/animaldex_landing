@@ -6,8 +6,8 @@
  *
  *   npx tsx scripts/generate-your-step-parity-fixture.mts <AnimalDex repo> [ref]
  *
- * The ref (default r32d-server, the Debates server lane, which carries Your
- * step too) is read with `git archive` into a temporary
+ * The ref (default main, since step outcomes 2026-11-03) is read with
+ * `git archive` into a temporary
  * folder; the AnimalDex checkout itself is never touched. Deno's remote
  * imports (npm:, jsr:, https:) become an empty stub: nothing here calls them.
  */
@@ -18,7 +18,7 @@ import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
-const [repo, ref = "r32d-server"] = process.argv.slice(2);
+const [repo, ref = "main"] = process.argv.slice(2);
 if (!repo) throw new Error("usage: generate-your-step-parity-fixture.mts <AnimalDex repo> [ref]");
 const commit = execFileSync("git", ["-C", repo, "rev-parse", ref], {encoding: "utf8"}).trim();
 const root = mkdtempSync(join(tmpdir(), "your-step-parity-"));
@@ -132,6 +132,19 @@ const fixture = {
             {state: null, lines: null, written: null}
         ].map((input) => ({input, output: focus.debateOfferProblem(focus.parseCompanionState(input.state), input.lines, input.written)}))
     },
+    // How a step went (owner, 2026-11-03): the DONE line's outcome and the
+    // debate a step came from, as the server reads and says them.
+    outcomes: {
+        parseStepOutcome: ["worked", " | didn't work", "did not work", "didnt_work", "Partly", "partial", "maybe", "", null]
+            .map((input) => ({input, output: focus.parseStepOutcome(input)})),
+        stepReportDebateLine: [
+            {media: null},
+            {media: null, debate: null},
+            {media: null, debate: {chosen: "Ghost", others: ["Luna", "Sea Otter"], tried_before: []}},
+            {media: "a photo", debate: {chosen: "Luna", others: [], tried_before: ["Ghost"]}},
+            {media: null, debate: {chosen: null, others: [], tried_before: []}}
+        ].map((input) => ({input, output: focus.stepReportDebateLine(input)}))
+    },
     arrays: {
         COMPANION_OUTPUT_LINES: focus.COMPANION_OUTPUT_LINES,
         REFERRAL_OPENING_RULES: focus.REFERRAL_OPENING_RULES,
@@ -209,7 +222,9 @@ const fixture = {
         "DEBATE: Whether to take the promotion away\n§§FOLLOW_UPS§§\nOk",
         "Sure.\n§§FOLLOW_UPS§§\nOk\n- DEBATE: Whether to leave the band before the tour\nDEBATE: A second problem that is long enough | a3",
         "Hm.\n§§FOLLOW_UPS§§\nOk\nDEBATE_OFFER:",
-        "Done.\n§§FOLLOW_UPS§§\nNice\nFOCUS: Speaking up first\nTRIAL: Say it first on Monday | 4\nDONE: She said it first\nREFER: a1 | She keeps losing the thread in meetings"
+        "Done.\n§§FOLLOW_UPS§§\nNice\nFOCUS: Speaking up first\nTRIAL: Say it first on Monday | 4\nDONE: She said it first\nREFER: a1 | She keeps losing the thread in meetings",
+        "Hm.\n§§FOLLOW_UPS§§\nOk\nDONE: Paused before answering; he added more anyway | didn't work\nTRIAL: Rank the three jobs out loud | 3",
+        "Good.\n§§FOLLOW_UPS§§\nOk\nDONE: Said it first | partly"
     ].map((input) => ({input, output: focus.extractCompanionLines(input)})),
     conversationOffersDebate: [
         [{role: "assistant", content: 'Want other ways?\n```animaldex-card\n{"kind":"debate","title":"How would other animals handle this?","problem":"My boss."}\n```'}],

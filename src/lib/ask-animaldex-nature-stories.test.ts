@@ -524,6 +524,7 @@ test("the owner hears who came by, and a check-in they asked for, in the hello",
     });
     assert.ok(hello.includes("visitors_since_you_last_talked"));
     assert.ok(hello.includes('invited_follow_up — they asked you to check back on this (2026-10-20): "the job interview"'));
-    assert.ok(hello.includes("under 30 words"));
+    // A hello is 0.7 of the animal's short length (the apps' greeting, Debates v2).
+    assert.ok(hello.includes("under 21 words"));
     assert.ok(hello.includes("If how_you_met is given"));
 });

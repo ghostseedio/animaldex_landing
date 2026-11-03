@@ -190,7 +190,7 @@ import {useAnimalSounds} from "@/components/ask-animaldex/use-animal-sounds";
 import AskVoiceCallButton from "@/components/ask-animaldex/voice-call/ask-voice-call-button";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
 import type {DebateEdit, DebateHost} from "@/components/debates/debate-sheet";
-import {useMyDebates} from "@/components/debates/use-debates";
+import {fetchDebate, noteDebateChanged, useMyDebates} from "@/components/debates/use-debates";
 import {debateSeedProblem, type Debate, type DebateNamedAnimal, type DebateRequest} from "@/lib/debates";
 import {ASK_DIAGRAM_ADVANCE_PX, askCopyText, askReplyIsRealProblem, askTextColumns} from "@/lib/ask-animaldex/rich";
 import {talkAskAnotherOffered, talkChatPath, type TalkCapabilityWords, type TalkWords} from "@/lib/ask-animaldex/talk";
@@ -734,6 +734,14 @@ export default function AskConversation({
             noteOpenStep(companionSpeciesProfileId, update.loop.openStep);
             // The reply itself shows it: "Done together", or the Power earned, in its bubble.
             if (update.event.stepDone) void reloadCompanions();
+            // A debate's way that did not work: the debate is open again, its
+            // other ways there to try, in this thread and on its page.
+            const reopened = update.event.stepDone?.reopenedDebateId;
+            if (reopened) {
+                void fetchDebate(reopened).then(({debate}) => {
+                    if (debate) noteDebateChanged(debate);
+                });
+            }
         },
         // A call that ended on yes to a debate: set up once the call is over (Private, "From your call").
         onDebateRequest: (request) => {
@@ -2226,7 +2234,7 @@ export default function AskConversation({
                         />
                     );
                 }
-                return <AskDoneSection key="done" xp={special.xp} proofBonus={special.proofBonus} step={special.step} words={words} shareLabel={shareLabel} onShare={() => shareCard(message.id, null)} />;
+                return <AskDoneSection key="done" xp={special.xp} proofBonus={special.proofBonus} step={special.step} words={words} shareLabel={shareLabel} onShare={() => shareCard(message.id, null)} outcome={special.outcome} />;
             }
             case "step":
                 // Only the newest reply that set the open step has its buttons.

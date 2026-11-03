@@ -24,6 +24,8 @@ import {
     debateOfferAnimals,
     debateOfferProblem,
     describeStepMedia,
+    parseStepOutcome,
+    stepReportDebateLine,
     stepReportMediaLine,
     type CompanionStepReport,
     extractCompanionLines,
@@ -69,9 +71,22 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
     }
 }
 
-test("the fixture is the proof bonus + debates fixes server lane's build (owner, 2026-10-31)", () => {
-    assert.equal(fixture.source.ref, "proof-debates-server");
-    assert.match(fixture.source.commit, /^1c2b3bc2/);
+test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () => {
+    assert.equal(fixture.source.ref, "main");
+    assert.match(fixture.source.commit, /^7078beed/);
+});
+
+test("step outcomes: the DONE line's outcome and the debate a step came from read as the server reads them", () => {
+    for (const item of fixture.outcomes.parseStepOutcome) {
+        assert.equal(parseStepOutcome(item.input), item.output, JSON.stringify(item.input));
+    }
+    for (const item of fixture.outcomes.stepReportDebateLine) {
+        assert.equal(stepReportDebateLine(item.input as CompanionStepReport), item.output, JSON.stringify(item.input));
+    }
+    // An honest attempt still counts, and the next step comes in the same reply when it did not work.
+    const rules = fixture.companionLoopRules.offersSteps.join("\n");
+    assert.equal(rules.includes("It did not work: never say well done or talk as if it were solved."), true);
+    assert.equal(fixture.extractCompanionLines.some((item) => item.output.lines.doneOutcome === "didnt_work"), true);
 });
 
 test("proof bonus: the animal hears what the proof shows, as the server says it", () => {

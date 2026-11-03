@@ -103,6 +103,7 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
                     const name = debateAnimalName(participant);
                     const color = debateColor(participant);
                     const chosen = chosenId === participant.id;
+                    const tried = !chosen && debate.triedParticipantIds.includes(participant.id);
                     return (
                         <div key={participant.id} className="flex flex-col gap-1.5 py-3">
                             <div className="flex items-center gap-2">
@@ -114,7 +115,9 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
                             <ReportLine label={web.reportLesson} text={way.lesson} />
                             <ReportLine label={web.reportFits} text={way.fits} />
                             <ReportLine label={web.reportCosts} text={way.costs} />
-                            {onTryWay ? (
+                            {onTryWay && tried ? (
+                                <p className="mt-1.5 text-[13px] font-semibold text-white/60" data-testid="debate-tried-way">{words.debate.didntWorkForYou}</p>
+                            ) : onTryWay ? (
                                 <div className="mt-1.5 flex flex-col items-start gap-1">
                                     <button
                                         type="button"
@@ -426,8 +429,14 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                 ) : null}
                             </div>
                         ) : (
+                            <div className="flex flex-col gap-2">
+                                {ways.filter(({participant}) => debate.triedParticipantIds.includes(participant.id)).map(({participant}) => (
+                                    <p key={participant.id} className="text-[13px] font-semibold leading-5 text-white/60" data-testid="debate-tried-way">
+                                        {fillWords(words.debate.wayDidntWork, {name: debateAnimalName(participant)})}
+                                    </p>
+                                ))}
                             <div className="flex flex-wrap gap-2" data-testid="debate-try-ways">
-                                {ways.map(({participant}) => (
+                                {ways.filter(({participant}) => !debate.triedParticipantIds.includes(participant.id)).map(({participant}) => (
                                     <button
                                         key={participant.id}
                                         type="button"
@@ -438,6 +447,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                         {choosing === participant.id ? web.choosing : fillWords(words.debate.tryWay, {name: debateAnimalName(participant)})}
                                     </button>
                                 ))}
+                            </div>
                             </div>
                         )
                     ) : null}
