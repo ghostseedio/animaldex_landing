@@ -73,7 +73,7 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
 
 test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () => {
     assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^4c840869/);
+    assert.match(fixture.source.commit, /^059ba3df/);
 });
 
 test("step outcomes: the DONE line's outcome and the debate a step came from read as the server reads them", () => {
@@ -102,7 +102,7 @@ test("debates fixes: the offer's problem is the animal's focus, as the server pi
         assert.equal(debateOfferProblem(parseCompanionState(item.input.state), item.input.lines, item.input.written), item.output, JSON.stringify(item.input));
     }
     // The offer comes first in a reply where it may be made.
-    assert.equal(fixture.companionLoopRules.debates.join("\n").includes("this offer comes first"), true);
+    assert.equal(fixture.companionLoopRules.debates.join(" ").replace(/\s+/g, " ").includes("the offer comes first"), true);
 });
 
 test("the companion loop's rules and hidden lines are the apps', word for word", () => {
