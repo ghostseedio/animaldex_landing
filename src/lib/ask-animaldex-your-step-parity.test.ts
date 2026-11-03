@@ -73,7 +73,7 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
 
 test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () => {
     assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^7078beed/);
+    assert.match(fixture.source.commit, /^4c840869/);
 });
 
 test("step outcomes: the DONE line's outcome and the debate a step came from read as the server reads them", () => {
