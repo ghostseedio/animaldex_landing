@@ -8,12 +8,13 @@ import {fillWords, trialDifficulty, trialDifficultyText, type CompanionWords} fr
 import {stepCardState, type AnimalStep, type StepProblemCode} from "@/lib/your-step";
 
 /**
- * The card's first button (SPEC section 5): "I'll do it" until accepted, then
- * "I did it", and "Tell {name} more" once a report is attached.
+ * The card's first button (SPEC section 5): "I've done it", and "Tell {name}
+ * more" once a report is attached. Both open the report: a step needs no
+ * accepting first (owner, 2026-11-03: "I'll do it" is gone).
  */
 export function stepPrimaryLabel(step: Pick<AnimalStep, "acceptedAt" | "hasReport">, name: string, words: CompanionWords): string {
     switch (stepCardState(step)) {
-        case "offered": return words.journey.step.accept;
+        case "offered":
         case "accepted": return words.journey.step.didIt;
         case "reported": return fillWords(words.journey.report.more, {name});
     }

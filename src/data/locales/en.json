@@ -2632,7 +2632,7 @@
         "eyebrow": "Your step with {name}",
         "accept": "I'll do it",
         "other": "A different step",
-        "didIt": "I did it",
+        "didIt": "I've done it",
         "otherMessage": "Can I have a different step?",
         "pinnedLabel": "Your step"
       },

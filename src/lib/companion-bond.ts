@@ -104,7 +104,7 @@ export const YOUR_STEP_COPY = {
         accept: "I'll do it",
         /** Was "Something else" (newcomer UX vet, 2026-10-30): says what it does. */
         other: "A different step",
-        didIt: "I did it",
+        didIt: "I've done it",
         otherMessage: "Can I have a different step?",
         pinnedLabel: "Your step"
     },

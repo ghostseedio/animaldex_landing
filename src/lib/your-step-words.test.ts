@@ -23,13 +23,13 @@ const STEP = "5d6e7f80-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const indonesian = companionWords(JSON.parse(readFileSync(join(repoRoot, "src/data/locales/id.json"), "utf8")).companions);
 
-test("the card's first button: I'll do it, I did it, then Tell {name} again", () => {
+test("the card's first button: I've done it, then Tell {name} again", () => {
     const offered = decodeAnimalStep({id: STEP, step: "Walk"})!;
-    assert.equal(stepPrimaryLabel(offered, "Leo", COMPANION_WORDS_EN), "I'll do it");
-    assert.equal(stepPrimaryLabel(acceptingStep(offered), "Leo", COMPANION_WORDS_EN), "I did it");
+    assert.equal(stepPrimaryLabel(offered, "Leo", COMPANION_WORDS_EN), "I've done it");
+    assert.equal(stepPrimaryLabel(acceptingStep(offered), "Leo", COMPANION_WORDS_EN), "I've done it");
     assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", COMPANION_WORDS_EN), "Tell Leo more");
     assert.equal(stepPrimaryLabel(reportingStep(offered), "Leo", indonesian), "Ceritakan lagi kepada Leo");
-    assert.equal(stepPrimaryLabel(offered, "Leo", indonesian), "Akan saya lakukan");
+    assert.equal(stepPrimaryLabel(offered, "Leo", indonesian), "Sudah saya lakukan");
 });
 
 test("what is sent to the animal is the person's own message, in their language", () => {

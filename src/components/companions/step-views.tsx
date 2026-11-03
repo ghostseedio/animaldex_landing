@@ -62,7 +62,7 @@ export function StepCard({
     busy?: boolean;
     /** Why the last button press did not go through, in words. */
     problem?: string | null;
-    /** "I'll do it", or "I did it" / "Tell {name} more" (which open the report). */
+    /** "I've done it" / "Tell {name} more": both open the report. */
     onPrimary: () => void;
     onOther: () => void;
 }) {

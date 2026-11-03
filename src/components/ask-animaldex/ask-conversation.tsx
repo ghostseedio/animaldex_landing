@@ -109,7 +109,6 @@ import {
     cleanStepReport,
     isStepVideoFile,
     reportingStep,
-    stepCardState,
     stepReportReady,
     MAX_STEP_REPORT_CHARACTERS,
     STEP_MEDIA_ACCEPT,
@@ -122,7 +121,6 @@ import {notingTrainingResult, trainingCanStart} from "@/lib/species-training";
 import {submitSpeciesTraining, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 import {
-    acceptStep,
     attachStepReport,
     dropStep,
     noteOpenStep,
@@ -1644,20 +1642,10 @@ export default function AskConversation({
         setReportPreview(null);
         setReporting(null);
     }, [openStep, setReportPreview]);
-    /** "I'll do it" accepts; "I did it" (or "Tell {name} more") puts the bar in report mode. */
-    const stepPrimary = useCallback((step: AnimalStep) => {
-        if (stepCardState(step) !== "offered") {
-            startReport();
-            return;
-        }
-        setStepBusy(true);
-        setStepProblem(null);
-        void acceptStep(step).then((result) => {
-            setStepBusy(false);
-            if (result.ok) setOpenStep(result.value);
-            else setStepProblem(stepProblemText(result.code, words));
-        });
-    }, [setOpenStep, words, startReport]);
+    /** "I've done it" (or "Tell {name} more") puts the bar in report mode: no accepting first. */
+    const stepPrimary = useCallback((_step: AnimalStep) => {
+        startReport();
+    }, [startReport]);
     /** "A different step": the step is dropped, then they ask for a different one, as their own message. */
     const stepOther = useCallback((step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;

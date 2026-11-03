@@ -19,7 +19,7 @@
 import {useCallback, useEffect, useState} from "react";
 import Image from "next/image";
 import {StepCard, StepRecordEntry, StepRecordList, TrialRows} from "@/components/companions/step-views";
-import {acceptStep, dropStep, stepFromTrial, useStepRecords} from "@/components/companions/use-steps";
+import {dropStep, stepFromTrial, useStepRecords} from "@/components/companions/use-steps";
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 import {
     COMPANION_WORDS_EN,
@@ -33,7 +33,7 @@ import {
 } from "@/lib/companion-bond";
 import {type AnimalTrial} from "@/lib/animal-trials";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
-import {stepCardState, type AnimalStep, type StepFrequency, type StepRecordWithMedia} from "@/lib/your-step";
+import {type AnimalStep, type StepFrequency, type StepRecordWithMedia} from "@/lib/your-step";
 import {stepProblemText, warmupOfferText} from "@/lib/your-step-words";
 
 const NEON = "#A7F432";
@@ -173,18 +173,9 @@ export default function BondPanel({
             });
     }, [bond, onBondChanged, onStepChange, speciesProfileId]);
 
-    const primary = (step: AnimalStep) => {
-        if (stepCardState(step) !== "offered") {
-            onDidIt();
-            return;
-        }
-        setStepBusy(true);
-        setStepProblem(null);
-        void acceptStep(step).then((result) => {
-            setStepBusy(false);
-            if (result.ok) onStepChange(result.value);
-            else setStepProblem(stepProblemText(result.code, words));
-        });
+    /** "I've done it" (or "Tell {name} more") opens the report: no accepting first. */
+    const primary = (_step: AnimalStep) => {
+        onDidIt();
     };
 
     const other = (step: AnimalStep) => {
