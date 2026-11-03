@@ -2,7 +2,7 @@
   "source": {
     "repo": "AnimalDex",
     "ref": "main",
-    "commit": "059ba3df6f0c2014ecf7cbe78e2c806cbe3fb358",
+    "commit": "4ad732f17108fdae33b7775256b65cf0a23f7040",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",
@@ -535,8 +535,9 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
-      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-      "  one, leave it for the rest of this conversation."
+      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+      "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+      "  conversation."
     ],
     "noSteps": [
       "Helping them with their life — what you are for, with your owner:",
@@ -579,8 +580,9 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
-      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-      "  one, leave it for the rest of this conversation."
+      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+      "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+      "  conversation."
     ],
     "debates": [
       "Helping them with their life — what you are for, with your owner:",
@@ -657,7 +659,9 @@
       "    genuinely help them: they bring it as a choice between options or are torn, your way does not sit right with",
       "    them, they ask for more or what else they could do, or a step on it did not work. Then, after your own take in",
       "    that same reply, the offer comes first: make it instead of a new step or your Trials or Warmup; the step can",
-      "    come from the way they choose.",
+      "    come from the way they choose. Except when they ask you for a different step: give them another of your own (a",
+      "    step, not your Trials), then make the offer after it in the same reply, so they have a step whether or not they",
+      "    take the offer.",
       "  - Not the time for the offer: small talk; while they are still telling you something hard (the step rules for a",
       "    hard moment still apply); when anyone is hurting them; or when they have already decided what to do and ask",
       "    you how, which is the moment for the step.",
@@ -668,8 +672,9 @@
       "  instead of your own answer. Once for a problem: if they let it pass or say no, leave it. Without",
       "  companion.debate, do not offer it. In a reply where it is not the moment for the offer, the step rules apply",
       "  as they would without it.",
-      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-      "  one, leave it for the rest of this conversation."
+      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+      "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+      "  conversation."
     ],
     "debatesNoSteps": [
       "Helping them with their life — what you are for, with your owner:",
@@ -712,8 +717,9 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
-      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-      "  one, leave it for the rest of this conversation."
+      "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+      "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+      "  conversation."
     ]
   },
   "stepOfferRules": {
@@ -2142,8 +2148,9 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
-        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-        "  one, leave it for the rest of this conversation.",
+        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+        "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+        "  conversation.",
         ""
       ],
       "output": [
@@ -2260,8 +2267,9 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
-        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-        "  one, leave it for the rest of this conversation.",
+        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+        "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+        "  conversation.",
         ""
       ],
       "output": [
@@ -2570,7 +2578,9 @@
         "    genuinely help them: they bring it as a choice between options or are torn, your way does not sit right with",
         "    them, they ask for more or what else they could do, or a step on it did not work. Then, after your own take in",
         "    that same reply, the offer comes first: make it instead of a new step or your Trials or Warmup; the step can",
-        "    come from the way they choose.",
+        "    come from the way they choose. Except when they ask you for a different step: give them another of your own (a",
+        "    step, not your Trials), then make the offer after it in the same reply, so they have a step whether or not they",
+        "    take the offer.",
         "  - Not the time for the offer: small talk; while they are still telling you something hard (the step rules for a",
         "    hard moment still apply); when anyone is hurting them; or when they have already decided what to do and ask",
         "    you how, which is the moment for the step.",
@@ -2581,8 +2591,9 @@
         "  instead of your own answer. Once for a problem: if they let it pass or say no, leave it. Without",
         "  companion.debate, do not offer it. In a reply where it is not the moment for the offer, the step rules apply",
         "  as they would without it.",
-        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-        "  one, leave it for the rest of this conversation.",
+        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+        "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+        "  conversation.",
         ""
       ],
       "output": [
@@ -2706,8 +2717,9 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
-        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply; if they ignore or decline",
-        "  one, leave it for the rest of this conversation.",
+        "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
+        "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
+        "  conversation.",
         ""
       ],
       "output": [
