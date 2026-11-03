@@ -138,6 +138,24 @@ export async function getMyDebatesPage(): Promise<{enabled: boolean; debates: De
     return {enabled, debates: debates ?? [], available: debates !== null};
 }
 
+/**
+ * Someone's public debates, for their profile's Diary tab
+ * (`public_debates_v1`, owner 2026-11-03): only those they asked in public,
+ * in public words. Private debates are never listed. Readable signed out.
+ */
+export async function getPublicDebates(userId: string): Promise<Debate[]> {
+    if (!(await loadDebatesEnabled())) return [];
+    const supabase = createSupabaseServerClient() ?? createSupabaseServiceClient();
+    if (!supabase) return [];
+    try {
+        const {data, error} = await supabase.rpc("public_debates_v1", {p_user_id: userId, p_limit: 50});
+        if (error) return [];
+        return withDebateSlugs(decodeDebates(data));
+    } catch {
+        return [];
+    }
+}
+
 export async function getDebateForViewer(debateId: string): Promise<Debate | null> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return null;

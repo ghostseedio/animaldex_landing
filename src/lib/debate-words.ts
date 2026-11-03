@@ -75,6 +75,10 @@ export function debateResultLines(debate: Debate, words: CompanionWords): string
     if (debate.status !== "settled") return [];
     const lines: string[] = [];
     const winner = winnerOf(debate);
+    if (winner && debate.askedPublic) {
+        // Asked in public: the community's pick, nothing won or lost.
+        return [fillWords(words.debateWeb.communityPicked, {name: debateAnimalName(winner)})];
+    }
     if (winner) {
         const name = debateAnimalName(winner);
         lines.push(winner.ownerIsMe && winner.creditsWon > 0

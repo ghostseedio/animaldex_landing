@@ -15,6 +15,7 @@ import {
 import {getCollectionBinders} from "@/data/collection-binders";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getCompanionWords} from "@/loaders/companion-words";
+import {getPublicDebates} from "@/data/debates";
 import {formatDiscoveryDistance} from "@/lib/format-discovery-distance";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
@@ -124,12 +125,19 @@ export async function ProfilePageBody({
     const listedPacksPromise = getMemberListedPacks(profile.userId);
     const virtualGuidesPromise = getVirtualGuideProfile(profile.userId, viewer.isOwner);
     const boughtGuidesPromise = viewer.isOwner ? getMyWildlifeGuidePurchases().catch(() => []) : Promise.resolve([]);
-    const [listedPacks, social, virtualGuides, boughtGuides] = await Promise.all([
+    // Someone else's Diary tab: only the debates they asked in public (owner, 2026-11-03).
+    const publicDebatesPromise = viewer.isOwner
+        ? Promise.resolve(null)
+        : Promise.all([getPublicDebates(profile.userId), getCompanionWords(locale)])
+            .then(([debates, words]) => ({debates, words}))
+            .catch(() => null);
+    const [listedPacks, social, virtualGuides, boughtGuides, publicDebates] = await Promise.all([
         listedPacksPromise,
         // Also records this visit as a profile view for a signed-in non-owner.
         getProfileSocialState(profile.userId),
         virtualGuidesPromise,
-        boughtGuidesPromise
+        boughtGuidesPromise,
+        publicDebatesPromise
     ]);
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
@@ -211,6 +219,7 @@ export async function ProfilePageBody({
                     tabStats: t("tabStats"),
                     tabHistory: t("tabHistory"),
                     tabShop: t("tabShop"),
+                    tabDiary: t("tabDiary"),
                     settingsActivity: t("settingsActivity"),
                     earnings: t("earnings"),
                     settingsEndorsements: t("settingsEndorsements"),
@@ -269,6 +278,7 @@ export async function ProfilePageBody({
                     viewSignedInAs: t("viewSignedInAs")
                 }}
                 companionWords={companionWords}
+                publicDebates={publicDebates}
                 locale={locale}
                 localePrefix={localePrefix}
                 viewer={viewer}

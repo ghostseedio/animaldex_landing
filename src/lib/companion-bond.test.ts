@@ -218,7 +218,10 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(DEBATE_COPY.othersAnimals, "Other people's animals");
     assert.equal(DEBATE_COPY.noOthers, "No one else's animals can join yet, so yours debate it and the community votes.");
     const {ownOnly: _ownOnly, ...retiredChecked} = DEBATE_COPY;
-    const english = said({debate: retiredChecked, roster: ROSTER_COPY, heal: HEAL_COPY, web: COMPANION_WORDS_EN.debateWeb}).join("\n");
+    // Ask the public (owner, 2026-11-03) says the same "nothing at stake".
+    assert.equal(COMPANION_WORDS_EN.debateWeb.askedPublicNote, "Asked in public. Nothing at stake: the community picks the way that helps most.");
+    const {askedPublicNote: _askedPublicNote, ...webChecked} = COMPANION_WORDS_EN.debateWeb;
+    const english = said({debate: retiredChecked, roster: ROSTER_COPY, heal: HEAL_COPY, web: webChecked}).join("\n");
     for (const retired of ["Battle", "battle", "Opponent", "Rival", "Arena", "Matchup", "Rulebook", "Restore", "stake", "Tier "]) {
         assert.equal(english.includes(retired), false, retired);
     }

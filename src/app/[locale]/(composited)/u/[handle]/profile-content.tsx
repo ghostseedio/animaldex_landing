@@ -12,6 +12,8 @@ import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-
 import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
 import MyCompanionsSection from "@/components/companions/my-companions-section";
 import type {CompanionWords} from "@/lib/companion-bond";
+import {DebateRow} from "@/components/debates/debate-views";
+import type {Debate} from "@/lib/debates";
 import {useOwnCardLevel} from "@/components/companions/use-companions";
 import {useSearchParams} from "next/navigation";
 import {
@@ -53,7 +55,7 @@ import type {GuideBought} from "@/lib/virtual-wildlife-guides";
 import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import StoreLink from "@/components/store/store-link";
 
-export type ProfileTab = "history" | "stats" | "shop" | "locations";
+export type ProfileTab = "history" | "stats" | "diary" | "shop" | "locations";
 
 /** iOS `historyPageSize`. */
 const HISTORY_PAGE_SIZE = 18;
@@ -68,6 +70,7 @@ export type ProfileContentLabels = {
     tabStats: string;
     tabHistory: string;
     tabShop: string;
+    tabDiary: string;
     settingsActivity: string;
     earnings: string;
     settingsEndorsements: string;
@@ -177,6 +180,11 @@ type ProfileContentProps = {
     labels: ProfileContentLabels;
     /** "My Companions", in the reader's language. */
     companionWords?: CompanionWords;
+    /**
+     * Someone else's Diary tab: the debates they asked in public, and the
+     * words for them (owner, 2026-11-03). Null on your own profile.
+     */
+    publicDebates?: {debates: Debate[]; words: CompanionWords} | null;
     locale: string;
     shareButton: React.ReactNode;
     localePrefix: string;
@@ -228,6 +236,11 @@ const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
             <path d="M12 2.2 21.4 6v1.1H2.6V6z" />
             <path d="M3.4 8.6h17.2v10.1a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2zM8.5 11.4h7v1.9h-7z" fillOpacity="1" />
+        </svg>
+    ),
+    diary: (
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M6 2.8h11.2a1.8 1.8 0 0 1 1.8 1.8v14.8a1.8 1.8 0 0 1-1.8 1.8H6a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2m2.2 4.1v1.8h7.6V6.9zm0 3.6v1.8h5.4v-1.8z" />
         </svg>
     ),
     locations: (
@@ -512,6 +525,7 @@ export default function ProfileContent({
     profile,
     labels,
     companionWords,
+    publicDebates = null,
     locale,
     shareButton,
     localePrefix,
@@ -564,15 +578,19 @@ export default function ProfileContent({
         () => surface === "app" && viewer.isOwner
             // Your own profile in the app: Shop and Locations live in the drawer.
             ? drawerTab ? ["history", "stats", drawerTab] : ["history", "stats"]
-            : profile.canViewLocations || viewer.isOwner
+            : viewer.isOwner
                 ? ["history", "stats", "shop", "locations"]
-                : ["history", "stats", "shop"],
+                // Someone else's: their Diary holds only what they asked in public.
+                : profile.canViewLocations
+                    ? ["history", "stats", "diary", "shop", "locations"]
+                    : ["history", "stats", "diary", "shop"],
         [drawerTab, profile.canViewLocations, surface, viewer.isOwner]
     );
     const tabLabel = (tab: ProfileTab) => {
         if (tab === "history") return labels.tabHistory;
         if (tab === "stats") return labels.tabStats;
         if (tab === "shop") return labels.tabShop;
+        if (tab === "diary") return labels.tabDiary;
         return labels.locationsTitle;
     };
 
@@ -1001,6 +1019,21 @@ export default function ProfileContent({
                         ) : null}
                     </div>
                 )
+            ) : null}
+
+            {activeTab === "diary" ? (
+                <section className={`flex flex-col px-5 ${bleed}`} data-testid="profile-public-debates">
+                    {publicDebates && publicDebates.debates.length > 0 ? (
+                        publicDebates.debates.map((debate) => (
+                            <DebateRow key={debate.id} debate={debate} words={publicDebates.words} href={`/app/debates/${debate.id}`} />
+                        ))
+                    ) : (
+                        <p className="px-[18px] py-10 text-center text-[15px] font-medium text-white/[0.62]">
+                            {(publicDebates?.words.debateWeb.publicDebatesEmpty ?? "{name} hasn't asked the public yet. Private debates never show here.")
+                                .replace("{name}", profile.displayName)}
+                        </p>
+                    )}
+                </section>
             ) : null}
 
             {activeTab === "locations" ? (

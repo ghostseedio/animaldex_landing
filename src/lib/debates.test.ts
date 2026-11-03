@@ -8,7 +8,9 @@ import {
     decodeDebateRequest,
     preselectedDebatePicks,
     suggestedDebatePicks,
+    debateHasStakes,
     debateIsMine,
+    debateIsOwnOnly,
     debateOpenings,
     debateProblemCode,
     debateVoteState,
@@ -377,4 +379,27 @@ test("SPEC section 6: the animals it named are pre-selected first, then the sugg
     // Named animals that are not candidates (a public debate's roster) leave the suggestions.
     assert.deepEqual(preselectedDebatePicks(candidates, [named("zzz", "s9")]), suggestedDebatePicks(candidates));
     assert.deepEqual(preselectedDebatePicks(candidates, []), ["a", "c", "d"]);
+});
+
+test("ask the public: nothing at stake, the community's pick, and only public words for others", () => {
+    const wolf = "11111111-0000-4000-8000-0000000000a1";
+    const heron = "11111111-0000-4000-8000-0000000000a3";
+    // A Discover post names no visibility and no has_stakes, only asked_public.
+    const post = decodeDebate({
+        debate_id: "11111111-0000-4000-8000-000000000001", status: "settled", visibility: "public", asked_public: true,
+        problem_public: "My manager keeps piling work on me.", winner_participant_id: wolf,
+        participants: [
+            {participant_id: wolf, seat: 0, animal: "Gray Wolf"},
+            {participant_id: heron, seat: 1, animal: "Grey Heron", kind: "community", is_asker_owned: false}
+        ]
+    });
+    assert.ok(post);
+    assert.equal(post.askedPublic, true);
+    assert.equal(debateHasStakes(post), false);
+    assert.equal(debateIsOwnOnly(post), false, "not the own-animals note: it was asked in public");
+    assert.deepEqual(debateResultLines(post, COMPANION_WORDS_EN), ["The community picked Gray Wolf's way."]);
+    assert.equal(debateHeadline(post), "My manager keeps piling work on me.");
+    // An older row says nothing: as before.
+    const older = decodeDebate({id: "11111111-0000-4000-8000-000000000002", status: "voting", visibility: "public", participants: []});
+    assert.equal(older?.askedPublic, false);
 });

@@ -307,6 +307,10 @@ export const DEBATE_WEB_COPY = {
     statusVoting: "Voting is open",
     statusDone: "Report ready",
     wonBy: "{name}'s way won.",
+    /** Ask the public (2026-11-03): the result, the note, someone's profile. */
+    communityPicked: "The community picked {name}'s way.",
+    askedPublicNote: "Asked in public. Nothing at stake: the community picks the way that helps most.",
+    publicDebatesEmpty: "{name} hasn't asked the public yet. Private debates never show here.",
     reportProblem: "The problem",
     reportWay: "Its way",
     reportLesson: "The lesson behind it",

@@ -26,6 +26,9 @@ export default function DebateDetail({debate, words, typingLabel, backLabel, loc
                         {debate.askerIsMe && debate.visibility === "private" ? words.debateWeb.yourDebate : words.debate.voteQuestion}
                     </p>
                     <h1 className="mt-1 font-display text-2xl font-black leading-8 text-white">{headline}</h1>
+                    {debate.askedPublic ? (
+                        <p className="mt-2 text-xs font-semibold text-white/55">{words.debateWeb.askedPublicNote}</p>
+                    ) : null}
                 </div>
             ) : null}
             <DebateThread seed={debate} words={words} typingLabel={typingLabel} locale={locale} />

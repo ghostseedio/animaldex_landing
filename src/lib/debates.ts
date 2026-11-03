@@ -139,6 +139,12 @@ export type Debate = {
      * (`debateHasStakes` then reads the animals).
      */
     stakes: boolean | null;
+    /**
+     * Asked in public after it ran privately (Ask the public, 2026-11-03):
+     * nothing at stake, and anyone but the asker reads only the anonymised
+     * problem and ways. Discover's posts say it with `asked_public`.
+     */
+    askedPublic: boolean;
 };
 
 /** One row of `debate_candidates_v1`. */
@@ -430,7 +436,8 @@ export function decodeDebate(raw: unknown): Debate | null {
         stakes: (() => {
             const said = first(row, "has_stakes", "hasStakes", "stakes", "at_stake");
             return typeof said === "boolean" ? said : null;
-        })()
+        })(),
+        askedPublic: bool(first(row, "asked_public", "askedPublic"))
     };
 }
 
@@ -508,15 +515,16 @@ export function canHealHeart(hearts: number | null | undefined, credits: number 
  * different owners. A private debate never; a public one of only the asker's
  * own animals never either, though it still goes to the vote and Discover.
  */
-export function debateHasStakes(debate: Pick<Debate, "visibility" | "participants" | "stakes">): boolean {
-    if (debate.visibility !== "public") return false;
+export function debateHasStakes(debate: Pick<Debate, "visibility" | "participants" | "stakes"> & {askedPublic?: boolean}): boolean {
+    // Asked in public after it ran: never any stakes.
+    if (debate.visibility !== "public" || debate.askedPublic) return false;
     if (debate.stakes !== null) return debate.stakes;
     return debate.participants.some((participant) => !participant.isAskerOwned);
 }
 
 /** A public debate of only the asker's own animals: "Only your animals: nothing at stake." */
-export function debateIsOwnOnly(debate: Pick<Debate, "visibility" | "participants" | "stakes">): boolean {
-    return debate.visibility === "public" && debate.participants.length > 0 && !debateHasStakes(debate);
+export function debateIsOwnOnly(debate: Pick<Debate, "visibility" | "participants" | "stakes"> & {askedPublic?: boolean}): boolean {
+    return debate.visibility === "public" && !debate.askedPublic && debate.participants.length > 0 && !debateHasStakes(debate);
 }
 
 /**
