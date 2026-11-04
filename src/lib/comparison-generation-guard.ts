@@ -12,7 +12,11 @@ import {getSupabaseServiceKey} from "@/lib/supabase-http";
  *      click wasn't scripted the instant the page loaded and young enough that
  *      it wasn't harvested and replayed later,
  *   3. a same-origin browser request without a known bot user agent,
- * plus the per-IP and site-wide rate limits in the route.
+ *   4. (Nov 2026) a signed-in AnimalDex account or an admin session: an
+ *      anonymous visitor or crawler reads published comparisons (the static
+ *      pages and the snapshot) and never spends on a new one,
+ * plus the per-account, per-IP and site-wide rate limits in the route.
+ * Repainting an existing comparison's artwork is for admins only.
  */
 
 export const INTENT_MIN_AGE_MS = 1500;
@@ -74,4 +78,32 @@ export function isSameOriginBrowserRequest(request: Request) {
     } catch {
         return false;
     }
+}
+
+/** Who is asking to spend: an admin session, a signed-in AnimalDex account, or nobody. */
+export type GenerationRequester = {kind: "admin"} | {kind: "user"; userId: string} | {kind: "anonymous"};
+
+export type GenerationRefusal = {status: 401 | 403; error: "sign_in_required" | "forbidden" | "intent_expired"};
+
+/** Null when this request may generate; otherwise the answer the route gives. */
+export function generationRefusal(input: {
+    requester: GenerationRequester;
+    userAgent: string | null;
+    sameOrigin: boolean;
+    intent: IntentCheck;
+    pairMatchesIntent: boolean;
+    refreshImage: boolean;
+}): GenerationRefusal | null {
+    if (looksLikeBot(input.userAgent) || !input.sameOrigin) return {status: 403, error: "forbidden"};
+    if (input.requester.kind === "anonymous") return {status: 401, error: "sign_in_required"};
+    if (input.refreshImage && input.requester.kind !== "admin") return {status: 403, error: "forbidden"};
+    if (input.intent === "expired") return {status: 403, error: "intent_expired"};
+    if (input.intent !== "ok" || !input.pairMatchesIntent) return {status: 403, error: "forbidden"};
+    return null;
+}
+
+/** New comparisons one signed-in account may start a day (COMPARISON_USER_DAILY_LIMIT, default 5). */
+export function userDailyGenerationLimit(env: NodeJS.ProcessEnv = process.env) {
+    const value = Number(env.COMPARISON_USER_DAILY_LIMIT);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 5;
 }

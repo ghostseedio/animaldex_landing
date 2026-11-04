@@ -38,6 +38,9 @@ export async function renderComparisonGenerating({locale, basePath, slug, animal
                     errorDescription: t("generating.errorDescription"),
                     rateLimitTitle: t("generating.rateLimitTitle"),
                     rateLimitDescription: t("generating.rateLimitDescription"),
+                    signInTitle: t("generating.signInTitle"),
+                    signInDescription: t("generating.signInDescription"),
+                    signInLabel: t("generating.signIn"),
                     retryLabel: t("generating.retry"),
                     browseLabel: t("generating.browse")
                 }}

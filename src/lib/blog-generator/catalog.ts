@@ -17,6 +17,7 @@ export type CatalogKind = "species" | "comparison" | "hybrid" | "ranking" | "loc
 export type CatalogItem = {kind: CatalogKind; title: string; href: string; slug: string};
 
 const HUBS: CatalogItem[] = [
+    {kind: "hub", title: "Talk: take any idea to an animal", href: "/talk", slug: "talk"},
     {kind: "hub", title: "Animal encyclopedia (every species)", href: "/animals", slug: "animals"},
     {kind: "hub", title: "Animal comparisons: who would win", href: "/comparisons", slug: "comparisons"},
     {kind: "hub", title: "Animal Hybrid Lab and fusions", href: "/animal-hybrids", slug: "animal-hybrids"},

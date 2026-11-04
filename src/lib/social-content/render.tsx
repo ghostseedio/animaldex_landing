@@ -11,7 +11,9 @@ import type {Slide} from "@/lib/social-content/types";
 // Barlow Condensed ExtraBold headlines in capitals, the punchline word in
 // AnimalDex lime, photos full-bleed under a dark gradient. Picture first: a
 // photo fills every slide that has one, the words sit low and short, and a
-// words-only slide sits on a blurred photo rather than flat black. Three sizes:
+// words-only slide sits on a blurred photo rather than flat black. The one
+// exception is "the usual answer" (layout "usual"): a plain grey card with no
+// photo and no lime, so the animal's take on the next slide stands out. Three sizes:
 //   feed 1080×1350 (4:5)  Instagram, Facebook, Threads, X, Bluesky
 //   tall 1080×1920 (9:16) TikTok photo mode, text kept out of its side and bottom UI
 //   pin  1000×1500 (2:3)  the Pinterest cover
@@ -25,6 +27,8 @@ export const SLIDE_SIZES: Record<SlideSize, {width: number; height: number}> = {
 
 const LIME = "#A7F432";
 const INK = "#0E0F0E";
+/** The usual answer's greys: deliberately flat next to the animal's take. */
+const USUAL = {background: "#2A2C2A", card: "#3A3D3A", edge: "#5E625E", title: "#E4E6E4", body: "#B9BDB9", kicker: "#F2F3F2"};
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 
 type Font = {name: string; data: Buffer; weight: 400 | 500 | 600 | 700 | 800; style: "normal"};
@@ -220,6 +224,22 @@ async function slideElement(slide: Slide, picture: Picture | null, frame: Frame)
                     <Headline text={slide.title} size={headlineSize(slide.title, 96)} />
                     <Body text={slide.body} size={38} />
                     <Stat stat={slide.stat} />
+                </div>
+            </Chrome>
+        );
+    }
+
+    if (slide.layout === "usual") {
+        return (
+            <Chrome frame={frame} background={<div style={{position: "absolute", top: 0, left: 0, width, height, display: "flex", background: USUAL.background}} />}>
+                <div style={{position: "absolute", left: pad, right, top: 0, bottom, display: "flex", flexDirection: "column", justifyContent: "center", gap: 28}}>
+                    {slide.kicker ? (
+                        <div style={{display: "flex", alignSelf: "flex-start", background: USUAL.edge, color: USUAL.kicker, fontFamily: "Barlow", fontWeight: 800, fontSize: 36, padding: "6px 18px", letterSpacing: 1}}>{slide.kicker.toUpperCase()}</div>
+                    ) : null}
+                    <div style={{display: "flex", flexDirection: "column", gap: 20, background: USUAL.card, border: `4px solid ${USUAL.edge}`, padding: "44px 48px"}}>
+                        <div style={{display: "flex", fontFamily: "Barlow", fontWeight: 800, fontSize: headlineSize(slide.title, 100), lineHeight: 1, color: USUAL.title}}>{slide.title.toUpperCase()}</div>
+                        {slide.body ? <div style={{display: "flex", fontSize: 40, fontWeight: 500, lineHeight: 1.3, color: USUAL.body}}>{slide.body}</div> : null}
+                    </div>
                 </div>
             </Chrome>
         );

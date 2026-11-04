@@ -17,6 +17,9 @@ export type ComparisonGeneratingCopy = {
     errorDescription: string;
     rateLimitTitle: string;
     rateLimitDescription: string;
+    signInTitle: string;
+    signInDescription: string;
+    signInLabel: string;
     retryLabel: string;
     browseLabel: string;
 };
@@ -48,8 +51,9 @@ export default function ComparisonGenerating({
     const router = useRouter();
     // Generation is paid, so it never starts on page load: the screen checks
     // status, then waits for a person to press Generate (bots crawled these
-    // pages and auto-started hundreds of comparisons).
-    const [status, setStatus] = useState<"checking" | "idle" | "working" | "error" | "rate-limited">("checking");
+    // pages and auto-started hundreds of comparisons). Since Nov 2026 only a
+    // signed-in account can generate; anyone else is asked to sign in.
+    const [status, setStatus] = useState<"checking" | "idle" | "working" | "error" | "rate-limited" | "sign-in">("checking");
     const [intent, setIntent] = useState<string | null>(null);
     const [stepIndex, setStepIndex] = useState(0);
     const [seconds, setSeconds] = useState(0);
@@ -83,10 +87,14 @@ export default function ComparisonGenerating({
                 {cache: "no-store"}
             );
             const payload = response.ok
-                ? (await response.json()) as {status?: string; slug?: string; intent?: string | null}
+                ? (await response.json()) as {status?: string; slug?: string; intent?: string | null; signInRequired?: boolean}
                 : null;
             if (payload?.status === "ready" && payload.slug) {
                 finish(payload.slug);
+                return;
+            }
+            if (payload?.signInRequired) {
+                setStatus("sign-in");
                 return;
             }
             setIntent(payload?.intent ?? null);
@@ -154,6 +162,13 @@ export default function ComparisonGenerating({
 
             if (settled) return;
 
+            if (response.status === 401) {
+                settled = true;
+                window.clearInterval(pollTimer);
+                setStatus("sign-in");
+                return;
+            }
+
             if (response.status === 403) {
                 settled = true;
                 window.clearInterval(pollTimer);
@@ -213,6 +228,8 @@ export default function ComparisonGenerating({
     }, [copy.steps.length, status]);
 
     const failed = status === "error" || status === "rate-limited";
+    // Back to this page after signing in.
+    const signInHref = `/account?next=${encodeURIComponent(`${basePath}/${slug}`)}`;
 
     return (
         <div className="mx-auto flex w-full max-w-[52rem] flex-col items-center px-4 py-20 text-center md:py-28">
@@ -236,7 +253,26 @@ export default function ComparisonGenerating({
                 </figure>
             </div>
 
-            {failed ? (
+            {status === "sign-in" ? (
+                <>
+                    <h1 className="mt-10 font-display text-3xl font-bold text-white md:text-4xl">{copy.signInTitle}</h1>
+                    <p className="mt-3 max-w-[34rem] text-base leading-7 text-ink-200">{copy.signInDescription}</p>
+                    <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                        <Link
+                            href={signInHref}
+                            className="rounded-full bg-primary-400 px-6 py-3 text-sm font-bold text-black transition hover:bg-primary-300"
+                        >
+                            {copy.signInLabel}
+                        </Link>
+                        <Link
+                            href="/comparisons"
+                            className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-ink-200 transition hover:border-white/35 hover:text-white"
+                        >
+                            {copy.browseLabel}
+                        </Link>
+                    </div>
+                </>
+            ) : failed ? (
                 <>
                     <h1 className="mt-10 font-display text-3xl font-bold text-white md:text-4xl">
                         {status === "rate-limited" ? copy.rateLimitTitle : copy.errorTitle}

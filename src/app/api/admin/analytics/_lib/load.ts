@@ -28,7 +28,7 @@ import {
  */
 
 const GROWTH_COLUMNS =
-  "user_id,created_at,first_reported_platform,first_reported_at,reported_platforms,has_apns_token,has_app_store_purchase,has_play_purchase,auth_providers,self_reported_source,utm_source,utm_medium,utm_campaign,gclid,apple_ads_attributed";
+  "user_id,created_at,first_reported_platform,first_reported_at,reported_platforms,has_apns_token,has_app_store_purchase,has_play_purchase,auth_providers,self_reported_source,self_reported_detail,utm_source,utm_medium,utm_campaign,gclid,apple_ads_attributed";
 const FIRST_TOUCH_COLUMNS = ",utm_content,landing_path,referrer_host";
 
 async function optional<T>(table: string, query: string, notes: string[], note: string): Promise<T[] | null> {

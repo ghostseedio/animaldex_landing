@@ -2,15 +2,16 @@ import "server-only";
 import publishedSeoSlugs from "@/data/published-seo-slugs.json";
 import {loadRisingQueries} from "@/app/api/admin/growth/_lib/search-console";
 import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
-import {animalMatcher, dedupeCandidates, parseAutocomplete, parseFeed, parseGoogleTrends, parseWikipediaTop, type RadarCandidate} from "@/lib/trend-radar/feeds";
+import {animalMatcher, AUTOCOMPLETE_SEEDS, dedupeCandidates, parseAutocomplete, parseFeed, parseGoogleTrends, parseWikipediaTop, type RadarCandidate} from "@/lib/trend-radar/feeds";
 
 // Where the trend radar looks. Each source is best-effort: one failing (a feed
-// down, a rate limit) is noted and the rest still count.
-//   news       science and wildlife feeds (what just happened)
-//   trend      Google's daily trending searches in our biggest countries (what people search today)
-//   wiki       Wikipedia's 1,000 most-viewed pages yesterday that are animals (what people read about)
-//   ask        Google autocomplete for animal questions (what people keep asking)
+// down, a rate limit) is noted and the rest still count. Since Nov 2026 it
+// hunts culture, ideas and everyday-life trends an animal's take can reframe:
+//   ask        Google autocomplete for everyday ideas, decisions and animal questions (what people keep asking)
 //   search     queries our own pages are gaining impressions on (Search Console)
+//   trend      Google's daily trending searches in our biggest countries, all of them (what people search today)
+//   wiki       Wikipedia's 1,000 most-viewed pages yesterday that are animals (an animal people read about)
+//   news       science and wildlife feeds (nature news, a low-priority lane)
 
 const USER_AGENT = "AnimalDexTrendRadar/1.0 (+https://animaldex.app)";
 
@@ -25,13 +26,6 @@ export const NEWS_FEEDS = [
 ];
 
 const TREND_GEOS = ["US", "GB", "IN", "AU", "CA"];
-
-/** What people type: question starters around animals and the talk-to-animals feature. */
-export const AUTOCOMPLETE_SEEDS = [
-    "why do dogs", "why do cats", "what does it mean when a cat", "what does it mean when a dog",
-    "can animals", "do animals", "which animal", "what animal", "how to talk to",
-    "animal that can", "strongest animal", "smartest animal", "most dangerous animal", "animal translator"
-];
 
 /** Freshness window for news items. */
 const NEWS_MAX_AGE_MS = 72 * 3_600_000;
@@ -71,10 +65,10 @@ export async function collectCandidates(): Promise<CollectResult> {
 
     await Promise.all(TREND_GEOS.map(async (geo) => {
         try {
-            const items = parseGoogleTrends(await (await get(`https://trends.google.com/trending/rss?geo=${geo}`, "application/rss+xml")).text(), `Google Trends ${geo}`)
-                .filter((item) => isAnimal(`${item.title} ${item.summary}`));
+            // Every trend, not only animal ones: an everyday idea inside a trend is what an animal's take reframes.
+            const items = parseGoogleTrends(await (await get(`https://trends.google.com/trending/rss?geo=${geo}`, "application/rss+xml")).text(), `Google Trends ${geo}`);
             out.push(...items);
-            notes[`Google Trends ${geo}`] = `${items.length} animal trends`;
+            notes[`Google Trends ${geo}`] = `${items.length} trends`;
         } catch (error) {
             notes[`Google Trends ${geo}`] = `failed (${error instanceof Error ? error.message : error})`;
         }

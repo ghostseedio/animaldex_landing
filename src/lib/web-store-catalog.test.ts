@@ -4,6 +4,12 @@ import {
     billingReturnHref,
     billingStatusIsServerFulfilled,
     creditDeltaForProduct,
+    isProProductCode,
+    WEB_STORE_PRO_BENEFITS,
+    WEB_STORE_PRO_PLANS,
+    WEB_STORE_PRODUCTS,
+    webPurchaseProductCode,
+    webStoreProBenefits,
     localePrefixForPath,
     localizedBillingReturnPath,
     recommendCreditPack,
@@ -69,4 +75,27 @@ test("checkout returns to the page that started it, in its language", () => {
         billingReturnHref("p1", "/id/app/credits"),
         "/id/app/billing/return?status=success&purchase_id=p1&return=%2Fid%2Fapp%2Fcredits"
     );
+});
+
+test("Pro comes yearly or monthly; both are the database's one Pro product", () => {
+    assert.deepEqual(WEB_STORE_PRO_PLANS, ["pro_annual", "pro_upgrade"]);
+    assert.equal(isProProductCode("pro_annual"), true);
+    assert.equal(isProProductCode("pro_upgrade"), true);
+    assert.equal(isProProductCode("purchase_25"), false);
+    assert.equal(creditDeltaForProduct("pro_annual"), 0);
+    assert.equal(webPurchaseProductCode("pro_annual"), "pro_upgrade");
+    assert.equal(webPurchaseProductCode("pro_upgrade"), "pro_upgrade");
+    assert.equal(webPurchaseProductCode("purchase_100"), "purchase_100");
+    assert.equal(WEB_STORE_PRODUCTS.pro_annual.period, "year");
+    assert.equal(WEB_STORE_PRODUCTS.pro_upgrade.fallbackPrice, "$14.99/month");
+    assert.equal(validateCheckoutRequestBody({productCode: "pro_annual"}).ok, true);
+    assert.equal(validateCheckoutRequestBody({productCode: "pro_annual", priceId: "pri_cheap"}).ok, false);
+});
+
+test("Pro's benefits promise only what a buyer gets: no Instagram Import, and no monthly Credits on the yearly plan", () => {
+    assert.ok(!WEB_STORE_PRO_BENEFITS.some((benefit) => /instagram/i.test(`${benefit.title} ${benefit.detail ?? ""}`)));
+    assert.ok(webStoreProBenefits("pro_upgrade").some((benefit) => benefit.title === "42 Credits every month"));
+    // Paddle grants the 42 Credits once per paid billing period.
+    assert.ok(!webStoreProBenefits("pro_annual").some((benefit) => /Credits every month/.test(benefit.title)));
+    assert.doesNotMatch(WEB_STORE_PRODUCTS.pro_annual.detail, /42 Credits/);
 });

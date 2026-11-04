@@ -50,7 +50,8 @@ test("Paddle catalog maps only server-side Price IDs", () => {
     assert.equal(productCodeForPaddlePriceId("", liveEnv), null);
     assert.equal(assertPaddleClientConfigured(liveEnv), null);
     assert.equal(assertPaddleProductCheckoutConfigured("pro_upgrade", liveEnv), null);
-    assert.deepEqual(paddleProductAvailability(liveEnv), {purchase_25: true, purchase_100: true, pro_upgrade: true});
+    // The yearly plan is hidden until PADDLE_PRICE_PRO_ANNUAL is set.
+    assert.deepEqual(paddleProductAvailability(liveEnv), {purchase_25: true, purchase_100: true, pro_upgrade: true, pro_annual: false});
     assert.equal(assertPaddleApiConfigured(liveEnv), null);
     assert.equal(assertPaddleWebhookConfigured(liveEnv), null);
     assert.equal(resolvePaddleEnvironment(liveEnv), "production");
@@ -74,11 +75,11 @@ test("each catalog product is available on its own Price ID", () => {
     assert.equal(paddleCatalogError(proOnly), null);
     assert.equal(assertPaddleProductCheckoutConfigured("pro_upgrade", proOnly), null);
     assert.match(assertPaddleProductCheckoutConfigured("purchase_25", proOnly) ?? "", /PADDLE_PRICE_CREDITS_25/);
-    assert.deepEqual(paddleProductAvailability(proOnly), {purchase_25: false, purchase_100: false, pro_upgrade: true});
+    assert.deepEqual(paddleProductAvailability(proOnly), {purchase_25: false, purchase_100: false, pro_upgrade: true, pro_annual: false});
     assert.equal(productCodeForPaddlePriceId("pri_pro", proOnly), "pro_upgrade");
 
     const packsOnly = {...liveEnv, PADDLE_PRICE_PRO_MONTHLY: ""} as unknown as NodeJS.ProcessEnv;
-    assert.deepEqual(paddleProductAvailability(packsOnly), {purchase_25: true, purchase_100: true, pro_upgrade: false});
+    assert.deepEqual(paddleProductAvailability(packsOnly), {purchase_25: true, purchase_100: true, pro_upgrade: false, pro_annual: false});
 });
 
 test("a missing catalog Price ID never stops the webhook, the API or Wildlife Guide checkout", () => {
@@ -91,13 +92,13 @@ test("a missing catalog Price ID never stops the webhook, the API or Wildlife Gu
     assert.equal(assertPaddleWebhookConfigured(noCatalog), null);
     assert.equal(assertPaddleApiConfigured(noCatalog), null);
     assert.equal(assertPaddleClientConfigured(noCatalog), null);
-    assert.deepEqual(paddleProductAvailability(noCatalog), {purchase_25: false, purchase_100: false, pro_upgrade: false});
+    assert.deepEqual(paddleProductAvailability(noCatalog), {purchase_25: false, purchase_100: false, pro_upgrade: false, pro_annual: false});
 });
 
 test("a configured value that is not a distinct Price ID closes the whole catalog", () => {
     const productId = {...liveEnv, PADDLE_PRICE_CREDITS_25: "pro_01h_not_a_price"} as unknown as NodeJS.ProcessEnv;
     assert.match(paddleCatalogError(productId) ?? "", /PADDLE_PRICE_CREDITS_25 must be a Paddle Price ID/);
-    assert.deepEqual(paddleProductAvailability(productId), {purchase_25: false, purchase_100: false, pro_upgrade: false});
+    assert.deepEqual(paddleProductAvailability(productId), {purchase_25: false, purchase_100: false, pro_upgrade: false, pro_annual: false});
     assert.equal(productCodeForPaddlePriceId("pri_pro", productId), null);
 
     const shared = {...liveEnv, PADDLE_PRICE_PRO_MONTHLY: "pri_25"} as unknown as NodeJS.ProcessEnv;
@@ -128,4 +129,19 @@ test("signature verifier accepts either h1 during secret rotation", () => {
     const now = 1_700_000_000;
     const valid = signedHeader(body, "secret", now).split("h1=")[1];
     assert.equal(verifyPaddleSignature(body, `ts=${now};h1=bad;h1=${valid}`, "secret", 5, now).ok, true);
+});
+
+test("the yearly plan is on sale on its own Price ID, and must not share one with monthly", () => {
+    const withAnnual = {...liveEnv, PADDLE_PRICE_PRO_ANNUAL: "pri_pro_year"} as unknown as NodeJS.ProcessEnv;
+    assert.equal(assertPaddleProductCheckoutConfigured("pro_annual", withAnnual), null);
+    assert.deepEqual(paddleProductAvailability(withAnnual), {purchase_25: true, purchase_100: true, pro_upgrade: true, pro_annual: true});
+    assert.equal(productCodeForPaddlePriceId("pri_pro_year", withAnnual), "pro_annual");
+    assert.equal(productCodeForPaddlePriceId("pri_pro", withAnnual), "pro_upgrade");
+    assert.match(assertPaddleProductCheckoutConfigured("pro_annual", liveEnv) ?? "", /PADDLE_PRICE_PRO_ANNUAL is not set/);
+    const shared = {...liveEnv, PADDLE_PRICE_PRO_ANNUAL: "pri_pro"} as unknown as NodeJS.ProcessEnv;
+    assert.match(paddleCatalogError(shared) ?? "", /distinct/);
+    // Only yearly configured: monthly is off sale, yearly still sells.
+    const annualOnly = {...liveEnv, PADDLE_PRICE_PRO_MONTHLY: "", PADDLE_PRICE_PRO_ANNUAL: "pri_pro_year"} as unknown as NodeJS.ProcessEnv;
+    assert.equal(paddleProductAvailability(annualOnly).pro_upgrade, false);
+    assert.equal(paddleProductAvailability(annualOnly).pro_annual, true);
 });

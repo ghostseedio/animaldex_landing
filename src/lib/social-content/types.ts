@@ -1,5 +1,5 @@
 import type {SourceType} from "@/lib/content-video/plan";
-import type {Experiment, TextFormat} from "@/lib/social-lab/arms";
+import type {CarouselFormat, Experiment, TextFormat} from "@/lib/social-lab/arms";
 import type {ShareCopy} from "@/lib/social/share-copy";
 
 // What the official accounts post besides videos (admin_social_content,
@@ -7,11 +7,15 @@ import type {ShareCopy} from "@/lib/social/share-copy";
 // carousels rendered from one of our pages, and text posts (hot takes, polls,
 // would-you-rathers) for X, Threads, Bluesky and Facebook.
 
-export const CAROUSEL_TEMPLATES = ["countdown", "versus", "facts", "myth_fact", "guess"] as const;
+export const CAROUSEL_TEMPLATES = ["countdown", "versus", "facts", "myth_fact", "guess", "usual_vs_animal", "five_animals"] as const;
 export type CarouselTemplate = (typeof CAROUSEL_TEMPLATES)[number];
 
-/** cover: photo + hook. item: photo/artwork + headline. text: brand background, big words. cta: the closing question. */
-export const SLIDE_LAYOUTS = ["cover", "item", "text", "cta"] as const;
+/**
+ * cover: photo + hook. item: photo/artwork + headline. text: brand background,
+ * big words. usual: the plain grey card that holds the usual answer (the
+ * "usual vs the animal" format only). cta: the closing question.
+ */
+export const SLIDE_LAYOUTS = ["cover", "item", "text", "usual", "cta"] as const;
 export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
 
 export type Slide = {
@@ -84,3 +88,12 @@ export const TEMPLATES_FOR_SOURCE: Partial<Record<SourceType, CarouselTemplate[]
     location: ["countdown", "guess", "facts"],
     blog: ["facts", "myth_fact", "countdown", "guess"]
 };
+
+/** The take formats are their own template; they need real animals with real behaviour (never hybrids or fusions). */
+export const FORMAT_SOURCES: Record<Exclude<CarouselFormat, "page">, SourceType[]> = {
+    usual_vs_animal: ["ranking", "location", "comparison", "blog"],
+    five_animals: ["ranking", "location"]
+};
+
+/** Photos a page needs for each format: "5 animals" shows one per animal. */
+export const FORMAT_MIN_IMAGES: Record<CarouselFormat, number> = {page: 3, usual_vs_animal: 2, five_animals: 5};

@@ -1,8 +1,8 @@
 import "server-only";
 import {listContentVideos, type ContentVideoRow} from "@/lib/content-video/store";
 import type {VideoPlan} from "@/lib/content-video/plan";
-import {armLabel, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, intentsFor} from "@/lib/social-lab/arms";
-import {armStats, chanceBest, chooseExperiment, itemScores, learningKinds, type ItemScore, rankArms, type ScoredShare, scoreShares, sourceTypeStats} from "@/lib/social-lab/bandit";
+import {armLabel, type CarouselFormat, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, intentsFor, textFormatsFor, withCarouselFormat} from "@/lib/social-lab/arms";
+import {armStats, chanceBest, chooseExperiment, itemScores, learningKinds, type ItemScore, pickArm, rankArms, type ScoredShare, scoreShares, sourceTypeStats} from "@/lib/social-lab/bandit";
 import {SOURCE_LABELS} from "@/lib/content-video/source-paths";
 import {listPostMetrics} from "@/lib/social-lab/metrics";
 import type {MetricsRow} from "@/lib/social-lab/metrics-core";
@@ -70,7 +70,7 @@ export async function loadScoredShares(): Promise<ScoredShare[]> {
             const item = id ? contentById.get(id) : undefined;
             if (!item) continue;
             const kind = item.kind === "carousel" ? "carousel" : "text";
-            shares.push({itemId: item.id, itemKind: kind, family: kind, platform: post.platform, sourceType: item.source_type, experiment: item.experiment, ageHours, metrics: metricsOf});
+            shares.push({itemId: item.id, itemKind: kind, family: kind, platform: post.platform, sourceType: item.source_type, experiment: withCarouselFormat(kind, item.experiment), ageHours, metrics: metricsOf});
         }
     }
     return shares;
@@ -89,12 +89,25 @@ async function scoredItems() {
 
 /**
  * The arms the next item of `kind` uses. With the page it is made from, the
- * intent is one that page fits (a battle is never a "save"; news is "stay").
- * Never throws: with no data it explores uniformly.
+ * intent is one that page fits (a battle is never a "save"; news is "stay"),
+ * a text post only takes formats the page can carry ("5 animals" needs five),
+ * and a carousel keeps the format it was planned in. Never throws: with no
+ * data it explores uniformly.
  */
-export async function nextExperiment(kind: ExperimentKind, page?: {sourceType: string; fresh: boolean}): Promise<Experiment> {
+export async function nextExperiment(kind: ExperimentKind, page?: {sourceType: string; fresh: boolean; carouselFormat?: CarouselFormat}): Promise<Experiment> {
     const items = await scoredItems().catch(() => [] as ItemScore[]);
-    return chooseExperiment(kind, items, Math.random, {intent: intentsFor(kind, page?.sourceType ?? null, page?.fresh ?? false)});
+    const sourceType = page?.sourceType ?? null;
+    return chooseExperiment(kind, items, Math.random, {
+        intent: intentsFor(kind, sourceType, page?.fresh ?? false, page?.carouselFormat ?? null),
+        ...(kind === "text" ? {textFormat: textFormatsFor(sourceType)} : {}),
+        ...(page?.carouselFormat ? {carouselFormat: [page.carouselFormat]} : {})
+    });
+}
+
+/** The format the next carousel is made in, drawn first because it decides which pages fit. Never throws. */
+export async function nextCarouselFormat(): Promise<CarouselFormat> {
+    const items = await scoredItems().catch(() => [] as ItemScore[]);
+    return pickArm(armStats(items, "carouselFormat", learningKinds("carousel", "carouselFormat"))) as CarouselFormat;
 }
 
 /**
@@ -120,6 +133,7 @@ export async function labReport(sourceTypes: readonly string[]): Promise<{dimens
         {kind: "Videos (narrated)", kinds: ["editorial"], dimension: "length"},
         {kind: "Videos", kinds: learningKinds("editorial", "ending"), dimension: "ending"},
         {kind: "Battles & reveals", kinds: ["battle", "creature"], dimension: "opener"},
+        {kind: "Carousels", kinds: ["carousel"], dimension: "carouselFormat"},
         {kind: "Carousels", kinds: ["carousel"], dimension: "intent"},
         {kind: "Carousels", kinds: ["carousel"], dimension: "hookStyle"},
         {kind: "Text posts", kinds: ["text"], dimension: "textFormat"}

@@ -2,7 +2,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import {MagicStick3, Refresh, Share, TrashBinMinimalistic} from "solar-icon-set";
-import {armLabel, type Dimension, type Experiment, HOOK_STYLES, TEXT_FORMATS} from "@/lib/social-lab/arms";
+import {armLabel, CAROUSEL_FORMATS, type CarouselFormat, type Dimension, type Experiment, HOOK_STYLES, TEXT_FORMATS} from "@/lib/social-lab/arms";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
 import type {CarouselSpec, SocialContentRow, TextSpec} from "@/lib/social-content/types";
 import {SOCIAL_PLATFORM_LABELS, type SocialPlatform} from "@/lib/social/types";
@@ -24,7 +24,12 @@ type LabPayload = {
 
 type ContentItem = SocialContentRow & {slideUrls: string[]; shares: Array<{platform: SocialPlatform; status: string; url: string | null; error: string | null}>};
 
-const DIMENSION_TITLES: Record<Dimension, string> = {intent: "Job", hookStyle: "Hook style", length: "Length", ending: "Ending", opener: "Opener", textFormat: "Format"};
+const DIMENSION_TITLES: Record<Dimension, string> = {intent: "Job", hookStyle: "Hook style", length: "Length", ending: "Ending", opener: "Opener", textFormat: "Format", carouselFormat: "Carousel format"};
+
+/** A carousel's shape for its badge: a take format by its name, a page carousel by its template. */
+function templateLabel(template: string) {
+    return template in CAROUSEL_FORMATS ? CAROUSEL_FORMATS[template as CarouselFormat].label : template.replace(/_/g, " ");
+}
 
 async function api<T>(input: string, init?: RequestInit): Promise<T> {
     const response = await fetch(input, {cache: "no-store", ...init});
@@ -183,8 +188,8 @@ export function AdminSocialContent() {
         }
     }
 
-    const generate = (kind: "carousel" | "text") => act(`generate-${kind}`, async () => {
-        const body = await api<{started: string}>("/api/admin/social/content", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({action: "generate", kind})});
+    const generate = (kind: "carousel" | "text", format?: CarouselFormat) => act(`generate-${kind}${format ? `-${format}` : ""}`, async () => {
+        const body = await api<{started: string}>("/api/admin/social/content", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({action: "generate", kind, format})});
         return `Making ${body.started}. It takes a minute or two; this list updates by itself.`;
     });
     const shareNow = (item: ContentItem) => act(`share-${item.id}`, async () => {
@@ -200,13 +205,15 @@ export function AdminSocialContent() {
     return (
         <Section
             title="Carousels & text posts"
-            description="Swipeable carousels (Instagram, TikTok photo mode, Facebook, X, Threads, Bluesky, Pinterest) and text posts (X, Threads, Bluesky, Facebook) made from our pages. The auto-share posts one per run alongside the video; the video timer keeps a few waiting."
+            description="Swipeable carousels (TikTok photo mode, plus Instagram, Facebook, X, Threads, Bluesky and Pinterest where they are on) and text posts (X, Threads, Bluesky, Facebook) made from our pages. Besides page carousels, the hook lab tests two take formats: “the usual vs the animal” (the usual answer on a grey card, then one animal's take from a real behaviour) and “5 animals, 1 idea”. The auto-share posts one per run alongside the video; the video timer keeps a few waiting."
             className="mt-6"
         >
             {error ? <Alert tone="bad" className="mb-3">{error}</Alert> : null}
             {notice ? <Alert tone="good" className="mb-3 break-words text-xs">{notice}</Alert> : null}
             <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="primary" loading={busy === "generate-carousel"} disabled={Boolean(generating)} onClick={() => generate("carousel")}><MagicStick3 size={14} />Make a carousel</Button>
+                <Button size="sm" loading={busy === "generate-carousel-usual_vs_animal"} disabled={Boolean(generating)} onClick={() => generate("carousel", "usual_vs_animal")}><MagicStick3 size={14} />The usual vs the animal</Button>
+                <Button size="sm" loading={busy === "generate-carousel-five_animals"} disabled={Boolean(generating)} onClick={() => generate("carousel", "five_animals")}><MagicStick3 size={14} />5 animals, 1 idea</Button>
                 <Button size="sm" loading={busy === "generate-text"} disabled={Boolean(generating)} onClick={() => generate("text")}><MagicStick3 size={14} />Make text posts</Button>
                 {generating ? <Badge tone="warn">Making {generating}…</Badge> : null}
             </div>
@@ -222,7 +229,7 @@ export function AdminSocialContent() {
                         return (
                             <article key={item.id} className="flex min-w-0 flex-col gap-3 border border-line-300 bg-surface-900 p-4">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <Badge>{carousel ? `Carousel · ${carousel.template.replace("_", " ")}` : `Text · ${text ? TEXT_FORMATS[text.format]?.label ?? text.format : ""}`}</Badge>
+                                    <Badge>{carousel ? `Carousel · ${templateLabel(carousel.template)}` : `Text · ${text ? TEXT_FORMATS[text.format]?.label ?? text.format : ""}`}</Badge>
                                     {item.experiment?.hookStyle ? <Badge tone="neutral">{HOOK_STYLES[item.experiment.hookStyle]?.label}</Badge> : null}
                                     <a href={sourcePath(item.source_type, item.source_slug)} target="_blank" rel="noreferrer" className="min-w-0 truncate text-xs text-ink-400 hover:text-white">{SOURCE_LABELS[item.source_type]}: {item.source_title}</a>
                                 </div>

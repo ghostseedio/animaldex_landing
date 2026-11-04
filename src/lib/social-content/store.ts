@@ -52,6 +52,12 @@ export async function carouselSourceSlugs(): Promise<Set<string>> {
     return new Set((await response.json() as Array<{source_type: SourceType; source_slug: string}>).map((row) => `${row.source_type}:${row.source_slug}`));
 }
 
+/** Each page's take-format carousels ("<template>:<type>:<slug>"): a page can carry one carousel of each take format. */
+export async function carouselFormatKeys(): Promise<Set<string>> {
+    const response = await expectOk(await rest("admin_social_content?kind=eq.carousel&select=source_type,source_slug,template:spec->>template&limit=5000"), "Loading carousel formats");
+    return new Set((await response.json() as Array<{source_type: SourceType; source_slug: string; template: string | null}>).map((row) => `${row.template ?? ""}:${row.source_type}:${row.source_slug}`));
+}
+
 /** What the content generation spent today (UTC). */
 export async function socialContentSpentToday(): Promise<number> {
     const since = `${new Date().toISOString().slice(0, 10)}T00:00:00Z`;

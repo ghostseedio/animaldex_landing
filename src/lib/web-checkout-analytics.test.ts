@@ -38,7 +38,8 @@ test("begin_checkout falls back to the catalog price only when Paddle reports no
         items: [{item_id: "purchase_25", item_name: "25 Credits", price: 2.75, quantity: 1}]
     });
     assert.deepEqual(beginCheckoutParameters("pro_upgrade", undefined).currency, "USD");
-    assert.equal(beginCheckoutParameters("pro_upgrade", undefined).value, 9.99);
+    assert.equal(beginCheckoutParameters("pro_upgrade", undefined).value, 14.99);
+    assert.equal(beginCheckoutParameters("pro_annual", undefined).value, 79.99);
 });
 
 test("a confirmed purchase is reported once, with the overlay's transaction and price", () => {
@@ -61,4 +62,17 @@ test("a purchase confirmed without the overlay's data still counts, at the catal
     assert.equal(purchase?.currency, "USD");
     assert.equal(purchase?.items[0]?.item_id, "pro_upgrade");
     assert.equal(takeConfirmedPurchase(memoryStorage(), "purchase-3", "not_a_product"), null);
+});
+
+test("a yearly purchase is reported as the yearly plan, though the server registers every Pro plan as pro_upgrade", () => {
+    const storage = memoryStorage();
+    rememberCompletedCheckout(storage, "purchase-year", "pro_annual", {transaction_id: "txn_year", currency_code: "USD", totals: {subtotal: 79.99, discount: 0, tax: 0, total: 79.99}});
+    const purchase = takeConfirmedPurchase(storage, "purchase-year", "pro_upgrade");
+    assert.equal(purchase?.items[0]?.item_id, "pro_annual");
+    assert.equal(purchase?.items[0]?.item_name, "AnimalDex Pro (yearly)");
+    assert.equal(purchase?.value, 79.99);
+    // A Credits checkout the server confirms as Credits stays Credits.
+    const packs = memoryStorage();
+    rememberCompletedCheckout(packs, "purchase-pack", "purchase_25", undefined);
+    assert.equal(takeConfirmedPurchase(packs, "purchase-pack", "purchase_25")?.items[0]?.item_id, "purchase_25");
 });

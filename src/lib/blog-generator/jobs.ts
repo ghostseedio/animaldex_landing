@@ -222,7 +222,8 @@ async function generateMetered(input: GenerateInput, log: (line: string) => void
         researchedUrls: research.urls,
         reachableUrls,
         minSources: input.materials?.length || input.materialFiles?.length ? 1 : 2,
-        today: new Date().toISOString().slice(0, 10)
+        today: new Date().toISOString().slice(0, 10),
+        contentPolicy: true
     });
     // Even after a rewrite, a forgettable article is held back rather than published.
     if (review && review.score < MIN_EDITOR_SCORE) assembled.problems.push(`editor scored it ${review.score}/10 for shareability (needs ${MIN_EDITOR_SCORE}): ${review.verdict}`);

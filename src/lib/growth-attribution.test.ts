@@ -167,3 +167,15 @@ describe("platform daily", () => {
     assert.equal(rows[1].ios, 1);
   });
 });
+
+describe("self-reported AI assistants", () => {
+  it("maps the apps' AI-assistant answer to its own channel, \"AI assistants\"", () => {
+    const ai = classifyAcquisition(row({ self_reported_source: "other", self_reported_detail: "ai_assistant" }));
+    assert.deepEqual(ai, { key: "said:ai_assistant", label: "AI assistants", kind: "organic", evidence: "self_reported", network: null });
+    assert.equal(classifyAcquisition(row({ self_reported_source: "other", self_reported_detail: " AI_Assistant " })).key, "said:ai_assistant");
+    // Any other "Other" answer stays "Other"; store-verified paid installs still win.
+    assert.equal(classifyAcquisition(row({ self_reported_source: "other", self_reported_detail: "a podcast" })).key, "said:other");
+    assert.equal(classifyAcquisition(row({ self_reported_source: "other" })).key, "said:other");
+    assert.equal(classifyAcquisition(row({ self_reported_source: "other", self_reported_detail: "ai_assistant", apple_ads_attributed: true })).key, "apple_search_ads");
+  });
+});

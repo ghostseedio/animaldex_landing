@@ -1,6 +1,7 @@
 import type {BlogPost, BlogSection} from "@/data/blog/types";
 import type {BlogMediaBlock, ContentImage} from "@/data/content-schema";
 import {embedProblem, readEmbedSpec, renderEmbed, type EmbedSpec} from "@/lib/blog-generator/embeds";
+import {describeFinding, policyFindings} from "@/lib/content-policy";
 
 // What the writer returns (ArticleSpec) and how it becomes a live BlogPost.
 // Pure: no I/O, so the checks here are covered by unit tests.
@@ -199,6 +200,13 @@ type AssembleContext = {
     keptMedia?: Map<string, BlogMediaBlock>;
     /** Editing: the post's original date stays; only updatedAt moves. */
     publishedAt?: string;
+    /**
+     * New articles: hold the draft to the content policy (src/lib/content-policy.ts).
+     * Another AI product named anywhere, or any slip in the title, meta
+     * description, quick answer or a section title, keeps it a draft; a
+     * clinical word or label in the body is a warning to read.
+     */
+    contentPolicy?: boolean;
 };
 
 export const KEEP_PREFIX = "keep:";
@@ -265,6 +273,14 @@ export function assembleBlogPost(spec: ArticleSpec, context: AssembleContext): A
         });
     const minSources = context.minSources ?? 2;
     if (sources.length < minSources) problems.push(`only ${sources.length} verifiable source(s); at least ${minSources} required`);
+
+    if (context.contentPolicy) {
+        const framing = policyFindings(spec.title, spec.metaDescription, spec.quickAnswer, ...spec.sections.map((section) => section.title));
+        const body = policyFindings(...spec.sections.flatMap((section) => [...section.paragraphs, section.pullQuote]), ...spec.faq.flatMap((item) => [item.question, item.answer]));
+        const blocking = [...framing, ...body.filter((finding) => finding.kind === "ai_product")];
+        if (blocking.length) problems.push(`breaks the content policy: ${Array.from(new Set(blocking.map(describeFinding))).join("; ")}`);
+        for (const finding of body.filter((entry) => entry.kind !== "ai_product")) warnings.push(`content policy, check the body: ${describeFinding(finding)}`);
+    }
 
     // Species pages are linked by the blog page itself wherever a species in
     // post.speciesSlugs is named, so those links go there rather than into a

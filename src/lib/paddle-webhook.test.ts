@@ -7,6 +7,7 @@ import {productCodeForPaddlePriceId, type PaddleEvent} from "./paddle-server";
 process.env.PADDLE_PRICE_CREDITS_25 = "pri_25";
 process.env.PADDLE_PRICE_CREDITS_100 = "pri_100";
 process.env.PADDLE_PRICE_PRO_MONTHLY = "pri_pro";
+process.env.PADDLE_PRICE_PRO_ANNUAL = "pri_pro_year";
 
 type RpcCall = {name: string; args: Record<string, unknown>};
 
@@ -325,4 +326,34 @@ test("an approved refund or chargeback also reverses a Wildlife Guide card purch
         data: {id: "adj_pending", transaction_id: "txn_guide", action: "refund", type: "full", status: "pending_approval"}
     });
     assert.equal(pending.calls.some((call) => call.name === "mark_wildlife_guide_web_purchase_reversed"), false);
+});
+
+test("the yearly plan is Pro like the monthly one: its checkout fulfils and its subscription syncs", async () => {
+    const checkout = mockSupabase();
+    await handlePaddleEvent(checkout.client as never, transactionEvent({
+        subscription_id: "sub_year",
+        items: [{quantity: 1, price: {id: "pri_pro_year", product_id: "pro_animaldex"}}]
+    }));
+    const fulfill = checkout.calls.find((call) => call.name === "fulfill_web_purchase");
+    assert.equal(fulfill?.args.p_provider_price_id, "pri_pro_year");
+    assert.equal(fulfill?.args.p_provider_subscription_id, "sub_year");
+
+    // A 7-day free trial starts "trialing" and then turns "active": both keep Pro.
+    for (const [eventType, expected] of [["subscription.trialing", "trialing"], ["subscription.activated", "active"], ["subscription.canceled", "canceled"]]) {
+        const mock = mockSupabase();
+        await handlePaddleEvent(mock.client as never, {
+            event_id: `evt_year_${expected}`,
+            event_type: eventType,
+            occurred_at: "2026-11-05T09:00:00Z",
+            data: {
+                id: "sub_year", status: "trialing", customer_id: "ctm_1",
+                custom_data: {animaldex_purchase_id: "11111111-1111-4111-8111-111111111111"},
+                current_billing_period: {ends_at: "2027-11-05T09:00:00Z"},
+                items: [{quantity: 1, price: {id: "pri_pro_year", product_id: "pro_animaldex"}}]
+            }
+        });
+        const sync = mock.calls.find((call) => call.name === "sync_paddle_subscription_state");
+        assert.equal(sync?.args.p_status, expected);
+        assert.equal(sync?.args.p_price_id, "pri_pro_year");
+    }
 });

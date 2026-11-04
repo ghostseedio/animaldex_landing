@@ -7,10 +7,11 @@ import type {TrendTopicRow} from "@/lib/trend-radar/store";
 import {Alert, Badge, Button, EmptyState, Section, Skeleton} from "@/components/admin/ui";
 import {RunList} from "@/app/admin/story-videos/admin-automation";
 
-// The trend radar: what is hot in animal news and searches right now, ranked
-// by Claude every 6 hours from news feeds, Google Trends, Wikipedia, Google
-// autocomplete and our rising Search Console queries. The blog writes the best
-// ideas on its own; "Write now" jumps the queue, "Skip" drops one.
+// The trend radar: culture, ideas and everyday-life trends an animal's take
+// can reframe, ranked by Claude every 6 hours from Google autocomplete, our
+// rising Search Console queries, Google Trends, Wikipedia and (low priority)
+// nature news feeds. The blog writes the best evergreen ideas on its own;
+// "Write now" jumps the queue, "Skip" drops one.
 
 type Payload = {refreshing: boolean; topics: TrendTopicRow[]; runs: AutomationRun[]};
 
@@ -66,7 +67,7 @@ export default function AdminTrendRadar() {
     return (
         <Section
             title="Trend radar"
-            description="What is hot in animal news and searches right now: science and wildlife feeds, Google's trending searches, animals spiking on Wikipedia, what people type into Google, and our rising Search Console queries, ranked by Claude every 6 hours. The morning article takes the best news story, a story scoring 8.5+ is written as breaking news, and evergreen questions feed the evening slot."
+            description="Culture, ideas and everyday-life trends one animal's take can reframe: what people type into Google, our rising Search Console queries, Google's trending searches and animals spiking on Wikipedia, ranked by Claude every 6 hours. Nature news is a low-priority lane (scored 5 or lower) that is only written when you pick it. The daily article takes the best evergreen idea (7+) on its radar days."
             className="mt-6"
         >
             {error ? <Alert tone="bad" className="mb-3">{error}</Alert> : null}
