@@ -1,30 +1,69 @@
 import type {SourceImage, VideoSource} from "@/lib/content-video/plan";
+import {CONTENT_POLICY_RULES, policyProblems} from "@/lib/content-policy";
 import {experimentBrief, type Experiment, TEXT_FORMATS, type TextFormat} from "@/lib/social-lab/arms";
+import {getCatalogSpeciesPower} from "@/lib/species-power";
 import type {ShareCopy} from "@/lib/social/share-copy";
 import {type CarouselSpec, type CarouselTemplate, SLIDE_LAYOUTS, type Slide, type SlideLayout, type TextSpec} from "@/lib/social-content/types";
 
 // The writing half of carousels and text posts, pure: prompts, JSON schemas
 // and the checks that hold a model's reply to the format (so a bad reply is
-// repaired or rejected here, never rendered).
+// repaired or rejected here, never rendered). Two take formats start from an
+// everyday idea instead of the page's own story: "the usual vs the <animal>"
+// (the usual answer on a grey slide, then one animal's take built on a real
+// behaviour) and "5 animals, 1 idea". A reply that names another AI product,
+// or breaks the rest of the content policy, is rejected.
 
 export const MIN_SLIDES = 5;
 export const MAX_SLIDES = 8;
 /** Slide text caps: a feed is looked at, not read (Oct 29 2026: slides had ~25-word paragraphs). */
 export const SLIDE_TITLE_CHARS = 60;
 export const SLIDE_BODY_CHARS = 80;
+/** A kicker is a label in a pill: cut at a word, never mid-word. */
+export const KICKER_CHARS = 30;
 export const TEXT_LIMIT = 270;
 export const LONG_TEXT_LIMIT = 480;
 export const POLL_OPTION_LIMIT = 25;
 
-const VOICE = `Audience: 16–28, scrolling fast, allergic to anything that reads like a textbook or an ad. Write like a sharp friend who knows wild animal facts: short, punchy, concrete, second person, contractions, in words a 5-year-old knows (no jargon, no wordplay to decode). Exaggerate the ANGLE, never the facts: every number and claim must come from the source. No invented facts, no emoji in slide text, no hashtags in slide text, no "Did you know".`;
+const VOICE = `Audience: 16–28, scrolling fast, allergic to anything that reads like a textbook or an ad. Write like a sharp friend who knows wild animal facts: short, punchy, concrete, second person, contractions, in words a 5-year-old knows (no jargon, no wordplay to decode). Exaggerate the ANGLE, never the facts: every number and claim must come from the source. No invented facts, no emoji in slide text, no hashtags in slide text, no "Did you know".
+
+${CONTENT_POLICY_RULES}`;
 
 const TEMPLATE_GUIDES: Record<CarouselTemplate, string> = {
     countdown: `countdown: cover (the hook) → one "item" slide per entry a photo shows, counting DOWN to #1 (kicker "#5"… "#1", title = the animal, body = its one surprising detail; stat when the source has a number) → cta. #1 must be the biggest payoff and must have a photo.`,
     versus: `versus: cover ("A vs B" framed by the hook) → 3–4 "item" slides, one round each (kicker "ROUND 1: SPEED", title = who takes the round, stat = the two numbers, e.g. label "TOP SPEED", value "65 vs 80 KM/H", body "" or a few words) → a verdict slide (kicker "VERDICT") → cta that splits the audience.`,
     facts: `facts: cover → 3–5 "item" slides, one jaw-dropping fact each (kicker "FACT 1"…), escalating, the wildest last → cta.`,
     myth_fact: `myth_fact: cover → 3–4 slides, each a myth people believe (kicker "MYTH", title = the myth in plain words, body = "Actually: …" the truth in a few words; use "text" layout when no photo fits) → cta.`,
-    guess: `guess: cover ("Guess the animal from 3 clues" in the hook style) → 3 "text" slides of clues getting easier (kicker "CLUE 1"…) → a reveal "item" slide with its photo (kicker "IT'S THE…", title = the animal) → cta asking how many clues they needed.`
+    guess: `guess: cover ("Guess the animal from 3 clues" in the hook style) → 3 "text" slides of clues getting easier (kicker "CLUE 1"…) → a reveal "item" slide with its photo (kicker "IT'S THE…", title = the animal) → cta asking how many clues they needed.`,
+    usual_vs_animal: `usual_vs_animal ("the usual vs the <animal>"): pick ONE idea from IDEAS and ONE animal on the page whose real behaviour (from the page text or ANIMAL RECORDS) sees it differently. cover (kicker "THE USUAL VS THE <ANIMAL>", title = the idea as a question in at most 7 words, e.g. "SHOULD YOU START A PODCAST?", image = that animal) → one "usual" slide (kicker "THE USUAL ANSWER", title = the advice everyone gives, at most 8 words, body = one more usual line or "", image 0) → an "item" slide (kicker "THE <ANIMAL>'S TAKE", title = a different move, at most 8 words, body at most 10 words, image = the animal) → a "text" slide (kicker "WHY A <ANIMAL> SEES IT THIS WAY", or "WHY IT SEES IT THIS WAY" for a long name, title = the real behaviour in at most 8 words, body = the fact behind it in at most 10 words) → cta (title "Which would you try?" or "Take your idea to an animal"). The take must be a move the usual answer would not give, never the usual answer in costume; the usual answer is plain and fair, never mocked.`,
+    five_animals: `five_animals ("5 animals, 1 idea"): pick ONE idea from IDEAS. cover (kicker "5 ANIMALS, 1 IDEA", title = the idea in at most 6 words, image = the most striking animal) → five "item" slides, one per animal on the page with its photo (kicker = the animal's name, title = its take in at most 6 words, body = the real behaviour behind it in at most 10 words, from the page or ANIMAL RECORDS); five different takes → cta (title "Which one is you?").`
 };
+
+/** The take formats start from an everyday idea and the animals' real behaviour, not the page's own story. */
+export type TakeContext = {ideas: readonly string[]; records: readonly string[]};
+
+/** The page's animals with their Power from the species records: what every take must be built on. */
+export function animalRecords(source: Pick<VideoSource, "species" | "battle">): string[] {
+    const animals = new Map<string, string>();
+    for (const entry of source.species ?? []) animals.set(entry.slug, entry.name);
+    for (const fighter of source.battle ? [source.battle.a, source.battle.b] : []) if (!animals.has(fighter.slug)) animals.set(fighter.slug, fighter.name);
+    return Array.from(animals.entries()).flatMap(([slug, name]) => {
+        const power = getCatalogSpeciesPower(slug);
+        if (!power) return [];
+        return [`${name}: its Power is "${power.name}"${power.expression ? `: ${power.expression}` : ""}${power.lesson ? ` Lesson: ${power.lesson}` : ""}`];
+    });
+}
+
+function takeLines(take: TakeContext | undefined) {
+    if (!take) return [];
+    return [
+        "IDEAS (pick the one these animals see most differently from the usual answer):",
+        ...take.ideas.map((idea) => `- ${idea}`),
+        "",
+        "ANIMAL RECORDS (real behaviours from AnimalDex's species records; build every take on one of these or on the page text, never on anything else):",
+        ...(take.records.length ? take.records.map((record) => `- ${record}`) : ["- (none: use the behaviours the page text describes)"]),
+        ""
+    ];
+}
 
 export const CAROUSEL_SYSTEM_PROMPT = `You make AnimalDex's swipeable carousels (Instagram, TikTok photo mode, Threads, X, Facebook, Bluesky, Pinterest) from one of our pages. A carousel lives or dies on three things: a cover a 5-year-old understands at a glance, PICTURES that carry every slide, and every next slide paying something off. Nobody reads a paragraph in a feed: if a slide needs a sentence to make sense, it is the wrong slide.
 
@@ -33,11 +72,11 @@ ${VOICE}
 THIS ITEM'S EXPERIMENT gives the carousel one JOB (be shared, saved or commented on): pick the shape and the angle that does that job.
 
 Slides (${MIN_SLIDES}–${MAX_SLIDES} in total):
-- Slide 1 is the "cover": title = the whole idea in at most 7 plain words, understood without any other slide ("THIS FROG FREEZES SOLID AND LIVES"); body = at most 8 words that tease the payoff, or ""; kicker = 1–3 words naming the format ("TIER LIST", "WHO WINS?", "GUESS IT").
+- Slide 1 is the "cover": title = the whole idea in at most 7 plain words, understood without any other slide ("THIS FROG FREEZES SOLID AND LIVES"); body = at most 8 words that tease the payoff, or ""; kicker = 1–3 words naming the format ("TIER LIST", "WHO WINS?", "GUESS IT"), or the kicker the shape below gives. Every kicker is at most 30 characters.
 - Middle slides: the PHOTO is the slide. title = at most 5 words; body = at most 10 words (one short line) or "". Put the slide's number in stat_label / stat_value, not in the body. One idea each; escalate.
-- Make a middle slide only for an animal or thing one of the photos shows, and show it. Leave out the rest rather than making a bare slide: fewer slides is fine. Only a "guess" clue or a "myth" may be a words-only "text" slide.
+- Make a middle slide only for an animal or thing one of the photos shows, and show it. Leave out the rest rather than making a bare slide: fewer slides is fine. Only a "guess" clue, a "myth", and the usual answer and the "why" slide of "the usual vs the <animal>" may be words-only.
 - The last slide is "cta": title = the JOB's ask in at most 8 words (a two-option question, "Save this for your next zoo trip", "Send this to your shark-obsessed friend"); body = "Full story on animaldex.app"; kicker "YOUR CALL" or similar.
-- layout: "cover" first, "cta" last, "item" for slides with a photo, "text" for words-only slides (clues, myths).
+- layout: "cover" first, "cta" last, "item" for slides with a photo, "text" for words-only slides (clues, myths, the "why"), "usual" only for the usual answer in "the usual vs the <animal>".
 - image: the number of the photo of exactly what the slide is about (use each photo at most once where you can; the cover gets the most striking one); 0 for none. "text" and "cta" slides may use 0.
 - stat_label / stat_value: one striking number a child can feel, e.g. "WEIGHS" / "AS MUCH AS A CAR", "TOP SPEED" / "110 KM/H"; "" for none.
 
@@ -96,7 +135,7 @@ function photoLines(images: SourceImage[]) {
     return images.map((image) => `${image.index}. ${image.alt || "(no description)"}${image.caption ? ` — ${image.caption.slice(0, 120)}` : ""}`);
 }
 
-export function buildCarouselUserPrompt(source: VideoSource, templates: readonly CarouselTemplate[], experiment: Experiment | null) {
+export function buildCarouselUserPrompt(source: VideoSource, templates: readonly CarouselTemplate[], experiment: Experiment | null, take?: TakeContext) {
     return [
         `Page: ${source.title}`,
         `URL: ${source.url}`,
@@ -107,6 +146,7 @@ export function buildCarouselUserPrompt(source: VideoSource, templates: readonly
         "",
         experimentBrief(experiment).replace("(we test what keeps viewers;", "(we test what makes people swipe;"),
         "",
+        ...takeLines(take),
         "Photos (attached in this order):",
         ...photoLines(source.images),
         "",
@@ -153,18 +193,30 @@ export function normalizeCarousel(value: unknown, imageNumbers: number[], templa
         const label = clean(slide.stat_label, 24);
         const statValue = clean(slide.stat_value, 24);
         const layout = SLIDE_LAYOUTS.includes(slide.layout as SlideLayout) ? slide.layout as SlideLayout : "item";
-        return [{layout, kicker: clean(slide.kicker, 28), title, body: fitChars(clean(slide.body, 400), SLIDE_BODY_CHARS), image, stat: label && statValue ? {label, value: statValue} : null}];
+        return [{layout, kicker: fitWords(clean(slide.kicker, 120), KICKER_CHARS), title, body: fitChars(clean(slide.body, 400), SLIDE_BODY_CHARS), image, stat: label && statValue ? {label, value: statValue} : null}];
     }).slice(0, MAX_SLIDES);
     if (slides.length < MIN_SLIDES || !share) return null;
     slides.forEach((slide, index) => {
         if (index === 0) slide.layout = "cover";
         else if (index === slides.length - 1) slide.layout = "cta";
         else if (slide.layout === "cover" || slide.layout === "cta") slide.layout = slide.image ? "item" : "text";
-        else if (slide.layout === "item" && slide.image === null) slide.layout = "text";
+        // The grey card is the usual answer, and only in that format: it never carries a photo.
+        else if (slide.layout === "usual") {
+            if (template === "usual_vs_animal") slide.image = null;
+            else slide.layout = slide.image ? "item" : "text";
+        } else if (slide.layout === "item" && slide.image === null) slide.layout = "text";
     });
     // The cover always carries a photo: the first one, when the writer left it bare.
     if (slides[0].image === null && imageNumbers.length) slides[0].image = imageNumbers[0];
+    const middle = slides.slice(1, -1);
+    if (template === "usual_vs_animal" && (middle.filter((slide) => slide.layout === "usual").length !== 1 || !middle.some((slide) => slide.layout === "item"))) return null;
+    if (template === "five_animals" && middle.filter((slide) => slide.layout === "item").length < 5) return null;
+    if (policyProblems(...slides.flatMap((slide) => [slide.kicker, slide.title, slide.body]), ...shareTexts(share)).length) return null;
     return {spec: {template, slides}, share};
+}
+
+function shareTexts(share: ShareCopy) {
+    return [share.youtube.title, share.youtube.description, share.tiktok.caption, share.instagram.caption, share.facebook.caption, share.x.text];
 }
 
 // ── Text posts ───────────────────────────────────────────────────────────────
@@ -203,7 +255,10 @@ export const TEXT_JSON_SCHEMA = {
     }
 } as const;
 
-export function buildTextUserPrompt(source: VideoSource, formats: TextFormat[]) {
+/** The text formats that start from an everyday idea and an animal's real behaviour. */
+export const TAKE_TEXT_FORMATS: readonly TextFormat[] = ["usual_vs_animal", "five_animals"];
+
+export function buildTextUserPrompt(source: VideoSource, formats: TextFormat[], take?: TakeContext) {
     return [
         `Page: ${source.title}`,
         `URL: ${source.url}`,
@@ -212,9 +267,17 @@ export function buildTextUserPrompt(source: VideoSource, formats: TextFormat[]) 
         `Write exactly ${formats.length} posts, in this order:`,
         ...formats.map((format, index) => `${index + 1}. format "${format}" — ${TEXT_FORMATS[format].instruction}`),
         "",
+        ...(formats.some((format) => TAKE_TEXT_FORMATS.includes(format)) ? takeLines(take) : []),
         "Page text:",
         source.text.slice(0, 9000)
     ].join("\n");
+}
+
+/** Whole words up to `max` characters, no ellipsis (a label, not a sentence). */
+function fitWords(text: string, max: number) {
+    if (Array.from(text).length <= max) return text;
+    const cut = Array.from(text).slice(0, max + 1).join("");
+    return cut.slice(0, Math.max(cut.lastIndexOf(" "), 0)).replace(/[,;:.\s]+$/, "") || Array.from(text).slice(0, max).join("");
 }
 
 function fitChars(text: string, max: number) {
@@ -237,6 +300,8 @@ export function normalizeTextPosts(value: unknown, formats: TextFormat[]): TextS
             ? post.poll_options.filter((option): option is string => typeof option === "string").map((option) => clean(option, POLL_OPTION_LIMIT)).filter(Boolean).slice(0, 4)
             : [];
         if (format === "poll" && options.length < 2) return [];
+        // Another AI product, a clinical word or a label: the post is dropped, never posted.
+        if (policyProblems(text, long, ...options).length) return [];
         return [{format, text: text.replace(/https?:\/\/\S+/g, "").trim(), long: long.replace(/https?:\/\/\S+/g, "").trim(), poll: format === "poll" ? options : null}];
     });
 }

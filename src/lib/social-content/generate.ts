@@ -4,22 +4,28 @@ import {listPageCandidates, loadPageSource} from "@/lib/content-video/page-sourc
 import {SOURCE_TYPES, type SourceImage, type SourceType, type VideoSource} from "@/lib/content-video/plan";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {uploadToStorage} from "@/lib/content-video/store";
-import {EXPERIMENT_VERSION, type TextFormat} from "@/lib/social-lab/arms";
-import {nextExperiment, rankSourceTypes} from "@/lib/social-lab/experiments";
+import {CAROUSEL_FORMATS, type CarouselFormat, EXPERIMENT_VERSION, TAKE_IDEAS, type TextFormat} from "@/lib/social-lab/arms";
+import {nextCarouselFormat, nextExperiment, rankSourceTypes} from "@/lib/social-lab/experiments";
 import {structuredClaude} from "@/lib/social-content/claude";
-import {buildCarouselUserPrompt, buildTextUserPrompt, CAROUSEL_SYSTEM_PROMPT, carouselJsonSchema, normalizeCarousel, normalizeTextPosts, TEXT_JSON_SCHEMA, TEXT_SYSTEM_PROMPT, textShareCopy} from "@/lib/social-content/plan";
+import {animalRecords, buildCarouselUserPrompt, buildTextUserPrompt, CAROUSEL_SYSTEM_PROMPT, carouselJsonSchema, normalizeCarousel, normalizeTextPosts, TAKE_TEXT_FORMATS, type TakeContext, TEXT_JSON_SCHEMA, TEXT_SYSTEM_PROMPT, textShareCopy} from "@/lib/social-content/plan";
 import {type Picture, pictureFromBytes, renderSlide, type SlideSize} from "@/lib/social-content/render";
-import {carouselSourceSlugs, insertSocialContent, listSocialContent} from "@/lib/social-content/store";
-import {type CarouselImages, type SocialContentRow, TEMPLATES_FOR_SOURCE} from "@/lib/social-content/types";
+import {carouselFormatKeys, carouselSourceSlugs, insertSocialContent, listSocialContent} from "@/lib/social-content/store";
+import {type CarouselImages, FORMAT_MIN_IMAGES, FORMAT_SOURCES, type SocialContentRow, TEMPLATES_FOR_SOURCE} from "@/lib/social-content/types";
 
 // Makes one carousel, or a batch of text posts, from one of our pages:
 // the hook lab picks the arms, Claude writes, Satori draws, the slides go to
 // the public content-videos bucket under social/<id>/, and the row lands in
-// admin_social_content ready for the auto-share.
+// admin_social_content ready for the auto-share. A carousel's format is drawn
+// first, because it decides which pages fit: a page carousel, "the usual vs
+// the <animal>" or "5 animals, 1 idea". The take formats start from an
+// everyday idea and build each take on the animals' real behaviour: the page
+// text and their Powers from the species records.
 
-/** A carousel needs this many usable photos (cover, items, and the closing backdrop). */
-const MIN_CAROUSEL_IMAGES = 3;
+/** A page carousel needs this many usable photos (cover, items, and the closing backdrop). */
+const MIN_CAROUSEL_IMAGES = FORMAT_MIN_IMAGES.page;
 const PICKS_PER_RUN = 6;
+/** Ideas a take format chooses from. */
+const IDEAS_OFFERED = 3;
 
 type Pick = {type: SourceType; slug: string};
 
@@ -53,6 +59,28 @@ export async function freshArticleNeeds() {
     };
 }
 
+/** A few everyday ideas for a take format to choose from. */
+function takeIdeas(random = Math.random) {
+    return shuffle([...TAKE_IDEAS], random).slice(0, IDEAS_OFFERED);
+}
+
+/** What a take format is written from: ideas to pick from and the animals' records. */
+function takeContext(source: VideoSource): TakeContext {
+    return {ideas: takeIdeas(), records: animalRecords(source)};
+}
+
+/** Pages for a take format: from the families it fits, best-scoring family first, never a page that has one in this format. */
+async function takeCandidates(format: Exclude<CarouselFormat, "page">): Promise<Pick[]> {
+    const used = await carouselFormatKeys().catch(() => new Set<string>());
+    const types = await rankSourceTypes("carousel", FORMAT_SOURCES[format]) as SourceType[];
+    const picks: Pick[] = [];
+    for (const type of types) {
+        const pages = shuffle(await listPageCandidates(type)).filter((page) => !used.has(`${format}:${type}:${page.slug}`) && page.imageCount >= FORMAT_MIN_IMAGES[format]);
+        picks.push(...pages.slice(0, 2).map((page) => ({type, slug: page.slug})));
+    }
+    return picks.slice(0, PICKS_PER_RUN);
+}
+
 /**
  * Fresh articles first, then random pages from the families a carousel can be
  * made of, the family whose carousels scored best first (the hook lab's draw);
@@ -83,29 +111,36 @@ async function loadPictures(images: SourceImage[]) {
     return pictures;
 }
 
-export async function generateCarousel(pick?: Pick): Promise<SocialContentRow> {
-    const candidates = pick ? [pick] : await carouselCandidates();
+/**
+ * One carousel. Without a page, the hook lab draws the format first and the
+ * page is picked to fit it; with a page (or no format asked for), it is a
+ * page carousel.
+ */
+export async function generateCarousel(pick?: Pick, requestedFormat?: CarouselFormat): Promise<SocialContentRow> {
+    const format: CarouselFormat = requestedFormat ?? (pick ? "page" : await nextCarouselFormat());
+    const minImages = FORMAT_MIN_IMAGES[format];
+    const candidates = pick ? [pick] : format === "page" ? await carouselCandidates() : await takeCandidates(format);
     let source: VideoSource | null = null;
     let chosen: Pick | null = null;
     for (const candidate of candidates) {
         const loaded = await loadPageSource(candidate.type, candidate.slug).catch(() => null);
-        if (loaded && loaded.images.length >= MIN_CAROUSEL_IMAGES) {
+        if (loaded && loaded.images.length >= minImages) {
             source = loaded;
             chosen = candidate;
             break;
         }
     }
-    if (!source || !chosen) throw new Error("No page with enough photos for a carousel");
-    const templates = TEMPLATES_FOR_SOURCE[chosen.type] ?? ["facts"];
+    if (!source || !chosen) throw new Error(format === "page" ? "No page with enough photos for a carousel" : `No page with enough animals for a “${CAROUSEL_FORMATS[format].label}” carousel`);
+    const templates = format === "page" ? TEMPLATES_FOR_SOURCE[chosen.type] ?? ["facts"] : [format];
     const fresh = Boolean(source.publishedAt) && Date.now() - Date.parse(source.publishedAt!) < FRESH_ARTICLE_MS;
-    const experiment = await nextExperiment("carousel", {sourceType: chosen.type, fresh});
+    const experiment = await nextExperiment("carousel", {sourceType: chosen.type, fresh, carouselFormat: format});
     // Only photos that load are offered: the writer picks from what will render.
     const pictures = await loadPictures(source.images.slice(0, 12));
     const offered = {...source, images: source.images.filter((image) => pictures.has(image.index))};
-    if (offered.images.length < MIN_CAROUSEL_IMAGES) throw new Error(`Only ${offered.images.length} photos of “${source.title}” loaded`);
+    if (offered.images.length < minImages) throw new Error(`Only ${offered.images.length} photos of “${source.title}” loaded`);
     const reply = await structuredClaude({
         system: CAROUSEL_SYSTEM_PROMPT,
-        user: buildCarouselUserPrompt(offered, templates, experiment),
+        user: buildCarouselUserPrompt(offered, templates, experiment, format === "page" ? undefined : takeContext(source)),
         schema: carouselJsonSchema(templates),
         images: offered.images.map((image) => ({index: image.index, bytes: pictures.get(image.index)!.bytes}))
     });
@@ -170,9 +205,12 @@ export async function generateTextPosts(count = 4, pick?: Pick): Promise<SocialC
         if (pick) break;
     }
     if (!source || !chosen) throw new Error("No page to write text posts from");
-    const experiments = await Promise.all(Array.from({length: count}, () => nextExperiment("text")));
+    // Only the formats this page can carry ("5 animals" needs five real animals).
+    const sourceType = chosen.type;
+    const experiments = await Promise.all(Array.from({length: count}, () => nextExperiment("text", {sourceType, fresh: false})));
     const formats = experiments.map((experiment) => experiment.textFormat!).filter(Boolean) as TextFormat[];
-    const reply = await structuredClaude({system: TEXT_SYSTEM_PROMPT, user: buildTextUserPrompt(source, formats), schema: TEXT_JSON_SCHEMA, effort: "low"});
+    const take = formats.some((format) => TAKE_TEXT_FORMATS.includes(format)) ? takeContext(source) : undefined;
+    const reply = await structuredClaude({system: TEXT_SYSTEM_PROMPT, user: buildTextUserPrompt(source, formats, take), schema: TEXT_JSON_SCHEMA, effort: "low"});
     const posts = normalizeTextPosts(reply.value, formats);
     if (!posts.length) throw new Error("Claude's text posts did not fit the format");
     const each = reply.usd / posts.length;
