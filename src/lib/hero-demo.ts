@@ -13,8 +13,8 @@
  * Pure, so the request, the stream reading and the shown text are tested.
  */
 
-/** The animal the demo talks to: the catalog's lion, with its Power. */
-export const HERO_DEMO_ANIMAL = {slug: "african-lion", name: "African Lion", power: "Pride Command"} as const;
+/** The animal the demo talks to: the catalog's lion (its Talk page calls it "Lion"), with its Power. */
+export const HERO_DEMO_ANIMAL = {slug: "african-lion", name: "Lion", power: "Pride Command"} as const;
 
 /** Where "Keep talking" goes, and the path the demo's turn is asked from, so it is that chat's thread. */
 export const HERO_DEMO_TALK_PATH = `/talk/${HERO_DEMO_ANIMAL.slug}`;
