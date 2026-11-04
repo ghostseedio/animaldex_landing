@@ -125,6 +125,7 @@ export const STATIC_OG_CARDS: Record<string, OgCardSpec> = {
     "legal/privacy": {kicker: "Legal", title: "AnimalDex Privacy Policy"},
     "legal/terms": {kicker: "Legal", title: "AnimalDex Terms of Service"},
     "legal/refunds": {kicker: "Legal", title: "AnimalDex Refund Policy"},
+    "legal/ai-and-safety": {kicker: "Legal", title: "AnimalDex AI and Safety"},
     "legal/wildlife-guide-author-terms": {kicker: "Legal", title: "Wildlife Guide Author Terms"},
     "legal/wildlife-guide-buyer-terms": {kicker: "Legal", title: "Wildlife Guide Buyer Terms"},
 
