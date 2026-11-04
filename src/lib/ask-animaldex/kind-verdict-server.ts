@@ -13,11 +13,13 @@ import {
     ASK_KIND_VERDICT_MAX_TOKENS,
     askHeldStances,
     askProblemSimilarity,
+    askWithChosenLatch,
     buildAskKindVerdictPrompt,
-    parseAskKindVerdict,
+    parseAskTurnRead,
     type AskHeldStance,
     type AskKindVerdict,
-    type AskKindVerdictInput
+    type AskKindVerdictInput,
+    type AskTurnRead
 } from "@/lib/ask-animaldex/kind-verdict";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 
@@ -36,15 +38,33 @@ function jsonRecord(text: string): Record<string, unknown> | null {
     }
 }
 
-/** Null on any failure: the animal then answers without one. */
-export async function requestAskKindVerdict(params: {
+/** The verdict call's model: the call model (Haiku 5.5 unless configured). */
+export function askVerdictModel(): string {
+    return process.env.CLAUDE_ANIMAL_CALL_MODEL?.trim() || DEFAULT_VERDICT_MODEL;
+}
+
+/** The request as it goes to the model. */
+export function askKindVerdictRequest(model: string, input: AskKindVerdictInput) {
+    return {
+        model,
+        max_tokens: ASK_KIND_VERDICT_MAX_TOKENS,
+        thinking: {type: "disabled" as const},
+        messages: [{role: "user" as const, content: buildAskKindVerdictPrompt(input)}]
+    };
+}
+
+/**
+ * What the turn is and its verdict, with the latch chosen for this reader
+ * (`angle.ts`). Null on any failure: the animal then answers without one.
+ */
+export async function requestAskTurnRead(params: {
     key: string;
     input: AskKindVerdictInput;
     model?: string;
     timeoutMs?: number;
     /** For tests. */
     fetchImpl?: typeof fetch;
-}): Promise<AskKindVerdict | null> {
+}): Promise<AskTurnRead | null> {
     try {
         const client = new Anthropic({
             apiKey: params.key,
@@ -53,26 +73,28 @@ export async function requestAskKindVerdict(params: {
             maxRetries: 0,
             ...(params.fetchImpl ? {fetch: params.fetchImpl} : {})
         });
-        const response = await client.messages.create({
-            model: params.model ?? (process.env.CLAUDE_ANIMAL_CALL_MODEL?.trim() || DEFAULT_VERDICT_MODEL),
-            max_tokens: ASK_KIND_VERDICT_MAX_TOKENS,
-            thinking: {type: "disabled"},
-            messages: [{role: "user", content: buildAskKindVerdictPrompt(params.input)}]
-        });
+        const response = await client.messages.create(askKindVerdictRequest(params.model ?? askVerdictModel(), params.input));
         const text = response.content.map((block) => (block.type === "text" ? block.text : "")).join("");
         const raw = jsonRecord(text);
-        const verdict = raw ? parseAskKindVerdict(raw, (params.input.held ?? []).slice(0, 8)) : null;
+        if (!raw) return null;
+        const read = parseAskTurnRead(raw, (params.input.held ?? []).slice(0, 8));
+        const verdict = read.verdict;
         // A "same kind" whose own description reads unlike the held one is
         // asked again without the held stances: a fresh answer beats someone else's.
         if (verdict?.held_id && verdict.asked_problem !== undefined &&
             askProblemSimilarity(verdict.asked_problem, verdict.problem ?? "") < ASK_HELD_MATCH_FLOOR) {
-            return await requestAskKindVerdict({...params, input: {...params.input, held: []}});
+            return await requestAskTurnRead({...params, input: {...params.input, held: []}});
         }
-        return verdict;
+        return {...read, verdict: askWithChosenLatch(verdict, params.input.heard ?? [])};
     } catch (error) {
         console.warn("[ask-animaldex] kind verdict failed", error instanceof Error ? error.message : String(error));
         return null;
     }
+}
+
+/** The verdict alone (requestAskTurnRead). */
+export async function requestAskKindVerdict(params: Parameters<typeof requestAskTurnRead>[0]): Promise<AskKindVerdict | null> {
+    return (await requestAskTurnRead(params))?.verdict ?? null;
 }
 
 /** The stances this animal already holds that might be this kind of problem; none on any failure. */
@@ -102,7 +124,15 @@ export async function rememberAskStance(speciesProfileId: string, verdict: AskKi
             ? await service.rpc("record_animal_stance", {
                 p_species_profile_id: speciesProfileId,
                 p_problem: verdict.problem,
-                p_stance: {power_says: verdict.power_says, obvious: verdict.obvious, angle: verdict.angle, verdict: verdict.verdict},
+                p_stance: {
+                    power_says: verdict.power_says,
+                    obvious: verdict.obvious,
+                    angle: verdict.angle,
+                    verdict: verdict.verdict,
+                    ...((verdict.latch ?? verdict.latches?.[0])
+                        ? {latch: {from: (verdict.latch ?? verdict.latches![0]).source, behaviour: (verdict.latch ?? verdict.latches![0]).behaviour}}
+                        : {})
+                },
                 p_source: source
             })
             : {error: null};

@@ -544,7 +544,7 @@ function speciesContextLines(params: AskSpeciesPromptParams & {pageLine: string}
                 ""
             ]),
         packet.howYouMet
-            ? `how_you_met — ${packet.ownerContext ? "how your owner found you" : "when and where they found you"}:\n${packet.howYouMet}`
+            ? `how_you_met — ${packet.ownerContext ? "how your owner found you" : "when and where they found you"} (only these facts: never add a place, a scene or a detail they do not give):\n${packet.howYouMet}`
             : "",
         packet.rightNow ?? "",
         packet.ownLife ?? "",
@@ -603,14 +603,17 @@ export const ANIMAL_GREETING_RULES = [
     "- One or two short sentences, under {words} words: they are waiting to talk. Say hello the way only you would — your",
     "  rhythm, your world, your temperament. This first line is how they will know you are not any other animal.",
     "- If you have not met (relationship is missing or 'met', and nothing in what_you_remember_about_them was told to",
-    "  you): introduce yourself in one line only you could say, with what your lesson is in your own words, then ask",
-    "  what is on their mind, anything at all, in the spirit of the kind of question you ask.",
+    "  you): say hello in one line only you could say, then one easy question they can answer in a word or two (what",
+    "  they are up to, how their day is going, or what is on their mind), in your own words. Keep it light: no probing",
+    "  question about their life, no test of them and no big question. The question you always ask waits until they",
+    "  bring you something real.",
     "- If you know them (a later relationship stage, or things they told you): greet them like you know them. Pick up",
     "  one remembered thing that matters — or invited_follow_up, if present — lightly, in a clause, and make your one",
     "  question open both ways in the same breath: how that went, or anything new on their mind, in your own words. Never",
     "  a question only about the old thing: they may have come with something new. Never 'I missed you', never how long",
     "  it has been.",
-    "- If how_you_met is given, you may say where they found you, in a few words.",
+    "- If how_you_met is given, you may say where they found you, in a few words, with only what it says: never add a",
+    "  place, a scene or a detail it does not give.",
     "- To a visitor: say whose you are (your owner's name from your_owner) and invite them to ask about your time with",
     "  your owner, or about you. Never ask about the visitor's own life. Their 3 replies below: one about your owner,",
     "  one about you, one about your Power.",
@@ -665,6 +668,8 @@ export function buildAskUserPrompt(params: {
     historyAsTurns?: boolean;
     /** Species scope: what its kind does in the moment most like theirs (`kind-verdict.ts`). */
     kindVerdict?: AskKindVerdict | null;
+    /** Species scope: the turn's own guide (`reply-guards.ts` turnGuideLines). */
+    turnGuide?: string[] | null;
 }): string {
     const {packet} = params;
     const history = (params.conversationHistory ?? [])
@@ -688,6 +693,7 @@ export function buildAskUserPrompt(params: {
             "",
             ...speciesContextLines({packet, recordInSystem: params.recordInSystem, pageLine}),
             params.kindVerdict ? askKindVerdictPromptSection(params.kindVerdict) : "",
+            ...(params.turnGuide ?? []),
             params.historyAsTurns ? "" : historyLine,
             "",
             "Answer the person's latest message, as yourself.",

@@ -135,7 +135,12 @@ export async function consumeServerSentEvents(
 }
 
 type SourceParams = {
-    systemPrompt: string;
+    /**
+     * The whole system prompt, or its blocks with the shared rules first:
+     * Claude caches each block (the shared rules once for every animal); the
+     * other providers get them joined.
+     */
+    systemPrompt: string | string[];
     userPrompt: string;
     /**
      * Earlier turns, oldest first, starting with the person and ending on the
@@ -145,6 +150,22 @@ type SourceParams = {
     history?: AskConversationTurn[];
     signal?: AbortSignal;
 };
+
+/** The system prompt as one string, for the providers that take one. */
+function joinedSystem(systemPrompt: string | string[]): string {
+    return Array.isArray(systemPrompt) ? systemPrompt.join("\n\n") : systemPrompt;
+}
+
+/** The system prompt as Claude's request sends it: one block per part, each with a cache breakpoint. */
+export function claudeSystemBlocks(systemPrompt: string | string[]) {
+    return (Array.isArray(systemPrompt) ? systemPrompt : [systemPrompt])
+        .filter((text) => text.trim().length > 0)
+        .slice(0, 3)
+        .map((text) => ({type: "text" as const, text, cache_control: {type: "ephemeral" as const}}));
+}
+
+/** The routed turn's Claude settings (`chat-routing.ts`), when a turn was routed. */
+export type AskClaudeRoute = {model: string; thinking: "adaptive" | "off"; fallback: boolean};
 
 /**
  * Claude as the voice of the animal: a streamed reply in character.
@@ -165,16 +186,19 @@ export function claudeAnswerSource(params: SourceParams & {
     effort: AskChatEffort;
     /** Covers thinking as well as the reply. */
     maxTokens?: number;
+    /** Thinking off (Haiku only), and whether to ask for the server-side fallback (not on Haiku). */
+    thinking?: "adaptive" | "off";
+    fallback?: boolean;
 }): AnswerDeltaSource {
     return async (emit) => {
         const client = new Anthropic({apiKey: params.key, timeout: 90_000, maxRetries: 0});
         const stream = client.beta.messages.stream({
             model: params.model,
             max_tokens: params.maxTokens ?? 6000,
-            betas: ["server-side-fallback-2026-07-01"],
-            fallbacks: "default",
+            ...(params.thinking === "off" ? {thinking: {type: "disabled" as const}} : {}),
+            ...(params.fallback !== false ? {betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const} : {}),
             output_config: {effort: params.effort},
-            system: [{type: "text", text: params.systemPrompt, cache_control: {type: "ephemeral"}}],
+            system: claudeSystemBlocks(params.systemPrompt),
             messages: [
                 ...(params.history ?? []).map((turn) => ({role: turn.role, content: turn.content})),
                 {role: "user" as const, content: params.userPrompt}
@@ -219,15 +243,16 @@ function geminiContents(params: {userPrompt: string; history?: AskConversationTu
     ];
 }
 
-function openAIMessages(params: {systemPrompt: string; userPrompt: string; history?: AskConversationTurn[]}) {
+function openAIMessages(params: {systemPrompt: string | string[]; userPrompt: string; history?: AskConversationTurn[]}) {
     return [
-        {role: "system", content: params.systemPrompt},
+        {role: "system", content: joinedSystem(params.systemPrompt)},
         ...(params.history ?? []).map((turn) => ({role: turn.role, content: turn.content})),
         {role: "user", content: params.userPrompt}
     ];
 }
 
 export function geminiAnswerSource(params: SourceParams & {key: string; model: string}): AnswerDeltaSource {
+    const systemPrompt = joinedSystem(params.systemPrompt);
     return async (emit) => {
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(params.model)}`
@@ -236,7 +261,7 @@ export function geminiAnswerSource(params: SourceParams & {key: string; model: s
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    systemInstruction: {parts: [{text: params.systemPrompt}]},
+                    systemInstruction: {parts: [{text: systemPrompt}]},
                     contents: geminiContents(params),
                     generationConfig: {
                         temperature: 0.4,
@@ -297,11 +322,21 @@ export function openAIAnswerSource(params: SourceParams & {key: string; model: s
 /** The delta source for one provider, or null when its key is missing. */
 export function askAnswerSource(
     provider: AskProviderName,
-    params: SourceParams & {effort?: AskChatEffort}
+    params: SourceParams & {effort?: AskChatEffort; route?: AskClaudeRoute | null}
 ): AnswerDeltaSource | null {
     if (provider === "claude") {
         const key = claudeAskKey();
-        return key ? claudeAnswerSource({...params, key, model: resolveClaudeAskModel(), effort: params.effort ?? "low"}) : null;
+        const route = params.route ?? null;
+        return key
+            ? claudeAnswerSource({
+                ...params,
+                key,
+                model: route?.model ?? resolveClaudeAskModel(),
+                effort: params.effort ?? "low",
+                thinking: route?.thinking,
+                fallback: route?.fallback
+            })
+            : null;
     }
     if (provider === "gemini") {
         const key = geminiAskKey();

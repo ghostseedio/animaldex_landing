@@ -70,11 +70,12 @@ test("its own lens finds the detail, and the move is never an obvious one, in an
     assert.ok(prompt.includes("With a person it waits on the wall until the moment is its own."));
     assert.ok(prompt.includes("obvious: the two or three moves any sensible adviser, or ChatGPT, would give them"));
     assert.ok(prompt.includes("Never one of the obvious moves in any words, even when its kind does that too"));
-    assert.ok(prompt.includes("problem, angle and verdict never name a person, place, company or product."));
+    assert.ok(prompt.includes("problem, angle, verdict, latch and twist never name a person, place, company or product."));
     const json = prompt.slice(prompt.indexOf("Return JSON only, on one line"));
     const order = ["problem", "obvious", "power_says", "angle", "verdict"].map((key) => json.indexOf(`"${key}"`));
     assert.ok(order.every((at, i) => at > 0 && (i === 0 || at > order[i - 1])));
-    assert.ok(ASK_KIND_VERDICT_MAX_TOKENS >= 200 && ASK_KIND_VERDICT_MAX_TOKENS <= 320);
+    // A decision's answer is short; an idea's three latches with their twists are the longest.
+    assert.ok(ASK_KIND_VERDICT_MAX_TOKENS >= 400 && ASK_KIND_VERDICT_MAX_TOKENS <= 560);
 });
 
 test("the one exception: the only kind or safe move for someone vulnerable is kept, with its own twist", () => {
@@ -84,7 +85,7 @@ test("the one exception: the only kind or safe move for someone vulnerable is ke
 
 test("the Power is read at its word and wins where the kind's life points both ways", () => {
     const prompt = flat(buildAskKindVerdictPrompt(input));
-    assert.ok(prompt.includes("4. power_says: its Power is the part of its life it lives by"));
+    assert.ok(prompt.includes("5. power_says: its Power is the part of its life it lives by"));
     assert.ok(prompt.includes("the side its Power lives by wins"));
     const unanchored = buildAskKindVerdictPrompt({...input, powerName: null});
     assert.ok(!/power_says|its Power/.test(unanchored));
@@ -101,7 +102,7 @@ test("held stances are listed and same_as follows the problem", () => {
 
 test("only a decision with nothing dangerous in it gives a verdict, and same_as keeps a held stance", () => {
     const raw = {decision: true, safety: false, ...verdict};
-    assert.deepEqual(parseAskKindVerdict(raw), verdict);
+    assert.deepEqual(parseAskKindVerdict(raw), {kind: "decision", ...verdict});
     assert.equal(parseAskKindVerdict({...raw, decision: false}), null);
     assert.equal(parseAskKindVerdict({...raw, safety: true}), null);
     assert.equal(parseAskKindVerdict({...raw, verdict: "  "}), null);
@@ -149,7 +150,7 @@ test("the request runs with thinking off, and a failure gives no verdict", async
         sent = JSON.parse(String(init?.body));
         return answer({decision: true, safety: false, ...verdict});
     }) as typeof fetch;
-    assert.deepEqual(await requestAskKindVerdict({key: "k", input, model: "claude-haiku-5-5", fetchImpl: ok}), verdict);
+    assert.deepEqual(await requestAskKindVerdict({key: "k", input, model: "claude-haiku-5-5", fetchImpl: ok}), {kind: "decision", ...verdict});
     assert.deepEqual(sent.thinking, {type: "disabled"});
     assert.equal(sent.max_tokens, ASK_KIND_VERDICT_MAX_TOKENS);
     const failing = (async () => new Response("{}", {status: 500})) as typeof fetch;

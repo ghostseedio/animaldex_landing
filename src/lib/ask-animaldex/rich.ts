@@ -9,8 +9,10 @@ import {ASK_RICH_COLUMNS_MAX, ASK_RICH_COLUMNS_MIN, askRichColumns} from "@/lib/
 
 /**
  * `supported_visuals` for one turn: the owner's cards (`ownerVisuals`) on
- * their own chat, and "rich" on every one-to-one animal turn whose column was
- * measured. Calls never send it (the call's turns go as they always have).
+ * their own chat, "step" on every other one-to-one turn (the chat draws a
+ * public chat's step preview, `AskStepPreviewSection`; the server sets one only
+ * for a client that says so), and "rich" on every one-to-one animal turn whose
+ * column was measured. Calls never send it (the call's turns go as they always have).
  */
 export function askTurnVisuals(params: {
     ownerVisuals: readonly string[] | null;
@@ -18,6 +20,7 @@ export function askTurnVisuals(params: {
     call?: boolean;
 }): {supported_visuals?: string[]; text_columns?: number} {
     const visuals = [...(params.ownerVisuals ?? [])];
+    if (!params.call && !visuals.includes("step")) visuals.push("step");
     const rich = !params.call && typeof params.richColumns === "number" && Number.isFinite(params.richColumns);
     if (rich) visuals.push("rich");
     return {
