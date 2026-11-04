@@ -6,6 +6,7 @@ import {ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import UseCaseProductCta from "@/app/[locale]/(composited)/use-cases/_components/use-case-product-cta";
+import TakeBridge from "@/app/[locale]/(composited)/_components/take-bridge";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
 import {answerPages, getAnswerPage, getAnswerPageImage, getRelatedAnswerPages} from "@/data/answer-pages";
 import {getBlogPost} from "@/data/blog";
@@ -266,6 +267,8 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
     const relatedSpecies = entry.speciesSlugs
         .map((speciesSlug) => getSpeciesBySlug(speciesSlug))
         .filter((item): item is NonNullable<ReturnType<typeof getSpeciesBySlug>> => Boolean(item));
+    // The page's first animal is the one its bridge offers a take from.
+    const bridgeAnimal = relatedSpecies[0] ?? null;
     const relatedBlogs = entry.blogSlugs
         .map((blogSlug) => getBlogPost(blogSlug))
         .filter((item): item is NonNullable<ReturnType<typeof getBlogPost>> => Boolean(item));
@@ -327,6 +330,12 @@ export default async function AnswerPage({slug, locale, cmsSource = false}: Answ
                                 // The positioning in one line, and the way in (DECISIONS §8).
                                 <p className="mt-4 max-w-3xl border-l-2 border-primary-400 pl-4 text-lg font-semibold leading-8 text-white">{t("positioningLine")}</p>
                             ) : null}
+                            <TakeBridge
+                                eyebrow={bridgeAnimal ? t("bridgeEyebrow", {animal: bridgeAnimal.name}) : t("bridgeEyebrowGeneral")}
+                                body={bridgeAnimal ? t("bridgeBody", {animal: bridgeAnimal.name}) : t("bridgeBodyGeneral")}
+                                cta={bridgeAnimal ? t("bridgeCta") : t("bridgeCtaGeneral")}
+                                href={bridgeAnimal ? `/talk/${bridgeAnimal.slug}` : "/talk"}
+                            />
                         </div>
                         <div className="mt-8 flex flex-col gap-5">
                             {/* Search phrases stay in the metadata; readers never see them as chips (WEB-11). */}

@@ -5,25 +5,20 @@ import type {ScopedTranslator} from "@/loaders/translation";
 import HeaderLink from "@/app/[locale]/(composited)/_components/header-link";
 import HeaderMenu from "@/app/[locale]/(composited)/_components/header-menu";
 import HeaderAuthLink, {HeaderAccountButton} from "@/app/[locale]/(composited)/_components/header-auth-link";
-import HeaderDropdown, {HeaderDropdownProvider} from "@/app/[locale]/(composited)/_components/header-dropdown";
 import HeaderMobileNav from "@/app/[locale]/(composited)/_components/header-mobile-nav";
 import HeaderTalkLink from "@/app/[locale]/(composited)/_components/header-talk-link";
 import BrandLockup from "@/components/brand/brand-lockup";
 import {
     START_COLLECTION_HREF,
     TALK_HREF,
-    headerDropdowns,
-    howItWorksNavLink,
-    mobileAccordionSections,
-    moreNavGroups,
+    headerNavLinks,
     type PublicNavLink
 } from "@/data/public-navigation";
 
 function translateLinks(t: (key: string) => string, links: PublicNavLink[]) {
     return links.map((link) => ({
         href: link.href,
-        label: t(link.labelKey),
-        preview: link.preview
+        label: t(link.labelKey)
     }));
 }
 
@@ -33,13 +28,10 @@ const pill = "inline-flex h-9 items-center justify-center whitespace-nowrap roun
 export default function Header({locale, t}: {locale: string; t: ScopedTranslator}) {
     // The primary action on every page is talking (docs/rich-chat/SPEC.md §4.5),
     // with getting the app beside it. On a species page it talks to that animal.
+    // Nov 2026: the whole header is Talk · Find your animals · Get the app.
     const ctaLabel = t("talkToAnAnimal");
     const getAppLabel = t("getTheApp");
-    const desktopDropdowns = headerDropdowns.map((section) => ({
-        ...section,
-        title: t(section.titleKey),
-        items: translateLinks(t, section.links)
-    }));
+    const navLinks = translateLinks(t, headerNavLinks);
 
     return (
         <header
@@ -101,31 +93,19 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                     )}
                     mobileLinks={(
                         <HeaderMobileNav
-                            howItWorks={{href: howItWorksNavLink.href, label: t(howItWorksNavLink.labelKey)}}
-                            sections={mobileAccordionSections.map((section) => ({
-                                id: section.id,
-                                title: t(section.titleKey),
-                                links: translateLinks(t, section.links)
-                            }))}
+                            topLinks={navLinks}
+                            sections={[]}
                             moreTitle={t("moreNav")}
-                            moreGroups={moreNavGroups.map((group) => translateLinks(t, group))}
+                            moreGroups={[]}
                         />
                     )}
                     mobileAuth={<HeaderAuthLink signInLabel={t("signIn")} myAnimalsLabel={t("myAnimals")} mobile />}
                 >
-                    <HeaderDropdownProvider>
-                        <HeaderLink href={howItWorksNavLink.href}>
-                            {t(howItWorksNavLink.labelKey)}
+                    {navLinks.map((link) => (
+                        <HeaderLink key={link.href} href={link.href}>
+                            {link.label}
                         </HeaderLink>
-                        {desktopDropdowns.map((section) => (
-                            <HeaderDropdown
-                                key={section.id}
-                                label={section.title}
-                                items={section.items}
-                                ruleAfterHref={section.ruleAfterHref}
-                            />
-                        ))}
-                    </HeaderDropdownProvider>
+                    ))}
                 </HeaderMenu>
             </div>
         </header>

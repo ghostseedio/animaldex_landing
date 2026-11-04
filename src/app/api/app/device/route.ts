@@ -2,7 +2,7 @@ import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {hasAuthCookie} from "@/lib/viewer";
-import {FIRST_TOUCH_COOKIE, parseFirstTouch} from "@/lib/first-touch";
+import {acquisitionTouch, FIRST_TOUCH_COOKIE, parseFirstTouch} from "@/lib/first-touch";
 
 // Only a new account takes the browser's first touch: an old account opening
 // the web app says nothing about how it was acquired.
@@ -41,7 +41,8 @@ export async function POST() {
             p_self_reported_detail: null,
             p_install_referrer: null,
             p_apple_ads: null,
-            p_utm: {...touch, at: undefined}
+            // The attribution only: the hero test's variant and visitor id stay in the browser.
+            p_utm: acquisitionTouch(touch)
         });
     }
 

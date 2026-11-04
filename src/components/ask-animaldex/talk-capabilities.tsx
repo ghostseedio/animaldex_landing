@@ -2,14 +2,15 @@
 
 /**
  * What this animal can do, on the public Talk chat (docs/rich-chat/SPEC.md,
- * section 4.4): a quiet row of two chips under its card, no caption. Its
- * Trials are public, opened in the thread as the animal's own Trials
- * section, a tap on a loop enlarging it in place. Steps and debates belong
- * to the app's own animals: one chip, one honest line and the one action it
- * needs, the app, where they capture one of their own (an account alone
- * unlocks neither: UX pass JRN-6, WEB-19). Talk itself is the message bar
- * under it, not a chip (visual first, no noise, 2026-11-01). Never a modal,
- * never a nag.
+ * section 4.4): a quiet row of chips under its card, no caption. Its Trials
+ * are public, opened in the thread as the animal's own Trials section, a tap
+ * on a loop enlarging it in place. Since Nov 1 2026 a public chat sets steps
+ * too (web only), so "Your step" says so, unlocked; debates still belong to
+ * the app's own animals: one locked chip, one honest line and the one action
+ * it needs, the app, where they capture one of their own (an account alone
+ * unlocks none: UX pass JRN-6, WEB-19). Talk itself is the message bar under
+ * it, not a chip (visual first, no noise, 2026-11-01). Never a modal, never a
+ * nag.
  */
 
 import {useEffect, useRef, useState, type ReactNode} from "react";
@@ -23,7 +24,7 @@ import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import type {AnimalTrial} from "@/lib/animal-trials";
 import type {TalkCapabilityWords} from "@/lib/ask-animaldex/talk";
 
-type Capability = "trials" | "app";
+type Capability = "trials" | "step" | "app";
 
 export default function TalkCapabilities({
     name,
@@ -81,12 +82,12 @@ export default function TalkCapabilities({
         if (open && rootRef.current) onReveal?.(rootRef.current);
     }, [open, onReveal]);
     const viewer = {signedIn};
-    /** The app's own capabilities' one action: the app, where they capture one of their own. */
+    /** Debates' one action: the app, where they capture one of their own. */
     const appPanel = () => {
-        talkCapabilityAction("step", viewer);
+        talkCapabilityAction("debates", viewer);
         return (
             <div className="mx-auto flex max-w-[30rem] flex-col items-center gap-2 px-4 pt-3 text-center" data-testid="talk-capability-app-panel">
-                <p className="text-[13px] leading-5 text-ink-200">{fillWords(words.capInAppNote, {animal: name})}</p>
+                <p className="text-[13px] leading-5 text-ink-200">{fillWords(words.capDebatesInApp, {animal: name})}</p>
                 <Link
                     href={appHref}
                     onClick={() => rememberStorePlacement("page_talk")}
@@ -105,8 +106,14 @@ export default function TalkCapabilities({
             {/* One scrolling row of starter chips under the contact card (DESIGN.md section 3), never a second line. */}
             <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:justify-center" role="group" aria-label={fillWords(words.capabilities, {name})}>
                 <CapabilityChip icon={<FlagIcon />} label={fillWords(words.capTrials, {animal: name})} pressed={open === "trials"} onClick={() => toggle("trials")} testId="talk-capability-trials" />
-                <CapabilityChip icon={<LockIcon />} label={words.capInApp} quiet pressed={open === "app"} onClick={() => toggle("app")} title={words.locked} testId="talk-capability-app" />
+                <CapabilityChip icon={<StepIcon />} label={words.capStep} pressed={open === "step"} onClick={() => toggle("step")} testId="talk-capability-step" />
+                <CapabilityChip icon={<LockIcon />} label={words.capDebates} quiet pressed={open === "app"} onClick={() => toggle("app")} title={words.locked} testId="talk-capability-app" />
             </div>
+            {open === "step" ? (
+                <p className="mx-auto max-w-[30rem] px-4 pt-3 text-center text-[13px] leading-5 text-ink-200" data-testid="talk-capability-step-panel">
+                    {fillWords(words.capStepHere, {animal: name})}
+                </p>
+            ) : null}
             {open === "app" ? appPanel() : null}
             {open === "trials" ? (
                 // Its Trials, as the animal's own section, under its card.
@@ -174,3 +181,4 @@ function icon(path: ReactNode) {
 
 const FlagIcon = () => icon(<path d="M5 17.5V3m0 1h9l-1.6 3.2L14 10.5H5" />);
 const LockIcon = () => icon(<path d="M5.5 9h9v7.5h-9ZM7.5 9V6.5a2.5 2.5 0 0 1 5 0V9" />);
+const StepIcon = () => icon(<path d="M3.5 15.5h4v-4h4v-4h5" />);

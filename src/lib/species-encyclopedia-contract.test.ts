@@ -41,7 +41,7 @@ test("species pages keep canonical knowledge server-rendered and treat Ask as an
     assert.match(askUi, /species_ask_why_clicked|SPECIES_ASK_FUNNEL_EVENTS.whyClicked/);
     assert.match(askUi, /AnimalDex’s interpretation|labels.layers/);
     assert.match(understand, /AskWhyButton/);
-    assert.match(askLib, /anonymous: 3/);
+    assert.match(askLib, /anonymous: 6/);
     assert.match(askLib, /signedIn: 10/);
     assert.match(askLib, /pro: 100/);
     assert.match(askLib, /species_page_viewed/);

@@ -5,22 +5,22 @@ import test from "node:test";
 import {fileURLToPath} from "node:url";
 import {
     ADVICE_FATIGUE_HREF,
+    AI_AND_SAFETY_HREF,
     ANIMAL_FREQUENCIES_HREF,
     animalWisdomLinks,
     blogNavLink,
     ANIMAL_TRIALS_HREF,
     EARN_ON_ANIMALDEX_HREF,
     exploreAnimalLinks,
+    FIND_YOUR_ANIMALS_HREF,
     footerColumns,
-    headerAnimalLinks,
-    headerArticleLinks,
-    headerDropdowns,
+    footerLegalLinks,
+    headerNavLinks,
     HOW_IT_WORKS_HREF,
     howItWorksNavLink,
     INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
     LOCATIONS_HREF,
-    mobileAccordionSections,
-    moreNavGroups,
+    PINNED_DRAWER_HREFS,
     productLinks,
     resourceLinks,
     START_COLLECTION_HREF,
@@ -83,7 +83,7 @@ test("public navigation keeps existing SEO routes", () => {
     // once guides became virtual.
     const everyNavHref = [
         ...productLinks, ...exploreAnimalLinks, ...animalWisdomLinks, ...resourceLinks,
-        ...headerDropdowns.flatMap((section) => section.links), ...moreNavGroups.flat()
+        ...headerNavLinks, ...footerColumns.flatMap((column) => column.links ?? []), ...footerLegalLinks
     ].map((link) => link.href);
     for (const retired of ["/become-a-wildlife-guide", "/wildlife-experiences", "/creator-rewards"]) {
         assert.ok(!everyNavHref.includes(retired), `${retired} should not be in public navigation`);
@@ -105,35 +105,39 @@ test("the header's primary action is Talk to an animal, with Get the app beside 
     assert.match(talkLink, /speciesTalkHref/);
 });
 
-test("the header is How it works, Animals and Articles (JRN-35), with the search hubs in the footer", () => {
-    assert.equal(howItWorksNavLink.href, HOW_IT_WORKS_HREF);
-    assert.deepEqual(headerDropdowns.map((section) => section.titleKey), ["animalsNav", "blog"]);
-    const headerHrefs = [howItWorksNavLink, ...headerAnimalLinks, ...headerArticleLinks].map((link) => link.href);
-    for (const hub of ["/comparisons", "/tier-list", "/pokemon-animals", "/talk-to-animals", "/what-animal-am-i"]) {
-        assert.ok(!headerHrefs.includes(hub), `${hub} should not be in the header`);
+test("the header is Talk · Find your animals · Get the app (Nov 2026), with the search hubs in the footer", () => {
+    // Talk and Get the app are the header's two buttons; Find your animals is its one link.
+    assert.deepEqual(headerNavLinks.map((link) => link.href), [FIND_YOUR_ANIMALS_HREF]);
+    assert.equal(FIND_YOUR_ANIMALS_HREF, "/what-animal-am-i");
+    for (const hub of ["/comparisons", "/tier-list", "/pokemon-animals", "/talk-to-animals", HOW_IT_WORKS_HREF, "/animals", "/blog"]) {
+        assert.ok(!headerNavLinks.some((link) => link.href === hub), `${hub} should not be in the header`);
     }
+    // The pages stay live and in the footer: the search hubs most people arrive through.
     const footerHrefs = footerColumns.flatMap((column) => column.links ?? []).map((link) => link.href);
-    for (const hub of ["/comparisons", "/tier-list", "/animal-hybrids", "/what-animal-am-i"]) {
+    for (const hub of ["/animals", "/comparisons", "/tier-list", "/animal-hybrids", FIND_YOUR_ANIMALS_HREF, HOW_IT_WORKS_HREF]) {
         assert.ok(footerHrefs.includes(hub), `${hub} should stay in the footer`);
     }
     assert.ok(!footerHrefs.includes("/talk-to-animals"), "one Talk entry in the footer");
+    assert.equal(new Set(footerHrefs).size, footerHrefs.length, "the footer lists each page once");
+    assert.ok(footerHrefs.length <= 12, "the footer is cut to essentials");
+    // The legal row carries the AI & safety page (SPEC 3.1).
+    assert.deepEqual(footerLegalLinks.map((link) => link.href), ["/legal/privacy", "/legal/terms", "/legal/refunds", AI_AND_SAFETY_HREF]);
+    assert.equal(AI_AND_SAFETY_HREF, "/legal/ai-and-safety");
 });
 
 test("header and footer consume the shared public navigation data", () => {
     const header = readRepo("src/app/[locale]/(composited)/_components/header.tsx");
     const footer = readRepo("src/app/[locale]/(composited)/_components/footer.tsx");
     const dropdown = readRepo("src/app/[locale]/(composited)/_components/header-dropdown.tsx");
-    assert.match(header, /headerDropdowns/);
-    assert.match(header, /mobileAccordionSections/);
+    assert.match(header, /headerNavLinks/);
     assert.match(header, /HeaderMobileNav/);
-    assert.match(header, /moreNavGroups/);
-    assert.doesNotMatch(header, /mobileNavSections/);
+    assert.doesNotMatch(header, /mobileNavSections|headerDropdowns/);
     assert.match(footer, /footerColumns/);
-    assert.equal(footerColumns.length, 4);
+    assert.match(footer, /footerLegalLinks/);
+    assert.equal(footerColumns.length, 3);
+    // The dropdown is out of the header, and kept accessible for when a menu returns.
     assert.match(dropdown, /aria-expanded/);
     assert.match(dropdown, /aria-haspopup/);
-    // Desktop dropdowns open on mouse hover (a deliberate product change), but
-    // only for a mouse: touch and keyboard users still open them with the button.
     assert.match(dropdown, /onPointerEnter=\{onRootPointerEnter\}/);
     assert.match(dropdown, /pointerType !== "mouse"/);
 });
@@ -162,6 +166,9 @@ test("nav labels match the published category names", () => {
     assert.equal(en.nav.getTheApp, "Get the app");
     assert.equal(en.nav.adviceFatigue, "Advice fatigue");
     assert.equal(en.nav.howItWorks, "How it works");
+    assert.equal(en.nav.findYourAnimals, "Find your animals");
+    assert.equal(en.nav.aiAndSafety, "AI & safety");
+    assert.equal(en.nav.footerGroups.help, "Help");
     assert.equal(en.nav.footerGroups.product, "AnimalDex");
     assert.notEqual(en.nav.animalWisdom, "Animal Guide");
     assert.equal(en.nav.moreNav, "More");
@@ -170,46 +177,30 @@ test("nav labels match the published category names", () => {
     const id = JSON.parse(readRepo("src/data/locales/id.json"));
     const keys = [
         ...productLinks, ...exploreAnimalLinks, ...animalWisdomLinks, ...resourceLinks,
-        ...headerAnimalLinks, ...headerArticleLinks, howItWorksNavLink, ...moreNavGroups.flat()
-    ].map((link) => link.labelKey).concat(headerDropdowns.map((section) => section.titleKey));
+        ...headerNavLinks, howItWorksNavLink, ...footerColumns.flatMap((column) => column.links ?? []), ...footerLegalLinks
+    ].map((link) => link.labelKey).concat(footerColumns.map((column) => column.titleKey.replace(/^footerGroups\./, "")));
+    const label = (messages: {nav: Record<string, unknown> & {footerGroups: Record<string, unknown>}}, key: string) =>
+        messages.nav[key] ?? messages.nav.footerGroups[key];
     for (const key of Array.from(new Set(keys))) {
-        assert.equal(typeof en.nav[key], "string", `en.nav.${key} is missing`);
-        assert.equal(typeof id.nav[key], "string", `id.nav.${key} is missing`);
+        assert.equal(typeof label(en, key), "string", `en.nav.${key} is missing`);
+        assert.equal(typeof label(id, key), "string", `id.nav.${key} is missing`);
     }
 });
 
 test("the mobile drawer shows every link exactly once", () => {
-    const animals = mobileAccordionSections.find((section) => section.id === "explore");
-    const articles = mobileAccordionSections.find((section) => section.id === "articles");
-    const moreHrefs = moreNavGroups.flat().map((link) => link.href);
-    const mobileHrefs = [
-        howItWorksNavLink.href,
-        ...mobileAccordionSections.flatMap((section) => section.links.map((link) => link.href)),
-        ...moreHrefs
-    ];
-
-    assert.ok(animals?.links.some((link) => link.href === LOCATIONS_HREF));
-    assert.ok(animals?.links.some((link) => link.href === ANIMAL_FREQUENCIES_HREF));
-    assert.ok(animals?.links.some((link) => link.href === ANIMAL_TRIALS_HREF));
-    assert.ok(articles?.links.some((link) => link.href === blogNavLink.href));
-    assert.ok(articles?.links.some((link) => link.href === ADVICE_FATIGUE_HREF));
-
-    // The drawer pins Talk to an animal, and Get the app beside the account, at its foot.
-    assert.ok(!moreHrefs.includes(START_COLLECTION_HREF));
-    assert.ok(!moreHrefs.includes(TALK_HREF));
-    assert.ok(moreHrefs.includes(EARN_ON_ANIMALDEX_HREF));
+    // Find your animals at the top; Talk to an animal, then Get the app beside the account, pinned at the foot.
+    const drawerHrefs = [...headerNavLinks.map((link) => link.href), ...PINNED_DRAWER_HREFS];
+    assert.deepEqual(PINNED_DRAWER_HREFS, [TALK_HREF, START_COLLECTION_HREF]);
+    assert.equal(new Set(drawerHrefs).size, drawerHrefs.length);
     assert.ok(productLinks.some((link) => link.href === START_COLLECTION_HREF));
     assert.ok(productLinks.some((link) => link.href === TALK_HREF));
-
-    // How it works, the accordions and More render together, so a repeat is
-    // a duplicate tap target rather than a shortcut.
-    assert.equal(new Set(mobileHrefs).size, mobileHrefs.length);
-    assert.deepEqual(moreHrefs, [
-        "/use-cases",
-        INSTAGRAM_WILDLIFE_ARCHIVE_HREF,
-        EARN_ON_ANIMALDEX_HREF,
-        "/contact"
-    ]);
+    // Still reachable from the footer, the sitemap and in-page links, only not in the drawer.
+    for (const href of [LOCATIONS_HREF, ANIMAL_FREQUENCIES_HREF, ANIMAL_TRIALS_HREF, blogNavLink.href, ADVICE_FATIGUE_HREF, EARN_ON_ANIMALDEX_HREF, INSTAGRAM_WILDLIFE_ARCHIVE_HREF]) {
+        assert.ok(!drawerHrefs.includes(href), `${href} left the drawer`);
+    }
+    const header = readRepo("src/app/[locale]/(composited)/_components/header.tsx");
+    assert.match(header, /topLinks=\{navLinks\}/);
+    assert.match(header, /moreGroups=\{\[\]\}/);
 });
 
 test("mobile drawer uses an accessible accordion and pins Talk, then Get the app beside the account", () => {

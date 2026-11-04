@@ -231,12 +231,13 @@ const answerPageData: AnswerPageEntry[] = [
         shortTitle: "Pokemon-Like Animal App",
         heroTitle: "Is there a Pokemon-like animal app for real species?",
         metaTitle: "Pokemon-Like Animal App for Real Species | AnimalDex",
-        metaDescription: "Looking for a Pokemon-like animal app with real species? AnimalDex combines creature-collection energy with AI scanning and wildlife learning.",
-        intro: "Yes. AnimalDex gives creature-collection fans a Pokemon-like loop built around real animals.",
+        // The page answers the search; AnimalDex describes itself per the Nov 2026 positioning, never as a Pokemon-style game.
+        metaDescription: "Looking for a Pokemon-like app with real animals? AnimalDex is something else: take any idea to a real animal for a genuinely different take, and every animal you meet in the wild joins your collection.",
+        intro: "Not quite, and that is the point: AnimalDex is where you take any idea to a real animal for a genuinely different take. The animals you meet and photograph join your collection, and each one adds a new way of seeing.",
         directAnswer: [
-            "If you want the excitement of discovering and collecting creatures but in the real world, AnimalDex is built for that use case.",
-            "The app keeps the progression energy people expect from collection games while grounding every entry in real species, habitats, and behavior context.",
-            "That balance makes AnimalDex appealing to both game-oriented users and people who want practical animal-learning value."
+            "If you want collecting with real animals, AnimalDex lets you photograph the animals you meet and keep them. What makes it different is that every one of them talks.",
+            "Take any idea, plan or decision to an animal and it latches onto a real behaviour of its kind, then turns it into an angle you would not hear elsewhere.",
+            "Every animal you collect adds another voice to ask, so the collection is worth more than a set to complete."
         ],
         howItWorks: [
             "Spot an animal, scan it, and save it as a collectible entry with meaningful context.",
@@ -250,13 +251,13 @@ const answerPageData: AnswerPageEntry[] = [
         comparisonAnimalDex: [
             "Real-animal discovery with collection and progression mechanics.",
             "Rarity and mission loops tied to actual species context.",
-            "A premium animal card game feel with educational outcomes."
+            "Every animal you collect talks, with a take from how its kind lives."
         ],
         whoItsFor: [
-            "Pokemon-style collectors who want real-world discovery",
-            "Card and set completion fans",
+            "People who want a different take on an idea, a plan or a decision",
+            "Card and set completion fans who want their animals to be real",
             "Travelers who like location-based spotting goals",
-            "Families wanting playful learning together",
+            "Animal lovers who want their sightings to mean something",
             "Photographers adding progression to field sessions"
         ],
         features: [
@@ -286,11 +287,11 @@ const answerPageData: AnswerPageEntry[] = [
         faq: [
             {
                 question: "Is there a Pokemon-like app for real animals?",
-                answer: "Yes. AnimalDex is designed specifically for real-animal collecting with scan, progression, and field-guide depth."
+                answer: "Yes, with a difference: AnimalDex collects the real animals you photograph, and each one talks, with a take on your ideas from how its kind really lives."
             },
             {
                 question: "Is AnimalDex just a game?",
-                answer: "No. It includes game-like progression, but it is also an educational animal app and practical wildlife discovery tool."
+                answer: "No. It is a way to take any idea to an animal for a genuinely different take; collecting real animals adds new voices to talk to."
             },
             {
                 question: "Do I need to travel far to use it?",

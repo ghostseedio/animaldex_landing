@@ -4,7 +4,7 @@ import Link from "@/app/[locale]/_components/link";
 import {FacebookIcon, InstagramIcon, RedditIcon, SubstackIcon, TikTokIcon, XIcon, YouTubeIcon} from "@/app/[locale]/_components/icons";
 import type {ScopedTranslator} from "@/loaders/translation";
 import {socialProfileUrls} from "@/lib/social-links";
-import {footerColumns, type PublicNavLink} from "@/data/public-navigation";
+import {footerColumns, footerLegalLinks, type PublicNavLink} from "@/data/public-navigation";
 import BrandLockup from "@/components/brand/brand-lockup";
 
 const socialLinks = [
@@ -86,7 +86,7 @@ export default function Footer({t}: {t: ScopedTranslator}) {
                     </div>
 
                     {/* Navigation. Numbered like the index of a field guide — the one motif. */}
-                    <nav aria-label={t("title")} className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-4 lg:gap-x-8">
+                    <nav aria-label={t("title")} className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 lg:gap-x-8">
                         {footerColumns.map((section, index) => (
                             <div key={section.titleKey} className="flex min-w-0 flex-col gap-3">
                                 {/* Fixed height so every rule lands on the same line,
@@ -116,9 +116,7 @@ export default function Footer({t}: {t: ScopedTranslator}) {
                 {/* Bottom bar: legal, company, and the return control, on one rule. */}
                 <div className="flex flex-col gap-4 border-t border-line-400 py-6 md:flex-row md:items-center md:justify-between md:gap-8">
                     <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                        <FooterLink href="/legal/privacy">{t("privacy")}</FooterLink>
-                        <FooterLink href="/legal/terms">{t("terms")}</FooterLink>
-                        <FooterLink href="/legal/refunds">{t("refunds")}</FooterLink>
+                        {renderLinks(footerLegalLinks)}
                     </nav>
 
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-ink-400">

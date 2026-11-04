@@ -67,3 +67,19 @@ test("the route sets public steps only off a call and a greeting, with a kill sw
     assert.match(chat, /rememberStorePlacement\("page_talk_step"\)/);
     assert.match(chat, /fillWords\(talkWords\.capStepNote/);
 });
+
+test("the public chat never says a step needs a capture: steps are offered right there, only debates need the app (Nov 2026)", () => {
+    const chips = readRepo("src/components/ask-animaldex/talk-capabilities.tsx");
+    assert.match(chips, /words\.capStepHere/);
+    assert.match(chips, /words\.capDebatesInApp/);
+    assert.doesNotMatch(chips, /capInAppNote|label=\{words\.capInApp\}/);
+    for (const locale of ["en", "id"]) {
+        const words = JSON.parse(readRepo(`src/data/locales/${locale}.json`)).talkPage;
+        for (const key of ["capStepHere", "capStepNote", "signUpForMore", "capDebatesInApp"]) assert.equal(typeof words[key], "string", `${locale} ${key}`);
+    }
+    const en = JSON.parse(readRepo("src/data/locales/en.json")).talkPage;
+    for (const key of ["capStepHere", "capStepNote", "signUpForMore"]) {
+        assert.doesNotMatch(en[key], /capture one in the app to start|to set steps/i, key);
+    }
+    assert.doesNotMatch(readRepo("public/llms.txt"), /Your step, Powers and debates need an account/);
+});

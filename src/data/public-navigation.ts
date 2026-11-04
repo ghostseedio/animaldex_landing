@@ -42,6 +42,10 @@ export const EARN_ON_ANIMALDEX_HREF = "/earn-on-animaldex";
 export const ANIMAL_FREQUENCIES_HREF = "/animal-frequencies";
 export const ANIMAL_TRIALS_HREF = "/animal-trials";
 export const WILDLIFE_GUIDES_HREF = "/wildlife-guides";
+/** The questionnaire that finds the animals who see the world like you. */
+export const FIND_YOUR_ANIMALS_HREF = "/what-animal-am-i";
+/** AI disclosure, crisis protocol, teen mode and what reaches AI providers (SPEC 3.1). */
+export const AI_AND_SAFETY_HREF = "/legal/ai-and-safety";
 
 /**
  * 01 — AnimalDex: what the product is, and the ways in. Talking comes first
@@ -103,69 +107,64 @@ export const resourceLinks: PublicNavLink[] = [
 ];
 
 /**
- * The header (JRN-35): How it works · Animals · Articles, then Talk to an
- * animal and Get the app. Animals holds the catalog and what each animal
- * teaches; Articles the reading and help. The search-traffic hubs live in
- * the footer.
+ * The header (Nov 2026 front door): Talk · Find your animals · Get the app.
+ * Talk to an animal is the lime button and Get the app the outline beside it;
+ * Find your animals is the one link in the nav. Every other page stays live,
+ * in the sitemap, search and internal links, just not in the header.
  */
-export const headerAnimalLinks: PublicNavLink[] = [
-    {href: "/animals", labelKey: "browseAnimals", preview: "browse"},
-    {href: "/animal-powers", labelKey: "animalPowers", preview: "lessons"},
-    {href: ANIMAL_TRIALS_HREF, labelKey: "animalTrials", preview: "challenge"},
-    {href: "/qualities", labelKey: "animalQualities", preview: "powers"},
-    {href: ANIMAL_FREQUENCIES_HREF, labelKey: "animalFrequencies", preview: "behaviours"},
-    {href: LOCATIONS_HREF, labelKey: "locations", preview: "locations"},
-    {href: WILDLIFE_GUIDES_HREF, labelKey: "wildlifeGuides", preview: "experiences"}
-];
+export const findYourAnimalsNavLink: PublicNavLink = {href: FIND_YOUR_ANIMALS_HREF, labelKey: "findYourAnimals"};
+export const headerNavLinks: PublicNavLink[] = [findYourAnimalsNavLink];
 
-export const headerArticleLinks: PublicNavLink[] = [
-    {href: BLOG_HREF, labelKey: "allArticles", preview: "symbolism"},
-    {href: ADVICE_FATIGUE_HREF, labelKey: "adviceFatigue", preview: "ask"},
-    {href: "/animal-wisdom", labelKey: "discoverAnimalWisdom", preview: "lessons"},
-    {href: "/animal-symbolism", labelKey: "animalSymbolism", preview: "symbolism"},
-    {href: "/support", labelKey: "support", preview: "support"}
-];
-
-/** How it works is a page of its own in the header, before the two menus. */
+/** Kept for older callers: How it works' own link (it is in the footer now). */
 export const howItWorksNavLink: PublicNavLink = {href: HOW_IT_WORKS_HREF, labelKey: "howItWorks"};
 
-export const headerDropdowns: PublicNavSection[] = [
-    // The catalog above the rule, the places to go and use it below.
-    {id: "explore", titleKey: "animalsNav", links: headerAnimalLinks, ruleAfterHref: ANIMAL_FREQUENCIES_HREF},
-    // Reading above the rule, help below.
-    {id: "articles", titleKey: "blog", links: headerArticleLinks, ruleAfterHref: "/animal-symbolism"}
-];
-
+/** The drawer keeps its accordion for sections; the slim header has none. */
 export const DEFAULT_MOBILE_ACCORDION_ID = "explore";
-
-export const mobileAccordionSections: PublicNavSection[] = headerDropdowns;
 
 /** The drawer pins these at its foot: Talk to an animal, then Get the app beside the account. */
 export const PINNED_DRAWER_HREFS = [TALK_HREF, START_COLLECTION_HREF];
 
-/**
- * The mobile drawer's "More" group: what neither the top-level How it works
- * nor the two accordions carry, and not the pinned actions at its foot.
- */
-export const moreNavGroups: PublicNavLink[][] = [
-    [
-        ...productLinks.filter((link) => !PINNED_DRAWER_HREFS.includes(link.href)
-            && link.href !== HOW_IT_WORKS_HREF
-            && !headerDropdowns.some((section) => section.links.some((item) => item.href === link.href))),
-        {href: "/contact", labelKey: "contact"}
-    ]
-];
-
 /** Kept for the footer and older callers: Articles' own link. */
 export const blogNavLink: PublicNavLink = {href: BLOG_HREF, labelKey: "blog"};
+
+/**
+ * The footer, cut to essentials (Nov 2026): the product's three ways in and
+ * How it works; the search hubs most people arrive through; and help. The
+ * legal row under it carries Privacy, Terms, Refunds and AI & safety.
+ */
+export const footerProductLinks: PublicNavLink[] = [
+    {href: TALK_HREF, labelKey: "talkToAnAnimal"},
+    findYourAnimalsNavLink,
+    {href: START_COLLECTION_HREF, labelKey: "getTheApp"},
+    howItWorksNavLink
+];
+
+export const footerExploreLinks: PublicNavLink[] = [
+    {href: "/animals", labelKey: "browseAnimals"},
+    {href: "/comparisons", labelKey: "compareAnimals"},
+    {href: "/tier-list", labelKey: "animalTierLists"},
+    {href: "/animal-hybrids", labelKey: "animalHybrids"}
+];
+
+export const footerHelpLinks: PublicNavLink[] = [
+    {href: "/support", labelKey: "support"},
+    {href: "/contact", labelKey: "contact"},
+    blogNavLink
+];
 
 export const footerColumns: Array<{
     titleKey: string;
     links?: PublicNavLink[];
     groups?: PublicNavLink[][];
 }> = [
-    {titleKey: "footerGroups.product", links: productLinks},
-    {titleKey: "footerGroups.explore", links: exploreAnimalLinks},
-    {titleKey: "footerGroups.wisdom", links: animalWisdomLinks},
-    {titleKey: "footerGroups.resources", links: resourceLinks}
+    {titleKey: "footerGroups.product", links: footerProductLinks},
+    {titleKey: "footerGroups.explore", links: footerExploreLinks},
+    {titleKey: "footerGroups.help", links: footerHelpLinks}
+];
+
+export const footerLegalLinks: PublicNavLink[] = [
+    {href: "/legal/privacy", labelKey: "privacy"},
+    {href: "/legal/terms", labelKey: "terms"},
+    {href: "/legal/refunds", labelKey: "refunds"},
+    {href: AI_AND_SAFETY_HREF, labelKey: "aiAndSafety"}
 ];

@@ -93,6 +93,9 @@ import {
     type AskSuggestion
 } from "@/lib/ask-animaldex/subject";
 import {trackEvent} from "@/lib/analytics";
+import {useAiChatGate} from "@/components/ai-gate/ai-chat-gate";
+import {AiNotice, AiTag, useAiLongSession} from "@/components/ai-gate/ai-notices";
+import {noteFunnelMessage, noteFunnelReply, trackFunnel} from "@/lib/web-funnel-client";
 import {rememberStorePlacement} from "@/lib/store-links";
 import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/species-ask";
 import {
@@ -278,6 +281,16 @@ export type AskDrawerLabels = {
     failedLimitPro: string;
     failedNoCredits: string;
     disclaimer: string;
+    /** The AI disclosure (SPEC 3.1): the header's tag, the thread's notices and the locked chat. */
+    aiTagLabel: string;
+    aiNotice: string;
+    aiNoticeLong: string;
+    aiNoticeBreak: string;
+    aiSafetyLink: string;
+    consentLockedHint: string;
+    consentReview: string;
+    under13Title: string;
+    under13Body: string;
     /** "What I remember about you": the facts every animal shares, in the reader's hands. */
     memoryOpen: string;
     memoryHint: string;
@@ -714,7 +727,7 @@ export default function AskConversation({
         persona,
         greetingState,
         greet,
-        send,
+        send: rawSend,
         stop,
         retry,
         regenerate,
@@ -762,10 +775,23 @@ export default function AskConversation({
                 source: onPage ? "talk" : "drawer",
                 layer_count: followUps
             });
+            // The front-door funnel (lib/web-funnel): the visitor's first reply.
+            noteFunnelReply();
         },
         // The animal's own chat draws rich answers; the site-wide assistant keeps its own format.
         richColumns: resolvedSubject.scope === "species" ? richColumns : null
     });
+    // SPEC 3.1: the age check and the AI consent come before any message, on
+    // every way one is sent (the composer, a chip, a report, a call); the
+    // session's clock starts with the first one.
+    const aiGate = useAiChatGate();
+    const aiSession = useAiLongSession();
+    const touchAiSession = aiSession.touch;
+    const send = useCallback(async (...args: Parameters<typeof rawSend>): Promise<string | null> => {
+        if (!(await aiGate.request())) return null;
+        touchAiSession();
+        return rawSend(...args);
+    }, [aiGate, rawSend, touchAiSession]);
 
     const panelRef = useRef<HTMLDivElement | null>(null);
     const composerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1262,10 +1288,18 @@ export default function AskConversation({
     const dictationStop = dictation.stop;
     const dictationActive = dictation.active;
 
-    const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
+    const gatedSubmitRef = useRef<((question: string, source: "form" | "chip" | "followup", passed?: boolean) => void) | null>(null);
+    const submit = useCallback((question: string, source: "form" | "chip" | "followup", passed = false) => {
         // The reader may talk over the animal's greeting (it keeps what it
         // had said); any other reply in flight has to finish or be stopped.
         if (!question.trim() || (isSending && greetingState !== "loading")) return;
+        // The gate first (SPEC 3.1): their words stay in the composer until it is passed.
+        if (!passed && !aiGate.ready) {
+            void aiGate.request().then((allowed) => {
+                if (allowed) gatedSubmitRef.current?.(question, source, true);
+            });
+            return;
+        }
         // Sent while dictating: the mic stops with it, nothing more is added.
         if (dictationActive) void dictationStop();
         // The one chip that is a destination rather than a question: it opens
@@ -1291,8 +1325,10 @@ export default function AskConversation({
         // or key press, the browser then lets the reply speak by itself.
         speech.stop();
         speech.prime();
+        noteFunnelMessage(source === "form" ? "typed" : "suggested");
         void send(question);
-    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech, dictationActive, dictationStop]);
+    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech, dictationActive, dictationStop, aiGate]);
+    gatedSubmitRef.current = submit;
 
     const loadMemory = useCallback(async () => {
         setMemoryState("loading");
@@ -1502,10 +1538,11 @@ export default function AskConversation({
     const shareMessage = (message: AskMessage) => {
         const body = shareText(messages, message, animalName, speaksAsAnimal);
         if (navigator.share) {
-            void navigator.share({text: body}).catch(() => undefined);
+            void navigator.share({text: body}).then(() => trackFunnel("share_take")).catch(() => undefined);
         } else {
             void navigator.clipboard?.writeText(body);
             setCopiedId(message.id);
+            trackFunnel("share_take");
         }
     };
     // While paying with credits the footer says what a message costs instead.
@@ -1689,6 +1726,7 @@ export default function AskConversation({
         speech.stop();
         speech.prime();
         sticksToBottom.current = true;
+        noteFunnelMessage("typed");
         void send(text, {
             stepReportId: openStep.id,
             stepReportThumb: thumb,
@@ -2524,6 +2562,8 @@ export default function AskConversation({
                             ) : null}
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
+                                {/* SPEC 3.1: a quiet line at the top of each conversation. */}
+                                <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} className="pb-3" />
                                 {debateBlocks("top")}
                                 {messages.flatMap((message, index) => [
                                     // The open step no reply here carries, where the conversation picks up.
@@ -2591,6 +2631,10 @@ export default function AskConversation({
                                             setShowsProIntro(false);
                                         }}
                                     />
+                                ) : null}
+                                {/* Past three hours of talking: again, and for a teen with a break suggested. */}
+                                {aiSession.due ? (
+                                    <AiNotice text={aiGate.band === "teen" ? labels.aiNoticeBreak : labels.aiNoticeLong} className="pt-4" />
                                 ) : null}
                             </div>
                         </div>
@@ -2662,6 +2706,7 @@ export default function AskConversation({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-6">
+                            <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} />
                             {messages.map((message) => (
                                 <MessageBlock
                                     key={message.id}
@@ -2744,8 +2789,12 @@ export default function AskConversation({
                             stage, which opens the bond); else what the two of you are working on;
                             else its temperament. "Not this any more" is in the ••• menu. */}
                         <div className="min-w-0 flex-1">
-                            <p className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
-                                {messenger ? speakerName : animalName ?? labels.title}
+                            <p className="flex min-w-0 items-center gap-1.5">
+                                <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
+                                    {messenger ? speakerName : animalName ?? labels.title}
+                                </span>
+                                {/* SPEC 3.1: the AI tag, always visible in the chat's header. */}
+                                <AiTag label={labels.aiTagLabel} />
                             </p>
                             {messenger && animalTalking ? (
                                 <p className="truncate text-[11px] leading-4 text-primary-300" aria-live="polite">{labels.typing}</p>
@@ -3097,7 +3146,21 @@ export default function AskConversation({
                                     </button>
                                 </div>
                             ) : null}
-                            <form
+                            {aiGate.declined && !aiGate.ready && !aiGate.blocked ? (
+                                <p className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] leading-5 text-ink-300" data-testid="ai-consent-locked">
+                                    <span>{labels.consentLockedHint}</span>
+                                    <button type="button" onClick={() => void aiGate.request()} className="font-bold text-primary-200 underline underline-offset-2 hover:text-white">
+                                        {labels.consentReview}
+                                    </button>
+                                </p>
+                            ) : null}
+                            {aiGate.blocked ? (
+                                // SPEC 3.1: under 13, a calm block where the message bar was.
+                                <div className="border border-white/10 bg-white/[0.035] px-4 py-3 text-left" data-testid="ai-under-13">
+                                    <p className="text-[15px] font-semibold leading-6 text-white">{labels.under13Title}</p>
+                                    <p className="mt-0.5 text-[13px] leading-5 text-ink-300">{labels.under13Body}</p>
+                                </div>
+                            ) : <form
                                 onSubmit={(event) => {
                                     event.preventDefault();
                                     if (debateEdit) saveDebateEdit();
@@ -3190,7 +3253,7 @@ export default function AskConversation({
                                         {showStop ? <StopIcon /> : reporting?.sending ? <span aria-hidden="true" className="text-sm font-black">…</span> : <ArrowUpIcon />}
                                     </button>
                                 )}
-                            </form>
+                            </form>}
                         </>
                     )}
                     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-ink-400">

@@ -253,6 +253,14 @@ button {
     }
 }
 
+/* The home hero test (lib/hero-variant): both heroes are in the HTML and the
+   boot script sets data-hero on <html> before the first paint, so one arm shows
+   and the other never flashes. With no variant set (no script), A shows. */
+html[data-hero="b"] [data-hero-arm="a"],
+html:not([data-hero="b"]) [data-hero-arm="b"] {
+    display: none;
+}
+
 .hero-background-feather {
     -webkit-mask-image:
         radial-gradient(ellipse 92% 78% at 50% 36%, #000 16%, rgba(0, 0, 0, 0.55) 48%, transparent 78%),

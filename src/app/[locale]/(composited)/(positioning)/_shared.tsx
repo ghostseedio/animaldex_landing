@@ -6,6 +6,7 @@ import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {collectorPages, getCollectorPage} from "@/data/collector-pages";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
+import TakeBridge from "@/app/[locale]/(composited)/_components/take-bridge";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {withOgCard} from "@/lib/og/og-image";
@@ -54,6 +55,7 @@ export async function generateCollectorMetadata(slug: string, locale: string): P
 
 export default async function CollectorLandingPage({slug, locale}: PositioningPageResult) {
     const t = await getScopedTranslator(locale, "collectorPages");
+    const bridge = await getScopedTranslator(locale, "answerPages");
     const entry = getCollectorPage(slug);
 
     if (!entry) {
@@ -86,6 +88,7 @@ export default async function CollectorLandingPage({slug, locale}: PositioningPa
                 <p className="text-lg md:text-xl xl:text-2xl text-ink-200">{entry.description}</p>
                 {/* The positioning, in one line (DECISIONS §8): the collection talks back. */}
                 <p className="max-w-3xl border-l-2 border-primary-400 pl-4 text-lg font-semibold leading-8 text-white">{t("positioningLine")}</p>
+                <TakeBridge eyebrow={bridge("bridgeEyebrowGeneral")} body={bridge("bridgeBodyGeneral")} cta={bridge("bridgeCtaGeneral")} href="/talk" />
                 <div className="flex flex-wrap gap-3 pt-2">
                     <Link href="/talk">
                         <Button as="span">{t("talkButton")}</Button>

@@ -20,8 +20,8 @@ type MobileNavSection = {
 };
 
 type HeaderMobileNavProps = {
-    /** A page of its own, above the menus (JRN-35). */
-    howItWorks: MobileNavItem;
+    /** Pages of their own, above any menus: Find your animals (Nov 2026). */
+    topLinks: MobileNavItem[];
     sections: MobileNavSection[];
     moreTitle: string;
     moreGroups: MobileNavItem[][];
@@ -76,7 +76,7 @@ function AccordionPanel({
 }
 
 export default function HeaderMobileNav({
-    howItWorks,
+    topLinks,
     sections,
     moreTitle,
     moreGroups
@@ -103,9 +103,11 @@ export default function HeaderMobileNav({
 
     return (
         <div className="flex flex-col">
-            <HeaderLink href={howItWorks.href} mobile topLevel>
-                {howItWorks.label}
-            </HeaderLink>
+            {topLinks.map((link) => (
+                <HeaderLink key={link.href} href={link.href} mobile topLevel>
+                    {link.label}
+                </HeaderLink>
+            ))}
 
             {sections.map((section) => {
                 const open = openSection === section.id;
@@ -129,7 +131,7 @@ export default function HeaderMobileNav({
                 );
             })}
 
-            <AccordionPanel
+            {moreGroups.some((group) => group.length > 0) ? <AccordionPanel
                 id="more"
                 title={moreTitle}
                 open={openSection === "more"}
@@ -147,7 +149,7 @@ export default function HeaderMobileNav({
                         </div>
                     ))}
                 </div>
-            </AccordionPanel>
+            </AccordionPanel> : null}
         </div>
     );
 }

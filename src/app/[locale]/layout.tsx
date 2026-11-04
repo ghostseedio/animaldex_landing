@@ -14,6 +14,8 @@ import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 import {AskAnimalDexProvider} from "@/components/ask-animaldex/ask-animaldex-provider";
 import AskAnimalDexSurface from "@/components/ask-animaldex/ask-animaldex-surface";
 import {getAskDrawerLabels} from "@/loaders/ask-labels";
+import {getAiGateWords} from "@/loaders/ai-gate-words";
+import {AiChatGateProvider} from "@/components/ai-gate/ai-chat-gate";
 import ThemeScript from "@/components/theme/theme-script";
 
 // 192 px rendition of /images/logo.webp (400 px, 132 KB), which every page
@@ -41,7 +43,8 @@ export default async function RootLayout(
     // conversation follows the reader instead of each surface owning a copy.
     // Its copy is resolved here because this codebase hands translations to
     // client components as props rather than through a context.
-    const askLabels = await getAskDrawerLabels(locale);
+    // Every chat surface asks through one gate: the age check and the AI consent (SPEC 3.1).
+    const [askLabels, gateWords] = await Promise.all([getAskDrawerLabels(locale), getAiGateWords(locale)]);
 
     // noinspection HtmlRequiredTitleElement
     return (
@@ -54,10 +57,12 @@ export default async function RootLayout(
             <CampaignAttribution />
             <Cursor />
             <NavigationProgress />
-            <AskAnimalDexProvider locale={locale}>
-                {children}
-                <AskAnimalDexSurface labels={askLabels} />
-            </AskAnimalDexProvider>
+            <AiChatGateProvider words={gateWords}>
+                <AskAnimalDexProvider locale={locale}>
+                    {children}
+                    <AskAnimalDexSurface labels={askLabels} />
+                </AskAnimalDexProvider>
+            </AiChatGateProvider>
         </body>
         </html>
     )

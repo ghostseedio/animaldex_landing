@@ -2,6 +2,7 @@
 
 import Link from "@/app/[locale]/_components/link";
 import DebateThread from "@/components/debates/debate-thread";
+import {AiTag} from "@/components/ai-gate/ai-notices";
 import {debateHeadline} from "@/lib/debate-words";
 import type {CompanionWords} from "@/lib/companion-bond";
 import type {Debate} from "@/lib/debates";
@@ -22,8 +23,10 @@ export default function DebateDetail({debate, words, typingLabel, backLabel, loc
             </Link>
             {headline ? (
                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
+                    <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
                         {debate.askerIsMe && debate.visibility === "private" ? words.debateWeb.yourDebate : words.debate.voteQuestion}
+                        {/* SPEC 3.1: the animals in a debate are AI too. */}
+                        <AiTag />
                     </p>
                     <h1 className="mt-1 font-display text-2xl font-black leading-8 text-white">{headline}</h1>
                     {debate.askedPublic ? (

@@ -16,6 +16,8 @@ import {
     PERSPECTIVE_FLOW_WIDTHS
 } from "@/data/animal-perspective";
 import {getHowItWorksContent} from "@/data/how-it-works";
+import {getAnswerPage} from "@/data/answer-pages";
+import {getCollectorPage} from "@/data/collector-pages";
 import {getSupportContent} from "@/data/support-content";
 import {countWords, parseInlineMarkup, plainInlineText} from "@/lib/inline-markup";
 import {diagramRuns, drawFlow, drawGrid, textColumns, wrapText} from "@/lib/text-diagram";
@@ -251,10 +253,33 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
 
     const en = JSON.parse(readRepo("src/data/locales/en.json"));
     const id = JSON.parse(readRepo("src/data/locales/id.json"));
-    assert.equal(en.meta.fullTitle, "AnimalDex: Talk to Animals. Every Animal Has a Lesson");
+    // SPEC section 1 (Nov 2026): the main line, with the slogan kept everywhere.
+    assert.equal(en.meta.fullTitle, "AnimalDex: Take Any Idea to an Animal. Every Animal Has a Lesson");
+    assert.match(id.meta.fullTitle, /Setiap Hewan Punya Pelajaran$/);
+    assert.equal(en.home.heroIdeaLead, "Take any idea to an animal.");
+    // Hero A, the test's control, keeps its words.
     assert.equal(en.home.heroTalkLead, "Talk to animals.");
     assert.equal(en.home.heroTalkAccent, "Every animal has a lesson.");
+    for (const copy of [en.meta.fullTitle, en.meta.description, en.home.supporting]) {
+        assert.doesNotMatch(copy, /life advice|self-improvement|therapy|anxiety|guarantee/i, copy);
+    }
     for (const key of ["heroCta", "heroGetApp", "heroHowItWorks"]) assert.equal(typeof id.home[key], "string", key);
     assert.deepEqual(Object.keys(id.home.fatigue).sort(), Object.keys(en.home.fatigue).sort());
     assert.deepEqual(Object.keys(id.home.different).sort(), Object.keys(en.home.different).sort());
 });
+
+test("the Pokemon-like search landings keep their topic but never describe AnimalDex as one (SPEC section 1)", () => {
+    const answer = getAnswerPage("pokemon-like-animal-app")!;
+    const collector = getCollectorPage("pokemon-like-animal-game")!;
+    assert.match(answer.heroTitle, /Pokemon-like/i, "the page still answers the search");
+    assert.match(answer.metaDescription, /take any idea to a real animal/);
+    assert.match(collector.description, /take any idea to a real animal/);
+    for (const text of [
+        answer.metaDescription, answer.intro, ...answer.directAnswer, ...answer.comparisonAnimalDex, ...answer.whoItsFor,
+        ...answer.faq.map((item) => item.answer), collector.heroTitle, collector.description,
+        ...collector.sections.flatMap((section) => [section.title, ...section.paragraphs])
+    ]) {
+        assert.doesNotMatch(text, /Pok[eé]mon-(?:like|style) (?:loop|animal game loop|collectors|progression)|creature-collection energy|collection energy|Families/i, text);
+    }
+});
+

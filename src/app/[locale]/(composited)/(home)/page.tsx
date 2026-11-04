@@ -1,14 +1,12 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import IconCanvas from "@/app/[locale]/_components/icon-canvas";
 import Image from "next/image";
 import HomeChatStill from "@/app/[locale]/(composited)/(home)/_components/home-chat-still";
 import {HomeDoneStill, HomeRevealStill} from "@/app/[locale]/(composited)/(home)/_components/home-stills";
 import HomeAnimalOrbit, {type HomeOrbitAnimal} from "@/app/[locale]/(composited)/(home)/_components/home-animal-orbit";
-import HomeAnimalWall, {type HomeWallAnimal} from "@/app/[locale]/(composited)/(home)/_components/home-animal-wall";
 import HomeSides from "@/app/[locale]/(composited)/(home)/_components/home-sides";
-import {checkedIcons} from "@/loaders/icons";
-import {animalSilhouetteImages} from "@/data/animal-silhouettes";
+import HomeIdeaDemo, {type HomeIdeaDemoWords} from "@/app/[locale]/(composited)/(home)/_components/home-idea-demo";
+import HeroVariantGate from "@/app/[locale]/(composited)/(home)/_components/hero-variant-gate";
 import {default as downloads} from "@/data/downloads.json";
 import {formatAnimalCount} from "@/lib/animal-count";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
@@ -20,14 +18,12 @@ import {localeConfig} from "@/i18n";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
-import {getHomeDownloadStatCounts} from "@/lib/home-download-stats";
-import {getRecentPublicCaptures} from "@/data/discover-timeline";
-import {getTalkPickerRows, type TalkPickerRows} from "@/data/talk-animals";
 import {TRY_TALKING_SPECIES} from "@/lib/try-talking";
 import {ADVICE_FATIGUE_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
 import {getDisagreeExample} from "@/data/animal-perspective";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
-import {discoverPostPath} from "@/lib/discover-post";
+import {HERO_ARM_ATTRIBUTE, heroBootScript, heroVariantSplit} from "@/lib/hero-variant";
+import {HERO_DEMO_ANIMAL, HERO_DEMO_CHIPS, type HeroDemoChip} from "@/lib/hero-demo";
 
 const heroBackgroundImage =
     "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
@@ -52,27 +48,17 @@ const heroOrbitAnimals = [
     {slug: "honey-badger", name: "Honey Badger"}
 ] as const;
 
-/** The wall's tiles, with its last "all animals" tile: full rows at 3, 4 and 6 columns. */
-const WALL_ROW_SETS = [24, 12] as const;
-
-/**
- * The Talk picker's own faces, the featured and most talked to first, then
- * the disagreeing pairs; one tile each, only animals with art.
- */
-function wallAnimals(rows: TalkPickerRows): HomeWallAnimal[] {
-    const seen = new Set<string>();
-    const animals: HomeWallAnimal[] = [];
-    for (const animal of [...rows.popular, ...rows.disagree.flatMap((pair) => [pair.left, pair.right])]) {
-        if (!animal.icon || seen.has(animal.slug)) continue;
-        seen.add(animal.slug);
-        animals.push({slug: animal.slug, name: animal.name, power: animal.power, image: animal.icon});
-    }
-    const tiles = WALL_ROW_SETS.find((count) => animals.length >= count - 1);
-    return tiles ? animals.slice(0, tiles - 1) : animals;
+/** Hero B's chips, with the reader's words for each (`home.demo.chips`). */
+function demoChips(raw: unknown): HeroDemoChip[] {
+    const chips = raw && typeof raw === "object" ? raw as Record<string, {label?: unknown; message?: unknown; usual?: unknown}> : {};
+    return HERO_DEMO_CHIPS.flatMap(({id, kind}) => {
+        const words = chips[id];
+        const usual = Array.isArray(words?.usual) ? words.usual.filter((line): line is string => typeof line === "string") : [];
+        return typeof words?.label === "string" && typeof words.message === "string" && usual.length > 0
+            ? [{id, kind, label: words.label, message: words.message, usual}]
+            : [];
+    });
 }
-
-const heroLaurelWreathImage =
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/laurel-wreath-ede0a9b0-7b2e-45c3-a4fa-12bf9615c29d.webp";
 
 export const revalidate = 86400;
 
@@ -121,41 +107,48 @@ export default async function Home({params}: HomePageProps) {
     const locale = localeConfig.locales.includes(params.locale) ? params.locale : localeConfig.defaultLocale;
 
     try {
-        const t = await timeDevStep(timer, "translations", () => getScopedTranslator(locale, "home"));
+        const [t, messages] = await timeDevStep(timer, "translations", () => Promise.all([
+            getScopedTranslator(locale, "home"),
+            loadLocaleMessages(locale)
+        ]));
     const siteUrl = getAbsoluteUrl(locale);
     const rootSiteUrl = getSiteUrl();
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og-every-animal-has-a-lesson.png", rootSiteUrl).toString();
-    const animalCount = formatAnimalCount(locale);
-    const appSchemaDescription = `Talk to real animals with AI. Each of ${formatAnimalCount("en")} species answers from its own Power, a lesson from how its kind survives, takes a side on your problem and keeps it. Bring a real problem, hear a real side, and take one step. Photograph the animals you meet to collect them, and let them debate your problems.`;
+    // SPEC section 1 (Nov 2026): a different take on any idea, from a real behaviour of the animal's kind.
+    const appSchemaDescription = `Take any idea, plan or decision to an animal and get a genuinely different take. Each of ${formatAnimalCount("en")} species answers from a real behaviour of its kind, its Power, how it lives and its field guide, and turns it into an angle you would not hear elsewhere. The animals remember you and the angles you have already heard, and every real animal you meet and photograph adds a new way of seeing.`;
     const disagree = getDisagreeExample(locale, getSpeciesArtworkUrl);
-    const [downloadStatCounts, recentCaptures, talkRows] = await timeDevStep(
-        timer,
-        "home.data",
-        () => Promise.all([
-            getHomeDownloadStatCounts(),
-            getRecentPublicCaptures(8, {imageVariant: "card-thumbnail"}),
-            getTalkPickerRows().catch((): TalkPickerRows => ({popular: [], disagree: []}))
-        ])
-    );
-    const wall = wallAnimals(talkRows);
-    const catalogNames = new Map(wall.map((animal) => [animal.slug, animal.name]));
     const orbitCenter: HomeOrbitAnimal = {slug: TRY_TALKING_SPECIES.slug, name: t("chatStill.animal"), image: TRY_TALKING_SPECIES.image};
-    const orbitAnimals: HomeOrbitAnimal[] = heroOrbitAnimals.map(({slug, name}) => ({
-        slug,
-        name: catalogNames.get(slug) ?? name,
-        image: getSpeciesArtworkUrl(slug)
-    }));
-    // Full rows of photos at 2 and 4 columns, or none at all.
-    const captures = recentCaptures.slice(0, recentCaptures.length - (recentCaptures.length % 4));
-    // One label set for the same three numbers, here and in the download band
-    // (WEB-28), and the one honest animal count every page quotes (WEB-29).
-    const downloadHeroStats = [
-        {value: downloadStatCounts.captures === null ? null : downloadStatCounts.captures.toLocaleString(locale), label: t("download.stats.capturesLabel")},
-        {value: downloadStatCounts.users === null ? null : downloadStatCounts.users.toLocaleString(locale), label: t("download.stats.usersLabel")},
-        {value: animalCount, label: t("download.stats.indexesLabel")}
-    ];
+    const orbitAnimals: HomeOrbitAnimal[] = heroOrbitAnimals.map(({slug, name}) => ({slug, name, image: getSpeciesArtworkUrl(slug)}));
     const downloadStoreLinks = downloads.filter(({name}) => name === "App Store" || name === "Google Play");
+    // The hero test (lib/hero-variant): read at render, so the split changes with the server's environment.
+    const heroSplit = heroVariantSplit(process.env.HERO_VARIANT_SPLIT);
+    const chips = demoChips((messages.home as {demo?: {chips?: unknown}} | undefined)?.demo?.chips);
+    const askT = await getScopedTranslator(locale, "askAnimalDex");
+    const demoWords: HomeIdeaDemoWords = {
+        label: t("demo.label"),
+        eyebrow: t("demo.eyebrow"),
+        chipsLabel: t("demo.chipsLabel"),
+        usualTitle: t("demo.usualTitle"),
+        exampleTag: t("demo.exampleTag"),
+        exampleNote: t("demo.exampleNote"),
+        takeTitle: t("demo.takeTitle"),
+        idle: t("demo.idle"),
+        ask: t("demo.ask"),
+        thinking: t("demo.thinking"),
+        keepTalking: t("demo.keepTalking"),
+        share: t("demo.share"),
+        copied: t("demo.copied"),
+        shareTitle: t("demo.shareTitle"),
+        failed: t("demo.failed"),
+        tryAgain: t("demo.tryAgain"),
+        limit: t("demo.limit"),
+        limitCta: t("demo.limitCta"),
+        disclosure: t("demo.disclosure"),
+        safetyLink: t("demo.safetyLink"),
+        aiTagLabel: askT("aiTagLabel"),
+        under13Title: askT("under13Title")
+    };
     // Six cards fill the 4-column bento exactly (WEB-28): the article on why an
     // animal that takes a side matters leads, side by side comes last (W6).
     // Pictures and a title only (2026-11-01).
@@ -187,6 +180,8 @@ export default async function Home({params}: HomePageProps) {
             "query-input": "required name=search_term_string"
         }
     };
+    // What AnimalDex is (SPEC section 1): no audiences or features it is not
+    // for (families, breeders, trading), and nothing clinical.
     const mobileAppSchema = {
         "@context": "https://schema.org",
         "@type": "MobileApplication",
@@ -204,48 +199,33 @@ export default async function Home({params}: HomePageProps) {
             price: "0",
             priceCurrency: "USD"
         },
-        isFamilyFriendly: true,
         audience: [
+            {"@type": "Audience", "audienceType": "People with an idea, a plan or a decision"},
+            {"@type": "Audience", "audienceType": "Curious minds who want a different take"},
             {"@type": "Audience", "audienceType": "Animal lovers"},
             {"@type": "Audience", "audienceType": "Wildlife learners"},
-            {"@type": "Audience", "audienceType": "Families"},
             {"@type": "Audience", "audienceType": "Travelers"},
-            {"@type": "Audience", "audienceType": "Photographers"},
-            {"@type": "Audience", "audienceType": "Collectors"},
-            {"@type": "Audience", "audienceType": "Breeders and breed researchers"},
-            {"@type": "Audience", "audienceType": "Animal card creators"},
-            {"@type": "Audience", "audienceType": "Self-improvement learners"}
+            {"@type": "Audience", "audienceType": "Photographers"}
         ],
         featureList: [
-            "Talk to animals that answer from their own Power, take a side and keep it",
-            "Your step: one real step from your own problem, which earns the animal's Power",
-            "Debates between animals on your problem, private or public with a community vote",
-            "Trials: each animal's own challenges",
-            "AI animal scanning and analysis",
-            "Animal identification and field-guide context",
-            "Breed identification, grading, and pricing context",
+            "Take any idea, plan or decision to an animal for a genuinely different take",
+            "Each animal answers from a real behaviour of its species: its Power, how it lives and its field guide",
+            "Animals that remember you and the angles you have already heard",
+            "Hear two more of your animals on the same idea",
+            "One step to try, when you want one",
+            "Every animal you meet and photograph adds a new way of seeing",
+            "AI animal identification and field-guide context",
             "Collectible wildlife cards and journals",
-            "Custom animal card decks for pets, wildlife, and creator projects",
-            "Albums, sets, missions, and progression",
-            "Discovery feed for real animal sightings",
-            "Trading animals",
-            "Family-friendly animal learning",
-            "Animal-inspired reflection and self-improvement prompts",
             "Respectful wildlife observation and habitat curiosity"
         ],
         about: [
+            {"@type": "Thing", "name": "A different take on your ideas"},
             {"@type": "Thing", "name": "Talking to animals"},
             {"@type": "Thing", "name": "Perspective-driven AI"},
-            {"@type": "Thing", "name": "Advice fatigue"},
+            {"@type": "Thing", "name": "Animal behaviour"},
             {"@type": "Thing", "name": "Animal identification"},
-            {"@type": "Thing", "name": "Animal breed grading"},
-            {"@type": "Thing", "name": "Animal breed pricing"},
             {"@type": "Thing", "name": "Wildlife learning"},
-            {"@type": "Thing", "name": "Animal card collecting"},
-            {"@type": "Thing", "name": "Custom animal card decks"},
-            {"@type": "Thing", "name": "Animal-inspired self-improvement"},
-            {"@type": "Thing", "name": "Wildlife photography"},
-            {"@type": "Thing", "name": "Zoo and safari animal discovery"}
+            {"@type": "Thing", "name": "Wildlife photography"}
         ]
     };
     const softwareAppSchema = {
@@ -276,6 +256,25 @@ export default async function Home({params}: HomePageProps) {
         sameAs: [...storeLinks.map((store) => store.href), ...socialProfileUrlList]
     };
     const sectionTitle = "font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white md:text-5xl lg:text-6xl";
+    const heroStoreRow = (
+        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+            {/* Its own line on a phone, so the row never rewraps when the web font
+                arrives (it shifted the hero by 48 px: CLS 0.043). */}
+            <span className="mr-1 basis-full text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 sm:basis-auto sm:text-left">{t("heroGetApp")}</span>
+            {downloadStoreLinks.map(({name}) => (
+                <StoreLink
+                    key={name}
+                    store={name === "App Store" ? "app_store" : "google_play"}
+                    placement="home_hero"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary-200/60 px-4 text-sm font-bold text-white transition-colors duration-300 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950"
+                >
+                    {name}
+                </StoreLink>
+            ))}
+        </div>
+    );
 
         return (
         <>
@@ -284,6 +283,9 @@ export default async function Home({params}: HomePageProps) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify([organizationSchema, webSiteSchema, softwareAppSchema, mobileAppSchema])}}
             />
+            {/* The hero test: marks <html> with this visitor's hero before either is painted. */}
+            <script dangerouslySetInnerHTML={{__html: heroBootScript(heroSplit)}} />
+            <HeroVariantGate splitB={heroSplit} />
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 top-0 -z-20 h-[min(120svh,56rem)] overflow-hidden"
@@ -297,15 +299,10 @@ export default async function Home({params}: HomePageProps) {
                     className="hero-background-feather object-cover object-center light:opacity-30"
                 />
             </div>
-            <IconCanvas
-                probability={0.02}
-                paths={checkedIcons}
-                imageSources={animalSilhouetteImages}
-                color="#21C05E"
-                height={2000}
-            />
 
+            {/* Hero A: the hero the page had, the talking octopus and its orbit (Nov 2026: without the stats and the laurel). */}
             <section
+                {...{[HERO_ARM_ATTRIBUTE]: "a"}}
                 className="relative mx-auto -mt-6 mb-16 grid min-h-[calc(100svh-7rem)] w-full max-w-[86rem] grid-cols-1 items-center gap-10 px-4 pb-12 pt-8 sm:pb-14 md:px-8 lg:-mt-8 lg:mb-8 lg:grid-cols-2 lg:items-center lg:gap-6 lg:pb-16 lg:pt-8 xl:gap-10"
                 id="top"
             >
@@ -334,77 +331,32 @@ export default async function Home({params}: HomePageProps) {
                             <span className="min-w-0 flex-1 font-display text-xl font-bold leading-none sm:text-2xl">{t("heroCta")}</span>
                             <span aria-hidden="true" className="text-2xl transition-transform duration-300 group-hover/talk:translate-x-1">→</span>
                         </Link>
-                        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-                            {/* Its own line on a phone, so the row never rewraps when the web font
-                                arrives (it shifted the hero by 48 px: CLS 0.043). */}
-                            <span className="mr-1 basis-full text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 sm:basis-auto sm:text-left">{t("heroGetApp")}</span>
-                            {downloadStoreLinks.map(({name}) => (
-                                <StoreLink
-                                    key={name}
-                                    store={name === "App Store" ? "app_store" : "google_play"}
-                                    placement="home_hero"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary-200/60 px-4 text-sm font-bold text-white transition-colors duration-300 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950"
-                                >
-                                    {name}
-                                </StoreLink>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="mt-10 flex w-full max-w-xl items-stretch justify-center lg:justify-start">
-                        {downloadHeroStats.map((item, index) => (
-                            <div
-                                key={item.label}
-                                className={`min-w-0 flex-1 ${index > 0 ? "border-l border-white/20 pl-4 sm:pl-5" : ""} ${index < downloadHeroStats.length - 1 ? "pr-4 sm:pr-5" : ""}`}
-                            >
-                                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2">
-                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-primary-400 text-primary-400" aria-hidden="true">
-                                        <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
-                                            <path d="M3.5 8.2 6.4 11.2 12.5 4.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </span>
-                                    <span className="font-display text-3xl font-extrabold leading-none tracking-tight text-white sm:text-4xl">
-                                        {item.value === null ? "—" : item.value}
-                                    </span>
-                                    <span className="col-start-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:text-[11px]">
-                                        {item.label}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
+                        {heroStoreRow}
                     </div>
                 </div>
                 <div className="relative z-10 flex w-full items-center justify-center pb-10 lg:pb-0">
                     <HomeAnimalOrbit center={orbitCenter} animals={orbitAnimals} bubble={t("heroBubble")} label={t("orbitLabel")} />
                 </div>
-                <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 w-full max-w-xl -translate-x-1/2 px-4 opacity-90 sm:bottom-4 lg:bottom-6">
-                    <div className="relative mx-auto w-full max-w-[18rem] sm:max-w-[21rem] md:max-w-[24rem]">
-                        <Image
-                            src={heroLaurelWreathImage}
-                            alt=""
-                            width={720}
-                            height={180}
-                            // It is drawn at most 24rem wide: without sizes the browser fetched the 1920 px rendition.
-                            sizes="(min-width: 768px) 24rem, (min-width: 640px) 21rem, 18rem"
-                            className="h-auto w-full select-none opacity-85"
-                            aria-hidden="true"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center px-[11%] sm:px-[12%]">
-                            <p className="-translate-y-1 whitespace-nowrap text-center font-display text-[9px] font-semibold uppercase leading-none tracking-[0.15em] text-white/85 sm:-translate-y-1.5 sm:text-[10px] sm:tracking-[0.17em] md:text-xs md:tracking-[0.19em]">
-                                {t("heroLaurelMadeFor")}{" "}
-                                <span className="ml-1.5 text-primary-200 sm:ml-2">{t("heroLaurelExplorers")}</span>.
-                                {" "}{t("heroLaurelBuiltFor")}{" "}
-                                <span className="ml-1.5 text-primary-200 sm:ml-2">{t("heroLaurelCurious")}</span>.
-                            </p>
-                        </div>
-                    </div>
-                </div>
             </section>
-            {/* Pick one (2026-11-01): the faces people talk to most, each opening its chat. */}
-            <section aria-labelledby="home-wall-title" className="relative mx-auto mb-20 flex w-full max-w-[86rem] flex-col gap-8 px-4 md:px-8 lg:mb-28">
-                <h2 id="home-wall-title" className={`${sectionTitle} text-center`}>{t("wall.title")}</h2>
-                <HomeAnimalWall animals={wall} allLabel={t("wall.all", {count: animalCount})} />
+
+            {/* Hero B: the demo first (SPEC section 1): the usual answer beside the lion's own take, live. */}
+            <section
+                {...{[HERO_ARM_ATTRIBUTE]: "b"}}
+                aria-labelledby="home-idea-title"
+                className="relative mx-auto -mt-4 mb-16 flex w-full max-w-5xl flex-col items-center gap-7 px-4 pb-10 pt-4 sm:pt-8 md:px-8 lg:mb-20 lg:pt-10"
+                id="try"
+            >
+                <h1 id="home-idea-title" className="w-full text-center font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white">
+                    <span
+                        className="hero-wild-textured block text-[2.65rem] font-semibold leading-[0.88] [text-wrap:balance] sm:text-6xl lg:text-[4.5rem] xl:text-[5rem]"
+                        style={{"--hero-wild-texture": `url(${heroTextureImage})`} as React.CSSProperties}
+                    >
+                        {t("heroIdeaLead")}
+                    </span>
+                    <span className="mt-3 block text-[1.6rem] leading-[0.95] [text-wrap:balance] sm:text-4xl lg:text-[2.75rem]">{t("heroTalkAccent")}</span>
+                </h1>
+                <HomeIdeaDemo chips={chips} words={demoWords} locale={locale} animalImage={getSpeciesArtworkUrl(HERO_DEMO_ANIMAL.slug)} />
+                {heroStoreRow}
             </section>
 
             {/* Every animal is different (spec §3): one question, two animals facing off across it. */}
@@ -491,32 +443,6 @@ export default async function Home({params}: HomePageProps) {
                 </p>
             </section>
 
-            {/* Real photos, from the people who took them. */}
-            {captures.length > 0 ? (
-                <section aria-labelledby="home-captures-title" className="relative mx-auto mb-20 flex w-full max-w-[86rem] flex-col gap-8 px-4 md:px-8 lg:mb-28">
-                    <h2 id="home-captures-title" className={`${sectionTitle} text-center`}>{t("captures.title")}</h2>
-                    <ul className="grid grid-cols-2 gap-1 md:grid-cols-4">
-                        {captures.map((capture) => (
-                            <li key={capture.id}>
-                                <Link href={discoverPostPath(capture.id)} className="theme-dark group relative block aspect-square overflow-hidden bg-white/5">
-                                    <img
-                                        src={capture.imageSrc}
-                                        alt={capture.animalName}
-                                        width={640}
-                                        height={640}
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 motion-reduce:transition-none"
-                                    />
-                                    <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
-                                    <span className="absolute inset-x-0 bottom-0 truncate p-3 font-display text-base font-bold text-white md:p-4 md:text-xl">{capture.animalName}</span>
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            ) : null}
-
             <Anchor id="download" className="md:-top-48" />
             <section className="relative mb-20 flex w-full flex-col items-center px-4 md:px-8 lg:mb-28">
                 <div className="relative w-full max-w-6xl">
@@ -527,16 +453,6 @@ export default async function Home({params}: HomePageProps) {
                                 <h2 className="font-display text-5xl font-bold leading-[0.96] text-white md:text-6xl lg:text-7xl">
                                     {t("download.title")}
                                 </h2>
-                                <div className="flex justify-center lg:justify-start">
-                                    {downloadHeroStats.map((item, index) => (
-                                        <div key={item.label} className={`flex min-w-0 flex-col gap-1.5 px-4 sm:px-6 ${index > 0 ? "border-l border-white/20" : "pl-0 sm:pl-0"}`}>
-                                            <span className="font-display text-3xl font-extrabold leading-none tracking-tight text-primary-200 sm:text-4xl">
-                                                {item.value === null ? "—" : item.value}
-                                            </span>
-                                            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-200 sm:text-[11px]">{item.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
                             <div className="flex flex-col gap-3">
                                 {downloadStoreLinks.map(({name}) => (

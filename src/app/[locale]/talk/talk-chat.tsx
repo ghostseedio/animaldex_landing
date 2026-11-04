@@ -27,6 +27,7 @@ import AskConversation, {type AskConversationPage, type AskDrawerLabels} from "@
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {AskAnimalFace, AskAnimalHero, AskTypingBubble} from "@/components/ask-animaldex/ask-messenger";
 import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
+import {AiNotice, AiTag} from "@/components/ai-gate/ai-notices";
 import {useCompanionCards} from "@/components/companions/use-companions";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
@@ -147,7 +148,10 @@ function TalkChatShell({name, power, slug, onMenu, words, labels, showsCapabilit
                         <span aria-hidden="true" className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-2 border-canvas-950 bg-primary-400" />
                     </span>
                     <div className="min-w-0 flex-1">
-                        <p className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">{name}</p>
+                        <p className="flex min-w-0 items-center gap-1.5">
+                            <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">{name}</span>
+                            <AiTag label={labels.aiTagLabel} />
+                        </p>
                         {power ? <p className="truncate text-[11px] font-semibold leading-4 text-primary-300">{power}</p> : null}
                     </div>
                 </div>
@@ -175,6 +179,7 @@ function TalkChatShell({name, power, slug, onMenu, words, labels, showsCapabilit
                             />
                         ) : null}
                         <div aria-hidden="true" className="min-h-7 flex-1" />
+                        <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} className="pb-3" />
                         <AskTypingBubble avatarUrl={face} label={labels.typing} />
                     </div>
                 </div>
