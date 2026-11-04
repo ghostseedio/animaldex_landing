@@ -58,9 +58,9 @@ test("only a finished reply that set a step shows it", () => {
     assert.deepEqual(askPublicReplySpecials({role: "assistant", status: "complete"}), []);
 });
 
-test("the route sets public steps only off a call and a greeting, with a kill switch, and saves nothing", () => {
+test("the route sets public steps only for a client that draws them, off a call and a greeting, with a kill switch, and saves nothing", () => {
     const route = readRepo("src/app/api/ask/stream/route.ts");
-    assert.match(route, /const publicSteps = publicChat && !isCall && !isGreeting && process\.env\.ASK_PUBLIC_STEPS !== "off"/);
+    assert.match(route, /const publicSteps = publicChat && advertised\.includes\("step"\) && !isCall && !isGreeting && process\.env\.ASK_PUBLIC_STEPS !== "off"/);
     assert.match(route, /trial_preview: \{step: lines\.trial\.step\}/);
     // I'll do it on a public step goes to the app, counted as its own placement.
     const chat = readRepo("src/components/ask-animaldex/ask-conversation.tsx");

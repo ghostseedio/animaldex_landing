@@ -562,7 +562,9 @@ export async function POST(request: Request) {
     // Web only (2026-11-01): there too the animal may set one step, which the
     // chat shows with the app as the way to take it on. Nothing is saved.
     // ASK_PUBLIC_STEPS=off turns it off.
-    const publicSteps = publicChat && !isCall && !isGreeting && process.env.ASK_PUBLIC_STEPS !== "off"
+    // Only for a client that draws it ("step" in supported_visuals, as the 3.2
+    // apps send it; the web chat says it on every one-to-one turn).
+    const publicSteps = publicChat && advertised.includes("step") && !isCall && !isGreeting && process.env.ASK_PUBLIC_STEPS !== "off"
         && (!viewer.signedIn || settings.suggestSteps !== false);
     const loop = owner?.loop ?? null;
     // 3.2 Debates: whether the offer may be made in this reply, and on a call whether a yes may be handed over.

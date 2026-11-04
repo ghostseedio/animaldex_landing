@@ -70,10 +70,12 @@ test("text_columns is the column over the advance of M, clamped as the server cl
 
 test("every one-to-one turn says rich with its columns; calls never do", () => {
     assert.deepEqual(askTurnVisuals({ownerVisuals: ["step", "card", "debate"], richColumns: 44}), {supported_visuals: ["step", "card", "debate", "rich"], text_columns: 44});
-    assert.deepEqual(askTurnVisuals({ownerVisuals: null, richColumns: 72}), {supported_visuals: ["rich"], text_columns: 72});
+    // A public chat draws its step preview, so it says "step" (the server sets one only then).
+    assert.deepEqual(askTurnVisuals({ownerVisuals: null, richColumns: 72}), {supported_visuals: ["step", "rich"], text_columns: 72});
     assert.deepEqual(askTurnVisuals({ownerVisuals: ["step", "card", "debate"], richColumns: 44, call: true}), {supported_visuals: ["step", "card", "debate"]});
     // Not measured yet (or the site-wide assistant): as before.
-    assert.deepEqual(askTurnVisuals({ownerVisuals: null, richColumns: null}), {});
+    assert.deepEqual(askTurnVisuals({ownerVisuals: null, richColumns: null}), {supported_visuals: ["step"]});
+    assert.deepEqual(askTurnVisuals({ownerVisuals: null, richColumns: null, call: true}), {});
 });
 
 test("a reply answered a real problem when it holds a heading or a numbered list, never in a hello", () => {

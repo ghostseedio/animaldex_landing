@@ -167,4 +167,9 @@ test("the stream route wires it: age gate, crisis before the limit, routing, the
     assert.ok(route.includes("recordAngleHeard(service, {userId, speciesProfileId: speciesId, angle: chosenAngle})"));
     assert.ok(route.includes("secondOpinionFields({isPro: rate?.isPro === true"));
     assert.ok(route.includes("buildAskStreamingSystemBlocks(promptOptions)"));
+    // turn_kind and angle ride in `closing`, spread into the done event itself (top level, as the apps read them).
+    assert.ok(route.includes("send({done: true, follow_up_prompts: split.followUps, ...closing, ...companionFields});"));
+    assert.ok(route.includes('const fields = {turn_kind: "crisis" as TurnKind, angle: null, signed_in: viewer.signedIn, conversation_mode: "auto"};'));
+    // A public chat's step only for a client that draws it.
+    assert.ok(route.includes('const publicSteps = publicChat && advertised.includes("step") && !isCall && !isGreeting'));
 });
