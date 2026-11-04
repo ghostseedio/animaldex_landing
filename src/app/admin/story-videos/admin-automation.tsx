@@ -9,7 +9,29 @@ import {Alert, Badge, Button, Section, Skeleton} from "@/components/admin/ui";
 // carousel/text generation every 3 hours): last runs with their reasons, the
 // next run, what is next in line, and a button to run either one now.
 
-type SharePreview = {connected: SocialPlatform[]; queueLength: number; next: {mediaPath: string; name: string; kind: string; platforms: SocialPlatform[]} | null} | {error: string};
+type PausedEntry = {platform: SocialPlatform; kind: "video" | "carousel" | "text"; reason: string};
+
+type SharePreview = {
+    connected: SocialPlatform[];
+    queueLength: number;
+    next: {mediaPath: string; name: string; kind: string; platforms: SocialPlatform[]} | null;
+    paused?: PausedEntry[];
+    pausesSource?: "saved" | "defaults" | "unreadable";
+} | {error: string};
+
+const PAUSED_KIND_LABELS: Record<PausedEntry["kind"], string> = {video: "videos", carousel: "carousels", text: "text posts"};
+
+/** "X (credits depleted) · Instagram carousels (carousels got 4–14 views)": one entry per platform when everything it posts shares a reason. */
+function pausedSummary(paused: PausedEntry[]) {
+    const byPlatform = new Map<SocialPlatform, PausedEntry[]>();
+    for (const entry of paused) byPlatform.set(entry.platform, [...(byPlatform.get(entry.platform) ?? []), entry]);
+    return Array.from(byPlatform.entries()).flatMap(([platform, entries]) => {
+        const reasons = new Set(entries.map((entry) => entry.reason));
+        const name = SOCIAL_PLATFORM_LABELS[platform].replace(/ (Reels|Shorts)$/, "");
+        if (reasons.size === 1 && entries.length > 1) return [`${name} (${entries[0].reason})`];
+        return entries.map((entry) => `${name} ${PAUSED_KIND_LABELS[entry.kind]} (${entry.reason})`);
+    }).join(" · ");
+}
 
 type Payload = {
     share: {runs: AutomationRun[]; nextRunAt: string; disabled: boolean; preview: SharePreview};
@@ -104,6 +126,12 @@ export default function AdminAutomation({onChanged}: {onChanged: () => void}) {
                                 {preview.next
                                     ? <>Next: <span className="font-bold text-white">{preview.next.name}</span> → {preview.next.platforms.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join(", ")}. {preview.queueLength} video{preview.queueLength === 1 ? "" : "s"} waiting.</>
                                     : "Nothing waiting: every video is on every connected platform."}
+                            </p>
+                        ) : null}
+                        {preview && !("error" in preview) && preview.paused?.length ? (
+                            <p className="text-xs leading-5 text-amber-200">
+                                Paused: {pausedSummary(preview.paused)}. Turn one back on under Official accounts.
+                                {preview.pausesSource === "unreadable" ? " The switches could not be read, so nothing posts until they can." : null}
                             </p>
                         ) : null}
                         <RunList runs={data.share.runs} />

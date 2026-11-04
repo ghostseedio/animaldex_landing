@@ -5,6 +5,7 @@ import {findShareableContentVideoByPath} from "@/lib/content-video/share";
 import {CONTENT_VIDEO_MEDIA_KIND} from "@/lib/content-video/store";
 import {findShareableUploadedVideoByPath, UPLOADED_VIDEO_MEDIA_KIND} from "@/lib/social/uploaded-videos";
 import {updatePost} from "@/lib/social/store";
+import {pauseOnFatalError} from "@/lib/social/platform-settings";
 import {normalizeVideoForSocial} from "@/lib/social/video-normalize";
 import {EMPTY_TIKTOK_OPTIONS} from "@/lib/social/tiktok-options";
 import {describeZernioError, getTikTokAccount, pinterestBoardId, postToTikTok, postToZernio, uploadToZernio, uploadVideoToZernio, zernioAccountFor, ZernioError, type ZernioMediaItem, type ZernioPostInput, type ZernioPostSnapshot} from "@/lib/social/zernio";
@@ -99,6 +100,8 @@ export async function runShareJob(rows: SocialPostRow[]) {
             await updatePost(row.id, {status: "published", external_id: result.externalId, external_url: result.externalUrl, error: null});
         } catch (error) {
             await updatePost(row.id, {status: "failed", error: errorText(error)}).catch(() => undefined);
+            // X out of API credits fails every post the same way: pause it until the admin turns it back on.
+            await pauseOnFatalError(row.platform, error);
         }
     }));
 }
@@ -308,6 +311,7 @@ export async function runContentShareJob(rows: SocialPostRow[], content: SocialC
             await updatePost(row.id, {status: "published", external_id: result.externalId, external_url: result.externalUrl, error: null});
         } catch (error) {
             await updatePost(row.id, {status: "failed", error: errorText(error)}).catch(() => undefined);
+            await pauseOnFatalError(row.platform, error);
         }
     }));
 }
