@@ -62,9 +62,14 @@ export const TALK_WORDS_EN = {
     capTrials: "{animal}'s Trials",
     capTrialsNote: "Its own challenges",
     capStep: "Your step",
-    capStepNote: "{animal} gives you one step to try, from your own problem. Capture one in the app to start.",
+    /** Under "I'll do it" on a public chat's step: what the app adds to it. */
+    capStepNote: "In the app, your animals keep your steps and check back on how they went.",
+    /** The step chip on the public chat: steps happen right here (web only since Nov 1 2026). */
+    capStepHere: "Tell {animal} about something real, and it can give you one step to try, right here.",
     capDebates: "Debates",
     capDebatesNote: "Bring other animals in to argue it out, once you've earned an animal's Power in the app.",
+    /** The locked Debates chip on the public chat: the one capability that needs the app. */
+    capDebatesInApp: "Bring other animals in to argue your problem out. Capture one in the app to start.",
     /** The two things only the app's own animals do, as one quiet chip under the contact card (visual first: no caption, no two locks). */
     capInApp: "Steps and debates",
     capInAppNote: "{animal} can set you a step from your own problem, and bring other animals in to argue it out. Capture one in the app to start.",
@@ -75,7 +80,7 @@ export const TALK_WORDS_EN = {
     noTrials: "No Trials for this animal yet.",
     askAnother: "Ask another animal",
     /** Under the first real answer: steps and debates need a captured animal, so the app (W13). */
-    signUpForMore: "Get the app to set steps and start debates",
+    signUpForMore: "Get the app to keep your steps and start debates",
     /** A share card's alt text. */
     ogAlt: "Talk to animals on AnimalDex"
 };
@@ -84,7 +89,7 @@ export type TalkWords = typeof TALK_WORDS_EN;
 
 /** What "What {name} can do" says: all the drawer needs of the Talk page's words (WEB-38). */
 export const TALK_CAPABILITY_KEYS = [
-    "capabilities", "capTalk", "capTalkNote", "capTrials", "capStep", "capStepNote", "capDebates", "capDebatesNote", "capInApp", "capInAppNote",
+    "capabilities", "capTalk", "capTalkNote", "capTrials", "capStep", "capStepNote", "capStepHere", "capDebates", "capDebatesNote", "capDebatesInApp", "capInApp", "capInAppNote",
     "locked", "getApp", "catchForTrials", "noTrials"
 ] as const;
 

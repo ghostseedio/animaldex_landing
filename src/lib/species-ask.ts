@@ -6,10 +6,12 @@ import {INSTAGRAM_IMPORT_PATH} from "@/lib/instagram-import";
  * Daily message budgets. Signed-in and Pro are the apps' budgets too: one
  * allowance per account, metered by `take_animal_chat_turn` in Postgres, so
  * the website and the apps draw from the same count. Anonymous readers are
- * metered per address here, since there is no account to key on.
+ * metered per address here, since there is no account to key on: six a day
+ * (Nov 2026, up from three, so the limit no longer lands right after the
+ * first useful reply), still one allowance per address across the site.
  */
 export const SPECIES_ASK_DAILY_LIMITS = {
-    anonymous: 3,
+    anonymous: 6,
     signedIn: 10,
     pro: 100
 } as const;
