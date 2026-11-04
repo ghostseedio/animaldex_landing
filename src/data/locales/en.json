@@ -63,7 +63,8 @@
       "resources": "Resources",
       "earn": "Earn",
       "experienceAndEarn": "Experience and earn",
-      "follow": "Follow"
+      "follow": "Follow",
+      "help": "Help"
     },
     "credits": {
       "platform": "Copyright",
@@ -82,7 +83,9 @@
     "language": "Language",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "backToTop": "Back to top"
+    "backToTop": "Back to top",
+    "findYourAnimals": "Find your animals",
+    "aiAndSafety": "AI & safety"
   },
   "home": {
     "title": "AnimalDex",
@@ -95,7 +98,7 @@
     "heroLaurelExplorers": "explorers",
     "heroLaurelBuiltFor": "Built for",
     "heroLaurelCurious": "the curious",
-    "supporting": "Talk to animals. Every animal has a lesson: its own Power, from how its kind survives.",
+    "supporting": "Take any idea to an animal for a genuinely different take. Every animal has a lesson: a real behaviour of its kind, turned into an angle you wouldn't hear anywhere else.",
     "chatStill": {
       "label": "An example conversation with a Common Octopus in AnimalDex",
       "animal": "Common Octopus",
@@ -375,6 +378,68 @@
     },
     "captures": {
       "title": "Caught by explorers."
+    },
+    "heroIdeaLead": "Take any idea to an animal.",
+    "demo": {
+      "label": "The usual answer beside the lion's take on the same idea",
+      "eyebrow": "The usual answer, or the lion's?",
+      "chipsLabel": "Pick an idea",
+      "usualTitle": "The usual answer",
+      "exampleTag": "Example",
+      "exampleNote": "An example we wrote of the answer you usually get.",
+      "takeTitle": "Your lion's take",
+      "aiTag": "AI",
+      "idle": "Tap an idea. The lion answers here, live.",
+      "ask": "Ask the lion",
+      "thinking": "The lion is thinking…",
+      "keepTalking": "Keep talking",
+      "share": "Share",
+      "copied": "Link copied",
+      "shareTitle": "The lion's take on “{idea}”",
+      "failed": "The lion couldn't answer just now. Try again in a minute.",
+      "tryAgain": "Try again",
+      "limit": "That's today's free messages on the web. Keep talking in the app.",
+      "limitCta": "Get the app",
+      "disclosure": "The animals are AI. Replies are AI-generated.",
+      "safetyLink": "AI & safety",
+      "chips": {
+        "podcast": {
+          "label": "Start a podcast",
+          "message": "I want to start a podcast.",
+          "usual": [
+            "Pick a niche you care about.",
+            "Get a decent mic and free editing software.",
+            "Publish on a consistent schedule."
+          ]
+        },
+        "abroad": {
+          "label": "Move abroad",
+          "message": "I'm thinking about moving abroad.",
+          "usual": [
+            "Research visas and the cost of living.",
+            "Save three to six months of expenses.",
+            "Visit for a few weeks before you commit."
+          ]
+        },
+        "sugar": {
+          "label": "Quit sugar",
+          "message": "I want to quit sugar.",
+          "usual": [
+            "Cut out sugary drinks first.",
+            "Read labels for hidden sugar.",
+            "Swap sweets for fruit."
+          ]
+        },
+        "deadlines": {
+          "label": "Three things due tomorrow",
+          "message": "I've got three things due tomorrow.",
+          "usual": [
+            "Make a to-do list.",
+            "Do the most urgent one first.",
+            "Take short breaks so you don't burn out."
+          ]
+        }
+      }
     }
   },
   "blog": {
@@ -975,7 +1040,13 @@
     "landingButton": "Home",
     "ctaEyebrow": "Start talking",
     "talkButton": "Talk to an animal",
-    "positioningLine": "And then it talks back, because every animal has a lesson: its own Power, from how its kind survives."
+    "positioningLine": "And then it talks back, because every animal has a lesson: its own Power, from how its kind survives.",
+    "bridgeEyebrow": "The usual answer, or the {animal}'s?",
+    "bridgeEyebrowGeneral": "The usual answer, or an animal's?",
+    "bridgeBody": "Tell the {animal} an idea, a plan or a decision. It answers from how its kind really lives.",
+    "bridgeBodyGeneral": "Tell an animal an idea, a plan or a decision. Each one answers from how its kind really lives.",
+    "bridgeCta": "Take your idea to this animal",
+    "bridgeCtaGeneral": "Take your idea to an animal"
   },
   "useCases": {
     "eyebrow": "Who it's for",
@@ -2302,9 +2373,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Talk to Animals. Every Animal Has a Lesson",
+    "fullTitle": "AnimalDex: Take Any Idea to an Animal. Every Animal Has a Lesson",
     "title": "AnimalDex",
-    "description": "Talk to real animals with AI. Each one answers from its own Power, a lesson from how its kind survives, and takes a side. Bring a real problem, hear a real side, and take one step.",
+    "description": "Talk to animals about any idea, plan or decision and get a genuinely different take. Each one answers from a real behaviour of its kind, and every animal you meet adds a new way of seeing.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
@@ -2312,15 +2383,15 @@
     "refundTitle": "AnimalDex Refund Policy",
     "refundDescription": "Read how refunds and cancellations work for AnimalDex purchases made through Paddle, Apple, and Google Play.",
     "keywords": [
+      "take any idea to an animal",
       "talk to animals",
       "talk to animals app",
-      "animal wisdom app",
       "talk to an animal",
+      "animal wisdom app",
+      "a different take on your idea",
       "AI that disagrees with you",
       "perspective-driven AI",
       "advice fatigue",
-      "sycophantic AI",
-      "AI coaching app",
       "AI animal scanner",
       "animal identifier app",
       "animal identification app",
@@ -2328,16 +2399,10 @@
       "wildlife collection app",
       "animal card app",
       "animal card collecting app",
-      "animal card game",
       "animal collection app",
-      "educational animal app",
       "animal discovery app",
       "animal field guide app",
       "wildlife learning app",
-      "family-friendly animal learning app",
-      "animal breed identifier",
-      "animal breed detector",
-      "pet breed identifier",
       "AI animal analysis",
       "identify insects",
       "identify birds",
@@ -2345,10 +2410,7 @@
       "wildlife photography app",
       "zoo animal app",
       "safari animal app",
-      "species collecting game",
-      "animal set collection game",
       "animal debate app",
-      "animal trading app",
       "respectful wildlife observation"
     ]
   },
@@ -2506,7 +2568,30 @@
     "openerDecidePrompt": "I've got a decision I keep putting off. How would you handle it?",
     "openerPowerTitle": "Your Power",
     "openerPowerPromptNamed": "What's your Power, {power}, in plain words?",
-    "openerPowerPrompt": "What's your Power, in plain words?"
+    "openerPowerPrompt": "What's your Power, in plain words?",
+    "aiTagLabel": "This animal is an AI",
+    "aiNotice": "Replies are AI-generated.",
+    "aiNoticeLong": "You've been talking for over three hours. Replies are AI-generated.",
+    "aiNoticeBreak": "You've been talking for over three hours. Replies are AI-generated, and a break might help.",
+    "aiSafetyLink": "AI & safety",
+    "consentTitle": "Before you start",
+    "consentBody": "The animals are AI. What you write is sent to our AI providers to create replies.",
+    "consentMore": "See {privacy} and {safety}.",
+    "consentPrivacy": "Privacy",
+    "consentSafety": "AI & safety",
+    "consentAgree": "Agree",
+    "consentNotNow": "Not now",
+    "consentLockedHint": "Talk opens once you agree to the AI notice.",
+    "consentReview": "Review",
+    "ageTitle": "A quick age check",
+    "ageBody": "What year were you born?",
+    "ageYearLabel": "Year of birth",
+    "ageContinue": "Continue",
+    "ageNote": "We ask once. It sets how the animals talk with you.",
+    "ageFailed": "That didn't save. Try again.",
+    "under13Title": "Talk is for ages 13 and up",
+    "under13Body": "You can still explore every animal and its field guide.",
+    "gateClose": "Close"
   },
   "wildProfile": {
     "eyebrow": "Identity",
@@ -2937,7 +3022,7 @@
     "capTrials": "{animal}'s Trials",
     "capTrialsNote": "Its own challenges",
     "capStep": "Your step",
-    "capStepNote": "{animal} gives you one step to try, from your own problem. Capture one in the app to start.",
+    "capStepNote": "In the app, your animals keep your steps and check back on how they went.",
     "capDebates": "Debates",
     "capDebatesNote": "Bring other animals in to argue it out, once you've earned an animal's Power in the app.",
     "capInApp": "Steps and debates",
@@ -2948,7 +3033,7 @@
     "catchForTrials": "Capture a {animal} in the app to work on its Trials",
     "noTrials": "No Trials for this animal yet.",
     "askAnother": "Ask another animal",
-    "signUpForMore": "Get the app to set steps and start debates",
+    "signUpForMore": "Get the app to keep your steps and start debates",
     "syncedHere": "Synced to your account",
     "noChatsYet": "Your chats with animals appear here.",
     "startWith": "Start with",
@@ -2959,7 +3044,9 @@
     "carriedHint": "Pick an animal. Your question will be ready to send.",
     "loadFailed": "Couldn't load the animals.",
     "tryAgain": "Try again",
-    "ogAlt": "Talk to animals on AnimalDex"
+    "ogAlt": "Talk to animals on AnimalDex",
+    "capStepHere": "Tell {animal} about something real, and it can give you one step to try, right here.",
+    "capDebatesInApp": "Bring other animals in to argue your problem out. Capture one in the app to start."
   },
   "appShell": {
     "companions": "Companions",

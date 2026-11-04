@@ -63,7 +63,8 @@
       "resources": "Sumber",
       "earn": "Hasilkan",
       "experienceAndEarn": "Pengalaman & Hasilkan",
-      "follow": "Ikuti"
+      "follow": "Ikuti",
+      "help": "Bantuan"
     },
     "credits": {
       "platform": "Hak cipta",
@@ -82,7 +83,9 @@
     "language": "Bahasa",
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
-    "backToTop": "Kembali ke atas"
+    "backToTop": "Kembali ke atas",
+    "findYourAnimals": "Temukan hewanmu",
+    "aiAndSafety": "AI & keamanan"
   },
   "home": {
     "title": "AnimalDex",
@@ -95,7 +98,7 @@
     "heroLaurelExplorers": "penjelajah",
     "heroLaurelBuiltFor": "Juga untuk",
     "heroLaurelCurious": "si penasaran",
-    "supporting": "Bicaralah dengan hewan. Setiap hewan punya pelajaran: Kekuatannya sendiri, dari cara jenisnya bertahan hidup.",
+    "supporting": "Bawa ide apa pun ke seekor hewan untuk sudut pandang yang benar-benar berbeda. Setiap hewan punya pelajaran: perilaku nyata jenisnya, diubah jadi sudut pandang yang tidak akan kamu dengar di tempat lain.",
     "chatStill": {
       "label": "Contoh percakapan dengan gurita biasa di AnimalDex",
       "animal": "Gurita Biasa",
@@ -375,6 +378,68 @@
     },
     "captures": {
       "title": "Ditangkap para penjelajah."
+    },
+    "heroIdeaLead": "Bawa ide apa pun ke seekor hewan.",
+    "demo": {
+      "label": "Jawaban biasa di samping pendapat singa tentang ide yang sama",
+      "eyebrow": "Jawaban biasa, atau jawaban singa?",
+      "chipsLabel": "Pilih ide",
+      "usualTitle": "Jawaban biasa",
+      "exampleTag": "Contoh",
+      "exampleNote": "Contoh yang kami tulis tentang jawaban yang biasanya kamu dapat.",
+      "takeTitle": "Pendapat singamu",
+      "aiTag": "AI",
+      "idle": "Ketuk sebuah ide. Singa menjawab di sini, langsung.",
+      "ask": "Tanya singa",
+      "thinking": "Singa sedang berpikir…",
+      "keepTalking": "Lanjut ngobrol",
+      "share": "Bagikan",
+      "copied": "Tautan disalin",
+      "shareTitle": "Pendapat singa tentang “{idea}”",
+      "failed": "Singa belum bisa menjawab. Coba lagi sebentar lagi.",
+      "tryAgain": "Coba lagi",
+      "limit": "Pesan gratismu di web untuk hari ini sudah habis. Lanjutkan di aplikasi.",
+      "limitCta": "Dapatkan aplikasinya",
+      "disclosure": "Hewan-hewan ini adalah AI. Balasannya dibuat oleh AI.",
+      "safetyLink": "AI & keamanan",
+      "chips": {
+        "podcast": {
+          "label": "Mulai podcast",
+          "message": "Aku ingin memulai podcast.",
+          "usual": [
+            "Pilih topik yang kamu sukai.",
+            "Beli mikrofon yang layak dan pakai aplikasi edit gratis.",
+            "Unggah dengan jadwal yang konsisten."
+          ]
+        },
+        "abroad": {
+          "label": "Pindah ke luar negeri",
+          "message": "Aku sedang memikirkan pindah ke luar negeri.",
+          "usual": [
+            "Pelajari visa dan biaya hidup.",
+            "Tabung biaya hidup tiga sampai enam bulan.",
+            "Tinggal beberapa minggu dulu sebelum memutuskan."
+          ]
+        },
+        "sugar": {
+          "label": "Berhenti makan gula",
+          "message": "Aku ingin berhenti makan gula.",
+          "usual": [
+            "Kurangi minuman manis dulu.",
+            "Baca label untuk gula tersembunyi.",
+            "Ganti camilan manis dengan buah."
+          ]
+        },
+        "deadlines": {
+          "label": "Tiga tugas tenggat besok",
+          "message": "Aku punya tiga tugas yang tenggatnya besok.",
+          "usual": [
+            "Buat daftar tugas.",
+            "Kerjakan yang paling mendesak dulu.",
+            "Istirahat sebentar agar tidak kelelahan."
+          ]
+        }
+      }
     }
   },
   "blog": {
@@ -981,7 +1046,13 @@
     "landingButton": "Beranda",
     "ctaEyebrow": "Mulai bicara",
     "talkButton": "Bicara dengan hewan",
-    "positioningLine": "Lalu ia menjawab, karena setiap hewan punya pelajaran: Kekuatannya sendiri, dari cara jenisnya bertahan hidup."
+    "positioningLine": "Lalu ia menjawab, karena setiap hewan punya pelajaran: Kekuatannya sendiri, dari cara jenisnya bertahan hidup.",
+    "bridgeEyebrow": "Jawaban biasa, atau jawaban {animal}?",
+    "bridgeEyebrowGeneral": "Jawaban biasa, atau jawaban seekor hewan?",
+    "bridgeBody": "Ceritakan ide, rencana, atau keputusan kepada {animal}. Ia menjawab dari cara jenisnya benar-benar hidup.",
+    "bridgeBodyGeneral": "Ceritakan ide, rencana, atau keputusan kepada seekor hewan. Setiap hewan menjawab dari cara jenisnya benar-benar hidup.",
+    "bridgeCta": "Bawa idemu ke hewan ini",
+    "bridgeCtaGeneral": "Bawa idemu ke seekor hewan"
   },
   "useCases": {
     "eyebrow": "Untuk siapa",
@@ -2291,9 +2362,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Bicara dengan Hewan. Setiap Hewan Punya Pelajaran",
+    "fullTitle": "AnimalDex: Bawa Ide Apa Pun ke Seekor Hewan. Setiap Hewan Punya Pelajaran",
     "title": "AnimalDex",
-    "description": "Bicara dengan hewan sungguhan lewat AI. Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, dan memilih satu sisi. Bawa masalah nyata, dengar sisi yang nyata, dan ambil satu langkah.",
+    "description": "Bicara dengan hewan tentang ide, rencana, atau keputusan apa pun dan dapatkan sudut pandang yang benar-benar berbeda. Setiap hewan menjawab dari perilaku nyata jenisnya, dan setiap hewan yang kamu temui menambah cara pandang baru.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
@@ -2301,27 +2372,23 @@
     "refundTitle": "Kebijakan Pengembalian Dana AnimalDex",
     "refundDescription": "Pelajari cara kerja pengembalian dana dan pembatalan untuk pembelian AnimalDex melalui Paddle, Apple, dan Google Play.",
     "keywords": [
+      "bawa ide ke seekor hewan",
       "bicara dengan hewan",
       "aplikasi bicara dengan hewan",
       "aplikasi kebijaksanaan hewan",
+      "sudut pandang berbeda untuk idemu",
       "AI yang tidak selalu setuju",
       "lelah nasihat",
       "advice fatigue",
-      "AI yang menjilat",
-      "aplikasi coaching AI",
       "pemindai hewan AI",
       "aplikasi identifier hewan",
       "aplikasi identifikasi hewan",
       "aplikasi identifikasi satwa liar",
       "aplikasi koleksi satwa liar",
       "aplikasi kartu hewan",
-      "aplikasi edukasi hewan",
       "field guide hewan",
       "aplikasi discovery hewan",
       "pembelajaran satwa liar",
-      "aplikasi ramah keluarga tentang hewan",
-      "identifikasi ras hewan",
-      "identifier ras hewan peliharaan",
       "analisis hewan dengan AI",
       "identifikasi serangga",
       "identifikasi burung",
@@ -2329,10 +2396,7 @@
       "aplikasi fotografi satwa liar",
       "aplikasi kebun binatang",
       "aplikasi safari",
-      "game koleksi spesies",
-      "game koleksi hewan",
       "aplikasi debat hewan",
-      "aplikasi trade hewan",
       "observasi satwa liar yang penuh hormat"
     ]
   },
@@ -2490,7 +2554,30 @@
     "openerDecidePrompt": "Ada keputusan yang terus aku tunda. Bagaimana kamu akan menghadapinya?",
     "openerPowerTitle": "Kekuatanmu",
     "openerPowerPromptNamed": "Apa Kekuatanmu, {power}, dengan kata-kata sederhana?",
-    "openerPowerPrompt": "Apa Kekuatanmu, dengan kata-kata sederhana?"
+    "openerPowerPrompt": "Apa Kekuatanmu, dengan kata-kata sederhana?",
+    "aiTagLabel": "Hewan ini adalah AI",
+    "aiNotice": "Balasan dibuat oleh AI.",
+    "aiNoticeLong": "Kamu sudah mengobrol lebih dari tiga jam. Balasan dibuat oleh AI.",
+    "aiNoticeBreak": "Kamu sudah mengobrol lebih dari tiga jam. Balasan dibuat oleh AI, dan istirahat sebentar mungkin membantu.",
+    "aiSafetyLink": "AI & keamanan",
+    "consentTitle": "Sebelum kamu mulai",
+    "consentBody": "Hewan-hewan ini adalah AI. Apa yang kamu tulis dikirim ke penyedia AI kami untuk membuat balasan.",
+    "consentMore": "Lihat {privacy} dan {safety}.",
+    "consentPrivacy": "Privasi",
+    "consentSafety": "AI & keamanan",
+    "consentAgree": "Setuju",
+    "consentNotNow": "Nanti saja",
+    "consentLockedHint": "Obrolan terbuka setelah kamu menyetujui pemberitahuan AI.",
+    "consentReview": "Lihat",
+    "ageTitle": "Cek usia singkat",
+    "ageBody": "Kamu lahir tahun berapa?",
+    "ageYearLabel": "Tahun lahir",
+    "ageContinue": "Lanjut",
+    "ageNote": "Kami hanya bertanya sekali. Ini menentukan cara hewan-hewan berbicara denganmu.",
+    "ageFailed": "Belum tersimpan. Coba lagi.",
+    "under13Title": "Talk untuk usia 13 tahun ke atas",
+    "under13Body": "Kamu tetap bisa menjelajahi setiap hewan dan panduan lapangannya.",
+    "gateClose": "Tutup"
   },
   "wildProfile": {
     "eyebrow": "Identitas",
@@ -2921,7 +3008,7 @@
     "capTrials": "Uji Coba {animal}",
     "capTrialsNote": "Tantangannya sendiri",
     "capStep": "Langkahmu",
-    "capStepNote": "{animal} memberimu satu langkah untuk dicoba, dari masalahmu sendiri. Tangkap satu di aplikasi untuk memulai.",
+    "capStepNote": "Di aplikasi, hewan-hewanmu menyimpan langkahmu dan menanyakan kembali hasilnya.",
     "capDebates": "Debat",
     "capDebatesNote": "Ajak hewan lain untuk memperdebatkannya, setelah kamu mendapatkan Kekuatan seekor hewan di aplikasi.",
     "capInApp": "Langkah dan debat",
@@ -2932,7 +3019,7 @@
     "catchForTrials": "Tangkap {animal} di aplikasi untuk mengerjakan Uji Cobanya",
     "noTrials": "Hewan ini belum punya Uji Coba.",
     "askAnother": "Tanya hewan lain",
-    "signUpForMore": "Dapatkan aplikasinya untuk menetapkan langkah dan memulai debat",
+    "signUpForMore": "Dapatkan aplikasinya untuk menyimpan langkahmu dan memulai debat",
     "syncedHere": "Disinkronkan ke akunmu",
     "noChatsYet": "Obrolanmu dengan para hewan muncul di sini.",
     "startWith": "Mulai dengan",
@@ -2943,7 +3030,9 @@
     "carriedHint": "Pilih seekor hewan. Pertanyaanmu akan siap dikirim.",
     "loadFailed": "Hewan-hewannya tidak bisa dimuat.",
     "tryAgain": "Coba lagi",
-    "ogAlt": "Mengobrol dengan hewan di AnimalDex"
+    "ogAlt": "Mengobrol dengan hewan di AnimalDex",
+    "capStepHere": "Ceritakan sesuatu yang nyata kepada {animal}, dan ia bisa memberimu satu langkah untuk dicoba, di sini juga.",
+    "capDebatesInApp": "Ajak hewan lain untuk memperdebatkan masalahmu. Tangkap satu di aplikasi untuk memulai."
   },
   "appShell": {
     "companions": "Teman",
