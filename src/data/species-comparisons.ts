@@ -582,39 +582,6 @@ export async function getComparisonPageData(slug: string): Promise<ComparisonPag
     return value;
 }
 
-/**
- * Resolve a comparison page:
- * 1) static editorial (keeps existing SEO pages stable)
- * 2) DB ready row
- * 3) AI generate-on-miss for parseable `a-vs-b` slugs
- */
-export async function resolveChallengeEntry(slug: string): Promise<ChallengeEntry | null> {
-    const staticEntry = getStaticChallenge(slug);
-    if (staticEntry) return staticEntry;
-
-    const fromDb = await fetchSpeciesComparisonBySlug(slug);
-    if (fromDb) {
-        // AI rows created before VS-hero generation still point at placeholder artwork.
-        // Ask the edge function to backfill a cinematic comparisons/{slug}.webp once.
-        if (!isGeneratedVsFeaturedImage(fromDb.featuredImage?.src)) {
-            const parsed = parseComparisonSlug(slug);
-            if (parsed) {
-                const withImage = await getOrGenerateSpeciesComparison({
-                    ...parsed,
-                    forceRegenerateImage: true
-                });
-                if (withImage) return withImage;
-            }
-        }
-        return fromDb;
-    }
-
-    const parsed = parseComparisonSlug(slug);
-    if (!parsed) return null;
-
-    return getOrGenerateSpeciesComparison(parsed);
-}
-
 export type ChallengeSitemapEntry = {
     slug: string;
     updatedAt: string;

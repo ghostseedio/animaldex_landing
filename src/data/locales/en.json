@@ -1858,6 +1858,9 @@
       "errorDescription": "Something failed while building this comparison. Try again, or browse the side-by-sides already published.",
       "rateLimitTitle": "Give it a minute",
       "rateLimitDescription": "You've generated a lot of new side-by-sides in a short window. Published ones still open instantly. Try again shortly.",
+      "signInTitle": "Sign in to make this one",
+      "signInDescription": "New side-by-sides are written for signed-in AnimalDex accounts. It's free, and the finished page stays live at this address for everyone. Published comparisons open right away.",
+      "signIn": "Sign in to generate",
       "retry": "Try again",
       "browse": "Browse comparisons"
     },

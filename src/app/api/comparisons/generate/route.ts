@@ -1,4 +1,4 @@
-import {NextResponse} from "next/server";
+import {NextRequest, NextResponse} from "next/server";
 import {revalidateTag} from "next/cache";
 import {isChallengeComparisonType, type ChallengeComparisonType} from "@/data/challenges";
 import {findComparableAnimal} from "@/data/comparison-animals";
@@ -13,7 +13,16 @@ import {
     speciesComparisonSlugCacheTag
 } from "@/data/species-comparisons";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
-import {issueComparisonIntent, isSameOriginBrowserRequest, looksLikeBot, verifyComparisonIntent} from "@/lib/comparison-generation-guard";
+import {
+    generationRefusal,
+    type GenerationRequester,
+    issueComparisonIntent,
+    isSameOriginBrowserRequest,
+    userDailyGenerationLimit,
+    verifyComparisonIntent
+} from "@/lib/comparison-generation-guard";
+import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 
 /** A published (static/snapshot) entry for either order, else a generated DB row under the canonical slug. */
 async function findReadyComparison(requestedSlug: string, reversedSlug: string) {
@@ -30,6 +39,19 @@ const GENERATION_WINDOW_MS = 60 * 60 * 1000;
 // process on the VM, so this in-memory window is effectively global.
 const SITE_GENERATION_LIMIT = Number(process.env.COMPARISON_DAILY_GENERATION_LIMIT) || 40;
 const SITE_GENERATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+const USER_GENERATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Who is asking: an admin session, else the signed-in account (verified with
+ * Supabase Auth), else nobody. Only the first two may spend (Nov 2026).
+ */
+async function requesterOf(request: NextRequest): Promise<GenerationRequester> {
+    if (await isSupportAdminRequestAuthorized(request).catch(() => false)) return {kind: "admin"};
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return {kind: "anonymous"};
+    const {data} = await supabase.auth.getUser().catch(() => ({data: {user: null}}));
+    return data.user ? {kind: "user", userId: data.user.id} : {kind: "anonymous"};
+}
 
 type GenerateRequestBody = {
     animalA?: string;
@@ -48,9 +70,10 @@ function normalizeSlug(value: unknown) {
  * Cheap status probe. Generation takes ~45s, which can outlive the platform's
  * function timeout, so the client polls this instead of trusting the POST to
  * return. Reads published entries and generated rows — never spends an AI call.
- * A pending answer carries the signed intent token a generate click needs.
+ * A pending answer carries the signed intent token a generate click needs, for
+ * a signed-in account or an admin; anyone else is told to sign in first.
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     const {searchParams} = new URL(request.url);
     const slug = normalizeSlug(searchParams.get("slug"));
     const parsed = slug ? parseComparisonSlug(slug) : null;
@@ -63,9 +86,10 @@ export async function GET(request: Request) {
     const existing = await findReadyComparison(slug, reversedSlug);
 
     if (!existing) {
-        // The intent token the generating screen must send back with its click.
+        // The intent token the generating screen must send back with its click; none for a visitor who is not signed in.
+        const requester = await requesterOf(request);
         return NextResponse.json(
-            {status: "pending", intent: issueComparisonIntent(slug)},
+            requester.kind === "anonymous" ? {status: "pending", intent: null, signInRequired: true} : {status: "pending", intent: issueComparisonIntent(slug)},
             {headers: {"Cache-Control": "no-store"}}
         );
     }
@@ -76,7 +100,7 @@ export async function GET(request: Request) {
     );
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     let body: GenerateRequestBody;
     try {
         body = (await request.json()) as GenerateRequestBody;
@@ -125,24 +149,47 @@ export async function POST(request: Request) {
         return NextResponse.json({status: "ready", slug: existing.slug, title: existing.title});
     }
 
-    // Only a person on our own generating screen may spend: same-origin browser
-    // fetch, no bot user agent, and the signed intent token that page rendered.
-    // The token is bound to the page's slug, so the pair must come from that slug.
+    // Only a person on our own generating screen may spend: a signed-in account
+    // or an admin, same-origin browser fetch, no bot user agent, and the signed
+    // intent token that page rendered. The token is bound to the page's slug,
+    // so the pair must come from that slug. Repainting artwork is admin-only.
     const intent = verifyComparisonIntent(normalizeSlug(body.slug), body.intent);
     const pairMatchesIntent = Boolean(fromSlug)
         && fromSlug?.animalASlug === animalASlug
         && fromSlug?.animalBSlug === animalBSlug;
-    if (looksLikeBot(request.headers.get("user-agent")) || !isSameOriginBrowserRequest(request) || intent !== "ok" || !pairMatchesIntent) {
+    const requester = await requesterOf(request);
+    const refusal = generationRefusal({
+        requester,
+        userAgent: request.headers.get("user-agent"),
+        sameOrigin: isSameOriginBrowserRequest(request),
+        intent,
+        pairMatchesIntent,
+        refreshImage: body.refreshImage === true
+    });
+    if (refusal) {
         console.warn("[comparisons/generate] refused", {
             slug: normalizeSlug(body.slug) || requestedSlug,
+            reason: refusal.error,
+            requester: requester.kind,
             intent,
             ip: getRequestIdentifier(request),
             userAgent: request.headers.get("user-agent")?.slice(0, 200) ?? null
         });
-        return NextResponse.json({error: intent === "expired" ? "intent_expired" : "forbidden"}, {status: 403});
+        return NextResponse.json({error: refusal.error}, {status: refusal.status});
     }
 
-    const limit = checkRateLimit(
+    // An account's own daily ceiling; admins have none.
+    if (requester.kind === "user") {
+        const userLimit = checkRateLimit(`comparison-generate:user:${requester.userId}`, userDailyGenerationLimit(), USER_GENERATION_WINDOW_MS);
+        if (!userLimit.allowed) {
+            return NextResponse.json(
+                {error: "rate_limited", retryAfterSeconds: userLimit.retryAfterSeconds},
+                {status: 429, headers: {"Retry-After": String(userLimit.retryAfterSeconds)}}
+            );
+        }
+    }
+
+    const limit = requester.kind === "admin" ? {allowed: true, retryAfterSeconds: 0} : checkRateLimit(
         `comparison-generate:${getRequestIdentifier(request)}`,
         GENERATION_LIMIT,
         GENERATION_WINDOW_MS
