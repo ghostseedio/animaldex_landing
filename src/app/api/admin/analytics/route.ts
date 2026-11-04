@@ -18,6 +18,7 @@ import {
 import { buildContentReport } from "@/lib/content-analytics";
 import { loadAnalytics } from "./_lib/load";
 import { loadContent } from "./_lib/content";
+import { loadWebFunnel } from "./_lib/funnel";
 
 const MAX_RANGE_DAYS = 731;
 
@@ -46,11 +47,12 @@ export async function GET(request: NextRequest) {
     const previous = previousRange(range.from, range.to);
     // Release markers compare the week before; the earliest of those decides how far back to read.
     const since = addDays(previous.from, -7);
-    const [data, content, search, searchPrevious] = await Promise.all([
+    const [data, content, search, searchPrevious, funnel] = await Promise.all([
       loadAnalytics(since, today),
       loadContent(range.from),
       loadSearchPages(range.from, range.to, 1000),
       loadSearchPages(previous.from, previous.to, 1000),
+      loadWebFunnel(range.from, range.to),
     ]);
     const report = buildAnalyticsReport(data, range);
     const contentReport = buildContentReport({
@@ -79,6 +81,7 @@ export async function GET(request: NextRequest) {
         note: search.note ?? null,
       },
       content: contentReport,
+      funnel,
       notes: data.notes,
     });
   } catch (error) {

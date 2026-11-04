@@ -5,6 +5,8 @@ import {getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {ensureAuthenticatedProfileRows} from "@/lib/supabase/auth-bootstrap";
 import {getSiteUrl} from "@/lib/site";
 import {AUTH_NEXT_COOKIE} from "@/lib/auth-next";
+import {FIRST_TOUCH_COOKIE} from "@/lib/first-touch";
+import {recordWebFunnelSignup} from "@/lib/web-funnel-server";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +67,7 @@ export async function GET(request: Request) {
         }
     });
 
-    const {error} = await supabase.auth.exchangeCodeForSession(code);
+    const {data, error} = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
         const redirectUrl = new URL(accountPathFor(nextPath), origin);
@@ -80,6 +82,9 @@ export async function GET(request: Request) {
         redirectUrl.searchParams.set("error", bootstrapError instanceof Error ? bootstrapError.message : "Could not initialize account.");
         return NextResponse.redirect(redirectUrl);
     }
+
+    // The front-door funnel's signup step, for a visitor in the home hero test.
+    recordWebFunnelSignup({firstTouchCookie: cookieStore.get(FIRST_TOUCH_COOKIE)?.value, accountCreatedAt: data.user?.created_at, path: nextPath});
 
     return response;
 }

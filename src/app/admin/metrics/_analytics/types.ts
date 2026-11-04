@@ -1,4 +1,5 @@
 import type { ContentReport } from "@/lib/content-analytics";
+import type { WebFunnelSummary } from "@/lib/web-funnel";
 import type { ActivityKind, AnalyticsReport, Platform } from "@/lib/product-analytics";
 
 export type SearchPageRow = { page: string; clicks: number; previousClicks: number; impressions: number; ctr: number; position: number };
@@ -14,6 +15,8 @@ export type AnalyticsResponse = AnalyticsReport & {
   annotations: Array<{ id: string; day: string; platform: Platform | null; label: string }>;
   search: { pages: SearchPageRow[]; totals: { clicks: number; impressions: number }; previousTotals: { clicks: number; impressions: number }; note: string | null };
   content: ContentReport;
+  /** The home hero test's funnel (web_funnel_events), by variant. */
+  funnel: WebFunnelSummary & { splitB: number; note: string | null };
   notes: string[];
 };
 

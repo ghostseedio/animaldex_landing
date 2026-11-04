@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, EmptyState, Field, InfoTip, TD, TH, Table, cn, fieldClass } from "@/components/admin/ui";
 import type { GroupRow, Platform } from "@/lib/product-analytics";
 import { Legend, ShareBar, TrendChart } from "./charts";
+import { HeroFunnel } from "./funnel";
 import { formatMetric, markersFor, metricDefs, seriesFor } from "./overview";
 import { countDelta, num, pct, platformColors, platformLabels, share, singleSeriesColor, storeColors, storeLabels, usd } from "./format";
 import type { AnalyticsResponse } from "./types";
@@ -156,6 +157,8 @@ export function Acquisition({ data }: { data: AnalyticsResponse }) {
         />
         <Tile label="Google CTR" value={search.note ? "—" : pct(share(search.totals.clicks, search.totals.impressions))} />
       </TileGrid>
+
+      <HeroFunnel funnel={data.funnel} />
 
       <Card>
         <CardHeader
