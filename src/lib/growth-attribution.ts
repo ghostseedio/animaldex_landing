@@ -152,6 +152,9 @@ export const selfReportedSourceLabels: Record<string, string> = {
   other: "Other",
 };
 
+/** self_reported_detail the apps send with source "other" for "An AI assistant (ChatGPT, Gemini…)". */
+export const AI_ASSISTANT_DETAIL = "ai_assistant";
+
 const PAID_MEDIUMS = new Set(["cpc", "ppc", "cpi", "cpm", "paid", "paid_social", "paidsocial", "ads", "ad", "display"]);
 
 function networkFromSource(source: string) {
@@ -198,6 +201,10 @@ export function classifyAcquisition(row: UserGrowthRow): AcquisitionChannel {
   if (medium && PAID_MEDIUMS.has(medium)) return paidChannel(networkFromSource(source));
 
   const self = row.self_reported_source;
+  // The apps' "An AI assistant (ChatGPT, Gemini…)" answer is "other" with this detail.
+  if (self === "other" && (row.self_reported_detail ?? "").trim().toLowerCase() === AI_ASSISTANT_DETAIL) {
+    return { key: "said:ai_assistant", label: "AI assistants", kind: "organic", evidence: "self_reported", network: null };
+  }
   if (self && self !== "skipped" && selfReportedSourceLabels[self]) {
     return {
       key: `said:${self}`,

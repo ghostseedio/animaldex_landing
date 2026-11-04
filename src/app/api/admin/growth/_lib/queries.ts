@@ -394,7 +394,7 @@ export async function loadUserGrowthRows(): Promise<UserGrowthRow[] | null> {
   try {
     return await fetchRows<UserGrowthRow>(
       "admin_user_growth_v1",
-      "select=user_id,created_at,first_reported_platform,first_reported_at,reported_platforms,has_apns_token,has_app_store_purchase,has_play_purchase,auth_providers,self_reported_source,utm_source,utm_medium,utm_campaign,gclid,apple_ads_attributed&order=created_at.asc",
+      "select=user_id,created_at,first_reported_platform,first_reported_at,reported_platforms,has_apns_token,has_app_store_purchase,has_play_purchase,auth_providers,self_reported_source,self_reported_detail,utm_source,utm_medium,utm_campaign,gclid,apple_ads_attributed&order=created_at.asc",
     );
   } catch (error) {
     if (isMissingTableError(error, "admin_user_growth_v1")) return null;
