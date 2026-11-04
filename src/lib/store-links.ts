@@ -60,17 +60,20 @@ export function appStoreLink(placement: StorePlacement, providerToken: string = 
  * `referral` is the sharer's code from a shared link's `?ref=`. Play hands the
  * whole referrer to the app on first launch, where it is stored raw, so the
  * code travels with the install. The App Store has no such channel, so its
- * link stays the placement alone.
+ * link stays the placement alone. `path` is the page the button was clicked
+ * on (`utm_content`), so /admin/metrics can name the exact page an Android
+ * install came from; it is added on click, never at render.
  */
-export function googlePlayLink(placement: StorePlacement, referral: string | null = null) {
+export function googlePlayLink(placement: StorePlacement, referral: string | null = null, path: string | null = null) {
     const url = new URL(googlePlayUrl);
     const ref = referral ? `&ref=${referral}` : "";
-    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}${ref}`);
+    const content = path ? `&utm_content=${encodeURIComponent(path.slice(0, 120))}` : "";
+    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}${content}${ref}`);
     return url.toString();
 }
 
-export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null) {
-    return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement, referral);
+export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null, path: string | null = null) {
+    return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement, referral, path);
 }
 
 /** A referral code as the app's share links carry it: letters, digits, `-` and `_`. */

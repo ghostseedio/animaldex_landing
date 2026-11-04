@@ -32,8 +32,8 @@ export default function StoreLink({store, placement, inheritPlacement = false, o
             onClick={(event) => {
                 onClick?.(event);
                 const effective = (inheritPlacement ? referringStorePlacement() : null) ?? placement;
-                // A shared link's `?ref=`, kept for the tab: Play carries it to the app.
-                const href = storeHref(store, effective, referringShareReferral());
+                // A shared link's `?ref=`, kept for the tab, and the page itself: Play carries both to the app.
+                const href = storeHref(store, effective, referringShareReferral(), window.location.pathname);
                 if (event.currentTarget.href !== href) event.currentTarget.href = href;
                 trackEvent("store_link_clicked", {
                     store,

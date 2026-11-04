@@ -8,6 +8,7 @@ import {
   Alert,
   Badge,
   Button,
+  buttonVariants,
   Card,
   CardContent,
   CardHeader,
@@ -63,13 +64,10 @@ import { errorFromBody, fetchJson } from "@/lib/admin-fetch-json";
 // Types
 // ---------------------------------------------------------------------------
 
-type PostType = "captures" | "alignments" | "fusions" | "challenges" | "trades";
-type PostSeriesRow = { date: string } & Record<PostType, number>;
 type Metrics = {
   month: string;
   kpis: Record<"users" | "captures" | "subscriptions" | "credits", { value: number; change: number }>;
   purchaseBreakdown: { production: number; sandbox: number };
-  postActivity: { total: number; types: Record<PostType, { value: number; change: number }>; series: PostSeriesRow[] };
 };
 type SocialMetric = {
   platform: string;
@@ -124,22 +122,19 @@ type Insights = {
   previousMonthUsers?: number | null;
 };
 type Growth = GrowthData & Insights;
-type MetricsTab = "overview" | "channels" | "product" | "revenue" | "plan";
+type MetricsTab = "channels" | "plan";
 type PlatformFilter = "all" | GrowthPlatform;
 
+// Signups, activation, retention, channels and revenue live on /admin/metrics
+// (Analytics). This page keeps what is entered or synced by hand: ad spend,
+// social accounts, imported reports, and the monthly plan.
 const tabs: Array<{ value: MetricsTab; label: string }> = [
-  { value: "overview", label: "Overview" },
-  { value: "channels", label: "Channels" },
-  { value: "product", label: "Product" },
-  { value: "revenue", label: "Revenue" },
+  { value: "channels", label: "Spend & social" },
   { value: "plan", label: "Plan & log" },
 ];
 
 function tabFromQuery(value: string | null): MetricsTab {
-  // Older links used ?tab=acquisition for what is now Channels.
-  if (value === "channels" || value === "acquisition") return "channels";
-  if (value === "product" || value === "revenue" || value === "plan") return value;
-  return "overview";
+  return value === "plan" ? "plan" : "channels";
 }
 
 const platformColors: Record<GrowthPlatform, string> = {
@@ -149,14 +144,6 @@ const platformColors: Record<GrowthPlatform, string> = {
   unknown: "#46544b",
 };
 const osLabels: Record<SpendOs, string> = { ios: "iOS", android: "Android", web: "Web", mixed: "iOS + Android", unknown: "App not set" };
-
-const postTypeMeta: Record<PostType, { label: string; color: string }> = {
-  captures: { label: "Captures", color: "#59f176" },
-  alignments: { label: "Alignments", color: "#57b8ff" },
-  fusions: { label: "Fusions", color: "#b997ff" },
-  challenges: { label: "Challenges", color: "#f6bd55" },
-  trades: { label: "Trades", color: "#ff7f8f" },
-};
 
 // ---------------------------------------------------------------------------
 // Formatting helpers
@@ -231,142 +218,6 @@ function MoneyTotal({ values, date }: { values: Record<string, number> | null | 
 }
 
 // ---------------------------------------------------------------------------
-// Charts
-// ---------------------------------------------------------------------------
-
-// One axis/grid palette for every chart on the page.
-const chartAxis = "#84958b";
-const chartGrid = "rgba(255,255,255,.07)";
-const chartBaseline = "rgba(255,255,255,.18)";
-const chartFont = 11;
-
-/** A chart ceiling of four equal, whole-number steps (e.g. 40 → ticks 0/10/20/30/40). */
-function niceMax(value: number) {
-  const rough = Math.max(1, value) / 4;
-  const magnitude = 10 ** Math.floor(Math.log10(rough));
-  const step = [1, 2, 5, 10].map((m) => m * magnitude).find((candidate) => candidate >= rough) ?? magnitude * 10;
-  return Math.max(4, Math.ceil(step) * 4);
-}
-
-function PlatformDailyChart({ rows, filter }: { rows: PlatformDailyRow[]; filter: PlatformFilter }) {
-  const visible: GrowthPlatform[] = filter === "all" ? growthPlatforms : [filter];
-  const totals = rows.map((row) => visible.reduce((sum, platform) => sum + row[platform], 0));
-  const max = niceMax(Math.max(1, ...totals));
-  const width = 900;
-  const height = 240;
-  const left = 34;
-  const bottom = 24;
-  const top = 8;
-  const plot = height - bottom - top;
-  const slot = (width - left) / Math.max(rows.length, 1);
-  const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
-  return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[560px] tabular-nums" role="img" aria-label="New users per day by platform">
-        {ticks.map((tick) => {
-          const y = top + plot - (tick / max) * plot;
-          return (
-            <g key={tick}>
-              <line x1={left} x2={width} y1={y} y2={y} stroke={tick === 0 ? chartBaseline : chartGrid} shapeRendering="crispEdges" />
-              <text x={left - 6} y={y + 4} textAnchor="end" fontSize={chartFont} fill={chartAxis}>
-                {Math.round(tick)}
-              </text>
-            </g>
-          );
-        })}
-        {rows.map((row, index) => {
-          let y = top + plot;
-          return (
-            <g key={row.date}>
-              {visible.map((platform) => {
-                const h = (row[platform] / max) * plot;
-                y -= h;
-                return h > 0 ? (
-                  <rect key={platform} x={left + index * slot + slot * 0.18} y={y} width={Math.max(3, slot * 0.64)} height={h} fill={platformColors[platform]} shapeRendering="crispEdges">
-                    <title>{`${row.date} · ${growthPlatformLabels[platform]} ${row[platform]}`}</title>
-                  </rect>
-                ) : null;
-              })}
-              {rows.length <= 16 || index % 2 === 0 ? (
-                <text x={left + index * slot + slot / 2} y={height - 6} textAnchor="middle" fontSize={chartFont} fill={chartAxis}>
-                  {Number(row.date.slice(8))}
-                </text>
-              ) : null}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function PostTypeChart({ rows }: { rows: PostSeriesRow[] }) {
-  const keys = Object.keys(postTypeMeta) as PostType[];
-  const max = niceMax(Math.max(1, ...rows.map((row) => keys.reduce((sum, key) => sum + row[key], 0))));
-  // Same frame as the new-users chart: a left value axis and four gridlines.
-  const width = 900;
-  const height = 230;
-  const left = 34;
-  const top = 8;
-  const bottom = 24;
-  const plot = height - bottom - top;
-  const slot = (width - left) / Math.max(rows.length, 1);
-  const ticks = [0, max / 4, max / 2, (max * 3) / 4, max];
-  return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[560px] tabular-nums" role="img" aria-label="Discover posts per day by type">
-        {ticks.map((tick) => {
-          const y = top + plot - (tick / max) * plot;
-          return (
-            <g key={tick}>
-              <line x1={left} x2={width} y1={y} y2={y} stroke={tick === 0 ? chartBaseline : chartGrid} shapeRendering="crispEdges" />
-              <text x={left - 6} y={y + 4} textAnchor="end" fontSize={chartFont} fill={chartAxis}>
-                {Math.round(tick)}
-              </text>
-            </g>
-          );
-        })}
-        {rows.map((row, index) => {
-          let y = top + plot;
-          return (
-            <g key={row.date}>
-              {keys.map((key) => {
-                const h = (row[key] / max) * plot;
-                y -= h;
-                return (
-                  <rect key={key} x={left + index * slot + slot * 0.16} y={y} width={Math.max(4, slot * 0.68)} height={h} fill={postTypeMeta[key].color} shapeRendering="crispEdges">
-                    <title>{`${row.date} · ${postTypeMeta[key].label} ${row[key]}`}</title>
-                  </rect>
-                );
-              })}
-              {rows.length <= 16 || index % 2 === 0 ? (
-                <text x={left + index * slot + slot / 2} y={height - 6} textAnchor="middle" fontSize={chartFont} fill={chartAxis}>
-                  {new Date(row.date).getUTCDate()}
-                </text>
-              ) : null}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function Legend({ items }: { items: Array<{ label: string; color: string; value?: ReactNode }> }) {
-  return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-400">
-      {items.map((item) => (
-        <span key={item.label} className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5" style={{ background: item.color }} aria-hidden="true" />
-          {item.label}
-          {item.value != null ? <span className="font-bold text-white tabular-nums">{item.value}</span> : null}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Sections
 // ---------------------------------------------------------------------------
 
@@ -436,55 +287,6 @@ function PaidOrganicCards({ split, log }: { split: PaidOrganicSplit[]; log: Paid
         </p>
       ) : null}
     </div>
-  );
-}
-
-function ChannelTable({ channels, filter, limit }: { channels: ChannelRow[]; filter: PlatformFilter; limit?: number }) {
-  const rows = channels.filter((row) => filter === "all" || row.platform === filter).slice(0, limit ?? Infinity);
-  if (!rows.length) return <EmptyState className="m-4 py-8" title="No users for this filter yet." />;
-  return (
-    <Table minWidth={760}>
-      <thead>
-        <tr>
-          <TH>Channel</TH>
-          <TH>Platform</TH>
-          <TH numeric>Users</TH>
-          <TH numeric>Activated</TH>
-          <TH numeric>D7</TH>
-          <TH numeric>Payers</TH>
-          <TH numeric>Cost / user</TH>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={`${row.key}-${row.platform}`} className="hover:bg-white/[.02]">
-            <TD>
-              <span className="font-bold text-white">{row.label}</span>{" "}
-              {row.kind === "paid" ? <Badge tone="warn">Paid</Badge> : row.kind === "organic" ? <Badge tone="good">Organic</Badge> : null}
-              {row.evidence === "self_reported" ? (
-                <span className="ml-1 text-[11px] text-ink-500">said in app</span>
-              ) : row.evidence === "store" ? (
-                <span className="ml-1 text-[11px] text-ink-500">store verified</span>
-              ) : null}
-            </TD>
-            <TD>
-              <PlatformBadge platform={row.platform} />
-            </TD>
-            <TD numeric className="font-bold text-white">
-              {format(row.users)}
-            </TD>
-            <TD numeric title={`${row.activationEligible} users old enough to count`}>
-              {pct(row.activationRate)}
-            </TD>
-            <TD numeric title={`${row.d7Eligible} activated users old enough to count`}>
-              {pct(row.d7Rate)}
-            </TD>
-            <TD numeric>{format(row.payers)}</TD>
-            <TD numeric><MoneyTotal values={row.costPerUser} /></TD>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
   );
 }
 
@@ -610,121 +412,6 @@ function HistoricalTable({ rows }: { rows: HistoricalChannelRow[] }) {
         </tfoot>
       ) : null}
     </Table>
-  );
-}
-
-function StoreTable({ revenue }: { revenue: NonNullable<Insights["revenue"]> }) {
-  const stores: PurchaseStore[] = ["app_store", "google_play", "web", "unknown", "test"];
-  return (
-    <Table minWidth={700}>
-      <thead>
-        <tr>
-          <TH>Store</TH>
-          <TH numeric>Purchases</TH>
-          <TH numeric>Pro</TH>
-          <TH numeric>Credits</TH>
-          <TH numeric>Buyers</TH>
-          <TH numeric>Est. revenue</TH>
-          <TH numeric>All-time purchases</TH>
-        </tr>
-      </thead>
-      <tbody>
-        {stores
-          .filter((store) => revenue.month[store] || revenue.allTime[store] || store === "google_play")
-          .map((store) => {
-            const month = revenue.month[store];
-            const allTime = revenue.allTime[store];
-            return (
-              <tr key={store}>
-                <TD className="font-bold text-white">
-                  {purchaseStoreLabels[store]}
-                  {store === "google_play" && !allTime ? (
-                    <span className="ml-2">
-                      <Badge tone="bad">Never recorded</Badge>
-                    </span>
-                  ) : null}
-                </TD>
-                <TD numeric>{format(month?.purchases ?? 0)}</TD>
-                <TD numeric>{format(month?.pro ?? 0)}</TD>
-                <TD numeric>{format(month?.credits ?? 0)}</TD>
-                <TD numeric>{format(month?.buyers ?? 0)}</TD>
-                <TD numeric>{store === "test" ? "—" : <Money amount={month?.estimatedUsd ?? 0} currency="USD" />}</TD>
-                <TD numeric>{format(allTime?.purchases ?? 0)}</TD>
-              </tr>
-            );
-          })}
-      </tbody>
-    </Table>
-  );
-}
-
-function CollectorDepth({ data }: { data: NonNullable<GrowthData["collectorAnalytics"]> }) {
-  const max = Math.max(1, ...data.depth.map((row) => row.users));
-  return (
-    <Card>
-      <CardHeader title="Collector depth" description="How many qualifying captures each collector made this month." />
-      <CardContent className="space-y-2.5">
-        {data.depth.map((row) => (
-          <div key={row.label} className="grid grid-cols-[84px_1fr_92px] items-center gap-3">
-            <p className="text-xs font-black text-white">
-              {row.label} {row.label === "1" ? "capture" : "captures"}
-            </p>
-            <div className="h-4 overflow-hidden bg-white/[.06]">
-              <div className="h-full bg-primary-400/80" style={{ width: `${(row.users / max) * 100}%` }} />
-            </div>
-            <p className="text-right text-xs text-ink-300 tabular-nums">
-              {format(row.users)} · {row.percent}%
-            </p>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function CaptureRetention({ data }: { data: NonNullable<GrowthData["collectorAnalytics"]> }) {
-  const rows = data.retention.slice(-8);
-  return (
-    <Card>
-      <CardHeader title="Capture retention by activation day" description="Share of each day's new collectors who captured again on day N. Blank cells are too recent to count." />
-      {rows.length ? (
-        <Table minWidth={700}>
-          <thead>
-            <tr>
-              <TH>Cohort</TH>
-              <TH numeric>Collectors</TH>
-              {Array.from({ length: 8 }, (_, day) => (
-                <TH key={day} numeric>
-                  D{day}
-                </TH>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.cohort}>
-                <TD className="font-bold text-white">{row.cohort.slice(5)}</TD>
-                <TD numeric>{row.size}</TD>
-                {row.days.map((value, day) => (
-                  <TD key={day} numeric className="p-1">
-                    <span
-                      className={`block px-2 py-1.5 ${value == null ? "text-ink-600" : "text-white"}`}
-                      style={value == null ? undefined : { backgroundColor: `rgba(89,241,118,${Math.max(0.08, (value / 100) * 0.75)})` }}
-                    >
-                      {value == null ? "—" : `${value}%`}
-                    </span>
-                  </TD>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      ) : (
-        <CardContent>
-          <EmptyState className="py-8" title="Not enough activated collectors yet." />
-        </CardContent>
-      )}
-    </Card>
   );
 }
 
@@ -910,10 +597,10 @@ export default function AdminMetricsDashboard() {
     setTab(nextTab);
     setGrowthMonth(nextMonth);
     const params = new URLSearchParams(window.location.search);
-    if (nextTab === "overview") params.delete("tab");
+    if (nextTab === "channels") params.delete("tab");
     else params.set("tab", nextTab);
     params.set("month", nextMonth);
-    const url = `/admin/metrics?${params.toString()}`;
+    const url = `/admin/metrics/marketing?${params.toString()}`;
     const historyState = window.history.state;
     window.history.pushState(historyState ? { ...historyState } : historyState, "", url);
   }
@@ -1087,14 +774,6 @@ export default function AdminMetricsDashboard() {
 
   const attribution = growth?.attribution;
   const attributionMonth = attribution?.available ? attribution.month : null;
-  const collector = growth?.collectorAnalytics;
-  const monthUsers = data?.kpis.users.value ?? growth?.actuals?.users ?? 0;
-  const knownUsers = attributionMonth ? attributionMonth.users - (attributionMonth.signupsByPlatform.unknown ?? 0) : 0;
-  const knownShare = attributionMonth ? share(knownUsers, attributionMonth.users) : 0;
-  const filteredStats = attributionMonth && platformFilter !== "all" ? attributionMonth.byPlatform[platformFilter] : null;
-  const monthPurchases = Object.entries(growth?.revenue?.month ?? {}).filter(([store]) => store !== "test");
-  const purchaseCount = monthPurchases.reduce((sum, [, summary]) => sum + (summary?.purchases ?? 0), 0);
-  const purchaseUsd = monthPurchases.reduce((sum, [, summary]) => sum + (summary?.estimatedUsd ?? 0), 0);
   const organicViews = [...organicPlatforms].map((platform) => {
     const entries = (growth?.daily ?? []).flatMap((row) => row.organicEntries ?? []).filter((entry) => entry.platform === platform);
     return {
@@ -1104,35 +783,20 @@ export default function AdminMetricsDashboard() {
     };
   });
 
-  const attention: string[] = [
-    ...(growth?.funnel?.needsAttention ?? []),
-    attribution && !attribution.available ? "Apply the platform attribution migration to split users by platform and channel." : null,
-    attributionMonth && attributionMonth.users > 0 && knownShare < 60
-      ? `${100 - knownShare}% of this month's users have no platform signal yet. The next iOS and Android releases fix this for new signups.`
-      : null,
-    (growth?.paid?.log ?? []).some((row) => row.os === "unknown")
-      ? "Some ad spend rows have no app set, so they're left out of the Android vs iOS split."
-      : null,
-    growth?.revenue && !growth.revenue.allTime.google_play
-      ? "No Google Play purchase has ever reached the backend. Check the Android purchase sync."
-      : null,
-  ].filter((item): item is string => Boolean(item));
-
   const upcoming = monthState === "upcoming";
-  const fxText = (amount: number, currency: string) => {
-    const converted = convertAmount(amount, currency, referenceDate, displayCurrency, fx);
-    return converted == null ? formatMoney(amount, currency) : formatMoney(converted, displayCurrency);
-  };
 
   return (
     <FxContext.Provider value={{ display: displayCurrency, rates: fx, referenceDate }}>
       <AdminPage width="wide" className="min-w-0">
         <PageHeader
-          eyebrow="Growth"
+          eyebrow="Spend, social & plan"
           title={monthName}
-          description="Signups, channels, collector depth and revenue for the month, on the Asia/Jakarta calendar."
+          description="Ad spend, organic social, imported channel reports and the monthly plan, on the Asia/Jakarta calendar. Signups, retention, channels and revenue are on Analytics."
           actions={
             <>
+              <Link href="/admin/metrics" className={buttonVariants({ size: "sm" })}>
+                ← Analytics
+              </Link>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={() => navigate({ month: shiftMonth(growthMonth, -1) })} aria-label={`Show ${monthLabel(shiftMonth(growthMonth, -1))}`}>
                   ←
@@ -1149,7 +813,7 @@ export default function AdminMetricsDashboard() {
         <div className="mt-4 flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Segmented label="Metrics section" value={tab} options={tabs} onChange={(value) => navigate({ tab: value })} />
-            {tab !== "plan" && tab !== "revenue" ? (
+            {tab !== "plan" ? (
               <Segmented
                 label="Platform filter"
                 value={platformFilter}
@@ -1164,7 +828,7 @@ export default function AdminMetricsDashboard() {
                 ]}
               />
             ) : null}
-            {tab !== "plan" && tab !== "product" ? (
+            {tab !== "plan" ? (
               <Segmented
                 label="Currency"
                 value={displayCurrency}
@@ -1173,7 +837,7 @@ export default function AdminMetricsDashboard() {
               />
             ) : null}
           </div>
-          {fxError && tab !== "plan" && tab !== "product" ? (
+          {fxError && tab !== "plan" ? (
             <Alert tone="warn" className="py-2 text-xs">
               {fxError}
             </Alert>
@@ -1188,131 +852,6 @@ export default function AdminMetricsDashboard() {
         {loading && !data ? <DashboardSkeleton /> : null}
 
         <div aria-busy={(loading && Boolean(data)) || undefined} className={cn("mt-6 space-y-6 transition-opacity", loading && data && "opacity-60")}>
-          {data && tab === "overview" ? (
-            upcoming ? (
-              <Card>
-                <CardContent>
-                  <EmptyState
-                    className="py-8"
-                    title={<>{monthName} hasn&apos;t started.</>}
-                    description="Targets for it are on the Plan & log tab."
-                    action={
-                      <Button size="sm" variant="primary" onClick={() => navigate({ tab: "plan" })}>
-                        Open Plan &amp; log
-                      </Button>
-                    }
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {attribution && !attribution.available ? <AttributionPending /> : null}
-                <StatGrid>
-                  <Stat
-                    label="New users"
-                    value={format(filteredStats ? filteredStats.users : monthUsers)}
-                    hint={
-                      platformFilter !== "all"
-                        ? `${growthPlatformLabels[platformFilter]} of ${format(monthUsers)} total`
-                        : growth?.previousMonthUsers != null
-                          ? `${monthLabel(shiftMonth(growthMonth, -1))}: ${format(growth.previousMonthUsers)}`
-                          : undefined
-                    }
-                    info="Profiles created this month (Asia/Jakarta calendar)."
-                  />
-                  <Stat
-                    label="Activated"
-                    value={pct(filteredStats ? filteredStats.activationRate : collector?.activation.rate)}
-                    hint={`Captured within 24h of signup · ${format(filteredStats ? filteredStats.activationEligible : collector?.activation.eligible ?? null)} users old enough to count`}
-                  />
-                  <Stat
-                    label="Captured again, days 6–8"
-                    value={pct(filteredStats ? filteredStats.d7Rate : collector?.d7.rate)}
-                    hint={`D7 capture retention · ${format(filteredStats ? filteredStats.d7Eligible : collector?.d7.eligible ?? null)} activated users old enough`}
-                  />
-                  <Stat
-                    label="Purchases"
-                    value={format(purchaseCount)}
-                    hint={`≈ ${fxText(purchaseUsd, "USD")} at list price · excludes test purchases`}
-                  />
-                </StatGrid>
-
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-                  <Card>
-                    <CardHeader
-                      title="New users per day"
-                      description={
-                        attributionMonth
-                          ? `${knownShare}% have a known platform · ${format(attributionMonth.reportedAtSignup)} reported by the app at signup, the rest inferred from device evidence.`
-                          : "Split by platform appears once the attribution migration is applied."
-                      }
-                    />
-                    <CardContent className="space-y-3">
-                      {attributionMonth ? (
-                        <>
-                          <PlatformDailyChart rows={attributionMonth.platformDaily} filter={platformFilter} />
-                          <Legend
-                            items={growthPlatforms.map((platform) => ({
-                              label: growthPlatformLabels[platform],
-                              color: platformColors[platform],
-                              value: format(attributionMonth.signupsByPlatform[platform]),
-                            }))}
-                          />
-                        </>
-                      ) : (
-                        <PlatformDailyChart
-                          rows={(growth?.daily ?? []).map((row) => ({ date: row.date, ios: 0, android: 0, web: 0, unknown: row.users }))}
-                          filter="all"
-                        />
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader title="Needs attention" />
-                    <CardContent>
-                      {attention.length ? (
-                        <ul className="space-y-2.5 text-sm text-ink-200">
-                          {attention.slice(0, 6).map((item) => (
-                            <li key={item} className="flex gap-2">
-                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" aria-hidden="true" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="flex items-center gap-2 text-sm text-ink-400">
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-300" aria-hidden="true" />
-                          Nothing flagged for {monthName}.
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {growth?.paid?.split.length ? (
-                  <Section title="Paid vs organic" className="mt-0">
-                    <PaidOrganicCards split={growth.paid.split} log={growth.paid.log} />
-                  </Section>
-                ) : null}
-
-                {attributionMonth ? (
-                  <Card>
-                    <CardHeader
-                      title="Top channels"
-                      description="Where this month's users came from, ranked by users. Activation and D7 show which channels bring collectors who stay."
-                      action={
-                        <Button size="sm" variant="ghost" onClick={() => navigate({ tab: "channels" })}>
-                          All channels →
-                        </Button>
-                      }
-                    />
-                    <ChannelTable channels={attributionMonth.channels} filter={platformFilter} limit={6} />
-                  </Card>
-                ) : null}
-              </>
-            )
-          ) : null}
-
           {data && tab === "channels" ? (
             <>
               {attribution && !attribution.available ? <AttributionPending /> : null}
@@ -1324,18 +863,6 @@ export default function AdminMetricsDashboard() {
                 >
                   <PaidOrganicCards split={growth.paid.split} log={growth.paid.log} />
                 </Section>
-              ) : null}
-
-              {attributionMonth ? (
-                <Card>
-                  <CardHeader
-                    title="Where users came from"
-                    description={`${format(attributionMonth.storeAttributed)} store-verified · ${format(attributionMonth.selfReported)} answered "Where did you hear about AnimalDex?" · ${format(
-                      attributionMonth.users - attributionMonth.storeAttributed - attributionMonth.selfReported,
-                    )} not attributed yet. People who saw an ad may still answer "TikTok" or "Instagram".`}
-                  />
-                  <ChannelTable channels={attributionMonth.channels} filter={platformFilter} />
-                </Card>
               ) : null}
 
               <Card>
@@ -1374,120 +901,6 @@ export default function AdminMetricsDashboard() {
                   </CardContent>
                 </Card>
               ) : null}
-            </>
-          ) : null}
-
-          {data && tab === "product" ? (
-            upcoming ? (
-              <Card>
-                <CardContent>
-                  <EmptyState className="py-8" title={<>{monthName} hasn&apos;t started.</>} />
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {attributionMonth ? (
-                  <Card>
-                    <CardHeader title="Collector quality by platform" description="Users who signed up this month, split by platform." />
-                    <Table minWidth={640}>
-                      <thead>
-                        <tr>
-                          <TH>Platform</TH>
-                          <TH numeric>Users</TH>
-                          <TH numeric>Activated</TH>
-                          <TH numeric>D7</TH>
-                          <TH numeric>Captures / collector</TH>
-                          <TH numeric>Payers</TH>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {growthPlatforms
-                          .filter((platform) => platformFilter === "all" || platform === platformFilter)
-                          .map((platform) => {
-                            const stats = attributionMonth.byPlatform[platform];
-                            return (
-                              <tr key={platform}>
-                                <TD>
-                                  <PlatformBadge platform={platform} />
-                                </TD>
-                                <TD numeric className="font-bold text-white">
-                                  {format(stats.users)}
-                                </TD>
-                                <TD numeric>{pct(stats.activationRate)}</TD>
-                                <TD numeric>{pct(stats.d7Rate)}</TD>
-                                <TD numeric>{stats.capturesPerCollector?.toFixed(1) ?? "—"}</TD>
-                                <TD numeric>{format(stats.payers)}</TD>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </Table>
-                  </Card>
-                ) : null}
-                {collector ? (
-                  <>
-                    <StatGrid>
-                      <Stat label="Activated" value={pct(collector.activation.rate)} hint={`${format(collector.activation.users)} of ${format(collector.activation.eligible)} users captured within 24h`} />
-                      <Stat label="Repeat collectors" value={pct(collector.repeat.rate)} hint={`${format(collector.repeat.users)} of ${format(collector.repeat.activated)} activated captured again`} />
-                      <Stat label="D1 capture retention" value={pct(collector.d1.rate)} hint={`${format(collector.d1.users)} of ${format(collector.d1.eligible)} captured again 24–48h later`} />
-                      <Stat label="D7 capture retention" value={pct(collector.d7.rate)} hint={`${format(collector.d7.users)} of ${format(collector.d7.eligible)} captured again on days 6–8`} />
-                    </StatGrid>
-                    <StatGrid>
-                      <Stat label="Qualifying captures" value={format(collector.summary.captures)} />
-                      <Stat label="Unique collectors" value={format(collector.summary.collectors)} />
-                      <Stat label="Captures per collector" value={collector.summary.capturesPerCollector?.toFixed(1) ?? "—"} />
-                      <Stat label="Median captures" value={collector.summary.medianCaptures?.toFixed(1).replace(".0", "") ?? "—"} />
-                    </StatGrid>
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      <CollectorDepth data={collector} />
-                      <CaptureRetention data={collector} />
-                    </div>
-                  </>
-                ) : null}
-                <Card>
-                  <CardHeader title="Discover activity" description={`${format(data.postActivity.total)} posts in ${monthName}.`} />
-                  <CardContent className="space-y-3">
-                    <PostTypeChart rows={data.postActivity.series} />
-                    <Legend
-                      items={(Object.keys(postTypeMeta) as PostType[]).map((key) => ({
-                        label: postTypeMeta[key].label,
-                        color: postTypeMeta[key].color,
-                        value: format(data.postActivity.types[key].value),
-                      }))}
-                    />
-                  </CardContent>
-                </Card>
-              </>
-            )
-          ) : null}
-
-          {data && tab === "revenue" ? (
-            <>
-              <StatGrid>
-                <Stat label="Purchases" value={format(purchaseCount)} hint="All stores, excluding test purchases" />
-                <Stat label="Estimated revenue" value={fxText(purchaseUsd, "USD")} info={growth?.revenue?.note} />
-                <Stat label="First-time purchasers" value={format(growth?.funnel?.firstTimePurchasers ?? null)} hint={`First production purchase happened in ${monthName}`} />
-                <Stat
-                  label="Signup-to-payer conversion"
-                  value={pct(growth?.funnel?.payerConversionRate)}
-                  hint={`${format(growth?.funnel?.cohortFirstTimePurchasers ?? null)} of ${format(monthUsers)} ${monthName} signups have paid`}
-                />
-              </StatGrid>
-              {growth?.revenue ? (
-                <Card>
-                  <CardHeader
-                    title="Purchases by store"
-                    description={growth.revenue.note}
-                    action={
-                      <Link href="/admin/users" className="text-xs font-black text-primary-100 hover:text-primary-200">
-                        Users & LTV →
-                      </Link>
-                    }
-                  />
-                  <StoreTable revenue={growth.revenue} />
-                </Card>
-              ) : null}
-              {growth?.payingProDefinition ? <p className="text-xs text-ink-500">Active Pro: {growth.payingProDefinition}</p> : null}
             </>
           ) : null}
 

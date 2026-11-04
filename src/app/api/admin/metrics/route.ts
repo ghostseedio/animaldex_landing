@@ -21,8 +21,6 @@ type MetricRow = {
   product_code?: string;
   environment?: string;
 };
-type PostType = "captures" | "alignments" | "fusions" | "challenges" | "trades";
-type PostMetricRow = { date?: string };
 
 const DAY_MS = 86400000;
 
@@ -81,17 +79,6 @@ function percentChange(current: number, previous: number) {
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
-async function fetchPostRows(
-  table: string,
-  dateColumn: string,
-  since: string,
-  before: string,
-): Promise<PostMetricRow[]> {
-  const query = `select=${dateColumn}&${dateColumn}=gte.${encodeURIComponent(since)}&${dateColumn}=lt.${encodeURIComponent(before)}&order=${dateColumn}.asc`;
-  const result = await fetchRows<Record<string, string>>(table, query);
-  return result.map((row) => ({ date: row[dateColumn] }));
-}
-
 export async function GET(request: NextRequest) {
   if (!(await isSupportAdminRequestAuthorized(request))) {
     return NextResponse.json(
@@ -123,7 +110,6 @@ export async function GET(request: NextRequest) {
       captures,
       purchases,
       creditTransactions,
-      postRows,
       totals,
     ] = await Promise.all([
       fetchRows<MetricRow>("profiles", `select=created_at&${dateFilter}`),
@@ -136,38 +122,6 @@ export async function GET(request: NextRequest) {
         "credit_transactions",
         `select=created_at,delta,reason&reason=eq.purchase&${dateFilter}`,
       ),
-      Promise.all([
-        fetchPostRows(
-          "discover_feed_v1",
-          "feed_activity_at",
-          previousStart.toISOString(),
-          end.toISOString(),
-        ),
-        fetchPostRows(
-          "discover_alignment_timeline_v1",
-          "completed_at",
-          previousStart.toISOString(),
-          end.toISOString(),
-        ),
-        fetchPostRows(
-          "discover_principle_fusion_timeline_v1",
-          "created_at",
-          previousStart.toISOString(),
-          end.toISOString(),
-        ),
-        fetchPostRows(
-          "discover_challenge_history_v1",
-          "created_at",
-          previousStart.toISOString(),
-          end.toISOString(),
-        ),
-        fetchPostRows(
-          "discover_trade_history_v1",
-          "completed_at",
-          previousStart.toISOString(),
-          end.toISOString(),
-        ),
-      ]),
       Promise.all([
         countRows("profiles", "select=id"),
         countRows("captures", "select=id"),
@@ -237,51 +191,6 @@ export async function GET(request: NextRequest) {
       if (series[i]) series[i].credits += Math.max(0, row.delta ?? 0);
     });
 
-    const postTypeKeys: PostType[] = [
-      "captures",
-      "alignments",
-      "fusions",
-      "challenges",
-      "trades",
-    ];
-    const postTypeSeries = Array.from({ length: bucketCount }, (_, index) => ({
-      date: new Date(start.getTime() + index * bucketMs).toISOString(),
-      captures: 0,
-      alignments: 0,
-      fusions: 0,
-      challenges: 0,
-      trades: 0,
-    }));
-    const postTypes = Object.fromEntries(
-      postTypeKeys.map((key, index) => {
-        const rows = postRows[index];
-        const current = rows.filter(
-          (row) =>
-            new Date(row.date ?? 0) >= start && new Date(row.date ?? 0) < end,
-        );
-        const previous = rows.filter(
-          (row) =>
-            new Date(row.date ?? 0) >= previousStart &&
-            new Date(row.date ?? 0) < start,
-        );
-        current.forEach((row) => {
-          const i = bucketKey(new Date(row.date!), start, bucketMs);
-          if (postTypeSeries[i]) postTypeSeries[i][key] += 1;
-        });
-        return [
-          key,
-          {
-            value: current.length,
-            change: percentChange(current.length, previous.length),
-          },
-        ];
-      }),
-    ) as Record<PostType, { value: number; change: number }>;
-    const totalPostActivity = Object.values(postTypes).reduce(
-      (sum, item) => sum + item.value,
-      0,
-    );
-
     return NextResponse.json({
       ok: true,
       period,
@@ -319,11 +228,6 @@ export async function GET(request: NextRequest) {
         ).length,
         sandbox: purchases.filter((row) => isCurrent(row) && !isProduction(row))
           .length,
-      },
-      postActivity: {
-        total: totalPostActivity,
-        types: postTypes,
-        series: postTypeSeries,
       },
       series,
     });

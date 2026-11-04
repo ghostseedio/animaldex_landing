@@ -18,6 +18,14 @@ test("Play links carry the placement in the install referrer", () => {
     assert.equal(storeHref("google_play", "share_sheet"), googlePlayLink("share_sheet"));
 });
 
+test("a Play link clicked on a page names that page in utm_content", () => {
+    assert.equal(
+        googlePlayLink("page_animals", null, "/animals/red-fox"),
+        "https://play.google.com/store/apps/details?id=app.animaldex&referrer=utm_source%3Dweb%26utm_campaign%3Dpage_animals%26utm_content%3D%252Fanimals%252Fred-fox"
+    );
+    assert.equal(storeHref("app_store", "page_animals", null, "/animals/red-fox"), appStoreLink("page_animals"));
+});
+
 test("a generic store button is named after the page's section", () => {
     assert.equal(pageStorePlacement("/comparisons/tiger-vs-lion"), "page_comparisons");
     assert.equal(pageStorePlacement("/id/animal-powers/wolf"), "page_animal-powers");

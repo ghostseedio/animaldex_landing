@@ -2,6 +2,7 @@
 
 import {useEffect} from "react";
 import {trackEvent} from "@/lib/analytics";
+import {FIRST_TOUCH_COOKIE, FIRST_TOUCH_MAX_AGE_SECONDS, firstTouchFromLocation, serializeFirstTouch} from "@/lib/first-touch";
 
 const STORAGE_KEY = "animaldex.campaign";
 
@@ -36,8 +37,18 @@ export function campaignParameters() {
     return safe;
 }
 
+/** Keeps the first page and referrer this browser arrived on, for a signup later (see lib/first-touch). */
+function rememberFirstTouch() {
+    if (document.cookie.split("; ").some((part) => part.startsWith(`${FIRST_TOUCH_COOKIE}=`))) return;
+    const touch = firstTouchFromLocation(window.location.href, document.referrer);
+    if (!touch) return;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${FIRST_TOUCH_COOKIE}=${serializeFirstTouch(touch)}; Max-Age=${FIRST_TOUCH_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${secure}`;
+}
+
 export default function CampaignAttribution() {
     useEffect(() => {
+        rememberFirstTouch();
         const captured = captureCampaignFromLocation(window.location.search);
         if (captured.utm_campaign || captured.intent) {
             trackEvent("archive_landing_view", {

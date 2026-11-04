@@ -10,39 +10,45 @@ const readAll = (entry: string, dir: string) => {
   return [read(entry), ...readdirSync(base).map((name) => readFileSync(new URL(name, base), "utf8"))].join("\n");
 };
 
-const dashboard = read("../app/admin/metrics/admin-metrics-dashboard.tsx");
+const marketing = read("../app/admin/metrics/admin-metrics-dashboard.tsx");
+const analytics = read("../app/admin/metrics/analytics-dashboard.tsx");
+const analyticsTabs = readAll("../app/admin/metrics/_analytics/types.ts", "../app/admin/metrics/_analytics/");
+const metricsPage = read("../app/admin/metrics/page.tsx");
 const plan = readAll("../app/admin/metrics/growth-plan-panel.tsx", "../app/admin/metrics/_growth/");
 const growthRoute = readAll("../app/api/admin/growth/route.ts", "../app/api/admin/growth/_lib/");
 const socialRoute = read("../app/api/admin/social-metrics/route.ts");
 const metricsRoute = read("../app/api/admin/metrics/route.ts");
 const migration = read("../../supabase/migrations/20260915120000_growth_platform_attribution.sql");
 
-describe("admin metrics dashboard", () => {
-  it("opens on Overview and keeps the other founder tabs", () => {
-    assert.match(dashboard, /type MetricsTab = "overview" \| "channels" \| "product" \| "revenue" \| "plan"/);
-    assert.match(dashboard, /return "overview"/);
+describe("analytics dashboard", () => {
+  it("opens on Overview with the founder tabs, Blog & social among them", () => {
+    assert.match(analyticsTabs, /type MetricsTab = "overview" \| "acquisition" \| "engagement" \| "retention" \| "content" \| "revenue" \| "releases"/);
+    assert.match(analytics, /return metricsTabs\.some\(\(tab\) => tab\.value === value\) \? \(value as MetricsTab\) : "overview"/);
   });
 
-  it("maps the old acquisition tab link onto Channels", () => {
-    assert.match(dashboard, /value === "channels" \|\| value === "acquisition"/);
+  it("picks any date range at day, week or month grain, and keeps it in the URL", () => {
+    for (const preset of ["7d", "30d", "90d", "mtd", "last_month", "6m", "12m", "custom"]) assert.match(analytics, new RegExp(`value: "${preset}"`));
+    assert.match(analytics, /window\.history\.replaceState/);
+    assert.doesNotMatch(analytics, /router\.push/);
   });
 
-  it("switches tabs in place and writes the query string without a router navigation", () => {
-    // Next 13.4 drops router.push when only ?tab= changes, so the click looked dead.
-    assert.match(dashboard, /setTab\(nextTab\)/);
-    assert.match(dashboard, /window\.history\.pushState/);
-    assert.doesNotMatch(dashboard, /router\.push\(`\/admin\/metrics/);
+  it("sends old spend and plan links to the marketing page", () => {
+    assert.match(metricsPage, /tab === "plan" \|\| tab === "channels"/);
+    assert.match(metricsPage, /redirect\(`\/admin\/metrics\/marketing/);
   });
 
-  it("keeps the month in the URL across tabs and month navigation", () => {
-    assert.match(dashboard, /parseGrowthMonth\(searchParams\.get\("month"\)\)/);
-    assert.match(dashboard, /params\.set\("month"/);
-    assert.match(dashboard, /shiftMonth\(growthMonth, -1\)/);
-    assert.match(dashboard, /shiftMonth\(growthMonth, 1\)/);
+  it("shows no retired features", () => {
+    for (const source of [analytics, analyticsTabs, marketing, metricsRoute]) assert.doesNotMatch(source, /fusion|alignment|discover_trade_history/i);
   });
+});
 
-  it("formats rates as percentages", () => {
-    assert.match(dashboard, /value=\{pct\(growth\?\.funnel\?\.payerConversionRate\)\}/);
+describe("spend, social & plan page", () => {
+  it("keeps the month in its own URL and only the hand-entered tabs", () => {
+    assert.match(marketing, /type MetricsTab = "channels" \| "plan"/);
+    assert.match(marketing, /parseGrowthMonth\(searchParams\.get\("month"\)\)/);
+    assert.match(marketing, /shiftMonth\(growthMonth, -1\)/);
+    assert.match(marketing, /\/admin\/metrics\/marketing\?/);
+    assert.match(marketing, /setTab\(nextTab\)/);
   });
 });
 

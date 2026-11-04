@@ -116,3 +116,53 @@ export async function loadRisingQueries(limit = 40): Promise<RisingQuery[]> {
         .sort((a, b) => (b.impressions - b.previous) - (a.impressions - a.previous))
         .slice(0, limit);
 }
+
+export type SearchPage = {page: string; clicks: number; impressions: number; ctr: number; position: number};
+export type SearchPages = {pages: SearchPage[]; totals: {clicks: number; impressions: number}; note?: string};
+
+const pageCache = new Map<string, {at: number; value: SearchPages}>();
+
+/** Google search clicks and impressions per landing page for a date range, best first. */
+export async function loadSearchPages(startDate: string, endDate: string, limit = 25): Promise<SearchPages> {
+    let account: ServiceAccount | null;
+    try {
+        account = credentials();
+    } catch (error) {
+        return {pages: [], totals: {clicks: 0, impressions: 0}, note: `Search Console: ${error instanceof Error ? error.message : "bad credentials"}`};
+    }
+    if (!account) return {pages: [], totals: {clicks: 0, impressions: 0}, note: "Search Console isn't connected on this server (GOOGLE_SEARCH_CONSOLE_CREDENTIALS)."};
+    const key = `${startDate}|${endDate}|${limit}`;
+    const hit = pageCache.get(key);
+    if (hit && Date.now() - hit.at < 60 * 60_000) return hit.value;
+    try {
+        const site = env("GOOGLE_SEARCH_CONSOLE_SITE") || "sc-domain:animaldex.app";
+        const response = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(site)}/searchAnalytics/query`, {
+            method: "POST",
+            headers: {Authorization: `Bearer ${await accessToken(account)}`, "Content-Type": "application/json"},
+            body: JSON.stringify({startDate, endDate, dimensions: ["page"], dataState: "all", rowLimit: 1000}),
+            cache: "no-store"
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body?.error?.message ?? `Search Console returned ${response.status}`);
+        const rows = (body.rows ?? []) as Array<{keys: string[]; clicks: number; impressions: number; ctr: number; position: number}>;
+        const pages = rows
+            .map((row) => {
+                let page = row.keys[0];
+                try {
+                    page = new URL(page).pathname;
+                } catch {
+                    // Keep the raw key.
+                }
+                return {page, clicks: Math.round(row.clicks), impressions: Math.round(row.impressions), ctr: Math.round(row.ctr * 1000) / 10, position: Math.round(row.position * 10) / 10};
+            })
+            .sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions);
+        const value: SearchPages = {
+            pages: pages.slice(0, limit),
+            totals: {clicks: pages.reduce((sum, row) => sum + row.clicks, 0), impressions: pages.reduce((sum, row) => sum + row.impressions, 0)}
+        };
+        pageCache.set(key, {at: Date.now(), value});
+        return value;
+    } catch (error) {
+        return {pages: [], totals: {clicks: 0, impressions: 0}, note: `Search Console: ${error instanceof Error ? error.message : "unavailable"}`};
+    }
+}

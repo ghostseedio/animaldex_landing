@@ -57,6 +57,11 @@ export type UserGrowthRow = {
   apple_ads_attributed: boolean | null;
   apple_ads_campaign_id?: string | null;
   store_attribution_at?: string | null;
+  /** The exact page a Play link was clicked on (website store links). */
+  utm_content?: string | null;
+  /** Web signups: the first page and referring site of the visit (first-touch cookie). */
+  landing_path?: string | null;
+  referrer_host?: string | null;
 };
 
 export type InferredPlatform = {
@@ -161,9 +166,31 @@ function paidChannel(network: string): AcquisitionChannel {
   return { key: network, label: paidNetworkLabels[network] ?? "Other ads", kind: "paid", evidence: "store", network };
 }
 
+const referrerGroups: Array<{ pattern: RegExp; key: string; label: string }> = [
+  { pattern: /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|gemini\.google\.com|copilot\.microsoft\.com)$/, key: "web_ai", label: "AI assistants" },
+  { pattern: /(^|\.)google\./, key: "web_google", label: "Google search" },
+  { pattern: /(^|\.)(bing\.com|duckduckgo\.com|search\.yahoo\.com|yandex\.|ecosia\.org|baidu\.com)/, key: "web_search_other", label: "Other search engines" },
+  { pattern: /(^|\.)(tiktok\.com)$/, key: "web_tiktok", label: "TikTok" },
+  { pattern: /(^|\.)(instagram\.com)$/, key: "web_instagram", label: "Instagram" },
+  { pattern: /(^|\.)(youtube\.com|youtu\.be)$/, key: "web_youtube", label: "YouTube" },
+  { pattern: /(^|\.)(facebook\.com|fb\.com|m\.facebook\.com)$/, key: "web_facebook", label: "Facebook" },
+  { pattern: /(^|\.)(x\.com|twitter\.com|t\.co)$/, key: "web_x", label: "X (Twitter)" },
+  { pattern: /(^|\.)(reddit\.com)$/, key: "web_reddit", label: "Reddit" },
+  { pattern: /(^|\.)(pinterest\.[a-z.]+|pin\.it)$/, key: "web_pinterest", label: "Pinterest" },
+];
+
+/** A web visit's referring site, grouped the way an analytics tool would (Google search, social, AI, other sites). */
+export function referrerChannel(host: string): AcquisitionChannel {
+  const clean = host.trim().toLowerCase().replace(/^www\./, "");
+  const group = referrerGroups.find((item) => item.pattern.test(clean));
+  if (group) return { key: group.key, label: group.label, kind: "organic", evidence: "store", network: null };
+  return { key: `referral:${clean}`, label: `Referral · ${clean}`, kind: "organic", evidence: "store", network: null };
+}
+
 export function classifyAcquisition(row: UserGrowthRow): AcquisitionChannel {
-  const source = (row.utm_source ?? "").trim().toLowerCase();
-  const medium = (row.utm_medium ?? "").trim().toLowerCase();
+  // Play hands some referrers over still encoded: "(not%20set)".
+  const source = (row.utm_source ?? "").replace(/%20/g, " ").trim().toLowerCase();
+  const medium = (row.utm_medium ?? "").replace(/%20/g, " ").trim().toLowerCase();
 
   // Store-verified paid installs outrank anything the user tells us.
   if (row.apple_ads_attributed === true) return paidChannel("apple_search_ads");
@@ -182,6 +209,14 @@ export function classifyAcquisition(row: UserGrowthRow): AcquisitionChannel {
   }
   if (source === "google-play" && medium === "organic") {
     return { key: "play_store", label: "Google Play search", kind: "organic", evidence: "store", network: null };
+  }
+  // A store button on animaldex.app: the Play link carries utm_source=web.
+  if (source === "web") {
+    return { key: "website", label: "Website store link", kind: "organic", evidence: "store", network: null };
+  }
+  if (row.referrer_host) return referrerChannel(row.referrer_host);
+  if (row.landing_path) {
+    return { key: "web_direct", label: "Website, direct", kind: "organic", evidence: "store", network: null };
   }
   if (source && source !== "google-play" && source !== "(not set)") {
     return { key: `referral:${source}`, label: `Referral · ${source}`, kind: "organic", evidence: "store", network: null };
