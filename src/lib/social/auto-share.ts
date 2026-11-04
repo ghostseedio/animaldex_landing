@@ -21,6 +21,8 @@ import {
 } from "@/lib/social/auto-share-plan";
 import {checkOAuthConnection} from "@/lib/social/connection-health";
 import {isOAuthPlatform, isProviderConfigured} from "@/lib/social/oauth";
+import {applyPauses, fullyPaused, pausedList, pauseLabel, type PlatformPauses, withoutPaused} from "@/lib/social/platform-pauses";
+import {loadPlatformPauses} from "@/lib/social/platform-settings";
 import {runContentShareJob, runShareJob} from "@/lib/social/runner";
 import type {ShareCopy} from "@/lib/social/share-copy";
 import {buildSpeciesShareContext, generateShareCopy} from "@/lib/social/share-copy-server";
@@ -36,7 +38,9 @@ import {reconcileZernioRows} from "@/lib/social/zernio-sync";
 // (auto-share-plan.ts), with the same copy and runner as the admin page. One
 // video per run keeps one upload job (and its ffmpeg normalise) on the
 // e2-small at a time. Every run also refreshes the per-post numbers the hook
-// lab learns from, at most every six hours.
+// lab learns from, at most every six hours. A platform the admin has paused
+// (platform-pauses.ts; X, Facebook, Pinterest and Instagram carousels by
+// default) is left out, with its reason, until it is turned back on.
 
 /** Longest video each platform takes through our share path (Facebook Reels API, X without Premium, Bluesky). */
 const MAX_VIDEO_SECONDS: Partial<Record<SocialPlatform, number>> = {facebook: 90, x: 140, bluesky: 60, threads: 300};
@@ -97,14 +101,27 @@ async function candidates(): Promise<Candidate[]> {
     ];
 }
 
-type Ready = {platforms: SocialPlatform[]; skipped: Record<string, string>; tiktok: {options: TikTokPostOptions; maxSeconds: number | null} | null};
+type Ready = {platforms: SocialPlatform[]; skipped: Record<string, string>; tiktok: {options: TikTokPostOptions; maxSeconds: number | null} | null; pauses: PlatformPauses};
 
-/** Platforms that can take a post right now; the rest with the reason. */
-async function readyPlatforms(): Promise<Ready> {
+type Caps = ReturnType<typeof dailyCaps>;
+
+/** The pauses in force and the daily caps with them applied (a paused kind's cap is 0). */
+async function pausesAndCaps() {
+    const pauses = await loadPlatformPauses();
+    const raw = dailyCaps(process.env.SOCIAL_DAILY_CAPS);
+    return {pauses, raw, caps: applyPauses(raw, pauses)};
+}
+
+/** Platforms that can take a post right now; the rest with the reason. A platform paused for everything it posts is not even checked. */
+async function readyPlatforms(pauses: PlatformPauses, raw: Caps): Promise<Ready> {
     const skipped: Record<string, string> = {};
     const rows = await listConnectionRows();
     const tiktok: {current: Ready["tiktok"]} = {current: null};
     const ready = await Promise.all(SOCIAL_PLATFORMS.map(async (platform): Promise<SocialPlatform | null> => {
+        if (fullyPaused(pauses, platform, raw)) {
+            skipped[platform] = pauseLabel(pauses, platform, raw[platform].video > 0 ? "video" : raw[platform].carousel > 0 ? "carousel" : "text") ?? "Paused";
+            return null;
+        }
         try {
             if (isOAuthPlatform(platform)) {
                 if (!isProviderConfigured(platform) || !rows.some((row) => row.platform === platform)) return null;
@@ -131,7 +148,7 @@ async function readyPlatforms(): Promise<Ready> {
             return null;
         }
     }));
-    return {platforms: ready.filter((platform): platform is SocialPlatform => platform !== null), skipped, tiktok: tiktok.current};
+    return {platforms: ready.filter((platform): platform is SocialPlatform => platform !== null), skipped, tiktok: tiktok.current, pauses};
 }
 
 async function draftCopy(video: Candidate) {
@@ -153,16 +170,17 @@ export async function previewAutoShare() {
     const connected = SOCIAL_PLATFORMS.filter((platform) => isOAuthPlatform(platform)
         ? isProviderConfigured(platform) && rows.some((row) => row.platform === platform)
         : platform === "tiktok" ? isZernioConfigured() : accounts.includes(platform));
-    const [posts, videos] = await Promise.all([listPosts(1000), candidates()]);
+    const [posts, videos, {pauses, raw, caps}] = await Promise.all([listPosts(1000), candidates(), pausesAndCaps()]);
     const now = Date.now();
-    const caps = dailyCaps(process.env.SOCIAL_DAILY_CAPS);
-    const videoRoom = platformsWithRoom(connected, "video", posts, caps, now);
+    const videoRoom = platformsWithRoom(withoutPaused(connected, "video", pauses).allowed, "video", posts, caps, now);
     const due = videos.filter((video) => pickNextAutoShare([video], posts, videoRoom, now));
     const next = pickNextAutoShare(videos, posts, videoRoom, now, "newest");
     return {
         connected,
         queueLength: due.length,
-        next: next ? {mediaPath: next.video.mediaPath, name: next.video.speciesName, kind: next.video.kind, platforms: next.platforms} : null
+        next: next ? {mediaPath: next.video.mediaPath, name: next.video.speciesName, kind: next.video.kind, platforms: next.platforms} : null,
+        paused: pausedList(pauses, raw),
+        pausesSource: pauses.source
     };
 }
 
@@ -201,19 +219,20 @@ async function shareNext(dryRun: boolean): Promise<AutoShareResult> {
     const uploading = posts.find((post) => isUploading(post, now));
     if (uploading) return {ok: true, shared: false, reason: `An upload is still running (${uploading.platform}, ${uploading.media_path})`};
 
-    const ready = await readyPlatforms();
+    const {pauses, raw, caps} = await pausesAndCaps();
+    const ready = await readyPlatforms(pauses, raw);
     if (!ready.platforms.length) return {ok: true, shared: false, reason: "No connected platform can post right now", skipped: ready.skipped};
-    const caps = dailyCaps(process.env.SOCIAL_DAILY_CAPS);
 
     const video = await shareVideo(dryRun, posts, ready, caps, now);
     const light = await shareLight(dryRun, posts, ready, caps, now).catch((error): LightShareResult => ({kind: null, reason: `Carousel/text share failed: ${error instanceof Error ? error.message : String(error)}`}));
     return {...video, light};
 }
 
-async function shareVideo(dryRun: boolean, posts: SocialPostRow[], ready: Ready, caps: ReturnType<typeof dailyCaps>, now: number): Promise<AutoShareResult> {
-    const skipped: Record<string, string> = {...ready.skipped};
-    const withRoom = platformsWithRoom(ready.platforms, "video", posts, caps, now);
-    for (const platform of ready.platforms) if (!withRoom.includes(platform)) skipped[platform] = "Today's video cap is reached";
+async function shareVideo(dryRun: boolean, posts: SocialPostRow[], ready: Ready, caps: Caps, now: number): Promise<AutoShareResult> {
+    const unpaused = withoutPaused(ready.platforms, "video", ready.pauses);
+    const skipped: Record<string, string> = {...ready.skipped, ...unpaused.skipped};
+    const withRoom = platformsWithRoom(unpaused.allowed, "video", posts, caps, now);
+    for (const platform of unpaused.allowed) if (!withRoom.includes(platform)) skipped[platform] = "Today's video cap is reached";
     if (!withRoom.length) return {ok: true, shared: false, reason: "Every ready platform has had today's videos", skipped};
 
     // Newest first: fresh videos carry the hook lab's current arms, so they teach it fastest.
@@ -286,9 +305,10 @@ function nextLightItem(items: SocialContentRow[], kind: "carousel" | "text", pos
     return pickNextAutoShare(candidates, posts, platforms, now, "newest");
 }
 
-async function shareLight(dryRun: boolean, posts: SocialPostRow[], ready: Ready, caps: ReturnType<typeof dailyCaps>, now: number): Promise<LightShareResult> {
+async function shareLight(dryRun: boolean, posts: SocialPostRow[], ready: Ready, caps: Caps, now: number): Promise<LightShareResult> {
+    // Paused kinds have a cap of 0 here, so they never win the pick or get room.
     const kind = pickLightKind(ready.platforms, posts, caps, now);
-    if (!kind) return {kind: null, reason: "Today's carousels and text posts are all out"};
+    if (!kind) return {kind: null, reason: "Today's carousels and text posts are all out (or paused everywhere)"};
     const items = await listSocialContent(kind, 100);
     const withRoom = platformsWithRoom(ready.platforms, kind, posts, caps, now);
     const next = nextLightItem(items, kind, posts, withRoom, now);
@@ -296,7 +316,7 @@ async function shareLight(dryRun: boolean, posts: SocialPostRow[], ready: Ready,
     const {item} = next.video;
     const link = getAbsoluteUrl("en", sourcePath(item.source_type, item.source_slug));
     const {targets, tooLong} = autoShareTargets(item.share as ShareCopy, next.platforms, link);
-    const skipped: Record<string, string> = {};
+    const skipped: Record<string, string> = {...withoutPaused(ready.platforms, kind, ready.pauses).skipped};
     for (const platform of tooLong) skipped[platform] = "Copy is over the platform's limit";
     if (dryRun || !targets.length) return {kind, id: item.id, title: item.source_title, queued: dryRun ? targets.map((target) => target.platform) : [], skipped};
 
@@ -325,20 +345,21 @@ async function shareLight(dryRun: boolean, posts: SocialPostRow[], ready: Ready,
 /**
  * "Share now" from the admin panel: one carousel or text post to every ready
  * platform that takes its kind (cap above 0) and has not had it, ignoring
- * today's remaining room. Returns the platforms queued.
+ * today's remaining room but not a pause. Returns the platforms queued.
  */
 export async function shareContentNow(item: SocialContentRow): Promise<{queued: SocialPlatform[]; skipped: Record<string, string>}> {
     const now = Date.now();
     const posts = await listPosts(1000);
-    const ready = await readyPlatforms();
-    const caps = dailyCaps(process.env.SOCIAL_DAILY_CAPS);
+    const {pauses, raw, caps} = await pausesAndCaps();
+    const ready = await readyPlatforms(pauses, raw);
     const kind = item.kind === "carousel" ? "carousel" : "text";
+    const paused = withoutPaused(ready.platforms, kind, pauses).skipped;
     const takers = ready.platforms.filter((platform) => caps[platform][kind] > 0);
     const next = nextLightItem([item], kind, posts, takers, now);
-    if (!next) return {queued: [], skipped: {...ready.skipped, all: "Already on every ready platform that takes it"}};
+    if (!next) return {queued: [], skipped: {...ready.skipped, ...paused, all: takers.length ? "Already on every ready platform that takes it" : "No ready platform takes it right now"}};
     const link = getAbsoluteUrl("en", sourcePath(item.source_type, item.source_slug));
     const {targets, tooLong} = autoShareTargets(item.share as ShareCopy, next.platforms, link);
-    const skipped: Record<string, string> = {...ready.skipped};
+    const skipped: Record<string, string> = {...ready.skipped, ...paused};
     for (const platform of tooLong) skipped[platform] = "Copy is over the platform's limit";
     const queued: SocialPostRow[] = [];
     for (const target of targets) {

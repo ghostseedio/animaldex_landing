@@ -1,29 +1,38 @@
 import type {TopicIdea} from "@/lib/blog-generator/pipeline";
+import {CONTENT_POLICY_RULES, policyProblems} from "@/lib/content-policy";
 import type {RadarCandidate} from "@/lib/trend-radar/feeds";
 
 // The radar's editor, pure half: the prompt that turns raw signals into ranked
 // article ideas, the schema, and the check that holds the reply to them (every
-// news idea must cite a URL that was actually in the signals).
+// news idea must cite a URL that was actually in the signals, and nothing
+// breaks the content policy). Since Nov 2026 the radar looks for culture,
+// ideas and everyday-life trends that one animal's real behaviour reframes;
+// nature news is a low-priority lane the blog does not write by itself.
 
 export const MAX_IDEAS = 10;
 
-export const RADAR_SYSTEM_PROMPT = `You are the news and trends editor of AnimalDex: an app and website about animals (identify any animal from a photo, collect it, battle it, and talk to it with an AI that answers as the species), with animal pages, rankings, comparisons and a blog that wants viral, searchable, TRUE articles.
+/** A nature news idea never scores above this: the blog has no news lane, so news only waits for a person to pick it. */
+export const NATURE_NEWS_MAX_SCORE = 5;
 
-From the signals below, pick up to ${MAX_IDEAS} article ideas worth writing NOW, best first. Two kinds:
-- "news": a fresh animal story from the last 72 hours (a discovery, study, attack, rescue, record, outbreak, sighting, policy) that people will search and share this week. Cite at least one of the signal URLs it comes from.
-- "evergreen": steady search demand you can see in the signals (Google autocomplete questions, our rising Search Console queries, an animal spiking on Wikipedia): a question people keep asking that a great article can own for months. primary_keyword is the exact phrase people type.
+export const RADAR_SYSTEM_PROMPT = `You are the trends editor of AnimalDex: an app and website where you take any idea, plan or decision to an animal, and the animal answers from a real behaviour of its species instead of the usual answer ("Every animal has a lesson."). The blog writes ideas seen through animals and "lesson for a human" pieces; the social accounts post "the usual answer vs the lion's take" and "5 animals, 1 idea".
 
-Score 1–10: how many people will search for and share it in the next week × how fresh it is × how well an animal site can own it. 9–10 only for a story that is clearly blowing up (in Google Trends or Wikipedia's top pages AND the news). Animals and nature only: drop celebrity, sport, politics and product trends unless the story is genuinely about an animal. Never repeat or near-repeat an idea in OUR CORE PAGES, RECENT ARTICLES or OPEN IDEAS. Merge the same story across sources into one idea and list every source that carried it. Never invent a story, a number or a source.
+From the signals below, pick up to ${MAX_IDEAS} article ideas worth writing, best first. Two kinds:
+- "evergreen" (nearly all ideas): a culture, idea or everyday-life trend people are searching or talking about (resolutions and seasons, a work or money habit everyone is trying, a big decision people are weighing, a question people keep typing), seen through ONE real animal behaviour that reframes it: the animal's take is the article. Or a searched animal question that becomes a lesson for a human ("why do lions roar": the roar is an honest count). primary_keyword is the exact phrase people type. It must still read well in a month.
+- "news" (low priority, at most 2): a fresh animal or nature story from the last 72 hours that people will search this week. Cite at least one of the signal URLs. Score news ${NATURE_NEWS_MAX_SCORE} or lower: we rarely write it.
+
+Score 1–10: how many people search or talk about it × how well one animal's real behaviour reframes it × how shareable the take is. 9–10 only for a trend that is clearly big right now (Google Trends AND autocomplete or Search Console) with a take nobody else has. Most trending searches are news, names and sport: use one only when an everyday idea inside it is what people discuss, never the event or the person. No politics, no tragedies. Never repeat or near-repeat an idea in OUR CORE PAGES, RECENT ARTICLES or OPEN IDEAS. Merge the same trend across sources into one idea and list every source that carried it. Never invent a trend, a number, a source or an animal behaviour.
+
+${CONTENT_POLICY_RULES}
 
 For each idea:
 - title: max 60 characters, curiosity-driven but true.
-- angle: the specific story or answer and what makes our take different (2–3 sentences).
+- angle: the trend or question, the one real animal behaviour that reframes it, and the take (2–3 sentences).
 - hook: the single most surprising true fact or question.
 - primary_keyword: the search phrase it targets.
-- format: news | explainer | listicle | guide | myth-buster | comparison.
-- why_now: the signal that makes it timely (e.g. "Mongabay + Guardian today, 50K+ US searches").
+- format: explainer | listicle | guide | myth-buster | comparison | news.
+- why_now: the signal that makes it timely (e.g. "autocomplete 'should i quit my job', Search Console rising").
 - score: 1–10 as above.
-- signals: the signal origins that point at it (e.g. "Mongabay", "Google Trends US", "Wikipedia", "Google autocomplete", "Search Console").
+- signals: the signal origins that point at it (e.g. "Google autocomplete", "Search Console", "Google Trends US", "Wikipedia", "Mongabay").
 - sources: [{label, url}] from the signal URLs only (empty for evergreen ideas without one).
 
 Return only the JSON object.`;
@@ -75,11 +84,11 @@ export function buildRadarUserPrompt(candidates: RadarCandidate[], recentTitles:
     return [
         `Now: ${now.toISOString().slice(0, 16).replace("T", " ")} UTC.`,
         "",
-        ...group("feed", "NEWS FEEDS (last 72 hours)", 90),
-        ...group("trend", "GOOGLE TRENDING SEARCHES (animal-related, today)", 30),
-        ...group("wiki", "WIKIPEDIA TOP 1,000 YESTERDAY (animal pages)", 25),
+        ...group("ask", "GOOGLE AUTOCOMPLETE (what people type: ideas, decisions, everyday questions)", 120),
         ...group("search", "OUR RISING SEARCH CONSOLE QUERIES (last 7 days vs the 7 before)", 30),
-        ...group("ask", "GOOGLE AUTOCOMPLETE (what people type)", 120),
+        ...group("trend", "GOOGLE TRENDING SEARCHES (today; mostly news and names)", 50),
+        ...group("wiki", "WIKIPEDIA TOP 1,000 YESTERDAY (animal pages)", 25),
+        ...group("feed", "NATURE NEWS FEEDS (last 72 hours; low priority)", 40),
         ...(corePages.length ? ["OUR CORE PAGES (already rank for these; never propose an article that duplicates one):", ...corePages.map((title) => `- ${title}`), ""] : []),
         "RECENT ARTICLES (do not repeat):",
         ...recentTitles.slice(0, 80).map((title) => `- ${title}`),
@@ -106,6 +115,8 @@ export function normalizeRadarIdeas(value: unknown, candidates: RadarCandidate[]
         const title = text(idea.title, 90);
         const keyword = text(idea.primary_keyword, 120).toLowerCase();
         if (!kind || !title || !keyword) return [];
+        // Another AI product, a clinical word or a label anywhere in the idea: never queued.
+        if (policyProblems(title, keyword, text(idea.angle, 900), text(idea.hook, 300)).length) return [];
         const key = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
         if (seen.has(key)) return [];
         seen.add(key);
@@ -115,7 +126,7 @@ export function normalizeRadarIdeas(value: unknown, candidates: RadarCandidate[]
             .map((source) => ({label: text(source.label, 160) || "Source", url: source.url as string}))
             .slice(0, 6);
         if (kind === "news" && !sources.length) return [];
-        const score = Math.min(Math.max(Number(idea.score) || 0, 1), 10);
+        const score = Math.min(Math.max(Number(idea.score) || 0, 1), kind === "news" ? NATURE_NEWS_MAX_SCORE : 10);
         return [{
             kind,
             score: Math.round(score * 10) / 10,

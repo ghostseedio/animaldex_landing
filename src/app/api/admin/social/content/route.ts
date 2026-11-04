@@ -7,6 +7,7 @@ import {runContentGenerate} from "@/lib/social-content/auto";
 import {generateCarousel, generateTextPosts} from "@/lib/social-content/generate";
 import {getSocialContent, listSocialContent, updateSocialContent} from "@/lib/social-content/store";
 import {contentIdFromMediaPath} from "@/lib/social-content/types";
+import {CAROUSEL_FORMATS, type CarouselFormat, isArm} from "@/lib/social-lab/arms";
 
 // Carousels and text posts for /admin/story-videos: the list (with slide URLs
 // and where each item went), "Generate now", "Share now" and "Archive".
@@ -39,16 +40,18 @@ export async function GET(request: NextRequest) {
     }
 }
 
-/** `{action: "generate", kind: "carousel" | "text" | "auto"}` or `{action: "share", id}`. */
+/** `{action: "generate", kind: "carousel" | "text" | "auto", format?: "page" | "usual_vs_animal" | "five_animals"}` or `{action: "share", id}`. */
 export async function POST(request: NextRequest) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
-    const body = await request.json().catch(() => ({})) as {action?: string; kind?: string; id?: string};
+    const body = await request.json().catch(() => ({})) as {action?: string; kind?: string; id?: string; format?: string};
     try {
         if (body.action === "generate") {
             if (generating) return NextResponse.json({error: `Already making ${generating}`}, {status: 409});
             const kind = body.kind === "carousel" || body.kind === "text" ? body.kind : "auto";
-            generating = kind === "auto" ? "the stock top-up" : kind === "carousel" ? "a carousel" : "text posts";
-            const job = kind === "carousel" ? generateCarousel() : kind === "text" ? generateTextPosts(4) : runContentGenerate();
+            // A carousel format asked for by hand; otherwise the hook lab draws one.
+            const format = kind === "carousel" && isArm("carouselFormat", body.format) ? body.format as CarouselFormat : undefined;
+            generating = kind === "auto" ? "the stock top-up" : kind === "carousel" ? (format ? `a “${CAROUSEL_FORMATS[format].label}” carousel` : "a carousel") : "text posts";
+            const job = kind === "carousel" ? generateCarousel(undefined, format) : kind === "text" ? generateTextPosts(4) : runContentGenerate();
             void job.catch((error) => console.error("[social-content] generate failed", error)).finally(() => {
                 generating = null;
             });

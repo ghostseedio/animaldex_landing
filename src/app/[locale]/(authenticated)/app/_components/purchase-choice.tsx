@@ -1,6 +1,7 @@
 "use client";
 
 import {useState} from "react";
+import Link from "@/app/[locale]/_components/link";
 import {trackEcommerceEvent, trackEvent} from "@/lib/analytics";
 import {beginCheckoutParameters, checkoutStorage, rememberCompletedCheckout} from "@/lib/web-checkout-analytics";
 import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
@@ -8,6 +9,7 @@ import {openPaddleCheckout, type PaddleRuntimeEnvironment} from "@/lib/paddle-ch
 import {splitLocalePath} from "@/lib/request-routing";
 import {
     billingReturnHref,
+    isProProductCode,
     localizedBillingReturnPath,
     recommendCreditPack,
     WEB_STORE_PRODUCTS,
@@ -23,7 +25,7 @@ import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components
  */
 export async function startWebCheckout(productCode: WebStoreProductCode, appReturnPath: string, source: string) {
     const returnPath = localizedBillingReturnPath(appReturnPath, window.location.pathname);
-    trackEvent(productCode === "pro_upgrade" ? "web_pro_checkout_started" : "web_checkout_started", {
+    trackEvent(isProProductCode(productCode) ? "web_pro_checkout_started" : "web_checkout_started", {
         product: productCode,
         source,
         provider: "paddle"
@@ -94,7 +96,9 @@ export function PurchaseChoice({
     const packs = (["purchase_25", "purchase_100"] as const).filter((code) => availability[code]);
     const preferred = recommendCreditPack(deficit);
     const recommended: WebStoreProductCode | null = availability[preferred] ? preferred : packs[0] ?? null;
-    const proOnSale = availability.pro_upgrade;
+    const proOnSale = availability.pro_upgrade || availability.pro_annual;
+    // With the yearly plan on sale there is a choice to make: the plans page shows both, yearly first.
+    const choosePlan = availability.pro_annual;
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState<WebStoreProductCode | null>(null);
 
@@ -129,7 +133,14 @@ export function PurchaseChoice({
                             {busy === recommended ? "Opening checkout…" : `Buy ${WEB_STORE_PRODUCTS[recommended].label}`}
                         </button>
                     ) : null}
-                    {proOnSale ? (
+                    {proOnSale && choosePlan ? (
+                        <Link
+                            href="/app/credits#pro"
+                            className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white"
+                        >
+                            See Pro plans
+                        </Link>
+                    ) : proOnSale ? (
                         <button
                             type="button"
                             disabled={Boolean(busy)}
@@ -147,7 +158,7 @@ export function PurchaseChoice({
             )}
             {proOnSale ? (
                 <p className="text-xs leading-5 text-white/45">
-                    Instagram Import is included with Pro, along with unlimited captures and 42 Credits every month.
+                    Pro includes unlimited captures and 100 messages a day with any animal.
                 </p>
             ) : null}
             <div className="flex flex-wrap gap-3 text-sm font-bold">

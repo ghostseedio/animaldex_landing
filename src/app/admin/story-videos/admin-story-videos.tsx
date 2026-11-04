@@ -9,6 +9,7 @@ import type {TikTokAccountInfo} from "@/lib/social/zernio-core";
 import {MANUAL_SHARE_PLATFORMS, type ManualSharePlatform, SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, type SocialPlatform, type SocialPostMode, type SocialPostRow, type TikTokPostOptions, type ZernioShareInfo} from "@/lib/social/types";
 import AdminBlogVideos, {type BlogVideo} from "@/app/admin/story-videos/admin-blog-videos";
 import AdminAutomation from "@/app/admin/story-videos/admin-automation";
+import {pausedFor, PlatformSwitches, type PlatformSwitchState} from "@/app/admin/story-videos/admin-platform-switches";
 import {AdminHookLab, AdminSocialContent} from "@/app/admin/story-videos/admin-growth-lab";
 import AdminTrendRadar from "@/app/admin/story-videos/admin-trend-radar";
 import AdminUploadedVideos, {type UploadedVideo} from "@/app/admin/story-videos/admin-uploaded-videos";
@@ -187,6 +188,7 @@ function localScheduleProblem(localValue: string, now = Date.now()): string | nu
 export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
     const [videos, setVideos] = useState<Video[] | null>(null);
     const [connections, setConnections] = useState<Connection[]>([]);
+    const [switches, setSwitches] = useState<PlatformSwitchState | null>(null);
     const [posts, setPosts] = useState<SocialPostRow[]>([]);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
@@ -204,6 +206,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
         const results = await Promise.allSettled([
             api<{videos: Video[]}>("/api/admin/social/videos").then((body) => setVideos(body.videos)),
             api<{connections: Connection[]}>("/api/admin/social/connections").then((body) => setConnections(body.connections)),
+            api<PlatformSwitchState>("/api/admin/social/platform-settings").then(setSwitches),
             loadPosts()
         ]);
         const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
@@ -362,6 +365,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                         Set <code className="text-ink-300">{connection.envNames.id}</code> and <code className="text-ink-300">{connection.envNames.secret}</code> on the server{connection.redirectUri ? <>, with redirect URI <code className="break-all text-ink-300">{connection.redirectUri}</code> in the platform&apos;s app</> : null}.
                                     </p>
                                 )}
+                                <PlatformSwitches platform={platform} state={switches} onSaved={setSwitches} onError={setError} />
                             </article>
                         );
                     })}
@@ -465,6 +469,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                     video={sharing}
                     siteUrl={siteUrl}
                     connections={connections}
+                    switches={switches}
                     shares={postsByVideo.get(sharing.mediaPath) ?? []}
                     onClose={() => setSharing(null)}
                     onShared={(message) => {
@@ -482,6 +487,8 @@ type ShareDialogProps = {
     video: Video;
     siteUrl: string;
     connections: Connection[];
+    /** The auto-share's pauses: a paused platform is not ticked for you, but can still be shared to by hand. */
+    switches: PlatformSwitchState | null;
     shares: SocialPostRow[];
     onClose: () => void;
     onShared: (message: string) => void;
@@ -510,7 +517,7 @@ const fieldClass = "mt-1.5 w-full border border-line-300 bg-canvas-900 px-3 py-2
 
 type TikTokWhen = "now" | "schedule";
 
-function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: ShareDialogProps) {
+function ShareDialog({video, siteUrl, connections, switches, shares, onClose, onShared}: ShareDialogProps) {
     const pageUrl = `${siteUrl}${video.pagePath ?? `/animals/${video.pageSlug}`}`;
     const [copy, setCopy] = useState<ShareCopy | null>(null);
     const [copySource, setCopySource] = useState<"claude" | "template" | null>(null);
@@ -525,7 +532,7 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
     const available = (platform: ManualSharePlatform) => Boolean(connections.find((candidate) => candidate.platform === platform)?.connected)
         && !overLength(platform)
         && !(blocked(platform, "post") && (!DRAFT_LABELS[platform] || blocked(platform, "draft")));
-    const [selected, setSelected] = useState<ManualSharePlatform[]>(() => MANUAL_SHARE_PLATFORMS.filter(available));
+    const [selected, setSelected] = useState<ManualSharePlatform[]>(() => MANUAL_SHARE_PLATFORMS.filter((platform) => available(platform) && !pausedFor(switches, platform, "video")));
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const tiktokConnected = Boolean(connections.find((candidate) => candidate.platform === "tiktok")?.connected);
@@ -666,12 +673,13 @@ function ShareDialog({video, siteUrl, connections, shares, onClose, onShared}: S
                                 const connected = Boolean(connections.find((candidate) => candidate.platform === platform)?.connected);
                                 const already = blocked(platform);
                                 const checked = selected.includes(platform);
+                                const paused = pausedFor(switches, platform, "video");
                                 return (
                                     <div key={platform} className="flex flex-wrap items-center gap-x-4 gap-y-1 border border-line-300 bg-canvas-900 px-3 py-2">
                                         <label className={`flex flex-1 items-center gap-2 text-sm ${available(platform) ? "text-white" : "text-ink-500"}`}>
                                             <input type="checkbox" disabled={!available(platform)} checked={checked} onChange={(event) => setSelected((current) => event.target.checked ? [...current, platform] : current.filter((item) => item !== platform))} />
                                             {SOCIAL_PLATFORM_LABELS[platform]}
-                                            {!connected ? <span className="text-[11px]">(not connected)</span> : overLength(platform) ? <span className="text-[11px]">(over its {MAX_SECONDS[platform]} s limit; share a shorter cut)</span> : platform === "youtube" && (video.durationSeconds ?? 0) > YOUTUBE_SHORTS_MAX_SECONDS ? <span className="text-[11px]">(over 3 min: posts as a regular video, not a Short)</span> : already ? <span className="text-[11px]">({modes[platform] === "draft" ? "draft already sent" : "already posted"})</span> : null}
+                                            {!connected ? <span className="text-[11px]">(not connected)</span> : overLength(platform) ? <span className="text-[11px]">(over its {MAX_SECONDS[platform]} s limit; share a shorter cut)</span> : platform === "youtube" && (video.durationSeconds ?? 0) > YOUTUBE_SHORTS_MAX_SECONDS ? <span className="text-[11px]">(over 3 min: posts as a regular video, not a Short)</span> : already ? <span className="text-[11px]">({modes[platform] === "draft" ? "draft already sent" : "already posted"})</span> : paused ? <span className="text-[11px] text-amber-200">(auto-share paused: {paused.reason ?? "paused in the admin"})</span> : null}
                                         </label>
                                         {DRAFT_LABELS[platform] && checked ? (
                                             <label className="flex items-center gap-2 text-xs text-ink-300">

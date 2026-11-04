@@ -5,7 +5,8 @@ import {AppPage, AppPageHeader, AppSurface} from "@/app/[locale]/(authenticated)
 import {useAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import {startWebCheckout} from "@/app/[locale]/(authenticated)/app/_components/purchase-choice";
 import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
-import {WEB_STORE_PRODUCTS, WEB_STORE_PRO_BENEFITS, type WebStoreProductCode} from "@/lib/web-store-catalog";
+import {annualSavingPercent, type ProPlanCode, type ProPlanPrice} from "@/lib/paddle-prices";
+import {WEB_STORE_PRO_PLANS, WEB_STORE_PRODUCTS, webStoreProBenefits, type WebStoreProductCode} from "@/lib/web-store-catalog";
 
 type BillingStatus = {
     balance?: number;
@@ -17,15 +18,21 @@ export type CreditsAccount = {email: string; provider: string | null} | null;
 
 const CREDIT_PACKS = ["purchase_25", "purchase_100"] as const;
 const UNAVAILABLE_LABEL = "Not available right now";
+const PLAN_NAMES: Record<ProPlanCode, string> = {pro_annual: "Yearly", pro_upgrade: "Monthly"};
 
 /**
  * Credits and Pro on the web, in the order the iOS store uses: Pro first and
- * recommended, then the Credit packs for someone who only needs a few.
+ * recommended, then the Credit packs for someone who only needs a few. Pro
+ * shows the yearly plan first and pre-selected, with its free trial when
+ * Paddle's price has one; monthly second. With no yearly Price ID set, it is
+ * monthly only, as before.
  */
-export default function CreditsClient({account, packDetails}: {
+export default function CreditsClient({account, packDetails, proPlans}: {
     account: CreditsAccount;
     /** Each pack's line in the reader's language; the catalog's English otherwise. */
     packDetails?: Partial<Record<WebStoreProductCode, string>>;
+    /** Paddle's price and trial for each Pro plan (src/lib/paddle-prices.ts); missing ones show the catalog price. */
+    proPlans?: Partial<Record<ProPlanCode, ProPlanPrice>>;
 }) {
     // setBalance alone: the context value is new on every frame of the
     // balance animation, and depending on it would refetch on every frame.
@@ -35,6 +42,7 @@ export default function CreditsClient({account, packDetails}: {
     const [busy, setBusy] = useState<WebStoreProductCode | "portal" | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
+    const [plan, setPlan] = useState<ProPlanCode>("pro_annual");
 
     const refresh = useCallback(async () => {
         const response = await fetch("/api/app/billing/status", {cache: "no-store"});
@@ -97,8 +105,14 @@ export default function CreditsClient({account, packDetails}: {
     const provider = status?.pro_provider ?? "none";
     const isPro = Boolean(status?.is_pro);
     const balance = status?.balance ?? displayBalance;
-    const pro = WEB_STORE_PRODUCTS.pro_upgrade;
-    const nothingOnSale = !availability.pro_upgrade && CREDIT_PACKS.every((code) => !availability[code]);
+    const plansOnSale = WEB_STORE_PRO_PLANS.filter((code) => availability[code]);
+    // Yearly is pre-selected; with only one plan on sale, that one.
+    const selected: ProPlanCode = availability[plan] ? plan : plansOnSale[0] ?? "pro_upgrade";
+    const pro = WEB_STORE_PRODUCTS[selected];
+    const priceOf = (code: ProPlanCode) => proPlans?.[code]?.display ?? WEB_STORE_PRODUCTS[code].fallbackPrice;
+    const trial = selected === "pro_annual" ? proPlans?.pro_annual?.trialLabel ?? null : null;
+    const saving = annualSavingPercent(proPlans?.pro_upgrade, proPlans?.pro_annual);
+    const nothingOnSale = plansOnSale.length === 0 && CREDIT_PACKS.every((code) => !availability[code]);
 
     return (
         <AppPage>
@@ -174,11 +188,39 @@ export default function CreditsClient({account, packDetails}: {
                             </span>
                         )}
                     </div>
-                    <h2 className="mt-2 font-display text-3xl font-bold text-white">{pro.label}</h2>
+                    <h2 className="mt-2 font-display text-3xl font-bold text-white">{WEB_STORE_PRODUCTS.pro_upgrade.label}</h2>
                     <p className="mt-2 text-sm leading-6 text-white/55">{pro.detail}</p>
-                    <p className="mt-3 text-sm font-bold text-white/80">{pro.fallbackPrice}</p>
+                    {plansOnSale.length > 1 && !isPro ? (
+                        <div role="radiogroup" aria-label="Choose a plan" className="mt-5 grid gap-3 sm:grid-cols-2">
+                            {plansOnSale.map((code) => {
+                                const active = code === selected;
+                                const planTrial = code === "pro_annual" ? proPlans?.pro_annual?.trialLabel ?? null : null;
+                                return (
+                                    <button
+                                        key={code}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={active}
+                                        onClick={() => setPlan(code)}
+                                        className={`flex flex-col items-start gap-1 border px-4 py-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/15 hover:border-white/35"}`}
+                                    >
+                                        <span className="flex flex-wrap items-center gap-2 text-sm font-black text-white">
+                                            {PLAN_NAMES[code]}
+                                            {code === "pro_annual" && saving ? (
+                                                <span className="bg-primary-400 px-1.5 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.14em] text-black">Save {saving}%</span>
+                                            ) : null}
+                                        </span>
+                                        <span className="text-sm text-white/80">{priceOf(code)}</span>
+                                        {planTrial ? <span className="text-xs font-bold text-primary-200">{planTrial}</span> : null}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="mt-3 text-sm font-bold text-white/80">{priceOf(selected)}{trial ? ` · ${trial}` : ""}</p>
+                    )}
                     <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                        {WEB_STORE_PRO_BENEFITS.map((benefit) => (
+                        {webStoreProBenefits(selected).map((benefit) => (
                             <li key={benefit.title} className="border-l border-white/10 pl-3">
                                 <p className="text-sm font-bold text-white/85">{benefit.title}</p>
                                 {benefit.detail ? <p className="mt-0.5 text-xs leading-5 text-white/45">{benefit.detail}</p> : null}
@@ -187,18 +229,25 @@ export default function CreditsClient({account, packDetails}: {
                     </ul>
                     <button
                         type="button"
-                        disabled={Boolean(busy) || isPro || !availability.pro_upgrade}
-                        onClick={() => void buy("pro_upgrade")}
+                        disabled={Boolean(busy) || isPro || !availability[selected]}
+                        onClick={() => void buy(selected)}
                         className="mt-6 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50 sm:w-auto sm:min-w-[14rem]"
                     >
                         {isPro
                             ? "Already Pro"
-                            : !availability.pro_upgrade
+                            : !availability[selected]
                                 ? UNAVAILABLE_LABEL
-                                : busy === "pro_upgrade"
+                                : busy === selected
                                     ? "Opening checkout…"
-                                    : "Go Pro"}
+                                    : trial
+                                        ? "Start free trial"
+                                        : "Go Pro"}
                     </button>
+                    {trial && !isPro && availability[selected] ? (
+                        <p className="mt-3 text-xs leading-5 text-white/45">
+                            {trial}, then {priceOf("pro_annual")}. Cancel before the trial ends and you won&apos;t be charged.
+                        </p>
+                    ) : null}
                 </AppSurface>
             </section>
 

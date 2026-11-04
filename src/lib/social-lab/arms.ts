@@ -117,10 +117,12 @@ export const FRESH_ARTICLE_HOURS = 72;
 
 /**
  * The reactions a page can honestly be built for: a battle invites comments,
- * a guide gets saved, today's news holds. Fresh news videos are always "stay".
+ * a guide gets saved, today's news holds. Fresh news videos are always "stay";
+ * a take carousel ("the usual vs the lion", "5 animals") is sent or argued over.
  */
-export function intentsFor(kind: ExperimentKind, sourceType: string | null, fresh = false): Intent[] {
+export function intentsFor(kind: ExperimentKind, sourceType: string | null, fresh = false, carouselFormat: CarouselFormat | null = null): Intent[] {
     if (fresh && kind !== "carousel" && kind !== "text") return ["stay"];
+    if (kind === "carousel" && carouselFormat && carouselFormat !== "page") return ["share", "comment"];
     const fits: Record<string, Intent[]> = {
         blog: ["share", "save", "comment"],
         comparison: ["comment", "share"],
@@ -137,9 +139,45 @@ export const TEXT_FORMATS = {
     poll: {label: "Poll", instruction: "A poll: a sharp question and 2–4 short options (max 25 characters each) that people will argue about."},
     would_you_rather: {label: "Would you rather", instruction: `"Would you rather…" with two vivid animal-powered options taken from the page, e.g. "Would you rather have a cheetah's speed or a bear's strength?"`},
     wild_fact: {label: "Wild fact", instruction: "One incredible, true fact from the page that sounds made up, in plain words, plus a one-line punchline."},
-    question: {label: "Question", instruction: "A direct question to followers that is fun to answer in the replies (a pick, a ranking, a story), built on a detail from the page."}
+    question: {label: "Question", instruction: "A direct question to followers that is fun to answer in the replies (a pick, a ranking, a story), built on a detail from the page."},
+    usual_vs_animal: {label: "The usual vs the animal", instruction: `THE USUAL VS THE <ANIMAL>: take one everyday idea from IDEAS, and one animal on the page whose real behaviour (from the page or ANIMAL RECORDS) sees it differently. Three short lines: "The usual answer: <the advice everyone gives, at most 12 words>." / "The <animal>'s take: <a different move, at most 25 words>." / "Because <the real behaviour, at most 15 words>." Then a two-option question ("Which would you try?"). The take must be a move the usual answer would not give, not the usual answer in costume.`},
+    five_animals: {label: "5 animals, 1 idea", instruction: `5 ANIMALS, 1 IDEA: one everyday idea from IDEAS, then five animals from the page, one line each: "<Animal>: <its take, at most 8 words>". Every take comes from that animal's real behaviour (page or ANIMAL RECORDS) and differs from the other four. End with "Which one is you?". In the long version add each take's behaviour in a few words.`}
 } as const satisfies Record<string, ArmSpec>;
 export type TextFormat = keyof typeof TEXT_FORMATS;
+
+/** Page families with five or more real animals (a countdown, a place's animals): the only ones a "5 animals" post can be built from. */
+export const MULTI_ANIMAL_SOURCES = ["ranking", "location"] as const;
+/** Imagined creatures have no real behaviour to build a take on. */
+const IMAGINED_SOURCES = ["hybrid", "fusion"];
+
+/** The text formats a page can honestly carry: "5 animals" needs five real animals, an animal's take needs a real one. */
+export function textFormatsFor(sourceType: string | null): TextFormat[] {
+    return (Object.keys(TEXT_FORMATS) as TextFormat[]).filter((format) => {
+        if (format === "five_animals") return sourceType !== null && (MULTI_ANIMAL_SOURCES as readonly string[]).includes(sourceType);
+        if (format === "usual_vs_animal") return sourceType === null || !IMAGINED_SOURCES.includes(sourceType);
+        return true;
+    });
+}
+
+/**
+ * What a carousel is: one of the page-led shapes (countdown, versus, facts…)
+ * the writer picks for the page, or one of the take formats, where an
+ * everyday idea meets an animal's real behaviour.
+ */
+export const CAROUSEL_FORMATS = {
+    page: {label: "Page carousel", instruction: "A carousel of the page itself: pick the shape that fits it best."},
+    usual_vs_animal: {label: "The usual vs the animal", instruction: `THE USUAL VS THE <ANIMAL>: one everyday idea, the usual answer on a plain grey slide, then one animal's take built on a real behaviour it is known for, and why it sees it that way. The take must be a move the usual answer would not give.`},
+    five_animals: {label: "5 animals, 1 idea", instruction: "5 ANIMALS, 1 IDEA: one everyday idea, then five animals from the page, each with its own take built on its real behaviour, all five different. The last slide asks which one is you."}
+} as const satisfies Record<string, ArmSpec>;
+export type CarouselFormat = keyof typeof CAROUSEL_FORMATS;
+
+/** Everyday ideas a take format starts from: ideas and decisions people actually have, never a problem to be labelled. */
+export const TAKE_IDEAS = [
+    "Start a podcast", "Move abroad", "Quit sugar", "Three things due tomorrow", "Ask for a raise", "Start running",
+    "Learn to code", "Start a side business", "Take a gap year", "Get up earlier", "Change careers", "Throw a dinner party",
+    "Write a book", "Buy a home or keep renting", "Get a dog", "Go back to school", "Start a YouTube channel",
+    "Travel somewhere alone", "Save up for something big", "Join a band", "Say no to a favour", "Make friends in a new city"
+] as const;
 
 export const DIMENSIONS = {
     hookStyle: HOOK_STYLES,
@@ -147,7 +185,8 @@ export const DIMENSIONS = {
     ending: ENDINGS,
     opener: OPENERS,
     textFormat: TEXT_FORMATS,
-    intent: INTENTS
+    intent: INTENTS,
+    carouselFormat: CAROUSEL_FORMATS
 } as const;
 export type Dimension = keyof typeof DIMENSIONS;
 
@@ -160,6 +199,7 @@ export type Experiment = {
     opener?: Opener;
     textFormat?: TextFormat;
     intent?: Intent;
+    carouselFormat?: CarouselFormat;
 };
 
 /** 2 (Oct 29 2026): the 5-year-old hook rule, the intent arm, no long videos, picture-first carousels. */
@@ -170,10 +210,16 @@ export const KIND_DIMENSIONS = {
     editorial: ["intent", "hookStyle", "length", "ending"],
     battle: ["intent", "hookStyle", "opener", "ending"],
     creature: ["intent", "hookStyle", "opener", "ending"],
-    carousel: ["intent", "hookStyle"],
+    carousel: ["carouselFormat", "intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;
 export type ExperimentKind = keyof typeof KIND_DIMENSIONS;
+
+/** Carousels made before the take formats were all page carousels: their numbers teach that arm. */
+export function withCarouselFormat(kind: "carousel" | "text", experiment: Experiment | null): Experiment | null {
+    if (kind !== "carousel" || !experiment || experiment.carouselFormat) return experiment;
+    return {...experiment, carouselFormat: "page"};
+}
 
 export function armLabel(dimension: Dimension, arm: string) {
     const table = DIMENSIONS[dimension] as Record<string, ArmSpec>;
@@ -194,6 +240,7 @@ export function experimentBrief(experiment: Experiment | null | undefined) {
     if (experiment.opener) lines.push(`OPENER — ${OPENERS[experiment.opener].instruction}`);
     if (experiment.ending) lines.push(`ENDING — ${ENDINGS[experiment.ending].instruction}`);
     if (experiment.textFormat) lines.push(`FORMAT — ${TEXT_FORMATS[experiment.textFormat].label}: ${TEXT_FORMATS[experiment.textFormat].instruction}`);
+    if (experiment.carouselFormat && experiment.carouselFormat !== "page") lines.push(`FORMAT — ${CAROUSEL_FORMATS[experiment.carouselFormat].label}: ${CAROUSEL_FORMATS[experiment.carouselFormat].instruction}`);
     if (!lines.length) return "";
     return `THIS ITEM'S EXPERIMENT (we test what keeps viewers; follow it exactly, it overrides any default above):\n${lines.map((line) => `- ${line}`).join("\n")}`;
 }

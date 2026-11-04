@@ -1,38 +1,39 @@
 import "server-only";
 import {listAutomationRuns, recordAutomationRun} from "@/lib/automation-runs";
-import {pickAutoFocus} from "@/lib/blog-generator/auto-generate-plan";
+import {type BlogLane, blogLanesFor, pickAutoFocus, utcDayNumber} from "@/lib/blog-generator/auto-generate-plan";
 import {isClaudeConfigured} from "@/lib/blog-generator/claude-client";
 import {formatCost} from "@/lib/blog-generator/cost-meter";
 import {guideMaterials, nextGuideTopic} from "@/lib/blog-generator/guide-topics";
 import {generateJobRunning, startGenerateJob, type GenerateInput, type Job} from "@/lib/blog-generator/jobs";
-import {nextSeoTopic} from "@/lib/blog-generator/seo-topics";
+import {nextLessonTopic, nextSeoTopic} from "@/lib/blog-generator/seo-topics";
+import {topicPolicyProblems} from "@/lib/blog-generator/topic-policy";
 import {listTrendTopics, openTrendTopics, type TrendTopicRow, updateTrendTopic} from "@/lib/trend-radar/store";
 
 // Unattended articles (POST /api/cron/blog-auto-generate, 07:40 and 19:40 UTC),
-// published as "Auto-pick and write" in /admin/blog-generator would:
-// - the morning run writes the news: the trend radar's best fresh story
-//   (src/lib/trend-radar), else a story Claude finds for a random focus;
-// - the evening run is search-led: a talk-to-animals topic (seo-topics.ts) and
-//   a product guide (guide-topics.ts) on alternate days, else the radar's best
-//   evergreen question;
-// - between them, a radar story hot enough to be breaking news is written at
-//   once (runBreakingNews, from the video timer every 3 hours).
-// Caps: BLOG_AUTO_PER_DAY articles (default 4) and BLOG_AUTO_DAILY_BUDGET_USD
-// (default $12). The editor's draft rule still applies (below 6/10 → draft). A
-// generation takes 10–20 minutes; the run returns once it has started and logs
-// a second row when it finishes.
+// published as "Auto-pick and write" in /admin/blog-generator would. One a day
+// (BLOG_AUTO_PER_DAY, default 1), so the second timer slot usually waits.
+// Since Nov 2026 there is no news lane: the blog writes ideas seen through
+// animals and "lesson for a human" pieces (topic-policy.ts). Each day one lane
+// leads and the others are fallbacks (blogLanesFor):
+// - radar: the trend radar's best evergreen idea (a culture or everyday-life
+//   trend an animal's take reframes) that passes the topic policy;
+// - lessons: the next lesson-for-a-human topic (seo-topics.ts LESSON_TOPICS);
+// - search: the next problem-led search page (SEO_TOPICS), then a product
+//   guide (guide-topics.ts);
+// and when every lane is empty, Claude picks an idea for a random focus.
+// Caps: BLOG_AUTO_PER_DAY and BLOG_AUTO_DAILY_BUDGET_USD (default $6). The
+// editor's draft rule still applies (below 6/10 → draft). A generation takes
+// 10–20 minutes; the run returns once it has started and logs a second row
+// when it finishes.
 
 export const BLOG_AUTO_JOB = "blog-auto-generate";
 
-/** A radar news story this hot is written as soon as the timer sees it. */
-export const BREAKING_SCORE = 8.5;
-/** The morning run takes a radar story at or above this; below it, Claude searches a random focus. */
-const NEWS_MIN_SCORE = 6;
-const EVERGREEN_MIN_SCORE = 7;
+/** The radar lane takes an evergreen idea scoring at least this. */
+export const RADAR_MIN_SCORE = 7;
 
 export type BlogAutoGenerateResult = {ok: true; acted: boolean; summary: string; ref?: string; detail?: Record<string, unknown>};
 
-type Meta = {seoTopic?: string; guideTopic?: string; trendTopic?: string};
+type Meta = {seoTopic?: string; lessonTopic?: string; guideTopic?: string; trendTopic?: string};
 
 /** Focuses of recent runs, newest first (a run's start and finish rows both carry it). */
 async function recentFocuses() {
@@ -67,7 +68,7 @@ async function recordFinished(job: Job, focus: string, meta: Meta = {}) {
 }
 
 /** Queue topics already written (published, or saved as a draft); a failed one is tried again. */
-async function writtenTopics(key: "seoTopic" | "guideTopic") {
+async function writtenTopics(key: "seoTopic" | "lessonTopic" | "guideTopic") {
     const runs = await listAutomationRuns(BLOG_AUTO_JOB, 300).catch(() => []);
     return new Set(runs
         .filter((run) => typeof run.detail?.[key] === "string" && (run.summary.startsWith("Published") || run.summary.startsWith("Saved")))
@@ -95,8 +96,8 @@ async function capsProblem(): Promise<string | null> {
     if (process.env.BLOG_AUTO_GENERATE_DISABLED?.trim() === "1") return "BLOG_AUTO_GENERATE_DISABLED=1";
     if (!isClaudeConfigured()) return "CLAUDE_API_KEY is not set on the server";
     if (generateJobRunning()) return "An article is already being written";
-    const perDay = numberEnv("BLOG_AUTO_PER_DAY", 4);
-    const budget = numberEnv("BLOG_AUTO_DAILY_BUDGET_USD", 12);
+    const perDay = numberEnv("BLOG_AUTO_PER_DAY", 1);
+    const budget = numberEnv("BLOG_AUTO_DAILY_BUDGET_USD", 6);
     const today = await todaysRuns();
     if (today.started >= perDay) return `Already started ${today.started} of ${perDay} articles today (BLOG_AUTO_PER_DAY)`;
     if (today.usd >= budget) return `Today's articles cost $${today.usd.toFixed(2)} of the $${budget} budget (BLOG_AUTO_DAILY_BUDGET_USD)`;
@@ -118,55 +119,62 @@ async function writeTrendTopic(topic: TrendTopicRow, label: string) {
     );
 }
 
-async function bestRadarTopic(kind: TrendTopicRow["kind"], minScore: number) {
+/**
+ * The best open evergreen radar idea that passes the topic policy. Ideas that
+ * break it are marked skipped with the reason, so they stop coming back.
+ */
+async function bestRadarTopic(minScore: number) {
     const open = await openTrendTopics().catch((): TrendTopicRow[] => []);
-    return open.find((topic) => topic.kind === kind && topic.score >= minScore) ?? null;
+    for (const topic of open.filter((entry) => entry.kind === "evergreen" && entry.score >= minScore)) {
+        const problems = topicPolicyProblems(topic.idea);
+        if (!problems.length) return topic;
+        await updateTrendTopic(topic.id, {status: "skipped", used_ref: `topic policy: ${problems.join("; ")}`.slice(0, 300)}).catch(() => undefined);
+    }
+    return null;
 }
 
-async function writeNews(): Promise<BlogAutoGenerateResult> {
-    const topic = await bestRadarTopic("news", NEWS_MIN_SCORE);
-    if (topic) return writeTrendTopic(topic, "today's top news story");
-    const focus = pickAutoFocus(await recentFocuses());
-    return start({mode: "news", focus, publish: true, depth: "standard"}, `Writing a news article, focus: ${focus}`, focus);
+async function writeFromRadar(): Promise<BlogAutoGenerateResult | null> {
+    const topic = await bestRadarTopic(RADAR_MIN_SCORE);
+    return topic ? writeTrendTopic(topic, "a radar idea") : null;
+}
+
+async function writeLesson(): Promise<BlogAutoGenerateResult | null> {
+    const lesson = nextLessonTopic(await writtenTopics("lessonTopic"));
+    if (!lesson) return null;
+    return start({mode: "catalog", idea: lesson.idea, publish: true, depth: "standard"}, `Writing a lesson piece: “${lesson.idea.title}” (${lesson.idea.primaryKeyword})`, `lesson: ${lesson.idea.primaryKeyword}`, {lessonTopic: lesson.id});
 }
 
 async function writeSearchLed(): Promise<BlogAutoGenerateResult | null> {
-    // Alternate the two queues by day; when one is done the other carries on.
-    const guidesFirst = Math.floor(Date.now() / 86_400_000) % 2 === 1;
-    const seoOn = process.env.BLOG_AUTO_SEO_TOPICS_DISABLED?.trim() !== "1";
-    const tryGuide = async () => {
-        const guide = nextGuideTopic(await writtenTopics("guideTopic"));
-        if (!guide) return null;
-        return start(
-            {mode: "catalog", idea: guide.idea, publish: true, depth: "standard", materialFiles: guideMaterials(guide)},
-            `Writing a product guide: “${guide.idea.title}” (${guide.idea.primaryKeyword})`,
-            `guide: ${guide.idea.primaryKeyword}`,
-            {guideTopic: guide.id}
-        );
-    };
-    const trySeo = async () => {
-        if (!seoOn) return null;
+    if (process.env.BLOG_AUTO_SEO_TOPICS_DISABLED?.trim() !== "1") {
         const seo = nextSeoTopic(await writtenTopics("seoTopic"));
-        if (!seo) return null;
-        return start({mode: "catalog", idea: seo.idea, publish: true, depth: "standard"}, `Writing a search-led article: “${seo.idea.title}” (${seo.idea.primaryKeyword})`, `seo: ${seo.idea.primaryKeyword}`, {seoTopic: seo.id});
-    };
-    for (const attempt of guidesFirst ? [tryGuide, trySeo] : [trySeo, tryGuide]) {
-        const result = await attempt();
-        if (result) return result;
+        if (seo) return start({mode: "catalog", idea: seo.idea, publish: true, depth: "standard"}, `Writing a search-led article: “${seo.idea.title}” (${seo.idea.primaryKeyword})`, `seo: ${seo.idea.primaryKeyword}`, {seoTopic: seo.id});
     }
-    const evergreen = await bestRadarTopic("evergreen", EVERGREEN_MIN_SCORE);
-    return evergreen ? writeTrendTopic(evergreen, "a search-led article from the radar") : null;
+    const guide = nextGuideTopic(await writtenTopics("guideTopic"));
+    if (!guide) return null;
+    return start(
+        {mode: "catalog", idea: guide.idea, publish: true, depth: "standard", materialFiles: guideMaterials(guide)},
+        `Writing a product guide: “${guide.idea.title}” (${guide.idea.primaryKeyword})`,
+        `guide: ${guide.idea.primaryKeyword}`,
+        {guideTopic: guide.id}
+    );
+}
+
+const LANES: Record<BlogLane, () => Promise<BlogAutoGenerateResult | null>> = {radar: writeFromRadar, lessons: writeLesson, search: writeSearchLed};
+
+/** Every lane empty: Claude picks the strongest idea for a random focus (an everyday idea through an animal). */
+async function writeFromFocus(): Promise<BlogAutoGenerateResult> {
+    const focus = pickAutoFocus(await recentFocuses());
+    return start({mode: "catalog", focus, publish: true, depth: "standard"}, `Writing an idea piece, focus: ${focus}`, focus);
 }
 
 async function run(): Promise<BlogAutoGenerateResult> {
     const blocked = await capsProblem();
     if (blocked) return {ok: true, acted: false, summary: blocked};
-    // The timer fires at 07:40 (news) and 19:40 UTC (search-led); "Run now" follows the clock too.
-    if (new Date().getUTCHours() >= 12) {
-        const searchLed = await writeSearchLed();
-        if (searchLed) return searchLed;
+    for (const lane of blogLanesFor(utcDayNumber())) {
+        const result = await LANES[lane]();
+        if (result) return result;
     }
-    return writeNews();
+    return writeFromFocus();
 }
 
 /** One run, logged to admin_automation_runs whatever happens. */
@@ -182,21 +190,7 @@ export async function runBlogAutoGenerate(): Promise<BlogAutoGenerateResult> {
     }
 }
 
-/**
- * Breaking news, between the scheduled runs: when the radar holds a news story
- * scoring BREAKING_SCORE or more and the caps allow, it is written now. Logged
- * only when it acts (the video timer calls it every 3 hours).
- */
-export async function runBreakingNews(): Promise<BlogAutoGenerateResult | null> {
-    if (process.env.BLOG_BREAKING_NEWS_DISABLED?.trim() === "1") return null;
-    const topic = await bestRadarTopic("news", BREAKING_SCORE);
-    if (!topic || await capsProblem()) return null;
-    const result = await writeTrendTopic(topic, "breaking news");
-    await recordAutomationRun({job: BLOG_AUTO_JOB, outcome: "acted", summary: result.summary, ref: result.ref, detail: result.detail});
-    return result;
-}
-
-/** "Write now" on a radar topic in /admin/story-videos: starts it at once (no daily caps; one article at a time). */
+/** "Write now" on a radar topic in /admin/story-videos: starts it at once (no daily caps; one article at a time). A person chose it, so the policy check is theirs. */
 export async function writeTrendTopicNow(id: string): Promise<BlogAutoGenerateResult> {
     if (!isClaudeConfigured()) throw new Error("CLAUDE_API_KEY is not set on the server");
     if (generateJobRunning()) throw new Error("An article is already being written; try again when it finishes");

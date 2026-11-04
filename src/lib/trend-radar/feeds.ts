@@ -1,4 +1,4 @@
-// Pure half of the trend radar's sources: parsing what each one returns and
+// Pure half of the trend radar's sources: what to ask autocomplete, parsing what each one returns and
 // keeping only what is about animals. No fetch here, so node:test imports it.
 
 export type RadarCandidate = {
@@ -13,6 +13,17 @@ export type RadarCandidate = {
     /** A rough size: trend traffic ("20K+"), wiki views, impressions. */
     weight: string | null;
 };
+
+/**
+ * What people type: everyday ideas and decisions (the takes an animal can
+ * reframe), identity questions, and animal questions that become a lesson.
+ */
+export const AUTOCOMPLETE_SEEDS = [
+    "should i quit", "should i move to", "should i start a", "is it worth starting a", "how to start a",
+    "is it too late to", "how to get better at", "how to ask for a", "how to make a decision", "how to save money",
+    "ideas for a", "what to do when you feel stuck", "ai that", "a different perspective on",
+    "what animal am i", "which animal are you", "what can we learn from", "why do lions", "how do animals", "what animal is known for"
+];
 
 const ENTITIES: Record<string, string> = {amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", "#39": "'", nbsp: " "};
 

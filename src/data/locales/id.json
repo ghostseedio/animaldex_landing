@@ -1919,6 +1919,9 @@
       "errorDescription": "Ada yang gagal saat membuat perbandingan ini. Coba lagi, atau jelajahi perbandingan yang sudah terbit.",
       "rateLimitTitle": "Tunggu sebentar",
       "rateLimitDescription": "Kamu sudah membuat banyak perbandingan baru dalam waktu singkat. Yang sudah terbit tetap langsung terbuka. Coba lagi sebentar lagi.",
+      "signInTitle": "Masuk untuk membuat yang ini",
+      "signInDescription": "Perbandingan baru dibuat untuk akun AnimalDex yang sudah masuk. Gratis, dan halamannya tetap tayang di alamat ini untuk semua orang. Perbandingan yang sudah terbit langsung terbuka.",
+      "signIn": "Masuk untuk membuat",
       "retry": "Coba lagi",
       "browse": "Jelajahi perbandingan"
     },

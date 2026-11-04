@@ -1,13 +1,18 @@
 import {splitLocalePath} from "@/lib/request-routing";
 
-export const WEB_STORE_PRODUCT_CODES = ["purchase_25", "purchase_100", "pro_upgrade"] as const;
+export const WEB_STORE_PRODUCT_CODES = ["purchase_25", "purchase_100", "pro_upgrade", "pro_annual"] as const;
 export type WebStoreProductCode = (typeof WEB_STORE_PRODUCT_CODES)[number];
+
+/** The Pro plans, annual first: it is shown first and pre-selected (Nov 2026 pricing). */
+export const WEB_STORE_PRO_PLANS = ["pro_annual", "pro_upgrade"] as const satisfies readonly WebStoreProductCode[];
 
 export type WebStoreProduct = {
     code: WebStoreProductCode;
     kind: "credits" | "pro";
     credits: number;
     label: string;
+    /** Pro plans: how often it bills. */
+    period: "month" | "year" | null;
     detail: string;
     /** Shown until Paddle's localized price is known; also the analytics value of last resort. */
     fallbackPrice: string;
@@ -21,6 +26,7 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         kind: "credits",
         credits: 25,
         label: "25 Credits",
+        period: null,
         // What Credits buy for most people (newcomer UX vet, 2026-10-30): captures and more talking.
         detail: "About 12 photo captures. Credits also keep a conversation going after the day's free messages.",
         fallbackPrice: "$2.99",
@@ -32,22 +38,52 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         kind: "credits",
         credits: 100,
         label: "100 Credits",
+        period: null,
         detail: "About 50 photo captures, or a mix of photos, videos and extra messages with your animals.",
         fallbackPrice: "$7.99",
         fallbackAmount: 7.99,
         fallbackCurrency: "USD"
     },
+    // The monthly plan keeps its historic code: the database, the apps and
+    // the existing web subscription all know Pro as "pro_upgrade".
     pro_upgrade: {
         code: "pro_upgrade",
         kind: "pro",
         credits: 0,
         label: "AnimalDex Pro",
+        period: "month",
         detail: "Unlimited captures, 100 messages a day with any animal, and 42 Credits every month.",
-        fallbackPrice: "$9.99/month",
-        fallbackAmount: 9.99,
+        fallbackPrice: "$14.99/month",
+        fallbackAmount: 14.99,
+        fallbackCurrency: "USD"
+    },
+    pro_annual: {
+        code: "pro_annual",
+        kind: "pro",
+        credits: 0,
+        label: "AnimalDex Pro (yearly)",
+        period: "year",
+        detail: "Unlimited captures and 100 messages a day with any animal, billed once a year.",
+        fallbackPrice: "$79.99/year",
+        fallbackAmount: 79.99,
         fallbackCurrency: "USD"
     }
 };
+
+export function isProProductCode(code: WebStoreProductCode) {
+    return WEB_STORE_PRODUCTS[code].kind === "pro";
+}
+
+/**
+ * The product a web purchase is registered under in the database
+ * (web_purchases.product_code, register_web_purchase): Pro is one product
+ * there whatever the billing period, so the annual plan is "pro_upgrade"
+ * with the annual Paddle Price ID. Fulfilment and the subscription checks
+ * key on that Price ID, and the period is Paddle's.
+ */
+export function webPurchaseProductCode(code: WebStoreProductCode): "purchase_25" | "purchase_100" | "pro_upgrade" {
+    return code === "pro_annual" ? "pro_upgrade" : code;
+}
 
 export type WebStoreBenefit = {title: string; detail?: string};
 
@@ -55,16 +91,27 @@ export type WebStoreBenefit = {title: string; detail?: string};
  * What Pro bought on the website includes. Every line is implemented for an
  * account whose Pro comes from Paddle: spoken replies (animal_chat_speech_limit,
  * Pro 30 a day) and story videos (hasVerifiedPro) are app features, so they
- * say so; the web chat has no voice. Field-guide unlocks are not listed.
+ * say so; the web chat has no voice. Field-guide unlocks are not listed, and
+ * Instagram Import is not either: it is paused (Nov 2026), so no buyer could use it.
  */
 export const WEB_STORE_PRO_BENEFITS: readonly WebStoreBenefit[] = [
     {title: "Hear every animal’s voice", detail: "30 spoken replies a day, in the app."},
     {title: "Story videos of your animals", detail: "Made from your own captures, in the app."},
     {title: "Unlimited captures", detail: "Photo and video captures don’t use Credits."},
     {title: "100 messages a day with any animal"},
-    {title: "42 Credits every month", detail: "Added each time Pro renews. Unused Credits carry over."},
-    {title: "Instagram Import included", detail: "Checking your Instagram archive doesn’t use Credits."}
+    {title: "42 Credits every month", detail: "Added each time Pro renews. Unused Credits carry over."}
 ];
+
+const MONTHLY_CREDITS_BENEFIT = "42 Credits every month";
+
+/**
+ * The benefits of one Pro plan. Paddle Pro grants its 42 Credits once per
+ * paid billing period (paddle_subscription_pro_monthly_credits), so the
+ * yearly plan does not promise them every month.
+ */
+export function webStoreProBenefits(code: WebStoreProductCode): readonly WebStoreBenefit[] {
+    return code === "pro_annual" ? WEB_STORE_PRO_BENEFITS.filter((benefit) => benefit.title !== MONTHLY_CREDITS_BENEFIT) : WEB_STORE_PRO_BENEFITS;
+}
 
 export function isWebStoreProductCode(value: unknown): value is WebStoreProductCode {
     return typeof value === "string" && (WEB_STORE_PRODUCT_CODES as readonly string[]).includes(value);

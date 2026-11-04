@@ -1,13 +1,15 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {animalMatcher, dedupeCandidates, parseAutocomplete, parseFeed, parseGoogleTrends, parseWikipediaTop, type RadarCandidate} from "./trend-radar/feeds";
-import {buildRadarUserPrompt, normalizeRadarIdeas} from "./trend-radar/score";
+import {animalMatcher, AUTOCOMPLETE_SEEDS, dedupeCandidates, parseAutocomplete, parseFeed, parseGoogleTrends, parseWikipediaTop, type RadarCandidate} from "./trend-radar/feeds";
+import {buildRadarUserPrompt, NATURE_NEWS_MAX_SCORE, normalizeRadarIdeas, RADAR_SYSTEM_PROMPT} from "./trend-radar/score";
 import {GUIDE_TOPICS, guideMaterials, nextGuideTopic} from "./blog-generator/guide-topics";
 import {nextSeoTopic, SEO_TOPICS} from "./blog-generator/seo-topics";
 
 // The trend radar's pure parts: parsing each source, keeping what is about
-// animals, holding Claude's ranking to cited sources, and the guide queue's
-// reference material (product claims come from our own docs).
+// animals, holding Claude's ranking to cited sources and the content policy,
+// and the guide queue's reference material (product claims come from our own
+// docs). Since Nov 2026 it ranks culture, ideas and everyday-life trends an
+// animal's take reframes; nature news is a low-priority lane.
 
 const rss = `<?xml version="1.0"?><rss><channel>
 <item><title><![CDATA[Jumping spiders &amp; REM sleep]]></title><link>https://phys.org/a</link><pubDate>Tue, 27 Oct 2026 10:00:00 GMT</pubDate><description><![CDATA[<p>Spiders twitch in their sleep.</p>]]></description></item>
@@ -46,27 +48,45 @@ test("only animal stories pass; films named after animals do not", () => {
 
 const candidates = [{source: "feed", origin: "Phys.org", title: "Jumping spiders", url: "https://phys.org/a", summary: "", publishedAt: null, weight: null}] as RadarCandidate[];
 
-test("radar ideas: news must cite a signal URL, scores are clamped, duplicates dropped", () => {
+test("radar ideas: news must cite a signal URL and scores low, scores are clamped, duplicates and policy breaks dropped", () => {
     const idea = (overrides: Record<string, unknown>) => ({kind: "news", title: "Do Spiders Dream?", angle: "a", hook: "h", primary_keyword: "Do Spiders Dream", format: "news", why_now: "w", score: 8, signals: ["Phys.org"], sources: [{label: "Phys.org", url: "https://phys.org/a"}], ...overrides});
     const ideas = normalizeRadarIdeas({ideas: [
         idea({}),
         idea({title: "Do spiders dream?!"}),
         idea({title: "Made-up story", sources: [{label: "Fake", url: "https://invented.example"}]}),
-        idea({kind: "evergreen", title: "Why do cats knead", primary_keyword: "why do cats knead", score: 14, sources: []})
+        idea({kind: "evergreen", title: "Why do cats knead", primary_keyword: "why do cats knead", score: 14, sources: []}),
+        idea({kind: "evergreen", title: "Should you quit? Ask a wolf", primary_keyword: "should i quit my job", score: 8, sources: []}),
+        idea({kind: "evergreen", title: "Animal therapy for anxiety", primary_keyword: "animal therapy", score: 9, sources: []}),
+        idea({kind: "evergreen", title: "What ChatGPT gets wrong about lions", primary_keyword: "lion facts", score: 9, sources: []}),
+        idea({kind: "evergreen", title: "Your INFJ animal", primary_keyword: "infj animal", score: 9, sources: []})
     ]}, candidates);
-    assert.deepEqual(ideas.map((entry) => [entry.kind, entry.idea.title, entry.score]), [["news", "Do Spiders Dream?", 8], ["evergreen", "Why do cats knead", 10]]);
+    assert.deepEqual(ideas.map((entry) => [entry.kind, entry.idea.title, entry.score]), [
+        ["news", "Do Spiders Dream?", NATURE_NEWS_MAX_SCORE],
+        ["evergreen", "Why do cats knead", 10],
+        ["evergreen", "Should you quit? Ask a wolf", 8]
+    ]);
     assert.equal(ideas[0].idea.primaryKeyword, "do spiders dream");
     const prompt = buildRadarUserPrompt(candidates, ["Old post"], ["Queued idea"], new Date("2026-10-28T12:00:00Z"), ["100 Strongest Animals in the World"]);
-    assert.match(prompt, /NEWS FEEDS[\s\S]*Jumping spiders[\s\S]*OUR CORE PAGES[\s\S]*100 Strongest Animals[\s\S]*RECENT ARTICLES[\s\S]*Old post[\s\S]*OPEN IDEAS[\s\S]*Queued idea/);
+    assert.match(prompt, /NATURE NEWS FEEDS \(last 72 hours; low priority\)[\s\S]*Jumping spiders[\s\S]*OUR CORE PAGES[\s\S]*100 Strongest Animals[\s\S]*RECENT ARTICLES[\s\S]*Old post[\s\S]*OPEN IDEAS[\s\S]*Queued idea/);
+});
+
+test("the radar looks for culture, ideas and everyday-life trends an animal's take reframes", () => {
+    assert.doesNotMatch(RADAR_SYSTEM_PROMPT, /Animals and nature only/);
+    assert.match(RADAR_SYSTEM_PROMPT, /culture, idea or everyday-life trend/);
+    assert.match(RADAR_SYSTEM_PROMPT, /ONE real animal behaviour that reframes it/);
+    assert.match(RADAR_SYSTEM_PROMPT, /"news" \(low priority, at most 2\)/);
+    assert.match(RADAR_SYSTEM_PROMPT, /Never name another AI product/);
+    assert.ok(AUTOCOMPLETE_SEEDS.includes("should i quit"));
+    assert.ok(!AUTOCOMPLETE_SEEDS.includes("animal translator"));
 });
 
 test("guide and search-led queues go in order; guides carry our own docs as reference", () => {
     assert.equal(nextGuideTopic(new Set())?.id, GUIDE_TOPICS[0].id);
     assert.equal(nextGuideTopic(new Set(GUIDE_TOPICS.map((topic) => topic.id))), null);
     assert.equal(nextSeoTopic(new Set([SEO_TOPICS[0].id]))?.id, SEO_TOPICS[1].id);
-    const files = guideMaterials(GUIDE_TOPICS.find((topic) => topic.id === "identify-animal-from-photo")!);
-    assert.ok(files.some((file) => file.name === "animaldex-animal-identifier-app.md"));
+    const files = guideMaterials(GUIDE_TOPICS.find((topic) => topic.id === "talk-to-animals-app")!);
+    assert.ok(files.some((file) => file.name === "animaldex-talk-to-animals.md"));
     const help = files.find((file) => file.name === "animaldex-help-centre.md")!.data.toString("utf8");
-    assert.match(help, /How do I scan an animal\?/);
+    assert.match(help, /What should I talk to my animal about\?/);
     for (const topic of GUIDE_TOPICS) assert.match(topic.idea.angle, /use ONLY the attached AnimalDex documentation/);
 });
