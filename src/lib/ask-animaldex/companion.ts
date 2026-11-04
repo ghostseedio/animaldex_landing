@@ -15,6 +15,7 @@
  * thread stays on its Trial).
  */
 
+import {TEEN_MEMORY_RULE, teenMemoryAllowed} from "@/lib/ask-animaldex/age-band";
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import type {AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
 
@@ -33,8 +34,13 @@ export type AskConversationMode = "chat" | "guidance" | "training" | "auto";
 export const ANIMAL_AUTO_MODE_RULES = [
     "How you talk: read what they need from what they say, message by message, and follow it as it changes. Never",
     "name these ways or ask which they want.",
-    "- Chatting (about you, their day, an idea, anything): talk with them. Keep it lighter than advice; do not bring up",
-    "  steps, your Warmup, your Trials or debates unless they do. Ask something only when you want to know.",
+    "- Chatting (a hello, small talk, their day, a question about you): talk with them. Keep it light and short, the way",
+    "  a friend texts back; do not bring up steps, your Warmup, your Trials or debates unless they do. Ask something only",
+    "  when you want to know.",
+    "- Bringing an idea or a plan (something they want to start, make, try or change): build on it as only your kind",
+    "  would, from one real thing your kind does that the usual advice leaves out, into a version of their idea nobody",
+    "  else would offer. No side on whether to do it, no audit, no list of tips, and no step unless they ask how to",
+    "  start; then the first move.",
     "- Bringing a real situation, a decision or a problem: work it through as yourself. If something important is",
     "  missing, ask one question first. Then your verdict on what they asked and the move your Power makes, concretely,",
     "  and why your body and your life make it the move; name your blind spot where it could bite them; end on one",
@@ -364,10 +370,9 @@ export function fallbackAskGreeting(params: {
 }): {text: string; followUps: string[]} {
     const name = params.nickname ? `${params.nickname}, your ${params.animalName}` : `the ${params.animalName}`;
     const intro = params.ownerName ? `I'm ${params.ownerName}'s ${params.animalName}.` : `I'm ${name}.`;
-    // Only an authored card's question; the record-derived card has none.
-    const question = params.voice?.origin === "card" ? params.voice.first_question?.trim() : null;
+    // A light hello, never the card's big question (the apps' fallbackGreeting, 2026-11-04).
     return {
-        text: question ? `${intro} ${question}` : `${intro} What's on your mind?`,
+        text: params.ownerName ? `${intro} Ask me about my time with ${params.ownerName}, or about me.` : `${intro} How's your day going?`,
         followUps: ["Tell me about yourself", "I need help with something", "What's your Power?"]
     };
 }
@@ -455,14 +460,17 @@ function memoryKind(raw: unknown): AskMemoryKind {
     return typeof raw === "string" && (MEMORY_KINDS as readonly string[]).includes(raw) ? raw as AskMemoryKind : "context";
 }
 
-function allowedFact(raw: unknown): string | null {
+function allowedFactFor(raw: unknown, teen = false): string | null {
     const fact = clean(raw, 160);
     if (!fact || fact.length < 6 || EXCLUDED_MEMORY_FACT.test(fact)) return null;
+    // Teen mode (`age-band.ts`): nothing sensitive is kept for a 13 to 17 year old.
+    if (teen && !teenMemoryAllowed(fact)) return null;
     return fact;
 }
 
-export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>): AskMemoryDelta {
+export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>, options: {teen?: boolean} = {}): AskMemoryDelta {
     const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+    const allowedFact = (value: unknown) => allowedFactFor(value, options.teen === true);
     const add = (Array.isArray(row.add) ? row.add : [])
         .map((item) => {
             const record = item && typeof item === "object" ? item as Record<string, unknown> : {};
@@ -487,7 +495,7 @@ export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>): AskMem
     const followRaw = row.follow_up && typeof row.follow_up === "object" ? row.follow_up as Record<string, unknown> : null;
     const followTopic = clean(followRaw?.topic, 200);
     const days = Number(followRaw?.revisit_after_days);
-    const follow_up = followTopic && !EXCLUDED_MEMORY_FACT.test(followTopic)
+    const follow_up = followTopic && !EXCLUDED_MEMORY_FACT.test(followTopic) && (options.teen !== true || teenMemoryAllowed(followTopic))
         ? {topic: followTopic, revisit_after_days: Number.isFinite(days) ? Math.max(1, Math.min(60, Math.round(days))) : 7}
         : null;
     return {add, update, retire, journey: clean(row.journey, 420), follow_up};
@@ -505,6 +513,8 @@ export function buildAskMemoryDeltaPrompts(params: {
     answer: string;
     existingJourney?: string | null;
     allowFollowUp?: boolean;
+    /** Teen mode (`age-band.ts`): only light, everyday facts. */
+    teen?: boolean;
 }): {system: string; user: string} {
     const today = new Date().toISOString().slice(0, 10);
     return {
@@ -529,6 +539,7 @@ export function buildAskMemoryDeltaPrompts(params: {
             params.allowFollowUp
                 ? "- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null."
                 : "- follow_up: always null.",
+            ...(params.teen ? [TEEN_MEMORY_RULE] : []),
             "- If nothing changes, return empty arrays."
         ].join("\n"),
         user: [

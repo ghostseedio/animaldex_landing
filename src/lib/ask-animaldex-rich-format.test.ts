@@ -103,7 +103,8 @@ test("a heading's emoji is never an animal: it sits next to the species icon art
         assert.equal(rules[heading + 2], "  - A heading's emoji is an object or symbol, never an animal or an animal face.");
     }
     // The server lane's build that added it.
-    assert.equal(fixture.source.commit, "081e9d751097d4c1a635e61892ebffb6a0e44f9f");
+    // The chat-engine lane's build (strategy, 2026-11-04): ideas get no layout, one shape per answer.
+    assert.equal(fixture.source.commit, "de6fc38ac898c074398855774fd447a3bed05ca0");
 });
 
 test("text_columns is clamped as the server clamps it", () => {

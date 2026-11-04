@@ -268,6 +268,9 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
                 "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
                 "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
                 "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+                "- At most one new step on a problem a day: while companion.open_trial.set_today is true, keep to that step (talk",
+                "  it through, make it easier to start) unless they tell you how it went or ask you for a different one.",
+                "- An idea of theirs gets no step unless they ask how to start it; then the step is its first move.",
                 "- Something hard (missing someone, a loss, feeling alone or low) changes how you give the step, not whether you",
                 "  do: comfort first, and once you have stayed with it for a reply, give them one small thing shaped by your",
                 "  lesson that helps them carry it, never a fix for the feeling. When they ask you for more, or what to do, they",
@@ -336,6 +339,10 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
                 "    come from the way they choose. Except when they ask you for a different step: give them another of your own (a",
                 "    step, not your Trials), then make the offer after it in the same reply, so they have a step whether or not they",
                 "    take the offer.",
+                "  - After your take on an idea of theirs, or your verdict on a decision (companion.debate.second_opinion), the",
+                "    offer is a second opinion, and the right time even when nothing is going wrong: ask in your own words whether",
+                "    they would like to hear two more of their animals on it, naming up to two from other_animals whose ways would",
+                "    differ most from yours.",
                 "  - Not the time for the offer: small talk; while they are still telling you something hard (the step rules for a",
                 "    hard moment still apply); when anyone is hurting them; or when they have already decided what to do and ask",
                 "    you how, which is the moment for the step.",
@@ -493,9 +500,14 @@ export function companionPromptLines(params: {
     debateOffer?: boolean;
     /** A call that may hand a debate to the chat: whether a yes can be handed over now. Present on such calls only. */
     debateHandOver?: boolean;
+    /** This turn is an idea or a decision: the debate offer is a second opinion ("Hear two more of your animals"). */
+    secondOpinion?: boolean;
+    /** For set_today: one new step on a problem a day. */
+    now?: Date;
 }): string[] {
     const {state} = params;
     const open = state?.open_trial ?? null;
+    const setToday = open?.set_at ? (params.now ?? new Date()).getTime() - Date.parse(open.set_at) < 24 * 60 * 60 * 1000 : false;
     const companion = state
         ? {
             focus: state.focus?.focus ?? null,
@@ -503,6 +515,7 @@ export function companionPromptLines(params: {
                 ? {
                     step: open.step,
                     set: open.set_at?.slice(0, 10) ?? null,
+                    ...(setToday ? {set_today: true} : {}),
                     accepted: Boolean(open.accepted_at),
                     ...(open.trial_frequency ? {from_your_trial: open.trial_frequency} : {})
                 }
@@ -518,7 +531,7 @@ export function companionPromptLines(params: {
             ...(params.debateHandOver !== undefined
                 ? {debate: {may_offer: Boolean(params.debateOffer), may_hand_over: params.debateHandOver}}
                 : params.debateOffer
-                ? {debate: {may_offer: true}}
+                ? {debate: {may_offer: true, ...(params.secondOpinion ? {second_opinion: true} : {})}}
                 : {})
         }
         : null;
@@ -700,4 +713,19 @@ export function companionDoneFields(params: {
             ...params.event
         }
     };
+}
+
+/**
+ * The second opinion (strategy 2026-11-04, SPEC 3.3; the apps'
+ * `secondOpinionFields`): after a take on an idea or a decision, the debate
+ * offer is "Hear two more of your animals". The offer names two, and a free
+ * account gets one a day, past which the client opens the Pro paywall
+ * (trigger second_opinion).
+ */
+export const SECOND_OPINION_LABEL = "Hear two more of your animals";
+export const SECOND_OPINION_FREE_PER_DAY = 1;
+
+export function secondOpinionFields(params: {isPro: boolean; privateDebatesToday: number | null}): Record<string, unknown> {
+    const pastFree = !params.isPro && params.privateDebatesToday !== null && params.privateDebatesToday >= SECOND_OPINION_FREE_PER_DAY;
+    return {kind: "second_opinion", label: SECOND_OPINION_LABEL, paywall: pastFree ? "second_opinion" : null};
 }

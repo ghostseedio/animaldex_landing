@@ -102,7 +102,8 @@ test("species scope carries the voice card, chat mode and the relationship rules
         assert.match(prompt, /- Rhythm: You speak fast\. Short, punchy sentences/);
         assert.match(prompt, /- Speech habits — use them in every reply: counts in seconds\./);
         assert.match(prompt, /The kind of question you ask: "How far away is the thing you want\?"/);
-        assert.ok(prompt.indexOf("Who you are") < prompt.indexOf("How you talk:"), "the character comes before the rules");
+        // The shared rules come first (one cache entry for every animal); the character opens the animal's own part.
+        assert.ok(prompt.indexOf("Who you are") > prompt.indexOf("How you talk:"), "the character follows the shared rules");
         assert.match(prompt, /Conversation mode: chat\./);
         assert.match(prompt, /Never say you missed them, waited for them, worried about them, need them or love them\./);
         assert.match(prompt, /answer from failure_modes by name\./);

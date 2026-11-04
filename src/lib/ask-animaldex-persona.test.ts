@@ -24,7 +24,7 @@ import {
     type AskGroundingPacket,
     type AskSpeciesGrounding
 } from "@/lib/ask-animaldex/grounding";
-import {buildAskStreamingSystemPrompt, buildAskSystemPrompt} from "@/lib/ask-animaldex/prompt";
+import {askSharedRuleLines, buildAskStreamingSystemPrompt, buildAskSystemPrompt} from "@/lib/ask-animaldex/prompt";
 
 // The same animals the apps' animal-persona.test.ts uses, so both copies are
 // held to the same numbers.
@@ -251,7 +251,7 @@ function mantaPacket(overrides: Partial<AskGroundingPacket> = {}): AskGroundingP
     };
 }
 
-test("the character leads the system prompt, and the record goes last for caching", () => {
+test("the shared rules lead the system prompt, the character opens the animal's own part, and the record goes last for caching", () => {
     const persona = askPersonaDials({stats: mantaStats, dynamics: manta.systemDynamics?.frequency ?? null, voice: mantaVoice});
     for (const build of [buildAskStreamingSystemPrompt, buildAskSystemPrompt]) {
         const system = build({
@@ -265,7 +265,9 @@ test("the character leads the system prompt, and the record goes last for cachin
             supportedVisuals: []
         });
         const who = system.indexOf("Who you are");
-        assert.ok(who > 0 && who < system.indexOf("How you talk:"), "who you are comes before how you talk");
+        // Every animal's prompt opens with the same rules (one cache entry for all), then who this one is.
+        assert.ok(system.startsWith(askSharedRuleLines().join("\n")), "the shared rules come first");
+        assert.ok(who > system.indexOf("How you talk:"), "who you are opens the animal's own part");
         assert.ok(system.indexOf("You ARE the animal named in animal_name") < who);
         assert.ok(system.includes("where you live: open ocean and offshore islands"));
         assert.ok(system.includes("what you eat: zooplankton"));
@@ -349,14 +351,13 @@ test("the greeting speaks first and offers replies in the person's voice", () =>
     assert.throws(() => buildAskGreetingUserPrompt({packet: mantaPacket({scope: "general", species: null})}));
 });
 
-test("the fallback greeting is the card's own question, never a template", () => {
+test("the fallback greeting is a light hello, never the card's big question (the apps', 2026-11-04)", () => {
     const fallback = fallbackAskGreeting({animalName: "Giant Oceanic Manta Ray", voice: mantaVoice});
-    assert.ok(fallback.text.startsWith("I'm the Giant Oceanic Manta Ray."));
-    assert.ok(fallback.text.includes("trusted the flow"));
+    assert.equal(fallback.text, "I'm the Giant Oceanic Manta Ray. How's your day going?");
+    assert.ok(!fallback.text.includes("trusted the flow"));
     assert.equal(fallback.followUps.length, 3);
-    // A record-derived card has no authored question to ask.
-    const derived = fallbackAskGreeting({animalName: "Gray Wolf", voice: {...mantaVoice, origin: "fallback"}});
-    assert.equal(derived.text, "I'm the Gray Wolf. What's on your mind?");
+    const visitor = fallbackAskGreeting({animalName: "Gray Wolf", ownerName: "Sam"});
+    assert.equal(visitor.text, "I'm Sam's Gray Wolf. Ask me about my time with Sam, or about me.");
 });
 
 test("history goes to the model as turns, opening with a stand-in when the animal spoke first", () => {

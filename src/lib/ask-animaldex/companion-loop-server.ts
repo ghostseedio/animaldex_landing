@@ -11,6 +11,7 @@ import "server-only";
  * refuses, leaves the animal without the loop, never without an answer.
  */
 
+import {newStepAllowed} from "@/lib/ask-animaldex/reply-guards";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
 import {STEP_PROOF_WAIT_MS, decodeStepProofResponse, type StepProof} from "@/lib/ask-animaldex/step-proof";
@@ -334,6 +335,8 @@ export async function applyCompanionLines(params: {
     state: CompanionState | null;
     roster: CompanionRosterEntry[];
     lines: CompanionLines;
+    /** What they said, for the one-new-step-a-day rule (they may ask for another). */
+    userMessage?: string;
 }): Promise<Record<string, unknown>> {
     const {service, userId, speciesProfileId, lines} = params;
     const base = {p_user_id: userId, p_species_profile_id: speciesProfileId};
@@ -387,7 +390,16 @@ export async function applyCompanionLines(params: {
                 if (result.bond && typeof result.bond === "object") bond = result.bond as CompanionBond;
             }
         }
-        if (lines.trial) {
+        // At most one new step on a problem a day (the apps' rule, 2026-11-04): a
+        // different step does not replace one set less than a day ago unless
+        // they reported on it or asked for another.
+        const stepAllowed = newStepAllowed({
+            openTrial: params.state?.open_trial ?? null,
+            newStep: lines.trial?.step ?? null,
+            reportedDone: Boolean(lines.done),
+            userMessage: params.userMessage ?? ""
+        });
+        if (lines.trial && stepAllowed) {
             const {data, error} = await service.rpc("set_animal_companion_trial", {
                 ...base,
                 p_step: lines.trial.step,
@@ -439,5 +451,20 @@ export async function takeAnimalReferral(service: Service, userId: string, refer
         if (error) warn("take_animal_referral", error);
     } catch (error) {
         warn("take_animal_referral", error);
+    }
+}
+
+/**
+ * Their private debates in the last day, for the second opinion's free one a
+ * day (SPEC 3.3; the apps' `privateDebatesToday`); null when it cannot be read.
+ */
+export async function privateDebatesToday(service: Service, userId: string): Promise<number | null> {
+    try {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const {count, error} = await service.from("debates").select("id", {count: "exact", head: true})
+            .eq("asker_user_id", userId).eq("visibility", "private").gt("created_at", since).neq("status", "cancelled");
+        return error ? null : count ?? 0;
+    } catch {
+        return null;
     }
 }

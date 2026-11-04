@@ -88,6 +88,8 @@ export async function rememberAskTurn(params: {
     journey?: {speciesProfileId: string} | null;
     /** The owner's chat with check-ins on: they may have asked the animal to check back. */
     allowFollowUp?: boolean;
+    /** Teen mode (`age-band.ts`): only light, everyday facts are kept. */
+    teen?: boolean;
 }): Promise<void> {
     if (!params.userId || !params.answer.trim()) return;
     // "ok", "yes", "thanks": nothing to learn, no call to make.
@@ -103,12 +105,13 @@ export async function rememberAskTurn(params: {
             userMessage: params.userMessage,
             answer: params.answer,
             existingJourney,
-            allowFollowUp: params.allowFollowUp === true
+            allowFollowUp: params.allowFollowUp === true,
+            teen: params.teen === true
         });
         const raw = await requestAskJSONObject({systemPrompt: prompts.system, userPrompt: prompts.user});
         if (!raw) return;
         const knownIds = new Set(params.existing.map((fact) => fact.id).filter((id): id is string => Boolean(id)));
-        const delta = parseAskMemoryDelta(raw, knownIds);
+        const delta = parseAskMemoryDelta(raw, knownIds, {teen: params.teen === true});
         const tasks: Promise<unknown>[] = [];
         if (params.journey) {
             tasks.push(saveAskJourney({
