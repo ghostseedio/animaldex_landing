@@ -113,7 +113,7 @@ import {
 import {buildAskGreetingUserPrompt, buildAskUserPrompt, shortWordsFor} from "@/lib/ask-animaldex/grounding";
 import {
     ASK_FOLLOW_UP_SENTINEL,
-    buildAskStreamingSystemPrompt,
+    buildAskStreamingSystemBlocks,
     buildAskSystemPrompt,
     splitStreamedReply,
     visibleAnswerSoFar,
@@ -127,11 +127,20 @@ import {
     availableAskProviders,
     claudeAskKey,
     requestAskAnswerJSON,
+    resolveClaudeAskModel,
     type AnswerDeltaSource,
     type AskProviderName
 } from "@/lib/ask-animaldex/providers";
 import {askKindVerdictEnabled, askStanceMemoryConfig} from "@/lib/ask-animaldex/kind-verdict";
-import {loadAskHeldStances, rememberAskStance, requestAskKindVerdict} from "@/lib/ask-animaldex/kind-verdict-server";
+import {askVerdictModel, loadAskHeldStances, rememberAskStance, requestAskTurnRead} from "@/lib/ask-animaldex/kind-verdict-server";
+import {isDeepTurn, looksLikeAppQuestion, resolveTurnKind, type TurnKind} from "@/lib/ask-animaldex/turn-kind";
+import {angleForClient, askRecordFacets, loadAnglesHeard, recordAngleHeard} from "@/lib/ask-animaldex/angle";
+import {loadChatRoutingConfig, routeChatTurn} from "@/lib/ask-animaldex/chat-routing";
+import {crisisCheckEnabled, crisisDecision, logSafetyEvent, requestCrisisCheck, type CrisisDecision} from "@/lib/ask-animaldex/crisis";
+import {crisisReplyText, resolveCrisisCountry} from "@/lib/ask-animaldex/crisis-helplines";
+import {ageRestrictedBody, loadAgeBand, TEEN_MODE_LINES, teenMemoryAllowed, type AgeBand} from "@/lib/ask-animaldex/age-band";
+import {recentAnimalReplies, recordVocabulary, turnGuideLines} from "@/lib/ask-animaldex/reply-guards";
+import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {
     askPersonaDials,
     askPersonaFrame,
@@ -165,12 +174,14 @@ import {
     extractCompanionLines,
     parseDebateMarker,
     debateOfferProblem,
+    secondOpinionFields,
     type CompanionLines
 } from "@/lib/ask-animaldex/companion-focus";
 import {
     applyCompanionLines,
     loadOwnerCompanion,
     noteDebateOffer,
+    privateDebatesToday,
     takeAnimalReferral,
     type OwnerCompanion
 } from "@/lib/ask-animaldex/companion-loop-server";
@@ -237,6 +248,11 @@ export async function POST(request: Request) {
     const basePacketPending = buildAskPacket({subject, question: question ?? ""});
     basePacketPending.catch(() => undefined);
     const viewer = await resolveAskViewer(request);
+    // Who they are by age (`age-band.ts`, SPEC 3.1): under 13, Talk is closed;
+    // 13 to 17, teen mode; unknown (and every signed-out reader), as before.
+    const service = createSupabaseServiceClient();
+    const ageBandPending: Promise<AgeBand> = viewer.userId && service ? loadAgeBand(service, viewer.userId) : Promise.resolve("unknown");
+    ageBandPending.catch(() => undefined);
 
     // A greeting is free: it never touches the message allowance or credits.
     // Every other message takes one from today's budget (or one credit past
@@ -267,6 +283,17 @@ export async function POST(request: Request) {
     // The history must not carry the message being sent; an older client
     // still appends it, so a trailing copy of the question is dropped here.
     const history = dedupeCurrentQuestion(resolveAskHistory(body.history), question ?? "");
+    // Whether it is an emergency (`crisis.ts`), read beside everything else;
+    // nothing is streamed before it says no. Not on a call, whose voice must
+    // start at once (the prompt's own exception holds there).
+    const crisisKey = claudeAskKey();
+    const crisisPending = crisisKey && crisisCheckEnabled() && question && !isGreeting && body.call !== true
+        ? requestCrisisCheck({apiKey: crisisKey, model: askVerdictModel(), input: {message: question, history}})
+        : Promise.resolve(null);
+    crisisPending.catch(() => undefined);
+    const crisisFor = async (): Promise<CrisisDecision> => isGreeting
+        ? {crisis: false, category: null, source: null}
+        : crisisDecision({check: await crisisPending.catch(() => null), patternHit: ASK_CRISIS_PATTERN.test(question ?? "")});
     // The conversation as sent, whole, for the cards already offered in it: a
     // card at the end of a long reply still counts, as the apps read it.
     const sentHistory = (Array.isArray(body.history) ? body.history as unknown[] : [])
@@ -281,7 +308,76 @@ export async function POST(request: Request) {
         viewer.signedIn ? loadAskCaptureContext(subject.captureId) : Promise.resolve(null),
         ratePending ?? Promise.resolve(null)
     ]);
+    const ageBand = await ageBandPending;
+    /**
+     * The fixed reply to a crisis (`crisis-helplines.ts`): the reader's
+     * language and country (Cloudflare's), never charged, nothing offered or
+     * remembered, kept in their history as they saw it.
+     */
+    const crisisResponse = async (decision: CrisisDecision): Promise<Response> => {
+        await refund();
+        const languageNameNow = askLanguageName(body.locale);
+        const text = crisisReplyText({
+            languageName: languageNameNow,
+            country: resolveCrisisCountry({requestCountry: request.headers.get("cf-ipcountry"), languageName: languageNameNow}),
+            teen: ageBand === "teen" || ageBand === "under_13"
+        });
+        if (service) {
+            void logSafetyEvent(service, {
+                userId: viewer.userId,
+                speciesProfileId: null,
+                surface: "web",
+                action: "crisis_reply",
+                category: decision.category,
+                source: decision.source ?? "pattern",
+                ageBand
+            });
+        }
+        if (viewer.userId) {
+            void recordAskChatTranscript({
+                userId: viewer.userId,
+                captureId: subject.captureId,
+                speciesProfileId: null,
+                call: false,
+                aboutTrial: Boolean(subject.trialContext),
+                greeting: false,
+                requestId: resolveAskRequestId(body.requestId) ?? null,
+                question: question ?? "",
+                answer: text,
+                askedAt,
+                stepReport: null,
+                followUpId: null
+            });
+        }
+        const fields = {turn_kind: "crisis" as TurnKind, angle: null, signed_in: viewer.signedIn, conversation_mode: "auto"};
+        if (body.mode === "complete") return askJson({answer: text, follow_up_prompts: [], ...fields});
+        const frames = `data: ${JSON.stringify({delta: text})}\n\ndata: ${JSON.stringify({done: true, follow_up_prompts: [], ...fields})}\n\n`;
+        return new Response(frames, {status: 200, headers: STREAM_HEADERS});
+    };
+    // Under 13, Talk is closed (SPEC 3.1): the message goes back, nothing is
+    // read or kept; an emergency still gets the helplines.
+    if (ageBand === "under_13") {
+        const crisis = await crisisFor();
+        if (crisis.crisis) return await crisisResponse(crisis);
+        await refund();
+        if (service) {
+            void logSafetyEvent(service, {
+                userId: viewer.userId,
+                speciesProfileId: null,
+                surface: "web",
+                action: "age_restricted",
+                category: null,
+                source: "age_gate",
+                ageBand
+            });
+        }
+        return askJson(ageRestrictedBody(askLanguageName(body.locale)), 403);
+    }
+    const teen = ageBand === "teen";
     if (rate && !rate.allowed) {
+        // Out of messages is never a reason to miss an emergency.
+        const crisis = await crisisFor();
+        if (crisis.crisis) return await crisisResponse(crisis);
         return askJson({
             error: "limit_reached",
             // The apps' reasons: the day's allowance is used, or the reader
@@ -340,9 +436,11 @@ export async function POST(request: Request) {
             companionPending,
             stanceMemory
                 ? speciesIdPending.then((speciesId) => (speciesId ? loadAskHeldStances(speciesId, question, stanceMemory.source) : []))
-                : Promise.resolve([])
+                : Promise.resolve([]),
+            // The angles this reader has already heard from this animal (`angle.ts`).
+            speciesIdPending.then((speciesId) => (speciesId && viewer.userId && service ? loadAnglesHeard(service, viewer.userId, speciesId) : []))
         ]).then(
-            ([companion, held]) => requestAskKindVerdict({
+            ([companion, held, heard]) => requestAskTurnRead({
                 key: verdictKey,
                 input: {
                     animalName: verdictSpecies.name,
@@ -359,13 +457,16 @@ export async function POST(request: Request) {
                     firstQuestion: companion?.voice?.first_question ?? null,
                     message: question,
                     history,
-                    held
+                    held,
+                    facets: askRecordFacets(verdictSpecies),
+                    heard
                 }
-            }).then((verdict) => {
-                if (verdict && stanceMemory) {
+            }).then((read) => {
+                const verdict = read?.verdict ?? null;
+                if (verdict && verdict.kind !== "idea" && stanceMemory) {
                     void speciesIdPending.then((speciesId) => (speciesId ? rememberAskStance(speciesId, verdict, stanceMemory.source) : undefined));
                 }
-                return verdict;
+                return read;
             }),
             () => null
         )
@@ -485,6 +586,19 @@ export async function POST(request: Request) {
     const visitorNotice = relayOn && relay && !relay.noticed ? askVisitorNoticeText(languageName, ownerName) : null;
     const relayThisTurn = relayOn && Boolean(relay?.noticed) && !isGreeting;
 
+    // What the turn is (`turn-kind.ts`): the verdict's read, else the words.
+    // Its kind's verdict is used only when nobody is hurting them.
+    const turnRead = await kindVerdict;
+    const turnKind: TurnKind | null = isGreeting ? null : resolveTurnKind(turnRead?.kind ?? null, question ?? "");
+    const verdictForPrompt = turnRead?.verdict && !turnRead.safety ? turnRead.verdict : null;
+    // The behaviour the take is built on, for the chip under the reply (SPEC 3.3).
+    const chosenAngle = isDeepTurn(turnKind) ? verdictForPrompt?.latch ?? null : null;
+    const clientAngle = angleForClient(chosenAngle, speciesId);
+    // After a take on an idea or a decision, the debate offer is a second opinion.
+    const secondOpinion = turnKind === "idea" || turnKind === "decision";
+    // Teen mode: nothing sensitive reaches the prompt.
+    const promptMemory = teen ? memory.filter((fact) => teenMemoryAllowed(fact.fact)) : memory;
+
     // Its nature, its day, and the moment they met.
     const species = basePacket.species
         ? {
@@ -556,7 +670,7 @@ export async function POST(request: Request) {
             species,
             // As the apps do, personalisation off also keeps the Wild Profile out.
             wildProfile: {summary: personalise ? wildProfile.summary : null},
-            memory,
+            memory: promptMemory,
             memorySpeciesProfileId: speciesId
         }
         : {...basePacket, species};
@@ -597,6 +711,7 @@ export async function POST(request: Request) {
                     }),
                     stepReport: loop.stepReport ? {media: loop.stepReport.media, proof: loop.stepReport.proof ?? null} : null,
                     debateOffer: debate.offer,
+                    secondOpinion,
                     // On a call: whether a yes may hand the debate over now.
                     ...(callDebates ? {debateHandOver: debate.handOver} : {})
                 })
@@ -631,8 +746,13 @@ export async function POST(request: Request) {
                 userMessage: question ?? "",
                 answer,
                 journey: ownerSpeciesId ? {speciesProfileId: ownerSpeciesId} : null,
-                allowFollowUp: Boolean(ownerSpeciesId) && followUpsOn
+                allowFollowUp: Boolean(ownerSpeciesId) && followUpsOn,
+                teen
             }));
+            // The angle this take was built on, so the next one is new (`angle.ts`).
+            if (chosenAngle && speciesId && service) {
+                work.push(recordAngleHeard(service, {userId, speciesProfileId: speciesId, angle: chosenAngle}));
+            }
         }
         if (relayThisTurn && card && speciesId) {
             work.push(saveAskVisitorNote({
@@ -683,9 +803,25 @@ export async function POST(request: Request) {
     const personaFrame: {persona?: AskPersonaFrame} = persona && companion
         ? {persona: askPersonaFrame(companion.voice, persona)}
         : {};
-    // Greetings think at low effort, as in the apps; replies at the animal's own,
-    // capped (medium unless ANIMAL_CHAT_MAX_EFFORT says otherwise).
-    const effort: AskChatEffort = isGreeting ? "low" : capAskEffort(persona?.effort ?? "low", askChatMaxEffort());
+    // The model and the effort for this kind of turn (`chat-routing.ts`, the
+    // apps' routing): a hello and small talk on Haiku, a real turn on the deep
+    // model at medium or more whatever the animal's stats. A call keeps its own
+    // model and the animal's capped effort; the site-wide assistant is unrouted.
+    const route = speaksAsAnimal && !isCall && service
+        ? routeChatTurn({
+            kind: turnKind,
+            greeting: isGreeting,
+            call: false,
+            forceDeep: Boolean(stepReportId || aboutTrial),
+            isPro: rate?.isPro === true,
+            personaEffort: persona?.effort ?? "low",
+            maxEffort: askChatMaxEffort(),
+            config: await loadChatRoutingConfig(service),
+            chatModel: resolveClaudeAskModel(),
+            callModel: resolveClaudeAskModel()
+        })
+        : null;
+    const effort: AskChatEffort = route?.effort ?? (isGreeting ? "low" : capAskEffort(persona?.effort ?? "low", askChatMaxEffort()));
     const call = isCall
         ? askCallTurn({
             viewer,
@@ -742,7 +878,33 @@ export async function POST(request: Request) {
             conversationHistory: history,
             recordInSystem: speaksAsAnimal,
             historyAsTurns: speaksAsAnimal,
-            kindVerdict: await kindVerdict
+            kindVerdict: verdictForPrompt,
+            // The turn's own guide (`reply-guards.ts`): its kind, their shorthand,
+            // the pictures and shape of the last replies, how they like answers,
+            // the app's facts for an app question, teen mode.
+            turnGuide: speaksAsAnimal
+                ? turnGuideLines({
+                    kind: turnKind,
+                    hasTake: Boolean(verdictForPrompt),
+                    message: question ?? "",
+                    replies: recentAnimalReplies(history),
+                    vocabulary: recordVocabulary([JSON.stringify(species ?? {})]),
+                    memory: personalise ? promptMemory : [],
+                    appQuestion: turnRead?.app === true || looksLikeAppQuestion(question ?? ""),
+                    appFacts: rate
+                        ? {
+                            remaining: rate.remaining,
+                            limit: rate.limit,
+                            isPro: rate.isPro,
+                            resetsAt: rate.resetsAt ?? null,
+                            creditBalance: rate.creditBalance ?? null,
+                            creditsCanPay: rate.creditOverflow?.available ?? null,
+                            creditCost: rate.creditCost ?? null
+                        }
+                        : null,
+                    teenLines: teen ? TEEN_MODE_LINES : null
+                })
+                : null
         });
     const providers = availableAskProviders({animalVoice: speaksAsAnimal});
 
@@ -774,7 +936,9 @@ export async function POST(request: Request) {
             // The check-in this reply raised, for its Done / Not now / Stop asking.
             ...(dueFollowUp ? {follow_up: {id: dueFollowUp.id, topic: dueFollowUp.topic}} : {}),
             ...personaFrame,
-            ...bondFrame
+            ...bondFrame,
+            // What the turn was, and the behaviour its take was built on (SPEC 3.3).
+            ...(speaksAsAnimal ? {turn_kind: turnKind, angle: clientAngle} : {})
         };
 
     const oneShot = () => requestAskAnswerJSON({
@@ -839,7 +1003,8 @@ export async function POST(request: Request) {
                 speciesProfileId: ownerSpeciesId,
                 state: loop.state,
                 roster: loop.roster,
-                lines
+                lines,
+                userMessage: question ?? ""
             });
             // The offer, in the animal's own words, ends with the debate marker:
             // noted so it is made once, and, when it was allowed, what the chat
@@ -848,10 +1013,15 @@ export async function POST(request: Request) {
             if (marker) {
                 await noteDebateOffer(owner.service, {userId: ownerUserId, speciesProfileId: ownerSpeciesId, via: "chat"});
                 if (debate.offer && result.companion && typeof result.companion === "object") {
+                    const animals = debateOfferAnimals(marker.keys, loop.roster);
                     (result.companion as Record<string, unknown>).debate_offer = {
                         // The main problem: the animal's focus with them, when it has one.
                         problem: debateOfferProblem(loop.state, lines, marker.problem),
-                        with: debateOfferAnimals(marker.keys, loop.roster)
+                        // A second opinion names two (SPEC 3.3); the free one a day is counted here.
+                        with: secondOpinion ? animals.slice(0, 2) : animals,
+                        ...(secondOpinion
+                            ? secondOpinionFields({isPro: rate?.isPro === true, privateDebatesToday: await privateDebatesToday(owner.service, ownerUserId)})
+                            : {})
                     };
                 }
             }
@@ -879,10 +1049,13 @@ export async function POST(request: Request) {
             return {};
         }
         : null;
-    const streamingSystemPrompt = buildAskStreamingSystemPrompt(promptOptions);
+    // The shared rules first, then the animal's own block: each cached on its own.
+    const streamingSystemBlocks = buildAskStreamingSystemBlocks(promptOptions);
     const sourceFor = (provider: AskProviderName): AnswerDeltaSource | null => {
-        const params = {systemPrompt: streamingSystemPrompt, userPrompt, history: historyTurns, effort, signal: request.signal};
-        const source = call ? call.source(provider, params) : askAnswerSource(provider, params);
+        const params = {systemPrompt: streamingSystemBlocks, userPrompt, history: historyTurns, effort, signal: request.signal, route};
+        const source = call
+            ? call.source(provider, {...params, systemPrompt: streamingSystemBlocks.join("\n\n")})
+            : askAnswerSource(provider, params);
         if (!source || !visitorNotice) return source;
         // The visitor is told once: at the end of a hello, at the start of a reply.
         return withAskVisitorNotice(source, visitorNotice, isGreeting ? "tail" : "lead");
