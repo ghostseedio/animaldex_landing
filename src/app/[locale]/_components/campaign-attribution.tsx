@@ -3,6 +3,7 @@
 import {useEffect} from "react";
 import {trackEvent} from "@/lib/analytics";
 import {FIRST_TOUCH_COOKIE, FIRST_TOUCH_MAX_AGE_SECONDS, firstTouchFromLocation, serializeFirstTouch} from "@/lib/first-touch";
+import {listenForStoreClicks} from "@/lib/web-funnel-client";
 
 const STORAGE_KEY = "animaldex.campaign";
 
@@ -47,6 +48,9 @@ function rememberFirstTouch() {
 }
 
 export default function CampaignAttribution() {
+    // The front-door funnel's store_click, from any store link on any page (a no-op outside the hero test).
+    useEffect(() => listenForStoreClicks(), []);
+
     useEffect(() => {
         rememberFirstTouch();
         const captured = captureCampaignFromLocation(window.location.search);

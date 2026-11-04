@@ -2562,6 +2562,8 @@ export default function AskConversation({
                             ) : null}
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
+                                {/* SPEC 3.1: a quiet line at the top of each conversation. */}
+                                <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} className="pb-3" />
                                 {debateBlocks("top")}
                                 {messages.flatMap((message, index) => [
                                     // The open step no reply here carries, where the conversation picks up.
@@ -2629,6 +2631,10 @@ export default function AskConversation({
                                             setShowsProIntro(false);
                                         }}
                                     />
+                                ) : null}
+                                {/* Past three hours of talking: again, and for a teen with a break suggested. */}
+                                {aiSession.due ? (
+                                    <AiNotice text={aiGate.band === "teen" ? labels.aiNoticeBreak : labels.aiNoticeLong} className="pt-4" />
                                 ) : null}
                             </div>
                         </div>
@@ -2700,6 +2706,7 @@ export default function AskConversation({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-6">
+                            <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} />
                             {messages.map((message) => (
                                 <MessageBlock
                                     key={message.id}
@@ -2782,8 +2789,12 @@ export default function AskConversation({
                             stage, which opens the bond); else what the two of you are working on;
                             else its temperament. "Not this any more" is in the ••• menu. */}
                         <div className="min-w-0 flex-1">
-                            <p className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
-                                {messenger ? speakerName : animalName ?? labels.title}
+                            <p className="flex min-w-0 items-center gap-1.5">
+                                <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
+                                    {messenger ? speakerName : animalName ?? labels.title}
+                                </span>
+                                {/* SPEC 3.1: the AI tag, always visible in the chat's header. */}
+                                <AiTag label={labels.aiTagLabel} />
                             </p>
                             {messenger && animalTalking ? (
                                 <p className="truncate text-[11px] leading-4 text-primary-300" aria-live="polite">{labels.typing}</p>
@@ -3135,7 +3146,21 @@ export default function AskConversation({
                                     </button>
                                 </div>
                             ) : null}
-                            <form
+                            {aiGate.declined && !aiGate.ready && !aiGate.blocked ? (
+                                <p className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] leading-5 text-ink-300" data-testid="ai-consent-locked">
+                                    <span>{labels.consentLockedHint}</span>
+                                    <button type="button" onClick={() => void aiGate.request()} className="font-bold text-primary-200 underline underline-offset-2 hover:text-white">
+                                        {labels.consentReview}
+                                    </button>
+                                </p>
+                            ) : null}
+                            {aiGate.blocked ? (
+                                // SPEC 3.1: under 13, a calm block where the message bar was.
+                                <div className="border border-white/10 bg-white/[0.035] px-4 py-3 text-left" data-testid="ai-under-13">
+                                    <p className="text-[15px] font-semibold leading-6 text-white">{labels.under13Title}</p>
+                                    <p className="mt-0.5 text-[13px] leading-5 text-ink-300">{labels.under13Body}</p>
+                                </div>
+                            ) : <form
                                 onSubmit={(event) => {
                                     event.preventDefault();
                                     if (debateEdit) saveDebateEdit();
@@ -3228,7 +3253,7 @@ export default function AskConversation({
                                         {showStop ? <StopIcon /> : reporting?.sending ? <span aria-hidden="true" className="text-sm font-black">…</span> : <ArrowUpIcon />}
                                     </button>
                                 )}
-                            </form>
+                            </form>}
                         </>
                     )}
                     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-ink-400">

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {dirname, join} from "node:path";
 import {describe, it} from "node:test";
+import {fileURLToPath} from "node:url";
 import {
     AI_CONSENT_VERSION,
     AI_LONG_SESSION_MS,
@@ -99,3 +102,48 @@ describe("the long-session notice", () => {
         assert.equal(parseAiSession(null), null);
     });
 });
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const readRepo = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+
+describe("every web chat carries the disclosure and asks through the gate (SPEC 3.1)", () => {
+    it("has the spec's words, in both languages", () => {
+        const en = JSON.parse(readRepo("src/data/locales/en.json")).askAnimalDex;
+        assert.equal(en.consentBody, "The animals are AI. What you write is sent to our AI providers to create replies.");
+        assert.equal(en.aiNotice, "Replies are AI-generated.");
+        assert.equal(en.under13Title, "Talk is for ages 13 and up");
+        assert.equal(en.ageTitle, "A quick age check");
+        const id = JSON.parse(readRepo("src/data/locales/id.json")).askAnimalDex;
+        for (const key of ["consentTitle", "consentBody", "consentMore", "consentAgree", "consentNotNow", "aiNotice", "aiNoticeLong", "aiNoticeBreak", "ageTitle", "ageBody", "under13Title", "under13Body"]) {
+            assert.equal(typeof id[key], "string", key);
+            assert.equal(typeof en[key], "string", key);
+        }
+    });
+
+    it("tags every chat header AI, notes it in the thread, and gates every message", () => {
+        const chat = readRepo("src/components/ask-animaldex/ask-conversation.tsx");
+        assert.match(chat, /<AiTag label=\{labels\.aiTagLabel\} \/>/);
+        assert.match(chat, /<AiNotice text=\{labels\.aiNotice\}/);
+        assert.match(chat, /labels\.aiNoticeBreak : labels\.aiNoticeLong/);
+        assert.match(chat, /if \(!\(await aiGate\.request\(\)\)\) return null;/);
+        assert.match(chat, /aiGate\.blocked \?/);
+        assert.match(readRepo("src/app/[locale]/talk/talk-chat.tsx"), /<AiTag label=\{labels\.aiTagLabel\} \/>/);
+        assert.match(readRepo("src/app/[locale]/(authenticated)/app/debates/[id]/debate-detail.tsx"), /<AiTag \/>/);
+        assert.match(readRepo("src/app/[locale]/layout.tsx"), /<AiChatGateProvider words=\{gateWords\}>/);
+        // The home demo's chips send our words: an account is still gated, a guest is not asked.
+        const demo = readRepo("src/app/[locale]/(composited)/(home)/_components/home-idea-demo.tsx");
+        assert.match(demo, /gate\.request\(\{ownWords: false\}\)/);
+        assert.match(demo, /<AiTag/);
+        // The consent links the safety page, which exists.
+        assert.match(readRepo("src/components/ai-gate/ai-chat-gate.tsx"), /AI_SAFETY_HREF = "\/legal\/ai-and-safety"/);
+        assert.match(readRepo("src/app/legal/ai-and-safety/page.tsx"), /ai-and-safety/);
+    });
+
+    it("never blocks a chat because the backend migration is missing", () => {
+        const route = readRepo("src/app/api/app/ai-gate/route.ts");
+        assert.match(route, /missing: true/);
+        assert.match(route, /available: false/);
+        assert.match(route, /isSameOriginBrowserRequest/);
+    });
+});
+
