@@ -189,12 +189,18 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
         });
     }, [loadAccount]);
 
-    const afterAge = useCallback((next: Account) => {
+    /** The account as it now stands, for this render and for the next request (which reads the cached load). */
+    const keepAccount = useCallback((next: Account) => {
+        loading.current = Promise.resolve(next);
         setAccount(next);
+    }, []);
+
+    const afterAge = useCallback((next: Account) => {
+        keepAccount(next);
         const step = aiGateStep({signedIn: true, birthYear: next.birthYear, band: next.band, ageCheckAvailable: next.available, consented: next.consented});
         if (step === "open") finish(true);
         else setSheet(step);
-    }, [finish]);
+    }, [finish, keepAccount]);
 
     const agree = useCallback(async () => {
         const store = storage();
@@ -205,7 +211,7 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
                 // Kept on the account below, when the backend has it.
             }
             if (account.available) await post({action: "consent"});
-            setAccount({...account, consented: true});
+            keepAccount({...account, consented: true});
         } else {
             try {
                 store?.setItem(AI_CONSENT_GUEST_KEY, AI_CONSENT_VERSION);
@@ -216,7 +222,7 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
         }
         setDeclined(false);
         finish(true);
-    }, [account, finish]);
+    }, [account, finish, keepAccount]);
 
     const notNow = useCallback(() => {
         setDeclined(true);
