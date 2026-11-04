@@ -5,6 +5,8 @@ import type {LoadedMaterials} from "@/lib/blog-generator/materials";
 import {describeCatalog, searchCatalog, type CatalogItem, type CatalogKind, type SiteCatalog} from "@/lib/blog-generator/catalog";
 import {claudeClient, CLAUDE_MODEL} from "@/lib/blog-generator/claude-client";
 import {recordUsage} from "@/lib/blog-generator/cost-meter";
+import {BLOG_TOPIC_POLICY} from "@/lib/blog-generator/topic-policy";
+import {CONTENT_POLICY_RULES} from "@/lib/content-policy";
 
 // Topic discovery → research → writing, all on Claude. Research may only use
 // what it actually finds (web search / fetch) and our own catalog; the writer
@@ -49,9 +51,10 @@ type Log = (line: string) => void;
 const FALLBACK = {betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const};
 const MAX_CONTINUATIONS = 12;
 
-const BRAND_CONTEXT = `AnimalDex (animaldex.app) is a mobile app and website about real animals. In the app you photograph real animals live, it identifies the species and adds it to your personal AnimalDex collection as a card with stats; there are species comparisons ("who would win"), tier lists, an Animal Hybrid Lab, location guides for where to see animals, quizzes and Trials. The website hosts an encyclopedia of species pages, comparisons, hybrids, tier lists, location guides and this blog.
+const BRAND_CONTEXT = `AnimalDex (animaldex.app) is the fastest way to get a genuinely different take on an idea, a plan or a decision: you take it to an animal, and the animal answers from a real behaviour of its species (its Power, its field guide) instead of the usual answer. The animals are AI; they remember the person they talk to, and every animal you meet adds a new way of seeing. The slogan is "Every animal has a lesson." In the app you can also photograph real animals live: it identifies the species and the animal becomes one of yours. The website hosts Talk (/talk: take any idea to an animal), an encyclopedia of species pages, comparisons, tier lists, location guides and this blog.
 
 Product facts you must never contradict:
+- The animals are AI. Never present AnimalDex as therapy, treatment or a stand-in for professional help.
 - Only live, in-app camera captures count toward a collection. Uploaded or imported photos never count as captures.
 - Credits are in-app only and are not cash. Never promise money, income or payouts.
 - Creator Rewards is currently paused. Do not mention it unless the topic requires, and then say it is paused.
@@ -70,6 +73,7 @@ Every story must pull at least one of these levers, hard:
 - CONTROVERSY: real fights among scientists, myths that turn out to be true (or false), uncomfortable truths about familiar animals, ethical debates like de-extinction, with both sides given fairly.
 - CRAZINESS: bizarre behaviour, weird mating, gross-out facts told with a grin, never with cruelty.
 - STAKES: animals in real trouble right now: wildfires, floods, droughts and heatwaves hitting wildlife, habitat being cleared, poaching and trafficking busts, disease outbreaks, mass die-offs, daring rescues and comebacks. The pull is urgency and scale: how many animals, how much habitat, how fast, why it is happening, and what is being done. Told with facts and respect, never as misery for its own sake.
+- LESSON: a real behaviour that turns into an idea a person can use ("the fastest bird on Earth knows when to stop", "a lion's roar is an honest count"). The behaviour carries it, told with its science; the idea is shown through the animal, never preached.
 
 Test: if a smart 16-year-old would scroll past it, or it reads like an encyclopedia entry ("The habitat and diet of the red fox"), reject it. If a reader would screenshot a line and send it to a friend with "wait, WHAT?", that's the bar.
 
@@ -195,20 +199,23 @@ async function runAgent(params: {
     throw new Error(`${params.label} did not finish within ${MAX_CONTINUATIONS} turns`);
 }
 
-const TOPIC_SYSTEM = `You are the editor-in-chief of the AnimalDex blog, a wildlife publication that competes for Google traffic and social shares with National Geographic, IFLScience and BBC Wildlife. You pick stories that make people stop scrolling: surprising animal abilities, fresh discoveries, records, myths busted, "X vs Y" debates, real-world places to see animals, and nature-inspired engineering (biomimicry).
+const TOPIC_SYSTEM = `You are the editor-in-chief of the AnimalDex blog, which competes for Google traffic and social shares by showing what animals know that people forget: real animal behaviour, told with its science, and the idea a person can take from it.
 
 ${BRAND_CONTEXT}
 
 ${VIRAL_STANDARD}
 
-Conservation news counts: a crisis unfolding now (fires burning orangutan forest, a coral bleaching event, a species pushed toward extinction) is a strong pick when it is current, large in scale and well sourced; the article explains what is happening, why, what it means for the animals, and what is being done.
+A good pick has (1) a lever from the list above, pulled hard, (2) real search demand or a clear reason to read it now, (3) enough verifiable facts for 1,200+ words, (4) natural links into AnimalDex pages (species, Talk, tier lists, locations, comparisons). Avoid topics already covered by an existing post title, pet-care advice, and anything medical or legal.
 
-A good pick has (1) a lever from the list above, pulled hard, (2) real search demand or a clear news peg, (3) enough verifiable facts for 1,200+ words, (4) natural links into AnimalDex pages (species, comparisons, tier lists, locations, hybrids). Avoid topics already covered by an existing post title, pet-care advice, and anything medical or legal.
+${CONTENT_POLICY_RULES}
 
-Brainstorm at least 12 candidates, score each honestly, and return only the 6 strongest. A routine news item (a survey count, a policy update, "new reserve opens") only makes the cut if you can find the genuinely wild angle or real stakes in it.`;
+Brainstorm at least 12 candidates, score each honestly, and return only the 6 strongest.`;
+
+/** Only when an editor asks for news by hand (the auto-generator has no news lane). */
+const NEWS_GUIDANCE = `Conservation news counts: a crisis unfolding now (fires burning orangutan forest, a coral bleaching event, a species pushed toward extinction) is a strong pick when it is current, large in scale and well sourced; the article explains what is happening, why, what it means for the animals, and what is being done. A routine news item (a survey count, a policy update, "new reserve opens") only makes the cut if you can find the genuinely wild angle or real stakes in it.`;
 
 const IDEAS_FORMAT = `Reply with only a JSON object in a \`\`\`json fence:
-{"ideas":[{"title":"working headline, max 60 characters","angle":"the specific story and what makes it different","hook":"the one surprising fact or question that sells it","shareLine":"the exact sentence a reader would text a friend","viralLever":"curiosity | strangeness | wildness | danger | coolness | controversy | craziness | stakes","viralScore":8,"primaryKeyword":"the search phrase it targets","format":"news | explainer | listicle | comparison | guide | myth-buster","whyNow":"news peg or search demand","sources":[{"label":"publisher: headline","url":"https://..."}]}]}
+{"ideas":[{"title":"working headline, max 60 characters","angle":"the specific story and what makes it different","hook":"the one surprising fact or question that sells it","shareLine":"the exact sentence a reader would text a friend","viralLever":"curiosity | strangeness | wildness | danger | coolness | controversy | craziness | stakes | lesson","viralScore":8,"primaryKeyword":"the search phrase it targets","format":"news | explainer | listicle | comparison | guide | myth-buster","whyNow":"news peg or search demand","sources":[{"label":"publisher: headline","url":"https://..."}]}]}
 viralScore is 1–10 for how irresistible it is to click and share; only return ideas scoring 7 or more, best first. Only list source URLs that appeared in your search results.`;
 
 export async function suggestTopics(mode: Exclude<GeneratorMode, "custom">, focus: string, catalog: SiteCatalog, log: Log): Promise<TopicIdea[]> {
@@ -218,13 +225,19 @@ export async function suggestTopics(mode: Exclude<GeneratorMode, "custom">, focu
     const prompt = mode === "news"
         ? `Today is ${today}. Use web search to find the wildest, strangest, most shareable wildlife and animal stories from the last 14 days: bizarre new species, behaviour studies with jaw-dropping results, record-breaking animals, scientific fights, myths overturned, animals doing things nobody thought they could, viral animal moments with a real science angle, biomimicry breakthroughs, and conservation crises unfolding now (wildfires, floods, droughts and heatwaves hitting wildlife, habitat clearing, poaching and trafficking busts, disease outbreaks, mass die-offs, rescues and comebacks). Skip routine stories unless they hide a wild angle or real stakes. Prefer primary or reputable outlets (journals, universities, IUCN, conservation groups, Mongabay, BBC, Reuters, AP, Smithsonian, ScienceDaily, Phys.org, New Scientist).${focusLine}
 
+${NEWS_GUIDANCE}
+
 Propose 6 distinct article ideas. Each must be about a real, dated development you found, explained for curious non-experts, and linkable to animals we cover (use search_site to check).
 
 Existing post titles (do not repeat these):
 ${summary.existingBlogTitles.join("\n")}
 
 ${IDEAS_FORMAT}`
-        : `Today is ${today}. Propose 6 evergreen articles that would rank in Google and get shared like crazy, built around the AnimalDex catalog so each one links deeply into our pages. Think: "animals that shouldn't exist" listicles, brutal "X vs Y: who actually wins" deep dives, "the most dangerous animals in Y" guides, absurd records, myths everyone believes, animals with real superpowers, and biomimicry that changed the world. You may use web search to check what people are asking and to confirm facts exist to support each idea.${focusLine}
+        : `Today is ${today}. Propose 6 evergreen articles that would rank in Google and get shared, each built on a real animal behaviour so it links deeply into our pages and can end by inviting the reader to take their own idea to that animal.
+
+${BLOG_TOPIC_POLICY}
+
+Use web search to check what people actually type (autocomplete, "People also ask") and to confirm the facts exist: a problem-led page needs a phrase people demonstrably search, and its whyNow names that evidence.${focusLine}
 
 Our catalog: ${JSON.stringify(summary.counts)} pages.
 Hubs: ${summary.hubs.join("; ")}
@@ -317,6 +330,8 @@ How that shows up in the writing:
 
 Voice: vivid, confident, warm, curious. Write to "you". Short paragraphs (2–4 sentences). Concrete images over adjectives. Specific numbers, names and places. No clichés ("in the vast tapestry", "nature never ceases to amaze", "delve", "fascinating world of"), no filler, no exclamation marks, no emojis. British-neutral spelling is fine; be consistent.
 
+${CONTENT_POLICY_RULES}
+
 Structure and SEO:
 - title: max 60 characters, contains the primary search phrase near the start, plus a curiosity gap, shocking number, or provocation. No clickbait that the article does not pay off.
 - metaDescription: 140–158 characters, the payoff plus a reason to click.
@@ -328,7 +343,7 @@ Structure and SEO:
 - One pullQuote in 2–3 sections: a short, quotable line a reader would screenshot. "" elsewhere.
 - cards: 2–6 short label/body pairs only when a list reads better as cards (e.g. "5 animals that..."); otherwise [].
 - faq: 4–6 questions from the dossier's QUESTIONS PEOPLE ASK, each answered in 2–3 sentences.
-- The last section connects to the reader's own life: how to see, spot or learn about these animals, naturally mentioning that AnimalDex lets you capture the real animal with your phone camera to add it to your collection. One mention, no hard sell, and never recite the product facts above as a disclaimer: they limit what you claim, they are not copy.
+- The last section connects to the reader's own life: the idea a person can take from the animal's behaviour, shown in one or two concrete lines (never a list of tips), then one natural mention that on AnimalDex they can take their own idea to this animal and hear how its kind would see it (link /talk when site search returned it). One mention, no hard sell, never "guaranteed", and never recite the product facts above as a disclaimer: they limit what you claim, they are not copy.
 
 Embeds (rendered for you; you supply data only). Every section has an embed object: set kind "none" (and leave the rest empty) except in 1–3 sections where an embed genuinely adds something. Unused fields are "" / 0 / false / [].
 - bar: items are the same, directly comparable measure (same unit, same method) for 3–12 animals/items. Never chart estimates that the article says are not comparable: label, value (a plain number in the stated unit), highlight true for the article's subject, optional note. Set unit.
@@ -438,6 +453,8 @@ const EDITOR_SYSTEM = `You are the AnimalDex blog's toughest editor. You decide 
 ${VIRAL_STANDARD}
 
 Score the draft 1–10 for how irresistible it is to click, finish and share (10 = people send it to friends; 5 = accurate but forgettable; 1 = encyclopedia filler). Judge the headline, the first sentence, whether every section has a "wait, what?" moment, whether the best reveals are held back to keep people scrolling, and the pull quotes. Flag any line that overclaims beyond its evidence: that costs points too.
+
+Content policy: ${CONTENT_POLICY_RULES} Any line that breaks it is a mandatory fix: quote the line.
 
 Reply with only JSON in a \`\`\`json fence: {"score": number, "verdict": "one sentence", "fixes": ["specific, actionable instruction naming the section or line", ...]} with at most 8 fixes, most important first.`;
 

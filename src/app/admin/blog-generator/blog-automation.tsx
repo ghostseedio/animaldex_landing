@@ -5,9 +5,10 @@ import type {AutomationRun} from "@/lib/automation-runs";
 import {Panel, RunList} from "@/app/admin/story-videos/admin-automation";
 import {Alert, Section, Skeleton} from "@/components/admin/ui";
 
-// The blog auto-generate timer (daily, a "Latest news" article with a
-// random focus, standard research, published when done): its last runs, the
-// next run, and a button to run it now.
+// The blog auto-generate timer (one article a day: an idea seen through an
+// animal or a lesson-for-a-human piece, standard research, published when
+// done; no news since Nov 2026): its last runs, the next run, and a button to
+// run it now.
 
 type BlogAutomation = {runs: AutomationRun[]; nextRunAt: string; disabled: boolean; busy: boolean};
 
@@ -45,10 +46,10 @@ export default function BlogAutomation() {
     }
 
     return (
-        <Section title="Auto-generate" description="A timer on the server writes and publishes a news article on its own, with a random focus from conservation crises to new species. Runs that wait say why." className="mt-6">
+        <Section title="Auto-generate" description="A timer on the server writes and publishes one article a day on its own: an everyday idea seen through an animal, a lesson-for-a-human piece, or a search page people already look for. No news. Runs that wait say why." className="mt-6">
             {error ? <Alert tone="bad" className="mb-3">{error}</Alert> : null}
             {!data ? <Skeleton className="h-48" /> : (
-                <Panel title="News articles" schedule="Daily at 07:40 UTC: Latest news, random focus, standard research, published when done" nextRunAt={data.nextRunAt} disabled={data.disabled} running={running} onRun={runNow}>
+                <Panel title="Idea articles" schedule="One a day (07:40 UTC; the 19:40 run waits once today's is written): the radar's best idea, the lesson queue or a search page, by turns; standard research, published when done" nextRunAt={data.nextRunAt} disabled={data.disabled} running={running} onRun={runNow}>
                     <p className="text-xs text-ink-300">{data.busy ? "An article is being written right now (10–20 minutes)." : "No article is being written right now."} Posts the editor scores below 6/10 are saved as drafts instead.</p>
                     <RunList runs={data.runs} />
                 </Panel>
