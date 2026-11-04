@@ -57,7 +57,9 @@ module.exports = withNextIntl({
     experimental: {
         // Keep sharp as a native Node dependency so /api/admin/assets can boot on Vercel.
         // satori (share cards, /api/og) loads its yoga layout wasm at runtime; keep it unbundled.
-        serverComponentsExternalPackages: ["sharp", "satori"]
+        serverComponentsExternalPackages: ["sharp", "satori"],
+        // src/instrumentation.ts: logs every paid AI call for /admin/ai-spend.
+        instrumentationHook: true
     },
     async redirects() {
         return [
