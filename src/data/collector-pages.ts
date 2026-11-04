@@ -73,8 +73,9 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "pokemon-like-animal-game",
         title: "Pokemon-like animal game centered on real species",
-        heroTitle: "Pokemon-Like Animal Game — Real Wildlife Discovery With Collection Energy",
-        description: "AnimalDex gives creature-collection fans a Pokemon-like animal game loop, but grounded in real species, real sightings, and field-guide learning.",
+        heroTitle: "Pokemon-Like Animal Game? Meet Real Animals That Talk Back",
+        // AnimalDex per the Nov 2026 positioning: the page answers the search, it is not a Pokemon-style game.
+        description: "Looking for a Pokemon-like game with real animals? AnimalDex is something else: take any idea to a real animal for a genuinely different take, and every animal you meet in the wild joins your collection.",
         searchIntents: [
             "Pokemon-like animal game",
             "Pokemon-like animal app",
@@ -84,10 +85,10 @@ const collectorPageData: CollectorPageEntry[] = [
         ],
         sections: [
             {
-                title: "Pokemon-like progression with real-world grounding",
+                title: "Real animals, and every one of them talks",
                 paragraphs: [
-                    "AnimalDex keeps the thrill of discovery and set-building that creature-collection players love.",
-                    "Instead of fantasy creatures, progression comes from finding, identifying, and collecting real animals."
+                    "AnimalDex keeps the thrill of finding an animal and keeping it, with real ones: you photograph the animals you meet, and AnimalDex identifies them.",
+                    "Then you can take any idea to one of them. Each answers from a real behaviour of its kind, so you hear an angle you would not get anywhere else."
                 ]
             },
             {

@@ -189,6 +189,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/legal/privacy")},
             {url: getAbsoluteUrl(locale, "/legal/terms")},
             {url: getAbsoluteUrl(locale, "/legal/refunds")},
+            {url: getAbsoluteUrl(locale, "/legal/ai-and-safety")},
             {url: getAbsoluteUrl(locale, "/legal/wildlife-guide-author-terms")},
             {url: getAbsoluteUrl(locale, "/legal/wildlife-guide-buyer-terms")}
         ];

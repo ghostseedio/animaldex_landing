@@ -16,6 +16,8 @@ import {
     PERSPECTIVE_FLOW_WIDTHS
 } from "@/data/animal-perspective";
 import {getHowItWorksContent} from "@/data/how-it-works";
+import {getAnswerPage} from "@/data/answer-pages";
+import {getCollectorPage} from "@/data/collector-pages";
 import {getSupportContent} from "@/data/support-content";
 import {countWords, parseInlineMarkup, plainInlineText} from "@/lib/inline-markup";
 import {diagramRuns, drawFlow, drawGrid, textColumns, wrapText} from "@/lib/text-diagram";
@@ -265,3 +267,19 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
     assert.deepEqual(Object.keys(id.home.fatigue).sort(), Object.keys(en.home.fatigue).sort());
     assert.deepEqual(Object.keys(id.home.different).sort(), Object.keys(en.home.different).sort());
 });
+
+test("the Pokemon-like search landings keep their topic but never describe AnimalDex as one (SPEC section 1)", () => {
+    const answer = getAnswerPage("pokemon-like-animal-app")!;
+    const collector = getCollectorPage("pokemon-like-animal-game")!;
+    assert.match(answer.heroTitle, /Pokemon-like/i, "the page still answers the search");
+    assert.match(answer.metaDescription, /take any idea to a real animal/);
+    assert.match(collector.description, /take any idea to a real animal/);
+    for (const text of [
+        answer.metaDescription, answer.intro, ...answer.directAnswer, ...answer.comparisonAnimalDex, ...answer.whoItsFor,
+        ...answer.faq.map((item) => item.answer), collector.heroTitle, collector.description,
+        ...collector.sections.flatMap((section) => [section.title, ...section.paragraphs])
+    ]) {
+        assert.doesNotMatch(text, /Pok[eé]mon-(?:like|style) (?:loop|animal game loop|collectors|progression)|creature-collection energy|collection energy|Families/i, text);
+    }
+});
+
