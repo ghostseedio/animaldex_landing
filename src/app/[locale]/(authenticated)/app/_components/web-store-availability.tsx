@@ -6,7 +6,7 @@ import type {WebStoreProductCode} from "@/lib/web-store-catalog";
 export type WebStoreAvailability = Record<WebStoreProductCode, boolean>;
 
 /** Nothing is on sale until the server says so: the checkout route checks again either way. */
-const NOTHING_ON_SALE: WebStoreAvailability = {purchase_25: false, purchase_100: false, pro_upgrade: false};
+const NOTHING_ON_SALE: WebStoreAvailability = {purchase_25: false, purchase_100: false, pro_upgrade: false, pro_annual: false};
 
 const WebStoreAvailabilityContext = createContext<WebStoreAvailability>(NOTHING_ON_SALE);
 

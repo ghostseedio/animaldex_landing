@@ -7,7 +7,9 @@ export type PaddleRuntimeEnvironment = "production" | "sandbox";
 export const PADDLE_PRICE_ENV: Record<WebStoreProductCode, string> = {
     purchase_25: "PADDLE_PRICE_CREDITS_25",
     purchase_100: "PADDLE_PRICE_CREDITS_100",
-    pro_upgrade: "PADDLE_PRICE_PRO_MONTHLY"
+    pro_upgrade: "PADDLE_PRICE_PRO_MONTHLY",
+    // Unset = the yearly plan is not offered; monthly stays on sale on its own.
+    pro_annual: "PADDLE_PRICE_PRO_ANNUAL"
 };
 
 const PRODUCTION_HOSTS = new Set(["animaldex.app", "www.animaldex.app"]);
@@ -147,11 +149,7 @@ export function assertPaddleProductCheckoutConfigured(code: WebStoreProductCode,
 
 /** Which catalog products the website can sell right now. */
 export function paddleProductAvailability(env: NodeJS.ProcessEnv = process.env): Record<WebStoreProductCode, boolean> {
-    return {
-        purchase_25: assertPaddleProductCheckoutConfigured("purchase_25", env) === null,
-        purchase_100: assertPaddleProductCheckoutConfigured("purchase_100", env) === null,
-        pro_upgrade: assertPaddleProductCheckoutConfigured("pro_upgrade", env) === null
-    };
+    return Object.fromEntries(WEB_STORE_PRODUCT_CODES.map((code) => [code, assertPaddleProductCheckoutConfigured(code, env) === null])) as Record<WebStoreProductCode, boolean>;
 }
 
 export function parseProductCode(value: unknown): WebStoreProductCode | null {

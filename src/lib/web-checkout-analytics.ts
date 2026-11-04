@@ -1,6 +1,6 @@
 import type {AnalyticsItem} from "@/lib/analytics";
 import type {PaddleCheckoutData} from "@/lib/paddle-checkout";
-import {isWebStoreProductCode, WEB_STORE_PRODUCTS, type WebStoreProductCode} from "@/lib/web-store-catalog";
+import {isWebStoreProductCode, WEB_STORE_PRODUCTS, type WebStoreProductCode, webPurchaseProductCode} from "@/lib/web-store-catalog";
 
 /**
  * GA4 `begin_checkout` and `purchase` for web Credits and Pro.
@@ -120,7 +120,9 @@ export function takeConfirmedPurchase(
         // Unreadable storage: report it; GA4 also drops a repeated transaction_id.
     }
     const completed = readCompletedCheckout(storage, purchaseId);
-    const code = isWebStoreProductCode(serverProductCode) ? serverProductCode : completed?.productCode;
+    // The server registers both Pro plans as "pro_upgrade": the plan bought is the one the overlay completed.
+    const samePurchase = Boolean(completed) && isWebStoreProductCode(serverProductCode) && webPurchaseProductCode(completed!.productCode) === serverProductCode;
+    const code = samePurchase ? completed!.productCode : isWebStoreProductCode(serverProductCode) ? serverProductCode : completed?.productCode;
     if (!code) return null;
     const value = (completed?.productCode === code ? completed.value : undefined) ?? catalogCheckoutValue(code);
     try {

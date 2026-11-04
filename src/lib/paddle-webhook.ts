@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {productCodeForPaddlePriceId, type PaddleEvent} from "@/lib/paddle-server";
-import type {WebStoreProductCode} from "@/lib/web-store-catalog";
+import {isProProductCode, type WebStoreProductCode} from "@/lib/web-store-catalog";
 
 export type PaddleWebhookResult = {ok: true; skipped?: boolean; reason?: string};
 
@@ -63,12 +63,13 @@ const catalogFromEnvironment: PaddleCatalogLookup = (priceId) => productCodeForP
 
 /**
  * A Credits or Pro event must carry one of the configured catalog Price IDs
- * (a subscription, the Pro one). Only the event's own Price ID is checked: a
- * product whose Price ID is not configured never stops an event for another.
+ * (a subscription, one of the Pro plans: monthly or yearly). Only the event's
+ * own Price ID is checked: a product whose Price ID is not configured never
+ * stops an event for another.
  */
-function requireCatalogPrice(priceId: string | null, catalog: PaddleCatalogLookup, only?: WebStoreProductCode) {
+function requireCatalogPrice(priceId: string | null, catalog: PaddleCatalogLookup, proOnly = false) {
     const product = priceId ? catalog(priceId) : null;
-    if (!product || (only && product !== only)) throw new Error("paddle_unknown_price");
+    if (!product || (proOnly && !isProProductCode(product))) throw new Error("paddle_unknown_price");
 }
 
 function isWildlifeGuideEvent(event: PaddleEvent) {
@@ -239,7 +240,8 @@ async function syncSubscription(supabase: SupabaseClient, event: PaddleEvent, ca
     const status = statusOverride[event.event_type] || asString(object.status);
     const {priceId, productId} = priceFromItems(object);
     if (!asString(object.id) || !status || !priceId) throw new Error("paddle_subscription_mismatch");
-    requireCatalogPrice(priceId, catalog, "pro_upgrade");
+    // Monthly or yearly: both are Pro, granted the same way; the period is Paddle's.
+    requireCatalogPrice(priceId, catalog, true);
     const period = asObject(object.current_billing_period);
     const scheduledChange = asObject(object.scheduled_change);
     const {error} = await supabase.rpc("sync_paddle_subscription_state", {

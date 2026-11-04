@@ -8,8 +8,10 @@ import {
     resolvePaddleEnvironment
 } from "@/lib/paddle-server";
 import {
+    isProProductCode,
     sanitizeBillingReturnPath,
-    validateCheckoutRequestBody
+    validateCheckoutRequestBody,
+    webPurchaseProductCode
 } from "@/lib/web-store-catalog";
 
 export const runtime = "nodejs";
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
     const returnPath = sanitizeBillingReturnPath(typeof body.returnPath === "string" ? body.returnPath : undefined);
     const {data: status} = await supabase.rpc("get_my_web_billing_status");
     const alreadyPro = Boolean(status && (status as {is_pro?: boolean}).is_pro);
-    if (productCode === "pro_upgrade" && alreadyPro) {
+    if (isProProductCode(productCode) && alreadyPro) {
         return NextResponse.json({
             error: "This account already has AnimalDex Pro.",
             code: "already_pro",
@@ -57,10 +59,12 @@ export async function POST(request: Request) {
     const priceId = paddlePriceIdForProduct(productCode);
     const service = createSupabaseServiceClient();
     if (!service) return NextResponse.json({error: "Checkout registration is not configured."}, {status: 503});
+    // The database knows Pro as one product, "pro_upgrade", monthly or yearly:
+    // the plan is the Price ID, which fulfilment and the subscription checks key on.
     const {data: purchaseId, error: registerError} = await service.rpc("register_web_purchase", {
         p_user_id: user.id,
         p_provider: "paddle",
-        p_product_code: productCode,
+        p_product_code: webPurchaseProductCode(productCode),
         p_return_path: returnPath,
         p_provider_price_id: priceId
     });
