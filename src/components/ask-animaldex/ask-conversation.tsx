@@ -93,6 +93,9 @@ import {
     type AskSuggestion
 } from "@/lib/ask-animaldex/subject";
 import {trackEvent} from "@/lib/analytics";
+import {useAiChatGate} from "@/components/ai-gate/ai-chat-gate";
+import {AiNotice, AiTag, useAiLongSession} from "@/components/ai-gate/ai-notices";
+import {noteFunnelMessage, noteFunnelReply, trackFunnel} from "@/lib/web-funnel-client";
 import {rememberStorePlacement} from "@/lib/store-links";
 import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/species-ask";
 import {
@@ -278,6 +281,16 @@ export type AskDrawerLabels = {
     failedLimitPro: string;
     failedNoCredits: string;
     disclaimer: string;
+    /** The AI disclosure (SPEC 3.1): the header's tag, the thread's notices and the locked chat. */
+    aiTagLabel: string;
+    aiNotice: string;
+    aiNoticeLong: string;
+    aiNoticeBreak: string;
+    aiSafetyLink: string;
+    consentLockedHint: string;
+    consentReview: string;
+    under13Title: string;
+    under13Body: string;
     /** "What I remember about you": the facts every animal shares, in the reader's hands. */
     memoryOpen: string;
     memoryHint: string;
@@ -714,7 +727,7 @@ export default function AskConversation({
         persona,
         greetingState,
         greet,
-        send,
+        send: rawSend,
         stop,
         retry,
         regenerate,
@@ -762,10 +775,23 @@ export default function AskConversation({
                 source: onPage ? "talk" : "drawer",
                 layer_count: followUps
             });
+            // The front-door funnel (lib/web-funnel): the visitor's first reply.
+            noteFunnelReply();
         },
         // The animal's own chat draws rich answers; the site-wide assistant keeps its own format.
         richColumns: resolvedSubject.scope === "species" ? richColumns : null
     });
+    // SPEC 3.1: the age check and the AI consent come before any message, on
+    // every way one is sent (the composer, a chip, a report, a call); the
+    // session's clock starts with the first one.
+    const aiGate = useAiChatGate();
+    const aiSession = useAiLongSession();
+    const touchAiSession = aiSession.touch;
+    const send = useCallback(async (...args: Parameters<typeof rawSend>): Promise<string | null> => {
+        if (!(await aiGate.request())) return null;
+        touchAiSession();
+        return rawSend(...args);
+    }, [aiGate, rawSend, touchAiSession]);
 
     const panelRef = useRef<HTMLDivElement | null>(null);
     const composerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1262,10 +1288,18 @@ export default function AskConversation({
     const dictationStop = dictation.stop;
     const dictationActive = dictation.active;
 
-    const submit = useCallback((question: string, source: "form" | "chip" | "followup") => {
+    const gatedSubmitRef = useRef<((question: string, source: "form" | "chip" | "followup", passed?: boolean) => void) | null>(null);
+    const submit = useCallback((question: string, source: "form" | "chip" | "followup", passed = false) => {
         // The reader may talk over the animal's greeting (it keeps what it
         // had said); any other reply in flight has to finish or be stopped.
         if (!question.trim() || (isSending && greetingState !== "loading")) return;
+        // The gate first (SPEC 3.1): their words stay in the composer until it is passed.
+        if (!passed && !aiGate.ready) {
+            void aiGate.request().then((allowed) => {
+                if (allowed) gatedSubmitRef.current?.(question, source, true);
+            });
+            return;
+        }
         // Sent while dictating: the mic stops with it, nothing more is added.
         if (dictationActive) void dictationStop();
         // The one chip that is a destination rather than a question: it opens
@@ -1291,8 +1325,10 @@ export default function AskConversation({
         // or key press, the browser then lets the reply speak by itself.
         speech.stop();
         speech.prime();
+        noteFunnelMessage(source === "form" ? "typed" : "suggested");
         void send(question);
-    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech, dictationActive, dictationStop]);
+    }, [close, isSending, greetingState, locale, resolvedSubject.slug, send, speech, dictationActive, dictationStop, aiGate]);
+    gatedSubmitRef.current = submit;
 
     const loadMemory = useCallback(async () => {
         setMemoryState("loading");
@@ -1502,10 +1538,11 @@ export default function AskConversation({
     const shareMessage = (message: AskMessage) => {
         const body = shareText(messages, message, animalName, speaksAsAnimal);
         if (navigator.share) {
-            void navigator.share({text: body}).catch(() => undefined);
+            void navigator.share({text: body}).then(() => trackFunnel("share_take")).catch(() => undefined);
         } else {
             void navigator.clipboard?.writeText(body);
             setCopiedId(message.id);
+            trackFunnel("share_take");
         }
     };
     // While paying with credits the footer says what a message costs instead.
@@ -1689,6 +1726,7 @@ export default function AskConversation({
         speech.stop();
         speech.prime();
         sticksToBottom.current = true;
+        noteFunnelMessage("typed");
         void send(text, {
             stepReportId: openStep.id,
             stepReportThumb: thumb,
