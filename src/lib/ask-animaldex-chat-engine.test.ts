@@ -109,6 +109,15 @@ test("a crisis: the classifier decides, and the fixed reply gives local lines in
     assert.ok(crisisReplyText({country: null}).includes("findahelpline.com"));
 });
 
+test("Indonesia and Malaysia give their health ministries' lines (verified Nov 2026, as the apps)", () => {
+    const indonesia = crisisReplyText({languageName: "Indonesian", country: resolveCrisisCountry({languageName: "Indonesian"})});
+    assert.ok(indonesia.includes("Healing119 (Kemenkes): 119 ekstensi 8, atau WhatsApp lewat healing119.id"), indonesia);
+    assert.ok(indonesia.includes("112 (atau 119)"), indonesia);
+    const malaysia = crisisReplyText({country: "MY"});
+    assert.ok(malaysia.indexOf("Befrienders KL") < malaysia.indexOf("Talian HEAL"), malaysia);
+    assert.ok(malaysia.includes("15555 (8am to midnight)"));
+});
+
 test("age bands, the under-13 refusal and teen memory", () => {
     const now = new Date("2026-11-04T00:00:00Z");
     assert.equal(ageBandFor(2014, now), "under_13");
