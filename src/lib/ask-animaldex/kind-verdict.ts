@@ -242,6 +242,8 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         "   conversation, keep that unless the person has since told it something new.",
         "   The move has to work if they really do it: never against what reliably works for this (steady practice,",
         "   testing before spending, the legal and safety basics), and never costing them the thing they are trying to keep.",
+        "   It is theirs to make, never something only someone else can decide, and it changes what happens next, not only",
+        "   how they see it.",
         `${step(8)}. latch: the one real thing its kind does, from the record above, that the verdict is built on: from (system_dynamics,`,
         "   power or field_guide) and the behaviour itself, in plain words, as a fact about the animal.",
         `${step(9)}. If kind is idea, instead of ${step(8) === 8 ? "4 to 8" : "4 to 7"}: there is no side to take. obvious: what any sensible adviser, or ChatGPT, would`,

@@ -87,6 +87,7 @@ test("a move or a twist has to work if they really do it, and a must-know says w
     const prompt = flat(buildAskKindVerdictPrompt(input));
     assert.ok(prompt.includes("The move has to work if they really do it: never against what reliably works for this"));
     assert.ok(prompt.includes("never costing them the thing they are trying to keep"));
+    assert.ok(prompt.includes("It is theirs to make, never something only someone else can decide, and it changes what happens next"));
     assert.ok(prompt.includes("fit: 1 to 5, how well it fits what they brought and would work if they really did it"));
     assert.ok(prompt.includes("says nothing about the thing they want to make or change, is a 1"));
     const section = flat(askKindVerdictPromptSection(verdict));
