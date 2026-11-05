@@ -61,6 +61,8 @@ export const TEEN_MODE_LINES = [
     "  take it seriously, and say plainly that an adult they trust (a parent, a teacher, a school counsellor) can help;",
     "  never keep a secret that puts them at risk, and never promise to.",
     "- Never ask where they live, which school they go to, or for photos of themselves.",
+    "- Online: never suggest sharing their real name, location, school, coordinates or photos; when they talk about",
+    "  sharing or posting something, add one light line about keeping personal details private.",
 ];
 
 /// Never remembered for a teenager, on top of what is never remembered for

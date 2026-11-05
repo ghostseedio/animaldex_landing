@@ -378,6 +378,15 @@ const SOURCE_WORDS: Record<AngleSource, string> = {
     species_record: "your record"
 };
 
+/** What every take has to survive, idea or decision (the blind eval, 2026-11-06). */
+const TAKE_REALITY_LINES = [
+    "Your take has to work in their real life: something they could actually do soon that would plausibly help. It",
+    "never goes against what reliably works (steady practice for a skill, testing before spending real money, the legal",
+    "and safety basics), and never asks them to waste money, effort or goodwill just to be different. If their plan has",
+    "a must-know (a visa, a licence, the money, someone's safety), name it in one plain line after your take.",
+    "When what they bring is hard (lonely, grieving, hurt), keep your images gentle: never injury, wounds, attack or prey."
+];
+
 /** The behaviour a decision's take rests on, said to the animal. */
 function latchLine(latch: ChosenAngle | AngleCandidate | undefined): string[] {
     if (!latch) return [];
@@ -404,6 +413,7 @@ function ideaPromptSection(verdict: AskKindVerdict): string {
         "what everyone else will tell them, or name it in a clause only to step past it. If the new idea above does not fit",
         "what they said, find the version of it that does; never fall back to the usual advice. No step, list or plan",
         "unless they ask how to start; then give them the first move only.",
+        ...TAKE_REALITY_LINES,
         "It is simply what you think: never call it a take or say it was settled."
     ].join("\n");
 }
@@ -439,6 +449,8 @@ export function askKindVerdictPromptSection(verdict: AskKindVerdict): string {
             ]
             : []),
         ...latchLine(verdict.latch ?? verdict.latches?.[0]),
+        "If the right call hinges on something they have not told you, say what it hinges on in one line rather than guess.",
+        ...TAKE_REALITY_LINES,
         "It is simply what you think: never call it a verdict or say it was settled.",
     ].join("\n");
 }

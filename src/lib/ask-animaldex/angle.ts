@@ -71,6 +71,10 @@ export type ClientAngle = { behaviour: string; source: AngleSource; species_prof
 
 /// Below this fit a candidate does not answer what they said.
 export const ANGLE_MIN_FIT = 3;
+/// At or above this a candidate clearly works for them. When any unheard one
+/// does, the choice is among those: a take must be useful before it is new
+/// (the blind eval, 2026-11-06: the freshest fit-3 twists lost on usefulness).
+export const ANGLE_STRONG_FIT = 4;
 /// At or above this a candidate reads like one they have heard.
 export const ANGLE_HEARD_SIMILARITY = 0.45;
 /// The behaviour line the client shows, at most.
@@ -147,9 +151,10 @@ function heardMatch(key: string, heard: string[]): { similarity: number; index: 
     return best;
 }
 
-/// The least obvious candidate that still fits and that they have not heard;
-/// if every fitting one was heard, the one heard longest ago. Null when none
-/// fits. `heard` is newest first.
+/// The least obvious candidate among those that clearly work for them (fit 4
+/// or more) and that they have not heard, else among any that fit; if every
+/// fitting one was heard, the one heard longest ago. Null when none fits.
+/// `heard` is newest first.
 export function chooseAngle(params: {
     candidates: AngleCandidate[];
     obvious?: string | null;
@@ -174,7 +179,8 @@ export function chooseAngle(params: {
         .filter((entry) => entry.candidate.fit >= ANGLE_MIN_FIT && entry.key);
     if (fitting.length === 0) return null;
     const fresh = fitting.filter((entry) => !entry.heard);
-    const pool = fresh.length > 0 ? fresh : fitting;
+    const strong = fresh.filter((entry) => entry.candidate.fit >= ANGLE_STRONG_FIT);
+    const pool = strong.length > 0 ? strong : fresh.length > 0 ? fresh : fitting;
     const ranked = [...pool].sort((a, b) =>
         fresh.length === 0 && a.heardIndex !== b.heardIndex
             ? b.heardIndex - a.heardIndex

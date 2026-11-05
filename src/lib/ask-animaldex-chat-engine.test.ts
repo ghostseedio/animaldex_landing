@@ -173,3 +173,13 @@ test("the stream route wires it: age gate, crisis before the limit, routing, the
     // A public chat's step only for a client that draws it.
     assert.ok(route.includes('const publicSteps = publicChat && advertised.includes("step") && !isCall && !isGreeting'));
 });
+
+test("a take that clearly works beats a fresher one that only just fits, as in the apps", () => {
+    // The blind eval (2026-11-06): the freshest fit-3 twists lost on usefulness.
+    const pair = [
+        {source: "system_dynamics" as const, behaviour: "Rests for weeks between hunts", twist: "Practise once a month", fit: 3, fresh: 5},
+        {source: "power" as const, behaviour: "Repeats a short call every dawn", twist: "Ten minutes every morning", fit: 5, fresh: 3}
+    ];
+    assert.equal(chooseAngle({candidates: pair})?.behaviour, "Repeats a short call every dawn");
+    assert.equal(chooseAngle({candidates: [pair[0], {...pair[1], fit: 3}]})?.behaviour, "Rests for weeks between hunts");
+});
