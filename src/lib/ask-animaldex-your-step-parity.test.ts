@@ -72,10 +72,11 @@ function sameLines(web: readonly string[], server: readonly string[], what: stri
 }
 
 test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () => {
-    // Refreshed from the chat-engine lane (strategy, 2026-11-04: ideas, a step a
-    // day, the second opinion) by docs/rich-chat/refresh-parity-fixtures.ts.
-    assert.equal(fixture.source.ref, "strategy/chat-engine");
-    assert.match(fixture.source.commit, /^de6fc38a/);
+    // Refreshed from the apps' main after the chat engine merged (strategy,
+    // 2026-11-06: no step on the first mention or with the second-opinion
+    // offer) by scripts/generate-your-step-parity-fixture.mts.
+    assert.equal(fixture.source.ref, "main");
+    assert.match(fixture.source.commit, /^3833e336/);
 });
 
 test("step outcomes: the DONE line's outcome and the debate a step came from read as the server reads them", () => {

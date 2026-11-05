@@ -277,9 +277,10 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
                 "  are asking for help: give your full take and the step in that same reply. Not when they sound hopeless, as if",
                 "  nothing matters, or may be hurting themselves or in danger: then no step; stay with them and point them to a",
                 "  person they trust, and if there is danger your one exception to staying in character is the whole reply.",
-                "- A step is one thing, said as yours, never 'maybe this, or that'. Whenever your reply asks them to do something",
-                "  in their life, a plan included, the first concrete move of it is their step: write its TRIAL line, or the app",
-                "  cannot show it to them.",
+                "- A step is one thing, said as yours, never 'maybe this, or that'. Once you set one (never on the first mention,",
+                "  and never in a reply that makes the debate or second-opinion offer), whatever your reply asks them to do in their",
+                "  life, a plan included, its first concrete move is their step: write its TRIAL line, or the app cannot show it to",
+                "  them. Before that, saying what you would do is your take, not their step, and gets no TRIAL line.",
                 "- What they tell you is enough. Never ask for proof or to see anything. A photo or video they add goes into",
                 "  their own record; when step_report says what it shows (proof.seen), you may react to that as if you had seen",
                 "  it, using only what proof.seen says and adding no detail of your own. Whatever it shows, their word stands:",
@@ -368,7 +369,7 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
 export const COMPANION_OUTPUT_LINES = [
     "5. Then, only for what this reply actually did, one hidden line each (never shown to anyone):",
     "   FOCUS: <what you are helping them with, a few words from their side, e.g. 'Speaking up first in meetings'>",
-    "   TRIAL: <the step you just set them, or the first move of the plan your reply gives them, one plain sentence> | <days before you would check how it went, 1-14>",
+    "   TRIAL: <the step you just set them, or the first move of the plan your reply gives them, one plain sentence; never on the first mention or with the debate offer> | <days before you would check how it went, 1-14>",
     "   DONE: <what they did on companion.open_trial, one sentence, third person> | <worked, partly or didnt_work>",
     "   REFER: <the key from other_animals> | <the problem in one or two sentences, third person, all the other animal",
     "   needs so they never have to explain it again>"

@@ -72,8 +72,9 @@ export function resolveTurnKind(modelKind: TurnKind | null | undefined, message:
 
 /// A question about AnimalDex itself (messages, credits, Pro, how it works,
 /// whether the animal is an AI), for when the model's read is not there.
+/// "Credit" alone is not enough: "taking credit for my work" is not about the app.
 const APP_QUESTION =
-    /\b(credits?|pro (plan|account|subscription|version)|go pro|animaldex pro|premium|subscription|subscribe|unsubscribe|refund|messages? (left|limit)|how many messages|out of messages|daily limit|paywall|how (does|do) (this|the app|animaldex|it) work|what is animaldex|is this (an? )?(ai|bot|app)|are you (an? )?(ai|bot|robot|real|human|person)|(app|it)'?s? (not working|broken|crashing)|bug in|xp|level up)\b/i;
+    /\b(credits|(?:buy|bought|out of|more|free|bonus|spend|spent|use|used|get|earn|earned|my) credit|pro (plan|account|subscription|version)|go pro|animaldex pro|premium|subscription|subscribe|unsubscribe|refund|messages? (left|limit)|how many messages|out of messages|daily limit|paywall|how (does|do) (this|the app|animaldex|it) work|what is animaldex|is this (an? )?(ai|bot|app)|are you (an? )?(ai|bot|robot|real|human|person)|(app|it)'?s? (not working|broken|crashing)|bug in|xp|level up)\b/i;
 
 export function looksLikeAppQuestion(message: string): boolean {
     return APP_QUESTION.test(message);

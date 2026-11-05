@@ -892,7 +892,8 @@ export async function POST(request: Request) {
                     replies: recentAnimalReplies(history),
                     vocabulary: recordVocabulary([JSON.stringify(species ?? {})]),
                     memory: personalise ? promptMemory : [],
-                    appQuestion: turnRead?.app === true || looksLikeAppQuestion(question ?? ""),
+                    // The model's read decides; the word list is only for when the read failed.
+                    appQuestion: turnRead ? turnRead.app === true : looksLikeAppQuestion(question ?? ""),
                     appFacts: rate
                         ? {
                             remaining: rate.remaining,
