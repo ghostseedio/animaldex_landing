@@ -83,6 +83,17 @@ test("the one exception: the only kind or safe move for someone vulnerable is ke
     assert.ok(flat(askKindVerdictPromptSection(verdict)).includes("lead with your own reason for it and the twist only you would add."));
 });
 
+test("a move or a twist has to work if they really do it, and a must-know says what to check (as the apps)", () => {
+    const prompt = flat(buildAskKindVerdictPrompt(input));
+    assert.ok(prompt.includes("The move has to work if they really do it: never against what reliably works for this"));
+    assert.ok(prompt.includes("never costing them the thing they are trying to keep"));
+    assert.ok(prompt.includes("fit: 1 to 5, how well it fits what they brought and would work if they really did it"));
+    assert.ok(prompt.includes("says nothing about the thing they want to make or change, is a 1"));
+    const section = flat(askKindVerdictPromptSection(verdict));
+    assert.ok(section.includes("name it in one plain line after your take: what to check or sort first, said plainly"));
+    assert.ok(section.includes("never that it is beyond you"));
+});
+
 test("the Power is read at its word and wins where the kind's life points both ways", () => {
     const prompt = flat(buildAskKindVerdictPrompt(input));
     assert.ok(prompt.includes("5. power_says: its Power is the part of its life it lives by"));
