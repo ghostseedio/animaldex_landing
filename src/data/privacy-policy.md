@@ -1,5 +1,5 @@
 ## AnimalDex Privacy Policy
-#### Effective November 1, 2026
+#### Effective November 6, 2026
 
 AnimalDex ("AnimalDex," "we," "our," or "the app") is operated by GHOSTSEED LTD for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
 
@@ -53,6 +53,12 @@ Users can talk with the animals in their collection, and with any animal on the 
 2. **What visitors see**: When another user talks with an animal on someone's card, the animal can share a short summary of what its owner has worked on with it, and the Play records the owner lets that viewer see. Owners can turn this summary off under "What I remember about you". The owner's own conversations and notes are never shown to visitors.
 3. **What owners hear about visits**: When a user talks with an animal on someone else's card, the animal tells its owner who visited and a short summary of what they asked about the owner or the animal. Visitors are told this in the conversation before anything they say is passed on. Summaries never include the visitor's exact words, insulting content, or anything the visitor asked the animal to keep between them, and nothing is passed on between users who have blocked each other. These summaries are deleted after 30 days.
 4. **Chat history on every device**: When a signed-in user talks with an animal, AnimalDex stores that conversation (their messages and the animal's replies) in their account so it is there on each of their devices. Users can turn this off at any time under "Keep my chats on all my devices", delete a single chat or their whole chat history, and the history is deleted with their account. Voice calls, group conversations and debates are not stored this way, and chats on the website without an account stay only in that browser.
+5. **Age and AI consent**: Before a user's first conversation, AnimalDex asks for their birth year (not their full date of birth) and for their agreement to send what they write to the AI providers listed above. We keep the birth year, and the date and version of that agreement, with their account, to set conversations up for their age:
+   - under 13, conversations are not available;
+   - from 13 to 17, conversations run in teen mode, where the animals do not keep sensitive details in their notes and do not send messages first.
+
+   The birth year is private to the account. Without an account, the agreement is kept only in that browser.
+6. **Safety records**: If a conversation suggests someone may be in crisis, the animal stops and shows helplines for their country. AnimalDex records only that this happened, with a short category and the date. The message itself is not stored in that record. See [AI and Safety](/legal/ai-and-safety).
 
 ## User Choices and Controls
 Users can:
