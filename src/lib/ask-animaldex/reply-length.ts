@@ -11,9 +11,16 @@
  * starting size the animal judges from, and a request for a long answer
  * always gets one (owner, 2026-10-28).
  *
+ * An idea, a decision or a problem is never a passing remark, however few
+ * words it takes to say, so it gets at least a few sentences. At "a line or
+ * two" the take was one thin tip: in the Nov 2026 uniqueness eval, short
+ * replies to ideas won 3 of 8 blind comparisons and few-sentence ones 6 of 8.
+ *
  * Port of the apps' `supabase/functions/_shared/animal-reply-length.ts`,
  * verbatim. Pure.
  */
+
+import {isDeepTurn, type TurnKind} from "./turn-kind";
 
 export type AskReplyLength = "few_words" | "short" | "medium" | "full";
 
@@ -42,6 +49,8 @@ export function askReplyLengthFor(params: {
     mode: string | null | undefined;
     // The conversation so far, oldest first (the app's recent turns).
     history?: Array<{role: string; content: string}>;
+    // What this turn is (./turn-kind), when known.
+    turnKind?: TurnKind | null;
 }): AskReplyLength {
     const message = params.message.trim();
     // Short messages only: the repeated pattern must never meet a long input.
@@ -62,6 +71,9 @@ export function askReplyLengthFor(params: {
     // The animal's own rhythm: after two replies of one length, a different one.
     const mine = history.filter((turn) => turn.role === "assistant").slice(-2).map((turn) => tierOfWords(words(turn.content)));
     if (mine.length === 2 && mine[0] === mine[1] && mine[0] === TIERS[at] && at > 1) at -= 1;
+
+    // An idea, decision or problem: a few sentences at least.
+    if (isDeepTurn(params.turnKind) && at < 2) at = 2;
 
     return TIERS[at];
 }

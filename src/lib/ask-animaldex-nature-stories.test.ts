@@ -15,6 +15,7 @@ import {
 } from "@/lib/ask-animaldex/nature";
 import {askOwnLifePromptSection, askStorytellingLine, extractAskOwnStory, parseAskOwnStories} from "@/lib/ask-animaldex/stories";
 import {askReplyLengthFor, askReplyLengthLine, askRoomForAStory} from "@/lib/ask-animaldex/reply-length";
+import type {TurnKind} from "@/lib/ask-animaldex/turn-kind";
 import {
     answerWithAskVisitorNotice,
     askVisitorNotesEnabled,
@@ -281,6 +282,24 @@ test("reply length follows the message, how they write, and the animal's own rhy
     // A request for a long answer is always honoured, and nothing has a word cap.
     assert.ok(askReplyLengthLine("short").includes("give them a thorough one however long it takes"));
     assert.ok(!/\d+ words/.test(askReplyLengthLine("full")));
+});
+
+test("an idea, a decision or a problem gets a few sentences at least, however short the message", () => {
+    const len = (message: string, turnKind: TurnKind | null, history: Array<{role: string; content: string}> = []) =>
+        askReplyLengthFor({message, mode: "auto", history, turnKind});
+    assert.equal(len("I want to move to Lisbon next year", "idea"), "medium");
+    assert.equal(len("I'm so tired today", "problem"), "medium");
+    assert.equal(len("Bus or a car?", "decision"), "medium");
+    // Small talk and an unknown kind keep the size of what was said.
+    assert.equal(len("I'm so tired today", "chat"), "short");
+    assert.equal(len("I'm so tired today", null), "short");
+    assert.equal(len("ok thanks!", "chat"), "few_words");
+    // Never less room than the message asked for, and the rhythm rule can't drop it below the floor.
+    assert.equal(len("How do you decide when to strike?", "decision"), "full");
+    const medium = "word ".repeat(40);
+    const rhythm = [{role: "assistant", content: medium}, {role: "user", content: "and?"}, {role: "assistant", content: medium}];
+    assert.equal(len("We went to the beach and saw a lot of crabs running sideways", "chat", rhythm), "short");
+    assert.equal(len("We went to the beach and saw a lot of crabs running sideways", "idea", rhythm), "medium");
 });
 
 test("the animal matches the size of what was said; a short reply has no room for a story", () => {

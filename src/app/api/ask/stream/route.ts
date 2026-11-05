@@ -647,7 +647,7 @@ export async function POST(request: Request) {
     // tell: from its character, the relationship and what it has told. The
     // animal matches the size of what was said; a short reply has no room
     // for a story.
-    const lengthTier = askReplyLengthFor({message: question ?? "", mode, history});
+    const lengthTier = askReplyLengthFor({message: question ?? "", mode, history, turnKind});
     const thisReply = isGreeting
         ? null
         : isCall
