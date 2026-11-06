@@ -2399,7 +2399,8 @@
       "discardTitle": "Buang perubahan?",
       "discard": "Buang",
       "keepEditing": "Lanjutkan mengedit"
-    }
+    },
+    "settingsAndActivity": "Pengaturan dan aktivitas"
   },
   "errors": {
     "notFound": {

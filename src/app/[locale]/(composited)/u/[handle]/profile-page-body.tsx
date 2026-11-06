@@ -221,6 +221,7 @@ export async function ProfilePageBody({
                     tabShop: t("tabShop"),
                     tabDiary: t("tabDiary"),
                     settingsActivity: t("settingsActivity"),
+                    settingsAndActivity: t("settingsAndActivity"),
                     earnings: t("earnings"),
                     settingsEndorsements: t("settingsEndorsements"),
                     settingsEndorsementsDetail: t("settingsEndorsementsDetail"),

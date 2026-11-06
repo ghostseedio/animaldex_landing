@@ -2410,7 +2410,8 @@
       "discardTitle": "Discard changes?",
       "discard": "Discard",
       "keepEditing": "Keep editing"
-    }
+    },
+    "settingsAndActivity": "Settings and activity"
   },
   "errors": {
     "notFound": {

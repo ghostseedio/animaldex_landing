@@ -71,6 +71,8 @@ export type ProfileContentLabels = {
     tabShop: string;
     tabDiary: string;
     settingsActivity: string;
+    /** iOS's label on the profile's •••: "Settings and activity". */
+    settingsAndActivity: string;
     earnings: string;
     settingsEndorsements: string;
     settingsEndorsementsDetail: string;
@@ -261,10 +263,14 @@ function ProfileEditIcon() {
     );
 }
 
+/** iOS `ellipsis.circle`: Profile's own drawer, Settings and activity. */
 function ProfileSettingsIcon() {
     return (
-        <svg viewBox="0 0 24 24" className="h-[17px] w-[17px]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-            <path d="M4 7h16M4 12h16M4 17h16" />
+        <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.25" />
+            <circle cx="7.6" cy="12" r="1.25" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none" />
+            <circle cx="16.4" cy="12" r="1.25" fill="currentColor" stroke="none" />
         </svg>
     );
 }
@@ -711,11 +717,15 @@ export default function ProfileContent({
                                     {shareButton}
                                 </div>
                             ) : null}
-                            {viewer.isOwner && surface !== "app" ? (
+                            {viewer.isOwner ? (
+                                // The one way into Settings and activity, as on iOS: the
+                                // ••• in white (neon is for the one thing to do on a screen).
                                 <Link
                                     href={`${localePrefix}/app/settings`}
-                                    aria-label="Settings and activity"
-                                    className="grid h-9 w-9 place-items-center text-primary-200 transition hover:text-primary-100"
+                                    aria-label={labels.settingsAndActivity}
+                                    title={labels.settingsAndActivity}
+                                    className="-mr-1.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white transition hover:bg-white/[0.08]"
+                                    data-testid="profile-settings-activity"
                                 >
                                     <ProfileSettingsIcon />
                                 </Link>
@@ -819,11 +829,8 @@ export default function ProfileContent({
             </div>
             </div>
 
-            <nav aria-label="Profile sections" className={`sticky z-20 border-b border-white/[0.08] bg-canvas-950/95 backdrop-blur-xl ${bleed} ${
- surface === "app"
-                    ? viewer.isOwner ? "top-[6.65rem] lg:top-[2.65rem]" : "top-16 lg:top-0"
-                    : "top-0"
-            }`}>
+            {/* Flush with the top (no top bar since 2026-11-06: the hamburger row scrolls away). */}
+            <nav aria-label="Profile sections" className={`sticky top-0 z-20 border-b border-white/[0.08] bg-canvas-950/95 backdrop-blur-xl ${bleed}`}>
                 {/* Words only (design pass, 2026-11-06): up to three share the width; more scroll sideways, never shrink. */}
                 <div
                     className={tabs.length > 3
