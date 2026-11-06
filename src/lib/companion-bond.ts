@@ -379,6 +379,9 @@ export const COMPANIONS_COPY = {
     /** The side menu after the Claude app (the owner, 2026-11-06): ten animals, the rest behind View all. */
     recents: "Recents",
     viewAll: "View all",
+    /** The menu's search drawer (the owner, 2026-11-06): the field's hint, and when nothing matches. */
+    searchPlaceholder: "Search animals and places",
+    nothingMatches: "Nothing matches",
     mastered: "Mastered",
     myCompanions: "My Companions",
     masteredCount: "{n} mastered",

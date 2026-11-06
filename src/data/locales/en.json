@@ -2714,7 +2714,9 @@
       "switcher": "Your animals",
       "talking": "Talking",
       "recents": "Recents",
-      "viewAll": "View all"
+      "viewAll": "View all",
+      "searchPlaceholder": "Search animals and places",
+      "nothingMatches": "Nothing matches"
     },
     "stages": {
       "met": "Met",

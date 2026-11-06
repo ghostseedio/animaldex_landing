@@ -2700,7 +2700,9 @@
       "switcher": "Hewan Anda",
       "talking": "Sedang mengobrol",
       "recents": "Terbaru",
-      "viewAll": "Lihat semua"
+      "viewAll": "Lihat semua",
+      "searchPlaceholder": "Cari hewan dan tempat",
+      "nothingMatches": "Tidak ada yang cocok"
     },
     "stages": {
       "met": "Baru bertemu",
