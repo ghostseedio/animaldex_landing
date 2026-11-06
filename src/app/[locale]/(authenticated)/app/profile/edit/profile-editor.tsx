@@ -369,7 +369,7 @@ export default function ProfileEditor({initial, isRequired, customCaptureCount, 
             {photoOptions ? (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 md:items-center" role="dialog" aria-modal="true" aria-labelledby="photo-options-title" onClick={() => setPhotoOptions(false)}>
                     <div className="w-full max-w-sm space-y-2" onClick={(event) => event.stopPropagation()}>
-                        <div className="overflow-hidden rounded-2xl bg-[#262626]">
+                        <div className="overflow-hidden bg-[#262626]">
                             <p id="photo-options-title" className="px-4 py-3 text-center text-[13px] font-semibold text-white/55">{words.profilePhoto}</p>
                             <button type="button" onClick={() => { setPhotoOptions(false); libraryInput.current?.click(); }} className="block w-full border-t border-white/[0.08] py-3.5 text-[17px] text-white hover:bg-white/[0.04]">{words.chooseFromLibrary}</button>
                             <button type="button" onClick={() => { setPhotoOptions(false); cameraInput.current?.click(); }} className="block w-full border-t border-white/[0.08] py-3.5 text-[17px] text-white hover:bg-white/[0.04] md:hidden">{words.takePhoto}</button>
@@ -377,7 +377,7 @@ export default function ProfileEditor({initial, isRequired, customCaptureCount, 
                                 <button type="button" onClick={() => { setPhotoOptions(false); setDraft((current) => ({...current, avatarUrl: ""})); }} className="block w-full border-t border-white/[0.08] py-3.5 text-[17px] text-red-400 hover:bg-white/[0.04]">{words.removePhoto}</button>
                             ) : null}
                         </div>
-                        <button type="button" onClick={() => setPhotoOptions(false)} className="block w-full rounded-2xl bg-[#262626] py-3.5 text-[17px] font-semibold text-white hover:bg-[#2c2c2c]">{words.cancel}</button>
+                        <button type="button" onClick={() => setPhotoOptions(false)} className="block w-full bg-[#262626] py-3.5 text-[17px] font-semibold text-white hover:bg-[#2c2c2c]">{words.cancel}</button>
                     </div>
                 </div>
             ) : null}
@@ -385,11 +385,11 @@ export default function ProfileEditor({initial, isRequired, customCaptureCount, 
             {confirmDiscard ? (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 md:items-center" role="alertdialog" aria-modal="true" aria-labelledby="discard-title" onClick={() => setConfirmDiscard(false)}>
                     <div className="w-full max-w-sm space-y-2" onClick={(event) => event.stopPropagation()}>
-                        <div className="overflow-hidden rounded-2xl bg-[#262626]">
+                        <div className="overflow-hidden bg-[#262626]">
                             <p id="discard-title" className="px-4 py-3 text-center text-[13px] font-semibold text-white/55">{words.discardTitle}</p>
                             <button type="button" onClick={() => router.push("/app/profile")} className="block w-full border-t border-white/[0.08] py-3.5 text-[17px] text-red-400 hover:bg-white/[0.04]">{words.discard}</button>
                         </div>
-                        <button type="button" onClick={() => setConfirmDiscard(false)} className="block w-full rounded-2xl bg-[#262626] py-3.5 text-[17px] font-semibold text-white hover:bg-[#2c2c2c]">{words.keepEditing}</button>
+                        <button type="button" onClick={() => setConfirmDiscard(false)} className="block w-full bg-[#262626] py-3.5 text-[17px] font-semibold text-white hover:bg-[#2c2c2c]">{words.keepEditing}</button>
                     </div>
                 </div>
             ) : null}

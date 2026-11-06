@@ -109,8 +109,8 @@ function SkeletonRows() {
                 <div key={index} className="flex min-h-[72px] items-center gap-3 border-b border-white/[0.06] px-[18px] py-2">
                     <span className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-white/[0.07]" />
                     <span className="flex-1 space-y-2">
-                        <span className="block h-3 w-4/5 animate-pulse rounded bg-white/[0.07]" />
-                        <span className="block h-3 w-2/5 animate-pulse rounded bg-white/[0.05]" />
+                        <span className="block h-3 w-4/5 animate-pulse bg-white/[0.07]" />
+                        <span className="block h-3 w-2/5 animate-pulse bg-white/[0.05]" />
                     </span>
                     <span className="h-5 w-16 animate-pulse rounded-full bg-white/[0.06]" />
                 </div>
