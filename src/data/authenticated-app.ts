@@ -1095,7 +1095,7 @@ async function selectNotificationRows(supabase: NonNullable<ReturnType<typeof cr
     return [];
 }
 
-function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
+export function mapAppNotificationRows(rows: QueryRow[]): AppNotification[] {
     return rows.map((row) => ({
         id: row.id,
         captureId: row.capture_id ?? null,
