@@ -135,7 +135,20 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
         router.push(`/app/capture?entry=${entry}`);
     }, [router]);
 
-    const page = useMemo<AskConversationPage | null>(() => (current
+    // The subject as a value, never a row: the roster hands back new rows on every reload (a
+    // message read, a thread changed), and a new subject object made the conversation read its
+    // context and every owner fetch again, whose read reloaded the roster: a loop that ran for as
+    // long as the chat was open (perf pass, 2026-11-06).
+    const currentId = current?.speciesProfileId ?? null;
+    const currentSlug = current?.slug ?? null;
+    const currentAnimal = current?.animal ?? null;
+    const currentTitle = current?.displayName ?? null;
+    const subject = useMemo(
+        () => (currentId ? askDeclaredSubject(pathname, {scope: "species", slug: currentSlug, name: currentAnimal, title: currentTitle, captureId}, null) : null),
+        [currentId, pathname, currentSlug, currentAnimal, currentTitle, captureId]
+    );
+
+    const page = useMemo<AskConversationPage | null>(() => (currentId && subject
         ? {
             onMenu: openSwitcher,
             words: talk,
@@ -143,9 +156,9 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
             initialQuestion: null,
             appHref: "/#download",
             subject: {
-                subject: askDeclaredSubject(pathname, {scope: "species", slug: current.slug, name: current.animal, title: current.displayName, captureId}, null),
+                subject,
                 avatarUrl,
-                companionSpeciesProfileId: current.speciesProfileId
+                companionSpeciesProfileId: currentId
             },
             switcher: {
                 label: words.list.switcher,
@@ -164,7 +177,7 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 }
             }
         }
-        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile]);
+        : null), [currentId, subject, openSwitcher, talk, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile]);
 
     if (!current || !page) return null;
     const list = (onClose?: () => void) => (
