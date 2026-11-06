@@ -178,9 +178,22 @@ export default function CaptureDetailClient({
     const referralId = viewer.isOwner ? resolveReferralId(searchParams?.get("referral")) : null;
     const opensChat = Boolean(referralId) || searchParams?.get("talk") === "1";
     const {open: openAsk} = useAskAnimalDex();
+    // A debate's page, on the step its chosen way became (iOS d2eb6fa4): `?step=report` is
+    // "I've done it" (the message bar on the report), `?step=other` "A different step" (the
+    // step already dropped there). Taken once, then left out of the address.
+    const stepAction = viewer.isOwner ? searchParams?.get("step") : null;
     useEffect(() => {
+        if (stepAction === "report" || stepAction === "other") {
+            if (stepAction === "report") openAsk(undefined, {kind: "report"});
+            else openAsk(words.journey.step.otherMessage);
+            const rest = new URLSearchParams(searchParams?.toString() ?? "");
+            rest.delete("step");
+            const query = rest.toString();
+            router.replace(`${window.location.pathname}${query ? `?${query}` : ""}`, {scroll: false});
+            return;
+        }
         if (opensChat) openAsk();
-    }, [opensChat, openAsk]);
+    }, [opensChat, openAsk, stepAction, searchParams, router, words.journey.step.otherMessage]);
     const [tab, setTab] = useState<AnimalDetailTab>(() => {
         if (requestedTab === "play" || requestedTab === "stats" || requestedTab === "battle") return "battle";
         if (requestedTab === "bond" && viewer.isOwner) return "bond";

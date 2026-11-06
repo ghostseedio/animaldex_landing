@@ -2,12 +2,17 @@
 
 import Link from "@/app/[locale]/_components/link";
 import DebateThread from "@/components/debates/debate-thread";
+import DebateOpenStep from "@/components/debates/debate-open-step";
 import {AiTag} from "@/components/ai-gate/ai-notices";
 import {debateHeadline} from "@/lib/debate-words";
 import type {CompanionWords} from "@/lib/companion-bond";
 import type {Debate} from "@/lib/debates";
 
-/** A debate on its own page: what it is about, then the debate itself. Read here; the asker's chat runs it. */
+/**
+ * A debate on its own page: what it is about, then the debate itself. Read
+ * here; the asker's chat runs it (and this page, after Ask more animals).
+ * Under it, the step the chosen way became, while it is open (iOS d2eb6fa4).
+ */
 export default function DebateDetail({debate, words, typingLabel, backLabel, locale}: {
     debate: Debate;
     words: CompanionWords;
@@ -35,6 +40,7 @@ export default function DebateDetail({debate, words, typingLabel, backLabel, loc
                 </div>
             ) : null}
             <DebateThread seed={debate} words={words} typingLabel={typingLabel} locale={locale} />
+            <DebateOpenStep debate={debate} words={words} />
         </div>
     );
 }
