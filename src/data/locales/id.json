@@ -3479,5 +3479,219 @@
     "ratedDetail": "Buka tangkapan untuk melihat penilaiannya.",
     "videoReadyDetail": "Video cerita Anda siap ditonton.",
     "videoReadyNamed": "Video cerita {name} siap ditonton."
+  },
+  "appCapture": {
+    "close": "Tutup",
+    "tryAgain": "Coba lagi",
+    "signIn": "Masuk",
+    "scanner": {
+      "primingTitle": "Arahkan ke hewan apa saja.",
+      "primingDetail": "AnimalDex mengenalinya, lalu ia jadi milikmu untuk diajak bicara.",
+      "continue": "Lanjutkan",
+      "requestingCamera": "Menyalakan kamera…",
+      "cameraRequiredTitle": "Akses kamera diperlukan",
+      "cameraRequiredDetail": "AnimalDex memerlukan akses kamera untuk pemindaian langsung. Aktifkan akses Kamera di Pengaturan sebelum mengambil foto atau video.",
+      "tapToShoot": "Ketuk untuk memotret",
+      "takePhoto": "Ambil foto",
+      "cameraNotReady": "Kamera belum siap. Silakan coba lagi.",
+      "reviewTitle": "Tinjau foto",
+      "retake": "Ambil ulang",
+      "chooseAnother": "Pilih yang lain",
+      "identifyPhoto": "Kenali foto",
+      "usesOneCredit": "Memakai 1 kredit",
+      "usesCredits": "Memakai {n} kredit",
+      "creditsLeft": "sisa {n}",
+      "includedWithPro": "Termasuk dalam Pro",
+      "freeWithPro": "Gratis dengan Pro",
+      "needsCredits": "Perlu {required} kredit — kamu punya {available}.",
+      "getCredits": "Dapatkan Kredit",
+      "takeAnother": "Ambil yang lain",
+      "retry": "Coba lagi",
+      "ready": "Siap",
+      "locationAttached": "Lokasi langsung dilampirkan untuk validasi habitat",
+      "gettingLocation": "Mengambil lokasimu…",
+      "reviewAltLive": "Tinjauan foto kamera langsung",
+      "reviewAltLibrary": "Tinjauan foto dari galeri",
+      "takeAPhoto": "Ambil foto",
+      "uploadFromCameraRoll": "Unggah dari galeri",
+      "chooseFromCameraRoll": "Pilih dari galeri",
+      "openCamera": "Buka kamera",
+      "entryLibraryDetail": "Pilih foto yang kamu ambil sendiri. Tangkapan layar, unduhan, dan gambar AI tidak bisa diunggah.",
+      "entryCameraDetail": "Ambil foto hewan itu dengan kameramu.",
+      "checkingPhoto": "Memeriksa foto…",
+      "chooseAnotherPhoto": "Pilih foto lain yang kamu ambil sendiri.",
+      "takeAnotherPhoto": "Ambil foto lain dengan kameramu.",
+      "rejectUnreadable": "Foto ini tidak bisa dibaca. Coba foto lain.",
+      "rejectScreenshot": "Tangkapan layar tidak bisa diunggah. Unggah foto asli hewan yang kamu ambil.",
+      "rejectNoCameraInformation": "Foto ini tidak punya informasi kamera, jadi tidak tampak seperti foto yang kamu ambil. Gambar yang diunduh, disimpan, atau dibuat AI tidak bisa diunggah.",
+      "fromThePhoto": "Dari foto: {place}",
+      "confirm": "Konfirmasi",
+      "change": "Ubah",
+      "noPlaceSaved": "Foto ini tidak menyimpan lokasi. Pilih tempat kamu memotretnya.",
+      "pickThePlace": "Pilih tempatnya",
+      "pickPlaceFirst": "Pilih dulu tempat foto ini diambil.",
+      "whereWasThis": "Di mana ini?",
+      "photoSays": "Menurut foto, ini di {place}. Pilih tempatnya jika itu salah.",
+      "noPlaceRequired": "Foto ini tidak menyimpan lokasi. Pilih tempat kamu memotretnya. Ini wajib untuk unggahan dari galeri.",
+      "searchForAPlace": "Cari tempat",
+      "searching": "Mencari…",
+      "confirmLocation": "Konfirmasi lokasi"
+    },
+    "progress": {
+      "uploadingPhoto": "Mengunggah foto…",
+      "uploadUsually": "Biasanya hanya beberapa detik.",
+      "uploadAboutLeft": "Biasanya beberapa detik. Sekitar {time} lagi.",
+      "uploadSlowTitle": "Unggahan lebih lama dari biasanya",
+      "uploadSlowDetail": "Masih berjalan. Coba lagi jika tidak bergerak.",
+      "identifying": "Mengenali…",
+      "identifyRange": "biasanya 15–30 detik",
+      "identifyAboutLeft": "Sekitar {time} lagi · {range}.",
+      "identifySoon": "Sebentar lagi selesai · {range}.",
+      "identifySlowTitle": "Pengenalan lebih lama dari biasanya",
+      "identifySlowDetail": "Masih berjalan — {range}. Fotomu tersimpan.",
+      "seconds": "{n} dtk",
+      "minutes": "{n} mnt",
+      "minutesSeconds": "{m} mnt {s} dtk"
+    },
+    "failures": {
+      "network_unavailable": {
+        "title": "Tidak ada koneksi internet",
+        "message": "Tangkapanmu aman. Kami lanjutkan begitu kamu kembali online."
+      },
+      "provider_rate_limited": {
+        "title": "Sementara tertunda",
+        "message": "Layanan sedang sibuk. Tangkapanmu aman dan kami akan segera mencoba lagi."
+      },
+      "provider_unavailable": {
+        "title": "Sementara tertunda",
+        "message": "Layanan sedang sibuk. Tangkapanmu aman dan kami akan segera mencoba lagi."
+      },
+      "provider_timeout": {
+        "title": "Lebih lama dari biasanya",
+        "message": "Tangkapanmu aman. Kami akan segera mencoba lagi."
+      },
+      "server_error": {
+        "title": "Terjadi kesalahan",
+        "message": "Tangkapanmu aman. Kami akan mencoba lagi."
+      },
+      "database_unavailable": {
+        "title": "Terjadi kesalahan",
+        "message": "Tangkapanmu aman. Kami akan mencoba lagi."
+      },
+      "database_deadlock": {
+        "title": "Sementara tertunda",
+        "message": "Tangkapanmu aman. Kami akan segera mencoba lagi."
+      },
+      "insufficient_credits": {
+        "title": "Kredit tidak cukup",
+        "message": "Tangkapan ini tersimpan. Tambahkan kredit untuk melanjutkan analisisnya."
+      },
+      "authentication_required": {
+        "title": "Masuk untuk melanjutkan",
+        "message": "Tangkapanmu tersimpan. Masuk lagi dan kami lanjutkan dari titik terakhir."
+      },
+      "instagram_reauthorization_required": {
+        "title": "Hubungkan ulang Instagram",
+        "message": "Instagram memintamu masuk lagi sebelum kami bisa melanjutkan impormu. Progresmu tersimpan."
+      },
+      "location_unavailable": {
+        "title": "Menunggu lokasimu",
+        "message": "Tangkapanmu tersimpan. Kami lanjutkan begitu AnimalDex mendapat lokasi."
+      },
+      "capture_rules_not_accepted": {
+        "title": "Setujui aturan tangkapan",
+        "message": "Unggahanmu tersimpan. Setujui aturan tangkapan dari tombol +, lalu ketuk untuk mencoba lagi."
+      },
+      "wifi_required": {
+        "title": "Menunggu Wi-Fi",
+        "message": "Tangkapanmu tersimpan dan akan dilanjutkan saat Wi-Fi tersedia."
+      },
+      "likely_burst_duplicate": {
+        "title": "Mirip tangkapan sebelumnya",
+        "message": "Tangkapanmu tersimpan. Konfirmasi bahwa ini hewan baru untuk menganalisisnya, atau gabungkan ke tangkapan sebelumnya."
+      },
+      "account_suspended": {
+        "title": "Akunmu ditangguhkan",
+        "message": "Akun ini melanggar aturan tangkapan tiga kali dan tidak bisa mengenali tangkapan baru. Tangkapanmu yang sudah ada aman. Hubungi dukungan jika menurutmu ini keliru."
+      },
+      "media_too_large": {
+        "title": "Tangkapan ini terlalu besar",
+        "message": "Coba tangkap lagi dengan durasi lebih pendek."
+      },
+      "media_unreadable": {
+        "title": "Tangkapan ini tidak bisa dibaca",
+        "message": "Foto atau video tampaknya rusak. Coba tangkap lagi."
+      },
+      "media_missing": {
+        "title": "Tangkapan ini belum selesai diunggah",
+        "message": "Masih ada di perangkatmu. Ketuk untuk mencoba lagi."
+      },
+      "no_animal_detected": {
+        "title": "Tidak ada hewan ditemukan",
+        "message": "Kami tidak menemukan hewan di tangkapan ini."
+      },
+      "authenticity_rejected": {
+        "title": "Ini tidak tampak seperti tangkapan asli",
+        "message": "AnimalDex mendeteksi bahwa ini mungkin tangkapan layar, rekaman layar, atau bukan tangkapan asli yang memenuhi syarat."
+      },
+      "source_media_unavailable": {
+        "title": "Kami tidak bisa mengakses foto aslinya",
+        "message": "Foto asli tidak terunggah, jadi AnimalDex tidak bisa menganalisis tangkapan ini."
+      },
+      "instagram_media_unavailable": {
+        "title": "Postingan ini sudah tidak tersedia",
+        "message": "Kami tidak bisa mengambil media ini dari Instagram."
+      },
+      "video_frames_required": {
+        "title": "Video ini perlu dianalisis di perangkatmu",
+        "message": "Buka AnimalDex dan kami akan menyelesaikan pengenalannya."
+      },
+      "gemini_empty_content": {
+        "title": "Tidak bisa mengenali tangkapan ini",
+        "message": "Tangkapanmu tersimpan. Kami tidak bisa menyelesaikan analisis foto ini. Kamu bisa mencoba lagi nanti."
+      },
+      "storage_unavailable": {
+        "title": "Terjadi kesalahan",
+        "message": "Tangkapanmu aman. Kami akan mencoba lagi."
+      },
+      "cancelled_by_user": {
+        "title": "Dibatalkan",
+        "message": "Ini sudah dibatalkan. Tidak ada lagi yang menunggu."
+      },
+      "unknown": {
+        "title": "Terjadi kesalahan",
+        "message": "Tangkapanmu aman. Kami akan mencoba lagi."
+      }
+    },
+    "exhausted": {
+      "title": "Terjadi kesalahan",
+      "message": "Tangkapanmu masih tersimpan, tetapi kami tidak bisa menyelesaikan analisisnya. Coba lagi."
+    },
+    "refusals": {
+      "capture_session_expired": "Tangkapan ini kedaluwarsa. Ambil fotonya lagi.",
+      "jpeg_required": "Foto harus berformat JPEG.",
+      "place_required": "Pilih tempat foto ini diambil.",
+      "location_required": "Izin lokasi diperlukan untuk pemindaian langsung.",
+      "location_denied": "AnimalDex memerlukan izin lokasi untuk pemindaian langsung.",
+      "location_unsupported": "Peramban ini tidak menyediakan akses lokasi.",
+      "camera_unsupported": "Tangkapan kamera langsung memerlukan HTTPS dan peramban yang didukung.",
+      "photo_unreadable": "Foto tidak bisa dibaca. Coba lagi.",
+      "session_failed": "Tidak bisa memulai sesi tangkapan yang aman.",
+      "rules_save_failed": "Tidak bisa menyimpannya. Coba lagi."
+    },
+    "terms": {
+      "title": "Ketentuan Komunitas",
+      "intro": "Sebelum kamu membagikan tangkapan, profil, dan pesan, setujui aturan yang menjaga AnimalDex tetap aman.",
+      "ruleContent": "Dilarang konten yang tidak pantas, kasar, melecehkan, penuh kebencian, seksual, kekerasan, atau ilegal.",
+      "ruleReport": "Laporkan konten yang tidak pantas saat kamu melihatnya.",
+      "ruleBlock": "Blokir pengguna yang kasar agar kontennya langsung hilang dari feed-mu.",
+      "ruleRemoval": "AnimalDex dapat menghapus konten dan mengeluarkan pengguna yang melanggar aturan ini.",
+      "legalPrefix": "Aturan ini adalah bagian dari",
+      "termsOfUse": "Ketentuan Penggunaan",
+      "and": "dan",
+      "privacyPolicy": "Kebijakan Privasi",
+      "zeroTolerance": "Ketentuan melarang konten yang tidak pantas dan perilaku kasar. Kamu bisa melaporkan konten dan memblokir pengguna dari area komunitas.",
+      "agree": "Saya Setuju"
+    }
   }
 }

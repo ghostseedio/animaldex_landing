@@ -1,17 +1,14 @@
-import {AppPageHeader} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import CaptureClient from "@/app/[locale]/(authenticated)/app/capture/capture-client";
 import {captureEntryFromParam} from "@/lib/capture-entry";
+import {getCaptureWords} from "@/loaders/capture-words";
 
 /**
  * The scanner, or (from the chat's "+", `?entry=camera|library`) the phone's
- * camera app or the camera roll at once, with the same review after.
+ * camera app or the camera roll at once, with the same review after. Like
+ * iOS's camera cover it has no page header: the priming says what it is for.
  */
-export default function CapturePage({searchParams}: {searchParams?: {entry?: string | string[]}}) {
+export default async function CapturePage({params, searchParams}: {params: {locale: string}; searchParams?: {entry?: string | string[]}}) {
     const entry = captureEntryFromParam(searchParams?.entry);
-    const description = entry === "library"
-        ? "A photo from your camera roll. AnimalDex checks it is one you took, asks where it was, then runs the same analysis as the apps."
-        : entry === "camera"
-            ? "A photo from your camera. AnimalDex runs the same authenticity and analysis checks as the apps."
-            : "Live camera capture only. AnimalDex requires camera and location access, then runs the same authenticity and analysis checks as the iOS app.";
-    return <div className="space-y-8"><AppPageHeader eyebrow="AI animal scanner" title="Add capture" description={description}/><CaptureClient entry={entry}/></div>;
+    const words = await getCaptureWords(params.locale);
+    return <div className="space-y-8"><h1 className="sr-only">{words.scanner.primingTitle}</h1><CaptureClient entry={entry} words={words}/></div>;
 }

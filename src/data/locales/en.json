@@ -3493,5 +3493,219 @@
     "ratedDetail": "Open the capture to see the rating.",
     "videoReadyDetail": "Your story video is ready to watch.",
     "videoReadyNamed": "The {name} story video is ready to watch."
+  },
+  "appCapture": {
+    "close": "Close",
+    "tryAgain": "Try again",
+    "signIn": "Sign in",
+    "scanner": {
+      "primingTitle": "Point at any animal.",
+      "primingDetail": "AnimalDex identifies it, and it becomes yours to talk to.",
+      "continue": "Continue",
+      "requestingCamera": "Starting the camera…",
+      "cameraRequiredTitle": "Camera access required",
+      "cameraRequiredDetail": "AnimalDex requires camera access for live scans. Enable Camera access in Settings before taking a photo or video.",
+      "tapToShoot": "Tap to shoot",
+      "takePhoto": "Take photo",
+      "cameraNotReady": "Camera isn't ready yet. Please try again.",
+      "reviewTitle": "Review photo",
+      "retake": "Retake",
+      "chooseAnother": "Choose another",
+      "identifyPhoto": "Identify photo",
+      "usesOneCredit": "Uses 1 credit",
+      "usesCredits": "Uses {n} credits",
+      "creditsLeft": "{n} left",
+      "includedWithPro": "Included with Pro",
+      "freeWithPro": "Free with Pro",
+      "needsCredits": "Needs {required} credits — you have {available}.",
+      "getCredits": "Get Credits",
+      "takeAnother": "Take another",
+      "retry": "Retry",
+      "ready": "Ready",
+      "locationAttached": "Live location attached for habitat validation",
+      "gettingLocation": "Getting your location…",
+      "reviewAltLive": "Live camera capture review",
+      "reviewAltLibrary": "Camera roll photo review",
+      "takeAPhoto": "Take a photo",
+      "uploadFromCameraRoll": "Upload from camera roll",
+      "chooseFromCameraRoll": "Choose from camera roll",
+      "openCamera": "Open camera",
+      "entryLibraryDetail": "Choose a photo you took. Screenshots, downloads and AI images can't be uploaded.",
+      "entryCameraDetail": "Take a photo of the animal with your camera.",
+      "checkingPhoto": "Checking photo…",
+      "chooseAnotherPhoto": "Choose another photo you took.",
+      "takeAnotherPhoto": "Take another photo with your camera.",
+      "rejectUnreadable": "This photo couldn't be read. Try a different one.",
+      "rejectScreenshot": "Screenshots can't be uploaded. Upload the original photo you took of the animal.",
+      "rejectNoCameraInformation": "This photo has no camera information, so it doesn't look like one you took. Downloaded, saved or AI-generated images can't be uploaded.",
+      "fromThePhoto": "From the photo: {place}",
+      "confirm": "Confirm",
+      "change": "Change",
+      "noPlaceSaved": "This photo has no location saved. Pick the place you took it.",
+      "pickThePlace": "Pick the place",
+      "pickPlaceFirst": "Pick where this photo was taken first.",
+      "whereWasThis": "Where was this?",
+      "photoSays": "The photo says {place}. Pick the place if that's wrong.",
+      "noPlaceRequired": "This photo has no location saved. Pick the place you took it. It's required for camera-roll uploads.",
+      "searchForAPlace": "Search for a place",
+      "searching": "Searching…",
+      "confirmLocation": "Confirm location"
+    },
+    "progress": {
+      "uploadingPhoto": "Uploading photo…",
+      "uploadUsually": "This usually takes a few seconds.",
+      "uploadAboutLeft": "Usually a few seconds. About {time} left.",
+      "uploadSlowTitle": "Upload is taking longer",
+      "uploadSlowDetail": "Still working. Retry if this hasn't moved.",
+      "identifying": "Identifying…",
+      "identifyRange": "usually 15–30 seconds",
+      "identifyAboutLeft": "About {time} left · {range}.",
+      "identifySoon": "Should be done soon · {range}.",
+      "identifySlowTitle": "Identification is taking longer",
+      "identifySlowDetail": "Still working — {range}. Your photo is saved.",
+      "seconds": "{n}s",
+      "minutes": "{n} min",
+      "minutesSeconds": "{m} min {s}s"
+    },
+    "failures": {
+      "network_unavailable": {
+        "title": "No internet connection",
+        "message": "Your capture is safe. We'll continue when you're back online."
+      },
+      "provider_rate_limited": {
+        "title": "Temporarily delayed",
+        "message": "The service is busy. Your capture is safe and we'll try again shortly."
+      },
+      "provider_unavailable": {
+        "title": "Temporarily delayed",
+        "message": "The service is busy. Your capture is safe and we'll try again shortly."
+      },
+      "provider_timeout": {
+        "title": "Taking longer than usual",
+        "message": "Your capture is safe. We'll try again shortly."
+      },
+      "server_error": {
+        "title": "Something went wrong",
+        "message": "Your capture is safe. We'll try again."
+      },
+      "database_unavailable": {
+        "title": "Something went wrong",
+        "message": "Your capture is safe. We'll try again."
+      },
+      "database_deadlock": {
+        "title": "Temporarily delayed",
+        "message": "Your capture is safe. We'll try again shortly."
+      },
+      "insufficient_credits": {
+        "title": "Not enough credits",
+        "message": "This capture is saved. Add credits to continue analysing it."
+      },
+      "authentication_required": {
+        "title": "Sign in to continue",
+        "message": "Your capture is saved. Sign in again and we'll pick up where we left off."
+      },
+      "instagram_reauthorization_required": {
+        "title": "Reconnect Instagram",
+        "message": "Instagram needs you to sign in again before we can continue your import. Your progress is saved."
+      },
+      "location_unavailable": {
+        "title": "Waiting for your location",
+        "message": "Your capture is saved. We'll continue once AnimalDex has a location fix."
+      },
+      "capture_rules_not_accepted": {
+        "title": "Agree to the capture rules",
+        "message": "Your upload is saved. Agree to the capture rules from the + button, then tap to try again."
+      },
+      "wifi_required": {
+        "title": "Waiting for Wi-Fi",
+        "message": "Your capture is saved and will continue when Wi-Fi is available."
+      },
+      "likely_burst_duplicate": {
+        "title": "Looks like a recent capture",
+        "message": "Your capture is saved. Confirm it is a new animal to analyse it, or attach it to the earlier one."
+      },
+      "account_suspended": {
+        "title": "Your account is suspended",
+        "message": "This account broke the capture rules three times and can't identify new captures. Your existing captures are safe. Contact support if you think this is a mistake."
+      },
+      "media_too_large": {
+        "title": "This capture is too large",
+        "message": "Try capturing it again at a shorter length."
+      },
+      "media_unreadable": {
+        "title": "This capture can't be read",
+        "message": "The photo or video appears to be damaged. Try capturing it again."
+      },
+      "media_missing": {
+        "title": "This capture didn't finish uploading",
+        "message": "It's still on your device. Tap to try again."
+      },
+      "no_animal_detected": {
+        "title": "No animal found",
+        "message": "We couldn't find an animal in this capture."
+      },
+      "authenticity_rejected": {
+        "title": "This doesn't look like an original capture",
+        "message": "AnimalDex detected that this may be a screenshot, screen recording, or otherwise not an eligible original capture."
+      },
+      "source_media_unavailable": {
+        "title": "We couldn't access the original photo",
+        "message": "The original photo was not uploaded, so AnimalDex couldn't analyse this capture."
+      },
+      "instagram_media_unavailable": {
+        "title": "This post is no longer available",
+        "message": "We couldn't retrieve this media from Instagram."
+      },
+      "video_frames_required": {
+        "title": "This video needs to be analysed on your device",
+        "message": "Open AnimalDex and we'll finish identifying it."
+      },
+      "gemini_empty_content": {
+        "title": "Couldn't identify this capture",
+        "message": "Your capture is saved. We couldn't finish analysing this photo. You can try again later."
+      },
+      "storage_unavailable": {
+        "title": "Something went wrong",
+        "message": "Your capture is safe. We'll try again."
+      },
+      "cancelled_by_user": {
+        "title": "Cancelled",
+        "message": "This was cancelled. Nothing else is waiting."
+      },
+      "unknown": {
+        "title": "Something went wrong",
+        "message": "Your capture is safe. We'll try again."
+      }
+    },
+    "exhausted": {
+      "title": "Something went wrong",
+      "message": "Your capture is still saved, but we couldn't finish analysing it. Try again."
+    },
+    "refusals": {
+      "capture_session_expired": "This capture expired. Take the photo again.",
+      "jpeg_required": "The photo must be a JPEG.",
+      "place_required": "Pick where this photo was taken.",
+      "location_required": "Location permission is required for live scans.",
+      "location_denied": "AnimalDex requires location permission for live scans.",
+      "location_unsupported": "This browser does not provide location access.",
+      "camera_unsupported": "Live camera capture requires HTTPS and a supported browser.",
+      "photo_unreadable": "Could not read the photo. Try again.",
+      "session_failed": "Could not start a secure capture session.",
+      "rules_save_failed": "Couldn't save that. Try again."
+    },
+    "terms": {
+      "title": "Community Terms",
+      "intro": "Before you share captures, profiles and messages, agree to the rules that keep AnimalDex safe.",
+      "ruleContent": "No objectionable, abusive, harassing, hateful, sexual, violent, or illegal content.",
+      "ruleReport": "Report objectionable content when you see it.",
+      "ruleBlock": "Block abusive users to remove their content from your feed immediately.",
+      "ruleRemoval": "AnimalDex may remove content and eject users who violate these rules.",
+      "legalPrefix": "These rules are part of AnimalDex's",
+      "termsOfUse": "Terms of Use",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "zeroTolerance": "The Terms prohibit objectionable content and abusive behavior. You can report content and block users from community surfaces.",
+      "agree": "I Agree"
+    }
   }
 }
