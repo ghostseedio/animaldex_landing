@@ -467,14 +467,32 @@ export function useAskThread(params: {
 
         let answer = "";
         let lastFlush = 0;
+        let flushTimer: ReturnType<typeof setTimeout> | null = null;
         let didFinish = false;
         let answered: string | null = null;
 
+        // Nothing held back is written once the reply is settled or dropped.
+        const cancelFlush = () => {
+            if (flushTimer !== null) clearTimeout(flushTimer);
+            flushTimer = null;
+        };
         const flush = (force: boolean) => {
             const now = Date.now();
             // Coalesce: a token-rate re-render would lay out the whole thread
-            // dozens of times a second for no visible gain.
-            if (!force && now - lastFlush < 50) return;
+            // dozens of times a second for no visible gain. What arrives inside
+            // the window is written when it closes, even if nothing more comes:
+            // before, the last words before a pause in the model's output sat
+            // unwritten until the next delta, so the reply stalled on screen.
+            if (!force && now - lastFlush < 50) {
+                if (flushTimer === null) {
+                    flushTimer = setTimeout(() => {
+                        flushTimer = null;
+                        flush(true);
+                    }, 50 - (now - lastFlush));
+                }
+                return;
+            }
+            cancelFlush();
             lastFlush = now;
             const thread = askSessionStore.messages(threadKey);
             const index = thread.findIndex((message) => message.id === placeholderId);
@@ -497,6 +515,7 @@ export function useAskThread(params: {
             followUp?: AskMessage["followUp"],
             failureKind?: AskFailureKind
         ) => {
+            cancelFlush();
             const thread = askSessionStore.messages(threadKey);
             const index = thread.findIndex((message) => message.id === placeholderId);
             if (index < 0) return;
@@ -517,6 +536,7 @@ export function useAskThread(params: {
         };
 
         const drop = () => {
+            cancelFlush();
             const thread = askSessionStore.messages(threadKey);
             replace(thread.filter((message) => message.id !== placeholderId));
         };

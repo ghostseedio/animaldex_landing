@@ -253,10 +253,32 @@ export async function POST(request: Request) {
     // reads beside the sign-in check the same way).
     const basePacketPending = buildAskPacket({subject, question: question ?? ""});
     basePacketPending.catch(() => undefined);
+    // How this animal talks (its voice card) and the stances it already holds
+    // key off the record alone, so they start as soon as it is in, beside the
+    // reader's sign-in and the first reads, not after them: its kind's verdict
+    // waits on both, and the reply waits on the verdict (reply speed,
+    // docs/perf-2026-11-06/reply-speed.md in the app repo). Read for a visit,
+    // a call or a Trial too, where they go unused: two small reads.
+    const companionEarly: Promise<AskCompanion | null> = basePacketPending.then(
+        (packet) => (packet.scope === "species" && packet.species ? loadAskCompanion(packet.species) : null)
+    );
+    companionEarly.catch(() => undefined);
+    const stanceMemoryEarly = askStanceMemoryConfig();
+    const heldStancesEarly = stanceMemoryEarly && question && !isGreeting
+        ? companionEarly.then(
+            (companion) => (companion?.speciesProfileId ? loadAskHeldStances(companion.speciesProfileId, question, stanceMemoryEarly.source) : []),
+            () => []
+        )
+        : null;
+    heldStancesEarly?.catch(() => undefined);
     const viewer = await resolveAskViewer(request);
     // Who they are by age (`age-band.ts`, SPEC 3.1): under 13, Talk is closed;
     // 13 to 17, teen mode; unknown (and every signed-out reader), as before.
     const service = createSupabaseServiceClient();
+    // Which model answers (`chat-routing.ts`), cached a minute per process:
+    // a miss is read here, beside everything, not after the verdict.
+    const routingConfigPending = service ? loadChatRoutingConfig(service) : null;
+    routingConfigPending?.catch(() => undefined);
     const ageBandPending: Promise<AgeBand> = viewer.userId && service ? loadAgeBand(service, viewer.userId) : Promise.resolve("unknown");
     ageBandPending.catch(() => undefined);
 
@@ -416,7 +438,7 @@ export async function POST(request: Request) {
     // Read first: its kind's verdict and the owner's reads key off it, so it
     // no longer waits for the memory and the quantiles beside it.
     const companionPending: Promise<AskCompanion | null> = speaksAsAnimal && basePacket.species
-        ? loadAskCompanion(basePacket.species)
+        ? companionEarly
         : Promise.resolve(null as AskCompanion | null);
     companionPending.catch(() => undefined);
     // The canonical species, as the companion read resolves it.
@@ -436,13 +458,14 @@ export async function POST(request: Request) {
     // The animal keeps one stance per kind of problem across everyone (the
     // apps' animal_species_stances): what it already holds comes in beside the
     // companion read, and what it settles is kept after.
-    const stanceMemory = askStanceMemoryConfig();
+    const stanceMemory = stanceMemoryEarly;
     const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && verdictSpecies && question &&
             !isVisit && !isCall && !stepReportId && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
         ? Promise.all([
             companionPending,
-            stanceMemory
-                ? speciesIdPending.then((speciesId) => (speciesId ? loadAskHeldStances(speciesId, question, stanceMemory.source) : []))
+            // Started with the record (heldStancesEarly); the same read.
+            stanceMemory && heldStancesEarly
+                ? speciesIdPending.then((speciesId) => (speciesId ? heldStancesEarly : []))
                 : Promise.resolve([]),
             // The angles this reader has already heard from this animal (`angle.ts`).
             speciesIdPending.then((speciesId) => (speciesId && viewer.userId && service ? loadAnglesHeard(service, viewer.userId, speciesId) : []))
@@ -826,7 +849,7 @@ export async function POST(request: Request) {
             isPro: rate?.isPro === true,
             personaEffort: persona?.effort ?? "low",
             maxEffort: askChatMaxEffort(),
-            config: await loadChatRoutingConfig(service),
+            config: await (routingConfigPending ?? loadChatRoutingConfig(service)),
             chatModel: resolveClaudeAskModel(),
             callModel: resolveClaudeAskModel()
         })

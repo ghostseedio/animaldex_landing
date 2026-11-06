@@ -1133,12 +1133,15 @@ export default function AskConversation({
     // (not while the voice loads, so its opening call is not cut short).
     // On a call the animal's voice is the call's; the thread stays quiet.
     const [onCall, setOnCall] = useState(false);
-    // Its sounds are fetched with the first message sent or as the hello starts typing, never as the chat opens (WEB-42).
+    // Its sounds are fetched once the reader starts typing (so they are decoded
+    // before a fast reply's first word), with the first message sent, or as the
+    // hello starts typing; never as the chat opens (WEB-42).
     const [soundsWanted, setSoundsWanted] = useState(false);
     const firstWordsShown = messages.some((message) => message.role === "assistant" && message.text.trim().length > 0 && message.status !== "complete");
+    const startedTyping = composer.trim().length > 0;
     useEffect(() => {
-        if ((isSending && greetingState !== "loading") || firstWordsShown) setSoundsWanted(true);
-    }, [isSending, greetingState, firstWordsShown]);
+        if ((isSending && greetingState !== "loading") || firstWordsShown || startedTyping) setSoundsWanted(true);
+    }, [isSending, greetingState, firstWordsShown, startedTyping]);
     const sounds = useAnimalSounds({
         speciesProfileId: messenger && soundsWanted ? context?.speciesProfileId ?? null : null,
         pace: persona?.pace ?? null,
