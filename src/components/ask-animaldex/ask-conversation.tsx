@@ -448,7 +448,7 @@ export type AskConversationPage = {
      * the switch to another of their animals, like a model switcher, with a
      * dot while that many other animals have written.
      */
-    switcher?: {label: string; othersUnread: number; onOpen: () => void} | null;
+    switcher?: {label: string; othersUnread: number; onOpen: () => void; capture?: {href: string; label: string} | null} | null;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -1510,6 +1510,13 @@ export default function AskConversation({
         ? fillWords(labels.companions.naming.nameYour, {animal: animalName})
         : null;
     const speakerName = nickname ?? animalName ?? labels.title;
+    // The tab opens ready to type (the owner, 2026-11-06, after the Claude app).
+    const rootSwitcher = onPage && page?.switcher ? page.switcher : null;
+    useEffect(() => {
+        if (!rootSwitcher) return;
+        const handle = window.setTimeout(() => composerRef.current?.focus(), 450);
+        return () => window.clearTimeout(handle);
+    }, [rootSwitcher, historyKey]);
     const suggestions = context?.suggestions ?? askSuggestions(resolvedSubject, hints);
     // The Talk page's sidebar names and opens this thread (SPEC section 4.2).
     useEffect(() => {
@@ -2662,7 +2669,7 @@ export default function AskConversation({
                                 {threadStepAt === messages.length ? threadStepMessage : null}
                                 {debateSetupMessage}
                                 {messages.length === 0 && awaitingGreeting ? (
-                                    <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />
+                                    <AskTypingBubble plain avatarUrl={faceUrl} label={labels.typing} />
                                 ) : null}
                                 {showsProIntro ? (
                                     <AskProIntroBand
@@ -2916,7 +2923,8 @@ export default function AskConversation({
                             onCallChange={setOnCall}
                         />
                     ) : null}
-                    {speaksAsAnimal && context?.signedIn && !messenger ? (
+                    {/* One icon at the tab's root (the owner, 2026-11-06): memory lives in the ••• menu there. */}
+                    {speaksAsAnimal && context?.signedIn && !messenger && !(onPage && page?.switcher) ? (
                         <button
                             type="button"
                             onClick={showingMemory ? () => setShowingMemory(false) : openMemory}
@@ -2928,7 +2936,7 @@ export default function AskConversation({
                             <MemoryIcon />
                         </button>
                     ) : null}
-                    {messenger ? null : <button
+                    {messenger || (onPage && page?.switcher) ? null : <button
                         type="button"
                         onClick={() => setConfirmingClear(true)}
                         disabled={!hasConversation}
@@ -3259,6 +3267,18 @@ export default function AskConversation({
                                             <AttachIcon />
                                         </button>
                                     </>
+                                ) : null}
+                                {rootSwitcher?.capture ? (
+                                    // A new animal from the composer (the owner, 2026-11-06, after the Claude app's "+").
+                                    <Link
+                                        href={rootSwitcher.capture.href}
+                                        aria-label={rootSwitcher.capture.label}
+                                        title={rootSwitcher.capture.label}
+                                        className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-white transition-colors hover:bg-white/15"
+                                        data-testid="composer-plus"
+                                    >
+                                        <PlusIcon />
+                                    </Link>
                                 ) : null}
                                 <label className="sr-only" htmlFor="ask-animaldex-composer">{fieldPlaceholder}</label>
                                 <textarea
@@ -3606,7 +3626,7 @@ const AnimalMessageRow = memo(function AnimalMessageRow({
 
     // Nothing on screen yet: the animal is still finding its first word.
     if (message.status === "thinking" || (paced !== null && paced.length === 0)) {
-        return <AskTypingBubble avatarUrl={faceUrl} label={labels.typing} />;
+        return <AskTypingBubble plain avatarUrl={faceUrl} label={labels.typing} />;
     }
 
     if (message.status === "failed") {
@@ -3681,6 +3701,7 @@ const AnimalMessageRow = memo(function AnimalMessageRow({
             {typing ? <p className="sr-only">{askMarkdownPlainText(message.text)}</p> : null}
             <div aria-hidden={typing ? true : undefined}>
                 <AskReplyBubbles
+                    plain
                     text={shownText}
                     isLive={isLive}
                     avatarUrl={faceUrl}
@@ -4578,6 +4599,14 @@ function SwitchChevronIcon() {
     return (
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function PlusIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
     );
 }

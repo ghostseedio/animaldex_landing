@@ -117,7 +117,7 @@ export default function CompanionsGalleryClient({words, locale, frontDoor = null
     }, []);
     if (!ready) return null;
     return (
-        <AppShellChromeContext.Provider value={{isAuthenticated: true, unreadCount: 0, unreadMessageCount: 0, words: APP_SHELL_WORDS_EN, menuOpen: false, toggleMenu: () => undefined}}>
+        <AppShellChromeContext.Provider value={{isAuthenticated: true, unreadCount: 0, unreadMessageCount: 0, words: APP_SHELL_WORDS_EN, menuOpen: false, toggleMenu: () => undefined, setBottomNavHidden: () => undefined}}>
             {/* The app shell's own ground: pinned dark, the list width of /app. */}
             <div className="theme-dark min-h-screen bg-black text-white">
                 <div className="mx-auto w-full max-w-[92rem] px-4 py-7 sm:px-7 lg:px-10 lg:py-10" data-testid="companions-gallery">

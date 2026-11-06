@@ -13,6 +13,12 @@ export type AppShellChrome = {
     words: AppShellWords;
     menuOpen: boolean;
     toggleMenu: () => void;
+    /**
+     * The Companions tab as the chat (the owner, 2026-11-06, after the Claude
+     * app): the phone's tab bar goes away under the conversation; its drawer
+     * carries the other tabs.
+     */
+    setBottomNavHidden: (hidden: boolean) => void;
 };
 
 const noopChrome: AppShellChrome = {
@@ -21,7 +27,8 @@ const noopChrome: AppShellChrome = {
     unreadMessageCount: 0,
     words: APP_SHELL_WORDS_EN,
     menuOpen: false,
-    toggleMenu: () => undefined
+    toggleMenu: () => undefined,
+    setBottomNavHidden: () => undefined
 };
 
 export const AppShellChromeContext = createContext<AppShellChrome>(noopChrome);

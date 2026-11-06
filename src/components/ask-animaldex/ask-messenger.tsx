@@ -220,10 +220,10 @@ export function AskWalkIcon({className = "h-3.5 w-3.5"}: {className?: string}) {
 }
 
 /** The animal is typing: three soft dots in its own bubble, beside its face. */
-export function AskTypingBubble({avatarUrl, label}: {avatarUrl: string | null; label: string}) {
+export function AskTypingBubble({avatarUrl, label, plain = false}: {avatarUrl: string | null; label: string; plain?: boolean}) {
     return (
         <div className="flex items-end gap-2" role="status" aria-label={label}>
-            <AskAnimalFace url={avatarUrl} size={28} />
+            {plain ? null : <AskAnimalFace url={avatarUrl} size={28} />}
             {/* Exactly a one-line bubble's height (10 + 24 + 10), so the first words replace the dots without moving the thread. */}
             <span
                 className="flex h-[44px] w-[58px] items-center justify-center gap-[5px]"
@@ -323,10 +323,17 @@ export function AskReplyBubbles({
     renderPlain,
     trailing,
     after,
-    special = null
+    special = null,
+    plain = false
 }: {
     /** What is on screen of the reply (the pacer's text while it types). */
     text: string;
+    /**
+     * The animal's words across the thread with nothing around them and no
+     * face beside them (the owner, 2026-11-06, after the Claude app); its
+     * controls a quiet row under the words. Special messages keep their card.
+     */
+    plain?: boolean;
     /** Still arriving or still typing: a sparkle at the end, no menu yet. */
     isLive: boolean;
     avatarUrl: string | null;
@@ -351,23 +358,23 @@ export function AskReplyBubbles({
     special?: ReactNode;
 }) {
     const pieces = askReplyPieces(text, !isLive);
-    if (pieces.length === 0) return <AskTypingBubble avatarUrl={avatarUrl} label={speakerName} />;
+    if (pieces.length === 0) return <AskTypingBubble plain={plain} avatarUrl={avatarUrl} label={speakerName} />;
     const lastBubble = lastBubbleIndex(pieces);
     const specialHere = special && !isLive ? special : null;
     let plainIndex = -1;
     return (
         <div className="flex flex-col">
             <div
-                className={`flex items-end gap-2 pr-2 ${isLive ? "cursor-text" : ""}`}
+                className={`flex items-end gap-2 ${plain ? "" : "pr-2"} ${isLive ? "cursor-text" : ""}`}
                 onClick={isLive ? onSkip : undefined}
             >
-                <AskAnimalFace url={avatarUrl} size={28} />
+                {plain ? null : <AskAnimalFace url={avatarUrl} size={28} />}
                 {/* 4 between the pieces of one reply (DESIGN.md section 3). */}
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                     {pieces.map((piece, index) => {
                         if (piece.kind === "visual") {
                             return (
-                                <div key={`v-${index}`} className="py-1 pr-9">
+                                <div key={`v-${index}`} className={`py-1 ${plain ? "" : "pr-9"}`}>
                                     <AssistantMarkdown compact text={piece.source} photoUrl={photoUrl} photoAlt={photoAlt} streaming={isLive} />
                                 </div>
                             );
@@ -382,8 +389,8 @@ export function AskReplyBubbles({
                         const bubble = (
                             <div
                                 // 10 × 14 of padding on every bubble; the special one keeps 14 past its 3 px neon edge.
-                                className={`min-w-0 max-w-full break-words py-2.5 text-[15px] leading-6 text-white ${carries ? "ask-special w-full pl-[17px] pr-3.5" : wide ? "w-full px-3.5" : "px-3.5"}`}
-                                style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: radius}}
+                                className={`min-w-0 max-w-full break-words py-2.5 text-[15px] leading-6 text-white ${carries ? "ask-special w-full pl-[17px] pr-3.5" : plain ? "w-full px-0 py-1.5" : wide ? "w-full px-3.5" : "px-3.5"}`}
+                                style={plain && !carries ? undefined : {backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: radius}}
                                 data-testid={carries ? "special-message" : undefined}
                             >
                                 {piece.isPlain
@@ -416,9 +423,11 @@ export function AskReplyBubbles({
                                     voice, its menu), so their far edges line up. On a phone the
                                     bubbles take the whole width beside the face, the controls under
                                     the reply (UX pass WEB-27). */}
-                                <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">
-                                    {!isLive && index === lastBubble ? trailing : null}
-                                </div>
+                                {plain ? null : (
+                                    <div className="hidden w-[60px] shrink-0 items-center justify-start gap-0.5 pl-1 sm:flex">
+                                        {!isLive && index === lastBubble ? trailing : null}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -436,10 +445,10 @@ export function AskReplyBubbles({
                 </div>
             </div>
             {/* A phone's controls: under the reply, beside nothing, so the face stays by the last bubble. */}
-            {!isLive && trailing && (lastBubble >= 0 ? !askPieceIsWide(pieces[lastBubble]) : specialHere !== null) ? (
-                <div className="flex items-center gap-0.5 pl-9 pt-1 sm:hidden" data-testid="reply-controls-under">{trailing}</div>
+            {!isLive && trailing && (plain || (lastBubble >= 0 ? !askPieceIsWide(pieces[lastBubble]) : specialHere !== null)) ? (
+                <div className={`flex items-center gap-0.5 pt-1 ${plain ? "" : "pl-9 sm:hidden"}`} data-testid="reply-controls-under">{trailing}</div>
             ) : null}
-            {after ? <div className="pl-9 pt-2.5">{after}</div> : null}
+            {after ? <div className={plain ? "pt-2.5" : "pl-9 pt-2.5"}>{after}</div> : null}
         </div>
     );
 }

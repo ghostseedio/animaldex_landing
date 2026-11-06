@@ -16,6 +16,7 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import {usePathname} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
+import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
 import AskConversation, {type AskConversationPage, type AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
@@ -47,8 +48,9 @@ function useFillToFoot(ref: React.RefObject<HTMLDivElement | null>): string | un
         if (!element) return;
         const measure = () => {
             const top = Math.max(0, Math.round(element.getBoundingClientRect().top + window.scrollY));
-            // Below 1024 px the tab bar floats at the foot (the shell's pb-28); above it, the page's own bottom padding.
-            const reserve = window.matchMedia("(min-width: 1024px)").matches ? 40 : 112;
+            // The tab bar is away under the chat on a phone (the owner, 2026-11-06, after the
+            // Claude app), so the chat runs to the foot; above 1024 px, the page's own bottom padding.
+            const reserve = window.matchMedia("(min-width: 1024px)").matches ? 40 : 0;
             setHeight(`calc(100dvh - ${top}px - ${reserve}px)`);
         };
         measure();
@@ -67,6 +69,12 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     locale: string;
 }) {
     const pathname = usePathname() ?? "/app";
+    const {setBottomNavHidden} = useAppShellChrome();
+    // The phone's tab bar goes away while the chat fills the tab; the drawer carries the other tabs.
+    useEffect(() => {
+        setBottomNavHidden(true);
+        return () => setBottomNavHidden(false);
+    }, [setBottomNavHidden]);
     const rows = useMemo(() => entries.map((entry) => entry.row), [entries]);
     const [switchedTo, setSwitchedTo] = useState<string | null>(null);
     const [open, setOpen] = useState(false);
@@ -119,9 +127,15 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 avatarUrl,
                 companionSpeciesProfileId: current.speciesProfileId
             },
-            switcher: {label: words.list.switcher, othersUnread, onOpen: openSwitcher}
+            switcher: {
+                label: words.list.switcher,
+                othersUnread,
+                onOpen: openSwitcher,
+                // The "+" by the composer: a new animal (the Claude app's "+").
+                capture: {href: "/app/capture", label: words.list.capture}
+            }
         }
-        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, othersUnread]);
+        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.capture, othersUnread]);
 
     if (!current || !page) return null;
     const list = (onClose?: () => void) => (
@@ -212,6 +226,22 @@ function SwitchList({entries, currentId, words, locale, onPick, onClose, closeLa
                         <CloseIcon />
                     </button>
                 ) : null}
+            </div>
+            {/* Where the phone's tab bar went while the chat fills the tab: the other tabs, at the head (as the Claude app's drawer leads with its places). */}
+            <div className="flex gap-2 px-4 pb-3 pt-3 lg:hidden">
+                {[
+                    {href: "/app/collection", name: "collection" as const},
+                    {href: "/app/explore", name: "explore" as const},
+                    {href: "/app/profile", name: "profile" as const}
+                ].map((tab) => (
+                    <Link
+                        key={tab.href}
+                        href={tab.href}
+                        className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-pill bg-[#12351C] text-[13px] font-semibold text-white transition-colors hover:bg-[#1a4526]"
+                    >
+                        <AppIcon name={tab.name} className="h-4 w-4" />
+                    </Link>
+                ))}
             </div>
             {entries.length >= SEARCH_FROM ? (
                 <input
