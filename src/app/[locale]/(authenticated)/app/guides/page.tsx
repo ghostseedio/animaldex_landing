@@ -4,6 +4,8 @@ import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/pr
 import {getAuthenticatedAppContext} from "@/data/authenticated-app";
 import {getMyWildlifeGuidePurchases, getMyWildlifeGuides} from "@/data/virtual-wildlife-guides";
 import {getScopedTranslator} from "@/loaders/translation";
+import {loadAppFeatureFlags} from "@/data/app-feature-flags";
+import {isAppFeatureOn} from "@/lib/app-feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,12 @@ export const dynamic = "force-dynamic";
 export default async function GuidesPage({params}: {params: {locale: string}}) {
     const context = await getAuthenticatedAppContext();
     if (!context) redirect(`/${params.locale}/account?next=${encodeURIComponent(`/${params.locale}/app/guides`)}`);
-    const [mine, bought, t] = await Promise.all([getMyWildlifeGuides(), getMyWildlifeGuidePurchases(), getScopedTranslator(params.locale, "profile")]);
+    const [mine, bought, t, flags] = await Promise.all([
+        getMyWildlifeGuides(),
+        getMyWildlifeGuidePurchases(),
+        getScopedTranslator(params.locale, "profile"),
+        loadAppFeatureFlags().catch(() => ({}))
+    ]);
     const labels = Object.fromEntries(PROFILE_SHOP_LABEL_KEYS.map((key) => [key, t(`shop.${key}`)]));
-    return <GuidesListClient initial={mine} bought={bought} labels={labels} locale={params.locale} />;
+    return <GuidesListClient initial={mine} bought={bought} labels={labels} locale={params.locale} guideSales={isAppFeatureOn(flags, "guide_sales")} />;
 }
