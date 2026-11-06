@@ -102,3 +102,38 @@ export function StandardAppTabSkeleton({metricCount = 3}: {metricCount?: number}
         </div>
     );
 }
+
+/**
+ * Explore's first paint (the owner, 2026-11-06: "the explore feed skeleton
+ * seems to be not the same"): the shape of one post as the feed draws it
+ * now, filling the phone with no bar under it: who captured it at the top,
+ * the animal, its chips and the action rail at the foot.
+ */
+export function ExploreFeedSkeleton() {
+    return (
+        <div className="relative h-full min-h-[100dvh] w-full bg-black lg:h-[90svh] lg:min-h-[42rem]" aria-busy="true" aria-label="Loading timeline" data-testid="explore-feed-skeleton">
+            <div className="absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3">
+                <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-white/10" />
+                <div className="space-y-1.5">
+                    <div className="h-2.5 w-24 animate-pulse rounded-full bg-white/12" />
+                    <div className="h-2 w-16 animate-pulse rounded-full bg-white/[0.07]" />
+                </div>
+                <div className="ml-auto h-6 w-14 animate-pulse rounded-full bg-white/[0.08]" />
+            </div>
+            <div className="absolute bottom-[max(3.5rem,env(safe-area-inset-bottom,0px))] right-4 flex flex-col items-center gap-3">
+                {[0, 1, 2].map((item) => <div key={item} className="h-8 w-8 animate-pulse rounded-full bg-white/10" />)}
+            </div>
+            <div className="absolute bottom-[max(3.5rem,env(safe-area-inset-bottom,0px))] left-4 right-20 space-y-2.5">
+                <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
+                    <div className="h-4 w-36 animate-pulse rounded-full bg-white/12" />
+                </div>
+                <div className="flex gap-2">
+                    <div className="h-6 w-16 animate-pulse rounded-full bg-white/[0.08]" />
+                    <div className="h-6 w-11 animate-pulse rounded-full bg-white/[0.08]" />
+                </div>
+                <div className="h-2.5 w-28 animate-pulse rounded-full bg-white/[0.07]" />
+            </div>
+        </div>
+    );
+}
