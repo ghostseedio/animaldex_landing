@@ -39,11 +39,11 @@ import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/
 import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
 import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
-import CompanionsChat from "@/app/[locale]/(authenticated)/app/companions/companions-chat";
 import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
 import {chatCaptureIdFor} from "@/components/companions/use-companions";
 import {useCompanionRoster} from "@/components/companions/use-companion-roster";
 import {useMemo} from "react";
+import dynamic from "next/dynamic";
 import {companionRowHref, fillWords, type CompanionWords} from "@/lib/companion-bond";
 import type {CompanionCard} from "@/lib/companion-cards";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
@@ -53,6 +53,16 @@ import TalkFrontDoorBand from "@/components/talk-front-door/talk-front-door-band
 import {useFrontDoorOwnAnimals} from "@/components/talk-front-door/use-front-door-animals";
 import {featuredFrontDoorAnimal, meetOneNowAnimals, type TalkFrontDoorWords} from "@/lib/talk-front-door";
 import type {TalkAnimal} from "@/lib/ask-animaldex/talk";
+
+/**
+ * The chat, with the conversation (the app's largest script), loads beside
+ * the roster's read instead of before the page can hydrate: on the server
+ * this tab draws the splash anyway (perf pass, 2026-11-06).
+ */
+const loadCompanionsChat = () => import("@/app/[locale]/(authenticated)/app/companions/companions-chat");
+const CompanionsChat = dynamic(loadCompanionsChat, {ssr: false, loading: () => <AppSplash />});
+// Started as this script runs, before the page hydrates, so it downloads beside the page's own.
+if (typeof window !== "undefined") void loadCompanionsChat();
 
 /** The Talk front door's part of the tab, when its switch is on. */
 export type CompanionsFrontDoor = {
