@@ -103,8 +103,11 @@ export default function MessagesInbox({initialInbox, currentUserId, locale, word
         }
     }, []);
 
+    // On arrival as well as every few seconds: a page the router kept from an
+    // earlier visit would otherwise show a conversation read or blocked since.
     useEffect(() => {
         if (!visible) return;
+        void refresh(true);
         const timer = window.setInterval(() => void refresh(true), INBOX_POLL_MS);
         return () => window.clearInterval(timer);
     }, [visible, refresh]);
