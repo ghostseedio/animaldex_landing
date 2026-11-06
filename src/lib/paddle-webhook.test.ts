@@ -165,6 +165,134 @@ test("unhandled payment-failure transaction event never grants or mutates Pro", 
 });
 
 // ---------------------------------------------------------------------------
+// Refunds and chargebacks of a Pro subscription payment (subscription_id set)
+// ---------------------------------------------------------------------------
+
+function paddleTransactions(found: {subscriptionId?: string | null; billingPeriodEndsAt?: string | null} = {}) {
+    const asked: string[] = [];
+    return {
+        asked,
+        lookup: async (transactionId: string) => {
+            asked.push(transactionId);
+            return {subscriptionId: "sub_1", billingPeriodEndsAt: "2026-12-05T09:00:00Z", ...found};
+        }
+    };
+}
+
+function subscriptionAdjustment(overrides: Record<string, unknown> = {}): PaddleEvent {
+    return {
+        event_id: "evt_sub_adjustment",
+        event_type: "adjustment.updated",
+        occurred_at: "2026-11-06T10:00:00Z",
+        data: {
+            id: "adj_sub", transaction_id: "txn_renewal", subscription_id: "sub_1",
+            action: "refund", type: "full", status: "approved", ...overrides
+        }
+    };
+}
+
+test("a refunded or charged-back subscription payment goes to the Pro policy with the period Paddle says it paid for", async () => {
+    for (const action of ["refund", "chargeback"]) {
+        const mock = mockSupabase();
+        const paddle = paddleTransactions();
+        await handlePaddleEvent(mock.client as never, subscriptionAdjustment({action}), undefined, null, undefined, paddle.lookup);
+        assert.deepEqual(paddle.asked, ["txn_renewal"]);
+        assert.deepEqual(mock.calls.find((call) => call.name === "record_paddle_pro_adjustment")?.args, {
+            p_provider_adjustment_id: "adj_sub",
+            p_provider_transaction_id: "txn_renewal",
+            p_paddle_subscription_id: "sub_1",
+            p_billing_period_end: "2026-12-05T09:00:00Z",
+            p_action: action,
+            p_adjustment_type: "full",
+            p_status: "approved",
+            p_event_id: "evt_sub_adjustment",
+            p_occurred_at: "2026-11-06T10:00:00Z"
+        });
+        assert.equal(mock.calls.some((call) => call.name === "record_web_purchase_adjustment"), false);
+        assert.equal(mock.calls.at(-1)?.name, "complete_web_purchase_event");
+    }
+});
+
+test("reversals, pending refunds and payments with no period go to the Pro policy too, which decides", async () => {
+    for (const [action, status] of [["chargeback_reverse", "approved"], ["credit_reverse", "approved"], ["refund", "pending_approval"]]) {
+        const mock = mockSupabase();
+        await handlePaddleEvent(mock.client as never, subscriptionAdjustment({action, status}), undefined, null, undefined, paddleTransactions().lookup);
+        const pro = mock.calls.find((call) => call.name === "record_paddle_pro_adjustment");
+        assert.equal(pro?.args.p_action, action);
+        assert.equal(pro?.args.p_status, status);
+    }
+    const noPeriod = mockSupabase();
+    await handlePaddleEvent(noPeriod.client as never, subscriptionAdjustment(), undefined, null, undefined,
+        paddleTransactions({billingPeriodEndsAt: null}).lookup);
+    assert.equal(noPeriod.calls.find((call) => call.name === "record_paddle_pro_adjustment")?.args.p_billing_period_end, null);
+});
+
+test("a Credits pack adjustment never asks Paddle and keeps the pack policy", async () => {
+    const mock = mockSupabase();
+    const paddle = paddleTransactions();
+    await handlePaddleEvent(mock.client as never, subscriptionAdjustment({id: "adj_pack", transaction_id: "txn_1", subscription_id: null}),
+        undefined, null, undefined, paddle.lookup);
+    assert.deepEqual(paddle.asked, []);
+    assert.equal(mock.calls.find((call) => call.name === "record_web_purchase_adjustment")?.args.p_provider_adjustment_id, "adj_pack");
+    assert.equal(mock.calls.some((call) => call.name === "record_paddle_pro_adjustment"), false);
+});
+
+test("a payment Paddle files under another subscription, or a lookup that fails, fails the event so Paddle retries", async () => {
+    const other = mockSupabase();
+    await assert.rejects(() => handlePaddleEvent(other.client as never, subscriptionAdjustment(), undefined, null, undefined,
+        paddleTransactions({subscriptionId: "sub_other"}).lookup), /paddle_adjustment_mismatch/);
+    assert.equal(other.calls.some((call) => call.name === "record_paddle_pro_adjustment"), false);
+    assert.equal(other.calls.at(-1)?.name, "fail_web_purchase_event");
+
+    const unreachable = mockSupabase();
+    await assert.rejects(() => handlePaddleEvent(unreachable.client as never, subscriptionAdjustment(), undefined, null, undefined,
+        async () => {
+            throw new Error("Paddle request failed.");
+        }), /Paddle request failed/);
+    assert.equal(unreachable.calls.some((call) => call.name === "record_paddle_pro_adjustment"), false);
+    assert.equal(unreachable.calls.at(-1)?.name, "fail_web_purchase_event");
+
+    // Until the server migration is applied the function is missing: retried too.
+    const missing = mockSupabase({rpcError: {name: "record_paddle_pro_adjustment", message: "Could not find the function public.record_paddle_pro_adjustment"}});
+    await assert.rejects(() => handlePaddleEvent(missing.client as never, subscriptionAdjustment(), undefined, null, undefined,
+        paddleTransactions().lookup), /record_paddle_pro_adjustment/);
+    assert.equal(missing.calls.at(-1)?.name, "fail_web_purchase_event");
+});
+
+test("the refunded payment's period is read from Paddle's GET /transactions/{id}", async () => {
+    const saved = {fetch: globalThis.fetch, environment: process.env.PADDLE_ENVIRONMENT, apiKey: process.env.PADDLE_API_KEY};
+    const requests: {url: string; method?: string; authorization?: string}[] = [];
+    // Production settings: they pass the environment check on any host.
+    process.env.PADDLE_ENVIRONMENT = "production";
+    process.env.PADDLE_API_KEY = "pdl_live_apikey_example";
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+        requests.push({url: String(url), method: init?.method, authorization: (init?.headers as Record<string, string> | undefined)?.Authorization});
+        return new Response(JSON.stringify({
+            data: {
+                id: "txn_renewal", subscription_id: "sub_1", origin: "subscription_recurring",
+                billing_period: {starts_at: "2026-11-05T09:00:00Z", ends_at: "2026-12-05T09:00:00Z"}
+            }
+        }), {status: 200, headers: {"Content-Type": "application/json"}});
+    }) as typeof fetch;
+    try {
+        const mock = mockSupabase();
+        await handlePaddleEvent(mock.client as never, subscriptionAdjustment());
+        assert.deepEqual(requests, [{
+            url: "https://api.paddle.com/transactions/txn_renewal",
+            method: "GET",
+            authorization: "Bearer pdl_live_apikey_example"
+        }]);
+        assert.equal(mock.calls.find((call) => call.name === "record_paddle_pro_adjustment")?.args.p_billing_period_end, "2026-12-05T09:00:00Z");
+    } finally {
+        globalThis.fetch = saved.fetch;
+        for (const [name, value] of [["PADDLE_ENVIRONMENT", saved.environment], ["PADDLE_API_KEY", saved.apiKey]] as const) {
+            if (value === undefined) delete process.env[name];
+            else process.env[name] = value;
+        }
+    }
+});
+
+// ---------------------------------------------------------------------------
 // Wildlife Guides bought by card (custom_data.kind = "wildlife_guide")
 // ---------------------------------------------------------------------------
 

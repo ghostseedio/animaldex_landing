@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import type {SupabaseClient} from "@supabase/supabase-js";
-import {productCodeForPaddlePriceId, type PaddleEvent} from "@/lib/paddle-server";
+import {paddleApiRequest, productCodeForPaddlePriceId, type PaddleEvent} from "@/lib/paddle-server";
 import {isProProductCode, type WebStoreProductCode} from "@/lib/web-store-catalog";
 
 export type PaddleWebhookResult = {ok: true; skipped?: boolean; reason?: string};
@@ -76,12 +76,35 @@ function isWildlifeGuideEvent(event: PaddleEvent) {
     return asString(customData(event.data).kind) === WILDLIFE_GUIDE_CHECKOUT_KIND;
 }
 
+/** What a Pro refund needs to know about the payment it refunds. */
+export type PaddleTransactionPeriod = {
+    subscriptionId: string | null;
+    /** billing_period.ends_at: the end of the period the payment was for, or null when Paddle set none. */
+    billingPeriodEndsAt: string | null;
+};
+
+/** Reads one transaction from Paddle. The webhook uses the Paddle API; tests pass a fake. */
+export type PaddleTransactionLookup = (transactionId: string) => Promise<PaddleTransactionPeriod>;
+
+const transactionFromPaddleApi: PaddleTransactionLookup = async (transactionId) => {
+    const payload = await paddleApiRequest<{data?: unknown}>(
+        `/transactions/${encodeURIComponent(transactionId)}`,
+        {method: "GET", signal: AbortSignal.timeout(4_000)}
+    );
+    const transaction = asObject(payload.data);
+    return {
+        subscriptionId: asString(transaction.subscription_id),
+        billingPeriodEndsAt: asString(asObject(transaction.billing_period).ends_at)
+    };
+};
+
 export async function handlePaddleEvent(
     supabase: SupabaseClient,
     event: PaddleEvent,
     rawBody = JSON.stringify(event),
     guides: WildlifeGuideFulfillment | null = null,
-    catalog: PaddleCatalogLookup = catalogFromEnvironment
+    catalog: PaddleCatalogLookup = catalogFromEnvironment,
+    transactions: PaddleTransactionLookup = transactionFromPaddleApi
 ): Promise<PaddleWebhookResult> {
     const digest = crypto.createHash("sha256").update(rawBody).digest("hex");
     const {data: claimed, error: claimError} = await supabase.rpc("claim_web_purchase_event", {
@@ -112,7 +135,7 @@ export async function handlePaddleEvent(
         } else if (event.event_type.startsWith("subscription.")) {
             result = await syncSubscription(supabase, event, catalog);
         } else if (event.event_type === "adjustment.created" || event.event_type === "adjustment.updated") {
-            result = await recordAdjustment(supabase, event);
+            result = await recordAdjustment(supabase, event, transactions);
         } else {
             result = {ok: true, skipped: true, reason: "unhandled_event"};
         }
@@ -262,25 +285,52 @@ async function syncSubscription(supabase: SupabaseClient, event: PaddleEvent, ca
     return {ok: true};
 }
 
-async function recordAdjustment(supabase: SupabaseClient, event: PaddleEvent): Promise<PaddleWebhookResult> {
+async function recordAdjustment(
+    supabase: SupabaseClient,
+    event: PaddleEvent,
+    transactions: PaddleTransactionLookup
+): Promise<PaddleWebhookResult> {
     const object = event.data;
     const adjustmentId = asString(object.id);
     const transactionId = asString(object.transaction_id);
+    const subscriptionId = asString(object.subscription_id);
     const action = asString(object.action);
     const status = asString(object.status);
     const type = asString(object.type);
     if (!adjustmentId || !transactionId || !action || !status) throw new Error("paddle_adjustment_mismatch");
-    const {error} = await supabase.rpc("record_web_purchase_adjustment", {
-        p_provider: "paddle",
-        p_provider_adjustment_id: adjustmentId,
-        p_provider_transaction_id: transactionId,
-        p_action: action,
-        p_adjustment_type: type,
-        p_status: status,
-        p_event_id: event.event_id,
-        p_occurred_at: event.occurred_at
-    });
-    if (error) throw new Error(error.message);
+    if (subscriptionId) {
+        // A Pro subscription payment. A refund ends the period that payment
+        // was for and takes back that period's Pro Credits, and only Paddle
+        // knows the period: the adjustment does not carry it.
+        const transaction = await transactions(transactionId);
+        if (transaction.subscriptionId && transaction.subscriptionId !== subscriptionId) {
+            throw new Error("paddle_adjustment_mismatch");
+        }
+        const {error} = await supabase.rpc("record_paddle_pro_adjustment", {
+            p_provider_adjustment_id: adjustmentId,
+            p_provider_transaction_id: transactionId,
+            p_paddle_subscription_id: subscriptionId,
+            p_billing_period_end: transaction.billingPeriodEndsAt,
+            p_action: action,
+            p_adjustment_type: type,
+            p_status: status,
+            p_event_id: event.event_id,
+            p_occurred_at: event.occurred_at
+        });
+        if (error) throw new Error(error.message);
+    } else {
+        const {error} = await supabase.rpc("record_web_purchase_adjustment", {
+            p_provider: "paddle",
+            p_provider_adjustment_id: adjustmentId,
+            p_provider_transaction_id: transactionId,
+            p_action: action,
+            p_adjustment_type: type,
+            p_status: status,
+            p_event_id: event.event_id,
+            p_occurred_at: event.occurred_at
+        });
+        if (error) throw new Error(error.message);
+    }
     // A refund or chargeback of a Wildlife Guide card payment (ours, sent by
     // the refunds job, or one made in Paddle) locks the guide again. A no-op
     // for any other transaction and for a purchase that is already refunded.
