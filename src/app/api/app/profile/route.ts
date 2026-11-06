@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {
     BIO_CHARACTER_LIMIT,
+    captureGridSortToSave,
     isDuplicateUsernameError,
     moderationRejection,
     normalizeInstagramUrl,
@@ -11,7 +12,6 @@ import {
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 const PROFILE_PRESETS = new Set(["spirit", "friend", "professional", "business"]);
-const GRID_SORTS = new Set(["recent", "index"]);
 
 /**
  * Profile writes for the signed-in user.
@@ -19,7 +19,11 @@ const GRID_SORTS = new Set(["recent", "index"]);
  * - `{chromePreset}` alone: the profile style (kept for older clients).
  * - `{action: "update", …}`: iOS `ProfileEditorView` → `updateCurrentProfile`:
  *   moderation filter, username availability, then one `profiles` update of
- *   display name, username, avatar, bio, Instagram, style and grid sort.
+ *   display name, username, avatar, bio and Instagram. The style and the grid
+ *   sort are written only when the request carries a value the apps know
+ *   (recent, index, stars or custom): Edit profile on the web never turns a
+ *   choice made in the app into another. The custom grid's captures
+ *   (`capture_grid_capture_ids`) are the app's to pick and never written here.
  */
 export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
@@ -54,11 +58,11 @@ export async function POST(request: Request) {
         return NextResponse.json({error: `Keep your bio to ${BIO_CHARACTER_LIMIT} characters.`}, {status: 400});
     }
     const instagram = String(body.instagramUrl ?? "");
-    const chromePreset = String(body.chromePreset ?? "professional");
-    const captureGridSort = String(body.captureGridSort ?? "recent");
-    if (!PROFILE_PRESETS.has(chromePreset) || !GRID_SORTS.has(captureGridSort)) {
+    const rawPreset = typeof body.chromePreset === "string" ? body.chromePreset.trim().toLowerCase() : "";
+    if (rawPreset && !PROFILE_PRESETS.has(rawPreset)) {
         return NextResponse.json({error: "A valid profile style is required."}, {status: 400});
     }
+    const captureGridSort = captureGridSortToSave(body.captureGridSort);
 
     const rejection = moderationRejection([displayName, username, bio, instagram].join(" "));
     if (rejection) return NextResponse.json({error: rejection}, {status: 400});
@@ -80,8 +84,8 @@ export async function POST(request: Request) {
         avatar_url: avatarUrl,
         bio: normalizeOptionalText(bio),
         instagram_url: normalizeInstagramUrl(instagram),
-        chrome_preset: chromePreset,
-        capture_grid_sort: captureGridSort
+        ...(rawPreset ? {chrome_preset: rawPreset} : {}),
+        ...(captureGridSort ? {capture_grid_sort: captureGridSort} : {})
     }).eq("id", user.id);
 
     if (error) {

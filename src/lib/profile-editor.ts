@@ -6,19 +6,39 @@
 export const BIO_CHARACTER_LIMIT = 160;
 
 export type ProfileChromePreset = "spirit" | "friend" | "professional" | "business";
-export type ProfileCaptureGridSort = "recent" | "index";
+/** iOS `ProfileCaptureGridSort`: every value the apps can save. */
+export type ProfileCaptureGridSort = "recent" | "index" | "stars" | "custom";
 
-export const PROFILE_STYLE_OPTIONS: Array<{id: ProfileChromePreset; title: string; detail: string}> = [
-    {id: "spirit", title: "Spirit", detail: "Origin, Apex, and Active animals"},
-    {id: "friend", title: "Friend", detail: "Your pets"},
-    {id: "professional", title: "Professional", detail: "Bio, joined date, and Instagram"},
-    {id: "business", title: "Business", detail: "Net worth, overall score, and catalog %"}
-];
+const CAPTURE_GRID_SORTS: readonly ProfileCaptureGridSort[] = ["recent", "index", "stars", "custom"];
 
-export const CAPTURE_GRID_OPTIONS: Array<{id: ProfileCaptureGridSort; title: string; detail: string}> = [
-    {id: "recent", title: "Recently captured", detail: "Newest captures first"},
-    {id: "index", title: "Index number", detail: "AnimalDex #, lowest to highest"}
-];
+/**
+ * iOS `ProfileCaptureGridSort.parse`: trimmed and lowercased; anything else,
+ * or nothing, is the default (recent).
+ */
+export function parseCaptureGridSort(raw: unknown): ProfileCaptureGridSort {
+    const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+    return (CAPTURE_GRID_SORTS as readonly string[]).includes(value) ? value as ProfileCaptureGridSort : "recent";
+}
+
+/**
+ * The grid sort an Edit profile save may write, or null to leave the stored
+ * one alone. Only a value the apps know is written: a missing or unknown one
+ * never turns someone's star or custom grid (chosen in the app) into recent.
+ */
+export function captureGridSortToSave(raw: unknown): ProfileCaptureGridSort | null {
+    const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+    return (CAPTURE_GRID_SORTS as readonly string[]).includes(value) ? value as ProfileCaptureGridSort : null;
+}
+
+/**
+ * The grid choices Edit profile offers, in iOS's order. Custom needs the
+ * app's capture picker, which the web does not have: it is offered only
+ * while it is the saved choice, so keeping it is always possible and
+ * choosing it from nothing (an empty grid) is not.
+ */
+export function captureGridChoices(saved: ProfileCaptureGridSort): ProfileCaptureGridSort[] {
+    return saved === "custom" ? ["recent", "index", "stars", "custom"] : ["recent", "index", "stars"];
+}
 
 export function normalizeUsername(value: string) {
     return value.trim().replace(/@/g, "").toLowerCase();
