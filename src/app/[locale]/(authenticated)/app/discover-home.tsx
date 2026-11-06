@@ -2,7 +2,7 @@
 
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
-import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {useAppShellChrome, useAppShellMenuOpen} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {AppEmpty, AppPrimaryLink} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {DiscoverTimelineCard} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import LessonVideoFeed, {PlayRectangleIcon} from "@/app/[locale]/(authenticated)/app/lesson-video-feed";
@@ -133,6 +133,7 @@ function DiscoverTopBar({
     onToggleLessonVideos: () => void;
 }) {
     const chrome = useAppShellChrome();
+    const menuOpen = useAppShellMenuOpen();
     const showsCollectors = segment === "collectors";
 
     // iOS: the hamburger leads, then the lesson videos and Collectors; the
@@ -144,11 +145,11 @@ function DiscoverTopBar({
                 <button
                     type="button"
                     onClick={chrome.toggleMenu}
-                    aria-label={chrome.menuOpen ? "Close menu" : "Open menu"}
+                    aria-label={menuOpen ? "Close menu" : "Open menu"}
                     className={`relative grid h-11 w-11 place-items-center text-white ${glass}`}
                     data-testid="explore-menu-button"
                 >
-                    <AppIcon name={chrome.menuOpen ? "close" : "menu"} className="h-[1.35rem] w-[1.35rem]" />
+                    <AppIcon name={menuOpen ? "close" : "menu"} className="h-[1.35rem] w-[1.35rem]" />
                     {chrome.isAuthenticated ? <CountBadge count={chrome.unreadCount} /> : null}
                 </button>
                 <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className={`h-11 w-11 ${glass}`} />

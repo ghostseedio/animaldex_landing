@@ -11,7 +11,6 @@ export type AppShellChrome = {
     unreadMessageCount: number;
     /** The frame's words, and the error lines every screen shares (DECISIONS section 4). */
     words: AppShellWords;
-    menuOpen: boolean;
     toggleMenu: () => void;
     /**
      * The Companions tab as the chat (the owner, 2026-11-06, after the Claude
@@ -28,12 +27,22 @@ const noopChrome: AppShellChrome = {
     unreadCount: 0,
     unreadMessageCount: 0,
     words: APP_SHELL_WORDS_EN,
-    menuOpen: false,
     toggleMenu: () => undefined,
     setBottomNavHidden: () => undefined
 };
 
 export const AppShellChromeContext = createContext<AppShellChrome>(noopChrome);
+
+/**
+ * Whether the side menu is open, apart from the rest of the chrome: only the
+ * Explore bar's toggle shows it, and the screens that read the chrome must not
+ * draw again on every open and close (perf pass, 2026-11-06).
+ */
+export const AppShellMenuOpenContext = createContext(false);
+
+export function useAppShellMenuOpen() {
+    return useContext(AppShellMenuOpenContext);
+}
 
 /**
  * Lets a screen draw its own top bar (the Discover tab mirrors iOS

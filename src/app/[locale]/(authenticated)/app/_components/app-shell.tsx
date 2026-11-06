@@ -1,13 +1,13 @@
 "use client";
 
-import {useEffect, useState, useRef} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import SideMenu from "@/app/[locale]/(authenticated)/app/_components/side-menu";
 import {COMPANION_WORDS_EN, type CompanionWords} from "@/lib/companion-bond";
 import {CreditBalanceChip} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
-import {AppShellChromeContext, isDiscoverShellRoute} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {AppShellChromeContext, AppShellMenuOpenContext, isDiscoverShellRoute} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {useUnreadAnimalMessages} from "@/components/companions/use-animal-conversations";
 import {APP_SHELL_WORDS_EN, type AppShellWords} from "@/lib/app-shell-words";
@@ -201,11 +201,19 @@ export default function AppShell({
         }
     }, [resolvedAuthenticated, pathname, router]);
 
-    async function signOut() {
+    const signOut = useCallback(async () => {
         await fetch("/api/auth/logout", {method: "POST"});
         router.push("/account");
         router.refresh();
-    }
+    }, [router]);
+    // The menu's props hold still while the menu opens and closes, so the sidebar is not drawn again.
+    const menuProfileName = resolvedProfile?.displayName ?? null;
+    const menuProfileUsername = resolvedProfile?.username ?? null;
+    const menuProfileAvatar = resolvedProfile?.avatarUrl ?? null;
+    const menuProfile = useMemo(
+        () => (resolvedAuthenticated && menuProfileName !== null ? {displayName: menuProfileName, username: menuProfileUsername, avatarUrl: menuProfileAvatar} : null),
+        [resolvedAuthenticated, menuProfileName, menuProfileUsername, menuProfileAvatar]
+    );
 
     const navClass = (active: boolean, mobile = false) => {
         const base = mobile
@@ -250,19 +258,25 @@ export default function AppShell({
         </Link>
     );
 
+    // One value while nothing in it changes, and a toggle that never changes: every screen that
+    // reads the chrome (the Companions chat and its conversation) used to draw again on each
+    // menu open and close (perf pass, 2026-11-06).
+    const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
+    const closeMenu = useCallback(() => setMenuOpen(false), []);
+    const profileName = resolvedAuthenticated ? resolvedProfile?.displayName ?? null : null;
+    const chrome = useMemo(() => ({
+        isAuthenticated: resolvedAuthenticated,
+        unreadCount: resolvedAuthenticated ? unreadCount : 0,
+        unreadMessageCount: resolvedAuthenticated ? unreadMessageCount : 0,
+        words,
+        toggleMenu,
+        setBottomNavHidden,
+        profileName
+    }), [resolvedAuthenticated, unreadCount, unreadMessageCount, words, toggleMenu, profileName]);
+
     return (
-        <AppShellChromeContext.Provider
-            value={{
-                isAuthenticated: resolvedAuthenticated,
-                unreadCount: resolvedAuthenticated ? unreadCount : 0,
-                unreadMessageCount: resolvedAuthenticated ? unreadMessageCount : 0,
-                words,
-                menuOpen,
-                toggleMenu: () => setMenuOpen((open) => !open),
-                setBottomNavHidden,
-                profileName: resolvedAuthenticated ? resolvedProfile?.displayName ?? null : null
-            }}
-        >
+        <AppShellChromeContext.Provider value={chrome}>
+        <AppShellMenuOpenContext.Provider value={menuOpen}>
         {/* The web app mirrors the iOS app, which is dark-only, so it keeps its own
             palette when the marketing site is in the light theme. */}
         <div className={`theme-dark bg-black text-white ${isDiscoverRoute ? "flex h-[100dvh] flex-col overflow-hidden lg:block lg:h-auto lg:min-h-screen lg:overflow-visible" : "min-h-screen"}`}>
@@ -272,7 +286,7 @@ export default function AppShell({
                     variant="sidebar"
                     words={words}
                     companionWords={companionWords ?? COMPANION_WORDS_EN}
-                    profile={resolvedAuthenticated && resolvedProfile ? {displayName: resolvedProfile.displayName, username: resolvedProfile.username ?? null, avatarUrl: resolvedProfile.avatarUrl ?? null} : null}
+                    profile={menuProfile}
                     isAuthenticated={resolvedAuthenticated}
                     unreadCount={resolvedAuthenticated ? unreadCount : 0}
                     unreadMessageCount={resolvedAuthenticated ? unreadMessageCount : 0}
@@ -295,18 +309,18 @@ export default function AppShell({
 
             {menuOpen ? (
                 <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={words.openMenu}>
-                    <button type="button" aria-label={words.closeMenu} className="absolute inset-0 bg-black/70" onClick={() => setMenuOpen(false)} />
+                    <button type="button" aria-label={words.closeMenu} className="absolute inset-0 bg-black/70" onClick={closeMenu} />
                     <div ref={slideOverRef} tabIndex={-1} className="talk-slide-over absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col border-r border-white/10 shadow-[12px_0_40px_rgba(0,0,0,0.45)] outline-none">
                         <SideMenu
                             variant="slideover"
                             words={words}
                             companionWords={companionWords ?? COMPANION_WORDS_EN}
-                                    profile={resolvedAuthenticated && resolvedProfile ? {displayName: resolvedProfile.displayName, username: resolvedProfile.username ?? null, avatarUrl: resolvedProfile.avatarUrl ?? null} : null}
+                            profile={menuProfile}
                             isAuthenticated={resolvedAuthenticated}
                             unreadCount={resolvedAuthenticated ? unreadCount : 0}
                             unreadMessageCount={resolvedAuthenticated ? unreadMessageCount : 0}
                             accountHref={accountHref}
-                            onClose={() => setMenuOpen(false)}
+                            onClose={closeMenu}
                             onSignOut={signOut}
                         />
                     </div>
@@ -328,6 +342,7 @@ export default function AppShell({
 
             {/* No bottom nav (the owner, 2026-11-06): the side menu carries every place. */}
         </div>
+        </AppShellMenuOpenContext.Provider>
         </AppShellChromeContext.Provider>
     );
 }

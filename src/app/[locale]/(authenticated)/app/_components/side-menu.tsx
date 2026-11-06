@@ -10,7 +10,7 @@
  */
 
 import {usePathname, useRouter} from "next/navigation";
-import {useState} from "react";
+import {memo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {type AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
@@ -25,7 +25,7 @@ const RECENTS_LIMIT = 10;
 
 export type SideMenuProfile = {displayName: string; username: string | null; avatarUrl: string | null} | null;
 
-export default function SideMenu({variant, words, companionWords, profile, isAuthenticated, unreadCount, unreadMessageCount, accountHref, onClose, onSignOut}: {
+export default memo(function SideMenu({variant, words, companionWords, profile, isAuthenticated, unreadCount, unreadMessageCount, accountHref, onClose, onSignOut}: {
     variant: "sidebar" | "slideover";
     words: AppShellWords;
     companionWords: CompanionWords;
@@ -68,7 +68,8 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
         rememberCompanion(speciesProfileId);
         window.dispatchEvent(new CustomEvent(COMPANIONS_SWITCH_EVENT, {detail: speciesProfileId}));
         onClose?.();
-        router.push(`${localePrefix}/app`);
+        // Already on the tab, the chat takes the switch itself: no round trip for the page it is on.
+        if ((pathname.slice(localePrefix.length) || "/") !== "/app") router.push(`${localePrefix}/app`);
     };
     return (
         <div className="relative flex h-full min-h-0 flex-col bg-[#0b0b0b]" data-testid={`side-menu-${variant}`}>
@@ -178,4 +179,4 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
             ) : null}
         </div>
     );
-}
+});

@@ -543,7 +543,7 @@ function signInHrefFor(pathname: string | null) {
     return `/account?next=${encodeURIComponent(pathname || "/")}`;
 }
 
-export default function AskConversation({
+function AskConversation({
     labels,
     presentation = "drawer",
     page = null
@@ -3462,6 +3462,13 @@ export default function AskConversation({
         </>
     );
 }
+
+/**
+ * Drawn again only when its own props change: the Companions chat hands over
+ * the same labels and page while the roster, the menu or the shell around it
+ * change (perf pass, 2026-11-06).
+ */
+export default memo(AskConversation);
 
 function lastQuestion(messages: AskMessage[]): string {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
