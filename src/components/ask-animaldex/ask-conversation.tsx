@@ -1583,7 +1583,7 @@ export default function AskConversation({
         : null;
     // Report mode: "Tell Leo how it went", and send once there are three characters.
     const fieldPlaceholder = debateEdit
-        ? words.debateWeb.problemPlaceholder
+        ? debateEdit.placeholder ?? words.debateWeb.problemPlaceholder
         : reporting ? fillWords(labels.companions.journey.report.placeholder, {name: speakerName}) : visitorPlaceholder ?? placeholder;
     const sendReady = debateEdit
         ? composer.trim().length >= debateEdit.min
@@ -2160,6 +2160,7 @@ export default function AskConversation({
                 chat={debateChat}
                 hostFaceUrl={faceUrl}
                 opening={!anchoredDebateIds.has(debate.id)}
+                onEdit={startDebateEdit}
             />
         </div>
     ));
@@ -3203,7 +3204,7 @@ export default function AskConversation({
                                 >
                                     <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] font-bold leading-4 text-primary-300">
                                         <PencilIcon />
-                                        <span className="min-w-0 truncate">{debateEdit.kind === "public" ? words.debate.editingPublic : words.debate.editingQuestion}</span>
+                                        <span className="min-w-0 truncate">{debateEdit.strip ?? (debateEdit.kind === "public" ? words.debate.editingPublic : words.debate.editingQuestion)}</span>
                                     </p>
                                     <span className="shrink-0 text-[11px] tabular-nums text-white/45">{composer.length} / {debateEdit.max}</span>
                                     <button
@@ -3348,7 +3349,7 @@ export default function AskConversation({
                                         className={`mb-0.5 inline-flex h-9 shrink-0 items-center rounded-full px-4 text-xs font-black transition-colors ${sendReady ? "bg-primary-400 text-canvas-950 hover:bg-primary-300 active:bg-primary-500" : "bg-white/8 text-ink-400"}`}
                                         data-testid="debate-edit-save"
                                     >
-                                        {words.debate.save}
+                                        {debateEdit.sendLabel ?? words.debate.save}
                                     </button>
                                 ) : (
                                     <button

@@ -14,7 +14,7 @@
  * (`DebateReportSections`, `DebateVoteSection`).
  */
 
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState, type ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {AskAnimalFace, AskReplyBubbles, AskSpecialLabel, AskTypingBubble} from "@/components/ask-animaldex/ask-messenger";
 import {ASK_GROUP_COLORS} from "@/lib/ask-animaldex/group-thread";
@@ -22,11 +22,16 @@ import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import {
     debateAnimalName,
+    debateParticipantIsWild,
+    debateRecommendedParticipant,
+    debateReportIsRated,
     debateVoteState,
     reportWayFor,
     type Debate,
-    type DebateParticipant
+    type DebateParticipant,
+    type DebateQuality
 } from "@/lib/debates";
+import {DEBATE_SECONDARY_CHIP, DebatePlusIcon, DebateQualitiesLine, DebateRatedWay, DebateSealIcon, DebateWildTag} from "@/components/debates/debate-v2-views";
 import {debateCast, debateClosesIn, debateHeadline, debateLine, debateProblemText, debateResultLines, debateSpeakerLine, debateStatusText, debateVotesText} from "@/lib/debate-words";
 import {debateIsOwnOnly} from "@/lib/debates";
 import {voteOnDebate, noteDebateChanged} from "@/components/debates/use-debates";
@@ -281,18 +286,25 @@ export function DebateRow({debate, words, href}: {debate: Debate; words: Compani
  * pace, its species icon art beside the last; the three-dot bubble while it
  * finds its words. A tap shows the rest at once. No voice on debate turns.
  */
-export function DebateTurnMessage({participant, text, live = false, typingLabel, onSkip}: {
+export function DebateTurnMessage({participant, text, live = false, typingLabel, onSkip, words}: {
     participant: DebateParticipant | null;
     text: string;
     live?: boolean;
     typingLabel?: string;
     onSkip?: () => void;
+    /** For the "Wild" tag beside a kind the asker has not caught (V2). */
+    words?: CompanionWords;
 }) {
     const face = debateFaceUrl(participant);
     const name = participant ? debateAnimalName(participant) : "";
     return (
         <div className="flex flex-col" data-testid="debate-turn">
-            {participant ? <p className="truncate pb-1 pl-9 text-[11px] font-semibold leading-4 text-ink-300">{debateSpeakerLine(participant)}</p> : null}
+            {participant ? (
+                <p className="flex min-w-0 items-center gap-1.5 pb-1 pl-9 text-[11px] font-semibold leading-4 text-ink-300">
+                    <span className="min-w-0 truncate">{debateSpeakerLine(participant)}</span>
+                    {words && debateParticipantIsWild(participant) ? <DebateWildTag words={words} /> : null}
+                </p>
+            ) : null}
             {text ? (
                 <AskReplyBubbles text={text} isLive={live} avatarUrl={face} speakerName={name} photoUrl={null} photoAlt="" onSkip={onSkip} />
             ) : (
@@ -338,8 +350,16 @@ function useWide(min: number) {
  * first: …"; and for the asker a chip per animal, until a way is chosen:
  * then only "You chose {name}'s way", with how to earn its Power when the
  * animal is not theirs.
+ *
+ * A rated report (Debates v2, iOS e15b474b) is quiet: "How well each way fits
+ * what you told them", then each way with its fit bar, one Recommended with
+ * its reason, its own Try, and "Why" for the rest; its "try first" line is
+ * left out (the recommendation replaces it). Under it, for the asker before a
+ * way is chosen, [I solved it my way] and [Ask more animals]; `sections` are
+ * the message's further sections (Ask more, the solution, Ask the public)
+ * and `closing` the last (Add one of your animals).
  */
-export function DebateReportSections({debate, words, locale, onTryWay, choosing, chosenId, problem, signedIn = true, onVoted}: {
+export function DebateReportSections({debate, words, locale, onTryWay, choosing, chosenId, problem, signedIn = true, onVoted, qualities = [], onSolve, onAskMore, sections = null, closing = null}: {
     debate: Debate;
     words: CompanionWords;
     locale?: string;
@@ -349,8 +369,17 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
     problem?: string | null;
     signedIn?: boolean;
     onVoted?: (debate: Debate) => void;
+    /** What the way they chose adds to their qualities. */
+    qualities?: readonly DebateQuality[];
+    /** "I solved it my way" and "Ask more animals" (the asker, before a way is chosen). */
+    onSolve?: () => void;
+    onAskMore?: () => void;
+    sections?: ReactNode;
+    closing?: ReactNode;
 }) {
     const report = debate.report;
+    const rated = debateReportIsRated(report);
+    const recommended = rated ? debateRecommendedParticipant(debate) : null;
     // The reply column at 640 px or more (the Talk page): this section is that column less the face and the bubble's room.
     const {ref, wide} = useWide(500);
     const web = words.debateWeb;
@@ -365,7 +394,30 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                 <section className="flex flex-col gap-2.5" aria-label={words.debate.reportTitle} data-testid="debate-report">
                     <AskSpecialLabel icon={<ReportIcon />}>{words.debate.reportTitle}</AskSpecialLabel>
                     {report.problem ? <p className="text-[15px] font-bold leading-6 text-white">{report.problem}</p> : null}
-                    {wide ? (
+                    {rated ? (
+                        <>
+                            <p className="text-[11px] leading-4 text-white/45" data-testid="debate-fit-caption">{words.debate.fitCaption}</p>
+                            <div className="flex flex-col gap-3.5">
+                                {ways.map(({participant, way}) => (
+                                    <DebateRatedWay
+                                        key={participant.id}
+                                        participant={participant}
+                                        way={way!}
+                                        recommended={recommended?.id === participant.id}
+                                        why={recommended?.id === participant.id ? report.recommendedWhy : null}
+                                        words={words}
+                                        chosenId={chosen?.id ?? null}
+                                        tried={debate.triedParticipantIds.includes(participant.id)}
+                                        onTryWay={onTryWay}
+                                        choosing={choosing ?? null}
+                                        choosingLabel={web.choosing}
+                                        ownsSpecies={participant.isAskerOwned || participant.ownerIsMe}
+                                        qualities={qualities}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    ) : wide ? (
                         <div className="max-w-full overflow-x-auto rounded-panel" style={{boxShadow: "inset 0 0 0 1px var(--ask-hairline)"}} data-testid="debate-report-table">
                             <table className="w-full border-collapse text-left text-[13px] leading-5">
                                 <thead>
@@ -383,6 +435,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                                     <AskAnimalFace url={debateFaceUrl(participant)} size={24} />
                                                     <span className="min-w-0">
                                                         <span className="block font-bold text-white">{debateAnimalName(participant)}</span>
+                                                        {debateParticipantIsWild(participant) ? <DebateWildTag words={words} /> : null}
                                                         {participant.powerName ? <span className="block text-[11px] text-white/50">{participant.powerName}</span> : null}
                                                     </span>
                                                 </span>
@@ -405,6 +458,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                     <div className="flex items-center gap-2">
                                         <AskAnimalFace url={debateFaceUrl(participant)} size={24} />
                                         <span className="text-[13px] font-bold text-white">{debateAnimalName(participant)}</span>
+                                        {debateParticipantIsWild(participant) ? <DebateWildTag words={words} /> : null}
                                         {participant.powerName ? <span className="min-w-0 truncate text-[11px] font-semibold text-white/45">{participant.powerName}</span> : null}
                                     </div>
                                     <p className="text-[14px] leading-[22px] text-white"><span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{words.debate.itsWay}</span> {way?.way}</p>
@@ -415,18 +469,19 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                             ))}
                         </div>
                     )}
-                    {report.tryFirst ? (
+                    {report.tryFirst && !rated ? (
                         <p className="text-[14px] leading-[22px] text-white" data-testid="debate-try-first">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{fillWords(words.debate.tryFirst, {text: ""}).trim()}</span>{" "}{report.tryFirst}
                         </p>
                     ) : null}
-                    {onTryWay ? (
+                    {onTryWay && !rated ? (
                         chosen ? (
                             <div className="flex flex-col gap-1" data-testid="debate-chosen">
                                 <p className="text-[13px] font-semibold leading-5 text-white/70">{fillWords(words.debate.youChose, {name: debateAnimalName(chosen)})}</p>
                                 {!chosen.isAskerOwned && !chosen.ownerIsMe ? (
                                     <p className="text-[12px] leading-4 text-white/50">{fillWords(words.debate.catchToEarn, {species: chosen.animal})}</p>
                                 ) : null}
+                                <DebateQualitiesLine qualities={qualities} words={words} />
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
@@ -451,12 +506,30 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                             </div>
                         )
                     ) : null}
+                    {onSolve || onAskMore ? (
+                        <div className="flex flex-wrap gap-2" data-testid="debate-report-actions">
+                            {onSolve ? (
+                                <button type="button" onClick={onSolve} className={DEBATE_SECONDARY_CHIP} data-testid="debate-solved-mine">
+                                    <DebateSealIcon />
+                                    {words.debate.solvedMine}
+                                </button>
+                            ) : null}
+                            {onAskMore ? (
+                                <button type="button" onClick={onAskMore} className={DEBATE_SECONDARY_CHIP} data-testid="debate-ask-more-open">
+                                    <DebatePlusIcon />
+                                    {words.debate.askMore}
+                                </button>
+                            ) : null}
+                        </div>
+                    ) : null}
                     {problem ? <p role="alert" className="text-[12px] text-white/60">{problem}</p> : null}
                 </section>
             ) : null}
+            {sections}
             {debate.visibility === "public" && (debate.status === "voting" || debate.status === "settled" || debate.status === "draw") ? (
                 <DebateVoteSection debate={debate} words={words} locale={locale} signedIn={signedIn} onChange={onVoted} />
             ) : null}
+            {closing}
         </div>
     );
 }

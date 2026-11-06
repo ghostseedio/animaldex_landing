@@ -21,6 +21,13 @@
  * had not); the report comes at the end of the stream, or is read until it
  * is in. Closing the chat mid-debate stops it there; the next look carries
  * it on from the next turn.
+ *
+ * Debates v2 (docs/debates/V2.md; iOS e15b474b, 390e5c2a): a rated report
+ * (fit bars, one Recommended, Why); for the asker before a way is chosen,
+ * [I solved it my way] (in the chat's message bar, `onEdit`) and [Ask more
+ * animals], whose new animals then argue here; Ask the public under a
+ * finished private report; and, for anyone who could vote on a debate asked
+ * in public, [Add one of your animals].
  */
 
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -30,17 +37,28 @@ import {usePrefersReducedMotion} from "@/components/ask-animaldex/use-reply-pace
 import {parseAskGroupFrame} from "@/lib/ask-animaldex/group-thread";
 import type {CompanionWords} from "@/lib/companion-bond";
 import {
+    DEBATE_MIN_SOLUTION,
+    DEBATE_PROBLEM_MAX,
+    DEBATE_PUBLIC_TEXT_MAX,
+    debateAskPublicStage,
+    debateCanOfferAnimal,
+    debateOffersAskMore,
+    debateOffersSolve,
     decodeDebateReport,
     orderedDebateTurns,
     type Debate,
     type DebateParticipant,
     type DebatePhase,
+    type DebateQuality,
     type DebateTurn
 } from "@/lib/debates";
 import {debateProblemText} from "@/lib/debate-words";
-import {chooseDebateWay, fetchDebate, noteDebateChanged, useDebateUpdates} from "@/components/debates/use-debates";
+import {chooseDebateWay, fetchDebate, loadTopQualities, noteDebateChanged, useDebateUpdates} from "@/components/debates/use-debates";
+import {useDebateV2} from "@/components/debates/use-debate-v2";
+import type {DebateEdit} from "@/components/debates/debate-sheet";
 import {AskSpecialBubble, AskTypingBubble} from "@/components/ask-animaldex/ask-messenger";
 import {debateFaceUrl, DebateQuietSection, DebateReportSections, DebateTurnMessage} from "@/components/debates/debate-views";
+import {DebateAskMoreSection, DebateAskPublicSection, DebateJudgingSection, DebateOfferAnimalSection, DebateSolutionSection} from "@/components/debates/debate-v2-views";
 
 export {DebateQuietSection};
 
@@ -101,6 +119,8 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
     const [problem, setProblem] = useState<string | null>(null);
     const [chosenId, setChosenId] = useState<string | null>(debate?.chosenParticipantId ?? null);
     useEffect(() => setChosenId(debate?.chosenParticipantId ?? null), [debate?.chosenParticipantId]);
+    // V2: what the way they chose adds to their qualities, shown under it.
+    const [qualities, setQualities] = useState<DebateQuality[]>([]);
     const tryWay = useCallback((participant: DebateParticipant) => {
         if (!debate || choosing) return;
         setChoosing(participant.id);
@@ -112,6 +132,7 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
                 return;
             }
             setChosenId(participant.id);
+            if (participant.speciesProfileId) void loadTopQualities(participant.speciesProfileId).then(setQualities);
             const choice = result.value;
             const captureId = choice.captureId
                 ?? (choice.stepSource === "own_animal" && (participant.ownerIsMe || participant.isAskerOwned) ? participant.captureId : debate.hostCaptureId);
@@ -124,7 +145,7 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
             router.push(`/app/capture/${encodeURIComponent(captureId)}${query}`);
         });
     }, [debate, choosing, router, words, chat]);
-    return {tryWay, choosing, chosenId, problem};
+    return {tryWay, choosing, chosenId, problem, qualities};
 }
 
 export default function DebateThread({
@@ -137,7 +158,8 @@ export default function DebateThread({
     onApprove,
     chat,
     hostFaceUrl = null,
-    opening = true
+    opening = true,
+    onEdit
 }: {
     seed: Debate;
     words: CompanionWords;
@@ -154,8 +176,12 @@ export default function DebateThread({
     hostFaceUrl?: string | null;
     /** Opens on "DEBATE" and who is in it, as the host's own message (false: the offer's section already says it). */
     opening?: boolean;
+    /** The chat's message bar edit mode: "I solved it my way" and Ask the public's Edit are written there. */
+    onEdit?: (edit: DebateEdit) => void;
 }) {
     const [debate, setDebate] = useState<Debate>(seed);
+    const debateRef = useRef(debate);
+    debateRef.current = debate;
     const [shown, setShown] = useState<DebateTurn[]>(() => orderedDebateTurns(seed.turns));
     /** The stream's phase for each frame index (the group parser reads only its own phases). */
     const phasesRef = useRef(new Map<number, DebatePhase>());
@@ -166,6 +192,11 @@ export default function DebateThread({
     const reducedMotion = usePrefersReducedMotion();
     const ranRef = useRef(false);
     const pollingRef = useRef(false);
+    /** This view runs the turns: the asker's chat, or here after Ask more animals. */
+    const [runs, setRuns] = useState(run);
+    /** After Ask more animals, the report on show until the new one replaces it (its JSON). */
+    const staleReportRef = useRef<string | null>(null);
+    const reportIsNew = (report: Debate["report"]) => Boolean(report) && JSON.stringify(report) !== staleReportRef.current;
     const mounted = useRef(true);
     // Set again on every mount: React's development double mount runs the cleanup once in between.
     useEffect(() => {
@@ -216,19 +247,20 @@ export default function DebateThread({
                 await new Promise((resolve) => setTimeout(resolve, REPORT_POLL_MS));
                 const {debate: fetched} = await fetchDebate(seed.id);
                 if (!fetched) continue;
-                if (fetched.report || (fetched.status !== "debating" && fetched.status !== "reporting")) {
+                if (reportIsNew(fetched.report) || (fetched.status !== "debating" && fetched.status !== "reporting")) {
+                    staleReportRef.current = null;
                     apply(fetched);
                     noteDebateChanged(fetched);
                     return;
                 }
                 // Someone else's view of a debate still being argued: its new turns, as they are kept.
-                if (!run) apply(fetched);
+                if (!runs) apply(fetched);
             }
         } finally {
             pollingRef.current = false;
             if (mounted.current) setWaitingReport(false);
         }
-    }, [seed.id, apply, run]);
+    }, [seed.id, apply, runs]);
 
     const runDebate = useCallback(async () => {
         setStreaming(true);
@@ -309,36 +341,75 @@ export default function DebateThread({
         if (!mounted.current) return;
         setStreaming(false);
         const written = report as Debate["report"];
-        if (written) setDebate((current) => ({...current, report: written}));
+        if (written) {
+            staleReportRef.current = null;
+            setDebate((current) => ({...current, report: written}));
+        }
         // Where it stands now (the `done` frame carries only the status): the server's copy.
         const {debate: fetched} = await fetchDebate(seed.id);
         if (fetched && mounted.current) {
-            apply(written && !fetched.report ? {...fetched, report: written} : fetched);
+            apply(written && !reportIsNew(fetched.report) ? {...fetched, report: written} : fetched);
             noteDebateChanged(fetched);
         }
         const now = fetched ?? null;
-        if (finished && !written && !now?.report) void waitForReport();
-        else if (!finished && now && (now.status === "reporting")) void waitForReport();
+        if (!written && (now?.status === "reporting" || (finished && !reportIsNew(now?.report ?? null)))) void waitForReport();
     }, [seed.id, locale, director, apply, waitForReport, words]);
 
     // The asker's chat runs it once, while it is being argued; any other view reads it as it goes.
     useEffect(() => {
         if (debate.status !== "debating" && debate.status !== "reporting") return;
-        if (run && debate.askerIsMe && debate.status === "debating" && !ranRef.current) {
+        if (runs && debate.askerIsMe && debate.status === "debating" && !ranRef.current) {
             ranRef.current = true;
             void runDebate();
             return;
         }
         if (!streaming && !ranRef.current) void waitForReport();
-    }, [run, debate.status, debate.askerIsMe, runDebate, streaming, waitForReport]);
+    }, [runs, debate.status, debate.askerIsMe, runDebate, streaming, waitForReport]);
 
     const tryWay = useTryDebateWay(debate, words, chat);
+    // V2: Ask more animals brings them into this debate, and the turns run here, then the report again.
+    const v2 = useDebateV2({
+        debate,
+        words,
+        locale,
+        apply: useCallback((next: Debate) => apply(next, {turns: false}), [apply]),
+        onExtended: useCallback((extended: Debate) => {
+            const before = extended.report ?? debateRef.current.report;
+            staleReportRef.current = before ? JSON.stringify(before) : null;
+            ranRef.current = false;
+            setRuns(true);
+            apply(extended);
+        }, [apply])
+    });
     const live = director.revealing;
     const waiting = director.waiting ?? (director.current && director.current !== live ? director.current : null);
     const participantFor = (participantId: string | null) => debate.participants.find((participant) => participant.id === participantId) ?? null;
     const talking = streaming || director.active;
     const hostFace = hostFaceUrl ?? debateFaceUrl(debate.participants.find((participant) => participant.seat === 0) ?? debate.participants[0] ?? null);
-    const writingReport = !talking && !debate.report && (waitingReport || debate.status === "reporting" || (debate.status === "debating" && shown.length > 0));
+    // After Ask more animals the report on show is the old one, until the new one is written.
+    const shownReport = debate.report && reportIsNew(debate.report) ? debate.report : null;
+    const writingReport = !talking && !shownReport && (waitingReport || debate.status === "reporting" || (debate.status === "debating" && shown.length > 0));
+    const reportDebate = shownReport === debate.report ? debate : {...debate, report: shownReport};
+    const askPublicStage = !talking && !v2.askMore.picking ? debateAskPublicStage(debate) : null;
+    const offersSolve = Boolean(onEdit) && debateOffersSolve(debate) && !v2.solve.working;
+    const offersAskMore = debateOffersAskMore(debate) && !v2.askMore.picking && !talking;
+    const solveEdit = () => onEdit?.({
+        kind: "solution",
+        text: "",
+        min: DEBATE_MIN_SOLUTION,
+        max: DEBATE_PROBLEM_MAX,
+        strip: words.debate.solvedTitle,
+        placeholder: words.debate.solvedPlaceholder,
+        sendLabel: words.debate.solvedSend,
+        save: (text) => void v2.solve.send(text)
+    });
+    const publicEdit = onEdit ? () => onEdit({
+        kind: "public",
+        text: v2.askPublic.draft,
+        min: 10,
+        max: DEBATE_PUBLIC_TEXT_MAX,
+        save: (text) => v2.askPublic.setDraft(text.slice(0, DEBATE_PUBLIC_TEXT_MAX))
+    }) : undefined;
     const votes = debate.visibility === "public" && (debate.status === "voting" || debate.status === "settled" || debate.status === "draw");
     const hostMessage = (children: React.ReactNode, testId?: string) => (
         <div className="pt-3.5">
@@ -358,12 +429,13 @@ export default function DebateThread({
                     <DebateTurnMessage
                         participant={debate.participants.find((participant) => participant.seat === turn.seat) ?? null}
                         text={turn.text}
+                        words={words}
                     />
                 </div>
             ))}
             {live ? (
                 <div className="pt-3.5">
-                    <DebateTurnMessage participant={participantFor(live.captureId)} text={director.visibleText} live onSkip={director.skipCurrent} />
+                    <DebateTurnMessage participant={participantFor(live.captureId)} text={director.visibleText} live onSkip={director.skipCurrent} words={words} />
                 </div>
             ) : null}
             {waiting && talking ? (
@@ -385,7 +457,8 @@ export default function DebateThread({
                     ) : null}
                 </div>
             ) : null}
-            {debate.status === "approving" || debate.status === "drafting" ? hostMessage(
+            {/* A v1 public debate waiting for its text (one asked in public says so under its report). */}
+            {(debate.status === "approving" || debate.status === "drafting") && !debate.askedPublic ? hostMessage(
                 <div className="flex flex-col items-start gap-2">
                     <p className="text-[13px] leading-5 text-white/70">{words.debateWeb.statusApproving}</p>
                     {onApprove && debate.askerIsMe ? (
@@ -406,17 +479,70 @@ export default function DebateThread({
                     <p className="pl-9 text-[11px] font-semibold text-white/50">{words.debate.writingReport}</p>
                 </div>
             ) : null}
-            {!talking && (debate.report || votes) ? hostMessage(
+            {!talking && (shownReport || votes) ? hostMessage(
                 <DebateReportSections
-                    debate={debate}
+                    debate={reportDebate}
                     words={words}
                     locale={locale}
                     onTryWay={debate.askerIsMe ? tryWay.tryWay : undefined}
                     choosing={tryWay.choosing}
                     chosenId={tryWay.chosenId}
-                    problem={tryWay.problem}
+                    problem={tryWay.problem ?? v2.solve.problem}
                     signedIn={signedIn}
                     onVoted={(next) => apply(next, {turns: false})}
+                    qualities={tryWay.qualities}
+                    // Once a way is chosen the report is settled: no more animals and no "my way" (owner, 2026-11-03).
+                    onSolve={offersSolve && !tryWay.chosenId ? solveEdit : undefined}
+                    onAskMore={offersAskMore && !tryWay.chosenId ? () => void v2.askMore.begin() : undefined}
+                    sections={(
+                        <>
+                            {v2.askMore.picking ? (
+                                <DebateAskMoreSection
+                                    words={words}
+                                    rows={v2.askMore.rows}
+                                    picked={v2.askMore.picked}
+                                    room={v2.askMore.room}
+                                    loading={v2.askMore.loading}
+                                    bringing={v2.askMore.bringing}
+                                    problem={v2.askMore.problem}
+                                    onToggle={v2.askMore.toggle}
+                                    onBring={() => void v2.askMore.bring()}
+                                    onCancel={v2.askMore.cancel}
+                                />
+                            ) : null}
+                            {v2.solve.working ? <DebateJudgingSection words={words} /> : debate.solution ? (
+                                <DebateSolutionSection debate={debate} solution={debate.solution} words={words} locale={locale} />
+                            ) : null}
+                            {askPublicStage ? (
+                                <DebateAskPublicSection
+                                    debate={debate}
+                                    stage={askPublicStage}
+                                    words={words}
+                                    working={v2.askPublic.working}
+                                    problem={v2.askPublic.problem}
+                                    draft={v2.askPublic.draft}
+                                    onDraft={v2.askPublic.setDraft}
+                                    onAsk={() => void v2.askPublic.ask()}
+                                    onPost={() => void v2.askPublic.post()}
+                                    onKeepPrivate={() => void v2.askPublic.keepPrivate()}
+                                    onEdit={publicEdit}
+                                />
+                            ) : null}
+                        </>
+                    )}
+                    closing={debateCanOfferAnimal(debate) || v2.offer.picking ? (
+                        <DebateOfferAnimalSection
+                            words={words}
+                            picking={v2.offer.picking}
+                            candidates={v2.offer.candidates}
+                            loading={v2.offer.loading}
+                            offeringId={v2.offer.offeringId}
+                            problem={v2.offer.problem}
+                            onBegin={() => void v2.offer.begin()}
+                            onOffer={(candidate) => void v2.offer.offer(candidate)}
+                            onCancel={v2.offer.cancel}
+                        />
+                    ) : null}
                 />,
                 "debate-report-message"
             ) : null}
