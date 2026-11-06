@@ -35,7 +35,7 @@ const usualReply = {
 };
 
 test("the hook lab tests carousel formats, and text posts get both take formats", () => {
-    assert.deepEqual(Object.keys(CAROUSEL_FORMATS), ["page", "usual_vs_animal", "five_animals"]);
+    assert.deepEqual(Object.keys(CAROUSEL_FORMATS), ["page", "usual_vs_animal", "five_animals", "birth_month"]);
     assert.deepEqual(KIND_DIMENSIONS.carousel, ["carouselFormat", "intent", "hookStyle"]);
     assert.ok("usual_vs_animal" in TEXT_FORMATS && "five_animals" in TEXT_FORMATS);
     // "5 animals" needs five real animals; an animal's take needs a real one.

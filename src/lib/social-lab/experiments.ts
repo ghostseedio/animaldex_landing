@@ -41,7 +41,7 @@ export function inferredExperiment(video: Pick<ContentVideoRow, "plan" | "durati
 
 function videoKind(video: ContentVideoRow): ExperimentKind {
     const format = (video.plan as VideoPlan | null)?.format;
-    return format === "battle" || format === "creature" ? format : "editorial";
+    return format === "battle" || format === "creature" || format === "lesson" || format === "guess" ? format : "editorial";
 }
 
 /** Every judged share, joined to its item. Exported for the admin panel's post table. */

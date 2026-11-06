@@ -85,8 +85,17 @@ export function wavSeconds(wav: Buffer): number {
     throw new Error("WAV has no data chunk");
 }
 
-async function googleLine(text: string, key: string): Promise<Buffer> {
-    const voice = process.env.CONTENT_VIDEO_TTS_VOICE?.trim() || "en-US-Chirp3-HD-Charon";
+/**
+ * How a video's narrator sounds. "brisk": the house voice, a fun older
+ * sibling. "deep": the noir lesson voice, slower and lower, like the
+ * self-improvement quote videos the format borrows from.
+ */
+export type VoiceProfile = "brisk" | "deep";
+
+const DEEP_INSTRUCTIONS = "Deep, calm, low male narrator for a stoic quote video. Slow and deliberate, with a short pause after each sentence; grave and warm, never theatrical or shouty.";
+
+async function googleLine(text: string, key: string, profile: VoiceProfile = "brisk"): Promise<Buffer> {
+    const voice = (profile === "deep" ? process.env.CONTENT_VIDEO_TTS_VOICE_DEEP?.trim() : undefined) || process.env.CONTENT_VIDEO_TTS_VOICE?.trim() || "en-US-Chirp3-HD-Charon";
     const languageCode = voice.split("-").slice(0, 2).join("-");
     const call = (audioConfig: Record<string, unknown>) => fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
         method: "POST",
@@ -95,7 +104,7 @@ async function googleLine(text: string, key: string): Promise<Buffer> {
         signal: AbortSignal.timeout(60_000)
     });
     const base = {audioEncoding: "LINEAR16", sampleRateHertz: 24000};
-    const rate = Number(process.env.CONTENT_VIDEO_TTS_RATE ?? "1.08");
+    const rate = Number(profile === "deep" ? process.env.CONTENT_VIDEO_TTS_RATE_DEEP ?? "0.9" : process.env.CONTENT_VIDEO_TTS_RATE ?? "1.08");
     let response = await call(Number.isFinite(rate) && rate !== 1 ? {...base, speakingRate: rate} : base);
     // Not every voice takes a speaking rate; fall back to its natural pace.
     if (response.status === 400) response = await call(base);
@@ -105,15 +114,15 @@ async function googleLine(text: string, key: string): Promise<Buffer> {
     return Buffer.from(body.audioContent, "base64");
 }
 
-async function openaiLine(text: string, key: string): Promise<Buffer> {
+async function openaiLine(text: string, key: string, profile: VoiceProfile = "brisk"): Promise<Buffer> {
     const response = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {Authorization: `Bearer ${key}`, "Content-Type": "application/json"},
         body: JSON.stringify({
             model: process.env.CONTENT_VIDEO_OPENAI_TTS_MODEL?.trim() || "gpt-4o-mini-tts",
-            voice: process.env.CONTENT_VIDEO_OPENAI_TTS_VOICE?.trim() || "ash",
+            voice: (profile === "deep" ? "onyx" : process.env.CONTENT_VIDEO_OPENAI_TTS_VOICE?.trim()) || "ash",
             input: text,
-            instructions: "Energetic, confident short-form video narrator. Brisk pace, clear emphasis, warm and curious; never shouty.",
+            instructions: profile === "deep" ? DEEP_INSTRUCTIONS : "Energetic, confident short-form video narrator. Brisk pace, clear emphasis, warm and curious; never shouty.",
             response_format: "wav"
         }),
         signal: AbortSignal.timeout(60_000)
@@ -127,12 +136,12 @@ async function openaiLine(text: string, key: string): Promise<Buffer> {
  * video (`state.skip`), so one voice is not swapped for another mid-video
  * unless the first stops working.
  */
-export async function speakLine(text: string, state: {skip: Set<string>; failures: string[]}): Promise<SpokenLine> {
+export async function speakLine(text: string, state: {skip: Set<string>; failures: string[]}, profile: VoiceProfile = "brisk"): Promise<SpokenLine> {
     const googleKey = process.env.GOOGLE_TTS_API_KEY?.trim();
     const openaiKey = process.env.OPENAI_API_KEY?.trim();
     if (googleKey && !state.skip.has("google")) {
         try {
-            const wav = await googleLine(text, googleKey);
+            const wav = await googleLine(text, googleKey, profile);
             return {wav, seconds: wavSeconds(wav), provider: "google"};
         } catch (error) {
             state.skip.add("google");
@@ -141,7 +150,7 @@ export async function speakLine(text: string, state: {skip: Set<string>; failure
     }
     if (openaiKey && !state.skip.has("openai")) {
         try {
-            const wav = await openaiLine(text, openaiKey);
+            const wav = await openaiLine(text, openaiKey, profile);
             return {wav, seconds: wavSeconds(wav), provider: "openai"};
         } catch (error) {
             state.skip.add("openai");

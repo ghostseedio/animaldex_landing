@@ -1,6 +1,6 @@
 import "server-only";
 import {randomUUID} from "node:crypto";
-import {listPageCandidates, loadPageSource} from "@/lib/content-video/page-sources";
+import {BIRTH_MONTH_PREFIX, listPageCandidates, loadPageSource} from "@/lib/content-video/page-sources";
 import {SOURCE_TYPES, type SourceImage, type SourceType, type VideoSource} from "@/lib/content-video/plan";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {uploadToStorage} from "@/lib/content-video/store";
@@ -71,6 +71,8 @@ function takeContext(source: VideoSource): TakeContext {
 
 /** Pages for a take format: from the families it fits, best-scoring family first, never a page that has one in this format. */
 async function takeCandidates(format: Exclude<CarouselFormat, "page">): Promise<Pick[]> {
+    // Its twelve animals are put together for it (page-sources birthMonthSource); the seed keeps a re-render the same.
+    if (format === "birth_month") return [{type: "lesson", slug: `${BIRTH_MONTH_PREFIX}${Date.now().toString(36)}`}];
     const used = await carouselFormatKeys().catch(() => new Set<string>());
     const types = await rankSourceTypes("carousel", FORMAT_SOURCES[format]) as SourceType[];
     const picks: Pick[] = [];

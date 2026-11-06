@@ -7,7 +7,7 @@ import type {ShareCopy} from "@/lib/social/share-copy";
 // carousels rendered from one of our pages, and text posts (hot takes, polls,
 // would-you-rathers) for X, Threads, Bluesky and Facebook.
 
-export const CAROUSEL_TEMPLATES = ["countdown", "versus", "facts", "myth_fact", "guess", "usual_vs_animal", "five_animals"] as const;
+export const CAROUSEL_TEMPLATES = ["countdown", "versus", "facts", "myth_fact", "guess", "usual_vs_animal", "five_animals", "birth_month"] as const;
 export type CarouselTemplate = (typeof CAROUSEL_TEMPLATES)[number];
 
 /**
@@ -92,8 +92,10 @@ export const TEMPLATES_FOR_SOURCE: Partial<Record<SourceType, CarouselTemplate[]
 /** The take formats are their own template; they need real animals with real behaviour (never hybrids or fusions). */
 export const FORMAT_SOURCES: Record<Exclude<CarouselFormat, "page">, SourceType[]> = {
     usual_vs_animal: ["ranking", "location", "comparison", "blog"],
-    five_animals: ["ranking", "location"]
+    five_animals: ["ranking", "location"],
+    // Twelve headline animals put together for the carousel (page-sources birthMonthSource).
+    birth_month: ["lesson"]
 };
 
 /** Photos a page needs for each format: "5 animals" shows one per animal. */
-export const FORMAT_MIN_IMAGES: Record<CarouselFormat, number> = {page: 3, usual_vs_animal: 2, five_animals: 5};
+export const FORMAT_MIN_IMAGES: Record<CarouselFormat, number> = {page: 3, usual_vs_animal: 2, five_animals: 5, birth_month: 12};

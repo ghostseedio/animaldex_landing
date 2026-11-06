@@ -96,7 +96,8 @@ export function toVideoSource(post: BlogPost): VideoSource {
     };
 }
 
-export type VideoCandidate = {slug: string; title: string; publishedAt: string; imageCount: number};
+/** A page a video could be made from. `priority`: the auto-generator takes the highest group first (lessons: headline animals). */
+export type VideoCandidate = {slug: string; title: string; publishedAt: string; imageCount: number; priority?: number};
 
 /** Every post a video could be made from: enough photos to cut between. Newest first. */
 export async function listVideoCandidates(): Promise<VideoCandidate[]> {

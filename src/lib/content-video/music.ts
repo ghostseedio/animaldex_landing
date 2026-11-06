@@ -3,7 +3,7 @@
 // in public/video-music/. Original audio, so no Content ID claims. The planner
 // picks a mood per video; the renderer ducks the bed under the voice.
 
-export const MUSIC_MOODS = ["suspense", "mystery", "intense", "wonder", "epic", "curious", "playful", "somber"] as const;
+export const MUSIC_MOODS = ["suspense", "mystery", "intense", "wonder", "epic", "curious", "playful", "somber", "noir"] as const;
 export type MusicMood = (typeof MUSIC_MOODS)[number];
 
 export function isMusicMood(value: unknown): value is MusicMood {
@@ -19,7 +19,8 @@ export const MUSIC_MOOD_GUIDE: Record<MusicMood, string> = {
     epic: "huge scale, migrations, ancient giants, evolution, big achievements",
     curious: "quirky facts, how things work, light science, explainers",
     playful: "funny, cute or surprising-in-a-good-way animals, lighthearted posts",
-    somber: "loss, extinction, conservation, human impact"
+    somber: "loss, extinction, conservation, human impact",
+    noir: "the dark & gold animal-lesson videos only: slow, heavy, motivational"
 };
 
 export type MusicTrack = {id: string; mood: MusicMood; prompt: string};
@@ -40,7 +41,10 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     {id: "curious-1", mood: "curious", prompt: `${BED} Curious and upbeat: pizzicato strings, light electronic beat, quirky woodwinds, smart science-explainer feel.`},
     {id: "curious-2", mood: "curious", prompt: `${BED} Curious modern: bouncy synth plucks, lo-fi drums, playful bass line, inquisitive and friendly.`},
     {id: "playful-1", mood: "playful", prompt: `${BED} Playful and fun: ukulele, claps, whistling-style synth lead without vocals, bright and cheerful.`},
-    {id: "somber-1", mood: "somber", prompt: `${BED} Somber and reflective: slow solo piano, soft cello, gentle ambient texture, emotional but hopeful.`}
+    {id: "somber-1", mood: "somber", prompt: `${BED} Somber and reflective: slow solo piano, soft cello, gentle ambient texture, emotional but hopeful.`},
+    // The lesson format's beds (Nov 2026): the slowed dark phonk and low strings the stoic quote shorts run on.
+    {id: "noir-1", mood: "noir", prompt: `${BED} Slowed dark phonk instrumental for a stoic motivational short: heavy distorted 808 bass, a slow menacing cowbell melody kept low in the mix, sparse trap hi-hats, reverb-drenched, about 70 BPM, dark and confident.`},
+    {id: "noir-2", mood: "noir", prompt: `${BED} Dark cinematic motivational bed: low sustained cello and double bass, a slow solemn piano motif, distant timpani swells, deep sub-bass pulses, grave, powerful and calm.`}
 ];
 
 /** The bed for a video: one of its mood's tracks, chosen by the video id so a re-edit keeps the same music. */

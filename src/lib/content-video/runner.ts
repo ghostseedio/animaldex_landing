@@ -105,7 +105,7 @@ async function runJob(id: string) {
             // The hook lab picks this video's job (share, save, comment, stay; one the page fits),
             // hook style, length / opener and ending from what has worked.
             const fresh = Boolean(source.publishedAt) && Date.now() - Date.parse(source.publishedAt!) < FRESH_ARTICLE_HOURS * 3_600_000;
-            const experiment = await nextExperiment(source.format === "battle" || source.format === "creature" ? source.format : "editorial", {sourceType: source.type, fresh});
+            const experiment = await nextExperiment(source.format === "editorial" ? "editorial" : source.format, {sourceType: source.type, fresh});
             const {plan, provider, failures} = await generateVideoPlan(source, experiment);
             if (failures.length) console.warn(`[content-video] ${id} plan fallbacks: ${failures.join("; ")}`);
             await save({plan, llm_provider: provider, status: "generating", progress: "Script ready"});
@@ -310,7 +310,7 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
     const narrations = [...plan.scenes.map((scene) => scene.narration), ...(loops ? [] : [plan.ctaNarration])];
     const lines = [];
     for (const narration of narrations) {
-        lines.push(await speakLine(narration, voiceState));
+        lines.push(await speakLine(narration, voiceState, plan.theme === "noir_gold" ? "deep" : "brisk"));
     }
     // When each word is said: measured by the aligner when it is available, else pinned to the recording's pauses.
     await progress("Timing the captions to the voice");
@@ -381,7 +381,8 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
         lineWords,
         endUrl: "ANIMALDEX.APP",
         credit: credited ? "Photos: Wikimedia Commons contributors · full credits in the article" : plan.format && plan.format !== "editorial" ? "AI-generated imagery" : undefined,
-        hud: plan.hud
+        hud: plan.hud,
+        theme: plan.theme
     }));
 
     // Plans made before music existed have no mood: they get the neutral "curious" bed.
@@ -396,7 +397,8 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
         assPath,
         fontsDir: path.join(process.cwd(), "public", "video-fonts"),
         logoPath: path.join(process.cwd(), "public", "images", "animaldex-logo-text.webp"),
-        musicPath: music && existsSync(musicTrackPath(process.cwd(), music)) ? musicTrackPath(process.cwd(), music) : null
+        musicPath: music && existsSync(musicTrackPath(process.cwd(), music)) ? musicTrackPath(process.cwd(), music) : null,
+        theme: plan.theme
     });
     return {...rendered, timeline, ttsProvider: lines[0].provider, musicTrack: music?.id ?? null};
 }

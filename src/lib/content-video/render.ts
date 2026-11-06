@@ -4,7 +4,7 @@ import path from "node:path";
 import sharp from "sharp";
 import {childProcessEnv} from "@/lib/child-process-env";
 import {lowPriority, withFfmpegSlot} from "@/lib/ffmpeg-slot";
-import {AI_CLIP_SECONDS, type BattleFx, battleHitOffsets, type CardSpec, VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH, type TimelineEntry} from "@/lib/content-video/plan";
+import {AI_CLIP_SECONDS, type BattleFx, battleHitOffsets, type CardSpec, VIDEO_FPS, VIDEO_HEIGHT, VIDEO_WIDTH, type TimelineEntry, type VideoTheme} from "@/lib/content-video/plan";
 
 // The edit, in ffmpeg (installed in the Docker runner stage): one silent
 // segment per scene — a slow push-in/out across a photo, or an AI clip
@@ -31,7 +31,16 @@ type RenderInput = {
     logoPath: string;
     /** Instrumental bed, ducked under the voice; none for a voice-only mix. */
     musicPath?: string | null;
+    /** "noir_gold": graded dark and warm, slow pushes, no slam or shake (plan.ts VideoTheme). */
+    theme?: VideoTheme;
 };
+
+/**
+ * The noir grade, applied once to the cut before the text goes on: crushed,
+ * desaturated, warmed towards amber, with a heavy vignette, so any photo or
+ * clip reads like the dark quote videos it borrows from.
+ */
+export const NOIR_GRADE = "eq=brightness=-0.07:contrast=1.16:saturation=0.55:gamma=0.92,colorbalance=rs=0.05:gs=0.015:bs=-0.06:rm=0.04:bm=-0.04:rh=0.03:bh=-0.05,vignette=angle=PI/3.6";
 
 function ffmpegBinary() {
     return process.env.FFMPEG_PATH?.trim() || "ffmpeg";
@@ -188,11 +197,16 @@ async function renderCardScene(visual: Extract<SceneVisual, {type: "card"}>, sec
 }
 
 /** One or two silent shots of a photo; returns their files in order. */
-async function renderImageScene(source: string, focusX: number, seconds: number, index: number, dir: string) {
+async function renderImageScene(source: string, focusX: number, seconds: number, index: number, dir: string, calm = false) {
     const prepared = path.join(dir, `still-${index}.jpg`);
     await preparePortrait(source, focusX, prepared);
     const n = frames(seconds);
     const base = path.join(dir, `segment-${String(index).padStart(2, "0")}`);
+    if (calm) {
+        // Noir: one slow, unbroken push-in per photo, the quote-video move.
+        await zoomShot(prepared, n, `1.02+0.09*(on/${n})`, `${base}.mp4`);
+        return [`${base}.mp4`];
+    }
     if (index === 0) {
         // The hook: slams in from 135% in a third of a second, then keeps drifting.
         await zoomShot(prepared, n, `if(lt(on,10),1.35-0.025*on,1.10+0.06*sin(PI/2*on/${n}))`, `${base}.mp4`, true);
@@ -469,6 +483,7 @@ function filterPath(value: string) {
 
 export async function renderVideo(input: RenderInput): Promise<{videoPath: string; posterPath: string; seconds: number}> {
     const {dir, timeline, visuals} = input;
+    const calm = input.theme === "noir_gold";
     const segments: string[] = [];
     for (let index = 0; index < timeline.length; index += 1) {
         const entry = timeline[index];
@@ -483,10 +498,10 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
         if (visual.type === "card") {
             segments.push(...await renderCardScene(visual, entry.duration, index, dir));
         } else if (visual.type === "clip") {
-            await renderClipScene(visual.path, entry.duration, out, visual.seconds, index === 0, entry.fx);
+            await renderClipScene(visual.path, entry.duration, out, visual.seconds, index === 0 && !calm, entry.fx);
             segments.push(out);
         } else {
-            segments.push(...await renderImageScene(visual.path, visual.focusX, entry.duration, index, dir));
+            segments.push(...await renderImageScene(visual.path, visual.focusX, entry.duration, index, dir, calm));
         }
     }
 
@@ -522,7 +537,8 @@ export async function renderVideo(input: RenderInput): Promise<{videoPath: strin
         "-loop", "1", "-framerate", String(VIDEO_FPS), "-i", logo,
         "-filter_complex", [
             `[2:v]format=rgba,colorchannelmixer=aa=0.85[logo]`,
-            `[0:v][logo]overlay=x=(W-w)/2:y=110:shortest=1:enable='lt(t,${logoUntil.toFixed(2)})'[branded]`,
+            `[0:v]${calm ? `${NOIR_GRADE},` : ""}null[graded]`,
+            `[graded][logo]overlay=x=(W-w)/2:y=110:shortest=1:enable='lt(t,${logoUntil.toFixed(2)})'[branded]`,
             `[branded]ass='${filterPath(input.assPath)}':fontsdir='${filterPath(input.fontsDir)}',format=yuv420p[v]`
         ].join(";"),
         "-map", "[v]", "-map", "1:a",

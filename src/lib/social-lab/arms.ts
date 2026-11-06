@@ -51,8 +51,11 @@ export type HookStyle = keyof typeof HOOK_STYLES;
  * Target length of an editorial (narrated photo) video. Battles and creature
  * reveals keep their own length. No long arm: by Oct 28 2026 our 43–46 s
  * videos were watched to the end by 1–2% on TikTok, the 18 s ones by 4.5%.
+ * Micro (Nov 2026): our average watch was 4.75 s, and finishing is what
+ * TikTok weighs most, so a 7–12 s cut is tested against the other two.
  */
 export const VIDEO_LENGTHS = {
+    micro: {label: "7–12 s", instruction: "7–12 seconds: exactly 3 scenes, 18–28 narrated words in total. The hook line sets up the payoff, the middle beat builds it, the last beat pays it off; nothing else.", scenes: [3, 3], words: [18, 28]},
     short: {label: "12–18 s", instruction: "12–18 seconds: 3–4 scenes, 30–45 narrated words in total. One idea, one payoff.", scenes: [3, 4], words: [30, 45]},
     medium: {label: "20–28 s", instruction: "20–28 seconds: 5–6 scenes, 50–70 narrated words in total.", scenes: [5, 6], words: [50, 70]}
 } as const satisfies Record<string, ArmSpec & {scenes: readonly [number, number]; words: readonly [number, number]}>;
@@ -129,7 +132,9 @@ export function intentsFor(kind: ExperimentKind, sourceType: string | null, fres
         hybrid: ["share", "comment"],
         fusion: ["share", "comment"],
         ranking: ["comment", "save"],
-        location: ["save", "share"]
+        location: ["save", "share"],
+        lesson: ["share", "save"],
+        guess: ["comment"]
     };
     return (sourceType ? fits[sourceType] : undefined) ?? ["share", "save", "comment"];
 }
@@ -167,7 +172,9 @@ export function textFormatsFor(sourceType: string | null): TextFormat[] {
 export const CAROUSEL_FORMATS = {
     page: {label: "Page carousel", instruction: "A carousel of the page itself: pick the shape that fits it best."},
     usual_vs_animal: {label: "The usual vs the animal", instruction: `THE USUAL VS THE <ANIMAL>: one everyday idea, the usual answer on a plain grey slide, then one animal's take built on a real behaviour it is known for, and why it sees it that way. The take must be a move the usual answer would not give.`},
-    five_animals: {label: "5 animals, 1 idea", instruction: "5 ANIMALS, 1 IDEA: one everyday idea, then five animals from the page, each with its own take built on its real behaviour, all five different. The last slide asks which one is you."}
+    five_animals: {label: "5 animals, 1 idea", instruction: "5 ANIMALS, 1 IDEA: one everyday idea, then five animals from the page, each with its own take built on its real behaviour, all five different. The last slide asks which one is you."},
+    // Nov 2026 research: "your month = your <X>" slideshows had the highest comment rate measured (6.2 per 1,000 views).
+    birth_month: {label: "Your birth month = your animal", instruction: "YOUR BIRTH MONTH = YOUR ANIMAL: one slide per month, January to December, each giving that month one of the twelve animals and the one real trait people born then share with it. One month (pick it) gets a playful roast instead of praise; the last slide asks which month they are."}
 } as const satisfies Record<string, ArmSpec>;
 export type CarouselFormat = keyof typeof CAROUSEL_FORMATS;
 
@@ -210,6 +217,10 @@ export const KIND_DIMENSIONS = {
     editorial: ["intent", "hookStyle", "length", "ending"],
     battle: ["intent", "hookStyle", "opener", "ending"],
     creature: ["intent", "hookStyle", "opener", "ending"],
+    // The lesson has its own hook pattern (the animal's move, then yours), so it tests only its job and ending.
+    lesson: ["intent", "ending"],
+    // A guess is built for one reaction (the guess in the comments); it tests how it ends.
+    guess: ["intent", "ending"],
     carousel: ["carouselFormat", "intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;

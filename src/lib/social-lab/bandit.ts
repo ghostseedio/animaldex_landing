@@ -202,8 +202,10 @@ export function chanceBest(stats: ArmStats[], draws = 400, random: Random = Math
 
 /** Kinds that share what they learn about a dimension: a hook style that works in a battle informs an editorial too. */
 export function learningKinds(kind: ExperimentKind, dimension: Dimension): readonly ExperimentKind[] {
-    if (dimension === "hookStyle" || dimension === "intent") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature"];
-    if (dimension === "ending" || dimension === "opener") return ["editorial", "battle", "creature"];
+    if (dimension === "hookStyle") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature"];
+    if (dimension === "intent") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature", "lesson", "guess"];
+    if (dimension === "ending") return ["editorial", "battle", "creature", "lesson", "guess"];
+    if (dimension === "opener") return ["editorial", "battle", "creature"];
     return [kind];
 }
 

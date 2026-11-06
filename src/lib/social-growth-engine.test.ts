@@ -194,7 +194,8 @@ test("every video prompt carries the 5-year-old test; carousels are picture-firs
         assert.doesNotMatch(prompt, /no name of the animal before the hook/);
     }
     assert.match(CAROUSEL_SYSTEM_PROMPT, /the PHOTO is the slide/);
-    assert.deepEqual(Object.keys(VIDEO_LENGTHS), ["short", "medium"]);
+    // Nov 2026: a 7–12 s micro cut joined (our average watch was 4.75 s); still no long arm.
+    assert.deepEqual(Object.keys(VIDEO_LENGTHS), ["micro", "short", "medium"]);
 });
 
 test("Zernio analytics map to one metrics row: hold at 1 s / 3 s from the curve, ratios held to 0–1, matched by any id", () => {

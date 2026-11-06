@@ -34,15 +34,23 @@ export type SourceImage = {
     license: string | null;
 };
 
-export const SOURCE_TYPES = ["blog", "comparison", "hybrid", "fusion", "ranking", "location"] as const;
+export const SOURCE_TYPES = ["blog", "comparison", "hybrid", "fusion", "ranking", "location", "lesson", "guess"] as const;
 export type SourceType = (typeof SOURCE_TYPES)[number];
 
 export function isSourceType(value: unknown): value is SourceType {
     return typeof value === "string" && (SOURCE_TYPES as readonly string[]).includes(value);
 }
 
-/** editorial: narrated photo edit. battle: VS card + AI fight. creature: AI reveal of an imagined animal. */
-export type VideoFormat = "editorial" | "battle" | "creature";
+/** editorial: narrated photo edit. battle: VS card + AI fight. creature: AI reveal of an imagined animal. lesson: what one animal teaches you (dark & gold). */
+export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess";
+
+/**
+ * The look of a video. "house": Barlow, lime, punch-ins, a brisk voice.
+ * "noir_gold": the self-improvement quote look transplanted to animals: the
+ * picture graded dark and warm, gold serif type centred on screen, slow
+ * pushes instead of slams, a slower, deeper voice.
+ */
+export type VideoTheme = "house" | "noir_gold";
 
 export type StatLine = {label: string; a: string; b: string; advantage: "a" | "b" | "even"};
 
@@ -70,6 +78,32 @@ export type BattleFacts = {
 };
 
 export type BattlePower = {name: string; basis: string};
+
+/** "Guess the animal": clues from hardest to easiest, then the reveal. */
+export type GuessFacts = {
+    animal: Fighter;
+    /** Clue material from the species page, hardest first: behaviour and habitat, then looks, then range. */
+    clues: string[];
+    /** Surprising true facts for after the reveal. */
+    facts: string[];
+    lookalikes: string[];
+    /** The animal's lesson line, when it has one. */
+    lesson: string | null;
+};
+
+/** One animal's lesson (an /animal-powers page): the real behaviour and what it teaches. */
+export type LessonFacts = {
+    animal: Fighter;
+    power: string;
+    /** The behaviour in a phrase, e.g. "Dig through hard ground until the hidden food is reached." */
+    expression: string;
+    lesson: string;
+    motto: string;
+    /** The biology the lesson stands on. */
+    basis: string;
+    /** A real-life moment the lesson applies to. */
+    application: string;
+};
 
 export type CreatureFacts = {
     kind: "hybrid" | "fusion";
@@ -99,6 +133,8 @@ export type VideoSource = {
     species?: SourceSpecies[];
     battle?: BattleFacts;
     creature?: CreatureFacts;
+    lesson?: LessonFacts;
+    guess?: GuessFacts;
 };
 
 export type PlanScene = {
@@ -158,6 +194,8 @@ export type BattleHud = {left: string; right: string; winner: "left" | "right"; 
 
 export type VideoPlan = {
     format?: VideoFormat;
+    /** Absent = "house". */
+    theme?: VideoTheme;
     /** The hook-lab arms this video tests (src/lib/social-lab/arms.ts); absent on videos made before the lab. */
     experiment?: Experiment;
     /** "loop": no end card, the last beat runs straight back into the first. Absent = the CTA end card. */
@@ -409,7 +447,18 @@ export function normalizePlan(value: unknown, imageCount: number): VideoPlan | n
  */
 export function applyStatCards(plan: VideoPlan, source: Pick<VideoSource, "species" | "battle">): VideoPlan {
     const bySlug = new Map((source.species ?? []).map((entry) => [entry.slug, entry]));
-    if (plan.format === "creature") return plan;
+    // A lesson is a quote video, no HUD; a creature is imagined, no real stats.
+    if (plan.format === "creature" || plan.format === "lesson") return plan;
+    if (plan.format === "guess") {
+        // Only the reveal names the animal: matching scenes by photo would put its card (and name) on a clue.
+        return {
+            ...plan,
+            scenes: plan.scenes.map((scene) => {
+                const card = scene.species ? bySlug.get(scene.species)?.card : undefined;
+                return card ? {...scene, statCard: card} : scene;
+            })
+        };
+    }
     if (plan.format === "battle") {
         const left = source.battle ? bySlug.get(source.battle.a.slug)?.card : undefined;
         const right = source.battle ? bySlug.get(source.battle.b.slug)?.card : undefined;
@@ -519,6 +568,11 @@ const INK = "&H00141414";
 const LIME = "&H0032F4A7";
 const SHADOW = "&H96000000";
 const FONT = "Barlow Condensed ExtraBold";
+// noir_gold: Cinzel Bold (public/video-fonts), antique gold on ivory.
+const GOLD = "&H005CB8E3";
+const IVORY = "&H00D9EBF4";
+const NOIR_INK = "&H00060606";
+const NOIR_FONT = "Cinzel";
 
 function assTime(seconds: number) {
     const centis = Math.max(0, Math.round(seconds * 100));
@@ -562,6 +616,7 @@ type AssInput = {
     credit?: string;
     /** Battle health bars (plan.hud), drawn over its fight scenes. */
     hud?: BattleHud;
+    theme?: VideoTheme;
 };
 
 const RED = "&H003C3CE8";
@@ -646,11 +701,23 @@ function headToHeadEvents(event: StatEvent, left: StatCard, right: StatCard, at:
     event(4, at, until, "TierBadge", `{\\an5\\pos(810,440)\\3c${TIER_COLOURS[right.tier]}&\\fad(120,0)}TIER ${right.tier}`);
 }
 
-/** The last word in lime: the hook's punchline lands visually too. */
-function limeLastWord(label: string) {
+/** The last word in lime (gold on a noir video): the hook's punchline lands visually too. */
+function limeLastWord(label: string, accent = LIME) {
     const words = label.split(" ");
-    if (words.length < 2) return `{\\c${LIME}&}${label}`;
-    return `${words.slice(0, -1).join(" ")} {\\c${LIME}&}${words.at(-1)}`;
+    if (words.length < 2) return `{\\c${accent}&}${label}`;
+    return `${words.slice(0, -1).join(" ")} {\\c${accent}&}${words.at(-1)}`;
+}
+
+/** The text styles a noir video swaps in: gold serif, no boxes, captions centred like a quote. */
+function noirStyles() {
+    return [
+        `Style: Caption,${NOIR_FONT},74,${IVORY},${IVORY},${NOIR_INK},${SHADOW},0,0,0,0,100,100,2,0,1,3,3,2,110,110,700,1`,
+        `Style: Hook,${NOIR_FONT},90,${GOLD},${GOLD},${NOIR_INK},${SHADOW},0,0,0,0,100,100,3,0,1,3,4,8,90,90,360,1`,
+        `Style: Headline,${NOIR_FONT},64,${GOLD},${GOLD},${NOIR_INK},${SHADOW},0,0,0,0,100,100,4,0,1,3,3,8,110,110,330,1`,
+        `Style: EndTitle,${NOIR_FONT},86,${GOLD},${GOLD},${NOIR_INK},${SHADOW},0,0,0,0,100,100,3,0,1,3,3,5,100,100,0,1`,
+        `Style: EndCredit,${FONT},34,&H40FFFFFF,&H40FFFFFF,&H80000000,&H00000000,0,0,0,0,100,100,1,0,1,2,0,2,90,90,170,1`,
+        `Style: EndUrl,${NOIR_FONT},50,${IVORY},${IVORY},${NOIR_INK},&H00000000,0,0,0,0,100,100,6,0,1,2,0,5,90,90,0,1`
+    ];
 }
 
 /**
@@ -658,7 +725,10 @@ function limeLastWord(label: string) {
  * lime), the hook headline over the first scene, a headline box per beat and
  * the end card's call to action. The logo is overlaid by the renderer.
  */
-export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hud}: AssInput) {
+export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hud, theme}: AssInput) {
+    const noir = theme === "noir_gold";
+    const accent = noir ? GOLD : LIME;
+    const base = noir ? IVORY : WHITE;
     const header = [
         "[Script Info]",
         "ScriptType: v4.00+",
@@ -692,6 +762,13 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
         "[Events]",
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"
     ];
+    if (noir) {
+        const overrides = new Map(noirStyles().map((line) => [line.split(",")[0], line]));
+        header.forEach((line, index) => {
+            const swap = overrides.get(line.split(",")[0]);
+            if (swap) header[index] = swap;
+        });
+    }
     const events: string[] = [];
     const event = (layer: number, start: number, end: number, style: string, body: string, marginV = 0) => {
         if (end - start < 0.04) return;
@@ -753,7 +830,9 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
             const label = assEscape(entry.overlay.toUpperCase());
             if (entry.kind === "hook") {
                 // Slams in on the first frame, punchline in lime: readable before anyone scrolls.
-                event(3, entry.start, sceneEnd, "Hook", `{\\fscx135\\fscy135\\t(0,160,\\fscx100\\fscy100)}${limeLastWord(balanceLines(label, 14))}`);
+                // Noir: no slam; the line rises out of the dark like a quote card.
+                const entrance = noir ? "{\\fad(260,0)\\fscx96\\fscy96\\t(0,600,\\fscx100\\fscy100)}" : "{\\fscx135\\fscy135\\t(0,160,\\fscx100\\fscy100)}";
+                event(3, entry.start, sceneEnd, "Hook", `${entrance}${limeLastWord(balanceLines(label, noir ? 18 : 14), accent)}`);
             } else {
                 event(3, entry.start + 0.05, sceneEnd - 0.05, "Headline", `{\\fad(90,90)\\fscx106\\fscy106\\t(0,120,\\fscx100\\fscy100)}${balanceLines(label, 18)}`);
             }
@@ -769,9 +848,9 @@ export function buildAss({timeline, spokenSeconds, lineWords, endUrl, credit, hu
                 const wordEnd = wordIndex + 1 < chunk.length ? chunk[wordIndex + 1].start : chunkEnd;
                 const textLine = chunk.map((candidate, candidateIndex) => {
                     const clean = assEscape(candidate.word.toUpperCase());
-                    return candidateIndex === wordIndex ? `{\\c${LIME}&}${clean}{\\c${WHITE}&}` : clean;
+                    return candidateIndex === wordIndex ? `{\\c${accent}&}${clean}{\\c${base}&}` : clean;
                 }).join(" ");
-                const pop = wordIndex === 0 ? "{\\fscx108\\fscy108\\t(0,90,\\fscx100\\fscy100)}" : "";
+                const pop = wordIndex === 0 ? (noir ? "{\\fad(140,0)}" : "{\\fscx108\\fscy108\\t(0,90,\\fscx100\\fscy100)}") : "";
                 event(1, word.start, wordEnd, "Caption", `${pop}${textLine}`);
             });
         }

@@ -4,11 +4,14 @@ import {useCallback, useEffect, useState} from "react";
 import {MagicStick3, Refresh, Share, TrashBinMinimalistic} from "solar-icon-set";
 import {armLabel, CAROUSEL_FORMATS, type CarouselFormat, type Dimension, type Experiment, HOOK_STYLES, TEXT_FORMATS} from "@/lib/social-lab/arms";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
+import {type FormatBoard, type FormatStrategy, HIT_MULTIPLE, HOOK_HOLD_FLOOR, KILL_MULTIPLE, SCALE_HIT_RATE, SCALE_MULTIPLE, TEST_ITEMS, VERDICTS} from "@/lib/social-lab/format-board";
 import type {CarouselSpec, SocialContentRow, TextSpec} from "@/lib/social-content/types";
 import {SOCIAL_PLATFORM_LABELS, type SocialPlatform} from "@/lib/social/types";
 import {Alert, Badge, Button, EmptyState, Section, Skeleton, Table, TD, TH} from "@/components/admin/ui";
 
-// The growth engine's two panels on /admin/story-videos:
+// The growth engine's panels on /admin/story-videos:
+// - Format lab: which repeatable formats beat their platform's median, and
+//   the playbook's verdict for each (format-board.ts).
 // - Hook lab: which hook styles, lengths, endings and openers are winning,
 //   from every post's own numbers (3-second hold, completion, views), and the
 //   latest numbers per post. "Sync stats now" re-reads every platform.
@@ -73,6 +76,98 @@ function ArmCard({title, arms}: {title: string; arms: LabArm[]}) {
 
 function shareTone(status: string): "good" | "bad" | "warn" {
     return status === "published" ? "good" : status === "failed" ? "bad" : "warn";
+}
+
+const STRATEGY_LABELS: Record<FormatStrategy, string> = {out_execute: "Out-execute", transplant: "Transplant", scale: "Scale"};
+
+const multipleText = (value: number | null) => (value === null ? "—" : `${value.toFixed(2)}×`);
+
+/**
+ * The format lab (Victor Gu's format arbitrage): one row per repeatable
+ * format, its views per post against each platform's median, hit rate,
+ * 3-second hold and shares, and the playbook's verdict, which the
+ * auto-generators follow when they pick what to make next.
+ */
+export function AdminFormatBoard() {
+    const [board, setBoard] = useState<FormatBoard | null>(null);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const load = useCallback(async (fresh = false) => {
+        setLoading(true);
+        try {
+            setBoard((await api<{board: FormatBoard}>(`/api/admin/social/formats${fresh ? "?fresh=1" : ""}`)).board);
+            setError("");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to load the format board");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+    useEffect(() => {
+        void load();
+    }, [load]);
+
+    const made = board?.formats.filter((row) => row.posts > 0) ?? [];
+    const waiting = board?.formats.filter((row) => row.posts === 0) ?? [];
+    const counted = board?.platforms.filter((platform) => platform.counted) ?? [];
+
+    return (
+        <Section
+            title="Format lab"
+            description={`We pick formats, not single videos: a format with more demand than good videos gets more views per post. Each post is measured against its own platform's median (1× = a typical post), and the playbook decides: ${TEST_ITEMS} videos before judging, then scale at ${SCALE_MULTIPLE}× or a ${Math.round(SCALE_HIT_RATE * 100)}% hit rate (a hit is ${HIT_MULTIPLE}× the median), fix the hook when under ${Math.round(HOOK_HOLD_FLOOR * 100)}% stay 3 seconds, retire under ${KILL_MULTIPLE}×. The video and carousel generators follow these verdicts.`}
+            action={<Button size="sm" loading={loading} onClick={() => void load(true)}>{loading ? null : <Refresh size={14} />}Recalculate</Button>}
+            className="mt-6"
+        >
+            {error ? <Alert tone="bad" className="mb-3">{error}</Alert> : null}
+            {board ? (
+                <p className="mb-3 text-xs text-ink-400">
+                    Medians per post (posts older than 36 hours): {counted.map((platform) => `${SOCIAL_PLATFORM_LABELS[platform.platform as SocialPlatform] ?? platform.platform} ${platform.medianViews.toLocaleString()}`).join(" · ")}
+                    {board.platforms.some((platform) => !platform.counted) ? <> · not ranked yet (median under 10 views): {board.platforms.filter((platform) => !platform.counted).map((platform) => SOCIAL_PLATFORM_LABELS[platform.platform as SocialPlatform] ?? platform.platform).join(", ")}</> : null}
+                </p>
+            ) : null}
+            {!board ? <Skeleton className="h-48" /> : (
+                <Table minWidth={980}>
+                    <thead>
+                        <tr><TH>Format</TH><TH>Strategy</TH><TH numeric>Videos</TH><TH numeric>× median</TH><TH numeric>Hit rate</TH><TH numeric>3 s hold</TH><TH numeric>Shares / 1k</TH><TH>Best post</TH><TH>Verdict</TH></tr>
+                    </thead>
+                    <tbody>
+                        {made.map((row) => (
+                            <tr key={row.format}>
+                                <TD className="max-w-[260px]">
+                                    <span className="font-bold text-white">{row.label}</span>
+                                    <span className="block text-[11px] text-ink-500">{row.perPlatform.filter((entry) => entry.multiple !== null).map((entry) => `${SOCIAL_PLATFORM_LABELS[entry.platform as SocialPlatform] ?? entry.platform} ${multipleText(entry.multiple)}`).join(" · ")}</span>
+                                </TD>
+                                <TD className="whitespace-nowrap text-ink-400">{STRATEGY_LABELS[row.strategy]}</TD>
+                                <TD numeric>{row.items}</TD>
+                                <TD numeric className="font-bold text-white">{multipleText(row.multiple)}</TD>
+                                <TD numeric>{percent(row.hitRate)}</TD>
+                                <TD numeric className={row.hold3s !== null && row.hold3s < HOOK_HOLD_FLOOR ? "text-amber-200" : undefined}>{percent(row.hold3s)}</TD>
+                                <TD numeric>{row.sharesPer1k === null ? "—" : row.sharesPer1k.toFixed(1)}</TD>
+                                <TD className="max-w-[220px] truncate text-xs">
+                                    {row.best ? (
+                                        <>
+                                            {row.best.url ? <a href={row.best.url} target="_blank" rel="noreferrer" className="text-white hover:underline">{row.best.title ?? "Open"}</a> : row.best.title}
+                                            <span className="block text-[11px] text-ink-500">{row.best.views.toLocaleString()} on {SOCIAL_PLATFORM_LABELS[row.best.platform as SocialPlatform] ?? row.best.platform} ({row.best.multiple.toFixed(1)}×)</span>
+                                        </>
+                                    ) : "—"}
+                                </TD>
+                                <TD className="min-w-[180px]">
+                                    <Badge tone={VERDICTS[row.verdict].tone}>{VERDICTS[row.verdict].label}</Badge>
+                                    <span className="mt-1 block text-[11px] leading-4 text-ink-500">{row.reason}. {VERDICTS[row.verdict].action}.</span>
+                                </TD>
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            )}
+            {waiting.length ? (
+                <p className="mt-3 text-xs leading-5 text-ink-500">
+                    Not posted yet (each gets extra slots until it has {TEST_ITEMS} videos): {waiting.map((row) => `${row.label} (${STRATEGY_LABELS[row.strategy].toLowerCase()})`).join(" · ")}
+                </p>
+            ) : null}
+        </Section>
+    );
 }
 
 export function AdminHookLab() {

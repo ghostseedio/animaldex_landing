@@ -10,7 +10,9 @@ export function pickRandomSource<T extends {slug: string}>(available: Partial<Re
     if (!types.length) return null;
     const ranked = order.find((type): type is SourceType => types.includes(type as SourceType));
     const type = ranked ?? types[Math.min(types.length - 1, Math.floor(random() * types.length))];
-    const pages = available[type]!;
+    // Within the family, the highest-priority pages go first (a lesson about a lion before one about a moth).
+    const top = Math.max(...available[type]!.map((page) => (page as {priority?: number}).priority ?? 0));
+    const pages = available[type]!.filter((page) => ((page as {priority?: number}).priority ?? 0) === top);
     return {type, page: pages[Math.min(pages.length - 1, Math.floor(random() * pages.length))]};
 }
 

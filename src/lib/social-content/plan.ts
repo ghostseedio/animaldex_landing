@@ -15,6 +15,9 @@ import {type CarouselSpec, type CarouselTemplate, SLIDE_LAYOUTS, type Slide, typ
 
 export const MIN_SLIDES = 5;
 export const MAX_SLIDES = 8;
+/** "Your birth month = your animal": a cover, twelve months and the question. */
+export const BIRTH_MONTH_SLIDES = 14;
+export const MONTHS = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"] as const;
 /** Slide text caps: a feed is looked at, not read (Oct 29 2026: slides had ~25-word paragraphs). */
 export const SLIDE_TITLE_CHARS = 60;
 export const SLIDE_BODY_CHARS = 80;
@@ -35,6 +38,7 @@ const TEMPLATE_GUIDES: Record<CarouselTemplate, string> = {
     myth_fact: `myth_fact: cover → 3–4 slides, each a myth people believe (kicker "MYTH", title = the myth in plain words, body = "Actually: …" the truth in a few words; use "text" layout when no photo fits) → cta.`,
     guess: `guess: cover ("Guess the animal from 3 clues" in the hook style) → 3 "text" slides of clues getting easier (kicker "CLUE 1"…) → a reveal "item" slide with its photo (kicker "IT'S THE…", title = the animal) → cta asking how many clues they needed.`,
     usual_vs_animal: `usual_vs_animal ("the usual vs the <animal>"): pick ONE idea from IDEAS and ONE animal on the page whose real behaviour (from the page text or ANIMAL RECORDS) sees it differently. cover (kicker "THE USUAL VS THE <ANIMAL>", title = the idea as a question in at most 7 words, e.g. "SHOULD YOU START A PODCAST?", image = that animal) → one "usual" slide (kicker "THE USUAL ANSWER", title = the advice everyone gives, at most 8 words, body = one more usual line or "", image 0) → an "item" slide (kicker "THE <ANIMAL>'S TAKE", title = a different move, at most 8 words, body at most 10 words, image = the animal) → a "text" slide (kicker "WHY A <ANIMAL> SEES IT THIS WAY", or "WHY IT SEES IT THIS WAY" for a long name, title = the real behaviour in at most 8 words, body = the fact behind it in at most 10 words) → cta (title "Which would you try?" or "Take your idea to an animal"). The take must be a move the usual answer would not give, never the usual answer in costume; the usual answer is plain and fair, never mocked.`,
+    birth_month: `birth_month ("your birth month = your animal"): EXACTLY 14 slides, overriding the usual count. cover (kicker "BIRTH MONTH", title "YOUR BIRTH MONTH IS YOUR ANIMAL" or as sharp, body "Swipe to yours", image = the most striking animal) → twelve "item" slides in calendar order (kicker = the month in capitals, "JANUARY"… "DECEMBER"; title = the animal's name; body = the trait people born that month share with it, at most 10 words, built on the animal's real Power or behaviour from ANIMAL RECORDS; image = that animal; every animal used once) → cta (title "Which month are you? Comment it."). ONE month gets a playful, affectionate roast instead of praise ("Lazy until the last minute, then terrifying.") — that is the slide people tag their friends on; never mean about anything a person cannot change. Every trait must be one that animal is really known for.`,
     five_animals: `five_animals ("5 animals, 1 idea"): pick ONE idea from IDEAS. cover (kicker "5 ANIMALS, 1 IDEA", title = the idea in at most 6 words, image = the most striking animal) → five "item" slides, one per animal on the page with its photo (kicker = the animal's name, title = its take in at most 6 words, body = the real behaviour behind it in at most 10 words, from the page or ANIMAL RECORDS); five different takes → cta (title "Which one is you?").`
 };
 
@@ -194,7 +198,7 @@ export function normalizeCarousel(value: unknown, imageNumbers: number[], templa
         const statValue = clean(slide.stat_value, 24);
         const layout = SLIDE_LAYOUTS.includes(slide.layout as SlideLayout) ? slide.layout as SlideLayout : "item";
         return [{layout, kicker: fitWords(clean(slide.kicker, 120), KICKER_CHARS), title, body: fitChars(clean(slide.body, 400), SLIDE_BODY_CHARS), image, stat: label && statValue ? {label, value: statValue} : null}];
-    }).slice(0, MAX_SLIDES);
+    }).slice(0, template === "birth_month" ? BIRTH_MONTH_SLIDES : MAX_SLIDES);
     if (slides.length < MIN_SLIDES || !share) return null;
     slides.forEach((slide, index) => {
         if (index === 0) slide.layout = "cover";
@@ -211,6 +215,8 @@ export function normalizeCarousel(value: unknown, imageNumbers: number[], templa
     const middle = slides.slice(1, -1);
     if (template === "usual_vs_animal" && (middle.filter((slide) => slide.layout === "usual").length !== 1 || !middle.some((slide) => slide.layout === "item"))) return null;
     if (template === "five_animals" && middle.filter((slide) => slide.layout === "item").length < 5) return null;
+    // All twelve months, in order, each with its animal's photo: a missing month is the comment the post gets instead.
+    if (template === "birth_month" && (middle.length !== MONTHS.length || middle.some((slide, index) => slide.kicker.toUpperCase() !== MONTHS[index] || slide.layout !== "item"))) return null;
     if (policyProblems(...slides.flatMap((slide) => [slide.kicker, slide.title, slide.body]), ...shareTexts(share)).length) return null;
     return {spec: {template, slides}, share};
 }

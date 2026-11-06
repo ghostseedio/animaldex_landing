@@ -8,7 +8,9 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
     hybrid: "Hybrid reveal",
     fusion: "Fusion reveal",
     ranking: "Ranking countdown",
-    location: "Location guide"
+    location: "Location guide",
+    lesson: "Animal lesson",
+    guess: "Guess the animal"
 };
 
 export function sourcePath(type: SourceType, slug: string) {
@@ -19,5 +21,8 @@ export function sourcePath(type: SourceType, slug: string) {
         case "fusion": return `/animal-hybrids/${slug}`;
         case "ranking": return `/tier-list/${slug}`;
         case "location": return `/locations/${slug}`;
+        // A birth-month carousel is twelve animals put together, not one page: it links to the lessons hub.
+        case "lesson": return slug.startsWith("birth-month-") ? "/animal-powers" : `/animal-powers/${slug}`;
+        case "guess": return `/animals/${slug}`;
     }
 }

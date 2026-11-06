@@ -369,3 +369,227 @@ export function normalizeCreaturePlan(value: unknown, source: VideoSource, exper
         share
     };
 }
+
+// ---------------------------------------------------------------- lesson
+
+// "What the <animal> teaches you": the self-improvement "dark & gold quote"
+// short transplanted to animals (the format lab's first transplant). Research
+// (Nov 2026): lion / eagle / wolf "mindset" Shorts reach 4–6M views on small
+// channels, mostly 5–23 s, deep slow voice, gold serif lines over dark
+// close-ups, and many of them repeat myths. Ours is the same look with true
+// biology: one real behaviour, turned into a rule for the viewer's life.
+
+export const LESSON_SYSTEM_PROMPT = `You direct AnimalDex's "what the animal teaches you" shorts: the dark & gold quote video that self-improvement channels made famous, about one REAL animal behaviour. A vertical 15–22 second video in five shots: near-black cinematic close-ups of the animal, gold serif lines on screen, a deep, slow, calm male voice. Slogan of the channel: "Every animal has a lesson."
+
+WHY IT WORKS: one true, surprising behaviour, said like a rule to live by. The viewer should feel the line is about THEM, and want to send it to someone or keep it.
+
+THE TRUTH RULE (our whole edge over the copycat channels): every claim about the animal is real biology, from the record below or well-established science. Never repeat the famous myths: the eagle does not pull out its beak and talons at 40 to be "reborn"; the wolf pack is a family, there is no "alpha walks at the back to protect the weak"; ostriches do not bury their heads; bats are not blind; goldfish remember for months; lions live in savanna, not jungle. Exaggerate the framing, never the facts; no invented numbers.
+
+SHOTS (exactly 5, in order):
+(1) HOOK, 0–3 s: the voice and the on-screen line start on the first frame. Pattern: "The <animal> doesn't <what people expect>. It <the real behaviour>." or one jaw-dropping true fact said flatly. The animal is named in the first three words. Shot: an extreme close-up of its face or eyes, mid-movement (a breath, a turn of the head, eyes opening).
+(2) BEHAVIOUR: the real behaviour in action, one line. Shot: the animal doing it.
+(3) THE TURN: turn that behaviour into a rule for the viewer, second person, plain words ("Most people chase everything. Pick one thing."). Shot: the animal in motion, powerful and calm.
+(4) THE PRINCIPLE: the lesson in one short line a person would quote (from the record's lesson, in plainer words). Shot: the animal still and powerful: a silhouette against low gold light, or looking straight into the lens.
+(5) CLOSE: the motto, or "Every animal has a lesson." The picture returns to the opening shot so the video loops.
+
+WORDS: deep and slow, about 2 words a second. Narration across the five shots: 30–42 words. Each line 4–12 words, short sentences, words a 12-year-old knows, no jargon, no Latin names, no emoji, no hashtags. Never preachy or cheesy ("rise and grind", "alpha", "sigma", "king mentality" are banned).
+
+- hook_text: on screen over shot 1, 3–7 words, the whole hook on its own ("THE LION DOESN'T CHASE EVERYTHING").
+- shots[i].overlay: on screen, gold, 2–6 words: "" for shot 1 (the hook_text is there), the rule for shot 3, the principle for shot 4, the motto for shot 5; shot 2 may be "".
+- shots[i].keyframe_prompt: the first frame, a photoreal description of exactly this species doing exactly this (pose, angle, lens, the light falling on it). Never other animals, never people, never text.
+- shots[i].motion_prompt: one sentence: a slow camera move first ("Slow push-in…", "Slow orbit…"), then the animal's one real movement.
+- cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise the JOB's ask: share → "Send this to someone who needs it." save → "Save this for the day you need it." Never "follow".
+- music_mood: "noir" (the dark bed made for this format).
+
+${SHARE_RULES}
+Captions for this format: the hook first, then "Every animal has a lesson." on its own line; TikTok and Instagram end with a question that makes people answer ("Which animal are you?").
+
+Return only the JSON object.`;
+
+export const LESSON_JSON_SCHEMA = {
+    type: "object",
+    additionalProperties: false,
+    required: ["title", "hook_text", "shots", "cta_narration", "cta_text", "music_mood", "share"],
+    properties: {
+        title: {type: "string"},
+        hook_text: {type: "string"},
+        shots: {
+            type: "array",
+            items: {
+                type: "object", additionalProperties: false, required: ["narration", "overlay", "keyframe_prompt", "motion_prompt"],
+                properties: {narration: {type: "string"}, overlay: {type: "string"}, keyframe_prompt: {type: "string"}, motion_prompt: {type: "string"}}
+            }
+        },
+        cta_narration: {type: "string"},
+        cta_text: {type: "string"},
+        music_mood: {type: "string", enum: [...MUSIC_MOODS]},
+        share: shareSchema
+    }
+} as const;
+
+export function buildLessonUserPrompt(source: VideoSource) {
+    const facts = source.lesson!;
+    return [
+        `Animal: ${facts.animal.name}`,
+        `Page: ${source.title} — ${source.url}`,
+        `Its AnimalDex Power: ${facts.power}`,
+        facts.expression ? `The behaviour: ${facts.expression}` : null,
+        facts.basis ? `The biology: ${facts.basis}` : null,
+        `The lesson (say it plainer): ${facts.lesson}`,
+        facts.motto ? `Motto: ${facts.motto}` : null,
+        facts.application ? `A real-life moment it fits: ${facts.application}` : null
+    ].filter((line) => line !== null).join("\n");
+}
+
+const LESSON_KEYFRAME_SUFFIX =
+    "Cinematic low-key wildlife photograph: near-black background, one warm golden rim light, deep shadows, rich fur, feather or scale detail, shallow depth of field; photoreal and species-accurate, the real animal exactly as it looks in life, large in frame. Vertical 9:16. No text, no letters, no logos, no people.";
+const LESSON_MOTION_SUFFIX =
+    "Slow, deliberate, cinematic motion with real weight; the slow camera move continues the whole shot; dust or mist drifting through the light. Keep the species, colours and markings exactly as in the frame. No text, no added animals or people.";
+const LESSON_SHOTS = 5;
+
+/** A lesson plan: four drawn-and-animated shots, the fifth replaying the first so the video loops; always the noir theme. */
+export function normalizeLessonPlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
+    const facts = source.lesson;
+    const record = value as Record<string, unknown> | null;
+    if (!facts || !record || typeof record !== "object" || !Array.isArray(record.shots)) return null;
+    const share = parseShare(record.share);
+    const shots = (record.shots as Array<Record<string, unknown>>).slice(0, LESSON_SHOTS).map((shot) => ({
+        narration: clean(shot?.narration, 160),
+        overlay: clean(shot?.overlay, 48),
+        keyframe: clean(shot?.keyframe_prompt, 1200),
+        motion: clean(shot?.motion_prompt, 500)
+    }));
+    if (!share || shots.length < LESSON_SHOTS || shots.some((shot) => !shot.narration)) return null;
+    if (shots.slice(0, 4).some((shot) => !shot.keyframe || !shot.motion)) return null;
+    const loops = experiment?.ending === "loop";
+    const scenes: PlanScene[] = shots.map((shot, index) => index < 4
+        ? {
+            narration: shot.narration,
+            overlay: index === 0 ? "" : shot.overlay,
+            visual: "ai_clip",
+            image: facts.animal.image,
+            focusX: 0.5,
+            motionPrompt: `${shot.motion} ${LESSON_MOTION_SUFFIX}`,
+            keyframePrompt: `${shot.keyframe} ${LESSON_KEYFRAME_SUFFIX}`,
+            species: facts.animal.slug,
+            // The principle is the quote people screenshot: let it breathe.
+            ...(index === 3 ? {minSeconds: 3.6} : {})
+        }
+        : {narration: shot.narration, overlay: shot.overlay, visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", reuseClip: 0, minSeconds: 2.6});
+    return {
+        format: "lesson",
+        theme: "noir_gold",
+        ending: loops ? "loop" : "cta_card",
+        title: clean(record.title, 120) || `What the ${facts.animal.name} teaches you`,
+        hookText: clean(record.hook_text, 60) || `WHAT THE ${facts.animal.name.toUpperCase()} KNOWS`,
+        scenes,
+        ctaNarration: loops ? "" : clean(record.cta_narration, 140) || "Send this to someone who needs it.",
+        ctaText: loops ? "" : clean(record.cta_text, 40) || "Every animal has a lesson.",
+        musicMood: isMusicMood(record.music_mood) ? record.music_mood : "noir",
+        share
+    };
+}
+
+// ----------------------------------------------------------------- guess
+
+// "Guess the animal": a puzzle in the first frame, clues from hardest to
+// easiest, the reveal with the animal's real stat card (the Dex entry), one
+// surprising fact, and a loop back to the opening close-up. Research (Nov
+// 2026): MrBeast's "Guess the Animal" Shorts run 311–646M views and the rest of
+// the supply is mostly kids' clip art; the viewer commits to a guess, so they
+// stay for the reveal and say it in the comments.
+
+export const GUESS_SYSTEM_PROMPT = `You direct AnimalDex's "guess the animal" shorts. A vertical 16–22 second puzzle: the viewer sees a close-up they cannot place, gets clues that get easier, guesses, and then the animal is revealed with its AnimalDex stat card. They should feel smart if they got it and need to comment either way.
+
+THE FIRST FRAME IS THE PUZZLE: an extreme close-up of one distinctive part (an eye, the skin or feather pattern, a paw, a tooth, the texture of a horn), sharp, real, and hard but fair to place. The spoken line and the on-screen line start on that frame.
+
+SHOTS (exactly 6, in order):
+(1) CLUE 1, the close-up. narration: the challenge, at most 9 words ("Name this animal before the reveal." / "Only 1 in 10 people get this one."). hook_text: 3–6 words ("NAME IT BEFORE THE REVEAL").
+(2) CLUE 2: the animal as a silhouette, backlit or mostly hidden (in tall grass, in shadow, in mist), still not identifiable. narration: the hardest clue (what it does or where it lives), at most 14 words, from the clues below. overlay "CLUE 2".
+(3) CLUE 3: narration: an easier clue (how it looks or a striking number), at most 14 words. overlay "CLUE 3". (This shot replays the silhouette.)
+(4) REVEAL: narration: "It's the <animal>." (or "It's a <animal>.") — nothing else. (The real artwork and its stat card are shown; no prompts needed.)
+(5) THE PAYOFF: the animal in full, doing its most striking real thing. narration: the most surprising true fact about it, plus its lesson in a few words when one is given, 14–24 words in total.
+(6) LOOP: narration: "Next one is harder." overlay "NEXT ONE IS HARDER". (This shot replays the opening close-up, so the video loops.)
+
+RULES: every clue and fact comes from the page material below or well-established biology; never invent a number. A clue never names the animal or a giveaway word in its name ("snow" for a snow leopard). The voice is a fun quiz host: quick, warm, words a 10-year-old knows.
+- shots[i].keyframe_prompt (shots 1, 2 and 5; "" for the others): the photoreal first frame of exactly this species, with the framing above (shot 1 so close the whole animal is not visible; shot 2 a silhouette). No other animals, no people, no text.
+- shots[i].motion_prompt (shots 1, 2 and 5; "" for the others): one sentence, the camera move first (shot 1 a very slow pull-back that still never shows the whole animal), then the animal's one real movement.
+- cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise "How many clues did you need? Comment it." / "How many clues?".
+- music_mood: "curious" or "mystery".
+
+${SHARE_RULES}
+Captions for this format never name the animal (the reveal is the point): "Guess it before the reveal 👀" style hook, a question asking for the number of clues; YouTube's title is the challenge, never the answer.
+
+Return only the JSON object.`;
+
+export const GUESS_JSON_SCHEMA = LESSON_JSON_SCHEMA;
+
+export function buildGuessUserPrompt(source: VideoSource) {
+    const facts = source.guess!;
+    return [
+        `The animal (never named before the reveal): ${facts.animal.name}`,
+        `Page: ${source.url}`,
+        "Clue material from its species page (hardest first):",
+        ...facts.clues.map((clue) => `- ${clue}`),
+        "Facts for the payoff:",
+        ...facts.facts.map((fact) => `- ${fact}`),
+        facts.lookalikes.length ? `Often mistaken for: ${facts.lookalikes.join("; ")}` : null,
+        facts.lesson ? `Its AnimalDex lesson: ${facts.lesson}` : null
+    ].filter((line) => line !== null).join("\n");
+}
+
+const GUESS_KEYFRAME_SUFFIX =
+    "Photorealistic wildlife photograph, natural light, tack-sharp detail, shallow depth of field; species-accurate. Vertical 9:16. No text, no letters, no logos, no people, no other animals.";
+const GUESS_MOTION_SUFFIX =
+    "Natural, believable animal motion; a slow, smooth camera move. Keep the species, colours and markings exactly as in the frame. No text, no added animals or people.";
+const GUESS_SHOTS = 6;
+
+/** A guess plan: close-up, silhouette (twice), the reveal on the real artwork with its stat card, the payoff clip, the close-up again. */
+export function normalizeGuessPlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
+    const facts = source.guess;
+    const record = value as Record<string, unknown> | null;
+    if (!facts || !record || typeof record !== "object" || !Array.isArray(record.shots)) return null;
+    const share = parseShare(record.share);
+    const shots = (record.shots as Array<Record<string, unknown>>).slice(0, GUESS_SHOTS).map((shot) => ({
+        narration: clean(shot?.narration, 200),
+        overlay: clean(shot?.overlay, 40),
+        keyframe: clean(shot?.keyframe_prompt, 1200),
+        motion: clean(shot?.motion_prompt, 500)
+    }));
+    if (!share || shots.length < GUESS_SHOTS || shots.some((shot) => !shot.narration)) return null;
+    if ([0, 1, 4].some((index) => !shots[index].keyframe || !shots[index].motion)) return null;
+    // The model may slip the name into a clue: a clue that gives the answer away is no clue.
+    const nameWords = facts.animal.name.toLowerCase().split(/\s+/).filter((word) => word.length > 3);
+    const givesAway = (text: string) => nameWords.some((word) => text.toLowerCase().includes(word));
+    if ([0, 1, 2].some((index) => givesAway(shots[index].narration) || givesAway(shots[index].overlay))) return null;
+    const clip = (index: number): PlanScene => ({
+        narration: shots[index].narration,
+        overlay: index === 0 ? "" : shots[index].overlay,
+        visual: "ai_clip",
+        image: facts.animal.image,
+        focusX: 0.5,
+        motionPrompt: `${shots[index].motion} ${GUESS_MOTION_SUFFIX}`,
+        keyframePrompt: `${shots[index].keyframe} ${GUESS_KEYFRAME_SUFFIX}`
+    });
+    const loops = experiment?.ending === "loop";
+    const scenes: PlanScene[] = [
+        clip(0),
+        clip(1),
+        {narration: shots[2].narration, overlay: shots[2].overlay || "CLUE 3", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", reuseClip: 1},
+        // The reveal: the real artwork with its stat card, the name slamming in.
+        {narration: shots[3].narration, overlay: `It's the: ${facts.animal.name}`, overlayStyle: "winner", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", species: facts.animal.slug, minSeconds: 3},
+        {...clip(4), overlay: ""},
+        {narration: shots[5].narration, overlay: shots[5].overlay || "NEXT ONE IS HARDER", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", reuseClip: 0, minSeconds: 1.8}
+    ];
+    return {
+        format: "guess",
+        ending: loops ? "loop" : "cta_card",
+        title: clean(record.title, 120) || "Guess the animal",
+        hookText: clean(record.hook_text, 50) || "NAME IT BEFORE THE REVEAL",
+        scenes,
+        ctaNarration: loops ? "" : clean(record.cta_narration, 140) || "How many clues did you need? Comment it.",
+        ctaText: loops ? "" : clean(record.cta_text, 40) || "How many clues?",
+        musicMood: isMusicMood(record.music_mood) && record.music_mood !== "noir" ? record.music_mood : "curious",
+        share
+    };
+}

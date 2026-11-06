@@ -2,10 +2,12 @@ import {getAnimalHybrid, animalHybridEntries} from "@/data/animal-hybrids";
 import {getFusableSpecies, getPublishedAnimalFusion, publishedAnimalFusions} from "@/data/animal-fusions";
 import {getLocationPage, locationPages} from "@/data/locations";
 import {getRankingPage, rankingPages} from "@/data/rankings";
-import {getSpeciesBySlug} from "@/data/species";
+import {getSpeciesBySlug, speciesEntries} from "@/data/species";
 import {getResolvedSpeciesArtworkUrl} from "@/data/species-artwork-index";
 import {getComparisonPageData} from "@/data/species-comparisons";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
+import lessonSnapshot from "@/data/published-seo-lesson-pages.json";
+import speciesPowers from "@/data/published-species-powers.json";
 import {getAbsoluteUrl} from "@/lib/site";
 import type {Fighter, SourceImage, SourceType, StatLine, VideoSource} from "@/lib/content-video/plan";
 import {listVideoCandidates, loadVideoSource as loadBlogSource, type VideoCandidate} from "@/lib/content-video/source";
@@ -15,7 +17,8 @@ import {battlePowerFor} from "@/lib/content-video/battle-powers";
 
 // Every page family a video can be made from, as a VideoSource: comparisons
 // (battle), hybrids and fusions (creature), rankings and locations
-// (editorial, over the species artwork). Blog posts live in source.ts.
+// (editorial, over the species artwork), animal lessons (/animal-powers, the
+// dark & gold lesson format). Blog posts live in source.ts.
 
 const TOP_RANKING_ENTRIES = 5;
 const LOCATION_ANIMALS = 7;
@@ -186,7 +189,161 @@ async function locationSource(slug: string): Promise<VideoSource | null> {
     };
 }
 
+type LessonEntry = {slug: string; displayName?: string | null; principleName?: string | null; principleExpression?: string | null; coreLesson?: string | null; biologicalBasis?: string | null; shortMotto?: string | null; applicationExample?: string | null};
+
+/**
+ * Every animal with a lesson: the /animal-powers snapshot (with its biology
+ * and a real-life example) and the catalog's species Powers, which cover
+ * headline animals the snapshot lacks (the tiger, the orca, the honey badger).
+ */
+const lessonEntries: LessonEntry[] = (() => {
+    const bySlug = new Map<string, LessonEntry>();
+    for (const entry of (lessonSnapshot as {entries: LessonEntry[]}).entries) {
+        if (entry.slug && entry.principleName && entry.coreLesson) bySlug.set(entry.slug, entry);
+    }
+    const powers = (speciesPowers as {powers: Record<string, {name: string; expression: string | null; lesson: string | null; motto: string | null}>}).powers;
+    for (const [slug, power] of Object.entries(powers)) {
+        if (bySlug.has(slug) || !power.name || !power.lesson) continue;
+        bySlug.set(slug, {slug, principleName: power.name, principleExpression: power.expression, coreLesson: power.lesson, shortMotto: power.motto});
+    }
+    return Array.from(bySlug.values());
+})();
+
+/**
+ * Demand sits with the animals people already admire (Nov 2026 research:
+ * lion / wolf / eagle "mindset" Shorts reach millions on tiny channels, a
+ * crocodile or octopus one a few thousand). They get their lesson videos first.
+ */
+export const HEADLINE_LESSON_ANIMALS = [
+    "african-lion", "gray-wolf", "bald-eagle", "golden-eagle", "bengal-tiger", "orca", "great-white-shark", "honey-badger",
+    "saltwater-crocodile", "mountain-gorilla", "western-gorilla", "african-bush-elephant", "cheetah", "snow-leopard", "jaguar",
+    "grizzly-bear", "polar-bear", "peregrine-falcon", "great-horned-owl", "snowy-owl", "king-cobra", "black-mamba", "komodo-dragon",
+    "common-octopus", "spotted-hyena", "wolverine", "common-raven", "american-crow", "chimpanzee", "red-fox", "american-bison",
+    "harpy-eagle", "mountain-lion", "eurasian-lynx", "common-hippopotamus", "humpback-whale", "blue-whale", "emperor-penguin",
+    "peacock-mantis-shrimp", "sea-otter", "domestic-horse", "eurasian-wolf", "moose", "axolotl", "electric-eel"
+] as const;
+
+function lessonEntry(slug: string) {
+    return lessonEntries.find((entry) => entry.slug === slug) ?? null;
+}
+
+async function lessonSource(slug: string): Promise<VideoSource | null> {
+    const entry = lessonEntry(slug);
+    if (!entry) return null;
+    const name = entry.displayName?.trim() || speciesName(slug);
+    const images = await artworkImages([{slug, alt: name}]);
+    if (!images.length) return null;
+    const facts = {
+        animal: fighter(slug, name, images, 1),
+        power: entry.principleName!.trim(),
+        expression: entry.principleExpression?.trim() ?? "",
+        lesson: entry.coreLesson!.trim(),
+        motto: entry.shortMotto?.trim() ?? "",
+        basis: entry.biologicalBasis?.trim() ?? "",
+        application: entry.applicationExample?.trim() ?? ""
+    };
+    return {
+        type: "lesson",
+        format: "lesson",
+        slug,
+        title: `What the ${name} teaches you: ${facts.power}`,
+        description: facts.lesson,
+        url: getAbsoluteUrl("en", sourcePath("lesson", slug)),
+        tags: [name, facts.power, "animal lessons", "life lessons from animals"],
+        text: [`Power: ${facts.power}`, `Behaviour: ${facts.expression}`, `Biology: ${facts.basis}`, `Lesson: ${facts.lesson}`, `Motto: ${facts.motto}`, `In real life: ${facts.application}`].join("\n"),
+        images,
+        species: await sourceSpecies([{slug, name, image: 1}]),
+        lesson: facts
+    };
+}
+
+/** "Guess the animal" from a species page: its clue material, hardest first, and what to say after the reveal. */
+async function guessSource(slug: string): Promise<VideoSource | null> {
+    const entry = getSpeciesBySlug(slug);
+    if (!entry) return null;
+    const analysis = entry.analysis;
+    const details = entry.premiumDetails;
+    const clues = [
+        ...(details?.behaviorTraits ?? []),
+        analysis?.habitat,
+        ...(analysis?.identification ?? []),
+        analysis?.nativeRange
+    ].filter((clue): clue is string => typeof clue === "string" && clue.trim().length > 0);
+    if (clues.length < 3) return null;
+    const images = await artworkImages([{slug, alt: entry.name}]);
+    if (!images.length) return null;
+    const lesson = lessonEntry(slug);
+    const facts = {
+        animal: fighter(slug, entry.name, images, 1),
+        clues,
+        facts: [...(details?.whyInteresting ?? []), analysis?.summary].filter((fact): fact is string => typeof fact === "string" && fact.trim().length > 0),
+        lookalikes: (details?.lookalikes ?? []).slice(0, 3),
+        lesson: lesson?.coreLesson?.trim() ?? null
+    };
+    return {
+        type: "guess",
+        format: "guess",
+        slug,
+        title: `Guess the animal: ${entry.name}`,
+        description: analysis?.summary ?? entry.name,
+        url: getAbsoluteUrl("en", sourcePath("guess", slug)),
+        tags: [entry.name, "guess the animal", "animal quiz"],
+        text: [`Clues: ${clues.join(" | ")}`, `Facts: ${facts.facts.join(" | ")}`, facts.lookalikes.length ? `Often mistaken for: ${facts.lookalikes.join(" | ")}` : "", facts.lesson ? `Its lesson: ${facts.lesson}` : ""].filter(Boolean).join("\n"),
+        images,
+        species: await sourceSpecies([{slug, name: entry.name, image: 1}]),
+        guess: facts
+    };
+}
+
+export const BIRTH_MONTH_PREFIX = "birth-month-";
+
+/**
+ * Twelve headline animals for a "your birth month = your animal" carousel,
+ * drawn from the slug's seed (birth-month-<seed>), so a re-render keeps the
+ * same twelve. Their lessons are the records every month's trait is built on.
+ */
+export async function birthMonthSource(slug: string): Promise<VideoSource | null> {
+    const seed = slug.slice(BIRTH_MONTH_PREFIX.length) || "0";
+    let hash = 0;
+    for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    const pool = HEADLINE_LESSON_ANIMALS.filter((animal) => lessonEntry(animal));
+    // A seeded shuffle: different twelve on each carousel.
+    const order = pool.map((animal, index) => ({animal, key: ((hash ^ (index * 2654435761)) >>> 0) % 1000003})).sort((a, b) => a.key - b.key).map((entry) => entry.animal);
+    const chosen: Array<{slug: string; name: string}> = [];
+    const images: SourceImage[] = [];
+    for (const animal of order) {
+        if (chosen.length === 12) break;
+        const name = lessonEntry(animal)?.displayName?.trim() || speciesName(animal);
+        const url = await getResolvedSpeciesArtworkUrl(animal).catch(() => null);
+        if (!url) continue;
+        chosen.push({slug: animal, name});
+        images.push({index: chosen.length, src: url, alt: name, caption: null, width: 1200, height: 900, license: null});
+    }
+    if (chosen.length < 12) return null;
+    return {
+        type: "lesson",
+        format: "lesson",
+        slug,
+        title: "Your birth month is your animal",
+        description: "Twelve animals, one for each birth month, and the trait you share with yours.",
+        url: getAbsoluteUrl("en", "/animal-powers"),
+        tags: ["birth month", "spirit animal", "animal personality"],
+        text: chosen.map((animal) => {
+            const entry = lessonEntry(animal.slug)!;
+            return `${animal.name}: Power "${entry.principleName}"${entry.principleExpression ? ` (${entry.principleExpression})` : ""}. Lesson: ${entry.coreLesson}`;
+        }).join("\n"),
+        images,
+        species: await sourceSpecies(chosen.map((animal, index) => ({slug: animal.slug, name: animal.name, image: index + 1})))
+    };
+}
+
+/** The fewest source images a family's video can be made with: a lesson or a guess is one animal, drawn by the clips. */
+export function minimumImages(type: SourceType) {
+    return type === "lesson" || type === "guess" ? 1 : 2;
+}
+
 export async function loadPageSource(type: SourceType, slug: string): Promise<VideoSource | null> {
+    if (type === "lesson" && slug.startsWith(BIRTH_MONTH_PREFIX)) return birthMonthSource(slug);
     switch (type) {
         case "blog": return loadBlogSource(slug);
         case "comparison": return comparisonSource(slug);
@@ -194,6 +351,8 @@ export async function loadPageSource(type: SourceType, slug: string): Promise<Vi
         case "fusion": return fusionSource(slug);
         case "ranking": return rankingSource(slug);
         case "location": return locationSource(slug);
+        case "lesson": return lessonSource(slug);
+        case "guess": return guessSource(slug);
     }
 }
 
@@ -207,5 +366,27 @@ export async function listPageCandidates(type: SourceType): Promise<VideoCandida
         case "fusion": return publishedAnimalFusions.map((entry) => ({slug: entry.slug, title: `${speciesName(entry.receiverSlug)} learns ${entry.name} from ${speciesName(entry.donorSlug)}`, publishedAt: entry.updatedAt, imageCount: 2}));
         case "ranking": return rankingPages.map((page) => ({slug: page.slug, title: page.headline ?? page.title, publishedAt: page.publishedAt, imageCount: TOP_RANKING_ENTRIES}));
         case "location": return locationPages.map((page) => ({slug: page.slug, title: page.title, publishedAt: page.publishedAt, imageCount: LOCATION_ANIMALS}));
+        case "lesson": {
+            // Demand before depth: headline animals, then animals with their own species page, then the rest.
+            const headline = new Set<string>(HEADLINE_LESSON_ANIMALS);
+            return lessonEntries.map((entry) => ({
+                slug: entry.slug,
+                title: `What the ${entry.displayName ?? speciesName(entry.slug)} teaches you`,
+                publishedAt: now,
+                imageCount: 1,
+                priority: headline.has(entry.slug) ? 2 : getSpeciesBySlug(entry.slug) ? 1 : 0
+            }));
+        }
+        case "guess": {
+            // Famous animals make the best guesses (people get to be right); then those with a lesson to end on.
+            const headline = new Set<string>(HEADLINE_LESSON_ANIMALS);
+            return speciesEntries.map((entry) => ({
+                slug: entry.slug,
+                title: `Guess the animal: ${entry.name}`,
+                publishedAt: now,
+                imageCount: 1,
+                priority: headline.has(entry.slug) ? 2 : lessonEntry(entry.slug) ? 1 : 0
+            }));
+        }
     }
 }

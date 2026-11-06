@@ -16,8 +16,16 @@ import {
     buildCreatureUserPrompt,
     CREATURE_JSON_SCHEMA,
     CREATURE_SYSTEM_PROMPT,
+    buildGuessUserPrompt,
+    buildLessonUserPrompt,
+    GUESS_JSON_SCHEMA,
+    GUESS_SYSTEM_PROMPT,
+    LESSON_JSON_SCHEMA,
+    LESSON_SYSTEM_PROMPT,
     normalizeBattlePlan,
-    normalizeCreaturePlan
+    normalizeCreaturePlan,
+    normalizeGuessPlan,
+    normalizeLessonPlan
 } from "@/lib/content-video/formats";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
@@ -163,6 +171,12 @@ function plannerFor(source: VideoSource, experiment: Experiment | null): {prompt
     }
     if (source.format === "creature") {
         return {prompt: {system: CREATURE_SYSTEM_PROMPT, schema: CREATURE_JSON_SCHEMA}, user: buildCreatureUserPrompt(source) + brief, normalize: (value) => normalizeCreaturePlan(value, source, experiment)};
+    }
+    if (source.format === "guess") {
+        return {prompt: {system: GUESS_SYSTEM_PROMPT, schema: GUESS_JSON_SCHEMA}, user: buildGuessUserPrompt(source) + brief, normalize: (value) => normalizeGuessPlan(value, source, experiment)};
+    }
+    if (source.format === "lesson") {
+        return {prompt: {system: LESSON_SYSTEM_PROMPT, schema: LESSON_JSON_SCHEMA}, user: buildLessonUserPrompt(source) + brief, normalize: (value) => normalizeLessonPlan(value, source, experiment)};
     }
     return {prompt: {system: PLAN_SYSTEM_PROMPT, schema: PLAN_JSON_SCHEMA}, user: buildPlanUserPrompt(source, experiment), normalize: (value) => normalizePlan(value, source.images.length)};
 }
