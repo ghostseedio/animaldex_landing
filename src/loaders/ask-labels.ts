@@ -165,6 +165,7 @@ export async function getAskDrawerLabels(locale: string): Promise<AskDrawerLabel
         hearCall: askT("hearCall"),
         animalSounds: askT("animalSounds"),
         soundCredits: askT("soundCredits"),
+        settings: askT("settings"),
         soundCreditsSpecies: askT("soundCreditsSpecies"),
         soundCreditsHabitat: askT("soundCreditsHabitat"),
         soundOriginal: askT("soundOriginal"),

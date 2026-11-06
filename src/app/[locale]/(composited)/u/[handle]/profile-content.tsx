@@ -213,43 +213,9 @@ type ProfileContentProps = {
 };
 
 /* ------------------------------------------------------------------ *
- * Tab bar — iOS `profileTabPicker`
+ * Tab bar — iOS `ProfileTabRow`: words only (design pass, 2026-11-06)
  * ------------------------------------------------------------------ */
 
-const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
-    history: (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-            <rect x="3" y="3" width="8" height="8" rx="2" />
-            <rect x="13" y="3" width="8" height="8" rx="2" />
-            <rect x="3" y="13" width="8" height="8" rx="2" />
-            <rect x="13" y="13" width="8" height="8" rx="2" />
-        </svg>
-    ),
-    stats: (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-            <rect x="3" y="12" width="4.5" height="9" rx="1.2" />
-            <rect x="9.75" y="6" width="4.5" height="15" rx="1.2" />
-            <rect x="16.5" y="9" width="4.5" height="12" rx="1.2" />
-        </svg>
-    ),
-    shop: (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-            <path d="M12 2.2 21.4 6v1.1H2.6V6z" />
-            <path d="M3.4 8.6h17.2v10.1a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2zM8.5 11.4h7v1.9h-7z" fillOpacity="1" />
-        </svg>
-    ),
-    diary: (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-            <path d="M6 2.8h11.2a1.8 1.8 0 0 1 1.8 1.8v14.8a1.8 1.8 0 0 1-1.8 1.8H6a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2m2.2 4.1v1.8h7.6V6.9zm0 3.6v1.8h5.4v-1.8z" />
-        </svg>
-    ),
-    locations: (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-            <path d="M12 2.4a5.4 5.4 0 0 0-5.4 5.4c0 3.7 4.3 8.4 5.05 9.2a.47.47 0 0 0 .7 0c.75-.8 5.05-5.5 5.05-9.2A5.4 5.4 0 0 0 12 2.4m0 7.5a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2" />
-            <ellipse cx="12" cy="19.6" rx="7.4" ry="2.2" fillOpacity="0.55" />
-        </svg>
-    )
-};
 
 function ProfileChromeButton({
     children,
@@ -574,18 +540,31 @@ export default function ProfileContent({
     const bleed = surface === "app" ? "" : "-mx-4 md:-mx-8";
     const inset = surface === "app" ? "px-[18px]" : "px-[18px] md:px-0";
 
+    // Someone else's profile shows a tab only once it has something in it
+    // (design pass, 2026-11-06, as iOS): Cards and Stats always; the Diary
+    // when they have asked the public; the Shop when they list something;
+    // Locations when you may see them and they have places.
+    const memberHasPublicDebates = (publicDebates?.debates.length ?? 0) > 0;
+    const memberHasShop = listedPacks.length > 0 || (virtualGuides?.kind === "public" && virtualGuides.guides.length > 0);
+    const memberHasPlaces = profile.locationVisits.length > 0;
     const tabs = useMemo<ProfileTab[]>(
-        () => surface === "app" && viewer.isOwner
-            // Your own profile in the app: Shop and Locations live in the drawer.
-            ? drawerTab ? ["history", "stats", drawerTab] : ["history", "stats"]
-            : viewer.isOwner
-                ? ["history", "stats", "shop", "locations"]
-                // Someone else's: their Diary holds only what they asked in public.
-                : profile.canViewLocations
-                    ? ["history", "stats", "diary", "shop", "locations"]
-                    : ["history", "stats", "diary", "shop"],
-        [drawerTab, profile.canViewLocations, surface, viewer.isOwner]
+        () => {
+            if (surface === "app" && viewer.isOwner) {
+                // Your own profile in the app: Shop and Locations live in the drawer.
+                return drawerTab ? ["history", "stats", drawerTab] : ["history", "stats"];
+            }
+            if (viewer.isOwner) return ["history", "stats", "shop", "locations"];
+            const shown: ProfileTab[] = ["history", "stats"];
+            if (memberHasPublicDebates) shown.push("diary");
+            if (memberHasShop) shown.push("shop");
+            if (profile.canViewLocations && memberHasPlaces) shown.push("locations");
+            return shown;
+        },
+        [drawerTab, memberHasPlaces, memberHasPublicDebates, memberHasShop, profile.canViewLocations, surface, viewer.isOwner]
     );
+    useEffect(() => {
+        if (!tabs.includes(activeTab)) setActiveTab("history");
+    }, [activeTab, tabs]);
     const tabLabel = (tab: ProfileTab) => {
         if (tab === "history") return labels.tabHistory;
         if (tab === "stats") return labels.tabStats;
@@ -862,7 +841,13 @@ export default function ProfileContent({
                     ? viewer.isOwner ? "top-[6.65rem] lg:top-[2.65rem]" : "top-16 lg:top-0"
                     : "top-0"
             }`}>
-                <div className="grid px-[18px]" style={{gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`}}>
+                {/* Words only (design pass, 2026-11-06): up to three share the width; more scroll sideways, never shrink. */}
+                <div
+                    className={tabs.length > 3
+                        ? "flex gap-6 overflow-x-auto px-[18px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        : "grid px-[18px]"}
+                    style={tabs.length > 3 ? undefined : {gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`}}
+                >
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab;
                         return (
@@ -872,11 +857,10 @@ export default function ProfileContent({
                                 role="tab"
                                 aria-selected={isActive}
                                 onClick={() => setActiveTab(tab)}
-                                aria-label={tabLabel(tab)}
-                                className="flex flex-col items-center gap-1.5 pt-2.5 outline-none focus-visible:bg-white/[0.05]"
+                                className="flex shrink-0 flex-col items-center gap-2.5 pt-3.5 outline-none focus-visible:bg-white/[0.05]"
                             >
-                                <span className={`relative flex h-5 items-center ${isActive ? "text-white" : "text-white/40"}`}>
-                                    {TAB_ICONS[tab]}
+                                <span className={`whitespace-nowrap text-[15px] font-semibold leading-5 ${isActive ? "text-white" : "text-white/40"}`}>
+                                    {tabLabel(tab)}
                                 </span>
                                 <span className={`h-0.5 w-full ${isActive ? "bg-white" : "bg-transparent"}`} />
                             </button>

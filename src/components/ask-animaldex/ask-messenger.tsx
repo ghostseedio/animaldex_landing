@@ -640,6 +640,8 @@ export type AskMenuItem = {
     disabled?: boolean;
     /** A toggle shows its state. */
     checked?: boolean;
+    /** A page of its own inside the menu (the chat's Settings): the menu stays open and shows these, with a way back. */
+    submenu?: AskMenuItem[];
 };
 
 /**
@@ -661,9 +663,14 @@ export function AskMenu({
     children: ReactNode;
 }) {
     const [open, setOpen] = useState(false);
+    // The submenu on show, if any (design pass, 2026-11-06).
+    const [submenu, setSubmenu] = useState<AskMenuItem | null>(null);
     // Low in the panel, the menu opens upwards, so the thread's edge never cuts it off.
     const [upwards, setUpwards] = useState(false);
     const rootRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        if (!open) setSubmenu(null);
+    }, [open]);
     useEffect(() => {
         if (!open) return;
         const onPointer = (event: PointerEvent) => {
@@ -707,15 +714,36 @@ export function AskMenu({
                     role="menu"
                     className={`absolute z-10 min-w-[15rem] border border-white/12 bg-canvas-900 py-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)] ${align === "right" ? "right-0" : "left-0"} ${upwards ? "bottom-full mb-1" : "top-full mt-1"}`}
                 >
-                    {visible.map((item) => (
+                    {submenu ? (
+                        // The way back to the top of the menu.
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                setSubmenu(null);
+                            }}
+                            className="flex w-full items-center gap-2.5 border-b border-white/[0.08] px-3.5 py-2 text-left text-[13px] font-semibold text-ink-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                        >
+                            <span aria-hidden="true" className="shrink-0">‹</span>
+                            <span className="min-w-0 flex-1">{submenu.label}</span>
+                        </button>
+                    ) : null}
+                    {(submenu ? submenu.submenu ?? [] : visible).filter(Boolean).map((item) => (
                         <button
                             key={item.label}
                             type="button"
                             role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
                             aria-checked={item.checked}
+                            aria-haspopup={item.submenu ? "menu" : undefined}
                             disabled={item.disabled}
                             onClick={(event) => {
                                 event.stopPropagation();
+                                if (item.submenu) {
+                                    // The menu stays open: its page takes the list's place.
+                                    setSubmenu(item);
+                                    return;
+                                }
                                 setOpen(false);
                                 // Whatever it opens, it opens once this menu has gone.
                                 setTimeout(item.onSelect, 0);
@@ -727,6 +755,7 @@ export function AskMenu({
                                 <span className="block">{item.label}</span>
                                 {item.detail ? <span className="block text-[11px] text-ink-400">{item.detail}</span> : null}
                             </span>
+                            {item.submenu ? <span aria-hidden="true" className="shrink-0 text-ink-400">›</span> : null}
                             {item.checked === undefined ? null : (
                                 <span
                                     aria-hidden="true"

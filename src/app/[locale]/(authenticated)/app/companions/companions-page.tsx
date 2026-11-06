@@ -127,7 +127,8 @@ function CompanionRow({row, href, line, time, locale, words}: {
         </>
     );
     // Hover is a wash, no scale (DESIGN.md section 1); a press darkens it a step.
-    const className = "flex h-16 items-center gap-3 pl-4 transition-colors duration-150 ease-spring hover:bg-white/[0.04] active:bg-white/[0.07] md:pl-5";
+    // 72 tall, as the app's rows (design pass, 2026-11-06).
+    const className = "flex h-[72px] items-center gap-3 pl-4 transition-colors duration-150 ease-spring hover:bg-white/[0.04] active:bg-white/[0.07] md:pl-5";
     return href
         ? <Link href={href} className={className} data-testid="companion-row">{body}</Link>
         : <div className={className} data-testid="companion-row">{body}</div>;
@@ -300,24 +301,54 @@ function YourCompanions({words, locale, frontDoor}: {words: CompanionWords; loca
                 </div>
             ) : (
                 // The rows fade in once, when the list first mounts; a refresh keeps them.
+                // Rows for the animals with something going on; the ones never
+                // talked to are faces under them (design pass, 2026-11-06, as iOS),
+                // so a message and an idle animal no longer weigh the same. With
+                // nothing going on anywhere, everyone is a row.
                 <div className={`rows-in -mx-4 ${top} md:mx-0`} data-testid="companions-roster">
-                    {roster.map(({row, line, time}) => (
-                        <CompanionRow
-                            key={row.speciesProfileId}
-                            row={row}
-                            line={line}
-                            time={time}
-                            locale={locale}
-                            words={words}
-                            // Its chat, on the card you last talked through (else
-                            // its newest); on the referral, when one is waiting.
-                            href={companionRowHref({
-                                captureId: chatCaptureIdFor(cards, row.speciesProfileId, row.captureId),
-                                referralWaiting: row.referralWaiting,
-                                referralId: row.referralId
-                            })}
-                        />
-                    ))}
+                    {(() => {
+                        const quiet = roster.filter(({line}) => line.kind === "power" || line.kind === "hello");
+                        const active = quiet.length === roster.length ? roster : roster.filter(({line}) => line.kind !== "power" && line.kind !== "hello");
+                        const hrefOf = (row: CompanionTabRow) => companionRowHref({
+                            captureId: chatCaptureIdFor(cards, row.speciesProfileId, row.captureId),
+                            referralWaiting: row.referralWaiting,
+                            referralId: row.referralId
+                        });
+                        return (
+                            <>
+                                {active.map(({row, line, time}) => (
+                                    <CompanionRow
+                                        key={row.speciesProfileId}
+                                        row={row}
+                                        line={line}
+                                        time={time}
+                                        locale={locale}
+                                        words={words}
+                                        // Its chat, on the card you last talked through (else
+                                        // its newest); on the referral, when one is waiting.
+                                        href={hrefOf(row)}
+                                    />
+                                ))}
+                                {active.length < roster.length ? (
+                                    <div className="grid grid-cols-4 gap-x-2 gap-y-4 px-4 pb-4 pt-5 md:grid-cols-6 md:px-5" data-testid="companions-faces">
+                                        {quiet.map(({row}) => {
+                                            const href = hrefOf(row);
+                                            const face = (
+                                                <>
+                                                    <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={56} />
+                                                    <span className="line-clamp-2 text-center text-[13px] font-semibold leading-4 text-white/60">{row.displayName}</span>
+                                                </>
+                                            );
+                                            const className = "flex flex-col items-center gap-1.5 transition-opacity hover:opacity-80 active:opacity-70";
+                                            return href
+                                                ? <Link key={row.speciesProfileId} href={href} className={className} data-testid="companion-face">{face}</Link>
+                                                : <div key={row.speciesProfileId} className={className} data-testid="companion-face">{face}</div>;
+                                        })}
+                                    </div>
+                                ) : null}
+                            </>
+                        );
+                    })()}
                 </div>
             )}
         </div>

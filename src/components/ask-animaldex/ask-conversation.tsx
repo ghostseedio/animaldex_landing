@@ -398,6 +398,8 @@ export type AskDrawerLabels = {
     hearCall: string;
     /** The chat's menu: the animal's recorded sounds as it types. */
     animalSounds: string;
+    /** The ••• menu's Settings submenu. */
+    settings: string;
     soundCredits: string;
     soundCreditsSpecies: string;
     soundCreditsHabitat: string;
@@ -2932,33 +2934,14 @@ export default function AskConversation({
                                 setShowingSoundCredits(true);
                             }}
                             extraItems={[
-                                // What the two of you are working on, and letting it go (iOS keeps it in the ••• menu).
-                                ...(ownerChat && companionLoop?.focus ? [{
-                                    label: labels.notThisAnyMore,
-                                    detail: labels.workingOn.replace("{focus}", companionLoop.focus),
-                                    icon: <CloseIcon />,
-                                    onSelect: clearCompanionFocus
-                                }] : []),
-                                // "Name your Gray Wolf" while it has no name (iOS keeps it in the ••• menu too).
+                                // The top of the menu: four things a newcomer understands at a glance
+                                // (design pass, 2026-11-06, as iOS). Each shows only once it applies.
+                                // "Name your Gray Wolf" while it has no name.
                                 ...(nameTitle ? [{
                                     label: nameTitle,
                                     icon: <PencilIcon />,
                                     onSelect: () => setShowingNameSheet(true)
                                 }] : []),
-                                // "Mute messages from Luna" / "Let Luna message you" (AnimalDex 51293f02).
-                                ...(animalMuted === null ? [] : [{
-                                    label: (animalMuted ? labels.unmuteAnimal : labels.muteAnimal)
-                                        .replace("{name}", nickname ?? labels.theAnimal.replace("{animal}", animalName ?? "")),
-                                    icon: <BellIcon />,
-                                    onSelect: toggleAnimalMuted
-                                }]),
-                                // 3.2 Debates: once its Power is earned, and while the server has them on.
-                                ...(debatesOffered ? [{
-                                    label: words.debate.start,
-                                    icon: <DebateIcon />,
-                                    onSelect: () => openDebateSheet(null)
-                                }] : []),
-                                // In the menu, as on iOS, so the header has room for the call.
                                 {
                                     label: labels.newConversation,
                                     icon: <PencilIcon />,
@@ -2967,11 +2950,34 @@ export default function AskConversation({
                                     disabled: messages.length === 0,
                                     onSelect: () => setConfirmingClear(true)
                                 },
+                                // 3.2 Debates: once its Power is earned, and while the server has them on.
+                                ...(debatesOffered ? [{
+                                    label: words.debate.start,
+                                    icon: <DebateIcon />,
+                                    onSelect: () => openDebateSheet(null)
+                                }] : [])
+                            ]}
+                            settingsItems={[
+                                // Under Settings: its messages, what it remembers, what you are working on.
+                                // "Mute messages from Luna" / "Let Luna message you" (AnimalDex 51293f02).
+                                ...(animalMuted === null ? [] : [{
+                                    label: (animalMuted ? labels.unmuteAnimal : labels.muteAnimal)
+                                        .replace("{name}", nickname ?? labels.theAnimal.replace("{animal}", animalName ?? "")),
+                                    icon: <BellIcon />,
+                                    onSelect: toggleAnimalMuted
+                                }]),
                                 ...(context?.signedIn ? [{
                                     label: labels.memoryOpen,
                                     icon: <MemoryIcon />,
                                     checked: showingMemory,
                                     onSelect: showingMemory ? () => setShowingMemory(false) : openMemory
+                                }] : []),
+                                // What the two of you are working on, and letting it go.
+                                ...(ownerChat && companionLoop?.focus ? [{
+                                    label: labels.notThisAnyMore,
+                                    detail: labels.workingOn.replace("{focus}", companionLoop.focus),
+                                    icon: <CloseIcon />,
+                                    onSelect: clearCompanionFocus
                                 }] : [])
                             ]}
                         />

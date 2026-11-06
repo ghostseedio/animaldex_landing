@@ -2527,6 +2527,7 @@
     "hearCall": "Dengarkan suaranya",
     "animalSounds": "Suara hewan",
     "soundCredits": "Pemilik rekaman ini",
+    "settings": "Pengaturan",
     "soundCreditsSpecies": "{animal} berbicara dengan rekaman asli spesiesnya, yang dibuat di alam liar oleh orang-orang di bawah ini. AnimalDex memotongnya, menyamakan kerasnya, dan sedikit membersihkannya.",
     "soundCreditsHabitat": "Anda mendengar {habitat}, tempat {animal} tinggal: rekaman asli, dibuat oleh orang-orang di bawah ini.",
     "soundOriginal": "Lihat rekaman aslinya",

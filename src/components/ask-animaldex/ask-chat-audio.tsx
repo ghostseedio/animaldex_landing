@@ -20,6 +20,8 @@ export type AskChatAudioLabels = {
     hearCall: string;
     animalSounds: string;
     soundCredits: string;
+    /** The ••• menu's one submenu: how the two of you talk, its sounds, its messages, what it remembers. */
+    settings: string;
 };
 
 /** The header's speaker and the chat's ••• menu, side by side. */
@@ -33,7 +35,8 @@ export function AskChatOptions({
     onSounds,
     onHearCall,
     onCredits,
-    extraItems = []
+    extraItems = [],
+    settingsItems = []
 }: {
     labels: AskChatAudioLabels;
     /** A signed-in reader: the voice is per account. */
@@ -46,8 +49,10 @@ export function AskChatOptions({
     onSounds: (on: boolean) => void;
     onHearCall: () => void;
     onCredits: () => void;
-    /** The chat's other choices: on the owner's chat, whether the animal may write to them. */
+    /** The chat's top-level choices: name it, start again, start a debate. */
     extraItems?: AskMenuItem[];
+    /** Under Settings, before the sounds: its messages, what it remembers, what you are working on (design pass, 2026-11-06). */
+    settingsItems?: AskMenuItem[];
 }) {
     const soundItems: AskMenuItem[] = bank
         ? [
@@ -57,7 +62,13 @@ export function AskChatOptions({
             ...(bank.credits.length > 0 ? [{label: labels.soundCredits, icon: <CreditIcon />, onSelect: onCredits}] : [])
         ]
         : [];
-    const items = [...extraItems, ...soundItems];
+    // Four things a newcomer understands at the top; everything about how
+    // the two of you talk under one Settings page of the same menu (as iOS).
+    const settings = [...settingsItems, ...soundItems];
+    const items: AskMenuItem[] = [
+        ...extraItems,
+        ...(settings.length > 0 ? [{label: labels.settings, icon: <SettingsIcon />, submenu: settings, onSelect: () => {}}] : [])
+    ];
     return (
         <>
             {voiceAvailable ? (
@@ -84,6 +95,13 @@ export function AskChatOptions({
         </>
     );
 }
+
+const SettingsIcon = () => (
+    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="10" cy="10" r="2.6" />
+        <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
+    </svg>
+);
 
 /** Hear the reply in the animal's voice: a small control beside its last bubble, quiet until it plays. */
 export function AskVoiceIcon({

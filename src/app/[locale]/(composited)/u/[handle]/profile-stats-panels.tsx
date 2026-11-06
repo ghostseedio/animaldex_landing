@@ -196,23 +196,6 @@ const SETTING_LABEL_ALIGNMENT = {
     end: "items-end"
 } as const;
 
-function SettingComparisonLabel({
-    title,
-    count,
-    align
-}: {
-    title: string;
-    count: number;
-    align: keyof typeof SETTING_LABEL_ALIGNMENT;
-}) {
-    return (
-        <div className={`flex flex-1 flex-col gap-[3px] text-black/[0.82] ${SETTING_LABEL_ALIGNMENT[align]}`}>
-            <span className="text-[9px] font-bold leading-none">{title}</span>
-            <span className="text-[17px] font-extrabold leading-none">{count}</span>
-        </div>
-    );
-}
-
 export function SettingComparisonCard({
     wild,
     zoo,
@@ -224,25 +207,37 @@ export function SettingComparisonCard({
     domestic: number;
     farm: number;
 }) {
+    // A thin bar and a legend (design pass, 2026-11-06, as iOS), not a slab
+    // of colour: on a new account the old panel was one coloured rectangle.
     const total = wild + zoo + domestic + farm;
-    const share = (value: number) => (total > 0 ? (value / total) * 100 : 25);
+    const parts = [
+        {title: "Wild", count: wild, color: THEME.cyan},
+        {title: "Zoo", count: zoo, color: THEME.orange},
+        {title: "Domestic", count: domestic, color: THEME.domestic},
+        {title: "Farm", count: farm, color: THEME.farm}
+    ];
 
     return (
         <StatsPanel className="p-4">
             <PanelTitle>WILD VS ZOO VS DOMESTIC VS FARM</PanelTitle>
-            <div className="relative mt-3 h-[72px] w-full overflow-hidden bg-white/[0.04]">
-                <div className="absolute inset-0 flex">
-                    <div style={{width: `${share(wild)}%`, backgroundColor: THEME.cyan, opacity: 0.92}} />
-                    <div style={{width: `${share(zoo)}%`, backgroundColor: THEME.orange, opacity: 0.92}} />
-                    <div style={{width: `${share(domestic)}%`, backgroundColor: THEME.domestic, opacity: 0.96}} />
-                    <div style={{width: `${share(farm)}%`, backgroundColor: THEME.farm, opacity: 0.96}} />
-                </div>
-                <div className="absolute inset-0 flex items-center px-2.5">
-                    <SettingComparisonLabel title="Wild" count={wild} align="start" />
-                    <SettingComparisonLabel title="Zoo" count={zoo} align="center" />
-                    <SettingComparisonLabel title="Domestic" count={domestic} align="center" />
-                    <SettingComparisonLabel title="Farm" count={farm} align="end" />
-                </div>
+            <div className="mt-3 flex h-2 w-full gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+                {total === 0 ? (
+                    <div className="h-full w-full bg-white/[0.08]" />
+                ) : (
+                    parts.filter((part) => part.count > 0).map((part) => (
+                        // Even one capture shows as a sliver.
+                        <div key={part.title} className="h-full" style={{flexGrow: Math.max(part.count, total * 0.01), flexBasis: 0, backgroundColor: part.color}} />
+                    ))
+                )}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-1.5">
+                {parts.map((part) => (
+                    <span key={part.title} className="flex items-center gap-1.5 text-[12px] leading-4">
+                        <span className="h-2 w-2 rounded-full" style={{backgroundColor: part.color}} aria-hidden="true" />
+                        <span className="text-white/60">{part.title}</span>
+                        <span className="font-semibold tabular-nums text-white">{part.count}</span>
+                    </span>
+                ))}
             </div>
         </StatsPanel>
     );

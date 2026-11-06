@@ -2541,6 +2541,7 @@
     "hearCall": "Hear its call",
     "animalSounds": "Animal sounds",
     "soundCredits": "Whose recordings these are",
+    "settings": "Settings",
     "soundCreditsSpecies": "The {animal} speaks with real recordings of its species, made in the wild by the people below. AnimalDex trimmed them, matched their loudness and lightly cleaned them.",
     "soundCreditsHabitat": "You hear {habitat}, where the {animal} lives: real recordings, made by the people below.",
     "soundOriginal": "See the original recording",
