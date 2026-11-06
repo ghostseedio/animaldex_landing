@@ -853,6 +853,16 @@ function FeedRailButton({
   );
 }
 
+/** iOS `bubble.left.and.bubble.right.fill`: two speech bubbles, filled. */
+function TalkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+      <path d="M3.5 4.5h10a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 1-1.5 1.5H8.2L4.6 16v-3H3.5A1.5 1.5 0 0 1 2 11.5V6a1.5 1.5 0 0 1 1.5-1.5Z" />
+      <path d="M16.6 8.6h3.9A1.5 1.5 0 0 1 22 10.1v5.5a1.5 1.5 0 0 1-1.5 1.5h-1.1v3l-3.6-3h-4.3a1.5 1.5 0 0 1-1.5-1.5v-1.5h4.1a2.5 2.5 0 0 0 2.5-2.5Z" />
+    </svg>
+  );
+}
+
 function OfferIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1176,6 +1186,9 @@ function CaptureCard({
 
   const isOwnPost = Boolean(viewerUserId && activeItem.collector.userId && viewerUserId === activeItem.collector.userId);
   const canOffer = Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain;
+  // iOS: signed in, someone else's post, and an animal with a Power to speak
+  // from (an identified species; an unclear photo has none).
+  const canTalk = Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain && Boolean(activeItem.speciesSlug);
   const activityLabel = activeItem.activityBadge.toLowerCase() === "capture" && activeItem.animalDexNumber
     ? `#${String(activeItem.animalDexNumber).padStart(3, "0")}`
     : activeItem.activityBadge;
@@ -1242,8 +1255,15 @@ function CaptureCard({
 
         <div className="flex items-end gap-3.5 [@media(max-height:760px)]:gap-2">
           <FeedBottomOverlay item={activeItem} isOwn={isOwnPost} titleHref={discoverCaptureTitleHref(activeItem, viewerUserId)} />
-          {/* iOS `actionRail` order: Gift, Offer, Share, Info (3.2: no battle Compare). */}
+          {/* iOS `actionRail` order: Talk, Gift, Offer, Share, Info (3.2: no battle Compare). */}
           <div className="flex w-[46px] shrink-0 flex-col items-center gap-1 [@media(max-height:760px)]:w-10 [@media(max-height:760px)]:gap-0.5">
+            {canTalk ? (
+              // iOS `showsSpeakPill` (784c9b44): talk to someone else's animal,
+              // at the top of the rail above Gift; its card opens with the chat.
+              <FeedRailButton label={`Talk to the ${activeItem.animalName}`} href={`/app/capture/${encodeURIComponent(activeItem.captureId)}?talk=1`}>
+                <TalkIcon />
+              </FeedRailButton>
+            ) : null}
             {viewerUserId ? (
               <DiscoverCaptureActions
                 variant="rail"
