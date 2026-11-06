@@ -8,9 +8,11 @@
  * `request()` resolves true when the chat may go ahead. On the way it asks
  * what is still to be asked, once: an account's birth year ("a quick age
  * check"), then the AI consent (an account's through `record_ai_consent`, a
- * guest's in this browser). Under 13 it shows "Talk is for ages 13 and up"
- * and resolves false; "Not now" on the consent resolves false and the chat
- * stays locked until they agree.
+ * guest's in this browser). Under 13, AnimalDex is closed (6 Nov 2026): a
+ * full-page "AnimalDex is for ages 13 and up" with no way out, the account
+ * deleted at once (`close_under_13`) and this browser marked, so the app,
+ * sign-in and every chat show the same page afterwards. "Not now" on the
+ * consent resolves false and the chat stays locked until they agree.
  *
  * Nothing here blocks a chat because the backend is behind: with the
  * migration missing there is no age check and the consent is kept in the
@@ -19,6 +21,7 @@
 
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode} from "react";
 import {createPortal} from "react-dom";
+import {usePathname} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {
@@ -28,7 +31,9 @@ import {
     aiGateStep,
     ageBandFor,
     birthYearOptions,
+    hasAgeRestrictedMark,
     isAgeBand,
+    isAgeRestrictedPath,
     isCurrentConsent,
     type AgeBand,
     type AiGateStep
@@ -51,8 +56,15 @@ export type AiGateWords = {
     ageFailed: string;
     under13Title: string;
     under13Body: string;
+    under13Closing: string;
+    under13Failed: string;
+    under13Retry: string;
+    /** "Entered the wrong year? Email support@animaldex.app." */
+    under13Support: string;
     close: string;
 };
+
+const SUPPORT_EMAIL = "support@animaldex.app";
 
 export const AI_SAFETY_HREF = "/legal/ai-and-safety";
 export const PRIVACY_HREF = "/legal/privacy";
@@ -132,6 +144,11 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
     const [sheet, setSheet] = useState<Sheet | null>(null);
     const [declined, setDeclined] = useState(false);
     const [mounted, setMounted] = useState(false);
+    // Under 13: this browser's mark, whether a chat asked for the block, and the account's closing.
+    const [restricted, setRestricted] = useState(false);
+    const [blockAsked, setBlockAsked] = useState(false);
+    const [closing, setClosing] = useState<ClosingState>("idle");
+    const pathname = usePathname() ?? "";
     const pending = useRef<((allowed: boolean) => void) | null>(null);
     const loading = useRef<Promise<Account | null> | null>(null);
 
@@ -152,9 +169,29 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
     useEffect(() => {
         setMounted(true);
         setGuestConsented(isCurrentConsent(storage()?.getItem(AI_CONSENT_GUEST_KEY)));
-        // An account's band is known before its first message, so an under-13 chat shows its block at once.
+        setRestricted(hasAgeRestrictedMark(document.cookie));
+        // An account's band is known before its first message, so an under-13 account is closed at once.
         if (signedIn()) void loadAccount();
     }, [loadAccount]);
+
+    /** Deletes the under-13 account (the route checks the band again), signs out and marks this browser. */
+    const closeAccount = useCallback(async () => {
+        setClosing("closing");
+        const result = await post({action: "close_under_13"});
+        if (result?.ok === true) {
+            loading.current = Promise.resolve(null);
+            setAccount(null);
+            setRestricted(true);
+            setClosing("closed");
+        } else {
+            setClosing("failed");
+        }
+    }, []);
+
+    const accountUnder13 = mounted && account?.band === "under_13" && signedIn();
+    useEffect(() => {
+        if (accountUnder13 && closing === "idle") void closeAccount();
+    }, [accountUnder13, closing, closeAccount]);
 
     const finish = useCallback((allowed: boolean) => {
         setSheet(null);
@@ -164,6 +201,12 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
     }, []);
 
     const request = useCallback(async ({ownWords = true}: {ownWords?: boolean} = {}) => {
+        // A browser marked under 13 never chats again, signed in or not.
+        if (hasAgeRestrictedMark(document.cookie)) {
+            setRestricted(true);
+            setBlockAsked(true);
+            return false;
+        }
         if (!signedIn()) {
             if (!ownWords || isCurrentConsent(storage()?.getItem(AI_CONSENT_GUEST_KEY))) return true;
             return new Promise<boolean>((resolve) => {
@@ -182,6 +225,11 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
             consented: facts?.consented ?? isCurrentConsent(storage()?.getItem(AI_CONSENT_GUEST_KEY))
         });
         if (step === "open") return true;
+        // Under 13 the full page is already up (the account is being closed): no sheet.
+        if (step === "blocked") {
+            setBlockAsked(true);
+            return false;
+        }
         return new Promise<boolean>((resolve) => {
             pending.current?.(false);
             pending.current = resolve;
@@ -199,7 +247,12 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
         keepAccount(next);
         const step = aiGateStep({signedIn: true, birthYear: next.birthYear, band: next.band, ageCheckAvailable: next.available, consented: next.consented});
         if (step === "open") finish(true);
-        else setSheet(step);
+        else if (step === "blocked") {
+            // The route marked this browser; the full page takes over and closes the account.
+            setRestricted(true);
+            setBlockAsked(true);
+            finish(false);
+        } else setSheet(step);
     }, [finish, keepAccount]);
 
     const agree = useCallback(async () => {
@@ -234,12 +287,19 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
         ? account !== null && aiGateStep({signedIn: true, birthYear: account.birthYear, band: account.band, ageCheckAvailable: account.available, consented: account.consented}) === "open"
         : guestConsented);
     const band = isSignedIn ? account?.band ?? "unknown" : "unknown";
-    const value = useMemo<AiChatGate>(() => ({ready, request, band, blocked: band === "under_13", declined}), [ready, request, band, declined]);
+    const blocked = band === "under_13" || restricted;
+    const value = useMemo<AiChatGate>(() => ({ready, request, band, blocked, declined}), [ready, request, band, blocked, declined]);
+    // The full page: an under-13 account (while it is closed), or a marked browser on the app, sign-in or a chat.
+    const showBlock = mounted && (accountUnder13 || closing !== "idle" || (restricted && (blockAsked || isAgeRestrictedPath(pathname))));
 
     return (
         <AiChatGateContext.Provider value={value}>
             {children}
-            {mounted && sheet ? createPortal(
+            {showBlock ? createPortal(
+                <Under13Block words={words} closing={closing} onRetry={() => void closeAccount()} />,
+                document.body
+            ) : null}
+            {mounted && sheet && !showBlock ? createPortal(
                 <GateSheet
                     sheet={sheet}
                     words={words}
@@ -252,6 +312,43 @@ export function AiChatGateProvider({words, children}: {words: AiGateWords; child
                 document.body
             ) : null}
         </AiChatGateContext.Provider>
+    );
+}
+
+type ClosingState = "idle" | "closing" | "closed" | "failed";
+
+/**
+ * "AnimalDex is for ages 13 and up": the whole page, with no way back in.
+ * While the account is being closed it says so; if that fails, Try again.
+ * Square, like every container; only the button is a capsule.
+ */
+function Under13Block({words, closing, onRetry}: {words: AiGateWords; closing: ClosingState; onRetry: () => void}) {
+    const [before, after] = words.under13Support.split(SUPPORT_EMAIL);
+    return (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-canvas-950 px-5" role="alertdialog" aria-modal="true" aria-labelledby="ai-gate-under13-title" data-testid="ai-gate-under13">
+            <div className="w-full max-w-[28rem] border border-line-300 bg-canvas-950 p-6">
+                <p id="ai-gate-under13-title" className="font-display text-2xl font-bold leading-tight text-white">{words.under13Title}</p>
+                <p className="mt-3 text-[15px] leading-6 text-ink-100">{words.under13Body}</p>
+                {closing === "closing" ? <p className="mt-4 text-[13px] leading-5 text-ink-300" aria-live="polite">{words.under13Closing}</p> : null}
+                {closing === "failed" ? (
+                    <>
+                        <p className="mt-4 text-[13px] leading-5 text-ink-200" aria-live="polite">{words.under13Failed}</p>
+                        <button type="button" onClick={onRetry} className="mt-3 min-h-11 w-full rounded-full bg-primary-400 px-4 text-sm font-black text-canvas-950 transition-colors hover:bg-primary-300">
+                            {words.under13Retry}
+                        </button>
+                    </>
+                ) : null}
+                <p className="mt-6 text-[12px] leading-5 text-ink-400">
+                    {after === undefined ? words.under13Support : (
+                        <>
+                            {before}
+                            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary-200 underline underline-offset-2 hover:text-white">{SUPPORT_EMAIL}</a>
+                            {after}
+                        </>
+                    )}
+                </p>
+            </div>
+        </div>
     );
 }
 

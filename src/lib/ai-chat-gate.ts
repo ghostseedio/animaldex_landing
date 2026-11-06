@@ -20,6 +20,28 @@
 
 export const AI_CONSENT_VERSION = "2026-11";
 
+/**
+ * Under 13, AnimalDex is closed (founder decision, 6 Nov 2026; COPPA): the
+ * account is deleted at once (delete-account, with a server sweep behind it)
+ * and this browser keeps a year-long mark, so the chat, the app and sign-in
+ * show "AnimalDex is for ages 13 and up" instead of a way back in. A neutral
+ * age screen: the mark is not tied to an account, so a different year cannot
+ * simply be entered again.
+ */
+export const AGE_RESTRICTED_COOKIE = "adx_age_restricted";
+export const AGE_RESTRICTED_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
+
+/** Whether this browser carries the under-13 mark (a raw `document.cookie` string or a cookie value). */
+export function hasAgeRestrictedMark(cookieHeader: string | null | undefined): boolean {
+    if (!cookieHeader) return false;
+    return cookieHeader.split(";").some((part) => part.trim() === `${AGE_RESTRICTED_COOKIE}=1`);
+}
+
+/** The pages that show the block outright under the mark: the web app and sign-in. */
+export function isAgeRestrictedPath(pathname: string): boolean {
+    return /^\/(?:[a-z]{2}\/)?(?:app|account)(?:\/|$)/.test(pathname);
+}
+
 export type AgeBand = "unknown" | "under_13" | "teen" | "adult";
 
 export const BIRTH_YEAR_MIN = 1900;

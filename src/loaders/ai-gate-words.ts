@@ -21,6 +21,10 @@ export async function getAiGateWords(locale: string): Promise<AiGateWords> {
         ageFailed: t("ageFailed"),
         under13Title: t("under13Title"),
         under13Body: t("under13Body"),
+        under13Closing: t("under13Closing"),
+        under13Failed: t("under13Failed"),
+        under13Retry: t("under13Retry"),
+        under13Support: t("under13Support"),
         close: t("gateClose")
     };
 }

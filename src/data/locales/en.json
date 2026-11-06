@@ -2592,8 +2592,12 @@
     "ageContinue": "Continue",
     "ageNote": "We ask once. It sets how the animals talk with you.",
     "ageFailed": "That didn't save. Try again.",
-    "under13Title": "Talk is for ages 13 and up",
-    "under13Body": "You can still explore every animal and its field guide.",
+    "under13Title": "AnimalDex is for ages 13 and up",
+    "under13Body": "Because you're under 13, we're closing this account and deleting what's in it.",
+    "under13Closing": "Closing the account…",
+    "under13Failed": "We couldn't finish closing the account. Check your connection and try again.",
+    "under13Retry": "Try again",
+    "under13Support": "Entered the wrong year? Email support@animaldex.app.",
     "gateClose": "Close"
   },
   "wildProfile": {

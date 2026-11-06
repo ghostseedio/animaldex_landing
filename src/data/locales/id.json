@@ -2578,8 +2578,12 @@
     "ageContinue": "Lanjut",
     "ageNote": "Kami hanya bertanya sekali. Ini menentukan cara hewan-hewan berbicara denganmu.",
     "ageFailed": "Belum tersimpan. Coba lagi.",
-    "under13Title": "Talk untuk usia 13 tahun ke atas",
-    "under13Body": "Kamu tetap bisa menjelajahi setiap hewan dan panduan lapangannya.",
+    "under13Title": "AnimalDex untuk usia 13 tahun ke atas",
+    "under13Body": "Karena usiamu di bawah 13 tahun, kami menutup akun ini dan menghapus isinya.",
+    "under13Closing": "Menutup akun…",
+    "under13Failed": "Kami belum bisa menyelesaikan penutupan akun. Periksa koneksimu, lalu coba lagi.",
+    "under13Retry": "Coba lagi",
+    "under13Support": "Salah memasukkan tahun? Kirim email ke support@animaldex.app.",
     "gateClose": "Tutup"
   },
   "wildProfile": {

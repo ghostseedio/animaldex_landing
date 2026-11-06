@@ -7,9 +7,12 @@ import {
     AI_CONSENT_VERSION,
     AI_LONG_SESSION_MS,
     AI_SESSION_IDLE_MS,
+    AGE_RESTRICTED_COOKIE,
     ageBandFor,
     aiGateStep,
     birthYearOptions,
+    hasAgeRestrictedMark,
+    isAgeRestrictedPath,
     isCurrentConsent,
     isValidBirthYear,
     longSessionNoticeDue,
@@ -111,10 +114,11 @@ describe("every web chat carries the disclosure and asks through the gate (SPEC 
         const en = JSON.parse(readRepo("src/data/locales/en.json")).askAnimalDex;
         assert.equal(en.consentBody, "The animals are AI. What you write is sent to our AI providers to create replies.");
         assert.equal(en.aiNotice, "Replies are AI-generated.");
-        assert.equal(en.under13Title, "Talk is for ages 13 and up");
+        // Under 13, AnimalDex is closed, not only Talk (6 Nov 2026).
+        assert.equal(en.under13Title, "AnimalDex is for ages 13 and up");
         assert.equal(en.ageTitle, "A quick age check");
         const id = JSON.parse(readRepo("src/data/locales/id.json")).askAnimalDex;
-        for (const key of ["consentTitle", "consentBody", "consentMore", "consentAgree", "consentNotNow", "aiNotice", "aiNoticeLong", "aiNoticeBreak", "ageTitle", "ageBody", "under13Title", "under13Body"]) {
+        for (const key of ["consentTitle", "consentBody", "consentMore", "consentAgree", "consentNotNow", "aiNotice", "aiNoticeLong", "aiNoticeBreak", "ageTitle", "ageBody", "under13Title", "under13Body", "under13Closing", "under13Failed", "under13Retry", "under13Support"]) {
             assert.equal(typeof id[key], "string", key);
             assert.equal(typeof en[key], "string", key);
         }
@@ -147,3 +151,32 @@ describe("every web chat carries the disclosure and asks through the gate (SPEC 
     });
 });
 
+describe("under 13, AnimalDex is closed (6 Nov 2026)", () => {
+    it("marks this browser, and the mark shows the block on the web app and sign-in", () => {
+        assert.equal(AGE_RESTRICTED_COOKIE, "adx_age_restricted");
+        assert.ok(hasAgeRestrictedMark("adx_ft=x; adx_age_restricted=1"));
+        assert.ok(hasAgeRestrictedMark("adx_age_restricted=1"));
+        assert.ok(!hasAgeRestrictedMark("adx_age_restricted=0; other=1"));
+        assert.ok(!hasAgeRestrictedMark(""));
+        assert.ok(!hasAgeRestrictedMark(null));
+        assert.ok(isAgeRestrictedPath("/app"));
+        assert.ok(isAgeRestrictedPath("/id/app/settings"));
+        assert.ok(isAgeRestrictedPath("/account"));
+        assert.ok(!isAgeRestrictedPath("/animals/red-fox"));
+        assert.ok(!isAgeRestrictedPath("/apple"));
+    });
+
+    it("closes the account through delete-account, signs out and keeps the mark", () => {
+        const route = readRepo("src/app/api/app/ai-gate/route.ts");
+        assert.match(route, /action === "close_under_13"/);
+        assert.match(route, /functions\/v1\/delete-account/);
+        assert.match(route, /auth\.signOut\(\)/);
+        assert.match(route, /AGE_RESTRICTED_COOKIE/);
+        // Only an account the age check put under 13.
+        assert.match(route, /ageBandFor\(kept\) !== "under_13"/);
+        const gate = readRepo("src/components/ai-gate/ai-chat-gate.tsx");
+        assert.match(gate, /close_under_13/);
+        assert.match(gate, /hasAgeRestrictedMark/);
+        assert.match(gate, /words\.under13Support/);
+    });
+});

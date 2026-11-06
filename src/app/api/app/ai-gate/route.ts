@@ -2,7 +2,8 @@ import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {hasAuthCookie} from "@/lib/viewer";
 import {isSameOriginBrowserRequest} from "@/lib/comparison-generation-guard";
-import {AI_CONSENT_VERSION, ageBandFor, isAgeBand, isValidBirthYear} from "@/lib/ai-chat-gate";
+import {AGE_RESTRICTED_COOKIE, AGE_RESTRICTED_MAX_AGE_SECONDS, AI_CONSENT_VERSION, ageBandFor, isAgeBand, isValidBirthYear} from "@/lib/ai-chat-gate";
+import {getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,36 @@ async function viewer() {
 }
 
 type ProfileGate = {birth_year?: unknown; ai_consent_at?: unknown; ai_consent_version?: unknown};
+
+/** The year-long under-13 mark on this browser (lib/ai-chat-gate). */
+function withAgeRestrictedMark(response: NextResponse) {
+    response.cookies.set(AGE_RESTRICTED_COOKIE, "1", {
+        maxAge: AGE_RESTRICTED_MAX_AGE_SECONDS,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    });
+    return response;
+}
+
+/** Deletes the signed-in account through delete-account, with the person's own token, as Settings does in the apps. */
+async function closeAccount(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>): Promise<boolean> {
+    const {data: {session}} = await supabase.auth.getSession();
+    const url = getSupabaseUrl();
+    const key = getSupabasePublicKey();
+    if (!session?.access_token || !url || !key) return false;
+    const response = await fetch(`${url}/functions/v1/delete-account`, {
+        method: "POST",
+        headers: {apikey: key, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json"},
+        body: "{}",
+        cache: "no-store"
+    }).catch(() => null);
+    if (!response?.ok) {
+        console.warn("[ai-gate] closing an under-13 account failed", response?.status ?? "network");
+        return false;
+    }
+    return true;
+}
 
 /**
  * What the chat gate needs before an account's first web chat (SPEC 3.1):
@@ -80,7 +111,10 @@ export async function POST(request: Request) {
         const {data, error} = await session.supabase.rpc("set_birth_year", {p_birth_year: body.year});
         if (!error) {
             const band = isAgeBand(data) ? data : ageBandFor(body.year);
-            return json({ok: true, band, birthYear: body.year});
+            // Under 13 the browser is marked at once; the gate then closes the account.
+            return band === "under_13"
+                ? withAgeRestrictedMark(json({ok: true, band, birthYear: body.year}))
+                : json({ok: true, band, birthYear: body.year});
         }
         if (isMissing(error)) return json({ok: false, missing: true});
         // Already set (it is set once): what the account holds stands.
@@ -89,6 +123,17 @@ export async function POST(request: Request) {
         if (kept !== null) return json({ok: true, band: ageBandFor(kept), birthYear: kept});
         console.warn("[ai-gate] set_birth_year failed", error.code, error.message);
         return json({ok: false, error: error.code === "22023" ? "invalid_year" : "failed"}, error.code === "22023" ? 400 : 500);
+    }
+
+    if (body?.action === "close_under_13") {
+        // Only an account the age check put under 13 (the same rule as delete-account's sweep path).
+        const {data: profile} = await session.supabase.from("profiles").select("birth_year").eq("id", session.user.id).maybeSingle();
+        const kept = typeof (profile as ProfileGate | null)?.birth_year === "number" ? (profile as {birth_year: number}).birth_year : null;
+        if (kept === null || ageBandFor(kept) !== "under_13") return json({ok: false, error: "not_age_restricted"}, 409);
+        const closed = await closeAccount(session.supabase);
+        if (!closed) return json({ok: false, error: "failed"}, 502);
+        await session.supabase.auth.signOut().catch(() => undefined);
+        return withAgeRestrictedMark(json({ok: true, closed: true}));
     }
 
     if (body?.action === "consent") {

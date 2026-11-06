@@ -54,7 +54,7 @@ Users can talk with the animals in their collection, and with any animal on the 
 3. **What owners hear about visits**: When a user talks with an animal on someone else's card, the animal tells its owner who visited and a short summary of what they asked about the owner or the animal. Visitors are told this in the conversation before anything they say is passed on. Summaries never include the visitor's exact words, insulting content, or anything the visitor asked the animal to keep between them, and nothing is passed on between users who have blocked each other. These summaries are deleted after 30 days.
 4. **Chat history on every device**: When a signed-in user talks with an animal, AnimalDex stores that conversation (their messages and the animal's replies) in their account so it is there on each of their devices. Users can turn this off at any time under "Keep my chats on all my devices", delete a single chat or their whole chat history, and the history is deleted with their account. Voice calls, group conversations and debates are not stored this way, and chats on the website without an account stay only in that browser.
 5. **Age and AI consent**: Before a user's first conversation, AnimalDex asks for their birth year (not their full date of birth) and for their agreement to send what they write to the AI providers listed above. We keep the birth year, and the date and version of that agreement, with their account, to set conversations up for their age:
-   - under 13, conversations are not available;
+   - under 13, AnimalDex is not available: the account is closed and its data deleted;
    - from 13 to 17, conversations run in teen mode, where the animals do not keep sensitive details in their notes and do not send messages first.
 
    The birth year is private to the account. Without an account, the agreement is kept only in that browser.
@@ -78,7 +78,7 @@ When a user deletes their account, AnimalDex deletes or deidentifies account dat
 Some information may remain in backups or logs for a limited period before routine deletion. Public or shared content may be removed, deidentified, or disconnected from the deleted account depending on the feature and operational requirements.
 
 ## Children
-AnimalDex is not intended for children under 13. If you believe a child under 13 has provided personal information without appropriate consent, contact `support@animaldex.app` and we will review the request.
+AnimalDex is not intended for children under 13. If our age check shows that a user is under 13, we close the account and delete its data, and that device or browser shows that AnimalDex is for ages 13 and up. If you believe a child under 13 has provided personal information, contact `support@animaldex.app` and we will delete it.
 
 ## Changes
 We may update this Privacy Policy as AnimalDex changes. When we do, we will revise the effective date on this page.

@@ -1,6 +1,6 @@
 # AI and safety
 
-**Last updated: November 4, 2026**
+**Last updated: November 6, 2026**
 
 The animals you talk to on AnimalDex are AI. This page explains what that means, what happens to what you write, and how we look after people, including the moments that matter most.
 
@@ -20,7 +20,7 @@ The animals you talk to on AnimalDex are AI. This page explains what that means,
 - When this happens we record only that it happened, with a short category and the date. We don't store the message in that record.
 
 ## Ages
-- **Under 13:** talking to the animals is not available. You can still explore and collect animals.
+- **Under 13:** AnimalDex isn't available. If the age check shows someone is under 13, we close the account and delete what's in it.
 - **13 to 17:** conversations run in teen mode. The animals don't send messages first, don't remember sensitive details, and keep to stricter safety rules. A break is suggested after three hours.
 - We ask for your birth year once, before your first conversation, to set this up. It stays private to your account.
 
