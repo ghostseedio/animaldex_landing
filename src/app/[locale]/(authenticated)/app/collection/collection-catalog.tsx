@@ -531,7 +531,7 @@ export default function CollectionCatalog({
                 </span>
             </div>
 
-            <div className="sticky top-16 z-20 space-y-3 border border-white/[0.08] bg-[#0d0d0d]/90 p-3 backdrop-blur-xl lg:top-0 lg:bg-[#121212]/90">
+            <div className="sticky top-0 z-20 space-y-3 border border-white/[0.08] bg-[#0d0d0d]/90 p-3 backdrop-blur-xl lg:bg-[#121212]/90">
                 <label className="flex items-center gap-3 border border-white/10 bg-black/50 px-4 py-3 focus-within:border-primary-400/40">
                     <AppIcon name="search" className="h-5 w-5 shrink-0 text-white/35" />
                     <input
