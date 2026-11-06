@@ -11,7 +11,7 @@ export default async function LocationPrivacyPage({params}: {params: {locale: st
     const overview = await getSettingsOverview();
     if (!overview) redirect(getLocalePath(params.locale, "/account"));
     return (
-        <SettingsScreen title="Location Privacy">
+        <SettingsScreen title="Location privacy">
             <LocationPrivacyList initial={overview.locationVisibility} />
         </SettingsScreen>
     );

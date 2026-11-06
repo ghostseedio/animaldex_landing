@@ -11,6 +11,9 @@ import {
     PASSWORD_MAX_LENGTH,
     PUSH_PREFERENCE_ROWS,
     type PushPreferences,
+    RECORD_PRIVACY_SECTIONS,
+    type RecordPrivacy,
+    type RecordPrivacySection,
     currencyDisplayName,
     passwordChangeProblem
 } from "@/lib/account-settings";
@@ -29,6 +32,8 @@ import {
     SettingsToggleRow
 } from "@/app/[locale]/(authenticated)/app/settings/_components/settings-ui";
 import {AppRequestError} from "@/lib/user-facing-error";
+import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
+import {forgetAllTalkThreads} from "@/components/ask-animaldex/ask-thread-meta";
 import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 
 async function postSetting(body: Record<string, unknown>) {
@@ -176,6 +181,155 @@ export function LocationPrivacyList({initial}: {initial: LocationVisibility}) {
     );
 }
 
+// MARK: - Chat history
+
+const CHAT_HISTORY_NOTE = "Your conversations with animals are saved to your account so they're on every device. Turn this off to keep new chats on this device only.";
+const CHAT_HISTORY_CONFIRM = "Delete every conversation with your animals? This can't be undone.";
+
+/**
+ * iOS `AnimalChatHistorySection` (docs/chat-sync/SPEC.md, section 3): keep
+ * chats on every device, and delete every thread on the account, then this
+ * browser's copy. Shown once the account's answer is in, as iOS does.
+ */
+export function ChatHistorySection() {
+    const [historySync, setHistorySync] = useState<boolean | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [deletion, setDeletion] = useState<"idle" | "confirming" | "deleting" | "done">("idle");
+    const [problem, setProblem] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        void fetch("/api/ask/memory", {headers: {Accept: "application/json"}})
+            .then((response) => (response.ok ? response.json() as Promise<{settings?: {historySync?: boolean | null}}> : null))
+            .then((payload) => {
+                const value = payload?.settings?.historySync;
+                if (!cancelled && typeof value === "boolean") setHistorySync(value);
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    async function setSync(next: boolean) {
+        const previous = historySync;
+        setHistorySync(next);
+        setSaving(true);
+        setProblem(null);
+        try {
+            const response = await fetch("/api/ask/memory", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "preferences", historySync: next})
+            });
+            if (!response.ok) throw new Error(String(response.status));
+        } catch {
+            setHistorySync(previous);
+            setProblem("Something went wrong. Try again.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function deleteAll() {
+        setDeletion("deleting");
+        setProblem(null);
+        try {
+            const response = await fetch("/api/ask/history", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({action: "deleteAll"})
+            });
+            const payload = await response.json().catch(() => null) as {ok?: boolean} | null;
+            if (!response.ok || payload?.ok !== true) throw new Error(String(response.status));
+            askSessionStore.clearAnimalThreads();
+            forgetAllTalkThreads();
+            setDeletion("done");
+        } catch {
+            setDeletion("idle");
+            setProblem("Something went wrong. Try again.");
+        }
+    }
+
+    if (historySync === null) return null;
+    return (
+        <SettingsSection title="Chat history" footer={problem ?? undefined}>
+            <SettingsToggleRow
+                icon={SettingsIcons.cloud}
+                title="Keep my chats on all my devices"
+                subtitle={CHAT_HISTORY_NOTE}
+                checked={historySync}
+                onChange={(next) => void setSync(next)}
+                disabled={saving}
+            />
+            <SettingsDivider />
+            {deletion === "confirming" ? (
+                <div className="space-y-3 px-4 py-3">
+                    <p className="text-[13px] leading-5 text-white/70">{CHAT_HISTORY_CONFIRM}</p>
+                    <div className="flex gap-2">
+                        <button type="button" onClick={() => void deleteAll()} className="min-h-10 flex-1 rounded-pill bg-red-500/90 px-4 text-sm font-bold text-white">Delete chat history</button>
+                        <button type="button" onClick={() => setDeletion("idle")} className="min-h-10 flex-1 rounded-pill border border-white/15 px-4 text-sm font-bold text-white">Cancel</button>
+                    </div>
+                </div>
+            ) : (
+                <SettingsDestructiveRow
+                    icon={SettingsIcons.trash}
+                    title={deletion === "done" ? "Delete chat history · Done" : "Delete chat history"}
+                    onClick={() => setDeletion("confirming")}
+                    busy={deletion === "deleting"}
+                    disabled={deletion === "deleting"}
+                />
+            )}
+        </SettingsSection>
+    );
+}
+
+// MARK: - Record privacy
+
+/** iOS `SettingsPlayRecordPrivacyView`: one audience per part of the Record. */
+export function RecordPrivacyList({initial}: {initial: RecordPrivacy}) {
+    const describeError = useUserFacingError();
+    const [privacy, setPrivacy] = useState(initial);
+    const [saving, setSaving] = useState<RecordPrivacySection | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    async function save(section: RecordPrivacySection, next: LocationVisibility) {
+        if (next === privacy[section] || saving) return;
+        const previous = privacy;
+        setPrivacy({...privacy, [section]: next});
+        setSaving(section);
+        setError(null);
+        try {
+            await postSetting({action: "recordPrivacy", key: section, value: next});
+        } catch (failure) {
+            setPrivacy(previous);
+            setError(describeError(failure));
+        } finally {
+            setSaving(null);
+        }
+    }
+
+    return (
+        <>
+            {RECORD_PRIVACY_SECTIONS.map((section) => (
+                <SettingsSection key={section.id} title={section.header} footer={error && saving === null ? error : section.footer}>
+                    {LOCATION_VISIBILITY_OPTIONS.map((option, index) => (
+                        <div key={option.id}>
+                            {index > 0 ? <SettingsDivider /> : null}
+                            <SettingsActionRow
+                                icon={<SelectedMark selected={privacy[section.id] === option.id} />}
+                                title={option.title}
+                                onClick={() => void save(section.id, option.id)}
+                                disabled={saving !== null}
+                            />
+                        </div>
+                    ))}
+                </SettingsSection>
+            ))}
+        </>
+    );
+}
+
 // MARK: - Notifications
 
 export function PushPreferencesList({initial}: {initial: PushPreferences}) {
@@ -186,6 +340,7 @@ export function PushPreferencesList({initial}: {initial: PushPreferences}) {
         captureUpdates: SettingsIcons.photo,
         socialActivity: SettingsIcons.people,
         directMessages: SettingsIcons.message,
+        animalMessages: SettingsIcons.message,
         creditBonuses: SettingsIcons.credits
     };
 

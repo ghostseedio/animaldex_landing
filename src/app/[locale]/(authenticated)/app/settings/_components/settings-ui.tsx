@@ -37,7 +37,7 @@ export function SettingsScreen({title, backHref = "/app/settings", backLabel = "
 }) {
     return (
         <div className="mx-auto w-full max-w-2xl pb-10">
-            <header className="sticky top-16 z-20 -mx-4 mb-2 grid grid-cols-[1fr_auto_1fr] items-center bg-black/95 px-4 py-2.5 backdrop-blur-xl lg:top-0 md:mx-0 md:px-0">
+            <header className="sticky top-0 z-20 -mx-4 mb-2 grid grid-cols-[1fr_auto_1fr] items-center bg-black/95 px-4 py-2.5 backdrop-blur-xl md:mx-0 md:px-0">
                 <Link href={backHref} className="inline-flex min-h-10 items-center gap-1 justify-self-start text-sm font-bold text-primary-200 transition hover:text-primary-100" aria-label={`Back to ${backLabel}`}>
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
                     {backLabel}
@@ -215,5 +215,10 @@ export const SettingsIcons = {
     people: svg(<><circle cx="9" cy="7" r="4" /><path d="M2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-5-6.7" /></>),
     message: svg(<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H9.7L5 18.2V15h1.5A2.5 2.5 0 0 1 4 12.5v-7Z" />, true),
     pin: svg(<><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" /><circle cx="12" cy="10" r="2.5" /></>),
-    character: svg(<><path d="M4 7V4h16v3M9 20h6M12 4v16" /></>)
+    character: svg(<><path d="M4 7V4h16v3M9 20h6M12 4v16" /></>),
+    gift: svg(<><path d="M3.5 8.5h17v4h-17zM5 12.5h14V21H5zM12 8.5V21" /><path d="M12 8.5C10.5 4.5 6.5 4.5 7 7c.3 1.4 2.6 1.5 5 1.5Zm0 0c1.5-4 5.5-4 5-1.5-.3 1.4-2.6 1.5-5 1.5Z" /></>),
+    shop: svg(<><path d="M4 9.5 5.5 4h13L20 9.5" /><path d="M4 9.5h16v2a2.7 2.7 0 0 1-5.3 0 2.7 2.7 0 0 1-5.4 0 2.7 2.7 0 0 1-5.3 0Z" /><path d="M5.5 13v7h13v-7M10 20v-4h4v4" /></>),
+    trade: svg(<path d="M4 8h14l-3-3m3 3-3 3M20 16H6l3 3m-3-3 3-3" />),
+    record: svg(<path d="m13 2-8 12h6l-1 8 8-12h-6l1-8Z" />, true),
+    cloud: svg(<path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.5 9.6 4.5 4.5 0 0 0 7 18.5Z" />)
 };

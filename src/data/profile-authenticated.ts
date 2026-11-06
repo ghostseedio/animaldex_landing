@@ -340,24 +340,8 @@ export function buildOwnerCompletedSets(completions: ProfilePowerSetCompletion[]
     }));
 }
 
-export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndorsedCapture[]> {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return [];
-
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const {data: endorsementRows} = await supabase
-        .from("capture_endorsements")
-        .select("capture_id,endorsed_stat,updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", {ascending: false})
-        .limit(limit);
-
-    const endorsements = (endorsementRows ?? []) as QueryRow[];
-    const captureIds = endorsements.map((row) => row.capture_id).filter(Boolean);
-    if (captureIds.length === 0) return [];
-
+/** Feed rows for these captures as profile grid captures, with their AnimalDex number, keyed by capture id. */
+async function feedCapturesById(supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>, captureIds: string[]) {
     const {data: feedRows} = await supabase
         .from("discover_feed_v1")
         .select("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,game_stats,dominance_boost,speed_boost,intelligence_boost,identity_kind")
@@ -382,15 +366,36 @@ export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndor
         if (entry.speciesProfileId) numberBySpecies.set(entry.speciesProfileId.toLowerCase(), number);
     }
 
-    const capturesById = new Map(
+    return new Map(
         ((feedRows ?? []) as QueryRow[]).map((row) => {
             const capture = toCaptureFromFeedRow(row, speciesByIdentity);
             const animalDexNumber = (capture.speciesProfileId ? numberBySpecies.get(capture.speciesProfileId) : undefined)
                 ?? (capture.speciesSlug ? numberBySlug.get(capture.speciesSlug) : undefined)
                 ?? null;
-            return [row.capture_id, {...capture, animalDexNumber}];
+            return [row.capture_id as string, {...capture, animalDexNumber}];
         })
     );
+}
+
+export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndorsedCapture[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const {data: endorsementRows} = await supabase
+        .from("capture_endorsements")
+        .select("capture_id,endorsed_stat,updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", {ascending: false})
+        .limit(limit);
+
+    const endorsements = (endorsementRows ?? []) as QueryRow[];
+    const captureIds = endorsements.map((row) => row.capture_id).filter(Boolean);
+    if (captureIds.length === 0) return [];
+
+    const capturesById = await feedCapturesById(supabase, captureIds);
 
     return endorsements
         .map((row) => {
@@ -399,6 +404,56 @@ export async function getOwnerEndorsedCaptures(limit = 12): Promise<ProfileEndor
             return {...capture, endorsedStat: String(row.endorsed_stat)};
         })
         .filter((item): item is ProfileEndorsedCapture => Boolean(item));
+}
+
+/**
+ * iOS `SupabaseCaptureGiftService.fetchSentGiftCaptures`: the captures you
+ * sent a Gift to, newest first, each once (several Gifts to one capture show
+ * it where its newest sits). A sender reads their own rows through RLS.
+ */
+export async function getOwnerSentGiftCaptures(limit = 48): Promise<PublicProfileCapture[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const {data: giftRows} = await supabase
+        .from("capture_gifts")
+        .select("capture_id")
+        .eq("sender_user_id", user.id)
+        .is("voided_at", null)
+        .order("created_at", {ascending: false})
+        .limit(limit);
+    const orderedIds = Array.from(new Set(((giftRows ?? []) as QueryRow[]).map((row) => String(row.capture_id ?? "")).filter(Boolean)));
+    if (orderedIds.length === 0) return [];
+
+    const capturesById = await feedCapturesById(supabase, orderedIds);
+    return orderedIds.map((id) => capturesById.get(id)).filter((item): item is NonNullable<typeof item> => Boolean(item));
+}
+
+export type ProfileRatedCapture = PublicProfileCapture & {stars: number};
+
+/** iOS `listMine` + `fetchPublicCaptures`: the captures you rated, with your stars. */
+export async function getOwnerRatedCaptures(limit = 48): Promise<ProfileRatedCapture[]> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return [];
+    const {data: {user}} = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const {data, error} = await supabase.rpc("list_my_capture_community_ratings", {p_limit: limit});
+    if (error || !Array.isArray(data)) return [];
+    const ratings = (data as QueryRow[])
+        .map((row) => ({captureId: String(row.capture_id ?? ""), stars: Number(row.stars ?? 0)}))
+        .filter((row) => row.captureId && row.stars > 0);
+    if (ratings.length === 0) return [];
+
+    const capturesById = await feedCapturesById(supabase, ratings.map((row) => row.captureId));
+    return ratings
+        .map((row) => {
+            const capture = capturesById.get(row.captureId);
+            return capture ? {...capture, stars: row.stars} : null;
+        })
+        .filter((item): item is ProfileRatedCapture => Boolean(item));
 }
 
 export async function getMemberListedPacks(sellerUserId: string, limit = 12): Promise<ProfileListedPack[]> {

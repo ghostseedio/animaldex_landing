@@ -5,10 +5,12 @@ import {
     accountStandingValue,
     convertFromUsd,
     decodeAccountStanding,
-    missionsSubtitle,
+    decodeRecordPrivacy,
     normalizeLocationVisibility,
     passwordChangeFootnote,
     passwordChangeProblem,
+    PUSH_PREFERENCE_ROWS,
+    recordPrivacySummary,
     resolveDisplayCurrency,
     signInMethodLabels
 } from "@/lib/account-settings";
@@ -35,10 +37,7 @@ test("account standing decodes the RPC and words each state", () => {
     assert.equal(accountStandingFooter(decodeAccountStanding({standing: "suspended"})), "This account is suspended.");
 });
 
-test("missions row and location privacy fall back safely", () => {
-    assert.equal(missionsSubtitle(0), "Earn credits through progression");
-    assert.equal(missionsSubtitle(1), "1 active mission");
-    assert.equal(missionsSubtitle(4), "4 active missions");
+test("location privacy falls back safely", () => {
     assert.equal(normalizeLocationVisibility("friends"), "friends");
     assert.equal(normalizeLocationVisibility("nobody"), "everyone");
 });
@@ -49,4 +48,15 @@ test("display currency follows the iOS reference rates", () => {
     assert.equal(resolveDisplayCurrency("XYZ", "XYZ"), "USD");
     assert.equal(convertFromUsd(100, "USD"), 100);
     assert.ok(Math.abs((convertFromUsd(117.33, "EUR") ?? 0) - 100) < 1e-9);
+});
+
+test("record privacy reads one audience as itself and a mix as Custom (iOS playRecordPrivacySummary)", () => {
+    const all = decodeRecordPrivacy({powers_visibility: "friends", trials_visibility: "friends", battles_visibility: "friends"});
+    assert.equal(recordPrivacySummary(all), "Friends");
+    assert.equal(recordPrivacySummary(decodeRecordPrivacy({powers_visibility: "private", trials_visibility: "everyone"})), "Custom");
+    assert.equal(recordPrivacySummary(decodeRecordPrivacy(null)), "Everyone");
+});
+
+test("alert types are iOS's five, Animal messages after Messages", () => {
+    assert.deepEqual(PUSH_PREFERENCE_ROWS.map((row) => row.title), ["Your captures", "Activity", "Messages", "Animal messages", "Credits"]);
 });

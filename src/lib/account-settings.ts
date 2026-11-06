@@ -29,6 +29,7 @@ export type PushPreferences = {
     captureUpdates: boolean;
     socialActivity: boolean;
     directMessages: boolean;
+    animalMessages: boolean;
     creditBonuses: boolean;
 };
 
@@ -36,15 +37,50 @@ export const PUSH_PREFERENCE_COLUMNS: Record<keyof PushPreferences, string> = {
     captureUpdates: "push_capture_updates_enabled",
     socialActivity: "push_social_activity_enabled",
     directMessages: "push_direct_messages_enabled",
+    // Migration 20261023200000 (animal messages), as iOS `SupabaseNotificationsService`.
+    animalMessages: "push_animal_messages_enabled",
     creditBonuses: "push_credit_bonuses_enabled"
 };
 
+/** iOS `SettingsNotificationsView` alert types, word for word and in its order. */
 export const PUSH_PREFERENCE_ROWS: Array<{id: keyof PushPreferences; title: string; subtitle: string}> = [
-    {id: "captureUpdates", title: "Your captures", subtitle: "Merges and corrections to animals you have indexed."},
-    {id: "socialActivity", title: "Activity", subtitle: "New captures and comparisons from people you follow."},
+    {id: "captureUpdates", title: "Your captures", subtitle: "Merges and corrections to animals you have captured."},
+    {id: "socialActivity", title: "Activity", subtitle: "New captures from people you follow."},
     {id: "directMessages", title: "Messages", subtitle: "New messages from collectors and AnimalDex Support."},
+    {id: "animalMessages", title: "Animal messages", subtitle: "When an animal you talk with writes to you."},
     {id: "creditBonuses", title: "Credits", subtitle: "Missions, referrals, and other free Credit rewards."}
 ];
+
+// MARK: - Record privacy (iOS `PlayRecordSection`, migration 20261019170000)
+
+export type RecordPrivacySection = "powers" | "trials" | "battles";
+export type RecordPrivacy = Record<RecordPrivacySection, LocationVisibility>;
+
+/**
+ * Who can see each part of the Record: one audience per part, no per-item
+ * hiding (iOS 8c570350). Debates replaced battles but keep the
+ * `battles_visibility` column, so older apps still read and set it.
+ */
+export const RECORD_PRIVACY_SECTIONS: Array<{id: RecordPrivacySection; column: string; header: string; footer: string}> = [
+    {id: "powers", column: "powers_visibility", header: "WHO CAN SEE MY POWERS", footer: "Covers the Powers on your profile and their posts on Explore."},
+    {id: "trials", column: "trials_visibility", header: "WHO CAN SEE MY TRIALS", footer: "Covers Trials you completed earlier and their posts on Explore, including your proof. Failed attempts are never shown to anyone."},
+    {id: "battles", column: "battles_visibility", header: "WHO CAN SEE MY DEBATES", footer: "Covers your debates and past battles on your profile. A public debate is on Explore while people vote."}
+];
+
+export function decodeRecordPrivacy(row: Record<string, unknown> | null | undefined): RecordPrivacy {
+    return {
+        powers: normalizeLocationVisibility(row?.powers_visibility),
+        trials: normalizeLocationVisibility(row?.trials_visibility),
+        battles: normalizeLocationVisibility(row?.battles_visibility)
+    };
+}
+
+/** iOS `playRecordPrivacySummary`: one audience for all of them reads as that audience; a mix reads as Custom. */
+export function recordPrivacySummary(privacy: RecordPrivacy): string {
+    const audiences = new Set(RECORD_PRIVACY_SECTIONS.map((section) => privacy[section.id]));
+    if (audiences.size !== 1) return "Custom";
+    return locationVisibilityTitle(Array.from(audiences)[0]);
+}
 
 // MARK: - Sign-in methods
 
@@ -159,12 +195,6 @@ export function accountStandingFooter(standing: AccountStanding) {
 }
 
 // MARK: - Missions row
-
-export function missionsSubtitle(activeCount: number) {
-    if (activeCount === 1) return "1 active mission";
-    if (activeCount > 1) return `${activeCount} active missions`;
-    return "Earn credits through progression";
-}
 
 // MARK: - Display currency (iOS `PriceDisplayCurrencyCatalog`, ECB reference rates 2026-04-22)
 

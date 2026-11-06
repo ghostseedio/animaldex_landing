@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {LOCATION_VISIBILITY_OPTIONS, PUSH_PREFERENCE_COLUMNS, type PushPreferences} from "@/lib/account-settings";
+import {LOCATION_VISIBILITY_OPTIONS, PUSH_PREFERENCE_COLUMNS, RECORD_PRIVACY_SECTIONS, type PushPreferences} from "@/lib/account-settings";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -11,6 +11,8 @@ export const runtime = "nodejs";
  *   (iOS `SettingsLocationPrivacyView`, `SupabaseProfileService.updateLocationVisibility`)
  * - `{action: "push", key, enabled}` → `push_*_enabled`
  *   (iOS `SettingsNotificationsView` alert types)
+ * - `{action: "recordPrivacy", key, value}` → `powers|trials|battles_visibility`
+ *   (iOS `SettingsPlayRecordPrivacyView`, `updatePlayRecordVisibility`)
  */
 export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
@@ -27,6 +29,10 @@ export async function POST(request: Request) {
         if (value) update = {location_visibility: value};
     } else if (body.action === "push" && typeof body.enabled === "boolean" && body.key && body.key in PUSH_PREFERENCE_COLUMNS) {
         update = {[PUSH_PREFERENCE_COLUMNS[body.key as keyof PushPreferences]]: body.enabled};
+    } else if (body.action === "recordPrivacy") {
+        const section = RECORD_PRIVACY_SECTIONS.find((candidate) => candidate.id === body.key);
+        const value = LOCATION_VISIBILITY_OPTIONS.find((option) => option.id === body.value)?.id;
+        if (section && value) update = {[section.column]: value};
     }
 
     if (!update) return NextResponse.json({error: "Unsupported setting."}, {status: 400});
