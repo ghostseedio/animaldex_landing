@@ -5,10 +5,17 @@
  * (every row kind: an unread message, an open step, a conversation, animals
  * never talked to), so it can be looked at without a session. The page's
  * four reads are answered here; nothing reaches the server.
+ *
+ * `?frontDoor=1` adds the Talk front door (AnimalDex
+ * docs/talk-front-door/SPEC.md), as the page shows it with its switch on:
+ * its suggestion is answered here too, from the draft's words ("sleep" is
+ * the Koala they work on it with, "boss" or "work" the Wolf they were just
+ * talking to, anything else the Fox's lesson, with a wild Octopus and Owl
+ * to change to), after a short wait like the server's.
  */
 
 import {useEffect, useState} from "react";
-import CompanionsPage from "@/app/[locale]/(authenticated)/app/companions/companions-page";
+import CompanionsPage, {type CompanionsFrontDoor} from "@/app/[locale]/(authenticated)/app/companions/companions-page";
 import {AppShellChromeContext} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {APP_SHELL_WORDS_EN} from "@/lib/app-shell-words";
 import type {CompanionWords} from "@/lib/companion-bond";
@@ -56,6 +63,31 @@ const STEPS = [
     {id: id(91), species_profile_id: FOX, capture_id: id(12), animal: "Red Fox", nickname: null, slug: "red-fox", step: "Walk the long way home once this week", status: "open", accepted_at: minutesAgo(60 * 20)}
 ];
 
+/** `talk_suggest` (SPEC 6.1) for the draft, as the server answers it, with the website's slugs. */
+function gallerySuggestion(text: string) {
+    const ownCandidate = (row: typeof COMPANIONS[number]) => ({
+        species_profile_id: row.species_profile_id,
+        capture_id: row.capture_id,
+        animal: row.animal,
+        nickname: row.nickname,
+        power_name: row.power.name,
+        kind: "own",
+        slug: row.slug
+    });
+    const wild = [
+        {species_profile_id: id(21), capture_id: null, animal: "Common Octopus", nickname: null, power_name: "Many Minds", kind: "wild", slug: "common-octopus"},
+        {species_profile_id: id(22), capture_id: null, animal: "Orca", nickname: null, power_name: "Pod Echo", kind: "wild", slug: "orca"}
+    ];
+    const [wolf, fox, koala] = COMPANIONS;
+    const lower = text.toLowerCase();
+    const [pick, why, also] = lower.includes("sleep")
+        ? [koala, "focus", [ownCandidate(wolf)]]
+        : lower.includes("boss") || lower.includes("work")
+            ? [wolf, "continuing", [ownCandidate(fox), wild[0]]]
+            : [fox, "lesson", [wild[0]]];
+    return {pick: ownCandidate(pick), why, also, picked_by: "model", candidates: [...COMPANIONS.map(ownCandidate), ...wild]};
+}
+
 let installed = false;
 function installGalleryFetch() {
     if (installed || typeof window === "undefined") return;
@@ -68,11 +100,16 @@ function installGalleryFetch() {
         if (url.includes("/api/app/companions")) return json({companions: COMPANIONS, available: true});
         if (url.includes("/api/ask/animal-messages")) return json({conversations: CONVERSATIONS, available: true});
         if (url.includes("/api/app/steps")) return json({steps: STEPS});
+        if (url.includes("/api/app/talk-suggest")) {
+            const body = JSON.parse(typeof init?.body === "string" ? init.body : "{}") as {text?: string};
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            return json({ok: true, suggestion: gallerySuggestion(body.text ?? "")});
+        }
         return real(input, init);
     };
 }
 
-export default function CompanionsGalleryClient({words, locale}: {words: CompanionWords; locale: string}) {
+export default function CompanionsGalleryClient({words, locale, frontDoor = null}: {words: CompanionWords; locale: string; frontDoor?: CompanionsFrontDoor | null}) {
     const [ready, setReady] = useState(false);
     useEffect(() => {
         installGalleryFetch();
@@ -84,7 +121,7 @@ export default function CompanionsGalleryClient({words, locale}: {words: Compani
             {/* The app shell's own ground: pinned dark, the list width of /app. */}
             <div className="theme-dark min-h-screen bg-black text-white">
                 <div className="mx-auto w-full max-w-[92rem] px-4 py-7 sm:px-7 lg:px-10 lg:py-10" data-testid="companions-gallery">
-                    <CompanionsPage words={words} locale={locale} />
+                    <CompanionsPage words={words} locale={locale} frontDoor={frontDoor} />
                 </div>
             </div>
         </AppShellChromeContext.Provider>

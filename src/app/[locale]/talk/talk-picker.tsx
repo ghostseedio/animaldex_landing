@@ -11,6 +11,14 @@
  * (polish pass, DESIGN.md section 3); a tap starts its chat. Opened from
  * "Ask another animal", the question rides along into the new chat's
  * composer, ready to send, never sent for them (DECISIONS section 6).
+ *
+ * With the remote switch `talk_front_door` on, the Talk front door is above
+ * it all (AnimalDex docs/talk-front-door/SPEC.md, sections 4.1 and 4.6): a
+ * full-width band, "What's on your mind?". Signed in, it chooses among their
+ * animals (and wild ones while they have fewer than 5); a guest's goes to
+ * the first featured animal, Change offers the featured ones, and nothing
+ * asks a model for them. The picker stays under it for browsing. Off, the
+ * page is exactly as before.
  */
 
 import {useCallback, useEffect, useMemo, useRef, useState, type ReactNode} from "react";
@@ -24,6 +32,12 @@ import {getSpeciesImageRoute} from "@/lib/species-image-public";
 import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {talkSearch, type TalkAnimal, type TalkDisagreePair, type TalkWords} from "@/lib/ask-animaldex/talk";
 import {useTalkShell} from "@/app/[locale]/talk/talk-shell";
+import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
+import {useAppFeatureFlag} from "@/components/use-app-feature-flag";
+import TalkFrontDoorBand from "@/components/talk-front-door/talk-front-door-band";
+import {useFrontDoorOwnAnimals} from "@/components/talk-front-door/use-front-door-animals";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
+import {featuredFrontDoorAnimal, type TalkFrontDoorWords} from "@/lib/talk-front-door";
 
 type Catalog = {
     animals: TalkAnimal[];
@@ -53,12 +67,43 @@ function SectionLabel({children}: {children: ReactNode}) {
     return <h2 className="flex h-9 items-center text-[11px] font-bold uppercase tracking-[0.08em] text-ink-400">{children}</h2>;
 }
 
-export default function TalkPicker({words, initial}: {
+/**
+ * The Talk front door above the picker. Signed in (the session, or its
+ * cookie before the session has been read), their animals; a guest, the
+ * featured ones only.
+ */
+function TalkFrontDoor({words, featured}: {words: TalkFrontDoorWords; featured: TalkAnimal[]}) {
+    const {locale, labels} = useTalkShell();
+    const {session} = useHeaderAuth();
+    const [cookieSignedIn, setCookieSignedIn] = useState(false);
+    useEffect(() => setCookieSignedIn(requestHasSupabaseAuthCookie(document.cookie)), []);
+    const signedIn = Boolean(session.user) || cookieSignedIn;
+    const {animals} = useFrontDoorOwnAnimals(signedIn, labels.companions);
+    const meetOneNow = useMemo(() => featured.map(featuredFrontDoorAnimal), [featured]);
+    return (
+        <div className="shrink-0 border-b border-white/10 px-4 py-3" data-testid="talk-front-door-band">
+            <TalkFrontDoorBand
+                words={words}
+                surface="talk"
+                locale={locale}
+                signedIn={signedIn}
+                own={signedIn ? animals : []}
+                meetOneNow={meetOneNow}
+                className="mx-auto w-full max-w-[728px]"
+            />
+        </div>
+    );
+}
+
+export default function TalkPicker({words, initial, frontDoor = null}: {
     words: TalkWords;
     /** The first rows, from the server; empty when the catalog could not be read then. */
     initial: {popular: TalkAnimal[]; disagree: TalkDisagreePair[]};
+    /** The Talk front door: its switch as the page was drawn, and its words. */
+    frontDoor?: {enabled: boolean; words: TalkFrontDoorWords} | null;
 }) {
     const {openSidebar, locale} = useTalkShell();
+    const frontDoorOn = useAppFeatureFlag("talk_front_door", frontDoor?.enabled ?? false) && frontDoor !== null;
     const router = useRouter();
     const [catalog, setCatalog] = useState<Catalog | null>(null);
     const [catalogState, setCatalogState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
@@ -85,9 +130,11 @@ export default function TalkPicker({words, initial}: {
         // Rows the server could not draw: read them here instead.
         if (initial.popular.length === 0) fetchCatalog();
     }, [initial.popular.length, fetchCatalog]);
+    // The search takes the keyboard on a desktop; under the front door it waits, since the box is the way in.
+    const searchFocusesFirst = useRef(!frontDoor?.enabled);
     useEffect(() => {
         const coarse = window.matchMedia?.("(pointer: coarse)").matches;
-        if (!coarse) searchRef.current?.focus();
+        if (!coarse && searchFocusesFirst.current) searchRef.current?.focus();
     }, []);
     // Nearly everyone here opens a chat next, and every chat shares one set
     // of scripts: once the picker is idle, one chat page is fetched, which
@@ -131,6 +178,7 @@ export default function TalkPicker({words, initial}: {
                 <p className="text-[15px] font-semibold leading-5 text-white">{words.newChat}</p>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto">
+                {frontDoorOn && frontDoor ? <TalkFrontDoor words={frontDoor.words} featured={popular} /> : null}
                 <div className="mx-auto w-full max-w-[760px] px-4 pb-16 pt-6 sm:pt-10" data-testid="talk-picker">
                     {/* The question alone: the faces and their Powers under it say the rest (visual first, no noise). */}
                     <h1 className="font-display text-[24px] font-bold leading-8 text-white sm:text-[28px] sm:leading-9">{words.pickerTitle}</h1>

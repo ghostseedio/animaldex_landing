@@ -3055,6 +3055,14 @@
     "capStepHere": "Tell {animal} about something real, and it can give you one step to try, right here.",
     "capDebatesInApp": "Bring other animals in to argue your problem out. Capture one in the app to start."
   },
+  "talkFrontDoor": {
+    "placeholder": "What's on your mind?",
+    "sendTo": "Send to {name}",
+    "change": "Change",
+    "whyContinuing": "Carrying on from earlier",
+    "whyFocus": "Working on this with you",
+    "whyLesson": "Fits best"
+  },
   "appShell": {
     "companions": "Companions",
     "collection": "Collection",

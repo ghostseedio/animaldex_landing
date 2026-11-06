@@ -24,6 +24,12 @@
  *
  * Signed out, the tab says what to do instead of showing nothing (newcomer
  * UX vet, 2026-10-30, P1-10): sign in, or talk to an animal right now.
+ *
+ * With the remote switch `talk_front_door` on (the page reads it on the
+ * server and passes `frontDoor`), the Talk front door is the first thing
+ * under the title: a full-width band, "What's on your mind?", that chooses
+ * which animal hears it (AnimalDex docs/talk-front-door/SPEC.md, section 4).
+ * Without it the tab is exactly as before.
  */
 
 import {useCallback, useEffect, useMemo, useState} from "react";
@@ -43,8 +49,19 @@ import {rosterLastAt, rosterLine, rosterNeed, sortCompanionRoster, type RosterLo
 import {animalMessagePreviewText, buildCompanionRows, type CompanionTabRow} from "@/lib/companion-rows";
 import type {CompanionCard} from "@/lib/companion-cards";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
-import {TRY_TALKING_HREF} from "@/lib/try-talking";
+import {TRY_TALKING_HREF, TRY_TALKING_SPECIES} from "@/lib/try-talking";
 import type {AnimalStep} from "@/lib/your-step";
+import TalkFrontDoorBand from "@/components/talk-front-door/talk-front-door-band";
+import {useFrontDoorOwnAnimals} from "@/components/talk-front-door/use-front-door-animals";
+import {featuredFrontDoorAnimal, meetOneNowAnimals, type TalkFrontDoorWords} from "@/lib/talk-front-door";
+import type {TalkAnimal} from "@/lib/ask-animaldex/talk";
+
+/** The Talk front door's part of the tab, when its switch is on. */
+export type CompanionsFrontDoor = {
+    words: TalkFrontDoorWords;
+    /** The featured Talk animals: "Meet one now" for someone with no animals yet. */
+    featured: TalkAnimal[];
+};
 
 const NEON = "#A7F432";
 
@@ -116,9 +133,37 @@ function CompanionRow({row, href, line, time, locale, words}: {
         : <div className={className} data-testid="companion-row">{body}</div>;
 }
 
-export default function CompanionsPage({words, locale = "en"}: {words: CompanionWords; locale?: string}) {
+export default function CompanionsPage({words, locale = "en", frontDoor = null}: {
+    words: CompanionWords;
+    locale?: string;
+    /** Set only with `talk_front_door` on. */
+    frontDoor?: CompanionsFrontDoor | null;
+}) {
     const {isAuthenticated} = useAppShellChrome();
-    return isAuthenticated ? <YourCompanions words={words} locale={locale} /> : <SignedOutCompanions words={words} />;
+    return isAuthenticated ? <YourCompanions words={words} locale={locale} frontDoor={frontDoor} /> : <SignedOutCompanions words={words} />;
+}
+
+/**
+ * The Talk front door on Companions: edge to edge right under the title, on
+ * the tab's band rhythm; the rows follow with no gap.
+ */
+function CompanionsFrontDoorBand({frontDoor, words, locale}: {frontDoor: CompanionsFrontDoor; words: CompanionWords; locale: string}) {
+    const {animals} = useFrontDoorOwnAnimals(true, words);
+    const meetOneNow = useMemo(
+        () => meetOneNowAnimals(frontDoor.featured.map(featuredFrontDoorAnimal), TRY_TALKING_SPECIES.slug),
+        [frontDoor.featured]
+    );
+    return (
+        <TalkFrontDoorBand
+            words={frontDoor.words}
+            surface="app"
+            locale={locale}
+            signedIn
+            own={animals}
+            meetOneNow={meetOneNow}
+            className="-mx-4 mt-4 border-y border-white/[0.08] px-4 py-3 md:mx-0 md:px-5"
+        />
+    );
 }
 
 /** Signed out: sign in to meet your animals, or talk to one now. */
@@ -162,7 +207,7 @@ function localLastOf(cards: CompanionCard[], row: CompanionTabRow): RosterLocalL
     return null;
 }
 
-function YourCompanions({words, locale}: {words: CompanionWords; locale: string}) {
+function YourCompanions({words, locale, frontDoor}: {words: CompanionWords; locale: string; frontDoor: CompanionsFrontDoor | null}) {
     const {rows: companions, didLoad, available, reload} = useCompanions();
     const {cards, didLoad: cardsLoaded, available: cardsAvailable, reload: reloadCards} = useCompanionCards();
     const {conversations, reload: reloadConversations} = useAnimalConversations();
@@ -204,13 +249,17 @@ function YourCompanions({words, locale}: {words: CompanionWords; locale: string}
 
     // Nothing to show yet, and nothing has said there is nothing.
     const isFirstLoad = roster.length === 0 && !(didLoad && cardsLoaded);
+    // Under the front door's band, the next band starts at its edge: no gap, no second hairline.
+    const top = frontDoor ? "mt-0" : "mt-4";
+    const ruled = frontDoor ? "border-b" : "border-y";
 
     return (
         <div className="mx-auto max-w-3xl">
             <Title>{words.list.title}</Title>
+            {frontDoor ? <CompanionsFrontDoorBand frontDoor={frontDoor} words={words} locale={locale} /> : null}
             {isFirstLoad ? (
                 // The skeleton is the row's own layout: 64 tall, the circle, two lines, the hairline.
-                <div className="-mx-4 mt-4 md:mx-0" aria-busy="true" data-testid="companions-skeleton">
+                <div className={`-mx-4 ${top} md:mx-0`} aria-busy="true" data-testid="companions-skeleton">
                     {[0, 1, 2, 3].map((index) => (
                         <div key={index} className="flex h-16 items-center gap-3 pl-4 md:pl-5">
                             <span className="h-12 w-12 shrink-0 rounded-full bg-white/[0.06] motion-safe:animate-pulse" />
@@ -224,7 +273,7 @@ function YourCompanions({words, locale}: {words: CompanionWords; locale: string}
             ) : roster.length === 0 && !available && !cardsAvailable ? (
                 // Neither the bond nor your cards could be read: your animals
                 // are still all in the Collection.
-                <div className="-mx-4 mt-4 border-y border-white/[0.08] px-4 py-6 md:mx-0 md:px-5">
+                <div className={`-mx-4 ${top} ${ruled} border-white/[0.08] px-4 py-6 md:mx-0 md:px-5`}>
                     <Link
                         href="/app/collection"
                         className="inline-flex min-h-11 items-center gap-2 rounded-pill border border-white/12 bg-white/[0.05] px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/10 active:bg-white/15"
@@ -234,7 +283,7 @@ function YourCompanions({words, locale}: {words: CompanionWords; locale: string}
                 </div>
             ) : roster.length === 0 ? (
                 // Empty: art, one line, Capture, and the public chats as the other way in.
-                <div className="-mx-4 mt-4 flex flex-col items-center gap-4 border-y border-white/[0.08] px-4 py-10 text-center md:mx-0 md:px-5" data-testid="companions-empty">
+                <div className={`-mx-4 ${top} flex flex-col items-center gap-4 ${ruled} border-white/[0.08] px-4 py-10 text-center md:mx-0 md:px-5`} data-testid="companions-empty">
                     <span aria-hidden="true" className="grid h-16 w-16 place-items-center rounded-full bg-primary-400/10 text-primary-200">
                         <AppIcon name="companions" className="h-8 w-8" />
                     </span>
@@ -251,7 +300,7 @@ function YourCompanions({words, locale}: {words: CompanionWords; locale: string}
                 </div>
             ) : (
                 // The rows fade in once, when the list first mounts; a refresh keeps them.
-                <div className="rows-in -mx-4 mt-4 md:mx-0" data-testid="companions-roster">
+                <div className={`rows-in -mx-4 ${top} md:mx-0`} data-testid="companions-roster">
                     {roster.map(({row, line, time}) => (
                         <CompanionRow
                             key={row.speciesProfileId}

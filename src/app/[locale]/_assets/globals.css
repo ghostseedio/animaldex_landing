@@ -677,6 +677,19 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
     .rows-in { animation: none; }
 }
 
+/* The Talk front door's "to" line: a new animal fades in over 180 ms when
+   the suggestion or a Change tap picks it (talk front door SPEC 4.3). */
+@keyframes frontDoorFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.front-door-fade { animation: frontDoorFade 180ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .front-door-fade { animation: none; }
+}
+
 /* ==========================================================================
    Ask AnimalDex — drawer
    --------------------------------------------------------------------------

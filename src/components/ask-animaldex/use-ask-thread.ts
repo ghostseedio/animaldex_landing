@@ -425,6 +425,12 @@ export function useAskThread(params: {
             /** The report's photo or video as its bubble's thumbnail (docs/your-step/INLINE.md). */
             stepReportThumb?: string | null;
             stepReportKind?: "photo" | "video" | null;
+            /**
+             * Which door this message came in by: the Talk front door, or the
+             * first message in a chat opened from a referral (talk front door
+             * SPEC 6.3). Kept on it in their history as `meta.origin`.
+             */
+            origin?: "front_door" | "referral" | null;
         } = {}
     ): Promise<string | null> => {
         const question = rawQuestion.replace(/\s+/g, " ").trim();
@@ -526,6 +532,7 @@ export function useAskThread(params: {
             ...(payWithCredits ? {payWithCredits: true} : {}),
             ...(options.onCallEvent ? {call: true} : {}),
             ...(options.stepReportId ? {step_report: {step_id: options.stepReportId}} : {}),
+            ...(options.origin ? {origin: options.origin} : {}),
             ...askTurnVisuals({
                 ownerVisuals: callbacks.current.ownerChat ? OWNER_CHAT_VISUALS : null,
                 richColumns: callbacks.current.richColumns,

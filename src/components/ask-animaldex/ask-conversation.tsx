@@ -94,6 +94,7 @@ import {
 } from "@/lib/ask-animaldex/subject";
 import {trackEvent} from "@/lib/analytics";
 import {useAiChatGate} from "@/components/ai-gate/ai-chat-gate";
+import {clearFrontDoorDraft, frontDoorMessageWaiting, takeFrontDoorMessage} from "@/components/talk-front-door/front-door-store";
 import {AiNotice, AiTag, useAiLongSession} from "@/components/ai-gate/ai-notices";
 import {noteFunnelMessage, noteFunnelReply, trackFunnel} from "@/lib/web-funnel-client";
 import {rememberStorePlacement} from "@/lib/store-links";
@@ -787,10 +788,21 @@ export default function AskConversation({
     const aiGate = useAiChatGate();
     const aiSession = useAiLongSession();
     const touchAiSession = aiSession.touch;
+    // Opened from another of their animals' referral: the first message they
+    // send here says so (`origin: "referral"`, talk front door SPEC 6.3), once.
+    const referralOriginRef = useRef<string | null>(null);
+    useEffect(() => {
+        referralOriginRef.current = referralId ?? null;
+    }, [referralId]);
     const send = useCallback(async (...args: Parameters<typeof rawSend>): Promise<string | null> => {
         if (!(await aiGate.request())) return null;
         touchAiSession();
-        return rawSend(...args);
+        const [question, options = {}] = args;
+        if (!options.origin && !options.onCallEvent && referralOriginRef.current) {
+            referralOriginRef.current = null;
+            return rawSend(question, {...options, origin: "referral"});
+        }
+        return rawSend(question, options);
     }, [aiGate, rawSend, touchAiSession]);
 
     const panelRef = useRef<HTMLDivElement | null>(null);
@@ -867,6 +879,29 @@ export default function AskConversation({
         if (pending) void send(pending);
         // `questionRequest`: a question asked while the drawer is already open.
     }, [context, questionRequest, takePendingQuestion, send]);
+    // The Talk front door (docs/talk-front-door/SPEC.md, section 4.4): what
+    // they typed before this chat opened is sent once, as their first message
+    // here, with `origin: "front_door"`, once the subject has resolved. Only
+    // the chat it was sent to takes it (their card's, or a wild animal's
+    // public chat), and the animal skips its hello, as with any chat opened
+    // with a question.
+    const frontDoorChat = useMemo(() => (subject.scope === "species" && !subject.trialContext
+        ? {captureId: subject.captureId?.toLowerCase() ?? null, slug: subject.slug ?? null}
+        : null), [subject.scope, subject.trialContext, subject.captureId, subject.slug]);
+    const frontDoorWaiting = useMemo(() => typeof window !== "undefined" && frontDoorChat !== null && frontDoorMessageWaiting(frontDoorChat), [frontDoorChat]);
+    useEffect(() => {
+        if (!context || !frontDoorChat) return;
+        // The context read for this chat, not the one before it.
+        if ((context.subject.captureId?.toLowerCase() ?? null) !== frontDoorChat.captureId) return;
+        const text = takeFrontDoorMessage({...frontDoorChat, speciesProfileId: context.speciesProfileId ?? null});
+        if (!text) return;
+        // Past Talk's gate, it is sent and the box's draft goes; refused, the draft stays in the box.
+        void aiGate.request().then((allowed) => {
+            if (!allowed) return;
+            clearFrontDoorDraft();
+            void send(text, {origin: "front_door"});
+        });
+    }, [context, frontDoorChat, send, aiGate]);
     // On the Talk page, a question carried over from another animal's chat
     // ("Ask another animal"): in the composer, ready to send, once. Never
     // sent for them (UX pass WEB-3, DECISIONS section 6): sending spends a
@@ -978,6 +1013,8 @@ export default function AskConversation({
 
     useEffect(() => {
         if (!(canGreet || greetsBeforeContext) || isSending) return;
+        // A message from the front door is on its way: they speak first.
+        if (frontDoorWaiting) return;
         if (animalSpeciesId && !animalMessagesSettled) return;
         if (greetsForReferral) {
             void greet({referralId});
@@ -985,7 +1022,7 @@ export default function AskConversation({
         }
         if (messages.length > 0 || greetingState !== "idle") return;
         void greet();
-    }, [canGreet, greetsBeforeContext, greetsForReferral, referralId, messages.length, greetingState, isSending, greet, animalSpeciesId, animalMessagesSettled]);
+    }, [canGreet, greetsBeforeContext, greetsForReferral, referralId, messages.length, greetingState, isSending, greet, animalSpeciesId, animalMessagesSettled, frontDoorWaiting]);
 
     // The loop as it stands when the chat opens; replies keep it current.
     useEffect(() => {

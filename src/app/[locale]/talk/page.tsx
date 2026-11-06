@@ -5,6 +5,9 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import {talkWords} from "@/lib/ask-animaldex/talk";
 import {ogImagePath} from "@/lib/og/og-image";
 import {getTalkPickerRows} from "@/data/talk-animals";
+import {loadAppFeatureFlags} from "@/data/app-feature-flags";
+import {isAppFeatureOn} from "@/lib/app-feature-flags";
+import {TALK_FRONT_DOOR_FLAG, talkFrontDoorWords} from "@/lib/talk-front-door";
 import TalkPicker from "@/app/[locale]/talk/talk-picker";
 
 /**
@@ -14,6 +17,11 @@ import TalkPicker from "@/app/[locale]/talk/talk-picker";
  * animals and the pairs that disagree) are drawn here, a few KB with each
  * face's own address; the search index loads only once someone searches
  * (WEB-18, WEB-24).
+ *
+ * The Talk front door (AnimalDex docs/talk-front-door/SPEC.md, section 4.1)
+ * sits above the picker while its remote switch is on: the switch as it was
+ * when this page was drawn, then the live one, read in the browser, so a
+ * page kept for a day follows the owner's switch within a minute.
  */
 
 export const revalidate = 86400;
@@ -50,9 +58,16 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
 }
 
 export default async function TalkPage({params}: {params: {locale: string}}) {
-    const [messages, rows] = await Promise.all([
+    const [messages, rows, flags] = await Promise.all([
         loadLocaleMessages(params.locale).catch(() => null),
-        getTalkPickerRows().catch(() => ({popular: [], disagree: []}))
+        getTalkPickerRows().catch(() => ({popular: [], disagree: []})),
+        loadAppFeatureFlags().catch(() => ({}))
     ]);
-    return <TalkPicker words={talkWords(messages?.talkPage)} initial={rows} />;
+    return (
+        <TalkPicker
+            words={talkWords(messages?.talkPage)}
+            initial={rows}
+            frontDoor={{enabled: isAppFeatureOn(flags, TALK_FRONT_DOOR_FLAG), words: talkFrontDoorWords(messages?.talkFrontDoor)}}
+        />
+    );
 }

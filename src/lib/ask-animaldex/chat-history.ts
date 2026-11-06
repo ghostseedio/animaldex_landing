@@ -73,7 +73,18 @@ export type ChatTranscriptInput = {
     stepReport?: {stepId: string; media: string | null} | null;
     /** The check-in this reply raised. */
     followUpId?: string | null;
+    /** Which door the person's message came in by (docs/talk-front-door/SPEC.md, section 6.3). */
+    origin?: ChatMessageOrigin | null;
 };
+
+/** The doors a message may say it came in by; anything else is ignored (the server's list, AnimalDex 4403b042). */
+export const CHAT_MESSAGE_ORIGINS = ["front_door", "referral"] as const;
+export type ChatMessageOrigin = typeof CHAT_MESSAGE_ORIGINS[number];
+
+/** A known door, or null for anything else (most messages say none). */
+export function chatMessageOrigin(raw: unknown): ChatMessageOrigin | null {
+    return typeof raw === "string" && (CHAT_MESSAGE_ORIGINS as readonly string[]).includes(raw) ? raw as ChatMessageOrigin : null;
+}
 
 export type ChatTranscriptMessage = {
     role: "user" | "assistant";
@@ -133,12 +144,18 @@ export async function buildChatTranscript(input: ChatTranscriptInput): Promise<C
     const id = await chatMessageId(input.requestId as string);
     const stepId = lowerUUID(input.stepReport?.stepId ?? null);
     const followUpId = lowerUUID(input.followUpId ?? null);
+    // Kept as `meta.origin` on the person's message (talk front door SPEC 6.3), beside a step report.
+    const origin = chatMessageOrigin(input.origin);
+    const questionMeta: Record<string, unknown> = {
+        ...(stepId ? {step_report: {step_id: stepId, media_kind: mediaKind(input.stepReport?.media ?? null)}} : {}),
+        ...(origin ? {origin} : {})
+    };
     const question: ChatTranscriptMessage = {
         role: "user",
         body: clipBody(input.question),
         client_message_id: id,
         at: input.askedAt.toISOString(),
-        ...(stepId ? {meta: {step_report: {step_id: stepId, media_kind: mediaKind(input.stepReport?.media ?? null)}}} : {})
+        ...(Object.keys(questionMeta).length > 0 ? {meta: questionMeta} : {})
     };
     const answer: ChatTranscriptMessage = {
         role: "assistant",

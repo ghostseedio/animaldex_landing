@@ -78,7 +78,10 @@ import {NextResponse} from "next/server";
  * reply as shown, through `record_animal_chat_messages_v1` with
  * `p_surface: "web"` (a hello is its reply alone). Never a call or a Trial
  * thread, never a signed-out reader, never a failed turn; before the
- * migration nothing is written.
+ * migration nothing is written. A message sent from the Talk front door, or
+ * the first one in a chat opened from a referral, says so (`origin:
+ * "front_door" | "referral"`, docs/talk-front-door/SPEC.md, section 6.3): it
+ * is kept as the person's message's `meta.origin`; anything else is ignored.
  *
  * A species with no card, from someone who holds no live card of it (or has
  * no account), is a public chat (SPEC section 4): the animal meets them and
@@ -200,6 +203,7 @@ import {
     saveAskOwnStory,
     saveAskVisitorNote
 } from "@/lib/ask-animaldex/chat-records-server";
+import {chatMessageOrigin} from "@/lib/ask-animaldex/chat-history";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -240,6 +244,8 @@ export async function POST(request: Request) {
     const isGreeting = body.greeting === true;
     const question = isGreeting ? "" : body.call === true ? resolveAskCallQuestion(body.question) : resolveAskQuestion(body.question);
     if (!isGreeting && !question) return askJson({error: "invalid_question"}, 400);
+    // Which door the message came in by (talk front door SPEC 6.3): kept on it in their history, nothing else.
+    const origin = isGreeting ? null : chatMessageOrigin(body.origin);
 
     const subject = resolveAskSubject(body.subject);
     // The animal's record is keyed by the subject alone: it loads while the
@@ -346,7 +352,8 @@ export async function POST(request: Request) {
                 answer: text,
                 askedAt,
                 stepReport: null,
-                followUpId: null
+                followUpId: null,
+                origin
             });
         }
         const fields = {turn_kind: "crisis" as TurnKind, angle: null, signed_in: viewer.signedIn, conversation_mode: "auto"};
@@ -793,7 +800,8 @@ export async function POST(request: Request) {
             answer: shown,
             askedAt,
             stepReport: stepReportId && loop?.stepReport ? {stepId: stepReportId, media: loop.stepReport.media ?? null} : null,
-            followUpId: dueFollowUp?.id ?? null
+            followUpId: dueFollowUp?.id ?? null,
+            origin
         });
     };
     /** A story of its own life it told in this reply: kept with the owner's animal of this species. */

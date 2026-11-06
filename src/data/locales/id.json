@@ -3041,6 +3041,14 @@
     "capStepHere": "Ceritakan sesuatu yang nyata kepada {animal}, dan ia bisa memberimu satu langkah untuk dicoba, di sini juga.",
     "capDebatesInApp": "Ajak hewan lain untuk memperdebatkan masalahmu. Tangkap satu di aplikasi untuk memulai."
   },
+  "talkFrontDoor": {
+    "placeholder": "Apa yang ada di pikiranmu?",
+    "sendTo": "Kirim ke {name}",
+    "change": "Ubah",
+    "whyContinuing": "Melanjutkan obrolan tadi",
+    "whyFocus": "Sedang mengerjakan ini bersamamu",
+    "whyLesson": "Paling cocok"
+  },
   "appShell": {
     "companions": "Teman",
     "collection": "Koleksi",
