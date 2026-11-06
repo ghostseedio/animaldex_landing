@@ -78,8 +78,9 @@ function ranked(clips: FootageClip[]) {
  *   fight, or an animal that does not exist).
  * Pure; the library is injectable for tests.
  */
-export function applyFootage(plan: VideoPlan, source: Pick<VideoSource, "lesson" | "guess" | "species">, clips: readonly FootageClip[] = FOOTAGE): VideoPlan {
-    if (plan.format === "battle" || plan.format === "creature" || plan.format === "scan") return plan;
+export function applyFootage(plan: VideoPlan, source: Pick<VideoSource, "lesson" | "guess" | "pokemon" | "species">, clips: readonly FootageClip[] = FOOTAGE): VideoPlan {
+    // A you-vs round or a would-you-rather power is an event our zoo footage does not show.
+    if (plan.format === "battle" || plan.format === "creature" || plan.format === "scan" || plan.format === "you_vs" || plan.format === "would_you_rather") return plan;
     const used = new Set<string>();
     const take = (species: string | null | undefined) => {
         const clip = ranked(footageFor(species, ["animal"], clips)).find((candidate) => !used.has(candidate.id));
@@ -94,6 +95,11 @@ export function applyFootage(plan: VideoPlan, source: Pick<VideoSource, "lesson"
         }
         if (plan.format === "guess") {
             const clip = index === 4 && scene.visual === "ai_clip" ? take(source.guess?.animal.slug) : null;
+            return clip ? footageScene(scene, clip) : scene;
+        }
+        if (plan.format === "pokemon") {
+            // "This real animal": the opening and the payoff can be the real one we filmed; the clue shows a feature, so it stays drawn.
+            const clip = (index === 0 || index === 4) && scene.visual === "ai_clip" ? take(source.pokemon?.animal.slug) : null;
             return clip ? footageScene(scene, clip) : scene;
         }
         const clip = scene.species ? take(scene.species) : null;

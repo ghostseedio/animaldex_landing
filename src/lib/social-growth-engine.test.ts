@@ -73,10 +73,10 @@ test("the day starts at Jakarta midnight; caps count today's live posts by kind,
     assert.equal(contentKindOf({media_kind: "text_post"}), "text");
     const caps = dailyCaps('{"tiktok":{"video":2},"x":{"text":"bad"}}');
     assert.equal(caps.tiktok.video, 2);
-    assert.equal(caps.x.text, 3);
+    assert.equal(caps.x.text, 2);
     assert.deepEqual(platformsWithRoom(["tiktok", "youtube"], "video", posts, caps, now), ["youtube"]);
     assert.deepEqual(platformsWithRoom(["youtube", "instagram"], "carousel", posts, caps, now), ["instagram"]);
-    assert.equal(dailyCaps("not json").youtube.video, 6);
+    assert.equal(dailyCaps("not json").youtube.video, 2);
 });
 
 test("the light kind with more room left goes next; none when both are spent", () => {

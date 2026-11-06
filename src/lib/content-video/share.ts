@@ -111,7 +111,7 @@ export async function blogShareCopy(id: string, regenerate: boolean): Promise<Bl
                     `URL: ${url}`,
                     `The video opens on: "${row.plan.hookText}"`,
                     `Narration:\n${row.plan.scenes.map((scene) => scene.narration).join(" ")}`,
-                    row.plan.format === "battle" || row.plan.format === "creature" ? "The video is AI-generated: mention it naturally once (e.g. \"AI-imagined\")." : "",
+                    row.plan.format === "battle" || row.plan.format === "creature" || row.plan.format === "you_vs" || row.plan.format === "would_you_rather" ? "The video is AI-generated: mention it naturally once (e.g. \"AI-imagined\")." : "",
                     source ? `\nArticle summary: ${source.description}\n\nArticle text:\n${source.text.slice(0, 6000)}` : ""
                 ].join("\n")
             }]

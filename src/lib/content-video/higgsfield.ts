@@ -37,6 +37,11 @@ export function keyframePayload(prompt: string) {
     return {prompt: prompt.slice(0, 2400), aspect_ratio: "9:16", resolution: "720p", batch_size: 1};
 }
 
+/** The prompt for the second try at a frame that showed the wrong animal. Pure. */
+export function redrawPrompt(prompt: string, subject: string, seen: string) {
+    return `${prompt} IMPORTANT: it must be unmistakably a ${subject}, exactly as the species looks in life${seen ? `; the last attempt looked like ${seen}, which is wrong` : ""}.`.slice(0, 2400);
+}
+
 export type ImagePoll = {status: "pending" | "completed" | "failed"; imageUrl?: string; error?: string};
 
 export async function pollImage(authorization: string, statusUrl: string): Promise<ImagePoll> {

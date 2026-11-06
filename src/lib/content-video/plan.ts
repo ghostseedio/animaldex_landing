@@ -17,6 +17,19 @@ export const VIDEO_FPS = 30;
 export const MAX_AI_CLIPS = 5;
 /** Kling 2.5 Turbo image-to-video takes 5 or 10 seconds; scenes are short. */
 export const AI_CLIP_SECONDS = 5;
+/**
+ * Why the autopilot does not render a video whose AI clips did not come back
+ * (no key, no credit, timeouts): it would ship as stills, the look the feeds
+ * punish. One lost clip is fine; null when enough came back. Pure.
+ */
+export function clipShortfall(plan: Pick<VideoPlan, "scenes">, clips: ReadonlyArray<{status: string; error?: string}>): string | null {
+    const wanted = plan.scenes.filter((scene) => scene.visual === "ai_clip").length;
+    if (!wanted) return null;
+    const made = clips.filter((clip) => clip.status === "completed").length;
+    if (made >= wanted - 1) return null;
+    const why = clips.find((clip) => clip.status === "failed" && clip.error)?.error ?? "no clips were made";
+    return `Held back: only ${made} of ${wanted} AI clips came back (${why.slice(0, 160)}), so it would have shipped as stills`;
+}
 /** The most photos sent to the model (each is a few hundred tokens). */
 export const MAX_PLAN_IMAGES = 12;
 /** A 12-second cut has three beats; anything shorter is not a story. */
@@ -34,15 +47,19 @@ export type SourceImage = {
     license: string | null;
 };
 
-export const SOURCE_TYPES = ["blog", "comparison", "hybrid", "fusion", "ranking", "location", "lesson", "guess", "scan"] as const;
+export const SOURCE_TYPES = ["blog", "comparison", "hybrid", "fusion", "ranking", "location", "lesson", "guess", "scan", "you_vs", "would_you_rather", "pokemon"] as const;
 export type SourceType = (typeof SOURCE_TYPES)[number];
 
 export function isSourceType(value: unknown): value is SourceType {
     return typeof value === "string" && (SOURCE_TYPES as readonly string[]).includes(value);
 }
 
-/** editorial: narrated photo edit. battle: VS card + AI fight. creature: AI reveal of an imagined animal. lesson: what one animal teaches you (dark & gold). */
-export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess" | "scan";
+/**
+ * editorial: narrated photo edit. battle: VS card + AI fight. creature: AI reveal of an imagined animal.
+ * lesson: what one animal teaches you (dark & gold). guess / pokemon: a quiz with a reveal. scan: our footage.
+ * you_vs: the viewer against one animal, three rounds. would_you_rather: two animals' powers, pick one.
+ */
+export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess" | "scan" | "you_vs" | "would_you_rather" | "pokemon";
 
 /**
  * The look of a video. "house": Barlow, lime, punch-ins, a brisk voice.
@@ -101,6 +118,36 @@ export type ScanFacts = {
     power: string | null;
 };
 
+/** "Could you beat a gorilla?": the viewer against one animal, three rounds, a verdict. */
+export type YouVsFacts = {
+    animal: Fighter;
+    /** The animal's side of its comparison pages' stat lines ("Mass and leverage: 120–190 kg, muscular"). */
+    stats: Array<{label: string; value: string}>;
+    facts: string[];
+    lesson: string | null;
+};
+
+/** "Would you rather have the bite of a crocodile or the speed of a cheetah?": two animals of a comparison page. */
+export type WouldYouRatherFacts = {
+    a: Fighter;
+    b: Fighter;
+    powers: {a: BattlePower | null; b: BattlePower | null};
+    stats: StatLine[];
+    /** True facts about each, for the catch. */
+    facts: {a: string[]; b: string[]};
+};
+
+/** "This real animal is a Pokémon": guess which one, then the real animal behind the design. */
+export type PokemonFacts = {
+    /** The Pokémon's name (only ever named in words: no Pokémon artwork is shown). */
+    pokemon: string;
+    animal: Fighter;
+    /** Why the design matches, from /pokemon-animals. */
+    note: string;
+    facts: string[];
+    lesson: string | null;
+};
+
 /** One of our own clips, as a scene plays it. */
 export type FootageRef = {id: string; path: string; seconds: number};
 
@@ -149,6 +196,9 @@ export type VideoSource = {
     lesson?: LessonFacts;
     guess?: GuessFacts;
     scan?: ScanFacts;
+    youVs?: YouVsFacts;
+    wouldYouRather?: WouldYouRatherFacts;
+    pokemon?: PokemonFacts;
 };
 
 export type PlanScene = {
@@ -164,6 +214,8 @@ export type PlanScene = {
     motionPrompt: string;
     /** Draw the clip's first frame from this prompt (text-to-image) instead of using a photo. */
     keyframePrompt?: string;
+    /** The real animal a drawn first frame must show: checked by eye before it is animated (keyframe-check.ts). */
+    subject?: string;
     /** Start from the last frame of the previous scene's clip, so the action continues. */
     chain?: boolean;
     clipSeconds?: 5 | 10;
@@ -465,7 +517,7 @@ export function applyStatCards(plan: VideoPlan, source: Pick<VideoSource, "speci
     const bySlug = new Map((source.species ?? []).map((entry) => [entry.slug, entry]));
     // A lesson is a quote video, no HUD; a creature is imagined, no real stats.
     if (plan.format === "creature" || plan.format === "lesson") return plan;
-    if (plan.format === "guess") {
+    if (plan.format === "guess" || plan.format === "pokemon" || plan.format === "you_vs" || plan.format === "would_you_rather") {
         // Only the reveal names the animal: matching scenes by photo would put its card (and name) on a clue.
         return {
             ...plan,

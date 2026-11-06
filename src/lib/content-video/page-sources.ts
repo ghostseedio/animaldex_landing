@@ -5,6 +5,8 @@ import {getRankingPage, rankingPages} from "@/data/rankings";
 import {getSpeciesBySlug, speciesEntries} from "@/data/species";
 import {getResolvedSpeciesArtworkUrl} from "@/data/species-artwork-index";
 import {getComparisonPageData} from "@/data/species-comparisons";
+import {getPokemonAnimalEntry, pokemonAnimalEntries} from "@/data/pokemon-animal-counterparts";
+import {listSnapshotComparisons} from "@/lib/published-seo-page-data";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import lessonSnapshot from "@/data/published-seo-lesson-pages.json";
 import speciesPowers from "@/data/published-species-powers.json";
@@ -12,6 +14,7 @@ import {getAbsoluteUrl} from "@/lib/site";
 import type {Fighter, SourceImage, SourceType, StatLine, VideoSource} from "@/lib/content-video/plan";
 import {listVideoCandidates, loadVideoSource as loadBlogSource, type VideoCandidate} from "@/lib/content-video/source";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
+import {famousSides} from "@/lib/content-video/auto-generate-plan";
 import {sourceSpecies} from "@/lib/content-video/stat-cards";
 import {battlePowerFor} from "@/lib/content-video/battle-powers";
 import {footageFor, scanRevealSpecies, type FootageClip} from "@/lib/content-video/footage";
@@ -296,6 +299,109 @@ async function guessSource(slug: string): Promise<VideoSource | null> {
     };
 }
 
+/** True facts from a species page, for a payoff or a catch. */
+function speciesFacts(slug: string) {
+    const entry = getSpeciesBySlug(slug);
+    return [...(entry?.premiumDetails?.whyInteresting ?? []), entry?.analysis?.summary].filter((fact): fact is string => typeof fact === "string" && fact.trim().length > 0).slice(0, 6);
+}
+
+/** An animal's side of every comparison page it fights in: its values on the battle stats, one per label. */
+function comparisonStatsFor(slug: string) {
+    const stats = new Map<string, string>();
+    for (const page of listSnapshotComparisons()) {
+        const side = page.animalASlug === slug ? "animalAValue" : page.animalBSlug === slug ? "animalBValue" : null;
+        if (!side) continue;
+        for (const stat of page.statCategories) if (!stats.has(stat.label) && stat[side]) stats.set(stat.label, stat[side]);
+    }
+    return Array.from(stats, ([label, value]) => ({label, value})).slice(0, 10);
+}
+
+/** "Could you beat a <animal>?" from a species page and its battle stats. */
+async function youVsSource(slug: string): Promise<VideoSource | null> {
+    const entry = getSpeciesBySlug(slug);
+    if (!entry) return null;
+    // Battle stats where it has comparison pages; the famous animals mostly have none, and the truth rule covers the rest.
+    const stats = comparisonStatsFor(slug);
+    const images = await artworkImages([{slug, alt: entry.name}]);
+    if (!images.length) return null;
+    const facts = {animal: fighter(slug, entry.name, images, 1), stats, facts: speciesFacts(slug), lesson: lessonEntry(slug)?.coreLesson?.trim() ?? null};
+    return {
+        type: "you_vs",
+        format: "you_vs",
+        slug,
+        title: `Could you beat a ${entry.name}?`,
+        description: entry.analysis?.summary ?? entry.name,
+        url: getAbsoluteUrl("en", sourcePath("you_vs", slug)),
+        tags: [entry.name, `human vs ${entry.name.toLowerCase()}`, "could you beat"],
+        text: [`Stats: ${stats.map((stat) => `${stat.label}: ${stat.value}`).join(" | ")}`, `Facts: ${facts.facts.join(" | ")}`].join("\n"),
+        images,
+        species: await sourceSpecies([{slug, name: entry.name, image: 1}]),
+        youVs: facts
+    };
+}
+
+/**
+ * The animals people argue about, by their species-page slugs (the lesson
+ * slugs above are the /animal-powers ones: "african-lion" there is "lion"
+ * here). A "could you beat it?" fight and a guess start with these.
+ */
+const FAMOUS_SPECIES = new Set(["gorilla", "lion", "tiger", "grizzly-bear", "polar-bear", "crocodile", "hippopotamus", "wolf", "great-white-shark", "orca", "chimpanzee", "honey-badger", "komodo-dragon", "elephant", "spotted-hyena", "jaguar", "king-cobra", "green-anaconda", "cheetah", "leopard", "red-kangaroo", "moose", "white-rhinoceros", "ostrich", "bull-shark"]);
+
+/** "Would you rather" from a comparison page: its two animals, their Powers and battle stats. */
+async function wouldYouRatherSource(slug: string): Promise<VideoSource | null> {
+    const data = await getComparisonPageData(slug);
+    if (data.status !== "ready") return null;
+    const entry = data.challenge;
+    const nameA = entry.animalADisplayName ?? speciesName(entry.animalASlug);
+    const nameB = entry.animalBDisplayName ?? speciesName(entry.animalBSlug);
+    const images = await artworkImages([{slug: entry.animalASlug, alt: nameA}, {slug: entry.animalBSlug, alt: nameB}]);
+    if (images.length < 2) return null;
+    const stats: StatLine[] = entry.statCategories.map((stat) => ({label: stat.label, a: stat.animalAValue, b: stat.animalBValue, advantage: stat.advantage === "animalA" ? "a" : stat.advantage === "animalB" ? "b" : "even"}));
+    const [powerA, powerB] = await Promise.all([battlePowerFor(entry.animalASlug), battlePowerFor(entry.animalBSlug)]);
+    return {
+        type: "would_you_rather",
+        format: "would_you_rather",
+        slug,
+        title: `Would you rather: ${nameA} or ${nameB}?`,
+        description: entry.description,
+        url: getAbsoluteUrl("en", sourcePath("would_you_rather", slug)),
+        tags: [nameA, nameB, "would you rather", "animal powers"],
+        text: [entry.quickVerdict, ...entry.whyThisMatchupIsInteresting].join("\n"),
+        images,
+        species: await sourceSpecies([{slug: entry.animalASlug, name: nameA, image: 1}, {slug: entry.animalBSlug, name: nameB, image: 2}]),
+        wouldYouRather: {
+            a: fighter(entry.animalASlug, nameA, images, 1),
+            b: fighter(entry.animalBSlug, nameB, images, 2),
+            powers: {a: powerA, b: powerB},
+            stats,
+            facts: {a: speciesFacts(entry.animalASlug), b: speciesFacts(entry.animalBSlug)}
+        }
+    };
+}
+
+/** "This real animal is a Pokémon": a /pokemon-animals match. Designs built on myth or objects ("broad") are skipped. */
+async function pokemonSource(slug: string): Promise<VideoSource | null> {
+    const match = getPokemonAnimalEntry(slug);
+    if (!match || match.confidence === "broad") return null;
+    const animal = getSpeciesBySlug(match.speciesSlug);
+    const name = animal?.name ?? match.animal;
+    const images = await artworkImages([{slug: match.speciesSlug, alt: name}]);
+    if (!images.length) return null;
+    return {
+        type: "pokemon",
+        format: "pokemon",
+        slug,
+        title: `${match.name} in real life: the ${name}`,
+        description: match.note,
+        url: getAbsoluteUrl("en", sourcePath("pokemon", slug)),
+        tags: [match.name, name, "pokemon in real life", "real life pokemon"],
+        text: [`Match: ${match.note}`, `Facts: ${speciesFacts(match.speciesSlug).join(" | ")}`].join("\n"),
+        images,
+        species: await sourceSpecies([{slug: match.speciesSlug, name, image: 1}]),
+        pokemon: {pokemon: match.name, animal: fighter(match.speciesSlug, name, images, 1), note: match.note, facts: speciesFacts(match.speciesSlug), lesson: lessonEntry(match.speciesSlug)?.coreLesson?.trim() ?? null}
+    };
+}
+
 export const BIRTH_MONTH_PREFIX = "birth-month-";
 
 /**
@@ -374,7 +480,7 @@ async function scanSource(slug: string): Promise<VideoSource | null> {
 
 /** The fewest source images a family's video can be made with: a lesson, a guess or a scan is one animal. */
 export function minimumImages(type: SourceType) {
-    return type === "lesson" || type === "guess" || type === "scan" ? 1 : 2;
+    return type === "lesson" || type === "guess" || type === "scan" || type === "you_vs" || type === "pokemon" ? 1 : 2;
 }
 
 export async function loadPageSource(type: SourceType, slug: string): Promise<VideoSource | null> {
@@ -389,6 +495,9 @@ export async function loadPageSource(type: SourceType, slug: string): Promise<Vi
         case "lesson": return lessonSource(slug);
         case "guess": return guessSource(slug);
         case "scan": return scanSource(slug);
+        case "you_vs": return youVsSource(slug);
+        case "would_you_rather": return wouldYouRatherSource(slug);
+        case "pokemon": return pokemonSource(slug);
     }
 }
 
@@ -430,8 +539,35 @@ export async function listPageCandidates(type: SourceType): Promise<VideoCandida
                 title: `Guess the animal: ${entry.name}`,
                 publishedAt: now,
                 imageCount: 1,
-                priority: headline.has(entry.slug) ? 2 : lessonEntry(entry.slug) ? 1 : 0
+                priority: FAMOUS_SPECIES.has(entry.slug) || headline.has(entry.slug) ? 2 : lessonEntry(entry.slug) ? 1 : 0
             }));
         }
+        case "you_vs": {
+            // The animals people already argue about (the gorilla, the lion): demand sits with them (Nov 2026 research).
+            // Only those: "could you beat a banded linsang?" is a question nobody asks.
+            const slugs = new Set([...Array.from(FAMOUS_SPECIES), ...HEADLINE_LESSON_ANIMALS]);
+            return Array.from(slugs).filter((slug) => getSpeciesBySlug(slug)).map((slug) => ({
+                slug,
+                title: `Could you beat a ${speciesName(slug)}?`,
+                publishedAt: now,
+                imageCount: 1,
+                priority: FAMOUS_SPECIES.has(slug) ? 1 : 0
+            }));
+        }
+        case "would_you_rather":
+            // Two famous animals make the hardest choice; a pair with neither is left out.
+            return (closedSeoNamespaceSlugs.comparisons ?? [])
+                .map((slug) => ({slug, famous: famousSides(slug)}))
+                .filter((entry) => entry.famous > 0)
+                .map((entry) => ({slug: entry.slug, title: `Would you rather: ${titleCase(entry.slug).replace(/ Vs /, " or ")}?`, publishedAt: now, imageCount: 2, priority: entry.famous}));
+        case "pokemon":
+            // The closest matches of the first generation (the Pokémon everyone knows) first.
+            return pokemonAnimalEntries.filter((entry) => entry.confidence !== "broad").map((entry) => ({
+                slug: entry.slug,
+                title: `${entry.name} in real life`,
+                publishedAt: now,
+                imageCount: 1,
+                priority: (entry.confidence === "strong" ? 2 : 0) + (entry.generation === 1 ? 1 : 0)
+            }));
     }
 }

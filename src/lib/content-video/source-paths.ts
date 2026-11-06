@@ -11,7 +11,10 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
     location: "Location guide",
     lesson: "Animal lesson",
     guess: "Guess the animal",
-    scan: "Scan reveal (our footage)"
+    scan: "Scan reveal (our footage)",
+    you_vs: "You vs the animal",
+    would_you_rather: "Would you rather",
+    pokemon: "Real-life Pokémon"
 };
 
 export function sourcePath(type: SourceType, slug: string) {
@@ -25,6 +28,9 @@ export function sourcePath(type: SourceType, slug: string) {
         // A birth-month carousel is twelve animals put together, not one page: it links to the lessons hub.
         case "lesson": return slug.startsWith("birth-month-") ? "/animal-powers" : `/animal-powers/${slug}`;
         case "guess":
-        case "scan": return `/animals/${slug}`;
+        case "scan":
+        case "you_vs": return `/animals/${slug}`;
+        case "would_you_rather": return `/comparisons/${slug}`;
+        case "pokemon": return `/pokemon-animals/${slug}`;
     }
 }

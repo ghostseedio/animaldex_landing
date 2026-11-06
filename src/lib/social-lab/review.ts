@@ -1,5 +1,5 @@
 import {type Intent, INTENTS} from "@/lib/social-lab/arms";
-import type {VideoPlan, VideoSource} from "@/lib/content-video/plan";
+import type {VideoFormat, VideoPlan, VideoSource} from "@/lib/content-video/plan";
 
 // The pre-flight check, pure: before a video's clips are paid for, a second
 // model reads the script cold, as someone scrolling would meet it, and answers
@@ -32,6 +32,7 @@ export type VideoReview = {
 export const REVIEW_SYSTEM_PROMPT = `You are the toughest test audience for AnimalDex's short animal videos (TikTok, YouTube Shorts, Reels). You read a script cold, the way someone scrolling meets it, and judge it honestly. Most scripts are average: score 4–6 unless you can name exactly why a viewer would act.
 
 1. THE 5-YEAR-OLD TEST. The first 3 seconds are the on-screen hook text, the first spoken line and what the first shot shows. After those 3 seconds, could a 5-year-old say what the video is about: which animal, and what is surprising about it? Write what they would say (would_say). It FAILS for: a word a 5-year-old does not know (list each in hard_words; an animal's common name is fine), wordplay or a metaphor to decode, a hook that only makes sense after the title, an animal that is not named or clearly shown, or more than one idea.
+   A QUIZ (the script says so) hides the animal on purpose until its reveal: there the test is whether, after 3 seconds, a 5-year-old knows the GAME (what they have to guess, and that the answer is coming), never whether they can name the animal. Judge the reveal and the payoff as the rest of the video.
 
 2. For each reaction, a score from 1 to 10 and the concrete reason:
 - share: would a viewer send this to one specific friend? Name who and the message they would send with it.
@@ -62,6 +63,12 @@ export const REVIEW_JSON_SCHEMA = {
     }
 } as const;
 
+/** Formats that hide the answer until a reveal on purpose, and what the viewer has to guess. (A scan reveal shows its animal from the first frame: not a quiz.) */
+const QUIZ_FORMATS: Partial<Record<VideoFormat, string>> = {
+    guess: "the viewer guesses the animal from clues; it is named at the reveal.",
+    pokemon: "the viewer guesses which Pokémon this real animal matches; it is named at the reveal."
+};
+
 /** About how fast the voice speaks, for the timings the reviewer sees. */
 const WORDS_PER_SECOND = 2.7;
 
@@ -79,8 +86,10 @@ export function scriptForReview(plan: VideoPlan, source: Pick<VideoSource, "titl
         return line;
     });
     const end = plan.ending === "loop" ? "No end card: the last line loops back to the first." : `End card: says "${plan.ctaNarration}" | shows "${plan.ctaText}"`;
+    const quiz = plan.format ? QUIZ_FORMATS[plan.format] : undefined;
     return [
         `Video about: ${source.title}`,
+        ...(quiz ? [`A QUIZ: ${quiz}`] : []),
         job ? `Its JOB: ${INTENTS[job].label}. ${INTENTS[job].question}` : "Its job: not set; judge all four reactions.",
         "",
         `On-screen hook text over the first seconds: "${plan.hookText}"`,
@@ -137,4 +146,20 @@ export function rewriteBrief(review: VideoReview) {
         ...failed.map((line) => `- ${line}`),
         ...(review.fixes.length ? ["Their fixes:", ...review.fixes.map((fix) => `- ${fix}`)] : [])
     ].join("\n");
+}
+
+/**
+ * Why the autopilot holds a script back before any clip is paid for; null when
+ * it may go ahead. No review (Claude unavailable) holds it back too: an
+ * unchecked script is what filled the feeds with average videos.
+ */
+export function heldBackReason(review: VideoReview | null, drafts: number): string | null {
+    if (!review) return "Held back: the test audience could not review the script (Claude unavailable), so no clips were made";
+    if (review.passes) return null;
+    const score = jobScore(review);
+    const reasons = [
+        review.fiveYearOld.passes ? null : `a 5-year-old would say "${review.fiveYearOld.wouldSay}"`,
+        score < PASS_SCORE ? `its ${review.job ?? "best"} score is ${score}/10 (needs ${PASS_SCORE})` : null
+    ].filter(Boolean);
+    return `Held back after ${drafts} drafts, before any clip was paid for: ${reasons.join("; ")}`;
 }

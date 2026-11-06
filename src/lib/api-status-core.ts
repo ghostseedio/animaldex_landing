@@ -16,7 +16,7 @@ export const API_PROVIDER_INFO: Record<ApiProvider, {label: string; billingUrl: 
     higgsfield: {label: "Higgsfield", billingUrl: "https://cloud.higgsfield.ai/", usedFor: "AI clips in page videos"}
 };
 
-const CREDIT_WORDS = /credit balance|insufficient[_ ](quota|credits?|balance|funds)|billing|payment required|out of credits|not enough credits|top up/i;
+const CREDIT_WORDS = /credit balance|insufficient[_ ](quota|credits?|balance|funds)|billing|payment required|out[_ ]of[_ ]credits?|not[_ ]enough[_ ]credits?|top up/i;
 
 /** What an HTTP status plus error body from a provider means. */
 export function classifyProviderReply(status: number, body: string): ApiHealth {
@@ -27,6 +27,26 @@ export function classifyProviderReply(status: number, body: string): ApiHealth {
     if (status >= 500) return "down";
     // A 400/404/422 to a well-formed probe still proves the key was accepted.
     return status === 400 || status === 404 || status === 422 ? "ok" : "down";
+}
+
+/**
+ * The clip error that shows Higgsfield's account is empty, from the page-video
+ * ledger: the latest video (by last update, within `withinMs`) that settled any
+ * clip decides. Its credit failure counts only if none of its clips came back,
+ * so a top-up clears the warning with the next video that gets a clip. Null
+ * when the account is fine as far as the ledger knows. Pure.
+ */
+export function higgsfieldCreditFailure(
+    rows: ReadonlyArray<{updated_at: string; clips: ReadonlyArray<{status: string; error?: string}>}>,
+    now: Date,
+    withinMs = 3 * 86_400_000
+) {
+    const since = now.getTime() - withinMs;
+    const latest = rows
+        .filter((row) => Date.parse(row.updated_at) >= since && row.clips.some((clip) => clip.status === "completed" || clip.status === "failed"))
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+    if (!latest || latest.clips.some((clip) => clip.status === "completed")) return null;
+    return latest.clips.map((clip) => clip.error ?? "").find((error) => classifyProviderReply(400, error) === "no_credit") ?? null;
 }
 
 /** Sums Anthropic cost_report buckets: `amount` is a decimal string in cents. */

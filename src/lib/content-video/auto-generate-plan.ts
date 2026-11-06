@@ -20,3 +20,11 @@ export function pickRandomSource<T extends {slug: string}>(available: Partial<Re
 export function budgetAllowsVideo(spentTodayUSD: number, maxVideoUSD: number, dailyBudgetUSD: number) {
     return spentTodayUSD + maxVideoUSD <= dailyBudgetUSD;
 }
+
+/** Animals everyone has an opinion on, as they appear in comparison slugs ("gorilla-vs-crocodile", "bear-vs-tiger"). */
+const FAMOUS_ANIMALS = ["gorilla", "lion", "tiger", "shark", "crocodile", "alligator", "orca", "bear", "wolf", "hippopotamus", "eagle", "elephant", "cheetah", "leopard", "jaguar", "hyena", "rhino", "rhinoceros", "python", "anaconda", "cobra", "octopus", "chimpanzee", "honey-badger", "komodo-dragon", "whale", "moose", "bison", "kangaroo", "ostrich"];
+
+/** How many sides of a comparison slug are a famous animal (a "golden-headed-lion-tamarin" or a "lionfish" is not a lion). */
+export function famousSides(slug: string) {
+    return slug.split("-vs-").filter((side) => FAMOUS_ANIMALS.some((animal) => side === animal || side.endsWith(`-${animal}`))).length;
+}

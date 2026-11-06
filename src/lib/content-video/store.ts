@@ -22,6 +22,8 @@ export type ContentVideoClip = {
     videoUrl?: string;
     usd: number;
     error?: string;
+    /** The drawn first frame showed the wrong animal and was drawn once more. */
+    redrawn?: boolean;
 };
 
 export type ContentVideoRow = {

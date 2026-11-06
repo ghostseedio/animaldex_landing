@@ -96,20 +96,22 @@ export const CAROUSEL_MEDIA_KIND = "carousel";
 export const TEXT_MEDIA_KIND = "text_post";
 
 /**
- * Posts per platform per day (Jakarta day), by kind. Videos are held to a few a
- * day while the hook lab learns: a feed of weak videos drags the account down.
+ * Posts per platform per day (Jakarta day), by kind. Fewer, better posts since
+ * Nov 2026: two videos a day at most (the autopilot makes two, each held to the
+ * test audience's bar), one carousel, a couple of text posts. A feed of
+ * average posts drags the whole account down (Instagram judges the last 30 days).
  * 0 = never (YouTube and Pinterest take no text; YouTube no carousels via the API).
  * Override with SOCIAL_DAILY_CAPS='{"tiktok":{"video":3}}'.
  */
 export const DEFAULT_DAILY_CAPS: Record<SocialPlatform, Record<ShareContentKind, number>> = {
-    youtube: {video: 6, carousel: 0, text: 0},
-    tiktok: {video: 4, carousel: 2, text: 0},
-    instagram: {video: 4, carousel: 2, text: 0},
-    facebook: {video: 4, carousel: 1, text: 2},
-    x: {video: 4, carousel: 1, text: 3},
-    pinterest: {video: 2, carousel: 3, text: 0},
-    threads: {video: 3, carousel: 1, text: 3},
-    bluesky: {video: 2, carousel: 1, text: 3}
+    youtube: {video: 2, carousel: 0, text: 0},
+    tiktok: {video: 2, carousel: 1, text: 0},
+    instagram: {video: 2, carousel: 1, text: 0},
+    facebook: {video: 2, carousel: 1, text: 1},
+    x: {video: 2, carousel: 1, text: 2},
+    pinterest: {video: 1, carousel: 2, text: 0},
+    threads: {video: 2, carousel: 1, text: 2},
+    bluesky: {video: 1, carousel: 1, text: 2}
 };
 
 /** The caps with an override (JSON) merged over the defaults; a malformed override is ignored. */

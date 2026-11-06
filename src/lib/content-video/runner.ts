@@ -12,13 +12,14 @@ import {
     MOTION_STYLE_SUFFIX,
     poll,
     pollImage,
+    redrawPrompt,
     submit,
     textToImagePath,
     uploadImage
 } from "@/lib/content-video/higgsfield";
 import {BATTLE_NEGATIVE_PROMPT} from "@/lib/content-video/formats";
 import {generateVideoPlan} from "@/lib/content-video/llm";
-import {AI_CLIP_SECONDS, applyStatCards, buildAss, buildTimeline, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
+import {AI_CLIP_SECONDS, applyStatCards, buildAss, clipShortfall, buildTimeline, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
 import {portraitCrop, renderVideo, runFfmpeg, type SceneVisual} from "@/lib/content-video/render";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {loadPageSource, sourcePath} from "@/lib/content-video/page-sources";
@@ -35,7 +36,9 @@ import {alignLine, speakLine, wavPcm} from "@/lib/content-video/tts";
 import {speechSpans, timeLineWords} from "@/lib/content-video/word-timing";
 import {musicTrackPath, pickMusicTrack} from "@/lib/content-video/music";
 import {nextExperiment} from "@/lib/social-lab/experiments";
+import {heldBackReason} from "@/lib/social-lab/review";
 import {applyFootage, planHasAiImagery} from "@/lib/content-video/footage";
+import {keyframeShows} from "@/lib/content-video/keyframe-check";
 import {FRESH_ARTICLE_HOURS} from "@/lib/social-lab/arms";
 import {existsSync} from "node:fs";
 
@@ -70,11 +73,21 @@ export function contentVideoBusy() {
     return running.size > 0;
 }
 
+/**
+ * How a job is run. `reviewGate` (the autopilot): the script gets up to three
+ * drafts, and one the test audience still rejects stops the video before any
+ * clip is paid for. A video made by hand in the admin goes ahead either way.
+ */
+export type JobOptions = {reviewGate?: boolean};
+
+/** Drafts the autopilot's script gets before it is held back. */
+const GATED_DRAFTS = 3;
+
 /** Starts (or resumes) a video in the background; `onDone` runs once it stops. False when one is already running. */
-export function startContentVideoJob(id: string, onDone?: () => Promise<void>) {
+export function startContentVideoJob(id: string, onDone?: () => Promise<void>, options: JobOptions = {}) {
     if (running.size > 0) return false;
     running.add(id);
-    runJob(id)
+    runJob(id, options)
         .catch((error) => console.error(`[content-video] ${id} crashed`, error))
         .finally(() => {
             running.delete(id);
@@ -91,7 +104,7 @@ export function resumeStatus(row: Pick<ContentVideoRow, "plan" | "clips" | "vide
     return "rendering";
 }
 
-async function runJob(id: string) {
+async function runJob(id: string, options: JobOptions = {}) {
     let row = await getContentVideo(id);
     if (!row) return;
     const save = async (patch: Parameters<typeof updateContentVideo>[1]) => {
@@ -108,14 +121,27 @@ async function runJob(id: string) {
             // hook style, length / opener and ending from what has worked.
             const fresh = Boolean(source.publishedAt) && Date.now() - Date.parse(source.publishedAt!) < FRESH_ARTICLE_HOURS * 3_600_000;
             const experiment = await nextExperiment(source.format === "editorial" ? "editorial" : source.format, {sourceType: source.type, fresh});
-            const {plan: written, provider, failures} = await generateVideoPlan(source, experiment);
+            const {plan: written, provider, failures} = await generateVideoPlan(source, experiment, {drafts: options.reviewGate ? GATED_DRAFTS : 2});
             if (failures.length) console.warn(`[content-video] ${id} plan fallbacks: ${failures.join("; ")}`);
             // Shots of an animal we have filmed play our own clips: no AI clip is ordered for them.
             const plan = applyFootage(written, source);
+            const held = options.reviewGate ? heldBackReason(plan.review ?? null, GATED_DRAFTS) : null;
+            if (held) {
+                // The script is kept so the admin page shows what the audience said; the page is not tried again by the autopilot.
+                await save({plan, llm_provider: provider, status: "failed", progress: null, error: held});
+                console.info(`[content-video] ${id} ${held}`);
+                return;
+            }
             await save({plan, llm_provider: provider, status: "generating", progress: "Script ready"});
         }
         if (row.status === "generating") {
             await generateClips(row, source, save);
+            const short = options.reviewGate ? clipShortfall(row.plan as VideoPlan, row.clips) : null;
+            if (short) {
+                await save({status: "failed", progress: null, error: short});
+                console.info(`[content-video] ${id} ${short}`);
+                return;
+            }
             await save({status: "rendering"});
         }
         if (row.status === "rendering") {
@@ -256,6 +282,21 @@ export async function generateClips(row: ContentVideoRow, source: VideoSource, s
                     const result = await pollImage(authorization, clip.imageStatusUrl);
                     if (result.status === "failed") record(index, {status: "failed", error: result.error ?? "image failed"});
                     if (result.status === "completed" && result.imageUrl) {
+                        // The right animal before it is animated: a wrong one is drawn once more, then the scene keeps its real photo.
+                        const verdict = scene.subject ? await keyframeShows(result.imageUrl, scene.subject, source.images.find((image) => image.index === scene.image)?.src ?? null) : null;
+                        if (verdict && !verdict.ok) {
+                            if (!clip.redrawn && scene.keyframePrompt) {
+                                const payload = keyframePayload(redrawPrompt(scene.keyframePrompt, scene.subject!, verdict.seen));
+                                const usd = Math.max((await estimateUSD(authorization, textToImagePath(), payload)) ?? 0, 0.01);
+                                if (!(await afford(index, usd))) continue;
+                                await save({progress: `Scene ${index + 1} showed ${verdict.seen || "the wrong animal"}: drawing it again`});
+                                const submitted = await submit(authorization, textToImagePath(), payload, `${clip.idempotencyKey}-image-2`);
+                                record(index, {imageStatusUrl: submitted.statusUrl, redrawn: true, usd: clip.usd + usd});
+                            } else {
+                                record(index, {status: "failed", imageUrl: undefined, error: `The drawn frame showed ${verdict.seen || "the wrong animal"}, not a ${scene.subject}`});
+                            }
+                            continue;
+                        }
                         record(index, {imageUrl: result.imageUrl});
                         await animate(index, result.imageUrl);
                     }

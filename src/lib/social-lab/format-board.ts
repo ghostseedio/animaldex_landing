@@ -32,6 +32,9 @@ export const FORMATS = {
     lesson: {label: "What the animal teaches you", family: "video", strategy: "transplant", what: "Self-improvement's dark & gold quote video, with one real animal behaviour as the lesson."},
     guess: {label: "Guess the animal", family: "video", strategy: "transplant", what: "Quiz: a close-up you can't place, clues getting easier, then the reveal with its stat card."},
     scan: {label: "Scan reveal (our footage)", family: "video", strategy: "out_execute", what: "Real footage of the app scanning a real animal, the result card, a fact and its lesson."},
+    you_vs: {label: "You vs the animal", family: "video", strategy: "transplant", what: "Could you beat it? Three rounds shown as events, one you really win, then the score."},
+    would_you_rather: {label: "Would you rather", family: "video", strategy: "transplant", what: "Two animals' powers in action, each one's real catch, then \"A or B?\"."},
+    pokemon: {label: "Real-life Pokémon", family: "video", strategy: "transplant", what: "A real animal, two design clues, the Pokémon it matches, a fact that beats the game."},
     app_story: {label: "App species story", family: "video", strategy: "out_execute", what: "The app's own story video of one species."},
     real_footage: {label: "Real footage (uploaded)", family: "video", strategy: "transplant", what: "Phone or camera footage edited by hand and uploaded."},
     carousel_page: {label: "Page carousel", family: "carousel", strategy: "out_execute", what: "A page told in 5–8 slides."},
@@ -56,7 +59,10 @@ export const SOURCE_FORMAT: Record<string, FormatKey> = {
     blog: "page_story",
     lesson: "lesson",
     guess: "guess",
-    scan: "scan"
+    scan: "scan",
+    you_vs: "you_vs",
+    would_you_rather: "would_you_rather",
+    pokemon: "pokemon"
 };
 
 /** Which format a post is, from what it was made of. Null when we cannot tell. */

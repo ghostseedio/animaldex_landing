@@ -1,4 +1,4 @@
-import {API_PROVIDERS, classifyProviderReply, monthStartUTC, sumAnthropicCostReport, sumOpenAICosts, type ApiHealth, type ApiProvider} from "@/lib/api-status-core";
+import {API_PROVIDERS, classifyProviderReply, higgsfieldCreditFailure, monthStartUTC, sumAnthropicCostReport, sumOpenAICosts, type ApiHealth, type ApiProvider} from "@/lib/api-status-core";
 import {higgsfieldAuthorization, keyframePayload, textToImagePath} from "@/lib/content-video/higgsfield";
 import {listContentVideos, spentTodayUSD} from "@/lib/content-video/store";
 
@@ -128,13 +128,9 @@ async function higgsfield(now: Date): Promise<ApiStatus> {
         signal: AbortSignal.timeout(TIMEOUT_MS),
         cache: "no-store"
     }));
-    // The estimate is free and does not touch the balance; a clip that failed for
-    // lack of credit in the last three days is the only sign of an empty account.
-    const since = new Date(now.getTime() - 3 * 86_400_000).toISOString();
-    const creditFailure = rows
-        .filter((row) => row.updated_at >= since)
-        .flatMap((row) => row.clips.map((clip) => clip.error ?? ""))
-        .find((error) => classifyProviderReply(400, error) === "no_credit");
+    // The estimate is free and does not touch the balance; the latest video's
+    // clips failing for lack of credit is the only sign of an empty account.
+    const creditFailure = higgsfieldCreditFailure(rows, now);
     if (result.health === "ok" && creditFailure) return {provider: "higgsfield", health: "no_credit", message: `A recent clip failed: ${creditFailure.slice(0, 200)}`, latencyMs: result.latencyMs, ...ledger};
     return {provider: "higgsfield", health: result.health, message: message(result), latencyMs: result.latencyMs, ...ledger};
 }

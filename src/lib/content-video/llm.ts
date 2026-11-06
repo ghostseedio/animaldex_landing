@@ -19,6 +19,9 @@ import {
     buildGuessUserPrompt,
     buildScanUserPrompt,
     buildLessonUserPrompt,
+    buildPokemonUserPrompt,
+    buildWouldYouRatherUserPrompt,
+    buildYouVsUserPrompt,
     GUESS_JSON_SCHEMA,
     GUESS_SYSTEM_PROMPT,
     LESSON_JSON_SCHEMA,
@@ -29,7 +32,16 @@ import {
     normalizeCreaturePlan,
     normalizeGuessPlan,
     normalizeScanPlan,
-    normalizeLessonPlan
+    normalizeLessonPlan,
+    normalizePokemonPlan,
+    normalizeWouldYouRatherPlan,
+    normalizeYouVsPlan,
+    POKEMON_JSON_SCHEMA,
+    POKEMON_SYSTEM_PROMPT,
+    WOULD_YOU_RATHER_JSON_SCHEMA,
+    WOULD_YOU_RATHER_SYSTEM_PROMPT,
+    YOU_VS_JSON_SCHEMA,
+    YOU_VS_SYSTEM_PROMPT
 } from "@/lib/content-video/formats";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
@@ -182,6 +194,15 @@ function plannerFor(source: VideoSource, experiment: Experiment | null): {prompt
     if (source.format === "guess") {
         return {prompt: {system: GUESS_SYSTEM_PROMPT, schema: GUESS_JSON_SCHEMA}, user: buildGuessUserPrompt(source) + brief, normalize: (value) => normalizeGuessPlan(value, source, experiment)};
     }
+    if (source.format === "you_vs") {
+        return {prompt: {system: YOU_VS_SYSTEM_PROMPT, schema: YOU_VS_JSON_SCHEMA}, user: buildYouVsUserPrompt(source) + brief, normalize: (value) => normalizeYouVsPlan(value, source, experiment)};
+    }
+    if (source.format === "would_you_rather") {
+        return {prompt: {system: WOULD_YOU_RATHER_SYSTEM_PROMPT, schema: WOULD_YOU_RATHER_JSON_SCHEMA}, user: buildWouldYouRatherUserPrompt(source) + brief, normalize: (value) => normalizeWouldYouRatherPlan(value, source, experiment)};
+    }
+    if (source.format === "pokemon") {
+        return {prompt: {system: POKEMON_SYSTEM_PROMPT, schema: POKEMON_JSON_SCHEMA}, user: buildPokemonUserPrompt(source) + brief, normalize: (value) => normalizePokemonPlan(value, source, experiment)};
+    }
     if (source.format === "lesson") {
         return {prompt: {system: LESSON_SYSTEM_PROMPT, schema: LESSON_JSON_SCHEMA}, user: buildLessonUserPrompt(source) + brief, normalize: (value) => normalizeLessonPlan(value, source, experiment)};
     }
@@ -201,23 +222,36 @@ async function reviewPlan(plan: VideoPlan, source: VideoSource, experiment: Expe
     }
 }
 
-/** Writes the plan; with an experiment, its arms steer the prompt and are recorded on the plan for the hook lab. */
-export async function generateVideoPlan(source: VideoSource, experiment: Experiment | null = null): Promise<GeneratedPlan> {
+/**
+ * Writes the plan; with an experiment, its arms steer the prompt and are recorded on the plan for the hook lab.
+ * A draft the test audience rejects is rewritten with its notes, up to `drafts` scripts in all; the best-reviewed one is kept.
+ */
+export async function generateVideoPlan(source: VideoSource, experiment: Experiment | null = null, {drafts = 2}: {drafts?: number} = {}): Promise<GeneratedPlan> {
     const first = await writePlan(source, experiment);
     const review = await reviewPlan(first.plan, source, experiment);
     if (!review) return first;
-    if (review.passes) return {...first, plan: {...first.plan, review}};
-    // One rewrite with the audience's notes; keep whichever script reviews better.
-    try {
-        const second = await writePlan(source, experiment, rewriteBrief(review));
-        const again = await reviewPlan(second.plan, source, experiment);
-        const firstDraft = {passes: review.passes, jobScore: jobScore(review), fiveYearOld: review.fiveYearOld.passes};
-        if (again && betterReview(again, review) === again) return {...second, failures: [...first.failures, ...second.failures], plan: {...second.plan, review: {...again, rewritten: true, firstDraft}}};
-        return {...first, plan: {...first.plan, review}};
-    } catch (error) {
-        console.warn(`[content-video] rewrite failed, keeping the first draft: ${error instanceof Error ? error.message : error}`);
-        return {...first, plan: {...first.plan, review}};
+    let best: GeneratedPlan = {...first, plan: {...first.plan, review}};
+    let bestReview = review;
+    let latest = review;
+    const failures = [...first.failures];
+    for (let draft = 2; draft <= drafts && !bestReview.passes; draft += 1) {
+        try {
+            const next = await writePlan(source, experiment, rewriteBrief(latest));
+            failures.push(...next.failures);
+            const again = await reviewPlan(next.plan, source, experiment);
+            if (!again) break;
+            latest = again;
+            if (betterReview(again, bestReview) === again) {
+                const firstDraft = {passes: review.passes, jobScore: jobScore(review), fiveYearOld: review.fiveYearOld.passes};
+                best = {...next, plan: {...next.plan, review: {...again, rewritten: true, firstDraft}}};
+                bestReview = again;
+            }
+        } catch (error) {
+            console.warn(`[content-video] rewrite failed, keeping the best draft so far: ${error instanceof Error ? error.message : error}`);
+            break;
+        }
     }
+    return {...best, failures};
 }
 
 async function writePlan(source: VideoSource, experiment: Experiment | null, feedback = ""): Promise<GeneratedPlan> {

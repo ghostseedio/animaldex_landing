@@ -72,7 +72,7 @@ test("a paused kind's cap is 0, whatever SOCIAL_DAILY_CAPS says", () => {
     assert.equal(caps.x.video, 0);
     assert.equal(caps.x.text, 0);
     assert.equal(caps.instagram.carousel, 0);
-    assert.equal(caps.instagram.video, 4);
+    assert.equal(caps.instagram.video, 2);
     assert.equal(caps.tiktok.video, 7);
     // With carousels and text paused everywhere but TikTok, the light pick is a TikTok carousel.
     assert.equal(pickLightKind(["tiktok", "instagram", "x", "facebook"], [], caps, Date.now()), "carousel");

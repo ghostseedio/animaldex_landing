@@ -12,6 +12,13 @@ import type {ShareCopy} from "@/lib/social/share-copy";
 // then a 10-second photoreal clip of the imagined animal moving through its
 // habitat under a documentary voiceover. Both come back as an ordinary VideoPlan.
 
+/**
+ * Text-to-image models mix up lookalikes (a "honey badger" came back with an
+ * anteater's snout): every drawn first frame spells out what tells the species
+ * apart. The writer sees the artwork, so it can say what the animal looks like.
+ */
+const LOOKS_RULE = `  Every keyframe_prompt names the species AND spells out the 2–3 features that tell it apart from its lookalikes, as the photos show them (a honey badger: "stocky and short-legged, black body under a broad silver-white cape from the crown to the tail, a short blunt muzzle, small eyes").`;
+
 const SHARE_RULES = `Share copy (share), from the same facts:
 - youtube.title: max 100 chars, the hook in the first 40, then the search phrase people type (e.g. "Tiger vs Grizzly Bear: Who Would Win?"). No hashtags, never "AnimalDex".
 - youtube.description: 3–5 short lines, then "Full breakdown: <url>", then "Subscribe @animaldexapp for more.", then 4–5 hashtags starting "#AnimalDex #Shorts".
@@ -397,6 +404,7 @@ WORDS: deep and slow, about 2 words a second. Narration across the five shots: 3
 - hook_text: on screen over shot 1, 3–7 words, the whole hook on its own ("THE LION DOESN'T CHASE EVERYTHING").
 - shots[i].overlay: on screen, gold, 2–6 words: "" for shot 1 (the hook_text is there), the rule for shot 3, the principle for shot 4, the motto for shot 5; shot 2 may be "".
 - shots[i].keyframe_prompt: the first frame, a photoreal description of exactly this species doing exactly this (pose, angle, lens, the light falling on it). Never other animals, never people, never text.
+${LOOKS_RULE}
 - shots[i].motion_prompt: one sentence: a slow camera move first ("Slow push-in…", "Slow orbit…"), then the animal's one real movement.
 - cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise the JOB's ask: share → "Send this to someone who needs it." save → "Save this for the day you need it." Never "follow".
 - music_mood: "noir" (the dark bed made for this format).
@@ -471,6 +479,7 @@ export function normalizeLessonPlan(value: unknown, source: VideoSource, experim
             focusX: 0.5,
             motionPrompt: `${shot.motion} ${LESSON_MOTION_SUFFIX}`,
             keyframePrompt: `${shot.keyframe} ${LESSON_KEYFRAME_SUFFIX}`,
+            subject: facts.animal.name,
             species: facts.animal.slug,
             // The principle is the quote people screenshot: let it breathe.
             ...(index === 3 ? {minSeconds: 3.6} : {})
@@ -513,6 +522,7 @@ SHOTS (exactly 6, in order):
 
 RULES: every clue and fact comes from the page material below or well-established biology; never invent a number. A clue never names the animal or a giveaway word in its name ("snow" for a snow leopard). The voice is a fun quiz host: quick, warm, words a 10-year-old knows.
 - shots[i].keyframe_prompt (shots 1, 2 and 5; "" for the others): the photoreal first frame of exactly this species, with the framing above (shot 1 so close the whole animal is not visible; shot 2 a silhouette). No other animals, no people, no text.
+${LOOKS_RULE}
 - shots[i].motion_prompt (shots 1, 2 and 5; "" for the others): one sentence, the camera move first (shot 1 a very slow pull-back that still never shows the whole animal), then the animal's one real movement.
 - cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise "How many clues did you need? Comment it." / "How many clues?".
 - music_mood: "curious" or "mystery".
@@ -569,7 +579,8 @@ export function normalizeGuessPlan(value: unknown, source: VideoSource, experime
         image: facts.animal.image,
         focusX: 0.5,
         motionPrompt: `${shots[index].motion} ${GUESS_MOTION_SUFFIX}`,
-        keyframePrompt: `${shots[index].keyframe} ${GUESS_KEYFRAME_SUFFIX}`
+        keyframePrompt: `${shots[index].keyframe} ${GUESS_KEYFRAME_SUFFIX}`,
+        subject: facts.animal.name
     });
     const loops = experiment?.ending === "loop";
     const scenes: PlanScene[] = [
@@ -696,6 +707,313 @@ export function normalizeScanPlan(value: unknown, source: VideoSource, experimen
         ctaNarration: "",
         ctaText: loops ? "" : "What should I scan next?",
         musicMood: isMusicMood(record.music_mood) && record.music_mood !== "noir" ? record.music_mood : "curious",
+        share
+    };
+}
+
+// ---------------------------------------------------------------- you vs
+
+// "Could you beat a gorilla?": the viewer against one real animal, three
+// rounds, each stat shown as something that happens to them, one round they
+// really win, then the score. Research (Nov 2026): "100 men vs 1 gorilla"
+// (288M on X), Sambucha's survival Shorts (25M), "bite force vs leg" (19.7M,
+// AI): the viewer is the fighter and the ending is argued over.
+
+export const YOU_VS_SYSTEM_PROMPT = `You direct AnimalDex's "You vs the animal" shorts: could YOU beat this animal? A vertical 16–24 second video in six shots: three rounds between the viewer and one real animal, each shown as a physical event, then the verdict and a question that splits the comments.
+
+WHY IT WORKS: the viewer is the fighter. Every stat becomes something that happens to them ("It runs 60 km/h. It catches you in four seconds."). One round is one a human really wins (running for hours in the heat, throwing, planning ahead, using tools, climbing a ladder, staying awake), so the ending is argued over.
+
+THE TRUTH RULE: every number and claim is from the record below or well-established biology; never invent a number. Without a sure number, compare without one ("It outweighs three of you."). For the human side: an average adult sprints about 20–25 km/h and weighs about 60–80 kg; trained people can run 40+ km in a day in the heat, which almost no animal can.
+
+SHOTS (exactly 6, in order):
+(1) HOOK, 0–3 s: narration "Could you beat a <animal>? Three rounds." or sharper, at most 10 words, the animal named in the first five. hook_text: 3–6 words ("YOU VS A GORILLA"). Shot: the animal at eye level, staring into the lens, close, from the viewer's point of view.
+(2) ROUND 1: the animal's strongest edge as an event, second person. overlay "ROUND 1: <SKILL>" ("ROUND 1: STRENGTH"). Shot: the animal doing it, coming toward the camera.
+(3) ROUND 2: a different edge. overlay "ROUND 2: <SKILL>".
+(4) ROUND 3: the round YOU win, said plainly and truly. overlay "ROUND 3: <SKILL>". Shot: the animal at the limit of that skill (panting in the heat, looking up at something out of reach).
+(5) VERDICT: the score and who wins overall, honestly ("Two rounds to one. The gorilla wins, but only up close."). overlay "<ANIMAL> WINS 2–1" or "YOU WIN 2–1". (The real artwork and its stat card are shown; no prompts needed.)
+(6) ASK: a question that makes people pick a side ("Which round would you take? Comment it."). overlay: 2–5 words. (Replays the opening shot so the video loops.)
+
+WORDS: a fun, confident host; words a 10-year-old knows; each line at most 18 words; 50–70 words in total. No gore: an event shows power (a charge, a lift, a sprint), never an injury, never blood, never a person getting hurt.
+- shots[i].keyframe_prompt (shots 1–4; "" for 5 and 6): the photoreal first frame of exactly this species doing exactly this, from the viewer's point of view (first-person camera, the animal facing it). Never people or human body parts, never text.
+${LOOKS_RULE}
+- shots[i].motion_prompt (shots 1–4; "" for 5 and 6): one sentence, the camera move first, then the animal's one real movement.
+- cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise "Could you take it? Comment your round." / "Could you take it?".
+- music_mood: "intense" or "epic".
+
+${SHARE_RULES}
+Captions for this format: the challenge first ("Could you beat a gorilla? 3 rounds 🥊"), then a question asking which round they would win. The shots are AI-imagined: say so once, naturally.
+
+Return only the JSON object.`;
+
+export const YOU_VS_JSON_SCHEMA = LESSON_JSON_SCHEMA;
+
+export function buildYouVsUserPrompt(source: VideoSource) {
+    const facts = source.youVs!;
+    return [
+        `The animal: ${facts.animal.name}`,
+        `Page: ${source.url}`,
+        "Its side of the AnimalDex battle stats:",
+        ...facts.stats.map((stat) => `- ${stat.label}: ${stat.value}`),
+        "Facts from its species page:",
+        ...facts.facts.map((fact) => `- ${fact}`),
+        facts.lesson ? `Its AnimalDex lesson: ${facts.lesson}` : null
+    ].filter((line) => line !== null).join("\n");
+}
+
+const POV_KEYFRAME_SUFFIX =
+    "Photorealistic wildlife photograph from a first-person point of view at human eye level, the animal facing the camera, natural light, tack-sharp detail, dramatic but real; species-accurate. Vertical 9:16. No people, no hands, no text, no letters, no logos, no blood.";
+const POV_MOTION_SUFFIX =
+    "Powerful, believable animal motion with real weight toward the camera; a handheld first-person camera. Keep the species, colours and markings exactly as in the frame. No people, no blood, no text.";
+const YOU_VS_SHOTS = 6;
+
+/** A you-vs plan: the stare, three rounds (AI clips), the verdict on the real artwork with its stat card, the stare again. */
+export function normalizeYouVsPlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
+    const facts = source.youVs;
+    const record = value as Record<string, unknown> | null;
+    if (!facts || !record || typeof record !== "object" || !Array.isArray(record.shots)) return null;
+    const share = parseShare(record.share);
+    const shots = (record.shots as Array<Record<string, unknown>>).slice(0, YOU_VS_SHOTS).map((shot) => ({
+        narration: clean(shot?.narration, 200),
+        overlay: clean(shot?.overlay, 40),
+        keyframe: clean(shot?.keyframe_prompt, 1200),
+        motion: clean(shot?.motion_prompt, 500)
+    }));
+    if (!share || shots.length < YOU_VS_SHOTS || shots.some((shot) => !shot.narration)) return null;
+    if ([0, 1, 2, 3].some((index) => !shots[index].keyframe || !shots[index].motion)) return null;
+    const loops = experiment?.ending === "loop";
+    const clip = (index: number): PlanScene => ({
+        narration: shots[index].narration,
+        overlay: index === 0 ? "" : shots[index].overlay || `ROUND ${index}`,
+        visual: "ai_clip",
+        image: facts.animal.image,
+        focusX: 0.5,
+        motionPrompt: `${shots[index].motion} ${POV_MOTION_SUFFIX}`,
+        keyframePrompt: `${shots[index].keyframe} ${POV_KEYFRAME_SUFFIX}`,
+        subject: facts.animal.name
+    });
+    const scenes: PlanScene[] = [
+        clip(0),
+        clip(1),
+        clip(2),
+        clip(3),
+        {narration: shots[4].narration, overlay: shots[4].overlay || `${facts.animal.name} wins`, overlayStyle: "winner", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", species: facts.animal.slug, minSeconds: 3},
+        {narration: shots[5].narration, overlay: shots[5].overlay, visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", reuseClip: 0, minSeconds: 1.8}
+    ];
+    return {
+        format: "you_vs",
+        ending: loops ? "loop" : "cta_card",
+        title: clean(record.title, 120) || `Could you beat a ${facts.animal.name}?`,
+        hookText: clean(record.hook_text, 50) || `YOU VS A ${facts.animal.name.toUpperCase()}`,
+        scenes,
+        ctaNarration: loops ? "" : clean(record.cta_narration, 140) || "Could you take it? Comment your round.",
+        ctaText: loops ? "" : clean(record.cta_text, 40) || "Could you take it?",
+        musicMood: isMusicMood(record.music_mood) && record.music_mood !== "noir" ? record.music_mood : "intense",
+        share
+    };
+}
+
+// ------------------------------------------------------- would you rather
+
+// "Would you rather have the bite of a crocodile or the speed of a cheetah?":
+// two animals of a comparison page, each power in action, each one's real
+// catch, then "A or B?". Research (Nov 2026): "Shark or Chimp" 13.9M with 22K
+// comments, This or That 60M; a fair, hard choice is argued over.
+
+export const WOULD_YOU_RATHER_SYSTEM_PROMPT = `You direct AnimalDex's "Would you rather" shorts: two real animals, one superpower each, and the viewer has to pick. A vertical 16–24 second video in six shots that ends with everyone arguing in the comments.
+
+WHY IT WORKS: a hard, fair choice. Each power sounds amazing, then each has a real catch, so neither answer is obvious.
+
+THE TRUTH RULE: both powers and both catches are real biology, from the record below or well-established science; never invent a number. A catch is a real cost of that power (a cheetah is spent after about 30 seconds of sprinting and often loses its meal to lions).
+
+SHOTS (exactly 6, in order):
+(1) THE QUESTION: "Would you rather have the <power A> of a <animal A>, or the <power B> of a <animal B>?", at most 22 words. hook_text: 2–5 words ("WOULD YOU RATHER…"). (Shown on the two animals' card; no prompts needed.)
+(2) POWER A in action: what it would let YOU do, second person, with a vivid true number when there is one. overlay: the power in 2–4 words ("A CRUSHING BITE"). Shot: animal A using it.
+(3) POWER B in action, the same way. overlay: power B in 2–4 words. Shot: animal B using it.
+(4) THE CATCH of power A: one true downside, said as what it would cost you. overlay "THE CATCH". (Shows animal A's artwork.)
+(5) THE CATCH of power B, the same way. overlay "THE CATCH". (Shows animal B's artwork.)
+(6) ASK: "<animal A> or <animal B>? Comment your pick." overlay: the two names with "OR". (Back to the question card, so it loops.)
+
+WORDS: quick and playful; words a 10-year-old knows; each line at most 20 words; 55–75 words in total.
+- shots[i].keyframe_prompt (shots 2 and 3; "" for the others): the photoreal first frame of exactly that species using exactly that power, dynamic and close. Never people, never text.
+${LOOKS_RULE}
+- shots[i].motion_prompt (shots 2 and 3; "" for the others): one sentence, the camera move first, then the animal's one real movement.
+- cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise "Pick one in the comments." / "Which one?".
+- music_mood: "playful" or "curious".
+
+${SHARE_RULES}
+Captions for this format: the question itself, then "Comment A or B 👇". The action shots are AI-imagined: say so once, naturally.
+
+Return only the JSON object.`;
+
+export const WOULD_YOU_RATHER_JSON_SCHEMA = LESSON_JSON_SCHEMA;
+
+export function buildWouldYouRatherUserPrompt(source: VideoSource) {
+    const facts = source.wouldYouRather!;
+    const power = (name: string, entry: {name: string; basis: string} | null) => entry ? `${name}'s AnimalDex Power: ${entry.name} — ${entry.basis}` : `${name} has no AnimalDex Power yet: pick its signature ability from the stats and facts.`;
+    return [
+        `Animal A: ${facts.a.name}`,
+        `Animal B: ${facts.b.name}`,
+        `Page: ${source.url}`,
+        power(facts.a.name, facts.powers.a),
+        power(facts.b.name, facts.powers.b),
+        "Battle stats (A | B):",
+        ...facts.stats.map((stat) => `- ${stat.label}: ${stat.a} | ${stat.b}`),
+        `Facts about ${facts.a.name}:`,
+        ...facts.facts.a.map((fact) => `- ${fact}`),
+        `Facts about ${facts.b.name}:`,
+        ...facts.facts.b.map((fact) => `- ${fact}`)
+    ].join("\n");
+}
+
+const WOULD_YOU_RATHER_SHOTS = 6;
+
+/** A would-you-rather plan: the question over power B's clip, each power (AI clips), each catch on the real artwork, the two animals' card for the pick. */
+export function normalizeWouldYouRatherPlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
+    const facts = source.wouldYouRather;
+    const record = value as Record<string, unknown> | null;
+    if (!facts || !record || typeof record !== "object" || !Array.isArray(record.shots)) return null;
+    const share = parseShare(record.share);
+    const shots = (record.shots as Array<Record<string, unknown>>).slice(0, WOULD_YOU_RATHER_SHOTS).map((shot) => ({
+        narration: clean(shot?.narration, 220),
+        overlay: clean(shot?.overlay, 40),
+        keyframe: clean(shot?.keyframe_prompt, 1200),
+        motion: clean(shot?.motion_prompt, 500)
+    }));
+    if (!share || shots.length < WOULD_YOU_RATHER_SHOTS || shots.some((shot) => !shot.narration)) return null;
+    if ([1, 2].some((index) => !shots[index].keyframe || !shots[index].motion)) return null;
+    const loops = experiment?.ending === "loop";
+    const card = (narration: string, overlay: string, minSeconds: number): PlanScene => ({
+        narration, overlay, visual: "card", image: facts.a.image, focusX: 0.5, motionPrompt: "", minSeconds,
+        card: {kind: "pair", left: facts.a, right: facts.b, title: "or"}
+    });
+    const power = (index: number, side: "a" | "b"): PlanScene => ({
+        narration: shots[index].narration,
+        overlay: shots[index].overlay,
+        visual: "ai_clip",
+        image: facts[side].image,
+        focusX: 0.5,
+        motionPrompt: `${shots[index].motion} ${GUESS_MOTION_SUFFIX}`,
+        keyframePrompt: `${shots[index].keyframe} ${GUESS_KEYFRAME_SUFFIX}`,
+        subject: facts[side].name
+    });
+    // No stat card on a catch: over the artwork it covers the animal's face, and the catch is the point.
+    const catchScene = (index: number, side: "a" | "b"): PlanScene => ({
+        narration: shots[index].narration, overlay: shots[index].overlay || "THE CATCH", visual: "image", image: facts[side].image, focusX: 0.5, motionPrompt: ""
+    });
+    return {
+        format: "would_you_rather",
+        ending: loops ? "loop" : "cta_card",
+        title: clean(record.title, 120) || `${facts.a.name} or ${facts.b.name}: would you rather?`,
+        hookText: clean(record.hook_text, 50) || "WOULD YOU RATHER…",
+        // The question opens on power B in action (frame 0 is a moving animal, not a card); the card comes back for the pick.
+        scenes: [
+            {narration: shots[0].narration, overlay: "", visual: "image", image: facts.b.image, focusX: 0.5, motionPrompt: "", reuseClip: 2, minSeconds: 3},
+            power(1, "a"),
+            power(2, "b"),
+            catchScene(3, "a"),
+            catchScene(4, "b"),
+            card(shots[5].narration, shots[5].overlay || `${facts.a.name} or ${facts.b.name}?`, 2.2)
+        ],
+        ctaNarration: loops ? "" : clean(record.cta_narration, 140) || "Pick one in the comments.",
+        ctaText: loops ? "" : clean(record.cta_text, 40) || "Which one?",
+        musicMood: isMusicMood(record.music_mood) && record.music_mood !== "noir" ? record.music_mood : "playful",
+        share
+    };
+}
+
+// --------------------------------------------------------------- pokemon
+
+// "This real animal is a Pokémon. Name it.": the real animal (never Pokémon
+// artwork), two clues from the design match on /pokemon-animals, the reveal,
+// then a true fact that beats the game. Research (Nov 2026): real-animal
+// Pokémon Shorts run 3.6–15.9M; gaming fans cross over into nature.
+
+export const POKEMON_SYSTEM_PROMPT = `You direct AnimalDex's "real animals that look like Pokémon" shorts. A vertical 16–22 second quiz: the viewer sees a REAL animal, guesses which Pokémon it matches, then gets the answer and one true fact about the real animal that is wilder than the game.
+
+No Pokémon artwork is ever shown and no shot depicts a Pokémon, a cartoon or a game: every shot is the real animal, photoreal. The Pokémon is only ever named in words.
+
+SHOTS (exactly 6, in order):
+(1) HOOK: the real animal, close and striking. narration: the challenge, at most 10 words ("This real animal is a Pokémon. Name it."). hook_text: 3–6 words ("NAME THE POKÉMON").
+(2) CLUE 1: a design cue from the match note below, said about the real animal. overlay "CLUE 1". Shot: the animal showing that feature.
+(3) CLUE 2: an easier cue. overlay "CLUE 2". (Replays shot 2.)
+(4) REVEAL: "It's <Pokémon>! The real one is the <animal>." — nothing else. (The animal's artwork and stat card are shown; no prompts needed.)
+(5) PAYOFF: the most surprising true fact about the real animal, 14–24 words, ideally one that beats the game ("Squirtle sprays water. A real green sea turtle can sleep underwater for hours.").
+(6) LOOP: "Comment the next Pokémon I should find." overlay "WHICH POKÉMON NEXT?". (Replays the opening shot.)
+
+RULES: facts from the record below or well-established biology; never invent a number; say about the Pokémon only what the match note says. A clue never names the Pokémon or a giveaway part of its name. Fun and quick, words a 10-year-old knows.
+- shots[i].keyframe_prompt (shots 1, 2 and 5; "" for the others): the photoreal first frame of exactly this real species (shot 1 close on its face, shot 2 showing the feature of the clue). Never cartoons, game art or toys, never people, never text.
+${LOOKS_RULE}
+- shots[i].motion_prompt (shots 1, 2 and 5; "" for the others): one sentence, the camera move first, then the animal's one real movement.
+- cta_narration / cta_text: when THIS ITEM'S EXPERIMENT says the ending is a loop, both "". Otherwise "Comment the next Pokémon to find." / "Which Pokémon next?".
+- music_mood: "playful" or "curious".
+
+${SHARE_RULES}
+Captions for this format never name the Pokémon (the reveal is the point): "Which Pokémon is this real animal? 👀"; YouTube's title is the challenge, never the answer.
+
+Return only the JSON object.`;
+
+export const POKEMON_JSON_SCHEMA = LESSON_JSON_SCHEMA;
+
+export function buildPokemonUserPrompt(source: VideoSource) {
+    const facts = source.pokemon!;
+    return [
+        `The Pokémon (never named before the reveal): ${facts.pokemon}`,
+        `The real animal: ${facts.animal.name}`,
+        `Page: ${source.url}`,
+        `Why they match: ${facts.note}`,
+        "Facts about the real animal:",
+        ...facts.facts.map((fact) => `- ${fact}`),
+        facts.lesson ? `Its AnimalDex lesson: ${facts.lesson}` : null
+    ].filter((line) => line !== null).join("\n");
+}
+
+const POKEMON_SHOTS = 6;
+
+/** A Pokémon plan: the real animal, two clues, the reveal on its artwork with its stat card, the payoff, the opening again. */
+export function normalizePokemonPlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
+    const facts = source.pokemon;
+    const record = value as Record<string, unknown> | null;
+    if (!facts || !record || typeof record !== "object" || !Array.isArray(record.shots)) return null;
+    const share = parseShare(record.share);
+    const shots = (record.shots as Array<Record<string, unknown>>).slice(0, POKEMON_SHOTS).map((shot) => ({
+        narration: clean(shot?.narration, 200),
+        overlay: clean(shot?.overlay, 40),
+        keyframe: clean(shot?.keyframe_prompt, 1200),
+        motion: clean(shot?.motion_prompt, 500)
+    }));
+    if (!share || shots.length < POKEMON_SHOTS || shots.some((shot) => !shot.narration)) return null;
+    if ([0, 1, 4].some((index) => !shots[index].keyframe || !shots[index].motion)) return null;
+    // A clue that names the Pokémon gives the answer away.
+    const nameWords = facts.pokemon.toLowerCase().split(/[\s-]+/).filter((word) => word.length > 2);
+    const givesAway = (text: string) => nameWords.some((word) => text.toLowerCase().includes(word));
+    if ([0, 1, 2].some((index) => givesAway(shots[index].narration) || givesAway(shots[index].overlay))) return null;
+    const clip = (index: number): PlanScene => ({
+        narration: shots[index].narration,
+        overlay: index === 0 ? "" : shots[index].overlay,
+        visual: "ai_clip",
+        image: facts.animal.image,
+        focusX: 0.5,
+        motionPrompt: `${shots[index].motion} ${GUESS_MOTION_SUFFIX}`,
+        keyframePrompt: `${shots[index].keyframe} ${GUESS_KEYFRAME_SUFFIX}`,
+        subject: facts.animal.name
+    });
+    const loops = experiment?.ending === "loop";
+    return {
+        format: "pokemon",
+        ending: loops ? "loop" : "cta_card",
+        title: clean(record.title, 120) || "Which Pokémon is this real animal?",
+        hookText: clean(record.hook_text, 50) || "NAME THE POKÉMON",
+        scenes: [
+            clip(0),
+            {...clip(1), overlay: shots[1].overlay || "CLUE 1"},
+            {narration: shots[2].narration, overlay: shots[2].overlay || "CLUE 2", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", reuseClip: 1},
+            {narration: shots[3].narration, overlay: `It's ${facts.pokemon}`, overlayStyle: "winner", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", species: facts.animal.slug, minSeconds: 3},
+            {...clip(4), overlay: ""},
+            {narration: shots[5].narration, overlay: shots[5].overlay || "WHICH POKÉMON NEXT?", visual: "image", image: facts.animal.image, focusX: 0.5, motionPrompt: "", reuseClip: 0, minSeconds: 1.8}
+        ],
+        ctaNarration: loops ? "" : clean(record.cta_narration, 140) || "Comment the next Pokémon to find.",
+        ctaText: loops ? "" : clean(record.cta_text, 40) || "Which Pokémon next?",
+        musicMood: isMusicMood(record.music_mood) && record.music_mood !== "noir" ? record.music_mood : "playful",
         share
     };
 }

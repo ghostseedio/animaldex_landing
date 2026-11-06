@@ -200,11 +200,14 @@ export function chanceBest(stats: ArmStats[], draws = 400, random: Random = Math
     return Object.fromEntries(Object.entries(wins).map(([arm, count]) => [arm, count / draws]));
 }
 
+/** Every video kind: all of them learn which job and which ending work from each other. */
+const VIDEO_KINDS = (Object.keys(KIND_DIMENSIONS) as ExperimentKind[]).filter((kind) => kind !== "carousel" && kind !== "text");
+
 /** Kinds that share what they learn about a dimension: a hook style that works in a battle informs an editorial too. */
 export function learningKinds(kind: ExperimentKind, dimension: Dimension): readonly ExperimentKind[] {
     if (dimension === "hookStyle") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature"];
-    if (dimension === "intent") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature", "lesson", "guess", "scan"];
-    if (dimension === "ending") return ["editorial", "battle", "creature", "lesson", "guess", "scan"];
+    if (dimension === "intent") return kind === "carousel" ? ["carousel"] : VIDEO_KINDS;
+    if (dimension === "ending") return VIDEO_KINDS;
     if (dimension === "opener") return ["editorial", "battle", "creature"];
     return [kind];
 }

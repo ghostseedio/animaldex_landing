@@ -135,7 +135,10 @@ export function intentsFor(kind: ExperimentKind, sourceType: string | null, fres
         location: ["save", "share"],
         lesson: ["share", "save"],
         guess: ["comment"],
-        scan: ["comment", "share"]
+        scan: ["comment", "share"],
+        you_vs: ["comment", "share"],
+        would_you_rather: ["comment"],
+        pokemon: ["comment", "share"]
     };
     return (sourceType ? fits[sourceType] : undefined) ?? ["share", "save", "comment"];
 }
@@ -224,6 +227,10 @@ export const KIND_DIMENSIONS = {
     guess: ["intent", "ending"],
     // Our own footage: what is tested is its job and how it ends.
     scan: ["intent", "ending"],
+    // The three play formats (Nov 2026): a viewer against an animal, a choice between two, a Pokémon quiz.
+    you_vs: ["intent", "ending"],
+    would_you_rather: ["intent", "ending"],
+    pokemon: ["intent", "ending"],
     carousel: ["carouselFormat", "intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;
