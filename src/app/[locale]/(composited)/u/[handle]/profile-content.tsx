@@ -53,6 +53,8 @@ import {GUIDE_BAND, GuideBandHeader} from "@/components/wildlife-guides/guide-ui
 import type {GuideBought} from "@/lib/virtual-wildlife-guides";
 import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import StoreLink from "@/components/store/store-link";
+import {ProfileDiaryTab} from "@/app/[locale]/(composited)/u/[handle]/profile-diary";
+import {PROBLEM_DIARY_WORDS_EN, type ProblemDiaryWords} from "@/lib/problem-diary";
 
 export type ProfileTab = "history" | "stats" | "diary" | "shop" | "locations";
 
@@ -186,6 +188,8 @@ type ProfileContentProps = {
      * words for them (owner, 2026-11-03). Null on your own profile.
      */
     publicDebates?: {debates: Debate[]; words: CompanionWords} | null;
+    /** Your own Diary's words (iOS `ProblemDiaryCopy`); null on someone else's profile. */
+    diaryWords?: ProblemDiaryWords | null;
     locale: string;
     shareButton: React.ReactNode;
     localePrefix: string;
@@ -479,6 +483,7 @@ export default function ProfileContent({
     labels,
     companionWords,
     publicDebates = null,
+    diaryWords = null,
     locale,
     shareButton,
     localePrefix,
@@ -536,11 +541,11 @@ export default function ProfileContent({
     const memberHasPlaces = profile.locationVisits.length > 0;
     const tabs = useMemo<ProfileTab[]>(
         () => {
-            if (surface === "app" && viewer.isOwner) {
-                // Your own profile in the app: Shop and Locations live in the drawer.
-                return drawerTab ? ["history", "stats", drawerTab] : ["history", "stats"];
+            if (viewer.isOwner) {
+                // Your own profile: Cards · Stats · Diary, as iOS. Shop and Locations
+                // open from Settings and activity (`?tab=shop` / `?tab=locations`).
+                return drawerTab ? ["history", "stats", "diary", drawerTab] : ["history", "stats", "diary"];
             }
-            if (viewer.isOwner) return ["history", "stats", "shop", "locations"];
             const shown: ProfileTab[] = ["history", "stats"];
             if (memberHasPublicDebates) shown.push("diary");
             if (memberHasShop) shown.push("shop");
@@ -995,7 +1000,13 @@ export default function ProfileContent({
                 )
             ) : null}
 
-            {activeTab === "diary" ? (
+            {activeTab === "diary" && viewer.isOwner ? (
+                <div className={bleed}>
+                    <ProfileDiaryTab words={diaryWords ?? PROBLEM_DIARY_WORDS_EN} companionWords={companionWords} locale={locale} />
+                </div>
+            ) : null}
+
+            {activeTab === "diary" && !viewer.isOwner ? (
                 <section className={`flex flex-col px-5 ${bleed}`} data-testid="profile-public-debates">
                     {publicDebates && publicDebates.debates.length > 0 ? (
                         publicDebates.debates.map((debate) => (

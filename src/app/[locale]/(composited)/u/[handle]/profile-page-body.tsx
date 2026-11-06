@@ -22,6 +22,7 @@ import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {animalLevel} from "@/lib/animal-level";
 import {getMyWildlifeGuidePurchases, getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
+import {PROBLEM_DIARY_WORD_KEYS, type ProblemDiaryWords} from "@/lib/problem-diary";
 
 function profilePath(handle: string) {
     return `/u/${encodeURIComponent(handle)}`;
@@ -280,6 +281,9 @@ export async function ProfilePageBody({
                 }}
                 companionWords={companionWords}
                 publicDebates={publicDebates}
+                diaryWords={viewer.isOwner
+                    ? Object.fromEntries(PROBLEM_DIARY_WORD_KEYS.map((key) => [key, t(`diary.${key}`)])) as ProblemDiaryWords
+                    : null}
                 locale={locale}
                 localePrefix={localePrefix}
                 viewer={viewer}

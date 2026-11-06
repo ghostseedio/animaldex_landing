@@ -174,9 +174,13 @@ export default function CaptureDetailClient({
     const cardTabs: AnimalDetailTab[] = viewer.isOwner ? ["about", "bond", "battle"] : ["about", "battle"];
     // `?referral=` is "Talk to …" from another of the owner's animals, and
     // `?talk=1` is a Companions row: this one's chat opens (with a referral,
-    // it speaks first about the problem it was sent).
+    // it speaks first about the problem it was sent). `?talk=report` is "I've
+    // done it" on a step in the profile's Diary: the chat opens on the report,
+    // as the step's card in the chat does (iOS `opensStepReport`).
     const referralId = viewer.isOwner ? resolveReferralId(searchParams?.get("referral")) : null;
-    const opensChat = Boolean(referralId) || searchParams?.get("talk") === "1";
+    const talkParam = searchParams?.get("talk");
+    const opensReport = viewer.isOwner && talkParam === "report";
+    const opensChat = Boolean(referralId) || talkParam === "1" || opensReport;
     const {open: openAsk} = useAskAnimalDex();
     // A debate's page, on the step its chosen way became (iOS d2eb6fa4): `?step=report` is
     // "I've done it" (the message bar on the report), `?step=other` "A different step" (the
@@ -192,8 +196,10 @@ export default function CaptureDetailClient({
             router.replace(`${window.location.pathname}${query ? `?${query}` : ""}`, {scroll: false});
             return;
         }
-        if (opensChat) openAsk();
-    }, [opensChat, openAsk, stepAction, searchParams, router, words.journey.step.otherMessage]);
+        // The Diary's "I've done it" (`?talk=report`): the chat, on the report.
+        if (opensReport) openAsk(undefined, {kind: "report"});
+        else if (opensChat) openAsk();
+    }, [opensChat, opensReport, openAsk, stepAction, searchParams, router, words.journey.step.otherMessage]);
     const [tab, setTab] = useState<AnimalDetailTab>(() => {
         if (requestedTab === "play" || requestedTab === "stats" || requestedTab === "battle") return "battle";
         if (requestedTab === "bond" && viewer.isOwner) return "bond";
