@@ -14,6 +14,16 @@
  * `discover_debate_pinned_v1`. Their refusals come back as codes, said in
  * words by `debateProblemText`.
  *
+ * Debates v2 (docs/debates/V2.md; migrations 20261103120000_debates_v2 and
+ * 20261103180000_ask_the_public, as iOS e15b474b and 390e5c2a): a debate
+ * starts private from the first problem, no Power needed, with the person's
+ * own animals and wild ones (a kind they have not caught, picked by its
+ * species): `debate_candidates_v2`, `create_debate_v2`, `debate_v2` (each
+ * animal's kind, Ask more animals, the solution, Ask the public),
+ * `extend_debate_v1`, `species_top_qualities`, `ask_public_v1`,
+ * `keep_debate_private_v1` and `debate_offer_candidates_v1`. A v2 report
+ * rates each way (`fit`, 0–100) and recommends one.
+ *
  * Someone else's animal is never named by its card: the server sends a
  * participant's `capture_id` (and nickname, and hearts) only to its owner.
  * A participant is keyed by its participant id and its seat.
@@ -67,6 +77,8 @@ export type DebateParticipant = {
     opening: string | null;
     /** Discover: it won the vote. */
     isWinner: boolean;
+    /** V2: own | wild | community | roster; null from an older server. */
+    kind: string | null;
 };
 
 export type DebateTurn = {seat: number; phase: DebatePhase; text: string; createdAt: string | null; index: number | null};
@@ -80,14 +92,43 @@ export type DebateReportWay = {
     lesson: string | null;
     fits: string | null;
     costs: string | null;
+    /** V2: how well this way fits the problem as they told it, 0–100. */
+    fit: number | null;
 };
 
-/** The deep report: the problem in one line, each animal's way, and one line on what to try first. Never a winner. */
+/**
+ * The deep report: the problem in one line, each animal's way, and one line on
+ * what to try first. V2 rates each way and recommends one, gently, with why.
+ */
 export type DebateReport = {
     problem: string | null;
     ways: DebateReportWay[];
     tryFirst: string | null;
+    /** V2: the way it recommends (the highest fit; ties, the lower seat), and why in one line. */
+    recommendedSeat: number | null;
+    recommendedWhy: string | null;
 };
+
+/** One quality an animal brings to the person's own (`species_top_qualities`). */
+export type DebateQuality = {tagKey: string; label: string};
+
+/** "I solved it my way" (V2 section 5): one animal whose ideas they used. */
+export type DebateSolutionUsed = {
+    seat: number;
+    participantId: string | null;
+    animal: string;
+    powerName: string | null;
+    speciesProfileId: string | null;
+    kind: string | null;
+    /** They have a card of it, so its Power can be theirs. */
+    caught: boolean;
+    note: string | null;
+};
+
+export type DebateEarnedPower = {speciesProfileId: string | null; animal: string; powerName: string; captureId: string | null};
+
+/** What the judge found: whose ideas they used, the Powers it earned, the qualities it adds. */
+export type DebateSolution = {used: DebateSolutionUsed[]; powersEarned: DebateEarnedPower[]; qualities: DebateQuality[]};
 
 export type Debate = {
     id: string;
@@ -145,11 +186,30 @@ export type Debate = {
      * problem and ways. Discover's posts say it with `asked_public`.
      */
     askedPublic: boolean;
+    /** V2 (`debate_v2`): rounds of "Ask more animals" so far, and whether another is open to the asker. */
+    extensions: number;
+    canAskMore: boolean;
+    /** V2: "I solved it my way" is still open to the asker, or what it found. */
+    canSolve: boolean;
+    solution: DebateSolution | null;
+    /** Ask the public: every way as strangers read it, by participant id. */
+    publicWays: Record<string, string>;
+    /** Too personal to post: it stayed private (the asker only). */
+    publicRefused: boolean;
+    /** "Ask the public" is open to the asker. */
+    canAskPublic: boolean;
 };
 
-/** One row of `debate_candidates_v1`. */
+/** Who a candidate is (V2): one of the person's own cards, a wild animal (a kind they have not caught: no card), or another person's card from the v1 roster. */
+export type DebateCandidateKind = "own" | "wild" | "roster";
+
+/** One row of `debate_candidates_v1`, `debate_candidates_v2` or `debate_offer_candidates_v1`. */
 export type DebateCandidate = {
-    captureId: string;
+    /** What the picker selects by: the card, or a wild animal's species. */
+    id: string;
+    /** The card; null for a wild animal. */
+    captureId: string | null;
+    kind: DebateCandidateKind;
     ownerIsMe: boolean;
     speciesProfileId: string | null;
     slug: string | null;
@@ -172,9 +232,18 @@ export type DebateWayChoice = {
     referralId: string | null;
 };
 
+/** One animal picked into a debate, as `create_debate_v2` and `extend_debate_v1` take it: a card, or a wild animal's species. */
+export type DebatePick = {captureId: string} | {speciesProfileId: string};
+
 /** Pick 1–3 other animals. */
 export const DEBATE_MAX_PICKS = 3;
 export const DEBATE_MIN_PICKS = 1;
+/** V2: the most animals one debate holds, Ask more animals and offered animals included. */
+export const DEBATE_MAX_ANIMALS = 7;
+/** V2: "Ask more animals" shows at most this many new suggestions. */
+export const DEBATE_ASK_MORE_ROWS = 6;
+/** "I solved it my way": at least this many characters. */
+export const DEBATE_MIN_SOLUTION = 10;
 /** A public debate's text, as approved. */
 export const DEBATE_PUBLIC_TEXT_MAX = 400;
 /** The asker's own words. */
@@ -333,8 +402,14 @@ export function decodeDebateParticipant(raw: unknown, index = 0): DebateParticip
         creditsWon: Math.max(0, int(first(row, "credits_won", "creditsWon")) ?? 0),
         xpAwarded: Math.max(0, int(first(row, "xp_awarded", "xpAwarded")) ?? 0),
         opening: firstText(row, "opening"),
-        isWinner: bool(first(row, "is_winner", "isWinner"))
+        isWinner: bool(first(row, "is_winner", "isWinner")),
+        kind: firstText(row, "kind")
     };
+}
+
+/** A wild animal: a kind the asker has not caught, brought in for its way (V2). */
+export function debateParticipantIsWild(participant: Pick<DebateParticipant, "kind">): boolean {
+    return participant.kind === "wild";
 }
 
 export function decodeDebateTurn(raw: unknown): DebateTurn | null {
@@ -355,20 +430,100 @@ export function decodeDebateReport(raw: unknown): DebateReport | null {
         if (!way) return [];
         const said = firstText(way, "way", "point", "approach", "summary");
         if (!said) return [];
+        // V2's `fit` is a number, 0–100; an older report may have used the key for where it fits.
+        const fit = int(way.fit);
         return [{
             seat: int(way.seat),
             participantId: debateUuid(first(way, "participant_id", "participantId", "id")),
             captureId: debateUuid(first(way, "capture_id", "captureId")),
             way: said,
             lesson: firstText(way, "lesson", "why", "lesson_behind"),
-            fits: firstText(way, "fits_when", "fits", "fit", "where_it_fits", "best_for"),
-            costs: firstText(way, "costs", "cost", "what_it_costs", "tradeoff")
+            fits: firstText(way, "fits_when", "fits", "where_it_fits", "best_for") ?? (fit === null ? text(way.fit) : null),
+            costs: firstText(way, "costs", "cost", "what_it_costs", "tradeoff"),
+            fit: fit === null ? null : Math.max(0, Math.min(100, fit))
         }];
     });
     const problem = firstText(row, "problem", "problem_line", "summary");
     const tryFirst = firstText(row, "try_first", "tryFirst", "first_try", "first_step", "try");
     if (!problem && ways.length === 0 && !tryFirst) return null;
-    return {problem, ways, tryFirst};
+    return {
+        problem,
+        ways,
+        tryFirst,
+        recommendedSeat: int(first(row, "recommended_seat", "recommendedSeat")),
+        recommendedWhy: firstText(row, "recommended_why", "recommendedWhy")
+    };
+}
+
+/** Fit bars and one Recommended are drawn only when every way has a fit (a V2 report). */
+export function debateReportIsRated(report: Pick<DebateReport, "ways"> | null | undefined): boolean {
+    return Boolean(report && report.ways.length > 0 && report.ways.every((way) => way.fit !== null));
+}
+
+/**
+ * The animal a rated report recommends: the server's `recommended_seat`; from
+ * a report that names none, the highest fit (ties: the lower seat). Null for
+ * an older report.
+ */
+export function debateRecommendedParticipant(debate: Pick<Debate, "participants" | "report">): DebateParticipant | null {
+    const report = debate.report;
+    if (!report || !debateReportIsRated(report)) return null;
+    const rated = debate.participants
+        .map((participant) => ({participant, way: reportWayFor(report, participant)}))
+        .filter((entry): entry is {participant: DebateParticipant; way: DebateReportWay} => entry.way !== null && entry.way.fit !== null);
+    if (report.recommendedSeat !== null) {
+        return rated.find((entry) => entry.participant.seat === report.recommendedSeat)?.participant ?? null;
+    }
+    const best = [...rated].sort((a, b) => (b.way.fit ?? 0) - (a.way.fit ?? 0) || a.participant.seat - b.participant.seat)[0];
+    return best?.participant ?? null;
+}
+
+/** `species_top_qualities` and a solution's `qualities`: `[{tag_key, label}]`, each label once. */
+export function decodeDebateQualities(raw: unknown): DebateQuality[] {
+    const seen = new Set<string>();
+    return list(raw).flatMap((item): DebateQuality[] => {
+        const row = object(item);
+        const label = row ? firstText(row, "label", "tag_label") : null;
+        if (!row || !label || seen.has(label)) return [];
+        seen.add(label);
+        return [{tagKey: firstText(row, "tag_key") ?? "", label}];
+    });
+}
+
+/** `debate.solution`, or the `debate_solution` flow's `{solution}`. Null when there is none. */
+export function decodeDebateSolution(raw: unknown): DebateSolution | null {
+    const outer = object(raw);
+    if (!outer) return null;
+    const row = object(outer.solution) ?? (["used", "powers_earned", "qualities"].some((key) => key in outer) ? outer : null);
+    if (!row) return null;
+    return {
+        used: list(row.used).flatMap((item): DebateSolutionUsed[] => {
+            const used = object(item);
+            if (!used) return [];
+            return [{
+                seat: int(used.seat) ?? 0,
+                participantId: debateUuid(first(used, "participant_id", "participantId")),
+                animal: firstText(used, "animal", "animal_name") ?? "",
+                powerName: firstText(used, "power_name", "powerName"),
+                speciesProfileId: debateUuid(first(used, "species_profile_id", "speciesProfileId")),
+                kind: firstText(used, "kind"),
+                caught: bool(used.caught),
+                note: firstText(used, "note")
+            }];
+        }),
+        powersEarned: list(first(row, "powers_earned", "powersEarned")).flatMap((item): DebateEarnedPower[] => {
+            const earned = object(item);
+            const powerName = earned ? firstText(earned, "power_name", "powerName") : null;
+            if (!earned || !powerName) return [];
+            return [{
+                speciesProfileId: debateUuid(first(earned, "species_profile_id", "speciesProfileId")),
+                animal: firstText(earned, "animal", "animal_name") ?? "",
+                powerName,
+                captureId: debateUuid(first(earned, "capture_id", "captureId"))
+            }];
+        }),
+        qualities: decodeDebateQualities(row.qualities)
+    };
 }
 
 /** `debate_v1`, a row of `my_debates_v1`, or a Discover debate post. Null without an id. */
@@ -378,10 +533,20 @@ export function decodeDebate(raw: unknown): Debate | null {
     if (!row) return null;
     const id = debateUuid(first(row, "id", "debate_id", "debateId"));
     if (!id) return null;
+    // A debate read with its v2 extras beside it names each animal's kind in a map (participant id → kind).
+    const kinds = object(row.kinds);
     const participants = list(first(row, "participants") ?? outer?.participants)
         .map((item, index) => decodeDebateParticipant(item, index))
         .filter((item): item is DebateParticipant => item !== null)
+        .map((participant) => (participant.kind || !kinds ? participant : {...participant, kind: text(kinds[participant.id])}))
         .sort((a, b) => a.seat - b.seat);
+    const publicWays: Record<string, string> = {};
+    for (const item of list(row.public_ways)) {
+        const way = object(item);
+        const participantId = way ? debateUuid(first(way, "participant_id", "participantId")) : null;
+        const said = way ? firstText(way, "way", "summary") : null;
+        if (participantId && said && !(participantId in publicWays)) publicWays[participantId] = said;
+    }
     const turns = list(first(row, "turns") ?? outer?.turns)
         .map(decodeDebateTurn)
         .filter((item): item is DebateTurn => item !== null);
@@ -437,7 +602,14 @@ export function decodeDebate(raw: unknown): Debate | null {
             const said = first(row, "has_stakes", "hasStakes", "stakes", "at_stake");
             return typeof said === "boolean" ? said : null;
         })(),
-        askedPublic: bool(first(row, "asked_public", "askedPublic"))
+        askedPublic: bool(first(row, "asked_public", "askedPublic")),
+        extensions: Math.max(0, int(row.extensions) ?? 0),
+        canAskMore: bool(first(row, "can_ask_more", "canAskMore")),
+        canSolve: bool(first(row, "can_solve", "canSolve")),
+        solution: decodeDebateSolution(row.solution ? {solution: row.solution} : null),
+        publicWays,
+        publicRefused: bool(first(row, "public_refused", "publicRefused")),
+        canAskPublic: bool(first(row, "can_ask_public", "canAskPublic"))
     };
 }
 
@@ -453,14 +625,23 @@ export function decodeDebateCandidates(raw: unknown): DebateCandidate[] {
     const seen = new Set<string>();
     return rows.flatMap((item): DebateCandidate[] => {
         const row = object(item);
-        const captureId = row ? debateUuid(first(row, "capture_id", "captureId", "id")) : null;
-        if (!row || !captureId || seen.has(captureId)) return [];
-        seen.add(captureId);
+        if (!row) return [];
         const animalRow = object(row.animal);
+        const captureId = debateUuid(first(row, "capture_id", "captureId")) ?? (row.kind === "wild" ? null : debateUuid(row.id));
+        const speciesProfileId = debateUuid(first(row, "species_profile_id", "speciesProfileId")) ?? (animalRow ? debateUuid(animalRow.species_profile_id) : null);
+        const ownerIsMe = bool(first(row, "owner_is_me", "ownerIsMe", "is_mine"));
+        const said = row.kind === "own" || row.kind === "wild" || row.kind === "roster" ? row.kind : null;
+        const kind: DebateCandidateKind = said ?? (captureId ? (ownerIsMe ? "own" : "roster") : "wild");
+        // A wild animal has no card: it is known by its species; anything else by its card.
+        const id = kind === "wild" ? speciesProfileId : captureId;
+        if (!id || seen.has(id)) return [];
+        seen.add(id);
         return [{
-            captureId,
-            ownerIsMe: bool(first(row, "owner_is_me", "ownerIsMe")),
-            speciesProfileId: debateUuid(first(row, "species_profile_id", "speciesProfileId")) ?? (animalRow ? debateUuid(animalRow.species_profile_id) : null),
+            id,
+            captureId: kind === "wild" ? null : captureId,
+            kind,
+            ownerIsMe,
+            speciesProfileId,
             slug: slugOf(row) ?? (animalRow ? slugOf(animalRow) : null),
             animal: (typeof row.animal === "string" ? text(row.animal) : null)
                 ?? (animalRow ? firstText(animalRow, "name", "animal_name", "common_name") : null)
@@ -541,7 +722,7 @@ export function groupDebateCandidates(candidates: readonly DebateCandidate[]): {
 
 /** How many of the picks are other people's animals: none means nothing at stake. */
 export function othersPicked(candidates: readonly DebateCandidate[], picked: readonly string[]): number {
-    return candidates.filter((candidate) => !candidate.ownerIsMe && picked.includes(candidate.captureId)).length;
+    return candidates.filter((candidate) => !candidate.ownerIsMe && picked.includes(candidate.id)).length;
 }
 
 /**
@@ -555,7 +736,7 @@ export function suggestedDebatePicks(candidates: DebateCandidate[], max = DEBATE
         if (!candidate.fits || picks.length >= max) continue;
         if (candidate.speciesProfileId && species.has(candidate.speciesProfileId)) continue;
         if (candidate.speciesProfileId) species.add(candidate.speciesProfileId);
-        picks.push(candidate.captureId);
+        picks.push(candidate.id);
     }
     return picks;
 }
@@ -647,10 +828,10 @@ export function preselectedDebatePicks(candidates: DebateCandidate[], named: rea
     const species = new Set<string>();
     const picks: string[] = [];
     const add = (candidate: DebateCandidate) => {
-        if (picks.length >= max || picks.includes(candidate.captureId)) return;
+        if (picks.length >= max || picks.includes(candidate.id)) return;
         if (candidate.speciesProfileId && species.has(candidate.speciesProfileId)) return;
         if (candidate.speciesProfileId) species.add(candidate.speciesProfileId);
-        picks.push(candidate.captureId);
+        picks.push(candidate.id);
     };
     for (const animal of named) {
         const match = candidates.find((candidate) => candidate.captureId === animal.captureId)
@@ -738,6 +919,135 @@ export function debatesWithCapture(debates: Debate[], captureId: string): Debate
     return debates.filter((debate) => debate.status !== "cancelled" && debate.participants.some((participant) => participant.captureId === id));
 }
 
+// MARK: - Debates v2 (docs/debates/V2.md)
+
+/** How a candidate is sent to start a debate or join one: its card, or a wild animal's species. */
+export function debateCandidatePick(candidate: Pick<DebateCandidate, "id" | "captureId" | "speciesProfileId">): DebatePick {
+    return candidate.captureId ? {captureId: candidate.captureId} : {speciesProfileId: candidate.speciesProfileId ?? candidate.id};
+}
+
+/** The picks a client sent (`[{captureId} | {speciesProfileId}]`, either spelling): each animal once, at most `max`. */
+export function decodeDebatePicks(raw: unknown, max = DEBATE_MAX_PICKS): DebatePick[] {
+    const picks: DebatePick[] = [];
+    const seen = new Set<string>();
+    for (const item of list(raw)) {
+        const row = object(item);
+        const captureId = row ? debateUuid(first(row, "captureId", "capture_id")) : null;
+        const speciesProfileId = row && !captureId ? debateUuid(first(row, "speciesProfileId", "species_profile_id")) : null;
+        const key = captureId ?? speciesProfileId;
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        picks.push(captureId ? {captureId} : {speciesProfileId: speciesProfileId!});
+        if (picks.length >= max) break;
+    }
+    return picks;
+}
+
+/** The picks as the RPCs take them (`p_picks`): `{capture_id}` or `{species_profile_id}`. */
+export function debatePicksParam(picks: readonly DebatePick[]): Array<{capture_id: string} | {species_profile_id: string}> {
+    return picks.map((pick) => ("captureId" in pick ? {capture_id: pick.captureId} : {species_profile_id: pick.speciesProfileId}));
+}
+
+/** The candidates picked, in the order they were picked, as picks. */
+export function debatePicksFor(candidates: readonly DebateCandidate[], picked: readonly string[]): DebatePick[] {
+    return picked.flatMap((id) => {
+        const candidate = candidates.find((item) => item.id === id);
+        return candidate ? [debateCandidatePick(candidate)] : [];
+    });
+}
+
+/** The asker's way on from a finished report (V2): before a way is chosen, never once one is (owner, 2026-11-03). */
+export function debateOffersAskMore(debate: Pick<Debate, "askerIsMe" | "chosenParticipantId" | "canAskMore">): boolean {
+    return debate.askerIsMe && !debate.chosenParticipantId && debate.canAskMore;
+}
+
+export function debateOffersSolve(debate: Pick<Debate, "askerIsMe" | "chosenParticipantId" | "canSolve">): boolean {
+    return debate.askerIsMe && !debate.chosenParticipantId && debate.canSolve;
+}
+
+/** How many more animals "Ask more animals" may bring in: 1–3 a round, at most 7 in a debate. */
+export function debateAskMoreRoom(debate: Pick<Debate, "participants">): number {
+    return Math.max(0, Math.min(DEBATE_MAX_PICKS, DEBATE_MAX_ANIMALS - debate.participants.length));
+}
+
+/**
+ * "Ask more animals" (V2 section 3): new suggestions, own and wild, none of a
+ * kind already in it and never the host's card, at most six; those that fit
+ * best start picked, as many as there is room for.
+ */
+export function debateAskMoreCandidates(candidates: readonly DebateCandidate[], debate: Pick<Debate, "participants" | "hostCaptureId">): {rows: DebateCandidate[]; picked: string[]} {
+    const present = new Set(debate.participants.map((participant) => participant.speciesProfileId).filter((id): id is string => Boolean(id)));
+    const rows = candidates
+        .filter((candidate) => !present.has(candidate.speciesProfileId ?? candidate.id) && candidate.id !== debate.hostCaptureId)
+        .slice(0, DEBATE_ASK_MORE_ROWS);
+    return {rows, picked: suggestedDebatePicks(rows, debateAskMoreRoom(debate))};
+}
+
+/** Ask the public (V2 section 6), as the asker sees it under the report. */
+export type DebateAskPublicStage =
+    | {kind: "available"}
+    | {kind: "drafting"}
+    | {kind: "reviewing"; text: string}
+    | {kind: "posted"; text: string}
+    | {kind: "refused"};
+
+export function debateAskPublicStage(debate: Pick<Debate, "askerIsMe" | "askedPublic" | "status" | "problemPublic" | "publicRefused" | "canAskPublic">): DebateAskPublicStage | null {
+    if (!debate.askerIsMe) return null;
+    if (debate.askedPublic) {
+        switch (debate.status) {
+            case "drafting": return {kind: "drafting"};
+            case "approving": return {kind: "reviewing", text: debate.problemPublic ?? ""};
+            case "voting":
+            case "settled":
+            case "draw": return {kind: "posted", text: debate.problemPublic ?? ""};
+            default: return null;
+        }
+    }
+    if (debate.publicRefused) return {kind: "refused"};
+    return debate.canAskPublic ? {kind: "available"} : null;
+}
+
+/** Someone other than the asker may add one of their animals: asked in public, voting, room for another, and they could vote. */
+export function debateCanOfferAnimal(debate: Pick<Debate, "askedPublic" | "askerIsMe" | "status" | "canVote" | "participants">): boolean {
+    return debate.askedPublic && !debate.askerIsMe && debate.status === "voting" && debate.canVote && debate.participants.length < DEBATE_MAX_ANIMALS;
+}
+
+/**
+ * Whose chat holds the step the chosen way became (iOS d2eb6fa4): the chosen
+ * animal's when it is the host or one of theirs, else the host's, which took
+ * the other animal's way on as their step. Null with no way chosen, or for
+ * anyone but the asker.
+ */
+export function debateStepOwner(debate: Pick<Debate, "askerIsMe" | "chosenParticipantId" | "participants">): DebateParticipant | null {
+    if (!debate.askerIsMe || !debate.chosenParticipantId) return null;
+    const chosen = debate.participants.find((participant) => participant.id === debate.chosenParticipantId);
+    if (!chosen) return null;
+    if (chosen.seat === 0 || chosen.isAskerOwned || chosen.ownerIsMe) return chosen;
+    return debate.participants.find((participant) => participant.seat === 0)
+        ?? [...debate.participants].sort((a, b) => a.seat - b.seat)[0]
+        ?? null;
+}
+
+/**
+ * The open step that animal holds, when it was set since the debate began (a
+ * minute's grace); an older step belongs to another problem.
+ */
+export function debateOpenStepFor<Step extends {speciesProfileId: string; captureId: string | null; setAt: string | null}>(
+    debate: Pick<Debate, "askerIsMe" | "chosenParticipantId" | "participants" | "createdAt">,
+    steps: readonly Step[]
+): Step | null {
+    const owner = debateStepOwner(debate);
+    if (!owner) return null;
+    const began = Date.parse(debate.createdAt ?? "");
+    return steps.find((step) => {
+        const sameAnimal = (owner.speciesProfileId !== null && step.speciesProfileId.toLowerCase() === owner.speciesProfileId)
+            || (owner.captureId !== null && step.captureId?.toLowerCase() === owner.captureId);
+        if (!sameAnimal) return false;
+        const setAt = Date.parse(step.setAt ?? "");
+        return !Number.isFinite(setAt) || !Number.isFinite(began) || setAt >= began - 60_000;
+    }) ?? null;
+}
+
 // MARK: - Refusals
 
 export const DEBATE_PROBLEM_CODES = [
@@ -766,6 +1076,15 @@ export const DEBATE_PROBLEM_CODES = [
     "duplicate_species",
     "debate_not_finished",
     "account_suspended",
+    // V2 and Ask the public (20261103120000, 20261103180000).
+    "no_more_animals",
+    "debate_full",
+    "no_power",
+    "solution_too_short",
+    "judge_unavailable",
+    "debate_check_unavailable",
+    "way_unavailable",
+    "already_offered",
     "debate_unavailable"
 ] as const;
 
@@ -818,7 +1137,7 @@ export function debateSetupRows(
     const suggested = candidates.filter((candidate) => candidate.fits).slice(0, max);
     const base = suggested.length === 0
         ? candidates.slice(0, Math.min(candidates.length, max))
-        : candidates.filter((candidate) => suggested.includes(candidate) || picked.includes(candidate.captureId));
+        : candidates.filter((candidate) => suggested.includes(candidate) || picked.includes(candidate.id));
     const rest = candidates.filter((candidate) => !base.includes(candidate)).slice(0, Math.max(0, more));
     const rows = candidates.filter((candidate) => base.includes(candidate) || rest.includes(candidate));
     return {rows, hasMore: rows.length < candidates.length};

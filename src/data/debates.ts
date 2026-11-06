@@ -88,9 +88,19 @@ export async function readMyDebates(supabase: Supabase, captureId: string | null
     return withDebateSlugs(decodeDebates(data));
 }
 
-/** `debate_v1`: one debate as the reader may see it. */
+/** PostgREST's word for a function the server does not have yet (an older server). */
+function missingFunction(error: {code?: string; message: string}): boolean {
+    return error.code === "PGRST202" || /PGRST202|could not find the function/i.test(error.message);
+}
+
+/**
+ * One debate as the reader may see it: `debate_v2` (each animal's kind, Ask
+ * more animals, the solution, Ask the public), else `debate_v1` on a server
+ * without it (iOS e15b474b).
+ */
 export async function readDebate(supabase: Supabase, debateId: string): Promise<{debate: Debate | null; error: string | null}> {
-    const {data, error} = await supabase.rpc("debate_v1", {p_debate_id: debateId});
+    let {data, error} = await supabase.rpc("debate_v2", {p_debate_id: debateId});
+    if (error && missingFunction(error)) ({data, error} = await supabase.rpc("debate_v1", {p_debate_id: debateId}));
     if (error) return {debate: null, error: error.message};
     const debate = decodeDebate(data);
     if (!debate) return {debate: null, error: "not_found"};

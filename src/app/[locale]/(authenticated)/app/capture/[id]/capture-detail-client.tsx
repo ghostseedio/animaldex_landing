@@ -642,7 +642,8 @@ export default function CaptureDetailClient({
                                     passed: speciesTraining.training.completed,
                                     questionCount: speciesTraining.training.questions.length
                                 } : null}
-                                onDebate={myDebates.enabled && powerEarned ? () => openAsk(undefined, {kind: "debate"}) : null}
+                                // From the first problem, Power earned or not (Debates v2, iOS 059ba3df).
+                                onDebate={myDebates.enabled ? () => openAsk(undefined, {kind: "debate"}) : null}
                                 onBondChanged={animalBond.setBond}
                                 locale={locale}
                                 words={words}

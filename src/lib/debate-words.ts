@@ -11,7 +11,9 @@ import {
     debateWinnerCredits,
     type Debate,
     type DebateParticipant,
-    type DebateProblemCode
+    type DebateProblemCode,
+    type DebateQuality,
+    type DebateSolution
 } from "@/lib/debates";
 
 export function debateProblemText(code: DebateProblemCode | null | undefined, words: CompanionWords): string {
@@ -41,6 +43,14 @@ export function debateProblemText(code: DebateProblemCode | null | undefined, wo
         case "hearts_full": return words.heal.full;
         case "insufficient_credits": return problems.noCredits;
         case "text_too_long": return problems.textTooLong;
+        // V2 and Ask the public (iOS `DebatesServiceError.userMessage`).
+        case "no_more_animals":
+        case "debate_full": return problems.noMoreAnimals;
+        case "solution_too_short": return problems.solutionTooShort;
+        case "already_offered": return problems.alreadyOffered;
+        case "judge_unavailable":
+        case "debate_check_unavailable":
+        case "way_unavailable":
         default: return problems.generic;
     }
 }
@@ -162,4 +172,36 @@ export function debateClosesIn(deadline: string | null | undefined, words: Compa
 export function debateSpeakerLine(participant: Pick<DebateParticipant, "nickname" | "animal" | "powerName" | "isAskerOwned" | "ownerIsMe">): string {
     const name = (participant.isAskerOwned || participant.ownerIsMe) && participant.nickname?.trim() ? participant.nickname.trim() : participant.animal;
     return participant.powerName?.trim() ? `${name} · ${participant.powerName.trim()}` : name;
+}
+
+/** Names joined the reader's way: "Luna, Pip and Bruno". */
+function joinedNames(names: string[], locale: string): string {
+    try {
+        return new Intl.ListFormat(locale, {style: "long", type: "conjunction"}).format(names);
+    } catch {
+        return names.join(", ");
+    }
+}
+
+/**
+ * What "I solved it my way" found, in one line (V2 section 5): "You used ideas
+ * from Luna and Pip", each by its name in the debate; with none, "You found
+ * your own way".
+ */
+export function debateSolutionHeadline(debate: Pick<Debate, "participants">, solution: DebateSolution, words: CompanionWords, locale = "en"): string {
+    const names = solution.used.map((used) => {
+        const participant = debate.participants.find((item) => item.seat === used.seat);
+        return participant ? debateAnimalName(participant) : used.animal;
+    }).filter(Boolean);
+    return names.length === 0 ? words.debate.usedNone : fillWords(words.debate.usedIdeas, {names: joinedNames(names, locale)});
+}
+
+/** "Your qualities: Patience, Coordination", as a screen reader says the chips. */
+export function debateQualitiesLabel(qualities: readonly DebateQuality[], words: CompanionWords): string {
+    return fillWords(words.debate.qualitiesLine, {qualities: qualities.map((quality) => quality.label).join(", ")});
+}
+
+/** "Fit: 82 out of 100": a fit bar read aloud (no number on screen). */
+export function debateFitLabel(fit: number, words: CompanionWords): string {
+    return fillWords(words.debate.fitLabel, {fit: Math.max(0, Math.min(100, Math.round(fit)))});
 }

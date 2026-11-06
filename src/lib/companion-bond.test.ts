@@ -217,7 +217,9 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     assert.equal(DEBATE_COPY.yourAnimals, "Your animals");
     assert.equal(DEBATE_COPY.othersAnimals, "Other people's animals");
     assert.equal(DEBATE_COPY.noOthers, "No one else's animals can join yet, so yours debate it and the community votes.");
-    const {ownOnly: _ownOnly, ...retiredChecked} = DEBATE_COPY;
+    // Ask the public's note (iOS 390e5c2a) says "Nothing is at stake." in the owner's words too.
+    assert.equal(DEBATE_COPY.askPublicNote.endsWith("Nothing is at stake."), true);
+    const {ownOnly: _ownOnly, askPublicNote: _askPublicNote, ...retiredChecked} = DEBATE_COPY;
     // Ask the public (owner, 2026-11-03) says the same "nothing at stake".
     assert.equal(COMPANION_WORDS_EN.debateWeb.askedPublicNote, "Asked in public. Nothing at stake: the community picks the way that helps most.");
     const {askedPublicNote: _askedPublicNote, ...webChecked} = COMPANION_WORDS_EN.debateWeb;

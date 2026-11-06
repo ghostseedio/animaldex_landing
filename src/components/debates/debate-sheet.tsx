@@ -18,6 +18,14 @@
  * special message of its own from the host. Edit works in the message bar
  * (`onEdit`), never in a field in the bubble. The modal sheet (`layout:
  * "sheet"`) is only the drawer's fallback below 340 px.
+ *
+ * Debates v2 (docs/debates/V2.md, sections 2 and 6; iOS e15b474b, 059ba3df):
+ * every debate starts private, from the first problem, Power earned or not,
+ * so there is no Private | Public switch (Ask the public comes after, from the
+ * report). The animals are the person's own and wild ones (a kind they have
+ * not caught, tagged Wild), picked by card or by species
+ * (`debate_candidates_v2`, `create_debate_v2`). The Public path stays for a
+ * v1 public draft still waiting for its text to be approved.
  */
 
 import {useCallback, useEffect, useMemo, useState, type ReactNode} from "react";
@@ -31,6 +39,7 @@ import {
     DEBATE_PUBLIC_TEXT_MAX,
     debateAnimalName,
     debateHasStakes,
+    debatePicksFor,
     debateSetupRows,
     groupDebateCandidates,
     othersPicked,
@@ -42,7 +51,8 @@ import {
     type DebateVisibility
 } from "@/lib/debates";
 import {debateProblemText, debateStakeNote} from "@/lib/debate-words";
-import {approvePublicDebate, cancelDebate, createDebate, fetchDebate, loadDebateCandidates, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
+import {approvePublicDebate, cancelDebate, createDebate, createDebateV2, fetchDebate, loadDebateCandidates, loadDebateCandidatesV2, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
+import {DebateWildTag} from "@/components/debates/debate-v2-views";
 
 /** The animal the debate starts from: the one whose chat this is. */
 export type DebateHost = {
@@ -50,6 +60,7 @@ export type DebateHost = {
     /** "Luna", or the animal. */
     name: string;
     speciesProfileId: string | null;
+    /** Only a v1 public debate needs it; a v2 debate starts without (V2 section 2). */
     powerEarned: boolean;
     /** Null when unknown: the server checks. */
     hearts: number | null;
@@ -60,11 +71,16 @@ export type DebateHost = {
  * strip says what is being edited, the field is prefilled, Send saves it.
  */
 export type DebateEdit = {
-    kind: "problem" | "public";
+    /** V2: "solution" is "I solved it my way": the words go to the debate, never into the setup. */
+    kind: "problem" | "public" | "solution";
     text: string;
     min: number;
     max: number;
     save: (text: string) => void;
+    /** The strip, the field's hint and the send's label, where they are not the question's. */
+    strip?: string;
+    placeholder?: string;
+    sendLabel?: string;
 };
 
 /** The server wants at least this much of the problem (and of the public text). */
@@ -201,7 +217,11 @@ export default function DebateSetup({
         let cancelled = false;
         setCandidates(null);
         setFailure(null);
-        void loadDebateCandidates({hostCaptureId: host.captureId, visibility, problem: fittedTo}).then((result) => {
+        // V2: private, with their own animals and wild ones; Public only for an older setup.
+        const loading = visibility === "private"
+            ? loadDebateCandidatesV2({hostCaptureId: host.captureId, problem: fittedTo})
+            : loadDebateCandidates({hostCaptureId: host.captureId, visibility, problem: fittedTo});
+        void loading.then((result) => {
             if (cancelled) return;
             if (!result.ok) {
                 setCandidates([]);
@@ -211,7 +231,7 @@ export default function DebateSetup({
             // Fits this best first, then the rest; never a second of the host's species.
             const usable = result.value.filter((candidate) => !host.speciesProfileId || candidate.speciesProfileId !== host.speciesProfileId);
             setCandidates([...usable.filter((candidate) => candidate.fits), ...usable.filter((candidate) => !candidate.fits)]);
-            setPicked((current) => current.filter((id) => usable.some((candidate) => candidate.captureId === id)));
+            setPicked((current) => current.filter((id) => usable.some((candidate) => candidate.id === id)));
         });
         return () => {
             cancelled = true;
@@ -225,7 +245,7 @@ export default function DebateSetup({
     }, [candidates, touched, named]);
 
     const pickedSpecies = useMemo(() => new Set((candidates ?? [])
-        .filter((candidate) => picked.includes(candidate.captureId) && candidate.speciesProfileId)
+        .filter((candidate) => picked.includes(candidate.id) && candidate.speciesProfileId)
         .map((candidate) => candidate.speciesProfileId as string)), [candidates, picked]);
     const suggested = useMemo(() => (candidates ?? []).filter((candidate) => candidate.fits).slice(0, DEBATE_MAX_PICKS), [candidates]);
     const listed = useMemo(() => {
@@ -234,26 +254,26 @@ export default function DebateSetup({
         if (layout === "section") return debateSetupRows(candidates, picked, moreRows).rows;
         if (showsAll || suggested.length === 0) return candidates;
         // The suggestions, and whatever else they picked.
-        return candidates.filter((candidate) => suggested.includes(candidate) || picked.includes(candidate.captureId));
+        return candidates.filter((candidate) => suggested.includes(candidate) || picked.includes(candidate.id));
     }, [candidates, showsAll, suggested, picked, layout, moreRows]);
 
     const toggle = (candidate: DebateCandidate) => {
         setTouched(true);
         setPicked((current) => {
-            if (current.includes(candidate.captureId)) return current.filter((id) => id !== candidate.captureId);
+            if (current.includes(candidate.id)) return current.filter((id) => id !== candidate.id);
             if (current.length >= DEBATE_MAX_PICKS) return current;
-            return [...current, candidate.captureId];
+            return [...current, candidate.id];
         });
     };
 
     /** One animal to pick: its face, name and Power, "Fits this best", and the tick. */
     const candidateRow = (candidate: DebateCandidate) => {
-        const on = picked.includes(candidate.captureId);
+        const on = picked.includes(candidate.id);
         const taken = !on && Boolean(candidate.speciesProfileId && pickedSpecies.has(candidate.speciesProfileId));
         const full = !on && picked.length >= DEBATE_MAX_PICKS;
         return (
             <button
-                key={candidate.captureId}
+                key={candidate.id}
                 type="button"
                 onClick={() => toggle(candidate)}
                 disabled={taken || full}
@@ -265,6 +285,7 @@ export default function DebateSetup({
                 <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold text-white">{taken ? words.picker.alreadyHere : debateAnimalName(candidate)}</span>
                     <span className="block truncate text-[11px] font-semibold text-white/50">{candidate.powerName ?? candidate.animal}</span>
+                    {candidate.kind === "wild" ? <span className="mt-0.5 block"><DebateWildTag words={words} /></span> : null}
                 </span>
                 {candidate.fits ? (
                     <span className="shrink-0 rounded-full border border-primary-300/30 px-2 py-0.5 text-[10px] font-bold text-primary-200">{words.debate.suggested}</span>
@@ -306,7 +327,10 @@ export default function DebateSetup({
         }
         setWorking(true);
         setFailure(null);
-        const result = await createDebate({hostCaptureId: host.captureId, visibility, problem: text, captureIds: picked});
+        // V2: private, by card or (a wild animal) by species; Public only for an older setup.
+        const result = visibility === "private"
+            ? await createDebateV2({hostCaptureId: host.captureId, problem: text, picks: debatePicksFor(candidates ?? [], picked)})
+            : await createDebate({hostCaptureId: host.captureId, visibility, problem: text, captureIds: picked});
         setWorking(false);
         if (!result.ok) {
             if (result.code === "debate_not_public") {
@@ -417,7 +441,7 @@ export default function DebateSetup({
         ? null
         : host.hearts !== null && host.hearts <= 0
             ? host.captureId
-            : (candidates ?? []).find((candidate) => candidate.ownerIsMe && picked.includes(candidate.captureId) && candidate.hearts !== null && candidate.hearts <= 0)?.captureId ?? null;
+            : (candidates ?? []).find((candidate) => candidate.ownerIsMe && picked.includes(candidate.id) && candidate.hearts !== null && candidate.hearts <= 0)?.captureId ?? null;
     const hostOutOfHearts = heartless !== null;
     // Why Start can't be tapped yet, so it is never a disabled button with no reason.
     const startHint = !draft && !working && !failure && !publicBlocker && candidates !== null && candidates.length > 0
@@ -523,11 +547,11 @@ export default function DebateSetup({
                                     ) : null}
                                     {group.rows.map((candidate) => (
                                         <SectionAnimalRow
-                                            key={candidate.captureId}
+                                            key={candidate.id}
                                             candidate={candidate}
-                                            on={picked.includes(candidate.captureId)}
-                                            taken={!picked.includes(candidate.captureId) && Boolean(candidate.speciesProfileId && pickedSpecies.has(candidate.speciesProfileId))}
-                                            full={!picked.includes(candidate.captureId) && picked.length >= DEBATE_MAX_PICKS}
+                                            on={picked.includes(candidate.id)}
+                                            taken={!picked.includes(candidate.id) && Boolean(candidate.speciesProfileId && pickedSpecies.has(candidate.speciesProfileId))}
+                                            full={!picked.includes(candidate.id) && picked.length >= DEBATE_MAX_PICKS}
                                             words={words}
                                             onToggle={() => toggle(candidate)}
                                         />
@@ -621,7 +645,8 @@ export default function DebateSetup({
     ) : (
         <>
             {fromCall ? <p className={`${rule} ${pad} py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-primary-200/85`}>{words.debate.fromCall}</p> : null}
-            <div className={`${rule} ${pad} py-3`}>
+            {/* V2: every debate starts private; a setup already public (an older one) keeps its switch. */}
+            {visibility === "public" ? <div className={`${rule} ${pad} py-3`}>
                 <div role="radiogroup" aria-label={words.debate.start} className="flex border border-white/10 bg-white/[0.04] p-[3px]">
                     {(["private", "public"] as const).map((option) => (
                         <button
@@ -642,8 +667,8 @@ export default function DebateSetup({
                         </button>
                     ))}
                 </div>
-                <p className="mt-2 text-xs leading-5 text-white/60">{visibility === "private" ? words.debate.privateNote : words.debate.publicNote}</p>
-            </div>
+                <p className="mt-2 text-xs leading-5 text-white/60">{words.debate.publicNote}</p>
+            </div> : null}
             {refusedPublic ? (
                 <p role="status" className={`${rule} ${pad} bg-amber-400/[0.08] py-3 text-xs leading-5 text-amber-100`}>{words.debate.notPublic}</p>
             ) : null}
@@ -836,6 +861,8 @@ function SectionAnimalRow({candidate, on, taken, full, words, onToggle}: {
                     {candidate.fits ? (
                         <span className="shrink-0 text-[11px] font-black uppercase leading-4 tracking-[0.08em] text-primary-300" data-testid="debate-fits">{words.debate.suggested}</span>
                     ) : null}
+                    {/* A kind they haven't caught, here for its way (V2). */}
+                    {candidate.kind === "wild" ? <DebateWildTag words={words} /> : null}
                 </span>
                 <span className="block truncate text-[11px] font-semibold leading-4 text-white/50">{candidate.powerName ?? candidate.animal}</span>
             </span>
@@ -917,7 +944,8 @@ function DebateSetupSection({
                     </p>
                     {notes}
                     {animals}
-                    <div className="flex flex-col gap-1.5">
+                    {/* V2: every debate starts private; a setup already public (an older one) keeps its switch. */}
+                    {visibility === "public" ? <div className="flex flex-col gap-1.5">
                         <div role="radiogroup" aria-label={words.debate.start} className="flex flex-wrap gap-1.5">
                             {(["private", "public"] as const).map((option) => (
                                 <button
@@ -933,8 +961,8 @@ function DebateSetupSection({
                                 </button>
                             ))}
                         </div>
-                        <SectionNote>{visibility === "private" ? words.debate.privateNote : words.debate.publicNote}</SectionNote>
-                    </div>
+                        <SectionNote>{words.debate.publicNote}</SectionNote>
+                    </div> : null}
                     {roster}
                     {stakeNote ? <SectionNote testId="debate-stake">{stakeNote}</SectionNote> : null}
                 </>

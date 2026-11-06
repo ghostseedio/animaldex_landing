@@ -79,7 +79,7 @@ export type OwnerCompanion = {
      * 3.2 Debates (`debate_chat_state`): whether the animal may offer a debate
      * in this reply (`companion.debate.may_offer`) and whether a call may hand
      * one to the chat (`may_hand_over`). Only asked when the turn allows it
-     * (`debateState` on the call) and the Power is earned; both false otherwise.
+     * (`debateState` on the call), Power earned or not (Debates v2); both false otherwise.
      */
     debate: DebateChatState;
     /** The loop, when it is on (personalisation on, not a Trial thread). */
@@ -195,7 +195,7 @@ export async function loadOwnerCompanion(params: {
     /** `step_report.step_id` on the request: they tapped "I did it" on this step. */
     stepReportId?: string | null;
     /**
-     * 3.2 Debates: everything but the Power and `debate_chat_state` allows a
+     * 3.2 Debates: everything but `debate_chat_state` allows a
      * debate offer (or, on a call, a hand-over) in this reply: the request takes
      * debates, the loop is on, not a greeting, steps are offered, no crisis
      * words, and in a chat no debate marker in the conversation yet.
@@ -255,14 +255,15 @@ export async function loadOwnerCompanion(params: {
         }
     };
 
-    // The loop settles the Power first, so the progress read follows it, and
-    // the debate state only once the Power is earned, as in the apps.
+    // The loop settles the Power first, so the progress read follows it. The
+    // debate state is read from the first problem, Power earned or not, as a
+    // v2 app's ("debate_v2", docs/debates/V2.md section 2; iOS 059ba3df).
     const loop = params.loopOn ? await loadLoop() : null;
     const [bond, [progress, debate]] = await Promise.all([
         loadBond(),
         loadProgress().then(async (progress) => [
             progress,
-            params.debateState && loop && progress.power_earned
+            params.debateState && loop
                 ? await loadDebateChatState(service, params.userId, params.speciesProfileId)
                 : NO_DEBATE
         ] as const)

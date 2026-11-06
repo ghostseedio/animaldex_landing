@@ -2041,11 +2041,12 @@ export default function AskConversation({
     // MARK: Debates (3.2)
 
     // The debates this chat started, and the server's switch: every debate
-    // entry hides while it is off. Offered once the animal's Power is earned.
+    // entry hides while it is off. From the first problem, Power earned or not
+    // (Debates v2, iOS 059ba3df).
     const hostCaptureId = ownerChat ? resolvedSubject.captureId ?? null : null;
     const myDebates = useMyDebates({captureId: hostCaptureId, active: Boolean(hostCaptureId)});
     const powerEarned = animalBond.bond?.power.earned === true;
-    const debatesOffered = Boolean(ownerChat && hostCaptureId && myDebates.enabled && powerEarned && !aboutTrial);
+    const debatesOffered = Boolean(ownerChat && hostCaptureId && myDebates.enabled && !aboutTrial);
     const debateHost: DebateHost | null = hostCaptureId ? {
         captureId: hostCaptureId,
         name: speakerName,

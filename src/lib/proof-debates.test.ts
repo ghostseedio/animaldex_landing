@@ -82,7 +82,7 @@ test("the new words are in English and Indonesian", () => {
 });
 
 function candidate(captureId: string, ownerIsMe: boolean, fits = false): DebateCandidate {
-    return {captureId, ownerIsMe, speciesProfileId: null, slug: null, animal: captureId, nickname: null, powerName: null, powerLesson: null, hearts: null, fits};
+    return {id: captureId, captureId, kind: ownerIsMe ? "own" : "roster", ownerIsMe, speciesProfileId: null, slug: null, animal: captureId, nickname: null, powerName: null, powerLesson: null, hearts: null, fits};
 }
 
 test("Public lists your animals first, then other people's, best fits first in each", () => {

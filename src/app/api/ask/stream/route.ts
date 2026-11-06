@@ -54,7 +54,7 @@ import {NextResponse} from "next/server";
  * offer of other animals' ways, in the animal's own words, naming up to three
  * of the owner's own animals. The animal may make it in this reply
  * (`companion.debate`) only with the loop on, not in a greeting, with steps
- * offered, the Power earned, no crisis words, no debate marker in the
+ * offered (Power earned or not, Debates v2), no crisis words, no debate marker in the
  * conversation yet, and `debate_chat_state` saying the switch is on, this
  * animal has neither offered nor hosted one on the problem and a private
  * debate is still free today. A reply with the marker is noted
@@ -529,9 +529,9 @@ export async function POST(request: Request) {
     // A call whose request says "debate" (SPEC section 6): the spoken offer,
     // and a yes handed to the chat (`done.debate_request`).
     const callDebates = speaksAsAnimal && ownsCapture && isCall && advertised.includes("debate");
-    // The animal may offer a debate once for a problem, once its Power is
-    // earned, never in a crisis; the Power and `debate_chat_state` are read
-    // with the owner's loop.
+    // The animal may offer a debate once for a problem, from the first problem
+    // (Debates v2), never in a crisis; `debate_chat_state` is read with the
+    // owner's loop.
     const debateStateAsked = (debateCards || callDebates) && personalise && !isGreeting &&
         settings.suggestSteps !== false && !ASK_CRISIS_PATTERN.test(question ?? "") &&
         (callDebates || !conversationOffersDebate(sentHistory));

@@ -10,8 +10,9 @@ import {COMPANION_WORDS_EN} from "@/lib/companion-bond";
 import {createAskMessage, loadAskThreads, saveAskThreads, type AskThreadStorage} from "@/lib/ask-animaldex/thread";
 
 function candidate(n: number, fits = false, ownerIsMe = true): DebateCandidate {
+    const captureId = `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
     return {
-        captureId: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
+        id: captureId, captureId, kind: ownerIsMe ? "own" : "roster",
         ownerIsMe, speciesProfileId: `s${n}`, slug: `animal-${n}`, animal: `Animal ${n}`,
         nickname: null, powerName: `Power ${n}`, powerLesson: null, hearts: 3, fits
     };
@@ -23,7 +24,7 @@ test("the setup lists the suggestions, then six more at a time", () => {
     assert.deepEqual(first.rows.map((row) => row.animal), ["Animal 2", "Animal 4"]);
     assert.equal(first.hasMore, true);
     // A pick outside the suggestions stays listed.
-    assert.deepEqual(debateSetupRows(all, [all[0].captureId], 0).rows.map((row) => row.animal), ["Animal 1", "Animal 2", "Animal 4"]);
+    assert.deepEqual(debateSetupRows(all, [all[0].id], 0).rows.map((row) => row.animal), ["Animal 1", "Animal 2", "Animal 4"]);
     const more = debateSetupRows(all, [], 6);
     assert.equal(more.rows.length, 8);
     assert.deepEqual(more.rows.slice(0, 3).map((row) => row.animal), ["Animal 1", "Animal 2", "Animal 3"]);

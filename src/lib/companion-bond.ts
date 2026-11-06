@@ -263,7 +263,45 @@ export const DEBATE_COPY = {
     costs: "Costs {text}",
     writingReport: "Writing the debate report",
     /** The report as a table, where the column is wide: "Animal | Its way | Fits when | Costs". */
-    reportAnimal: "Animal"
+    reportAnimal: "Animal",
+    // Debates v2 (docs/debates/V2.md, section 9; iOS e15b474b): from the first problem.
+    /** A wild animal's tag in the setup and the thread: a kind they have not caught. */
+    wild: "Wild",
+    wildNote: "Not caught yet",
+    askMore: "Ask more animals",
+    askMoreTitle: "Who else should weigh in?",
+    askMoreGo: "Bring them in",
+    recommended: "Recommended",
+    /** Read aloud for a way's fit bar; no number on screen. */
+    fitLabel: "Fit: {fit} out of 100",
+    fitCaption: "How well each way fits what you told them",
+    solvedMine: "I solved it my way",
+    solvedTitle: "How did you solve it?",
+    solvedPlaceholder: "What did you do?",
+    solvedSend: "Tell them",
+    judging: "Reading how you solved it…",
+    /** "You used ideas from Luna and Pip". */
+    usedIdeas: "You used ideas from {names}",
+    usedNone: "You found your own way",
+    /** The small label over the qualities a pick adds. */
+    yourQualities: "Your qualities",
+    qualitiesLine: "Your qualities: {qualities}",
+    /** Opens a way's lesson, where it fits and what it costs. */
+    why: "Why",
+    powerEarned: "{power} is yours",
+    // Ask the public (V2 section 6; iOS 390e5c2a).
+    askPublic: "Ask the public",
+    askPublicTitle: "Ask the public?",
+    askPublicNote: "Your problem and the animals' ways are rewritten without names, places or details that could identify anyone. You read it before it goes up. It shows on Explore and on your profile. The community votes for 48 hours, longer until at least 3 people have. Nothing is at stake.",
+    askPublicGo: "Prepare it",
+    askPublicDrafting: "Taking out names and details…",
+    askPublicReview: "This is what people will see, on Explore and on your profile. Change anything you'd rather keep to yourself.",
+    askPublicPost: "Post it",
+    askPublicPosted: "In public as",
+    offerAnimal: "Add one of your animals",
+    offerAnimalTitle: "Which of your animals should weigh in?",
+    offerAnimalNone: "None of your animals with a Power can join this one.",
+    offerAnimalWorking: "Your animal is thinking…"
 } as const;
 
 export const ROSTER_COPY = {
@@ -288,7 +326,8 @@ export const DEBATE_WEB_COPY = {
     open: "Open",
     past: "Past",
     empty: "No debates yet",
-    emptyBody: "Debates start in a chat, once an animal's Power is yours. Bring it a problem, and when it offers a debate, say yes.",
+    /** From the first problem (Debates v2; iOS 059ba3df): no Power needed. */
+    emptyBody: "Debates start in a chat. Bring an animal a problem, and when it offers a debate, say yes.",
     goToCompanions: "Go to Companions",
     withAnimal: "Debates this animal was in",
     withAnimalEmpty: "It hasn't been in a debate yet.",
@@ -342,7 +381,11 @@ export const DEBATE_WEB_COPY = {
         powerNotEarned: "Earn its Power first: finish one step with it.",
         noHearts: "It's out of hearts. Heal it to start a public debate.",
         notOptedIn: "Turn on public debates in Settings first.",
-        alreadyInDebate: "One of those animals is already in an open public debate.",
+        /** V2 (an offered animal, Ask more animals): its kind is in the debate already (iOS `already_in_debate`). */
+        alreadyInDebate: "An animal of that kind is already in this debate.",
+        alreadyOffered: "One of your animals is already in this debate.",
+        noMoreAnimals: "That's as many animals as one debate holds.",
+        solutionTooShort: "Tell them a little more about what you did.",
         pickOne: "Pick at least one animal.",
         tooShort: "Say a little more about it: a sentence or two.",
         animalUnavailable: "One of those animals can't join right now. Pick another.",

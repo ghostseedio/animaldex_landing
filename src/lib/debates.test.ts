@@ -303,7 +303,7 @@ test("the server's refusals say themselves", () => {
 
 test("the setup pre-selects the suggestions: best first, at most three, one per species", () => {
     const candidate = (id: string, fits: boolean, species: string | null) => ({
-        captureId: id, ownerIsMe: true, speciesProfileId: species, slug: null, animal: id, nickname: null, powerName: null, powerLesson: null, hearts: 3, fits
+        id, captureId: id, kind: "own" as const, ownerIsMe: true, speciesProfileId: species, slug: null, animal: id, nickname: null, powerName: null, powerLesson: null, hearts: 3, fits
     });
     assert.deepEqual(suggestedDebatePicks([
         candidate("a", true, "s1"),
@@ -368,7 +368,7 @@ test("SPEC section 6: the offer's quick replies and setup come from done.compani
 
 test("SPEC section 6: the animals it named are pre-selected first, then the suggestions, never two of a species", () => {
     const candidate = (id: string, fits: boolean, species: string | null) => ({
-        captureId: id, ownerIsMe: true, speciesProfileId: species, slug: null, animal: id, nickname: null, powerName: null, powerLesson: null, hearts: 3, fits
+        id, captureId: id, kind: "own" as const, ownerIsMe: true, speciesProfileId: species, slug: null, animal: id, nickname: null, powerName: null, powerLesson: null, hearts: 3, fits
     });
     const candidates = [candidate("a", true, "s1"), candidate("b", false, "s2"), candidate("c", true, "s3"), candidate("d", true, "s4"), candidate("w", false, WOLF)];
     const named = (captureId: string, speciesProfileId: string | null) => ({captureId, speciesProfileId, animal: "x", nickname: null});

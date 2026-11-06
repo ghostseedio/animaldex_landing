@@ -13,12 +13,17 @@ import {
     debateProblemCode,
     decodeDebate,
     decodeDebateCandidates,
+    decodeDebateQualities,
+    decodeDebateSolution,
     decodeDebateWayChoice,
     decodeDebates,
     decodeHeartsResult,
     type Debate,
     type DebateCandidate,
+    type DebatePick,
     type DebateProblemCode,
+    type DebateQuality,
+    type DebateSolution,
     type DebateVisibility,
     type DebateWayChoice,
     type HeartsResult
@@ -50,6 +55,70 @@ export async function loadDebateCandidates(params: {hostCaptureId: string; visib
 
 export async function createDebate(params: {hostCaptureId: string; visibility: DebateVisibility; problem: string; captureIds: string[]}): Promise<DebateCallResult<Debate>> {
     const result = await debatesCall({action: "create", ...params});
+    if (!result.ok) return result;
+    const debate = decodeDebate(result.payload.debate);
+    return debate ? {ok: true, value: debate} : {ok: false, code: "debate_unavailable"};
+}
+
+// MARK: Debates v2 (docs/debates/V2.md; iOS e15b474b, 390e5c2a)
+
+/** Own and wild animals for a problem, the best fits marked; `excludeSpecies` leaves out the kinds already in (Ask more animals). */
+export async function loadDebateCandidatesV2(params: {hostCaptureId: string; problem: string; excludeSpecies?: string[]}): Promise<DebateCallResult<DebateCandidate[]>> {
+    const result = await debatesCall({action: "candidatesV2", ...params});
+    return result.ok ? {ok: true, value: decodeDebateCandidates(result.payload.candidates)} : result;
+}
+
+/** `create_debate_v2`: private, from the first problem, with own and wild animals. */
+export async function createDebateV2(params: {hostCaptureId: string; problem: string; picks: DebatePick[]}): Promise<DebateCallResult<Debate>> {
+    return debateResult(await debatesCall({action: "createV2", ...params}));
+}
+
+/** Ask more animals: they join the same debate, which goes on with them. */
+export async function extendDebate(debateId: string, picks: DebatePick[]): Promise<DebateCallResult<Debate>> {
+    return debateResult(await debatesCall({action: "extend", debateId, picks}));
+}
+
+/** What picking this animal adds to the person's qualities (its top two). Empty when it cannot be read. */
+export async function loadTopQualities(speciesProfileId: string): Promise<DebateQuality[]> {
+    const result = await debatesCall({action: "qualities", speciesProfileId});
+    return result.ok ? decodeDebateQualities(result.payload.qualities) : [];
+}
+
+/** "I solved it my way": whose ideas they used, and what it earned. */
+export async function solveDebate(debateId: string, account: string, locale?: string): Promise<DebateCallResult<DebateSolution>> {
+    const result = await debatesCall({action: "solve", debateId, account, locale});
+    if (!result.ok) return result;
+    const solution = decodeDebateSolution({solution: result.payload.solution});
+    return solution ? {ok: true, value: solution} : {ok: false, code: "debate_unavailable"};
+}
+
+/** Ask the public: the debate goes to be made anonymous (`drafting`). */
+export async function askDebatePublic(debateId: string): Promise<DebateCallResult<Debate>> {
+    return debateResult(await debatesCall({action: "askPublic", debateId}));
+}
+
+/** Keep it private: back to the private debate, nothing posted. */
+export async function keepDebatePrivate(debateId: string): Promise<DebateCallResult<Debate>> {
+    return debateResult(await debatesCall({action: "keepPrivate", debateId}));
+}
+
+/** Post it: the text they approved is checked, then goes up for the vote. */
+export async function postDebatePublic(debateId: string, text: string): Promise<DebateCallResult<Debate>> {
+    return debateResult(await debatesCall({action: "postPublic", debateId, text}));
+}
+
+/** Add one of your animals: the reader's animals that could join. */
+export async function loadOfferCandidates(debateId: string): Promise<DebateCallResult<DebateCandidate[]>> {
+    const result = await debatesCall({action: "offerCandidates", debateId});
+    return result.ok ? {ok: true, value: decodeDebateCandidates(result.payload.candidates)} : result;
+}
+
+/** One of the reader's animals joins someone's public debate; its way is written from the public words only. */
+export async function offerAnimalToDebate(debateId: string, captureId: string, locale?: string): Promise<DebateCallResult<Debate>> {
+    return debateResult(await debatesCall({action: "offerAnimal", debateId, captureId, locale}));
+}
+
+function debateResult(result: Awaited<ReturnType<typeof debatesCall>>): DebateCallResult<Debate> {
     if (!result.ok) return result;
     const debate = decodeDebate(result.payload.debate);
     return debate ? {ok: true, value: debate} : {ok: false, code: "debate_unavailable"};
