@@ -68,7 +68,7 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
         router.push(`${localePrefix}/app`);
     };
     return (
-        <div className="flex h-full min-h-0 flex-col bg-[#0b0b0b]" data-testid={`side-menu-${variant}`}>
+        <div className="relative flex h-full min-h-0 flex-col bg-[#0b0b0b]" data-testid={`side-menu-${variant}`}>
             {/* The title band: the name, the bell, and on a phone a way out. */}
             <div className="flex h-14 shrink-0 items-center gap-1 pl-4 pr-1">
                 <h2 className="min-w-0 flex-1 truncate font-display text-[20px] font-bold leading-6 text-white">AnimalDex</h2>
@@ -109,8 +109,8 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
                     className="mx-4 mb-2.5 h-10 shrink-0 rounded-pill border border-white/10 bg-white/[0.05] px-4 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-primary-400/60"
                 />
             ) : null}
-            {/* Recents: ten of their animals, the rest behind View all, as the Claude app lists its recent chats. */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-2">
+            {/* Recents: ten of their animals, the rest behind View all, as the Claude app lists its recent chats. The list runs under the floating foot. */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-20">
                 {entries.length > 0 ? <p className="px-4 pb-1 pt-4 text-[15px] text-white/60">{companionWords.list.recents ?? "Recents"}</p> : null}
                 {recents.map(({row, line, time}) => (
                     <CompanionRow key={row.speciesProfileId} row={row} line={line} time={time} locale={locale} words={companionWords} href={null} onSelect={() => pick(row.speciesProfileId)} compact />
@@ -128,10 +128,10 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
                     </div>
                 )}
             </div>
-            {/* The person's face bottom-left and Capture bottom-right, floating on the canvas: no name, no bar (the owner, 2026-11-06). */}
-            <div className="flex shrink-0 items-center gap-2 py-2.5 pl-4 pr-3">
+            {/* The person's face bottom-left and Capture bottom-right, floating as glass over the list, no bar (the owner, 2026-11-06: "floating in the sidemenu"). */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 pb-2.5 pl-4 pr-3 [&>*]:pointer-events-auto">
                 {isAuthenticated && profile ? (
-                    <Link href="/app/profile" onClick={onClose} aria-label={words.openProfile} className="grid h-11 w-11 place-items-center transition hover:opacity-80" data-testid="side-menu-profile">
+                    <Link href="/app/profile" onClick={onClose} aria-label={words.openProfile} className="grid h-11 w-11 place-items-center rounded-full bg-white/10 backdrop-blur-xl transition hover:bg-white/15" data-testid="side-menu-profile">
                         {profile.avatarUrl
                             ? <img src={profile.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10" />
                             : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-400/10 text-primary-200 ring-1 ring-primary-400/10"><AppIcon name="profile" /></span>}

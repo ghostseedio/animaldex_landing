@@ -3242,7 +3242,7 @@ export default function AskConversation({
                                     else submit(composer, "form");
                                 }}
                                 // The message bar is a control, a capsule like the apps' composer: never a square box.
-                                className={`flex items-end gap-2 rounded-pill border border-white/12 bg-white/[0.05] ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
+                                className={`flex items-end gap-2 rounded-pill border border-white/12 bg-white/[0.06] backdrop-blur-xl ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
                             >
                                 {reporting ? (
                                     <>
