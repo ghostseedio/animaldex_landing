@@ -1,16 +1,19 @@
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppMetric, AppPage, AppPageHeader, AppProgress, AppSectionTitle, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
-import TrainBackLink from "@/app/[locale]/(authenticated)/app/train/train-back-link";
+import PageCloseButton from "@/app/[locale]/(authenticated)/app/_components/page-close-button";
+import {loadAppFeatureFlags} from "@/data/app-feature-flags";
+import {isAppFeatureOn} from "@/lib/app-feature-flags";
 import {getAppProgression, getAppSponsoredCampaigns, type AppSponsoredCampaign} from "@/data/authenticated-app";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {appShellWords, type AppShellWords} from "@/lib/app-shell-words";
 import {formatEarningsMinor} from "@/lib/earnings";
 
+/** iOS `MissionShelf`, word for word. */
 const shelves = [
-    {key: "starter", title: "Starter", detail: "Fast wins that teach the capture loop.", accent: "green" as const},
-    {key: "progression", title: "Progression", detail: "Build species depth, quality, and variety.", accent: "blue" as const},
+    {key: "starter", title: "Starter", detail: "Fast wins to teach the capture loop.", accent: "green" as const},
+    {key: "progression", title: "Progression", detail: "Build species depth, stat quality, and variety.", accent: "blue" as const},
     {key: "trade", title: "Advanced", detail: "Trade-era goals and harder competitive steps.", accent: "violet" as const},
-    {key: "collector", title: "Legendary", detail: "The hardest long-term collector objectives.", accent: "gold" as const}
+    {key: "collector", title: "Legendary", detail: "Collector hunts and the hardest animal objectives.", accent: "gold" as const}
 ];
 
 function campaignObjective(campaign: AppSponsoredCampaign) {
@@ -131,11 +134,14 @@ function SponsoredCampaignCard({campaign, words}: {campaign: AppSponsoredCampaig
 }
 
 export default async function MissionsPage({params}: {params: {locale: string}}) {
-    const [progression, sponsoredCampaigns, messages] = await Promise.all([
+    const [progression, flags, messages] = await Promise.all([
         getAppProgression(),
-        getAppSponsoredCampaigns(),
+        loadAppFeatureFlags(),
         loadLocaleMessages(params.locale).catch(() => null)
     ]);
+    // Sponsored events, only while they are on (shared SPEC section 3.2); iOS has no Events here at all, the web keeps its one door after the shelves.
+    const showsEvents = isAppFeatureOn(flags, "sponsored_challenges");
+    const sponsoredCampaigns = showsEvents ? await getAppSponsoredCampaigns() : [];
     const words = appShellWords(messages?.appShell);
     const liveCampaigns = sponsoredCampaigns.filter((campaign) => !isPastCampaign(campaign));
     const pastCampaigns = sponsoredCampaigns
@@ -147,45 +153,17 @@ export default async function MissionsPage({params}: {params: {locale: string}})
 
     return (
         <AppPage>
-            <TrainBackLink />
-            <AppPageHeader
-                eyebrow="Progression"
-                title="Missions"
-                description="Earn free credits through progression, referrals, and collector milestones."
-            />
+            {/* iOS: a close button, then the hero "MISSION BOARD / Credits & milestones". */}
+            <div className="-mb-2 -ml-2">
+                <PageCloseButton />
+            </div>
+            <AppPageHeader eyebrow="MISSION BOARD" title="Credits & milestones" />
 
             <section className="grid grid-cols-3 gap-3">
                 <AppMetric label="Active" value={active} accent="violet" />
                 <AppMetric label="Completed" value={completed} />
                 <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
             </section>
-
-            {/* Events: what the drawer's "Events" opens (JRN-1). */}
-            <div id="events" className="scroll-mt-24 space-y-8">
-                {liveCampaigns.length ? (
-                    <section className="space-y-4">
-                        <AppSectionTitle icon="arena" title={words.events} detail={words.eventsDetail} />
-                        <div className="grid gap-4 xl:grid-cols-2">
-                            {liveCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} words={words} />)}
-                        </div>
-                    </section>
-                ) : (
-                    <section className="space-y-3">
-                        <AppSectionTitle icon="arena" title={words.events} detail={words.eventsDetail} />
-                        <p className="text-sm text-white/45">{pastCampaigns.length ? words.eventsNoneLive : words.eventsNone}</p>
-                    </section>
-                )}
-
-                {/* Events whose window has closed, kept out of the live list. */}
-                {pastCampaigns.length ? (
-                    <section className="space-y-4">
-                        <AppSectionTitle icon="arena" title={words.pastEvents} detail={words.pastEventsDetail} />
-                        <div className="grid gap-4 xl:grid-cols-2">
-                            {pastCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} words={words} />)}
-                        </div>
-                    </section>
-                ) : null}
-            </div>
 
             <AppSurface>
                 <div className="flex items-center gap-3">
@@ -245,6 +223,35 @@ export default async function MissionsPage({params}: {params: {locale: string}})
                     </section>
                 );
             })}
+
+            {/* Events (sponsored campaigns): the web's one door to them, after the shelves. */}
+            {showsEvents ? (
+                <div id="events" className="scroll-mt-24 space-y-8">
+                    {liveCampaigns.length ? (
+                        <section className="space-y-4">
+                            <AppSectionTitle icon="arena" title={words.events} detail={words.eventsDetail} />
+                            <div className="grid gap-4 xl:grid-cols-2">
+                                {liveCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} words={words} />)}
+                            </div>
+                        </section>
+                    ) : (
+                        <section className="space-y-3">
+                            <AppSectionTitle icon="arena" title={words.events} detail={words.eventsDetail} />
+                            <p className="text-sm text-white/45">{pastCampaigns.length ? words.eventsNoneLive : words.eventsNone}</p>
+                        </section>
+                    )}
+
+                    {/* Events whose window has closed, kept out of the live list. */}
+                    {pastCampaigns.length ? (
+                        <section className="space-y-4">
+                            <AppSectionTitle icon="arena" title={words.pastEvents} detail={words.pastEventsDetail} />
+                            <div className="grid gap-4 xl:grid-cols-2">
+                                {pastCampaigns.map((campaign) => <SponsoredCampaignCard key={campaign.id} campaign={campaign} words={words} />)}
+                            </div>
+                        </section>
+                    ) : null}
+                </div>
+            ) : null}
         </AppPage>
     );
 }
