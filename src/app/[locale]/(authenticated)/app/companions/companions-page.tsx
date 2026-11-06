@@ -32,7 +32,6 @@
  * Without it the tab is exactly as before.
  */
 
-import {useCallback, useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
@@ -41,19 +40,14 @@ import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation"
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
 import CompanionsChat from "@/app/[locale]/(authenticated)/app/companions/companions-chat";
 import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
-import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
-import {useTalkThreads} from "@/components/ask-animaldex/use-talk-threads";
-import {useAnimalConversations} from "@/components/companions/use-animal-conversations";
-import {chatCaptureIdFor, useCompanionCards, useCompanions} from "@/components/companions/use-companions";
-import {useOpenStepUpdates} from "@/components/companions/use-steps";
-import {askThreadKey} from "@/lib/ask-animaldex/thread";
+import {chatCaptureIdFor} from "@/components/companions/use-companions";
+import {useCompanionRoster} from "@/components/companions/use-companion-roster";
+import {useMemo} from "react";
 import {companionRowHref, fillWords, type CompanionWords} from "@/lib/companion-bond";
-import {rosterLastAt, rosterLine, rosterNeed, sortCompanionRoster, type RosterLocalLast} from "@/lib/companion-roster";
-import {animalMessagePreviewText, buildCompanionRows, type CompanionTabRow} from "@/lib/companion-rows";
 import type {CompanionCard} from "@/lib/companion-cards";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import type {CompanionTabRow} from "@/lib/companion-rows";
 import {TRY_TALKING_HREF, TRY_TALKING_SPECIES} from "@/lib/try-talking";
-import type {AnimalStep} from "@/lib/your-step";
 import TalkFrontDoorBand from "@/components/talk-front-door/talk-front-door-band";
 import {useFrontDoorOwnAnimals} from "@/components/talk-front-door/use-front-door-animals";
 import {featuredFrontDoorAnimal, meetOneNowAnimals, type TalkFrontDoorWords} from "@/lib/talk-front-door";
@@ -139,21 +133,6 @@ function SignedOutCompanions({words}: {words: CompanionWords}) {
     );
 }
 
-/** The newest message on the animal's chat in this browser, yours or its. */
-function localLastOf(cards: CompanionCard[], row: CompanionTabRow): RosterLocalLast {
-    const captureId = chatCaptureIdFor(cards, row.speciesProfileId, row.captureId);
-    if (!captureId) return null;
-    const messages = askSessionStore.messages(askThreadKey({scope: "species", captureId}));
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-        const message = messages[index];
-        if (message.status !== "complete" || !message.text.trim()) continue;
-        const at = Date.parse(message.createdAt);
-        const text = animalMessagePreviewText(message.text);
-        return text && Number.isFinite(at) ? {text, at} : null;
-    }
-    return null;
-}
-
 function YourCompanions({words, locale, frontDoor, labels, talk}: {
     words: CompanionWords;
     locale: string;
@@ -161,44 +140,7 @@ function YourCompanions({words, locale, frontDoor, labels, talk}: {
     labels: AskDrawerLabels | null;
     talk: TalkWords | null;
 }) {
-    const {rows: companions, didLoad, available, reload} = useCompanions();
-    const {cards, didLoad: cardsLoaded, available: cardsAvailable, reload: reloadCards} = useCompanionCards();
-    const {conversations, reload: reloadConversations} = useAnimalConversations();
-    // Read again when a thread changes here: a message sent moves its row and its line.
-    const threads = useTalkThreads();
-    // A step accepted, dropped or finished in a chat changes its row at once.
-    const [stepOverrides, setStepOverrides] = useState<ReadonlyMap<string, string | null>>(() => new Map());
-    useOpenStepUpdates(null, useCallback((step: AnimalStep | null, speciesProfileId: string) => {
-        setStepOverrides((current) => new Map(current).set(speciesProfileId, step?.step ?? null));
-    }, []));
-
-    useEffect(() => {
-        const refresh = () => {
-            void reload();
-            void reloadCards();
-            void reloadConversations();
-        };
-        refresh();
-        window.addEventListener("focus", refresh);
-        return () => window.removeEventListener("focus", refresh);
-    }, [reload, reloadCards, reloadConversations]);
-    // The server's list is the truth again once it has been read after a change.
-    useEffect(() => setStepOverrides(new Map()), [companions]);
-
-    const roster = useMemo(() => {
-        const rows = buildCompanionRows({companions, conversations, cards, words}).map((row) =>
-            stepOverrides.has(row.speciesProfileId) ? {...row, openStep: stepOverrides.get(row.speciesProfileId) ?? null} : row);
-        const local = new Map(rows.map((row) => [row.speciesProfileId, localLastOf(cards, row)]));
-        const localOf = (row: CompanionTabRow) => local.get(row.speciesProfileId) ?? null;
-        return sortCompanionRoster(rows, localOf).map((row) => ({
-            row,
-            line: rosterLine(row, localOf(row), words),
-            // The time only once there is a conversation to date.
-            time: row.hasConversation || localOf(row) ? rosterLastAt(row, localOf(row)) : null
-        }));
-        // `threads` is the signal that this browser's chats changed; the rows read them through localLastOf.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [companions, conversations, cards, words, stepOverrides, threads]);
+    const {entries: roster, cards, didLoad, cardsLoaded, available, cardsAvailable} = useCompanionRoster(words);
 
     // Nothing to show yet, and nothing has said there is nothing.
     const isFirstLoad = roster.length === 0 && !(didLoad && cardsLoaded);

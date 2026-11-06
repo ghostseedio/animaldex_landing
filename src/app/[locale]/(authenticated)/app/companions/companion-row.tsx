@@ -32,7 +32,7 @@ export function yesterdayWord(locale: string): string {
  * One row, 64 tall, 16 inset: the art, then the text column with the
  * hairline under it (the separator starts at the text, never under the art).
  */
-export function CompanionRow({row, href, line, time, locale, words, onSelect, isCurrent = false}: {
+export function CompanionRow({row, href, line, time, locale, words, onSelect, isCurrent = false, compact = false}: {
     row: CompanionTabRow;
     href: string | null;
     line: ReturnType<typeof rosterLine>;
@@ -43,8 +43,30 @@ export function CompanionRow({row, href, line, time, locale, words, onSelect, is
     onSelect?: () => void;
     /** The animal whose chat is open: chrome under it, a neon edge. */
     isCurrent?: boolean;
+    /** The side menu's row (the owner, 2026-11-06): the face small, the line alone, no time, 44 tall. */
+    compact?: boolean;
 }) {
     const unread = row.unreadCount > 0;
+    if (compact && onSelect) {
+        return (
+            <button
+                type="button"
+                onClick={onSelect}
+                aria-current={isCurrent ? "true" : undefined}
+                aria-label={`${row.displayName}${unread ? `, ${fillWords(words.tab.unread, {n: row.unreadCount})}` : ""}${line.text ? `, ${line.text}` : ""}`}
+                className={`relative flex h-11 w-full items-center gap-2.5 px-4 text-left transition-colors duration-150 ease-spring hover:bg-white/[0.04] active:bg-white/[0.07] ${isCurrent ? "bg-[#12351C]" : ""}`}
+                data-testid="companion-row"
+            >
+                {isCurrent ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px]" style={{backgroundColor: NEON}} /> : null}
+                <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={28} className={unread ? "ring-[1.5px] ring-primary-400/80" : ""} />
+                <span className={`flex min-w-0 flex-1 items-center gap-1 text-[15px] leading-5 ${unread ? "font-semibold text-white" : line.text ? "text-white/60" : "text-white/40"}`}>
+                    {line.kind === "step" ? <AskWalkIcon className="h-3.5 w-3.5 shrink-0" /> : null}
+                    <span className="min-w-0 truncate">{line.text || row.displayName}</span>
+                </span>
+                {unread ? <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor: row.muted ? "rgb(255 255 255 / 0.35)" : NEON}} /> : null}
+            </button>
+        );
+    }
     const needsYou = rosterNeed(row) !== null;
     const body = (
         <>

@@ -6,14 +6,16 @@ import {getAuthenticatedAppShellData} from "@/data/authenticated-app";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {appShellWords} from "@/lib/app-shell-words";
+import {getCompanionWords} from "@/loaders/companion-words";
 
 export const metadata = {robots: {index: false, follow: false}};
 
 export default async function AuthenticatedAppLayout({children, params}: {children: React.ReactNode; params: {locale: string}}) {
     const timer = createDevRequestTimer("app.layout");
-    const [{context, notifications, unreadMessageCount, creditBalance}, messages] = await Promise.all([
+    const [{context, notifications, unreadMessageCount, creditBalance}, messages, companionWords] = await Promise.all([
         timeDevStep(timer, "shell-data", () => getAuthenticatedAppShellData()),
-        loadLocaleMessages(params.locale).catch(() => null)
+        loadLocaleMessages(params.locale).catch(() => null),
+        getCompanionWords(params.locale)
     ]);
     finishDevRequestTimer(timer, {authenticated: Boolean(context)});
 
@@ -26,6 +28,7 @@ export default async function AuthenticatedAppLayout({children, params}: {childr
                     unreadCount={notifications.filter((item) => !item.readAt).length}
                     unreadMessageCount={unreadMessageCount}
                     words={appShellWords(messages?.appShell)}
+                    companionWords={companionWords}
                 >
                     {children}
                 </AppShell>

@@ -17,10 +17,7 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import {usePathname, useRouter} from "next/navigation";
 import {plusItemInput, takePhotoOpensCameraApp, type CaptureEntry} from "@/lib/capture-entry";
 import {setPendingCaptureFile} from "@/lib/capture-handoff";
-import Link from "@/app/[locale]/_components/link";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
-import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
-import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
 import AskConversation, {type AskConversationPage, type AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import {chatCaptureIdFor} from "@/components/companions/use-companions";
@@ -31,8 +28,8 @@ import type {CompanionCard} from "@/lib/companion-cards";
 import type {rosterLine} from "@/lib/companion-roster";
 import type {CompanionTabRow} from "@/lib/companion-rows";
 import {pickCompanionToOpen, rememberCompanion, rememberedCompanion, type CompanionsOpeningMemory} from "@/lib/companions-opening";
+import {COMPANIONS_SWITCH_EVENT} from "@/components/companions/use-companion-roster";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
-import {TRY_TALKING_HREF} from "@/lib/try-talking";
 
 export type CompanionsChatEntry = {row: CompanionTabRow; line: ReturnType<typeof rosterLine>; time: number | null};
 
@@ -50,9 +47,8 @@ function useFillToFoot(ref: React.RefObject<HTMLDivElement | null>): string | un
         if (!element) return;
         const measure = () => {
             const top = Math.max(0, Math.round(element.getBoundingClientRect().top + window.scrollY));
-            // The tab bar is away under the chat on a phone (the owner, 2026-11-06, after the
-            // Claude app), so the chat runs to the foot; above 1024 px, the page's own bottom padding.
-            const reserve = window.matchMedia("(min-width: 1024px)").matches ? 40 : 0;
+            // No bars under the chat (the owner, 2026-11-06): it runs to the foot everywhere.
+            const reserve = 0;
             setHeight(`calc(100dvh - ${top}px - ${reserve}px)`);
         };
         measure();
@@ -71,7 +67,7 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     locale: string;
 }) {
     const pathname = usePathname() ?? "/app";
-    const {setBottomNavHidden} = useAppShellChrome();
+    const {setBottomNavHidden, toggleMenu} = useAppShellChrome();
     // The phone's tab bar goes away while the chat fills the tab; the drawer carries the other tabs.
     useEffect(() => {
         setBottomNavHidden(true);
@@ -79,7 +75,6 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     }, [setBottomNavHidden]);
     const rows = useMemo(() => entries.map((entry) => entry.row), [entries]);
     const [switchedTo, setSwitchedTo] = useState<string | null>(null);
-    const [open, setOpen] = useState(false);
     const [remembered, setRemembered] = useState<CompanionsOpeningMemory | null>(null);
     useEffect(() => setRemembered(rememberedCompanion()), []);
 
@@ -96,26 +91,23 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
         setSwitchedTo(current.speciesProfileId);
         rememberCompanion(current.speciesProfileId);
     }, [current, switchedTo]);
-    const pick = useCallback((row: CompanionTabRow) => {
-        setSwitchedTo(row.speciesProfileId);
-        rememberCompanion(row.speciesProfileId);
-        setOpen(false);
-    }, []);
+    // The side menu's pick, when this chat is already on screen.
     useEffect(() => {
-        if (!open) return;
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") setOpen(false);
+        const onSwitch = (event: Event) => {
+            const id = (event as CustomEvent<string>).detail;
+            if (typeof id === "string") setSwitchedTo(id);
         };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [open]);
+        window.addEventListener(COMPANIONS_SWITCH_EVENT, onSwitch);
+        return () => window.removeEventListener(COMPANIONS_SWITCH_EVENT, onSwitch);
+    }, []);
 
     const frame = useRef<HTMLDivElement | null>(null);
     const height = useFillToFoot(frame);
     const othersUnread = current ? rows.filter((row) => row.speciesProfileId !== current.speciesProfileId && row.unreadCount > 0).length : 0;
     const captureId = current ? chatCaptureIdFor(cards, current.speciesProfileId, current.captureId) : null;
     const avatarUrl = current?.slug ? getSpeciesImageRoute(current.slug) : null;
-    const openSwitcher = useCallback(() => setOpen(true), []);
+    // The shell's side menu (the owner, 2026-11-06): on a phone the slide-over; on a wide screen the sidebar is always there.
+    const openSwitcher = useCallback(() => toggleMenu(), [toggleMenu]);
 
     // The "+" (the owner, 2026-11-06, after the Claude app): the phone's camera
     // app or the camera roll opens at once, from the tap on the item; the
@@ -167,30 +159,13 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
         : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile]);
 
     if (!current || !page) return null;
-    const list = (onClose?: () => void) => (
-        <SwitchList entries={entries} currentId={current.speciesProfileId} words={words} locale={locale} onPick={pick} onClose={onClose} closeLabel={labels.close} />
-    );
     return (
         <div
             ref={frame}
             style={{height}}
-            className="-mx-4 -my-7 flex min-h-[420px] overflow-hidden border-t border-white/10 sm:-mx-7 lg:-mx-10 lg:-my-10 lg:border-t-0"
+            className="-mx-4 -my-7 flex min-h-[420px] overflow-hidden sm:-mx-7 lg:-mx-10 lg:-my-10"
             data-testid="companions-chat"
         >
-            <aside className="hidden w-[300px] shrink-0 flex-col border-r border-white/10 lg:flex" aria-label={words.list.switcher}>
-                {list()}
-            </aside>
-            {open ? (
-                <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={words.list.switcher}>
-                    <button type="button" aria-label={labels.close} onClick={() => setOpen(false)} className="absolute inset-0 bg-canvas-950/70" />
-                    <aside
-                        className="talk-slide-over absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col border-r border-white/10 bg-canvas-900 shadow-[12px_0_40px_rgba(0,0,0,0.45)]"
-                        data-testid="companion-switcher-panel"
-                    >
-                        {list(() => setOpen(false))}
-                    </aside>
-                </div>
-            ) : null}
             <main className="flex min-w-0 flex-1 flex-col">
                 <AskSubjectBridge
                     scope="species"
@@ -204,110 +179,5 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 <AskConversation key={current.speciesProfileId} labels={labels} presentation="page" page={page} />
             </main>
         </div>
-    );
-}
-
-/** Their animals, the same rows the roster had: talking first, then the ones to say hello to, then the other ways in. */
-function SwitchList({entries, currentId, words, locale, onPick, onClose, closeLabel}: {
-    entries: CompanionsChatEntry[];
-    currentId: string;
-    words: CompanionWords;
-    locale: string;
-    onPick: (row: CompanionTabRow) => void;
-    onClose?: () => void;
-    closeLabel: string;
-}) {
-    const [query, setQuery] = useState("");
-    const needle = query.trim().toLowerCase();
-    const shown = needle
-        ? entries.filter(({row}) => row.displayName.toLowerCase().includes(needle) || row.animal.toLowerCase().includes(needle))
-        : entries;
-    const talking = shown.filter(({time}) => time !== null);
-    const quiet = shown.filter(({time}) => time === null);
-    const headers = talking.length > 0 && quiet.length > 0;
-    const band = (text: string) => (
-        <p className="bg-[#12351C]/60 px-4 pb-2 pt-3.5 text-[11px] font-black uppercase tracking-[0.08em] text-white/40">{text}</p>
-    );
-    const rowOf = ({row, line, time}: CompanionsChatEntry) => (
-        <CompanionRow
-            key={row.speciesProfileId}
-            row={row}
-            line={line}
-            time={time}
-            locale={locale}
-            words={words}
-            href={null}
-            onSelect={() => onPick(row)}
-            isCurrent={row.speciesProfileId === currentId}
-        />
-    );
-    return (
-        <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex h-14 shrink-0 items-center gap-2 border-b border-white/10 pl-4 pr-1">
-                <h2 className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold leading-6 text-white">{words.list.switcher}</h2>
-                {onClose ? (
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        aria-label={closeLabel}
-                        className="grid h-11 w-11 place-items-center rounded-full text-ink-200 transition-colors hover:bg-white/8 hover:text-white"
-                    >
-                        <CloseIcon />
-                    </button>
-                ) : null}
-            </div>
-            {/* Where the phone's tab bar went while the chat fills the tab: the other tabs, at the head (as the Claude app's drawer leads with its places). */}
-            <div className="flex gap-2 px-4 pb-3 pt-3 lg:hidden">
-                {[
-                    {href: "/app/collection", name: "collection" as const},
-                    {href: "/app/explore", name: "explore" as const},
-                    {href: "/app/profile", name: "profile" as const}
-                ].map((tab) => (
-                    <Link
-                        key={tab.href}
-                        href={tab.href}
-                        className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-pill bg-[#12351C] text-[13px] font-semibold text-white transition-colors hover:bg-[#1a4526]"
-                    >
-                        <AppIcon name={tab.name} className="h-4 w-4" />
-                    </Link>
-                ))}
-            </div>
-            {entries.length >= SEARCH_FROM ? (
-                <input
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    aria-label={words.list.switcher}
-                    className="mx-4 my-2.5 h-10 shrink-0 rounded-pill border border-white/10 bg-white/[0.05] px-4 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-primary-400/60"
-                />
-            ) : null}
-            <div className="min-h-0 flex-1 overflow-y-auto">
-                {headers ? band(words.list.talking) : null}
-                {talking.map(rowOf)}
-                {headers ? band(words.list.shelf) : null}
-                {quiet.map(rowOf)}
-                {needle ? null : (
-                    <div className="flex flex-col items-start gap-3 px-4 py-5">
-                        <Link href={TRY_TALKING_HREF} className="text-[13px] font-semibold text-white/60 transition-colors hover:text-white">
-                            {words.tab.meetOneNow}
-                        </Link>
-                        <Link
-                            href="/app/capture"
-                            className="inline-flex min-h-11 items-center gap-2 rounded-pill bg-primary-400 px-5 text-[13px] font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500"
-                        >
-                            <AppIcon name="camera" /> {words.list.capture}
-                        </Link>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function CloseIcon() {
-    return (
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
     );
 }
