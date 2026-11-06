@@ -15,6 +15,10 @@ export default async function WildProfileInterviewPage({params}: {params: {local
         WILD_PROFILE_INTERVIEW_LABEL_KEYS.map((key) => [key, t(`interview.${key}`)])
     ) as WildProfileInterviewLabels;
     labels.privacyNote = t("privacyNote");
+    // iOS `TalkLockedBar`: the line and Continue while Talk's gate is closed.
+    const askT = await getScopedTranslator(params.locale, "askAnimalDex");
+    labels.lockedLine = askT("lockedLine");
+    labels.lockedContinue = askT("ageContinue");
     return (
         <div className="mx-auto max-w-3xl space-y-6">
             <div>

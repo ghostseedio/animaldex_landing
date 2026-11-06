@@ -117,4 +117,4 @@ export const WILD_PROFILE_INTERVIEW_LABEL_KEYS = [
 ] as const;
 
 /** Interview copy plus the shared privacy note (`wildProfile.privacyNote`). */
-export type WildProfileInterviewLabels = Record<(typeof WILD_PROFILE_INTERVIEW_LABEL_KEYS)[number] | "privacyNote", string>;
+export type WildProfileInterviewLabels = Record<(typeof WILD_PROFILE_INTERVIEW_LABEL_KEYS)[number] | "privacyNote" | "lockedLine" | "lockedContinue", string>;

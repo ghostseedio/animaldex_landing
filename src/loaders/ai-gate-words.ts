@@ -8,6 +8,7 @@ export async function getAiGateWords(locale: string): Promise<AiGateWords> {
     return {
         consentTitle: t("consentTitle"),
         consentBody: t("consentBody"),
+        consentPoints: [t("consentPointAi"), t("consentPointMemory"), t("consentPointCare")],
         consentMore: t("consentMore"),
         consentPrivacy: t("consentPrivacy"),
         consentSafety: t("consentSafety"),

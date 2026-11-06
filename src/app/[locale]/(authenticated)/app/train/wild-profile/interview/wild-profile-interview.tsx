@@ -3,6 +3,7 @@
 import {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useRouter} from "next/navigation";
 import {getLocalePath} from "@/lib/site";
+import {useAiChatGate} from "@/components/ai-gate/ai-chat-gate";
 import {applyWildProfileChip, suggestedWildProfileChips} from "@/lib/wild-profile-interview-chips";
 import {
     isDeepWildProfileQuestion,
@@ -184,9 +185,25 @@ export default function WildProfileInterview({locale, labels}: {locale: string; 
     const birthDateAnswer = answerInput === "birth_date" ? wildProfileBirthDateAnswer(answerText) : null;
     const canSend = answerInput === "birth_date" ? birthDateAnswer !== null : Boolean(answerText.trim());
 
+    // Talk's gate (iOS 30bbb25b, shared SPEC section 3.1): the questions and the
+    // profile are written by AI, so until the age check and the AI notice are
+    // through, the interview loads nothing and shows the locked line instead.
+    const gate = useAiChatGate();
+    const [locked, setLocked] = useState(false);
+    const passGate = useCallback(async () => {
+        if (gate.ready) return true;
+        const allowed = await gate.request();
+        setLocked(!allowed);
+        return allowed;
+    }, [gate]);
+
     const load = useCallback(async () => {
         setIsLoading(true);
         setErrorMessage(null);
+        if (!(await passGate())) {
+            setIsLoading(false);
+            return;
+        }
         try {
             const payload = await callWildProfile<WildProfileInterviewPayload>({action: "load"}, unavailable);
             setSession(payload.session);
@@ -197,7 +214,7 @@ export default function WildProfileInterview({locale, labels}: {locale: string; 
             setErrorMessage(error instanceof Error ? error.message : String(error));
         }
         setIsLoading(false);
-    }, [unavailable]);
+    }, [unavailable, passGate]);
 
     useEffect(() => {
         void load();
@@ -288,6 +305,7 @@ export default function WildProfileInterview({locale, labels}: {locale: string; 
         // A birth date goes in as free text, yyyy-MM-dd, like any other answer.
         const text = answerInput === "birth_date" ? (birthDateAnswer ?? "") : answerText.trim();
         if (!skipped && !text) return;
+        if (!(await passGate())) return;
         setIsSaving(true);
         setErrorMessage(null);
         setPendingUserMessage(skipped
@@ -313,6 +331,7 @@ export default function WildProfileInterview({locale, labels}: {locale: string; 
     async function generate() {
         const sessionId = response?.session_id ?? session?.id;
         if (!sessionId) return;
+        if (!(await passGate())) return;
         setShowSignal(false);
         setIsGenerating(true);
         setErrorMessage(null);
@@ -347,6 +366,17 @@ export default function WildProfileInterview({locale, labels}: {locale: string; 
             </span>
         </button>
     ) : null;
+
+    if (locked) {
+        return (
+            <div className="flex min-h-[12rem] flex-col items-center justify-center gap-4 border border-white/10 bg-[#151515] px-6 text-center">
+                <p className="text-[15px] font-semibold text-white/75">{labels.lockedLine}</p>
+                <button type="button" onClick={() => void load()} className="min-h-11 rounded-pill bg-primary-400 px-6 text-sm font-black text-black">
+                    {labels.lockedContinue}
+                </button>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

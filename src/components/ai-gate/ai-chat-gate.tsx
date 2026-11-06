@@ -42,6 +42,8 @@ import {
 export type AiGateWords = {
     consentTitle: string;
     consentBody: string;
+    /** iOS `AIConsentPoint`s: AI writes every reply, what is kept, not a doctor. */
+    consentPoints?: string[];
     /** "See {privacy} and {safety}." */
     consentMore: string;
     consentPrivacy: string;
@@ -409,6 +411,16 @@ function GateSheet({sheet, words, account, onAge, onAgree, onNotNow, onClose}: {
                             <span id={titleId} className="font-display text-xl font-bold leading-tight text-white">{words.consentTitle}</span>
                         </p>
                         <p className="mt-3 text-[15px] leading-6 text-ink-100">{words.consentBody}</p>
+                        {words.consentPoints?.length ? (
+                            <ul className="mt-3 space-y-2">
+                                {words.consentPoints.map((point) => (
+                                    <li key={point} className="flex gap-2.5 text-[13px] leading-5 text-ink-200">
+                                        <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary-300" />
+                                        <span>{point}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : null}
                         <p className="mt-2 text-[13px] leading-5 text-ink-300">
                             {more.map((part, index) => part === "{privacy}"
                                 ? <Link key={index} href={PRIVACY_HREF} className="text-primary-200 underline underline-offset-2 hover:text-white">{words.consentPrivacy}</Link>
