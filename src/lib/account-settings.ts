@@ -147,6 +147,8 @@ export type AccountStanding = {
     suspendedAt: string | null;
     suspensionReason: string | null;
     strikes: Array<{id: string; reason: string; createdAt: string}>;
+    /** Strikes a review overturned (iOS `removedStrikes`, a key of its own so old clients never count them). */
+    removedStrikes: Array<{id: string; reason: string; createdAt: string}>;
 };
 
 export const EMPTY_ACCOUNT_STANDING: AccountStanding = {
@@ -155,8 +157,45 @@ export const EMPTY_ACCOUNT_STANDING: AccountStanding = {
     maxStrikes: 3,
     suspendedAt: null,
     suspensionReason: null,
-    strikes: []
+    strikes: [],
+    removedStrikes: []
 };
+
+function decodeStrikes(value: unknown): AccountStanding["strikes"] {
+    return (Array.isArray(value) ? value : [])
+        .filter((strike: Record<string, unknown>) => typeof strike?.id === "string")
+        .map((strike: Record<string, unknown>) => ({
+            id: strike.id as string,
+            reason: typeof strike.reason === "string" ? strike.reason : "",
+            createdAt: typeof strike.createdAt === "string" ? strike.createdAt : ""
+        }));
+}
+
+/**
+ * iOS `AccountStandingStatusHeader.statusLine`. The web has no dispute flow
+ * yet, so it never adds "Tap a strike to dispute it." (Contact Support is
+ * the way, as the ladder's footnote says).
+ */
+export function accountStandingStatusLine(standing: AccountStanding) {
+    switch (standing.standing) {
+        case "at_risk":
+            return Math.max(standing.maxStrikes - standing.strikeCount, 1) === 1
+                ? "One more strike suspends your account."
+                : "Two more strikes suspend your account.";
+        case "suspended":
+            return "New captures can't be identified while the account is suspended.";
+        default:
+            return "No strikes. Keep capturing real animals with your own camera.";
+    }
+}
+
+/** iOS `StrikeLadderSection`, without disputes. */
+export const STRIKE_LADDER = [
+    {count: 1, title: "First strike", detail: "A warning. The photo comes off Discover."},
+    {count: 2, title: "Second strike", detail: "A final warning."},
+    {count: 3, title: "Third strike", detail: "Your account is suspended."}
+] as const;
+export const STRIKE_LADDER_FOOTNOTE = "Contact Support with other shots from the same moment or proof you were there. A person looks at every message.";
 
 export function decodeAccountStanding(value: unknown): AccountStanding {
     const row = value as Record<string, unknown> | null;
@@ -168,13 +207,8 @@ export function decodeAccountStanding(value: unknown): AccountStanding {
         maxStrikes: Math.max(1, Number(row.maxStrikes) || 3),
         suspendedAt: typeof row.suspendedAt === "string" ? row.suspendedAt : null,
         suspensionReason: typeof row.suspensionReason === "string" && row.suspensionReason.trim() ? row.suspensionReason : null,
-        strikes: (Array.isArray(row.strikes) ? row.strikes : [])
-            .filter((strike: Record<string, unknown>) => typeof strike?.id === "string")
-            .map((strike: Record<string, unknown>) => ({
-                id: strike.id as string,
-                reason: typeof strike.reason === "string" ? strike.reason : "",
-                createdAt: typeof strike.createdAt === "string" ? strike.createdAt : ""
-            }))
+        strikes: decodeStrikes(row.strikes),
+        removedStrikes: decodeStrikes(row.removedStrikes)
     };
 }
 

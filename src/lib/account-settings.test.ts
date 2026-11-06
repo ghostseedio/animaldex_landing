@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     accountStandingFooter,
+    accountStandingStatusLine,
     accountStandingValue,
     convertFromUsd,
     decodeAccountStanding,
@@ -59,4 +60,14 @@ test("record privacy reads one audience as itself and a mix as Custom (iOS playR
 
 test("alert types are iOS's five, Animal messages after Messages", () => {
     assert.deepEqual(PUSH_PREFERENCE_ROWS.map((row) => row.title), ["Your captures", "Activity", "Messages", "Animal messages", "Credits"]);
+});
+
+test("account standing says what iOS says, and keeps removed strikes apart", () => {
+    assert.equal(accountStandingStatusLine(decodeAccountStanding(null)), "No strikes. Keep capturing real animals with your own camera.");
+    assert.equal(accountStandingStatusLine(decodeAccountStanding({standing: "at_risk", strikeCount: 1, maxStrikes: 3})), "Two more strikes suspend your account.");
+    assert.equal(accountStandingStatusLine(decodeAccountStanding({standing: "at_risk", strikeCount: 2, maxStrikes: 3})), "One more strike suspends your account.");
+    assert.equal(accountStandingStatusLine(decodeAccountStanding({standing: "suspended", strikeCount: 3})), "New captures can't be identified while the account is suspended.");
+    const standing = decodeAccountStanding({standing: "good", strikes: [], removedStrikes: [{id: "r", reason: "Screen photo", createdAt: "2026-10-01T00:00:00Z"}]});
+    assert.equal(standing.strikes.length, 0);
+    assert.equal(standing.removedStrikes.length, 1);
 });
