@@ -85,7 +85,8 @@
     "closeMenu": "Close menu",
     "backToTop": "Back to top",
     "findYourAnimals": "Find your animals",
-    "aiAndSafety": "AI & safety"
+    "aiAndSafety": "AI & safety",
+    "search": "Search"
   },
   "home": {
     "title": "AnimalDex",
@@ -2711,7 +2712,9 @@
       "masteredCount": "{n} mastered",
       "powersEarned": "{n} Powers earned",
       "switcher": "Your animals",
-      "talking": "Talking"
+      "talking": "Talking",
+      "recents": "Recents",
+      "viewAll": "View all"
     },
     "stages": {
       "met": "Met",

@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * The microphone in the chat header that starts a voice call with the animal
- * (the iOS chat's `speakToAnimalCall`). Shown only when the animal has a
+ * The wave beside the message bar's mic that starts a voice call with the
+ * animal (the iOS chat's `speakToAnimalCall`), where ChatGPT keeps its voice
+ * mode (the owner, 2026-11-06). Shown only when the animal has a
  * talking model published as glTF and this browser can hold a call: a
  * microphone, Web Audio, and a recognizer, its own or (a signed-in reader:
  * Firefox has no Web Speech API) the call's on the server. The call screen,
@@ -21,7 +22,7 @@ import dynamic from "next/dynamic";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {primeCallAudio} from "@/components/ask-animaldex/voice-call/call-audio";
 import {browserCanCall} from "@/components/ask-animaldex/voice-call/call-listener";
-import {PhoneIcon} from "@/components/ask-animaldex/voice-call/call-icons";
+import {WaveIcon} from "@/components/ask-animaldex/voice-call/call-icons";
 import {callCopy} from "@/lib/ask-animaldex/call-copy";
 import {callClipSource, type CallClip} from "@/lib/ask-animaldex/call-events";
 import {
@@ -138,7 +139,7 @@ export default function AskVoiceCallButton({
 
     if (!asset) return null;
     const copy = callCopy(locale);
-    // "Call Luna": the header's call (the message bar's mic only dictates, DECISIONS section 9).
+    // "Call Luna": the call beside the mic (the mic only dictates, DECISIONS section 9).
     const label = copy.call.replace("{animal}", animalName);
 
     return (
@@ -155,9 +156,9 @@ export default function AskVoiceCallButton({
                 aria-label={label}
                 title={label}
                 data-testid="ask-voice-call"
-                className="grid h-9 w-9 place-items-center rounded-full text-ink-300 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 disabled:pointer-events-none disabled:opacity-35"
+                className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-ink-300 transition-colors hover:bg-white/12 hover:text-white active:bg-white/16 disabled:pointer-events-none disabled:opacity-35"
             >
-                <PhoneIcon size={16} />
+                <WaveIcon size={17} />
             </button>
             {open && typeof document !== "undefined"
                 ? createPortal(

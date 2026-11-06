@@ -31,6 +31,7 @@ export const APP_SHELL_WORDS_EN = {
     openProfile: "Open profile",
     viewProfile: "View profile",
     openMenu: "Open menu",
+    search: "Search",
     closeMenu: "Close menu",
     collector: "Collector",
     /** Missions › Events: sponsored and AnimalDex campaigns (DECISIONS section 1). */

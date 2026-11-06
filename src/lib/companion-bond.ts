@@ -376,6 +376,9 @@ export const COMPANIONS_COPY = {
     /** The switcher in the tab's chat (the owner, 2026-11-06): its title, and the rows talking. */
     switcher: "Your animals",
     talking: "Talking",
+    /** The side menu after the Claude app (the owner, 2026-11-06): ten animals, the rest behind View all. */
+    recents: "Recents",
+    viewAll: "View all",
     mastered: "Mastered",
     myCompanions: "My Companions",
     masteredCount: "{n} mastered",

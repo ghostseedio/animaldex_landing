@@ -85,7 +85,8 @@
     "closeMenu": "Tutup menu",
     "backToTop": "Kembali ke atas",
     "findYourAnimals": "Temukan hewanmu",
-    "aiAndSafety": "AI & keamanan"
+    "aiAndSafety": "AI & keamanan",
+    "search": "Cari"
   },
   "home": {
     "title": "AnimalDex",
@@ -2697,7 +2698,9 @@
       "masteredCount": "{n} dikuasai",
       "powersEarned": "{n} Kekuatan didapatkan",
       "switcher": "Hewan Anda",
-      "talking": "Sedang mengobrol"
+      "talking": "Sedang mengobrol",
+      "recents": "Terbaru",
+      "viewAll": "Lihat semua"
     },
     "stages": {
       "met": "Baru bertemu",

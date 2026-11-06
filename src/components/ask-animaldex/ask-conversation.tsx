@@ -2923,26 +2923,6 @@ export default function AskConversation({
                             ) : null}
                         </div>
                     </div>
-                    {messenger && animalName && askCallsOffered(context?.signedIn === true) ? (
-                        // A voice call with its talking 3D model, when it has one (voice-call/).
-                        <AskVoiceCallButton
-                            threadKey={threadKey}
-                            animalName={animalName}
-                            captureId={resolvedSubject.captureId ?? null}
-                            speciesProfileId={context?.speciesProfileId ?? null}
-                            serverHearing={context?.signedIn === true}
-                            names={[hints.animalName, resolvedSubject.name, resolvedSubject.slug]}
-                            locale={locale}
-                            disabled={isSending}
-                            send={send}
-                            stop={stop}
-                            onOpen={() => {
-                                speech.stop();
-                                sounds.stop();
-                            }}
-                            onCallChange={setOnCall}
-                        />
-                    ) : null}
                     {/* One icon at the tab's root (the owner, 2026-11-06): memory lives in the ••• menu there. */}
                     {speaksAsAnimal && context?.signedIn && !messenger && !(onPage && page?.switcher) ? (
                         <button
@@ -3318,6 +3298,26 @@ export default function AskConversation({
                                     }}
                                     className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
                                 />
+                                {messenger && animalName && askCallsOffered(context?.signedIn === true) && !debateEdit && !reporting && !showStop ? (
+                                    // The call beside the mic, as ChatGPT's voice mode sits (the owner, 2026-11-06): with its talking 3D model (voice-call/).
+                                    <AskVoiceCallButton
+                                        threadKey={threadKey}
+                                        animalName={animalName}
+                                        captureId={resolvedSubject.captureId ?? null}
+                                        speciesProfileId={context?.speciesProfileId ?? null}
+                                        serverHearing={context?.signedIn === true}
+                                        names={[hints.animalName, resolvedSubject.name, resolvedSubject.slug]}
+                                        locale={locale}
+                                        disabled={isSending}
+                                        send={send}
+                                        stop={stop}
+                                        onOpen={() => {
+                                            speech.stop();
+                                            sounds.stop();
+                                        }}
+                                        onCallChange={setOnCall}
+                                    />
+                                ) : null}
                                 {messenger && dictation.available && !debateEdit && !showStop ? (
                                     <DictationButton
                                         active={dictation.phase === "starting" || dictation.phase === "listening"}

@@ -54,3 +54,10 @@ export const EllipsisIcon = ({size}: IconProps) => fill(size, <>
 
 /** The call button (SF Symbols phone.fill): the mic glyph means dictation only (DECISIONS section 9). */
 export const PhoneIcon = ({size}: IconProps) => fill(size, <path d="M6.6 3.2c.5-.4 1.2-.4 1.7 0l2.3 2.3c.5.5.5 1.2.1 1.7l-1.2 1.6a.9.9 0 0 0-.1.9 11.6 11.6 0 0 0 4.9 4.9c.3.1.6.1.9-.1l1.6-1.2c.5-.4 1.2-.4 1.7.1l2.3 2.3c.5.5.5 1.2 0 1.7l-1.4 1.4c-1 1-2.6 1.4-4 .9A18.4 18.4 0 0 1 4.3 8.6c-.5-1.4-.1-3 .9-4Z" />);
+
+/** The wave: a voice call, where ChatGPT keeps its voice mode (beside the mic). */
+export const WaveIcon = ({size}: IconProps) => (
+    <svg viewBox="0 0 20 20" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+        <path d="M3 8.5v3M6.5 5.5v9M10 3v14M13.5 6.5v7M17 8.5v3" />
+    </svg>
+);
