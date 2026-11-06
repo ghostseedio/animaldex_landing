@@ -81,11 +81,7 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
                         <span className="absolute right-1 top-1 min-w-[1.05rem] rounded-full bg-primary-400 px-1 text-center text-[0.55rem] font-black leading-4 text-black">{unreadCount > 99 ? "99+" : unreadCount}</span>
                     ) : null}
                 </Link>
-                {onClose ? (
-                    <button type="button" onClick={onClose} aria-label={words.closeMenu} className="grid h-11 w-11 place-items-center rounded-full text-ink-200 transition-colors hover:bg-white/8 hover:text-white">
-                        <AppIcon name="close" className="h-4 w-4" />
-                    </button>
-                ) : null}
+                {/* No ✕ (the owner, 2026-11-06): it closes as the Claude app's does, with a tap past it or a pick. */}
             </div>
             <div className="shrink-0 px-2 pb-1">
                 {places.map((place) => (

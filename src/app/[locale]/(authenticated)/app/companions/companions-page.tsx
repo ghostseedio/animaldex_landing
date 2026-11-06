@@ -32,6 +32,7 @@
  * Without it the tab is exactly as before.
  */
 
+import AppSplash from "@/components/brand/app-splash";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
@@ -150,6 +151,11 @@ function YourCompanions({words, locale, frontDoor, labels, talk}: {
     // the moments before there is anyone to talk to.
     if (labels && talk && roster.length > 0) {
         return <CompanionsChat entries={roster} cards={cards} words={words} labels={labels} talk={talk} locale={locale} />;
+    }
+    // Nothing to show yet, and nothing has said there is nothing: the splash,
+    // not the roster and its skeleton (the owner, 2026-11-06).
+    if (isFirstLoad) {
+        return <AppSplash />;
     }
     // Under the front door's band, the next band starts at its edge: no gap, no second hairline.
     const top = frontDoor ? "mt-0" : "mt-4";
