@@ -4,6 +4,7 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type
 import {useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import SupportMessageBody from "@/app/[locale]/(composited)/support/_components/support-message-body";
+import CardPicker from "@/app/[locale]/(authenticated)/app/messages/_components/card-picker";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import {
     DmAlert,
@@ -131,6 +132,7 @@ export default function ConversationClient({
     const [menu, setMenu] = useState<{items: DmMenuItem[]; x: number; y: number; label: string} | null>(null);
     const [pendingUnsend, setPendingUnsend] = useState<DirectMessage | null>(null);
     const [pendingBlock, setPendingBlock] = useState(false);
+    const [showsCardPicker, setShowsCardPicker] = useState(false);
     const [isNearBottom, setIsNearBottom] = useState(true);
     const [unseenIncoming, setUnseenIncoming] = useState(0);
     const [now, setNow] = useState(() => new Date());
@@ -299,6 +301,23 @@ export default function ConversationClient({
             scrollAfterRenderRef.current = "smooth";
             setMessages((current) => mergeThreadMessages(current, [message]));
             setDraft("");
+        } catch (error) {
+            setErrorMessage(describe(error));
+        } finally {
+            setSending(false);
+        }
+    }
+
+    /** One of your animals as a card, sent at once, as iOS's picker does. */
+    async function sendCard(captureId: string) {
+        setShowsCardPicker(false);
+        if (sending) return;
+        setSending(true);
+        setErrorMessage(null);
+        try {
+            const {message} = await postJson<{message: DirectMessage}>("/api/app/messages/send", {recipientId: partner.userId, body: "", captureId});
+            scrollAfterRenderRef.current = "smooth";
+            setMessages((current) => mergeThreadMessages(current, [message]));
         } catch (error) {
             setErrorMessage(describe(error));
         } finally {
@@ -681,6 +700,16 @@ export default function ConversationClient({
                                 </div>
                             ) : null}
                             <div className="flex items-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowsCardPicker(true)}
+                                    disabled={sending}
+                                    aria-label={words.attach}
+                                    title={words.animalCardAttach}
+                                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-white transition hover:bg-white/[0.12] disabled:opacity-50"
+                                >
+                                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                                </button>
                                 <textarea
                                     ref={textareaRef}
                                     value={draft}
@@ -715,6 +744,8 @@ export default function ConversationClient({
             </div>
 
             {menu ? <DmMenu items={menu.items} anchor={{x: menu.x, y: menu.y}} label={menu.label} onClose={() => setMenu(null)} /> : null}
+
+            {showsCardPicker ? <CardPicker words={words} onClose={() => setShowsCardPicker(false)} onPick={(card) => void sendCard(card.captureId)} /> : null}
 
             {pendingUnsend ? (
                 <DmAlert

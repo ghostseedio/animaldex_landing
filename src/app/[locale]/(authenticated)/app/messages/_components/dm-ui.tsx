@@ -23,6 +23,13 @@ export function useMounted(): boolean {
     return mounted;
 }
 
+/** The newest value without re-running effects: callbacks a parent remakes on every render. */
+export function useLatest<T>(value: T) {
+    const ref = useRef(value);
+    ref.current = value;
+    return ref;
+}
+
 /** True while the tab is in front; polling pauses behind it, as iOS's does when the scene is inactive. */
 export function usePageVisible(): boolean {
     const [visible, setVisible] = useState(true);
@@ -121,6 +128,7 @@ export function DmMenu({items, anchor, onClose, label}: {
     label: string;
 }) {
     const ref = useRef<HTMLDivElement | null>(null);
+    const close = useLatest(onClose);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [position, setPosition] = useState<{left: number; top: number}>({left: anchor.x, top: anchor.y});
 
@@ -135,23 +143,24 @@ export function DmMenu({items, anchor, onClose, label}: {
     }, [anchor.x, anchor.y, openSubmenu]);
 
     useEffect(() => {
+        const dismiss = () => close.current();
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onClose();
+            if (event.key === "Escape") dismiss();
         };
         const onPointer = (event: PointerEvent) => {
-            if (ref.current && !ref.current.contains(event.target as Node)) onClose();
+            if (ref.current && !ref.current.contains(event.target as Node)) dismiss();
         };
         document.addEventListener("keydown", onKey);
         document.addEventListener("pointerdown", onPointer, true);
-        window.addEventListener("resize", onClose);
-        window.addEventListener("scroll", onClose, true);
+        window.addEventListener("resize", dismiss);
+        window.addEventListener("scroll", dismiss, true);
         return () => {
             document.removeEventListener("keydown", onKey);
             document.removeEventListener("pointerdown", onPointer, true);
-            window.removeEventListener("resize", onClose);
-            window.removeEventListener("scroll", onClose, true);
+            window.removeEventListener("resize", dismiss);
+            window.removeEventListener("scroll", dismiss, true);
         };
-    }, [onClose]);
+    }, [close]);
 
     const itemClass = "flex w-full items-center gap-3 px-4 py-2.5 text-left text-[15px] transition hover:bg-white/[0.06] focus-visible:bg-white/[0.08] focus-visible:outline-none";
 
@@ -206,14 +215,15 @@ export function DmAlert({title, message, actions, onCancel}: {
     onCancel: () => void;
 }) {
     const ref = useRef<HTMLDivElement | null>(null);
+    const cancel = useLatest(onCancel);
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onCancel();
+            if (event.key === "Escape") cancel.current();
         };
         document.addEventListener("keydown", onKey);
         ref.current?.querySelector<HTMLButtonElement>("button")?.focus();
         return () => document.removeEventListener("keydown", onKey);
-    }, [onCancel]);
+    }, [cancel]);
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 px-6" role="presentation" onClick={onCancel}>
             <div

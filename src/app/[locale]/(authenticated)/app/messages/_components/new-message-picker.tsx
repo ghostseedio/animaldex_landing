@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useRef, useState} from "react";
-import {DmAvatar, DmSymbol} from "@/app/[locale]/(authenticated)/app/messages/_components/dm-ui";
+import {DmAvatar, DmSymbol, useLatest} from "@/app/[locale]/(authenticated)/app/messages/_components/dm-ui";
 import {conversationSubtitle, conversationTitle, type DirectMessageProfile} from "@/lib/direct-message-presentation";
 import {fillWords, type DirectMessageWords} from "@/lib/direct-message-words";
 
@@ -21,17 +21,18 @@ export default function NewMessagePicker({words, recents, onPick, onClose}: {
     const [results, setResults] = useState<DirectMessageProfile[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const inputRef = useRef<HTMLInputElement | null>(null);
+    const close = useLatest(onClose);
     const needle = query.trim();
     const searching = needle.length >= 2;
 
     useEffect(() => {
         inputRef.current?.focus();
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onClose();
+            if (event.key === "Escape") close.current();
         };
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
-    }, [onClose]);
+    }, [close]);
 
     useEffect(() => {
         let cancelled = false;

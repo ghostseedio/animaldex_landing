@@ -101,6 +101,14 @@ export const DIRECT_MESSAGE_WORDS_EN = {
     errorCardNotShareable: "That card can't be shared any more.",
     errorTooLong: "That caption is too long.",
     errorUnavailable: "This isn't available yet. Update AnimalDex and try again.",
+    // Sending an animal (the composer's attach, DirectMessageCardPickerView).
+    attach: "Attach",
+    animalCardAttach: "Animal Card",
+    sendAnAnimal: "Send an Animal",
+    searchYourAnimals: "Search your animals",
+    noAnimalsYet: "No animals yet",
+    noAnimalsDetail: "Cards you capture appear here to send.",
+    privateCard: "Private card",
     // The New Message picker (DirectMessagePickers).
     searchCollectors: "Search collectors",
     recent: "RECENT",

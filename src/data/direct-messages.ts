@@ -467,14 +467,19 @@ export async function markDirectConversationRead(otherUserId: string) {
     return error ? {ok: false as const, error: error.message} : {ok: true as const};
 }
 
-/** A text message, as iOS sends one: the server stamps its time and receipts. */
-export async function sendDirectMessage(recipientId: string, body: string): Promise<DirectMessageResult<DirectMessage>> {
+/**
+ * A message as iOS sends one: text, or an animal card named by its capture
+ * id alone (the server's insert trigger writes the card's title, grade and
+ * image from the capture row). The server stamps its time and receipts.
+ */
+export async function sendDirectMessage(recipientId: string, body: string, captureId: string | null = null): Promise<DirectMessageResult<DirectMessage>> {
     const session = await signedInClient();
     if (!session) return NOT_SIGNED_IN;
 
     const trimmed = body.trim();
-    if (!trimmed) return {ok: false, error: "empty_message", status: 400};
-    if (trimmed.length > 1000) return {ok: false, error: "send_failed", status: 400};
+    if (!trimmed && !captureId) return {ok: false, error: "empty_message", status: 400};
+    if (trimmed.length > 1000) return {ok: false, error: captureId ? "caption_too_long" : "send_failed", status: 400};
+    if (captureId && !isDirectMessageUserId(captureId)) return {ok: false, error: "capture_not_shareable", status: 400};
     if (!isDirectMessageUserId(recipientId)) return {ok: false, error: "invalid_conversation", status: 400};
     if (recipientId === session.userId) return {ok: false, error: "self_message", status: 400};
 
@@ -488,7 +493,12 @@ export async function sendDirectMessage(recipientId: string, body: string): Prom
 
     const {data, error} = await session.supabase
         .from("direct_messages")
-        .insert({sender_id: session.userId, recipient_id: recipientId, body: trimmed})
+        .insert({
+            sender_id: session.userId,
+            recipient_id: recipientId,
+            body: trimmed,
+            ...(captureId ? {attachment: {kind: "capture", capture_id: captureId.toLowerCase()}} : {})
+        })
         .select(MESSAGE_COLUMNS)
         .single();
     if (error || !data) return failure(error, "send_failed");
@@ -541,4 +551,75 @@ export async function findDirectMessagePeople(query: string): Promise<DirectMess
     const {data: profiles} = await supabase.from("profiles").select(PROFILE_COLUMNS).in("id", ids.slice(0, 500));
     const following = ((profiles ?? []) as QueryRow[]).map(mapDirectMessageProfile).filter(eligible);
     return {ok: true, value: {following, results: []}};
+}
+
+export type DirectMessageCardChoice = {
+    captureId: string;
+    /** The nickname, else the animal. */
+    title: string;
+    grade: number | null;
+    isPrivate: boolean;
+    imageUrl: string | null;
+};
+
+/**
+ * The reader's own animals, newest first, to send as cards (iOS
+ * `DirectMessageCardPickerView`): their own rows only, with a small still
+ * signed from each capture's own image row.
+ */
+export async function getDirectMessageCardChoices(limit = 150): Promise<DirectMessageResult<DirectMessageCardChoice[]>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    const {supabase, userId} = session;
+
+    const {data, error} = await supabase
+        .from("captures")
+        .select("id,title,is_discoverable,created_at,analysis_results(animal_name,capture_grade)")
+        .eq("user_id", userId)
+        .eq("status", "ready")
+        .is("merged_into_capture_id", null)
+        .order("created_at", {ascending: false})
+        .limit(limit);
+    if (error) return failure(error, "cards_unavailable");
+    const rows = (data ?? []) as QueryRow[];
+    const ids = rows.map((row) => readString(row, "id")).filter((id): id is string => Boolean(id));
+    if (!ids.length) return {ok: true, value: []};
+
+    const {data: imageRows} = await supabase
+        .from("capture_images")
+        .select("capture_id,storage_bucket,storage_path,media_kind,sort_order,thumb_320_storage_bucket,thumb_320_storage_path,poster_storage_bucket,poster_storage_path")
+        .in("capture_id", ids);
+    const firstImage = new Map<string, QueryRow>();
+    for (const image of ((imageRows ?? []) as QueryRow[]).sort((left, right) => {
+        const leftPhoto = (readString(left, "media_kind") ?? "photo") === "photo" ? 0 : 1;
+        const rightPhoto = (readString(right, "media_kind") ?? "photo") === "photo" ? 0 : 1;
+        return leftPhoto - rightPhoto || (readNumber(left, "sort_order") ?? 0) - (readNumber(right, "sort_order") ?? 0);
+    })) {
+        const captureId = readString(image, "capture_id");
+        if (captureId && !firstImage.has(captureId) && readString(image, "storage_path")) firstImage.set(captureId, image);
+    }
+
+    const choices = await Promise.all(rows.map(async (row): Promise<DirectMessageCardChoice | null> => {
+        const captureId = readString(row, "id");
+        if (!captureId) return null;
+        const analysis = asRow(row.analysis_results);
+        const animal = readString(analysis, "animal_name") ?? "Animal";
+        const grade = readNumber(analysis, "capture_grade");
+        const image = firstImage.get(captureId) ?? null;
+        // A still: the 320 px thumbnail, else a video's poster, else the photo itself (never a video file).
+        const moving = (readString(image, "media_kind") ?? "photo") !== "photo";
+        const still = readString(image, "thumb_320_storage_path")
+            ? {bucket: readString(image, "thumb_320_storage_bucket"), path: readString(image, "thumb_320_storage_path")}
+            : moving
+                ? {bucket: readString(image, "poster_storage_bucket"), path: readString(image, "poster_storage_path")}
+                : {bucket: readString(image, "storage_bucket"), path: readString(image, "storage_path")};
+        return {
+            captureId,
+            title: readString(row, "title") ?? animal,
+            grade: grade === null ? null : Math.round(grade),
+            isPrivate: row.is_discoverable !== true,
+            imageUrl: still.bucket && still.path ? await createSignedStorageUrl(still.bucket, still.path) : null
+        };
+    }));
+    return {ok: true, value: choices.filter((choice): choice is DirectMessageCardChoice => Boolean(choice))};
 }
