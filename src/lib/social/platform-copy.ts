@@ -62,8 +62,22 @@ export function pinterestCopy(copy: ShareCopy): PlatformCaption {
     return {caption: tags ? `${body}\n\n${tags}` : body, title};
 }
 
-/** The caption (and Pinterest's title) a platform posts from the drafted copy. */
-export function captionForPlatform(copy: ShareCopy, platform: SocialPlatform, pageUrl: string | null): PlatformCaption {
+const LINK_PLACEHOLDER = /<\s*(?:page\s*url|app\s*url|url|link)\s*>|\{\s*(?:page\s*url|url|link)\s*\}|\[\s*(?:page\s*url|url|link)\s*\]/i;
+
+/**
+ * The writer is told to end with "Full article: <url>" and sometimes leaves
+ * the placeholder in: it becomes the page link, or its line goes when there is
+ * none. YouTube refuses a description with "<" or ">" in it (invalidDescription,
+ * two failed uploads on Nov 6 2026), so it never gets either. Pure.
+ */
+export function fillLinks(text: string, pageUrl: string | null, platform: SocialPlatform) {
+    const filled = pageUrl
+        ? text.replace(new RegExp(LINK_PLACEHOLDER.source, "gi"), pageUrl)
+        : text.split("\n").filter((line) => !LINK_PLACEHOLDER.test(line)).join("\n");
+    return platform === "youtube" ? filled.replace(/[<>]/g, "") : filled;
+}
+
+function rawCaption(copy: ShareCopy, platform: SocialPlatform, pageUrl: string | null): PlatformCaption {
     switch (platform) {
         case "youtube": return {caption: copy.youtube.description, title: copy.youtube.title};
         case "x": return {caption: copy.x.text, title: null};
@@ -72,6 +86,12 @@ export function captionForPlatform(copy: ShareCopy, platform: SocialPlatform, pa
         case "pinterest": return pinterestCopy(copy);
         default: return {caption: copy[platform].caption, title: null};
     }
+}
+
+/** The caption (and Pinterest's title) a platform posts from the drafted copy. */
+export function captionForPlatform(copy: ShareCopy, platform: SocialPlatform, pageUrl: string | null): PlatformCaption {
+    const raw = rawCaption(copy, platform, pageUrl);
+    return {caption: fillLinks(raw.caption, pageUrl, platform), title: raw.title === null ? null : fillLinks(raw.title, pageUrl, platform)};
 }
 
 /** Whether a platform's caption fits its limits. */
