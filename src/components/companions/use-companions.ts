@@ -28,6 +28,8 @@ type CompanionsSnapshot = {rows: CompanionSummary[]; didLoad: boolean; available
 
 let snapshot: CompanionsSnapshot = {rows: [], didLoad: false, available: false};
 let inFlight: Promise<void> | null = null;
+/** When the list was last read from the server (0: never). */
+let loadedAt = 0;
 const listeners = new Set<() => void>();
 
 function emit(next: CompanionsSnapshot) {
@@ -40,6 +42,7 @@ export function reloadCompanions(): Promise<void> {
     inFlight = fetch("/api/app/companions", {headers: {Accept: "application/json"}, cache: "no-store"})
         .then((response) => (response.ok ? response.json() : null))
         .then((payload: {companions?: unknown; available?: boolean} | null) => {
+            if (payload) loadedAt = Date.now();
             emit({
                 rows: decodeCompanionSummaries(payload?.companions),
                 didLoad: true,
@@ -126,6 +129,7 @@ type CardsSnapshot = {cards: CompanionCard[]; didLoad: boolean; available: boole
 
 let cardsSnapshot: CardsSnapshot = {cards: [], didLoad: false, available: false};
 let cardsInFlight: Promise<void> | null = null;
+let cardsLoadedAt = 0;
 const cardListeners = new Set<() => void>();
 const SERVER_CARDS: CardsSnapshot = {cards: [], didLoad: false, available: false};
 
@@ -140,6 +144,7 @@ export function reloadCompanionCards(): Promise<void> {
     cardsInFlight = fetch("/api/app/companions/cards", {headers: {Accept: "application/json"}, cache: "no-store"})
         .then((response) => (response.ok ? response.json() : null))
         .then((payload: {cards?: unknown; available?: boolean} | null) => {
+            if (payload) cardsLoadedAt = Date.now();
             emitCards({cards: decodeCompanionCards(payload?.cards), didLoad: true, available: payload?.available === true});
         })
         .catch(() => emitCards({...cardsSnapshot, didLoad: true}))
@@ -163,6 +168,11 @@ export function useCompanionCards(enabled = true) {
         if (enabled && !state.didLoad) void reloadCompanionCards();
     }, [enabled, state.didLoad]);
     return {...state, reload: reloadCompanionCards};
+}
+
+/** Whether the animals and the cards were both read from the server within `ms`. */
+export function companionsReadWithin(ms: number, now = Date.now()): boolean {
+    return now - loadedAt < ms && now - cardsLoadedAt < ms;
 }
 
 /** When the last thing was said on this card's thread in this browser, if anything was. */

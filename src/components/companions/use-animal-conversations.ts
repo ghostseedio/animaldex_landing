@@ -19,6 +19,8 @@ type Snapshot = {conversations: AnimalConversation[]; didLoad: boolean; unread: 
 
 let snapshot: Snapshot = {conversations: [], didLoad: false, unread: null};
 let inFlight: Promise<void> | null = null;
+/** When the list was last read from the server (0: never). */
+let loadedAt = 0;
 let countInFlight: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 const SERVER_SNAPSHOT: Snapshot = {conversations: [], didLoad: false, unread: null};
@@ -44,6 +46,7 @@ export function reloadAnimalConversations(): Promise<void> {
                 emit({...snapshot, didLoad: true});
                 return;
             }
+            loadedAt = Date.now();
             const conversations = decodeAnimalConversations(payload.conversations);
             emit({conversations, didLoad: true, unread: unreadAnimalMessages(conversations)});
         })
@@ -66,6 +69,11 @@ function reloadUnreadCount(): Promise<void> {
             countInFlight = null;
         });
     return countInFlight;
+}
+
+/** Whether the conversations were read from the server within `ms`. */
+export function animalConversationsReadWithin(ms: number, now = Date.now()): boolean {
+    return now - loadedAt < ms;
 }
 
 /** Everything you talk with, and what is unread. */

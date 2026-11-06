@@ -10,8 +10,8 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {useTalkThreads} from "@/components/ask-animaldex/use-talk-threads";
-import {useAnimalConversations} from "@/components/companions/use-animal-conversations";
-import {chatCaptureIdFor, useCompanionCards, useCompanions} from "@/components/companions/use-companions";
+import {animalConversationsReadWithin, useAnimalConversations} from "@/components/companions/use-animal-conversations";
+import {chatCaptureIdFor, companionsReadWithin, useCompanionCards, useCompanions} from "@/components/companions/use-companions";
 import {useOpenStepUpdates} from "@/components/companions/use-steps";
 import {askThreadKey} from "@/lib/ask-animaldex/thread";
 import type {CompanionWords} from "@/lib/companion-bond";
@@ -19,6 +19,13 @@ import type {CompanionCard} from "@/lib/companion-cards";
 import {rosterLastAt, rosterLine, sortCompanionRoster, type RosterLocalLast} from "@/lib/companion-roster";
 import {animalMessagePreviewText, buildCompanionRows, type CompanionTabRow} from "@/lib/companion-rows";
 import type {AnimalStep} from "@/lib/your-step";
+
+/**
+ * Opening the tab, or the side menu (which mounts on every open), reads the
+ * lists again only when what is held is older than this; coming back to the
+ * window always does (perf pass, 2026-11-06: three reads on every menu open).
+ */
+const ROSTER_FRESH_MS = 30_000;
 
 export type CompanionRosterEntry = {row: CompanionTabRow; line: ReturnType<typeof rosterLine>; time: number | null};
 
@@ -58,7 +65,7 @@ export function useCompanionRoster(words: CompanionWords, enabled = true) {
             void reloadCards();
             void reloadConversations();
         };
-        refresh();
+        if (!(companionsReadWithin(ROSTER_FRESH_MS) && animalConversationsReadWithin(ROSTER_FRESH_MS))) refresh();
         window.addEventListener("focus", refresh);
         return () => window.removeEventListener("focus", refresh);
     }, [enabled, reload, reloadCards, reloadConversations]);
