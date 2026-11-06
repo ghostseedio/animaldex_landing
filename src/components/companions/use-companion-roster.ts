@@ -40,7 +40,9 @@ function localLastOf(cards: CompanionCard[], row: CompanionTabRow): RosterLocalL
 export function useCompanionRoster(words: CompanionWords, enabled = true) {
     const {rows: companions, didLoad, available, reload} = useCompanions(enabled);
     const {cards, didLoad: cardsLoaded, available: cardsAvailable, reload: reloadCards} = useCompanionCards(enabled);
-    const {conversations, reload: reloadConversations} = useAnimalConversations();
+    // Signed out (the side menu passes enabled = false), nothing is read: the
+    // list answered 401 on every page a visitor opened.
+    const {conversations, reload: reloadConversations} = useAnimalConversations(enabled);
     // Read again when a thread changes here: a message sent moves its row and its line.
     const threads = useTalkThreads();
     // A step accepted, dropped or finished in a chat changes its row at once.
