@@ -10,6 +10,7 @@ import {
     TALK_FRONT_DOOR_WORDS_EN,
     animalForCandidate,
     applySuggestion,
+    firstMessageOrigin,
     changeRowAnimals,
     choiceForText,
     decodeFrontDoorHandoff,
@@ -375,4 +376,12 @@ test("the person's message keeps its door as meta.origin; anything else is ignor
     // None, or an unknown door: no meta at all, as before.
     assert.equal((await buildChatTranscript(base))?.p_messages[0].meta, undefined);
     assert.equal((await buildChatTranscript({...base, origin: "elsewhere" as never}))?.p_messages[0].meta, undefined);
+});
+
+test("the first message in the chat the Companions tab opens on is the front door; a referral still says so", () => {
+    assert.equal(firstMessageOrigin({referral: false, tabRoot: true}), "front_door");
+    assert.equal(firstMessageOrigin({referral: true, tabRoot: true}), "referral");
+    assert.equal(firstMessageOrigin({referral: true, tabRoot: false}), "referral");
+    // A chat opened from a row, a push or a card: none.
+    assert.equal(firstMessageOrigin({referral: false, tabRoot: false}), null);
 });

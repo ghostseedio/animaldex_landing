@@ -95,6 +95,7 @@ import {
 import {trackEvent} from "@/lib/analytics";
 import {useAiChatGate} from "@/components/ai-gate/ai-chat-gate";
 import {clearFrontDoorDraft, frontDoorMessageWaiting, takeFrontDoorMessage} from "@/components/talk-front-door/front-door-store";
+import {firstMessageOrigin} from "@/lib/talk-front-door";
 import {AiNotice, AiTag, useAiLongSession} from "@/components/ai-gate/ai-notices";
 import {noteFunnelMessage, noteFunnelReply, trackFunnel} from "@/lib/web-funnel-client";
 import {rememberStorePlacement} from "@/lib/store-links";
@@ -816,15 +817,20 @@ export default function AskConversation({
     useEffect(() => {
         referralOriginRef.current = referralId ?? null;
     }, [referralId]);
+    // The chat the Companions tab opens on is the front door (the owner,
+    // 2026-11-06): the first message sent in it says so, once per visit.
+    const tabRootOriginRef = useRef(Boolean(page?.switcher));
     const send = useCallback(async (...args: Parameters<typeof rawSend>): Promise<string | null> => {
         if (!(await aiGate.request())) return null;
         touchAiSession();
         const [question, options = {}] = args;
-        if (!options.origin && !options.onCallEvent && referralOriginRef.current) {
-            referralOriginRef.current = null;
-            return rawSend(question, {...options, origin: "referral"});
-        }
-        return rawSend(question, options);
+        if (options.onCallEvent) return rawSend(question, options);
+        const tabRoot = tabRootOriginRef.current;
+        tabRootOriginRef.current = false;
+        if (options.origin) return rawSend(question, options);
+        const origin = firstMessageOrigin({referral: Boolean(referralOriginRef.current), tabRoot});
+        if (origin === "referral") referralOriginRef.current = null;
+        return rawSend(question, origin ? {...options, origin} : options);
     }, [aiGate, rawSend, touchAiSession]);
 
     const panelRef = useRef<HTMLDivElement | null>(null);

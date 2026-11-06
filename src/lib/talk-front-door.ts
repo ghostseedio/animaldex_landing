@@ -35,6 +35,17 @@ export const PICK_FADE_MS = 180;
 export const FRONT_DOOR_TEXT_MAX = 2000;
 
 export type FrontDoorWhy = "continuing" | "focus" | "lesson";
+
+/**
+ * The origin a chat's first message carries (SPEC 6.3) when what opened the
+ * chat set none: a referral it was opened with, else the chat the Companions
+ * tab opens on (the chat is the front door since the owner's 2026-11-06
+ * redesign), else none.
+ */
+export function firstMessageOrigin(pending: {referral: boolean; tabRoot: boolean}): "referral" | "front_door" | null {
+    if (pending.referral) return "referral";
+    return pending.tabRoot ? "front_door" : null;
+}
 const WHYS: readonly FrontDoorWhy[] = ["continuing", "focus", "lesson"];
 
 // MARK: - Words
