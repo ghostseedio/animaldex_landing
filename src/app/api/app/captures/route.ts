@@ -6,6 +6,27 @@ import {verifyWebCaptureSession} from "@/lib/supabase/web-capture-session";
 
 export const runtime = "nodejs";
 
+/** The apps' CaptureRules.version; a library upload needs this agreed first. */
+const CAPTURE_RULES_VERSION = 1;
+
+/** The claims a library photo's file made about itself, as the apps send them (never evidence). */
+const CAMERA_ROLL_CLAIM_KEYS = ["taken_at", "camera_make", "camera_model", "software", "had_embedded_location"] as const;
+
+function cameraRollClaims(raw: FormDataEntryValue | null): Record<string, string> {
+    if (typeof raw !== "string" || !raw) return {};
+    try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const claims: Record<string, string> = {};
+        for (const key of CAMERA_ROLL_CLAIM_KEYS) {
+            const value = parsed?.[key];
+            if (typeof value === "string" && value.length <= 80) claims[key] = value;
+        }
+        return claims;
+    } catch {
+        return {};
+    }
+}
+
 export async function POST(request: Request) {
     const supabase = createSupabaseServerClient();
     if (!supabase) return NextResponse.json({error: "Supabase is not configured."}, {status: 503});
@@ -16,15 +37,27 @@ export async function POST(request: Request) {
     const file = form.get("image");
     const captureToken = String(form.get("captureToken") ?? "");
     const captureSource = String(form.get("captureSource") ?? "");
-    // Freshness is the shutter-time token, signed with the server's clock. A
-    // second check against the phone's clock (30 s) rejected anyone who read
-    // the review for half a minute or whose clock was off, and added nothing
-    // the token does not already prove.
-    if (!verifyWebCaptureSession(captureToken, user.id) || captureSource !== "live_camera") {
+    // Two ways in. A live frame carries the shutter-time token, signed with
+    // the server's clock: that is what proves freshness. (A second check
+    // against the phone's clock rejected anyone who read the review for half
+    // a minute, and added nothing.) A camera-roll photo (the chat's "+",
+    // 2026-11-06) carries no token; it is marked as a library upload below,
+    // which only ever makes the server stricter, and needs the capture rules
+    // agreed, as in the apps.
+    const isLibrary = captureSource === "camera_roll";
+    if (!isLibrary && (!verifyWebCaptureSession(captureToken, user.id) || captureSource !== "live_camera")) {
         return NextResponse.json({error: "This capture expired. Take the photo again."}, {status: 400});
     }
-    if (!(file instanceof File) || file.type !== "image/jpeg") return NextResponse.json({error: "Live camera output must be a JPEG image."}, {status: 400});
+    if (!(file instanceof File) || file.type !== "image/jpeg") return NextResponse.json({error: isLibrary ? "The photo must be a JPEG." : "Live camera output must be a JPEG image."}, {status: 400});
     if (file.size > 12 * 1024 * 1024) return NextResponse.json({error: "Images must be smaller than 12 MB."}, {status: 413});
+
+    if (isLibrary) {
+        const {data: rulesVersion, error: rulesError} = await supabase.rpc("my_capture_rules_version");
+        if (rulesError) return NextResponse.json({error: rulesError.message}, {status: 502});
+        if ((typeof rulesVersion === "number" ? rulesVersion : 0) < CAPTURE_RULES_VERSION) {
+            return NextResponse.json({error: "capture_rules_not_accepted", message: "Agree to the capture rules before uploading from your camera roll."}, {status: 403});
+        }
+    }
 
     const captureId = randomUUID();
     const latitudeValue = form.get("latitude");
@@ -32,12 +65,12 @@ export async function POST(request: Request) {
     const latitude = typeof latitudeValue === "string" ? Number(latitudeValue) : NaN;
     const longitude = typeof longitudeValue === "string" ? Number(longitudeValue) : NaN;
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-        return NextResponse.json({error: "Location permission is required for live scans."}, {status: 400});
+        return NextResponse.json({error: isLibrary ? "Pick where this photo was taken." : "Location permission is required for live scans."}, {status: 400});
     }
     // The capture row, its media and its status are created through the
     // capture-authority RPCs rather than written here. This route runs as the
     // signed-in person, not the service role, so before the RPCs existed it
-    // could set user_id, status and analysis_credit_cost directly — the same
+    // could set user_id, status and analysis_credit_cost directly, the same
     // authority a tampered mobile client had. The server now decides all three.
     const {data: createdId, error: insertError} = await supabase.rpc("create_capture_v1", {
         p_capture_mode: "photo",
@@ -51,6 +84,15 @@ export async function POST(request: Request) {
     const serverCaptureId: string = createdId;
 
     try {
+        if (isLibrary) {
+            // Before upload and analysis, so the server screens it as a
+            // library photo from the first pass (the apps do the same).
+            const {error: markError} = await supabase.rpc("mark_capture_camera_roll_v1", {
+                p_capture_id: serverCaptureId,
+                p_metadata: cameraRollClaims(form.get("cameraRollMetadata"))
+            });
+            if (markError) throw markError;
+        }
         await supabase.from("captures").update({status: "uploading"}).eq("id", serverCaptureId);
         const bytes = Buffer.from(await file.arrayBuffer());
         const path = `${user.id.toLowerCase()}/${serverCaptureId.toLowerCase()}/primary.jpg`;

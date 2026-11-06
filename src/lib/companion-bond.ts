@@ -362,6 +362,10 @@ export const COMPANIONS_COPY = {
     title: "Companions",
     empty: "Capture an animal to meet your first companion.",
     capture: "Capture",
+    /** The composer's "+" (the owner, 2026-11-06, after the Claude app): word for word with iOS and Android. */
+    captureAnAnimal: "Capture an animal",
+    takePhoto: "Take a photo",
+    uploadFromRoll: "Upload from camera roll",
     referralWaiting: "Sent your way: tap to hear its take",
     yourStep: "Your step: {step}",
     workingOn: "Working on: {focus}",

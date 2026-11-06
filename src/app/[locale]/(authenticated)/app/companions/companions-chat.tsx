@@ -14,7 +14,9 @@
  */
 
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
-import {usePathname} from "next/navigation";
+import {usePathname, useRouter} from "next/navigation";
+import {plusItemInput, takePhotoOpensCameraApp, type CaptureEntry} from "@/lib/capture-entry";
+import {setPendingCaptureFile} from "@/lib/capture-handoff";
 import Link from "@/app/[locale]/_components/link";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
@@ -115,6 +117,24 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     const avatarUrl = current?.slug ? getSpeciesImageRoute(current.slug) : null;
     const openSwitcher = useCallback(() => setOpen(true), []);
 
+    // The "+" (the owner, 2026-11-06, after the Claude app): the phone's camera
+    // app or the camera roll opens at once, from the tap on the item; the
+    // picked file goes to the capture page's review (no scanner). A desktop
+    // has no camera app, so its "Take a photo" is the scanner page.
+    const router = useRouter();
+    const [coarsePointer, setCoarsePointer] = useState(true);
+    useEffect(() => {
+        try {
+            setCoarsePointer(window.matchMedia("(pointer: coarse)").matches);
+        } catch {
+            setCoarsePointer(true);
+        }
+    }, []);
+    const onCaptureFile = useCallback((entry: CaptureEntry, file: File) => {
+        setPendingCaptureFile(entry, file);
+        router.push(`/app/capture?entry=${entry}`);
+    }, [router]);
+
     const page = useMemo<AskConversationPage | null>(() => (current
         ? {
             onMenu: openSwitcher,
@@ -132,10 +152,19 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 othersUnread,
                 onOpen: openSwitcher,
                 // The "+" by the composer: a new animal (the Claude app's "+").
-                capture: {href: "/app/capture", label: words.list.capture}
+                capture: {
+                    label: words.list.captureAnAnimal,
+                    items: [
+                        takePhotoOpensCameraApp(coarsePointer)
+                            ? {key: "camera", label: words.list.takePhoto, ...plusItemInput("camera")}
+                            : {key: "camera", label: words.list.takePhoto, href: "/app/capture"},
+                        {key: "library", label: words.list.uploadFromRoll, ...plusItemInput("library")}
+                    ],
+                    onFile: onCaptureFile
+                }
             }
         }
-        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.capture, othersUnread]);
+        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile]);
 
     if (!current || !page) return null;
     const list = (onClose?: () => void) => (

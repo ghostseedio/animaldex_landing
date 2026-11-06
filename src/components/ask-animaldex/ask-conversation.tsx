@@ -448,7 +448,21 @@ export type AskConversationPage = {
      * the switch to another of their animals, like a model switcher, with a
      * dot while that many other animals have written.
      */
-    switcher?: {label: string; othersUnread: number; onOpen: () => void; capture?: {href: string; label: string} | null} | null;
+    switcher?: {
+        label: string; othersUnread: number; onOpen: () => void;
+        /**
+         * The composer's "+" (the owner, 2026-11-06, after the Claude app): a
+         * new animal. Each item opens its source at once: a file input (the
+         * phone's camera app with `capture`, or the camera roll), or a link
+         * where there is no camera app (a desktop's "Take a photo" is the
+         * scanner page). The picked file goes to `onFile`.
+         */
+        capture?: {
+            label: string;
+            items: Array<{key: "camera" | "library"; label: string; accept?: string; capture?: "environment"; href?: string}>;
+            onFile: (key: "camera" | "library", file: File) => void;
+        } | null;
+    } | null;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -3270,15 +3284,7 @@ export default function AskConversation({
                                 ) : null}
                                 {rootSwitcher?.capture ? (
                                     // A new animal from the composer (the owner, 2026-11-06, after the Claude app's "+").
-                                    <Link
-                                        href={rootSwitcher.capture.href}
-                                        aria-label={rootSwitcher.capture.label}
-                                        title={rootSwitcher.capture.label}
-                                        className="mb-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-white transition-colors hover:bg-white/15"
-                                        data-testid="composer-plus"
-                                    >
-                                        <PlusIcon />
-                                    </Link>
+                                    <ComposerPlusMenu capture={rootSwitcher.capture} />
                                 ) : null}
                                 <label className="sr-only" htmlFor="ask-animaldex-composer">{fieldPlaceholder}</label>
                                 <textarea
@@ -4607,6 +4613,96 @@ function PlusIcon() {
     return (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+/**
+ * The "+" and its two items (Take a photo, Upload from camera roll), as the
+ * Claude app's. A file item is a label over a hidden file input, so the tap
+ * that picks the item is the tap that opens the camera app or the roll; a
+ * link item is where there is no camera app. The menu closes on a pick,
+ * Escape, or a tap outside.
+ */
+function ComposerPlusMenu({capture}: {capture: NonNullable<NonNullable<AskConversationPage["switcher"]>["capture"]>}) {
+    const [open, setOpen] = useState(false);
+    const root = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setOpen(false);
+        };
+        const onPointer = (event: PointerEvent) => {
+            if (root.current && !root.current.contains(event.target as Node)) setOpen(false);
+        };
+        window.addEventListener("keydown", onKey);
+        window.addEventListener("pointerdown", onPointer);
+        return () => {
+            window.removeEventListener("keydown", onKey);
+            window.removeEventListener("pointerdown", onPointer);
+        };
+    }, [open]);
+    const itemClass = "flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-card px-3 py-2 text-left text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.08] active:bg-white/10";
+    return (
+        <div ref={root} className="relative mb-0.5 shrink-0">
+            <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                aria-label={capture.label}
+                title={capture.label}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.08] text-white transition-colors hover:bg-white/15"
+                data-testid="composer-plus"
+            >
+                <PlusIcon />
+            </button>
+            {open ? (
+                <div role="menu" className="absolute bottom-11 left-0 z-30 w-64 rounded-panel border border-white/10 bg-[#121a14] p-1.5 shadow-2xl" data-testid="composer-plus-menu">
+                    {capture.items.map((item) => item.href ? (
+                        <Link key={item.key} href={item.href} role="menuitem" className={itemClass} data-testid={`composer-plus-${item.key}`} onClick={() => setOpen(false)}>
+                            {item.key === "camera" ? <CameraGlyph /> : <RollGlyph />}
+                            <span>{item.label}</span>
+                        </Link>
+                    ) : (
+                        <label key={item.key} role="menuitem" className={itemClass} data-testid={`composer-plus-${item.key}`}>
+                            {item.key === "camera" ? <CameraGlyph /> : <RollGlyph />}
+                            <span>{item.label}</span>
+                            <input
+                                type="file"
+                                accept={item.accept}
+                                capture={item.capture}
+                                className="sr-only"
+                                onChange={(event) => {
+                                    const file = event.target.files?.[0] ?? null;
+                                    event.target.value = "";
+                                    setOpen(false);
+                                    if (file) capture.onFile(item.key, file);
+                                }}
+                            />
+                        </label>
+                    ))}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function CameraGlyph() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 text-primary-300">
+            <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.1-1.6c.3-.4.7-.6 1.2-.6h3.2c.5 0 .9.2 1.2.6L15.9 6h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z" stroke="currentColor" strokeWidth="1.7" />
+            <circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.7" />
+        </svg>
+    );
+}
+
+function RollGlyph() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 text-primary-300">
+            <rect x="4" y="5" width="16" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+            <path d="m5 16 4.2-4.6a1 1 0 0 1 1.5 0L14 15l1.8-2a1 1 0 0 1 1.5 0L19 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="15.5" cy="9.5" r="1.3" fill="currentColor" />
         </svg>
     );
 }
