@@ -2702,6 +2702,7 @@
       "yourStep": "Your step: {step}",
       "workingOn": "Working on: {focus}",
       "sayHello": "Talk to it",
+      "shelf": "Say hello",
       "mastered": "Mastered",
       "myCompanions": "My Companions",
       "masteredCount": "{n} mastered",

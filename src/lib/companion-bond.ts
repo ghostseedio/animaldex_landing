@@ -367,6 +367,8 @@ export const COMPANIONS_COPY = {
     workingOn: "Working on: {focus}",
     /** One name for talking (newcomer UX vet, 2026-10-30, P2); was "Say hello". */
     sayHello: "Talk to it",
+    /** The band header over the animals never talked to (second pass, 2026-11-06, as iOS). */
+    shelf: "Say hello",
     mastered: "Mastered",
     myCompanions: "My Companions",
     masteredCount: "{n} mastered",

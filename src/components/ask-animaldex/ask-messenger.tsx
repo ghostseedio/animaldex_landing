@@ -141,7 +141,8 @@ export function AskAnimalHero({
                 </button>
             ) : null}
             {differenceLine ? (
-                <p className="mt-1.5 max-w-[24rem] text-[13px] leading-[18px] text-ink-400" data-testid="hero-difference">{differenceLine}</p>
+                // A footnote (second pass, 2026-11-06, as iOS): small and quiet under the Power.
+                <p className="mt-1.5 max-w-[22rem] text-[11px] leading-4 text-ink-400/80" data-testid="hero-difference">{differenceLine}</p>
             ) : null}
         </div>
     );

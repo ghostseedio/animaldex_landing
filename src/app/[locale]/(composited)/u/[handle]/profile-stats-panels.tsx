@@ -130,34 +130,20 @@ export function CollectorScoreCard({
 
     return (
         <section
+            // Calm (second pass, 2026-11-06, as iOS): the number, who you are as a
+            // collector with the tier after it, and the ring. No pill, no gradient wash.
             className="relative w-full p-5 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/10"
-            style={{
-                background: [
-                    `radial-gradient(220px 220px at 18px 18px, ${collectorScoreAccent(band, 0.16)}, transparent)`,
-                    "linear-gradient(135deg, rgba(255,255,255,0.04), transparent 50%, rgba(0,0,0,0.18))",
-                    // Same iOS chrome surface as the story card: #1F1F1F, white in the light theme.
-                    `var(--story-card-base, ${THEME.chrome})`
-                ].join(", ")
-            }}
+            style={{background: `var(--story-card-base, ${THEME.chrome})`}}
         >
-            <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-medium text-white/40">Overall Score</p>
-                <span
-                    className="rounded-full border px-2.5 py-[7px] text-[11px] font-semibold uppercase leading-none"
-                    style={{
-                        color: accent,
-                        backgroundColor: collectorScoreAccent(band, 0.14),
-                        borderColor: collectorScoreAccent(band, 0.3)
-                    }}
-                >
-                    {band.tierLabel}
-                </span>
-            </div>
-
-            <div className="mt-[18px] flex items-center gap-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">Overall Score</p>
                     <p className="truncate text-[44px] font-extrabold leading-none text-white">{score}</p>
-                    <p className="truncate text-lg font-semibold text-white/[0.62]">{archetype}</p>
+                    <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold">
+                        <span className="truncate text-white/[0.62]">{archetype}</span>
+                        <span className="text-white/35" aria-hidden="true">·</span>
+                        <span className="shrink-0" style={{color: accent}}>{band.tierLabel}</span>
+                    </p>
                 </div>
                 {catalogCompletion ? (
                     <CatalogCompletionRing
@@ -255,24 +241,27 @@ export type ProfileStatChip = {
 };
 
 export function StatChipScroller({items}: {items: ProfileStatChip[]}) {
+    // Two to a row, split by hairlines (second pass, 2026-11-06, as iOS): a
+    // sideways strip clipped at the edge read as a bug.
     return (
         <StatsPanel>
-            <div className="flex gap-2 overflow-x-auto px-4 py-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {items.map((item) => (
+            <div className="grid grid-cols-2">
+                {items.map((item, index) => (
                     <div
                         key={item.title}
-                        className="flex h-[66px] w-[116px] shrink-0 flex-col justify-between border border-white/10 bg-[#1F1F1F] light:bg-surface-900 px-2.5 py-[9px]"
+                        className={`flex min-h-[72px] flex-col justify-between px-4 py-3 ${index % 2 === 1 ? "border-l border-white/10" : ""} ${index >= 2 ? "border-t border-white/10" : ""}`}
                     >
-                        <p className="truncate text-[8px] font-extrabold uppercase text-white/40">{item.title}</p>
+                        <p className="truncate text-[11px] font-semibold uppercase text-white/40">{item.title}</p>
                         <p className="flex items-baseline gap-px">
                             <span className="truncate text-[20px] font-extrabold leading-none text-white">{item.value}</span>
                             {item.denominator ? (
-                                <span className="text-[8px] font-bold text-white/40">{item.denominator}</span>
+                                <span className="text-[9px] font-bold text-white/40">{item.denominator}</span>
                             ) : null}
                         </p>
-                        <span className="block h-0.5 w-full " style={{backgroundColor: item.tint}} />
+                        <span className="mt-1 block h-0.5 w-full" style={{backgroundColor: item.tint}} aria-hidden="true" />
                     </div>
                 ))}
+                {items.length % 2 === 1 ? <div className="border-l border-t border-white/10" aria-hidden="true" /> : null}
             </div>
         </StatsPanel>
     );

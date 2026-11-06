@@ -9,12 +9,11 @@ import ProfileFollowListSheet from "@/app/[locale]/(composited)/u/[handle]/profi
 import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profile-weekly-stats-card";
 import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
-import {buildProfileGridItems, formatAnimalDexNumber, type ProfileGridItem} from "@/lib/profile-capture-grid";
+import {buildProfileGridItems, type ProfileGridItem} from "@/lib/profile-capture-grid";
 import MyCompanionsSection from "@/components/companions/my-companions-section";
 import type {CompanionWords} from "@/lib/companion-bond";
 import {DebateRow} from "@/components/debates/debate-views";
 import type {Debate} from "@/lib/debates";
-import {useOwnCardLevel} from "@/components/companions/use-companions";
 import {useSearchParams} from "next/navigation";
 import {
     AverageTraitsCard,
@@ -401,10 +400,8 @@ function ProfileViewsCard({stats}: {stats: ProfileViewStats}) {
     );
 }
 
-/** iOS `ProfileHistoryGridCell`: square photo, index chip, sightings pill, level chip, video marker. */
+/** iOS `ProfileHistoryGridCell`: square photo, sightings pill, video marker. */
 function ProfileGridCell({item, isOwn = false}: {item: ProfileGridItem<PublicProfileCapture>; isOwn?: boolean}) {
-    // Your own grid shows each animal's bond level: one level per animal.
-    const level = useOwnCardLevel(item.representative, item.level, isOwn);
     const capture = item.representative;
     return (
         <Link href={capture.href} className="group relative aspect-square overflow-hidden bg-black">
@@ -415,15 +412,8 @@ function ProfileGridCell({item, isOwn = false}: {item: ProfileGridItem<PublicPro
                 unoptimized
                 className="object-cover transition duration-300 group-hover:scale-105"
             />
-            {item.animalDexNumber != null ? (
-                <span className="absolute left-[7px] top-[7px] rounded-full border border-[#A7F432]/[0.28] bg-black/55 px-[7px] py-1 text-[11px] font-extrabold leading-none tabular-nums text-[#A7F432]">
-                    {formatAnimalDexNumber(item.animalDexNumber)}
-                </span>
-            ) : (
-                <span className="absolute left-[7px] top-[7px] rounded-full bg-black/55 px-1.5 py-1 text-[9px] font-extrabold leading-none text-[#A8B0AA]">
-                    NOT INDEXED
-                </span>
-            )}
+            {/* Two marks at most on a tile (second pass, 2026-11-06, as iOS): the sightings
+                count and a video's play glyph. The # number and the level live on the card. */}
             {item.captureCount > 1 ? (
                 <span
                     aria-label={`${item.captureCount} sightings`}
@@ -433,15 +423,6 @@ function ProfileGridCell({item, isOwn = false}: {item: ProfileGridItem<PublicPro
                         <path d="M9 4.5 7.6 6.5H5A2.5 2.5 0 0 0 2.5 9v8.5A2.5 2.5 0 0 0 5 20h14a2.5 2.5 0 0 0 2.5-2.5V9A2.5 2.5 0 0 0 19 6.5h-2.6L15 4.5H9Zm3 4.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" />
                     </svg>
                     {item.captureCount}
-                </span>
-            ) : null}
-            {/* Level 1 is every new capture; iOS shows no chip for it. */}
-            {level > 1 ? (
-                <span
-                    aria-label={`Level ${level}`}
-                    className="absolute bottom-[7px] left-[7px] rounded-full bg-black/55 px-[7px] py-1 text-[10px] font-extrabold leading-none tabular-nums text-white"
-                >
-                    Level {level}
                 </span>
             ) : null}
             {item.isMovingMedia ? (
@@ -747,10 +728,12 @@ export default function ProfileContent({
                             <Link
                                 href={`${localePrefix}/app/credits`}
                                 aria-label={`${ownerExtras.credits.balance} credits. Open credits and unlocks.`}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold tabular-nums ${
- ownerExtras.credits.isLow
-                                        ? "bg-primary-400 text-black"
-                                        : "border border-primary-200/35 bg-primary-400/14 text-primary-200"
+                                // Quiet at zero (second pass, 2026-11-06, as iOS): credits you have are
+                                // neon; none is chrome.
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-extrabold tabular-nums ${
+ ownerExtras.credits.balance <= 0
+                                        ? "border-white/10 bg-[#12351C] text-white/60"
+                                        : "border-primary-200/35 bg-primary-400/14 text-primary-200"
                                 }`}
                             >
                                 <span aria-hidden="true">⚡</span>

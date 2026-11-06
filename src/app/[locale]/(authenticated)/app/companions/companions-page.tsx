@@ -330,20 +330,25 @@ function YourCompanions({words, locale, frontDoor}: {words: CompanionWords; loca
                                     />
                                 ))}
                                 {active.length < roster.length ? (
-                                    <div className="grid grid-cols-4 gap-x-2 gap-y-4 px-4 pb-4 pt-5 md:grid-cols-6 md:px-5" data-testid="companions-faces">
-                                        {quiet.map(({row}) => {
-                                            const href = hrefOf(row);
-                                            const face = (
-                                                <>
-                                                    <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={56} />
-                                                    <span className="line-clamp-2 text-center text-[13px] font-semibold leading-4 text-white/60">{row.displayName}</span>
-                                                </>
-                                            );
-                                            const className = "flex flex-col items-center gap-1.5 transition-opacity hover:opacity-80 active:opacity-70";
-                                            return href
-                                                ? <Link key={row.speciesProfileId} href={href} className={className} data-testid="companion-face">{face}</Link>
-                                                : <div key={row.speciesProfileId} className={className} data-testid="companion-face">{face}</div>;
-                                        })}
+                                    // A shelf (second pass, 2026-11-06, as iOS): the "Say hello" band header,
+                                    // then faces with names in a row that scrolls sideways.
+                                    <div data-testid="companions-faces">
+                                        <p className="bg-[#12351C]/60 px-4 pb-2 pt-3.5 text-[11px] font-black uppercase tracking-[0.08em] text-white/40 md:px-5">{words.list.shelf}</p>
+                                        <div className="flex gap-2 overflow-x-auto px-1.5 pb-3 pt-4 [scrollbar-width:none] md:px-2.5 [&::-webkit-scrollbar]:hidden">
+                                            {quiet.map(({row}) => {
+                                                const href = hrefOf(row);
+                                                const face = (
+                                                    <>
+                                                        <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={64} />
+                                                        <span className="line-clamp-2 text-center text-[13px] font-semibold leading-4 text-white/60">{row.displayName}</span>
+                                                    </>
+                                                );
+                                                const className = "flex w-[84px] shrink-0 flex-col items-center gap-1.5 transition-opacity hover:opacity-80 active:opacity-70";
+                                                return href
+                                                    ? <Link key={row.speciesProfileId} href={href} className={className} data-testid="companion-face">{face}</Link>
+                                                    : <div key={row.speciesProfileId} className={className} data-testid="companion-face">{face}</div>;
+                                            })}
+                                        </div>
                                     </div>
                                 ) : null}
                             </>
