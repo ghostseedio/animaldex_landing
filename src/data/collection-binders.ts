@@ -2,6 +2,7 @@ import "server-only";
 
 import {getAppCaptures, type AppCapture} from "@/data/authenticated-app";
 import {
+    type SpeciesBinderLink,
     type BinderDefinition,
     type BinderIndexSummary,
     type BinderProgress,
@@ -10,6 +11,7 @@ import {
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {
+    binderSetIdsForEntry,
     buildBinderMembershipMap,
     type BinderMembershipCatalogEntry
 } from "@/lib/collection-binder-membership";
@@ -19,6 +21,7 @@ import {getSupabaseUrl} from "@/lib/supabase-http";
 import type {SpeciesEntry} from "@/data/species";
 
 export type {
+    SpeciesBinderLink,
     BinderDefinition,
     BinderIndexSummary,
     BinderProgress,
@@ -455,4 +458,38 @@ export async function getCollectionBinderDetail(id: string): Promise<BinderProgr
 
     const {binders} = await getCollectionBinders();
     return binders.find((binder) => binder.definition.id === id) ?? null;
+}
+
+
+/**
+ * The binders one species sits in (iOS `SpeciesBinderMembershipResolver`):
+ * the server's memberships for it, else the catalog rules the shelf falls
+ * back to. Sorted as the shelf is. Empty when it is in none.
+ */
+export async function getSpeciesBinderLinks(entry: SpeciesEntry | null): Promise<SpeciesBinderLink[]> {
+    const profileId = entry?.speciesProfileId?.trim();
+    if (!entry || !profileId) return [];
+    const supabase = createSupabaseServerClient();
+    let setIds: string[] | null = null;
+    if (supabase) {
+        const {data, error} = await supabase
+            .from("animal_collection_set_memberships")
+            .select("set_id")
+            .eq("species_profile_id", profileId);
+        if (!error && data) setIds = (data as Array<{set_id: string}>).map((row) => row.set_id);
+    }
+    if (!setIds || setIds.length === 0) {
+        const membership = toMembershipCatalogEntry(entry);
+        setIds = membership ? binderSetIdsForEntry(membership) : [];
+    }
+    const wanted = new Set(setIds);
+    return LAUNCH_BINDERS
+        .filter((definition) => wanted.has(definition.id))
+        .sort((left, right) => left.sortOrder - right.sortOrder)
+        .map((definition) => ({
+            id: definition.id,
+            title: definition.title,
+            accentHex: definition.accentHex,
+            href: `/app/collection/binders/${encodeURIComponent(definition.id)}`
+        }));
 }

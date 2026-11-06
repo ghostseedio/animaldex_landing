@@ -10,6 +10,62 @@
 
 import {getBattlePower, type SpeciesStats} from "@/lib/battle-tier";
 
+/** The reward cards' words (`appCapture.reveal`), English by default. */
+export type RevealRewardWords = {
+    captureReward: string;
+    basePoints: string;
+    wildBonus: string;
+    zooContext: string;
+    domesticAdjustment: string;
+    farmAdjustment: string;
+    unknownContext: string;
+    newSpeciesBonus: string;
+    freeCreditLine: string;
+    total: string;
+    totalRewards: string;
+    plusCredit: string;
+    /** "{setting}" */
+    addedToScore: string;
+    /** "{setting}" */
+    addedToScoreAndCredits: string;
+    wildEducation: string;
+    /** "{animal}" */
+    firstInCollection: string;
+    wild: string;
+    zoo: string;
+    domestic: string;
+    farm: string;
+    unknown: string;
+};
+
+export const REVEAL_REWARD_WORDS_EN: RevealRewardWords = {
+    captureReward: "Capture Reward",
+    basePoints: "Base Points",
+    wildBonus: "Wild bonus",
+    zooContext: "Zoo context",
+    domesticAdjustment: "Domestic adjustment",
+    farmAdjustment: "Farm adjustment",
+    unknownContext: "Unknown context",
+    newSpeciesBonus: "New Species Bonus",
+    freeCreditLine: "Free Credit (First Wild Species)",
+    total: "Total",
+    totalRewards: "Total Rewards",
+    plusCredit: "+1 credit",
+    addedToScore: "{setting} capture added to your score",
+    addedToScoreAndCredits: "{setting} capture added to your score and credits",
+    wildEducation: "Wild animals give bonus points",
+    firstInCollection: "This is the first {animal} in your collection.",
+    wild: "Wild",
+    zoo: "Zoo",
+    domestic: "Domestic",
+    farm: "Farm",
+    unknown: "Unknown"
+};
+
+function fillReveal(template: string, values: Record<string, string>) {
+    return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? values[key] : match));
+}
+
 export type SightingNovelty = {
     isNewSpecies: boolean;
     /** Sightings of this species in the collection, including this capture. */
@@ -63,9 +119,8 @@ function settingKey(settingTag: string | null | undefined) {
 }
 
 /** "Wild", "Zoo", … as the subtitle names the capture. */
-function settingShortLabel(settingTag: string | null | undefined) {
-    const key = settingKey(settingTag);
-    return key.charAt(0).toUpperCase() + key.slice(1);
+function settingShortLabel(settingTag: string | null | undefined, words: RevealRewardWords) {
+    return words[settingKey(settingTag) as "wild" | "zoo" | "domestic" | "farm" | "unknown"];
 }
 
 export function captureContextMultiplier(settingTag: string | null | undefined) {
@@ -77,13 +132,13 @@ export function captureContextMultiplier(settingTag: string | null | undefined) 
     }
 }
 
-function contextLabel(settingTag: string | null | undefined) {
+function contextLabel(settingTag: string | null | undefined, words: RevealRewardWords) {
     switch (settingKey(settingTag)) {
-        case "wild": return "Wild bonus";
-        case "zoo": return "Zoo context";
-        case "domestic": return "Domestic adjustment";
-        case "farm": return "Farm adjustment";
-        default: return "Unknown context";
+        case "wild": return words.wildBonus;
+        case "zoo": return words.zooContext;
+        case "domestic": return words.domesticAdjustment;
+        case "farm": return words.farmAdjustment;
+        default: return words.unknownContext;
     }
 }
 
@@ -121,39 +176,38 @@ export function captureRewardBreakdown(input: {
  */
 export function captureRewardShowcase(
     breakdown: CaptureRewardBreakdown,
-    awardedWildUniqueCredit: boolean
+    awardedWildUniqueCredit: boolean,
+    words: RevealRewardWords = REVEAL_REWARD_WORDS_EN
 ): RewardShowcaseItem[] {
     if (breakdown.totalPoints <= 0) return [];
 
     const lines: RewardBreakdownLine[] = [
-        {title: "Base Points", points: breakdown.basePoints},
-        {title: contextLabel(breakdown.settingTag), points: breakdown.contextPoints - breakdown.basePoints}
+        {title: words.basePoints, points: breakdown.basePoints},
+        {title: contextLabel(breakdown.settingTag, words), points: breakdown.contextPoints - breakdown.basePoints}
     ];
     if (breakdown.newSpeciesBonus > 0) {
-        lines.push({title: "New Species Bonus", points: breakdown.newSpeciesBonus});
+        lines.push({title: words.newSpeciesBonus, points: breakdown.newSpeciesBonus});
     }
     if (awardedWildUniqueCredit) {
-        lines.push({title: "Free Credit (First Wild Species)", points: 1});
+        lines.push({title: words.freeCreditLine, points: 1});
     }
 
-    const setting = settingShortLabel(breakdown.settingTag);
+    const setting = settingShortLabel(breakdown.settingTag, words);
 
     return [{
-        title: "Capture Reward",
+        title: words.captureReward,
         lines,
-        totalLabel: awardedWildUniqueCredit ? "Total Rewards" : "Total",
+        totalLabel: awardedWildUniqueCredit ? words.totalRewards : words.total,
         totalValueText: awardedWildUniqueCredit
-            ? `+${breakdown.totalPoints} • +1 credit`
+            ? `+${breakdown.totalPoints} • ${words.plusCredit}`
             : `+${breakdown.totalPoints}`,
-        subtitle: awardedWildUniqueCredit
-            ? `${setting} capture added to your score and credits`
-            : `${setting} capture added to your score`,
-        educationChip: settingKey(breakdown.settingTag) === "wild" ? "Wild animals give bonus points" : null
+        subtitle: fillReveal(awardedWildUniqueCredit ? words.addedToScoreAndCredits : words.addedToScore, {setting}),
+        educationChip: settingKey(breakdown.settingTag) === "wild" ? words.wildEducation : null
     }];
 }
 
-export function newSpeciesMessage(animalName: string) {
-    return `This is the first ${animalName.trim().toLowerCase()} in your collection.`;
+export function newSpeciesMessage(animalName: string, words: Pick<RevealRewardWords, "firstInCollection"> = REVEAL_REWARD_WORDS_EN) {
+    return fillReveal(words.firstInCollection, {animal: animalName.trim().toLowerCase()});
 }
 
 export const CONTINUATION_NOTE = "Already saved to your collection.";

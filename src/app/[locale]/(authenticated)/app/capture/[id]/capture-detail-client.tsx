@@ -6,7 +6,6 @@ import Image from "next/image";
 import {useParams, useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
-import CaptureGradeBadge from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
 import CaptureGiftsPanel from "@/app/[locale]/(authenticated)/app/_components/capture-gifts-panel";
 import {MediaCarousel} from "@/app/[locale]/(authenticated)/app/discover-timeline-cards";
 import AnimalDetailTabBar, {type AnimalDetailTab} from "@/components/animal-detail/animal-detail-tab-bar";
@@ -14,8 +13,6 @@ import AnimalStoryCard, {type AnimalStoryPrinciple} from "@/components/animal-de
 import AnimalStatsPanel from "@/components/animal-detail/animal-stats-panel";
 import SystemDynamicsSection from "@/components/animal-detail/system-dynamics/system-dynamics-section";
 import AnimalPowerBand from "@/components/animal-detail/animal-powers/animal-power-band";
-import {useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
-import {trainingCanStart} from "@/lib/species-training";
 import BondPanel from "@/components/companions/bond-panel";
 import {noteOpenStep, useOpenStepUpdates} from "@/components/companions/use-steps";
 import type {AnimalStep} from "@/lib/your-step";
@@ -27,7 +24,13 @@ import {useAnimalPower} from "@/components/animal-detail/animal-powers/use-anima
 import HeartsBand from "@/components/debates/hearts-band";
 import {useMyDebates} from "@/components/debates/use-debates";
 import CaptureMediaManager from "@/components/animal-detail/capture-media/capture-media-manager";
-import {CaptureMeetBeat, NewSpeciesCard, RewardShowcase} from "@/components/animal-detail/capture-reveal/capture-reveal";
+import {CaptureRevealFlow, NewSpeciesCard, RewardShowcase} from "@/components/animal-detail/capture-reveal/capture-reveal";
+import {CaptureCardOptions, CaptureModerationMenu, CaptureShareButton, shareCaptureCard} from "@/components/animal-detail/capture-card-actions";
+import {AppearsInBinders, CaptureValidityBand} from "@/components/animal-detail/capture-card-bands";
+import type {SpeciesBinderLink} from "@/data/collection-binder-types";
+import {captureValidityNotice} from "@/lib/capture-validity-notice";
+import {captureStarCount} from "@/lib/capture-star-rating";
+import {CAPTURE_WORDS_EN, type CaptureWords} from "@/lib/capture-words";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import type {AppCaptureDetail} from "@/data/authenticated-app";
 import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from "@/data/discover-timeline";
@@ -75,6 +78,12 @@ type CaptureDetailClientProps = {
     play?: ReactNode;
     /** The bond's words (the Bond tab, the level chip, Talk to it), in the reader's language. */
     companionWords?: CompanionWords;
+    /** The card's, the reveal's and the Stats tab's words, in the reader's language. */
+    captureWords?: CaptureWords;
+    /** The species' AnimalDex number, when it has one. */
+    animalDexNumber?: number | null;
+    /** The binders the species sits in ("Appears in"; "Added to" on a first capture). */
+    binders?: SpeciesBinderLink[];
 };
 
 type CohortPage = {
@@ -110,7 +119,7 @@ function detailList(details: Record<string, any> | null, ...keys: string[]) {
 }
 
 /** iOS photographer row: "Spotted by" avatar · name · handle → profile. */
-function SpottedByRow({spotter}: {spotter: DiscoverCollectorRef}) {
+function SpottedByRow({spotter, label}: {spotter: DiscoverCollectorRef; label: string}) {
     const avatar = spotter.avatarUrl ? (
         <img src={spotter.avatarUrl} alt="" className="h-[34px] w-[34px] shrink-0 rounded-full object-cover ring-1 ring-white/[0.12]" />
     ) : (
@@ -122,7 +131,7 @@ function SpottedByRow({spotter}: {spotter: DiscoverCollectorRef}) {
         <>
             {avatar}
             <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-semibold text-white/40">Spotted by</span>
+                <span className="block text-[11px] font-semibold text-white/40">{label}</span>
                 <span className="block truncate text-sm font-bold text-white">{spotter.name}</span>
                 {spotter.username ? <span className="block truncate text-[11px] font-semibold text-white/55">@{spotter.username}</span> : null}
             </span>
@@ -161,8 +170,12 @@ export default function CaptureDetailClient({
     rankings,
     nativeRange,
     play,
-    companionWords: words = COMPANION_WORDS_EN
+    companionWords: words = COMPANION_WORDS_EN,
+    captureWords = CAPTURE_WORDS_EN,
+    animalDexNumber = null,
+    binders = []
 }: CaptureDetailClientProps) {
+    const cardWords = captureWords.card;
     const router = useRouter();
     const searchParams = useSearchParams();
     const locale = useParams<{locale?: string}>()?.locale ?? null;
@@ -233,9 +246,6 @@ export default function CaptureDetailClient({
     }, [capture.id, viewer.isOwner]);
     // "Luna the Gray Wolf" (iOS: the card's own nickname and the animal).
     const companionName = companionDisplayName(nickname, speciesName, words.displayName);
-    // The Warmup (3.2) is offered on the Bond tab and taken in the chat, where
-    // its result goes to the animal as the person's own message.
-    const speciesTraining = useSpeciesTraining(viewer.isOwner ? speciesProfileId : null);
     // The open step, kept in step with the chat and Companions.
     const [openStep, setOpenStep] = useState<AnimalStep | null>(null);
     useEffect(() => {
@@ -267,7 +277,8 @@ export default function CaptureDetailClient({
     // Set only when this card was opened by the capture flow that just made it.
     // Claimed once, so reopening or reloading the card plays nothing again.
     const [reveal, setReveal] = useState<CaptureReveal | null>(null);
-    const [showsRewards, setShowsRewards] = useState(false);
+    /** The reveal first (iOS `CaptureRevealFlowView`), then the card's reward cards. */
+    const [revealStage, setRevealStage] = useState<"flow" | "rewards" | null>(null);
 
     useEffect(() => {
         if (!viewer.isOwner) return;
@@ -280,7 +291,7 @@ export default function CaptureDetailClient({
         const claimed = claimCaptureReveal(storage, capture.id);
         if (!claimed) return;
         setReveal(claimed);
-        setShowsRewards(true);
+        setRevealStage("flow");
     }, [capture.id, viewer.isOwner]);
 
     const rewardItems = useMemo(() => reveal ? captureRewardShowcase(
@@ -291,9 +302,10 @@ export default function CaptureDetailClient({
             hasUncertaintyFallback: capture.hasUncertaintyFallback,
             isNewSpecies: reveal.isNewSpecies
         }),
-        reveal.awardedWildUniqueCredit
-    ) : [], [capture.baseGameStats, capture.hasUncertaintyFallback, capture.isEligibleCapture, capture.settingTag, reveal]);
-    const finishRewards = useCallback(() => setShowsRewards(false), []);
+        reveal.awardedWildUniqueCredit,
+        captureWords.reveal
+    ) : [], [capture.baseGameStats, capture.hasUncertaintyFallback, capture.isEligibleCapture, capture.settingTag, captureWords.reveal, reveal]);
+    const finishRewards = useCallback(() => setRevealStage(null), []);
     const [cohortPage, setCohortPage] = useState<CohortPage>({ids: [capture.id], hasMore: false, nextOffset: null});
     const [isLoadingCohort, setIsLoadingCohort] = useState(false);
     const heroTouchStartRef = useRef<{x: number; y: number} | null>(null);
@@ -447,23 +459,64 @@ export default function CaptureDetailClient({
     // The owner's card manages its media; anybody else's only shows it.
     const canManageMedia = viewer.isOwner && mediaAssets.some((asset) => asset.mediaRowId);
     const canMarkAsPet = viewer.isOwner && isEligibleToMarkAsPet(capture);
+    const isUncertain = capture.hasUncertaintyFallback || !capture.isEligibleCapture;
+    // The photo's notice: Retake required, a clearer look, or an ineligible photo.
+    const validityNotice = captureValidityNotice({
+        isOwner: viewer.isOwner,
+        captureValidity: capture.captureValidity,
+        isEligibleCapture: capture.isEligibleCapture,
+        hasUncertaintyFallback: capture.hasUncertaintyFallback,
+        isNumbered: animalDexNumber != null,
+        justRevealed: reveal !== null,
+        captureGrade: capture.captureGrade,
+        words: cardWords
+    });
+    // The card's stars, as the reveal pulls them (none for an uncertain capture).
+    const revealStars = isUncertain ? null : captureStarCount({
+        grade: capture.captureGrade,
+        settingTag: capture.settingTag,
+        humanContext: capture.humanContext,
+        totalProgressionXP: capture.totalProgressionXP,
+        stats: capture.effectiveGameStats
+    });
+    const revealPowerName = resolvedPowerProfile?.principleName?.trim() || null;
+    const shareCard = useCallback(() => {
+        void shareCaptureCard({animalName: capture.animalName, speciesSlug: resolvedSpeciesSlug, imageSrc: capture.imageSrc, words: captureWords});
+    }, [capture.animalName, capture.imageSrc, captureWords, resolvedSpeciesSlug]);
 
     return (
-        <div className={`mx-auto w-full max-w-[88rem] ${reveal ? "pb-64" : "pb-12"}`}>
-            {/* iOS toolbar: Done/close on the leading edge; the pager chrome sits at the bottom. */}
+        <div className="mx-auto w-full max-w-[88rem] pb-12">
+            {/* iOS toolbar: close and the card's options on the leading edge;
+                Share, the Collection and Talk to it on the trailing one. */}
             <div className="mb-4 flex items-center justify-between gap-3">
-                <button
-                    type="button"
-                    onClick={close}
-                    aria-label="Close"
-                    className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.08]"
-                >
-                    <AppIcon name="close" />
-                </button>
                 <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={close}
+                        aria-label={captureWords.close}
+                        className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.08]"
+                    >
+                        <AppIcon name="close" />
+                    </button>
+                    {viewer.isOwner ? (
+                        <CaptureCardOptions captureId={capture.id} canReanalyze words={captureWords} />
+                    ) : null}
+                </div>
+                <div className="flex items-center gap-1">
+                    {viewer.isOwner && capture.isEligibleCapture && !capture.hasUncertaintyFallback ? (
+                        <CaptureShareButton animalName={capture.animalName} speciesSlug={resolvedSpeciesSlug} imageSrc={capture.imageSrc} words={captureWords} />
+                    ) : null}
+                    {!viewer.isOwner && spotter && isSignedIn && spotter.userId !== viewer.userId ? (
+                        <CaptureModerationMenu
+                            captureId={capture.id}
+                            ownerUserId={spotter.userId}
+                            snapshot={`${capture.animalName} ${capture.scientificName ?? ""}`.trim()}
+                            words={captureWords}
+                        />
+                    ) : null}
                     {viewer.isOwner ? (
                         <Link href="/app/collection" className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-bold text-primary-200">
-                            <AppIcon name="collection" /> Collection
+                            <AppIcon name="collection" /> {cardWords.collection}
                         </Link>
                     ) : null}
                     {/* The card's one main action: it replaces the floating Speak button. */}
@@ -496,10 +549,13 @@ export default function CaptureDetailClient({
                     referralId={referralId}
                 />
 
+                {/* Nothing over the photo (DECISIONS section 10, iOS a4aa36db,
+                    8f208a57): its media controls only; the name and the chips
+                    live under it and on the Stats tab. */}
                 <section
                     onTouchStart={handleHeroTouchStart}
                     onTouchEnd={handleHeroTouchEnd}
-                    className="relative aspect-[4/5] max-h-[48rem] overflow-hidden border border-white/10 bg-black lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:aspect-auto"
+                    className="relative aspect-[4/5] max-h-[48rem] overflow-hidden border border-white/10 bg-[#090909] lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:aspect-auto"
                 >
                     {canManageMedia ? (
                         <CaptureMediaManager
@@ -509,6 +565,8 @@ export default function CaptureDetailClient({
                             isUncertain={capture.hasUncertaintyFallback}
                             isMarkedAsPet={isMarkedAsPet}
                             canMarkAsPet={canMarkAsPet}
+                            copyRecordIdLabel={cardWords.copyRecordId}
+                            recordIdCopiedLabel={cardWords.recordIdCopied}
                         />
                     ) : showsHeroCarousel ? (
                         <div className="absolute inset-0">
@@ -524,31 +582,14 @@ export default function CaptureDetailClient({
                             className="object-cover"
                         />
                     )}
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/15" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 p-5 sm:p-7">
-                        <div className="mb-3 flex flex-wrap items-center gap-2 [&>*]:pointer-events-auto">
-                            {capture.captureGrade != null ? (
-                                <CaptureGradeBadge grade={capture.captureGrade} breakdown={capture.gradeBreakdown} />
-                            ) : null}
-                            {capture.settingTag ? (
-                                <span className="rounded-full bg-primary-400 px-3 py-1.5 text-xs font-black text-black">
-                                    {capture.settingTag}
-                                </span>
-                            ) : null}
-                            {bondChip ? (
-                                // One level per animal: every card of it shows the bond's.
-                                <button
-                                    type="button"
-                                    onClick={() => setTab("bond")}
-                                    className="rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm"
-                                >
-                                    {bondChip}
-                                </button>
-                            ) : null}
-                        </div>
-                        {/* Its name, when you gave it one, then the animal (iOS headerTitle and headerSupportingName). */}
+                </section>
+
+                <section className="overflow-hidden border border-white/[0.08] bg-[#090909] font-sans">
+                    {/* The header block (iOS headerTitle / headerSupportingName): its
+                        name, when you gave it one, then the animal. */}
+                    <header className="border-b border-white/[0.08] px-5 pb-4 pt-5">
                         <div className="flex items-end gap-2.5">
-                            <h1 className="min-w-0 break-words font-display text-4xl font-bold text-white sm:text-5xl xl:text-6xl">{nickname ?? capture.animalName}</h1>
+                            <h1 className="min-w-0 break-words font-display text-3xl font-bold text-white sm:text-4xl xl:text-5xl">{nickname ?? capture.animalName}</h1>
                             {viewer.isOwner ? (
                                 // iOS Customize Card → Add Nickname / Edit Nickname.
                                 <button
@@ -556,7 +597,7 @@ export default function CaptureDetailClient({
                                     onClick={() => setShowsNameSheet(true)}
                                     aria-label={nickname ? words.naming.editNickname : words.naming.addNickname}
                                     title={nickname ? words.naming.editNickname : words.naming.addNickname}
-                                    className="pointer-events-auto mb-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 bg-black/55 text-white/80 backdrop-blur-sm transition hover:text-white sm:mb-2.5"
+                                    className="mb-1 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:text-white sm:mb-1.5"
                                 >
                                     <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M4 16h3.5l8-8a2.1 2.1 0 0 0-3-3l-8 8V16Z" />
@@ -565,7 +606,7 @@ export default function CaptureDetailClient({
                             ) : null}
                         </div>
                         {nickname ? (
-                            <p className="mt-1 text-lg font-semibold text-white/80 sm:text-xl">{capture.animalName}</p>
+                            <p className="mt-1 text-lg font-semibold text-white/80">{capture.animalName}</p>
                         ) : null}
                         {capture.scientificName ? (
                             <p className="mt-1 text-sm italic text-white/55 sm:text-base">{capture.scientificName}</p>
@@ -573,10 +614,8 @@ export default function CaptureDetailClient({
                         {descriptor ? (
                             <p className="mt-2 max-w-2xl text-[15px] font-medium leading-6 text-white/[0.62]">{descriptor}</p>
                         ) : null}
-                    </div>
-                </section>
+                    </header>
 
-                <section className="overflow-hidden border border-white/[0.08] bg-black font-sans">
                     <div className="px-5 pt-5">
                         <AnimalDetailTabBar value={tab} onChange={setTab} tabs={cardTabs} labels={{about: words.card.about, bond: words.card.bond, battle: words.card.stats}} />
                     </div>
@@ -587,6 +626,30 @@ export default function CaptureDetailClient({
                         hidden={tab !== "about"}
                         className={tab === "about" ? "mt-5 px-5 pb-5" : "hidden"}
                     >
+                        {validityNotice ? (
+                            <div className="-mx-5">
+                                <CaptureValidityBand notice={validityNotice} retakeLabel={cardWords.retake} />
+                            </div>
+                        ) : null}
+                        {/* Capture notices stay with the identity they are about. */}
+                        {reveal?.isNewSpecies ? (
+                            <div className="-mx-5">
+                                <NewSpeciesCard animalName={capture.animalName} settingTag={capture.settingTag} words={captureWords.reveal} />
+                            </div>
+                        ) : null}
+                        {/* The Power at a glance, its rows behind one Learn more, then
+                            the story, then System Dynamics and the rest (iOS 06d80a58).
+                            No form: the Power is earned with the animal, in its chat. */}
+                        {resolvedPowerProfile && !capture.hasUncertaintyFallback ? (
+                            <div className="-mx-5">
+                                <AnimalPowerBand
+                                    profile={resolvedPowerProfile}
+                                    power={animalPower.power}
+                                    speciesProfileId={speciesProfileId}
+                                    words={cardWords}
+                                />
+                            </div>
+                        ) : null}
                         <div className="-mx-5">
                             <AnimalStoryCard
                                 contentKey={`${capture.id}:${resolvedSpeciesSlug}`}
@@ -595,24 +658,6 @@ export default function CaptureDetailClient({
                                 settingTag={capture.settingTag}
                             />
                         </div>
-                        {/* Capture notices stay with the identity they are about. */}
-                        {reveal?.isNewSpecies ? (
-                            <div className="-mx-5">
-                                <NewSpeciesCard animalName={capture.animalName} settingTag={capture.settingTag} />
-                            </div>
-                        ) : null}
-                        {/* The Power, its story, System Dynamics, then the animal
-                            itself. No form: the Power is earned
-                            with the animal, in its chat. */}
-                        {resolvedPowerProfile && !capture.hasUncertaintyFallback ? (
-                            <div className="-mx-5">
-                                <AnimalPowerBand
-                                    profile={resolvedPowerProfile}
-                                    power={animalPower.power}
-                                    speciesProfileId={speciesProfileId}
-                                />
-                            </div>
-                        ) : null}
                         <div className="mt-5">
                             <SystemDynamicsSection
                                 speciesProfileId={speciesProfileId}
@@ -620,7 +665,12 @@ export default function CaptureDetailClient({
                                 defersHeadlineToAnimalPower={Boolean(resolvedPowerProfile)}
                             />
                         </div>
-                        {spotter ? <div className="mt-5"><SpottedByRow spotter={spotter} /></div> : null}
+                        {binders.length ? (
+                            <div className="-mx-5 mt-5 border-t border-white/[0.08]">
+                                <AppearsInBinders binders={binders} words={cardWords} />
+                            </div>
+                        ) : null}
+                        {spotter ? <div className="mt-5"><SpottedByRow spotter={spotter} label={cardWords.spottedBy} /></div> : null}
                         <div className="mt-5">
                             <CaptureMetadataBand
                                 captureId={capture.id}
@@ -629,6 +679,8 @@ export default function CaptureDetailClient({
                                 locationHref={capture.locationLat != null && capture.locationLng != null
                                     ? `https://www.google.com/maps/search/?api=1&query=${capture.locationLat},${capture.locationLng}`
                                     : null}
+                                saved={viewer.isOwner}
+                                savedLabel={cardWords.savedInCollection}
                             />
                             {nativeRange ? <div className="-mx-5">{nativeRange}</div> : null}
                         </div>
@@ -642,6 +694,8 @@ export default function CaptureDetailClient({
                             hidden={tab !== "bond"}
                             className={tab === "bond" ? "mt-5 pb-5" : "hidden"}
                         >
+                            {/* iOS AnimalBondView on the card: no Warmup button (the
+                                Warmup is the chat's), and its Power before its Trials. */}
                             <BondPanel
                                 bond={animalBond.bond}
                                 didLoad={animalBond.didLoad}
@@ -656,11 +710,6 @@ export default function CaptureDetailClient({
                                 onDidIt={() => openAsk(undefined, {kind: "report"})}
                                 onDropped={() => talk(words.journey.step.otherMessage)}
                                 onTrialPicked={(frequency) => talk(trialPickedMessage(frequency, words) ?? undefined)}
-                                warmup={speciesTraining.training?.available ? {
-                                    onTake: trainingCanStart(speciesTraining.training) ? () => openAsk(undefined, {kind: "warmup"}) : null,
-                                    passed: speciesTraining.training.completed,
-                                    questionCount: speciesTraining.training.questions.length
-                                } : null}
                                 // From the first problem, Power earned or not (Debates v2, iOS 059ba3df).
                                 onDebate={myDebates.enabled ? () => openAsk(undefined, {kind: "debate"}) : null}
                                 onBondChanged={animalBond.setBond}
@@ -699,9 +748,13 @@ export default function CaptureDetailClient({
                                 totalProgressionXP={capture.totalProgressionXP}
                                 recentProgressionSource={capture.recentProgressionSource}
                                 captureGrade={capture.captureGrade}
+                                gradeBreakdown={capture.gradeBreakdown}
                                 settingTag={capture.settingTag}
+                                humanContext={capture.humanContext}
                                 conservationTier={capture.conservationTier}
                                 bondChip={bondChip}
+                                onBondLevel={viewer.isOwner ? () => setTab("bond") : null}
+                                words={captureWords.stats}
                             />
                         ) : null}
                         {rankings ? <div className="mt-5">{rankings}</div> : null}
@@ -716,7 +769,7 @@ export default function CaptureDetailClient({
                             // Someone else's card: an offer for it.
                             <div className="-mx-5 mt-5 flex flex-wrap gap-2 border-y border-white/[0.08] px-5 py-4">
                                 <Link href={`/app/trades?theirCapture=${encodeURIComponent(capture.id)}`} className="inline-flex min-h-11 items-center gap-2 border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white">
-                                    <AppIcon name="trade" /> Offer
+                                    <AppIcon name="trade" /> {cardWords.offer}
                                 </Link>
                             </div>
                         ) : null}
@@ -724,46 +777,61 @@ export default function CaptureDetailClient({
                 </section>
             </div>
 
-            {reveal && showsRewards && rewardItems.length ? (
-                <RewardShowcase items={rewardItems} onFinished={finishRewards} />
-            ) : null}
-            {reveal && !showsRewards ? (
-                // The reveal's last beat: meet the animal, then talk to it.
-                <CaptureMeetBeat
+            {reveal && revealStage === "flow" ? (
+                // iOS CaptureRevealFlowView: identity, the discovery, then the animal.
+                <CaptureRevealFlow
+                    photoSrc={capture.imageSrc}
                     slug={resolvedSpeciesSlug}
                     animalName={capture.animalName}
-                    powerName={resolvedPowerProfile?.principleName ?? null}
-                    lesson={resolvedPowerProfile?.shortMotto ?? firstSentence(resolvedPowerProfile?.coreLesson)}
+                    scientificName={capture.scientificName}
+                    dexNumber={animalDexNumber}
+                    isNewSpecies={reveal.isNewSpecies}
+                    totalSightings={reveal.totalSightings}
+                    isUncertain={isUncertain}
+                    companion={revealPowerName ? {
+                        powerName: revealPowerName,
+                        lesson: resolvedPowerProfile?.shortMotto ?? firstSentence(resolvedPowerProfile?.coreLesson)
+                    } : null}
+                    powerEarned={powerEarned}
+                    stars={revealStars}
+                    binders={reveal.isNewSpecies ? binders : []}
+                    awardsFreeCredit={reveal.awardedWildUniqueCredit}
                     onTalk={() => {
-                        setReveal(null);
+                        setRevealStage(null);
                         talk();
                     }}
-                    onSeeCard={() => setReveal(null)}
+                    onSeeCard={() => setRevealStage(rewardItems.length ? "rewards" : null)}
+                    onShare={viewer.isOwner && !isUncertain ? shareCard : null}
+                    words={captureWords.reveal}
                 />
+            ) : null}
+            {reveal && revealStage === "rewards" && rewardItems.length ? (
+                <RewardShowcase items={rewardItems} onFinished={finishRewards} words={captureWords.reveal} />
             ) : null}
 
             {showsPager ? (
-                // iOS `rankedPagerChrome`: ‹ n / N › pinned above the tab bar.
-                <div className="pointer-events-none fixed inset-x-0 bottom-[5.25rem] z-30 flex justify-center lg:bottom-6">
-                    <div className="pointer-events-auto flex items-center gap-3.5 rounded-full bg-black/60 p-1.5 backdrop-blur-md">
+                // iOS `rankedPagerChrome`: ‹ n / N ›. The web has no bottom bar,
+                // so it sits on the bottom edge at every width.
+                <div className="pointer-events-none fixed inset-x-0 bottom-6 z-30 flex justify-center">
+                    <div className="pointer-events-auto flex items-center gap-3.5 rounded-full bg-[#090909]/60 p-1.5 backdrop-blur-md">
                         <button
                             type="button"
                             onClick={selectPrevious}
                             disabled={currentIndex <= 0}
-                            aria-label="Previous capture"
-                            className="grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white disabled:opacity-35"
+                            aria-label={cardWords.previousCapture}
+                            className="grid h-10 w-10 place-items-center rounded-full bg-[#090909]/45 text-white disabled:opacity-35"
                         >
                             <AppIcon name="back" className="h-4 w-4" />
                         </button>
-                        <span className="rounded-full border border-white/[0.12] bg-black/45 px-3 py-1.5 font-mono text-[11px] font-semibold text-white/[0.92]">
+                        <span className="rounded-full border border-white/[0.12] bg-[#090909]/45 px-3 py-1.5 font-mono text-[11px] font-semibold text-white/[0.92]">
                             {currentIndex + 1} / {cohortPage.ids.length}{cohortPage.hasMore ? "+" : ""}
                         </span>
                         <button
                             type="button"
                             onClick={() => void selectNext()}
                             disabled={nextDisabled || isLoadingCohort}
-                            aria-label="Next capture"
-                            className="grid h-10 w-10 place-items-center rounded-full bg-black/45 text-white disabled:opacity-35"
+                            aria-label={cardWords.nextCapture}
+                            className="grid h-10 w-10 place-items-center rounded-full bg-[#090909]/45 text-white disabled:opacity-35"
                         >
                             <AppIcon name="chevron" className="h-4 w-4" />
                         </button>

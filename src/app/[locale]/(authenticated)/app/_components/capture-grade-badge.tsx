@@ -25,7 +25,7 @@ function weightText(value: number) {
   return `${Math.round(value * 100)}% weight`;
 }
 
-function CaptureGradeExplanationSheet({
+export function CaptureGradeExplanationSheet({
   breakdown,
   onClose,
 }: {

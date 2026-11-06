@@ -70,10 +70,28 @@ export async function POST(request: Request) {
             if (error) return NextResponse.json({error: "Moderation tools are unavailable right now."}, {status: 400});
             return NextResponse.json({ok: true, message: "Profile reported. AnimalDex will review the report within 24 hours."});
         }
+        case "report_capture": {
+            // Report Capture on someone else's card (iOS `reportPublicCapture`).
+            const captureId = String(body.captureId ?? "").trim().toLowerCase();
+            if (!UUID.test(captureId)) return NextResponse.json({error: "A valid capture is required."}, {status: 400});
+            const snapshot = String(body.snapshot ?? "").trim().slice(0, 1000);
+            const {error} = await supabase.from("moderation_reports").insert({
+                reporter_id: user.id,
+                reported_user_id: profileUserId,
+                content_type: "capture",
+                content_id: captureId,
+                reason: "Objectionable public capture content",
+                snapshot
+            });
+            if (error) return NextResponse.json({error: "Moderation tools are unavailable right now."}, {status: 400});
+            return NextResponse.json({ok: true, message: "Capture reported. AnimalDex will review the report within 24 hours."});
+        }
         case "block": {
+            // From a profile, or from one of their cards (iOS `blockSpotter`).
+            const reason = body.from === "capture" ? "Blocked from public capture" : "Blocked from profile";
             const {error} = await supabase
                 .from("user_blocks")
-                .upsert({blocker_id: user.id, blocked_user_id: profileUserId, reason: "Blocked from profile"}, {onConflict: "blocker_id,blocked_user_id"});
+                .upsert({blocker_id: user.id, blocked_user_id: profileUserId, reason}, {onConflict: "blocker_id,blocked_user_id"});
             if (error) return NextResponse.json({error: "Moderation tools are unavailable right now."}, {status: 400});
             return NextResponse.json({ok: true, message: "User blocked. Their content has been removed from your feed."});
         }

@@ -263,11 +263,30 @@ export default function SpeciesRadarStats({
                 </svg>
             </div>
 
-            <div className={`grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-2 ${showsChartChrome ? "" : "px-4"}`}>
-                {legendMetrics.map((metric) => (
-                    <SpeciesRadarLegendChip key={metric.id} metric={metric} />
-                ))}
-            </div>
+            {showsChartChrome ? (
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-2">
+                    {legendMetrics.map((metric) => (
+                        <SpeciesRadarLegendChip key={metric.id} metric={metric} />
+                    ))}
+                </div>
+            ) : (
+                // Flush on the card (iOS IOS-14): one band of columns split by
+                // hairlines, not a grid of small inset boxes.
+                <div className="-mx-2 flex border-t border-white/[0.09]" data-testid="stats-flush-band">
+                    {legendMetrics.map((metric, index) => (
+                        <div key={metric.id} className={`flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-3 ${index > 0 ? "border-l border-white/[0.09]" : ""}`}>
+                            <span className="flex max-w-full items-center gap-[5px]">
+                                <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{backgroundColor: metric.tint}} />
+                                <span className="truncate text-[10px] font-semibold text-white/[0.62]">{metric.title}</span>
+                            </span>
+                            <span className="flex items-baseline gap-[3px]">
+                                <span className="text-base font-extrabold tabular-nums text-white">{metric.value}{metric.valueSuffix ?? ""}</span>
+                                {metric.delta > 0 ? <span className="text-[10px] font-bold text-primary-400">+{metric.delta}</span> : null}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

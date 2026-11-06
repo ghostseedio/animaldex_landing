@@ -2,59 +2,26 @@
 
 import {useState} from "react";
 import SpeciesRadarStats from "@/app/[locale]/(composited)/animals/[slug]/species-radar-stats";
+import {CaptureGradeExplanationSheet} from "@/app/[locale]/(authenticated)/app/_components/capture-grade-badge";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {SIZE_SCALE_ANCHORS} from "@/data/size-scale-anchors";
-import {getBattleTier, type AnimalBattleTier, type SpeciesStats} from "@/lib/battle-tier";
+import {type SpeciesStats} from "@/lib/battle-tier";
 import {MAX_ANIMAL_LEVEL_XP, animalLevel, xpForAnimalLevel} from "@/lib/animal-level";
+import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
+import {CAPTURE_WORDS_EN, fillCaptureWords, type CaptureWords} from "@/lib/capture-words";
+import {statsClassificationChips, type StatsChip} from "@/lib/capture-card-chips";
 
-const STAT_LABELS: Record<keyof SpeciesStats, string> = {
-    dominance: "Dominance",
-    speed: "Speed",
-    size: "Size",
-    intelligence: "Intelligence",
-    rarity: "Rarity"
-};
+/**
+ * The Stats tab (iOS `ScanResultMediaScopedStatsBlock` and
+ * `AnimalDexSizeScaleCard`): one row of facts in one outlined chip style
+ * (GRADE with its breakdown, the setting, conservation, rarity) and no battle
+ * tier letter (JRN-8, IOS-22); the bond's level on your own card; the stats
+ * as one flush band; the size scale with every part on its own row (IOS-02).
+ */
 
-const TIER_TINT: Record<AnimalBattleTier, string> = {
-    S: "56,250,71",
-    A: "56,250,71",
-    B: "34,211,238",
-    C: "255,255,255",
-    D: "251,146,60",
-    E: "248,113,113"
-};
+type StatsWords = CaptureWords["stats"];
 
-const SETTING_TINT: Record<string, string> = {
-    zoo: "rgb(250 219 71)",
-    wild: "#A7F432",
-    domestic: "rgb(140 199 255)",
-    farm: "rgb(209 166 89)"
-};
-
-const CONSERVATION: Record<string, {label: string; tint: string}> = {
-    lc: {label: "Least Concern", tint: "#A7F432"},
-    leastconcern: {label: "Least Concern", tint: "#A7F432"},
-    nt: {label: "Near Threatened", tint: "rgb(250 219 56)"},
-    nearthreatened: {label: "Near Threatened", tint: "rgb(250 219 56)"},
-    vu: {label: "Vulnerable", tint: "rgb(250 158 51)"},
-    vulnerable: {label: "Vulnerable", tint: "rgb(250 158 51)"},
-    en: {label: "Endangered", tint: "rgb(250 89 71)"},
-    endangered: {label: "Endangered", tint: "rgb(250 89 71)"},
-    cr: {label: "Critically Endangered", tint: "rgb(191 46 242)"},
-    criticallyendangered: {label: "Critically Endangered", tint: "rgb(191 46 242)"},
-    ew: {label: "Extinct in the Wild", tint: "rgb(140 140 148)"},
-    extinctinthewild: {label: "Extinct in the Wild", tint: "rgb(140 140 148)"},
-    ex: {label: "Extinct", tint: "rgb(89 89 97)"},
-    extinct: {label: "Extinct", tint: "rgb(89 89 97)"}
-};
-
-function normalize(value: string | null | undefined) {
-    return value?.trim().toLowerCase().replace(/[^a-z]/g, "") ?? "";
-}
-
-function titleCase(value: string) {
-    return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+const NEON = "#A7F432";
 
 function levelPresentation(totalXP: number) {
     const xp = Math.max(0, Math.round(totalXP));
@@ -74,75 +41,64 @@ function levelPresentation(totalXP: number) {
     };
 }
 
-function rarityPresentation(score: number) {
-    if (score < 10) return {label: "Common", tint: "rgb(110 231 183)", lightText: false};
-    if (score < 25) return {label: "Uncommon", tint: "rgb(110 231 183)", lightText: false};
-    if (score < 45) return {label: "Rare", tint: "rgb(34 211 238)", lightText: false};
-    if (score < 65) return {label: "Epic", tint: "rgb(251 146 60)", lightText: false};
-    if (score < 90) return {label: "Legendary", tint: "#9454fa", lightText: true};
-    return {label: "Mythic", tint: "rgb(235 82 56)", lightText: true};
-}
-
-function GradeChip({grade}: {grade: number}) {
-    const tint = grade >= 9 ? "251,146,60" : grade >= 7 ? "34,211,238" : grade >= 5 ? "56,250,71" : grade >= 3 ? "255,255,255" : "248,113,113";
-    return (
-        <span className="inline-flex h-[31px] items-center gap-1.5 rounded-full border px-2.5" style={{background: `linear-gradient(rgba(${tint},.18),rgba(0,0,0,.36))`, borderColor: `rgba(${tint},.38)`}}>
-            <span className="text-[9px] font-extrabold text-white/[0.72]">GRADE</span>
-            <span className="text-[13px] font-extrabold tabular-nums text-white">{grade}</span>
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-2.5 w-2.5 text-white/[0.72]" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" strokeLinecap="round" /><circle cx="12" cy="8" r=".7" fill="currentColor" /></svg>
-        </span>
+/** iOS `AnimalDexInfoChip`: an outlined capsule, the value tinted only where it carries meaning. */
+function InfoChip({chip, onClick, hint}: {chip: StatsChip; onClick?: () => void; hint?: string}) {
+    const body = (
+        <>
+            {chip.label ? <span className="text-[9px] font-extrabold uppercase tracking-[0.06em] text-white/[0.62]">{chip.label}</span> : null}
+            <span className="text-xs font-extrabold uppercase tabular-nums" style={{color: chip.tint ?? "#FFFFFF"}}>{chip.value}</span>
+            {chip.showsInfo ? (
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-2.5 w-2.5 text-white/[0.62]" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 11v5" strokeLinecap="round" /><circle cx="12" cy="8" r=".7" fill="currentColor" /></svg>
+            ) : null}
+        </>
+    );
+    const className = "inline-flex min-h-[30px] shrink-0 items-center gap-[5px] rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5";
+    return onClick ? (
+        <button type="button" onClick={onClick} title={hint} className={`${className} transition hover:bg-white/[0.08]`}>{body}</button>
+    ) : (
+        <span className={className}>{body}</span>
     );
 }
 
-function TierChip({tier}: {tier: AnimalBattleTier}) {
-    const tint = TIER_TINT[tier];
-    return (
-        <span className="inline-flex h-[31px] items-center gap-1.5 rounded-full border px-2.5" style={{background: `linear-gradient(rgba(${tint},.18),rgba(0,0,0,.36))`, borderColor: `rgba(${tint},.38)`}}>
-            <span className="text-[9px] font-extrabold" style={{color: `rgba(${tint},.72)`}}>TIER</span>
-            <span className="text-[13px] font-extrabold text-white">{tier}</span>
-        </span>
-    );
-}
-
-function ClassificationChips({settingTag, conservationTier, baseRarity}: {settingTag?: string | null; conservationTier?: string | null; baseRarity: number}) {
-    const [showExplanation, setShowExplanation] = useState(false);
-    const settingKey = normalize(settingTag);
-    const settingTint = SETTING_TINT[settingKey];
-    const conservation = CONSERVATION[normalize(conservationTier)];
-    const rarity = rarityPresentation(baseRarity);
-    const settingLabel = settingTag?.trim() ? titleCase(settingTag.trim()) : null;
+function ClassificationChips({
+    chips,
+    gradeBreakdown,
+    settingIntro,
+    words
+}: {
+    chips: StatsChip[];
+    gradeBreakdown?: CaptureGradeBreakdown | null;
+    settingIntro: string | null;
+    words: StatsWords;
+}) {
+    const [showsGrade, setShowsGrade] = useState(false);
+    const [showsSetting, setShowsSetting] = useState(false);
+    const settingChip = chips.find((chip) => chip.kind === "setting") ?? null;
 
     return (
         <>
-            <div className="flex flex-wrap gap-2">
-                {settingTint && settingLabel ? (
-                    <button
-                        type="button"
-                        onClick={() => setShowExplanation(true)}
-                        className="rounded-full border border-black/[0.12] px-2.5 py-1.5 text-[11px] font-semibold uppercase leading-[14px] text-black/[0.88] shadow-[0_1px_0_rgba(0,0,0,.28)]"
-                        style={{backgroundColor: settingTint}}
-                    >
-                        {settingLabel}
-                    </button>
-                ) : null}
-                {conservation ? (
-                    <span className="rounded-full border border-white/[0.18] px-3 py-2 text-[11px] font-semibold leading-[14px] text-white" style={{backgroundColor: conservation.tint}}>
-                        {conservation.label}
-                    </span>
-                ) : null}
-                <span className={`rounded-full border px-2.5 py-[7px] text-[11px] font-semibold uppercase leading-[14px] ${rarity.lightText ? "border-white/[0.18] text-white" : "border-black/[0.08] text-black/[0.88]"}`} style={{backgroundColor: rarity.tint}}>
-                    {rarity.label}
-                </span>
+            <div className="flex flex-wrap gap-2" aria-label="Capture classification">
+                {chips.map((chip) => (
+                    <InfoChip
+                        key={chip.kind}
+                        chip={chip}
+                        hint={chip.kind === "grade" ? words.gradeHint : undefined}
+                        onClick={chip.kind === "grade" && gradeBreakdown
+                            ? () => setShowsGrade(true)
+                            : chip.kind === "setting" && settingIntro
+                                ? () => setShowsSetting(true)
+                                : undefined}
+                    />
+                ))}
             </div>
-            {showExplanation && settingLabel ? (
-                <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-label={`Why it says ${settingLabel}`}>
-                    <button type="button" aria-label="Close" className="absolute inset-0" onClick={() => setShowExplanation(false)} />
-                    <div className="relative z-10 w-full max-w-sm  border border-white/10 bg-[#1f1f1f] light:bg-surface-900 p-5">
-                        <h3 className="text-[17px] font-semibold text-white">Why it says {settingLabel}</h3>
-                        <p className="mt-3 text-[15px] font-medium leading-6 text-white/[0.62]">
-                            AnimalDex uses the visible scene and habitat cues in the capture to classify its setting as {settingLabel}.
-                        </p>
-                        <button type="button" onClick={() => setShowExplanation(false)} className="mt-5 w-full rounded-full bg-primary-400 px-4 py-3 text-xs font-bold text-black">Done</button>
+            {showsGrade && gradeBreakdown ? <CaptureGradeExplanationSheet breakdown={gradeBreakdown} onClose={() => setShowsGrade(false)} /> : null}
+            {showsSetting && settingChip && settingIntro ? (
+                <div className="fixed inset-0 z-50 grid place-items-center bg-[#090909]/75 p-4" role="dialog" aria-modal="true" aria-label={fillCaptureWords(words.whyItSays, {setting: settingChip.value})}>
+                    <button type="button" aria-label={words.done} className="absolute inset-0" onClick={() => setShowsSetting(false)} />
+                    <div className="relative z-10 w-full max-w-sm border border-white/10 bg-[#1f1f1f] light:bg-surface-900 p-5">
+                        <h3 className="text-[17px] font-semibold text-white">{fillCaptureWords(words.whyItSays, {setting: settingChip.title})}</h3>
+                        <p className="mt-3 text-[15px] font-medium leading-6 text-white/[0.62]">{settingIntro}</p>
+                        <button type="button" onClick={() => setShowsSetting(false)} className="mt-5 w-full rounded-full bg-primary-400 px-4 py-3 text-xs font-bold text-black">{words.done}</button>
                     </div>
                 </div>
             ) : null}
@@ -150,17 +106,17 @@ function ClassificationChips({settingTag, conservationTier, baseRarity}: {settin
     );
 }
 
-function LevelProgress({totalXP, recentSource, wide = false}: {totalXP: number; recentSource?: string | null; wide?: boolean}) {
+function LevelProgress({totalXP, recentSource, wide = false, words}: {totalXP: number; recentSource?: string | null; wide?: boolean; words: StatsWords}) {
     const progress = levelPresentation(totalXP);
     return (
         <div className={`space-y-2.5 px-4 py-3.5 ${wide ? "lg:px-0 lg:py-0" : ""}`}>
             <div className="flex items-baseline gap-2.5">
-                <span className="rounded-full border border-primary-400/[0.24] bg-primary-400/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-primary-400/95">{progress.level === 100 ? "Level 100 MAX" : `Level ${progress.level}`}</span>
-                <span className="text-xs font-medium text-white">{progress.xp} XP</span>
-                <span className="ml-auto text-[11px] font-semibold text-white/[0.42]">{progress.level === 100 ? "MAX" : `${progress.needed} XP to next`}</span>
+                <span className="rounded-full border border-primary-400/[0.24] bg-primary-400/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-primary-400/95">{progress.level === 100 ? words.levelMax : fillCaptureWords(words.level, {n: progress.level})}</span>
+                <span className="text-xs font-medium text-white">{fillCaptureWords(words.xp, {n: progress.xp})}</span>
+                <span className="ml-auto text-[11px] font-semibold text-white/[0.42]">{progress.level === 100 ? words.max : fillCaptureWords(words.xpToNext, {n: progress.needed})}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-primary-400/[0.82]" style={{width: `${progress.fraction * 100}%`}} /></div>
-            {progress.level < 100 ? <p className="text-[11px] font-semibold text-white/[0.62]">{progress.progressXP}/{progress.span} XP toward Level {progress.level + 1}</p> : null}
+            {progress.level < 100 ? <p className="text-[11px] font-semibold text-white/[0.62]">{fillCaptureWords(words.xpToward, {progress: progress.progressXP, span: progress.span, next: progress.level + 1})}</p> : null}
             {recentSource ? <p className="text-[11px] font-semibold text-primary-400/90">{recentSource}</p> : null}
         </div>
     );
@@ -168,14 +124,23 @@ function LevelProgress({totalXP, recentSource, wide = false}: {totalXP: number; 
 
 /**
  * Your own card: the bond's level, the one every card of this animal shows
- * (docs/companion-loop/SPEC.md, phase 2), in place of the card's own.
+ * (iOS `bondLevelRow`), with "Your bond" opening the Bond tab.
  */
-function BondLevel({chip, wide = false}: {chip: string; wide?: boolean}) {
-    return (
-        <div className={`px-4 py-3.5 ${wide ? "lg:px-0 lg:py-0" : ""}`}>
-            <span className="rounded-full border border-primary-400/[0.24] bg-primary-400/[0.12] px-[9px] py-1.5 text-[11px] font-extrabold text-primary-400/95">{chip}</span>
-        </div>
+function BondLevel({chip, onOpen, wide = false, words}: {chip: string; onOpen?: (() => void) | null; wide?: boolean; words: StatsWords}) {
+    const body = (
+        <>
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="none" stroke={NEON} strokeWidth="2.6" strokeLinecap="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" /><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" /></svg>
+            <span className="text-xs font-semibold text-white">{chip}</span>
+            {onOpen ? (
+                <span className="ml-auto flex items-center gap-1.5 text-[10px] font-semibold text-white/[0.42]">
+                    {words.yourBond}
+                    <span aria-hidden="true" className="text-[11px] font-bold">›</span>
+                </span>
+            ) : null}
+        </>
     );
+    const className = `flex w-full items-center gap-2 px-4 py-3.5 text-left ${wide ? "lg:px-0 lg:py-0" : ""}`;
+    return onOpen ? <button type="button" onClick={onOpen} className={`${className} transition hover:bg-white/[0.03]`}>{body}</button> : <div className={className}>{body}</div>;
 }
 
 function Artwork({slug, label, size}: {slug: string; label: string; size: number}) {
@@ -200,41 +165,59 @@ function Artwork({slug, label, size}: {slug: string; label: string; size: number
     );
 }
 
-function SizeScale({speciesName, speciesSlug, score, wide = false}: {speciesName: string; speciesSlug: string; score: number; wide?: boolean}) {
+/** The ruler's rows, top to bottom (iOS `AnimalDexBodyScaleRuler`): nothing drawn over anything else. */
+const RULER_HEIGHT = 176;
+const MARKER_CENTER_Y = 24;
+const LINE_TOP = 48;
+const TRACK_CENTER_Y = 100;
+const ANCHOR_CENTER_Y = 146;
+/** Half an anchor's width: the first and last sit whole inside the strip. */
+const ANCHOR_INSET = 34;
+const MARKER_INSET = 80;
+
+function SizeScale({speciesName, speciesSlug, score, wide = false, words}: {speciesName: string; speciesSlug: string; score: number; wide?: boolean; words: StatsWords}) {
     const clampedScore = Math.min(100, Math.max(0, Math.round(score)));
     return (
         <div className={`mt-5 border-t border-white/[0.09] pt-3.5 ${wide ? "lg:mt-0 lg:border-t-0 lg:pt-0" : ""}`}>
-            <p className={`px-4 text-xs font-medium text-white/[0.42] ${wide ? "lg:px-0 lg:text-sm" : ""}`}>Size scale</p>
+            <p className={`px-4 text-xs font-medium text-white/[0.42] ${wide ? "lg:px-0 lg:text-sm" : ""}`}>{words.sizeScale}</p>
             <div className={`mt-3.5 flex justify-end px-4 ${wide ? "lg:px-0" : ""}`}>
-                <span className="rounded-full bg-[linear-gradient(to_right,rgba(167,244,50,.18),rgba(148,84,250,.16))] px-3 py-2 text-lg font-extrabold text-primary-400">{clampedScore}/100</span>
+                <span className="rounded-full bg-primary-400/[0.14] px-3 py-2 text-[17px] font-extrabold tabular-nums text-primary-400">{clampedScore}/100</span>
             </div>
-            <div className="mt-3.5 h-40 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="relative h-[150px] min-w-[560px] border border-white/[0.07] light:bg-none light:bg-surface-800 bg-[linear-gradient(135deg,rgba(255,255,255,.04),rgba(18,18,18,.92),rgba(148,84,250,.08))]">
-                    <div className="absolute left-[18px] right-[18px] top-[86px]">
-                        <div className="relative h-2.5 rounded-full bg-[linear-gradient(to_right,rgba(255,255,255,.10),rgba(148,84,250,.16),rgba(167,244,50,.10))]">
+            <div className="mt-3.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{height: RULER_HEIGHT}}>
+                <div className="relative min-w-[560px] border border-white/[0.07] light:bg-none light:bg-surface-800 bg-[linear-gradient(135deg,rgba(255,255,255,.04),rgba(24,24,24,.92),rgba(24,24,24,.92))]" style={{height: RULER_HEIGHT}}>
+                    {/* The track; the anchors below already say tiny to giant. */}
+                    <div className="absolute left-[18px] right-[18px] -translate-y-1/2" style={{top: TRACK_CENTER_Y}}>
+                        <div className="relative h-2.5 rounded-full bg-[linear-gradient(to_right,rgba(255,255,255,.10),rgba(255,255,255,.14),rgba(167,244,50,.12))]">
                             <div className="absolute inset-x-2 top-2 flex items-start justify-between">
                                 {Array.from({length: 21}, (_, index) => <span key={index} className={`w-px bg-white ${index % 5 === 0 ? "h-4 opacity-[.18]" : "h-2.5 opacity-[.08]"}`} />)}
                             </div>
                         </div>
-                        <div className="mt-2 flex justify-between text-[10px] font-bold uppercase text-white/[0.42]"><span>Tiny</span><span>Pet</span><span>Giant</span></div>
                     </div>
 
                     {SIZE_SCALE_ANCHORS.map((anchor) => (
-                        <div key={anchor.slug} className="absolute top-[90px] flex w-[60px] -translate-x-1/2 flex-col items-center gap-1.5" style={{left: `${anchor.position}%`}}>
+                        <div
+                            key={anchor.slug}
+                            className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+                            style={{width: ANCHOR_INSET * 2, top: ANCHOR_CENTER_Y, left: `clamp(${ANCHOR_INSET}px, ${anchor.position}%, calc(100% - ${ANCHOR_INSET}px))`}}
+                        >
                             <Artwork slug={anchor.slug} label={anchor.label} size={34} />
-                            <span className="truncate text-[9px] font-bold text-white/[0.62]">{anchor.label}</span>
+                            <span className="max-w-full truncate text-[9px] font-bold text-white/[0.62]">{anchor.label}</span>
                         </div>
                     ))}
 
-                    <div className="absolute top-[9px] flex max-w-[150px] -translate-x-1/2 flex-col items-center gap-1.5" style={{left: `clamp(70px, ${clampedScore}%, calc(100% - 70px))`}}>
-                        <div className="flex items-center gap-2">
-                            <Artwork slug={speciesSlug} label={speciesName} size={30} />
-                            <span className="max-w-[108px] truncate text-[11px] font-extrabold text-white">{speciesName}</span>
-                        </div>
-                        <span className="text-[9px] font-bold text-white/[0.62]">Scale {clampedScore}</span>
+                    {/* The animal and its score side by side, so the line down never runs through the score. */}
+                    <div
+                        className="absolute flex max-w-[160px] -translate-x-1/2 -translate-y-1/2 items-center gap-2"
+                        style={{top: MARKER_CENTER_Y, left: `clamp(${MARKER_INSET}px, ${clampedScore}%, calc(100% - ${MARKER_INSET}px))`}}
+                    >
+                        <Artwork slug={speciesSlug} label={speciesName} size={30} />
+                        <span className="flex min-w-0 flex-col">
+                            <span className="truncate text-xs font-bold text-white">{speciesName}</span>
+                            <span className="text-[10px] font-semibold tabular-nums text-white/[0.62]">{fillCaptureWords(words.scaleScore, {n: clampedScore})}</span>
+                        </span>
                     </div>
-                    <span className="absolute top-[41px] h-[66px] w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-primary-400 to-[#9454fa] shadow-[0_0_10px_rgba(167,244,50,.36)]" style={{left: `${clampedScore}%`}} />
-                    <span className="absolute top-[101px] h-3 w-3 -translate-x-1/2 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(167,244,50,.38)]" style={{left: `${clampedScore}%`}} />
+                    <span className="absolute w-[3px] -translate-x-1/2 rounded-full bg-primary-400 shadow-[0_0_10px_rgba(167,244,50,.36)]" style={{left: `${clampedScore}%`, top: LINE_TOP, height: TRACK_CENTER_Y - LINE_TOP}} />
+                    <span className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(167,244,50,.38)]" style={{left: `${clampedScore}%`, top: TRACK_CENTER_Y}} />
                 </div>
             </div>
         </div>
@@ -249,10 +232,14 @@ export default function AnimalStatsPanel({
     totalProgressionXP,
     recentProgressionSource,
     captureGrade,
+    gradeBreakdown = null,
     settingTag,
+    humanContext = null,
     conservationTier,
     bondChip = null,
-    layout = "compact"
+    onBondLevel = null,
+    layout = "compact",
+    words = CAPTURE_WORDS_EN.stats
 }: {
     speciesName: string;
     speciesSlug: string;
@@ -261,39 +248,62 @@ export default function AnimalStatsPanel({
     totalProgressionXP?: number | null;
     recentProgressionSource?: string | null;
     captureGrade?: number | null;
+    /** The photo grade's breakdown, opened from the GRADE chip. */
+    gradeBreakdown?: CaptureGradeBreakdown | null;
     settingTag?: string | null;
+    /** A free-ranging domestic animal tagged Wild reads "Free-ranging", uncoloured. */
+    humanContext?: string | null;
     conservationTier?: string | null;
     /** Your own card: the bond's stage ("Working together") in place of the card's level. */
     bondChip?: string | null;
+    /** Opens the Bond tab from the bond's line. */
+    onBondLevel?: (() => void) | null;
     layout?: "compact" | "wide";
+    words?: StatsWords;
 }) {
-    const tier = getBattleTier(effectiveStats);
     const wide = layout === "wide";
     const columnClass = wide
         ? "lg:flex lg:flex-col lg:gap-5 lg:  lg:border lg:border-white/[0.08] lg:bg-white/[0.02] lg:p-6"
         : "";
+    const {chips, settingIntro} = statsClassificationChips({
+        captureGrade: captureGrade ?? null,
+        settingTag: settingTag ?? null,
+        humanContext,
+        conservationTier: conservationTier ?? null,
+        rarity: baseStats.rarity,
+        words
+    });
+    const statLabels: Record<keyof SpeciesStats, string> = {
+        dominance: words.dominance,
+        speed: words.speed,
+        size: words.size,
+        intelligence: words.intelligence,
+        rarity: words.rarity
+    };
 
     return (
         <section className={`-mx-5 font-sans ${wide ? "lg:mx-0 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-start lg:gap-6" : ""}`}>
             <div className={columnClass}>
-                <div className={`space-y-3 px-4 pb-2 ${wide ? "lg:px-0 lg:pb-0" : ""}`}>
-                    <div className="flex items-center gap-1.5"><TierChip tier={tier} />{captureGrade != null ? <GradeChip grade={captureGrade} /> : null}</div>
-                    <ClassificationChips settingTag={settingTag} conservationTier={conservationTier} baseRarity={baseStats.rarity} />
-                </div>
+                {chips.length ? (
+                    <div className={`px-4 pb-2 ${wide ? "lg:px-0 lg:pb-0" : ""}`}>
+                        <ClassificationChips chips={chips} gradeBreakdown={gradeBreakdown} settingIntro={settingIntro} words={words} />
+                    </div>
+                ) : null}
                 {bondChip
-                    ? <BondLevel chip={bondChip} wide={wide} />
-                    : totalProgressionXP != null ? <LevelProgress totalXP={totalProgressionXP} recentSource={recentProgressionSource} wide={wide} /> : null}
+                    ? <BondLevel chip={bondChip} onOpen={onBondLevel} wide={wide} words={words} />
+                    : totalProgressionXP != null ? <LevelProgress totalXP={totalProgressionXP} recentSource={recentProgressionSource} wide={wide} words={words} /> : null}
                 {bondChip || totalProgressionXP != null ? <div className={`h-px bg-white/[0.09] ${wide ? "lg:hidden" : ""}`} /> : null}
                 <div className={`py-3.5 ${wide ? "lg:py-0" : ""}`}>
-                    <h2 className={`px-4 text-[22px] font-bold leading-[1.25] text-white ${wide ? "lg:px-0 lg:text-2xl" : ""}`}>AnimalDex stats</h2>
+                    <h2 className={`px-4 text-[22px] font-bold leading-[1.25] text-white ${wide ? "lg:px-0 lg:text-2xl" : ""}`}>{words.statsTitle}</h2>
                     <div className="mt-3">
-                        <SpeciesRadarStats stats={effectiveStats} baseStats={baseStats} labels={STAT_LABELS} showsChartChrome={false} />
+                        <SpeciesRadarStats stats={effectiveStats} baseStats={baseStats} labels={statLabels} showsChartChrome={false} />
                     </div>
                 </div>
             </div>
             <div className={columnClass}>
-                <SizeScale speciesName={speciesName} speciesSlug={speciesSlug} score={baseStats.size} wide={wide} />
+                <SizeScale speciesName={speciesName} speciesSlug={speciesSlug} score={baseStats.size} wide={wide} words={words} />
             </div>
         </section>
     );
 }
+

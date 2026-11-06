@@ -1,11 +1,12 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useMemo, useState, useSyncExternalStore} from "react";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import type {AnimalPower} from "@/lib/animal-powers";
 import {parseAnimalPowerIcon} from "@/lib/animal-power-icon";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 import {useAnimalPowerIcon} from "@/components/animal-detail/animal-powers/use-animal-power-icon";
+import {CAPTURE_WORDS_EN, fillCaptureWords, type CaptureWords} from "@/lib/capture-words";
 
 /**
  * The Animal Power band on Learn, ported from iOS `AnimalPowerGuideSection`.
@@ -44,6 +45,30 @@ function LockBadge() {
 
 type RowId = "pattern" | "proof" | "continuum" | "practise" | "notice";
 
+/**
+ * Whether "Learn more" is open (iOS `AnimalPowerLearnMoreState`): one answer
+ * for every card and species page, kept for the session only, never saved,
+ * so a fresh load starts calm.
+ */
+let learnMoreExpanded = false;
+const learnMoreListeners = new Set<() => void>();
+
+function subscribeLearnMore(listener: () => void) {
+    learnMoreListeners.add(listener);
+    return () => {
+        learnMoreListeners.delete(listener);
+    };
+}
+
+function setLearnMoreExpanded(next: boolean) {
+    learnMoreExpanded = next;
+    learnMoreListeners.forEach((listener) => listener());
+}
+
+function useLearnMoreExpanded() {
+    return useSyncExternalStore(subscribeLearnMore, () => learnMoreExpanded, () => false);
+}
+
 function Row({
     title,
     isOpen,
@@ -74,7 +99,8 @@ function Row({
 export default function AnimalPowerBand({
     profile,
     power,
-    speciesProfileId
+    speciesProfileId,
+    words = CAPTURE_WORDS_EN.card
 }: {
     profile: EnhancedAnimalPowerProfile;
     /**
@@ -84,8 +110,10 @@ export default function AnimalPowerBand({
     power: AnimalPower | null;
     /** The species, for the Power's icon before `power` has loaded. */
     speciesProfileId?: string | null;
+    words?: CaptureWords["card"];
 }) {
     const [openRow, setOpenRow] = useState<RowId | null>(null);
+    const isLearnMoreOpen = useLearnMoreExpanded();
     const toggle = (row: RowId) => setOpenRow((current) => (current === row ? null : row));
 
     const isEarned = power?.isEarned === true;
@@ -101,6 +129,9 @@ export default function AnimalPowerBand({
     const iconSvg = useAnimalPowerIcon(power?.speciesProfileId ?? speciesProfileId);
     const hasIcon = useMemo(() => parseAnimalPowerIcon(iconSvg) !== null, [iconSvg]);
     const isLocked = power !== null && !isEarned;
+    const hasRows = enhanced
+        ? Boolean(profile.corePattern || profile.behavioralEvidence.length || profile.powerContinuum || profile.embodimentPractices.length || profile.reflectionQuestions.length)
+        : Boolean(profile.biologicalBasis || profile.applicationExample);
 
     return (
         <section className="flex flex-col gap-4 border-b border-white/[0.08] bg-[#0F2A17]/55 px-5 py-6 font-sans">
@@ -108,7 +139,7 @@ export default function AnimalPowerBand({
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     <span className="flex items-center gap-2">
                         <span aria-hidden="true" className="text-xs font-bold" style={{color: NEON}}>⚡</span>
-                        <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-white">Animal Power</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-white">{words.animalPower}</h3>
                     </span>
                     {/* Earned state, as a quiet label beside the section title.
                         State only — the action lives at the close of the band. */}
@@ -118,7 +149,7 @@ export default function AnimalPowerBand({
                             style={{color: isEarned ? NEON : "rgba(255,255,255,0.4)"}}
                         >
                             <span aria-hidden="true">{isEarned ? "✓" : "○"}</span>
-                            {isEarned ? "Power earned" : "Not yet earned"}
+                            {isEarned ? words.powerEarned : words.notYetEarned}
                         </span>
                     ) : null}
                 </div>
@@ -155,16 +186,28 @@ export default function AnimalPowerBand({
                 {motto ? <p className="text-sm italic text-white/55">“{motto}”</p> : null}
             </div>
 
-            <div className="flex flex-col border-b border-white/[0.08]">
-                {enhanced ? (
+            {/* The name, motto and lesson are the Power at a glance; the rows
+                that explain it wait behind one "Learn more" (iOS 06d80a58). */}
+            {hasRows ? <div className="flex flex-col border-b border-white/[0.08]">
+                <button
+                    type="button"
+                    onClick={() => setLearnMoreExpanded(!isLearnMoreOpen)}
+                    aria-expanded={isLearnMoreOpen}
+                    className="flex min-h-11 w-full items-center gap-2 border-t border-white/[0.08] text-left"
+                    data-testid="power-learn-more"
+                >
+                    <span className="text-sm font-semibold" style={{color: NEON}}>{isLearnMoreOpen ? words.showLess : words.learnMore}</span>
+                    <span aria-hidden="true" className={`ml-auto text-[10px] font-bold transition-transform ${isLearnMoreOpen ? "rotate-180" : ""}`} style={{color: NEON}}>⌄</span>
+                </button>
+                {!isLearnMoreOpen ? null : enhanced ? (
                     <>
                         {profile.corePattern ? (
-                            <Row title="The Pattern" isOpen={openRow === "pattern"} onToggle={() => toggle("pattern")}>
+                            <Row title={words.thePattern} isOpen={openRow === "pattern"} onToggle={() => toggle("pattern")}>
                                 <p>{profile.corePattern}</p>
                             </Row>
                         ) : null}
                         {profile.behavioralEvidence.length ? (
-                            <Row title="Nature Proof" isOpen={openRow === "proof"} onToggle={() => toggle("proof")}>
+                            <Row title={words.natureProof} isOpen={openRow === "proof"} onToggle={() => toggle("proof")}>
                                 {profile.behavioralEvidence.map((item) => (
                                     <div key={item.title} className="flex flex-col gap-1">
                                         <p className="font-semibold text-white">{item.title}</p>
@@ -176,14 +219,14 @@ export default function AnimalPowerBand({
                             </Row>
                         ) : null}
                         {profile.powerContinuum ? (
-                            <Row title="How this Power shows up" isOpen={openRow === "continuum"} onToggle={() => toggle("continuum")}>
-                                <p><span className="font-semibold text-orange-300">Too little · </span>{profile.powerContinuum.deficientExpression}</p>
-                                <p><span className="font-semibold" style={{color: NEON}}>Balanced · </span>{profile.powerContinuum.balancedExpression}</p>
-                                <p><span className="font-semibold text-violet-300">Too much · </span>{profile.powerContinuum.excessExpression}</p>
+                            <Row title={words.howItShowsUp} isOpen={openRow === "continuum"} onToggle={() => toggle("continuum")}>
+                                <p><span className="font-semibold text-orange-300">{words.tooLittle} · </span>{profile.powerContinuum.deficientExpression}</p>
+                                <p><span className="font-semibold" style={{color: NEON}}>{words.balanced} · </span>{profile.powerContinuum.balancedExpression}</p>
+                                <p><span className="font-semibold text-violet-300">{words.tooMuch} · </span>{profile.powerContinuum.excessExpression}</p>
                             </Row>
                         ) : null}
                         {profile.embodimentPractices.length ? (
-                            <Row title="Practise this Power" isOpen={openRow === "practise"} onToggle={() => toggle("practise")}>
+                            <Row title={words.practise} isOpen={openRow === "practise"} onToggle={() => toggle("practise")}>
                                 {profile.embodimentPractices.map((practice) => (
                                     <div key={practice.title} className="flex flex-col gap-1">
                                         <p className="font-semibold text-white">{practice.title}</p>
@@ -197,7 +240,7 @@ export default function AnimalPowerBand({
                             </Row>
                         ) : null}
                         {profile.reflectionQuestions.length ? (
-                            <Row title="Notice this in your life" isOpen={openRow === "notice"} onToggle={() => toggle("notice")}>
+                            <Row title={words.noticeInYourLife} isOpen={openRow === "notice"} onToggle={() => toggle("notice")}>
                                 <ul className="flex list-disc flex-col gap-2 pl-5">
                                     {profile.reflectionQuestions.map((question) => <li key={question}>{question}</li>)}
                                 </ul>
@@ -207,25 +250,25 @@ export default function AnimalPowerBand({
                 ) : (
                     <>
                         {profile.biologicalBasis ? (
-                            <Row title="Nature Proof" isOpen={openRow === "proof"} onToggle={() => toggle("proof")}>
+                            <Row title={words.natureProof} isOpen={openRow === "proof"} onToggle={() => toggle("proof")}>
                                 <p>{profile.biologicalBasis}</p>
                             </Row>
                         ) : null}
                         {profile.applicationExample ? (
-                            <Row title="Practise this Power" isOpen={openRow === "practise"} onToggle={() => toggle("practise")}>
+                            <Row title={words.practise} isOpen={openRow === "practise"} onToggle={() => toggle("practise")}>
                                 <p>{profile.applicationExample}</p>
                             </Row>
                         ) : null}
                     </>
                 )}
-            </div>
+            </div> : null}
 
             {/* Earned: what earning opened. */}
             {isEarned ? (
                 <div className="flex flex-col gap-2 pt-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: NEON}}>Unlocked</p>
-                    {["Debates", "Fusion"].map((title) => (
-                        <p key={title} aria-label={`${title} unlocked`} className="flex items-center gap-[7px] text-xs text-white/60">
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em]" style={{color: NEON}}>{words.unlocked}</p>
+                    {[words.debates, words.fusion].map((title) => (
+                        <p key={title} aria-label={fillCaptureWords(words.unlockedItem, {title})} className="flex items-center gap-[7px] text-xs text-white/60">
                             <span aria-hidden="true" className="text-[10px] font-black" style={{color: NEON}}>✓</span>
                             {title}
                         </p>

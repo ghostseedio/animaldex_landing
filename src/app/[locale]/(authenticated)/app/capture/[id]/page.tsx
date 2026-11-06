@@ -13,6 +13,8 @@ import {getSpeciesRankings} from "@/data/species-rankings";
 import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getCompanionWords} from "@/loaders/companion-words";
+import {getCaptureWords} from "@/loaders/capture-words";
+import {getSpeciesBinderLinks} from "@/data/collection-binders";
 
 function toQualitySlug(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -22,10 +24,11 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
     // iOS opens every card in the same ScanResultView: an owned entry
     // (`isSavedEntry`) or a public one with a `spotter`. Try the owner read
     // first, then the public Discover row.
-    const [owned, context, companionWords] = await Promise.all([
+    const [owned, context, companionWords, captureWords] = await Promise.all([
         getAppCaptureDetail(params.id),
         getAuthenticatedAppContext(),
-        getCompanionWords(params.locale)
+        getCompanionWords(params.locale),
+        getCaptureWords(params.locale)
     ]);
     const [publicDetail, ownedMediaAssets, isMarkedAsPet] = await Promise.all([
         owned ? null : getPublicCaptureDetail(params.id),
@@ -71,11 +74,12 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
                 speciesSlug={requestedSpeciesSlug}
                 speciesName={capture.animalName}
                 companionWords={companionWords}
+                captureWords={captureWords}
             />
         );
     }
 
-    const [t, subtitle, principle, powerProfile, rankingItems, growth] = await Promise.all([
+    const [t, subtitle, principle, powerProfile, rankingItems, growth, binders] = await Promise.all([
         getScopedTranslator(params.locale, "animals"),
         getSpeciesSubtitle(entry.slug, params.locale),
         resolveSpeciesBehaviorProfile(entry.slug),
@@ -85,7 +89,9 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
         getSpeciesRankings(entry),
         // The growth/compare panel is about the viewer's own animal; for a
         // public card the Play tab shows Offer / Compare instead.
-        owned ? getSpeciesGrowthContext(entry, capture.id) : Promise.resolve(null)
+        owned ? getSpeciesGrowthContext(entry, capture.id) : Promise.resolve(null),
+        // "Appears in" (iOS SpeciesAppearsInBindersSection).
+        getSpeciesBinderLinks(entry).catch(() => [])
     ]);
     const primaryQuality = principle?.bestFor[0] ?? null;
     const primaryQualitySlug = primaryQuality ? toQualitySlug(primaryQuality) : null;
@@ -196,6 +202,9 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             nativeRange={nativeRange}
             play={play}
             companionWords={companionWords}
+            captureWords={captureWords}
+            animalDexNumber={entry.databaseSource?.animalDexNumber ?? publicDetail?.animalDexNumber ?? null}
+            binders={binders}
         />
     );
 }

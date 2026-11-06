@@ -14,6 +14,9 @@ export type BinderDefinition = {
     coverArtworkKey: string;
 };
 
+/** A binder a species belongs to, for "Appears in" and "Added to". */
+export type SpeciesBinderLink = {id: string; title: string; accentHex: string; href: string};
+
 export type BinderSlot = {
     speciesProfileId: string;
     identityKey: string;

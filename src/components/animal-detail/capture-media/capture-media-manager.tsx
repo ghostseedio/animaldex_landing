@@ -44,7 +44,9 @@ export default function CaptureMediaManager({
     assets,
     isUncertain = false,
     isMarkedAsPet,
-    canMarkAsPet
+    canMarkAsPet,
+    copyRecordIdLabel = "Copy record ID",
+    recordIdCopiedLabel = "Record ID copied"
 }: {
     captureId: string;
     animalName: string;
@@ -53,6 +55,8 @@ export default function CaptureMediaManager({
     isUncertain?: boolean;
     isMarkedAsPet: boolean;
     canMarkAsPet: boolean;
+    copyRecordIdLabel?: string;
+    recordIdCopiedLabel?: string;
 }) {
     const router = useRouter();
     const [media, setMedia] = useState(assets);
@@ -91,7 +95,9 @@ export default function CaptureMediaManager({
     const activeAsset = media[activeIndex] ?? null;
     const canSetActiveAsCover = Boolean(activeAsset && canBecomeCover(activeAsset, activeIndex));
     const canDeleteActive = Boolean(activeAsset && isDeletableMedia(activeAsset));
-    const hasActions = canSetActiveAsCover || canMarkAsPet || canDeleteActive || media.length > 1;
+    // Always one action on the owner's photo: Copy record ID (iOS 8f208a57).
+    const hasActions = true;
+    const [copied, setCopied] = useState(false);
     const isMovingMedia = activeAsset?.kind === "video" || activeAsset?.kind === "loop";
 
     const handleActiveAssetChange = useCallback((asset: DiscoverMediaAsset | null) => {
@@ -201,6 +207,17 @@ export default function CaptureMediaManager({
             label: isPet ? "Remove as Pet" : "Mark as Pet",
             action: () => void togglePet()
         } : null,
+        {
+            key: "record",
+            label: copyRecordIdLabel,
+            detail: captureId.toUpperCase(),
+            action: () => {
+                void navigator.clipboard?.writeText(captureId).then(() => {
+                    setCopied(true);
+                    window.setTimeout(() => setCopied(false), 1600);
+                }).catch(() => undefined);
+            }
+        },
         canDeleteActive && activeAsset?.mediaRowId ? {
             key: "delete",
             label: "Delete Media",
@@ -208,7 +225,7 @@ export default function CaptureMediaManager({
             action: () => setPendingDelete([activeAsset.mediaRowId as string])
         } : null
     ].filter((item): item is NonNullable<typeof item> => item !== null),
-    [activeAsset, activeIndex, canDeleteActive, canMarkAsPet, canSetActiveAsCover, isPet, makeCover, media.length, togglePet]);
+    [activeAsset, activeIndex, canDeleteActive, canMarkAsPet, canSetActiveAsCover, captureId, copyRecordIdLabel, isPet, makeCover, media.length, togglePet]);
 
     return (
         <div className="absolute inset-0">
@@ -223,11 +240,15 @@ export default function CaptureMediaManager({
             />
 
             {/* State only, so it never takes a tap from the media beneath it. */}
-            {activeAsset ? (
+            {/* Only where there is more than one page to tell apart: a lone
+                photo is simply the photo that was analysed (iOS 8f208a57). */}
+            {activeAsset && (media.length > 1 || (isPet && canMarkAsPet)) ? (
                 <div className={`pointer-events-none absolute left-3 z-20 flex flex-wrap items-center gap-1.5 ${isMovingMedia ? "top-12" : "top-3"}`}>
-                    <Pill tone={mediaKindBadge(activeAsset) === "Analysis image" ? "analysis" : "extra"}>
-                        {mediaKindBadge(activeAsset)}
-                    </Pill>
+                    {media.length > 1 ? (
+                        <Pill tone={mediaKindBadge(activeAsset) === "Analysis image" ? "analysis" : "extra"}>
+                            {mediaKindBadge(activeAsset)}
+                        </Pill>
+                    ) : null}
                     {/* Carousel invariant: page zero is always the cover. */}
                     {activeIndex === 0 && activeAsset.mediaRowId && media.length > 1 ? <Pill>★ Cover</Pill> : null}
                     {isPet && canMarkAsPet ? <Pill>Pet</Pill> : null}
@@ -262,13 +283,14 @@ export default function CaptureMediaManager({
                                         setShowsMenu(false);
                                         item.action();
                                     }}
-                                    className={`flex min-h-11 w-full items-center px-4 text-left text-sm font-semibold ${
+                                    className={`flex min-h-11 w-full flex-col justify-center px-4 text-left text-sm font-semibold ${
                                         "destructive" in item && item.destructive
                                             ? "border-t border-white/10 text-red-400"
-                                            : "text-white"
+                                            : item.key === "record" ? "border-t border-white/10 text-white" : "text-white"
                                     }`}
                                 >
                                     {item.label}
+                                    {"detail" in item && item.detail ? <span className="break-all text-[10px] font-medium text-white/40">{item.detail}</span> : null}
                                 </button>
                             ))}
                         </div>
@@ -276,6 +298,9 @@ export default function CaptureMediaManager({
                 </div>
             ) : null}
 
+            {copied ? (
+                <p role="status" className="absolute inset-x-3 top-16 z-20 bg-[#090909]/80 px-3 py-2 text-center text-xs font-semibold text-primary-200">{recordIdCopiedLabel}</p>
+            ) : null}
             {errorMessage ? (
                 <p role="alert" className="absolute inset-x-3 top-16 z-20 bg-black/80 px-3 py-2 text-center text-xs font-semibold text-orange-300 ring-1 ring-orange-300/20">
                     {errorMessage}

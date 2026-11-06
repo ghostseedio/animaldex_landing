@@ -334,7 +334,18 @@ export default function BondPanel({
                 onOpen={setOpenRecord}
             />
 
-            {/* 8. Its Trials: one of them can be your step. */}
+            {/* 8. Its Power, then its Trials (iOS AnimalBondView). */}
+            {power ? (
+                <section className="flex flex-col gap-1.5 border-b border-white/[0.08] px-5 py-5">
+                    <BandHeader>{words.bond.itsPower}</BandHeader>
+                    <p className="font-display text-xl font-black text-white">{power}</p>
+                    <p className="text-sm leading-6" style={{color: bond?.power.earned ? NEON : "rgb(255 255 255 / 0.6)"}}>
+                        {bondPowerLine(bond ?? {power: {name: power, earned: false, via: null, at: null}}, name, words)}
+                    </p>
+                </section>
+            ) : null}
+
+            {/* 9. Its Trials: one of them can be your step. */}
             <TrialRows
                 trials={trials}
                 name={name}
@@ -345,17 +356,6 @@ export default function BondPanel({
                 closeLabel={closeLabel}
             />
             {stepProblem && !openStep ? <p role="alert" className="px-5 py-3 text-xs text-white/60">{stepProblem}</p> : null}
-
-            {/* 9. Its Power. */}
-            {power ? (
-                <section className="flex flex-col gap-1.5 border-b border-white/[0.08] px-5 py-5">
-                    <BandHeader>{words.bond.itsPower}</BandHeader>
-                    <p className="font-display text-xl font-black text-white">{power}</p>
-                    <p className="text-sm leading-6" style={{color: bond?.power.earned ? NEON : "rgb(255 255 255 / 0.6)"}}>
-                        {bondPowerLine(bond ?? {power: {name: power, earned: false, via: null, at: null}}, name, words)}
-                    </p>
-                </section>
-            ) : null}
 
             {openRecord ? (
                 <StepRecordEntry

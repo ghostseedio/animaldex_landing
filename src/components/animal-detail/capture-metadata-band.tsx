@@ -45,6 +45,7 @@ export default function CaptureMetadataBand({
     locationLabel,
     locationHref,
     saved = true,
+    savedLabel = "Saved in your collection",
     layout = "compact"
 }: {
     captureId: string;
@@ -52,6 +53,7 @@ export default function CaptureMetadataBand({
     locationLabel?: string | null;
     locationHref?: string | null;
     saved?: boolean;
+    savedLabel?: string;
     layout?: "compact" | "wide";
 }) {
     const relativeDate = useMemo(() => capturedAt ? relativeTimestamp(capturedAt) : null, [capturedAt]);
@@ -83,13 +85,10 @@ export default function CaptureMetadataBand({
                 {saved ? (
                     <div className="flex items-start gap-2 text-[15px] font-medium leading-5 text-white/[0.62]">
                         <span className="grid w-5 shrink-0 place-items-center text-primary-400"><CheckIcon /></span>
-                        <span>Saved in your collection</span>
+                        <span>{savedLabel}</span>
                     </div>
                 ) : null}
-                <div className="space-y-1 px-1 pt-1 text-[11px] font-semibold leading-[14px] text-white/[0.42]">
-                    <p>RECORD ID</p>
-                    <p className="break-all text-white/[0.31] selection:bg-primary-400 selection:text-black">{captureId.toUpperCase()}</p>
-                </div>
+                {/* The record id is the photo's ••• "Copy record ID" (iOS 8f208a57), not printed here. */}
             </div>
         </section>
     );
