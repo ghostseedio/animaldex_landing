@@ -2574,17 +2574,17 @@ export default function AskConversation({
                                 // Its Power on one line under the name (DESIGN.md section 3); how it is, when it has none.
                                 subtitle={hints.principleName?.trim() || heroSubtitle}
                                 avatarUrl={faceUrl}
-                                bondLabel={ownerChat && chipBond ? bondChip(chipBond, labels) : null}
+                                // Only before there is a level: once the header shows "Gray Wolf · Level 4",
+                                // the card does not say it again (owner, 2026-11-06).
+                                bondLabel={ownerChat && chipBond && chipBond.level == null ? bondChip(chipBond, labels) : null}
                                 onBond={() => {
                                     setShowingMemory(false);
                                     setShowingBond(true);
                                     void animalBond.reload();
                                 }}
-                                // Every animal is different (SPEC section 3.3): in a chat with no
-                                // history yet, and always on the public Talk chat.
-                                differenceLine={!aboutTrial && (publicChat || !hasConversation)
-                                    ? labels.answersFromPower.replace("{name}", speakerName)
-                                    : null}
+                                // No positioning line (owner, 2026-11-06: "drop both"); the animals show it
+                                // by disagreeing.
+                                differenceLine={null}
                             />
                             {publicChat && talkWords ? (
                                 <TalkCapabilities
@@ -2601,8 +2601,7 @@ export default function AskConversation({
                             ) : null}
                             <div aria-hidden="true" className="min-h-7 flex-1" />
                             <div className="flex flex-col">
-                                {/* SPEC 3.1: a quiet line at the top of each conversation. */}
-                                <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} className="pb-3" />
+                                {/* The AI tag beside the name is the notice (owner, 2026-11-06: "drop both"). */}
                                 {debateBlocks("top")}
                                 {messages.flatMap((message, index) => [
                                     // The open step no reply here carries, where the conversation picks up.
@@ -2745,7 +2744,6 @@ export default function AskConversation({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-6">
-                            <AiNotice text={labels.aiNotice} linkLabel={labels.aiSafetyLink} />
                             {messages.map((message) => (
                                 <MessageBlock
                                     key={message.id}
@@ -2833,7 +2831,7 @@ export default function AskConversation({
                                     {messenger ? speakerName : animalName ?? labels.title}
                                 </span>
                                 {/* SPEC 3.1: the AI tag, always visible in the chat's header. */}
-                                <AiTag label={labels.aiTagLabel} />
+                                <AiTag label={labels.aiTagLabel} linksToSafety />
                             </p>
                             {messenger && animalTalking ? (
                                 <p className="truncate text-[11px] leading-4 text-primary-300" aria-live="polite">{labels.typing}</p>

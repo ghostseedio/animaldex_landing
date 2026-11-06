@@ -12,9 +12,13 @@ import Link from "@/app/[locale]/_components/link";
 import {AI_SAFETY_HREF} from "@/components/ai-gate/ai-chat-gate";
 import {AI_SESSION_KEY, longSessionNoticeDue, parseAiSession, touchAiSession} from "@/lib/ai-chat-gate";
 
-/** "AI", beside the name in a chat header: always visible. */
-export function AiTag({label, className = ""}: {label?: string; className?: string}) {
-    return (
+/**
+ * "AI", beside the name in a chat header: always visible. With `linksToSafety`
+ * it opens the safety page, the way the inline line used to (that line left
+ * the top of the chat on 2026-11-06, owner: "drop both").
+ */
+export function AiTag({label, className = "", linksToSafety = false}: {label?: string; className?: string; linksToSafety?: boolean}) {
+    const tag = (
         <span
             title={label}
             aria-label={label}
@@ -24,6 +28,7 @@ export function AiTag({label, className = ""}: {label?: string; className?: stri
             AI
         </span>
     );
+    return linksToSafety ? <Link href={AI_SAFETY_HREF} className="inline-flex shrink-0 hover:opacity-80">{tag}</Link> : tag;
 }
 
 /** "Replies are AI-generated.", with the safety page a tap away. */
