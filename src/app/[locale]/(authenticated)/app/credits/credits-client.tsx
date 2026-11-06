@@ -1,7 +1,11 @@
 "use client";
 
 import {useCallback, useEffect, useState} from "react";
+import Link from "@/app/[locale]/_components/link";
 import {AppPage, AppPageHeader, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
+import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {AppRequestError} from "@/lib/user-facing-error";
+import {creditBalanceLine, type CreditsWords} from "@/lib/credits-words";
 import {useAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
 import {startWebCheckout} from "@/app/[locale]/(authenticated)/app/_components/purchase-choice";
 import {useWebStoreAvailability} from "@/app/[locale]/(authenticated)/app/_components/web-store-availability";
@@ -17,8 +21,24 @@ type BillingStatus = {
 export type CreditsAccount = {email: string; provider: string | null} | null;
 
 const CREDIT_PACKS = ["purchase_25", "purchase_100"] as const;
-const UNAVAILABLE_LABEL = "Not available right now";
-const PLAN_NAMES: Record<ProPlanCode, string> = {pro_annual: "Yearly", pro_upgrade: "Monthly"};
+
+/** iOS `CreditStoreSettingsRow`: a full-width row that leads somewhere. */
+function StoreRow({href, title, subtitle}: {href: string; title: string; subtitle: string}) {
+    return (
+        <Link href={href} className="flex min-h-14 items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04]">
+            <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-white">{title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-white/45">{subtitle}</span>
+            </span>
+            <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0 text-white/35" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+        </Link>
+    );
+}
+
+/** iOS `AnimalDexBandHeader`: an uppercase micro band, flush. */
+function BandHeader({title}: {title: string}) {
+    return <h2 className="px-4 pb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white/40">{title}</h2>;
+}
 
 /**
  * Credits and Pro on the web, in the order the iOS store uses: Pro first and
@@ -27,8 +47,9 @@ const PLAN_NAMES: Record<ProPlanCode, string> = {pro_annual: "Yearly", pro_upgra
  * Paddle's price has one; monthly second. With no yearly Price ID set, it is
  * monthly only, as before.
  */
-export default function CreditsClient({account, packDetails, proPlans}: {
+export default function CreditsClient({account, packDetails, proPlans, words}: {
     account: CreditsAccount;
+    words: CreditsWords;
     /** Each pack's line in the reader's language; the catalog's English otherwise. */
     packDetails?: Partial<Record<WebStoreProductCode, string>>;
     /** Paddle's price and trial for each Pro plan (src/lib/paddle-prices.ts); missing ones show the catalog price. */
@@ -43,11 +64,14 @@ export default function CreditsClient({account, packDetails, proPlans}: {
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [plan, setPlan] = useState<ProPlanCode>("pro_annual");
+    // Never the server's own text (iOS UserFacingError): offline, our side, or the action's line.
+    const describeError = useUserFacingError();
+    const planName = (code: ProPlanCode) => (code === "pro_annual" ? words.yearly : words.monthly);
 
     const refresh = useCallback(async () => {
         const response = await fetch("/api/app/billing/status", {cache: "no-store"});
         const payload = await response.json() as BillingStatus & {error?: string};
-        if (!response.ok) throw new Error(payload.error || "Could not refresh Credits.");
+        if (!response.ok) throw new AppRequestError(response.status, payload.error ?? null);
         setStatus(payload);
         if (typeof payload.balance === "number") setBalance(payload.balance);
         return payload;
@@ -55,16 +79,16 @@ export default function CreditsClient({account, packDetails, proPlans}: {
 
     useEffect(() => {
         void refresh().catch((caught) => {
-            setError(caught instanceof Error ? caught.message : "Could not load Credits.");
+            setError(describeError(caught));
         });
-    }, [refresh]);
+    }, [refresh, describeError]);
 
     // Back from checkout: the return page only sends people here once the purchase is on the account.
     useEffect(() => {
         const billing = new URLSearchParams(window.location.search).get("billing");
-        if (billing === "success") setNotice("Thank you. Your purchase is on your account.");
-        else if (billing === "cancel") setNotice("Checkout cancelled. You haven't been charged.");
-    }, []);
+        if (billing === "success") setNotice(words.purchaseDone);
+        else if (billing === "cancel") setNotice(words.purchaseCancelled);
+    }, [words.purchaseDone, words.purchaseCancelled]);
 
     async function buy(code: WebStoreProductCode) {
         setBusy(code);
@@ -73,7 +97,7 @@ export default function CreditsClient({account, packDetails, proPlans}: {
             await startWebCheckout(code, "/app/credits", "credits_page");
             setBusy(null);
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Checkout could not start.");
+            setError(describeError(caught));
             setBusy(null);
         }
     }
@@ -85,19 +109,19 @@ export default function CreditsClient({account, packDetails, proPlans}: {
             const response = await fetch("/api/app/billing/portal", {method: "POST"});
             const payload = await response.json() as {url?: string; error?: string; code?: string};
             if (payload.code === "manage_on_apple") {
-                setNotice("Manage this subscription in the App Store on your iPhone.");
+                setNotice(words.manageApple);
                 setBusy(null);
                 return;
             }
             if (payload.code === "manage_on_google") {
-                setNotice("Manage this subscription in Google Play on your Android device.");
+                setNotice(words.manageGoogle);
                 setBusy(null);
                 return;
             }
-            if (!response.ok || !payload.url) throw new Error(payload.error || "Could not open subscription management.");
+            if (!response.ok || !payload.url) throw new AppRequestError(response.status, payload.error ?? null);
             window.location.assign(payload.url);
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Could not open subscription management.");
+            setError(describeError(caught));
             setBusy(null);
         }
     }
@@ -114,47 +138,30 @@ export default function CreditsClient({account, packDetails, proPlans}: {
     const saving = annualSavingPercent(proPlans?.pro_upgrade, proPlans?.pro_annual);
     const nothingOnSale = plansOnSale.length === 0 && CREDIT_PACKS.every((code) => !availability[code]);
 
+    const subscribedLine = provider === "paddle"
+        ? words.subscribedWeb
+        : provider === "apple"
+            ? words.subscribedApple
+            : provider === "google"
+                ? words.subscribedGoogle
+                : words.subscribedOther;
+
     return (
         <AppPage>
-            <AppPageHeader
-                eyebrow="Credits"
-                title="Credits and Pro"
-                description="Buy Credits or AnimalDex Pro on the website. The same balance and Pro status appear in the iOS and Android apps."
-            />
+            {/* iOS hero: ANIMALDEX MEMBERSHIP, then what this page is for you. */}
+            <AppPageHeader eyebrow={words.eyebrow} title={isPro ? words.titlePro : words.titleFree} description={isPro ? words.bodyPro : words.bodyFree} />
             <AppSurface>
-                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Your AnimalDex</p>
-                <p className="mt-2 font-display text-3xl font-bold text-white" aria-live="polite">
-                    {isPro ? "Pro active" : `${balance === 1 ? "1 Credit" : `${balance} Credits`}`}
-                </p>
-                <p className="mt-2 text-sm text-white/45">
-                    {isPro
-                        ? provider === "paddle"
-                            ? "Subscribed on the web."
-                            : provider === "apple"
-                                ? "Subscribed through the App Store."
-                                : provider === "google"
-                                    ? "Subscribed through Google Play."
-                                    : "AnimalDex Pro is active on this account."
-                        : "Credits are in-app currency and cannot be withdrawn for cash."}
-                </p>
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">{words.yourAnimalDex}</p>
+                <p className="mt-2 font-display text-3xl font-bold text-white" aria-live="polite">{creditBalanceLine(words, balance)}</p>
+                <p className="mt-2 text-sm text-white/45">{words.creditsNote}</p>
                 <div className="mt-5 flex flex-wrap gap-3">
                     <button
                         type="button"
                         className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-2.5 text-sm font-bold text-white"
-                        onClick={() => void refresh().then(() => setNotice("Balance refreshed.")).catch((caught) => setError(caught instanceof Error ? caught.message : "Refresh failed."))}
+                        onClick={() => void refresh().then(() => setNotice(words.refreshed)).catch((caught) => setError(describeError(caught)))}
                     >
-                        Refresh balance
+                        {words.refresh}
                     </button>
-                    {isPro && provider === "paddle" ? (
-                        <button
-                            type="button"
-                            disabled={busy === "portal"}
-                            className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-                            onClick={() => void manageSubscription()}
-                        >
-                            {busy === "portal" ? "Opening…" : "Manage subscription"}
-                        </button>
-                    ) : null}
                 </div>
             </AppSurface>
 
@@ -164,102 +171,132 @@ export default function CreditsClient({account, packDetails, proPlans}: {
             {account ? (
                 <div className="border-l-2 border-primary-400/50 pl-4">
                     <p className="text-sm font-bold text-white">
-                        Signed in as {account.email}
+                        {words.signedInAs.replace("{email}", account.email)}
                         {account.provider ? <span className="font-medium text-white/45"> · {account.provider}</span> : null}
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-white/45">
-                        Purchases go to this account. To see them in the app, sign in there the same way.
-                    </p>
+                    <p className="mt-1 text-xs leading-5 text-white/45">{words.purchasesGoHere}</p>
                 </div>
             ) : null}
-            {nothingOnSale ? (
-                <p className="text-sm leading-6 text-white/55">
-                    Credits and Pro aren’t on sale on the website right now. You can get them in the AnimalDex app.
-                </p>
-            ) : null}
+            {nothingOnSale && !isPro ? <p className="text-sm leading-6 text-white/55">{words.nothingOnSale}</p> : null}
 
-            <section id="pro" className="scroll-mt-24">
-                <AppSurface className="border-primary-400/30">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Membership</p>
-                        {isPro ? null : (
-                            <span className="bg-primary-400 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.14em] text-black">
-                                Recommended
-                            </span>
-                        )}
-                    </div>
-                    <h2 className="mt-2 font-display text-3xl font-bold text-white">{WEB_STORE_PRODUCTS.pro_upgrade.label}</h2>
-                    <p className="mt-2 text-sm leading-6 text-white/55">{pro.detail}</p>
-                    {plansOnSale.length > 1 && !isPro ? (
-                        <div role="radiogroup" aria-label="Choose a plan" className="mt-5 grid gap-3 sm:grid-cols-2">
-                            {plansOnSale.map((code) => {
-                                const active = code === selected;
-                                const planTrial = code === "pro_annual" ? proPlans?.pro_annual?.trialLabel ?? null : null;
-                                return (
-                                    <button
-                                        key={code}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={active}
-                                        onClick={() => setPlan(code)}
-                                        className={`flex flex-col items-start gap-1 border px-4 py-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/15 hover:border-white/35"}`}
-                                    >
-                                        <span className="flex flex-wrap items-center gap-2 text-sm font-black text-white">
-                                            {PLAN_NAMES[code]}
-                                            {code === "pro_annual" && saving ? (
-                                                <span className="bg-primary-400 px-1.5 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.14em] text-black">Save {saving}%</span>
-                                            ) : null}
-                                        </span>
-                                        <span className="text-sm text-white/80">{priceOf(code)}</span>
-                                        {planTrial ? <span className="text-xs font-bold text-primary-200">{planTrial}</span> : null}
-                                    </button>
-                                );
-                            })}
+            {isPro ? (
+                // iOS `proActiveSection`: Your membership · AnimalDex Pro · MEMBERSHIP ACTIVE · benefits · Manage.
+                <section id="pro" className="scroll-mt-24">
+                    <BandHeader title={words.yourMembership} />
+                    <AppSurface className="border-primary-400/30">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="font-display text-2xl font-bold text-white">AnimalDex Pro</h2>
+                            <span className="bg-primary-400 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.14em] text-black">{words.membershipActive}</span>
                         </div>
-                    ) : (
-                        <p className="mt-3 text-sm font-bold text-white/80">{priceOf(selected)}{trial ? ` · ${trial}` : ""}</p>
-                    )}
-                    <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                        {webStoreProBenefits(selected).map((benefit) => (
-                            <li key={benefit.title} className="border-l border-white/10 pl-3">
-                                <p className="text-sm font-bold text-white/85">{benefit.title}</p>
-                                {benefit.detail ? <p className="mt-0.5 text-xs leading-5 text-white/45">{benefit.detail}</p> : null}
-                            </li>
-                        ))}
-                    </ul>
-                    <button
-                        type="button"
-                        disabled={Boolean(busy) || isPro || !availability[selected]}
-                        onClick={() => void buy(selected)}
-                        className="mt-6 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50 sm:w-auto sm:min-w-[14rem]"
-                    >
-                        {isPro
-                            ? "Already Pro"
-                            : !availability[selected]
-                                ? UNAVAILABLE_LABEL
+                        <p className="mt-2 text-sm text-white/55">{subscribedLine}</p>
+                        <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                            {webStoreProBenefits(selected).map((benefit) => (
+                                <li key={benefit.title} className="border-l border-white/10 pl-3">
+                                    <p className="text-sm font-bold text-white/85">{benefit.title}</p>
+                                    {benefit.detail ? <p className="mt-0.5 text-xs leading-5 text-white/45">{benefit.detail}</p> : null}
+                                </li>
+                            ))}
+                        </ul>
+                        {provider === "paddle" ? (
+                            <div className="mt-6">
+                                <button
+                                    type="button"
+                                    disabled={busy === "portal"}
+                                    className="inline-flex min-h-11 items-center justify-center border border-white/15 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                                    onClick={() => void manageSubscription()}
+                                >
+                                    {busy === "portal" ? words.opening : words.manage}
+                                </button>
+                                <p className="mt-2 text-xs leading-5 text-white/45">{words.manageWeb}</p>
+                            </div>
+                        ) : (
+                            <p className="mt-6 text-xs leading-5 text-white/45">{provider === "apple" ? words.manageApple : provider === "google" ? words.manageGoogle : words.manageWeb}</p>
+                        )}
+                    </AppSurface>
+                </section>
+            ) : (
+                <section id="pro" className="scroll-mt-24">
+                    <AppSurface className="border-primary-400/30">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">{words.membership}</p>
+                            <span className="bg-primary-400 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.14em] text-black">{words.recommended}</span>
+                        </div>
+                        <h2 className="mt-2 font-display text-3xl font-bold text-white">{WEB_STORE_PRODUCTS.pro_upgrade.label}</h2>
+                        <p className="mt-2 text-sm leading-6 text-white/55">{pro.detail}</p>
+                        {plansOnSale.length > 1 ? (
+                            <div role="radiogroup" aria-label={words.choosePlan} className="mt-5 grid gap-3 sm:grid-cols-2">
+                                {plansOnSale.map((code) => {
+                                    const active = code === selected;
+                                    const planTrial = code === "pro_annual" ? proPlans?.pro_annual?.trialLabel ?? null : null;
+                                    return (
+                                        <button
+                                            key={code}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={active}
+                                            onClick={() => setPlan(code)}
+                                            className={`flex flex-col items-start gap-1 border px-4 py-3 text-left transition ${active ? "border-primary-400 bg-primary-400/10" : "border-white/15 hover:border-white/35"}`}
+                                        >
+                                            <span className="flex flex-wrap items-center gap-2 text-sm font-black text-white">
+                                                {planName(code)}
+                                                {code === "pro_annual" && saving ? (
+                                                    <span className="bg-primary-400 px-1.5 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.14em] text-black">{words.save.replace("{percent}", String(saving))}</span>
+                                                ) : null}
+                                            </span>
+                                            <span className="text-sm text-white/80">{priceOf(code)}</span>
+                                            {planTrial ? <span className="text-xs font-bold text-primary-200">{planTrial}</span> : null}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="mt-3 text-sm font-bold text-white/80">{priceOf(selected)}{trial ? ` · ${trial}` : ""}</p>
+                        )}
+                        <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                            {webStoreProBenefits(selected).map((benefit) => (
+                                <li key={benefit.title} className="border-l border-white/10 pl-3">
+                                    <p className="text-sm font-bold text-white/85">{benefit.title}</p>
+                                    {benefit.detail ? <p className="mt-0.5 text-xs leading-5 text-white/45">{benefit.detail}</p> : null}
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            type="button"
+                            disabled={Boolean(busy) || !availability[selected]}
+                            onClick={() => void buy(selected)}
+                            className="mt-6 inline-flex min-h-11 w-full items-center justify-center bg-primary-400 px-4 py-3 text-sm font-black text-black disabled:opacity-50 sm:w-auto sm:min-w-[14rem]"
+                        >
+                            {!availability[selected]
+                                ? words.unavailable
                                 : busy === selected
-                                    ? "Opening checkout…"
+                                    ? words.openingCheckout
                                     : trial
-                                        ? "Start free trial"
-                                        : "Go Pro"}
-                    </button>
-                    {trial && !isPro && availability[selected] ? (
-                        <p className="mt-3 text-xs leading-5 text-white/45">
-                            {trial}, then {priceOf("pro_annual")}. Cancel before the trial ends and you won&apos;t be charged.
-                        </p>
-                    ) : null}
-                </AppSurface>
+                                        ? words.startTrial
+                                        : words.goPro}
+                        </button>
+                        {trial && availability[selected] ? (
+                            <p className="mt-3 text-xs leading-5 text-white/45">
+                                {words.trialTerms.replace("{trial}", trial).replace("{price}", priceOf("pro_annual"))}
+                            </p>
+                        ) : null}
+                    </AppSurface>
+                </section>
+            )}
+
+            {/* iOS: Earn free Credits, between the membership and the packs. */}
+            <section className="-mx-4 border-y border-white/[0.08] bg-[#141414] md:mx-0 md:border">
+                <StoreRow href="/app/missions" title={words.earnTitle} subtitle={words.earnDetail} />
             </section>
 
             <section id="credits" className="scroll-mt-24">
-                <h2 className="font-display text-2xl font-bold text-white">Just need a few credits?</h2>
+                <h2 className="font-display text-2xl font-bold text-white">{words.packsTitle}</h2>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                     {CREDIT_PACKS.map((code) => {
                         const product = WEB_STORE_PRODUCTS[code];
                         const onSale = availability[code];
                         return (
                             <AppSurface key={code}>
-                                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">Credit pack</p>
+                                <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-white/35">{words.creditPack}</p>
                                 <h3 className="mt-2 font-display text-2xl font-bold text-white">{product.label}</h3>
                                 <p className="mt-2 text-sm leading-6 text-white/55">{packDetails?.[code] ?? product.detail}</p>
                                 <p className="mt-3 text-sm font-bold text-white/80">{product.fallbackPrice}</p>
@@ -269,15 +306,19 @@ export default function CreditsClient({account, packDetails, proPlans}: {
                                     onClick={() => void buy(code)}
                                     className="mt-5 inline-flex min-h-11 w-full items-center justify-center border border-white/15 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
                                 >
-                                    {!onSale
-                                        ? UNAVAILABLE_LABEL
-                                        : busy === code
-                                            ? "Opening checkout…"
-                                            : `Buy ${product.label}`}
+                                    {!onSale ? words.unavailable : busy === code ? words.openingCheckout : words.buy.replace("{label}", product.label)}
                                 </button>
                             </AppSurface>
                         );
                     })}
+                </div>
+            </section>
+
+            {/* iOS `accountSection`: Your account · Credit history. */}
+            <section>
+                <BandHeader title={words.yourAccount} />
+                <div className="-mx-4 border-y border-white/[0.08] bg-[#141414] md:mx-0 md:border">
+                    <StoreRow href="/app/credits/history" title={words.history} subtitle={words.historyDetail} />
                 </div>
             </section>
         </AppPage>
