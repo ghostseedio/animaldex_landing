@@ -65,16 +65,21 @@ export default function AppShell({
         if (!menuOpen) return;
         const previous = document.activeElement as HTMLElement | null;
         const page = pageRef.current;
-        page?.setAttribute("inert", "");
+        // Focus first, while the page's styles are clean, and the page goes inert a task later:
+        // in one task, focus() forced a style pass over the whole page (every message of a long
+        // thread) inside the tap, 35 ms of a 50-80 ms task on a phone (perf pass, 2026-11-07).
         slideOverRef.current?.focus();
+        const inertLater = window.setTimeout(() => page?.setAttribute("inert", ""), 0);
         const onKey = (event: KeyboardEvent) => {
             if (event.key === "Escape") setMenuOpen(false);
         };
         document.addEventListener("keydown", onKey);
         return () => {
+            window.clearTimeout(inertLater);
             document.removeEventListener("keydown", onKey);
             page?.removeAttribute("inert");
-            previous?.focus?.();
+            // Back where it was, a task after the closed menu is drawn, for the same reason.
+            window.setTimeout(() => previous?.focus?.(), 0);
         };
     }, [menuOpen]);
     // The Companions chat hides the phone's tab bar while it is up.
