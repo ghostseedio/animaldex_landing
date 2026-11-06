@@ -4,6 +4,7 @@ import Link from "@/app/[locale]/_components/link";
 import {useEffect, useState} from "react";
 import CaptureGiftSheet, {GiftGlyph} from "@/app/[locale]/(authenticated)/app/_components/capture-gift-sheet";
 import {parseGiftCatalog, type GiftCatalog} from "@/lib/capture-gifts";
+import {useAppFeatureFlag} from "@/components/use-app-feature-flag";
 
 /** Mirrors `FEED_RAIL_BUTTON_CLASS` in discover-timeline-cards (kept local to avoid an import cycle). */
 const FEED_RAIL_BUTTON_CLASS = "pointer-events-auto grid h-11 w-11 place-items-center [filter:drop-shadow(0_1px_3px_rgba(0,0,0,0.6))] [@media(max-height:760px)]:h-9 [@media(max-height:760px)]:w-9 [&_svg]:h-5 [&_svg]:w-5 [@media(max-height:760px)]:[&_svg]:h-[1.1rem] [@media(max-height:760px)]:[&_svg]:w-[1.1rem]";
@@ -96,12 +97,15 @@ export default function DiscoverCaptureActions({
         };
     }, []);
 
+    // Trades paused (shared SPEC section 3.2): no Offer, as iOS hides it.
+    const tradesOn = useAppFeatureFlag("trades");
+
     if (isOwnPost) return null;
 
     const giftsEnabled = catalog?.enabled === true && (catalog.definitions.length ?? 0) > 0;
     const showsGift = giftsEnabled;
     const showsEndorse = !giftsEnabled;
-    const showsOffer = canOffer;
+    const showsOffer = canOffer && tradesOn;
     // 3.2: no battle "Compare" here; debates start from the animal's own chat.
     if (!showsGift && !showsEndorse && !showsOffer) return null;
 

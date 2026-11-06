@@ -33,6 +33,7 @@ import { formatAppShortDate } from "@/lib/app-dates";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import {CloseIconButton} from "@/components/ui/icon-buttons";
 import {useOwnCardLevel} from "@/components/companions/use-companions";
+import {useAppFeatureFlag} from "@/components/use-app-feature-flag";
 
 const FEED_VIDEO_SOUND_EVENT = "animaldex-feed-video-sound";
 let feedVideoSoundEnabled = false;
@@ -1185,7 +1186,9 @@ function CaptureCard({
   }, [rankedItems, activeItem.collector]);
 
   const isOwnPost = Boolean(viewerUserId && activeItem.collector.userId && viewerUserId === activeItem.collector.userId);
-  const canOffer = Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain;
+  // Trades paused (shared SPEC section 3.2): no Offer, as iOS hides it.
+  const tradesOn = useAppFeatureFlag("trades");
+  const canOffer = tradesOn && Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain;
   // iOS: signed in, someone else's post, and an animal with a Power to speak
   // from (an identified species; an unclear photo has none).
   const canTalk = Boolean(viewerUserId) && !isOwnPost && !activeItem.isUncertain && Boolean(activeItem.speciesSlug);

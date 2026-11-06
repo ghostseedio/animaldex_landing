@@ -2,6 +2,9 @@ import {AppEmpty, AppMetric, AppPage, AppPageHeader} from "@/app/[locale]/(authe
 import TradesClient from "@/app/[locale]/(authenticated)/app/trades/trades-client";
 import {decorateCapture, getAuthenticatedAppContext, getAppCreditOffers, getAppDiscoverFeed, getAppProgression, getAppTrades} from "@/data/authenticated-app";
 import {getUserCaptures} from "@/data/user-captures";
+import {loadAppFeatureFlags} from "@/data/app-feature-flags";
+import {isAppFeatureOn} from "@/lib/app-feature-flags";
+import PausedFeature from "@/app/[locale]/(authenticated)/app/_components/paused-feature";
 
 export default async function TradesPage({
     params,
@@ -10,6 +13,8 @@ export default async function TradesPage({
     params: {locale: string};
     searchParams?: {theirCapture?: string};
 }) {
+    // Trades paused (shared SPEC section 3.2): the way in is hidden, a link here says so.
+    if (!isAppFeatureOn(await loadAppFeatureFlags(), "trades")) return <PausedFeature />;
     const [context, progression, trades, creditOffers, rawCaptures, feed] = await Promise.all([
         getAuthenticatedAppContext(),
         getAppProgression(),

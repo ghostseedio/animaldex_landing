@@ -17,8 +17,24 @@ export type AppFeatureFlags = Readonly<Record<string, boolean>>;
 
 const KEY = /^[a-z][a-z0-9_]{1,62}$/;
 
-/** The switches the website reads. */
-export const WEB_FEATURE_FLAGS = ["talk_front_door"] as const;
+/**
+ * The switches the website reads: iOS `AppFeature`, every key. Off hides the
+ * way in (the row, the button, the section); a link straight to one says
+ * "Not available right now" (`PAUSED_FEATURE_TITLE`).
+ */
+export const WEB_FEATURE_FLAGS = [
+    "talk_front_door",
+    "guide_sales",
+    "creator_earnings",
+    "trades",
+    "card_packs",
+    "instagram_import",
+    "sponsored_challenges",
+    "arena_stakes"
+] as const;
+
+/** iOS `FeaturePause.title`. */
+export const PAUSED_FEATURE_TITLE = "Not available right now";
 export type WebFeatureFlag = typeof WEB_FEATURE_FLAGS[number];
 
 /** The RPC's answer as switches: only real keys with a boolean value. */
