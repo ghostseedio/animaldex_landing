@@ -146,3 +146,31 @@ The machine's load average was about 380 that night (other sessions' Android, iO
 - **Background prefetching.** `AppShell` prefetches 11 routes on every pathname change, and each prefetch of a dynamic `/app` route runs the `(authenticated)` layout's reads on the server. That is load on the 2 GB VM, not jank in the browser. Worth trimming to the four places in the menu.
 - **Very long threads.** With threads well past 120 messages, `content-visibility: auto` on rows would make page-wide style passes (focus and menu changes) scale with the visible rows only. It wasn't needed at 120 messages.
 - **The dialog without `inert`.** If the owner prefers it, a focus trap inside the slide-over would drop the remaining whole-page style pass on menu open and close. Since #11 it no longer forms a long task.
+
+## Addendum, 2026-11-07
+
+### The loop, as a hotfix for live
+- **Branch.** `hotfix/companions-refetch-loop` is 19e1929d on top of live 8042cea8: the loop fix plus `src/lib/companions-chat-subject.test.ts`. The test fails on the old shape.
+- **Checks.** `tsc` clean, 1,565/1,565 tests passing, `next build` green.
+- **Measured.** With the chat open and 10 s idle:
+  - instant fixtures: 8042cea8 made 21,438 requests (2,144/s); the hotfix made 0 (15 at open);
+  - 120 ms per request: 8042cea8 made 432; the hotfix made 0.
+- **On main.** The same test is ee84aeb3.
+
+### The remembered animal
+Commit bcef1436, found by the bug hunt.
+- **The bug.** The chat read the browser's remembered switch in an effect after its first draw. In the same pass it pinned the first pick, which is always the newest animal, and wrote that over the memory. So the web never reopened the animal you had switched to last.
+- **The fix.** The memory is now read for the first draw, which is safe because the chat is client-only.
+- **Measured.** With an older animal remembered, it opens with one thread mount.
+
+### The chat's first mount on the newest main
+After rebasing onto 50b1f3cc, which brought other lanes' Debates v2 and inline reply controls, the chat's first draw is one task of about 75–90 ms on a phone at 4× CPU. Before that rebase it was under 50 ms. Two changes were tried and measured:
+
+| Tried | Load long task | Chat ready |
+|---|---|---|
+| Mounting the chat at transition priority (`useDeferredValue`) | none | ~600 ms → ~1,150 ms |
+| A first batch of 12 messages instead of 24 | 65–78 ms (no change) | no change |
+
+The transition was the wrong trade for "instant": the roster's other reads kept restarting the render. Neither change was kept.
+
+The next thing to look at is what the conversation now draws at first mount that it didn't before.
