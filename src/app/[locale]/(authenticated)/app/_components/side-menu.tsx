@@ -113,13 +113,7 @@ export default function SideMenu({variant, words, companionWords, profile, isAut
                         {companionWords.list.viewAll ?? "View all"} <span aria-hidden="true">›</span>
                     </button>
                 ) : null}
-                {showAll ? null : (
-                    <div className="px-4 py-3">
-                        <Link href={TRY_TALKING_HREF} onClick={onClose} className="text-[13px] font-semibold text-white/60 transition-colors hover:text-white">
-                            {companionWords.tab.meetOneNow}
-                        </Link>
-                    </div>
-                )}
+                {/* No "meet one now" row here (parity with iOS, 2026-11-06): the full switcher behind View all keeps Meet one now. */}
             </div>
             {searchOpen ? (
                 // The search over the whole menu (the owner, 2026-11-06: as the Claude app's): the field, a round × beside it, then the recents or whatever matches of their animals and the places.
