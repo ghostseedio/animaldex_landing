@@ -72,6 +72,10 @@ export async function getAskDrawerLabels(locale: string): Promise<AskDrawerLabel
         failedNoCredits: askT("failedNoCredits"),
         disclaimer: askT("disclaimer"),
         aiTagLabel: askT("aiTagLabel"),
+        // The fixed greeting under the animal's face in an empty chat (the owner, 2026-11-06).
+        goodMorning: askT("goodMorning"),
+        goodAfternoon: askT("goodAfternoon"),
+        goodEvening: askT("goodEvening"),
         aiNotice: askT("aiNotice"),
         aiNoticeLong: askT("aiNoticeLong"),
         aiNoticeBreak: askT("aiNoticeBreak"),

@@ -238,7 +238,8 @@ export default function AppShell({
                 words,
                 menuOpen,
                 toggleMenu: () => setMenuOpen((open) => !open),
-                setBottomNavHidden
+                setBottomNavHidden,
+                profileName: resolvedAuthenticated ? resolvedProfile?.displayName ?? null : null
             }}
         >
         {/* The web app mirrors the iOS app, which is dark-only, so it keeps its own

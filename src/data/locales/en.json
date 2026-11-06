@@ -2600,7 +2600,10 @@
     "under13Failed": "We couldn't finish closing the account. Check your connection and try again.",
     "under13Retry": "Try again",
     "under13Support": "Entered the wrong year? Email support@animaldex.app.",
-    "gateClose": "Close"
+    "gateClose": "Close",
+    "goodMorning": "Good morning, {name}",
+    "goodAfternoon": "Good afternoon, {name}",
+    "goodEvening": "Good evening, {name}"
   },
   "wildProfile": {
     "eyebrow": "Identity",

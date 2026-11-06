@@ -19,6 +19,8 @@ export type AppShellChrome = {
      * carries the other tabs.
      */
     setBottomNavHidden: (hidden: boolean) => void;
+    /** The person's name, for the chat's fixed greeting (the owner, 2026-11-06). */
+    profileName?: string | null;
 };
 
 const noopChrome: AppShellChrome = {

@@ -2586,7 +2586,10 @@
     "under13Failed": "Kami belum bisa menyelesaikan penutupan akun. Periksa koneksimu, lalu coba lagi.",
     "under13Retry": "Coba lagi",
     "under13Support": "Salah memasukkan tahun? Kirim email ke support@animaldex.app.",
-    "gateClose": "Tutup"
+    "gateClose": "Tutup",
+    "goodMorning": "Selamat pagi, {name}",
+    "goodAfternoon": "Selamat siang, {name}",
+    "goodEvening": "Selamat malam, {name}"
   },
   "wildProfile": {
     "eyebrow": "Identitas",

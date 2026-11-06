@@ -67,7 +67,7 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     locale: string;
 }) {
     const pathname = usePathname() ?? "/app";
-    const {setBottomNavHidden, toggleMenu} = useAppShellChrome();
+    const {setBottomNavHidden, toggleMenu, profileName} = useAppShellChrome();
     // The phone's tab bar goes away while the chat fills the tab; the drawer carries the other tabs.
     useEffect(() => {
         setBottomNavHidden(true);
@@ -143,6 +143,8 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 label: words.list.switcher,
                 othersUnread,
                 onOpen: openSwitcher,
+                // The person's name, for the fixed greeting under the animal's face (the owner, 2026-11-06).
+                personName: profileName ?? null,
                 // The "+" by the composer: a new animal (the Claude app's "+").
                 capture: {
                     label: words.list.captureAnAnimal,
@@ -156,7 +158,7 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 }
             }
         }
-        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile]);
+        : null), [current, openSwitcher, talk, pathname, captureId, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile, profileName]);
 
     if (!current || !page) return null;
     return (

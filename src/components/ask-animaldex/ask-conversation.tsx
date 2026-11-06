@@ -285,6 +285,10 @@ export type AskDrawerLabels = {
     disclaimer: string;
     /** The AI disclosure (SPEC 3.1): the header's tag, the thread's notices and the locked chat. */
     aiTagLabel: string;
+    /** The fixed greeting under the animal's face in an empty chat (the owner, 2026-11-06). */
+    goodMorning: string;
+    goodAfternoon: string;
+    goodEvening: string;
     aiNotice: string;
     aiNoticeLong: string;
     aiNoticeBreak: string;
@@ -451,6 +455,8 @@ export type AskConversationPage = {
      */
     switcher?: {
         label: string; othersUnread: number; onOpen: () => void;
+        /** The person's name, for the fixed greeting under the animal's face in an empty chat (the owner, 2026-11-06). */
+        personName?: string | null;
         /**
          * The composer's "+" (the owner, 2026-11-06, after the Claude app): a
          * new animal. Each item opens its source at once: a file input (the
@@ -1048,8 +1054,8 @@ export default function AskConversation({
             void greet({referralId});
             return;
         }
-        if (messages.length > 0 || greetingState !== "idle") return;
-        void greet();
+        // No hello from the animal in an empty chat (the owner, 2026-11-06):
+        // the app's fixed greeting stands under its face instead.
     }, [canGreet, greetsBeforeContext, greetsForReferral, referralId, messages.length, greetingState, isSending, greet, animalSpeciesId, animalMessagesSettled, frontDoorWaiting]);
 
     // The loop as it stands when the chat opens; replies keep it current.
@@ -2603,9 +2609,11 @@ export default function AskConversation({
                         // The animal's card at the top, the messages resting on the composer.
                         <div className="flex min-h-full flex-1 flex-col">
                             <AskAnimalHero
-                                name={speakerName}
+                                // An empty chat at the tab's root greets with the app's own words for the time of day, under the
+                                // animal's face, as the Claude app does (the owner, 2026-11-06); the animal's name is the line under it.
+                                name={rootSwitcher && messages.length === 0 ? greetingLine(labels, rootSwitcher.personName ?? null) : speakerName}
                                 // Its Power on one line under the name (DESIGN.md section 3); how it is, when it has none.
-                                subtitle={hints.principleName?.trim() || heroSubtitle}
+                                subtitle={rootSwitcher && messages.length === 0 ? speakerName : (hints.principleName?.trim() || heroSubtitle)}
                                 avatarUrl={faceUrl}
                                 // Only before there is a level: once the header shows "Gray Wolf · Level 4",
                                 // the card does not say it again (owner, 2026-11-06).
@@ -2814,7 +2822,7 @@ export default function AskConversation({
 
     const body = (
         <>
-                <header className={`relative flex shrink-0 items-center gap-2 border-b border-white/10 px-4 ${onPage ? "py-3" : "pb-3 pt-4 lg:pt-3"}`}>
+                <header className={`relative flex shrink-0 items-center gap-2 px-4 ${onPage && page?.switcher ? "py-3" : onPage ? "border-b border-white/10 py-3" : "border-b border-white/10 pb-3 pt-4 lg:pt-3"}`}>
                     {onPage && page ? (
                         // Below 1024 px the sidebar is a slide-over, opened from here.
                         <button
@@ -2822,7 +2830,7 @@ export default function AskConversation({
                             onClick={page.onMenu}
                             aria-label={page.words.openChats}
                             title={page.words.openChats}
-                            className="-ml-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-200 transition-colors hover:bg-white/8 hover:text-white active:bg-white/12 lg:hidden"
+                            className={`-ml-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors lg:hidden ${page.switcher ? "bg-white/10 text-white backdrop-blur-xl hover:bg-white/15" : "text-ink-200 hover:bg-white/8 hover:text-white active:bg-white/12"}`}
                             data-testid="talk-menu"
                         >
                             <MenuIcon />
@@ -2861,23 +2869,9 @@ export default function AskConversation({
                         <div className="min-w-0 flex-1">
                             <p className="flex min-w-0 items-center gap-1.5">
                                 {onPage && page?.switcher ? (
-                                    // The name as the switch (the owner, 2026-11-06): the Companions tab's chat.
-                                    <button
-                                        type="button"
-                                        onClick={page.switcher.onOpen}
-                                        aria-label={`${messenger ? speakerName : animalName ?? labels.title}, ${page.switcher.label}`}
-                                        data-testid="companion-switcher"
-                                        className="-mx-1 flex min-w-0 items-center gap-1 rounded-pill px-1 text-left transition-colors hover:bg-white/[0.06] active:bg-white/10"
-                                    >
-                                        <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
-                                            {messenger ? speakerName : animalName ?? labels.title}
-                                        </span>
-                                        <span className="relative shrink-0 text-ink-300" aria-hidden="true">
-                                            <SwitchChevronIcon />
-                                            {page.switcher.othersUnread > 0 ? <span className="absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-primary-400" /> : null}
-                                        </span>
-                                    </button>
-                                ) : (
+                                    // Nothing in the middle at the tab's root (the owner, 2026-11-06, after the Claude app): the
+                                    // name and the switch live in the composer's pill, with the AI tag.
+                                    <span className="flex-1" />                                ) : (
                                     <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
                                         {messenger ? speakerName : animalName ?? labels.title}
                                     </span>
@@ -2947,6 +2941,7 @@ export default function AskConversation({
                         <PencilIcon />
                     </button>}
                     {messenger ? (
+                        <span className={onPage && page?.switcher ? "[&>div>button]:h-9 [&>div>button]:w-9 [&>div>button]:bg-white/10 [&>div>button]:text-white [&>div>button]:backdrop-blur-xl" : ""}>
                         <AskChatOptions
                             labels={labels}
                             voiceAvailable={Boolean(context?.signedIn)}
@@ -3012,6 +3007,7 @@ export default function AskConversation({
                                 }] : [])
                             ]}
                         />
+                        </span>
                     ) : null}
                     {onPage && ownerChat && resolvedSubject.captureId ? (
                         // The owner's chat on the page: back to their card.
@@ -3242,7 +3238,7 @@ export default function AskConversation({
                                     else submit(composer, "form");
                                 }}
                                 // The message bar is a control, a capsule like the apps' composer: never a square box.
-                                className={`flex items-end gap-2 rounded-pill border border-white/12 bg-white/[0.06] backdrop-blur-xl ${reporting ? "pl-1.5" : "pl-4"} pr-1.5 py-1.5 focus-within:border-primary-300/45`}
+                                className={`flex items-end gap-2 border border-white/12 bg-white/[0.06] backdrop-blur-xl py-1.5 ${rootSwitcher ? "flex-wrap rounded-panel px-2.5" : `rounded-pill ${reporting ? "pl-1.5" : "pl-4"} pr-1.5`} focus-within:border-primary-300/45`}
                             >
                                 {reporting ? (
                                     <>
@@ -3272,6 +3268,23 @@ export default function AskConversation({
                                     // A new animal from the composer (the owner, 2026-11-06, after the Claude app's "+").
                                     <ComposerPlusMenu capture={rootSwitcher.capture} />
                                 ) : null}
+                                {rootSwitcher ? (
+                                    // The animal as the pill, like a model switcher (the owner), with the AI tag always in view.
+                                    <button
+                                        type="button"
+                                        onClick={rootSwitcher.onOpen}
+                                        aria-label={`${messenger ? speakerName : animalName ?? labels.title}, ${rootSwitcher.label}`}
+                                        data-testid="companion-switcher"
+                                        className="mb-0.5 mr-auto flex h-9 max-w-[12rem] shrink-0 items-center gap-1 rounded-pill bg-white/[0.08] pl-3 pr-1.5 text-left transition-colors hover:bg-white/15"
+                                    >
+                                        <span className="min-w-0 truncate text-[13px] font-semibold leading-5 text-white">{messenger ? speakerName : animalName ?? labels.title}</span>
+                                        <AiTag label={labels.aiTagLabel} linksToSafety />
+                                        <span className="relative shrink-0 text-ink-300" aria-hidden="true">
+                                            <SwitchChevronIcon />
+                                            {rootSwitcher.othersUnread > 0 ? <span className="absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-primary-400" /> : null}
+                                        </span>
+                                    </button>
+                                ) : null}
                                 <label className="sr-only" htmlFor="ask-animaldex-composer">{fieldPlaceholder}</label>
                                 <textarea
                                     id="ask-animaldex-composer"
@@ -3296,7 +3309,7 @@ export default function AskConversation({
                                             else submit(composer, "form");
                                         }
                                     }}
-                                    className="max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400"
+                                    className={`max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400 ${rootSwitcher ? "order-first basis-full px-1.5" : ""}`}
                                 />
                                 {messenger && animalName && askCallsOffered(context?.signedIn === true) && !debateEdit && !reporting && !showStop ? (
                                     // The call beside the mic, as ChatGPT's voice mode sits (the owner, 2026-11-06): with its talking 3D model (voice-call/).
@@ -4613,6 +4626,13 @@ function SwitchChevronIcon() {
             <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     );
+}
+
+/** The app's fixed greeting for the time of day (the owner, 2026-11-06, after the Claude app). */
+function greetingLine(labels: AskDrawerLabels, personName: string | null, hour = new Date().getHours()): string {
+    const base = hour < 12 ? labels.goodMorning : hour < 18 ? labels.goodAfternoon : labels.goodEvening;
+    const name = personName?.trim();
+    return name ? base.replace("{name}", name) : base.replace(", {name}", "").replace("{name}", "").trim();
 }
 
 function PlusIcon() {
