@@ -134,7 +134,8 @@ export function intentsFor(kind: ExperimentKind, sourceType: string | null, fres
         ranking: ["comment", "save"],
         location: ["save", "share"],
         lesson: ["share", "save"],
-        guess: ["comment"]
+        guess: ["comment"],
+        scan: ["comment", "share"]
     };
     return (sourceType ? fits[sourceType] : undefined) ?? ["share", "save", "comment"];
 }
@@ -221,6 +222,8 @@ export const KIND_DIMENSIONS = {
     lesson: ["intent", "ending"],
     // A guess is built for one reaction (the guess in the comments); it tests how it ends.
     guess: ["intent", "ending"],
+    // Our own footage: what is tested is its job and how it ends.
+    scan: ["intent", "ending"],
     carousel: ["carouselFormat", "intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;

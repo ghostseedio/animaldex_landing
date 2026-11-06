@@ -243,6 +243,69 @@ export function AdminHookLab() {
     );
 }
 
+type FootageItem = {id: string; kind: string; species: string | null; label: string | null; seconds: number; filmed: string | null; url: string; posterUrl: string; uses: number};
+
+const FOOTAGE_KINDS: Array<{kind: string; label: string}> = [
+    {kind: "scan", label: "Scanning"},
+    {kind: "result", label: "Result card"},
+    {kind: "animal", label: "Animal"},
+    {kind: "reaction", label: "Reaction"},
+    {kind: "intro", label: "Intro"}
+];
+
+/**
+ * Our own footage (src/data/footage-library.json): the shots the generator
+ * plays instead of AI clips, and the scan reveals are made of. Added with
+ * scripts/build-footage-library.mts; no sound, no metadata (GPS stripped).
+ */
+export function AdminFootageLibrary() {
+    const [clips, setClips] = useState<FootageItem[] | null>(null);
+    const [error, setError] = useState("");
+    const [kind, setKind] = useState("scan");
+    useEffect(() => {
+        api<{clips: FootageItem[]}>("/api/admin/footage")
+            .then((body) => setClips(body.clips))
+            .catch((caught) => setError(caught instanceof Error ? caught.message : "Unable to load the footage library"));
+    }, []);
+    const shown = (clips ?? []).filter((clip) => clip.kind === kind);
+    const species = new Set((clips ?? []).map((clip) => clip.species).filter(Boolean));
+    return (
+        <Section
+            title="Footage library"
+            description="Our own clips. A video's shot of an animal we have filmed plays our clip instead of an AI one (lessons, the payoff of a guess, rankings and places), and scan reveals are made entirely of them. Every clip is vertical, silent and stripped of its metadata (no location)."
+            className="mt-6"
+        >
+            {error ? <Alert tone="bad" className="mb-3">{error}</Alert> : null}
+            {!clips ? <Skeleton className="h-40" /> : !clips.length ? (
+                <EmptyState title="No footage yet" description="Add shots with scripts/build-footage-library.mts." />
+            ) : (
+                <>
+                    <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-ink-400">
+                        {FOOTAGE_KINDS.map((entry) => (
+                            <Button key={entry.kind} size="sm" variant={kind === entry.kind ? "primary" : "outline"} onClick={() => setKind(entry.kind)}>
+                                {entry.label} <span className="tabular-nums opacity-70">{clips.filter((clip) => clip.kind === entry.kind).length}</span>
+                            </Button>
+                        ))}
+                        <span className="ml-auto">{clips.length} shots · {species.size} species</span>
+                    </div>
+                    <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+                        {shown.map((clip) => (
+                            <li key={clip.id} className="border border-line-300 bg-surface-900">
+                                <a href={clip.url} target="_blank" rel="noreferrer" className="block">
+                                    {/* eslint-disable-next-line @next/next/no-img-element -- bucket posters, shown as they are */}
+                                    <img src={clip.posterUrl} alt={clip.label ?? clip.kind} loading="lazy" className="aspect-[9/16] w-full object-cover" />
+                                </a>
+                                <p className="truncate px-2 pt-1 text-[11px] font-bold text-white">{clip.label ?? "Any animal"}</p>
+                                <p className="px-2 pb-1.5 text-[10px] tabular-nums text-ink-500">{clip.seconds.toFixed(1)} s{clip.filmed ? ` · ${clip.filmed}` : ""}{clip.uses ? ` · used ${clip.uses}×` : ""}</p>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
+        </Section>
+    );
+}
+
 export function AdminSocialContent() {
     const [items, setItems] = useState<ContentItem[] | null>(null);
     const [generating, setGenerating] = useState<string | null>(null);

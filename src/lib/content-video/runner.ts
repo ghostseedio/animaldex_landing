@@ -26,6 +26,7 @@ import {
     type ContentVideoClip,
     type ContentVideoRow,
     getContentVideo,
+    publicStorageUrl,
     spentTodayUSD,
     updateContentVideo,
     uploadToStorage
@@ -34,6 +35,7 @@ import {alignLine, speakLine, wavPcm} from "@/lib/content-video/tts";
 import {speechSpans, timeLineWords} from "@/lib/content-video/word-timing";
 import {musicTrackPath, pickMusicTrack} from "@/lib/content-video/music";
 import {nextExperiment} from "@/lib/social-lab/experiments";
+import {applyFootage, planHasAiImagery} from "@/lib/content-video/footage";
 import {FRESH_ARTICLE_HOURS} from "@/lib/social-lab/arms";
 import {existsSync} from "node:fs";
 
@@ -106,8 +108,10 @@ async function runJob(id: string) {
             // hook style, length / opener and ending from what has worked.
             const fresh = Boolean(source.publishedAt) && Date.now() - Date.parse(source.publishedAt!) < FRESH_ARTICLE_HOURS * 3_600_000;
             const experiment = await nextExperiment(source.format === "editorial" ? "editorial" : source.format, {sourceType: source.type, fresh});
-            const {plan, provider, failures} = await generateVideoPlan(source, experiment);
+            const {plan: written, provider, failures} = await generateVideoPlan(source, experiment);
             if (failures.length) console.warn(`[content-video] ${id} plan fallbacks: ${failures.join("; ")}`);
+            // Shots of an animal we have filmed play our own clips: no AI clip is ordered for them.
+            const plan = applyFootage(written, source);
             await save({plan, llm_provider: provider, status: "generating", progress: "Script ready"});
         }
         if (row.status === "generating") {
@@ -345,6 +349,18 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
             visuals.push({type: "card", card: scene.card, left: await imagePath(scene.card.left.image), right: await imagePath(scene.card.right.image)});
             continue;
         }
+        // Our own footage: downloaded from the bucket, played like a clip.
+        const footage = scene.footage ?? (scene.reuseClip !== undefined ? plan.scenes[scene.reuseClip]?.footage : undefined);
+        if (footage) {
+            const out = path.join(dir, `footage-${index}.mp4`);
+            try {
+                await download(publicStorageUrl(footage.path), out);
+                visuals.push({type: "clip", path: out, seconds: footage.seconds});
+                continue;
+            } catch (error) {
+                console.warn(`[content-video] footage ${footage.id} unavailable, using a still`, error);
+            }
+        }
         // A cold open plays another scene's clip (the fight's clash, the creature's reveal).
         const clipScene = scene.reuseClip ?? index;
         const clip = clips.find((candidate) => candidate.scene === clipScene);
@@ -380,7 +396,7 @@ export async function produceVideo(planned: VideoPlan, source: VideoSource, clip
         spokenSeconds: lines.map((line) => line.seconds),
         lineWords,
         endUrl: "ANIMALDEX.APP",
-        credit: credited ? "Photos: Wikimedia Commons contributors · full credits in the article" : plan.format && plan.format !== "editorial" ? "AI-generated imagery" : undefined,
+        credit: credited ? "Photos: Wikimedia Commons contributors · full credits in the article" : plan.format && plan.format !== "editorial" && planHasAiImagery(plan) ? "AI-generated imagery" : undefined,
         hud: plan.hud,
         theme: plan.theme
     }));

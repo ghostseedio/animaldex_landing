@@ -17,14 +17,18 @@ import {
     CREATURE_JSON_SCHEMA,
     CREATURE_SYSTEM_PROMPT,
     buildGuessUserPrompt,
+    buildScanUserPrompt,
     buildLessonUserPrompt,
     GUESS_JSON_SCHEMA,
     GUESS_SYSTEM_PROMPT,
     LESSON_JSON_SCHEMA,
     LESSON_SYSTEM_PROMPT,
+    SCAN_JSON_SCHEMA,
+    SCAN_SYSTEM_PROMPT,
     normalizeBattlePlan,
     normalizeCreaturePlan,
     normalizeGuessPlan,
+    normalizeScanPlan,
     normalizeLessonPlan
 } from "@/lib/content-video/formats";
 import {loadImageBytes} from "@/lib/content-video/source";
@@ -171,6 +175,9 @@ function plannerFor(source: VideoSource, experiment: Experiment | null): {prompt
     }
     if (source.format === "creature") {
         return {prompt: {system: CREATURE_SYSTEM_PROMPT, schema: CREATURE_JSON_SCHEMA}, user: buildCreatureUserPrompt(source) + brief, normalize: (value) => normalizeCreaturePlan(value, source, experiment)};
+    }
+    if (source.format === "scan") {
+        return {prompt: {system: SCAN_SYSTEM_PROMPT, schema: SCAN_JSON_SCHEMA}, user: buildScanUserPrompt(source) + brief, normalize: (value) => normalizeScanPlan(value, source, experiment)};
     }
     if (source.format === "guess") {
         return {prompt: {system: GUESS_SYSTEM_PROMPT, schema: GUESS_JSON_SCHEMA}, user: buildGuessUserPrompt(source) + brief, normalize: (value) => normalizeGuessPlan(value, source, experiment)};

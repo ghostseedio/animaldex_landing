@@ -14,6 +14,7 @@ import {listVideoCandidates, loadVideoSource as loadBlogSource, type VideoCandid
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
 import {sourceSpecies} from "@/lib/content-video/stat-cards";
 import {battlePowerFor} from "@/lib/content-video/battle-powers";
+import {footageFor, scanRevealSpecies, type FootageClip} from "@/lib/content-video/footage";
 
 // Every page family a video can be made from, as a VideoSource: comparisons
 // (battle), hybrids and fusions (creature), rankings and locations
@@ -337,9 +338,43 @@ export async function birthMonthSource(slug: string): Promise<VideoSource | null
     };
 }
 
-/** The fewest source images a family's video can be made with: a lesson or a guess is one animal, drawn by the clips. */
+/** A scan reveal: our own clips of the app scanning this animal, its result card and the animal itself (footage.ts). */
+async function scanSource(slug: string): Promise<VideoSource | null> {
+    const ref = (clip: FootageClip) => ({id: clip.id, path: clip.path, seconds: clip.seconds});
+    const byKind = (kind: FootageClip["kind"]) => footageFor(slug, [kind]).sort((a, b) => b.seconds - a.seconds).map(ref);
+    const clips = {scan: byKind("scan"), result: byKind("result"), animal: byKind("animal"), reaction: byKind("reaction")};
+    if (!clips.scan.length && !clips.result.length) return null;
+    const entry = getSpeciesBySlug(slug);
+    const lesson = lessonEntry(slug);
+    const name = entry?.name ?? lesson?.displayName?.trim() ?? speciesName(slug);
+    // The artwork is only the fallback still and the end card's backdrop.
+    const images = await artworkImages([{slug, alt: name}]);
+    if (!images.length) return null;
+    const facts = [
+        ...(entry?.premiumDetails?.whyInteresting ?? []),
+        ...(entry?.premiumDetails?.behaviorTraits ?? []),
+        entry?.analysis?.summary,
+        lesson?.biologicalBasis
+    ].filter((fact): fact is string => typeof fact === "string" && fact.trim().length > 0);
+    if (!facts.length) return null;
+    return {
+        type: "scan",
+        format: "scan",
+        slug,
+        title: `I scanned a ${name}`,
+        description: entry?.analysis?.summary ?? name,
+        url: getAbsoluteUrl("en", sourcePath("scan", slug)),
+        tags: [name, "animal scanner", "real footage"],
+        text: facts.join("\n"),
+        images,
+        species: await sourceSpecies([{slug, name, image: 1}]),
+        scan: {animal: fighter(slug, name, images, 1), clips, facts, lesson: lesson?.coreLesson?.trim() ?? null, power: lesson?.principleName?.trim() ?? null}
+    };
+}
+
+/** The fewest source images a family's video can be made with: a lesson, a guess or a scan is one animal. */
 export function minimumImages(type: SourceType) {
-    return type === "lesson" || type === "guess" ? 1 : 2;
+    return type === "lesson" || type === "guess" || type === "scan" ? 1 : 2;
 }
 
 export async function loadPageSource(type: SourceType, slug: string): Promise<VideoSource | null> {
@@ -353,6 +388,7 @@ export async function loadPageSource(type: SourceType, slug: string): Promise<Vi
         case "location": return locationSource(slug);
         case "lesson": return lessonSource(slug);
         case "guess": return guessSource(slug);
+        case "scan": return scanSource(slug);
     }
 }
 
@@ -377,6 +413,15 @@ export async function listPageCandidates(type: SourceType): Promise<VideoCandida
                 priority: headline.has(entry.slug) ? 2 : getSpeciesBySlug(entry.slug) ? 1 : 0
             }));
         }
+        case "scan":
+            // The richest footage first: a scan or result shot plus the animal itself.
+            return scanRevealSpecies().map((entry) => ({
+                slug: entry.species,
+                title: `I scanned a ${speciesName(entry.species)}`,
+                publishedAt: now,
+                imageCount: 1,
+                priority: entry.kinds.includes("animal") && (entry.kinds.includes("result") || entry.kinds.length >= 3) ? 2 : 1
+            }));
         case "guess": {
             // Famous animals make the best guesses (people get to be right); then those with a lesson to end on.
             const headline = new Set<string>(HEADLINE_LESSON_ANIMALS);

@@ -1,4 +1,6 @@
 import {recordAutomationRun} from "@/lib/automation-runs";
+import {planHasAiImagery} from "@/lib/content-video/footage";
+import type {VideoPlan} from "@/lib/content-video/plan";
 import {contentVideoBusy} from "@/lib/content-video/runner";
 import {blogShareCopy} from "@/lib/content-video/share";
 import {sourcePath} from "@/lib/content-video/source-paths";
@@ -58,6 +60,8 @@ type Candidate = {
     /** A blog video (admin_content_videos.id), else an app story video. */
     contentVideoId: string | null;
     story: AdminStoryVideo | null;
+    /** TikTok's AI label: on unless every shot is our own footage or a real photo (footage.ts planHasAiImagery). */
+    madeWithAi: boolean;
 };
 
 export type LightShareResult =
@@ -82,7 +86,8 @@ async function candidates(): Promise<Candidate[]> {
             captureId: video.captureId,
             durationSeconds: video.durationSeconds,
             contentVideoId: null,
-            story: video
+            story: video,
+            madeWithAi: true
         })),
         // Only blog videos the admin has put on their page: that is the approval.
         ...blogs.filter((row) => row.status === "ready" && row.video_path && row.published_at).map((row) => ({
@@ -96,7 +101,8 @@ async function candidates(): Promise<Candidate[]> {
             captureId: null,
             durationSeconds: row.duration_seconds,
             contentVideoId: row.id,
-            story: null
+            story: null,
+            madeWithAi: planHasAiImagery(row.plan as VideoPlan | null)
         }))
     ];
 }
@@ -276,7 +282,7 @@ async function shareVideo(dryRun: boolean, posts: SocialPostRow[], ready: Ready,
             caption: target.caption.slice(0, 5000),
             title: (target.title ?? drafted.copy.youtube.title).slice(0, 100),
             mode: "post",
-            options: zernioRowOptions(target.platform, ready, video.pageUrl)
+            options: zernioRowOptions(target.platform, ready, video.pageUrl, undefined, video.madeWithAi)
         });
         if (row) queued.push(row);
         else skipped[target.platform] = "Already shared";
@@ -290,9 +296,9 @@ async function shareVideo(dryRun: boolean, posts: SocialPostRow[], ready: Ready,
 }
 
 /** Row options: auto, the page link, and for Zernio platforms the bookkeeping that marks the row as Zernio-held. */
-function zernioRowOptions(platform: SocialPlatform, ready: Ready, link: string, content?: string): SocialPostRow["options"] {
+function zernioRowOptions(platform: SocialPlatform, ready: Ready, link: string, content?: string, madeWithAi = true): SocialPostRow["options"] {
     const base = {auto: true, link, ...(content ? {content} : {})};
-    if (platform === "tiktok" && ready.tiktok) return {...base, tiktok: ready.tiktok.options, zernio: {postId: "", scheduledFor: null, timezone: null}};
+    if (platform === "tiktok" && ready.tiktok) return {...base, tiktok: {...ready.tiktok.options, madeWithAi}, zernio: {postId: "", scheduledFor: null, timezone: null}};
     if (isZernioPlatform(platform)) return {...base, zernio: {postId: "", scheduledFor: null, timezone: null}};
     return base;
 }

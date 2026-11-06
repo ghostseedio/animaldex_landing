@@ -593,3 +593,109 @@ export function normalizeGuessPlan(value: unknown, source: VideoSource, experime
         share
     };
 }
+
+// ------------------------------------------------------------------ scan
+
+// The scan reveal: the founder's own footage of the app scanning a real
+// animal at a zoo or aquarium, the result card, then the animal itself with
+// one surprising fact and its lesson. Real footage of a real person using the
+// product: the most original thing the account can post (research, Nov 2026:
+// platforms down-rank templated AI slideshows; sends and real footage win).
+// The shots come from our clips (footage.ts); the writer only writes the words.
+
+export const SCAN_SYSTEM_PROMPT = `You write the voiceover for AnimalDex's scan reveals: real phone footage of our founder pointing the AnimalDex app at a real animal at a zoo or aquarium, the app's result card, then the animal itself. A vertical 14–20 second video in five shots. The voice is the founder's inner monologue, said by a narrator: curious, warm, a little amazed, never salesy. You do not describe the footage; you say what a curious person would say over it.
+
+SHOTS (exactly 5, in order; the footage is fixed, you write only the words):
+(1) THE SCAN: the phone is pointed at the animal. narration: a curious hook in at most 9 words that makes people need the answer ("Found this guy at the aquarium. What is it?" / "This thing was staring at me. Let's scan it."). Never name the animal here. hook_text (on screen over it): 3–6 words ("WHAT EVEN IS THIS?").
+(2) THE RESULT: the app's card names it. narration: "It's a <animal>." plus at most 6 more words of surprise. overlay "".
+(3) THE FACT: the animal itself. narration: the single most surprising TRUE fact about it, from the material below, in plain words, 10–18 words. overlay: the fact in 2–5 words.
+(4) THE LESSON: the animal again. narration: its lesson for the viewer's life in 8–14 words, from its AnimalDex lesson when one is given, else a second fact. overlay: 2–5 words.
+(5) THE CLOSE: narration: when THIS ITEM'S EXPERIMENT says the ending is a loop, a line that leads back to the start ("…and I still couldn't stop staring at it."); otherwise "What should I scan next? Comment it." overlay "".
+
+RULES: every fact comes from the material below or well-established biology; never invent a number. Plain words a 10-year-old knows. Never say "AnimalDex" in the narration (the card shows it). No emoji, no hashtags.
+- cta_narration / cta_text: "" when the ending is a loop; otherwise "" too (shot 5 already asks).
+- music_mood: "curious" or "wonder".
+
+${SHARE_RULES}
+Captions for this format say it is real footage and invite people to say what they would scan next; TikTok and Instagram end with "What should I scan next?".
+
+Return only the JSON object.`;
+
+export const SCAN_JSON_SCHEMA = {
+    type: "object",
+    additionalProperties: false,
+    required: ["title", "hook_text", "shots", "cta_narration", "cta_text", "music_mood", "share"],
+    properties: {
+        title: {type: "string"},
+        hook_text: {type: "string"},
+        shots: {type: "array", items: {type: "object", additionalProperties: false, required: ["narration", "overlay"], properties: {narration: {type: "string"}, overlay: {type: "string"}}}},
+        cta_narration: {type: "string"},
+        cta_text: {type: "string"},
+        music_mood: {type: "string", enum: [...MUSIC_MOODS]},
+        share: shareSchema
+    }
+} as const;
+
+export function buildScanUserPrompt(source: VideoSource) {
+    const facts = source.scan!;
+    return [
+        `The animal (named only from shot 2 on): ${facts.animal.name}`,
+        `Page: ${source.url}`,
+        "Material from its species page:",
+        ...facts.facts.map((fact) => `- ${fact}`),
+        facts.power ? `Its AnimalDex Power: ${facts.power}` : null,
+        facts.lesson ? `Its AnimalDex lesson: ${facts.lesson}` : null
+    ].filter((line) => line !== null).join("\n");
+}
+
+const SCAN_SHOTS = 5;
+
+/** A scan reveal plan: each shot plays one of our clips (scan, result, animal, animal or reaction, reaction or the scan again). */
+export function normalizeScanPlan(value: unknown, source: VideoSource, experiment: Experiment | null = null): VideoPlan | null {
+    const facts = source.scan;
+    const record = value as Record<string, unknown> | null;
+    if (!facts || !record || typeof record !== "object" || !Array.isArray(record.shots)) return null;
+    const share = parseShare(record.share);
+    const shots = (record.shots as Array<Record<string, unknown>>).slice(0, SCAN_SHOTS).map((shot) => ({narration: clean(shot?.narration, 200), overlay: clean(shot?.overlay, 40)}));
+    if (!share || shots.length < SCAN_SHOTS || shots.some((shot) => !shot.narration)) return null;
+    const {scan, result, animal, reaction} = facts.clips;
+    const opening = scan[0] ?? reaction[0];
+    if (!opening || (!result[0] && !scan[1])) return null;
+    const scene = (narration: string, overlay: string, footage: typeof opening | undefined, extra: Partial<PlanScene> = {}): PlanScene => ({
+        narration,
+        overlay,
+        visual: "image",
+        image: facts.animal.image,
+        focusX: 0.5,
+        motionPrompt: "",
+        ...(footage ? {footage} : {}),
+        ...extra
+    });
+    const loops = experiment?.ending === "loop";
+    const scenes: PlanScene[] = [
+        scene(shots[0].narration, "", opening),
+        scene(shots[1].narration, `It's a: ${facts.animal.name}`, result[0] ?? scan[1], {overlayStyle: "winner", minSeconds: 2.8}),
+        scene(shots[2].narration, shots[2].overlay, animal[0] ?? reaction[0]),
+        scene(shots[3].narration, shots[3].overlay, animal[1] ?? reaction[1] ?? animal[0]),
+        // The close: a reaction when we have one, else the scan again (it loops back into shot 1).
+        reaction[0] && animal[0] ? scene(shots[4].narration, "", reaction[0]) : scene(shots[4].narration, "", undefined, {reuseClip: 0})
+    ];
+    // A shot we have no clip for falls back to an AI clip of the real animal, never a cut-out still.
+    for (const entry of scenes) {
+        if (entry.footage || entry.reuseClip !== undefined) continue;
+        entry.visual = "ai_clip";
+        entry.keyframePrompt = `A real ${facts.animal.name} in a zoo or aquarium enclosure, close and sharp, natural light, shot on a phone. Photorealistic, species-accurate. Vertical 9:16. No text, no people.`;
+        entry.motionPrompt = `Handheld phone camera, the ${facts.animal.name} moves naturally. No text, no added animals or people.`;
+    }
+    return {
+        format: "scan",
+        ending: loops ? "loop" : "cta_card",
+        title: clean(record.title, 120) || `I scanned a ${facts.animal.name}`,
+        hookText: clean(record.hook_text, 50) || "WHAT EVEN IS THIS?",
+        scenes,
+        ctaNarration: "",
+        ctaText: loops ? "" : "What should I scan next?",
+        musicMood: isMusicMood(record.music_mood) && record.music_mood !== "noir" ? record.music_mood : "curious",
+        share
+    };
+}

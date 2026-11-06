@@ -34,7 +34,7 @@ export type SourceImage = {
     license: string | null;
 };
 
-export const SOURCE_TYPES = ["blog", "comparison", "hybrid", "fusion", "ranking", "location", "lesson", "guess"] as const;
+export const SOURCE_TYPES = ["blog", "comparison", "hybrid", "fusion", "ranking", "location", "lesson", "guess", "scan"] as const;
 export type SourceType = (typeof SOURCE_TYPES)[number];
 
 export function isSourceType(value: unknown): value is SourceType {
@@ -42,7 +42,7 @@ export function isSourceType(value: unknown): value is SourceType {
 }
 
 /** editorial: narrated photo edit. battle: VS card + AI fight. creature: AI reveal of an imagined animal. lesson: what one animal teaches you (dark & gold). */
-export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess";
+export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess" | "scan";
 
 /**
  * The look of a video. "house": Barlow, lime, punch-ins, a brisk voice.
@@ -91,6 +91,19 @@ export type GuessFacts = {
     lesson: string | null;
 };
 
+/** A scan reveal: our own footage of the app scanning a real animal, then the result, a fact and its lesson. */
+export type ScanFacts = {
+    animal: Fighter;
+    /** Our clips of this animal (footage.ts), by kind. */
+    clips: {scan: FootageRef[]; result: FootageRef[]; animal: FootageRef[]; reaction: FootageRef[]};
+    facts: string[];
+    lesson: string | null;
+    power: string | null;
+};
+
+/** One of our own clips, as a scene plays it. */
+export type FootageRef = {id: string; path: string; seconds: number};
+
 /** One animal's lesson (an /animal-powers page): the real behaviour and what it teaches. */
 export type LessonFacts = {
     animal: Fighter;
@@ -135,6 +148,7 @@ export type VideoSource = {
     creature?: CreatureFacts;
     lesson?: LessonFacts;
     guess?: GuessFacts;
+    scan?: ScanFacts;
 };
 
 export type PlanScene = {
@@ -169,6 +183,8 @@ export type PlanScene = {
     move?: string;
     /** Whose move the fight shot is: its hits drain the other side's health bar. */
     attacker?: "left" | "right";
+    /** Plays one of our own clips (footage.ts) instead of an AI clip or the photo. */
+    footage?: FootageRef;
 };
 
 export type BattleFx = "charge" | "clash" | "finish";
