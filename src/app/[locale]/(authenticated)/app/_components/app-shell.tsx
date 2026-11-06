@@ -307,6 +307,19 @@ export default function AppShell({
                 </div>
             )}
 
+            <main
+                className={`bg-[radial-gradient(ellipse_at_top,_rgba(26,26,26,0.55)_0%,_rgba(0,0,0,0)_45%)] lg:ml-[17rem] lg:pb-0 ${
+                    isDiscoverRoute
+                        // Bottom padding = floating tab bar (bottom-3 + ~4.2rem) so the last
+                        // snap slot ends above it, like iOS's safe-area inset.
+                        ? "min-h-0 flex-1 pb-4 lg:min-h-screen"
+                        : "min-h-screen pb-6"
+                }`}
+            >
+                <div className={`mx-auto w-full max-w-[92rem] ${isDiscoverRoute ? "h-full lg:px-10 lg:py-10" : "px-4 py-7 sm:px-7 lg:px-10 lg:py-10"}`}>{children}</div>
+            </main>
+            </div>
+            {/* Outside the inert page (it holds the hamburger row and the main content), or the open menu could not be touched. */}
             {menuOpen ? (
                 <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={words.openMenu}>
                     <button type="button" aria-label={words.closeMenu} className="absolute inset-0 bg-black/70" onClick={closeMenu} />
@@ -326,19 +339,6 @@ export default function AppShell({
                     </div>
                 </div>
             ) : null}
-
-            <main
-                className={`bg-[radial-gradient(ellipse_at_top,_rgba(26,26,26,0.55)_0%,_rgba(0,0,0,0)_45%)] lg:ml-[17rem] lg:pb-0 ${
-                    isDiscoverRoute
-                        // Bottom padding = floating tab bar (bottom-3 + ~4.2rem) so the last
-                        // snap slot ends above it, like iOS's safe-area inset.
-                        ? "min-h-0 flex-1 pb-4 lg:min-h-screen"
-                        : "min-h-screen pb-6"
-                }`}
-            >
-                <div className={`mx-auto w-full max-w-[92rem] ${isDiscoverRoute ? "h-full lg:px-10 lg:py-10" : "px-4 py-7 sm:px-7 lg:px-10 lg:py-10"}`}>{children}</div>
-            </main>
-            </div>
 
             {/* No bottom nav (the owner, 2026-11-06): the side menu carries every place. */}
         </div>
