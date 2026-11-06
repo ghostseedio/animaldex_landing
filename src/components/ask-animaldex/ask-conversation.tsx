@@ -571,7 +571,13 @@ export default function AskConversation({
     // The Talk page knows its subject from its own address and server data: it
     // opens on the right thread in the same paint as the navigation. The drawer
     // takes the provider's, as any page declared it.
-    const subject = page?.subject?.subject ?? providerSubject;
+    // Held by value: the context read, the history and every owner fetch are keyed on it, so a
+    // caller that hands over an equal subject in a new object must not start them all again
+    // (perf pass, 2026-11-06: the Companions chat looped that way while it was open).
+    const declaredSubject = page?.subject?.subject ?? providerSubject;
+    const subjectKey = JSON.stringify(declaredSubject);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const subject = useMemo(() => declaredSubject, [subjectKey]);
     const avatarUrl = page?.subject ? page.subject.avatarUrl : providerAvatarUrl;
     const companionSpeciesProfileId = page?.subject ? page.subject.companionSpeciesProfileId : providerCompanionSpeciesProfileId;
     const currentPath = usePathname();
