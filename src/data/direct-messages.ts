@@ -2,85 +2,115 @@ import "server-only";
 
 import {createSignedStorageUrl} from "@/lib/capture-storage-image";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
+import {
+    NO_DIRECT_MESSAGE_SETTINGS,
+    sortedInbox,
+    type DirectMessage,
+    type DirectMessageAttachment,
+    type DirectMessageConversationSummary,
+    type DirectMessageProfile,
+    type DirectMessageSettings
+} from "@/lib/direct-message-presentation";
+
+export type {
+    DirectMessage,
+    DirectMessageAttachment,
+    DirectMessageConversationSummary,
+    DirectMessageProfile,
+    DirectMessageSettings
+} from "@/lib/direct-message-presentation";
+
+/**
+ * Messages v2 for the web, read and written exactly as iOS does
+ * (`SupabaseDirectMessagesService`, AnimalDex 20261020230000), always as the
+ * signed-in reader: the RPCs check `auth.uid()`, the tables answer through
+ * RLS. Refusals come back as the SQL's own code ("pin_limit_reached"), which
+ * the screens put into words (`directMessageKnownErrors`).
+ */
 
 type QueryRow = Record<string, unknown>;
+type ServerClient = NonNullable<ReturnType<typeof createSupabaseServerClient>>;
 
-export type DirectMessageProfile = {
-    userId: string;
-    displayName: string;
-    username: string | null;
-    avatarUrl: string | null;
-    href: string | null;
-    isSystem?: boolean;
-};
+export type DirectMessageResult<T> = {ok: true; value: T} | {ok: false; error: string; status: number};
 
-/** A photo or animal card sent from the app, with URLs signed for this page view. */
-export type DirectMessageAttachment =
-    | {
-        kind: "image";
-        bubbleUrl: string | null;
-        fullUrl: string | null;
-        width: number | null;
-        height: number | null;
-    }
-    | {
-        kind: "capture";
-        captureId: string;
-        title: string;
-        animalName: string | null;
-        grade: number | null;
-        imageUrl: string | null;
-    };
-
-export type DirectMessage = {
-    id: string;
-    senderId: string;
-    recipientId: string;
-    /** The plain-text stand-in older clients show ("📷 Photo", "🐾 Red Fox"). */
-    body: string;
-    /** What the sender typed: a photo or card's caption, else the body. */
-    text: string;
-    createdAt: string;
-    readAt: string | null;
-    deletedAt: string | null;
-    /** Photos only: "pending" until screening decides, then "approved" or "removed". */
-    photoReview: "pending" | "approved" | "removed" | null;
-    attachment: DirectMessageAttachment | null;
-    sender: DirectMessageProfile | null;
-    recipient: DirectMessageProfile | null;
-};
-
-export type DirectMessageConversationSummary = {
-    otherUser: DirectMessageProfile;
-    lastMessage: DirectMessage;
+export type DirectMessageThreadPage = {
+    messages: DirectMessage[];
+    hasMore: boolean;
+    serverNow: string;
+    partnerTyping: boolean;
+    settings: DirectMessageSettings;
+    /** The newest page only: where the unread run began before this read, and how long it was. */
+    firstUnreadId: string | null;
     unreadCount: number;
 };
 
-const MESSAGE_SELECT = [
-    "id",
-    "sender_id",
-    "recipient_id",
-    "body",
-    "created_at",
-    "read_at",
-    "sender:profiles!direct_messages_sender_id_fkey(id,display_name,username,avatar_url,is_system)",
-    "recipient:profiles!direct_messages_recipient_id_fkey(id,display_name,username,avatar_url,is_system)"
-].join(",");
+export type DirectMessageThreadSync = {
+    messages: DirectMessage[];
+    serverNow: string;
+    partnerTyping: boolean;
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MESSAGE_COLUMNS = "id,sender_id,recipient_id,body,created_at,updated_at,delivered_at,read_at,deleted_at,attachment,photo_review";
+const PROFILE_COLUMNS = "id,display_name,username,avatar_url,is_system";
+
+/** The SQL refusals a screen can say in words; anything else is "our side". */
+const KNOWN_CODES = new Set([
+    "pin_limit_reached",
+    "unsend_window_passed",
+    "cannot_hide_system_conversation",
+    "attachment_not_uploaded",
+    "capture_not_shareable",
+    "capture_not_found",
+    "caption_too_long",
+    "invalid_conversation",
+    "message_not_found"
+]);
+
+export function isDirectMessageUserId(value: unknown): value is string {
+    return typeof value === "string" && UUID.test(value.trim());
+}
 
 function readString(row: QueryRow | null | undefined, key: string) {
     const value = row?.[key];
     return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function mapProfile(row: QueryRow | null | undefined): DirectMessageProfile | null {
+function readNumber(row: QueryRow | null | undefined, key: string) {
+    const value = row?.[key];
+    const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+    return Number.isFinite(number) ? number : null;
+}
+
+function asRow(value: unknown): QueryRow | null {
+    if (Array.isArray(value)) return (value[0] ?? null) as QueryRow | null;
+    return value && typeof value === "object" ? value as QueryRow : null;
+}
+
+function failure(error: {message?: string; code?: string} | null | undefined, fallback = "send_failed"): {ok: false; error: string; status: number} {
+    const message = error?.message?.trim() ?? "";
+    if (KNOWN_CODES.has(message)) return {ok: false, error: message, status: 400};
+    if (error?.code === "PGRST202" || /could not find the function/i.test(message)) return {ok: false, error: "settings_unavailable", status: 400};
+    if (message === "invalid_token") return {ok: false, error: "unauthorized", status: 401};
+    if (message) console.warn("[direct-messages]", fallback, message.slice(0, 200));
+    return {ok: false, error: fallback, status: 400};
+}
+
+async function signedInClient(): Promise<{supabase: ServerClient; userId: string} | null> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return null;
+    const {data: {user}} = await supabase.auth.getUser();
+    return user ? {supabase, userId: user.id} : null;
+}
+
+const NOT_SIGNED_IN = {ok: false as const, error: "unauthorized", status: 401};
+
+export function mapDirectMessageProfile(row: QueryRow | null | undefined): DirectMessageProfile | null {
     const userId = readString(row, "id");
     if (!userId) return null;
-
     const username = readString(row, "username");
     const displayName = readString(row, "display_name");
-
     const isSystem = row?.is_system === true;
-
     return {
         userId,
         displayName: displayName || (username ? `@${username}` : "Collector"),
@@ -91,37 +121,14 @@ function mapProfile(row: QueryRow | null | undefined): DirectMessageProfile | nu
     };
 }
 
-function mapMessage(row: QueryRow, currentUserId?: string | null): DirectMessage | null {
-    const id = readString(row, "id");
-    const senderId = readString(row, "sender_id");
-    const recipientId = readString(row, "recipient_id");
-    const body = readString(row, "body");
-
-    if (!id || !senderId || !recipientId || !body) return null;
-
-    const sender = mapProfile(Array.isArray(row.sender) ? row.sender[0] as QueryRow : row.sender as QueryRow | undefined);
-    const recipient = mapProfile(Array.isArray(row.recipient) ? row.recipient[0] as QueryRow : row.recipient as QueryRow | undefined);
-
+function mapSettings(raw: unknown): DirectMessageSettings {
+    const row = asRow(raw);
+    if (!row) return NO_DIRECT_MESSAGE_SETTINGS;
     return {
-        id,
-        senderId,
-        recipientId,
-        body,
-        text: body,
-        createdAt: readString(row, "created_at") ?? new Date(0).toISOString(),
-        readAt: readString(row, "read_at"),
-        deletedAt: null,
-        photoReview: null,
-        attachment: null,
-        sender: sender ?? (senderId === currentUserId ? null : {userId: senderId, displayName: "Collector", username: null, avatarUrl: null, href: null}),
-        recipient: recipient ?? (recipientId === currentUserId ? null : {userId: recipientId, displayName: "Collector", username: null, avatarUrl: null, href: null})
+        pinnedAt: readString(row, "pinned_at"),
+        mutedUntil: readString(row, "muted_until"),
+        markedUnreadAt: readString(row, "marked_unread_at")
     };
-}
-
-function readNumber(row: QueryRow | null | undefined, key: string) {
-    const value = row?.[key];
-    const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-    return Number.isFinite(number) ? number : null;
 }
 
 function readPhotoReview(row: QueryRow): DirectMessage["photoReview"] {
@@ -129,10 +136,14 @@ function readPhotoReview(row: QueryRow): DirectMessage["photoReview"] {
     return value === "pending" || value === "approved" || value === "removed" ? value : null;
 }
 
-/** `direct_messages.attachment`; unknown kinds are ignored, as in the apps. */
-async function resolveAttachment(raw: unknown): Promise<{attachment: DirectMessageAttachment; caption: string | null} | null> {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-    const row = raw as QueryRow;
+/**
+ * `direct_messages.attachment`, written by the server's insert trigger (never
+ * by a client), so its paths are the conversation's own. Unknown kinds are
+ * ignored, as in the apps. `sign` is off for inbox previews, which show text only.
+ */
+async function resolveAttachment(raw: unknown, sign: boolean): Promise<DirectMessageAttachment | null> {
+    const row = asRow(raw);
+    if (!row) return null;
     const caption = readString(row, "caption");
 
     if (readString(row, "kind") === "image") {
@@ -140,18 +151,18 @@ async function resolveAttachment(raw: unknown): Promise<{attachment: DirectMessa
         const path = readString(row, "path");
         if (!path) return null;
         const cardPath = readString(row, "card_path");
-        const [bubbleUrl, fullUrl] = await Promise.all([
-            createSignedStorageUrl(bucket, cardPath ?? path),
-            cardPath ? createSignedStorageUrl(bucket, path) : Promise.resolve(null)
-        ]);
+        const [bubbleUrl, fullUrl] = sign
+            ? await Promise.all([
+                createSignedStorageUrl(bucket, cardPath ?? path),
+                cardPath ? createSignedStorageUrl(bucket, path) : Promise.resolve(null)
+            ])
+            : [null, null];
         return {
-            attachment: {
-                kind: "image",
-                bubbleUrl,
-                fullUrl: fullUrl ?? bubbleUrl,
-                width: readNumber(row, "width"),
-                height: readNumber(row, "height")
-            },
+            kind: "image",
+            bubbleUrl,
+            fullUrl: fullUrl ?? bubbleUrl,
+            width: readNumber(row, "width"),
+            height: readNumber(row, "height"),
             caption
         };
     }
@@ -159,7 +170,7 @@ async function resolveAttachment(raw: unknown): Promise<{attachment: DirectMessa
     if (readString(row, "kind") === "capture") {
         const captureId = readString(row, "capture_id");
         if (!captureId) return null;
-        const image = (row.image && typeof row.image === "object" ? row.image : null) as QueryRow | null;
+        const image = asRow(row.image);
         // A still for the card: its 640 px card, the photo, or a video's poster.
         const moving = readString(image, "media_kind") !== null && readString(image, "media_kind") !== "photo";
         const bucket = (moving ? readString(image, "poster_bucket") : null)
@@ -167,15 +178,15 @@ async function resolveAttachment(raw: unknown): Promise<{attachment: DirectMessa
         const path = (moving ? readString(image, "poster_path") : null)
             ?? readString(image, "card_path") ?? readString(image, "path");
         const grade = readNumber(row, "grade");
+        const ownerHandle = readString(row, "owner_username");
         return {
-            attachment: {
-                kind: "capture",
-                captureId,
-                title: readString(row, "title") ?? readString(row, "animal_name") ?? "Animal card",
-                animalName: readString(row, "animal_name"),
-                grade: grade === null ? null : Math.round(grade),
-                imageUrl: bucket && path ? await createSignedStorageUrl(bucket, path) : null
-            },
+            kind: "capture",
+            captureId,
+            title: readString(row, "title") ?? readString(row, "animal_name") ?? "Animal card",
+            animalName: readString(row, "animal_name"),
+            ownerName: ownerHandle ? (ownerHandle.startsWith("@") ? ownerHandle : `@${ownerHandle}`) : readString(row, "owner_display_name"),
+            grade: grade === null ? null : Math.round(grade),
+            imageUrl: sign && bucket && path ? await createSignedStorageUrl(bucket, path) : null,
             caption
         };
     }
@@ -183,8 +194,8 @@ async function resolveAttachment(raw: unknown): Promise<{attachment: DirectMessa
     return null;
 }
 
-/** A message as `direct_message_client_json` writes it (20261020230000). */
-async function mapThreadMessage(row: QueryRow): Promise<DirectMessage | null> {
+/** A message as `direct_message_client_json` (or a v2 insert's select) writes it. */
+async function mapMessage(row: QueryRow, sign = true): Promise<DirectMessage | null> {
     const id = readString(row, "id");
     const senderId = readString(row, "sender_id");
     const recipientId = readString(row, "recipient_id");
@@ -193,32 +204,30 @@ async function mapThreadMessage(row: QueryRow): Promise<DirectMessage | null> {
     const body = readString(row, "body") ?? "";
     const deletedAt = readString(row, "deleted_at");
     const photoReview = readPhotoReview(row);
-    const resolved = deletedAt || photoReview === "removed" ? null : await resolveAttachment(row.attachment);
+    const hidden = Boolean(deletedAt) || photoReview === "removed";
+    const attachment = hidden ? null : await resolveAttachment(row.attachment, sign);
 
     return {
         id,
         senderId,
         recipientId,
         body,
-        text: deletedAt || photoReview === "removed" ? "" : resolved ? resolved.caption ?? "" : body,
+        text: hidden ? "" : attachment ? attachment.caption ?? "" : body,
         createdAt: readString(row, "created_at") ?? new Date(0).toISOString(),
         readAt: readString(row, "read_at"),
+        deliveredAt: readString(row, "delivered_at"),
         deletedAt,
         photoReview,
-        attachment: resolved?.attachment ?? null,
+        attachment,
         sender: null,
         recipient: null
     };
 }
 
-function otherUserForMessage(message: DirectMessage, currentUserId: string): DirectMessageProfile | null {
-    if (message.senderId === currentUserId) return message.recipient;
-    if (message.recipientId === currentUserId) return message.sender;
-    return null;
-}
-
-function isUnreadIncoming(message: DirectMessage, currentUserId: string) {
-    return message.recipientId === currentUserId && message.senderId !== currentUserId && !message.readAt;
+async function mapMessages(raw: unknown, sign = true): Promise<DirectMessage[]> {
+    const rows = Array.isArray(raw) ? raw as QueryRow[] : [];
+    const messages = await Promise.all(rows.map((row) => mapMessage(row, sign)));
+    return messages.filter((message): message is DirectMessage => Boolean(message));
 }
 
 export async function getCurrentUserId() {
@@ -230,106 +239,208 @@ export async function getCurrentUserId() {
 
 export async function getDirectMessagePartner(userId: string): Promise<DirectMessageProfile | null> {
     const supabase = createSupabaseServerClient();
-    if (!supabase) return null;
+    if (!supabase || !isDirectMessageUserId(userId)) return null;
 
     const {data} = await supabase
         .from("profiles")
-        .select("id,display_name,username,avatar_url,is_system")
+        .select(PROFILE_COLUMNS)
         .eq("id", userId)
         .maybeSingle();
 
-    return mapProfile((data ?? null) as QueryRow | null);
+    return mapDirectMessageProfile((data ?? null) as QueryRow | null);
 }
 
-export async function getDirectMessageInbox(limit = 40): Promise<DirectMessageConversationSummary[]> {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return [];
-
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const {data} = await supabase
-        .from("direct_messages")
-        .select(MESSAGE_SELECT)
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-        .order("created_at", {ascending: false})
-        .limit(Math.max(limit * 20, 200));
-
-    const rows = (data ?? []) as unknown as QueryRow[];
-    const orderedPartnerIds: string[] = [];
-    const summaries = new Map<string, DirectMessageConversationSummary>();
-
-    for (const row of rows) {
-        const message = mapMessage(row, user.id);
-        if (!message) continue;
-
-        const otherUser = otherUserForMessage(message, user.id);
-        if (!otherUser) continue;
-
-        const existing = summaries.get(otherUser.userId);
-        if (!existing) {
-            orderedPartnerIds.push(otherUser.userId);
-            summaries.set(otherUser.userId, {
-                otherUser,
-                lastMessage: message,
-                unreadCount: isUnreadIncoming(message, user.id) ? 1 : 0
-            });
-        } else if (isUnreadIncoming(message, user.id)) {
-            existing.unreadCount += 1;
-        }
-    }
-
-    return orderedPartnerIds
-        .map((partnerId) => summaries.get(partnerId))
-        .filter((item): item is DirectMessageConversationSummary => Boolean(item))
-        .sort((left, right) => Number(Boolean(right.otherUser.isSystem)) - Number(Boolean(left.otherUser.isSystem)))
-        .slice(0, limit);
+/** Whether the reader has blocked this person (their own `user_blocks` rows). */
+export async function isDirectMessagePartnerBlocked(partnerId: string): Promise<boolean> {
+    const session = await signedInClient();
+    if (!session || !isDirectMessageUserId(partnerId)) return false;
+    const {data} = await session.supabase
+        .from("user_blocks")
+        .select("blocked_user_id")
+        .eq("blocker_id", session.userId)
+        .eq("blocked_user_id", partnerId)
+        .maybeSingle();
+    return Boolean(data);
 }
 
-export async function getDirectMessageConversation(otherUserId: string, limit = 120): Promise<DirectMessage[]> {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return [];
+/** One row per conversation in one call (`direct_message_inbox`), in iOS's order. */
+export async function getDirectMessageInbox(limit = 40): Promise<DirectMessageResult<DirectMessageConversationSummary[]>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
 
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return [];
+    const {data, error} = await session.supabase.rpc("direct_message_inbox", {p_limit: limit});
+    if (error) return failure(error, "inbox_unavailable");
 
-    // The newest page, with photos and cards, through the thread function.
-    const {data: page, error} = await supabase.rpc("direct_message_thread_page", {
+    const rows = Array.isArray(data) ? data as QueryRow[] : [];
+    const summaries = await Promise.all(rows.map(async (row): Promise<DirectMessageConversationSummary | null> => {
+        const otherUser = mapDirectMessageProfile(asRow(row.other_user));
+        const lastRow = asRow(row.last_message);
+        const lastMessage = lastRow ? await mapMessage(lastRow, false) : null;
+        if (!otherUser || !lastMessage) return null;
+        return {
+            otherUser,
+            lastMessage,
+            unreadCount: Math.max(0, Math.round(readNumber(row, "unread_count") ?? 0)),
+            settings: mapSettings(row)
+        };
+    }));
+    return {ok: true, value: sortedInbox(summaries.filter((summary): summary is DirectMessageConversationSummary => Boolean(summary)))};
+}
+
+/**
+ * The newest page (no `beforeId`), or the page before a message. Only the
+ * newest page marks, and only when asked; an older page is history.
+ */
+export async function getDirectMessageThreadPage(
+    otherUserId: string,
+    options: {beforeId?: string | null; limit?: number; markRead?: boolean} = {}
+): Promise<DirectMessageResult<DirectMessageThreadPage>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(otherUserId) || otherUserId === session.userId) return {ok: false, error: "invalid_conversation", status: 400};
+
+    // Explicit nulls: PostgREST matches an RPC by the argument names sent.
+    const {data, error} = await session.supabase.rpc("direct_message_thread_page", {
         p_other_user_id: otherUserId,
-        p_limit: limit,
-        p_mark_read: false
+        p_before_created_at: null,
+        p_before_id: options.beforeId && isDirectMessageUserId(options.beforeId) ? options.beforeId : null,
+        p_limit: Math.max(1, Math.min(options.limit ?? 50, 200)),
+        p_mark_read: options.markRead === true
     });
-    if (!error && page && typeof page === "object" && Array.isArray((page as QueryRow).messages)) {
-        const rows = (page as QueryRow).messages as QueryRow[];
-        const messages = await Promise.all(rows.map((row) => mapThreadMessage(row)));
-        return messages.filter((message): message is DirectMessage => Boolean(message));
-    }
+    const page = asRow(data);
+    if (error || !page) return failure(error, "thread_unavailable");
 
-    // Servers without 20261020230000: the table, newest first, then put in
-    // order. Reading oldest first returned the first messages ever sent, so a
-    // long conversation stopped showing new ones.
-    const filter = [
-        `and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId})`,
-        `and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`
-    ].join(",");
-
-    const {data} = await supabase
-        .from("direct_messages")
-        .select(MESSAGE_SELECT)
-        .or(filter)
-        .order("created_at", {ascending: false})
-        .limit(limit);
-
-    return ((data ?? []) as unknown as QueryRow[])
-        .map((row) => mapMessage(row, user.id))
-        .filter((message): message is DirectMessage => Boolean(message))
-        .reverse();
+    return {
+        ok: true,
+        value: {
+            messages: await mapMessages(page.messages),
+            hasMore: page.has_more === true,
+            serverNow: readString(page, "server_now") ?? new Date().toISOString(),
+            partnerTyping: page.partner_typing === true,
+            settings: mapSettings(page.settings),
+            firstUnreadId: readString(page, "first_unread_id"),
+            unreadCount: Math.max(0, Math.round(readNumber(page, "unread_count") ?? 0))
+        }
+    };
 }
 
-export async function getDirectMessageUnreadCountForUser(
-    supabase: NonNullable<ReturnType<typeof createSupabaseServerClient>>,
-    userId: string
-) {
+/** Rows whose `updated_at` moved past the cursor: new messages, receipts, unsends. */
+export async function syncDirectMessageThread(
+    otherUserId: string,
+    since: string | null,
+    markRead: boolean
+): Promise<DirectMessageResult<DirectMessageThreadSync>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(otherUserId) || otherUserId === session.userId) return {ok: false, error: "invalid_conversation", status: 400};
+    const cursor = since && Number.isFinite(Date.parse(since)) ? new Date(since).toISOString() : null;
+
+    const {data, error} = await session.supabase.rpc("direct_message_thread_sync", {
+        p_other_user_id: otherUserId,
+        p_since: cursor,
+        p_mark_read: markRead
+    });
+    const result = asRow(data);
+    if (error || !result) return failure(error, "thread_unavailable");
+
+    return {
+        ok: true,
+        value: {
+            messages: await mapMessages(result.messages),
+            serverNow: readString(result, "server_now") ?? new Date().toISOString(),
+            partnerTyping: result.partner_typing === true
+        }
+    };
+}
+
+export type DirectConversationAction =
+    | {kind: "pin"; pinned: boolean}
+    | {kind: "mute"; until: string | null}
+    | {kind: "unread"; unread: boolean};
+
+/** Pin (five at most), mute (push only; null unmutes) or mark read/unread. */
+export async function setDirectConversationSetting(otherUserId: string, action: DirectConversationAction): Promise<DirectMessageResult<DirectMessageSettings>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(otherUserId) || otherUserId === session.userId) return {ok: false, error: "invalid_conversation", status: 400};
+
+    const call = action.kind === "pin"
+        ? session.supabase.rpc("set_direct_conversation_pinned", {p_other_user_id: otherUserId, p_pinned: action.pinned})
+        : action.kind === "mute"
+            ? session.supabase.rpc("set_direct_conversation_muted", {
+                p_other_user_id: otherUserId,
+                p_muted_until: action.until && Number.isFinite(Date.parse(action.until)) ? new Date(action.until).toISOString() : null
+            })
+            : session.supabase.rpc("set_direct_conversation_unread", {p_other_user_id: otherUserId, p_unread: action.unread});
+    const {data, error} = await call;
+    if (error) return failure(error, "settings_failed");
+    return {ok: true, value: mapSettings(data)};
+}
+
+/** Removes the conversation from the reader's inbox until they write again. Support stays. */
+export async function hideDirectConversation(otherUserId: string): Promise<DirectMessageResult<null>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(otherUserId)) return {ok: false, error: "invalid_conversation", status: 400};
+    const {error} = await session.supabase.rpc("hide_direct_conversation", {p_other_user_id: otherUserId});
+    return error ? failure(error, "delete_failed") : {ok: true, value: null};
+}
+
+/** iOS `blockUser(_, reason: "Blocked from messages")`: the reader's own `user_blocks` row. */
+export async function blockDirectMessagePartner(otherUserId: string): Promise<DirectMessageResult<null>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(otherUserId)) return {ok: false, error: "invalid_conversation", status: 400};
+    if (otherUserId === session.userId) return {ok: false, error: "self_message", status: 400};
+    const {error} = await session.supabase
+        .from("user_blocks")
+        .upsert({blocker_id: session.userId, blocked_user_id: otherUserId, reason: "Blocked from messages"}, {onConflict: "blocker_id,blocked_user_id"});
+    return error ? failure(error, "block_failed") : {ok: true, value: null};
+}
+
+/** A `direct_message` moderation report, worded as iOS files it. */
+export async function reportDirectMessage(
+    otherUserId: string,
+    contentId: string | null,
+    snapshot: string
+): Promise<DirectMessageResult<null>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(otherUserId)) return {ok: false, error: "invalid_conversation", status: 400};
+    const {error} = await session.supabase.from("moderation_reports").insert({
+        reporter_id: session.userId,
+        reported_user_id: otherUserId,
+        content_type: "direct_message",
+        content_id: contentId && isDirectMessageUserId(contentId) ? contentId : null,
+        reason: "Objectionable direct message or abusive behavior",
+        snapshot: snapshot.trim().slice(0, 1000) || null
+    });
+    return error ? failure(error, "report_failed") : {ok: true, value: null};
+}
+
+/**
+ * Takes a message back from both sides within 48 hours. A photo's files go
+ * too, from the sender's own folder (the bucket lets only its owner delete).
+ */
+export async function unsendDirectMessage(messageId: string, wasPhoto: boolean): Promise<DirectMessageResult<DirectMessage>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    if (!isDirectMessageUserId(messageId)) return {ok: false, error: "message_not_found", status: 400};
+
+    const {data, error} = await session.supabase.rpc("unsend_direct_message", {p_message_id: messageId});
+    const row = asRow(data);
+    if (error || !row) return failure(error, "unsend_failed");
+    const message = await mapMessage(row);
+    if (!message) return {ok: false, error: "unsend_failed", status: 400};
+
+    if (wasPhoto) {
+        const folder = `${session.userId.toLowerCase()}/${messageId.toLowerCase()}`;
+        await session.supabase.storage.from("direct-message-media").remove([`${folder}/full.jpg`, `${folder}/card.jpg`]).catch(() => undefined);
+    }
+    return {ok: true, value: message};
+}
+
+export async function getDirectMessageUnreadCountForUser(supabase: ServerClient, userId: string) {
     const {count} = await supabase
         .from("direct_messages")
         .select("id", {count: "exact", head: true})
@@ -341,46 +452,93 @@ export async function getDirectMessageUnreadCountForUser(
 }
 
 export async function getDirectMessageUnreadCount() {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return 0;
-
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return 0;
-
-    return getDirectMessageUnreadCountForUser(supabase, user.id);
+    const session = await signedInClient();
+    if (!session) return 0;
+    return getDirectMessageUnreadCountForUser(session.supabase, session.userId);
 }
 
+/** Opening a thread on the web clears its unread messages and its "marked unread". */
 export async function markDirectConversationRead(otherUserId: string) {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return {ok: false as const, error: "Not configured"};
+    const session = await signedInClient();
+    if (!session) return {ok: false as const, error: "Unauthorized"};
+    if (!isDirectMessageUserId(otherUserId)) return {ok: false as const, error: "invalid_conversation"};
 
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return {ok: false as const, error: "Unauthorized"};
-
-    const {error} = await supabase.rpc("mark_direct_conversation_read", {p_other_user_id: otherUserId});
+    const {error} = await session.supabase.rpc("mark_direct_conversation_read", {p_other_user_id: otherUserId});
     return error ? {ok: false as const, error: error.message} : {ok: true as const};
 }
 
-export async function sendDirectMessage(recipientId: string, body: string) {
-    const supabase = createSupabaseServerClient();
-    if (!supabase) return {ok: false as const, error: "Not configured"};
-
-    const {data: {user}} = await supabase.auth.getUser();
-    if (!user) return {ok: false as const, error: "Unauthorized"};
+/** A text message, as iOS sends one: the server stamps its time and receipts. */
+export async function sendDirectMessage(recipientId: string, body: string): Promise<DirectMessageResult<DirectMessage>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
 
     const trimmed = body.trim();
-    if (!trimmed) return {ok: false as const, error: "Type a message first."};
-    if (trimmed.length > 1000) return {ok: false as const, error: "Message is too long."};
-    if (recipientId === user.id) return {ok: false as const, error: "You cannot message yourself."};
+    if (!trimmed) return {ok: false, error: "empty_message", status: 400};
+    if (trimmed.length > 1000) return {ok: false, error: "send_failed", status: 400};
+    if (!isDirectMessageUserId(recipientId)) return {ok: false, error: "invalid_conversation", status: 400};
+    if (recipientId === session.userId) return {ok: false, error: "self_message", status: 400};
 
-    const {data, error} = await supabase
+    const {data: blocked} = await session.supabase
+        .from("user_blocks")
+        .select("blocked_user_id")
+        .eq("blocker_id", session.userId)
+        .eq("blocked_user_id", recipientId)
+        .maybeSingle();
+    if (blocked) return {ok: false, error: "blocked_user", status: 400};
+
+    const {data, error} = await session.supabase
         .from("direct_messages")
-        .insert({sender_id: user.id, recipient_id: recipientId, body: trimmed})
-        .select(MESSAGE_SELECT)
+        .insert({sender_id: session.userId, recipient_id: recipientId, body: trimmed})
+        .select(MESSAGE_COLUMNS)
         .single();
+    if (error || !data) return failure(error, "send_failed");
 
-    if (error) return {ok: false as const, error: error.message};
+    const message = await mapMessage(data as unknown as QueryRow);
+    return message ? {ok: true, value: message} : {ok: false, error: "send_failed", status: 400};
+}
 
-    const message = mapMessage(data as unknown as QueryRow, user.id);
-    return message ? {ok: true as const, message} : {ok: false as const, error: "Message could not be sent."};
+/**
+ * People to message (the New Message picker): everyone the reader follows,
+ * or a search by name or @username (two letters at least, as iOS), without
+ * system accounts, the reader, or anyone they blocked.
+ */
+export async function findDirectMessagePeople(query: string): Promise<DirectMessageResult<{following: DirectMessageProfile[]; results: DirectMessageProfile[]}>> {
+    const session = await signedInClient();
+    if (!session) return NOT_SIGNED_IN;
+    const {supabase, userId} = session;
+
+    const {data: blockRows} = await supabase.from("user_blocks").select("blocked_user_id").eq("blocker_id", userId);
+    const blocked = new Set(((blockRows ?? []) as QueryRow[]).map((row) => readString(row, "blocked_user_id")).filter(Boolean) as string[]);
+    const eligible = (profile: DirectMessageProfile | null): profile is DirectMessageProfile =>
+        Boolean(profile) && profile!.userId !== userId && !profile!.isSystem && !blocked.has(profile!.userId);
+
+    const needle = query.trim().replace(/[@%,()*\\]/g, "").trim();
+    if (needle.length >= 2) {
+        const pattern = `%${needle}%`;
+        const [byName, byHandle] = await Promise.all([
+            supabase.from("profiles").select(PROFILE_COLUMNS).eq("is_system", false).ilike("display_name", pattern).limit(30),
+            supabase.from("profiles").select(PROFILE_COLUMNS).eq("is_system", false).ilike("username", pattern).limit(30)
+        ]);
+        if (byName.error && byHandle.error) return failure(byName.error, "search_failed");
+        const seen = new Set<string>();
+        const results = [...((byName.data ?? []) as QueryRow[]), ...((byHandle.data ?? []) as QueryRow[])]
+            .map(mapDirectMessageProfile)
+            .filter(eligible)
+            .filter((profile) => !seen.has(profile.userId) && Boolean(seen.add(profile.userId)))
+            .slice(0, 30);
+        return {ok: true, value: {following: [], results}};
+    }
+
+    const {data: follows, error} = await supabase
+        .from("user_follows")
+        .select("followed_id")
+        .eq("follower_id", userId)
+        .limit(500);
+    if (error) return failure(error, "search_failed");
+    const ids = ((follows ?? []) as QueryRow[]).map((row) => readString(row, "followed_id")).filter((id): id is string => Boolean(id));
+    if (!ids.length) return {ok: true, value: {following: [], results: []}};
+
+    const {data: profiles} = await supabase.from("profiles").select(PROFILE_COLUMNS).in("id", ids.slice(0, 500));
+    const following = ((profiles ?? []) as QueryRow[]).map(mapDirectMessageProfile).filter(eligible);
+    return {ok: true, value: {following, results: []}};
 }

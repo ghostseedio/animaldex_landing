@@ -7,20 +7,16 @@ export async function POST(request: NextRequest) {
     try {
         body = await request.json() as {recipientId?: string; body?: string};
     } catch {
-        return NextResponse.json({error: "Invalid JSON body"}, {status: 400});
+        return NextResponse.json({error: "invalid_request"}, {status: 400});
     }
 
     const recipientId = typeof body.recipientId === "string" ? body.recipientId.trim() : "";
     const messageBody = typeof body.body === "string" ? body.body : "";
 
-    if (!recipientId) {
-        return NextResponse.json({error: "Missing recipient"}, {status: 400});
-    }
-
     const result = await sendDirectMessage(recipientId, messageBody);
     return result.ok
-        ? NextResponse.json({message: result.message})
-        : NextResponse.json({error: result.error}, {status: 400});
+        ? NextResponse.json({message: result.value})
+        : NextResponse.json({error: result.error}, {status: result.status});
 }
 
 export const dynamic = "force-dynamic";
