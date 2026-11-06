@@ -132,6 +132,9 @@ test("a call runs after a 700 ms pause, for 12 characters or more, when 3 words 
         suggestionDue({draft, text: value, lastEditAt: 1000, now: 1000 + pause, canSuggest: true});
     assert.equal(due(NEW_DRAFT, text, SUGGEST_PAUSE_MS - 1), false);
     assert.equal(due(NEW_DRAFT, text), true);
+    // The first call needs only the 12 characters: a long two-word draft gets one.
+    assert.equal(due(NEW_DRAFT, "Procrastination everywhere"), true);
+    assert.equal(due(NEW_DRAFT, "short one"), false);
     // Not before Talk's gate, signed out or with the switch off.
     assert.equal(suggestionDue({draft: NEW_DRAFT, text, lastEditAt: 0, now: 5000, canSuggest: false}), false);
     // Once asked, the same text (or one word more) does not ask again.

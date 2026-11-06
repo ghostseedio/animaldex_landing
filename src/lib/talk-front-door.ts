@@ -8,7 +8,7 @@
  *   card, else the first "Meet one now" animal (on /talk, for a guest, the
  *   first featured animal).
  * - A suggestion (`talk_suggest`, SPEC 6.1) runs only for a draft of 12
- *   characters or more, after a 700 ms pause, when at least 3 words changed
+ *   characters or more, after a 700 ms pause; after the first call, only when at least 3 words changed
  *   since the last call, and at most 4 times a draft. Shorter drafts never
  *   run it: they go to the default.
  * - A successful answer makes its `pick` the chosen animal with its reason;
@@ -310,14 +310,19 @@ export function wordsChanged(before: string, after: string): number {
     return Math.max(added, removed);
 }
 
-/** Whether a call may go out for this text, the pause aside: long enough, calls left, no Change tap, 3 words changed. */
+/**
+ * Whether a call may go out for this text, the pause aside: long enough,
+ * calls left, no Change tap, and, after the first call, 3 words changed
+ * since the last one (the first needs only the 12 characters, so a long
+ * two-word draft still gets one).
+ */
 function callAllowed(draft: FrontDoorDraft, raw: string): boolean {
     const now = frontDoorText(raw);
     return !draft.manual
         && now.length >= SUGGEST_MIN_CHARS
         && draft.calls < SUGGEST_MAX_CALLS
         && now !== draft.pendingText
-        && wordsChanged(draft.lastCalledText ?? "", now) >= SUGGEST_MIN_WORDS_CHANGED;
+        && (draft.lastCalledText === null || wordsChanged(draft.lastCalledText, now) >= SUGGEST_MIN_WORDS_CHANGED);
 }
 
 /**
