@@ -440,15 +440,24 @@ export async function unsendDirectMessage(messageId: string, wasPhoto: boolean):
     return {ok: true, value: message};
 }
 
+/**
+ * The shell's badge: the sum of the inbox's own unread counts, so a
+ * conversation marked unread by hand counts as iOS counts it
+ * (`directMessageInbox.reduce { $0 + $1.unreadCount }`). Counting raw
+ * unread messages missed those (the Messages lane, 2026-11-06).
+ */
 export async function getDirectMessageUnreadCountForUser(supabase: ServerClient, userId: string) {
-    const {count} = await supabase
-        .from("direct_messages")
-        .select("id", {count: "exact", head: true})
-        .eq("recipient_id", userId)
-        .neq("sender_id", userId)
-        .is("read_at", null);
-
-    return count ?? 0;
+    const {data, error} = await supabase.rpc("direct_message_inbox", {p_limit: 200});
+    if (error || !Array.isArray(data)) {
+        const {count} = await supabase
+            .from("direct_messages")
+            .select("id", {count: "exact", head: true})
+            .eq("recipient_id", userId)
+            .neq("sender_id", userId)
+            .is("read_at", null);
+        return count ?? 0;
+    }
+    return (data as QueryRow[]).reduce((total, row) => total + Math.max(0, Math.round(readNumber(row, "unread_count") ?? 0)), 0);
 }
 
 export async function getDirectMessageUnreadCount() {

@@ -169,8 +169,12 @@ export default function ConversationClient({
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({otherUserId: partner.userId})
-        }).catch(() => undefined);
-    }, [partner.userId, loadState, visible]);
+        })
+            // The shell's badge is rendered on the server: refresh it now
+            // that this thread is read (the Messages lane, 2026-11-06).
+            .then((response) => { if (response.ok) router.refresh(); })
+            .catch(() => undefined);
+    }, [partner.userId, loadState, visible, router]);
 
     const scrollToBottom = useCallback((behavior: "instant" | "smooth") => {
         const list = listRef.current;
