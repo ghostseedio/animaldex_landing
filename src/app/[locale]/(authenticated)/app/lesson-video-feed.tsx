@@ -1,5 +1,6 @@
 "use client";
 
+import {ExploreFeedSkeleton} from "@/app/[locale]/(authenticated)/app/_components/app-tab-loading";
 import Link from "@/app/[locale]/_components/link";
 import {type LessonVideo, type LessonVideoPage, mergeLessonVideos} from "@/lib/lesson-videos";
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -200,7 +201,8 @@ export default function LessonVideoFeed({locale}: {locale: string}) {
         return (
             <div className={`${frame} flex flex-col items-center justify-center gap-3 px-6 text-center`}>
                 {isLoading || !didLoad ? (
-                    <PageLoading label="Loading lesson videos" />
+                    // The shape of a video on its way, as the post feed starts.
+                    <div className="-mx-6 h-full w-[calc(100%+3rem)]"><ExploreFeedSkeleton /></div>
                 ) : signedOut ? (
                     <>
                         <PlayRectangleIcon className="h-9 w-9 text-white/35" />

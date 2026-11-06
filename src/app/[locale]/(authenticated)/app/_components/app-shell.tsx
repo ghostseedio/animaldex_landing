@@ -284,8 +284,9 @@ export default function AppShell({
             {/* No top bar (the owner, 2026-11-06): on a phone a lone hamburger leads the page, the way the Claude app's screens do; the chat draws its own. */}
             <div ref={pageRef} className="contents">
             {bottomNavHidden || isDiscoverRoute ? null : (
-                <div className="flex h-12 shrink-0 items-center px-1 lg:hidden">
-                    <button type="button" onClick={() => setMenuOpen(true)} aria-label={words.openMenu} className="relative grid h-11 w-11 place-items-center rounded-full text-white transition-colors hover:bg-white/8" data-testid="shell-menu">
+                <div className="flex h-14 shrink-0 items-center px-3 pt-1 lg:hidden">
+                    {/* Glass, as the chat's and Explore's floating controls (the owner, 2026-11-06, "like claude"). */}
+                    <button type="button" onClick={() => setMenuOpen(true)} aria-label={words.openMenu} className="relative grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur-xl transition-colors hover:bg-white/15" data-testid="shell-menu">
                         <AppIcon name="menu" className="h-5 w-5" />
                         {resolvedAuthenticated && (unreadCount || unreadMessageCount || unreadAnimalMessages) ? <span className="absolute right-2 top-2 h-[7px] w-[7px] rounded-full bg-primary-400" /> : null}
                     </button>

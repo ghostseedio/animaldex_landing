@@ -112,7 +112,7 @@ export function StandardAppTabSkeleton({metricCount = 3}: {metricCount?: number}
 export function ExploreFeedSkeleton() {
     return (
         <div className="relative h-full min-h-[100dvh] w-full bg-black lg:h-[90svh] lg:min-h-[42rem]" aria-busy="true" aria-label="Loading timeline" data-testid="explore-feed-skeleton">
-            <div className="absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-3">
+            <div className="absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-[4.125rem] lg:pt-3">
                 <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-white/10" />
                 <div className="space-y-1.5">
                     <div className="h-2.5 w-24 animate-pulse rounded-full bg-white/12" />

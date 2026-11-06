@@ -117,8 +117,9 @@ function LessonVideosButton({active, onToggle, className = ""}: {active: boolean
  * the middle, notifications on the right. No segments: the feed is Explore,
  * and Debates start in a chat (public ones pin to the top of the feed). The
  * wordmark takes only the space between the two groups and shrinks to fit
- * it, so it never covers a button. Sits in the flow above the snap feed so
- * nothing floats over the first post.
+ * it, so it never covers a button. Floats over the feed in glass, as the
+ * iOS bar does (the owner, 2026-11-06, "like claude"); the posts keep their
+ * chrome clear of it (`FeedTopOverlay`'s top padding).
  */
 function DiscoverTopBar({
     segment,
@@ -134,35 +135,29 @@ function DiscoverTopBar({
     const chrome = useAppShellChrome();
     const showsCollectors = segment === "collectors";
 
+    // iOS: the hamburger leads, then the lesson videos and Collectors; the
+    // bell lives in the side menu.
+    const glass = "rounded-full bg-white/10 backdrop-blur-xl transition-colors hover:bg-white/15";
     return (
-        <div className="flex h-14 shrink-0 items-center gap-1 px-3 lg:hidden">
-            <div className="flex shrink-0 items-center gap-1">
-                <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className="h-11 w-11" />
-                <CollectorsButton active={showsCollectors} onToggle={onToggleCollectors} className="h-11 w-11" />
-            </div>
-
-            <Link href="/app/explore" aria-label="AnimalDex" className="flex h-7 min-w-0 flex-1 justify-center overflow-hidden">
-                <img src={DISCOVER_WORDMARK_URL} alt="AnimalDex" className="h-7 w-auto min-w-0 max-w-full object-contain" />
-            </Link>
-
-            <div className="flex shrink-0 items-center gap-1">
-                <Link
-                    href={chrome.isAuthenticated ? "/app/notifications" : "/account"}
-                    aria-label="Notifications"
-                    className="relative grid h-11 w-11 place-items-center text-white"
-                >
-                    <AppIcon name="bell" className="h-[1.35rem] w-[1.35rem]" />
-                    {chrome.isAuthenticated ? <CountBadge count={chrome.unreadCount} /> : null}
-                </Link>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-[3.5rem] items-center gap-2 px-3 pt-1 lg:hidden">
+            <div className="pointer-events-auto flex shrink-0 items-center gap-2">
                 <button
                     type="button"
                     onClick={chrome.toggleMenu}
                     aria-label={chrome.menuOpen ? "Close menu" : "Open menu"}
-                    className="grid h-11 w-11 place-items-center text-white"
+                    className={`relative grid h-11 w-11 place-items-center text-white ${glass}`}
+                    data-testid="explore-menu-button"
                 >
                     <AppIcon name={chrome.menuOpen ? "close" : "menu"} className="h-[1.35rem] w-[1.35rem]" />
+                    {chrome.isAuthenticated ? <CountBadge count={chrome.unreadCount} /> : null}
                 </button>
+                <LessonVideosButton active={showsLessonVideos} onToggle={onToggleLessonVideos} className={`h-11 w-11 ${glass}`} />
+                <CollectorsButton active={showsCollectors} onToggle={onToggleCollectors} className={`h-11 w-11 ${glass}`} />
             </div>
+
+            <Link href="/app/explore" aria-label="AnimalDex" className={`pointer-events-auto flex h-11 min-w-0 flex-1 items-center justify-center overflow-hidden px-4 ${glass}`}>
+                <img src={DISCOVER_WORDMARK_URL} alt="AnimalDex" className="h-7 w-auto min-w-0 max-w-full object-contain" />
+            </Link>
         </div>
     );
 }
@@ -883,7 +878,7 @@ export default function DiscoverHome({
     const lessonVideosActive = showsLessonVideos && segment === "discover";
 
     return (
-        <div className="flex h-full min-h-0 flex-col lg:block lg:h-auto lg:space-y-8">
+        <div className="relative flex h-full min-h-0 flex-col lg:block lg:h-auto lg:space-y-8">
             <DiscoverTopBar
                 segment={segment}
                 showsLessonVideos={lessonVideosActive}

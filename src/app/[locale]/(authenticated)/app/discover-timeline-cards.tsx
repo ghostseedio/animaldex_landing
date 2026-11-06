@@ -1245,8 +1245,10 @@ function CaptureCard({
       ) : null}
 
       {/* iOS `overlayChrome`: 16/14pt insets, 10/8pt when compact; the chrome
-          never sits under the tab bar because the snap slot already ends above it. */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-3.5 [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-2">
+          never sits under the tab bar because the snap slot already ends above it.
+          On phones the top row starts under the floating bar
+          (`DiscoverTimelineLayout.topChromeClearance`, 52pt). */}
+      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-[4.125rem] [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-[3.75rem] lg:pt-3.5">
         <FeedTopOverlay
           collector={activeItem.collector}
           activityLabel={activityLabel}
