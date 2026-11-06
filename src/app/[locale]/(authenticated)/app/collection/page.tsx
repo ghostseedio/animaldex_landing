@@ -21,6 +21,8 @@ import {
 import {isHomoSapiens} from "@/lib/people-never-public";
 import {collectionShowsCount, collectionShowsProgress} from "@/lib/collection-states";
 import CollectionRetry from "@/app/[locale]/(authenticated)/app/collection/collection-retry";
+import {loadAppFeatureFlags} from "@/data/app-feature-flags";
+import {isAppFeatureOn} from "@/lib/app-feature-flags";
 
 export default async function CollectionPage({params}: {params: {locale: string}}) {
     const [library, catalogEntries, behaviorPrinciples, binderData, t] = await Promise.all([
@@ -95,6 +97,8 @@ export default async function CollectionPage({params}: {params: {locale: string}
     const showsCount = !loadFailed && collectionShowsCount(discoveryStats.indexed);
     const showsProgress = showsCount && collectionShowsProgress(discoveryStats.found, discoveryStats.indexed);
 
+    const instagramImportOn = isAppFeatureOn(await loadAppFeatureFlags(), "instagram_import");
+
     // Newcomer UX vet (2026-10-30, P1-4): what this page is, and a count rather than a percentage.
     return (
         <AppPage>
@@ -105,7 +109,8 @@ export default async function CollectionPage({params}: {params: {locale: string}
                 action={(
                     <div className="flex flex-col gap-2 sm:flex-row">
                         <AppPrimaryLink href="/app/capture" icon="camera">{t("addCapture")}</AppPrimaryLink>
-                        <AppSecondaryLink href="/app/import/instagram">{t("checkInstagram")}</AppSecondaryLink>
+                        {/* Instagram import paused (shared SPEC section 3.2): no way in, as iOS hides it. */}
+                        {instagramImportOn ? <AppSecondaryLink href="/app/import/instagram">{t("checkInstagram")}</AppSecondaryLink> : null}
                     </div>
                 )}
             />

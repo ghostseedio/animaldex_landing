@@ -2,6 +2,7 @@
 
 import {type ReactNode, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AskSubjectBridge, useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider";
+import {useAppFeatureFlag} from "@/components/use-app-feature-flag";
 import Image from "next/image";
 import {useParams, useRouter, useSearchParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -323,7 +324,9 @@ export default function CaptureDetailClient({
     const resolvedSpeciesSlug = speciesSlug ?? capture.speciesSlug?.replace(/_/g, "-") ?? "animal";
     const isSignedIn = Boolean(viewer.userId);
     const canInteract = isSignedIn && !viewer.isOwner;
-    const canOffer = canInteract && !capture.hasUncertaintyFallback;
+    // Trades paused (shared SPEC section 3.2): no Offer, as iOS hides it.
+    const tradesOn = useAppFeatureFlag("trades");
+    const canOffer = tradesOn && canInteract && !capture.hasUncertaintyFallback;
 
 
     // The Story card never carries the Power. There is exactly one Animal Power
