@@ -53,7 +53,15 @@ function useFillToFoot(ref: React.RefObject<HTMLDivElement | null>): string | un
         };
         measure();
         window.addEventListener("resize", measure);
-        return () => window.removeEventListener("resize", measure);
+        // The shell's own row above the chat goes once the chat is up; measured only at the first
+        // paint, that left the row's height empty under the composer on a phone (perf pass,
+        // 2026-11-06). The page's height changes with it, so that is when to measure again.
+        const page = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+        page?.observe(document.body);
+        return () => {
+            window.removeEventListener("resize", measure);
+            page?.disconnect();
+        };
     }, [ref]);
     return height;
 }
@@ -69,7 +77,8 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     const pathname = usePathname() ?? "/app";
     const {setBottomNavHidden, toggleMenu, profileName} = useAppShellChrome();
     // The phone's tab bar goes away while the chat fills the tab; the drawer carries the other tabs.
-    useEffect(() => {
+    // Before the first paint, so the shell's row is never drawn above the chat for a frame.
+    useIsomorphicLayoutEffect(() => {
         setBottomNavHidden(true);
         return () => setBottomNavHidden(false);
     }, [setBottomNavHidden]);
