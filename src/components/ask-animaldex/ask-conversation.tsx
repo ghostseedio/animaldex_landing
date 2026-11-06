@@ -70,7 +70,7 @@
  * while the server's switch is off.
  */
 
-import {memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
+import {memo, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import {usePathname, useRouter} from "next/navigation";
@@ -492,6 +492,10 @@ const PRO_DAILY_VOICE_REPLIES = 30;
 /** The Pro introduction shows once per browser, as the apps show it once per account. */
 const PRO_INTRO_SHOWN_KEY = "animaldex:ask:pro-intro-shown";
 
+/** How many of a thread's newest messages draw at once, and how many older ones each step after. */
+const THREAD_FIRST_BATCH = 24;
+const THREAD_BATCH = 24;
+
 function readFlag(key: string): boolean {
     try {
         return window.localStorage.getItem(key) === "1";
@@ -818,6 +822,15 @@ function AskConversation({
         // The animal's own chat draws rich answers; the site-wide assistant keeps its own format.
         richColumns: resolvedSubject.scope === "species" ? richColumns : null
     });
+    // A long thread draws its newest messages first and the older ones a batch at a time right
+    // after, so opening the chat or switching to an animal is never one long task on a phone
+    // (perf pass, 2026-11-06). The view rests on the newest message throughout.
+    const [drawnFrom, setDrawnFrom] = useState(() => Math.max(0, messages.length - THREAD_FIRST_BATCH));
+    useEffect(() => {
+        if (drawnFrom <= 0) return;
+        const handle = window.setTimeout(() => startTransition(() => setDrawnFrom((from) => Math.max(0, from - THREAD_BATCH))), 0);
+        return () => window.clearTimeout(handle);
+    }, [drawnFrom]);
     // SPEC 3.1: the age check and the AI consent come before any message, on
     // every way one is sent (the composer, a chip, a report, a call); the
     // session's clock starts with the first one.
@@ -1308,7 +1321,7 @@ function AskConversation({
         if (!messenger || showingMemory || showingBond || showingSoundCredits || !sticksToBottom.current) return;
         const scroller = scrollRef.current;
         if (scroller) scroller.scrollTop = scroller.scrollHeight;
-    }, [messenger, showingMemory, showingBond, showingSoundCredits, messages, pacer.visibleText]);
+    }, [messenger, showingMemory, showingBond, showingSoundCredits, messages, pacer.visibleText, drawnFrom]);
     useEffect(() => {
         if (messenger && trailingQuestionId) scrollToLatest();
     }, [messenger, trailingQuestionId, scrollToLatest]);
@@ -2672,7 +2685,7 @@ function AskConversation({
                             <div className="flex flex-col">
                                 {/* The AI tag beside the name is the notice (owner, 2026-11-06: "drop both"). */}
                                 {debateBlocks("top")}
-                                {messages.flatMap((message, index) => [
+                                {messages.flatMap((message, index) => index < drawnFrom ? [] : [
                                     // The open step no reply here carries, where the conversation picks up.
                                     index === threadStepAt ? threadStepMessage : null,
                                     <div
