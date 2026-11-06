@@ -4631,7 +4631,8 @@ function SwitchChevronIcon() {
 /** The app's fixed greeting for the time of day (the owner, 2026-11-06, after the Claude app). */
 function greetingLine(labels: AskDrawerLabels, personName: string | null, hour = new Date().getHours()): string {
     const base = hour < 12 ? labels.goodMorning : hour < 18 ? labels.goodAfternoon : labels.goodEvening;
-    const name = personName?.trim();
+    // The first name, as the Claude app greets (bug hunt, 2026-11-06).
+    const name = personName?.trim().split(/\s+/)[0];
     return name ? base.replace("{name}", name) : base.replace(", {name}", "").replace("{name}", "").trim();
 }
 

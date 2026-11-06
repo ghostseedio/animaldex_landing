@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import {useEffect, useState, useRef} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon, {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
@@ -102,6 +102,27 @@ export default function AppShell({
     const pathname = normalizedPath(usePathname() || "/app");
     const router = useRouter();
     const [menuOpen, setMenuOpen] = useState(false);
+    // The phone's slide-over is a dialog in deed, not only in name (bug hunt,
+    // 2026-11-06): focus moves into it, Escape closes it, and the page behind
+    // is inert while it is up, so nobody tabs behind the menu.
+    const slideOverRef = useRef<HTMLDivElement>(null);
+    const pageRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!menuOpen) return;
+        const previous = document.activeElement as HTMLElement | null;
+        const page = pageRef.current;
+        page?.setAttribute("inert", "");
+        slideOverRef.current?.focus();
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setMenuOpen(false);
+        };
+        document.addEventListener("keydown", onKey);
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            page?.removeAttribute("inert");
+            previous?.focus?.();
+        };
+    }, [menuOpen]);
     // The Companions chat hides the phone's tab bar while it is up.
     const [bottomNavHidden, setBottomNavHidden] = useState(false);
     const [sessionProfile, setSessionProfile] = useState<AppShellProps["profile"]>(null);
@@ -261,6 +282,7 @@ export default function AppShell({
             </aside>
 
             {/* No top bar (the owner, 2026-11-06): on a phone a lone hamburger leads the page, the way the Claude app's screens do; the chat draws its own. */}
+            <div ref={pageRef} className="contents">
             {bottomNavHidden || isDiscoverRoute ? null : (
                 <div className="flex h-12 shrink-0 items-center px-1 lg:hidden">
                     <button type="button" onClick={() => setMenuOpen(true)} aria-label={words.openMenu} className="relative grid h-11 w-11 place-items-center rounded-full text-white transition-colors hover:bg-white/8" data-testid="shell-menu">
@@ -273,7 +295,7 @@ export default function AppShell({
             {menuOpen ? (
                 <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={words.openMenu}>
                     <button type="button" aria-label={words.closeMenu} className="absolute inset-0 bg-black/70" onClick={() => setMenuOpen(false)} />
-                    <div className="talk-slide-over absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col border-r border-white/10 shadow-[12px_0_40px_rgba(0,0,0,0.45)]">
+                    <div ref={slideOverRef} tabIndex={-1} className="talk-slide-over absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col border-r border-white/10 shadow-[12px_0_40px_rgba(0,0,0,0.45)] outline-none">
                         <SideMenu
                             variant="slideover"
                             words={words}
@@ -301,6 +323,7 @@ export default function AppShell({
             >
                 <div className={`mx-auto w-full max-w-[92rem] ${isDiscoverRoute ? "h-full lg:px-10 lg:py-10" : "px-4 py-7 sm:px-7 lg:px-10 lg:py-10"}`}>{children}</div>
             </main>
+            </div>
 
             {/* No bottom nav (the owner, 2026-11-06): the side menu carries every place. */}
         </div>
