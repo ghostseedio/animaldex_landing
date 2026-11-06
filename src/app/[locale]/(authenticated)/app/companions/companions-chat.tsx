@@ -84,8 +84,10 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     }, [setBottomNavHidden]);
     const rows = useMemo(() => entries.map((entry) => entry.row), [entries]);
     const [switchedTo, setSwitchedTo] = useState<string | null>(null);
-    const [remembered, setRemembered] = useState<CompanionsOpeningMemory | null>(null);
-    useEffect(() => setRemembered(rememberedCompanion()), []);
+    // Read for the first draw: this chat only ever draws in the browser (companions-page loads it
+    // with ssr: false). Read in an effect, the first draw opened the newest animal's whole thread
+    // and the next one swapped in the remembered animal's (bug hunt, 2026-11-07).
+    const [remembered] = useState<CompanionsOpeningMemory | null>(() => rememberedCompanion());
 
     const lastAtOf = useCallback(
         (row: CompanionTabRow) => entries.find((entry) => entry.row === row)?.time ?? row.lastActivityAt,
