@@ -137,3 +137,42 @@ export function ExploreFeedSkeleton() {
         </div>
     );
 }
+
+/**
+ * A list on its way (Messages, Notifications, debates, a group): rows of a
+ * face, a line and a shorter line, in place, so an in-app navigation never
+ * shows the launch splash (parity with iOS, 2026-11-06).
+ */
+export function ListRowsSkeleton({rows = 6}: {rows?: number}) {
+    return (
+        <div className="-mx-4 md:mx-0" aria-busy="true">
+            {Array.from({length: rows}).map((_, index) => (
+                <div key={index} className="flex h-16 items-center gap-3 pl-4 md:pl-5">
+                    <span className="h-12 w-12 shrink-0 rounded-full bg-white/[0.06] motion-safe:animate-pulse" />
+                    <span className="flex h-full min-w-0 flex-1 flex-col justify-center gap-2 border-b border-white/[0.08] pr-4">
+                        <span className="block h-3.5 w-36 rounded-full bg-white/[0.06] motion-safe:animate-pulse" />
+                        <span className="block h-3 w-56 max-w-full rounded-full bg-white/[0.04] motion-safe:animate-pulse" />
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** A chat thread on its way: the animal's card, then the shape of its first words. */
+export function ChatThreadSkeleton() {
+    return (
+        <div className="flex min-h-[60dvh] flex-col" aria-busy="true">
+            <div className="flex flex-col items-center gap-2 pt-6">
+                <span className="h-[72px] w-[72px] rounded-full bg-white/[0.06] motion-safe:animate-pulse" />
+                <span className="mt-1 h-4 w-40 rounded-full bg-white/[0.06] motion-safe:animate-pulse" />
+                <span className="h-3 w-24 rounded-full bg-white/[0.04] motion-safe:animate-pulse" />
+            </div>
+            <div className="mt-auto space-y-2 px-1 pb-6">
+                <span className="block h-3.5 w-full rounded-full bg-white/[0.06] motion-safe:animate-pulse" />
+                <span className="block h-3.5 w-11/12 rounded-full bg-white/[0.05] motion-safe:animate-pulse" />
+                <span className="block h-3.5 w-2/3 rounded-full bg-white/[0.04] motion-safe:animate-pulse" />
+            </div>
+        </div>
+    );
+}
