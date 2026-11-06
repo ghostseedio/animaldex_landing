@@ -4,6 +4,7 @@ import {classifyProviderReply, higgsfieldCreditFailure} from "./api-status-core"
 import {clipShortfall, type PlanScene} from "./content-video/plan";
 import {heldBackReason, REVIEW_SYSTEM_PROMPT, scriptForReview, type VideoReview} from "./social-lab/review";
 import {DEFAULT_DAILY_CAPS} from "./social/auto-share-plan";
+import {fillLinks} from "./social/platform-copy";
 
 const review = (passes: boolean, score: number, fiveYearOld = true): VideoReview => ({
     fiveYearOld: {passes: fiveYearOld, wouldSay: "A giraffe with shrimp fists?", hardWords: []},
@@ -56,4 +57,12 @@ test("the 5-year-old test knows a quiz hides its animal on purpose", () => {
     assert.match(quiz("guess"), /A QUIZ: the viewer guesses the animal/);
     assert.doesNotMatch(quiz("editorial"), /A QUIZ/);
     assert.match(REVIEW_SYSTEM_PROMPT, /knows the GAME/);
+});
+
+test("a link placeholder the writer left in becomes the page link; YouTube never gets < or >", () => {
+    const description = "One fly dominates.\nFull breakdown: <url>\nSubscribe @animaldexapp for more";
+    assert.equal(fillLinks(description, "https://animaldex.app/comparisons/a-vs-b", "youtube"), "One fly dominates.\nFull breakdown: https://animaldex.app/comparisons/a-vs-b\nSubscribe @animaldexapp for more");
+    assert.equal(fillLinks("Full guide: <pageUrl>", "https://animaldex.app/x", "facebook"), "Full guide: https://animaldex.app/x");
+    assert.equal(fillLinks(description, null, "facebook"), "One fly dominates.\nSubscribe @animaldexapp for more");
+    assert.equal(fillLinks("Lions <3 naps", null, "youtube"), "Lions 3 naps");
 });
