@@ -355,16 +355,18 @@ export default function AppShell({
                 <div className={`mx-auto w-full max-w-[92rem] ${isDiscoverRoute ? "h-full lg:px-10 lg:py-10" : "px-4 py-7 sm:px-7 lg:px-10 lg:py-10"}`}>{children}</div>
             </main>
 
-            <nav
-                className="fixed inset-x-3 bottom-3 z-40 flex items-center border border-white/10 bg-[#141414]/95 p-1.5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl lg:hidden"
-                hidden={bottomNavHidden}
-            >
-                {mainLinks.slice(0, 2).map((item) => navLink(item, true))}
-                <Link href={navHref("/app/capture")} aria-label={words.capture} className="-mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-400 text-black shadow-lg shadow-primary-400/20 ring-4 ring-black">
-                    <AppIcon name="plus" className="h-6 w-6" />
-                </Link>
-                {mainLinks.slice(2).map((item) => navLink(item, true))}
-            </nav>
+            {/* Away while the Companions chat fills the tab: not drawn, since Tailwind's `.flex` beats `[hidden]`. */}
+            {bottomNavHidden ? null : (
+                <nav
+                    className="fixed inset-x-3 bottom-3 z-40 flex items-center border border-white/10 bg-[#141414]/95 p-1.5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl lg:hidden"
+                >
+                    {mainLinks.slice(0, 2).map((item) => navLink(item, true))}
+                    <Link href={navHref("/app/capture")} aria-label={words.capture} className="-mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-400 text-black shadow-lg shadow-primary-400/20 ring-4 ring-black">
+                        <AppIcon name="plus" className="h-6 w-6" />
+                    </Link>
+                    {mainLinks.slice(2).map((item) => navLink(item, true))}
+                </nav>
+            )}
         </div>
         </AppShellChromeContext.Provider>
     );
