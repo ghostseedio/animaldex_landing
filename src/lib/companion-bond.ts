@@ -369,6 +369,9 @@ export const COMPANIONS_COPY = {
     sayHello: "Talk to it",
     /** The band header over the animals never talked to (second pass, 2026-11-06, as iOS). */
     shelf: "Say hello",
+    /** The switcher in the tab's chat (the owner, 2026-11-06): its title, and the rows talking. */
+    switcher: "Your animals",
+    talking: "Talking",
     mastered: "Mastered",
     myCompanions: "My Companions",
     masteredCount: "{n} mastered",

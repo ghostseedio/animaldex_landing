@@ -36,14 +36,17 @@ import {useCallback, useEffect, useMemo, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {useAppShellChrome} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
-import {AskAnimalFace, AskWalkIcon} from "@/components/ask-animaldex/ask-messenger";
+import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
+import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation";
+import type {TalkWords} from "@/lib/ask-animaldex/talk";
+import CompanionsChat from "@/app/[locale]/(authenticated)/app/companions/companions-chat";
+import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {useTalkThreads} from "@/components/ask-animaldex/use-talk-threads";
 import {useAnimalConversations} from "@/components/companions/use-animal-conversations";
 import {chatCaptureIdFor, useCompanionCards, useCompanions} from "@/components/companions/use-companions";
 import {useOpenStepUpdates} from "@/components/companions/use-steps";
 import {askThreadKey} from "@/lib/ask-animaldex/thread";
-import {talkRelativeTime} from "@/lib/ask-animaldex/talk";
 import {companionRowHref, fillWords, type CompanionWords} from "@/lib/companion-bond";
 import {rosterLastAt, rosterLine, rosterNeed, sortCompanionRoster, type RosterLocalLast} from "@/lib/companion-roster";
 import {animalMessagePreviewText, buildCompanionRows, type CompanionTabRow} from "@/lib/companion-rows";
@@ -63,85 +66,28 @@ export type CompanionsFrontDoor = {
     featured: TalkAnimal[];
 };
 
-const NEON = "#A7F432";
-
-/** "yesterday", in the reader's language, from the browser (the roster has no words of its own for it). */
-function yesterdayWord(locale: string): string {
-    try {
-        return new Intl.RelativeTimeFormat(locale, {numeric: "auto"}).format(-1, "day");
-    } catch {
-        return "";
-    }
-}
-
 /** The page's title: display 24/28, nothing above it. */
 function Title({children}: {children: string}) {
     return <h1 className="font-display text-[24px] font-bold leading-8 text-white sm:text-[28px] sm:leading-9">{children}</h1>;
 }
 
-/**
- * One row, 64 tall, 16 inset: the art, then the text column with the
- * hairline under it (the separator starts at the text, never under the art).
- */
-function CompanionRow({row, href, line, time, locale, words}: {
-    row: CompanionTabRow;
-    href: string | null;
-    line: ReturnType<typeof rosterLine>;
-    time: number | null;
-    locale: string;
-    words: CompanionWords;
-}) {
-    const unread = row.unreadCount > 0;
-    const needsYou = rosterNeed(row) !== null;
-    const body = (
-        <>
-            <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={48} className={needsYou ? "ring-2 ring-primary-400/80" : ""} />
-            <span className="flex h-full min-w-0 flex-1 items-center gap-3 border-b border-white/[0.08] pr-4">
-                <span className="min-w-0 flex-1">
-                    {/* The time sits on the name's baseline (baselines aligned across a row, DESIGN.md section 4). */}
-                    <span className="flex items-baseline gap-2">
-                        <span className={`min-w-0 flex-1 truncate text-[17px] leading-6 text-white ${unread ? "font-bold" : "font-semibold"}`}>{row.displayName}</span>
-                        {time !== null ? (
-                            <span className="shrink-0 text-[11px] leading-4 text-white/40">{talkRelativeTime(time, {locale, yesterday: yesterdayWord(locale)})}</span>
-                        ) : null}
-                    </span>
-                    <span
-                        className={`mt-0.5 flex items-center gap-1 text-[13px] leading-[18px] ${
-                            line.neon ? "font-semibold text-primary-300" : line.kind === "power" || line.kind === "hello" ? "text-white/40" : unread ? "text-white/85" : "text-white/60"
-                        }`}
-                        data-testid={`companion-line-${line.kind}`}
-                    >
-                        {line.kind === "step" ? <AskWalkIcon className="h-3.5 w-3.5" /> : null}
-                        <span className="min-w-0 truncate">{line.text}</span>
-                    </span>
-                    {/* What the dot and the ring say, for a screen reader. */}
-                    <span className="sr-only">
-                        {unread ? `, ${fillWords(words.tab.unread, {n: row.unreadCount})}` : ""}
-                        {row.muted ? `, ${words.tab.muted}` : ""}
-                    </span>
-                </span>
-                {unread ? (
-                    <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor: row.muted ? "rgb(255 255 255 / 0.35)" : NEON}} />
-                ) : null}
-            </span>
-        </>
-    );
-    // Hover is a wash, no scale (DESIGN.md section 1); a press darkens it a step.
-    // 72 tall, as the app's rows (design pass, 2026-11-06).
-    const className = "flex h-[72px] items-center gap-3 pl-4 transition-colors duration-150 ease-spring hover:bg-white/[0.04] active:bg-white/[0.07] md:pl-5";
-    return href
-        ? <Link href={href} className={className} data-testid="companion-row">{body}</Link>
-        : <div className={className} data-testid="companion-row">{body}</div>;
-}
-
-export default function CompanionsPage({words, locale = "en", frontDoor = null}: {
+export default function CompanionsPage({words, locale = "en", frontDoor = null, labels = null, talk = null}: {
     words: CompanionWords;
     locale?: string;
     /** Set only with `talk_front_door` on. */
     frontDoor?: CompanionsFrontDoor | null;
+    /**
+     * The conversation's labels and the Talk page's words: with both, the tab
+     * is the chat (the owner, 2026-11-06). Without them (the dev gallery), the
+     * roster of rows.
+     */
+    labels?: AskDrawerLabels | null;
+    talk?: TalkWords | null;
 }) {
     const {isAuthenticated} = useAppShellChrome();
-    return isAuthenticated ? <YourCompanions words={words} locale={locale} frontDoor={frontDoor} /> : <SignedOutCompanions words={words} />;
+    return isAuthenticated
+        ? <YourCompanions words={words} locale={locale} frontDoor={frontDoor} labels={labels} talk={talk} />
+        : <SignedOutCompanions words={words} />;
 }
 
 /**
@@ -208,7 +154,13 @@ function localLastOf(cards: CompanionCard[], row: CompanionTabRow): RosterLocalL
     return null;
 }
 
-function YourCompanions({words, locale, frontDoor}: {words: CompanionWords; locale: string; frontDoor: CompanionsFrontDoor | null}) {
+function YourCompanions({words, locale, frontDoor, labels, talk}: {
+    words: CompanionWords;
+    locale: string;
+    frontDoor: CompanionsFrontDoor | null;
+    labels: AskDrawerLabels | null;
+    talk: TalkWords | null;
+}) {
     const {rows: companions, didLoad, available, reload} = useCompanions();
     const {cards, didLoad: cardsLoaded, available: cardsAvailable, reload: reloadCards} = useCompanionCards();
     const {conversations, reload: reloadConversations} = useAnimalConversations();
@@ -250,6 +202,13 @@ function YourCompanions({words, locale, frontDoor}: {words: CompanionWords; loca
 
     // Nothing to show yet, and nothing has said there is nothing.
     const isFirstLoad = roster.length === 0 && !(didLoad && cardsLoaded);
+
+    // The tab is the chat (the owner, 2026-11-06): the animal they were with
+    // last, open, and the others behind its name. The roster below stays for
+    // the moments before there is anyone to talk to.
+    if (labels && talk && roster.length > 0) {
+        return <CompanionsChat entries={roster} cards={cards} words={words} labels={labels} talk={talk} locale={locale} />;
+    }
     // Under the front door's band, the next band starts at its edge: no gap, no second hairline.
     const top = frontDoor ? "mt-0" : "mt-4";
     const ruled = frontDoor ? "border-b" : "border-y";

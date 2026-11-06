@@ -2706,7 +2706,9 @@
       "mastered": "Mastered",
       "myCompanions": "My Companions",
       "masteredCount": "{n} mastered",
-      "powersEarned": "{n} Powers earned"
+      "powersEarned": "{n} Powers earned",
+      "switcher": "Your animals",
+      "talking": "Talking"
     },
     "stages": {
       "met": "Met",

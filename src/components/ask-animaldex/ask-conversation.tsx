@@ -443,6 +443,12 @@ export type AskConversationPage = {
      * Absent, the provider's subject is used, as in the drawer.
      */
     subject?: {subject: AskSubject; avatarUrl: string | null; companionSpeciesProfileId: string | null} | null;
+    /**
+     * The Companions tab's chat (the owner, 2026-11-06): the header's name is
+     * the switch to another of their animals, like a model switcher, with a
+     * dot while that many other animals have written.
+     */
+    switcher?: {label: string; othersUnread: number; onOpen: () => void} | null;
 };
 
 type AskMemoryFact = {id?: string; fact: string; animal: string | null; noted_at: string | null; source?: string; pinned?: boolean};
@@ -2827,9 +2833,28 @@ export default function AskConversation({
                             else its temperament. "Not this any more" is in the ••• menu. */}
                         <div className="min-w-0 flex-1">
                             <p className="flex min-w-0 items-center gap-1.5">
-                                <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
-                                    {messenger ? speakerName : animalName ?? labels.title}
-                                </span>
+                                {onPage && page?.switcher ? (
+                                    // The name as the switch (the owner, 2026-11-06): the Companions tab's chat.
+                                    <button
+                                        type="button"
+                                        onClick={page.switcher.onOpen}
+                                        aria-label={`${messenger ? speakerName : animalName ?? labels.title}, ${page.switcher.label}`}
+                                        data-testid="companion-switcher"
+                                        className="-mx-1 flex min-w-0 items-center gap-1 rounded-pill px-1 text-left transition-colors hover:bg-white/[0.06] active:bg-white/10"
+                                    >
+                                        <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
+                                            {messenger ? speakerName : animalName ?? labels.title}
+                                        </span>
+                                        <span className="relative shrink-0 text-ink-300" aria-hidden="true">
+                                            <SwitchChevronIcon />
+                                            {page.switcher.othersUnread > 0 ? <span className="absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-primary-400" /> : null}
+                                        </span>
+                                    </button>
+                                ) : (
+                                    <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-white">
+                                        {messenger ? speakerName : animalName ?? labels.title}
+                                    </span>
+                                )}
                                 {/* SPEC 3.1: the AI tag, always visible in the chat's header. */}
                                 <AiTag label={labels.aiTagLabel} linksToSafety />
                             </p>
@@ -4547,3 +4572,12 @@ const MenuIcon = () => (
         <path d="M3.5 6h13M3.5 10h13M3.5 14h9" />
     </svg>
 );
+
+/** The switcher's chevron after the name (the Companions tab's chat): the line opens. */
+function SwitchChevronIcon() {
+    return (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}

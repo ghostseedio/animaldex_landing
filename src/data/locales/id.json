@@ -2692,7 +2692,9 @@
       "mastered": "Dikuasai",
       "myCompanions": "Teman Saya",
       "masteredCount": "{n} dikuasai",
-      "powersEarned": "{n} Kekuatan didapatkan"
+      "powersEarned": "{n} Kekuatan didapatkan",
+      "switcher": "Hewan Anda",
+      "talking": "Sedang mengobrol"
     },
     "stages": {
       "met": "Baru bertemu",

@@ -7,6 +7,8 @@ import {getTalkPickerRows} from "@/data/talk-animals";
 import {isAppFeatureOn} from "@/lib/app-feature-flags";
 import {getLocalePath} from "@/lib/site";
 import {TALK_FRONT_DOOR_FLAG, talkFrontDoorWords} from "@/lib/talk-front-door";
+import {getAskDrawerLabels} from "@/loaders/ask-labels";
+import {talkWords} from "@/lib/ask-animaldex/talk";
 
 /**
  * The Talk front door, only with its remote switch on (AnimalDex
@@ -34,6 +36,13 @@ export default async function AppHomePage({
     params: {locale: string};
 }) {
     if (searchParams?.view === "collectors") redirect(getLocalePath(params.locale, "/app/explore?view=collectors"));
-    const [words, frontDoor] = await Promise.all([getCompanionWords(params.locale), loadFrontDoor(params.locale)]);
-    return <CompanionsPage words={words} locale={params.locale} frontDoor={frontDoor} />;
+    // The tab is the chat (the owner, 2026-11-06): the conversation's own
+    // labels and the Talk page's words come with it.
+    const [words, frontDoor, labels, messages] = await Promise.all([
+        getCompanionWords(params.locale),
+        loadFrontDoor(params.locale),
+        getAskDrawerLabels(params.locale),
+        loadLocaleMessages(params.locale).catch(() => null)
+    ]);
+    return <CompanionsPage words={words} locale={params.locale} frontDoor={frontDoor} labels={labels} talk={talkWords(messages?.talkPage)} />;
 }
