@@ -18,10 +18,16 @@ export async function GET(_: Request, {params}: {params: {id: string}}) {
     const errorText = typeof analysis?.error_message === "string" ? analysis.error_message.trim() : "";
     const failed = Boolean(errorText) || capture.status === "failed";
     const failureCode = failed ? classifyCaptureFailure({errorCode: errorText || null, message: errorText || null}) : null;
-    const {error_message: _withheld, ...readable} = analysis ?? {error_message: null};
     return NextResponse.json({
         status: capture.status,
         failure_code: failureCode,
-        analysis: analysis ? {...readable, failed} : null
+        analysis: analysis ? {
+            animal_name: analysis.animal_name,
+            scientific_name: analysis.scientific_name,
+            normalized_identity_key: analysis.normalized_identity_key,
+            confidence: analysis.confidence,
+            completed_at: analysis.completed_at,
+            failed
+        } : null
     });
 }
