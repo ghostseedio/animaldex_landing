@@ -2603,7 +2603,8 @@
     "gateClose": "Close",
     "goodMorning": "Good morning, {name}",
     "goodAfternoon": "Good afternoon, {name}",
-    "goodEvening": "Good evening, {name}"
+    "goodEvening": "Good evening, {name}",
+    "sayHey": "Say 'hey' to {name}"
   },
   "wildProfile": {
     "eyebrow": "Identity",

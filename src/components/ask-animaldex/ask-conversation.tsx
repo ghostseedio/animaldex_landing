@@ -289,6 +289,7 @@ export type AskDrawerLabels = {
     goodMorning: string;
     goodAfternoon: string;
     goodEvening: string;
+    sayHey: string;
     aiNotice: string;
     aiNoticeLong: string;
     aiNoticeBreak: string;
@@ -1538,6 +1539,9 @@ export default function AskConversation({
     const speakerName = nickname ?? animalName ?? labels.title;
     // The tab opens ready to type (the owner, 2026-11-06, after the Claude app).
     const rootSwitcher = onPage && page?.switcher ? page.switcher : null;
+    // The bar is one line at rest; the controls' row with the animal's pill comes while the field has focus (the owner, 2026-11-06).
+    const [composerFocused, setComposerFocused] = useState(false);
+    const stacked = Boolean(rootSwitcher) && composerFocused;
     useEffect(() => {
         if (!rootSwitcher) return;
         const handle = window.setTimeout(() => composerRef.current?.focus(), 450);
@@ -1557,12 +1561,9 @@ export default function AskConversation({
     // The animal's face is its icon art, never a capture photo.
     const faceUrl = speaksAsAnimal ? avatarUrl : photoUrl;
     // The owner's own chat with no step open: what to bring it (newcomer UX vet, P0-2).
-    const placeholder = messenger && animalName && ownerChat && !openStep
-        ? fillWords(labels.companions.journey.chat.placeholder, {name: speakerName})
-        : messenger && animalName && !(aboutTrial && !hasConversation)
-        ? (nickname
-            ? labels.placeholderNamed.replace("{name}", nickname)
-            : labels.placeholderFollowUpAnimal.replace("{animal}", animalName))
+    // Concise (the owner, 2026-11-06): "Say 'hey' to Luna".
+    const placeholder = messenger && animalName && !(aboutTrial && !hasConversation)
+        ? labels.sayHey.replace("{name}", nickname ?? animalName)
         : hasConversation
         ? (speaksAsAnimal && animalName
             ? labels.placeholderFollowUpAnimal.replace("{animal}", animalName)
@@ -2614,6 +2615,8 @@ export default function AskConversation({
                                 name={rootSwitcher && messages.length === 0 ? greetingLine(labels, rootSwitcher.personName ?? null) : speakerName}
                                 // Its Power on one line under the name (DESIGN.md section 3); how it is, when it has none.
                                 subtitle={rootSwitcher && messages.length === 0 ? speakerName : (hints.principleName?.trim() || heroSubtitle)}
+                                // No AI badge in the input (the owner, 2026-11-06): the tag sits by the name here at the tab's root.
+                                aiTag={rootSwitcher ? <AiTag label={labels.aiTagLabel} linksToSafety /> : null}
                                 avatarUrl={faceUrl}
                                 // Only before there is a level: once the header shows "Gray Wolf · Level 4",
                                 // the card does not say it again (owner, 2026-11-06).
@@ -3109,14 +3112,7 @@ export default function AskConversation({
                             <ArrowDownIcon />
                         </button>
                     ) : null}
-                    {messenger && !showingMemory && !showingBond && !showingSoundCredits && !reporting && !debateEdit ? (
-                        <AskSuggestionBar
-                            suggestions={dockedSuggestions}
-                            onPick={(prompt) => submit(prompt, "followup")}
-                            disabled={isSending && greetingState !== "loading"}
-                            sayLabel={labels.say}
-                        />
-                    ) : null}
+                    {/* No chips above the bar (the owner, 2026-11-06): a step, a debate or a Trial keeps its own card in the thread. */}
                     {messenger && quota.reached && !showingMemory ? (
                         <div className="pb-1">{limitNoticeContent}</div>
                     ) : (
@@ -3238,7 +3234,7 @@ export default function AskConversation({
                                     else submit(composer, "form");
                                 }}
                                 // The message bar is a control, a capsule like the apps' composer: never a square box.
-                                className={`flex items-end gap-2 border border-white/12 bg-white/[0.06] backdrop-blur-xl py-1.5 ${rootSwitcher ? "flex-wrap rounded-panel px-2.5" : `rounded-pill ${reporting ? "pl-1.5" : "pl-4"} pr-1.5`} focus-within:border-primary-300/45`}
+                                className={`flex items-end gap-2 border border-white/12 bg-white/[0.06] backdrop-blur-xl py-1.5 ${stacked ? "flex-wrap rounded-panel px-2.5" : rootSwitcher ? "rounded-pill pl-2.5 pr-1.5" : `rounded-pill ${reporting ? "pl-1.5" : "pl-4"} pr-1.5`} focus-within:border-primary-300/45`}
                             >
                                 {reporting ? (
                                     <>
@@ -3268,8 +3264,8 @@ export default function AskConversation({
                                     // A new animal from the composer (the owner, 2026-11-06, after the Claude app's "+").
                                     <ComposerPlusMenu capture={rootSwitcher.capture} />
                                 ) : null}
-                                {rootSwitcher ? (
-                                    // The animal as the pill, like a model switcher (the owner), with the AI tag always in view.
+                                {stacked && rootSwitcher ? (
+                                    // The animal as the pill, like a model switcher (the owner), while they type. No AI badge in the input (the owner): the tag sits on the animal's card.
                                     <button
                                         type="button"
                                         onClick={rootSwitcher.onOpen}
@@ -3278,7 +3274,6 @@ export default function AskConversation({
                                         className="mb-0.5 mr-auto flex h-9 max-w-[12rem] shrink-0 items-center gap-1 rounded-pill bg-white/[0.08] pl-3 pr-1.5 text-left transition-colors hover:bg-white/15"
                                     >
                                         <span className="min-w-0 truncate text-[13px] font-semibold leading-5 text-white">{messenger ? speakerName : animalName ?? labels.title}</span>
-                                        <AiTag label={labels.aiTagLabel} linksToSafety />
                                         <span className="relative shrink-0 text-ink-300" aria-hidden="true">
                                             <SwitchChevronIcon />
                                             {rootSwitcher.othersUnread > 0 ? <span className="absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-primary-400" /> : null}
@@ -3309,7 +3304,9 @@ export default function AskConversation({
                                             else submit(composer, "form");
                                         }
                                     }}
-                                    className={`max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400 ${rootSwitcher ? "order-first basis-full px-1.5" : ""}`}
+                                    className={`max-h-[8.25rem] min-h-[2.25rem] w-full resize-none bg-transparent py-1.5 text-[15px] leading-6 text-white outline-none placeholder:text-ink-400 ${stacked ? "order-first basis-full px-1.5" : rootSwitcher ? "px-1.5" : ""}`}
+                                    onFocus={() => setComposerFocused(true)}
+                                    onBlur={() => setComposerFocused(false)}
                                 />
                                 {messenger && animalName && askCallsOffered(context?.signedIn === true) && !debateEdit && !reporting && !showStop ? (
                                     // The call beside the mic, as ChatGPT's voice mode sits (the owner, 2026-11-06): with its talking 3D model (voice-call/).

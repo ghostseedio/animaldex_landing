@@ -2589,7 +2589,8 @@
     "gateClose": "Tutup",
     "goodMorning": "Selamat pagi, {name}",
     "goodAfternoon": "Selamat siang, {name}",
-    "goodEvening": "Selamat malam, {name}"
+    "goodEvening": "Selamat malam, {name}",
+    "sayHey": "Sapa {name}"
   },
   "wildProfile": {
     "eyebrow": "Identitas",

@@ -106,6 +106,7 @@ export function AskAnimalFace({url, size, className = ""}: {url: string | null; 
 export function AskAnimalHero({
     name,
     subtitle,
+    aiTag = null,
     avatarUrl,
     bondLabel,
     onBond,
@@ -114,6 +115,8 @@ export function AskAnimalHero({
     name: string;
     /** Its Power, on one line; else how it is. */
     subtitle: string | null;
+    /** The AI tag by the subtitle (shared SPEC section 3.1), where the chat's header no longer carries it (the owner, 2026-11-06). */
+    aiTag?: ReactNode;
     avatarUrl: string | null;
     /** "Level 4 · Working together" on the owner's chat. */
     bondLabel?: string | null;
@@ -129,7 +132,12 @@ export function AskAnimalHero({
                 <AskAnimalFace url={avatarUrl} size={72} className="ring-1 ring-primary-400/60" />
             </div>
             <h2 className="mt-2 max-w-full truncate font-display text-[17px] font-semibold leading-6 text-white">{name}</h2>
-            {subtitle ? <p className="mt-0.5 max-w-full truncate text-[13px] leading-[18px] text-ink-300">{subtitle}</p> : null}
+            {subtitle || aiTag ? (
+                <p className="mt-0.5 flex max-w-full items-center justify-center gap-1.5 text-[13px] leading-[18px] text-ink-300">
+                    {subtitle ? <span className="min-w-0 truncate">{subtitle}</span> : null}
+                    {aiTag}
+                </p>
+            ) : null}
             {showsBond ? (
                 <button
                     type="button"
@@ -394,7 +402,15 @@ export function AskReplyBubbles({
                                 data-testid={carries ? "special-message" : undefined}
                             >
                                 {piece.isPlain
-                                    ? (renderPlain
+                                    ? (plain && !isLive && index === lastBubble && trailing
+                                        // The speaker after the last word, on the same line (the owner, 2026-11-06): the last paragraph runs inline and the controls follow it.
+                                        ? <span className="[&>*>p:last-child]:inline [&>p:last-child]:inline">
+                                            {renderPlain
+                                                ? renderPlain({text: piece.text, sparkle, index: plainIndex, pieceIndex: index})
+                                                : <AskPlainBubbleText text={piece.text} sparkle={sparkle} />}
+                                            <span className="ml-1 inline-flex items-center gap-0.5 align-middle" data-testid="reply-controls-inline">{trailing}</span>
+                                        </span>
+                                        : renderPlain
                                         ? renderPlain({text: piece.text, sparkle, index: plainIndex, pieceIndex: index})
                                         : <AskPlainBubbleText text={piece.text} sparkle={sparkle} />)
                                     : (
@@ -445,8 +461,8 @@ export function AskReplyBubbles({
                 </div>
             </div>
             {/* A phone's controls: under the reply, beside nothing, so the face stays by the last bubble. */}
-            {!isLive && trailing && (plain || (lastBubble >= 0 ? !askPieceIsWide(pieces[lastBubble]) : specialHere !== null)) ? (
-                <div className={`flex items-center gap-0.5 pt-1 ${plain ? "" : "pl-9 sm:hidden"}`} data-testid="reply-controls-under">{trailing}</div>
+            {!isLive && trailing && !plain && (lastBubble >= 0 ? !askPieceIsWide(pieces[lastBubble]) : specialHere !== null) ? (
+                <div className="flex items-center gap-0.5 pl-9 pt-1 sm:hidden" data-testid="reply-controls-under">{trailing}</div>
             ) : null}
             {after ? <div className={plain ? "pt-2.5" : "pl-9 pt-2.5"}>{after}</div> : null}
         </div>

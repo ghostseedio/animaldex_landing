@@ -76,6 +76,8 @@ export async function getAskDrawerLabels(locale: string): Promise<AskDrawerLabel
         goodMorning: askT("goodMorning"),
         goodAfternoon: askT("goodAfternoon"),
         goodEvening: askT("goodEvening"),
+        // Concise (the owner, 2026-11-06): "Say 'hey' to Luna".
+        sayHey: askT("sayHey"),
         aiNotice: askT("aiNotice"),
         aiNoticeLong: askT("aiNoticeLong"),
         aiNoticeBreak: askT("aiNoticeBreak"),
