@@ -23,6 +23,8 @@ import {animalLevel} from "@/lib/animal-level";
 import {getMyWildlifeGuidePurchases, getVirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/profile-shop-labels";
 import {PROBLEM_DIARY_WORD_KEYS, type ProblemDiaryWords} from "@/lib/problem-diary";
+import {loadAppFeatureFlags} from "@/data/app-feature-flags";
+import {isAppFeatureOn} from "@/lib/app-feature-flags";
 
 function profilePath(handle: string) {
     return `/u/${encodeURIComponent(handle)}`;
@@ -33,8 +35,10 @@ function profilePath(handle: string) {
  * every card, private ones included) — not the 48 newest public Discover rows a
  * visitor sees. Cards open on the web app's card page.
  */
-async function getOwnerHistoryCaptures(): Promise<PublicProfileCapture[]> {
-    const captures = await getAppCaptures().catch(() => []);
+async function getOwnerHistoryCaptures(): Promise<PublicProfileCapture[] | null> {
+    // Null when the library could not be read: the Cards tab says so (iOS), never "No captures yet."
+    const captures = await getAppCaptures(2000, {throwOnError: true}).catch(() => null);
+    if (!captures) return null;
     return captures.map((capture) => ({
         id: capture.captureId,
         animalName: capture.displayName,
@@ -119,7 +123,8 @@ export async function ProfilePageBody({
                     href: binder.href
                 }))
                 : null,
-            historyCaptures
+            historyCaptures: historyCaptures ?? [],
+            historyFailed: historyCaptures === null
         };
     }
 
@@ -132,13 +137,15 @@ export async function ProfilePageBody({
         : Promise.all([getPublicDebates(profile.userId), getCompanionWords(locale)])
             .then(([debates, words]) => ({debates, words}))
             .catch(() => null);
-    const [listedPacks, social, virtualGuides, boughtGuides, publicDebates] = await Promise.all([
+    const [listedPacks, social, virtualGuides, boughtGuides, publicDebates, featureFlags] = await Promise.all([
         listedPacksPromise,
         // Also records this visit as a profile view for a signed-in non-owner.
         getProfileSocialState(profile.userId),
         virtualGuidesPromise,
         boughtGuidesPromise,
-        publicDebatesPromise
+        publicDebatesPromise,
+        // The Shop's remote switches (packs and guide sales are paused by them).
+        loadAppFeatureFlags().catch(() => ({}))
     ]);
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
@@ -208,7 +215,8 @@ export async function ProfilePageBody({
                     recentCaptures: profile.recentCaptures,
                     pets: profile.pets,
                     canViewLocations,
-                    captureGridSort: profile.captureGridSort
+                    captureGridSort: profile.captureGridSort,
+                    captureGridCaptureIds: profile.captureGridCaptureIds
                 }}
                 labels={{
                     profileTitle: t("title"),
@@ -277,7 +285,17 @@ export async function ProfilePageBody({
                     packMarketplaceEmpty: t("packMarketplaceEmpty"),
                     packListedBy: t("packListedBy"),
                     packBuyInApp: t("packBuyInApp"),
-                    viewSignedInAs: t("viewSignedInAs")
+                    viewSignedInAs: t("viewSignedInAs"),
+                    cardsEmpty: t("cardsEmpty"),
+                    cardsNothingSelected: t("cardsNothingSelected"),
+                    captureAction: t("captureAction"),
+                    tryAgain: t("tryAgain"),
+                    statWaitingForName: t("statWaitingForName"),
+                    collectionValue: t("collectionValue"),
+                    bondCompanionOne: t("bondCompanionOne"),
+                    bondCompanionMany: t("bondCompanionMany"),
+                    bondPowerOne: t("bondPowerOne"),
+                    bondPowerMany: t("bondPowerMany")
                 }}
                 companionWords={companionWords}
                 publicDebates={publicDebates}
@@ -297,6 +315,11 @@ export async function ProfilePageBody({
                 signInHref={`/account?next=${encodeURIComponent(profilePath(profile.username))}`}
                 surface={surface}
                 displayCurrency={displayCurrency}
+                shopFeatures={{
+                    cardPacks: isAppFeatureOn(featureFlags, "card_packs"),
+                    guideSales: isAppFeatureOn(featureFlags, "guide_sales"),
+                    creatorEarnings: isAppFeatureOn(featureFlags, "creator_earnings")
+                }}
                 shareButton={
                     <ShareProfileButton
                         url={pageUrl}

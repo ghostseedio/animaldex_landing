@@ -54,7 +54,15 @@ const STATUS_LABEL_KEYS = {
 } as const;
 
 /** The owner's Wildlife Guides, first in the Shop tab (iOS `ProfileWildlifeGuidesSection.ownerContent`). */
-export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], localePrefix = ""}: {initial: MyWildlifeGuides | null; labels: ProfileShopLabels; locale: string; boughtGuides?: GuideBought[]; localePrefix?: string}) {
+export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], localePrefix = "", guideSales = true}: {
+    initial: MyWildlifeGuides | null;
+    labels: ProfileShopLabels;
+    locale: string;
+    boughtGuides?: GuideBought[];
+    localePrefix?: string;
+    /** The `guide_sales` switch: off, guides are to read, and there is nothing to get paid for (iOS 163-180). */
+    guideSales?: boolean;
+}) {
     const [mine, setMine] = useState(initial);
     // A refreshed server render (after Ask AnimalDex changed guides) replaces the list.
     useEffect(() => {
@@ -323,7 +331,7 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
                     </div>
                 );
             }) : mine.growing.length === 0 && (mine.deleted?.length ?? 0) === 0 ? (
-                <GuideMessageBand title={labels.noGuidesTitle} detail="Log wild animals with location on. Each place you log them becomes a guide other explorers can buy." icon="binoculars" />
+                <GuideMessageBand title={labels.noGuidesTitle} detail={guideSales ? labels.noGuidesSalesDetail : labels.noGuidesReadDetail} icon="binoculars" />
             ) : null}
 
             {mine.growing.length > 0 ? (
@@ -345,7 +353,7 @@ export function OwnerShopGuides({initial, labels, locale, boughtGuides = [], loc
                     ))}
                 </>
             ) : null}
-            {(hasGuides || mine.sales.length > 0) && mine.settings.termsAccepted === false ? (
+            {(hasGuides || mine.sales.length > 0) && mine.settings.termsAccepted === false && guideSales ? (
                 <div className={`${GUIDE_BAND} px-[18px] py-[18px]`}>
                     <p className="font-display text-base font-bold text-white">{labels.termsTitle}</p>
                     <p className="mt-1.5 text-xs leading-5 text-white/60">{labels.termsIntro}</p>

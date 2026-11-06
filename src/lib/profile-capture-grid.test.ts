@@ -28,3 +28,21 @@ test("one cell per index, newest capture represents it, unindexed captures stay 
     const byIndex = buildProfileGridItems(captures, "index");
     assert.deepEqual(byIndex.map((item) => item.representative.id), ["e", "b", "c", "d"]);
 });
+
+test("a custom grid is the chosen captures, one cell each, in the order they were tapped", () => {
+    const captures = [
+        capture("a", 12, "2026-10-01T00:00:00Z"),
+        capture("b", 12, "2026-10-05T00:00:00Z"),
+        capture("c", null, "2026-10-03T00:00:00Z")
+    ];
+    const custom = buildProfileGridItems(captures, "custom", ["C", "a", "missing", "a"]);
+    assert.deepEqual(custom.map((item) => item.representative.id), ["c", "a"]);
+    assert.deepEqual(custom.map((item) => item.captureCount), [1, 1]);
+    // Nothing chosen yet: an empty grid ("Nothing selected yet.").
+    assert.deepEqual(buildProfileGridItems(captures, "custom", []), []);
+});
+
+test("star order is newest first on the web until it reads star ratings", () => {
+    const captures = [capture("a", 3, "2026-10-01T00:00:00Z"), capture("b", 9, "2026-10-05T00:00:00Z")];
+    assert.deepEqual(buildProfileGridItems(captures, "stars").map((item) => item.representative.id), ["b", "a"]);
+});

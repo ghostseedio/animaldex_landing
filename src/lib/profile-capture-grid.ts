@@ -3,6 +3,8 @@
  * capture first; captures without an index each keep their own cell.
  */
 
+import type {ProfileCaptureGridSort} from "@/lib/profile-editor";
+
 export type ProfileGridCapture = {
     id: string;
     animalName: string;
@@ -31,7 +33,36 @@ export function formatAnimalDexNumber(value: number) {
     return `#${String(value).padStart(3, "0")}`;
 }
 
-export function buildProfileGridItems<T extends ProfileGridCapture>(captures: T[], sort: "recent" | "index"): ProfileGridItem<T>[] {
+/**
+ * The grid in the owner's order. Recent and index group by AnimalDex index;
+ * custom (iOS `customOrderedSnapshot`) is one cell per chosen capture, in the
+ * order they were tapped, and nothing else. Star order needs each card's star
+ * rating, which the web does not read yet: it shows newest first.
+ */
+export function buildProfileGridItems<T extends ProfileGridCapture>(
+    captures: T[],
+    sort: ProfileCaptureGridSort,
+    customCaptureIds: string[] = []
+): ProfileGridItem<T>[] {
+    if (sort === "custom") {
+        const byId = new Map(captures.map((capture) => [capture.id.toLowerCase(), capture] as const));
+        const seen = new Set<string>();
+        return customCaptureIds.flatMap((raw) => {
+            const id = raw.toLowerCase();
+            const capture = byId.get(id);
+            if (!capture || seen.has(id)) return [];
+            seen.add(id);
+            return [{
+                id: `capture:${id}`,
+                representative: capture,
+                animalDexNumber: capture.animalDexNumber,
+                captureCount: 1,
+                level: capture.level ?? 1,
+                isMovingMedia: capture.isMovingMedia
+            }];
+        });
+    }
+
     const groups = new Map<string, T[]>();
     for (const capture of captures) {
         const key = capture.animalDexNumber != null ? `index:${capture.animalDexNumber}` : `capture:${capture.id.toLowerCase()}`;

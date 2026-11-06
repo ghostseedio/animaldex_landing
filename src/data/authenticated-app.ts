@@ -720,8 +720,8 @@ export async function getAppCreditBalance(session?: Awaited<ReturnType<typeof ge
     return data?.balance == null ? 0 : Number(data.balance);
 }
 
-export async function getAppCaptures(limit = 2000) {
-    const captures = await getUserCaptures(limit);
+export async function getAppCaptures(limit = 2000, options: {throwOnError?: boolean} = {}) {
+    const captures = await getUserCaptures(limit, options);
 
     return enrichAppCaptures(captures);
 }

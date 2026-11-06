@@ -2338,7 +2338,7 @@
       "packsForSale": "{count} for sale",
       "noActiveListings": "No active listings",
       "manage": "Manage",
-      "waysToEarn": "Ways to earn",
+      "waysToEarn": "Earn by selling",
       "waysToEarnDetail": "Credits and real money",
       "nothingListedTitle": "Nothing listed yet",
       "nothingListedDetail": "This collector doesn't have any packs or Wildlife Guides available right now.",
@@ -2367,7 +2367,9 @@
       "salePaidOut": "{amount} paid to your Earnings.",
       "saleRefundedNoReply": "Refunded: no reply within 48 hours. {amount} not earned.",
       "saleRefunded": "Refunded to the buyer.",
-      "statusSalesPaused": "Sales paused"
+      "statusSalesPaused": "Sales paused",
+      "noGuidesSalesDetail": "Log wild animals with location on. Each place you log them becomes a guide other explorers can buy.",
+      "noGuidesReadDetail": "Log wild animals with location on. Each place you log them becomes a guide other explorers can read."
     },
     "editor": {
       "title": "Edit Profile",
@@ -2442,7 +2444,17 @@
       "openDebate": "See the debate",
       "didIt": "I've done it",
       "back": "Back"
-    }
+    },
+    "cardsEmpty": "No captures yet.",
+    "cardsNothingSelected": "Nothing selected yet.",
+    "captureAction": "Capture",
+    "tryAgain": "Try again",
+    "statWaitingForName": "Waiting for a name",
+    "collectionValue": "Collection value",
+    "bondCompanionOne": "1 companion",
+    "bondCompanionMany": "{count} companions",
+    "bondPowerOne": "1 Power earned",
+    "bondPowerMany": "{count} Powers earned"
   },
   "errors": {
     "notFound": {

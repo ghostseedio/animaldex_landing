@@ -176,7 +176,13 @@ export async function getAuthenticatedUserId() {
     return user?.id ?? null;
 }
 
-export async function getUserCaptures(limit = 2000): Promise<UserCaptureSummary[]> {
+/**
+ * The signed-in person's finished cards, newest first. A read that fails part
+ * way keeps what came back; with `throwOnError`, a first page that fails
+ * throws instead of reading as an empty library (the profile's Cards tab says
+ * so, as iOS does, rather than "No captures yet.").
+ */
+export async function getUserCaptures(limit = 2000, options: {throwOnError?: boolean} = {}): Promise<UserCaptureSummary[]> {
     const supabase = createSupabaseServerClient();
 
     if (!supabase) {
@@ -201,6 +207,9 @@ export async function getUserCaptures(limit = 2000): Promise<UserCaptureSummary[
             .order("capture_created_at", {ascending: false})
             .range(offset, offset + pageSize - 1);
 
+        if (error && offset === 0 && options.throwOnError) {
+            throw new Error(`owned_capture_manifest_v1: ${error.message}`);
+        }
         if (error || !data?.length) {
             break;
         }

@@ -18,6 +18,6 @@ export const PROFILE_SHOP_LABEL_KEYS = [
     "termsRead", "termsAge", "termsAccept", "termsFailed", "boughtGuides", "refunded", "by",
     "termsIntro", "termsHeld", "salesTitle", "salesMessage", "salesBuyer",
     "saleAwaiting", "saleAwaitingLate", "salePending", "saleHeld", "salePaidOut", "saleRefundedNoReply", "saleRefunded",
-    "statusSalesPaused"
+    "statusSalesPaused", "noGuidesSalesDetail", "noGuidesReadDetail"
 ] as const;
 

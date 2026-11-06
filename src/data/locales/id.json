@@ -2327,7 +2327,7 @@
       "packsForSale": "{count} dijual",
       "noActiveListings": "Tidak ada listing aktif",
       "manage": "Kelola",
-      "waysToEarn": "Cara menghasilkan",
+      "waysToEarn": "Hasilkan dengan menjual",
       "waysToEarnDetail": "Kredit dan uang sungguhan",
       "nothingListedTitle": "Belum ada yang dijual",
       "nothingListedDetail": "Kolektor ini belum punya paket atau Wildlife Guides yang tersedia saat ini.",
@@ -2356,7 +2356,9 @@
       "salePaidOut": "{amount} sudah masuk ke Pendapatanmu.",
       "saleRefundedNoReply": "Dikembalikan: tidak ada balasan dalam 48 jam. {amount} tidak didapat.",
       "saleRefunded": "Dikembalikan ke pembeli.",
-      "statusSalesPaused": "Penjualan dijeda"
+      "statusSalesPaused": "Penjualan dijeda",
+      "noGuidesSalesDetail": "Catat hewan liar dengan lokasi aktif. Setiap tempat Anda mencatatnya menjadi panduan yang bisa dibeli penjelajah lain.",
+      "noGuidesReadDetail": "Catat hewan liar dengan lokasi aktif. Setiap tempat Anda mencatatnya akan menjadi panduan yang bisa dibaca penjelajah lain."
     },
     "editor": {
       "title": "Edit Profil",
@@ -2431,7 +2433,17 @@
       "openDebate": "Lihat debatnya",
       "didIt": "Sudah kulakukan",
       "back": "Kembali"
-    }
+    },
+    "cardsEmpty": "Belum ada tangkapan.",
+    "cardsNothingSelected": "Belum ada yang dipilih.",
+    "captureAction": "Tangkap",
+    "tryAgain": "Coba lagi",
+    "statWaitingForName": "Menunggu nama",
+    "collectionValue": "Nilai koleksi",
+    "bondCompanionOne": "1 teman",
+    "bondCompanionMany": "{count} teman",
+    "bondPowerOne": "1 Kekuatan diraih",
+    "bondPowerMany": "{count} Kekuatan diraih"
   },
   "errors": {
     "notFound": {

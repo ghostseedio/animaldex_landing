@@ -9,6 +9,7 @@ import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-s
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {animalLevel} from "@/lib/animal-level";
 import {isHomoSapiens} from "@/lib/people-never-public";
+import {parseCaptureGridSort, type ProfileCaptureGridSort} from "@/lib/profile-editor";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,28}[a-z0-9])?$/;
@@ -27,6 +28,7 @@ type ProfileRow = {
     chrome_preset?: string | null;
     location_visibility?: string | null;
     capture_grid_sort?: string | null;
+    capture_grid_capture_ids?: string[] | null;
 };
 
 type PublicCaptureRow = {
@@ -278,7 +280,9 @@ export type PublicProfileCard = {
     pets: PublicProfilePet[];
     locationVisibility: ProfileLocationVisibility;
     /** iOS `UserProfile.captureGridSort`: the owner's choice in the profile editor. */
-    captureGridSort: "recent" | "index";
+    captureGridSort: ProfileCaptureGridSort;
+    /** iOS `UserProfile.captureGridCaptureIDs`: a custom grid's captures, in the order they were tapped. */
+    captureGridCaptureIds: string[];
     /** Raw metric — callers must gate on `locationVisibility` before showing it. */
     discoveryDistanceMeters: number | null;
 };
@@ -718,7 +722,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
     if (!handle) return null;
 
     const profileParams = new URLSearchParams({
-        select: "id,username,display_name,avatar_url,bio,instagram_url,is_pro,created_at,chrome_preset,location_visibility,capture_grid_sort",
+        select: "id,username,display_name,avatar_url,bio,instagram_url,is_pro,created_at,chrome_preset,location_visibility,capture_grid_sort,capture_grid_capture_ids",
         username: `eq.${handle}`,
         limit: "1"
     });
@@ -985,7 +989,10 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         recentCaptures,
         pets,
         locationVisibility: normalizeLocationVisibility(profile.location_visibility),
-        captureGridSort: profile.capture_grid_sort?.trim().toLowerCase() === "index" ? "index" : "recent",
+        captureGridSort: parseCaptureGridSort(profile.capture_grid_sort),
+        captureGridCaptureIds: Array.isArray(profile.capture_grid_capture_ids)
+            ? profile.capture_grid_capture_ids.filter((id): id is string => typeof id === "string").map((id) => id.toLowerCase())
+            : [],
         discoveryDistanceMeters:
             Number(summary?.located_observation_count ?? 0) >= MIN_LOCATED_OBSERVATIONS_FOR_DISTANCE
             && summary?.discovery_distance_meters != null

@@ -10,11 +10,14 @@ import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profi
 import {formatDisplayMoney} from "@/lib/account-settings";
 import ProfileLocationsMap from "@/app/[locale]/(composited)/u/[handle]/profile-locations-map";
 import {buildProfileGridItems, type ProfileGridItem} from "@/lib/profile-capture-grid";
-import MyCompanionsSection from "@/components/companions/my-companions-section";
+import {useCompanions} from "@/components/companions/use-companions";
 import type {CompanionWords} from "@/lib/companion-bond";
 import {DebateRow} from "@/components/debates/debate-views";
 import type {Debate} from "@/lib/debates";
-import {useSearchParams} from "next/navigation";
+import {useRouter, useSearchParams} from "next/navigation";
+import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {AppRequestError} from "@/lib/user-facing-error";
+import type {ProfileCaptureGridSort} from "@/lib/profile-editor";
 import {
     AverageTraitsCard,
     BestForTagsChartCard,
@@ -130,6 +133,19 @@ export type ProfileContentLabels = {
     packListedBy: string;
     packBuyInApp: string;
     viewSignedInAs: string;
+    /** iOS's own words for the Cards tab's empty, failed and custom grids. */
+    cardsEmpty: string;
+    cardsNothingSelected: string;
+    captureAction: string;
+    tryAgain: string;
+    /** Stats: "Waiting for a name" (not a red alarm) and "Collection value". */
+    statWaitingForName: string;
+    collectionValue: string;
+    /** The professional header's bond line: "12 companions · 3 Powers earned". */
+    bondCompanionOne: string;
+    bondCompanionMany: string;
+    bondPowerOne: string;
+    bondPowerMany: string;
 };
 
 type ProfileContentProps = {
@@ -178,7 +194,9 @@ type ProfileContentProps = {
         /** Only the captures the owner marked as pets (iOS ProfilePetSelectionResolver). */
         pets: PublicProfilePet[];
         canViewLocations: boolean;
-        captureGridSort: "recent" | "index";
+        captureGridSort: ProfileCaptureGridSort;
+        /** A custom grid's captures, in the order they were tapped. */
+        captureGridCaptureIds: string[];
     };
     labels: ProfileContentLabels;
     /** "My Companions", in the reader's language. */
@@ -204,6 +222,8 @@ type ProfileContentProps = {
         completedBinders: ProfileBinder[] | null;
         /** The owner's whole library for History (iOS reads every card, not public rows). */
         historyCaptures: PublicProfileCapture[];
+        /** The library could not be read: the Cards tab says so, never "No captures yet." */
+        historyFailed?: boolean;
     } | null;
     listedPacks: ProfileListedPack[];
     virtualGuides?: VirtualGuideProfile;
@@ -215,6 +235,12 @@ type ProfileContentProps = {
     surface?: "marketing" | "app";
     /** Settings → Currency (iOS converts the USD collection value). */
     displayCurrency?: string;
+    /**
+     * The remote switches the Shop tab reads (iOS ShopStorefrontView): packs
+     * while `card_packs` is on, earning by selling while `creator_earnings`
+     * is, and paid guides while `guide_sales` is. Off by default, as in the apps.
+     */
+    shopFeatures?: {cardPacks: boolean; guideSales: boolean; creatorEarnings: boolean};
 };
 
 /* ------------------------------------------------------------------ *
@@ -497,7 +523,8 @@ export default function ProfileContent({
     social = null,
     signInHref = "/account",
     surface = "marketing",
-    displayCurrency = "USD"
+    displayCurrency = "USD",
+    shopFeatures = {cardPacks: false, guideSales: false, creatorEarnings: false}
 }: ProfileContentProps) {
     // Shop and Locations open from the app's drawer on your own profile
     // (docs/companion-loop/SPEC.md, phase 4): `?tab=shop` / `?tab=locations`.
@@ -518,6 +545,23 @@ export default function ProfileContent({
     const historyCaptures = viewer.isOwner && ownerExtras ? ownerExtras.historyCaptures : profile.recentCaptures;
     const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
     const historySentinel = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+    const describeError = useUserFacingError();
+    // The professional header's bond line (iOS `professionalBondLine`): your
+    // companions and the Powers earned on your own, the Powers on anyone else's.
+    const companions = useCompanions(viewer.isOwner && profile.chromePreset === "professional");
+    const bondLine = useMemo(() => {
+        const parts: string[] = [];
+        const companionCount = viewer.isOwner ? companions.rows.length : 0;
+        if (companionCount > 0) {
+            parts.push(companionCount === 1 ? labels.bondCompanionOne : labels.bondCompanionMany.replace("{count}", formatAppInteger(companionCount, locale)));
+        }
+        const powers = profile.animalPowersEarned ?? 0;
+        if (powers > 0) {
+            parts.push(powers === 1 ? labels.bondPowerOne : labels.bondPowerMany.replace("{count}", formatAppInteger(powers, locale)));
+        }
+        return parts.length > 0 ? parts.join(" · ") : null;
+    }, [companions.rows.length, labels, locale, profile.animalPowersEarned, viewer.isOwner]);
 
     const speciesDenominator = profile.catalogSpeciesCount > 0 ? `/${profile.catalogSpeciesCount}` : undefined;
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
@@ -537,7 +581,10 @@ export default function ProfileContent({
     // when they have asked the public; the Shop when they list something;
     // Locations when you may see them and they have places.
     const memberHasPublicDebates = (publicDebates?.debates.length ?? 0) > 0;
-    const memberHasShop = listedPacks.length > 0 || (virtualGuides?.kind === "public" && virtualGuides.guides.length > 0);
+    // Packs paused (card_packs off): the Shop is its guides.
+    const shownPacks = shopFeatures.cardPacks ? listedPacks : [];
+    const showsEarning = shopFeatures.creatorEarnings && (shopFeatures.cardPacks || shopFeatures.guideSales);
+    const memberHasShop = shownPacks.length > 0 || (virtualGuides?.kind === "public" && virtualGuides.guides.length > 0);
     const memberHasPlaces = profile.locationVisits.length > 0;
     const tabs = useMemo<ProfileTab[]>(
         () => {
@@ -571,8 +618,8 @@ export default function ProfileContent({
         : null;
 
     const gridItems = useMemo(
-        () => buildProfileGridItems(historyCaptures, profile.captureGridSort),
-        [historyCaptures, profile.captureGridSort]
+        () => buildProfileGridItems(historyCaptures, profile.captureGridSort, profile.captureGridCaptureIds),
+        [historyCaptures, profile.captureGridSort, profile.captureGridCaptureIds]
     );
 
     // iOS reveals 18 cells at a time as the grid nears the bottom.
@@ -625,7 +672,8 @@ export default function ProfileContent({
             ...(profile.animalPowersEarned != null
                 ? [{title: "Powers earned", value: String(profile.animalPowersEarned), tint: THEME.neon}]
                 : []),
-            {title: "Unindexed captures", value: String(profile.unindexedCount), tint: "rgba(255,59,48,0.92)"},
+            // Neutral words, not a red alarm (as iOS): its re-analysis is free, and the name usually comes.
+            {title: labels.statWaitingForName, value: String(profile.unindexedCount), tint: "rgba(255,255,255,0.62)"},
             {
                 title: "Indexed",
                 value: String(profile.indexedSpeciesCount),
@@ -647,7 +695,7 @@ export default function ProfileContent({
         }
 
         return chips;
-    }, [binders, profile, speciesDenominator]);
+    }, [binders, labels.statWaitingForName, profile, speciesDenominator]);
 
     useEffect(() => {
         const onScroll = () => {
@@ -771,62 +819,61 @@ export default function ProfileContent({
                     ) : null
             ) : null}
 
-            {activeChromePreset === "friend" ? (
+            {/* No pets, no band (iOS IOS-24): the top of a profile is too valuable for "No pets yet". */}
+            {activeChromePreset === "friend" && friendPets.length > 0 ? (
                 <section>
                     <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-primary-200">Pets</p>
-                    {friendPets.length === 0 ? (
-                        <div className="mt-2 space-y-1 py-1">
-                            <p className="text-sm font-bold text-white">No pets yet</p>
-                            <p className="text-xs font-medium text-white/45">Favorite pet captures will show up here.</p>
-                        </div>
-                    ) : (
-                        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                            {friendPets.map((pet) => (
-                                // iOS ProfilePetCell: the species artwork over the pet's name.
-                                <Link
-                                    key={pet.captureId}
-                                    href={`${localePrefix}/app/capture/${encodeURIComponent(pet.captureId)}`}
-                                    className="flex h-[78px] w-[78px] shrink-0 flex-col items-center justify-center gap-1.5 border border-white/[0.08] bg-white/[0.04] px-1.5 transition hover:border-primary-400/40"
-                                >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={pet.speciesSlug ? getSpeciesArtworkRoute(pet.speciesSlug) : "/images/placeholders/species-no-image.svg"}
-                                        alt=""
-                                        loading="lazy"
-                                        className="h-[30px] w-[30px] object-contain"
-                                    />
-                                    <p className="w-full truncate text-center text-[12px] font-black text-white">{pet.name}</p>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
+                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                        {friendPets.map((pet) => (
+                            // iOS ProfilePetCell: the species artwork over the pet's name.
+                            <Link
+                                key={pet.captureId}
+                                href={`${localePrefix}/app/capture/${encodeURIComponent(pet.captureId)}`}
+                                className="flex h-[78px] w-[78px] shrink-0 flex-col items-center justify-center gap-1.5 border border-white/[0.08] bg-white/[0.04] px-1.5 transition hover:border-primary-400/40"
+                            >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={pet.speciesSlug ? getSpeciesArtworkRoute(pet.speciesSlug) : "/images/placeholders/species-no-image.svg"}
+                                    alt=""
+                                    loading="lazy"
+                                    className="h-[30px] w-[30px] object-contain"
+                                />
+                                <p className="w-full truncate text-center text-[12px] font-black text-white">{pet.name}</p>
+                            </Link>
+                        ))}
+                    </div>
                 </section>
             ) : null}
 
-            {activeChromePreset === "professional" ? (
-                <section className="space-y-2 text-sm text-white/55">
-                    {profile.bio ? <p className="leading-6">{profile.bio}</p> : null}
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                        {profile.joinedAtLabel ? <span>{labels.collectorSince.replace("{date}", profile.joinedAtLabel)}</span> : null}
-                        {profile.instagramUrl && profile.instagramDisplay ? (
-                            <a href={profile.instagramUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-primary-200">
-                                Instagram · {profile.instagramDisplay}
-                            </a>
-                        ) : null}
-                    </div>
+            {/* The bio, Instagram and the bond line; "Joined …" is on Stats (iOS design pass, 2026-11-06). */}
+            {activeChromePreset === "professional" && (profile.bio || (profile.instagramUrl && profile.instagramDisplay) || bondLine) ? (
+                <section className="flex flex-col gap-1.5">
+                    {profile.bio ? <p className="text-[13px] font-medium leading-5 text-white/60">{profile.bio}</p> : null}
+                    {profile.instagramUrl && profile.instagramDisplay ? (
+                        <a href={profile.instagramUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-start text-[11px] font-semibold text-white/60 hover:text-white">
+                            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none" /></svg>
+                            <span className="truncate">{profile.instagramDisplay}</span>
+                        </a>
+                    ) : null}
+                    {bondLine ? (
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-white/60">
+                            <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="currentColor" aria-hidden="true"><ellipse cx="6.5" cy="10" rx="2" ry="2.6" /><ellipse cx="17.5" cy="10" rx="2" ry="2.6" /><ellipse cx="9.5" cy="5.5" rx="2" ry="2.6" /><ellipse cx="14.5" cy="5.5" rx="2" ry="2.6" /><path d="M12 12c-3 0-6 4.2-6 6.4 0 1.6 1.2 2.6 2.7 2.6 1.4 0 2-.7 3.3-.7s1.9.7 3.3.7c1.5 0 2.7-1 2.7-2.6C18 16.2 15 12 12 12Z" /></svg>
+                            <span className="line-clamp-2">{bondLine}</span>
+                        </p>
+                    ) : null}
                 </section>
             ) : null}
 
             {activeChromePreset === "business" ? (
                 <section className="grid grid-cols-3 gap-2">
                     {[
-                        ["Net worth", collectionValue ?? "—"],
-                        ["Overall", formatAppInteger(profile.collectorScore, locale)],
-                        ["Catalog", profile.catalogSpeciesCount > 0 ? `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%` : "—"]
-                    ].map(([title, value]) => (
+                        [labels.collectionValue, collectionValue ?? "—", "rgba(52,199,89,0.92)"],
+                        ["Overall", formatAppInteger(profile.collectorScore, locale), THEME.neon],
+                        ["Catalog", profile.catalogSpeciesCount > 0 ? `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%` : "—", THEME.mint]
+                    ].map(([title, value, tint]) => (
                         <div key={title} className=" border border-white/10 bg-white/[0.04] p-3">
                             <p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-white/35">{title}</p>
-                            <p className="mt-1 truncate font-display text-base font-bold text-primary-100">{value}</p>
+                            <p className="mt-1 truncate text-[15px] font-extrabold" style={{color: tint}}>{value}</p>
                         </div>
                     ))}
                 </section>
@@ -890,7 +937,7 @@ export default function ProfileContent({
                     <StatChipScroller items={statChips} />
                     {collectionValue ? (
                         <StatTile
-                            title="Net Worth"
+                            title={labels.collectionValue}
                             value={collectionValue}
                             tint="rgba(52,199,89,0.92)"
                             footerText={labels.netWorthFootnote}
@@ -918,11 +965,14 @@ export default function ProfileContent({
                         isWildScope={isWildInsightScope}
                         onToggleWildScope={setIsWildInsightScope}
                     />
-                    {/* Your companions and their levels, above what you have
-                        found. Read for the signed-in viewer only, so this is
-                        the owner's own profile. */}
-                    {viewer.isOwner ? <MyCompanionsSection words={companionWords} /> : null}
+                    {/* No My Companions here (iOS, owner 2026-11-03): Companions is its own place. */}
                     {binders ? <CompletedBindersSection binders={binders} /> : null}
+                    {/* "Joined …" lives on Stats now (iOS design pass, 2026-11-06), not in the header. */}
+                    {profile.joinedAtLabel ? (
+                        <p className="px-[18px] pb-2 pt-[18px] text-[11px] font-semibold text-white/40">
+                            {labels.collectorSince.replace("{date}", profile.joinedAtLabel)}
+                        </p>
+                    ) : null}
                     {/* No raw user ID here: it meant nothing to a visitor (newcomer UX vet, 2026-10-30). */}
                 </div>
             ) : null}
@@ -937,23 +987,30 @@ export default function ProfileContent({
                             locale={locale}
                             boughtGuides={boughtGuides}
                             localePrefix={localePrefix}
+                            guideSales={shopFeatures.guideSales}
                         />
-                        <GuideBandHeader title={shopLabels.sealedPacks} />
-                        <ShopDestinationRow
-                            href={`${localePrefix}/app/train/packs`}
-                            tint="#FF9500"
-                            title={shopLabels.sealedPacks}
-                            subtitle={shopLabels.sealedPacksDetail}
-                            status={listedPacks.length > 0 ? shopLabels.packsForSale.replace("{count}", String(listedPacks.length)) : shopLabels.noActiveListings}
-                            actionTitle={shopLabels.manage}
-                        />
-                        <Link
-                            href={`${localePrefix}/earn-on-animaldex`}
-                            className="flex items-center gap-3 px-[18px] pb-7 pt-4 text-sm font-semibold text-white transition hover:opacity-80"
-                        >
-                            <span className="flex-1">{shopLabels.waysToEarn}</span>
-                            <span className="text-xs text-white/40">{shopLabels.waysToEarnDetail} ›</span>
-                        </Link>
+                        {shopFeatures.cardPacks ? (
+                            <>
+                                <GuideBandHeader title={shopLabels.sealedPacks} />
+                                <ShopDestinationRow
+                                    href={`${localePrefix}/app/train/packs`}
+                                    tint="#FF9500"
+                                    title={shopLabels.sealedPacks}
+                                    subtitle={shopLabels.sealedPacksDetail}
+                                    status={listedPacks.length > 0 ? shopLabels.packsForSale.replace("{count}", String(listedPacks.length)) : shopLabels.noActiveListings}
+                                    actionTitle={shopLabels.manage}
+                                />
+                            </>
+                        ) : null}
+                        {showsEarning ? (
+                            <Link
+                                href={`${localePrefix}/earn-on-animaldex`}
+                                className="flex items-center gap-3 px-[18px] pb-7 pt-4 text-sm font-semibold text-white transition hover:opacity-80"
+                            >
+                                <span className="flex-1">{shopLabels.waysToEarn}</span>
+                                <span className="text-xs text-white/40">{shopLabels.waysToEarnDetail} ›</span>
+                            </Link>
+                        ) : null}
                     </div>
                 ) : (
                     // iOS `publicStorefront`: the person's guides, then their packs; one empty state for neither.
@@ -963,8 +1020,8 @@ export default function ProfileContent({
                             labels={shopLabels}
                             locale={locale}
                         />
-                        {listedPacks.length > 0 ? <GuideBandHeader title={shopLabels.sealedPacks} /> : null}
-                        {listedPacks.map((pack) => (
+                        {shownPacks.length > 0 ? <GuideBandHeader title={shopLabels.sealedPacks} /> : null}
+                        {shownPacks.map((pack) => (
                             <div key={pack.id} className={`${GUIDE_BAND} px-[18px] py-4`}>
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
@@ -990,7 +1047,7 @@ export default function ProfileContent({
                                 </p>
                             </div>
                         ))}
-                        {listedPacks.length === 0 && !(virtualGuides?.kind === "public" && virtualGuides.guides.length > 0) ? (
+                        {shownPacks.length === 0 && !(virtualGuides?.kind === "public" && virtualGuides.guides.length > 0) ? (
                             <div className="px-5 py-9 text-center">
                                 <p className="font-display text-xl font-bold text-white">{shopLabels.nothingListedTitle}</p>
                                 <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/45">{shopLabels.nothingListedDetail}</p>
@@ -1049,8 +1106,36 @@ export default function ProfileContent({
 
             {activeTab === "history" ? (
                 <section>
-                    {historyCaptures.length === 0 && viewer.isOwner ? (
-                        <p className="px-[18px] py-10 text-center text-[15px] font-medium text-white/[0.62]">No captures yet.</p>
+                    {gridItems.length === 0 && viewer.isOwner && ownerExtras?.historyFailed && historyCaptures.length === 0 ? (
+                        // A failed read is not an empty library (iOS): the paw, one line and one way on.
+                        <div className="flex flex-col items-center gap-3.5 px-[18px] py-7 text-center" data-testid="profile-library-failed">
+                            <svg viewBox="0 0 24 24" className="h-[30px] w-[30px] text-white/40" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><ellipse cx="6.5" cy="10" rx="2" ry="2.6" /><ellipse cx="17.5" cy="10" rx="2" ry="2.6" /><ellipse cx="9.5" cy="5.5" rx="2" ry="2.6" /><ellipse cx="14.5" cy="5.5" rx="2" ry="2.6" /><path d="M12 12c-3 0-6 4.2-6 6.4 0 1.6 1.2 2.6 2.7 2.6 1.4 0 2-.7 3.3-.7s1.9.7 3.3.7c1.5 0 2.7-1 2.7-2.6C18 16.2 15 12 12 12Z" /></svg>
+                            <p className="text-[15px] font-medium text-white/[0.62]">{describeError(new AppRequestError(502, null))}</p>
+                            <button
+                                type="button"
+                                onClick={() => router.refresh()}
+                                className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-[#1F1F1F] px-[22px] text-[17px] font-semibold text-white transition hover:bg-[#262626]"
+                            >
+                                {labels.tryAgain}
+                            </button>
+                        </div>
+                    ) : gridItems.length === 0 && (viewer.isOwner || (profile.captureGridSort === "custom" && historyCaptures.length > 0)) ? (
+                        <div className="flex flex-col items-center gap-3.5 px-[18px] py-7 text-center">
+                            <p className="text-[15px] font-medium text-white/[0.62]">
+                                {profile.captureGridSort === "custom" ? labels.cardsNothingSelected : labels.cardsEmpty}
+                            </p>
+                            {/* Your own empty grid leads somewhere: the camera. */}
+                            {viewer.isOwner && profile.captureGridSort !== "custom" ? (
+                                <Link
+                                    href={`${localePrefix}/app/capture`}
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-full px-[22px] text-[15px] font-black text-black transition hover:brightness-105"
+                                    style={{backgroundColor: THEME.neon}}
+                                >
+                                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M9 4.5 7.6 6.5H5A2.5 2.5 0 0 0 2.5 9v8.5A2.5 2.5 0 0 0 5 20h14a2.5 2.5 0 0 0 2.5-2.5V9A2.5 2.5 0 0 0 19 6.5h-2.6L15 4.5H9Zm3 4.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" /></svg>
+                                    {labels.captureAction}
+                                </Link>
+                            ) : null}
+                        </div>
                     ) : historyCaptures.length === 0 ? (
                         <div className="mt-4 border border-dashed border-white/10 px-6 py-10 text-center">
                             <h3 className="font-display text-2xl font-bold text-white">{labels.noPublicCapturesTitle}</h3>
