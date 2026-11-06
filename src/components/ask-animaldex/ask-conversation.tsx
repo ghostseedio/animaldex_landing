@@ -1301,11 +1301,14 @@ function AskConversation({
         sticksToBottom.current = distance < 72;
         setShowsLatest(distance > 160);
     }, [messenger]);
+    // Pinned when what the thread shows changes, not on every draw: reading scrollHeight lays out
+    // the whole thread, and a keystroke in the composer drew this again (perf pass, 2026-11-06).
+    // What changes size without a draw here is followed by the observers below.
     useLayoutEffect(() => {
         if (!messenger || showingMemory || showingBond || showingSoundCredits || !sticksToBottom.current) return;
         const scroller = scrollRef.current;
         if (scroller) scroller.scrollTop = scroller.scrollHeight;
-    });
+    }, [messenger, showingMemory, showingBond, showingSoundCredits, messages, pacer.visibleText]);
     useEffect(() => {
         if (messenger && trailingQuestionId) scrollToLatest();
     }, [messenger, trailingQuestionId, scrollToLatest]);
@@ -1325,18 +1328,29 @@ function AskConversation({
             }
             lastHeight = scroller.scrollHeight;
         };
-        const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(follow);
+        // The thread's own box: a composer growing a line shortens it, and the newest words stay in view.
+        let lastClient = scroller.clientHeight;
+        const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
+            if (scroller.clientHeight !== lastClient) {
+                lastClient = scroller.clientHeight;
+                if (sticksToBottom.current && !showingMemoryRef.current) scroller.scrollTop = scroller.scrollHeight;
+            }
+            follow();
+        });
         const observeParts = () => {
             if (!resize) return;
             resize.disconnect();
+            resize.observe(scroller);
             for (const child of Array.from(scroller.children)) {
                 resize.observe(child);
                 for (const inner of Array.from(child.children)) resize.observe(inner);
             }
         };
         observeParts();
-        const mutations = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => {
-            observeParts();
+        // Observed again only when the two levels it watches gain or lose a part: a reply typing
+        // out changes text deep inside, and re-observing every row on each step was the cost.
+        const mutations = typeof MutationObserver === "undefined" ? null : new MutationObserver((records) => {
+            if (records.some((record) => record.type === "childList" && (record.target === scroller || record.target.parentNode === scroller))) observeParts();
             follow();
         });
         mutations?.observe(scroller, {childList: true, subtree: true, characterData: true});
