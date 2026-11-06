@@ -124,10 +124,12 @@ describe("every web chat carries the disclosure and asks through the gate (SPEC 
         }
     });
 
-    it("tags every chat header AI, notes it in the thread, and gates every message", () => {
+    it("tags every chat header AI (the tag opens the safety page), keeps the three-hour notice, and gates every message", () => {
         const chat = readRepo("src/components/ask-animaldex/ask-conversation.tsx");
-        assert.match(chat, /<AiTag label=\{labels\.aiTagLabel\} \/>/);
-        assert.match(chat, /<AiNotice text=\{labels\.aiNotice\}/);
+        // The header's AI tag is the disclosure and opens the safety page; the inline
+        // "Replies are AI-generated." line left the top of the chat (owner, 2026-11-06).
+        assert.match(chat, /<AiTag label=\{labels\.aiTagLabel\} linksToSafety \/>/);
+        assert.doesNotMatch(chat, /<AiNotice text=\{labels\.aiNotice\}/);
         assert.match(chat, /labels\.aiNoticeBreak : labels\.aiNoticeLong/);
         assert.match(chat, /if \(!\(await aiGate\.request\(\)\)\) return null;/);
         assert.match(chat, /aiGate\.blocked \?/);
