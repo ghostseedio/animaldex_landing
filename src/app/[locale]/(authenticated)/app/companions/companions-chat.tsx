@@ -13,7 +13,7 @@
  * under them.
  */
 
-import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
+import {startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import {plusItemInput, takePhotoOpensCameraApp, type CaptureEntry} from "@/lib/capture-entry";
 import {setPendingCaptureFile} from "@/lib/capture-handoff";
@@ -104,7 +104,9 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     useEffect(() => {
         const onSwitch = (event: Event) => {
             const id = (event as CustomEvent<string>).detail;
-            if (typeof id === "string") setSwitchedTo(id);
+            // A transition: the menu closes on the tap's own frame, and the other animal's
+            // thread draws after it without holding the page (perf pass, 2026-11-06).
+            if (typeof id === "string") startTransition(() => setSwitchedTo(id));
         };
         window.addEventListener(COMPANIONS_SWITCH_EVENT, onSwitch);
         return () => window.removeEventListener(COMPANIONS_SWITCH_EVENT, onSwitch);
