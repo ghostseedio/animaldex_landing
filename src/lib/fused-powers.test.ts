@@ -169,3 +169,11 @@ test("submit results and refusals", () => {
     assert.equal(fusedRefusalMessage("grading_unavailable"), "We could not check that right now. Nothing was used up — try again in a moment.");
     assert.equal(fusedRefusalMessage("account_too_short"), "Tell us a bit more about what you actually did.");
 });
+
+test("the one-attempt locks are read as iOS reads them, and never on an earned Power", () => {
+    assert.equal(decodeFusedPower(SAMPLE)?.trainingLocked, false);
+    assert.equal(decodeFusedPower({...SAMPLE, training_locked: true})?.trainingLocked, true);
+    assert.equal(decodeFusedPower({...SAMPLE, proof_locked: true})?.proofLocked, true);
+    assert.equal(decodeFusedPower({...SAMPLE, proof_locked: "true"})?.proofLocked, false);
+    assert.equal(decodeFusedPower({...SAMPLE, stage: "earned", earned: true, proof_locked: true})?.proofLocked, false);
+});

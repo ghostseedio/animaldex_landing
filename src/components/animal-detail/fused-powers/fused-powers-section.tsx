@@ -248,6 +248,15 @@ function MiniStepper({stage}: {stage: FusedStage}) {
     );
 }
 
+function LockedLine({text}: {text: string}) {
+    return (
+        <p className="flex items-start gap-2 text-xs font-semibold leading-5 text-white/60" data-testid="fused-locked">
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-0.5 h-3.5 w-3.5 shrink-0" fill="currentColor"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm3 0h4V7a2 2 0 0 0-4 0z" /></svg>
+            {text}
+        </p>
+    );
+}
+
 function TrainingStage({
     item,
     receiverName,
@@ -274,15 +283,20 @@ function TrainingStage({
                 {power?.example ? <p className="text-[11px] leading-5 text-white/45">{power.example}</p> : null}
             </div>
             <p className="text-[11px] font-black" style={{color: NEON_TEXT}}>{fusedTrainingRewardLine(item)}</p>
-            <button
-                type="button"
-                onClick={onStart}
-                disabled={!canStart}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:opacity-50"
-                style={{backgroundColor: NEON}}
-            >
-                {TRAINING_COPY.start} <span aria-hidden="true">→</span>
-            </button>
+            {item.trainingLocked ? (
+                // A miss waits for the next day (iOS FusedPowersSection).
+                <LockedLine text={FUSED_COPY.trainingLocked} />
+            ) : (
+                <button
+                    type="button"
+                    onClick={onStart}
+                    disabled={!canStart}
+                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-base font-bold text-black/90 disabled:opacity-50"
+                    style={{backgroundColor: NEON}}
+                >
+                    {TRAINING_COPY.start} <span aria-hidden="true">→</span>
+                </button>
+            )}
         </>
     );
 }
@@ -366,6 +380,16 @@ function ProvingStage({
         <>
             <p className="text-[11px] font-black" style={{color: NEON_TEXT}}>{fusedProvingRewardLine(item)}</p>
 
+            {item.proofLocked ? (
+                // A rejected proof waits for the next day (iOS FusedPowersSection).
+                <>
+                    <LockedLine text={FUSED_COPY.proofLocked} />
+                    <button type="button" disabled className="flex min-h-[48px] w-full items-center justify-center rounded-full bg-white/[0.08] text-base font-bold text-white/60">
+                        {FUSED_COPY.lockedButton}
+                    </button>
+                </>
+            ) : (
+            <>
             {/* Both routes earn it; one is on screen. The same full-bleed
                 segmented band as the animal's own Earn the Power. */}
             <div className="-mx-5 flex flex-col">
@@ -412,6 +436,8 @@ function ProvingStage({
                     )}
                 </div>
             </div>
+            </>
+            )}
 
             {item.attempts.lastReason ? (
                 <p className="border-l-2 pl-3 text-xs leading-5 text-white/80" style={{borderColor: `${ORANGE}8C`}}>

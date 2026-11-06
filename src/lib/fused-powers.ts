@@ -36,7 +36,11 @@ export const FUSED_COPY = {
     fusionResultLine: "Its boost switches on after its Training and Trial.",
     notReady: "This Power isn't ready yet. Try again in a minute.",
     trainingRequired: "Pass this Power's lesson check first.",
-    continue: "Continue"
+    continue: "Continue",
+    /** iOS `SpeciesTrainingCopy`: a miss waits for the next day. */
+    trainingLocked: "You missed one. Try again tomorrow.",
+    proofLocked: "Your proof wasn't accepted. Try again tomorrow.",
+    lockedButton: "Try again tomorrow"
 } as const;
 
 export const taughtByLine = (teacher: string) => `Taught by ${teacher}`;
@@ -112,6 +116,13 @@ export type FusedPower = {
     reward: {xp: number; credits: number};
     /** The reviewer's last reason, shown under the routes. */
     attempts: {lastReason: string | null};
+    /**
+     * One attempt per capture (iOS `FusedPower.trainingLocked` /
+     * `proofLocked`): a missed lesson check or a rejected proof waits. The
+     * server reports them; 3.2's no-lock rule sends them false.
+     */
+    trainingLocked: boolean;
+    proofLocked: boolean;
 };
 
 /** `submit` on the `fused-power` edge function. */
@@ -242,8 +253,9 @@ export function decodeFusedPower(raw: unknown): FusedPower | null {
             estimatedMinutes: trialRow.estimated_minutes == null ? null : num(trialRow.estimated_minutes)
         } : null,
         reward: {xp: num(rewardRow?.xp, 10), credits: Math.max(0, num(rewardRow?.credits))},
-        // `training_locked` / `proof_locked` are always false since 3.2 and are not read.
-        attempts: {lastReason: text(attemptsRow?.last_reason)}
+        attempts: {lastReason: text(attemptsRow?.last_reason)},
+        trainingLocked: !earned && row.training_locked === true,
+        proofLocked: !earned && row.proof_locked === true
     };
 }
 
