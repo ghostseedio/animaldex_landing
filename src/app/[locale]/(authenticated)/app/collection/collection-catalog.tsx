@@ -8,6 +8,7 @@ import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import {canonicalPowerKey, displayPowerLabel} from "@/lib/power-set-tags";
 import {formatAnimalDexNumber} from "@/lib/animaldex-number";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import type {CollectionDiscoveryStats} from "@/lib/collection-discovery";
 import CollectionSystemDynamics, {
     FREQUENCY_FILTER_OPTIONS,
@@ -296,12 +297,43 @@ function SortOption<T extends string>({id, title, detail, selected, onSelect}: {
     );
 }
 
+/** The grid's own words (`appCollection`), English by default. */
+export type CollectionCatalogWords = {
+    noMatchesEyebrow: string;
+    noMatchesTitle: string;
+    noMatchesDetail: string;
+    resetView: string;
+};
+
+const CATALOG_WORDS_EN: CollectionCatalogWords = {
+    noMatchesEyebrow: "NO MATCHES",
+    noMatchesTitle: "No species match this view.",
+    noMatchesDetail: "Try another animal name or clear the current filters to explore the full catalogue.",
+    resetView: "Reset view"
+};
+
+/**
+ * A species not found yet is its silhouette art on the canvas (iOS IOS-21,
+ * d1fa2511), never a greyed-out photo, so the grid reads as one set.
+ */
+function SpeciesSilhouette({slug}: {slug: string}) {
+    const url = `url(${getSpeciesArtworkRoute(slug)})`;
+    return (
+        <span
+            aria-hidden="true"
+            className="absolute inset-[18%] block bg-white/[0.16]"
+            style={{maskImage: url, WebkitMaskImage: url, maskPosition: "center", WebkitMaskPosition: "center", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskSize: "contain", WebkitMaskSize: "contain"}}
+        />
+    );
+}
+
 export default function CollectionCatalog({
     species,
     discoveryStats,
     bindersPanel = null,
     initialContentMode = "animals",
-    onContentModeChange
+    onContentModeChange,
+    words = CATALOG_WORDS_EN
 }: {
     species: CatalogSpecies[];
     discoveryStats: CollectionDiscoveryStats;
@@ -309,6 +341,7 @@ export default function CollectionCatalog({
     bindersPanel?: ReactNode;
     initialContentMode?: ContentMode;
     onContentModeChange?: (mode: ContentMode) => void;
+    words?: CollectionCatalogWords;
 }) {
     const [query, setQuery] = useState("");
     const [appliedQuery, setAppliedQuery] = useState("");
@@ -744,16 +777,39 @@ export default function CollectionCatalog({
                 bindersPanel
             ) : appliedFilters.contentMode === "animals" ? (
                 <>
+                    {filteredAnimals.length === 0 ? (
+                        // iOS "No species match this view.", with a way back to all of them.
+                        <div className="relative overflow-hidden border-y border-white/[0.08] bg-[linear-gradient(135deg,rgba(167,244,50,.055),rgba(148,84,250,.025),transparent)] px-5 py-6" data-testid="collection-no-matches">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary-400">{words.noMatchesEyebrow}</p>
+                            <p className="mt-2.5 font-display text-2xl font-black text-white">{words.noMatchesTitle}</p>
+                            <p className="mt-2 max-w-xl text-sm leading-6 text-white/60">{words.noMatchesDetail}</p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setQuery("");
+                                    setAppliedQuery("");
+                                    setPendingFilters(DEFAULT_FILTERS);
+                                    setAppliedFilters({...DEFAULT_FILTERS, contentMode: appliedFilters.contentMode});
+                                }}
+                                className="mt-1.5 inline-flex min-h-11 items-center gap-1.5 text-[13px] font-black text-primary-400"
+                            >
+                                {words.resetView} <span aria-hidden="true">→</span>
+                            </button>
+                        </div>
+                    ) : null}
                     <div className={layout === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "space-y-3"}>
                         {visibleAnimals.map((item) => (
                             <Link
                                 key={item.slug}
-                                href={`/animals/${item.slug}`}
+                                // The in-app species page, caught or not (iOS
+                                // AnimalDexSpeciesDetailView), not the public one.
+                                href={`/app/collection/species/${item.slug}`}
                                 className={`group overflow-hidden border shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:-translate-y-0.5 hover:border-primary-400/35 ${item.captured ? "border-white/10 bg-[#121212]" : "border-white/[0.06] bg-[#101010]"} ${layout === "list" ? "flex items-center" : "block"}`}
                             >
                                 <div className={`relative overflow-hidden bg-white/[0.03] ${layout === "list" ? "h-28 w-28 shrink-0" : "aspect-square"}`}>
-                                    <img src={item.imageSrc} alt="" loading="lazy" className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${item.captured ? "" : "grayscale opacity-25"}`} />
-                                    {!item.captured ? <span className="absolute inset-0 flex items-center justify-center text-white/35"><AppIcon name="lock" /></span> : null}
+                                    {item.captured
+                                        ? <img src={item.imageSrc} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+                                        : <SpeciesSilhouette slug={item.slug} />}
                                     {item.hasIndexNumber ? <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black tabular-nums text-primary-200">{formatAnimalDexNumber(item.number)}</span> : <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/45">NEW</span>}
                                     {item.isLegendary ? (
                                         <span className="absolute bottom-2 left-2 right-2 truncate rounded-full border border-amber-400/35 bg-amber-400/90 px-2 py-1 text-center text-[0.58rem] font-black uppercase tracking-[0.08em] text-black">

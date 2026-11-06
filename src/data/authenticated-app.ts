@@ -10,7 +10,7 @@ import {getSpeciesBySlug, speciesEntries, type SpeciesEntry} from "@/data/specie
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {speciesSystemsIntelligence} from "@/data/species-systems-intelligence";
 import {getDirectMessageUnreadCountForUser} from "@/data/direct-messages";
-import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCaptureStats, getUserCaptures, UserCaptureSummary} from "@/data/user-captures";
+import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCaptureStats, getUserCaptures, getUserCapturesChecked, UserCaptureSummary} from "@/data/user-captures";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {discoverPostPath} from "@/lib/discover-post";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
@@ -724,6 +724,12 @@ export async function getAppCaptures(limit = 2000, options: {throwOnError?: bool
     const captures = await getUserCaptures(limit, options);
 
     return enrichAppCaptures(captures);
+}
+
+/** The library for the Collection, and whether reading it failed (never shown as an empty collection). */
+export async function getAppCapturesChecked(limit = 2000): Promise<{captures: AppCapture[]; failed: boolean}> {
+    const {captures, failed} = await getUserCapturesChecked(limit);
+    return {captures: await enrichAppCaptures(captures), failed};
 }
 
 export async function getAppTopCaptures(limit = 6) {

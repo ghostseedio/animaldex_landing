@@ -2,7 +2,7 @@ import {Suspense} from "react";
 import {AppPage, AppPageHeader, AppPrimaryLink, AppProgress, AppSecondaryLink, AppSurface} from "@/app/[locale]/(authenticated)/app/_components/app-ui";
 import CollectionPageClient from "@/app/[locale]/(authenticated)/app/collection/collection-page-client";
 import type {CatalogSpecies} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
-import {getAppCaptures} from "@/data/authenticated-app";
+import {getAppCapturesChecked} from "@/data/authenticated-app";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getCollectionBinders} from "@/data/collection-binders";
 import {getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
@@ -19,15 +19,18 @@ import {
     latestCaptureForCatalogEntry
 } from "@/lib/collection-discovery";
 import {isHomoSapiens} from "@/lib/people-never-public";
+import {collectionShowsCount, collectionShowsProgress} from "@/lib/collection-states";
+import CollectionRetry from "@/app/[locale]/(authenticated)/app/collection/collection-retry";
 
 export default async function CollectionPage({params}: {params: {locale: string}}) {
-    const [captures, catalogEntries, behaviorPrinciples, binderData, t] = await Promise.all([
-        getAppCaptures(),
+    const [library, catalogEntries, behaviorPrinciples, binderData, t] = await Promise.all([
+        getAppCapturesChecked(),
         getUnifiedSpeciesEntries(),
         getCatalogBehaviorPrincipleIndex(),
         getCollectionBinders(),
         getScopedTranslator(params.locale, "appCollection")
     ]);
+    const captures = library.captures;
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
     // People are never public (DECISIONS section 11): no Homo sapiens entry in the catalog.
     const species: CatalogSpecies[] = catalogEntries.filter((entry) => !isHomoSapiens({slug: entry.slug, scientificName: entry.analysis.scientificName})).map((entry) => {
@@ -86,6 +89,12 @@ export default async function CollectionPage({params}: {params: {locale: string}
         ? Math.round(discoveryStats.found / discoveryStats.indexed * 100)
         : 0;
 
+    // A failed read is never an empty collection (iOS d428026e, JRN-22): the
+    // reason in plain words and Try again, never "0 found" or a table name.
+    const loadFailed = library.failed || species.length === 0;
+    const showsCount = !loadFailed && collectionShowsCount(discoveryStats.indexed);
+    const showsProgress = showsCount && collectionShowsProgress(discoveryStats.found, discoveryStats.indexed);
+
     // Newcomer UX vet (2026-10-30, P1-4): what this page is, and a count rather than a percentage.
     return (
         <AppPage>
@@ -101,28 +110,45 @@ export default async function CollectionPage({params}: {params: {locale: string}
                 )}
             />
 
-            <AppSurface>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-                    <p className="font-display text-2xl font-bold tabular-nums text-white">
-                        {t("found", {
-                            found: discoveryStats.found.toLocaleString(params.locale),
-                            total: discoveryStats.indexed.toLocaleString(params.locale)
-                        })}
-                    </p>
-                    <div className="w-full sm:max-w-xs">
-                        <AppProgress value={progress} />
-                    </div>
-                </div>
-            </AppSurface>
+            {loadFailed ? (
+                <CollectionRetry title={t("unavailableTitle")} message={t("serverMessage")} retryLabel={t("retry")} />
+            ) : (
+                <>
+                    {showsCount ? (
+                        <AppSurface>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                                <p className={`font-display text-2xl font-bold tabular-nums ${discoveryStats.found > 0 ? "text-primary-400" : "text-white"}`}>
+                                    {t("found", {
+                                        found: discoveryStats.found.toLocaleString(params.locale),
+                                        total: discoveryStats.indexed.toLocaleString(params.locale)
+                                    })}
+                                </p>
+                                {/* Under 5% the bar reads as empty; the count already says it (iOS IOS-21). */}
+                                {showsProgress ? (
+                                    <div className="w-full sm:max-w-xs">
+                                        <AppProgress value={progress} />
+                                    </div>
+                                ) : null}
+                            </div>
+                        </AppSurface>
+                    ) : null}
 
-            <Suspense fallback={<div className="h-40 animate-pulse bg-white/[0.04]" />}>
-                <CollectionPageClient
-                    species={species}
-                    discoveryStats={discoveryStats}
-                    binders={binderData.binders}
-                    binderSummary={binderData.summary}
-                />
-            </Suspense>
+                    <Suspense fallback={<div className="h-40 animate-pulse bg-white/[0.04]" />}>
+                        <CollectionPageClient
+                            species={species}
+                            discoveryStats={discoveryStats}
+                            binders={binderData.binders}
+                            binderSummary={binderData.summary}
+                            catalogWords={{
+                                noMatchesEyebrow: t("noMatchesEyebrow"),
+                                noMatchesTitle: t("noMatchesTitle"),
+                                noMatchesDetail: t("noMatchesDetail"),
+                                resetView: t("resetView")
+                            }}
+                        />
+                    </Suspense>
+                </>
+            )}
         </AppPage>
     );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
-import CollectionCatalog, {type CatalogSpecies, type ContentMode} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
+import CollectionCatalog, {type CatalogSpecies, type CollectionCatalogWords, type ContentMode} from "@/app/[locale]/(authenticated)/app/collection/collection-catalog";
 import CollectionBindersPanel from "@/app/[locale]/(authenticated)/app/collection/collection-binders-panel";
 import type {BinderIndexSummary, BinderProgress} from "@/data/collection-binder-types";
 import type {CollectionDiscoveryStats} from "@/lib/collection-discovery";
@@ -15,12 +15,14 @@ export default function CollectionPageClient({
     species,
     discoveryStats,
     binders,
-    binderSummary
+    binderSummary,
+    catalogWords
 }: {
     species: CatalogSpecies[];
     discoveryStats: CollectionDiscoveryStats;
     binders: BinderProgress[];
     binderSummary: BinderIndexSummary;
+    catalogWords?: CollectionCatalogWords;
 }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -43,6 +45,7 @@ export default function CollectionPageClient({
                 bindersPanel={<CollectionBindersPanel binders={binders} summary={binderSummary} />}
                 initialContentMode={initialMode}
                 onContentModeChange={rememberMode}
+                words={catalogWords}
             />
         </div>
     );

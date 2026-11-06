@@ -42,7 +42,7 @@ function SlotCard({slot, accent}: {slot: BinderSlot; accent: string}) {
     if (slot.isCollected) {
         return (
             <Link
-                href={slot.captureId ? `/app/capture/${slot.captureId}` : `/animals/${slot.slug}`}
+                href={slot.captureId ? `/app/capture/${slot.captureId}` : `/app/collection/species/${slot.slug}`}
                 className="overflow-hidden border border-white/10 bg-[#121212] transition hover:border-white/25"
                 style={{boxShadow: `inset 0 0 0 1px ${accent}22`}}
             >
@@ -53,7 +53,7 @@ function SlotCard({slot, accent}: {slot: BinderSlot; accent: string}) {
 
     return (
         <Link
-            href={`/animals/${slot.slug}`}
+            href={`/app/collection/species/${slot.slug}`}
             className="overflow-hidden border border-dashed border-white/10 bg-[#0f0f0f] transition hover:border-white/20"
         >
             {content}

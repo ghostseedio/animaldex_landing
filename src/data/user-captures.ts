@@ -177,26 +177,38 @@ export async function getAuthenticatedUserId() {
 }
 
 /**
- * The signed-in person's finished cards, newest first. A read that fails part
- * way keeps what came back; with `throwOnError`, a first page that fails
- * throws instead of reading as an empty library (the profile's Cards tab says
- * so, as iOS does, rather than "No captures yet.").
+ * The signed-in person's finished cards, newest first. With `throwOnError`, a
+ * read that fails with nothing held throws instead of reading as an empty
+ * library (the profile's Cards tab says so, as iOS does, rather than "No
+ * captures yet.").
  */
 export async function getUserCaptures(limit = 2000, options: {throwOnError?: boolean} = {}): Promise<UserCaptureSummary[]> {
+    const checked = await getUserCapturesChecked(limit);
+    if (checked.failed && options.throwOnError) throw new Error("owned_capture_manifest_v1: the library could not be read");
+    return checked.captures;
+}
+
+/**
+ * The library, and whether reading it failed. A read that fails with nothing
+ * held is not an empty collection: the Collection says it could not load,
+ * with Try again (iOS d428026e), rather than "0 found".
+ */
+export async function getUserCapturesChecked(limit = 2000): Promise<{captures: UserCaptureSummary[]; failed: boolean}> {
     const supabase = createSupabaseServerClient();
 
     if (!supabase) {
-        return [];
+        return {captures: [], failed: true};
     }
 
     const {data: {user}} = await supabase.auth.getUser();
 
     if (!user) {
-        return [];
+        return {captures: [], failed: false};
     }
 
     const pageSize = 240;
     const rows: OwnedCaptureManifestRow[] = [];
+    let failed = false;
 
     for (let offset = 0; offset < limit; offset += pageSize) {
         const {data, error} = await supabase
@@ -207,10 +219,11 @@ export async function getUserCaptures(limit = 2000, options: {throwOnError?: boo
             .order("capture_created_at", {ascending: false})
             .range(offset, offset + pageSize - 1);
 
-        if (error && offset === 0 && options.throwOnError) {
-            throw new Error(`owned_capture_manifest_v1: ${error.message}`);
+        if (error) {
+            failed = rows.length === 0;
+            break;
         }
-        if (error || !data?.length) {
+        if (!data?.length) {
             break;
         }
 
@@ -220,9 +233,12 @@ export async function getUserCaptures(limit = 2000, options: {throwOnError?: boo
         }
     }
 
-    return rows
-        .map(toUserCaptureSummary)
-        .filter((item): item is UserCaptureSummary => Boolean(item));
+    return {
+        captures: rows
+            .map(toUserCaptureSummary)
+            .filter((item): item is UserCaptureSummary => Boolean(item)),
+        failed
+    };
 }
 
 export async function getUserCaptureStats(sampleLimit = 5000): Promise<UserCaptureStats> {
