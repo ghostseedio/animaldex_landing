@@ -140,7 +140,7 @@ function DiscoverTopBar({
     // bell lives in the side menu.
     const glass = "rounded-full bg-white/10 backdrop-blur-xl transition-colors hover:bg-white/15";
     return (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-[3.5rem] items-center gap-2 px-3 pt-1 lg:hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-3 pb-1 pt-[calc(0.25rem+env(safe-area-inset-top,0px))] lg:hidden">
             <div className="pointer-events-auto flex shrink-0 items-center gap-2">
                 <button
                     type="button"

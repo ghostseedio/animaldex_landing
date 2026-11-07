@@ -1248,7 +1248,9 @@ function CaptureCard({
           never sits under the tab bar because the snap slot already ends above it.
           On phones the top row starts under the floating bar
           (`DiscoverTimelineLayout.topChromeClearance`, 52pt). */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-[4.125rem] [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-[3.75rem] lg:pt-3.5">
+      {/* A soft scrim at the top, so a standalone phone's time and battery stay readable over bright media (the owner, 2026-11-07: media right to the top). */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[calc(3.5rem+env(safe-area-inset-top,0px))] bg-gradient-to-b from-black/50 via-black/20 to-transparent lg:hidden" />
+      <div className="pointer-events-none absolute inset-0 flex flex-col px-4 pb-3.5 pt-[calc(4.125rem+env(safe-area-inset-top,0px))] [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-[calc(3.75rem+env(safe-area-inset-top,0px))] lg:pt-3.5">
         <FeedTopOverlay
           collector={activeItem.collector}
           activityLabel={activityLabel}
