@@ -122,7 +122,8 @@ export function AskStepSection({
     busy,
     problem,
     onPrimary,
-    onOther
+    onOther,
+    onStartDebate
 }: {
     /** The step's words as the reply set them (the open step's while live). */
     text: string;
@@ -135,6 +136,13 @@ export function AskStepSection({
     problem: string | null;
     onPrimary: () => void;
     onOther: () => void;
+    /**
+     * The other animals' ways under an open step (the owner, 2026-11-07:
+     * "the options for asking other animals or starting a debate" went with
+     * the chip row): Start a debate, while the chat can debate and none has
+     * started here.
+     */
+    onStartDebate?: () => void;
 }) {
     const live = resolution.kind === "live" ? resolution.step : null;
     const frequency = live?.trialFrequency ?? trialFrequency;
@@ -158,6 +166,11 @@ export function AskStepSection({
                         <button type="button" onClick={onOther} className={SECONDARY}>
                             {words.journey.step.other}
                         </button>
+                        {onStartDebate ? (
+                            <button type="button" onClick={onStartDebate} className={SECONDARY} data-testid="step-start-debate">
+                                {words.debate.start}
+                            </button>
+                        ) : null}
                     </div>
                 )
             ) : resolution.kind === "done" ? (

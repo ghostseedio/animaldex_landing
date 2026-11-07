@@ -2332,10 +2332,13 @@ function AskConversation({
      * set it, or all of the message the thread shows for an open step no
      * reply in it carries. Done or dropped, it resolves the same either way.
      */
-    const stepSection = (stepSet: AskCompanionStepSet, carriedLater: boolean) => {
+    const stepSection = (stepSet: AskCompanionStepSet, carriedLater: boolean, messageId: string | null = null) => {
         const resolution = askStepResolution({stepSet, openStep, loaded: loopLoaded, doneStepIds, carriedLater});
+        // The other animals' ways under the open step (the owner, 2026-11-07).
+        const offersDebate = debatesOffered && debateHost !== null && !debateSheet && threadDebates.length === 0;
         return (
             <AskStepSection
+                onStartDebate={offersDebate ? () => openDebateSheet(messageId) : undefined}
                 key="step"
                 text={stepSet.step}
                 resolution={resolution}
@@ -2393,7 +2396,7 @@ function AskConversation({
             }
             case "step":
                 // Only the newest reply that set the open step has its buttons.
-                return stepSection(special.stepSet, stepCarrierId !== null && stepCarrierId !== message.id);
+                return stepSection(special.stepSet, stepCarrierId !== null && stepCarrierId !== message.id, message.id);
             case "warmup":
                 return warmupOfferState === "hidden" ? null : (
                     <AskWarmupOfferSection
