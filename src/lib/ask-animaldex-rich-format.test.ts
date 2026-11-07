@@ -103,8 +103,9 @@ test("a heading's emoji is never an animal: it sits next to the species icon art
         assert.equal(rules[heading + 2], "  - A heading's emoji is an object or symbol, never an animal or an animal face.");
     }
     // The server lane's build that added it.
-    // The chat-engine lane's build (strategy, 2026-11-04): ideas get no layout, one shape per answer.
-    assert.equal(fixture.source.commit, "de6fc38ac898c074398855774fd447a3bed05ca0");
+    // The chat-engine lane's build (strategy, 2026-11-04) gave one shape per answer; the owner's
+    // "more visuals" (2026-11-07) lets an idea sketch its twist and welcomes a drawing when it helps.
+    assert.equal(fixture.source.commit, "dbc4a969");
 });
 
 test("text_columns is clamped as the server clamps it", () => {
@@ -157,4 +158,14 @@ test("speakableText says what the server says", () => {
     for (const pair of fixture.speakableText) {
         assert.equal(speakableText(pair.input), pair.output, JSON.stringify(pair.input));
     }
+});
+
+test("more pictures (2026-11-07): rich mode's drawing rule is the server's, and an idea may be sketched only when drawn rich", async () => {
+    const {ANIMAL_RICH_DRAWING_RULES} = await import("./ask-animaldex/prompt");
+    const {turnGuideLines} = await import("./ask-animaldex/reply-guards");
+    assert.deepEqual(ANIMAL_RICH_DRAWING_RULES, (fixture as unknown as {drawingRules: string[]}).drawingRules);
+    const rich = turnGuideLines({kind: "idea", hasTake: true, message: "a podcast", replies: [], rich: true});
+    assert.ok(rich.some((line) => line.startsWith("this_reply_shape — an idea: talk it through") && line.includes("sketch it once")));
+    const plain = turnGuideLines({kind: "idea", hasTake: true, message: "a podcast", replies: []});
+    assert.ok(plain.some((line) => line.startsWith("this_reply_shape — an idea gets no layout")));
 });

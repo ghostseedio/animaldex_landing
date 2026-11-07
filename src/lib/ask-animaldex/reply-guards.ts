@@ -128,12 +128,17 @@ const SHAPE_WORDS: Record<ReplyShape, string> = {
 };
 
 /// This reply's shape, against the last one's.
-export function formatVarietyLine(replies: string[], kind: TurnKind | null): string | null {
+export function formatVarietyLine(replies: string[], kind: TurnKind | null, rich = false): string | null {
     if (kind === "chat" || kind === "crisis") return null;
     const shapes = replies.slice(-2).map(replyShape);
     const last = shapes.at(-1);
     if (kind === "idea") {
-        return "this_reply_shape — an idea gets no layout: talk it through in a few short paragraphs, a list only if they ask for one.";
+        // A build that draws rich answers may show the twist (the owner, 2026-11-07:
+        // "showing ideas using symbols and ascii"); still no skeleton of headings or lists.
+        return rich
+            ? "this_reply_shape — an idea: talk it through in a few short paragraphs; when your twist is easier seen than said, " +
+                "sketch it once under your words (a small text diagram or a few symbol-marked lines). No headings, a list only if they ask."
+            : "this_reply_shape — an idea gets no layout: talk it through in a few short paragraphs, a list only if they ask for one.";
     }
     if (!last || last === "plain") return null;
     const again = shapes.length === 2 && shapes[0] === last;
@@ -277,6 +282,8 @@ export function turnGuideLines(params: {
     appQuestion?: boolean;
     appFacts?: AppFacts | null;
     teenLines?: string[] | null;
+    /** This turn is drawn rich (`animalRichAnswers`): an idea may be sketched. */
+    rich?: boolean;
 }): string[] {
     const lines: string[] = [];
     if (params.kind === "chat") {
@@ -301,7 +308,7 @@ export function turnGuideLines(params: {
             "them again: if this reply needs a picture, take it from another part of your life, or use none.",
         );
     }
-    const shape = formatVarietyLine(params.replies, params.kind);
+    const shape = formatVarietyLine(params.replies, params.kind, params.rich === true);
     if (shape) lines.push(shape);
     const preference = params.memory ? preferenceLine(answerPreferences(params.memory)) : null;
     if (preference) lines.push(preference);

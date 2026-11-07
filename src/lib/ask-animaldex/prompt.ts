@@ -296,8 +296,9 @@ export function animalRichFormatRules(columns: number): string[] {
         "  question gets a plain reply: one to three short paragraphs, the way you would text a friend, with no headings,",
         "  lists, tables, diagrams or emoji. Each paragraph reaches them as its own message bubble: one thought each, with a",
         "  blank line between thoughts.",
-        "- An idea they bring gets no layout either: talk it through in a few short paragraphs, with a list only if they",
-        "  ask for one.",
+        "- An idea they bring: talk it through in a few short paragraphs. When your twist on it is easier to see than to",
+        "  explain (the before and after, the path it takes, the shape of the thing), sketch it once under your words: one",
+        "  small text diagram, or a few short lines marked with symbols. Otherwise no layout, and a list only if they ask.",
         "- When they bring a real problem, a decision, a 'how do I' or a 'why', or ask you to explain or compare, give an",
         "  answer they can take in at a glance, in the one shape this answer needs and not the shape of your last reply: a",
         "  verdict and two short paragraphs, a few steps, a small table, one text diagram, or a few headings when it truly",
@@ -308,8 +309,9 @@ export function animalRichFormatRules(columns: number): string[] {
         "  - Steps to do in order as '1. ' lines, each starting with the action in **bold**. Options to weigh as '- ' lines,",
         "    each starting with the option in **bold**, then what it gives and what it costs.",
         "  - A side-by-side comparison as a markdown table: at most 3 columns and 6 rows, a few words per cell.",
-        "  - When a picture would make it click (a loop they are stuck in, a path from here to there, a fork between two",
-        "    choices, a before and after, two pulls against each other), draw ONE text diagram in a ```text fence. Use",
+        "  - Whenever a picture would make it click faster than words (a loop they are stuck in, a path from here to",
+        "    there, a fork between two choices, a before and after, two pulls against each other), draw ONE text diagram",
+        "    in a ```text fence. Use",
         "    box-drawing characters (┌ ─ ┐ │ └ ┘ ├ ┤ ┬ ┴ ┼) and arrows (→ ← ↑ ↓). Every line of it, borders included, fits",
         `    in ${width} characters. Put a short title in capitals on its first line, and plain words inside: no emoji,`,
         "    no markdown and no tabs.",
@@ -317,9 +319,13 @@ export function animalRichFormatRules(columns: number): string[] {
         "  - An emoji begins each heading, and may mark list items where it is the clearest marker. Never mid-sentence,",
         "    never more than one on a line.",
         "  - A heading's emoji is an object or symbol, never an animal or an animal face.",
+        "  - Symbols can carry a short sequence or a before and after inside your words (→ for leads to, ✓ and ✗ for keep",
+        "    and drop, ↺ for a loop) when that reads faster than a sentence; a few, never a line full of them.",
         "- Every part is still you talking: your life, your Power, your side, in the first person. The layout carries your",
         "  view. It never becomes a neutral menu of everyone's options, and it never softens the side you took.",
         "- Your nature still sets the manner: a spare animal keeps its parts few and short; a chatty one may add an aside.",
+        "- A drawing, a table or a few symbol-marked lines is not extra length: it takes the place of the sentences that",
+        "  would have described it, so a reply of a few sentences can still carry one.",
         "- At most one table and one diagram in a reply, and a diagram counts as your one drawing. No '> ' quotes, no",
         "  mottos, no sign-off, no 'Move today' / 'Avoid today' blocks."
     ];
@@ -327,6 +333,19 @@ export function animalRichFormatRules(columns: number): string[] {
 
 /** In `animalMediumRules`, with "rich": the drawing line's addition (SPEC section 1.2). */
 export const ANIMAL_RICH_DRAWING_LINE = "  A text diagram counts as a drawing.";
+
+/**
+ * In rich mode these replace "A drawing is rare in conversation…" in
+ * `animalMediumRules`: an answer that is easier seen than said gets its
+ * picture (the owner, 2026-11-07: "showing ideas using symbols and ascii"),
+ * and small talk and something hard they are telling you never do.
+ */
+export const ANIMAL_RICH_DRAWING_RULES = [
+    "- Never a drawing in small talk, or when they are telling you something hard. For a real problem, a decision, an",
+    "  idea or a how or why, one drawing is welcome whenever it shows your point faster than words: a sequence, a loop,",
+    "  a switch between states, a too-little/too-much scale, a before and after.",
+    ANIMAL_RICH_DRAWING_LINE
+];
 
 /**
  * How a reply ends. In conversation a question is something you want to
@@ -933,10 +952,11 @@ function animalMediumRules(supportedVisuals: AskVisualMedium[], mode: AskConvers
     const lines = ["Medium — you are talking, so words come first."];
     if (drawings.length > 0) {
         lines.push(
-            "- A drawing is rare in conversation. Use one only when they ask how something works step by step, or when the",
-            "  answer is a sequence, a switch between states or a too-little/too-much scale that is genuinely clearer drawn.",
-            ...(mode === "chat" || mode === "auto" ? ["  Never in small talk."] : []),
-            ...(rich ? [ANIMAL_RICH_DRAWING_LINE] : []),
+            ...(rich ? ANIMAL_RICH_DRAWING_RULES : [
+                "- A drawing is rare in conversation. Use one only when they ask how something works step by step, or when the",
+                "  answer is a sequence, a switch between states or a too-little/too-much scale that is genuinely clearer drawn.",
+                ...(mode === "chat" || mode === "auto" ? ["  Never in small talk."] : [])
+            ]),
             "- At most ONE drawing (flow, scale, chart or photo) per answer. It replaces the prose that would have described",
             "  it: never draw it and then narrate it, and never point at it ('here is a chart', 'as shown').",
             "- Every visual block is closed with ``` on its own line before anything else follows it. An unclosed block is",

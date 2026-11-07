@@ -958,7 +958,9 @@ export async function POST(request: Request) {
                             creditCost: rate.creditCost ?? null
                         }
                         : null,
-                    teenLines: teen ? TEEN_MODE_LINES : null
+                    teenLines: teen ? TEEN_MODE_LINES : null,
+                    // Drawn rich: an idea may be sketched (as the apps' function).
+                    rich: Boolean(rich)
                 })
                 : null
         });
