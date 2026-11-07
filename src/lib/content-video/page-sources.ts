@@ -478,6 +478,19 @@ async function scanSource(slug: string): Promise<VideoSource | null> {
     };
 }
 
+/**
+ * Whether a page's video would play our own footage: every scan reveal, and a
+ * lesson, guess or real-life Pokémon about an animal we have filmed (footage.ts
+ * swaps our clips into those). The autopilot makes one of these a day first.
+ */
+export function hasOurFootage(type: SourceType, slug: string) {
+    if (type === "scan") return true;
+    const species = type === "pokemon" ? getPokemonAnimalEntry(slug)?.speciesSlug
+        : (type === "lesson" && !slug.startsWith(BIRTH_MONTH_PREFIX)) || type === "guess" ? slug
+            : null;
+    return footageFor(species, ["animal"]).length > 0;
+}
+
 /** The fewest source images a family's video can be made with: a lesson, a guess or a scan is one animal. */
 export function minimumImages(type: SourceType) {
     return type === "lesson" || type === "guess" || type === "scan" || type === "you_vs" || type === "pokemon" ? 1 : 2;
