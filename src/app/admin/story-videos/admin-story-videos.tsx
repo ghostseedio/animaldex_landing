@@ -14,7 +14,7 @@ import {AdminFootageLibrary, AdminFormatBoard, AdminHookLab, AdminSocialContent}
 import AdminTrendRadar from "@/app/admin/story-videos/admin-trend-radar";
 import AdminUploadedVideos, {type UploadedVideo} from "@/app/admin/story-videos/admin-uploaded-videos";
 import {sourcePath} from "@/lib/content-video/source-paths";
-import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
+import {AdminPage, Alert, Badge, Button, buttonVariants, Card, cn, EmptyState, PageHeader, RefreshButton, Section, Segmented, Skeleton, Spinner, Table, TableSkeleton, TD, TH} from "@/components/admin/ui";
 
 type Video = {
     mediaPath: string;
@@ -185,7 +185,67 @@ function localScheduleProblem(localValue: string, now = Date.now()): string | nu
     return null;
 }
 
+const TABS = [
+    {value: "videos", label: "Videos"},
+    {value: "carousels", label: "Carousels"},
+    {value: "accounts", label: "Accounts & log"},
+    {value: "insights", label: "Insights"},
+    {value: "footage", label: "Footage"},
+    {value: "automation", label: "Automation"}
+] as const;
+type Tab = (typeof TABS)[number]["value"];
+
+const VIDEO_LISTS = [
+    {value: "generated", label: "Made for socials"},
+    {value: "uploaded", label: "Uploaded"},
+    {value: "app", label: "App stories"}
+] as const;
+type VideoList = (typeof VIDEO_LISTS)[number]["value"];
+
+function tabFrom(value: string | null): Tab {
+    return TABS.some((tab) => tab.value === value) ? (value as Tab) : "videos";
+}
+
+/** Midnight in Jakarta (UTC+7), where the share caps start a new day (auto-share-plan.ts dayStartMs). */
+function jakartaDayStart(now = Date.now()) {
+    const shifted = now + 7 * 3_600_000;
+    return shifted - (shifted % 86_400_000) - 7 * 3_600_000;
+}
+
+/**
+ * The top of the page: what went out today on each platform, and which ones
+ * need the admin (paused, an error, not connected), so nothing below has to
+ * be read to know whether posting works.
+ */
+function TodayStrip({posts, connections, switches, onOpenAccounts}: {posts: SocialPostRow[]; connections: Connection[]; switches: PlatformSwitchState | null; onOpenAccounts: () => void}) {
+    const since = jakartaDayStart();
+    return (
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+            {SOCIAL_PLATFORMS.map((platform) => {
+                const connection = connections.find((candidate) => candidate.platform === platform);
+                const today = posts.filter((post) => post.platform === platform && post.status === "published" && Date.parse(post.created_at) >= since).length;
+                const paused = pausedFor(switches, platform, "video");
+                const problem = !connection ? null
+                    : connection.error ? "Needs attention"
+                        : !connection.connected ? "Not connected"
+                            : paused ? `Paused${paused.reason ? `: ${paused.reason}` : ""}` : null;
+                return (
+                    <button key={platform} type="button" onClick={onOpenAccounts} title={problem ?? `${today} posted today`} className={cn("flex min-h-16 flex-col justify-between border p-2.5 text-left transition hover:border-line-200", problem ? "border-amber-400/30 bg-amber-400/5" : "border-line-300 bg-surface-900")}>
+                        <span className="text-xs font-bold text-white">{SOCIAL_PLATFORM_LABELS[platform]}</span>
+                        {!connection ? <Skeleton className="h-3 w-12" />
+                            : problem ? <span className="line-clamp-2 text-[11px] leading-4 text-amber-200">{problem}</span>
+                                : <span className="text-[11px] tabular-nums text-ink-400"><span className="text-base font-black text-white">{today}</span> posted today</span>}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
+    const [tab, setTabState] = useState<Tab>("videos");
+    const [videoList, setVideoList] = useState<VideoList>("generated");
+    const [logLimit, setLogLimit] = useState(50);
     const [videos, setVideos] = useState<Video[] | null>(null);
     const [connections, setConnections] = useState<Connection[]>([]);
     const [switches, setSwitches] = useState<PlatformSwitchState | null>(null);
@@ -214,14 +274,27 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
         setVideos((current) => current ?? []);
     }, [loadPosts]);
 
+    const setTab = useCallback((next: Tab) => {
+        setTabState(next);
+        const url = new URL(window.location.href);
+        if (next === "videos") url.searchParams.delete("tab");
+        else url.searchParams.set("tab", next);
+        window.history.replaceState(null, "", url);
+    }, []);
+
     useEffect(() => {
         loadAll();
         const params = new URLSearchParams(window.location.search);
+        setTabState(tabFrom(params.get("tab")));
         const connected = params.get("connected");
         const connectError = params.get("connectError");
         if (connected) setNotice(`${SOCIAL_PLATFORM_LABELS[connected as SocialPlatform] ?? connected} connected.`);
         if (connectError) setError(connectError);
-        if (connected || connectError) window.history.replaceState(null, "", window.location.pathname);
+        if (connected || connectError) {
+            // Back from a platform's sign-in: show the accounts it was about.
+            setTabState("accounts");
+            window.history.replaceState(null, "", `${window.location.pathname}?tab=accounts`);
+        }
     }, [loadAll]);
 
     // Poll the log while anything is still uploading or publishing. Posts merely waiting for
@@ -272,7 +345,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
             <PageHeader
                 eyebrow="Content"
                 title="Story videos"
-                description="Videos made from blog posts here, and every finished, narrated story video the app serves. Share any of them to the official AnimalDex accounts; uploads run in the background and land in the log below."
+                description="The autopilot makes up to two videos a day and posts them to every connected account. Check here what went out, and fix what needs you."
                 actions={<RefreshButton loading={refreshing || videos === null} onClick={() => { setRefreshing(true); loadAll().finally(() => setRefreshing(false)); }} />}
             />
 
@@ -283,18 +356,33 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                 </div>
             ) : null}
 
-            <AdminAutomation onChanged={() => void loadAll()} />
+            <TodayStrip posts={posts} connections={connections} switches={switches} onOpenAccounts={() => setTab("accounts")} />
 
-            <AdminTrendRadar />
+            <div className="mt-6 border-b border-line-300 pb-4">
+                <Segmented label="Section" value={tab} onChange={setTab} options={TABS.map((entry) => ({value: entry.value, label: entry.label}))} />
+            </div>
 
-            <AdminFormatBoard />
+            {tab === "automation" ? <AdminAutomation onChanged={() => void loadAll()} /> : null}
 
-            <AdminHookLab />
+            {tab === "insights" ? (
+                <>
+                    <AdminFormatBoard />
+                    <AdminHookLab />
+                    <AdminTrendRadar />
+                </>
+            ) : null}
 
-            <AdminFootageLibrary />
+            {tab === "footage" ? <AdminFootageLibrary /> : null}
 
-            <AdminSocialContent />
+            {tab === "carousels" ? <AdminSocialContent /> : null}
 
+            {tab === "videos" ? (
+                <div className="mt-4">
+                    <Segmented label="Videos" value={videoList} onChange={setVideoList} options={VIDEO_LISTS.map((entry) => ({value: entry.value, label: entry.label}))} />
+                </div>
+            ) : null}
+
+            {tab === "accounts" ? (
             <Section title="Official accounts">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {SOCIAL_PLATFORMS.map((platform) => {
@@ -375,11 +463,13 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                     })}
                 </div>
             </Section>
+            ) : null}
 
-            <AdminUploadedVideos shares={postsByVideo} onShare={(video) => setSharing(uploadedVideoToShareable(video))} onNotice={setNotice} />
+            {tab === "videos" && videoList === "uploaded" ? <AdminUploadedVideos shares={postsByVideo} onShare={(video) => setSharing(uploadedVideoToShareable(video))} onNotice={setNotice} /> : null}
 
-            <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} />
+            {tab === "videos" && videoList === "generated" ? <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} /> : null}
 
+            {tab === "videos" && videoList === "app" ? (
             <Section title={<>App story videos {videos ? <span className="tabular-nums">({videos.length})</span> : ""}</>}>
                 {videos === null ? (
                     <div role="status" aria-label="Loading videos" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -426,7 +516,9 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                     </div>
                 )}
             </Section>
+            ) : null}
 
+            {tab === "accounts" ? (
             <Section title="Share log">
                 {posts.length === 0 && videos === null ? (
                     <Card><TableSkeleton rows={4} columns={5} /></Card>
@@ -437,7 +529,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                 <tr><TH>When</TH><TH>Video</TH><TH>Platform</TH><TH>Status</TH><TH>Result</TH></tr>
                             </thead>
                             <tbody>
-                                {posts.map((post) => {
+                                {posts.slice(0, logLimit).map((post) => {
                                     const zernio = zernioInfo(post);
                                     const scheduled = isScheduled(post);
                                     return (
@@ -464,9 +556,15 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
                                 })}
                             </tbody>
                         </Table>
+                        {posts.length > logLimit ? (
+                            <div className="flex justify-center border-t border-line-300 p-3">
+                                <Button size="sm" onClick={() => setLogLimit((current) => current + 50)}>Show more ({posts.length - logLimit} older)</Button>
+                            </div>
+                        ) : null}
                     </Card>
                 )}
             </Section>
+            ) : null}
 
             {sharing && (
                 <ShareDialog

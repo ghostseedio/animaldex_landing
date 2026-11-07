@@ -4,11 +4,9 @@ import {useCallback, useEffect, useState} from "react";
 import {ClapperboardPlay, Eye, EyeClosed, MagicStick3, Refresh, Share, TrashBinMinimalistic} from "solar-icon-set";
 import {SOURCE_TYPES, type SourceType, type TimelineEntry, type VideoPlan} from "@/lib/content-video/plan";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
-import {INTENTS} from "@/lib/social-lab/arms";
-import {jobScore, REACTIONS, type VideoReview} from "@/lib/social-lab/review";
 import type {ContentVideoClip, ContentVideoStatus} from "@/lib/content-video/store";
 import {SOCIAL_PLATFORM_LABELS, type SocialPostRow} from "@/lib/social/types";
-import {Alert, Badge, Button, Card, cn, EmptyState, fieldClass, Section, Skeleton, Spinner} from "@/components/admin/ui";
+import {Alert, Badge, Button, Card, cn, EmptyState, fieldClass, Segmented, Skeleton, Spinner} from "@/components/admin/ui";
 
 export type BlogVideo = {
     id: string;
@@ -83,6 +81,9 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
     const [starting, setStarting] = useState(false);
     const [acting, setActing] = useState<string | null>(null);
     const [error, setError] = useState("");
+    const [filter, setFilter] = useState<Filter>("all");
+    const [making, setMaking] = useState(false);
+    const [limit, setLimit] = useState(PAGE);
 
     const load = useCallback(async () => {
         const body = await api<{videos: BlogVideo[]; available: Partial<Record<SourceType, Candidate[]>>; busy: boolean; higgsfieldConfigured: boolean}>("/api/admin/content-videos");
@@ -142,169 +143,169 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
 
     const candidates = available[type] ?? [];
     const next = candidates[0];
+    const matching = (videos ?? []).filter((video) => matchesFilter(video, filter, shares));
+    const shown = matching.slice(0, limit);
+    const counts = Object.fromEntries(FILTERS.map((entry) => [entry.value, (videos ?? []).filter((video) => matchesFilter(video, entry.value, shares)).length])) as Record<Filter, number>;
 
     return (
-        <Section
-            title={<>Page videos {videos ? <span className="tabular-nums">({videos.length})</span> : ""}</>}
-            description="Viral vertical videos made from our pages: blog edits, Pokémon-style comparison battles, hybrid reveals, ranking countdowns and location guides. Publish one to show it on its page."
-        >
-            <Card>
-                <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
-                    <select value={type} onChange={(event) => { setType(event.target.value as SourceType); setChoice(""); }} disabled={working || starting} aria-label="Page type" className={cn(fieldClass, "sm:w-56")}>
-                        {SOURCE_TYPES.map((option) => <option key={option} value={option}>{SOURCE_LABELS[option]} ({available[option]?.length ?? 0})</option>)}
-                    </select>
-                    <select value={choice} onChange={(event) => setChoice(event.target.value)} disabled={working || starting} aria-label="Page" className={cn(fieldClass, "max-w-full sm:w-80")}>
-                        <option value="">{next ? `Next: ${next.title}` : "Every page of this kind has a video"}</option>
-                        {candidates.map((candidate) => (
-                            <option key={candidate.slug} value={candidate.slug}>{candidate.title}{type === "blog" ? ` (${candidate.imageCount} photos)` : ""}</option>
-                        ))}
-                    </select>
-                    <Button variant="primary" onClick={generate} loading={starting || working} disabled={!choice && !next} className="sm:ml-auto">
-                        {starting || working ? null : <MagicStick3 size={18} />}{starting ? "Starting…" : working ? "Making a video…" : "Generate video"}
-                    </Button>
-                </div>
-            </Card>
+        <section className="mt-6">
+            <div className="flex flex-wrap items-center gap-2">
+                <Segmented label="Show" value={filter} onChange={(next) => { setFilter(next); setLimit(PAGE); }} options={FILTERS.map((entry) => ({value: entry.value, label: entry.label, count: videos ? counts[entry.value] : null}))} />
+                <Button size="sm" onClick={() => setMaking((open) => !open)} className="ml-auto" aria-expanded={making}>
+                    <MagicStick3 size={15} />{making ? "Close" : "Make one now"}
+                </Button>
+            </div>
+
+            {making ? (
+                <Card className="mt-3">
+                    <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+                        <select value={type} onChange={(event) => { setType(event.target.value as SourceType); setChoice(""); }} disabled={working || starting} aria-label="Format" className={cn(fieldClass, "sm:w-56")}>
+                            {SOURCE_TYPES.map((option) => <option key={option} value={option}>{SOURCE_LABELS[option]} ({available[option]?.length ?? 0})</option>)}
+                        </select>
+                        <select value={choice} onChange={(event) => setChoice(event.target.value)} disabled={working || starting} aria-label="Page" className={cn(fieldClass, "max-w-full sm:w-80")}>
+                            <option value="">{next ? `Next: ${next.title}` : "Every page of this kind has a video"}</option>
+                            {candidates.map((candidate) => (
+                                <option key={candidate.slug} value={candidate.slug}>{candidate.title}{type === "blog" ? ` (${candidate.imageCount} photos)` : ""}</option>
+                            ))}
+                        </select>
+                        <Button variant="primary" onClick={generate} loading={starting || working} disabled={!choice && !next} className="sm:ml-auto">
+                            {starting || working ? null : <MagicStick3 size={18} />}{starting ? "Starting…" : working ? "Making a video…" : "Generate video"}
+                        </Button>
+                    </div>
+                    <p className="border-t border-line-300 px-3 py-2 text-xs text-ink-500">The autopilot already makes up to two a day and posts them. Use this for one more, now.</p>
+                </Card>
+            ) : null}
 
             {!higgsfield || error ? (
                 <div className="mt-3 flex flex-col gap-3">
-                    {!higgsfield && (
-                        <Alert tone="warn">HIGGSFIELD_API_KEY is not set on the server, so the AI-clip shots fall back to photo motion.</Alert>
-                    )}
+                    {!higgsfield && <Alert tone="warn">HIGGSFIELD_API_KEY is not set on the server, so the AI-clip shots fall back to photo motion.</Alert>}
                     {error && <Alert tone="bad">{error}</Alert>}
                 </div>
             ) : null}
 
             {videos === null ? (
-                <div role="status" aria-label="Loading blog videos" className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {Array.from({length: 4}, (_, index) => (
-                        <div key={index} aria-hidden="true" className="grid grid-cols-[7.5rem_1fr] gap-3 border border-line-300 bg-surface-900 p-3">
+                <div role="status" aria-label="Loading videos" className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {Array.from({length: 5}, (_, index) => (
+                        <div key={index} aria-hidden="true" className="border border-line-300 bg-surface-900">
                             <Skeleton className="aspect-[9/16] w-full" />
-                            <div className="flex flex-col gap-2">
-                                <Skeleton className="h-3.5 w-16" />
-                                <Skeleton className="h-3 w-full" />
-                                <Skeleton className="h-3 w-3/4" />
-                                <Skeleton className="mt-1 h-2.5 w-1/2" />
-                            </div>
+                            <div className="flex flex-col gap-2 p-3"><Skeleton className="h-3 w-3/4" /><Skeleton className="h-2.5 w-1/2" /></div>
                         </div>
                     ))}
                 </div>
-            ) : videos.length === 0 ? (
-                <EmptyState className="mt-3" icon={<ClapperboardPlay size={22} />} title="No page videos yet" description="Pick a page type, then generate the next one or choose a page." />
+            ) : shown.length === 0 ? (
+                <EmptyState className="mt-3" icon={<ClapperboardPlay size={22} />} title={videos.length ? "Nothing here" : "No videos yet"} description={videos.length ? "No video matches this filter." : "The autopilot makes the first one at its next run, or make one now."} />
             ) : (
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {videos.map((video) => {
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {shown.map((video) => {
                         const videoShares = video.video_path ? shares.get(video.video_path) ?? [] : [];
-                        const clipsReady = video.clips.filter((clip) => clip.status === "completed").length;
-                        const clipsWanted = video.plan?.scenes.filter((scene) => scene.visual === "ai_clip").length ?? 0;
                         const disabled = acting === video.id || video.running;
+                        const footage = video.plan?.scenes.some((scene) => scene.footage) ?? false;
+                        const silent = video.plan?.experiment?.voice === "no_voice";
                         return (
                             <article key={video.id} className="flex flex-col overflow-hidden border border-line-300 bg-surface-900">
-                                <div className="grid grid-cols-[7.5rem_1fr] gap-3 p-3">
-                                    {video.videoUrl
-                                        ? <video src={video.videoUrl} poster={video.posterUrl ?? undefined} controls playsInline preload="none" className="aspect-[9/16] w-full bg-black object-cover" />
-                                        : (
-                                            <div className="grid aspect-[9/16] w-full place-items-center border border-line-300 bg-canvas-950 p-2 text-center">
-                                                {inProgress(video) && !interrupted(video)
-                                                    ? <div><Spinner size={22} className="mx-auto text-primary-300" /><p className="mt-2 text-[10px] leading-4 text-ink-400">{video.progress ?? STATUS_LABELS[video.status]}</p></div>
-                                                    : <ClapperboardPlay size={28} className="text-ink-600" />}
-                                            </div>
-                                        )}
-                                    <div className="flex min-w-0 flex-col gap-1.5">
-                                        <div className="flex flex-wrap gap-1">
-                                            <Badge tone={video.status === "ready" ? "good" : video.status === "failed" || interrupted(video) ? "bad" : "warn"}>{interrupted(video) ? "Interrupted" : STATUS_LABELS[video.status]}</Badge>
-                                            <Badge>{SOURCE_LABELS[video.source_type] ?? video.source_type}</Badge>
-                                            {video.published_at ? <Badge tone="ios">On the page</Badge> : null}
+                                {video.videoUrl
+                                    ? <video src={video.videoUrl} poster={video.posterUrl ?? undefined} controls playsInline preload="none" className="aspect-[9/16] w-full bg-black object-cover" />
+                                    : (
+                                        <div className="grid aspect-[9/16] w-full place-items-center bg-canvas-950 p-3 text-center">
+                                            {inProgress(video) && !interrupted(video)
+                                                ? <div><Spinner size={22} className="mx-auto text-primary-300" /><p className="mt-2 text-[11px] leading-4 text-ink-400">{video.progress ?? STATUS_LABELS[video.status]}</p></div>
+                                                : <div><ClapperboardPlay size={28} className="mx-auto text-ink-600" /><p className={cn("mt-2 text-[11px] leading-4", interrupted(video) ? "text-ink-400" : "text-red-200")}>{interrupted(video) ? "Waiting to resume" : STATUS_LABELS[video.status]}</p></div>}
                                         </div>
-                                        <a href={`${siteUrl}${sourcePath(video.source_type, video.source_slug)}`} target="_blank" rel="noreferrer" className="line-clamp-3 text-sm font-bold leading-5 text-white hover:text-primary-100">{video.source_title}</a>
-                                        {video.plan?.hookText ? <p className="line-clamp-2 text-[11px] text-ink-300">“{video.plan.hookText}”</p> : null}
-                                        {video.plan?.review ? <ReviewBadges review={video.plan.review} /> : null}
-                                        <p className="text-[11px] leading-4 tabular-nums text-ink-500">
-                                            {[
-                                                video.duration_seconds ? `${Math.round(video.duration_seconds)}s` : null,
-                                                clipsWanted ? `${clipsReady}/${clipsWanted} AI clips` : null,
-                                                video.estimated_usd ? `$${video.estimated_usd.toFixed(2)}` : null,
-                                                video.llm_provider ? `script: ${video.llm_provider}` : null,
-                                                video.tts_provider ? `voice: ${video.tts_provider}` : null
-                                            ].filter(Boolean).join(" · ")}
-                                        </p>
-                                        {video.status === "failed" && video.error ? <p className="line-clamp-4 text-[11px] leading-4 text-red-200" title={video.error}>{video.error}</p> : null}
-                                        {videoShares.length > 0 && (
-                                            <div className="flex flex-wrap gap-1">
-                                                {videoShares.map((post) => (
-                                                    <Badge key={post.id} title={post.error ?? undefined} tone={post.status === "published" ? "good" : post.status === "failed" ? "bad" : "warn"} className="normal-case tracking-normal">{SOCIAL_PLATFORM_LABELS[post.platform]}: {post.status}</Badge>
-                                                ))}
-                                            </div>
+                                    )}
+                                <div className="flex flex-1 flex-col gap-2 p-3">
+                                    <div className="flex flex-wrap gap-1">
+                                        <Badge>{SOURCE_LABELS[video.source_type] ?? video.source_type}</Badge>
+                                        {footage ? <Badge tone="good">Real footage</Badge> : null}
+                                        {silent ? <Badge tone="ios">No voice</Badge> : null}
+                                    </div>
+                                    <a href={`${siteUrl}${sourcePath(video.source_type, video.source_slug)}`} target="_blank" rel="noreferrer" className="line-clamp-2 text-sm font-bold leading-5 text-white hover:text-primary-100">{video.source_title}</a>
+                                    <p className="text-[11px] tabular-nums text-ink-500">
+                                        {[new Date(video.created_at).toLocaleDateString(undefined, {month: "short", day: "numeric"}), video.duration_seconds ? `${Math.round(video.duration_seconds)}s` : null, video.estimated_usd ? `$${video.estimated_usd.toFixed(2)}` : null].filter(Boolean).join(" · ")}
+                                    </p>
+                                    <PostedTo shares={videoShares} ready={video.status === "ready"} />
+                                    {video.status === "failed" && video.error ? <p className="line-clamp-3 text-[11px] leading-4 text-red-200" title={video.error}>{video.error}</p> : null}
+                                    {video.plan ? (
+                                        <details className="text-xs text-ink-300">
+                                            <summary className="cursor-pointer text-[11px] font-bold text-ink-500 hover:text-white">Script</summary>
+                                            {video.plan.hookText ? <p className="mt-2 font-bold text-white">“{video.plan.hookText}”</p> : null}
+                                            <ol className="mt-1.5 flex flex-col gap-1">
+                                                {video.plan.scenes.map((scene, index) => <li key={index} className="leading-5">{scene.footage ? <span className="mr-1 text-[9px] font-black uppercase text-primary-200">Ours</span> : null}{scene.narration}</li>)}
+                                            </ol>
+                                        </details>
+                                    ) : null}
+                                    <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
+                                        {acting === video.id ? <Spinner size={14} className="text-primary-300" /> : null}
+                                        {video.status === "ready" && (
+                                            <>
+                                                <Button size="sm" variant="primary" onClick={() => onShare(video)} disabled={disabled}><Share size={14} />Share</Button>
+                                                {video.published_at ? null : <Button size="sm" onClick={() => act(video, "publish")} disabled={disabled}><Eye size={14} />Show on page</Button>}
+                                            </>
+                                        )}
+                                        {(video.status === "failed" || interrupted(video)) && (
+                                            <Button size="sm" variant="primary" onClick={() => act(video, "resume")} disabled={disabled || working}><Refresh size={14} />Resume</Button>
+                                        )}
+                                        {!video.running && (
+                                            <details className="relative ml-auto">
+                                                <summary className="cursor-pointer list-none px-2 py-1 text-xs font-black text-ink-400 hover:text-white" aria-label="More actions">•••</summary>
+                                                <div className="absolute bottom-full right-0 z-10 mb-1 flex w-40 flex-col border border-line-300 bg-canvas-900 p-1">
+                                                    {video.status === "ready" ? <button type="button" onClick={() => act(video, "rerender")} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50">Re-edit (no new spend)</button> : null}
+                                                    {video.published_at ? <button type="button" onClick={() => act(video, "unpublish")} disabled={disabled} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5"><EyeClosed size={12} className="mr-1 inline" />Take off the page</button> : null}
+                                                    <button type="button" onClick={() => act(video, "archive")} disabled={disabled} className="px-2 py-1.5 text-left text-xs text-red-200 hover:bg-red-400/10"><TrashBinMinimalistic size={12} className="mr-1 inline" />Archive</button>
+                                                </div>
+                                            </details>
                                         )}
                                     </div>
-                                </div>
-
-                                {video.plan && (
-                                    <details className="border-t border-line-300 px-3 py-2 text-xs text-ink-300">
-                                        <summary className="cursor-pointer font-bold text-ink-400 hover:text-white">Script & shots</summary>
-                                        <ol className="mt-2 flex flex-col gap-1.5">
-                                            {video.plan.scenes.map((scene, index) => (
-                                                <li key={index} className="leading-5">
-                                                    <span className={`mr-1.5 px-1 text-[9px] font-black uppercase ${scene.visual === "ai_clip" ? "bg-violet-400/15 text-violet-100" : "bg-white/5 text-ink-400"}`}>{index === 0 ? "Hook" : scene.visual === "card" ? "Card" : scene.visual === "ai_clip" ? (scene.chain ? "AI (cont.)" : scene.keyframePrompt ? "AI (drawn)" : "AI clip") : `Photo ${scene.image}`}</span>
-                                                    {scene.narration}
-                                                    {scene.overlay ? <span className="text-ink-500"> [{scene.overlay}]</span> : null}
-                                                </li>
-                                            ))}
-                                            <li className="leading-5 text-ink-400"><span className="mr-1.5 bg-white/5 px-1 text-[9px] font-black uppercase">End</span>{video.plan.ctaNarration}</li>
-                                        </ol>
-                                        {video.plan.review ? <ReviewDetails review={video.plan.review} /> : null}
-                                    </details>
-                                )}
-
-                                <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-line-300 p-3">
-                                    {acting === video.id ? <Spinner size={14} className="text-primary-300" /> : null}
-                                    {video.status === "ready" && (
-                                        <>
-                                            {video.published_at
-                                                ? <Button size="sm" onClick={() => act(video, "unpublish")} disabled={disabled}><EyeClosed size={14} />Unpublish</Button>
-                                                : <Button size="sm" variant="primary" onClick={() => act(video, "publish")} disabled={disabled} className="bg-sky-400 hover:bg-sky-300"><Eye size={14} />Publish to page</Button>}
-                                            <Button size="sm" variant="primary" onClick={() => onShare(video)} disabled={disabled}><Share size={14} />Share</Button>
-                                            <Button size="sm" onClick={() => act(video, "rerender")} disabled={disabled || working} title="Re-edit from the same script and clips (no new AI spend)"><Refresh size={14} />Re-edit</Button>
-                                        </>
-                                    )}
-                                    {(video.status === "failed" || interrupted(video)) && (
-                                        <Button size="sm" variant="primary" onClick={() => act(video, "resume")} disabled={disabled || working} className="bg-amber-300 hover:bg-amber-200"><Refresh size={14} />Resume</Button>
-                                    )}
-                                    {!video.running && (
-                                        <Button size="sm" variant="danger" onClick={() => act(video, "archive")} disabled={disabled} className="ml-auto"><TrashBinMinimalistic size={14} />Archive</Button>
-                                    )}
                                 </div>
                             </article>
                         );
                     })}
                 </div>
             )}
-        </Section>
+            {matching.length > shown.length ? (
+                <div className="mt-4 flex justify-center">
+                    <Button size="sm" onClick={() => setLimit((current) => current + PAGE)}>Show more ({matching.length - shown.length} older)</Button>
+                </div>
+            ) : null}
+        </section>
     );
 }
 
-/** The test audience's verdict, at a glance: the job, the 5-year-old test and the job's score. */
-function ReviewBadges({review}: {review: VideoReview}) {
-    return (
-        <div className="flex flex-wrap gap-1" title={`A 5-year-old would say: ${review.fiveYearOld.wouldSay}`}>
-            {review.job ? <Badge className="normal-case tracking-normal">Job: {INTENTS[review.job].label}</Badge> : null}
-            <Badge tone={review.fiveYearOld.passes ? "good" : "bad"} className="normal-case tracking-normal">5-year-old test {review.fiveYearOld.passes ? "passed" : "failed"}</Badge>
-            <Badge tone={review.passes ? "good" : "warn"} className="normal-case tracking-normal">{review.job ? INTENTS[review.job].label.split(" ")[0] : "Best"} {jobScore(review)}/10{review.rewritten ? " · rewritten" : ""}</Badge>
-        </div>
-    );
+/** Videos shown at a time, newest first. */
+const PAGE = 20;
+
+type Filter = "all" | "posted" | "waiting" | "making" | "failed";
+
+const FILTERS: Array<{value: Filter; label: string}> = [
+    {value: "all", label: "All"},
+    {value: "posted", label: "Posted"},
+    {value: "waiting", label: "Waiting to post"},
+    {value: "making", label: "In progress"},
+    {value: "failed", label: "Failed"}
+];
+
+function matchesFilter(video: BlogVideo, filter: Filter, shares: Map<string, SocialPostRow[]>) {
+    const posted = Boolean(video.video_path && (shares.get(video.video_path) ?? []).some((post) => post.status === "published"));
+    switch (filter) {
+        case "all": return true;
+        case "posted": return posted;
+        case "waiting": return video.status === "ready" && !posted;
+        case "making": return inProgress(video) && !interrupted(video);
+        case "failed": return video.status === "failed" || interrupted(video);
+    }
 }
 
-function ReviewDetails({review}: {review: VideoReview}) {
+/** Where a video went: one small chip per platform, green once it is live there. */
+function PostedTo({shares, ready}: {shares: SocialPostRow[]; ready: boolean}) {
+    if (!shares.length) return ready ? <p className="text-[11px] text-ink-500">Not posted yet: the auto-share picks it up.</p> : null;
+    const latest = new Map<string, SocialPostRow>();
+    for (const post of shares) if (!latest.has(post.platform) || post.status === "published") latest.set(post.platform, post);
     return (
-        <div className="mt-3 flex flex-col gap-1.5 border-t border-line-300 pt-2">
-            <p className="font-bold text-ink-400">Test audience{review.rewritten && review.firstDraft ? ` (first draft: ${review.firstDraft.jobScore}/10, 5-year-old test ${review.firstDraft.fiveYearOld ? "passed" : "failed"})` : ""}</p>
-            <p className="leading-5">A 5-year-old would say: “{review.fiveYearOld.wouldSay}”{review.fiveYearOld.hardWords.length ? <span className="text-amber-200"> · hard words: {review.fiveYearOld.hardWords.join(", ")}</span> : null}</p>
-            <ul className="flex flex-col gap-1">
-                {REACTIONS.map((reaction) => (
-                    <li key={reaction} className={`leading-5 ${reaction === review.job ? "text-white" : "text-ink-400"}`}>
-                        <span className="mr-1.5 tabular-nums">{INTENTS[reaction].label.split(" ")[0]} {review.scores[reaction].score}/10</span>{review.scores[reaction].reason}
-                    </li>
-                ))}
-            </ul>
+        <div className="flex flex-wrap gap-1">
+            {Array.from(latest.values()).map((post) => (
+                <span key={post.platform} title={post.error ?? post.status} className={cn("px-1.5 py-0.5 text-[10px] font-bold", post.status === "published" ? "bg-primary-400/15 text-primary-100" : post.status === "failed" ? "bg-red-400/15 text-red-200" : "bg-white/5 text-ink-400")}>
+                    {SOCIAL_PLATFORM_LABELS[post.platform]}{post.status === "published" ? " ✓" : post.status === "failed" ? " ✕" : "…"}
+                </span>
+            ))}
         </div>
     );
 }
