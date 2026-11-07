@@ -104,7 +104,8 @@ export default memo(function SideMenu({variant, words, companionWords, profile, 
                 ))}
             </div>
             {/* Recents: ten of their animals, the rest behind View all, as the Claude app lists its recent chats. The list runs under the floating foot. */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-20">
+            {/* Room for the floating foot plus the phone's bottom inset, so the last row and View all scroll clear of the face and Capture (the owner's phone, 2026-11-07). */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
                 {entries.length > 0 ? <p className="px-4 pb-1 pt-4 text-[15px] text-white/60">{companionWords.list.recents ?? "Recents"}</p> : null}
                 {recents.map(({row, line, time}) => (
                     <CompanionRow key={row.speciesProfileId} row={row} line={line} time={time} locale={locale} words={companionWords} href={null} onSelect={() => pick(row.speciesProfileId)} compact />
@@ -152,7 +153,7 @@ export default memo(function SideMenu({variant, words, companionWords, profile, 
                 </div>
             ) : null}
             {/* The person's face bottom-left and Capture bottom-right, floating as glass over the list, no bar (the owner, 2026-11-06: "floating in the sidemenu"). */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 pb-2.5 pl-4 pr-3 [&>*]:pointer-events-auto">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] pl-4 pr-3 [&>*]:pointer-events-auto">
                 {isAuthenticated && profile ? (
                     <Link href="/app/profile" onClick={onClose} aria-label={words.openProfile} className="grid h-11 w-11 place-items-center rounded-full bg-white/10 backdrop-blur-xl transition hover:bg-white/15" data-testid="side-menu-profile">
                         {profile.avatarUrl
