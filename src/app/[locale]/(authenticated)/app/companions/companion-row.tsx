@@ -54,15 +54,20 @@ export function CompanionRow({row, href, line, time, locale, words, onSelect, is
                 onClick={onSelect}
                 aria-current={isCurrent ? "true" : undefined}
                 aria-label={`${row.displayName}${unread ? `, ${fillWords(words.tab.unread, {n: row.unreadCount})}` : ""}${line.text ? `, ${line.text}` : ""}`}
-                className={`relative flex h-[52px] w-full items-center gap-2.5 px-4 text-left transition-colors duration-150 ease-spring hover:bg-white/[0.04] active:bg-white/[0.07] ${isCurrent ? "bg-[#12351C]" : ""}`}
+                className={`relative flex min-h-[60px] w-full items-center gap-2.5 px-4 py-2 text-left transition-colors duration-150 ease-spring hover:bg-white/[0.04] active:bg-white/[0.07] ${isCurrent ? "bg-[#12351C]" : ""}`}
                 data-testid="companion-row"
             >
                 {isCurrent ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px]" style={{backgroundColor: NEON}} /> : null}
                 <AskAnimalFace url={row.slug ? getSpeciesImageRoute(row.slug) : null} size={28} className={unread ? "ring-[1.5px] ring-primary-400/80" : ""} />
-                {/* White, read or not (the owner, 2026-11-06: "make the menu item texts white not grey"); unread is the weight and the dot. */}
-                <span className={`flex min-w-0 flex-1 items-center gap-1 text-[17px] leading-6 text-white ${unread ? "font-semibold" : ""}`}>
-                    {line.kind === "step" ? <AskWalkIcon className="h-3.5 w-3.5 shrink-0" /> : null}
-                    <span className="min-w-0 truncate">{line.text || row.displayName}</span>
+                {/* The animal's name in bold, its last line under it (the owner, 2026-11-07: "Bold name + last line"); never talked to: its Power's name, or its kind under a nickname. White, read or not (the owner, 2026-11-06); unread is the weight and the dot. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className={`min-w-0 truncate text-[16px] leading-5 text-white ${unread ? "font-bold" : "font-semibold"}`}>{row.displayName}</span>
+                    {line.text || row.displayName !== row.animal ? (
+                        <span className={`flex min-w-0 items-center gap-1 text-[14px] leading-5 ${unread ? "font-medium text-white" : "text-white/80"}`}>
+                            {line.kind === "step" ? <AskWalkIcon className="h-3.5 w-3.5 shrink-0" /> : null}
+                            <span className="min-w-0 truncate">{line.text || row.animal}</span>
+                        </span>
+                    ) : null}
                 </span>
                 {unread ? <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor: row.muted ? "rgb(255 255 255 / 0.35)" : NEON}} /> : null}
             </button>
