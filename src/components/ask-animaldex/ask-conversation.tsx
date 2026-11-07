@@ -70,6 +70,7 @@
  * while the server's switch is off.
  */
 
+import {AnimalChatBlockContext} from "@/components/ask-animaldex/animal-chat-blocks";
 import {memo, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -780,6 +781,10 @@ function AskConversation({
         threadKey,
         subject: resolvedSubject,
         locale,
+        // A reply may draw one of the animal's Trial loops or a picture (the
+        // owner, 2026-11-07: "messages seem to be lacking visuals"); a call
+        // never sends the blocks.
+        chatBlocks: true,
         principleName: hints.principleName,
         viewer: {signedIn: context?.signedIn ?? false, hasWildProfile: context?.hasWildProfile ?? false},
         ownerChat,
@@ -2577,8 +2582,11 @@ function AskConversation({
     const publicTalk = publicTalkChat;
 
     // The thread itself: the bond, the memory or the sound credits in its place when open.
+    // The reply's own pictures (animal-chat-blocks): the animal this chat is
+    // with, for a Trial loop or its Power's icon inside a reply. Trials and
+    // the icon are read by the blocks themselves, once a species.
     const threadContent = (
-        <>
+        <AnimalChatBlockContext.Provider value={{speciesProfileId: companionSpeciesProfileId ?? null, animalName: speakerName}}>
                     <AskColumnsProbe probeRef={columnsProbeRef} />
                     {showingBond && ownerChat ? (
                         <div className="-mx-4 -my-4">
@@ -2861,7 +2869,7 @@ function AskConversation({
                             {limitNoticeContent}
                         </div>
                     ) : null}
-        </>
+        </AnimalChatBlockContext.Provider>
     );
 
     const body = (
