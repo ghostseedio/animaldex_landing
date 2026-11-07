@@ -66,6 +66,21 @@ export function animalAskedLast(lastAnimalMessage: string | null | undefined): b
   return (lastAnimalMessage ?? "").replace(/[^\p{L}\p{N}?.!]+$/u, "").endsWith("?");
 }
 
+/// Small talk known from the request alone, before the animal's names are
+/// read: its kind's verdict is then never started (it was started and never
+/// read, one Haiku call per hello). Without the names it only ever finds less
+/// than smallTalkByWords with them: "hi" here, "hi Luna" only with the names
+/// (its verdict still starts, as before).
+export function smallTalkBeforeLoads(input: {
+  message: string;
+  history: Array<{ role: string; content: string }>;
+}): boolean {
+  return smallTalkByWords({
+    message: input.message,
+    lastAnimalMessage: input.history.filter((turn) => turn.role === "assistant").at(-1)?.content ?? null,
+  });
+}
+
 /// The turn is small talk by its words alone: it may go to the small-talk
 /// model without waiting for its kind's verdict.
 export function smallTalkByWords(input: {
