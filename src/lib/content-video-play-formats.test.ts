@@ -86,3 +86,12 @@ test("a would-you-rather needs an animal people know: a lion-tamarin or a lionfi
 test("a drawn frame that showed the wrong animal is redrawn with the correction", () => {
     assert.match(redrawPrompt("A honey badger digging.", "Honey Badger", "an anteater"), /must be unmistakably a Honey Badger.*looked like an anteater, which is wrong/);
 });
+
+test("every format's writer is told to sound like a person and open on an event", async () => {
+    const formats = await import("./content-video/formats");
+    const {PLAN_SYSTEM_PROMPT} = await import("./content-video/plan");
+    for (const prompt of [PLAN_SYSTEM_PROMPT, formats.BATTLE_SYSTEM_PROMPT, formats.CREATURE_SYSTEM_PROMPT, formats.YOU_VS_SYSTEM_PROMPT, formats.WOULD_YOU_RATHER_SYSTEM_PROMPT, formats.POKEMON_SYSTEM_PROMPT, formats.GUESS_SYSTEM_PROMPT]) {
+        assert.match(prompt, /SOUND LIKE A PERSON, NOT A DOCUMENTARY/);
+    }
+    assert.doesNotMatch(formats.YOU_VS_SYSTEM_PROMPT, /staring into the lens/);
+});

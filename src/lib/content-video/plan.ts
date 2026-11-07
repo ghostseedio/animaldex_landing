@@ -296,6 +296,15 @@ export type TimelineEntry = {
     attacker?: PlanScene["attacker"];
 };
 
+/**
+ * Nov 2026, the first 3 seconds of 47 animal Shorts (34 hits, 13 flops): every
+ * flop with a voice announced its topic like a documentary ("Tiger versus lion.
+ * The oldest debate…"); the hits talk like a person who just saw something.
+ * Shared by every format's prompt.
+ */
+export const PERSON_RULE = `SOUND LIKE A PERSON, NOT A DOCUMENTARY: the first line is someone reacting or talking to a friend ("I can't believe this bird…", "Guys, look at this", "Okay, you won't guess this one"), first or second person, said the way people actually talk. Never a title read aloud, never "X versus Y." or "Five facts about…" as an opener, never an announcer's "Meet the…". (Every flop we studied opened like a documentary; the hits sounded like a person.)
+FRAME 0 IS AN EVENT: the first shot shows something already happening with something at stake (mid-charge, mid-bite, mid-leap, a near miss), never a posed portrait, a calm stare, a title card or a fade from black.`;
+
 export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. A calm or clever opener is a dead video. Our numbers: a quarter of viewers leave in the first second and two thirds by the third, so the opening beat is the whole game.
 
 THE 5-YEAR-OLD TEST (a test audience checks every script before it is made, and a script that fails is rewritten): after 3 seconds, sound on or off, a 5-year-old could say what this video is about: which animal, and what is amazing about it.
@@ -309,6 +318,7 @@ THE HOOK:
 - The FIRST WORDS spoken are the hook: no warm-up, no greeting, no "in this video", no channel name.
 - Spoken hook: at most 10 words, no question answerable with "no".
 - Talk like a fun older sibling, not a documentary narrator: second person, contractions, short sentences, the plainest words that are still exciting.
+${PERSON_RULE}
 - Brainstorm at least five hooks silently, then use the clearest surprising one (clear beats clever). Pick from: an impossible-sounding true fact, a "you've been lied to" reveal, a size or power comparison, a contrarian claim ("Sharks aren't the scariest thing in the sea."), a direct challenge to the viewer ("You couldn't survive 10 seconds here").
 - Open a loop the viewer cannot close without watching to the end: tease the payoff ("…and number one isn't even a predator"), then pay it off last.
 - Extreme framing, TRUE substance: exaggerate the angle, never the facts. Every number, record and claim must be defensible from the source. No invented facts.

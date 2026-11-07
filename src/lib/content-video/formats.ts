@@ -1,5 +1,5 @@
 import {isMusicMood, MUSIC_MOOD_GUIDE, MUSIC_MOODS} from "@/lib/content-video/music";
-import {HOOK_RULES, type PlanScene, type StatLine, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
+import {HOOK_RULES, PERSON_RULE, type PlanScene, type StatLine, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
 import type {Experiment} from "@/lib/social-lab/arms";
 import type {ShareCopy} from "@/lib/social/share-copy";
 
@@ -520,6 +520,8 @@ SHOTS (exactly 6, in order):
 (5) THE PAYOFF: the animal in full, doing its most striking real thing. narration: the most surprising true fact about it, plus its lesson in a few words when one is given, 14–24 words in total.
 (6) LOOP: narration: "Next one is harder." overlay "NEXT ONE IS HARDER". (This shot replays the opening close-up, so the video loops.)
 
+${PERSON_RULE.split("\n")[0]} (The opening close-up stays the puzzle; it should still move.)
+
 RULES: every clue and fact comes from the page material below or well-established biology; never invent a number. A clue never names the animal or a giveaway word in its name ("snow" for a snow leopard). The voice is a fun quiz host: quick, warm, words a 10-year-old knows.
 - shots[i].keyframe_prompt (shots 1, 2 and 5; "" for the others): the photoreal first frame of exactly this species, with the framing above (shot 1 so close the whole animal is not visible; shot 2 a silhouette). No other animals, no people, no text.
 ${LOOKS_RULE}
@@ -726,12 +728,14 @@ WHY IT WORKS: the viewer is the fighter. Every stat becomes something that happe
 THE TRUTH RULE: every number and claim is from the record below or well-established biology; never invent a number. Without a sure number, compare without one ("It outweighs three of you."). For the human side: an average adult sprints about 20–25 km/h and weighs about 60–80 kg; trained people can run 40+ km in a day in the heat, which almost no animal can.
 
 SHOTS (exactly 6, in order):
-(1) HOOK, 0–3 s: narration "Could you beat a <animal>? Three rounds." or sharper, at most 10 words, the animal named in the first five. hook_text: 3–6 words ("YOU VS A GORILLA"). Shot: the animal at eye level, staring into the lens, close, from the viewer's point of view.
+(1) HOOK, 0–3 s: narration "Could you beat a <animal>? Three rounds." or sharper, at most 10 words, the animal named in the first five. hook_text: 3–6 words ("YOU VS A GORILLA"). Shot: the animal already coming at the viewer (mid-charge, mid-leap, mouth opening), close, from the viewer's point of view.
 (2) ROUND 1: the animal's strongest edge as an event, second person. overlay "ROUND 1: <SKILL>" ("ROUND 1: STRENGTH"). Shot: the animal doing it, coming toward the camera.
 (3) ROUND 2: a different edge. overlay "ROUND 2: <SKILL>".
 (4) ROUND 3: the round YOU win, said plainly and truly. overlay "ROUND 3: <SKILL>". Shot: the animal at the limit of that skill (panting in the heat, looking up at something out of reach).
 (5) VERDICT: the score and who wins overall, honestly ("Two rounds to one. The gorilla wins, but only up close."). overlay "<ANIMAL> WINS 2–1" or "YOU WIN 2–1". (The real artwork and its stat card are shown; no prompts needed.)
 (6) ASK: a question that makes people pick a side ("Which round would you take? Comment it."). overlay: 2–5 words. (Replays the opening shot so the video loops.)
+
+${PERSON_RULE}
 
 WORDS: a fun, confident host; words a 10-year-old knows; each line at most 18 words; 50–70 words in total. No gore: an event shows power (a charge, a lift, a sprint), never an injury, never blood, never a person getting hurt.
 - shots[i].keyframe_prompt (shots 1–4; "" for 5 and 6): the photoreal first frame of exactly this species doing exactly this, from the viewer's point of view (first-person camera, the animal facing it). Never people or human body parts, never text.
@@ -833,6 +837,8 @@ SHOTS (exactly 6, in order):
 (5) THE CATCH of power B, the same way. overlay "THE CATCH". (Shows animal B's artwork.)
 (6) ASK: "<animal A> or <animal B>? Comment your pick." overlay: the two names with "OR". (Back to the question card, so it loops.)
 
+${PERSON_RULE} (Here the question itself is the first line: ask it like a friend would, "Okay, would you rather…".)
+
 WORDS: quick and playful; words a 10-year-old knows; each line at most 20 words; 55–75 words in total.
 - shots[i].keyframe_prompt (shots 2 and 3; "" for the others): the photoreal first frame of exactly that species using exactly that power, dynamic and close. Never people, never text.
 ${LOOKS_RULE}
@@ -933,12 +939,14 @@ export const POKEMON_SYSTEM_PROMPT = `You direct AnimalDex's "real animals that 
 No Pokémon artwork is ever shown and no shot depicts a Pokémon, a cartoon or a game: every shot is the real animal, photoreal. The Pokémon is only ever named in words.
 
 SHOTS (exactly 6, in order):
-(1) HOOK: the real animal, close and striking. narration: the challenge, at most 10 words ("This real animal is a Pokémon. Name it."). hook_text: 3–6 words ("NAME THE POKÉMON").
+(1) HOOK: the real animal, close and mid-action (never a posed portrait). narration: the challenge, at most 10 words ("This real animal is a Pokémon. Name it."). hook_text: 3–6 words ("NAME THE POKÉMON").
 (2) CLUE 1: a design cue from the match note below, said about the real animal. overlay "CLUE 1". Shot: the animal showing that feature.
 (3) CLUE 2: an easier cue. overlay "CLUE 2". (Replays shot 2.)
 (4) REVEAL: "It's <Pokémon>! The real one is the <animal>." — nothing else. (The animal's artwork and stat card are shown; no prompts needed.)
 (5) PAYOFF: the most surprising true fact about the real animal, 14–24 words, ideally one that beats the game ("Squirtle sprays water. A real green sea turtle can sleep underwater for hours.").
 (6) LOOP: "Comment the next Pokémon I should find." overlay "WHICH POKÉMON NEXT?". (Replays the opening shot.)
+
+${PERSON_RULE}
 
 RULES: facts from the record below or well-established biology; never invent a number; say about the Pokémon only what the match note says. A clue never names the Pokémon or a giveaway part of its name. Fun and quick, words a 10-year-old knows.
 - shots[i].keyframe_prompt (shots 1, 2 and 5; "" for the others): the photoreal first frame of exactly this real species (shot 1 close on its face, shot 2 showing the feature of the clue). Never cartoons, game art or toys, never people, never text.
