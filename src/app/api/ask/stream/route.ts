@@ -138,6 +138,7 @@ import {askKindVerdictEnabled, askStanceMemoryConfig} from "@/lib/ask-animaldex/
 import {askVerdictModel, loadAskHeldStances, rememberAskStance, requestAskTurnRead} from "@/lib/ask-animaldex/kind-verdict-server";
 import {isDeepTurn, looksLikeAppQuestion, resolveTurnKind, type TurnKind} from "@/lib/ask-animaldex/turn-kind";
 import {smallTalkByWords} from "@/lib/ask-animaldex/small-talk";
+import {askTimingLine} from "@/lib/ask-animaldex/ask-timing";
 import {prestartAnswerSource} from "@/lib/ask-animaldex/answer-prestart";
 import {angleForClient, askRecordFacets, loadAnglesHeard, recordAngleHeard} from "@/lib/ask-animaldex/angle";
 import {loadChatRoutingConfig, routeChatTurn} from "@/lib/ask-animaldex/chat-routing";
@@ -235,6 +236,8 @@ const STREAM_HEADERS = {
 export async function POST(request: Request) {
     // When the message arrived: it is kept in their history at this time.
     const askedAt = new Date();
+    // The turn's timing line counts from here (askTimingLine).
+    const startedMs = performance.now();
     let body: Record<string, unknown>;
     try {
         body = await request.json() as Record<string, unknown>;
@@ -1145,8 +1148,10 @@ export async function POST(request: Request) {
     const responseStream = new ReadableStream<Uint8Array>({
         async start(controller) {
             let closed = false;
+            let firstFrameMs: number | null = null;
             const send = (event: Record<string, unknown>) => {
                 if (closed) return;
+                if (firstFrameMs === null && typeof event.delta === "string" && event.delta) firstFrameMs = performance.now() - startedMs;
                 try {
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
                 } catch {
@@ -1193,6 +1198,8 @@ export async function POST(request: Request) {
                 // On a call, `done` waits until all of it has been spoken.
                 await speaker?.finish();
                 send({done: true, follow_up_prompts: split.followUps, ...closing, ...companionFields});
+                // What it drew, by its fence markers only, like the apps' timing line.
+                console.info(askTimingLine({answer: split.answer, totalMs: performance.now() - startedMs, firstFrameMs, smallTalk}));
                 if (split.answer.trim()) {
                     afterAnswer(split.answer);
                     recordTranscript(split.answer);
@@ -1261,6 +1268,7 @@ export async function POST(request: Request) {
                     speaker?.hear(shownWhole(whole.answer));
                     await speaker?.finish();
                     send({done: true, follow_up_prompts: whole.followUps, ...closing});
+                    console.info(askTimingLine({answer: shownWhole(whole.answer), totalMs: performance.now() - startedMs, firstFrameMs, smallTalk}));
                     afterAnswer(whole.answer);
                     recordTranscript(shownWhole(whole.answer));
                     rememberStory(cleanAskOwnStory(whole.ownStory));
