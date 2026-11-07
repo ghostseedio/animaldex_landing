@@ -454,6 +454,15 @@ export async function POST(request: Request) {
     // "I did it" (3.2): this message is their report on the open step, if it
     // still is that step (checked with the loop below).
     const stepReportId = isGreeting ? null : resolveStepReport(body.step_report)?.stepId ?? null;
+    // Small talk the words alone can route (`small-talk.ts`, the owner's
+    // small-talk shortcut, as the apps' function does): a hello, a thanks, a
+    // laugh goes to the small-talk model without waiting for its kind's
+    // verdict. Never a step report, a Trial question or a call.
+    const smallTalk = !isGreeting && !stepReportId && !subject.trialContext && !isCall && smallTalkByWords({
+        message: question ?? "",
+        names: [card?.nickname, basePacket.species?.name],
+        lastAnimalMessage: history.filter((turn) => turn.role === "assistant").at(-1)?.content ?? null
+    });
     // Its kind's verdict on what they asked (`kind-verdict.ts`), settled as
     // natural history while the rest of the turn loads, so the animal argues
     // its own side rather than the sensible one. Not on a visit, a Trial or a
@@ -464,8 +473,10 @@ export async function POST(request: Request) {
     // apps' animal_species_stances): what it already holds comes in beside the
     // companion read, and what it settles is kept after.
     const stanceMemory = stanceMemoryEarly;
+    // Not for small talk by its words: a hello has no side to take, and the
+    // turn never waits for it.
     const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && verdictSpecies && question &&
-            !isVisit && !isCall && !stepReportId && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
+            !smallTalk && !isVisit && !isCall && !stepReportId && !subject.trialContext && !ASK_CRISIS_PATTERN.test(question)
         ? Promise.all([
             companionPending,
             // Started with the record (heldStancesEarly); the same read.
@@ -504,7 +515,9 @@ export async function POST(request: Request) {
                 return read;
             }),
             () => null
-        )
+        // A failure inside the read (not only in the loads) is no verdict, never
+        // a rejection nobody awaits.
+        ).catch(() => null)
         : Promise.resolve(null);
     // A Trial question is grounded on that Trial and kept there.
     const aboutTrial = Boolean(subject.trialContext);
@@ -623,15 +636,6 @@ export async function POST(request: Request) {
     const visitorNotice = relayOn && relay && !relay.noticed ? askVisitorNoticeText(languageName, ownerName) : null;
     const relayThisTurn = relayOn && Boolean(relay?.noticed) && !isGreeting;
 
-    // Small talk the words alone can route (`small-talk.ts`, the owner's
-    // small-talk shortcut, as the apps' function does): a hello, a thanks, a
-    // laugh goes to the small-talk model without waiting for its kind's
-    // verdict. Never a step report, a Trial question or a call.
-    const smallTalk = !isGreeting && !stepReportId && !subject.trialContext && !isCall && smallTalkByWords({
-        message: question ?? "",
-        names: [card?.nickname, basePacket.species?.name],
-        lastAnimalMessage: history.filter((turn) => turn.role === "assistant").at(-1)?.content ?? null
-    });
     // A streamed small-talk turn reads its crisis check at the stream, where
     // its reply's model starts beside it (below).
     const deferCrisis = smallTalk && body.mode !== "complete";
