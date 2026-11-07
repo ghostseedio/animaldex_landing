@@ -315,6 +315,12 @@ export function useAskThread(params: {
      * one-to-one turn says "rich" with it; calls never do.
      */
     richColumns?: number | null;
+    /**
+     * The chat supplies `AnimalChatBlockContext` (`animal-chat-blocks.tsx`),
+     * so a reply's Trial loops and pictures are drawn: every one-to-one turn
+     * says "loop" and "image" (calls never do). Off unless the chat sets it.
+     */
+    chatBlocks?: boolean;
 }) {
     const {threadKey, subject, locale, principleName} = params;
 
@@ -556,7 +562,8 @@ export function useAskThread(params: {
             ...askTurnVisuals({
                 ownerVisuals: callbacks.current.ownerChat ? OWNER_CHAT_VISUALS : null,
                 richColumns: callbacks.current.richColumns,
-                call: Boolean(options.onCallEvent)
+                call: Boolean(options.onCallEvent),
+                chatBlocks: callbacks.current.chatBlocks
             }),
             subject: {
                 scope: subject.scope,
@@ -807,7 +814,8 @@ export function useAskThread(params: {
                     ...(referralId ? {referral_id: referralId} : {}),
                     ...askTurnVisuals({
                         ownerVisuals: callbacks.current.ownerChat ? OWNER_CHAT_VISUALS : null,
-                        richColumns: callbacks.current.richColumns
+                        richColumns: callbacks.current.richColumns,
+                        chatBlocks: callbacks.current.chatBlocks
                     }),
                     locale,
                     utc_offset_minutes: readerUtcOffset(),

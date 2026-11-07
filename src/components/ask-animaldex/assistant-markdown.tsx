@@ -28,8 +28,11 @@ const AskVisualView = dynamic(() => import("@/components/ask-animaldex/ask-visua
     loading: () => <div className="h-24 bg-white/[0.03]" aria-hidden="true" />
 });
 
-/** The diagram panel and a table (docs/rich-chat/SPEC.md, section 1.4): the panel radius token, about 14 of padding. */
-const PANEL_STYLE = {borderRadius: "var(--r-panel)", backgroundColor: "var(--ask-panel)", padding: 14} as const;
+/**
+ * The diagram panel and a table (docs/rich-chat/SPEC.md, section 1.4): the panel radius token, about 14 of padding.
+ * A reply's loop and pictures sit in the same panel (`animal-chat-blocks.tsx`).
+ */
+export const ASK_DIAGRAM_PANEL_STYLE = {borderRadius: "var(--r-panel)", backgroundColor: "var(--ask-panel)", padding: 14} as const;
 const TABLE_STYLE = {borderRadius: "var(--r-panel)", boxShadow: "inset 0 0 0 1px var(--ask-hairline)"} as const;
 const HAIRLINE = {borderColor: "var(--ask-hairline)"} as const;
 
@@ -159,7 +162,7 @@ function Block({block, photoUrl, photoAlt}: {
             // language), drawn as it arrives, never wrapped; it scrolls sideways if
             // it must. Looked at, not heard: the voice skips it.
             return (
-                <div className="ask-diagram-panel max-w-full overflow-x-auto" style={PANEL_STYLE} data-testid="ask-diagram">
+                <div className="ask-diagram-panel max-w-full overflow-x-auto" style={ASK_DIAGRAM_PANEL_STYLE} data-testid="ask-diagram">
                     <pre className="ask-diagram m-0 w-max min-w-full text-ink-100">{block.text}</pre>
                 </div>
             );

@@ -6,6 +6,7 @@
  */
 
 import {ASK_RICH_COLUMNS_MAX, ASK_RICH_COLUMNS_MIN, askRichColumns} from "@/lib/ask-animaldex/prompt";
+import {ASK_CHAT_BLOCK_VISUALS} from "@/lib/ask-animaldex/visuals";
 
 /**
  * `supported_visuals` for one turn: the owner's cards (`ownerVisuals`) on
@@ -13,14 +14,25 @@ import {ASK_RICH_COLUMNS_MAX, ASK_RICH_COLUMNS_MIN, askRichColumns} from "@/lib/
  * public chat's step preview, `AskStepPreviewSection`; the server sets one only
  * for a client that says so), and "rich" on every one-to-one animal turn whose
  * column was measured. Calls never send it (the call's turns go as they always have).
+ *
+ * `chatBlocks` (off unless the chat says so): the chat supplies
+ * `AnimalChatBlockContext`, so its replies draw the animal's Trial loops and
+ * pictures (`animal-chat-blocks.tsx`, 2026-11-07); every one-to-one turn then
+ * says "loop" and "image". Never on a call. "rich" stays last.
  */
 export function askTurnVisuals(params: {
     ownerVisuals: readonly string[] | null;
     richColumns: number | null | undefined;
     call?: boolean;
+    chatBlocks?: boolean;
 }): {supported_visuals?: string[]; text_columns?: number} {
     const visuals = [...(params.ownerVisuals ?? [])];
     if (!params.call && !visuals.includes("step")) visuals.push("step");
+    if (params.chatBlocks && !params.call) {
+        for (const name of ASK_CHAT_BLOCK_VISUALS) {
+            if (!visuals.includes(name)) visuals.push(name);
+        }
+    }
     const rich = !params.call && typeof params.richColumns === "number" && Number.isFinite(params.richColumns);
     if (rich) visuals.push("rich");
     return {

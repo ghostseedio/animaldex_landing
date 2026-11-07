@@ -163,7 +163,7 @@ import {
     askVisitorNotesPromptSection,
     withAskVisitorNotice
 } from "@/lib/ask-animaldex/visitor-notes";
-import {askSupportedVisuals} from "@/lib/ask-animaldex/visuals";
+import {askChatBlockVisuals, askSupportedVisuals} from "@/lib/ask-animaldex/visuals";
 import {askCallTurn, resolveAskCallQuestion} from "@/lib/ask-animaldex/call-voice";
 import {CALL_REPLY_LINE} from "@/lib/ask-animaldex/call-speech";
 import {askCallsOffered} from "@/lib/ask-animaldex/call-gate";
@@ -891,6 +891,8 @@ export async function POST(request: Request) {
 
     const supportedVisuals: AskVisualMedium[] = [
         ...askSupportedVisuals(packet.hasReaderPhoto),
+        // The animal's Trial loop and its pictures (2026-11-07): only for a chat that says it draws them, never on a call.
+        ...(speaksAsAnimal && !isCall ? askChatBlockVisuals(advertised) : []),
         ...(cards ? ["card" as const] : []),
         ...(debateCards ? ["debate" as const] : [])
     ];

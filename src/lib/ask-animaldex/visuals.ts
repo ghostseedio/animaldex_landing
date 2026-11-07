@@ -50,11 +50,32 @@ export type AskPhotoSpec = {
     callout: string;
 };
 
+/**
+ * The animal's kind doing it: one of its own Trial loops, by frequency
+ * (`{"frequency":"MID","caption":"…"}`). Which animal is the chat's, never
+ * the model's (`AnimalChatBlockContext`).
+ */
+export type AskLoopSpec = {
+    frequency: "LOW" | "MID" | "HIGH";
+    caption: string | null;
+};
+
+/**
+ * A picture AnimalDex already has: the chat animal's Power icon
+ * (`{"of":"power"}`), or the art of a species it compares itself with
+ * (`{"of":"species","name":"Red Fox"}`). Nothing is generated.
+ */
+export type AskImageSpec =
+    | {of: "power"; caption: string | null}
+    | {of: "species"; name: string; caption: string | null};
+
 export type AskVisual =
     | {kind: "flow"; spec: AskFlowSpec}
     | {kind: "scale"; spec: AskScaleSpec}
     | {kind: "chart"; spec: AskChartSpec}
-    | {kind: "photo"; spec: AskPhotoSpec};
+    | {kind: "photo"; spec: AskPhotoSpec}
+    | {kind: "loop"; spec: AskLoopSpec}
+    | {kind: "image"; spec: AskImageSpec};
 
 export function isAskVisualLanguage(language: string): boolean {
     return language.startsWith("animaldex-");
@@ -247,6 +268,33 @@ function decodePhoto(input: Json): AskPhotoSpec | null {
     return callout ? {callout} : null;
 }
 
+const LOOP_FREQUENCIES = new Set(["LOW", "MID", "HIGH"]);
+
+/** A loop names one of the animal's three Trials; anything else is no loop. */
+function decodeLoop(input: Json): AskLoopSpec | null {
+    const object = renamed(input, {freq: "frequency", trial: "frequency", level: "frequency", text: "caption", label: "caption"});
+    const frequency = typeof object.frequency === "string" ? object.frequency.trim().toUpperCase() : "";
+    if (!LOOP_FREQUENCIES.has(frequency)) return null;
+    return {frequency: frequency as AskLoopSpec["frequency"], caption: text(object.caption, 200)};
+}
+
+/**
+ * Its Power's icon, or another species' art by its common name; nothing else
+ * is ours to show. The spellings iOS reads (`power_icon`, `icon`, `animal`)
+ * are read here too.
+ */
+function decodeImage(input: Json): AskImageSpec | null {
+    const object = renamed(input, {kind: "of", type: "of", show: "of", animal: "name", species_name: "name", text: "caption", label: "caption"});
+    const of = typeof object.of === "string" ? object.of.trim().toLowerCase() : "";
+    const caption = text(object.caption, 200);
+    if (of === "power" || of === "power_icon" || of === "icon") return {of: "power", caption};
+    if (of === "species" || of === "animal") {
+        const name = text(object.name, 80);
+        return name ? {of: "species", name, caption} : null;
+    }
+    return null;
+}
+
 /**
  * Decodes one fenced visual block. A block that cannot be decoded returns null
  * and is dropped by the parser: a reader should never be handed raw JSON
@@ -278,6 +326,14 @@ export function decodeAskVisual(language: string, payload: string): AskVisual | 
             const spec = decodePhoto(parsed);
             return spec ? {kind: "photo", spec} : null;
         }
+        case "animaldex-loop": {
+            const spec = decodeLoop(parsed);
+            return spec ? {kind: "loop", spec} : null;
+        }
+        case "animaldex-image": {
+            const spec = decodeImage(parsed);
+            return spec ? {kind: "image", spec} : null;
+        }
         default:
             return null;
     }
@@ -294,6 +350,10 @@ export function askVisualIdentity(visual: AskVisual): string {
             return `chart-${visual.spec.title ?? visual.spec.series.map((series) => series.label).join("|")}`;
         case "photo":
             return `photo-${visual.spec.callout}`;
+        case "loop":
+            return `loop-${visual.spec.frequency}`;
+        case "image":
+            return visual.spec.of === "species" ? `image-species-${visual.spec.name}` : "image-power";
     }
 }
 
@@ -316,6 +376,12 @@ export function askVisualSpokenSummary(visual: AskVisual): string {
         }
         case "photo":
             return `Your photo of this animal: ${visual.spec.callout}`;
+        case "loop":
+            return visual.spec.caption ?? "Its kind doing it";
+        case "image":
+            return visual.spec.of === "species"
+                ? [visual.spec.name, visual.spec.caption].filter(Boolean).join(": ")
+                : visual.spec.caption ?? "";
     }
 }
 
@@ -328,4 +394,42 @@ export function askVisualSpokenSummary(visual: AskVisual): string {
  */
 export function askSupportedVisuals(hasReaderPhoto: boolean): Array<"flow" | "scale" | "chart" | "photo"> {
     return hasReaderPhoto ? ["flow", "scale", "chart", "photo"] : ["flow", "scale", "chart"];
+}
+
+/** The two drawings that need the chat's animal (`AnimalChatBlockContext`). */
+export const ASK_CHAT_BLOCK_VISUALS = ["loop", "image"] as const;
+export type AskChatBlockVisual = (typeof ASK_CHAT_BLOCK_VISUALS)[number];
+
+/**
+ * The chat's own drawings a request says it draws (`supported_visuals`), in
+ * order: a client that sends neither "loop" nor "image" is described neither.
+ */
+export function askChatBlockVisuals(advertised: readonly unknown[]): AskChatBlockVisual[] {
+    return ASK_CHAT_BLOCK_VISUALS.filter((name) => advertised.includes(name));
+}
+
+/**
+ * The art slug for a species the model names in an image ("Red Fox" →
+ * "red-fox", "Harris's Hawk" → "harriss-hawk", as the artwork files are
+ * named); the artwork route finds the file or a close relative's from it.
+ */
+export function askSpeciesArtSlug(name: string): string | null {
+    const slug = name
+        .normalize("NFKD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/['’]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    return slug || null;
+}
+
+/**
+ * Whether a loaded picture from the artwork route is a species' art. The
+ * route answers a species without any with its stand-in
+ * (`SPECIES_NO_IMAGE_SRC`, drawn 1200 × 900), and an image block draws
+ * nothing rather than that.
+ */
+export function askIsSpeciesArt(width: number, height: number): boolean {
+    return width > 0 && height > 0 && !(width === 1200 && height === 900);
 }

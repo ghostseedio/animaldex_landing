@@ -381,8 +381,10 @@ export function AskReplyBubbles({
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                     {pieces.map((piece, index) => {
                         if (piece.kind === "visual") {
+                            // A drawing with nothing to show (a loop or a picture the chat has no
+                            // animal or asset for) takes no room either.
                             return (
-                                <div key={`v-${index}`} className={`py-1 ${plain ? "" : "pr-9"}`}>
+                                <div key={`v-${index}`} className={`py-1 [&:has(>div:empty)]:hidden ${plain ? "" : "pr-9"}`}>
                                     <AssistantMarkdown compact text={piece.source} photoUrl={photoUrl} photoAlt={photoAlt} streaming={isLive} />
                                 </div>
                             );

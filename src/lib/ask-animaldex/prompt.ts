@@ -60,8 +60,10 @@ export type AskScope = "species" | "general";
  * Non-prose mediums a client can render. Mirrors `AssistantVisual` on iOS.
  * `card` is the owner's chat only (the Warmup and Trials cards, 3.2), and
  * `debate` the debate card kind there (3.2 Debates), described with the card.
+ * `loop` and `image` (2026-11-07) only for a chat that draws them, which
+ * supplies the animal (`AnimalChatBlockContext`).
  */
-export type AskVisualMedium = "flow" | "scale" | "chart" | "photo" | "card" | "debate";
+export type AskVisualMedium = "flow" | "scale" | "chart" | "photo" | "card" | "debate" | "loop" | "image";
 
 export type AskConversationTurn = {
     role: "user" | "assistant";
@@ -638,6 +640,31 @@ const VISUAL_MEDIUMS: Record<AskVisualMedium, string[]> = {
         "  ```",
         "  with: the keys from other_animals of the animals you named or have in mind (at most 3; [] when none). No title,",
         "  body or button text: the words are in your reply. Never mention the marker. Only when the debate rule allows it."
+    ],
+    // Your kind doing it (the owner, 2026-11-07: "including the trial motion
+    // animation"): one of the animal's own Trial loops, drawn inline. For a
+    // chat that says "loop"; never an offer, that is the card. The apps'
+    // `ASSISTANT_VISUAL_MEDIUMS.loop`, verbatim.
+    loop: [
+        "- Your kind doing it is a LOOP: a short looping animation of you doing one of your Trials, the real act. Show it",
+        "  when you tell them how your kind does the thing your point comes from, or when you name one of your Trials:",
+        "  ```animaldex-loop",
+        '  {"frequency":"MID","caption":"optional: one short line on what to watch"}',
+        "  ```",
+        "  frequency is one of your Trials listed in available_content (LOW, MID or HIGH). It is a drawing, not an offer:",
+        "  no button, never in place of a card, never in small talk."
+    ],
+    // A picture AnimalDex already has (the owner, 2026-11-07: "even including
+    // images"): the Power's icon or another species' art, never generated.
+    // The apps' `ASSISTANT_VISUAL_MEDIUMS.image`, verbatim.
+    image: [
+        "- A picture AnimalDex already has is an IMAGE: your Power's icon, or the art of an animal you compare yourself",
+        "  with (only one named in animal_record.power.contrasting_species):",
+        "  ```animaldex-image",
+        '  {"of":"power"}',
+        "  ```",
+        '  or {"of":"species","name":"its common name, as your record gives it","caption":"optional, one short line"}.',
+        "  Only when the picture says something the words do not, never as decoration."
     ]
 };
 

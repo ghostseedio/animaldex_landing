@@ -7,12 +7,15 @@
  * prose that would have described it, which is why they are laid out to be read
  * at a glance rather than studied: a flow is the mechanism, a scale is the
  * too-little / too-much range, the photo is the reader's own picture with one
- * line pointing into it.
+ * line pointing into it. A loop and an image are the chat animal's own
+ * (`animal-chat-blocks.tsx`): its kind doing it, its Power's icon or another
+ * species' art, drawn only where the chat supplies the animal.
  */
 
 import Image from "next/image";
 import {askVisualSpokenSummary, type AskVisual} from "@/lib/ask-animaldex/visuals";
 import AskVisualChart from "@/components/ask-animaldex/ask-visual-chart";
+import {AnimalChatImageBlock, AnimalChatLoopBlock} from "@/components/ask-animaldex/animal-chat-blocks";
 
 function VisualFrame({title, summary, children}: {
     title: string | null;
@@ -179,5 +182,9 @@ export default function AskVisualView({visual, photoUrl, photoAlt}: {
                     summary={summary}
                 />
             );
+        case "loop":
+            return <AnimalChatLoopBlock spec={visual.spec} />;
+        case "image":
+            return <AnimalChatImageBlock spec={visual.spec} />;
     }
 }

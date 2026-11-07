@@ -30,7 +30,8 @@ import {
  *
  * `full` puts the numbered caption steps under the stage, the active one lit.
  * `compact` (cards) is the stage with "STEP n OF m" and the active caption
- * beside it, stacked under it when the row is narrow.
+ * beside it, stacked under it when the row is narrow. `stage` is the stage
+ * alone, the width of its container (a loop inside a chat reply).
  */
 
 /** Lime as text steps down to a readable green on the light theme; as a fill it stays lime. */
@@ -64,7 +65,7 @@ export default function TrialMotion({
 }: {
     /** The raw `motion_storyboard` value, or one already parsed. Null renders nothing. */
     storyboard: TrialStoryboard | unknown;
-    variant?: "full" | "compact";
+    variant?: "full" | "compact" | "stage";
     /** Server-rendered poster frame (inner SVG markup). */
     posterMarkup?: string | null;
     /** Draw this one frame (seconds) and never animate: stills and visual QA. */
@@ -99,7 +100,7 @@ function TrialMotionStage({
     className
 }: {
     storyboard: TrialStoryboard;
-    variant: "full" | "compact";
+    variant: "full" | "compact" | "stage";
     posterMarkup: string | null;
     freezeAt: number | null;
     compactLayout: "auto" | "row";
@@ -228,6 +229,11 @@ function TrialMotionStage({
             <svg ref={svgRef} aria-hidden="true" viewBox={viewBox} className="absolute inset-0 h-full w-full" />
         </div>
     );
+
+    if (variant === "stage") {
+        // The stage alone: its label reads every caption.
+        return <figure className={`w-full ${className}`}>{stage}</figure>;
+    }
 
     if (variant === "compact") {
         // The stage with the active step beside it (Android `TrialMotionStyle.Compact`).
