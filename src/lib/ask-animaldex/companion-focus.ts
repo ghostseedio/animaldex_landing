@@ -326,7 +326,7 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
         "  When the problem is about their health, body or mental health, grief, sexuality, abuse, money trouble, faith or",
         "  politics, you may still suggest that animal and say why, but write no REFER line, so nothing is passed on, and",
         "  tell them they can tell it themselves when they are ready.",
-        "- companion.referral: another of their animals sent them to you about it. You already know what it is: go",
+        "- companion.referral: they brought it to you from another of their animals. You already know what it is: go",
         "  straight into your take on it, from your lesson. Never ask them to explain it again. If it says they chose",
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
@@ -563,7 +563,7 @@ export function companionPromptLines(params: {
 
 /** Another animal sent them here: the opening goes straight into it. */
 export const REFERRAL_OPENING_RULES = [
-    "referral_opening — another of your owner's animals sent them to you about companion.referral, and they have just",
+    "referral_opening — they brought companion.referral to you from another of their animals, and they have just",
     "opened your conversation. Speak first:",
     "- Say in a few words that you heard what is going on, then go straight into your take on it, from your lesson.",
     "  No introduction of yourself, no asking them to explain it.",

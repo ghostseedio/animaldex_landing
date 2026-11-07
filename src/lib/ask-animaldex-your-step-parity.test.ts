@@ -75,9 +75,11 @@ test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () 
     // Refreshed from the apps' main after the chat engine merged (strategy,
     // 2026-11-06: no step on the first mention or with the second-opinion
     // offer), then after the Talk front door's referral privacy rule (SPEC
-    // 6.4, AnimalDex 4403b042), by scripts/generate-your-step-parity-fixture.mts.
+    // 6.4, AnimalDex 4403b042), then after referrals became something they
+    // brought, not something an animal sent ("Ask another animal", AnimalDex
+    // ceeaec79), by scripts/generate-your-step-parity-fixture.mts.
     assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^4403b042/);
+    assert.match(fixture.source.commit, /^ceeaec79/);
 });
 
 test("step outcomes: the DONE line's outcome and the debate a step came from read as the server reads them", () => {

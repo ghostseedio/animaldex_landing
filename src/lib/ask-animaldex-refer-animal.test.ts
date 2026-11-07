@@ -3,19 +3,20 @@ import test from "node:test";
 import {referAnimalReply, referAnimalUpstreamBody} from "./ask-animaldex/refer-animal";
 
 // "Ask another animal" (2026-11-07): the web passes the request to the apps'
-// function (mode refer_animal), which checks it.
+// function (flow refer_animal of animal_group_query), which checks it.
 
 test("the function is sent the four fields and nothing else", () => {
     const body = referAnimalUpstreamBody({
         from_species_profile_id: "a", to_species_profile_id: "b", to_capture_id: "c", problem: "I can't decide.", user_id: "someone-else"
     });
+    const envelope = {flow: "refer_animal", capture_ids: [], user_question: "", stream: false, surface: "web"};
     assert.deepEqual(body, {
-        mode: "refer_animal",
-        refer_animal: {from_species_profile_id: "a", to_species_profile_id: "b", to_capture_id: "c", problem: "I can't decide."}
+        mode: "animal_group_query",
+        animal_group_query: {...envelope, from_species_profile_id: "a", to_species_profile_id: "b", to_capture_id: "c", problem: "I can't decide."}
     });
     assert.deepEqual(referAnimalUpstreamBody({}), {
-        mode: "refer_animal",
-        refer_animal: {from_species_profile_id: null, to_species_profile_id: null, to_capture_id: null, problem: null}
+        mode: "animal_group_query",
+        animal_group_query: {...envelope, from_species_profile_id: null, to_species_profile_id: null, to_capture_id: null, problem: null}
     });
 });
 

@@ -3,7 +3,8 @@ import {NextResponse} from "next/server";
 /**
  * "Ask another animal" (2026-11-07): the reader sends their problem from one
  * of their animals to another. Passed to the apps' function as the reader
- * (`refer-animal.ts`), so the web and the apps refuse alike; no model is asked.
+ * (`refer-animal.ts`, flow "refer_animal"), so the web and the apps refuse
+ * alike; no model is asked.
  */
 
 import {createSupabaseServerClient} from "@/lib/supabase/server";

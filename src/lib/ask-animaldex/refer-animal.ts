@@ -1,27 +1,31 @@
 /**
  * "Ask another animal" (2026-11-07): the web passes the request to the apps'
- * `generate-applied-insight` (`mode: "refer_animal"`) as the signed-in
- * reader, so the app and the web check and refuse alike (one validator, in
+ * `generate-applied-insight` (`flow: "refer_animal"` of `animal_group_query`,
+ * like the debate actions) as the signed-in reader, so the app and the web check and refuse alike (one validator, in
  * the function's `_shared/animal-referral-request.ts`). No model is asked: the
  * target's referral greeting opens on the problem when its chat greets with
  * the id (`useAskThread().greet({referralId})`).
  *
- * Request: {from_species_profile_id, to_species_profile_id, to_capture_id, problem}.
+ * Request: {from_species_profile_id, to_species_profile_id, to_capture_id (or
+ * null: their newest card of that animal), problem}.
  * 200: {referral_id, referral: {id, species_profile_id, capture_id}}.
  * Otherwise {error}: invalid_request, problem_too_short, problem_too_long,
- * same_animal, unknown_animal, capture_not_that_animal (400), not_your_animal
- * (403), rate_limited (429), referral_refused (422), referral_failed (500),
+ * same_animal, unknown_animal (400), not_your_animal (403: no such card of
+ * theirs), rate_limited (429), referral_refused (422), referral_failed (500),
  * plus the age response and, from this route, not_authenticated (401) and
  * unavailable (503/502).
  */
 
 const FIELDS = ["from_species_profile_id", "to_species_profile_id", "to_capture_id", "problem"] as const;
 
-/** The function's request: only the four fields, as sent. */
+/** The function's request: the four fields, as sent, in the debate actions' envelope. */
 export function referAnimalUpstreamBody(body: Record<string, unknown>): Record<string, unknown> {
     const referral: Record<string, unknown> = {};
     for (const field of FIELDS) referral[field] = body[field] ?? null;
-    return {mode: "refer_animal", refer_animal: referral};
+    return {
+        mode: "animal_group_query",
+        animal_group_query: {flow: "refer_animal", capture_ids: [], user_question: "", stream: false, surface: "web", ...referral}
+    };
 }
 
 /** What the reader gets back from the function's answer. */
