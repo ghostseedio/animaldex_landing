@@ -123,7 +123,8 @@ export function AskStepSection({
     problem,
     onPrimary,
     onOther,
-    onStartDebate
+    onStartDebate,
+    onAskAnother
 }: {
     /** The step's words as the reply set them (the open step's while live). */
     text: string;
@@ -143,6 +144,8 @@ export function AskStepSection({
      * started here.
      */
     onStartDebate?: () => void;
+    /** "Ask another animal" (2026-11-07): another of theirs picks the problem up, with it fed in. */
+    onAskAnother?: {label: string; onClick: () => void};
 }) {
     const live = resolution.kind === "live" ? resolution.step : null;
     const frequency = live?.trialFrequency ?? trialFrequency;
@@ -169,6 +172,11 @@ export function AskStepSection({
                         {onStartDebate ? (
                             <button type="button" onClick={onStartDebate} className={SECONDARY} data-testid="step-start-debate">
                                 {words.debate.start}
+                            </button>
+                        ) : null}
+                        {onAskAnother ? (
+                            <button type="button" onClick={onAskAnother.onClick} className={SECONDARY} data-testid="step-ask-another">
+                                {onAskAnother.label}
                             </button>
                         ) : null}
                     </div>

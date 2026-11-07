@@ -29,6 +29,8 @@ import type {rosterLine} from "@/lib/companion-roster";
 import type {CompanionTabRow} from "@/lib/companion-rows";
 import {pickCompanionToOpen, rememberCompanion, rememberedCompanion, type CompanionsOpeningMemory} from "@/lib/companions-opening";
 import {COMPANIONS_SWITCH_EVENT} from "@/components/companions/use-companion-roster";
+import {referAnimal} from "@/components/debates/use-debates";
+import {CompanionRow} from "./companion-row";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
 
 export type CompanionsChatEntry = {row: CompanionTabRow; line: ReturnType<typeof rosterLine>; time: number | null};
@@ -84,6 +86,11 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     }, [setBottomNavHidden]);
     const rows = useMemo(() => entries.map((entry) => entry.row), [entries]);
     const [switchedTo, setSwitchedTo] = useState<string | null>(null);
+    // A switch made in the chat itself ("Ask another animal", a referral card, "Try X's way",
+    // 2026-11-07): the animal and the referral its chat opens on.
+    const [switchedReferral, setSwitchedReferral] = useState<{speciesProfileId: string; referralId: string | null} | null>(null);
+    // The picker of their other animals, with the problem the chat is on.
+    const [picker, setPicker] = useState<{problem: string} | null>(null);
     // Read for the first draw: this chat only ever draws in the browser (companions-page loads it
     // with ssr: false). Read in an effect, the first draw opened the newest animal's whole thread
     // and the next one swapped in the remembered animal's (bug hunt, 2026-11-07).
@@ -124,6 +131,25 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     const avatarUrl = current?.slug ? getSpeciesImageRoute(current.slug) : null;
     // The shell's side menu (the owner, 2026-11-06): on a phone the slide-over; on a wide screen the sidebar is always there.
     const openSwitcher = useCallback(() => toggleMenu(), [toggleMenu]);
+    // Another of their animals, in this tab, on the problem it was sent (the inline-chat rule:
+    // nothing in a conversation opens a window). False when it is not one of theirs here.
+    const openAnimalInPlace = useCallback((target: {speciesProfileId: string | null; captureId: string | null}, referralId: string | null) => {
+        const row = rows.find((candidate) => target.speciesProfileId !== null && candidate.speciesProfileId === target.speciesProfileId)
+            ?? rows.find((candidate) => target.captureId !== null && candidate.captureId === target.captureId);
+        if (!row) return false;
+        setSwitchedReferral({speciesProfileId: row.speciesProfileId, referralId});
+        rememberCompanion(row.speciesProfileId, Date.now(), {captureId: row.captureId, animal: row.animal, displayName: row.displayName, slug: row.slug});
+        startTransition(() => setSwitchedTo(row.speciesProfileId));
+        return true;
+    }, [rows]);
+    const askAnotherAnimal = useCallback((problem: string) => setPicker({problem}), []);
+    // A pick: the server is told (`refer_animal`), so that animal opens on the problem; told or not, it opens.
+    const pickAnother = useCallback(async (row: CompanionTabRow, from: string | null) => {
+        const problem = picker?.problem ?? "";
+        setPicker(null);
+        const result = await referAnimal({fromSpeciesProfileId: from, toSpeciesProfileId: row.speciesProfileId, toCaptureId: row.captureId, problem});
+        openAnimalInPlace({speciesProfileId: row.speciesProfileId, captureId: row.captureId}, result.ok ? result.value : null);
+    }, [picker, openAnimalInPlace]);
 
     // The "+" (the owner, 2026-11-06, after the Claude app): the phone's camera
     // app or the camera roll opens at once, from the tap on the item; the
@@ -161,6 +187,8 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
             onMenu: openSwitcher,
             words: talk,
             onAskAnother: openSwitcher,
+            onAskAnotherAnimal: rows.length > 1 ? askAnotherAnimal : null,
+            onOpenAnimal: openAnimalInPlace,
             initialQuestion: null,
             appHref: "/#download",
             subject: {
@@ -187,7 +215,7 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                 }
             }
         }
-        : null), [currentId, subject, openSwitcher, talk, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile, profileName]);
+        : null), [currentId, subject, openSwitcher, talk, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile, profileName, rows.length, askAnotherAnimal, openAnimalInPlace]);
 
     if (!current || !page) return null;
     return (
@@ -206,9 +234,23 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                     captureId={captureId}
                     avatarUrl={avatarUrl}
                     companionSpeciesProfileId={current.speciesProfileId}
+                    referralId={switchedReferral?.speciesProfileId === current.speciesProfileId ? switchedReferral.referralId : null}
                 />
                 <AskConversation key={current.speciesProfileId} labels={labels} presentation="page" page={page} />
             </main>
+            {/* "Ask another animal" (the owner, 2026-11-07): their other animals in the switcher's look, without this one. */}
+            {picker ? (
+                <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 sm:items-center" onClick={() => setPicker(null)} data-testid="ask-another-sheet">
+                    <div className="max-h-[85vh] w-full max-w-md overflow-y-auto bg-[#0b0b0b] pb-[env(safe-area-inset-bottom,0px)]" onClick={(event) => event.stopPropagation()}>
+                        <p className="px-5 pb-2 pt-5 font-display text-[20px] font-bold leading-6 text-white">{words.list.switcher}</p>
+                        <div className="px-2 pb-3">
+                            {entries.filter(({row}) => row.speciesProfileId !== current.speciesProfileId).map(({row, line, time}) => (
+                                <CompanionRow key={row.speciesProfileId} row={row} line={line} time={time} locale={locale} words={words} href={null} onSelect={() => void pickAnother(row, current.speciesProfileId)} compact />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

@@ -53,6 +53,14 @@ export async function loadDebateCandidates(params: {hostCaptureId: string; visib
     return result.ok ? {ok: true, value: decodeDebateCandidates(result.payload.candidates)} : result;
 }
 
+/** "Ask another animal" (2026-11-07): another of their animals is sent this problem; the referral its chat opens on. */
+export async function referAnimal(params: {fromSpeciesProfileId: string | null; toSpeciesProfileId: string; toCaptureId: string | null; problem: string}): Promise<DebateCallResult<string>> {
+    const result = await debatesCall({action: "referAnimal", ...params});
+    if (!result.ok) return result;
+    const referralId = typeof result.payload.referralId === "string" ? result.payload.referralId : null;
+    return referralId ? {ok: true, value: referralId} : {ok: false, code: "debate_unavailable"};
+}
+
 export async function createDebate(params: {hostCaptureId: string; visibility: DebateVisibility; problem: string; captureIds: string[]}): Promise<DebateCallResult<Debate>> {
     const result = await debatesCall({action: "create", ...params});
     if (!result.ok) return result;

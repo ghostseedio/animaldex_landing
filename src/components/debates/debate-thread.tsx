@@ -113,7 +113,14 @@ function withTurn(current: DebateTurn[], turn: DebateTurn): DebateTurn[] {
  * choice is said there as their message (`onOwnWay`); anywhere else the
  * host's chat opens.
  */
-export function useTryDebateWay(debate: Debate | null, words: CompanionWords, chat: {captureId: string | null; onOwnWay?: () => void} = {captureId: null}) {
+export type DebateThreadChat = {
+    captureId: string | null;
+    onOwnWay?: () => void;
+    /** The Companions tab's chat (2026-11-07): the way's chat opens in place, on its referral; true once it did. */
+    onOpenAnimal?: (target: {speciesProfileId: string | null; captureId: string | null}, referralId: string | null) => boolean;
+};
+
+export function useTryDebateWay(debate: Debate | null, words: CompanionWords, chat: DebateThreadChat = {captureId: null}) {
     const router = useRouter();
     const [choosing, setChoosing] = useState<string | null>(null);
     const [problem, setProblem] = useState<string | null>(null);
@@ -141,6 +148,7 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
                 chat.onOwnWay();
                 return;
             }
+            if (choice.referralId && chat.onOpenAnimal?.({speciesProfileId: participant.speciesProfileId ?? null, captureId}, choice.referralId)) return;
             const query = choice.referralId ? `?referral=${encodeURIComponent(choice.referralId)}` : "?talk=1";
             router.push(`/app/capture/${encodeURIComponent(captureId)}${query}`);
         });
@@ -171,7 +179,7 @@ export default function DebateThread({
     /** A public debate waiting for its text to be approved: open the approval. */
     onApprove?: (debate: Debate) => void;
     /** Shown in this card's own chat: the host's own way is said here. */
-    chat?: {captureId: string | null; onOwnWay?: () => void};
+    chat?: DebateThreadChat;
     /** The host's face for its special messages (its species icon art); else the host's seat's. */
     hostFaceUrl?: string | null;
     /** Opens on "DEBATE" and who is in it, as the host's own message (false: the offer's section already says it). */

@@ -107,6 +107,7 @@ import {
     normalizeCompanionLoop,
     referralCapturePath,
     type AskCompanionEvent,
+    type AskCompanionReferral,
     type AskCompanionLoop,
     type AskCompanionStepSet
 } from "@/lib/ask-animaldex/companion-loop";
@@ -439,6 +440,19 @@ export type AskConversationPage = {
     words: TalkWords;
     /** "Ask another animal": the picker, with the question the reply answered carried over. */
     onAskAnother: (question: string) => void;
+    /**
+     * The owner's own chat (the owner, 2026-11-07): "Ask another animal" in
+     * the ••• menu and under the open step opens the picker of their other
+     * animals, with the problem the chat is on; a pick tells the server
+     * (`refer_animal`) and switches to that animal. Absent, neither shows.
+     */
+    onAskAnotherAnimal?: ((problem: string) => void) | null;
+    /**
+     * Another of their animals, in place (the Companions tab's chat): an
+     * animal's referral card and "Try X's way" switch the tab's chat to it
+     * on the referral, instead of leaving the page. True once handled.
+     */
+    onOpenAnimal?: ((target: {speciesProfileId: string | null; captureId: string | null}, referralId: string | null) => boolean) | null;
     /** A question carried over from another animal's chat: put in the composer, ready to send, never sent for them. */
     initialQuestion: string | null;
     /** Where the app is ("Get the app"). */
@@ -2116,6 +2130,12 @@ function AskConversation({
      * they said (the call's `debate_request`, then their latest message).
      * The owner's animals it named are pre-selected.
      */
+    // What "Ask another animal" hands the other animal: the problem as a debate would seed it (the focus, else what they said).
+    const askAnotherProblem = useCallback(
+        () => debateSeedProblem({focus: companionLoop?.focus ?? animalBond.bond?.focus ?? null, said: [lastQuestion(messages)]}),
+        [companionLoop?.focus, animalBond.bond?.focus, messages]
+    );
+    const askAnotherAnimal = page?.onAskAnotherAnimal && ownerChat ? page.onAskAnotherAnimal : null;
     const openDebateSheet = useCallback((
         messageId: string | null,
         approving: Debate | null = null,
@@ -2184,8 +2204,10 @@ function AskConversation({
     // The host's own way, chosen in its own chat: said here, as their message.
     const debateChat = useMemo(() => ({
         captureId: hostCaptureId,
-        onOwnWay: () => submit(words.debateWeb.tryOwnWayMessage, "chip")
-    }), [hostCaptureId, submit, words.debateWeb.tryOwnWayMessage]);
+        onOwnWay: () => submit(words.debateWeb.tryOwnWayMessage, "chip"),
+        // At the tab's root, another animal's way switches the tab's chat to it in place (2026-11-07).
+        onOpenAnimal: page?.onOpenAnimal ?? undefined
+    }), [hostCaptureId, submit, words.debateWeb.tryOwnWayMessage, page?.onOpenAnimal]);
     const debateBlocks = (anchor: string) => (debatesAfter.get(anchor) ?? []).map((debate) => (
         <div key={debate.id} className="pt-3.5">
             <DebateThread
@@ -2296,8 +2318,9 @@ function AskConversation({
     // The rows' handlers, one stable object (see `AskRowActions`): each reads
     // this render's closure through the ref, so a memoised row never calls a
     // stale one and never renders again just because a closure was remade.
-    const rowClosuresRef = useRef({copyMessage, shareMessage, regenerate, retry, openReport, resolveFollowUp, submit, toggleVoice: speech.toggle, askAnother: (message: AskMessage) => page?.onAskAnother(askedBefore(message.id) ?? "")});
-    rowClosuresRef.current = {copyMessage, shareMessage, regenerate, retry, openReport, resolveFollowUp, submit, toggleVoice: speech.toggle, askAnother: (message: AskMessage) => page?.onAskAnother(askedBefore(message.id) ?? "")};
+    const openReferralInPlace = (referral: AskCompanionReferral) => page?.onOpenAnimal?.({speciesProfileId: referral.speciesProfileId, captureId: referral.captureId}, referral.id) ?? false;
+    const rowClosuresRef = useRef({copyMessage, shareMessage, regenerate, retry, openReport, resolveFollowUp, submit, toggleVoice: speech.toggle, askAnother: (message: AskMessage) => page?.onAskAnother(askedBefore(message.id) ?? ""), openReferral: openReferralInPlace});
+    rowClosuresRef.current = {copyMessage, shareMessage, regenerate, retry, openReport, resolveFollowUp, submit, toggleVoice: speech.toggle, askAnother: (message: AskMessage) => page?.onAskAnother(askedBefore(message.id) ?? ""), openReferral: openReferralInPlace};
     const rowActions = useMemo<AskRowActions>(() => ({
         onCopy: (message) => rowClosuresRef.current.copyMessage(message),
         onShare: (message) => rowClosuresRef.current.shareMessage(message),
@@ -2307,7 +2330,8 @@ function AskConversation({
         onReport: (message) => rowClosuresRef.current.openReport(message),
         onResolveFollowUp: (message, resolution) => rowClosuresRef.current.resolveFollowUp(message, resolution),
         onToggleVoice: (message) => rowClosuresRef.current.toggleVoice(message.id, message.text),
-        onAskAnother: (message) => rowClosuresRef.current.askAnother(message)
+        onAskAnother: (message) => rowClosuresRef.current.askAnother(message),
+        onOpenReferral: (referral) => rowClosuresRef.current.openReferral(referral)
     }), []);
     // Under the first real-problem reply on the public Talk chat, once: why to sign up (one object, so the row stays memoised).
     const signUpOffer = useMemo(() => (page ? {text: page.words.signUpForMore, href: page.appHref} : null), [page]);
@@ -2344,6 +2368,7 @@ function AskConversation({
         return (
             <AskStepSection
                 onStartDebate={offersDebate ? () => openDebateSheet(messageId) : undefined}
+                onAskAnother={askAnotherAnimal && page ? {label: page.words.askAnother, onClick: () => askAnotherAnimal(askAnotherProblem())} : undefined}
                 key="step"
                 text={stepSet.step}
                 resolution={resolution}
@@ -3033,6 +3058,12 @@ function AskConversation({
                                     label: words.debate.start,
                                     icon: <DebateIcon />,
                                     onSelect: () => openDebateSheet(null)
+                                }] : []),
+                                // "Ask another animal" (the owner, 2026-11-07): another of theirs picks the problem up.
+                                ...(askAnotherAnimal && page ? [{
+                                    label: page.words.askAnother,
+                                    icon: <ReferralIcon />,
+                                    onSelect: () => askAnotherAnimal(askAnotherProblem())
                                 }] : [])
                             ]}
                             settingsItems={[
@@ -3588,6 +3619,8 @@ type AskRowActions = {
     onResolveFollowUp: (message: AskMessage, resolution: AskFollowUpResolution) => Promise<boolean>;
     onToggleVoice: (message: AskMessage) => void;
     onAskAnother: (message: AskMessage) => void;
+    /** An animal's referral card at the tab's root: the tab's chat switches to that animal in place; true once it did. */
+    onOpenReferral?: (referral: AskCompanionReferral) => boolean;
 };
 
 const IDLE_PHASE: AskSpeechPhase = {kind: "idle"};
@@ -3771,7 +3804,7 @@ const AnimalMessageRow = memo(function AnimalMessageRow({
         : null;
     // A step done is the reply's special message; another of their animals it sent them to stays under it.
     const event = !isLive && companionEvent?.referral
-        ? <CompanionEventBlock event={{referral: companionEvent.referral}} name={speakerName} labels={labels} />
+        ? <CompanionEventBlock event={{referral: companionEvent.referral}} name={speakerName} labels={labels} onOpen={actions.onOpenReferral} />
         : null;
     return (
         <div className="group/reply">
@@ -4132,7 +4165,7 @@ const MessageBlock = memo(function MessageBlock({
  * another of their animals: the moment, marked in the thread. The animal has
  * already said well done in its own words; this is the game's part.
  */
-function CompanionEventBlock({event, name, labels}: {event: AskCompanionEvent; name: string; labels: AskDrawerLabels}) {
+function CompanionEventBlock({event, name, labels, onOpen}: {event: AskCompanionEvent; name: string; labels: AskDrawerLabels; onOpen?: (referral: AskCompanionReferral) => boolean}) {
     const done = event.stepDone;
     const referral = event.referral;
     // That animal's chat on the card you last talked through, else the one the server named.
@@ -4154,6 +4187,8 @@ function CompanionEventBlock({event, name, labels}: {event: AskCompanionEvent; n
                 <Link
                     href={referralHref}
                     title={labels.talkToHint}
+                    // At the Companions tab's root the chat switches in place (2026-11-07); elsewhere the link opens that card's chat.
+                    onClick={onOpen ? (click: React.MouseEvent<HTMLAnchorElement>) => { if (onOpen({...referral, captureId: referralCaptureId})) click.preventDefault(); } : undefined}
                     className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:border-primary-300/40 active:bg-white/10"
                 >
                     <ReferralIcon />
