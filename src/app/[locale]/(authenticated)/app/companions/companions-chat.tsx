@@ -100,7 +100,10 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     useEffect(() => {
         if (!current || switchedTo === current.speciesProfileId) return;
         setSwitchedTo(current.speciesProfileId);
-        rememberCompanion(current.speciesProfileId);
+        // The row too, so the next visit opens on it before anything loads.
+        rememberCompanion(current.speciesProfileId, Date.now(), {
+            captureId: current.captureId, animal: current.animal, displayName: current.displayName, slug: current.slug
+        });
     }, [current, switchedTo]);
     // The side menu's pick, when this chat is already on screen.
     useEffect(() => {

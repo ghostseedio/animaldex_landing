@@ -1,3 +1,4 @@
+import type {CompanionTabRow} from "@/lib/companion-rows";
 /**
  * Which animal the Companions tab opens on (the owner, 2026-11-06: the tab is
  * the chat, with the animal they were with most recently already open, and
@@ -8,7 +9,36 @@
  * `CompanionsOpening`.
  */
 
-export type CompanionsOpeningMemory = {speciesProfileId: string; at: number};
+export type CompanionsOpeningMemory = {speciesProfileId: string; at: number; row?: CompanionsOpeningRowSnapshot | null};
+
+/**
+ * Enough of the row to open its chat before anything has loaded (the owner,
+ * 2026-11-07: a returning person goes splash → chat from what the browser
+ * already knows). Older memories carry none.
+ */
+export type CompanionsOpeningRowSnapshot = {captureId: string | null; animal: string; displayName: string; slug: string | null};
+
+/** The remembered animal as a row with nothing of its messages yet; null for an older memory. */
+export function cachedCompanionRow(memory: CompanionsOpeningMemory | null): CompanionTabRow | null {
+    const row = memory?.row;
+    if (!memory || !row || !row.animal) return null;
+    return {
+        speciesProfileId: memory.speciesProfileId,
+        captureId: row.captureId,
+        animal: row.animal,
+        displayName: row.displayName || row.animal,
+        slug: row.slug,
+        powerName: null,
+        openStep: null,
+        lastMessage: null,
+        lastActivityAt: memory.at,
+        unreadCount: 0,
+        muted: false,
+        referralWaiting: false,
+        referralId: null,
+        hasConversation: false
+    };
+}
 
 export function pickCompanionToOpen<T extends {speciesProfileId: string}>(
     rows: readonly T[],
@@ -35,15 +65,29 @@ export function rememberedCompanion(): CompanionsOpeningMemory | null {
         const raw = window.localStorage.getItem(KEY);
         if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<CompanionsOpeningMemory>;
-        return typeof parsed.speciesProfileId === "string" && typeof parsed.at === "number" ? {speciesProfileId: parsed.speciesProfileId, at: parsed.at} : null;
+        if (typeof parsed.speciesProfileId !== "string" || typeof parsed.at !== "number") return null;
+        const row = parsed.row && typeof parsed.row === "object" && typeof parsed.row.animal === "string"
+            ? {
+                captureId: typeof parsed.row.captureId === "string" ? parsed.row.captureId : null,
+                animal: parsed.row.animal,
+                displayName: typeof parsed.row.displayName === "string" ? parsed.row.displayName : parsed.row.animal,
+                slug: typeof parsed.row.slug === "string" ? parsed.row.slug : null
+            }
+            : null;
+        return {speciesProfileId: parsed.speciesProfileId, at: parsed.at, row};
     } catch {
         return null;
     }
 }
 
-export function rememberCompanion(speciesProfileId: string, at = Date.now()) {
+export function rememberCompanion(speciesProfileId: string, at = Date.now(), row: CompanionsOpeningRowSnapshot | null = null) {
     try {
-        window.localStorage.setItem(KEY, JSON.stringify({speciesProfileId, at}));
+        // The id alone keeps whatever row was remembered for the same animal.
+        const kept = row ?? (() => {
+            const previous = rememberedCompanion();
+            return previous && previous.speciesProfileId.toLowerCase() === speciesProfileId.toLowerCase() ? previous.row ?? null : null;
+        })();
+        window.localStorage.setItem(KEY, JSON.stringify({speciesProfileId, at, row: kept}));
     } catch {
         // A browser with storage off keeps nothing; the newest conversation opens.
     }

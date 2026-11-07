@@ -32,6 +32,8 @@
  * Without it the tab is exactly as before.
  */
 
+import {rosterLine} from "@/lib/companion-roster";
+import {cachedCompanionRow, rememberedCompanion} from "@/lib/companions-opening";
 import AppSplash from "@/components/brand/app-splash";
 import Link from "@/app/[locale]/_components/link";
 import AppIcon from "@/app/[locale]/(authenticated)/app/_components/app-icon";
@@ -41,8 +43,8 @@ import type {AskDrawerLabels} from "@/components/ask-animaldex/ask-conversation"
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
 import {CompanionRow} from "@/app/[locale]/(authenticated)/app/companions/companion-row";
 import {chatCaptureIdFor} from "@/components/companions/use-companions";
-import {useCompanionRoster} from "@/components/companions/use-companion-roster";
-import {useMemo} from "react";
+import {useCompanionRoster, type CompanionRosterEntry} from "@/components/companions/use-companion-roster";
+import {useEffect, useMemo, useState} from "react";
 import dynamic from "next/dynamic";
 import {companionRowHref, fillWords, type CompanionWords} from "@/lib/companion-bond";
 import type {CompanionCard} from "@/lib/companion-cards";
@@ -155,12 +157,25 @@ function YourCompanions({words, locale, frontDoor, labels, talk}: {
 
     // Nothing to show yet, and nothing has said there is nothing.
     const isFirstLoad = roster.length === 0 && !(didLoad && cardsLoaded);
+    // The remembered animal, from what this browser kept of it (read after
+    // mount: storage is the browser's, not the server's), so a returning
+    // person goes splash → chat before the roster has loaded (the owner,
+    // 2026-11-07); the loaded rows take over in place.
+    const [cachedRow, setCachedRow] = useState<CompanionTabRow | null>(null);
+    useEffect(() => { setCachedRow(cachedCompanionRow(rememberedCompanion())); }, []);
+    const cachedEntries = useMemo<CompanionRosterEntry[]>(
+        () => (cachedRow ? [{row: cachedRow, line: rosterLine(cachedRow, null, words), time: cachedRow.lastActivityAt}] : []),
+        [cachedRow, words]
+    );
 
     // The tab is the chat (the owner, 2026-11-06): the animal they were with
     // last, open, and the others behind its name. The roster below stays for
     // the moments before there is anyone to talk to.
     if (labels && talk && roster.length > 0) {
         return <CompanionsChat entries={roster} cards={cards} words={words} labels={labels} talk={talk} locale={locale} />;
+    }
+    if (labels && talk && isFirstLoad && cachedEntries.length > 0) {
+        return <CompanionsChat entries={cachedEntries} cards={cards} words={words} labels={labels} talk={talk} locale={locale} />;
     }
     // Nothing to show yet, and nothing has said there is nothing: the splash,
     // not the roster and its skeleton (the owner, 2026-11-06).
