@@ -60,6 +60,7 @@ export const adminNavGroups: AdminNavGroup[] = [
             {href: "/admin/metrics", label: "Metrics", icon: Graph, hint: "Users, retention, channels, content and revenue"},
             {href: "/admin/users", label: "Users & LTV", icon: UsersGroupRounded, hint: "Buyers and lifetime value"},
             {href: "/admin/segments", label: "Segments", icon: PieChart, hint: "Cohorts and notifications"},
+            {href: "/admin/chat-uses", label: "Chat uses", icon: ChatRound, hint: "What people talk to the animals for"},
         ],
     },
     {
