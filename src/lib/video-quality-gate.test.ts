@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {classifyProviderReply, higgsfieldCreditFailure} from "./api-status-core";
 import type {PlanScene} from "./content-video/plan";
-import {REVIEW_SYSTEM_PROMPT, scriptForReview} from "./social-lab/review";
 import {DEFAULT_DAILY_CAPS} from "./social/auto-share-plan";
 import {fillLinks} from "./social/platform-copy";
 
@@ -26,14 +25,6 @@ const scene = (visual: PlanScene["visual"]): PlanScene => ({narration: "x", over
 
 test("no platform gets more than two videos a day", () => {
     for (const caps of Object.values(DEFAULT_DAILY_CAPS)) assert.ok(caps.video <= 2 && caps.carousel <= 2 && caps.text <= 2);
-});
-
-test("the 5-year-old test knows a quiz hides its animal on purpose", () => {
-    const images = [{index: 1, src: "", alt: "a paw", width: 1, height: 1, caption: null, license: null}];
-    const quiz = (format: "guess" | "editorial") => scriptForReview({format, title: "t", hookText: "NAME IT", scenes: [scene("image")], ctaNarration: "", ctaText: "", musicMood: "curious", share: {} as never}, {title: "Guess", images}, "comment");
-    assert.match(quiz("guess"), /A QUIZ: the viewer guesses the animal/);
-    assert.doesNotMatch(quiz("editorial"), /A QUIZ/);
-    assert.match(REVIEW_SYSTEM_PROMPT, /knows the GAME/);
 });
 
 test("a link placeholder the writer left in becomes the page link; YouTube never gets < or >", () => {

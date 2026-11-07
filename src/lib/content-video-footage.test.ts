@@ -105,3 +105,8 @@ test("a missing animal shot falls back to an AI clip of the real animal; no scan
     assert.equal(planHasAiImagery(made), true);
     assert.equal(normalizeScanPlan(reply, scanSource({animal: [ref("a1")]})), null);
 });
+
+test("a scan reveal without a clip of the scan or a reaction opens on the animal, then the result", () => {
+    const made = normalizeScanPlan(reply, scanSource({result: [ref("r")], animal: [ref("a1"), ref("a2")]}))!;
+    assert.deepEqual(made.scenes.map((scene) => scene.footage?.id ?? null).slice(0, 3), ["a1", "r", "a2"]);
+});

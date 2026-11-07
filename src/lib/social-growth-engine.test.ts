@@ -2,7 +2,6 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {experimentBrief, EXPERIMENT_VERSION, HOOK_STYLES, intentsFor, KIND_DIMENSIONS, VIDEO_LENGTHS} from "./social-lab/arms";
 import {armStats, chooseExperiment, itemScores, percentile, pickArm, rankArms, scoreShares, type ScoredShare, sourceTypeStats} from "./social-lab/bandit";
-import {betterReview, normalizeReview, PASS_SCORE, rewriteBrief, scriptForReview} from "./social-lab/review";
 import {fromZernioAnalytics, metricsRow, ratio, zernioAnalyticsKeys} from "./social-lab/metrics-core";
 import {contentKindOf, dailyCaps, dayStartMs, pickLightKind, platformsWithRoom, postedToday} from "./social/auto-share-plan";
 import {blueskyCaption, captionFits, captionForPlatform, pinterestCopy, threadsCaption, visibleLength} from "./social/platform-copy";
@@ -161,31 +160,6 @@ test("page families are ranked from every item's score; empty families still get
     assert.deepEqual(stats.map((entry) => [entry.arm, entry.items, entry.mean === null ? null : Math.round(entry.mean * 100)]), [["blog", 0, null], ["hybrid", 1, 80], ["location", 1, 10]]);
     const order = rankArms(stats);
     assert.deepEqual([...order].sort(), ["blog", "hybrid", "location"]);
-});
-
-test("the test audience: a script passes on the 5-year-old test and its job's score", () => {
-    const reply = (passes: boolean, share: number) => ({
-        five_year_old: {passes, would_say: "a shark that glows", hard_words: passes ? [] : ["bioluminescence"]},
-        scores: {share: {score: share, reason: "send to a friend who loves sharks"}, save: {score: 3, reason: ""}, comment: {score: 5, reason: ""}, stay: {score: 14, reason: "clamped"}},
-        fixes: ["Say 'glows' not 'bioluminescent'"]
-    });
-    const good = normalizeReview(reply(true, PASS_SCORE), "share")!;
-    assert.equal(good.passes, true);
-    assert.equal(good.scores.stay.score, 10);
-    const unclear = normalizeReview(reply(false, 9), "share")!;
-    assert.equal(unclear.passes, false);
-    const weak = normalizeReview(reply(true, 5), "share")!;
-    assert.equal(weak.passes, false);
-    assert.equal(betterReview(weak, good), good);
-    assert.equal(betterReview(unclear, weak), unclear);
-    assert.match(rewriteBrief(unclear), /FAILS the 5-year-old test[\s\S]*bioluminescence/);
-    assert.match(rewriteBrief(weak), /scores 5\/10/);
-    assert.equal(normalizeReview({scores: {}}, "share"), null);
-    const plan = {title: "t", hookText: "THIS SHARK GLOWS", scenes: [{narration: "This shark glows in the dark.", overlay: "GLOWS", visual: "ai_clip", image: 1, focusX: 0.5, motionPrompt: "swims"}], ctaNarration: "Send this to a shark fan.", ctaText: "SEND IT", musicMood: "wonder", share: copy} as unknown as VideoPlan;
-    const script = scriptForReview(plan, {title: "Glowing sharks", images: [{index: 1, src: "", alt: "a lantern shark", width: 1, height: 1, caption: null}] as any}, "share");
-    assert.match(script, /JOB: Share \(relatable\)/);
-    assert.match(script, /hook text over the first seconds: "THIS SHARK GLOWS"/);
-    assert.match(script, /1\. \[0\.0–2\.2 s\] shows: the photo, moving: a lantern shark \| on screen: "GLOWS" \| says: "This shark glows in the dark\."/);
 });
 
 test("every video prompt carries the 5-year-old test; carousels are picture-first", () => {

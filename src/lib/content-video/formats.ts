@@ -671,9 +671,11 @@ export function normalizeScanPlan(value: unknown, source: VideoSource, experimen
     const share = parseShare(record.share);
     const shots = (record.shots as Array<Record<string, unknown>>).slice(0, SCAN_SHOTS).map((shot) => ({narration: clean(shot?.narration, 200), overlay: clean(shot?.overlay, 40)}));
     if (!share || shots.length < SCAN_SHOTS || shots.some((shot) => !shot.narration)) return null;
-    const {scan, result, animal, reaction} = facts.clips;
-    const opening = scan[0] ?? reaction[0];
+    const {scan, result, reaction} = facts.clips;
+    // No clip of the scan itself or a reaction (a black swan we only filmed and scanned the result of): open on the animal.
+    const opening = scan[0] ?? reaction[0] ?? facts.clips.animal[0];
     if (!opening || (!result[0] && !scan[1])) return null;
+    const animal = facts.clips.animal.filter((clip) => clip !== opening);
     const scene = (narration: string, overlay: string, footage: typeof opening | undefined, extra: Partial<PlanScene> = {}): PlanScene => ({
         narration,
         overlay,

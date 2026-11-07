@@ -1,7 +1,6 @@
 import type {ShareCopy} from "@/lib/social/share-copy";
 import {isMusicMood, MUSIC_MOOD_GUIDE, MUSIC_MOODS, type MusicMood} from "@/lib/content-video/music";
 import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
-import type {VideoReview} from "@/lib/social-lab/review";
 
 // The script and shot plan of a page video, and everything derived from it
 // that is pure: the editorial prompt and schema (blog, ranking and location
@@ -255,8 +254,6 @@ export type VideoPlan = {
     experiment?: Experiment;
     /** "loop": no end card, the last beat runs straight back into the first. Absent = the CTA end card. */
     ending?: "loop" | "cta_card";
-    /** The test audience's verdict before the clips were made (social-lab/review.ts). */
-    review?: VideoReview;
     title: string;
     hookText: string;
     scenes: PlanScene[];
@@ -294,7 +291,7 @@ FRAME 0 IS AN EVENT: the first shot shows something already happening with somet
 
 export const HOOK_RULES = `THE FIRST 3 SECONDS DECIDE EVERYTHING. A calm or clever opener is a dead video. Our numbers: a quarter of viewers leave in the first second and two thirds by the third, so the opening beat is the whole game.
 
-THE 5-YEAR-OLD TEST (a test audience checks every script before it is made, and a script that fails is rewritten): after 3 seconds, sound on or off, a 5-year-old could say what this video is about: which animal, and what is amazing about it.
+THE 5-YEAR-OLD TEST: after 3 seconds, sound on or off, a 5-year-old could say what this video is about: which animal, and what is amazing about it.
 - Name or clearly show the animal in the first line and the first shot, the way a child would say it ("this shark", "a tiny frog"). Never a Latin name, never a riddle about what we are looking at.
 - ONE idea. Words a 5-year-old knows: short, concrete, physical (big, fast, eats, bites, hides, sleeps, fights, babies, poop). No jargon, no wordplay, no metaphors to decode, no abstract nouns.
 - A number only when a child can feel it: one round number, or a comparison to something they know ("as heavy as a car", "faster than a car on the motorway").

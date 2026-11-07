@@ -45,14 +45,11 @@ import {
 } from "@/lib/content-video/formats";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {experimentBrief, type Experiment} from "@/lib/social-lab/arms";
-import {betterReview, jobScore, normalizeReview, REVIEW_JSON_SCHEMA, REVIEW_SYSTEM_PROMPT, rewriteBrief, scriptForReview, type VideoReview} from "@/lib/social-lab/review";
-import {isClaudeReady, structuredClaude} from "@/lib/social-content/claude";
 
 // Writes the script and shot plan: Claude first, then OpenAI, then Gemini.
 // Each one SEES the photos, so the shots and motion prompts describe what is
-// actually in them. Any reply is held to the format by normalizePlan. Then a
-// test audience reviews it (social-lab/review.ts): a script that fails the
-// 5-year-old test or its job is rewritten once, and the better one is kept.
+// actually in them. Any reply is held to the format by normalizePlan. There is
+// no review step (removed Nov 7 2026 on the founder's word): every script is made.
 
 type PlanImage = {index: number; base64: string};
 type Prompt = {system: string; schema: Record<string, unknown>};
@@ -209,52 +206,12 @@ function plannerFor(source: VideoSource, experiment: Experiment | null): {prompt
     return {prompt: {system: PLAN_SYSTEM_PROMPT, schema: PLAN_JSON_SCHEMA}, user: buildPlanUserPrompt(source, experiment), normalize: (value) => normalizePlan(value, source.images.length)};
 }
 
-/** The test audience's verdict on a plan; null when it cannot run (no Claude key, an error): the plan goes ahead unreviewed. */
-async function reviewPlan(plan: VideoPlan, source: VideoSource, experiment: Experiment | null): Promise<VideoReview | null> {
-    if (!isClaudeReady() || process.env.CONTENT_VIDEO_REVIEW_DISABLED?.trim() === "1") return null;
-    const job = experiment?.intent ?? null;
-    try {
-        const reply = await structuredClaude({system: REVIEW_SYSTEM_PROMPT, user: scriptForReview(plan, source, job), schema: REVIEW_JSON_SCHEMA as unknown as Record<string, unknown>, effort: "low"});
-        return normalizeReview(reply.value, job);
-    } catch (error) {
-        console.warn(`[content-video] review skipped: ${error instanceof Error ? error.message : error}`);
-        return null;
-    }
+/** Writes the plan; with an experiment, its arms steer the prompt and are recorded on the plan for the hook lab. */
+export async function generateVideoPlan(source: VideoSource, experiment: Experiment | null = null): Promise<GeneratedPlan> {
+    return writePlan(source, experiment);
 }
 
-/**
- * Writes the plan; with an experiment, its arms steer the prompt and are recorded on the plan for the hook lab.
- * A draft the test audience rejects is rewritten with its notes, up to `drafts` scripts in all; the best-reviewed one is kept.
- */
-export async function generateVideoPlan(source: VideoSource, experiment: Experiment | null = null, {drafts = 2}: {drafts?: number} = {}): Promise<GeneratedPlan> {
-    const first = await writePlan(source, experiment);
-    const review = await reviewPlan(first.plan, source, experiment);
-    if (!review) return first;
-    let best: GeneratedPlan = {...first, plan: {...first.plan, review}};
-    let bestReview = review;
-    let latest = review;
-    const failures = [...first.failures];
-    for (let draft = 2; draft <= drafts && !bestReview.passes; draft += 1) {
-        try {
-            const next = await writePlan(source, experiment, rewriteBrief(latest));
-            failures.push(...next.failures);
-            const again = await reviewPlan(next.plan, source, experiment);
-            if (!again) break;
-            latest = again;
-            if (betterReview(again, bestReview) === again) {
-                const firstDraft = {passes: review.passes, jobScore: jobScore(review), fiveYearOld: review.fiveYearOld.passes};
-                best = {...next, plan: {...next.plan, review: {...again, rewritten: true, firstDraft}}};
-                bestReview = again;
-            }
-        } catch (error) {
-            console.warn(`[content-video] rewrite failed, keeping the best draft so far: ${error instanceof Error ? error.message : error}`);
-            break;
-        }
-    }
-    return {...best, failures};
-}
-
-async function writePlan(source: VideoSource, experiment: Experiment | null, feedback = ""): Promise<GeneratedPlan> {
+async function writePlan(source: VideoSource, experiment: Experiment | null): Promise<GeneratedPlan> {
     const list = providers();
     if (!list.length) throw new Error("No AI provider is configured (CLAUDE_API_KEY, OPENAI_API_KEY or GEMINI_API_KEY)");
     const images = await prepareImages(source);
@@ -263,7 +220,7 @@ async function writePlan(source: VideoSource, experiment: Experiment | null, fee
     const loaded = new Set(images.map((image) => image.index));
     const visible: VideoSource = {...source, images: source.images.filter((image) => loaded.has(image.index))};
     const planner = plannerFor(visible, experiment);
-    const user = feedback ? `${planner.user}\n\n${feedback}` : planner.user;
+    const user = planner.user;
 
     const failures: string[] = [];
     for (const provider of list) {
