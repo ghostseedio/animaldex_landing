@@ -377,7 +377,10 @@ export function resolveAskHistory(raw: unknown): AskHistoryTurn[] {
         .slice(-8);
 }
 
-export const ASK_QUESTION_MIN = 3;
+/// Any word at all: "hi", "yo" and "gm" are how people start a chat, and the
+/// apps' function takes any non-empty message. At 3 the web refused "hi" with
+/// invalid_question, and the chat showed "Something went wrong" (2026-11-07).
+export const ASK_QUESTION_MIN = 1;
 export const ASK_QUESTION_MAX = 900;
 
 export function resolveAskQuestion(raw: unknown): string | null {
