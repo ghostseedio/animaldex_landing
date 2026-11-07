@@ -137,6 +137,8 @@ import {
 import {askKindVerdictEnabled, askStanceMemoryConfig} from "@/lib/ask-animaldex/kind-verdict";
 import {askVerdictModel, loadAskHeldStances, rememberAskStance, requestAskTurnRead} from "@/lib/ask-animaldex/kind-verdict-server";
 import {isDeepTurn, looksLikeAppQuestion, resolveTurnKind, type TurnKind} from "@/lib/ask-animaldex/turn-kind";
+import {smallTalkByWords} from "@/lib/ask-animaldex/small-talk";
+import {prestartAnswerSource} from "@/lib/ask-animaldex/answer-prestart";
 import {angleForClient, askRecordFacets, loadAnglesHeard, recordAngleHeard} from "@/lib/ask-animaldex/angle";
 import {loadChatRoutingConfig, routeChatTurn} from "@/lib/ask-animaldex/chat-routing";
 import {crisisCheckEnabled, crisisDecision, logSafetyEvent, requestCrisisCheck, type CrisisDecision} from "@/lib/ask-animaldex/crisis";
@@ -618,10 +620,30 @@ export async function POST(request: Request) {
     const visitorNotice = relayOn && relay && !relay.noticed ? askVisitorNoticeText(languageName, ownerName) : null;
     const relayThisTurn = relayOn && Boolean(relay?.noticed) && !isGreeting;
 
+    // Small talk the words alone can route (`small-talk.ts`, the owner's
+    // small-talk shortcut, as the apps' function does): a hello, a thanks, a
+    // laugh goes to the small-talk model without waiting for its kind's
+    // verdict. Never a step report, a Trial question or a call.
+    const smallTalk = !isGreeting && !stepReportId && !subject.trialContext && !isCall && smallTalkByWords({
+        message: question ?? "",
+        names: [card?.nickname, basePacket.species?.name],
+        lastAnimalMessage: history.filter((turn) => turn.role === "assistant").at(-1)?.content ?? null
+    });
+    // A streamed small-talk turn reads its crisis check at the stream, where
+    // its reply's model starts beside it (below).
+    const deferCrisis = smallTalk && body.mode !== "complete";
+    // Every other typed turn: nothing is answered before the crisis check says
+    // no, as in the apps' function. Until 2026-11-07 the web read it only for
+    // the age gate and the limit, and answered an emergency in the animal's voice.
+    if (!isGreeting && !deferCrisis) {
+        const crisis = await crisisFor();
+        if (crisis.crisis) return await crisisResponse(crisis);
+    }
     // What the turn is (`turn-kind.ts`): the verdict's read, else the words.
-    // Its kind's verdict is used only when nobody is hurting them.
-    const turnRead = await kindVerdict;
-    const turnKind: TurnKind | null = isGreeting ? null : resolveTurnKind(turnRead?.kind ?? null, question ?? "");
+    // Its kind's verdict is used only when nobody is hurting them. Small talk
+    // by its words does not wait: it is chat, with no side to take.
+    const turnRead = smallTalk ? null : await kindVerdict;
+    const turnKind: TurnKind | null = isGreeting ? null : smallTalk ? "chat" : resolveTurnKind(turnRead?.kind ?? null, question ?? "");
     const verdictForPrompt = turnRead?.verdict && !turnRead.safety ? turnRead.verdict : null;
     // The behaviour the take is built on, for the chip under the reply (SPEC 3.3).
     const chosenAngle = isDeepTurn(turnKind) ? verdictForPrompt?.latch ?? null : null;
@@ -1085,8 +1107,8 @@ export async function POST(request: Request) {
         : null;
     // The shared rules first, then the animal's own block: each cached on its own.
     const streamingSystemBlocks = buildAskStreamingSystemBlocks(promptOptions);
-    const sourceFor = (provider: AskProviderName): AnswerDeltaSource | null => {
-        const params = {systemPrompt: streamingSystemBlocks, userPrompt, history: historyTurns, effort, signal: request.signal, route};
+    const sourceFor = (provider: AskProviderName, signal: AbortSignal = request.signal): AnswerDeltaSource | null => {
+        const params = {systemPrompt: streamingSystemBlocks, userPrompt, history: historyTurns, effort, signal, route};
         const source = call
             ? call.source(provider, {...params, systemPrompt: streamingSystemBlocks.join("\n\n")})
             : askAnswerSource(provider, params);
@@ -1094,6 +1116,26 @@ export async function POST(request: Request) {
         // The visitor is told once: at the end of a hello, at the start of a reply.
         return withAskVisitorNotice(source, visitorNotice, isGreeting ? "tail" : "lead");
     };
+
+    // Small talk: the reply's model starts now, beside the crisis check, and
+    // nothing is sent before the check says no; an emergency stops it and
+    // gets the fixed reply, as on every turn (`answer-prestart.ts`).
+    const early = deferCrisis ? new AbortController() : null;
+    // The reader leaving stops it too.
+    if (early) {
+        if (request.signal.aborted) early.abort();
+        else request.signal.addEventListener("abort", () => early.abort(), {once: true});
+    }
+    const earlyProvider = early ? providers[0] ?? null : null;
+    const earlySource = early && earlyProvider ? sourceFor(earlyProvider, early.signal) : null;
+    const prestarted = earlySource ? prestartAnswerSource(earlySource) : null;
+    if (early) {
+        const crisis = await crisisFor();
+        if (crisis.crisis) {
+            early.abort();
+            return await crisisResponse(crisis);
+        }
+    }
 
     const encoder = new TextEncoder();
     const responseStream = new ReadableStream<Uint8Array>({
@@ -1169,7 +1211,7 @@ export async function POST(request: Request) {
             const failures: string[] = [];
             const modelProviders = isGreeting && !greetingFromModel ? [] : providers;
             for (const provider of modelProviders) {
-                const source = sourceFor(provider);
+                const source = prestarted && provider === earlyProvider ? prestarted : sourceFor(provider);
                 if (!source) continue;
                 try {
                     await pump(source);
