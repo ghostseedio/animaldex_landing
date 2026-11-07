@@ -145,10 +145,13 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
     const askAnotherAnimal = useCallback((problem: string) => setPicker({problem}), []);
     // A pick: the server is told (`refer_animal`), so that animal opens on the problem; told or not, it opens.
     const pickAnother = useCallback(async (row: CompanionTabRow, from: string | null) => {
-        const problem = picker?.problem ?? "";
+        const problem = (picker?.problem ?? "").trim();
         setPicker(null);
-        const result = await referAnimal({fromSpeciesProfileId: from, toSpeciesProfileId: row.speciesProfileId, toCaptureId: row.captureId, problem});
-        openAnimalInPlace({speciesProfileId: row.speciesProfileId, captureId: row.captureId}, result.ok ? result.value : null);
+        // The server wants at least ten characters of problem; with less the other animal still opens, just not told anything.
+        const result = problem.length >= 10
+            ? await referAnimal({fromSpeciesProfileId: from, toSpeciesProfileId: row.speciesProfileId, toCaptureId: row.captureId, problem})
+            : null;
+        openAnimalInPlace({speciesProfileId: row.speciesProfileId, captureId: row.captureId}, result?.ok ? result.value : null);
     }, [picker, openAnimalInPlace]);
 
     // The "+" (the owner, 2026-11-06, after the Claude app): the phone's camera

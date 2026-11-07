@@ -53,12 +53,31 @@ export async function loadDebateCandidates(params: {hostCaptureId: string; visib
     return result.ok ? {ok: true, value: decodeDebateCandidates(result.payload.candidates)} : result;
 }
 
-/** "Ask another animal" (2026-11-07): another of their animals is sent this problem; the referral its chat opens on. */
+/**
+ * "Ask another animal" (2026-11-07): another of their animals is sent this
+ * problem; the referral its chat opens on. `/api/ask/refer` passes it to the
+ * chat function as the signed-in reader (flow `refer_animal`); the server
+ * wants at least ten characters of problem.
+ */
 export async function referAnimal(params: {fromSpeciesProfileId: string | null; toSpeciesProfileId: string; toCaptureId: string | null; problem: string}): Promise<DebateCallResult<string>> {
-    const result = await debatesCall({action: "referAnimal", ...params});
-    if (!result.ok) return result;
-    const referralId = typeof result.payload.referralId === "string" ? result.payload.referralId : null;
-    return referralId ? {ok: true, value: referralId} : {ok: false, code: "debate_unavailable"};
+    try {
+        const response = await fetch("/api/ask/refer", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", Accept: "application/json"},
+            body: JSON.stringify({
+                from_species_profile_id: params.fromSpeciesProfileId,
+                to_species_profile_id: params.toSpeciesProfileId,
+                to_capture_id: params.toCaptureId,
+                problem: params.problem
+            })
+        });
+        const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+        const referralId = typeof payload?.referral_id === "string" ? payload.referral_id : null;
+        if (!response.ok || !referralId) return {ok: false, code: debateProblemCode(payload?.error ?? (response.status === 401 ? "not_authenticated" : null))};
+        return {ok: true, value: referralId};
+    } catch {
+        return {ok: false, code: "debate_unavailable"};
+    }
 }
 
 export async function createDebate(params: {hostCaptureId: string; visibility: DebateVisibility; problem: string; captureIds: string[]}): Promise<DebateCallResult<Debate>> {

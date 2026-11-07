@@ -61,8 +61,6 @@ export const dynamic = "force-dynamic";
  * POST {action: "postPublic", debateId, text}          Post it (flow `debate_post_public`, which checks the text).
  * POST {action: "offerCandidates", debateId}           `debate_offer_candidates_v1`.
  * POST {action: "offerAnimal", debateId, captureId, locale?}   Add one of your animals (flow `debate_offer_animal`).
- * POST {action: "referAnimal", toSpeciesProfileId, toCaptureId?, fromSpeciesProfileId?, problem}
- *                                                      "Ask another animal" (flow `refer_animal`, 2026-11-07): `{ok, referralId}`.
  *
  * A refusal answers `{ok: false, code}` for the client to say in words; with
  * the switch off every write answers `debates_off` without calling the server.
@@ -152,24 +150,6 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const action = typeof body.action === "string" ? body.action : "";
-    // "Ask another animal" (2026-11-07): another of their animals is sent the problem; its chat opens on the
-    // referral. Not a debate: it works with the debates switch off.
-    if (action === "referAnimal") {
-        const toSpeciesProfileId = debateUuid(body.toSpeciesProfileId);
-        if (!toSpeciesProfileId) return refuse("not_found");
-        const fromSpeciesProfileId = debateUuid(body.fromSpeciesProfileId);
-        const toCaptureId = debateUuid(body.toCaptureId);
-        const result = await chatFlow("refer_animal", {
-            ...(fromSpeciesProfileId ? {from_species_profile_id: fromSpeciesProfileId} : {}),
-            to_species_profile_id: toSpeciesProfileId,
-            ...(toCaptureId ? {to_capture_id: toCaptureId} : {}),
-            problem: problemText(body.problem, DEBATE_PROBLEM_MAX)
-        });
-        if (!result.ok) return result.response;
-        const referralId = debateUuid(result.payload.referral_id);
-        return referralId ? NextResponse.json({ok: true, referralId}) : failed("refer_animal", "no referral returned");
-    }
-
     if (!(await loadDebatesEnabled())) return refuse("debates_off", 403);
 
     if (action === "candidates" || action === "create") {
