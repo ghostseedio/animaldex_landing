@@ -17,19 +17,6 @@ export const VIDEO_FPS = 30;
 export const MAX_AI_CLIPS = 5;
 /** Kling 2.5 Turbo image-to-video takes 5 or 10 seconds; scenes are short. */
 export const AI_CLIP_SECONDS = 5;
-/**
- * Why the autopilot does not render a video whose AI clips did not come back
- * (no key, no credit, timeouts): it would ship as stills, the look the feeds
- * punish. One lost clip is fine; null when enough came back. Pure.
- */
-export function clipShortfall(plan: Pick<VideoPlan, "scenes">, clips: ReadonlyArray<{status: string; error?: string}>): string | null {
-    const wanted = plan.scenes.filter((scene) => scene.visual === "ai_clip").length;
-    if (!wanted) return null;
-    const made = clips.filter((clip) => clip.status === "completed").length;
-    if (made >= wanted - 1) return null;
-    const why = clips.find((clip) => clip.status === "failed" && clip.error)?.error ?? "no clips were made";
-    return `Held back: only ${made} of ${wanted} AI clips came back (${why.slice(0, 160)}), so it would have shipped as stills`;
-}
 /** The most photos sent to the model (each is a few hundred tokens). */
 export const MAX_PLAN_IMAGES = 12;
 /** A 12-second cut has three beats; anything shorter is not a story. */

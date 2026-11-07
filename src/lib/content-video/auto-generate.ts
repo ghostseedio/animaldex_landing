@@ -20,9 +20,9 @@ import {videoWatchPath} from "@/lib/video-sitemap";
 // videos have scored best; some picks stay random), re-weighted by the format
 // lab's verdicts (a scaling format 3×, one in its first 10 videos 1.5×, a
 // retired one rarely), and a random page of it
-// that has no video yet, exactly as "Generate video" in /admin/story-videos,
-// except that its script must pass the test audience (social-lab/review.ts)
-// within three drafts or no clips are made. At most two a day: quality over volume.
+// that has no video yet, exactly as "Generate video" in /admin/story-videos.
+// Every video it makes is published and shared (Nov 7 2026, the founder: a
+// held-back video is money spent on nothing); at most two a day.
 // A video takes 5-20 minutes, so a run waits while one is being made (or a
 // social upload is encoding) instead of queuing. A finished auto video is
 // published to its page, which also makes it eligible for the auto-share.
@@ -72,18 +72,16 @@ async function run(): Promise<AutoGenerateResult> {
         await updateContentVideo(interrupted.id, {status: resumeStatus(interrupted), error: null, progress: "Resuming"});
         startContentVideoJob(interrupted.id, async () => {
             await publishIfReady(interrupted.id);
-        }, {reviewGate: true});
+        });
         return {ok: true, acted: true, summary: `Resumed the interrupted video for “${interrupted.source_title}”`, ref: interrupted.id, detail: {resumed: true, published}};
     }
 
-    // Fewer, better videos: at most CONTENT_VIDEO_DAILY_MAX a day (Jakarta day,
-    // as the share caps count it). A script held back by the test audience made
-    // no clips and does not count.
+    // At most CONTENT_VIDEO_DAILY_MAX a day (Jakarta day, as the share caps count it); a failed one does not count.
     const dailyMax = numberEnv("CONTENT_VIDEO_DAILY_MAX", 2);
     const today = rows.filter((row) => row.status !== "failed" && Date.parse(row.created_at) >= dayStartMs(Date.now()));
     const madeToday = today.length;
     // Real footage first: until one of today's videos plays our own clips, a run tries those pages before any
-    // other; at most twice a day, so footage scripts the test audience holds back cannot starve the rest.
+    // other; at most twice a day, so a footage video that fails cannot starve the rest.
     const playsFootage = (row: (typeof rows)[number]) => (row.plan as VideoPlan | null)?.scenes?.some((scene) => scene.footage) ?? false;
     const footageTries = rows.filter((row) => Date.parse(row.created_at) >= dayStartMs(Date.now()) && playsFootage(row)).length;
     const footageToday = today.some(playsFootage) || footageTries >= 2;
@@ -157,7 +155,7 @@ async function run(): Promise<AutoGenerateResult> {
         if (!row) continue;
         if (!startContentVideoJob(row.id, async () => {
             await publishIfReady(row.id);
-        }, {reviewGate: true})) {
+        })) {
             return {ok: true, acted: false, summary: "A video started elsewhere at the same moment", detail: {published}};
         }
         return {ok: true, acted: true, summary: `Making a ${type} video from “${source.title}”${filmedPick ? " (our own footage)" : ""}${creditFailure ? " (Higgsfield is out of credit: footage only)" : ""}`, ref: row.id, detail: {type, slug: page.slug, fresh: Boolean(freshPick), footage: Boolean(filmedPick), order, published, ...(unavailable.length ? {unavailable} : {})}};
