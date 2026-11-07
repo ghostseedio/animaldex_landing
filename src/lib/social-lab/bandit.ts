@@ -207,7 +207,7 @@ const VIDEO_KINDS = (Object.keys(KIND_DIMENSIONS) as ExperimentKind[]).filter((k
 export function learningKinds(kind: ExperimentKind, dimension: Dimension): readonly ExperimentKind[] {
     if (dimension === "hookStyle") return kind === "carousel" ? ["carousel"] : ["editorial", "battle", "creature"];
     if (dimension === "intent") return kind === "carousel" ? ["carousel"] : VIDEO_KINDS;
-    if (dimension === "ending") return VIDEO_KINDS;
+    if (dimension === "ending" || dimension === "voice") return VIDEO_KINDS;
     if (dimension === "opener") return ["editorial", "battle", "creature"];
     return [kind];
 }

@@ -2,7 +2,7 @@
 // OpenAI. Each line comes back as 16-bit mono WAV, so its exact length is in
 // the header — that is what times the scenes and the captions.
 
-export type SpokenLine = {wav: Buffer; seconds: number; provider: "google" | "openai"};
+export type SpokenLine = {wav: Buffer; seconds: number; provider: "google" | "openai" | "none"};
 
 /** The PCM samples and rate of a 16-bit WAV (for finding its pauses). */
 export function wavPcm(wav: Buffer): {pcm: Buffer; sampleRate: number; channels: number} {
@@ -91,6 +91,42 @@ export function wavSeconds(wav: Buffer): number {
  * self-improvement quote videos the format borrows from.
  */
 export type VoiceProfile = "brisk" | "deep";
+
+/** About how fast a viewer reads a short on-screen line (words a second). */
+const READING_WORDS_PER_SECOND = 2.6;
+
+/** How long a line stays on screen when nobody speaks it: reading time plus a beat, 1.4–6 s. Pure. */
+export function readingSeconds(text: string) {
+    const words = text.split(/\s+/).filter(Boolean).length;
+    return Math.min(6, Math.max(1.4, words / READING_WORDS_PER_SECOND + 0.6));
+}
+
+/**
+ * A "line" with nobody speaking (the no-voice arm): silence as long as the
+ * text takes to read, in the voice track's format (24 kHz mono 16-bit), so the
+ * timeline, captions and mix work exactly as with a voice. The music is all
+ * that is heard. Pure.
+ */
+export function silentLine(text: string): SpokenLine {
+    const seconds = readingSeconds(text);
+    const sampleRate = 24000;
+    const samples = Math.round(seconds * sampleRate);
+    const wav = Buffer.alloc(44 + samples * 2);
+    wav.write("RIFF", 0);
+    wav.writeUInt32LE(36 + samples * 2, 4);
+    wav.write("WAVE", 8);
+    wav.write("fmt ", 12);
+    wav.writeUInt32LE(16, 16);
+    wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(sampleRate, 24);
+    wav.writeUInt32LE(sampleRate * 2, 28);
+    wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34);
+    wav.write("data", 36);
+    wav.writeUInt32LE(samples * 2, 40);
+    return {wav, seconds: samples / sampleRate, provider: "none"};
+}
 
 const DEEP_INSTRUCTIONS = "Deep, calm, low male narrator for a stoic quote video. Slow and deliberate, with a short pause after each sentence; grave and warm, never theatrical or shouty.";
 

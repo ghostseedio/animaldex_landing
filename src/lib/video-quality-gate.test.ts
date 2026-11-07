@@ -66,3 +66,17 @@ test("a link placeholder the writer left in becomes the page link; YouTube never
     assert.equal(fillLinks(description, null, "facebook"), "One fly dominates.\nSubscribe @animaldexapp for more");
     assert.equal(fillLinks("Lions <3 naps", null, "youtube"), "Lions 3 naps");
 });
+
+test("no voice: each line stays on screen as long as it takes to read, over silence the mix fills with music", async () => {
+    const {readingSeconds, silentLine, wavPcm, wavSeconds} = await import("./content-video/tts");
+    const {experimentBrief} = await import("./social-lab/arms");
+    assert.equal(readingSeconds("It runs 60 km/h."), Math.max(1.4, 4 / 2.6 + 0.6));
+    assert.equal(readingSeconds("a ".repeat(40)), 6);
+    const line = silentLine("Gorilla or crocodile? One word.");
+    assert.equal(line.provider, "none");
+    assert.ok(Math.abs(wavSeconds(line.wav) - line.seconds) < 0.01);
+    assert.equal(wavPcm(line.wav).sampleRate, 24000);
+    assert.ok(wavPcm(line.wav).pcm.every((byte) => byte === 0));
+    assert.match(experimentBrief({version: 2, voice: "no_voice"}), /NO VOICEOVER: nobody speaks/);
+    assert.doesNotMatch(experimentBrief({version: 2, voice: "ai_voice", ending: "loop"}), /VOICE/);
+});

@@ -27,16 +27,17 @@ let cache: {at: number; items: ItemScore[]; scored: Array<ScoredShare & {score: 
  */
 export function inferredExperiment(video: Pick<ContentVideoRow, "plan" | "duration_seconds">): Experiment | null {
     const plan = video.plan as (VideoPlan & {experiment?: Experiment}) | null;
-    if (plan?.experiment) return plan.experiment;
+    // Every video before the voice arm (Nov 2026) had the AI voiceover: that is the baseline no-voice is tested against.
+    if (plan?.experiment) return plan.experiment.voice ? plan.experiment : {...plan.experiment, voice: "ai_voice"};
     if (!plan) return null;
     const format = plan.format ?? "editorial";
     const seconds = Number(video.duration_seconds ?? 0);
     if (format === "editorial") {
         if (!seconds) return null;
         // 30 s and up is the retired long arm: those still teach the ending.
-        return seconds < 30 ? {version: EXPERIMENT_VERSION, length: seconds < 20 ? "short" : "medium", ending: "cta_card"} : {version: EXPERIMENT_VERSION, ending: "cta_card"};
+        return seconds < 30 ? {version: EXPERIMENT_VERSION, length: seconds < 20 ? "short" : "medium", ending: "cta_card", voice: "ai_voice"} : {version: EXPERIMENT_VERSION, ending: "cta_card", voice: "ai_voice"};
     }
-    return {version: EXPERIMENT_VERSION, opener: "card_first", ending: "cta_card"};
+    return {version: EXPERIMENT_VERSION, opener: "card_first", ending: "cta_card", voice: "ai_voice"};
 }
 
 function videoKind(video: ContentVideoRow): ExperimentKind {
@@ -132,6 +133,7 @@ export async function labReport(sourceTypes: readonly string[]): Promise<{dimens
         {kind: "Videos", kinds: learningKinds("editorial", "hookStyle"), dimension: "hookStyle"},
         {kind: "Videos (narrated)", kinds: ["editorial"], dimension: "length"},
         {kind: "Videos", kinds: learningKinds("editorial", "ending"), dimension: "ending"},
+        {kind: "Videos", kinds: learningKinds("editorial", "voice"), dimension: "voice"},
         {kind: "Battles & reveals", kinds: ["battle", "creature"], dimension: "opener"},
         {kind: "Carousels", kinds: ["carousel"], dimension: "carouselFormat"},
         {kind: "Carousels", kinds: ["carousel"], dimension: "intent"},

@@ -32,7 +32,7 @@ import {
     updateContentVideo,
     uploadToStorage
 } from "@/lib/content-video/store";
-import {alignLine, speakLine, wavPcm} from "@/lib/content-video/tts";
+import {alignLine, silentLine, speakLine, wavPcm} from "@/lib/content-video/tts";
 import {speechSpans, timeLineWords} from "@/lib/content-video/word-timing";
 import {musicTrackPath, pickMusicTrack} from "@/lib/content-video/music";
 import {nextExperiment} from "@/lib/social-lab/experiments";
@@ -348,23 +348,25 @@ async function download(url: string, out: string) {
 /** Voiceover, photos/clips, captions and the edit, in `dir`. Shared with scripts that render without the database. */
 export async function produceVideo(planned: VideoPlan, source: VideoSource, clips: ContentVideoClip[], dir: string, progress: (step: string) => Promise<void>, seed = source.slug) {
     const plan = applyStatCards(planned, source);
-    await progress("Recording the voiceover");
+    // The no-voice arm: nobody speaks; each line is on screen as long as it takes to read, over the music.
+    const silent = plan.experiment?.voice === "no_voice";
+    await progress(silent ? "Timing the on-screen text (no voiceover)" : "Recording the voiceover");
     const voiceState = {skip: new Set<string>(), failures: [] as string[]};
     // A looping video has no end card, so no call-to-action line to say.
     const loops = plan.ending === "loop";
     const narrations = [...plan.scenes.map((scene) => scene.narration), ...(loops ? [] : [plan.ctaNarration])];
     const lines = [];
     for (const narration of narrations) {
-        lines.push(await speakLine(narration, voiceState, plan.theme === "noir_gold" ? "deep" : "brisk"));
+        lines.push(silent ? silentLine(narration) : await speakLine(narration, voiceState, plan.theme === "noir_gold" ? "deep" : "brisk"));
     }
     // When each word is said: measured by the aligner when it is available, else pinned to the recording's pauses.
     await progress("Timing the captions to the voice");
     const alignState = {disabled: false, failure: null as string | null};
     const lineWords = [];
     for (let index = 0; index < lines.length; index += 1) {
-        const aligned = await alignLine(narrations[index], lines[index].wav, alignState);
+        const aligned = silent ? null : await alignLine(narrations[index], lines[index].wav, alignState);
         const {pcm, sampleRate, channels} = wavPcm(lines[index].wav);
-        const spans = channels === 1 ? speechSpans(pcm, sampleRate) : null;
+        const spans = !silent && channels === 1 ? speechSpans(pcm, sampleRate) : null;
         lineWords.push(timeLineWords(narrations[index], lines[index].seconds, {aligned, spans}));
     }
     if (alignState.failure) console.warn(`[content-video] caption alignment fell back to the pause-based estimate: ${alignState.failure}`);

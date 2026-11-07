@@ -119,7 +119,7 @@ test("picking: exploration takes a random arm; otherwise the clearly better arm 
     assert.ok(picks.filter((arm) => arm === "good").length > 190);
     assert.equal(pickArm(stats, () => 0.01, 0.15), "good");
     const experiment = chooseExperiment("editorial", [], random);
-    assert.deepEqual(Object.keys(experiment).sort(), ["ending", "hookStyle", "intent", "length", "version"]);
+    assert.deepEqual(Object.keys(experiment).sort(), ["ending", "hookStyle", "intent", "length", "version", "voice"]);
     assert.ok(Object.hasOwn(HOOK_STYLES, experiment.hookStyle!));
     assert.deepEqual(KIND_DIMENSIONS.text, ["textFormat"]);
     assert.match(experimentBrief({version: 1, hookStyle: "pov", ending: "loop"}), /HOOK STYLE — POV[\s\S]*ENDING — No call-to-action card/);

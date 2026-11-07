@@ -27,7 +27,7 @@ type LabPayload = {
 
 type ContentItem = SocialContentRow & {slideUrls: string[]; shares: Array<{platform: SocialPlatform; status: string; url: string | null; error: string | null}>};
 
-const DIMENSION_TITLES: Record<Dimension, string> = {intent: "Job", hookStyle: "Hook style", length: "Length", ending: "Ending", opener: "Opener", textFormat: "Format", carouselFormat: "Carousel format"};
+const DIMENSION_TITLES: Record<Dimension, string> = {intent: "Job", hookStyle: "Hook style", length: "Length", ending: "Ending", opener: "Opener", textFormat: "Format", carouselFormat: "Carousel format", voice: "Voice"};
 
 /** A carousel's shape for its badge: a take format by its name, a page carousel by its template. */
 function templateLabel(template: string) {

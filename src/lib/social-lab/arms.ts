@@ -87,6 +87,22 @@ export const OPENERS = {
 export type Opener = keyof typeof OPENERS;
 
 /**
+ * Whether anyone speaks (Nov 2026). Our AI-voiced videos lost 27% of TikTok
+ * viewers by 1 s and 65% by 3 s; the founder's own phone uploads, with no AI
+ * voice, held 45% at 3 s against 35%, and many of the animal "mentality" winners
+ * are text over a song with no voice at all. So the AI voice is tested against
+ * none: the viewer reads the lines over the music.
+ */
+export const VOICES = {
+    ai_voice: {label: "AI voiceover", instruction: "A voiceover reads each shot's narration aloud."},
+    no_voice: {
+        label: "No voice (text + music)",
+        instruction: `NO VOICEOVER: nobody speaks. The viewer READS each shot's narration as on-screen text over the music, so write it to be read, not said: at most 9 words per shot, punchy, no filler ("you see", "so", "well"), one idea per shot, and the first shot's narration is the hook itself.`
+    }
+} as const satisfies Record<string, ArmSpec>;
+export type Voice = keyof typeof VOICES;
+
+/**
  * The one reaction a video or carousel is built to get. The writer follows the
  * recipe, the reviewer (review.ts) asks the question before anything is
  * rendered, and the lab judges the item on that reaction's own number.
@@ -197,7 +213,8 @@ export const DIMENSIONS = {
     opener: OPENERS,
     textFormat: TEXT_FORMATS,
     intent: INTENTS,
-    carouselFormat: CAROUSEL_FORMATS
+    carouselFormat: CAROUSEL_FORMATS,
+    voice: VOICES
 } as const;
 export type Dimension = keyof typeof DIMENSIONS;
 
@@ -211,6 +228,7 @@ export type Experiment = {
     textFormat?: TextFormat;
     intent?: Intent;
     carouselFormat?: CarouselFormat;
+    voice?: Voice;
 };
 
 /** 2 (Oct 29 2026): the 5-year-old hook rule, the intent arm, no long videos, picture-first carousels. */
@@ -218,19 +236,20 @@ export const EXPERIMENT_VERSION = 2;
 
 /** Which dimensions each kind of item tests. */
 export const KIND_DIMENSIONS = {
-    editorial: ["intent", "hookStyle", "length", "ending"],
-    battle: ["intent", "hookStyle", "opener", "ending"],
-    creature: ["intent", "hookStyle", "opener", "ending"],
+    // Every video tests its voice too: an AI voiceover or none (text over music).
+    editorial: ["intent", "hookStyle", "length", "ending", "voice"],
+    battle: ["intent", "hookStyle", "opener", "ending", "voice"],
+    creature: ["intent", "hookStyle", "opener", "ending", "voice"],
     // The lesson has its own hook pattern (the animal's move, then yours), so it tests only its job and ending.
-    lesson: ["intent", "ending"],
+    lesson: ["intent", "ending", "voice"],
     // A guess is built for one reaction (the guess in the comments); it tests how it ends.
-    guess: ["intent", "ending"],
+    guess: ["intent", "ending", "voice"],
     // Our own footage: what is tested is its job and how it ends.
-    scan: ["intent", "ending"],
+    scan: ["intent", "ending", "voice"],
     // The three play formats (Nov 2026): a viewer against an animal, a choice between two, a Pokémon quiz.
-    you_vs: ["intent", "ending"],
-    would_you_rather: ["intent", "ending"],
-    pokemon: ["intent", "ending"],
+    you_vs: ["intent", "ending", "voice"],
+    would_you_rather: ["intent", "ending", "voice"],
+    pokemon: ["intent", "ending", "voice"],
     carousel: ["carouselFormat", "intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;
@@ -260,6 +279,7 @@ export function experimentBrief(experiment: Experiment | null | undefined) {
     if (experiment.length) lines.push(`LENGTH — ${VIDEO_LENGTHS[experiment.length].instruction}`);
     if (experiment.opener) lines.push(`OPENER — ${OPENERS[experiment.opener].instruction}`);
     if (experiment.ending) lines.push(`ENDING — ${ENDINGS[experiment.ending].instruction}`);
+    if (experiment.voice === "no_voice") lines.push(`VOICE — ${VOICES.no_voice.instruction}`);
     if (experiment.textFormat) lines.push(`FORMAT — ${TEXT_FORMATS[experiment.textFormat].label}: ${TEXT_FORMATS[experiment.textFormat].instruction}`);
     if (experiment.carouselFormat && experiment.carouselFormat !== "page") lines.push(`FORMAT — ${CAROUSEL_FORMATS[experiment.carouselFormat].label}: ${CAROUSEL_FORMATS[experiment.carouselFormat].instruction}`);
     if (!lines.length) return "";
