@@ -32,6 +32,7 @@ import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {ASK_RESPONSE_HEADERS, askLanguageName} from "@/lib/ask-animaldex/request";
+import {askDebateVisuals} from "@/lib/ask-animaldex/rich";
 import {debateUuid} from "@/lib/debates";
 
 export const runtime = "nodejs";
@@ -74,7 +75,8 @@ export async function POST(request: Request) {
             },
             body: JSON.stringify({
                 mode: "animal_group_query",
-                animal_group_query: {flow: "debate", debate_id: debateId, language_name: askLanguageName(body.locale)}
+                // The turns may draw a little: a symbol, one small diagram or table.
+                animal_group_query: {flow: "debate", debate_id: debateId, language_name: askLanguageName(body.locale), ...askDebateVisuals(body.textColumns)}
             }),
             cache: "no-store",
             signal: request.signal

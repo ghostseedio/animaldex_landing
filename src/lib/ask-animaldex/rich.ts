@@ -42,6 +42,17 @@ export function askTurnVisuals(params: {
 }
 
 /**
+ * What a debate's stream says it draws (2026-11-07): its bubbles draw
+ * markdown, text diagrams and tables (`AskReplyBubbles`), so the apps'
+ * function lets the turns draw a little ("rich"; its
+ * `animalGroupDrawingRules`), with the column's width when the page measured it.
+ */
+export function askDebateVisuals(textColumns: unknown): {supported_visuals: string[]; text_columns?: number} {
+    const measured = typeof textColumns === "number" && Number.isFinite(textColumns);
+    return {supported_visuals: ["rich"], ...(measured ? {text_columns: askRichColumns(textColumns)} : {})};
+}
+
+/**
  * How many characters of the diagram font fit across a width: the floor of
  * the width over the advance of "M", clamped to what the server takes.
  * `advance` is null (or zero) before the font could be measured: then the
