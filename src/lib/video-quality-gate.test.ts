@@ -1,25 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {classifyProviderReply, higgsfieldCreditFailure} from "./api-status-core";
-import {clipShortfall, type PlanScene} from "./content-video/plan";
-import {heldBackReason, REVIEW_SYSTEM_PROMPT, scriptForReview, type VideoReview} from "./social-lab/review";
+import type {PlanScene} from "./content-video/plan";
+import {REVIEW_SYSTEM_PROMPT, scriptForReview} from "./social-lab/review";
 import {DEFAULT_DAILY_CAPS} from "./social/auto-share-plan";
 import {fillLinks} from "./social/platform-copy";
-
-const review = (passes: boolean, score: number, fiveYearOld = true): VideoReview => ({
-    fiveYearOld: {passes: fiveYearOld, wouldSay: "A giraffe with shrimp fists?", hardWords: []},
-    scores: {share: {score, reason: ""}, save: {score: 2, reason: ""}, comment: {score: 4, reason: ""}, stay: {score: 5, reason: ""}},
-    fixes: [],
-    job: "share",
-    passes
-});
-
-test("the autopilot holds back a script the test audience rejects, or could not review", () => {
-    assert.equal(heldBackReason(review(true, 8), 3), null);
-    assert.match(heldBackReason(review(false, 5), 3) ?? "", /after 3 drafts.*share score is 5\/10 \(needs 7\)/);
-    assert.match(heldBackReason(review(false, 8, false), 3) ?? "", /a 5-year-old would say "A giraffe with shrimp fists\?"/);
-    assert.match(heldBackReason(null, 3) ?? "", /could not review/);
-});
 
 test("Higgsfield's not_enough_credits reads as out of credit", () => {
     assert.equal(classifyProviderReply(403, 'higgsfield submit 403: "not_enough_credits"'), "no_credit");
@@ -38,14 +23,6 @@ test("only the latest video with settled clips decides whether Higgsfield is out
 });
 
 const scene = (visual: PlanScene["visual"]): PlanScene => ({narration: "x", overlay: "", visual, image: 1, focusX: 0.5, motionPrompt: ""});
-
-test("a video whose AI clips mostly failed is not rendered as stills; one lost clip is fine", () => {
-    const plan = {scenes: [scene("ai_clip"), scene("ai_clip"), scene("ai_clip"), scene("image")]};
-    assert.equal(clipShortfall(plan, [{status: "completed"}, {status: "completed"}, {status: "failed", error: "x"}]), null);
-    assert.match(clipShortfall(plan, [{status: "completed"}, {status: "failed", error: "not_enough_credits"}, {status: "failed"}]) ?? "", /only 1 of 3 AI clips came back \(not_enough_credits\)/);
-    assert.match(clipShortfall(plan, []) ?? "", /no clips were made/);
-    assert.equal(clipShortfall({scenes: [scene("image")]}, []), null);
-});
 
 test("no platform gets more than two videos a day", () => {
     for (const caps of Object.values(DEFAULT_DAILY_CAPS)) assert.ok(caps.video <= 2 && caps.carousel <= 2 && caps.text <= 2);

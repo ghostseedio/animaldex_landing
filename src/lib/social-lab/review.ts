@@ -147,19 +147,3 @@ export function rewriteBrief(review: VideoReview) {
         ...(review.fixes.length ? ["Their fixes:", ...review.fixes.map((fix) => `- ${fix}`)] : [])
     ].join("\n");
 }
-
-/**
- * Why the autopilot holds a script back before any clip is paid for; null when
- * it may go ahead. No review (Claude unavailable) holds it back too: an
- * unchecked script is what filled the feeds with average videos.
- */
-export function heldBackReason(review: VideoReview | null, drafts: number): string | null {
-    if (!review) return "Held back: the test audience could not review the script (Claude unavailable), so no clips were made";
-    if (review.passes) return null;
-    const score = jobScore(review);
-    const reasons = [
-        review.fiveYearOld.passes ? null : `a 5-year-old would say "${review.fiveYearOld.wouldSay}"`,
-        score < PASS_SCORE ? `its ${review.job ?? "best"} score is ${score}/10 (needs ${PASS_SCORE})` : null
-    ].filter(Boolean);
-    return `Held back after ${drafts} drafts, before any clip was paid for: ${reasons.join("; ")}`;
-}
