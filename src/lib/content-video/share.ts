@@ -24,6 +24,8 @@ export type ShareableContentVideo = {
     captureId: null;
     stableUrl: string;
     durationSeconds: number | null;
+    /** The page the video was made from: what a "<url>" left in the copy becomes. */
+    pageUrl: string;
 };
 
 function toShareable(row: ContentVideoRow): ShareableContentVideo | null {
@@ -36,7 +38,8 @@ function toShareable(row: ContentVideoRow): ShareableContentVideo | null {
         pageSlug: row.source_slug,
         captureId: null,
         stableUrl: publicStorageUrl(row.video_path),
-        durationSeconds: row.duration_seconds
+        durationSeconds: row.duration_seconds,
+        pageUrl: getAbsoluteUrl("en", sourcePath(row.source_type, row.source_slug))
     };
 }
 

@@ -138,6 +138,8 @@ export type ShareableUploadedVideo = {
     captureId: null;
     stableUrl: string;
     durationSeconds: number | null;
+    /** No page of its own: a link left in the copy becomes the app's home page. */
+    pageUrl: string;
 };
 
 function toShareable(row: UploadedVideoRow): ShareableUploadedVideo {
@@ -149,7 +151,8 @@ function toShareable(row: UploadedVideoRow): ShareableUploadedVideo {
         pageSlug: null,
         captureId: null,
         stableUrl: publicStorageUrl(row.video_path),
-        durationSeconds: row.duration_seconds
+        durationSeconds: row.duration_seconds,
+        pageUrl: getAbsoluteUrl("en", "/")
     };
 }
 

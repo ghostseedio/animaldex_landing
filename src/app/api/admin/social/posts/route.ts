@@ -5,6 +5,8 @@ import {findAdminStoryVideo} from "@/lib/social/story-videos";
 import {shareableContentVideo} from "@/lib/content-video/share";
 import {shareableUploadedVideo} from "@/lib/social/uploaded-videos";
 import {insertPost, listPosts, updatePost} from "@/lib/social/store";
+import {fillLinks} from "@/lib/social/platform-copy";
+import {getAbsoluteUrl} from "@/lib/site";
 import {isStale} from "@/lib/social/auto-share-plan";
 import {readTikTokOptions, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {isSocialPlatform, type SocialPlatform, type SocialPostOptions, type SocialPostRow} from "@/lib/social/types";
@@ -83,6 +85,11 @@ export async function POST(request: NextRequest) {
             : await findAdminStoryVideo(body.speciesProfileId!, body.mediaPath!);
         if (!video) return NextResponse.json({error: "That video is no longer served (deleted, archived or made private)"}, {status: 409});
 
+        // The share dialog posts the drafted copy as edited. A "<url>" the writer
+        // left in becomes the page link, and YouTube never gets "<" or ">"
+        // (invalidDescription: the Snowy Owl guess video, Nov 8 2026), as on auto-share.
+        const pageUrl = "pageUrl" in video ? video.pageUrl : video.pageSlug ? getAbsoluteUrl("en", `/animals/${video.pageSlug}`) : null;
+
         const existing = await listPosts(500);
         const now = Date.now();
         await Promise.all(existing
@@ -100,8 +107,8 @@ export async function POST(request: NextRequest) {
                 species_name: video.speciesName,
                 page_slug: video.pageSlug,
                 capture_id: video.captureId,
-                caption: (target.caption ?? "").slice(0, 5000),
-                title: body.title?.slice(0, 100) ?? null,
+                caption: fillLinks(target.caption ?? "", pageUrl, target.platform).slice(0, 5000),
+                title: body.title ? fillLinks(body.title, pageUrl, target.platform).slice(0, 100) : null,
                 mode: target.mode === "draft" ? "draft" : "post",
                 options: target === tiktokTarget ? tiktokOptions : null
             });
