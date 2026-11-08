@@ -1,5 +1,6 @@
 import "server-only";
 import {listContentVideos, type ContentVideoRow} from "@/lib/content-video/store";
+import {contentVideoIdFromPath} from "@/lib/content-video/fix";
 import type {VideoPlan} from "@/lib/content-video/plan";
 import {armLabel, type CarouselFormat, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, intentsFor, textFormatsFor, withCarouselFormat} from "@/lib/social-lab/arms";
 import {armStats, chanceBest, chooseExperiment, itemScores, learningKinds, type ItemScore, pickArm, rankArms, type ScoredShare, scoreShares, sourceTypeStats} from "@/lib/social-lab/bandit";
@@ -40,6 +41,13 @@ export function inferredExperiment(video: Pick<ContentVideoRow, "plan" | "durati
     return {version: EXPERIMENT_VERSION, opener: "card_first", ending: "cta_card", voice: "ai_voice"};
 }
 
+/** A no-voice video the Fix button gave its voice back: posts of the cut made after that had the voiceover. */
+export function experimentOfShare(video: Pick<ContentVideoRow, "plan" | "duration_seconds">, postedAt: string): Experiment | null {
+    const experiment = inferredExperiment(video);
+    const restoredAt = (video.plan as VideoPlan | null)?.voiceRestoredAt;
+    return experiment && restoredAt && postedAt >= restoredAt ? {...experiment, voice: "ai_voice"} : experiment;
+}
+
 function videoKind(video: ContentVideoRow): ExperimentKind {
     const format = (video.plan as VideoPlan | null)?.format;
     return format && format !== "editorial" ? format : "editorial";
@@ -54,7 +62,8 @@ export async function loadScoredShares(): Promise<ScoredShare[]> {
         listSocialContent(undefined, 2000).catch((): SocialContentRow[] => [])
     ]);
     const metricsByPost = new Map(metrics.map((row) => [row.post_id, row]));
-    const videoByPath = new Map(videos.filter((video) => video.video_path).map((video) => [video.video_path!, video]));
+    // By video, not file: every cut of a re-edited video is the same item.
+    const videoById = new Map(videos.map((video) => [video.id, video]));
     const contentById = new Map(content.map((row) => [row.id, row]));
     const shares: ScoredShare[] = [];
     for (const post of posts) {
@@ -63,9 +72,10 @@ export async function loadScoredShares(): Promise<ScoredShare[]> {
         const metricsOf = {views: row.views, likes: row.likes, comments: row.comments, shares: row.shares, saves: row.saves, hold_3s: row.hold_3s, completion: row.completion, avg_view_pct: row.avg_view_pct};
         const ageHours = Number(row.age_hours ?? 0);
         if (post.media_kind === CONTENT_VIDEO_MEDIA_KIND) {
-            const video = videoByPath.get(post.media_path);
+            const id = contentVideoIdFromPath(post.media_path);
+            const video = id ? videoById.get(id) : undefined;
             if (!video) continue;
-            shares.push({itemId: video.id, itemKind: videoKind(video), family: "video", platform: post.platform, sourceType: video.source_type, experiment: inferredExperiment(video), ageHours, metrics: metricsOf});
+            shares.push({itemId: video.id, itemKind: videoKind(video), family: "video", platform: post.platform, sourceType: video.source_type, experiment: experimentOfShare(video, post.created_at), ageHours, metrics: metricsOf});
         } else if (post.media_kind === CAROUSEL_MEDIA_KIND || post.media_kind === TEXT_MEDIA_KIND) {
             const id = post.options?.content ?? contentIdFromMediaPath(post.media_path);
             const item = id ? contentById.get(id) : undefined;

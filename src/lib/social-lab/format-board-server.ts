@@ -1,4 +1,5 @@
 import "server-only";
+import {contentVideoIdFromPath} from "@/lib/content-video/fix";
 import {CONTENT_VIDEO_MEDIA_KIND, listContentVideos, type ContentVideoRow} from "@/lib/content-video/store";
 import type {VideoPlan} from "@/lib/content-video/plan";
 import {listPostMetrics} from "@/lib/social-lab/metrics";
@@ -29,7 +30,7 @@ export async function loadBoardPosts(): Promise<BoardPost[]> {
         listSocialContent(undefined, 3000).catch((): SocialContentRow[] => [])
     ]);
     const metricsByPost = new Map(metrics.map((row) => [row.post_id, row]));
-    const videoByPath = new Map(videos.filter((video) => video.video_path).map((video) => [video.video_path!, video]));
+    const videoById = new Map(videos.map((video) => [video.id, video]));
     const contentById = new Map(content.map((row) => [row.id, row]));
     const result: BoardPost[] = [];
     for (const post of posts) {
@@ -38,7 +39,8 @@ export async function loadBoardPosts(): Promise<BoardPost[]> {
         let format: FormatKey | null = null;
         let itemId = post.media_path;
         if (post.media_kind === CONTENT_VIDEO_MEDIA_KIND) {
-            const video = videoByPath.get(post.media_path);
+            const videoId = contentVideoIdFromPath(post.media_path);
+            const video = videoId ? videoById.get(videoId) : undefined;
             if (!video) continue;
             itemId = video.id;
             format = formatOfPost({mediaKind: post.media_kind, videoFormat: (video.plan as VideoPlan | null)?.format ?? null, sourceType: video.source_type});

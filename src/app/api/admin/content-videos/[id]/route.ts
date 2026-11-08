@@ -2,9 +2,10 @@ import {revalidatePath, revalidateTag} from "next/cache";
 import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {contentVideoBusy, isContentVideoRunning, resumeStatus, startContentVideoJob} from "@/lib/content-video/runner";
-import {CONTENT_VIDEO_CACHE_TAG, getContentVideo, updateContentVideo} from "@/lib/content-video/store";
+import {CONTENT_VIDEO_CACHE_TAG, getContentVideo, publicStorageUrl, updateContentVideo} from "@/lib/content-video/store";
+import {fixPlan, videoProblems} from "@/lib/content-video/fix";
 
-type Action = "publish" | "unpublish" | "resume" | "rerender" | "archive";
+type Action = "publish" | "unpublish" | "resume" | "rerender" | "archive" | "fix";
 
 function revalidatePost(slug: string) {
     revalidateTag(CONTENT_VIDEO_CACHE_TAG);
@@ -16,6 +17,8 @@ function revalidatePost(slug: string) {
  * resume: continue a failed or interrupted video from its last saved step.
  * rerender: re-edit a ready video from the same script and clips (free: no new clips).
  * archive: retire it (also unpublishes); the post becomes eligible for a new video.
+ * fix: find what is wrong (no voice, failed AI shots, a missing file, a stopped
+ *   run) and repair it through the video maker (fix.ts). Only retried shots spend.
  */
 export async function PATCH(request: NextRequest, {params}: {params: {id: string}}) {
     if (!(await isSupportAdminRequestAuthorized(request))) return NextResponse.json({error: "Unauthorized"}, {status: 401});
@@ -39,6 +42,20 @@ export async function PATCH(request: NextRequest, {params}: {params: {id: string
                 await updateContentVideo(row.id, {published_at: null, archived_at: new Date().toISOString()});
                 revalidatePost(row.source_slug);
                 return NextResponse.json({ok: true});
+            case "fix": {
+                const fileMissing = row.status === "ready" && row.video_path ? !(await fileExists(publicStorageUrl(row.video_path))) : false;
+                const problems = videoProblems({...row, running: false}, {fileMissing});
+                const plan = fixPlan(row, problems, new Date(), resumeStatus(row));
+                if (!plan) {
+                    const reason = problems.find((problem) => problem.code === "not_editable")?.label;
+                    return NextResponse.json({ok: true, fixing: [], message: reason ?? "Nothing to fix: the voice, every shot and the file are all there"});
+                }
+                if (contentVideoBusy()) return NextResponse.json({error: "Another video is being made; try again when it finishes"}, {status: 409});
+                // A published video stays on its page (the current cut) until the fixed one replaces it.
+                await updateContentVideo(row.id, {status: plan.status, plan: plan.plan, clips: plan.clips, error: null, progress: `Fixing: ${plan.fixing.join(", ")}`});
+                startContentVideoJob(row.id, async () => revalidatePost(row.source_slug));
+                return NextResponse.json({ok: true, fixing: plan.fixing, usd: plan.usd});
+            }
             case "resume":
             case "rerender": {
                 if (contentVideoBusy()) return NextResponse.json({error: "Another video is being made; try again when it finishes"}, {status: 409});
@@ -55,6 +72,17 @@ export async function PATCH(request: NextRequest, {params}: {params: {id: string
         }
     } catch (error) {
         return NextResponse.json({error: error instanceof Error ? error.message : "Unable to update the video"}, {status: 500});
+    }
+}
+
+/** Whether the bucket still serves the finished file (a deleted object 400s/404s). */
+async function fileExists(url: string) {
+    try {
+        const response = await fetch(url, {method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(15_000)});
+        return response.ok;
+    } catch {
+        // Unreachable is not proof of absence: do not re-render on a network blip.
+        return true;
     }
 }
 

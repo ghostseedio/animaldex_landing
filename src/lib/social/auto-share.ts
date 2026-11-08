@@ -4,6 +4,7 @@ import type {VideoPlan} from "@/lib/content-video/plan";
 import {contentVideoBusy} from "@/lib/content-video/runner";
 import {blogShareCopy} from "@/lib/content-video/share";
 import {sourcePath} from "@/lib/content-video/source-paths";
+import {withCurrentVideoPaths} from "@/lib/content-video/fix";
 import {CONTENT_VIDEO_MEDIA_KIND, listContentVideos} from "@/lib/content-video/store";
 import {getAbsoluteUrl} from "@/lib/site";
 import {maybeSyncPostMetrics} from "@/lib/social-lab/metrics";
@@ -176,7 +177,8 @@ export async function previewAutoShare() {
     const connected = SOCIAL_PLATFORMS.filter((platform) => isOAuthPlatform(platform)
         ? isProviderConfigured(platform) && rows.some((row) => row.platform === platform)
         : platform === "tiktok" ? isZernioConfigured() : accounts.includes(platform));
-    const [posts, videos, {pauses, raw, caps}] = await Promise.all([listPosts(1000), candidates(), pausesAndCaps()]);
+    const [rawPosts, videos, {pauses, raw, caps}, blogs] = await Promise.all([listPosts(1000), candidates(), pausesAndCaps(), listContentVideos(200)]);
+    const posts = withCurrentVideoPaths(rawPosts, blogs);
     const now = Date.now();
     const videoRoom = platformsWithRoom(withoutPaused(connected, "video", pauses).allowed, "video", posts, caps, now);
     const due = videos.filter((video) => pickNextAutoShare([video], posts, videoRoom, now));
@@ -221,7 +223,8 @@ async function shareNext(dryRun: boolean): Promise<AutoShareResult> {
 
     const now = Date.now();
     // Brings waiting Zernio rows up to date, as opening the share log does.
-    const posts = await reconcileZernioRows(await listPosts(1000)).catch(() => listPosts(1000));
+    // A re-edited (or fixed) page video keeps its share history: its earlier cut's posts count as its own.
+    const posts = withCurrentVideoPaths(await reconcileZernioRows(await listPosts(1000)).catch(() => listPosts(1000)), await listContentVideos(200));
     const uploading = posts.find((post) => isUploading(post, now));
     if (uploading) return {ok: true, shared: false, reason: `An upload is still running (${uploading.platform}, ${uploading.media_path})`};
 

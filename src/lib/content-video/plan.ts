@@ -252,6 +252,8 @@ export type VideoPlan = {
     theme?: VideoTheme;
     /** The hook-lab arms this video tests (src/lib/social-lab/arms.ts); absent on videos made before the lab. */
     experiment?: Experiment;
+    /** Set when the Fix button gave a no-voice video its voiceover back (fix.ts): cuts made after it speak; the lab scores earlier posts as no-voice. */
+    voiceRestoredAt?: string;
     /** "loop": no end card, the last beat runs straight back into the first. Absent = the CTA end card. */
     ending?: "loop" | "cta_card";
     title: string;

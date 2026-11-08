@@ -1,7 +1,8 @@
 "use client";
 
-import {useCallback, useEffect, useState} from "react";
-import {ClapperboardPlay, Eye, EyeClosed, MagicStick3, Refresh, Share, TrashBinMinimalistic} from "solar-icon-set";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {ClapperboardPlay, Eye, EyeClosed, Health, MagicStick3, Share, TrashBinMinimalistic} from "solar-icon-set";
+import {contentVideoIdFromPath, videoProblems, type VideoProblem} from "@/lib/content-video/fix";
 import {SOURCE_TYPES, type SourceType, type TimelineEntry, type VideoPlan} from "@/lib/content-video/plan";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
 import type {ContentVideoClip, ContentVideoStatus} from "@/lib/content-video/store";
@@ -22,6 +23,7 @@ export type BlogVideo = {
     tts_provider: string | null;
     estimated_usd: number;
     video_path: string | null;
+    poster_path: string | null;
     duration_seconds: number | null;
     error: string | null;
     published_at: string | null;
@@ -126,6 +128,34 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
         }
     }
 
+    // Every cut of a video shares one history (a re-edit or fix writes a new file).
+    const sharesById = useMemo(() => {
+        const map = new Map<string, SocialPostRow[]>();
+        for (const [path, posts] of Array.from(shares.entries())) {
+            const id = contentVideoIdFromPath(path);
+            if (id) map.set(id, [...(map.get(id) ?? []), ...posts]);
+        }
+        return map;
+    }, [shares]);
+
+    async function fix(video: BlogVideo, problems: VideoProblem[]) {
+        const spend = problems.reduce((sum, problem) => sum + (problem.code === "missing_shots" ? problem.usd : 0), 0);
+        if (spend > 0 && !window.confirm(`Fixing “${video.source_title}” makes its failed AI shots again: up to about $${spend.toFixed(2)} of Higgsfield credit. Go ahead?`)) return;
+        setActing(video.id);
+        setError("");
+        try {
+            const body = await api<{fixing: string[]; message?: string}>(`/api/admin/content-videos/${video.id}`, {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({action: "fix"})});
+            onNotice(body.fixing.length
+                ? `Fixing “${video.source_title}”: ${body.fixing.join(", ").toLowerCase()}.${video.published_at ? " The current cut stays on its page until the fixed one replaces it." : ""} Platforms that already have it don't get it again.`
+                : body.message ?? "Nothing to fix.");
+            await load();
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Unable to fix");
+        } finally {
+            setActing(null);
+        }
+    }
+
     async function act(video: BlogVideo, action: "publish" | "unpublish" | "resume" | "rerender" | "archive") {
         if (action === "archive" && !window.confirm(`Archive the video for “${video.source_title}”? It comes off the page, and the page can get a new video.`)) return;
         setActing(video.id);
@@ -143,9 +173,9 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
 
     const candidates = available[type] ?? [];
     const next = candidates[0];
-    const matching = (videos ?? []).filter((video) => matchesFilter(video, filter, shares));
+    const matching = (videos ?? []).filter((video) => matchesFilter(video, filter, sharesById));
     const shown = matching.slice(0, limit);
-    const counts = Object.fromEntries(FILTERS.map((entry) => [entry.value, (videos ?? []).filter((video) => matchesFilter(video, entry.value, shares)).length])) as Record<Filter, number>;
+    const counts = Object.fromEntries(FILTERS.map((entry) => [entry.value, (videos ?? []).filter((video) => matchesFilter(video, entry.value, sharesById)).length])) as Record<Filter, number>;
 
     return (
         <section className="mt-6">
@@ -172,7 +202,7 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                             {starting || working ? null : <MagicStick3 size={18} />}{starting ? "Starting…" : working ? "Making a video…" : "Generate video"}
                         </Button>
                     </div>
-                    <p className="border-t border-line-300 px-3 py-2 text-xs text-ink-500">The autopilot already makes up to two a day and posts them. Use this for one more, now.</p>
+                    <p className="border-t border-line-300 px-3 py-2 text-xs text-ink-500">The autopilot makes one each run (every three hours, within the clip budget) and posts them. Use this for one more, now.</p>
                 </Card>
             ) : null}
 
@@ -197,10 +227,11 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
             ) : (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     {shown.map((video) => {
-                        const videoShares = video.video_path ? shares.get(video.video_path) ?? [] : [];
+                        const videoShares = sharesById.get(video.id) ?? [];
                         const disabled = acting === video.id || video.running;
                         const footage = video.plan?.scenes.some((scene) => scene.footage) ?? false;
-                        const silent = video.plan?.experiment?.voice === "no_voice";
+                        const problems = videoProblems(video);
+                        const fixable = problems.some((problem) => problem.code !== "not_editable");
                         return (
                             <article key={video.id} className="flex flex-col overflow-hidden border border-line-300 bg-surface-900">
                                 {video.videoUrl
@@ -216,7 +247,9 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                                     <div className="flex flex-wrap gap-1">
                                         <Badge>{SOURCE_LABELS[video.source_type] ?? video.source_type}</Badge>
                                         {footage ? <Badge tone="good">Real footage</Badge> : null}
-                                        {silent ? <Badge tone="ios">No voice</Badge> : null}
+                                        {problems.filter((problem) => problem.code !== "failed" && problem.code !== "interrupted").map((problem) => (
+                                            <Badge key={problem.code} tone={problem.code === "not_editable" ? "neutral" : "bad"} title={problem.label}>{PROBLEM_BADGES[problem.code]}</Badge>
+                                        ))}
                                     </div>
                                     <a href={`${siteUrl}${sourcePath(video.source_type, video.source_slug)}`} target="_blank" rel="noreferrer" className="line-clamp-2 text-sm font-bold leading-5 text-white hover:text-primary-100">{video.source_title}</a>
                                     <p className="text-[11px] tabular-nums text-ink-500">
@@ -241,14 +274,15 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                                                 {video.published_at ? null : <Button size="sm" onClick={() => act(video, "publish")} disabled={disabled}><Eye size={14} />Show on page</Button>}
                                             </>
                                         )}
-                                        {(video.status === "failed" || interrupted(video)) && (
-                                            <Button size="sm" variant="primary" onClick={() => act(video, "resume")} disabled={disabled || working}><Refresh size={14} />Resume</Button>
+                                        {fixable && (
+                                            <Button size="sm" variant={video.status === "ready" ? "danger" : "primary"} onClick={() => fix(video, problems)} disabled={disabled || working} title={problems.map((problem) => problem.label).join(" · ")}><Health size={14} />Fix</Button>
                                         )}
                                         {!video.running && (
                                             <details className="relative ml-auto">
                                                 <summary className="cursor-pointer list-none px-2 py-1 text-xs font-black text-ink-400 hover:text-white" aria-label="More actions">•••</summary>
                                                 <div className="absolute bottom-full right-0 z-10 mb-1 flex w-40 flex-col border border-line-300 bg-canvas-900 p-1">
                                                     {video.status === "ready" ? <button type="button" onClick={() => act(video, "rerender")} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50">Re-edit (no new spend)</button> : null}
+                                                    {video.status === "ready" && !fixable ? <button type="button" onClick={() => fix(video, problems)} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50"><Health size={12} className="mr-1 inline" />Check &amp; fix</button> : null}
                                                     {video.published_at ? <button type="button" onClick={() => act(video, "unpublish")} disabled={disabled} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5"><EyeClosed size={12} className="mr-1 inline" />Take off the page</button> : null}
                                                     <button type="button" onClick={() => act(video, "archive")} disabled={disabled} className="px-2 py-1.5 text-left text-xs text-red-200 hover:bg-red-400/10"><TrashBinMinimalistic size={12} className="mr-1 inline" />Archive</button>
                                                 </div>
@@ -283,8 +317,17 @@ const FILTERS: Array<{value: Filter; label: string}> = [
     {value: "failed", label: "Failed"}
 ];
 
-function matchesFilter(video: BlogVideo, filter: Filter, shares: Map<string, SocialPostRow[]>) {
-    const posted = Boolean(video.video_path && (shares.get(video.video_path) ?? []).some((post) => post.status === "published"));
+const PROBLEM_BADGES: Record<VideoProblem["code"], string> = {
+    failed: "Failed",
+    interrupted: "Stopped",
+    no_voice: "No voice",
+    missing_shots: "Shots failed",
+    missing_file: "File missing",
+    not_editable: "Not editable"
+};
+
+function matchesFilter(video: BlogVideo, filter: Filter, sharesById: Map<string, SocialPostRow[]>) {
+    const posted = (sharesById.get(video.id) ?? []).some((post) => post.status === "published");
     switch (filter) {
         case "all": return true;
         case "posted": return posted;

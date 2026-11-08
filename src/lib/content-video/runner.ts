@@ -40,6 +40,7 @@ import {applyFootage, planHasAiImagery} from "@/lib/content-video/footage";
 import {keyframeShows} from "@/lib/content-video/keyframe-check";
 import {FRESH_ARTICLE_HOURS} from "@/lib/social-lab/arms";
 import {existsSync} from "node:fs";
+import {isSilentPlan} from "@/lib/content-video/fix";
 
 // Runs one page video from script to finished file in the background of the
 // long-lived, self-hosted Node server (like the social share runner): the
@@ -325,7 +326,7 @@ async function download(url: string, out: string) {
 export async function produceVideo(planned: VideoPlan, source: VideoSource, clips: ContentVideoClip[], dir: string, progress: (step: string) => Promise<void>, seed = source.slug) {
     const plan = applyStatCards(planned, source);
     // The no-voice arm: nobody speaks; each line is on screen as long as it takes to read, over the music.
-    const silent = plan.experiment?.voice === "no_voice";
+    const silent = isSilentPlan(plan);
     await progress(silent ? "Timing the on-screen text (no voiceover)" : "Recording the voiceover");
     const voiceState = {skip: new Set<string>(), failures: [] as string[]};
     // A looping video has no end card, so no call-to-action line to say.

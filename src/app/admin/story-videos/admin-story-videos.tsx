@@ -345,7 +345,7 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
             <PageHeader
                 eyebrow="Content"
                 title="Story videos"
-                description="The autopilot makes up to two videos a day and posts them to every connected account. Check here what went out, and fix what needs you."
+                description="The autopilot makes a video every run and posts them to every connected account. Check here what went out, and fix what needs you."
                 actions={<RefreshButton loading={refreshing || videos === null} onClick={() => { setRefreshing(true); loadAll().finally(() => setRefreshing(false)); }} />}
             />
 
