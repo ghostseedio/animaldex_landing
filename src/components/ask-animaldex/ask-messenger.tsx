@@ -360,7 +360,7 @@ export function AskReplyBubbles({
     after?: ReactNode;
     /**
      * What this reply carries to do (docs/your-step/INLINE.md): drawn inside
-     * its last bubble, which becomes a special message (neon edge, faint
+     * its last bubble, which becomes a special message (neon outline, faint
      * wash, its own label), never as a card under it. Once it is all shown.
      */
     special?: ReactNode;
@@ -398,8 +398,8 @@ export function AskReplyBubbles({
                         const wide = askPieceIsWide(piece);
                         const bubble = (
                             <div
-                                // 10 × 14 of padding on every bubble; the special one keeps 14 past its 3 px neon edge.
-                                className={`min-w-0 max-w-full break-words py-2.5 text-[15px] leading-6 text-white ${carries ? "ask-special w-full pl-[17px] pr-3.5" : plain ? "w-full px-0 py-1.5" : wide ? "w-full px-3.5" : "px-3.5"}`}
+                                // 10 × 14 of padding on every bubble, the special one too (its outline is even on every side).
+                                className={`min-w-0 max-w-full break-words py-2.5 text-[15px] leading-6 text-white ${carries ? "ask-special w-full px-3.5" : plain ? "w-full px-0 py-1.5" : wide ? "w-full px-3.5" : "px-3.5"}`}
                                 style={plain && !carries ? undefined : {backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: radius}}
                                 data-testid={carries ? "special-message" : undefined}
                             >
@@ -476,11 +476,11 @@ function AskSpecialSections({children}: {children: ReactNode}) {
     return <div className="ask-special-sections mt-[11px] flex flex-col pt-[11px]">{children}</div>;
 }
 
-/** A special message's bubble on its own: the neon edge, the wash, and what it carries. */
+/** A special message's bubble on its own: the neon outline, the wash, and what it carries. */
 export function AskSpecialShell({children, testId = "special-message"}: {children: ReactNode; testId?: string}) {
     return (
         <div
-            className="ask-special flex w-full min-w-0 flex-col gap-2.5 break-words py-2.5 pl-[17px] pr-3.5 text-[15px] leading-6 text-white"
+            className="ask-special flex w-full min-w-0 flex-col gap-2.5 break-words py-2.5 px-3.5 text-[15px] leading-6 text-white"
             style={{backgroundColor: ASK_BUBBLE_INCOMING, borderRadius: bubbleRadius({fromAnimal: true, groupStart: true, groupEnd: true})}}
             data-testid={testId}
         >

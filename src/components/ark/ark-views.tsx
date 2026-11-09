@@ -41,6 +41,7 @@ import {
     arkSignedNumber,
     arkVisibleStats,
     arkRevealHeading,
+    arkRevealLines,
     arkWithUndone,
     type ArkChange,
     type ArkRevealPower,
@@ -121,15 +122,37 @@ function ChangeRow({change, row, words, money, locale, progress}: {
     );
 }
 
-/** The numbers of a reveal or a revision: the rows, a lesson's Experience, and Ark Score before → after. */
-export function ArkChangeNumbers({change, words, money, locale, progress}: {
+/** A stat that did not move (the chat's card, all five bars): its name, its value, its bar, quiet and with no change. */
+function StillRow({stat, value, stats, words, money}: {stat: ArkStat; value: number; stats: ArkStats | null; words: ArkWords; money: (usd: number) => string}) {
+    const amount = stat === "money" && stats?.bars.money ? money(stats.bars.money.balanceCents / 100) : null;
+    return (
+        <li className="flex flex-col gap-1 opacity-[0.42]" data-testid={`ark-row-${stat}`} data-still="true">
+            <div className="flex items-baseline justify-between gap-3 text-[13px] leading-5">
+                <span className="font-semibold text-white/60">{statName(stat, words)}</span>
+                <span className="tabular-nums text-white/40">{amount ?? value}</span>
+            </div>
+            <Bar value={value} tint={NEON} />
+        </li>
+    );
+}
+
+/**
+ * The numbers of a reveal or a revision: the rows, a lesson's Experience, and
+ * Ark Score before → after. `stats` (the chat passes it, null until it reads):
+ * Money, Relationships, Energy, Reputation and Experience, every bar, the
+ * still ones quiet (`arkRevealLines`); left out (the Diary): the moved rows.
+ */
+export function ArkChangeNumbers({change, words, money, locale, progress, stats}: {
     change: ArkChange;
     words: ArkWords;
     money: (usd: number) => string;
     locale: string;
     progress: number;
+    stats?: ArkStats | null;
 }) {
-    const rows = arkChangeRows(change);
+    const rows = stats === undefined
+        ? arkChangeRows(change).map((row) => ({kind: "moved" as const, ...row}))
+        : arkRevealLines(change, stats);
     const lessonExperience = change.experienceDelta > 0 && arkChangeHasLoss(change)
         ? fillWords(words.lessonExperience, {n: change.experienceDelta})
         : null;
@@ -137,8 +160,9 @@ export function ArkChangeNumbers({change, words, money, locale, progress}: {
         <div className="flex flex-col gap-2.5">
             {rows.length > 0 ? (
                 <ul className="flex flex-col gap-2.5">
-                    {rows.map((row) => (
-                        <ChangeRow key={row.stat} change={change} row={row} words={words} money={money} locale={locale} progress={progress} />
+                    {rows.map((row) => (row.kind === "moved"
+                        ? <ChangeRow key={row.stat} change={change} row={row} words={words} money={money} locale={locale} progress={progress} />
+                        : <StillRow key={row.stat} stat={row.stat} value={row.value} stats={stats ?? null} words={words} money={money} />
                     ))}
                 </ul>
             ) : null}
@@ -182,8 +206,10 @@ function ReviseIcon() {
  * here, so it arrives a message at a time and counts; otherwise (the thread
  * reopened) it is all there, at its final values.
  */
-export function ArkRevealMessages({reveal, power = null, plain = true, fresh, reducedMotion, faceUrl, speakerName, words, money, locale, onPlayed}: {
+export function ArkRevealMessages({reveal, stats, power = null, plain = true, fresh, reducedMotion, faceUrl, speakerName, words, money, locale, onPlayed}: {
     reveal: ArkChange;
+    /** The reader's own `ark_stats_v1` (null until it reads): every bar on the card, see `ArkChangeNumbers`. */
+    stats?: ArkStats | null;
     /**
      * The chat's plain thread (its replies have no bubble and no face): the
      * numbers take the same full-width special card as the step card in the
@@ -233,7 +259,7 @@ export function ArkRevealMessages({reveal, power = null, plain = true, fresh, re
             ))}
             {numbersIn ? (
                 <div className={`pt-1.5 ${animate ? "ask-ark-arrive" : ""}`}>
-                    {/* The step card's own container (AskSpecialBubble → AskSpecialShell): its radius, width, inset and neon edge. */}
+                    {/* The step card's own container (AskSpecialBubble → AskSpecialShell): its radius, width, inset and neon outline. */}
                     <AskSpecialBubble avatarUrl={faceUrl} plain={plain} testId="ark-numbers">
                         <section className="flex flex-col gap-2.5" aria-label={heading} aria-live={fresh ? "polite" : undefined}>
                             <AskSpecialLabel
@@ -246,7 +272,7 @@ export function ArkRevealMessages({reveal, power = null, plain = true, fresh, re
                             >
                                 <span data-testid="ark-reveal-heading">{heading}</span>
                             </AskSpecialLabel>
-                            <ArkChangeNumbers change={reveal} words={words.ark} money={money} locale={locale} progress={progress} />
+                            <ArkChangeNumbers change={reveal} words={words.ark} money={money} locale={locale} progress={progress} stats={stats} />
                         </section>
                     </AskSpecialBubble>
                 </div>
@@ -260,8 +286,10 @@ export function ArkRevealMessages({reveal, power = null, plain = true, fresh, re
  * better" / "worse"), what they said, and the numbers, animating when it has
  * just arrived. Undo is the Diary's (`onUndo` there).
  */
-export function ArkRevisionCard({revision, animate, words, money, locale, onUndo, undoing = false, problem = null, framed = true, plain = true}: {
+export function ArkRevisionCard({revision, stats, animate, words, money, locale, onUndo, undoing = false, problem = null, framed = true, plain = true}: {
     revision: ArkChange;
+    /** The chat's: the reader's own `ark_stats_v1`, every bar on the card (see `ArkChangeNumbers`). */
+    stats?: ArkStats | null;
     animate: boolean;
     words: CompanionWords;
     money: (usd: number) => string;
@@ -288,7 +316,7 @@ export function ArkRevisionCard({revision, animate, words, money, locale, onUndo
         <section className={`flex flex-col gap-2.5 ${undone ? "opacity-60" : ""}`} aria-label={title} data-testid={`ark-revision-${undone ? "undone" : direction}`}>
             <AskSpecialLabel icon={<ReviseIcon />} tint={tint}>{title}</AskSpecialLabel>
             {said ? <p className="text-[13px] italic leading-5 text-white/70">{said}</p> : null}
-            <ArkChangeNumbers change={revision} words={words.ark} money={money} locale={locale} progress={progress} />
+            <ArkChangeNumbers change={revision} words={words.ark} money={money} locale={locale} progress={progress} stats={stats} />
             {onUndo && !undone ? (
                 <div>
                     <button

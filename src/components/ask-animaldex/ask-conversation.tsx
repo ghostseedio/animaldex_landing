@@ -138,18 +138,20 @@ import {
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
 import {ArkRevealMessages, ArkRevisionCard} from "@/components/ark/ark-views";
-import {arkMoneyFormatter, fetchArkChanges, useDisplayCurrency} from "@/components/ark/use-ark";
+import {arkMoneyFormatter, fetchArkChanges, fetchArkStats, useDisplayCurrency} from "@/components/ark/use-ark";
 import {
     ARK_EVENTS,
     arkIsReveal,
     arkIsRevision,
     arkRevealAnchorId,
     arkRevealDone,
+    arkRevealShown,
     arkRevealShownParams,
     arkRevisionAnchorId,
     arkRevisionShownParams,
     arkThreadChanges,
-    type ArkChange
+    type ArkChange,
+    type ArkStats
 } from "@/lib/ark";
 import {
     AskDebateOfferSection,
@@ -1847,8 +1849,12 @@ function AskConversation({
 
     const displayCurrency = useDisplayCurrency();
     const arkMoney = useMemo(() => arkMoneyFormatter(displayCurrency, locale), [displayCurrency, locale]);
-    /** The reader's own ledger (every animal's: a word to this one can revise another's step), newest first. */
-    const [ark, setArk] = useState<{threadKey: string; changes: ArkChange[]; loaded: boolean}>(() => ({threadKey, changes: [], loaded: false}));
+    /**
+     * The reader's own ledger (every animal's: a word to this one can revise
+     * another's step), newest first, and their own bars (`ark_stats_v1`), so
+     * a card shows all five (owner, 2026-11-10); null when they do not read.
+     */
+    const [ark, setArk] = useState<{threadKey: string; changes: ArkChange[]; stats: ArkStats | null; loaded: boolean}>(() => ({threadKey, changes: [], stats: null, loaded: false}));
     /** Changes that arrived while this chat was open: they play in, the rest are already there. */
     const [arkFresh, setArkFresh] = useState<ReadonlySet<string>>(() => new Set());
     const arkRef = useRef(ark);
@@ -1859,7 +1865,7 @@ function AskConversation({
     const reloadArk = useCallback(async () => {
         if (!ownerChat) return;
         const key = threadKey;
-        const changes = await fetchArkChanges({limit: 50});
+        const [changes, stats] = await Promise.all([fetchArkChanges({limit: 50}), fetchArkStats()]);
         if (!changes) return;
         const current = arkRef.current;
         if (current.threadKey === key && current.loaded) {
@@ -1870,11 +1876,11 @@ function AskConversation({
                 sticksToBottom.current = true;
                 setArkFresh((fresh) => new Set([...Array.from(fresh), ...arrived.map((change) => change.id)]));
                 for (const change of arrived) {
-                    if (arkIsReveal(change)) trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(change, companionSpeciesProfileId));
+                    if (arkIsReveal(change) && arkRevealShown(change, messagesRef.current)) trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(change, companionSpeciesProfileId));
                 }
             }
         }
-        setArk({threadKey: key, changes, loaded: true});
+        setArk({threadKey: key, changes, stats: stats?.isSelf ? stats : null, loaded: true});
     }, [ownerChat, threadKey, companionSpeciesProfileId]);
     // When the chat opens, then after each reply: the memory call that may
     // revise a step runs once the reply is out, so it is read again a little
@@ -2411,6 +2417,8 @@ function AskConversation({
         const withThreadStep: ArkChange[] = [];
         const atEnd: ArkChange[] = [];
         reveals.forEach((reveal, stepId) => {
+            // A tap's reveal (the old "I'll do it" reward) only under the reply that finished its step (owner, 2026-11-10).
+            if (!arkRevealShown(reveal, messages)) return;
             const at = arkRevealAnchorId(stepId, messages);
             if (at) slot(at).reveals.push(reveal);
             else if (threadStep?.id && threadStep.id.toLowerCase() === stepId) withThreadStep.push(reveal);
@@ -2510,6 +2518,7 @@ function AskConversation({
         <ArkRevealMessages
             key={`ark-${reveal.id}`}
             reveal={reveal}
+            stats={ark.stats}
             // The animal's own Power heads it: "{Power} earned" when the reply that finished this step earned it.
             power={{
                 name: hints.principleName?.trim() || null,
@@ -2538,6 +2547,7 @@ function AskConversation({
                     <ArkRevisionCard
                         key={`ark-${revision.id}`}
                         revision={revision}
+                        stats={ark.stats}
                         animate={arkFresh.has(revision.id) && !reducedMotion}
                         words={words}
                         money={arkMoney}

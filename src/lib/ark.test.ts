@@ -17,6 +17,8 @@ import {
     arkRevealAnchorId,
     arkRevealDone,
     arkRevealHeading,
+    arkRevealLines,
+    arkRevealShown,
     arkRevealShownParams,
     arkRevisionAnchorId,
     arkRevisionDirection,
@@ -418,4 +420,51 @@ test("a reveal is headed by the animal's Power: earned here, a later step, or a 
     assert.equal(arkRevealHeading(true, power, words), "Lesson");
     assert.equal(arkRevealHeading(false, {...power, name: null}, words), "Earned");
     assert.equal(arkRevealHeading(false, null, words), "Step done");
+});
+
+test("the chat card lists all five bars in order with the reader's stats: moved ones with their delta, the rest still (owner, 2026-11-10)", () => {
+    const lesson = decodeArkChange(lessonRow)!;
+    const stats = decodeArkStats({
+        ark_score: 143,
+        is_self: true,
+        bars_visible: true,
+        bars: {money: {bar: 60, balance_cents: 114000}, relationships: 26, energy: 28, reputation: 24, experience: 9},
+        steps: {total: 1, worked: 0, partly: 0, didnt_work: 1},
+        powers_earned: 0
+    })!;
+    const lines = arkRevealLines(lesson, stats);
+    assert.deepEqual(lines.map((line) => line.stat), ["money", "relationships", "energy", "reputation", "experience"]);
+    assert.deepEqual(lines.map((line) => line.kind), ["moved", "still", "moved", "moved", "moved"]);
+    assert.deepEqual(lines[1], {kind: "still", stat: "relationships", value: 26});
+    assert.deepEqual(lines[2], {kind: "moved", stat: "energy", before: 30, after: 28, delta: -2});
+    // Experience gets a bar: from current − delta to current.
+    assert.deepEqual(lines[4], {kind: "moved", stat: "experience", before: 7, after: 9, delta: 2});
+    // Without stats: only the moved rows, in the same order, Experience as before.
+    const alone = arkRevealLines(lesson, null);
+    assert.deepEqual(alone.map((line) => line.stat), ["money", "energy", "reputation", "experience"]);
+    assert.ok(alone.every((line) => line.kind === "moved"));
+    assert.deepEqual(alone[3], {kind: "moved", stat: "experience", before: 0, after: 2, delta: 2});
+    // A revision that moved Money alone: four quiet bars under it.
+    const revision = arkRevealLines(decodeArkChange(revisionRow)!, stats);
+    assert.deepEqual(revision.map((line) => line.kind), ["moved", "still", "still", "still", "still"]);
+    assert.deepEqual(revision[4], {kind: "still", stat: "experience", value: 9});
+});
+
+test("a tap's reveal shows only under a reply in the thread that finished its step; a report's as before (owner, 2026-11-10)", () => {
+    const tap = decodeArkChange(lessonRow)!;
+    assert.equal(tap.source, "tap");
+    const set = {id: "set", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepSet: {id: STEP}}};
+    const done = {id: "done", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepDone: {id: STEP}}};
+    const typing = {...done, id: "typing", status: "streaming"};
+    const other = {...done, id: "other", companionEvent: {stepDone: {id: id1(99)}}};
+    assert.equal(arkRevealShown(tap, [set]), false);
+    assert.equal(arkRevealShown(tap, [set, other]), false);
+    assert.equal(arkRevealShown(tap, [set, typing]), false);
+    assert.equal(arkRevealShown(tap, [set, done]), true);
+    assert.equal(arkRevealAnchorId(STEP, [set, done]), "done");
+    assert.equal(arkRevealShown({...tap, stepId: null}, [set, done]), false);
+    // A report's reveal is unchanged: shown, under the reply that set the step when none finished it.
+    const report = {...tap, source: "report" as const};
+    assert.equal(arkRevealShown(report, [set]), true);
+    assert.equal(arkRevealShown(report, []), true);
 });

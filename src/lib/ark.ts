@@ -370,6 +370,38 @@ export function arkChangeRows(change: ArkChange): Array<{stat: ArkStat; before: 
     return rows;
 }
 
+/**
+ * One line of a reveal or a revision in the chat (owner, 2026-11-10: all five
+ * bars): a stat that moved, drawn as it animates, or one that did not, drawn
+ * quietly at its current value.
+ */
+export type ArkRevealLine =
+    | {kind: "moved"; stat: ArkStat; before: number; after: number; delta: number}
+    | {kind: "still"; stat: ArkStat; value: number};
+
+/**
+ * The chat card's lines, Money, Relationships, Energy, Reputation, then
+ * Experience. With the reader's own `ark_stats_v1`: every bar, the moved ones
+ * with their delta (Experience from current − delta to current), the rest
+ * still at their value. Without it: only the moved ones.
+ */
+export function arkRevealLines(change: ArkChange, stats: ArkStats | null): ArkRevealLine[] {
+    const moved = new Map(arkChangeRows(change).map((row) => [row.stat, row]));
+    const lines: ArkRevealLine[] = [];
+    for (const stat of ARK_STATS) {
+        const row = moved.get(stat);
+        const current = stats ? arkBarValue(stats, stat) : null;
+        if (row) {
+            lines.push(stat === "experience" && current !== null
+                ? {kind: "moved", stat, before: Math.max(0, current - row.delta), after: current, delta: row.delta}
+                : {kind: "moved", ...row});
+        } else if (current !== null) {
+            lines.push({kind: "still", stat, value: current});
+        }
+    }
+    return lines;
+}
+
 /** A row is a loss when the stat fell (Money: when the balance fell). */
 export function arkRowIsLoss(change: ArkChange, row: {stat: ArkStat; delta: number}): boolean {
     if (row.stat === "money" && change.money) return change.money.deltaCents < 0;
@@ -557,6 +589,16 @@ export function arkRevealHeading(
     const filled = (template: string) => template.split("{power}").join(name ?? "");
     if (power?.earnedHere) return name ? filled(words.powerEarned) : words.earned;
     return name ? filled(words.powerStepDone) : words.stepDone;
+}
+
+/**
+ * Whether the chat shows a reveal (owner, 2026-11-10): one made by a tap (the
+ * old "I'll do it" reward) only under a reply in the thread that finished its
+ * step; any other (a report's, a chat's) as before.
+ */
+export function arkRevealShown(reveal: Pick<ArkChange, "source" | "stepId">, messages: readonly ThreadMessage[]): boolean {
+    if (reveal.source !== "tap") return true;
+    return reveal.stepId ? arkRevealDone(reveal.stepId, messages) !== null : false;
 }
 
 /** The newest reveal per step, and every revision, from a newest-first ledger read for one animal. */

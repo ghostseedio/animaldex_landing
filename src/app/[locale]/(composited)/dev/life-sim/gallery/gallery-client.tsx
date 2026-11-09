@@ -267,6 +267,7 @@ function LiveStep({words, money, locale, reveal, earnsPower}: {
                     <ArkRevealMessages
                         key={run}
                         reveal={reveal}
+                        stats={decodeArkStats(SELF_STATS)}
                         power={{name: POWER, speciesProfileId: SPECIES, earnedHere: earnsPower}}
                         fresh
                         reducedMotion={false}
@@ -345,28 +346,31 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Reveal, Lesson, playing" width={416}>
                     <button type="button" className="mb-2 text-[11px] font-bold text-white/50 underline" onClick={() => setReplay((n) => n + 1)}>replay</button>
-                    <ArkRevealMessages key={replay} reveal={lesson} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
+                    <ArkRevealMessages key={replay} reveal={lesson} stats={self} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
                 </Frame>
                 <Frame title="Reveal, Earned, thread reopened" width={416}>
-                    <ArkRevealMessages reveal={earned} power={{name: "Slow Charge", speciesProfileId: id(6), earnedHere: true}} fresh={false} reducedMotion={false} faceUrl={getSpeciesArtworkRoute("javan-rhino")} speakerName="Javan rhino" words={words} money={money} locale={locale} />
+                    <ArkRevealMessages reveal={earned} stats={self} power={{name: "Slow Charge", speciesProfileId: id(6), earnedHere: true}} fresh={false} reducedMotion={false} faceUrl={getSpeciesArtworkRoute("javan-rhino")} speakerName="Javan rhino" words={words} money={money} locale={locale} />
                 </Frame>
                 <Frame title="Reveal, numbers alone (no story yet)" width={416}>
-                    <ArkRevealMessages reveal={{...earned, story: [], reaction: null}} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh={false} reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
+                    <ArkRevealMessages reveal={{...earned, story: [], reaction: null}} stats={self} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh={false} reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
+                </Frame>
+                <Frame title="Reveal, no stats read (moved rows only)" width={416}>
+                    <ArkRevealMessages reveal={{...earned, story: [], reaction: null}} stats={null} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh={false} reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
                 </Frame>
             </div>
 
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Revision under the message, better" width={416}>
                     <AskUserBubble text="I actually got them for £400." label="You" />
-                    <ArkRevisionCard revision={better} animate words={words} money={money} locale={locale} />
+                    <ArkRevisionCard revision={better} stats={self} animate words={words} money={money} locale={locale} />
                 </Frame>
                 <Frame title="Revision under the message, worse" width={416}>
                     <AskUserBubble text="Nobody is buying my candles." label="You" />
-                    <ArkRevisionCard revision={worse} animate words={words} money={money} locale={locale} />
+                    <ArkRevisionCard revision={worse} stats={self} animate words={words} money={money} locale={locale} />
                 </Frame>
                 <Frame title="Revision, undone" width={416}>
                     <AskUserBubble text="Nobody is buying my candles." label="You" />
-                    <ArkRevisionCard revision={{...worse, undoneAt: "2026-11-17T00:00:00Z"}} animate={false} words={words} money={money} locale={locale} />
+                    <ArkRevisionCard revision={{...worse, undoneAt: "2026-11-17T00:00:00Z"}} stats={self} animate={false} words={words} money={money} locale={locale} />
                 </Frame>
             </div>
 

@@ -811,26 +811,29 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
 }
 
 /* A special message (docs/your-step/INLINE.md): the animal's own bubble with
-   a neon edge on its left and a faint neon wash, strongest by the edge, the
-   same on every platform (iOS AnimalSpecialMessageBubble). */
+   an even neon outline (32%) and a flat neon wash (6%), the same on every
+   platform (iOS AnimalSpecialMessageBubble). The edge colour stays for the
+   composer's strips (report, edit, dictation). */
 :root,
 .theme-dark {
     --ask-special-edge: #A7F432;
-    --ask-special-wash-from: rgba(167, 244, 50, 0.13);
-    --ask-special-wash-to: rgba(167, 244, 50, 0.035);
+    --ask-special-outline: rgba(167, 244, 50, 0.32);
+    --ask-special-wash: rgba(167, 244, 50, 0.06);
     --ask-special-line: rgba(167, 244, 50, 0.22);
 }
 
 :root[data-theme="light"] {
     --ask-special-edge: #5C9A12;
-    --ask-special-wash-from: rgba(92, 154, 18, 0.16);
-    --ask-special-wash-to: rgba(92, 154, 18, 0.05);
+    --ask-special-outline: rgba(92, 154, 18, 0.32);
+    --ask-special-wash: rgba(92, 154, 18, 0.06);
     --ask-special-line: rgba(92, 154, 18, 0.3);
 }
 
+/* An even 1px neon outline on every side, following the radius, and a flat
+   neon wash over the bubble's own fill: no edge on one side, no gradient. */
 .ask-special {
-    background-image: linear-gradient(to right, var(--ask-special-wash-from), var(--ask-special-wash-to));
-    box-shadow: inset 3px 0 0 var(--ask-special-edge), inset 0 0 0 1px var(--ask-special-line);
+    background-image: linear-gradient(var(--ask-special-wash), var(--ask-special-wash));
+    box-shadow: inset 0 0 0 1px var(--ask-special-outline);
 }
 
 /* A special message holding only sections (a debate's report and its vote): a hairline between them. */
