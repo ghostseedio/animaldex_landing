@@ -34,6 +34,7 @@ import {
     arkSignedMoney,
     arkSignedNumber,
     arkVisibleStats,
+    arkWithUndone,
     type ArkChange,
     type ArkRevealSkip,
     type ArkStat,
@@ -431,8 +432,7 @@ export function ArkDiaryHistory({changes, words, money, locale, onUndo, undoingI
     /** Why the last Undo did not go through, under that revision. */
     problem?: {id: string; text: string} | null;
 }) {
-    const ordered = [...changes]
-        .filter((change) => change.kind !== "undone")
+    const ordered = arkWithUndone(changes)
         .sort((a, b) => (Date.parse(a.createdAt ?? "") || 0) - (Date.parse(b.createdAt ?? "") || 0));
     if (ordered.length === 0) return null;
     return (
@@ -441,7 +441,7 @@ export function ArkDiaryHistory({changes, words, money, locale, onUndo, undoingI
             {ordered.map((change) => {
                 if (change.kind === "revised") {
                     return (
-                        <div key={change.id} className="border border-white/[0.08] bg-white/[0.03] p-3.5" style={{borderRadius: "var(--r-panel)"}}>
+                        <div key={change.id} className="border border-white/[0.08] bg-white/[0.03] p-3.5">
                             <ArkRevisionCard
                                 revision={change}
                                 animate={false}
@@ -459,7 +459,7 @@ export function ArkDiaryHistory({changes, words, money, locale, onUndo, undoingI
                 const lesson = change.kind === "lesson" || arkChangeHasLoss(change);
                 const beats = [...(change.reaction ? [change.reaction] : []), ...change.story];
                 return (
-                    <div key={change.id} className="flex flex-col gap-2.5 border border-white/[0.08] bg-white/[0.03] p-3.5" style={{borderRadius: "var(--r-panel)"}} data-testid={`ark-diary-${lesson ? "lesson" : "earned"}`}>
+                    <div key={change.id} className="flex flex-col gap-2.5 border border-white/[0.08] bg-white/[0.03] p-3.5" data-testid={`ark-diary-${lesson ? "lesson" : "earned"}`}>
                         <p className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em]" style={{color: lesson ? LESSON : NEON}}>
                             {lesson ? <LessonIcon /> : <SparkIcon />}
                             <span>{lesson ? words.ark.lesson : words.ark.earned}</span>

@@ -329,7 +329,7 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
                                 previousCaptures: 2,
                                 previousNewSpecies: 0,
                                 daily: [],
-                                ark: {steps: 3, previousSteps: 1, arkScoreChange: -2, powers: 1, previousPowers: 0}
+                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, powers: 1, previousPowers: null}
                             }}
                         />
                     </div>

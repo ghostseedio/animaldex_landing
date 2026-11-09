@@ -129,12 +129,11 @@ export type ProfileStatsWeek = {
     daily: Array<{date: string; captures: number; newSpecies: number}>;
     /**
      * Life Sim (docs/life-sim/CONTRACT.md, section 9, item 9): steps taken,
-     * the Ark Score change and Powers this week, when the overview carries
-     * them (`steps`, `previous_steps`, `ark_score_change`, `powers`,
-     * `previous_powers`; the contract names the figures, not the keys).
-     * Null from a server without them.
+     * the Ark Score change and Powers this week, from the overview's
+     * `ark_week` (`{start, steps, ark_score_change, powers}`, the owner only;
+     * `previous_*` read when a server adds them). Null without it.
      */
-    ark: {steps: number; previousSteps: number; arkScoreChange: number; powers: number; previousPowers: number} | null;
+    ark: {steps: number; previousSteps: number | null; arkScoreChange: number; powers: number; previousPowers: number | null} | null;
 };
 
 function signedInteger(value: unknown): number | null {
@@ -142,7 +141,19 @@ function signedInteger(value: unknown): number | null {
     return Number.isFinite(parsed) ? Math.round(parsed) : null;
 }
 
-function decodeStatsWeek(value: unknown): ProfileStatsWeek | null {
+function decodeArkWeek(value: unknown): ProfileStatsWeek["ark"] {
+    const row = value && typeof value === "object" && !Array.isArray(value) ? value as QueryRow : null;
+    if (!row) return null;
+    return {
+        steps: toCount(row.steps),
+        previousSteps: row.previous_steps == null ? null : toCount(row.previous_steps),
+        arkScoreChange: signedInteger(row.ark_score_change) ?? 0,
+        powers: toCount(row.powers),
+        previousPowers: row.previous_powers == null ? null : toCount(row.previous_powers)
+    };
+}
+
+function decodeStatsWeek(value: unknown, arkWeek?: unknown): ProfileStatsWeek | null {
     const row = value as QueryRow | null;
     if (!row || typeof row !== "object") return null;
     const currentStart = typeof row.current_start === "string" ? row.current_start : null;
@@ -159,15 +170,7 @@ function decodeStatsWeek(value: unknown): ProfileStatsWeek | null {
         daily: (Array.isArray(row.daily) ? row.daily : [])
             .filter((day: QueryRow) => typeof day?.date === "string")
             .map((day: QueryRow) => ({date: day.date as string, captures: toCount(day.captures), newSpecies: toCount(day.new_species)})),
-        ark: row.steps !== undefined || row.ark_score_change !== undefined
-            ? {
-                steps: toCount(row.steps),
-                previousSteps: toCount(row.previous_steps),
-                arkScoreChange: signedInteger(row.ark_score_change) ?? 0,
-                powers: toCount(row.powers),
-                previousPowers: toCount(row.previous_powers)
-            }
-            : null
+        ark: decodeArkWeek(arkWeek)
     };
 }
 
@@ -240,7 +243,7 @@ export async function getProfileSocialState(profileUserId: string): Promise<Prof
         followCounts: counts
             ? {followers: toCount(counts.followers), following: toCount(counts.following)}
             : await fetchFollowCountsAsServer(profileUserId),
-        week: decodeStatsWeek(data?.week),
+        week: decodeStatsWeek(data?.week, data?.ark_week),
         profileViews: isOwner && views
             ? {thisWeek: toCount(views.this_week), previousWeek: toCount(views.previous_week), allTime: toCount(views.all_time)}
             : null,

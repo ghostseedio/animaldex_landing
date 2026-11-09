@@ -22,7 +22,8 @@ import {
     hideDiaryEntry,
     setDiaryVisibility,
     undoArkRevision,
-    useDisplayCurrency
+    useDisplayCurrency,
+    withdrawDiarySummary
 } from "@/components/ark/use-ark";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {trackEvent} from "@/lib/analytics";
@@ -280,7 +281,9 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
 }) {
     const said = words.ark.diary;
     const [draft, setDraft] = useState<string | null>(null);
-    const [working, setWorking] = useState<"draft" | "approve" | "hide" | null>(null);
+    /** The text as the anonymiser and the safety check passed it: an edit is checked again. */
+    const [checked, setChecked] = useState<string | null>(null);
+    const [working, setWorking] = useState<"draft" | "approve" | "hide" | "withdraw" | null>(null);
     const [problem, setProblem] = useState<string | null>(null);
     const [notPublic, setNotPublic] = useState(false);
     const focusId = entry.focusId;
@@ -296,18 +299,44 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
         if (!result.ok) return setProblem(said.changeFailed);
         if (!result.value.publicOk) return setNotPublic(true);
         setDraft(result.value.text);
+        setChecked(result.value.text);
     };
     const approve = async () => {
-        const text = cleanArkSummary(draft ?? "");
+        let text = cleanArkSummary(draft ?? "");
         if (!text) return;
         setWorking("approve");
         setProblem(null);
+        // Their own edit goes through the same check as the draft did, before it is approved.
+        if (text !== checked) {
+            const check = await draftDiarySummary(focusId, text);
+            if (!check.ok) {
+                setWorking(null);
+                return setProblem(said.changeFailed);
+            }
+            if (!check.value.publicOk) {
+                setWorking(null);
+                return setProblem(said.notPublic);
+            }
+            text = check.value.text;
+        }
         const result = await approveDiarySummary(focusId, text);
         setWorking(null);
-        if (!result.ok) return setProblem(result.code === "summary_not_safe" ? said.notPublic : said.changeFailed);
+        if (!result.ok) {
+            // The database approves only the text the check passed (summary_not_checked otherwise): it is always the draft's own.
+            const unsafe = result.code === "summary_not_safe" || result.code === "summary_is_raw_problem" || result.code === "focus_sensitive";
+            return setProblem(unsafe ? said.notPublic : said.changeFailed);
+        }
         trackEvent(ARK_EVENTS.diarySummaryApproved, {});
         setDraft(null);
         onChange((current) => ({...current, publicSummary: result.value}));
+    };
+    const withdraw = async () => {
+        setWorking("withdraw");
+        setProblem(null);
+        const result = await withdrawDiarySummary(focusId);
+        setWorking(null);
+        if (!result.ok) return setProblem(said.changeFailed);
+        onChange((current) => ({...current, publicSummary: null}));
     };
     const toggleHidden = async () => {
         const hidden = !entry.hidden;
@@ -323,7 +352,7 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
         if (hidden) trackEvent(ARK_EVENTS.diaryEntryHidden, {});
     };
     return (
-        <section className="flex flex-col gap-2 border border-white/[0.08] bg-white/[0.03] p-3.5" style={{borderRadius: "var(--r-panel)"}} data-testid="diary-public-summary">
+        <section className="flex flex-col gap-2 border border-white/[0.08] bg-white/[0.03] p-3.5" data-testid="diary-public-summary">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{said.summaryTitle}</p>
             {draft !== null ? (
                 <>
@@ -332,7 +361,7 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
                         maxLength={ARK_PUBLIC_SUMMARY_MAX}
                         onChange={(event) => setDraft(event.target.value)}
                         rows={4}
-                        className="w-full resize-none rounded-[var(--r-panel)] border border-white/12 bg-black/20 p-2.5 text-[13px] leading-5 text-white outline-none focus:border-primary-400/60"
+                        className="w-full resize-none border border-white/12 bg-black/20 p-2.5 text-[13px] leading-5 text-white outline-none focus:border-primary-400/60"
                         aria-label={said.summaryTitle}
                     />
                     <p className="text-[11px] text-white/45">{said.summaryHint}</p>
@@ -355,6 +384,11 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
                     </button>
                 </>
             )}
+            {draft === null && entry.publicSummary ? (
+                <button type="button" onClick={() => void withdraw()} disabled={working !== null} className={`${ACTION} border border-white/12 bg-white/[0.05] text-white/80 hover:bg-white/10`} data-testid="diary-withdraw">
+                    {working === "withdraw" ? "…" : said.withdraw}
+                </button>
+            ) : null}
             {/* Hide matters once something could show: an approved summary. */}
             {draft === null && entry.publicSummary ? (
                 <button type="button" onClick={() => void toggleHidden()} disabled={working !== null} className={`${ACTION} border border-white/12 bg-white/[0.05] text-white/80 hover:bg-white/10`} data-testid="diary-hide">
@@ -551,7 +585,7 @@ function DiaryVisibilityBand({visibility, teen, hasEntries, words, onChange}: {
             </div>
             {teen ? <p className="text-[12px] leading-5 text-white/55">{words.teenNotice}</p> : null}
             {noticeOpen && isPublic ? (
-                <div className="flex flex-col gap-2 rounded-[var(--r-panel)] bg-primary-400/[0.08] p-3" role="note" data-testid="diary-public-notice">
+                <div className="flex flex-col gap-2 bg-primary-400/[0.08] p-3" role="note" data-testid="diary-public-notice">
                     <p className="text-[12px] leading-5 text-white/80">{words.publicNotice}</p>
                     <button
                         type="button"

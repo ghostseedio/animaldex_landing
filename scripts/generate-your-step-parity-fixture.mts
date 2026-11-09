@@ -40,6 +40,8 @@ const companion = await load("animal-companion.ts");
 const profile = await load("animal-power-profile.ts");
 const voice = await load("animal-voice.ts");
 const debate = await load("animal-debate.ts");
+// Life Sim (docs/life-sim/CONTRACT.md; the edge lane, AnimalDex 5a1ff095).
+const ark = await load("ark-sim.ts");
 
 /** A module-private string array, read from the source and evaluated alone. */
 function privateArray(file: string, name: string): string[] {
@@ -112,9 +114,120 @@ const debateRoster = [
 ];
 const fence = (json: string) => `\`\`\`animaldex-card\n${json}\n\`\`\``;
 
+/** Life Sim's prompt side and helpers, as the edge lane writes and reads them. */
+function lifeSimFixture() {
+    const S1 = "11111111-1111-4111-8111-111111111111";
+    const S2 = "22222222-2222-4222-8222-222222222222";
+    const F1 = "33333333-3333-4333-8333-333333333333";
+    const steps = [
+        {id: S1, step: "Buy the candle materials today", animal: "Komodo Dragon", kind: "lesson", status: "open", outcome: null},
+        {id: S2, step: "Ask your sister to lunch", animal: "Javan Rhino", kind: "earned", status: "done", outcome: "worked"}
+    ];
+    const memoryInput = (extra: Record<string, unknown>) => ({
+        existing: [{id: "f1", fact: "Runs a candle business", animal: "Fox", noted_at: "2026-11-01", kind: "context"}],
+        animalName: "Javan Rhino",
+        userMessage: "sold out in a weekend!!",
+        answer: "That is the slow way paying off.",
+        existingJourney: "Practising patience with Javan Rhino.",
+        allowFollowUp: true,
+        ...extra
+    });
+    // The user prompt opens with today's date: the test compares the rest.
+    const memory = (extra: Record<string, unknown>) => {
+        const built = companion.buildMemoryDeltaPrompts(memoryInput(extra));
+        return {input: extra, system: built.system, user: built.user.split("\n\n").slice(1).join("\n\n")};
+    };
+    const stepIds = [S1, S2];
+    const deltaRaw = [
+        {add: [], step_outcomes: [{step_id: S1.toUpperCase(), direction: "better", statement: "  I actually got them for £400.  "}, {step_id: S1, direction: "worse", statement: "again"}], focus_sensitive: true},
+        {step_outcomes: [{step_id: S2, direction: "none", statement: "it was fine"}, {step_id: "nope", direction: "worse", statement: "made up"}], focus_sensitive: "yes"},
+        {step_outcomes: [{step_id: S2, direction: "worse", statement: "I want to kill myself"}]},
+        {step_outcomes: "x"}
+    ];
+    const tagAnimal = {animalName: "Komodo Dragon", nickname: "Kris", powerName: "Patient Venom", lesson: "One bite, then wait.", languageName: "English", stance: "meets every problem head on", speechHabits: ["short sentences", "dry jokes"]};
+    const revisionRows = [
+        {id: "r1", kind: "revised", direction: "better", step: "Buy the candle materials today", animal: "Komodo Dragon", statement: "I got them for £400", changes: [], money: {delta_cents: 3600}, experience_delta: 0, focus_id: F1},
+        {id: "r2", kind: "revised", direction: null, changes: [{stat: "reputation", delta: -2}], money: {delta_cents: -500}, experience_delta: 3},
+        {id: "r3", kind: "undone", changes: []},
+        {id: "r4", kind: "revised", undone_at: "2026-11-09T00:00:00Z"},
+        {id: "r5", kind: "revised", direction: "worse", sensitive: true}
+    ];
+    return {
+        memoryMinLength: [true, false].map((input) => ({input, output: companion.memoryMinLength(input)})),
+        buildMemoryDeltaPrompts: [
+            memory({}),
+            memory({revealedSteps: steps}),
+            memory({focusSensitiveCheck: {problem: "My candle business is struggling"}}),
+            memory({revealedSteps: steps, focusSensitiveCheck: {problem: ""}, teen: true}),
+            memory({revealedSteps: [], focusSensitiveCheck: null, allowFollowUp: false})
+        ],
+        parseMemoryDelta: deltaRaw.map((raw) => ({raw, stepIds, output: companion.parseMemoryDelta(raw, new Set(["f1"]), {stepIds: new Set(stepIds)})})),
+        parseStepSimTags: [
+            {size: "LARGE", costs: ["money", "money", "charisma", "energy"], sensitive: false, story: ["- You buy it all before anyone else can.", "", "The shelves fill; nothing sells yet.", "Your Ark Score drops."], reaction: "Bold. Let's see what they're worth."},
+            {size: "small", costs: [], sensitive: false, story: ["Only one beat."], reaction: "It costs £5"},
+            {size: "medium", sensitive: true, story: ["x", "y"], reaction: "z"},
+            {size: "huge", costs: [], story: ["a b c", "d e f"]},
+            {size: "small", story: ["I want to end my life", "fine"], reaction: "ok"},
+            null
+        ].map((input) => ({input, output: ark.parseStepSimTags(input)})),
+        buildStepSimTagsPrompt: [
+            {...tagAnimal, step: "Buy the materials today", problem: "Should I spend £600 on materials?", debateWay: null},
+            {...tagAnimal, nickname: null, stance: null, speechHabits: [], languageName: "Indonesian", step: "Wait a month", problem: null, debateWay: {animal: "Javan Rhino", way: "Test a small batch first.", fits_when: "you have no orders yet", costs: "time"}}
+        ].map((input) => ({input, output: ark.buildStepSimTagsPrompt(input)})),
+        simTagState: [
+            null, {}, {sim_tagged_at: null, sim_size: "small"}, {sim_tagged_at: "2026-11-09T00:00:00Z"}, {sim_size: null, sim_costs: [], sim_story: null},
+            {sim_size: "medium"}, {sim_sensitive: true, sim_reveal_at: "x"}
+        ].map((input) => ({input, output: ark.simTagState(input)})),
+        revealedStepsFromLedger: [
+            {raw: [
+                {step_id: S1, step: "Buy the candle materials today", animal: "Komodo Dragon", kind: "lesson", status: "open", outcome: null, focus_id: F1},
+                {step_id: S1, step: "dup", animal: "x"},
+                {step_id: S2, step: "Ask your sister to lunch", animal: null, kind: "earned", status: "done", outcome: "worked", focus_id: null},
+                {step_id: "s3", step: "Hidden", sensitive: true},
+                {step_id: "s4", step: "  "}
+            ], exclude: []},
+            {raw: [{step_id: S1, step: "Buy", animal: "Komodo"}, {step_id: S2, step: "Ask", animal: "Rhino"}], exclude: [S1.toUpperCase()]},
+            {raw: {not: "a list"}, exclude: []}
+        ].map((input) => ({input, output: ark.revealedStepsFromLedger(input.raw, input.exclude)})),
+        lifeSimActions: [
+            {stepOutcomes: [{step_id: S1, direction: "better", statement: "cheaper"}, {step_id: S2, direction: "worse", statement: "she cancelled"}], focusSensitive: false, revealed: [{id: S1, focusId: F1}, {id: S2, focusId: null}], checkedFocus: {id: F1}, message: "it went"},
+            {stepOutcomes: [{step_id: S1, direction: "better", statement: "cheaper"}, {step_id: S2, direction: "worse", statement: "she cancelled"}], focusSensitive: true, revealed: [{id: S1, focusId: F1}, {id: S2, focusId: null}], checkedFocus: {id: F1}, message: "it went"},
+            {stepOutcomes: [{step_id: S1, direction: "better", statement: "cheaper"}], focusSensitive: false, revealed: [{id: S1, focusId: F1}], checkedFocus: {id: F1, sensitive: true}, message: "x"},
+            {stepOutcomes: [{step_id: "other", direction: "better", statement: "?"}], focusSensitive: false, revealed: [], checkedFocus: null, message: "I want to kill myself"},
+            {stepOutcomes: [], focusSensitive: false, revealed: [], checkedFocus: {id: F1}, message: "I want to kill myself"}
+        ].map((input) => ({input, output: ark.lifeSimActions(input)})),
+        reportRevisionDirection: ["worked", "partly", "didnt_work", null, "x"].map((input) => ({input, output: ark.reportRevisionDirection(input)})),
+        outcomeAlreadyRevised: [{ark_revision: null}, {ark_revision: {id: "x"}}, {outcome: "worked"}, null, [1]].map((input) => ({input, output: ark.outcomeAlreadyRevised(input)})),
+        parseUnmentionedRevisions: [revisionRows, {revisions: revisionRows.slice(0, 2)}, {changes: []}, null].map((input) => ({input, output: ark.parseUnmentionedRevisions(input)})),
+        arkRevisionPromptLines: [
+            {revisions: ark.parseUnmentionedRevisions(revisionRows), focus: null},
+            {revisions: ark.parseUnmentionedRevisions(revisionRows), focus: {id: F1, sensitive: true}},
+            {revisions: [], focus: {id: F1, sensitive: true}},
+            {revisions: [], focus: {id: F1}}
+        ].map((input) => ({input, output: ark.arkRevisionPromptLines(input)})),
+        chatMessageRefFor: [
+            {messageId: S1, askedAt: "2026-11-09T10:00:00.000Z"},
+            {messageId: "  ", askedAt: "2026-11-09T10:00:00.000Z"},
+            {messageId: null, askedAt: "2026-11-09T10:00:00.000Z"},
+            {messageId: "x".repeat(300), askedAt: "2026-11-09T10:00:00.000Z"}
+        ].map((input) => ({input, output: ark.chatMessageRefFor(input.messageId, new Date(input.askedAt))})),
+        visitorOwnerContext: [
+            {owner_name: "Sam", journey: "Practising patience.", has_spoken: true, diary: ["secret"], problems: ["x"], ark_score: 140, diary_visibility: "public", public_diary: [{public_summary: "Someone weighed a big purchase for a small business."}, "short", {text: "Another approved summary about a family member."}]},
+            {owner_name: "Sam", diary_visibility: "private", public_diary: ["Someone weighed a big purchase for a small business."]},
+            {owner_name: "Sam", owner_teen: true, public_diary: ["Someone weighed a big purchase for a small business."]},
+            null
+        ].map((input) => ({input, output: ark.visitorOwnerContext(input)})),
+        parseCompanionState: [
+            {focus: {id: F1, focus: "Candle business", sensitive: true}},
+            {focus: {id: F1, focus: "Candle business", sensitive: false}}
+        ].map((input) => ({input, output: focus.parseCompanionState(input)}))
+    };
+}
+
 const card = 'Want to try?\n```animaldex-card\n{"kind":"training","title":"Warmup","body":"Two questions.","cta":"Take it"}\n```';
 const fixture = {
-    source: {repo: "AnimalDex", ref, commit, files: ["animal-focus.ts", "animal-companion.ts", "animal-power-profile.ts", "animal-voice.ts", "animal-debate.ts"]},
+    source: {repo: "AnimalDex", ref, commit, files: ["animal-focus.ts", "animal-companion.ts", "animal-power-profile.ts", "animal-voice.ts", "animal-debate.ts", "ark-sim.ts"]},
+    lifeSim: lifeSimFixture(),
     // Proof bonus + debates fixes (owner, 2026-10-31).
     proof: {
         stepReportMediaLine: [

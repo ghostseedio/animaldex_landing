@@ -375,12 +375,16 @@ export const ARK_COPY = {
         drafting: "Writing it…",
         approve: "Approve",
         approved: "Approved",
+        withdraw: "Take it back",
         notPublic: "This one stays private: it can't be shared safely.",
         alwaysPrivate: "Always private",
         hide: "Hide from public",
         unhide: "Show on public",
         hidden: "Hidden",
-        history: "What changed"
+        history: "What changed",
+        /** Someone else's Diary tab: the summaries they approved. */
+        fromTheirDiary: "From their diary",
+        stepsCount: "{n} steps"
     }
 } as const;
 

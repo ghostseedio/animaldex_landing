@@ -202,7 +202,8 @@ export default function BondPanel({
                 setStepProblem(stepProblemText(result.code, words));
                 return;
             }
-            onStepChange(result.value);
+            // Its Life Sim reveal shows in the chat, under the step.
+            onStepChange(result.value.step);
             onTrialPicked(trial.frequency);
         });
     };

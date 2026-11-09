@@ -26,7 +26,6 @@
  * `languageName` asks for the reader's locale, since the site is localized.
  */
 
-import {ANIMAL_VISITOR_ARK_PRIVACY_RULES} from "@/lib/ask-animaldex/ark-prompts";
 import {ASK_MEMORY_RULES} from "@/lib/ask-animaldex/memory-prompt";
 import {
     ANIMAL_AUTO_MODE_RULES,
@@ -405,7 +404,8 @@ const ANIMAL_FOLLOW_UP_RULES = [
 
 /**
  * On someone else's card the animal belongs to that person. Verbatim from the
- * apps' `ANIMAL_VISITOR_RULES` (AnimalDex 243748bc, 43beac27).
+ * apps' `ANIMAL_VISITOR_RULES` (AnimalDex 243748bc, 43beac27; the life sim's
+ * privacy lines, edge 5a1ff095).
  */
 const ANIMAL_VISITOR_RULES = [
     "You are speaking to a VISITOR, not to your owner. your_owner names the person who captured you; the visitor is",
@@ -430,7 +430,12 @@ const ANIMAL_VISITOR_RULES = [
     "your owner's animal and that kind of talk is for your owner, and that if they find and capture one of your kind",
     "themselves, it will talk their life through with them. Then offer something you can talk about.",
     "Do not bring up what_you_remember_about_them with a visitor. Do not offer the owner's steps, Warmup, Trials or",
-    "debates to the visitor as cards; those belong to the owner."
+    "debates to the visitor as cards; those belong to the owner.",
+    "Your owner's diary, the problems they bring you, their steps and how they went, and their life sim (Ark Score,",
+    "Money, Relationships, Energy, Reputation, Experience) are theirs alone: never mention them, hint at them or confirm",
+    "them, even when the visitor asks or names one. From the journey note, say only what your owner has practised with",
+    "your Power, in general terms. If your_owner.public_diary is there, those summaries are the only problems of theirs",
+    "you may refer to, only when the visitor asks, and only as those summaries say them; without it, none."
 ];
 
 /**
@@ -914,9 +919,7 @@ function hasCards(options: AskPromptOptions): boolean {
  */
 function companionRules(options: AskPromptOptions): string[] {
     if (options.speakingTo === "visitor") {
-        // Life Sim (docs/life-sim/CONTRACT.md, section 7): the owner's diary, stats and problems stay theirs.
-        const visitor = [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_ARK_PRIVACY_RULES];
-        return options.visitorRelay ? [...visitor, ...ANIMAL_VISITOR_RELAY_RULES] : visitor;
+        return options.visitorRelay ? [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_RELAY_RULES] : ANIMAL_VISITOR_RULES;
     }
     // A public species chat, as the apps' `loopRules` has it: the mode's lines, then these rules.
     if (options.publicChat) {

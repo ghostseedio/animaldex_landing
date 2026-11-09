@@ -58,7 +58,8 @@ import StoreLink from "@/components/store/store-link";
 import {ProfileDiaryTab} from "@/app/[locale]/(composited)/u/[handle]/profile-diary";
 import {PROBLEM_DIARY_WORDS_EN, type ProblemDiaryWords} from "@/lib/problem-diary";
 import {ArkBarsPanel, ArkScoreCard, ArkStepsPowersTiles} from "@/components/ark/ark-views";
-import {arkProfileSections, type ArkProfileSection, type ArkStats} from "@/lib/ark";
+import {arkProfileSections, type ArkProfileSection, type ArkPublicDiaryEntry, type ArkStats} from "@/lib/ark";
+import {ArkStateChip} from "@/components/ark/ark-views";
 import {COMPANION_WORDS_EN} from "@/lib/companion-bond";
 
 export type ProfileTab = "history" | "stats" | "diary" | "shop" | "locations";
@@ -246,6 +247,8 @@ type ProfileContentProps = {
     ark?: {stats: ArkStats | null; arkScore: number | null; stepsTotal: number | null; powersEarned: number | null} | null;
     /** Problems worked through (your own Diary's count), for the Stats tab's Diary row. */
     problemsWorkedThrough?: number | null;
+    /** Someone else's public diary: the summaries they approved (`public_diary_v1`); empty while it is private. */
+    publicDiary?: ArkPublicDiaryEntry[];
     /**
      * The remote switches the Shop tab reads (iOS ShopStorefrontView): packs
      * while `card_packs` is on, earning by selling while `creator_earnings`
@@ -537,6 +540,7 @@ export default function ProfileContent({
     displayCurrency = "USD",
     ark = null,
     problemsWorkedThrough = null,
+    publicDiary = [],
     shopFeatures = {cardPacks: false, guideSales: false, creatorEarnings: false}
 }: ProfileContentProps) {
     // Shop and Locations open from the app's drawer on your own profile
@@ -599,7 +603,8 @@ export default function ProfileContent({
     // (design pass, 2026-11-06, as iOS): Cards and Stats always; the Diary
     // when they have asked the public; the Shop when they list something;
     // Locations when you may see them and they have places.
-    const memberHasPublicDebates = (publicDebates?.debates.length ?? 0) > 0;
+    // Public debates, or (Life Sim) the diary summaries they approved while it is public.
+    const memberHasPublicDebates = (publicDebates?.debates.length ?? 0) > 0 || publicDiary.length > 0;
     // Packs paused (card_packs off): the Shop is its guides.
     const shownPacks = shopFeatures.cardPacks ? listedPacks : [];
     const showsEarning = shopFeatures.creatorEarnings && (shopFeatures.cardPacks || shopFeatures.guideSales);
@@ -1163,11 +1168,26 @@ export default function ProfileContent({
 
             {activeTab === "diary" && !viewer.isOwner ? (
                 <section className={`flex flex-col px-5 ${bleed}`} data-testid="profile-public-debates">
+                    {publicDiary.length > 0 ? (
+                        <div className="flex flex-col" data-testid="profile-public-diary">
+                            <p className="px-[18px] pb-1 pt-4 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{arkWords.diary.fromTheirDiary}</p>
+                            {publicDiary.map((entry) => (
+                                <div key={entry.focusId} className="flex flex-col gap-1.5 border-b border-white/[0.06] px-[18px] py-3.5">
+                                    <p className="text-[15px] font-semibold leading-6 text-white">{entry.publicSummary}</p>
+                                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-white/45">
+                                        {entry.state ? <ArkStateChip state={entry.state} words={arkWords} /> : null}
+                                        {entry.animal ? <span>{entry.animal}</span> : null}
+                                        {entry.steps.total > 0 ? <span>{arkWords.diary.stepsCount.replace("{n}", formatAppInteger(entry.steps.total, locale))}</span> : null}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
                     {publicDebates && publicDebates.debates.length > 0 ? (
                         publicDebates.debates.map((debate) => (
                             <DebateRow key={debate.id} debate={debate} words={publicDebates.words} href={`/app/debates/${debate.id}`} />
                         ))
-                    ) : (
+                    ) : publicDiary.length > 0 ? null : (
                         <p className="px-[18px] py-10 text-center text-[15px] font-medium text-white/[0.62]">
                             {(publicDebates?.words.debateWeb.publicDebatesEmpty ?? "{name} hasn't asked the public yet. Private debates never show here.")
                                 .replace("{name}", profile.displayName)}

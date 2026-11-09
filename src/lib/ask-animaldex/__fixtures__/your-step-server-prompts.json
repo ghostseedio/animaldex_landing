@@ -1,14 +1,1140 @@
 {
   "source": {
     "repo": "AnimalDex",
-    "ref": "main",
-    "commit": "ceeaec79c3fc3cb9f93327ef66dfefdfb32b6455",
+    "ref": "5a1ff095",
+    "commit": "5a1ff0952ca71e914fb01ea51fbabba3ddfaeb1a",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",
       "animal-power-profile.ts",
       "animal-voice.ts",
-      "animal-debate.ts"
+      "animal-debate.ts",
+      "ark-sim.ts"
+    ]
+  },
+  "lifeSim": {
+    "memoryMinLength": [
+      {
+        "input": true,
+        "output": 3
+      },
+      {
+        "input": false,
+        "output": 20
+      }
+    ],
+    "buildMemoryDeltaPrompts": [
+      {
+        "input": {},
+        "system": "You maintain what the animals in AnimalDex remember about one person, across all their conversations.\nYou get the current memory (each fact has an id) and the latest exchange between the person and one animal.\nReturn ONLY the changes, as JSON:\n{\"add\":[{\"fact\":string,\"kind\":\"context|goal|commitment|outcome|preference\"}],\n \"update\":[{\"id\":string,\"fact\":string,\"kind\":string}], \"retire\":[id], \"journey\":string,\n \"follow_up\":{\"topic\":string,\"revisit_after_days\":number} | null}\nFacts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in\nLeeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they\nwill do), outcome (what happened when they tried something), preference (how they like answers: short or\ndetailed, stories or straight to the point).\n- Add only durable things worth knowing next time, that the person said about themselves in THIS exchange.\n- Update a fact (by id) when this exchange corrects or supersedes it; retire a fact (by id) when they say it is\n  no longer true. Never touch facts marked pinned. Prefer updating over adding a near-copy.\n- Never keep: one-off questions about the animal, anything the person did not say about themselves, health or\n  mental-health conditions, sexuality, religion, politics, exact addresses, financial figures, passwords.\n- journey: one to three sentences, third person, that THIS animal could say to a visitor about how it has helped\n  the person so far; visitor-safe, nothing private, no other people's names, no places. Never a specific problem\n  from their life, a step or how it went, or any score or stat: only what they have practised with this animal's\n  Power, in general terms. Carry the previous one forward and refine it; empty string when there is nothing yet.\n- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null.\n- If nothing changes, return empty arrays.",
+        "user": "animal_name: Javan Rhino\n\ncurrent_memory:\n[{\"id\":\"f1\",\"fact\":\"Runs a candle business\",\"kind\":\"context\",\"pinned\":false}]\n\ncurrent_journey:\nPractising patience with Javan Rhino.\n\nperson_said:\nsold out in a weekend!!\n\nanimal_answered:\nThat is the slow way paying off."
+      },
+      {
+        "input": {
+          "revealedSteps": [
+            {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "step": "Buy the candle materials today",
+              "animal": "Komodo Dragon",
+              "kind": "lesson",
+              "status": "open",
+              "outcome": null
+            },
+            {
+              "id": "22222222-2222-4222-8222-222222222222",
+              "step": "Ask your sister to lunch",
+              "animal": "Javan Rhino",
+              "kind": "earned",
+              "status": "done",
+              "outcome": "worked"
+            }
+          ]
+        },
+        "system": "You maintain what the animals in AnimalDex remember about one person, across all their conversations.\nYou get the current memory (each fact has an id) and the latest exchange between the person and one animal.\nReturn ONLY the changes, as JSON:\n{\"add\":[{\"fact\":string,\"kind\":\"context|goal|commitment|outcome|preference\"}],\n \"update\":[{\"id\":string,\"fact\":string,\"kind\":string}], \"retire\":[id], \"journey\":string,\n \"follow_up\":{\"topic\":string,\"revisit_after_days\":number} | null,\n \"step_outcomes\":[{\"step_id\":string,\"direction\":\"better|worse|none\",\"statement\":string}]}\nFacts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in\nLeeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they\nwill do), outcome (what happened when they tried something), preference (how they like answers: short or\ndetailed, stories or straight to the point).\n- Add only durable things worth knowing next time, that the person said about themselves in THIS exchange.\n- Update a fact (by id) when this exchange corrects or supersedes it; retire a fact (by id) when they say it is\n  no longer true. Never touch facts marked pinned. Prefer updating over adding a near-copy.\n- Never keep: one-off questions about the animal, anything the person did not say about themselves, health or\n  mental-health conditions, sexuality, religion, politics, exact addresses, financial figures, passwords.\n- journey: one to three sentences, third person, that THIS animal could say to a visitor about how it has helped\n  the person so far; visitor-safe, nothing private, no other people's names, no places. Never a specific problem\n  from their life, a step or how it went, or any score or stat: only what they have practised with this animal's\n  Power, in general terms. Carry the previous one forward and refine it; empty string when there is nothing yet.\n- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null.\n- step_outcomes: recent_steps are steps the person took on with any of their animals in the last 30 days. Only\n  when person_said clearly says what actually happened with one of them, add one entry: its step_id, direction\n  (better: it went well or helped; worse: it went badly or made things worse; none: it made no difference), and\n  statement: their own words that say it, under 200 characters. Plans, hopes, maybes, questions and how they feel\n  about trying it are not outcomes ('I might get them cheaper' changes nothing). At most one entry per step; when\n  unsure, none. Otherwise an empty array.\n- If nothing changes, return empty arrays.",
+        "user": "animal_name: Javan Rhino\n\ncurrent_memory:\n[{\"id\":\"f1\",\"fact\":\"Runs a candle business\",\"kind\":\"context\",\"pinned\":false}]\n\ncurrent_journey:\nPractising patience with Javan Rhino.\n\nrecent_steps:\n[{\"step_id\":\"11111111-1111-4111-8111-111111111111\",\"step\":\"Buy the candle materials today\",\"animal\":\"Komodo Dragon\",\"kind\":\"lesson\",\"status\":\"open\"},{\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"step\":\"Ask your sister to lunch\",\"animal\":\"Javan Rhino\",\"kind\":\"earned\",\"status\":\"done\",\"reported\":\"worked\"}]\n\nperson_said:\nsold out in a weekend!!\n\nanimal_answered:\nThat is the slow way paying off."
+      },
+      {
+        "input": {
+          "focusSensitiveCheck": {
+            "problem": "My candle business is struggling"
+          }
+        },
+        "system": "You maintain what the animals in AnimalDex remember about one person, across all their conversations.\nYou get the current memory (each fact has an id) and the latest exchange between the person and one animal.\nReturn ONLY the changes, as JSON:\n{\"add\":[{\"fact\":string,\"kind\":\"context|goal|commitment|outcome|preference\"}],\n \"update\":[{\"id\":string,\"fact\":string,\"kind\":string}], \"retire\":[id], \"journey\":string,\n \"follow_up\":{\"topic\":string,\"revisit_after_days\":number} | null,\n \"focus_sensitive\":boolean}\nFacts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in\nLeeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they\nwill do), outcome (what happened when they tried something), preference (how they like answers: short or\ndetailed, stories or straight to the point).\n- Add only durable things worth knowing next time, that the person said about themselves in THIS exchange.\n- Update a fact (by id) when this exchange corrects or supersedes it; retire a fact (by id) when they say it is\n  no longer true. Never touch facts marked pinned. Prefer updating over adding a near-copy.\n- Never keep: one-off questions about the animal, anything the person did not say about themselves, health or\n  mental-health conditions, sexuality, religion, politics, exact addresses, financial figures, passwords.\n- journey: one to three sentences, third person, that THIS animal could say to a visitor about how it has helped\n  the person so far; visitor-safe, nothing private, no other people's names, no places. Never a specific problem\n  from their life, a step or how it went, or any score or stat: only what they have practised with this animal's\n  Power, in general terms. Carry the previous one forward and refine it; empty string when there is nothing yet.\n- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null.\n- focus_sensitive: true when the problem they are working through (current_problem, or what they said) involves\n  bereavement or grief, serious illness (theirs or someone close to them), abuse, self-harm or a crisis, or\n  persistent hopelessness. Not for ordinary hard problems (a breakup, losing a job, money stress, a bad day). When\n  unsure, true. Otherwise false.\n- If nothing changes, return empty arrays.",
+        "user": "animal_name: Javan Rhino\n\ncurrent_memory:\n[{\"id\":\"f1\",\"fact\":\"Runs a candle business\",\"kind\":\"context\",\"pinned\":false}]\n\ncurrent_journey:\nPractising patience with Javan Rhino.\n\ncurrent_problem:\nMy candle business is struggling\n\nperson_said:\nsold out in a weekend!!\n\nanimal_answered:\nThat is the slow way paying off."
+      },
+      {
+        "input": {
+          "revealedSteps": [
+            {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "step": "Buy the candle materials today",
+              "animal": "Komodo Dragon",
+              "kind": "lesson",
+              "status": "open",
+              "outcome": null
+            },
+            {
+              "id": "22222222-2222-4222-8222-222222222222",
+              "step": "Ask your sister to lunch",
+              "animal": "Javan Rhino",
+              "kind": "earned",
+              "status": "done",
+              "outcome": "worked"
+            }
+          ],
+          "focusSensitiveCheck": {
+            "problem": ""
+          },
+          "teen": true
+        },
+        "system": "You maintain what the animals in AnimalDex remember about one person, across all their conversations.\nYou get the current memory (each fact has an id) and the latest exchange between the person and one animal.\nReturn ONLY the changes, as JSON:\n{\"add\":[{\"fact\":string,\"kind\":\"context|goal|commitment|outcome|preference\"}],\n \"update\":[{\"id\":string,\"fact\":string,\"kind\":string}], \"retire\":[id], \"journey\":string,\n \"follow_up\":{\"topic\":string,\"revisit_after_days\":number} | null,\n \"step_outcomes\":[{\"step_id\":string,\"direction\":\"better|worse|none\",\"statement\":string}],\n \"focus_sensitive\":boolean}\nFacts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in\nLeeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they\nwill do), outcome (what happened when they tried something), preference (how they like answers: short or\ndetailed, stories or straight to the point).\n- Add only durable things worth knowing next time, that the person said about themselves in THIS exchange.\n- Update a fact (by id) when this exchange corrects or supersedes it; retire a fact (by id) when they say it is\n  no longer true. Never touch facts marked pinned. Prefer updating over adding a near-copy.\n- Never keep: one-off questions about the animal, anything the person did not say about themselves, health or\n  mental-health conditions, sexuality, religion, politics, exact addresses, financial figures, passwords.\n- journey: one to three sentences, third person, that THIS animal could say to a visitor about how it has helped\n  the person so far; visitor-safe, nothing private, no other people's names, no places. Never a specific problem\n  from their life, a step or how it went, or any score or stat: only what they have practised with this animal's\n  Power, in general terms. Carry the previous one forward and refine it; empty string when there is nothing yet.\n- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null.\n- This person is a teenager: keep only light, everyday things (interests, hobbies, what they are learning or making, how they like answers). Never keep relationships or crushes, family trouble, their body or looks, their school, where they live, or anything that could identify them.\n- step_outcomes: recent_steps are steps the person took on with any of their animals in the last 30 days. Only\n  when person_said clearly says what actually happened with one of them, add one entry: its step_id, direction\n  (better: it went well or helped; worse: it went badly or made things worse; none: it made no difference), and\n  statement: their own words that say it, under 200 characters. Plans, hopes, maybes, questions and how they feel\n  about trying it are not outcomes ('I might get them cheaper' changes nothing). At most one entry per step; when\n  unsure, none. Otherwise an empty array.\n- focus_sensitive: true when the problem they are working through (current_problem, or what they said) involves\n  bereavement or grief, serious illness (theirs or someone close to them), abuse, self-harm or a crisis, or\n  persistent hopelessness. Not for ordinary hard problems (a breakup, losing a job, money stress, a bad day). When\n  unsure, true. Otherwise false.\n- If nothing changes, return empty arrays.",
+        "user": "animal_name: Javan Rhino\n\ncurrent_memory:\n[{\"id\":\"f1\",\"fact\":\"Runs a candle business\",\"kind\":\"context\",\"pinned\":false}]\n\ncurrent_journey:\nPractising patience with Javan Rhino.\n\nrecent_steps:\n[{\"step_id\":\"11111111-1111-4111-8111-111111111111\",\"step\":\"Buy the candle materials today\",\"animal\":\"Komodo Dragon\",\"kind\":\"lesson\",\"status\":\"open\"},{\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"step\":\"Ask your sister to lunch\",\"animal\":\"Javan Rhino\",\"kind\":\"earned\",\"status\":\"done\",\"reported\":\"worked\"}]\n\ncurrent_problem:\n(none yet)\n\nperson_said:\nsold out in a weekend!!\n\nanimal_answered:\nThat is the slow way paying off."
+      },
+      {
+        "input": {
+          "revealedSteps": [],
+          "focusSensitiveCheck": null,
+          "allowFollowUp": false
+        },
+        "system": "You maintain what the animals in AnimalDex remember about one person, across all their conversations.\nYou get the current memory (each fact has an id) and the latest exchange between the person and one animal.\nReturn ONLY the changes, as JSON:\n{\"add\":[{\"fact\":string,\"kind\":\"context|goal|commitment|outcome|preference\"}],\n \"update\":[{\"id\":string,\"fact\":string,\"kind\":string}], \"retire\":[id], \"journey\":string,\n \"follow_up\":{\"topic\":string,\"revisit_after_days\":number} | null}\nFacts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in\nLeeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they\nwill do), outcome (what happened when they tried something), preference (how they like answers: short or\ndetailed, stories or straight to the point).\n- Add only durable things worth knowing next time, that the person said about themselves in THIS exchange.\n- Update a fact (by id) when this exchange corrects or supersedes it; retire a fact (by id) when they say it is\n  no longer true. Never touch facts marked pinned. Prefer updating over adding a near-copy.\n- Never keep: one-off questions about the animal, anything the person did not say about themselves, health or\n  mental-health conditions, sexuality, religion, politics, exact addresses, financial figures, passwords.\n- journey: one to three sentences, third person, that THIS animal could say to a visitor about how it has helped\n  the person so far; visitor-safe, nothing private, no other people's names, no places. Never a specific problem\n  from their life, a step or how it went, or any score or stat: only what they have practised with this animal's\n  Power, in general terms. Carry the previous one forward and refine it; empty string when there is nothing yet.\n- follow_up: always null.\n- If nothing changes, return empty arrays.",
+        "user": "animal_name: Javan Rhino\n\ncurrent_memory:\n[{\"id\":\"f1\",\"fact\":\"Runs a candle business\",\"kind\":\"context\",\"pinned\":false}]\n\ncurrent_journey:\nPractising patience with Javan Rhino.\n\nperson_said:\nsold out in a weekend!!\n\nanimal_answered:\nThat is the slow way paying off."
+      }
+    ],
+    "parseMemoryDelta": [
+      {
+        "raw": {
+          "add": [],
+          "step_outcomes": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "better",
+              "statement": "  I actually got them for £400.  "
+            },
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "worse",
+              "statement": "again"
+            }
+          ],
+          "focus_sensitive": true
+        },
+        "stepIds": [
+          "11111111-1111-4111-8111-111111111111",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "output": {
+          "add": [],
+          "update": [],
+          "retire": [],
+          "journey": null,
+          "follow_up": null,
+          "step_outcomes": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "better",
+              "statement": "I actually got them for £400."
+            }
+          ],
+          "focus_sensitive": true
+        }
+      },
+      {
+        "raw": {
+          "step_outcomes": [
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "direction": "none",
+              "statement": "it was fine"
+            },
+            {
+              "step_id": "nope",
+              "direction": "worse",
+              "statement": "made up"
+            }
+          ],
+          "focus_sensitive": "yes"
+        },
+        "stepIds": [
+          "11111111-1111-4111-8111-111111111111",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "output": {
+          "add": [],
+          "update": [],
+          "retire": [],
+          "journey": null,
+          "follow_up": null,
+          "step_outcomes": [],
+          "focus_sensitive": false
+        }
+      },
+      {
+        "raw": {
+          "step_outcomes": [
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "direction": "worse",
+              "statement": "I want to kill myself"
+            }
+          ]
+        },
+        "stepIds": [
+          "11111111-1111-4111-8111-111111111111",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "output": {
+          "add": [],
+          "update": [],
+          "retire": [],
+          "journey": null,
+          "follow_up": null,
+          "step_outcomes": [],
+          "focus_sensitive": false
+        }
+      },
+      {
+        "raw": {
+          "step_outcomes": "x"
+        },
+        "stepIds": [
+          "11111111-1111-4111-8111-111111111111",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "output": {
+          "add": [],
+          "update": [],
+          "retire": [],
+          "journey": null,
+          "follow_up": null,
+          "step_outcomes": [],
+          "focus_sensitive": false
+        }
+      }
+    ],
+    "parseStepSimTags": [
+      {
+        "input": {
+          "size": "LARGE",
+          "costs": [
+            "money",
+            "money",
+            "charisma",
+            "energy"
+          ],
+          "sensitive": false,
+          "story": [
+            "- You buy it all before anyone else can.",
+            "",
+            "The shelves fill; nothing sells yet.",
+            "Your Ark Score drops."
+          ],
+          "reaction": "Bold. Let's see what they're worth."
+        },
+        "output": {
+          "size": "large",
+          "costs": [
+            "money",
+            "energy"
+          ],
+          "sensitive": false,
+          "story": [
+            "You buy it all before anyone else can.",
+            "The shelves fill; nothing sells yet."
+          ],
+          "reaction": "Bold. Let's see what they're worth."
+        }
+      },
+      {
+        "input": {
+          "size": "small",
+          "costs": [],
+          "sensitive": false,
+          "story": [
+            "Only one beat."
+          ],
+          "reaction": "It costs £5"
+        },
+        "output": {
+          "size": "small",
+          "costs": [],
+          "sensitive": false,
+          "story": [],
+          "reaction": null
+        }
+      },
+      {
+        "input": {
+          "size": "medium",
+          "sensitive": true,
+          "story": [
+            "x",
+            "y"
+          ],
+          "reaction": "z"
+        },
+        "output": {
+          "size": "medium",
+          "costs": [],
+          "sensitive": true,
+          "story": [],
+          "reaction": null
+        }
+      },
+      {
+        "input": {
+          "size": "huge",
+          "costs": [],
+          "story": [
+            "a b c",
+            "d e f"
+          ]
+        },
+        "output": null
+      },
+      {
+        "input": {
+          "size": "small",
+          "story": [
+            "I want to end my life",
+            "fine"
+          ],
+          "reaction": "ok"
+        },
+        "output": {
+          "size": "small",
+          "costs": [],
+          "sensitive": true,
+          "story": [],
+          "reaction": null
+        }
+      },
+      {
+        "input": null,
+        "output": null
+      }
+    ],
+    "buildStepSimTagsPrompt": [
+      {
+        "input": {
+          "animalName": "Komodo Dragon",
+          "nickname": "Kris",
+          "powerName": "Patient Venom",
+          "lesson": "One bite, then wait.",
+          "languageName": "English",
+          "stance": "meets every problem head on",
+          "speechHabits": [
+            "short sentences",
+            "dry jokes"
+          ],
+          "step": "Buy the materials today",
+          "problem": "Should I spend £600 on materials?",
+          "debateWay": null
+        },
+        "output": "AnimalDex has a life sim: when a person takes on a step an animal set them for a real problem, the app shows how\ntrying it might move their life (money, relationships, energy, reputation). The app works out the numbers. You tag\nthe step and write the few lines the app shows with them.\n\nThe animal: Kris, a Komodo Dragon, whose Power is Patient Venom. Its lesson: One bite, then wait.\nHow it meets people: meets every problem head on\nHow it talks: short sentences; dry jokes\nTheir problem: <problem>Should I spend £600 on materials?</problem>\nThe step: <step>Buy the materials today</step>\n\n1. size: small (minutes, low stakes, easy to undo), medium (a real conversation or an hour or two, some exposure)\n   or large (a big decision, real money or a relationship on the line, hard to undo).\n2. costs: which of money, relationships, energy and reputation taking this step really spends or puts at risk:\n   spending or risking money is money; a hard conversation or saying no to someone is relationships; tiring or\n   time-consuming is energy; being seen to fail or stand out is reputation. Only what the step itself costs, not\n   what the problem is about. Often one or none.\n3. sensitive: true when the problem involves bereavement or grief, serious illness (theirs or someone close to\n   them), abuse, self-harm or a crisis, or persistent hopelessness. Not for ordinary hard problems (a breakup,\n   losing a job, money stress, a bad day). When unsure, true. When true, story is [] and reaction is \"\".\n4. story: 2 or 3 short beats, one sentence each, under 140 characters: what trying this step could look like in\n   their real life, as the animal sees it, said to them. The moment it asks something of them, and what it could\n   open up. Never say how it turned out, and never mention scores, stats, points or the app. Real amounts from\n   their problem may appear here, and only here.\n5. reaction: one line, the animal's own reaction to them taking the step on, the way only it would put it,\n   under 140 characters. No amounts, no scores.\nWrite story and reaction in English, in the animal's voice, as itself. Keys and the words for size and costs\nstay in English.\n\nReturn JSON only: {\"size\": \"small|medium|large\", \"costs\": [\"money\"|\"relationships\"|\"energy\"|\"reputation\"], \"sensitive\": false, \"story\": [\"...\", \"...\"], \"reaction\": \"...\"}"
+      },
+      {
+        "input": {
+          "animalName": "Komodo Dragon",
+          "nickname": null,
+          "powerName": "Patient Venom",
+          "lesson": "One bite, then wait.",
+          "languageName": "Indonesian",
+          "stance": null,
+          "speechHabits": [],
+          "step": "Wait a month",
+          "problem": null,
+          "debateWay": {
+            "animal": "Javan Rhino",
+            "way": "Test a small batch first.",
+            "fits_when": "you have no orders yet",
+            "costs": "time"
+          }
+        },
+        "output": "AnimalDex has a life sim: when a person takes on a step an animal set them for a real problem, the app shows how\ntrying it might move their life (money, relationships, energy, reputation). The app works out the numbers. You tag\nthe step and write the few lines the app shows with them.\n\nThe animal: a Komodo Dragon, whose Power is Patient Venom. Its lesson: One bite, then wait.\nTheir problem: <problem>(not said)</problem>\nThe step: <step>Wait a month</step>\n\nThis step is the way they chose in a debate, Javan Rhino's way:\n<way>Test a small batch first.</way>\nIt fits when <fits_when>you have no orders yet</fits_when>.\nIt costs <costs>time</costs>. Read costs from this first.\n\n1. size: small (minutes, low stakes, easy to undo), medium (a real conversation or an hour or two, some exposure)\n   or large (a big decision, real money or a relationship on the line, hard to undo).\n2. costs: which of money, relationships, energy and reputation taking this step really spends or puts at risk:\n   spending or risking money is money; a hard conversation or saying no to someone is relationships; tiring or\n   time-consuming is energy; being seen to fail or stand out is reputation. Only what the step itself costs, not\n   what the problem is about. Often one or none.\n3. sensitive: true when the problem involves bereavement or grief, serious illness (theirs or someone close to\n   them), abuse, self-harm or a crisis, or persistent hopelessness. Not for ordinary hard problems (a breakup,\n   losing a job, money stress, a bad day). When unsure, true. When true, story is [] and reaction is \"\".\n4. story: 2 or 3 short beats, one sentence each, under 140 characters: what trying this step could look like in\n   their real life, as the animal sees it, said to them. The moment it asks something of them, and what it could\n   open up. Never say how it turned out, and never mention scores, stats, points or the app. Real amounts from\n   their problem may appear here, and only here.\n5. reaction: one line, the animal's own reaction to them taking the step on, the way only it would put it,\n   under 140 characters. No amounts, no scores.\nWrite story and reaction in Indonesian, in the animal's voice, as itself. Keys and the words for size and costs\nstay in English.\n\nReturn JSON only: {\"size\": \"small|medium|large\", \"costs\": [\"money\"|\"relationships\"|\"energy\"|\"reputation\"], \"sensitive\": false, \"story\": [\"...\", \"...\"], \"reaction\": \"...\"}"
+      }
+    ],
+    "simTagState": [
+      {
+        "input": null,
+        "output": "unknown"
+      },
+      {
+        "input": {},
+        "output": "unknown"
+      },
+      {
+        "input": {
+          "sim_tagged_at": null,
+          "sim_size": "small"
+        },
+        "output": "untagged"
+      },
+      {
+        "input": {
+          "sim_tagged_at": "2026-11-09T00:00:00Z"
+        },
+        "output": "tagged"
+      },
+      {
+        "input": {
+          "sim_size": null,
+          "sim_costs": [],
+          "sim_story": null
+        },
+        "output": "untagged"
+      },
+      {
+        "input": {
+          "sim_size": "medium"
+        },
+        "output": "tagged"
+      },
+      {
+        "input": {
+          "sim_sensitive": true,
+          "sim_reveal_at": "x"
+        },
+        "output": "unknown"
+      }
+    ],
+    "revealedStepsFromLedger": [
+      {
+        "input": {
+          "raw": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "step": "Buy the candle materials today",
+              "animal": "Komodo Dragon",
+              "kind": "lesson",
+              "status": "open",
+              "outcome": null,
+              "focus_id": "33333333-3333-4333-8333-333333333333"
+            },
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "step": "dup",
+              "animal": "x"
+            },
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "step": "Ask your sister to lunch",
+              "animal": null,
+              "kind": "earned",
+              "status": "done",
+              "outcome": "worked",
+              "focus_id": null
+            },
+            {
+              "step_id": "s3",
+              "step": "Hidden",
+              "sensitive": true
+            },
+            {
+              "step_id": "s4",
+              "step": "  "
+            }
+          ],
+          "exclude": []
+        },
+        "output": [
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "step": "Buy the candle materials today",
+            "animal": "Komodo Dragon",
+            "status": "open",
+            "outcome": null,
+            "focusId": "33333333-3333-4333-8333-333333333333",
+            "kind": "lesson"
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "step": "Ask your sister to lunch",
+            "animal": "one of their animals",
+            "status": "done",
+            "outcome": "worked",
+            "focusId": null,
+            "kind": "earned"
+          }
+        ]
+      },
+      {
+        "input": {
+          "raw": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "step": "Buy",
+              "animal": "Komodo"
+            },
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "step": "Ask",
+              "animal": "Rhino"
+            }
+          ],
+          "exclude": [
+            "11111111-1111-4111-8111-111111111111"
+          ]
+        },
+        "output": [
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "step": "Ask",
+            "animal": "Rhino",
+            "status": null,
+            "outcome": null,
+            "focusId": null,
+            "kind": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "raw": {
+            "not": "a list"
+          },
+          "exclude": []
+        },
+        "output": []
+      }
+    ],
+    "lifeSimActions": [
+      {
+        "input": {
+          "stepOutcomes": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "better",
+              "statement": "cheaper"
+            },
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "direction": "worse",
+              "statement": "she cancelled"
+            }
+          ],
+          "focusSensitive": false,
+          "revealed": [
+            {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "focusId": "33333333-3333-4333-8333-333333333333"
+            },
+            {
+              "id": "22222222-2222-4222-8222-222222222222",
+              "focusId": null
+            }
+          ],
+          "checkedFocus": {
+            "id": "33333333-3333-4333-8333-333333333333"
+          },
+          "message": "it went"
+        },
+        "output": {
+          "markFocusId": null,
+          "revisions": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "better",
+              "statement": "cheaper"
+            },
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "direction": "worse",
+              "statement": "she cancelled"
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "stepOutcomes": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "better",
+              "statement": "cheaper"
+            },
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "direction": "worse",
+              "statement": "she cancelled"
+            }
+          ],
+          "focusSensitive": true,
+          "revealed": [
+            {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "focusId": "33333333-3333-4333-8333-333333333333"
+            },
+            {
+              "id": "22222222-2222-4222-8222-222222222222",
+              "focusId": null
+            }
+          ],
+          "checkedFocus": {
+            "id": "33333333-3333-4333-8333-333333333333"
+          },
+          "message": "it went"
+        },
+        "output": {
+          "markFocusId": "33333333-3333-4333-8333-333333333333",
+          "revisions": [
+            {
+              "step_id": "22222222-2222-4222-8222-222222222222",
+              "direction": "worse",
+              "statement": "she cancelled"
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "stepOutcomes": [
+            {
+              "step_id": "11111111-1111-4111-8111-111111111111",
+              "direction": "better",
+              "statement": "cheaper"
+            }
+          ],
+          "focusSensitive": false,
+          "revealed": [
+            {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "focusId": "33333333-3333-4333-8333-333333333333"
+            }
+          ],
+          "checkedFocus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "sensitive": true
+          },
+          "message": "x"
+        },
+        "output": {
+          "markFocusId": null,
+          "revisions": []
+        }
+      },
+      {
+        "input": {
+          "stepOutcomes": [
+            {
+              "step_id": "other",
+              "direction": "better",
+              "statement": "?"
+            }
+          ],
+          "focusSensitive": false,
+          "revealed": [],
+          "checkedFocus": null,
+          "message": "I want to kill myself"
+        },
+        "output": {
+          "markFocusId": null,
+          "revisions": []
+        }
+      },
+      {
+        "input": {
+          "stepOutcomes": [],
+          "focusSensitive": false,
+          "revealed": [],
+          "checkedFocus": {
+            "id": "33333333-3333-4333-8333-333333333333"
+          },
+          "message": "I want to kill myself"
+        },
+        "output": {
+          "markFocusId": "33333333-3333-4333-8333-333333333333",
+          "revisions": []
+        }
+      }
+    ],
+    "reportRevisionDirection": [
+      {
+        "input": "worked",
+        "output": "better"
+      },
+      {
+        "input": "partly",
+        "output": null
+      },
+      {
+        "input": "didnt_work",
+        "output": "worse"
+      },
+      {
+        "input": null,
+        "output": null
+      },
+      {
+        "input": "x",
+        "output": null
+      }
+    ],
+    "outcomeAlreadyRevised": [
+      {
+        "input": {
+          "ark_revision": null
+        },
+        "output": true
+      },
+      {
+        "input": {
+          "ark_revision": {
+            "id": "x"
+          }
+        },
+        "output": true
+      },
+      {
+        "input": {
+          "outcome": "worked"
+        },
+        "output": false
+      },
+      {
+        "input": null,
+        "output": false
+      },
+      {
+        "input": [
+          1
+        ],
+        "output": false
+      }
+    ],
+    "parseUnmentionedRevisions": [
+      {
+        "input": [
+          {
+            "id": "r1",
+            "kind": "revised",
+            "direction": "better",
+            "step": "Buy the candle materials today",
+            "animal": "Komodo Dragon",
+            "statement": "I got them for £400",
+            "changes": [],
+            "money": {
+              "delta_cents": 3600
+            },
+            "experience_delta": 0,
+            "focus_id": "33333333-3333-4333-8333-333333333333"
+          },
+          {
+            "id": "r2",
+            "kind": "revised",
+            "direction": null,
+            "changes": [
+              {
+                "stat": "reputation",
+                "delta": -2
+              }
+            ],
+            "money": {
+              "delta_cents": -500
+            },
+            "experience_delta": 3
+          },
+          {
+            "id": "r3",
+            "kind": "undone",
+            "changes": []
+          },
+          {
+            "id": "r4",
+            "kind": "revised",
+            "undone_at": "2026-11-09T00:00:00Z"
+          },
+          {
+            "id": "r5",
+            "kind": "revised",
+            "direction": "worse",
+            "sensitive": true
+          }
+        ],
+        "output": [
+          {
+            "id": "r1",
+            "step": "Buy the candle materials today",
+            "animal": "Komodo Dragon",
+            "direction": "better",
+            "statement": "I got them for £400",
+            "changes": [],
+            "money": "up",
+            "experience": 0,
+            "focusId": "33333333-3333-4333-8333-333333333333",
+            "sensitive": false
+          },
+          {
+            "id": "r2",
+            "step": null,
+            "animal": null,
+            "direction": "worse",
+            "statement": null,
+            "changes": [
+              {
+                "stat": "reputation",
+                "delta": -2
+              }
+            ],
+            "money": "down",
+            "experience": 3,
+            "focusId": null,
+            "sensitive": false
+          },
+          {
+            "id": "r5",
+            "step": null,
+            "animal": null,
+            "direction": "worse",
+            "statement": null,
+            "changes": [],
+            "money": null,
+            "experience": 0,
+            "focusId": null,
+            "sensitive": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "revisions": [
+            {
+              "id": "r1",
+              "kind": "revised",
+              "direction": "better",
+              "step": "Buy the candle materials today",
+              "animal": "Komodo Dragon",
+              "statement": "I got them for £400",
+              "changes": [],
+              "money": {
+                "delta_cents": 3600
+              },
+              "experience_delta": 0,
+              "focus_id": "33333333-3333-4333-8333-333333333333"
+            },
+            {
+              "id": "r2",
+              "kind": "revised",
+              "direction": null,
+              "changes": [
+                {
+                  "stat": "reputation",
+                  "delta": -2
+                }
+              ],
+              "money": {
+                "delta_cents": -500
+              },
+              "experience_delta": 3
+            }
+          ]
+        },
+        "output": [
+          {
+            "id": "r1",
+            "step": "Buy the candle materials today",
+            "animal": "Komodo Dragon",
+            "direction": "better",
+            "statement": "I got them for £400",
+            "changes": [],
+            "money": "up",
+            "experience": 0,
+            "focusId": "33333333-3333-4333-8333-333333333333",
+            "sensitive": false
+          },
+          {
+            "id": "r2",
+            "step": null,
+            "animal": null,
+            "direction": "worse",
+            "statement": null,
+            "changes": [
+              {
+                "stat": "reputation",
+                "delta": -2
+              }
+            ],
+            "money": "down",
+            "experience": 3,
+            "focusId": null,
+            "sensitive": false
+          }
+        ]
+      },
+      {
+        "input": {
+          "changes": []
+        },
+        "output": []
+      },
+      {
+        "input": null,
+        "output": []
+      }
+    ],
+    "arkRevisionPromptLines": [
+      {
+        "input": {
+          "revisions": [
+            {
+              "id": "r1",
+              "step": "Buy the candle materials today",
+              "animal": "Komodo Dragon",
+              "direction": "better",
+              "statement": "I got them for £400",
+              "changes": [],
+              "money": "up",
+              "experience": 0,
+              "focusId": "33333333-3333-4333-8333-333333333333",
+              "sensitive": false
+            },
+            {
+              "id": "r2",
+              "step": null,
+              "animal": null,
+              "direction": "worse",
+              "statement": null,
+              "changes": [
+                {
+                  "stat": "reputation",
+                  "delta": -2
+                }
+              ],
+              "money": "down",
+              "experience": 3,
+              "focusId": null,
+              "sensitive": false
+            },
+            {
+              "id": "r5",
+              "step": null,
+              "animal": null,
+              "direction": "worse",
+              "statement": null,
+              "changes": [],
+              "money": null,
+              "experience": 0,
+              "focusId": null,
+              "sensitive": true
+            }
+          ],
+          "focus": null
+        },
+        "output": [
+          "life_sim_changes — since you last spoke, what they said about how a step went moved their life sim in the app (their words are statement; the app shows the numbers). You may mention it once, in this reply, in your own words and only where it fits what they are saying now; never list the numbers like a report, and never as the opening line if they have brought something else:\n[{\"step\":\"Buy the candle materials today\",\"with\":\"Komodo Dragon\",\"went\":\"better\",\"statement\":\"I got them for £400\",\"money\":\"up\"},{\"went\":\"worse\",\"changes\":[{\"stat\":\"reputation\",\"delta\":-2}],\"money\":\"down\",\"experience\":3}]"
+        ]
+      },
+      {
+        "input": {
+          "revisions": [
+            {
+              "id": "r1",
+              "step": "Buy the candle materials today",
+              "animal": "Komodo Dragon",
+              "direction": "better",
+              "statement": "I got them for £400",
+              "changes": [],
+              "money": "up",
+              "experience": 0,
+              "focusId": "33333333-3333-4333-8333-333333333333",
+              "sensitive": false
+            },
+            {
+              "id": "r2",
+              "step": null,
+              "animal": null,
+              "direction": "worse",
+              "statement": null,
+              "changes": [
+                {
+                  "stat": "reputation",
+                  "delta": -2
+                }
+              ],
+              "money": "down",
+              "experience": 3,
+              "focusId": null,
+              "sensitive": false
+            },
+            {
+              "id": "r5",
+              "step": null,
+              "animal": null,
+              "direction": "worse",
+              "statement": null,
+              "changes": [],
+              "money": null,
+              "experience": 0,
+              "focusId": null,
+              "sensitive": true
+            }
+          ],
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "sensitive": true
+          }
+        },
+        "output": [
+          "life_sim_changes — since you last spoke, what they said about how a step went moved their life sim in the app (their words are statement; the app shows the numbers). You may mention it once, in this reply, in your own words and only where it fits what they are saying now; never list the numbers like a report, and never as the opening line if they have brought something else:\n[{\"went\":\"worse\",\"changes\":[{\"stat\":\"reputation\",\"delta\":-2}],\"money\":\"down\",\"experience\":3}]",
+          "life_sim — what they are working through with you is a hard one: never mention scores, stats, the Ark Score, Experience or anything else the app counts about it."
+        ]
+      },
+      {
+        "input": {
+          "revisions": [],
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "sensitive": true
+          }
+        },
+        "output": [
+          "life_sim — what they are working through with you is a hard one: never mention scores, stats, the Ark Score, Experience or anything else the app counts about it."
+        ]
+      },
+      {
+        "input": {
+          "revisions": [],
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333"
+          }
+        },
+        "output": []
+      }
+    ],
+    "chatMessageRefFor": [
+      {
+        "input": {
+          "messageId": "11111111-1111-4111-8111-111111111111",
+          "askedAt": "2026-11-09T10:00:00.000Z"
+        },
+        "output": "11111111-1111-4111-8111-111111111111"
+      },
+      {
+        "input": {
+          "messageId": "  ",
+          "askedAt": "2026-11-09T10:00:00.000Z"
+        },
+        "output": "2026-11-09T10:00:00.000Z"
+      },
+      {
+        "input": {
+          "messageId": null,
+          "askedAt": "2026-11-09T10:00:00.000Z"
+        },
+        "output": "2026-11-09T10:00:00.000Z"
+      },
+      {
+        "input": {
+          "messageId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "askedAt": "2026-11-09T10:00:00.000Z"
+        },
+        "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    ],
+    "visitorOwnerContext": [
+      {
+        "input": {
+          "owner_name": "Sam",
+          "journey": "Practising patience.",
+          "has_spoken": true,
+          "diary": [
+            "secret"
+          ],
+          "problems": [
+            "x"
+          ],
+          "ark_score": 140,
+          "diary_visibility": "public",
+          "public_diary": [
+            {
+              "public_summary": "Someone weighed a big purchase for a small business."
+            },
+            "short",
+            {
+              "text": "Another approved summary about a family member."
+            }
+          ]
+        },
+        "output": {
+          "owner_name": "Sam",
+          "journey": "Practising patience.",
+          "has_spoken": true,
+          "public_diary": [
+            "Someone weighed a big purchase for a small business.",
+            "Another approved summary about a family member."
+          ]
+        }
+      },
+      {
+        "input": {
+          "owner_name": "Sam",
+          "diary_visibility": "private",
+          "public_diary": [
+            "Someone weighed a big purchase for a small business."
+          ]
+        },
+        "output": {
+          "owner_name": "Sam"
+        }
+      },
+      {
+        "input": {
+          "owner_name": "Sam",
+          "owner_teen": true,
+          "public_diary": [
+            "Someone weighed a big purchase for a small business."
+          ]
+        },
+        "output": {
+          "owner_name": "Sam"
+        }
+      },
+      {
+        "input": null,
+        "output": null
+      }
+    ],
+    "parseCompanionState": [
+      {
+        "input": {
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "focus": "Candle business",
+            "sensitive": true
+          }
+        },
+        "output": {
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "focus": "Candle business",
+            "since": null,
+            "sensitive": true
+          },
+          "open_trial": null,
+          "your_trials_done": 0,
+          "recent_done": [],
+          "referral": null
+        }
+      },
+      {
+        "input": {
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "focus": "Candle business",
+            "sensitive": false
+          }
+        },
+        "output": {
+          "focus": {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "focus": "Candle business",
+            "since": null
+          },
+          "open_trial": null,
+          "your_trials_done": 0,
+          "recent_done": [],
+          "referral": null
+        }
+      }
     ]
   },
   "proof": {
@@ -394,7 +1520,12 @@
       "your owner's animal and that kind of talk is for your owner, and that if they find and capture one of your kind",
       "themselves, it will talk their life through with them. Then offer something you can talk about.",
       "Do not bring up what_you_remember_about_them with a visitor. Do not offer the owner's steps, Warmup, Trials or",
-      "debates to the visitor as cards; those belong to the owner."
+      "debates to the visitor as cards; those belong to the owner.",
+      "Your owner's diary, the problems they bring you, their steps and how they went, and their life sim (Ark Score,",
+      "Money, Relationships, Energy, Reputation, Experience) are theirs alone: never mention them, hint at them or confirm",
+      "them, even when the visitor asks or names one. From the journey note, say only what your owner has practised with",
+      "your Power, in general terms. If your_owner.public_diary is there, those summaries are the only problems of theirs",
+      "you may refer to, only when the visitor asks, and only as those summaries say them; without it, none."
     ],
     "ANIMAL_VISITOR_FOLLOW_UP_RULES": [
       "Follow-ups: 2-3 short things the visitor might say to you next, each under 60 characters, written AS THEM, to you —",

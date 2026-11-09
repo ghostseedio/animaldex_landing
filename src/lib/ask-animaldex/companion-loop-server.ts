@@ -11,6 +11,7 @@ import "server-only";
  * refuses, leaves the animal without the loop, never without an answer.
  */
 
+import {applyStepRevision, outcomeAlreadyRevised, reportRevisionDirection} from "@/lib/ask-animaldex/ark-sim";
 import {newStepAllowed} from "@/lib/ask-animaldex/reply-guards";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
@@ -343,6 +344,8 @@ export async function applyCompanionLines(params: {
      * (docs/life-sim/CONTRACT.md, section 5), fire and forget.
      */
     onStepSet?: (step: {id: string; step: string; problem: string | null}) => void;
+    /** Life sim (section 4): the message this turn answers, which a report's revision card sits under. */
+    chatMessageRef?: string | null;
 }): Promise<Record<string, unknown>> {
     const {service, userId, speciesProfileId, lines} = params;
     const base = {p_user_id: userId, p_species_profile_id: speciesProfileId};
@@ -380,15 +383,37 @@ export async function applyCompanionLines(params: {
                 if (lines.doneOutcome) {
                     const trialDone = event.trial_done as Record<string, unknown>;
                     trialDone.outcome = lines.doneOutcome;
+                    // Life sim: the message the report's revision card sits under (the apps' edge, as reviewed).
                     const recorded = await service.rpc("record_animal_step_outcome_v1", {
                         p_user_id: userId,
                         p_trial_id: trialDone.id,
-                        p_outcome: lines.doneOutcome
+                        p_outcome: lines.doneOutcome,
+                        p_chat_message_ref: params.chatMessageRef ?? null
                     });
                     if (recorded.error) warn("record_animal_step_outcome_v1", recorded.error);
                     else if (recorded.data && typeof recorded.data === "object") {
                         const row = recorded.data as Record<string, unknown>;
                         if (row.debate_reopened === true && typeof row.debate_id === "string") trialDone.debate_reopened = row.debate_id;
+                    }
+                    // Life sim (section 4; the apps' applyCompanionLines, edge 5a1ff095): the report
+                    // revises the step's reveal (worked is better, didn't work is worse, partly
+                    // changes nothing). Since migration 20261109110000 record_animal_step_outcome_v1
+                    // does it itself and says so with the ark_revision key (null when skipped);
+                    // only an older database's answer, without that key, leaves it here.
+                    const direction = reportRevisionDirection(lines.doneOutcome);
+                    const recordedRow = recorded.data && typeof recorded.data === "object" ? recorded.data : null;
+                    // A hard problem is never revised (the database refuses it too).
+                    if (recordedRow && direction && !outcomeAlreadyRevised(recordedRow) && params.state.focus?.sensitive !== true) {
+                        const statement = (params.userMessage ?? "").replace(/\s+/g, " ").trim() || lines.done;
+                        await applyStepRevision(service, {
+                            userId,
+                            stepId: String(trialDone.id),
+                            direction,
+                            source: "report",
+                            statement,
+                            chatMessageRef: params.chatMessageRef ?? null,
+                            chatSpeciesProfileId: speciesProfileId
+                        });
                     }
                 }
                 done = Number(result.your_trials_done) || done + 1;

@@ -25,7 +25,9 @@ export const dynamic = "force-dynamic";
  * POST {action: "visibility", visibility}         `set_diary_visibility_v1`
  * POST {action: "hide", focusId, hidden}          `hide_diary_entry_v1`
  * POST {action: "approve", focusId, text}         `approve_diary_summary_v1`
- * POST {action: "draft", focusId}                 `generate-applied-insight` `diary_public_draft`
+ * POST {action: "withdraw", focusId}              `approve_diary_summary_v1` with a NULL text
+ * POST {action: "draft", focusId[, text]}         `generate-applied-insight` `diary_public_draft`
+ *                                                 (with text: their edited summary, checked)
  *
  * Until the migration is live the reads answer `available: false` and the
  * screens show without Ark; the writes answer `{ok: false, code}`.
@@ -123,12 +125,24 @@ export async function POST(request: Request) {
         return NextResponse.json({ok: true, text});
     }
 
+    if (action === "withdraw") {
+        // A NULL text takes the approved summary back: the entry is private again.
+        const focusId = uuid(body.focusId);
+        if (!focusId) return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
+        const {error} = await supabase.rpc("approve_diary_summary_v1", {p_focus_id: focusId, p_text: null});
+        if (error) return failed("approve_diary_summary_v1", error.message);
+        return NextResponse.json({ok: true});
+    }
+
     if (action === "draft") {
         const focusId = uuid(body.focusId);
         if (!focusId) return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
+        // With `text`, the summary they edited is checked as it is instead of a new draft.
+        const edited = typeof body.text === "string" ? cleanArkSummary(body.text) : "";
         const invoked = await invokeAuthenticatedSupabaseFunctionResponse("generate-applied-insight", {
             action: "diary_public_draft",
-            focus_id: focusId
+            focus_id: focusId,
+            ...(edited ? {text: edited} : {})
         }).catch(() => null);
         if (!invoked) return NextResponse.json({ok: false, code: "ark_unavailable"}, {status: 502});
         const payload = invoked.payload && typeof invoked.payload === "object" ? invoked.payload as Record<string, unknown> : {};

@@ -87,12 +87,18 @@ export async function hideDiaryEntry(focusId: string, hidden: boolean): Promise<
 }
 
 /** The anonymised draft (edge `diary_public_draft`): its text, or that it stays private. */
-export async function draftDiarySummary(focusId: string): Promise<ArkCallResult<{publicOk: true; text: string} | {publicOk: false}>> {
-    const result = await post({action: "draft", focusId});
+export async function draftDiarySummary(focusId: string, edited?: string): Promise<ArkCallResult<{publicOk: true; text: string} | {publicOk: false}>> {
+    const result = await post({action: "draft", focusId, ...(edited ? {text: edited} : {})});
     if (!result.ok) return result;
     return result.payload.publicOk === true && typeof result.payload.text === "string"
         ? {ok: true, value: {publicOk: true, text: result.payload.text}}
         : {ok: true, value: {publicOk: false}};
+}
+
+/** Takes the approved summary back: the entry is private again. */
+export async function withdrawDiarySummary(focusId: string): Promise<ArkCallResult<null>> {
+    const result = await post({action: "withdraw", focusId});
+    return result.ok ? {ok: true, value: null} : result;
 }
 
 export async function approveDiarySummary(focusId: string, text: string): Promise<ArkCallResult<string>> {

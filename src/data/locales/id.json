@@ -2950,12 +2950,15 @@
         "drafting": "Sedang menulis…",
         "approve": "Setujui",
         "approved": "Disetujui",
+        "withdraw": "Tarik kembali",
         "notPublic": "Yang ini tetap pribadi: tidak bisa dibagikan dengan aman.",
         "alwaysPrivate": "Selalu pribadi",
         "hide": "Sembunyikan dari publik",
         "unhide": "Tampilkan di publik",
         "hidden": "Disembunyikan",
-        "history": "Yang berubah"
+        "history": "Yang berubah",
+        "fromTheirDiary": "Dari buku hariannya",
+        "stepsCount": "{n} langkah"
       }
     },
     "displayName": "{nickname} sang {animal}",

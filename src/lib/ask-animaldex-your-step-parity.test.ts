@@ -43,6 +43,20 @@ import {
     askStepOfferRules
 } from "@/lib/ask-animaldex/companion";
 import {buildAskStreamingSystemPrompt, type AskPromptOptions} from "@/lib/ask-animaldex/prompt";
+import {buildAskMemoryDeltaPrompts, memoryMinLength, parseAskMemoryDelta} from "@/lib/ask-animaldex/companion";
+import {
+    arkRevisionPromptLines,
+    buildStepSimTagsPrompt,
+    chatMessageRefFor,
+    lifeSimActions,
+    outcomeAlreadyRevised,
+    parseStepSimTags,
+    parseUnmentionedRevisions,
+    reportRevisionDirection,
+    revealedStepsFromLedger,
+    simTagState,
+    visitorOwnerContext
+} from "@/lib/ask-animaldex/ark-sim";
 import {ANIMAL_GREETING_RULES} from "@/lib/ask-animaldex/grounding";
 
 /** Lines from the first starting with `from` up to (not including) the next starting with `to`, as the fixture cut them. */
@@ -77,9 +91,12 @@ test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () 
     // offer), then after the Talk front door's referral privacy rule (SPEC
     // 6.4, AnimalDex 4403b042), then after referrals became something they
     // brought, not something an animal sent ("Ask another animal", AnimalDex
-    // ceeaec79), by scripts/generate-your-step-parity-fixture.mts.
-    assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^ceeaec79/);
+    // ceeaec79), then from the Life Sim edge lane (AnimalDex 5a1ff095, on main
+    // 8b3f0cbf; its only change to the older sections is the visitor's
+    // privacy lines), by scripts/generate-your-step-parity-fixture.mts.
+    assert.equal(fixture.source.ref, "5a1ff095");
+    assert.match(fixture.source.commit, /^5a1ff095/);
+    assert.equal(fixture.source.files.includes("ark-sim.ts"), true);
 });
 
 test("step outcomes: the DONE line's outcome and the debate a step came from read as the server reads them", () => {
@@ -287,4 +304,59 @@ test("the greeting, the visitor's rules and the role rules carry the 3.2 words",
     const loopLine = fixture.arrays.ANIMAL_FOLLOW_UP_RULES.findIndex((line) => line.startsWith("- The loop's next step"));
     const followUps = fixture.arrays.ANIMAL_FOLLOW_UP_RULES.filter((_, index) => index < loopLine || index > loopLine + 3);
     assert.equal(owner.includes(followUps.join("\n")), true, "ANIMAL_FOLLOW_UP_RULES");
+});
+
+// MARK: - Life Sim (docs/life-sim/CONTRACT.md sections 4 to 7; the edge lane, AnimalDex 5a1ff095)
+
+test("Life Sim section 6: the memory call's prompt is the apps', with and without steps to judge or a problem to check", () => {
+    for (const item of fixture.lifeSim.buildMemoryDeltaPrompts) {
+        const built = buildAskMemoryDeltaPrompts({
+            existing: [{id: "f1", fact: "Runs a candle business", animal: "Fox", noted_at: "2026-11-01", kind: "context"}],
+            animalName: "Javan Rhino",
+            userMessage: "sold out in a weekend!!",
+            answer: "That is the slow way paying off.",
+            existingJourney: "Practising patience with Javan Rhino.",
+            allowFollowUp: true,
+            ...(item.input as Partial<Parameters<typeof buildAskMemoryDeltaPrompts>[0]>)
+        });
+        sameLines(built.system.split("\n"), item.system.split("\n"), `memory system ${JSON.stringify(item.input).slice(0, 80)}`);
+        sameLines(built.user.split("\n\n").slice(1).join("\n\n").split("\n"), item.user.split("\n"), `memory user ${JSON.stringify(item.input).slice(0, 80)}`);
+    }
+    for (const item of fixture.lifeSim.memoryMinLength) assert.equal(memoryMinLength(item.input), item.output);
+    for (const item of fixture.lifeSim.parseMemoryDelta) {
+        const read = parseAskMemoryDelta(item.raw, new Set(["f1"]), {stepIds: new Set(item.stepIds)});
+        assert.deepEqual({step_outcomes: read.step_outcomes, focus_sensitive: read.focus_sensitive}, {step_outcomes: item.output.step_outcomes, focus_sensitive: item.output.focus_sensitive}, JSON.stringify(item.raw));
+    }
+});
+
+test("Life Sim section 5: the step tag call's prompt and its answer read as the apps' do", () => {
+    for (const item of fixture.lifeSim.buildStepSimTagsPrompt) {
+        sameLines(buildStepSimTagsPrompt(item.input as Parameters<typeof buildStepSimTagsPrompt>[0]).split("\n"), item.output.split("\n"), "buildStepSimTagsPrompt");
+    }
+    for (const item of fixture.lifeSim.parseStepSimTags) assert.deepEqual(parseStepSimTags(item.input), item.output, JSON.stringify(item.input));
+    for (const item of fixture.lifeSim.simTagState) assert.equal(simTagState(item.input as Record<string, unknown> | null), item.output, JSON.stringify(item.input));
+});
+
+test("Life Sim section 6: the steps judged, and what the answer asks (the flag first, never a hard problem's steps)", () => {
+    for (const item of fixture.lifeSim.revealedStepsFromLedger) assert.deepEqual(revealedStepsFromLedger(item.input.raw, item.input.exclude), item.output);
+    for (const item of fixture.lifeSim.lifeSimActions) {
+        assert.deepEqual(lifeSimActions(item.input as unknown as Parameters<typeof lifeSimActions>[0]), item.output, JSON.stringify(item.input));
+    }
+    for (const item of fixture.lifeSim.reportRevisionDirection) assert.equal(reportRevisionDirection(item.input), item.output);
+    for (const item of fixture.lifeSim.outcomeAlreadyRevised) assert.equal(outcomeAlreadyRevised(item.input), item.output, JSON.stringify(item.input));
+    for (const item of fixture.lifeSim.chatMessageRefFor) assert.equal(chatMessageRefFor(item.input.messageId, new Date(item.input.askedAt)), item.output);
+});
+
+test("Life Sim section 4: revisions mentioned once, and on a hard problem nothing the app counts", () => {
+    for (const item of fixture.lifeSim.parseUnmentionedRevisions) assert.deepEqual(parseUnmentionedRevisions(item.input), item.output, JSON.stringify(item.input));
+    for (const item of fixture.lifeSim.arkRevisionPromptLines) {
+        sameLines(arkRevisionPromptLines(item.input as Parameters<typeof arkRevisionPromptLines>[0]), item.output, "arkRevisionPromptLines");
+    }
+    for (const item of fixture.lifeSim.parseCompanionState) assert.deepEqual(parseCompanionState(item.input)?.focus, item.output?.focus);
+});
+
+test("Life Sim section 7: a visitor's animal knows only the whitelisted owner context, approved summaries only while public", () => {
+    for (const item of fixture.lifeSim.visitorOwnerContext) assert.deepEqual(visitorOwnerContext(item.input as Record<string, unknown> | null), item.output, JSON.stringify(item.input));
+    // The visitor's rules carry the five privacy lines (checked in full above, as ANIMAL_VISITOR_RULES).
+    assert.equal(fixture.arrays.ANIMAL_VISITOR_RULES.some((line) => line.includes("life sim (Ark Score,")), true);
 });

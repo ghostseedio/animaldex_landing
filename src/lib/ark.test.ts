@@ -29,7 +29,9 @@ import {
     decodeArkAccept,
     decodeArkChange,
     decodeArkChanges,
-    decodeArkStats
+    decodeArkStats,
+    decodePublicDiary,
+    arkWithUndone
 } from "@/lib/ark";
 import {formatDisplayMoney} from "@/lib/account-settings";
 import {decodeProblemDiary} from "@/lib/problem-diary";
@@ -94,7 +96,8 @@ test("a ledger entry reads as the contract's shape, and every field is optional 
     assert.equal(change.source, "tap");
     assert.equal(change.stepId, STEP);
     assert.equal(change.animal, "Komodo dragon");
-    assert.deepEqual(change.money, {beforeCents: 120000, afterCents: 114000, deltaCents: -6000});
+    assert.deepEqual(change.money, {beforeCents: 120000, afterCents: 114000, deltaCents: -6000, barBefore: arkMoneyBar(120000), barAfter: arkMoneyBar(114000)});
+    assert.equal(change.direction, null);
     assert.deepEqual(change.arkScore, {before: 140, after: 143});
     assert.equal(change.story.length, 2);
     assert.equal(change.reaction, "Bold. Let's see what those materials are worth.");
@@ -131,7 +134,7 @@ test("I'll do it: an old server's {step} alone has no reveal; a new one carries 
     assert.equal(old.revealSkipped, null);
     const played = decodeArkAccept({step, reveal: lessonRow, reveal_skipped: null}, decodeStepResult);
     assert.equal(played.reveal?.id, REVEAL);
-    for (const reason of ["sensitive", "animal_cap", "daily_cap", "already"] as const) {
+    for (const reason of ["sensitive", "animal_cap", "daily_cap", "already", "no_change"] as const) {
         assert.equal(decodeArkAccept({step, reveal: null, reveal_skipped: reason}, decodeStepResult).revealSkipped, reason);
     }
     assert.equal(decodeArkAccept({step, reveal: null, reveal_skipped: "weather"}, decodeStepResult).revealSkipped, null);
@@ -202,8 +205,8 @@ test("Money shows in the reader's currency, signed with a true minus, and counts
     assert.equal(arkCountAt(120000, 114000, 2), 114000);
     const mid = arkCountAt(120000, 114000, 0.5);
     assert.ok(mid < 120000 && mid > 114000);
-    assert.equal(arkMoneyPercent({beforeCents: 120000, afterCents: 114000, deltaCents: -6000}), -5);
-    assert.equal(arkMoneyPercent({beforeCents: 0, afterCents: 500, deltaCents: 500}), 0);
+    assert.equal(arkMoneyPercent({beforeCents: 120000, deltaCents: -6000}), -5);
+    assert.equal(arkMoneyPercent({beforeCents: 0, deltaCents: 500}), 0);
     assert.equal(arkMoneyPercent(null), 0);
 });
 
@@ -321,7 +324,8 @@ test("analytics: the contract's event names and parameters", () => {
     assert.deepEqual(arkRevealShownParams(decodeArkChange(lessonRow)!, null), {size: "medium", kind: "lesson", animal_species_id: SPECIES, money_pct: -5});
     assert.equal(arkRevealShownParams(decodeArkChange({...lessonRow, size: null, species_profile_id: null})!, id1(4)).animal_species_id, id1(4));
     assert.equal(arkRevealShownParams(decodeArkChange({...lessonRow, size: null})!, null).size, "medium");
-    assert.equal(arkProblemCode("ERROR: teen_private"), "teen_private");
+    assert.equal(arkProblemCode("ERROR: diary_private_for_teens"), "diary_private_for_teens");
+    assert.equal(arkProblemCode("summary_is_raw_problem"), "summary_is_raw_problem");
     assert.equal(arkProblemCode("boom"), "ark_unavailable");
 });
 
@@ -344,4 +348,64 @@ test("every Ark word ships in every locale the site has, and the reader's locale
         const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
         assert.deepEqual(placeholders(indonesian.ark[key]), placeholders(ARK_COPY[key]), key);
     }
+});
+
+test("the server's own shape (DB lane f8875782): direction, Money always sent with its bars, undo as its own row", () => {
+    // Money unmoved is still sent (delta 0): no Money row then.
+    const unmoved = decodeArkChange({...lessonRow, money: {before_cents: 114000, after_cents: 114000, delta_cents: 0, bar_before: 60, bar_after: 60}})!;
+    assert.equal(arkChangeRows(unmoved).some((row) => row.stat === "money"), false);
+    // The bars are the server's when it sends them.
+    const moved = decodeArkChange({...lessonRow, money: {before_cents: 120000, after_cents: 114000, delta_cents: -6000, bar_before: 61, bar_after: 60}})!;
+    assert.deepEqual(arkChangeRows(moved).find((row) => row.stat === "money"), {stat: "money", before: 61, after: 60, delta: -1});
+    // A revision says its direction: it wins over what the numbers suggest.
+    assert.equal(arkRevisionDirection(decodeArkChange({...revisionRow, direction: "worse"})!), "worse");
+    // An undo is a row of its own (kind undone, parent = the revision): the revision reads undone, the undo row is dropped.
+    const undo = {...revisionRow, id: id1(14), kind: "undone", source: "tap", parent_id: REVISION, created_at: "2026-11-11T09:00:00Z"};
+    const merged = arkWithUndone(decodeArkChanges([undo, revisionRow, lessonRow]));
+    assert.deepEqual(merged.map((change) => change.id), [REVISION, REVEAL]);
+    assert.equal(merged[0].undoneAt, "2026-11-11T09:00:00Z");
+    assert.equal(arkEntryState({state: null, changes: decodeArkChanges([lessonRow, revisionRow, undo])}), "lesson");
+    const {revisions} = arkThreadChanges(decodeArkChanges([undo, revisionRow]));
+    assert.equal(revisions.length, 1);
+    assert.equal(revisions[0].undoneAt, "2026-11-11T09:00:00Z");
+    // The owner's diary block on ark_stats_v1.
+    const own = decodeArkStats({ark_score: 10, is_self: true, bars_visible: true, bars: {experience: 0}, diary: {visibility: "private", can_be_public: true}})!;
+    assert.equal(own.diaryVisibility, "private");
+    assert.equal(own.teen, false);
+    const teen = decodeArkStats({ark_score: 10, is_self: true, bars_visible: false, bars: {experience: 0}, diary: {visibility: "private", can_be_public: false}})!;
+    assert.equal(teen.teen, true);
+    assert.equal(decodeArkStats({ark_score: 10, bars: {experience: 0}})!.teen, null);
+});
+
+test("a report's revision (no message ref) goes under their report on that step, else under the reply that set it", () => {
+    const report = decodeArkChange({...revisionRow, source: "report", chat_message_ref: null})!;
+    const withReport = [
+        {id: "set", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepSet: {id: STEP}}},
+        {id: "report", role: "user", createdAt: "", stepReportId: STEP.toUpperCase()},
+        {id: "reply", role: "assistant", createdAt: "", status: "complete"}
+    ];
+    assert.equal(arkRevisionAnchorId(report, withReport), "report");
+    assert.equal(arkRevisionAnchorId(report, withReport.filter((message) => message.id !== "report")), "set");
+    assert.equal(arkRevisionAnchorId(report, []), null);
+});
+
+test("someone else's public diary: only approved summaries, nothing while private", () => {
+    const entries = decodePublicDiary({
+        visible: true,
+        entries: [
+            {focus_id: FOCUS, public_summary: "Someone weighed a big purchase for a small business.", approved_at: "2026-11-10T00:00:00Z", animal: "Komodo dragon", state: "revised", steps: {total: 2, worked: 1, partly: 0, didnt_work: 1}},
+            {focus_id: FOCUS, public_summary: "  "},
+            {public_summary: "no id"}
+        ]
+    });
+    assert.deepEqual(entries, [{
+        focusId: FOCUS,
+        publicSummary: "Someone weighed a big purchase for a small business.",
+        approvedAt: "2026-11-10T00:00:00Z",
+        animal: "Komodo dragon",
+        state: "revised",
+        steps: {total: 2, worked: 1, partly: 0, didntWork: 1}
+    }]);
+    assert.deepEqual(decodePublicDiary({visible: false, entries: [{focus_id: FOCUS, public_summary: "x"}]}), []);
+    assert.deepEqual(decodePublicDiary(null), []);
 });

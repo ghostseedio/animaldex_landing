@@ -95,8 +95,18 @@ import {loadAskStatQuantiles} from "@/data/ask-stat-quantiles";
 import {loadAskCaptureContext} from "@/data/ask-capture-context";
 import {loadAskRecordExtras} from "@/data/ask-animal-record";
 import {loadAskChatSettings, loadAskMemory, rememberAskTurn} from "@/lib/ask-animaldex/memory";
-import {loadArkUnmentionedRevisions, markArkRevisionsMentioned, tagArkStep} from "@/lib/ask-animaldex/ark-server";
-import type {ArkMentionRevision} from "@/lib/ask-animaldex/ark-prompts";
+import {askFastJSON} from "@/lib/ask-animaldex/ark-server";
+import {
+    arkRevisionPromptLines,
+    chatMessageRefFor,
+    loadUnmentionedRevisions,
+    markRevisionsMentioned,
+    tagStepForSim,
+    visitorOwnerContext,
+    type ArkRevisionMention,
+    type StepTagAnimal
+} from "@/lib/ask-animaldex/ark-sim";
+import {chatMessageId} from "@/lib/ask-animaldex/chat-history";
 import {
     ASK_CRISIS_PATTERN,
     askHistoryAsTurns,
@@ -604,11 +614,13 @@ export async function POST(request: Request) {
                 ? Promise.resolve(false as boolean | null)
                 : speciesIdPending.then((speciesId) => (speciesId ? holdsLiveCard(viewer.userId!, speciesId) : null)),
             isGreeting && !referralRequested ? takeAskGreeting(request, viewer) : Promise.resolve(null as boolean | null),
-            // Life Sim (docs/life-sim/CONTRACT.md, section 4): what changed since its last reply, for it to mention once.
+            // Life sim (docs/life-sim/CONTRACT.md section 4; the apps' edge 5a1ff095): what
+            // changed since this animal last spoke, for it to mention once. Read beside the
+            // loop; it never fails a turn. Not on a call, where the loop is context only.
             ownerSpeciesIdPending.then((ownerSpeciesId) =>
                 ownerSpeciesId && viewer.userId && service && personalise && !aboutTrial && !isCall
-                    ? loadArkUnmentionedRevisions(service, viewer.userId, ownerSpeciesId)
-                    : [] as ArkMentionRevision[]
+                    ? loadUnmentionedRevisions(service, {userId: viewer.userId, speciesProfileId: ownerSpeciesId})
+                    : [] as ArkRevisionMention[]
             )
         ]);
     const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
@@ -756,7 +768,10 @@ export async function POST(request: Request) {
                 shortWords: persona ? shortWordsFor(persona.wordBudget) : null,
                 invitedFollowUp: dueFollowUp ? {topic: dueFollowUp.topic, invitedAt: dueFollowUp.invitedAt} : null,
                 visitorNotes: visitorNotes.length > 0 ? askVisitorNotesPromptSection(visitorNotes) : null,
-                ownerContext: visitorContext
+                // Life sim (section 7): only what a visitor may know of the owner, by name;
+                // their diary, problems, steps and stats never, approved public summaries
+                // only while the diary is public (the apps' visitorOwnerContext).
+                ownerContext: visitorOwnerContext(visitorContext)
             }
             : {}),
         ...(subject.trialContext ? {trialContext: subject.trialContext} : {}),
@@ -768,7 +783,9 @@ export async function POST(request: Request) {
         // when this message is their report on the open step, that it is.
         ...(loop
             ? {
-                companionLines: companionPromptLines({
+                // Then the revisions it may mention once in this reply (marked once it is
+                // answered), and on a hard problem, that nothing the app counts is said.
+                companionLines: [...companionPromptLines({
                     state: loop.state,
                     roster: loop.roster,
                     powerJustEarned: loop.powerJustEarned,
@@ -781,10 +798,9 @@ export async function POST(request: Request) {
                     stepReport: loop.stepReport ? {media: loop.stepReport.media, proof: loop.stepReport.proof ?? null} : null,
                     debateOffer: debate.offer,
                     secondOpinion,
-                    arkRevisions,
                     // On a call: whether a yes may hand the debate over now.
                     ...(callDebates ? {debateHandOver: debate.handOver} : {})
-                })
+                }), ...arkRevisionPromptLines({revisions: arkRevisions, focus: loop.state?.focus ?? null})]
             }
             : {})
     };
@@ -796,6 +812,26 @@ export async function POST(request: Request) {
      * the visit's gist for its owner, the visits passed on, the bond's day,
      * the check-in raised, and that they talked to this animal today.
      */
+    // Life sim (docs/life-sim/CONTRACT.md, the apps' edge 5a1ff095): what this
+    // reply settled (for the lazy tag and the detection after it), the
+    // revisions to mark mentioned, and who writes a step's story and reaction:
+    // this animal, in its own voice and their language.
+    let companionResult: Record<string, unknown> | null = null;
+    let arkMentionMarked = false;
+    const markArkMentioned = () => {
+        if (arkMentionMarked || arkRevisions.length === 0 || !service || !viewer.userId) return;
+        arkMentionMarked = true;
+        void markRevisionsMentioned(service, {userId: viewer.userId, ids: arkRevisions.map((revision) => revision.id)});
+    };
+    const stepTagAnimal = (): StepTagAnimal => ({
+        animalName: packet.scope === "species" && packet.species ? packet.species.name : "",
+        nickname: isVisit ? null : card?.nickname ?? null,
+        powerName: packet.scope === "species" && packet.species ? packet.species.power?.principleName ?? null : null,
+        lesson: packet.scope === "species" && packet.species ? packet.species.power?.coreLesson ?? null : null,
+        languageName,
+        stance: companion?.voice?.stance ?? null,
+        speechHabits: companion?.voice?.speech_habits ?? null
+    });
     const afterAnswer = (shown: string) => {
         // The notice is the route's line, not part of what the animal said.
         const answer = visitorNotice ? shown.replace(visitorNotice, "").trim() : shown;
@@ -803,26 +839,45 @@ export async function POST(request: Request) {
         const userId = viewer.userId;
         if (isGreeting) {
             if (userId && visitorNotes.length > 0) void markAskVisitorNotesDelivered(userId, visitorNotes, answer);
+            // Only a hello the model wrote was told about them.
+            markArkMentioned();
             return;
         }
         if (!userId) return;
         const work: Promise<unknown>[] = [];
+        // Life sim: the revisions it was told about are mentioned now (section 4),
+        // and an open step set without a chat turn (a Trials card, a debate way)
+        // is tagged once, while its reveal is still to come (section 5).
+        markArkMentioned();
+        const settled = (companionResult?.companion ?? null) as Record<string, unknown> | null;
+        const doneStep = settled?.trial_done as Record<string, unknown> | undefined;
+        const openTrial = loop?.state?.open_trial ?? null;
+        if (openTrial && ownerSpeciesId && service && !isCall && !settled?.trial_set && !doneStep) {
+            work.push(tagStepForSim(service, {userId, stepId: openTrial.id, animal: stepTagAnimal(), fresh: false}, {fastJSON: askFastJSON}));
+        }
+        // The problem the memory call checks for a hard turn: this animal's, as it
+        // stood, unless this reply moved to a new one (checked next turn).
+        const stateFocus = ownerSpeciesId ? loop?.state?.focus ?? null : null;
+        const focusMoved = Boolean(stateFocus && settled && settled.focus !== stateFocus.focus);
         if (personalise) {
-            work.push(rememberAskTurn({
+            const animalName = packet.species.name;
+            work.push(chatMessageRefPending.then((chatMessageRef) => rememberAskTurn({
                 userId,
                 existing: memory,
-                animalName: packet.species.name,
+                animalName,
                 speciesProfileId: speciesId,
                 userMessage: question ?? "",
                 answer,
                 journey: ownerSpeciesId ? {speciesProfileId: ownerSpeciesId} : null,
                 allowFollowUp: Boolean(ownerSpeciesId) && followUpsOn,
                 teen,
-                // Life Sim (section 6): a word about how an earlier step went revises it, under this message.
-                ark: viewer.client && !isCall && !aboutTrial
-                    ? {client: viewer.client, focusId: ownerSpeciesId ? loop?.state?.focus?.id ?? null : null, chatMessageRef: requestId?.toLowerCase() ?? null}
-                    : null
-            }));
+                lifeSim: {
+                    focus: stateFocus && !focusMoved ? stateFocus : null,
+                    exclude: [stepReportId, typeof doneStep?.id === "string" ? doneStep.id : null]
+                        .filter((id): id is string => typeof id === "string"),
+                    chatMessageRef
+                }
+            })));
             // The angle this take was built on, so the next one is new (`angle.ts`).
             if (chosenAngle && speciesId && service) {
                 work.push(recordAngleHeard(service, {userId, speciesProfileId: speciesId, angle: chosenAngle}));
@@ -844,8 +899,6 @@ export async function POST(request: Request) {
         if (ownerSpeciesId) work.push(recordAskCompanionDay(userId, ownerSpeciesId, question ?? ""));
         if (speciesId) work.push(recordAskTalkDay(userId, speciesId));
         if (dueFollowUp) work.push(markAskFollowUpRaised(userId, dueFollowUp.id));
-        // The reply has said them: they are not put to the animal again.
-        if (arkRevisions.length > 0 && service) work.push(markArkRevisionsMentioned(service, userId, arkRevisions.map((revision) => revision.id)));
         void Promise.allSettled(work);
     };
     /**
@@ -853,6 +906,10 @@ export async function POST(request: Request) {
      * message and `shown`, the reply as the reader received it.
      */
     const requestId = isGreeting ? null : resolveAskRequestId(body.requestId) ?? globalThis.crypto.randomUUID();
+    // Life sim (section 4): the message a revision card sits under, the id this
+    // message is stored by (chat-history.ts), else its time.
+    const chatMessageRefPending: Promise<string> = (requestId ? chatMessageId(requestId).catch(() => null) : Promise.resolve(null))
+        .then((id) => chatMessageRefFor(id, askedAt));
     const recordTranscript = (shown: string) => {
         if (!viewer.userId || !speaksAsAnimal) return;
         void recordAskChatTranscript({
@@ -1087,20 +1144,14 @@ export async function POST(request: Request) {
                 roster: loop.roster,
                 lines,
                 userMessage: question ?? "",
-                // Life Sim (section 5): a step saved from this reply is tagged, after the reply, fire and forget.
+                chatMessageRef: await chatMessageRefPending,
+                // Life sim (section 5): a step set in this reply is tagged now, after the
+                // reply, so its reveal can carry its story.
                 onStepSet: (step) => {
-                    void tagArkStep({
-                        service: owner.service,
-                        userId: ownerUserId,
-                        stepId: step.id,
-                        animalName: packet.scope === "species" && packet.species ? packet.species.name : "",
-                        power: packet.scope === "species" && packet.species ? packet.species.power?.principleName ?? null : null,
-                        problem: step.problem,
-                        step: step.step,
-                        teen
-                    });
+                    void tagStepForSim(owner.service, {userId: ownerUserId, stepId: step.id, animal: stepTagAnimal(), fresh: true, debateWay: null}, {fastJSON: askFastJSON});
                 }
             });
+            companionResult = result;
             // The offer, in the animal's own words, ends with the debate marker:
             // noted so it is made once, and, when it was allowed, what the chat
             // needs for its quick replies and setup band (the marker is never drawn).

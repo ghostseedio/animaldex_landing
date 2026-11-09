@@ -19,15 +19,17 @@ function deltaPhrase(delta: number) {
     return `${delta > 0 ? `+${delta}` : delta} vs last week`;
 }
 
-function Figure({title, value, delta}: {title: string; value: number; delta: number}) {
+function Figure({title, value, delta}: {title: string; value: number; delta: number | null}) {
     return (
         <div className="min-w-0 flex-1">
             <p className="text-[11px] font-medium uppercase text-white/40">{title}</p>
             <p className="mt-1 text-[28px] font-extrabold leading-none tabular-nums text-white">{value}</p>
-            <p className="mt-1 flex items-center gap-[3px] text-[11px] text-white/40">
-                {delta !== 0 ? <span aria-hidden="true" className="text-[8px] text-white/60">{delta > 0 ? "▲" : "▼"}</span> : null}
-                {deltaPhrase(delta)}
-            </p>
+            {delta !== null ? (
+                <p className="mt-1 flex items-center gap-[3px] text-[11px] text-white/40">
+                    {delta !== 0 ? <span aria-hidden="true" className="text-[8px] text-white/60">{delta > 0 ? "▲" : "▼"}</span> : null}
+                    {deltaPhrase(delta)}
+                </p>
+            ) : null}
         </div>
     );
 }
@@ -45,7 +47,7 @@ function ArkWeek({week, ark, words}: {week: ProfileStatsWeek; ark: NonNullable<P
                 <span>{rangeLabel(week.currentStart, week.currentEnd)}</span>
             </div>
             <div className="flex items-start gap-3.5">
-                <Figure title={words.weekSteps} value={ark.steps} delta={ark.steps - ark.previousSteps} />
+                <Figure title={words.weekSteps} value={ark.steps} delta={ark.previousSteps === null ? null : ark.steps - ark.previousSteps} />
                 <span className="h-11 w-px bg-white/10" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-medium uppercase text-white/40">{words.weekArkChange}</p>
@@ -54,7 +56,7 @@ function ArkWeek({week, ark, words}: {week: ProfileStatsWeek; ark: NonNullable<P
                     </p>
                 </div>
                 <span className="h-11 w-px bg-white/10" aria-hidden="true" />
-                <Figure title={words.weekPowers} value={ark.powers} delta={ark.powers - ark.previousPowers} />
+                <Figure title={words.weekPowers} value={ark.powers} delta={ark.previousPowers === null ? null : ark.powers - ark.previousPowers} />
             </div>
         </section>
     );

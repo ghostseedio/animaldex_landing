@@ -22,20 +22,24 @@ export type ArkStat = (typeof ARK_STATS)[number];
 export type ArkKind = "earned" | "lesson" | "revised" | "undone";
 export type ArkSource = "tap" | "chat" | "report";
 export type ArkSize = "small" | "medium" | "large";
-export type ArkRevealSkip = "sensitive" | "animal_cap" | "daily_cap" | "already";
+/** Why no reveal played. `no_change`: nothing moved. Any reason this build does not know reads as nothing to show. */
+export type ArkRevealSkip = "sensitive" | "animal_cap" | "daily_cap" | "already" | "no_change";
 export type ArkDiaryVisibility = "public" | "private";
 export type ArkDiaryState = "earned" | "lesson" | "revised";
 
 /** One stat's move, in bar points (Money's is its 0–100 bar when the server sends it here). */
 export type ArkStatChange = {stat: ArkStat; before: number; after: number; delta: number};
-export type ArkMoneyChange = {beforeCents: number; afterCents: number; deltaCents: number};
+/** Money: always sent by the server (delta 0 when unmoved), with its 0–100 bar before and after. */
+export type ArkMoneyChange = {beforeCents: number; afterCents: number; deltaCents: number; barBefore: number; barAfter: number};
 
 /** One ledger row: a reveal (`earned` / `lesson`), a revision (`revised`) or an undo (`undone`). */
 export type ArkChange = {
     id: string;
     kind: ArkKind;
     source: ArkSource;
-    /** A revision's original reveal. */
+    /** A revision's direction as the server recorded it; null on a reveal (or an older server). */
+    direction: "better" | "worse" | null;
+    /** A revision's original reveal; an undo's revision. */
     parentId: string | null;
     stepId: string | null;
     focusId: string | null;
@@ -161,7 +165,7 @@ export function arkSize(value: unknown): ArkSize | null {
 
 export function arkRevealSkip(value: unknown): ArkRevealSkip | null {
     const wire = text(value)?.toLowerCase();
-    return wire === "sensitive" || wire === "animal_cap" || wire === "daily_cap" || wire === "already" ? wire : null;
+    return wire === "sensitive" || wire === "animal_cap" || wire === "daily_cap" || wire === "already" || wire === "no_change" ? wire : null;
 }
 
 export function arkDiaryVisibility(value: unknown): ArkDiaryVisibility | null {
@@ -196,7 +200,15 @@ function moneyChange(value: unknown): ArkMoneyChange | null {
     if (before === null && after === null) return null;
     const from = Math.max(0, before ?? (after ?? 0) - (given ?? 0));
     const to = Math.max(0, after ?? from + (given ?? 0));
-    return {beforeCents: from, afterCents: to, deltaCents: given ?? to - from};
+    const barBefore = integer(row.bar_before);
+    const barAfter = integer(row.bar_after);
+    return {
+        beforeCents: from,
+        afterCents: to,
+        deltaCents: given ?? to - from,
+        barBefore: barBefore ?? arkMoneyBar(from),
+        barAfter: barAfter ?? arkMoneyBar(to)
+    };
 }
 
 function strings(value: unknown, max: number): string[] {
@@ -219,6 +231,7 @@ export function decodeArkChange(raw: unknown): ArkChange | null {
         id,
         kind,
         source: arkSource(row.source),
+        direction: text(row.direction)?.toLowerCase() === "better" ? "better" : text(row.direction)?.toLowerCase() === "worse" ? "worse" : null,
         parentId: uuid(row.parent_id),
         stepId: uuid(row.step_id),
         focusId: uuid(row.focus_id),
@@ -302,8 +315,9 @@ export function decodeArkStats(raw: unknown): ArkStats | null {
         lastChanges,
         steps: {total: count(steps?.total), worked: count(steps?.worked), partly: count(steps?.partly), didntWork: count(steps?.didnt_work)},
         powersEarned: count(row.powers_earned),
-        diaryVisibility: arkDiaryVisibility(row.diary_visibility),
-        teen: typeof row.teen === "boolean" ? row.teen : typeof row.is_teen === "boolean" ? row.is_teen : null
+        // The owner's own: `diary: {visibility, can_be_public}` (a teen cannot be public).
+        diaryVisibility: arkDiaryVisibility(object(row.diary)?.visibility) ?? arkDiaryVisibility(row.diary_visibility),
+        teen: typeof object(row.diary)?.can_be_public === "boolean" ? object(row.diary)?.can_be_public === false : null
     };
 }
 
@@ -337,9 +351,9 @@ export function arkChangeRows(change: ArkChange): Array<{stat: ArkStat; before: 
     if (change.money && change.money.deltaCents !== 0) {
         rows.push(money ?? {
             stat: "money",
-            before: arkMoneyBar(change.money.beforeCents),
-            after: arkMoneyBar(change.money.afterCents),
-            delta: arkMoneyBar(change.money.afterCents) - arkMoneyBar(change.money.beforeCents)
+            before: change.money.barBefore,
+            after: change.money.barAfter,
+            delta: change.money.barAfter - change.money.barBefore
         });
     } else if (money && money.delta !== 0) {
         rows.push(money);
@@ -363,6 +377,7 @@ export function arkChangeHasLoss(change: ArkChange): boolean {
 
 /** A revision went better or worse (or changed nothing), from what it moved. */
 export function arkRevisionDirection(change: ArkChange): "better" | "worse" | "none" {
+    if (change.direction) return change.direction;
     const net = arkChangeRows(change)
         .filter((row) => row.stat !== "experience")
         .reduce((sum, row) => sum + (row.stat === "money" && change.money
@@ -392,7 +407,7 @@ export function arkCountAt(before: number, after: number, progress: number): num
 }
 
 /** The Money change as a share of the balance before, to one decimal (analytics `money_pct`). */
-export function arkMoneyPercent(money: ArkMoneyChange | null): number {
+export function arkMoneyPercent(money: Pick<ArkMoneyChange, "beforeCents" | "deltaCents"> | null): number {
     if (!money || money.beforeCents <= 0) return 0;
     return Math.round((money.deltaCents / money.beforeCents) * 1000) / 10;
 }
@@ -413,9 +428,32 @@ export function arkSignedMoney(deltaCents: number, format: (usd: number) => stri
     return deltaCents > 0 ? `+${amount}` : deltaCents < 0 ? `−${amount}` : amount;
 }
 
+/**
+ * An undo is its own ledger row (`kind: "undone"`, `parent_id` = the
+ * revision); the revision itself carries `undone_at`. Either way the revision
+ * reads as undone, and the undo rows are dropped.
+ */
+export function arkWithUndone(changes: readonly ArkChange[]): ArkChange[] {
+    const undoneAt = new Map<string, string>();
+    for (const change of changes) {
+        if (change.kind === "undone" && change.parentId) undoneAt.set(change.parentId, change.createdAt ?? new Date(0).toISOString());
+    }
+    return changes
+        .filter((change) => change.kind !== "undone")
+        .map((change) => (!change.undoneAt && undoneAt.has(change.id) ? {...change, undoneAt: undoneAt.get(change.id) ?? null} : change));
+}
+
 // MARK: - Where a change shows in the chat
 
-type ThreadMessage = {id: string; role: string; createdAt: string; status?: string; companionEvent?: {stepSet?: {id: string | null} | undefined} | undefined};
+type ThreadMessage = {
+    id: string;
+    role: string;
+    createdAt: string;
+    status?: string;
+    /** The person's report on a step ("I've done it"). */
+    stepReportId?: string;
+    companionEvent?: {stepSet?: {id: string | null} | undefined} | undefined;
+};
 
 /**
  * The user message a revision belongs under (contract section 4): the one
@@ -423,9 +461,20 @@ type ThreadMessage = {id: string; role: string; createdAt: string; status?: stri
  * the person's message nearest that time (within ten minutes). Null when the
  * message is not in the loaded thread: the Diary still has it.
  */
-export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef">, messages: readonly ThreadMessage[]): string | null {
+export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & Partial<Pick<ArkChange, "source" | "stepId">>, messages: readonly ThreadMessage[]): string | null {
     const ref = change.chatMessageRef?.trim();
-    if (!ref) return null;
+    if (!ref) {
+        // A report's revision has no message ref (the database makes it while
+        // recording the outcome): it goes under their report on that step,
+        // else under the reply that set the step.
+        if (!change.stepId) return null;
+        const stepId = change.stepId.toLowerCase();
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+            const message = messages[index];
+            if (message.role === "user" && message.stepReportId?.toLowerCase() === stepId) return message.id;
+        }
+        return arkRevealAnchorId(stepId, messages);
+    }
     const byId = messages.find((message) => message.role === "user" && message.id.toLowerCase() === ref.toLowerCase());
     if (byId) return byId.id;
     if (UUID.test(ref)) return null;
@@ -457,7 +506,7 @@ export function arkRevealAnchorId(stepId: string, messages: readonly ThreadMessa
 export function arkThreadChanges(changes: readonly ArkChange[]): {reveals: Map<string, ArkChange>; revisions: ArkChange[]} {
     const reveals = new Map<string, ArkChange>();
     const revisions: ArkChange[] = [];
-    for (const change of changes) {
+    for (const change of arkWithUndone(changes)) {
         if (arkIsReveal(change) && change.stepId && !reveals.has(change.stepId)) reveals.set(change.stepId, change);
         if (arkIsRevision(change)) revisions.push(change);
     }
@@ -472,9 +521,10 @@ export function arkThreadChanges(changes: readonly ArkChange[]): {reveals: Map<s
 export function arkEntryState(ark: {state: ArkDiaryState | null; changes: ArkChange[]} | null | undefined): ArkDiaryState | null {
     if (!ark) return null;
     if (ark.state) return ark.state;
-    if (ark.changes.some((change) => arkIsRevision(change) && !change.undoneAt)) return "revised";
-    if (ark.changes.some((change) => arkIsReveal(change) && (change.kind === "lesson" || arkChangeHasLoss(change)))) return "lesson";
-    return ark.changes.some(arkIsReveal) ? "earned" : null;
+    const changes = arkWithUndone(ark.changes);
+    if (changes.some((change) => arkIsRevision(change) && !change.undoneAt)) return "revised";
+    if (changes.some((change) => arkIsReveal(change) && (change.kind === "lesson" || arkChangeHasLoss(change)))) return "lesson";
+    return changes.some(arkIsReveal) ? "earned" : null;
 }
 
 /** The choices the profile-wide switch offers: a teen has no public option. */
@@ -493,6 +543,37 @@ export function arkEffectiveVisibility(visibility: ArkDiaryVisibility | null, te
  */
 export function arkEntryIsPublic(entry: {publicSummary: string | null; hidden: boolean; sensitive: boolean}, visibility: ArkDiaryVisibility, teen: boolean): boolean {
     return !teen && visibility === "public" && Boolean(entry.publicSummary) && !entry.hidden && !entry.sensitive;
+}
+
+/** One entry of someone else's public diary (`public_diary_v1`): only the summary they approved, never the problem. */
+export type ArkPublicDiaryEntry = {
+    focusId: string;
+    publicSummary: string;
+    approvedAt: string | null;
+    animal: string;
+    state: ArkDiaryState | null;
+    steps: ArkSteps;
+};
+
+/** `public_diary_v1`: `{visible, entries}`; nothing while the diary is private (or on an old server). */
+export function decodePublicDiary(raw: unknown): ArkPublicDiaryEntry[] {
+    const row = object(raw);
+    if (!row || row.visible === false) return [];
+    return list(row.entries).flatMap((item) => {
+        const entry = object(item);
+        const focusId = uuid(entry?.focus_id);
+        const publicSummary = text(entry?.public_summary);
+        if (!entry || !focusId || !publicSummary) return [];
+        const steps = object(entry.steps);
+        return [{
+            focusId,
+            publicSummary,
+            approvedAt: text(entry.approved_at),
+            animal: text(entry.animal) ?? "",
+            state: arkDiaryState(entry.state),
+            steps: {total: count(steps?.total), worked: count(steps?.worked), partly: count(steps?.partly), didntWork: count(steps?.didnt_work)}
+        }];
+    });
 }
 
 // MARK: - The profile's Stats order (contract section 9)
@@ -565,10 +646,13 @@ export const ARK_PROBLEM_CODES = [
     "already_undone",
     "focus_not_found",
     "invalid_visibility",
-    "teen_private",
+    "diary_private_for_teens",
+    "focus_sensitive",
+    "summary_empty",
     "summary_too_long",
-    "summary_not_safe",
-    "sensitive_problem"
+    "summary_is_raw_problem",
+    "summary_not_checked",
+    "summary_not_safe"
 ] as const;
 
 export type ArkProblemCode = (typeof ARK_PROBLEM_CODES)[number] | "ark_unavailable";

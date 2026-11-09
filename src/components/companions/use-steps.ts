@@ -95,12 +95,24 @@ export async function dropStep(step: AnimalStep): Promise<StepCallResult<null>> 
     return result.ok ? {ok: true, value: null} : result;
 }
 
-/** "Make this my step": the Trial replaces any open step, accepted at once. */
-export async function stepFromTrial(speciesProfileId: string, frequency: StepFrequency): Promise<StepCallResult<AnimalStep>> {
+/**
+ * "Make this my step": the Trial replaces any open step, accepted at once.
+ * Life Sim: the reveal comes from `accept_animal_step_v1` right after
+ * (a Trials card's step is untagged, so it reveals with `story: []`). The
+ * step stands even when that second call fails: no reveal then.
+ */
+export async function stepFromTrial(speciesProfileId: string, frequency: StepFrequency): Promise<StepCallResult<StepAccepted>> {
     const result = await post({action: "fromTrial", speciesProfileId, frequency});
     if (!result.ok) return result;
     const step = decodeStepResult(result.payload.step);
-    return step ? {ok: true, value: step} : {ok: false, code: "step_unavailable"};
+    if (!step) return {ok: false, code: "step_unavailable"};
+    const accepted = await acceptStep(step);
+    return {
+        ok: true,
+        value: accepted.ok
+            ? {...accepted.value, step: {...accepted.value.step, trialFrequency: accepted.value.step.trialFrequency ?? step.trialFrequency}}
+            : {step, reveal: null, revealSkipped: null}
+    };
 }
 
 /**

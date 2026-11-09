@@ -1878,6 +1878,22 @@ function AskConversation({
         const timers = [4_000, 12_000].map((delay) => window.setTimeout(() => void reloadArk(), delay));
         return () => timers.forEach((timer) => window.clearTimeout(timer));
     }, [isSending, ownerChat, reloadArk]);
+    /** A step just taken on: its reveal plays here (and is counted), or why none is said for a cap. */
+    const noteArkAccepted = useCallback((stepId: string, reveal: ArkChange | null, revealSkipped: ArkRevealSkip | null) => {
+        if (reveal) {
+            sticksToBottom.current = true;
+            setArkFresh((fresh) => new Set([...Array.from(fresh), reveal.id]));
+            setArk((current) => ({
+                threadKey,
+                loaded: current.threadKey === threadKey && current.loaded,
+                changes: [reveal, ...(current.threadKey === threadKey ? current.changes.filter((change) => change.id !== reveal.id) : [])]
+            }));
+            trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(reveal, companionSpeciesProfileId));
+        } else if (revealSkipped) {
+            setArkSkip({stepId, reason: revealSkipped});
+            trackEvent(ARK_EVENTS.revealSkipped, {reason: revealSkipped});
+        }
+    }, [threadKey, companionSpeciesProfileId]);
     /** "I'll do it": the step is taken on and its reveal plays right here, under the message that set it. */
     const acceptAndReveal = useCallback(async (step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;
@@ -1890,21 +1906,8 @@ function AskConversation({
             return;
         }
         setOpenStep(result.value.step);
-        const {reveal, revealSkipped} = result.value;
-        if (reveal) {
-            sticksToBottom.current = true;
-            setArkFresh((fresh) => new Set([...Array.from(fresh), reveal.id]));
-            setArk((current) => ({
-                threadKey,
-                loaded: current.threadKey === threadKey && current.loaded,
-                changes: [reveal, ...(current.threadKey === threadKey ? current.changes.filter((change) => change.id !== reveal.id) : [])]
-            }));
-            trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(reveal, companionSpeciesProfileId));
-        } else if (revealSkipped) {
-            setArkSkip({stepId: step.id, reason: revealSkipped});
-            trackEvent(ARK_EVENTS.revealSkipped, {reason: revealSkipped});
-        }
-    }, [isSending, greetingState, words, setOpenStep, threadKey, companionSpeciesProfileId]);
+        noteArkAccepted(step.id, result.value.reveal, result.value.revealSkipped);
+    }, [isSending, greetingState, words, setOpenStep, noteArkAccepted]);
     /** Not yet taken on: "I'll do it". Taken on: "I've done it" (or "Tell {name} more") puts the bar in report mode. */
     const stepPrimary = useCallback((step: AnimalStep) => {
         if (stepCardState(step) === "offered") {
@@ -2165,8 +2168,10 @@ function AskConversation({
                 setTrialProblem({messageId, text: stepProblemText(result.code, words)});
                 return;
             }
-            const step = {...result.value, trialFrequency: result.value.trialFrequency ?? frequency};
+            const step = {...result.value.step, trialFrequency: result.value.step.trialFrequency ?? frequency};
             setOpenStep(step);
+            // Life Sim: the Trial's step is taken on at once, so its reveal plays now (numbers only: no story yet).
+            noteArkAccepted(step.id, result.value.reveal, result.value.revealSkipped);
             // The reply now carries that step instead of its Trials, with its loop.
             const offered = messages.find((message) => message.id === messageId);
             updateMessage(messageId, {
@@ -2176,7 +2181,7 @@ function AskConversation({
             const message = trialPickedMessage(frequency, words);
             if (message) submit(message, "chip");
         });
-    }, [companionSpeciesProfileId, setOpenStep, submit, words, updateMessage, messages]);
+    }, [companionSpeciesProfileId, setOpenStep, submit, words, updateMessage, messages, noteArkAccepted]);
 
     // MARK: Debates (3.2)
 

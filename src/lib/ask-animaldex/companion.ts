@@ -15,7 +15,6 @@
  * thread stays on its Trial).
  */
 
-import {ARK_MEMORY_RULES, ARK_MEMORY_SCHEMA_LINE, arkRecentStepsSection, type ArkRecentStep} from "@/lib/ask-animaldex/ark-prompts";
 import {TEEN_MEMORY_RULE, teenMemoryAllowed} from "@/lib/ask-animaldex/age-band";
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import type {AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
@@ -455,7 +454,73 @@ export type AskMemoryDelta = {
     retire: string[];
     journey: string | null;
     follow_up: {topic: string; revisit_after_days: number} | null;
+    /**
+     * Life sim (AnimalDex docs/life-sim/CONTRACT.md section 6): what they
+     * clearly said happened with one of their recent revealed steps. Only
+     * "better" and "worse" are kept: "none" changes nothing.
+     */
+    step_outcomes: AskStepOutcomeDelta[];
+    /** The problem they are working through is a hard one (section 5). Sticky: only a true is acted on. */
+    focus_sensitive: boolean;
 };
+
+export type AskStepOutcomeDirection = "better" | "worse";
+export type AskStepOutcomeDelta = {step_id: string; direction: AskStepOutcomeDirection; statement: string};
+
+/** A step the memory call may hear about (section 6): one taken on with any of their animals in the last 30 days. */
+export type AskMemoryRevealedStep = {
+    id: string;
+    step: string;
+    animal: string;
+    /** How its reveal went: earned (stats rose) or lesson (something fell). */
+    kind?: string | null;
+    status?: string | null;
+    outcome?: string | null;
+};
+
+/**
+ * The shortest message the memory call reads. "ok" and "thanks" teach nothing,
+ * but while they have a revealed step from the last 30 days a few words can
+ * say how it went ("it worked!"), so the floor drops from 20 to 3 characters.
+ */
+export const MEMORY_MIN_MESSAGE = 20;
+export const MEMORY_MIN_MESSAGE_WITH_STEPS = 3;
+
+export function memoryMinLength(hasRevealedSteps: boolean): number {
+    return hasRevealedSteps ? MEMORY_MIN_MESSAGE_WITH_STEPS : MEMORY_MIN_MESSAGE;
+}
+
+function stepOutcomeDirection(raw: unknown): AskStepOutcomeDirection | "none" | null {
+    const word = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+    return word === "better" || word === "worse" || word === "none" ? word : null;
+}
+
+/** The model's step_outcomes, kept only for steps it was shown, with their own words (3 to 200 characters), one per step and at most three a turn. */
+export function parseStepOutcomes(
+    raw: unknown,
+    stepIds: ReadonlySet<string>,
+    options: {teen?: boolean} = {}
+): AskStepOutcomeDelta[] {
+    if (!Array.isArray(raw) || stepIds.size === 0) return [];
+    const byLower = new Map(Array.from(stepIds).map((id) => [id.toLowerCase(), id]));
+    const seen = new Set<string>();
+    const out: AskStepOutcomeDelta[] = [];
+    for (const item of raw) {
+        const record = item && typeof item === "object" ? item as Record<string, unknown> : null;
+        if (!record) continue;
+        const id = typeof record.step_id === "string" ? byLower.get(record.step_id.trim().toLowerCase()) : undefined;
+        const direction = stepOutcomeDirection(record.direction);
+        const statement = clean(record.statement, 200);
+        if (!id || seen.has(id) || !direction || direction === "none" || !statement || statement.length < 3) continue;
+        // A crisis is never scored; teen mode keeps nothing sensitive.
+        if (ASK_CRISIS_PATTERN.test(statement)) continue;
+        if (options.teen && !teenMemoryAllowed(statement)) continue;
+        seen.add(id);
+        out.push({step_id: id, direction, statement});
+        if (out.length >= 3) break;
+    }
+    return out;
+}
 
 function memoryKind(raw: unknown): AskMemoryKind {
     return typeof raw === "string" && (MEMORY_KINDS as readonly string[]).includes(raw) ? raw as AskMemoryKind : "context";
@@ -469,7 +534,11 @@ function allowedFactFor(raw: unknown, teen = false): string | null {
     return fact;
 }
 
-export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>, options: {teen?: boolean} = {}): AskMemoryDelta {
+export function parseAskMemoryDelta(
+    raw: unknown,
+    knownIds: Set<string>,
+    options: {teen?: boolean; stepIds?: ReadonlySet<string>} = {}
+): AskMemoryDelta {
     const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
     const allowedFact = (value: unknown) => allowedFactFor(value, options.teen === true);
     const add = (Array.isArray(row.add) ? row.add : [])
@@ -499,16 +568,39 @@ export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>, options
     const follow_up = followTopic && !EXCLUDED_MEMORY_FACT.test(followTopic) && (options.teen !== true || teenMemoryAllowed(followTopic))
         ? {topic: followTopic, revisit_after_days: Number.isFinite(days) ? Math.max(1, Math.min(60, Math.round(days))) : 7}
         : null;
-    return {add, update, retire, journey: clean(row.journey, 420), follow_up};
+    return {
+        add,
+        update,
+        retire,
+        journey: clean(row.journey, 420),
+        follow_up,
+        step_outcomes: parseStepOutcomes(row.step_outcomes, options.stepIds ?? new Set(), {teen: options.teen}),
+        focus_sensitive: row.focus_sensitive === true
+    };
 }
 
+/** The life sim's part of the memory call (section 6). Added only when there is something to judge, so every other turn's prompt is unchanged. Verbatim. */
+export const MEMORY_STEP_OUTCOME_RULES = [
+    "- step_outcomes: recent_steps are steps the person took on with any of their animals in the last 30 days. Only",
+    "  when person_said clearly says what actually happened with one of them, add one entry: its step_id, direction",
+    "  (better: it went well or helped; worse: it went badly or made things worse; none: it made no difference), and",
+    "  statement: their own words that say it, under 200 characters. Plans, hopes, maybes, questions and how they feel",
+    "  about trying it are not outcomes ('I might get them cheaper' changes nothing). At most one entry per step; when",
+    "  unsure, none. Otherwise an empty array."
+];
+
+export const MEMORY_FOCUS_SENSITIVE_RULES = [
+    "- focus_sensitive: true when the problem they are working through (current_problem, or what they said) involves",
+    "  bereavement or grief, serious illness (theirs or someone close to them), abuse, self-harm or a crisis, or",
+    "  persistent hopelessness. Not for ordinary hard problems (a breakup, losing a job, money stress, a bad day). When",
+    "  unsure, true. Otherwise false."
+];
+
 /**
- * The extraction prompt, verbatim from the apps' `buildMemoryDeltaPrompts`.
- * The owner's own chat sends their journey so far and, with check-ins on,
- * `allowFollowUp`; everyone else sends neither. Life Sim's keys
- * (`step_outcomes`, `focus_sensitive`, `recent_steps`; `ark-prompts.ts`) are
- * written to docs/life-sim/CONTRACT.md section 6 ahead of the apps' edge
- * lane, which is to carry the same lines.
+ * The extraction prompt, verbatim from the apps' `buildMemoryDeltaPrompts`
+ * (with the life sim's, AnimalDex edge 5a1ff095). The owner's own chat sends
+ * their journey so far and, with check-ins on, `allowFollowUp`; everyone else
+ * sends neither.
  */
 export function buildAskMemoryDeltaPrompts(params: {
     existing: AskMemoryFact[];
@@ -519,14 +611,22 @@ export function buildAskMemoryDeltaPrompts(params: {
     allowFollowUp?: boolean;
     /** Teen mode (`age-band.ts`): only light, everyday facts. */
     teen?: boolean;
+    /** Life sim (section 6): their revealed steps from every animal, last 30 days. */
+    revealedSteps?: AskMemoryRevealedStep[] | null;
     /**
-     * Life Sim (docs/life-sim/CONTRACT.md, section 6): the steps they took on
-     * in the last 30 days, from every animal, which this exchange may say
-     * how they went. The call always returns `step_outcomes` and `focus_sensitive`.
+     * Life sim (section 5): ask whether the problem with this animal is a hard
+     * one. Set on the owner's turn while it is not flagged yet: the problem in
+     * its own words, or "" when this animal has none yet.
      */
-    recentSteps?: readonly ArkRecentStep[];
+    focusSensitiveCheck?: {problem: string} | null;
 }): {system: string; user: string} {
     const today = new Date().toISOString().slice(0, 10);
+    const steps = (params.revealedSteps ?? []).slice(0, 12);
+    const sensitiveCheck = params.focusSensitiveCheck ?? null;
+    const simShape = [
+        ...(steps.length > 0 ? [' "step_outcomes":[{"step_id":string,"direction":"better|worse|none","statement":string}]'] : []),
+        ...(sensitiveCheck ? [' "focus_sensitive":boolean'] : [])
+    ];
     return {
         system: [
             "You maintain what the animals in AnimalDex remember about one person, across all their conversations.",
@@ -534,24 +634,28 @@ export function buildAskMemoryDeltaPrompts(params: {
             "Return ONLY the changes, as JSON:",
             '{"add":[{"fact":string,"kind":"context|goal|commitment|outcome|preference"}],',
             ' "update":[{"id":string,"fact":string,"kind":string}], "retire":[id], "journey":string,',
-            ' "follow_up":{"topic":string,"revisit_after_days":number} | null,',
-            ARK_MEMORY_SCHEMA_LINE,
+            ...(simShape.length > 0
+                ? [' "follow_up":{"topic":string,"revisit_after_days":number} | null,', `${simShape.join(",\n")}}`]
+                : [' "follow_up":{"topic":string,"revisit_after_days":number} | null}']),
             "Facts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in",
             "Leeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they",
-            "will do), outcome (what happened when they tried something), preference (how they like answers).",
+            "will do), outcome (what happened when they tried something), preference (how they like answers: short or",
+            "detailed, stories or straight to the point).",
             "- Add only durable things worth knowing next time, that the person said about themselves in THIS exchange.",
             "- Update a fact (by id) when this exchange corrects or supersedes it; retire a fact (by id) when they say it is",
             "  no longer true. Never touch facts marked pinned. Prefer updating over adding a near-copy.",
             "- Never keep: one-off questions about the animal, anything the person did not say about themselves, health or",
             "  mental-health conditions, sexuality, religion, politics, exact addresses, financial figures, passwords.",
             "- journey: one to three sentences, third person, that THIS animal could say to a visitor about how it has helped",
-            "  the person so far; visitor-safe, nothing private, no other people's names, no places. Carry the previous one",
-            "  forward and refine it; empty string when there is nothing yet.",
+            "  the person so far; visitor-safe, nothing private, no other people's names, no places. Never a specific problem",
+            "  from their life, a step or how it went, or any score or stat: only what they have practised with this animal's",
+            "  Power, in general terms. Carry the previous one forward and refine it; empty string when there is nothing yet.",
             params.allowFollowUp
                 ? "- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null."
                 : "- follow_up: always null.",
             ...(params.teen ? [TEEN_MEMORY_RULE] : []),
-            ...ARK_MEMORY_RULES,
+            ...(steps.length > 0 ? MEMORY_STEP_OUTCOME_RULES : []),
+            ...(sensitiveCheck ? MEMORY_FOCUS_SENSITIVE_RULES : []),
             "- If nothing changes, return empty arrays."
         ].join("\n"),
         user: [
@@ -564,7 +668,17 @@ export function buildAskMemoryDeltaPrompts(params: {
                 pinned: fact.pinned === true
             })))}`,
             `current_journey:\n${params.existingJourney?.trim() || "(nothing yet)"}`,
-            arkRecentStepsSection(params.recentSteps ?? []),
+            ...(steps.length > 0
+                ? [`recent_steps:\n${JSON.stringify(steps.map((step) => ({
+                    step_id: step.id,
+                    step: step.step,
+                    animal: step.animal,
+                    ...(step.kind ? {kind: step.kind} : {}),
+                    ...(step.status ? {status: step.status} : {}),
+                    ...(step.outcome ? {reported: step.outcome} : {})
+                })))}`]
+                : []),
+            ...(sensitiveCheck ? [`current_problem:\n${sensitiveCheck.problem.trim() || "(none yet)"}`] : []),
             `person_said:\n${params.userMessage}`,
             `animal_answered:\n${params.answer.slice(0, 2000)}`
         ].join("\n\n")
