@@ -485,3 +485,19 @@ test("a revision of a step goes under the reply that finished it when made no ea
     assert.equal(arkRevisionAnchorId({...chat, stepId: null}, messages), id1(500));
     assert.equal(arkRevisionAnchorId({...chat, createdAt: null}, messages), id1(500));
 });
+
+test("a revision caused by something said after the step was done follows those words, even within the 2 minutes; one the report caused stays with the finishing reply (iOS c723d4a0)", () => {
+    const report = {id: id1(510), role: "user", createdAt: "2026-11-10T09:59:00Z", stepReportId: STEP};
+    const done = {id: "done", role: "assistant", createdAt: "2026-11-10T10:00:00Z", status: "complete", companionEvent: {stepDone: {id: STEP}}};
+    const later = {id: id1(520), role: "user", createdAt: "2026-11-10T10:00:40Z"};
+    const laterAnswer = {id: "later-answer", role: "assistant", createdAt: "2026-11-10T10:00:50Z", status: "complete"};
+    const thread = [report, done, later, laterAnswer];
+    const revision = {...decodeArkChange(revisionRow)!, stepId: STEP, chatMessageRef: id1(520), createdAt: "2026-11-10T10:01:00Z"};
+    assert.equal(arkRevisionAnchorId(revision, thread), id1(520));
+    // Matched by time (a thread without stable ids): the same.
+    assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: "2026-11-10T10:00:41Z"}, thread), id1(520));
+    // Caused by the report itself: still with the reply that finished it.
+    assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: id1(510), createdAt: "2026-11-10T09:59:15Z"}, thread), "done");
+    // A ref not in the loaded thread: no trigger, so with the finishing reply.
+    assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: id1(999)}, thread), "done");
+});

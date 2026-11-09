@@ -504,16 +504,21 @@ type ThreadMessage = {
  * message is not in the loaded thread: the Diary still has it.
  */
 export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & Partial<Pick<ArkChange, "source" | "stepId" | "createdAt">>, messages: readonly ThreadMessage[]): string | null {
+    const ref = change.chatMessageRef?.trim();
+    const trigger = ref ? arkRevisionTriggerId(ref, messages) : null;
     // A revision of a step this thread saw finish, made no earlier than two
     // minutes before that reply, sits with it, so "Didn't work" and what it
-    // cost read as one (owner, 2026-11-10; iOS ArkThreadRule.anchor).
+    // cost read as one (owner, 2026-11-10; iOS ArkThreadRule.anchor); unless
+    // a later message of the person's caused it ("You said: …"), which it
+    // then follows (UX sweep 2026-11-10, iOS c723d4a0: it sat above the
+    // words it quoted).
     if (change.stepId && change.createdAt) {
         const finisher = arkStepFinisher(change.stepId, messages);
         const made = Date.parse(change.createdAt);
         const finished = finisher ? Date.parse(finisher.createdAt) : Number.NaN;
-        if (finisher && !Number.isNaN(made) && !Number.isNaN(finished) && made >= finished - 2 * 60_000) return finisher.id;
+        const causedBefore = trigger === null || (finisher !== null && messages.findIndex((message) => message.id === trigger) < messages.indexOf(finisher));
+        if (finisher && !Number.isNaN(made) && !Number.isNaN(finished) && made >= finished - 2 * 60_000 && causedBefore) return finisher.id;
     }
-    const ref = change.chatMessageRef?.trim();
     if (!ref) {
         // A report's revision has no message ref (the database makes it while
         // recording the outcome): it goes under their report on that step,
@@ -526,6 +531,15 @@ export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & 
         }
         return arkRevealAnchorId(stepId, messages);
     }
+    return trigger;
+}
+
+/**
+ * The person's message a revision's `chat_message_ref` names: by id, else
+ * (a time) the nearest of theirs within 10 minutes. A stable id not in the
+ * loaded thread is not matched by time. Null when none.
+ */
+function arkRevisionTriggerId(ref: string, messages: readonly ThreadMessage[]): string | null {
     const byId = messages.find((message) => message.role === "user" && message.id.toLowerCase() === ref.toLowerCase());
     if (byId) return byId.id;
     if (UUID.test(ref)) return null;
