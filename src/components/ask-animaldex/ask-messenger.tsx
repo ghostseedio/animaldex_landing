@@ -494,13 +494,26 @@ export function AskSpecialShell({children, testId = "special-message"}: {childre
  * special bubble (a Warmup question, docs/your-step/INLINE.md), with room
  * beside it where a reply's controls sit, so the edges line up.
  */
-export function AskSpecialBubble({avatarUrl, showsFace = true, children, testId}: {
+export function AskSpecialBubble({avatarUrl, showsFace = true, plain = false, children, testId}: {
     avatarUrl: string | null;
     /** False while the next message is the animal's too (the next Warmup question): its face sits by the newest only. */
     showsFace?: boolean;
+    /**
+     * As a plain reply carries its special message (`AskReplyBubbles` with
+     * `plain`, the chat's own): the whole width of the thread, no face beside
+     * it, so it lines up with the step card in the reply above it.
+     */
+    plain?: boolean;
     children: ReactNode;
     testId?: string;
 }) {
+    if (plain) {
+        return (
+            <div className="flex min-w-0 flex-col items-start">
+                <AskSpecialShell testId={testId}>{children}</AskSpecialShell>
+            </div>
+        );
+    }
     return (
         <div className="flex items-end gap-2 pr-2">
             {showsFace ? <AskAnimalFace url={avatarUrl} size={28} /> : <span aria-hidden="true" className="w-7 shrink-0" />}
@@ -519,13 +532,15 @@ export function AskSpecialBubble({avatarUrl, showsFace = true, children, testId}
  * 1 OF 2", in small capitals with its icon, UI rather than the animal
  * speaking; `trailing` is a word after it in its own colour ("Easy").
  */
-export function AskSpecialLabel({icon, children, trailing = null}: {
+export function AskSpecialLabel({icon, children, trailing = null, tint = null}: {
     icon: ReactNode;
     children: ReactNode;
     trailing?: {text: string; color: string} | null;
+    /** Its colour when it is not the neon one (a Life Sim Lesson's amber). */
+    tint?: string | null;
 }) {
     return (
-        <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300">
+        <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em] text-primary-300" style={tint ? {color: tint} : undefined}>
             {icon}
             <span className="min-w-0">{children}</span>
             {trailing ? <span className="shrink-0 font-bold normal-case tracking-normal" style={{color: trailing.color}}>{trailing.text}</span> : null}

@@ -2826,7 +2826,7 @@
         "placeholder": "Ceritakan kepada {name} bagaimana hasilnya",
         "attach": "Tambah foto atau video",
         "attachNote": "Opsional. Disimpan dalam catatan Anda bersama {name}, dan hanya Anda yang bisa melihatnya.",
-        "attachBonus": "Tambahkan foto atau video saat Anda melakukannya · +5 XP",
+        "attachBonus": "Opsional: tambahkan foto atau video saat Anda melakukannya untuk +5 XP",
         "send": "Ceritakan kepada {name}",
         "more": "Ceritakan lagi kepada {name}",
         "strip": "Menceritakan langkah Anda kepada {name}"
@@ -2904,6 +2904,9 @@
       },
       "earned": "Didapat",
       "lesson": "Pelajaran",
+      "powerEarned": "{power} didapat",
+      "powerStepDone": "{power} · Langkah selesai",
+      "stepDone": "Langkah selesai",
       "revised": "Direvisi",
       "undone": "Dibatalkan",
       "lessonExperience": "+{n} Pengalaman dari pelajaran ini",

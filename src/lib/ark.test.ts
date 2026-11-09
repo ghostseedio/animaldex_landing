@@ -15,6 +15,8 @@ import {
     arkProfileSections,
     arkProblemCode,
     arkRevealAnchorId,
+    arkRevealDone,
+    arkRevealHeading,
     arkRevealShownParams,
     arkRevisionAnchorId,
     arkRevisionDirection,
@@ -388,4 +390,32 @@ test("the Diary's public notice says what public means, and no Diary word mentio
     assert.equal(COMPANION_WORDS_EN.ark.diary.publicCaption, "Others see your public debates and your Ark bars.");
     assert.equal(COMPANION_WORDS_EN.ark.diary.privateNotice, "Others see your public debates, not your Ark bars.");
     assert.equal("summaryTitle" in COMPANION_WORDS_EN.ark.diary, false);
+});
+
+test("a reveal goes under the reply that finished its step (owner, 2026-11-09), else under the one that set it", () => {
+    const messages = [
+        {id: "set", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepSet: {id: STEP}}},
+        {id: "report", role: "user", createdAt: "", stepReportId: STEP},
+        {id: "typing", role: "assistant", createdAt: "", status: "streaming", companionEvent: {stepDone: {id: STEP, powerEarned: true}}},
+        {id: "done", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepDone: {id: STEP.toUpperCase(), powerEarned: true}}}
+    ];
+    assert.equal(arkRevealAnchorId(STEP, messages), "done");
+    assert.deepEqual(arkRevealDone(STEP, messages), {messageId: "done", powerEarned: true});
+    // Not finished in this thread: an older reveal stays under the reply that set it.
+    assert.equal(arkRevealAnchorId(STEP, messages.slice(0, 3)), "set");
+    assert.equal(arkRevealDone(STEP, messages.slice(0, 3)), null);
+    // A later step: done, the Power not earned by it.
+    assert.deepEqual(arkRevealDone(STEP, [{id: "d", role: "assistant", createdAt: "", companionEvent: {stepDone: {id: STEP}}}]), {messageId: "d", powerEarned: false});
+    // A report's revision still goes under the report.
+    assert.equal(arkRevisionAnchorId({chatMessageRef: null, source: "report", stepId: STEP}, messages), "report");
+});
+
+test("a reveal is headed by the animal's Power: earned here, a later step, or a Lesson", () => {
+    const words = {lesson: "Lesson", earned: "Earned", stepDone: "Step done", powerEarned: "{power} earned", powerStepDone: "{power} · Step done"};
+    const power = {name: " Strike First ", speciesProfileId: null, earnedHere: true};
+    assert.equal(arkRevealHeading(false, power, words), "Strike First earned");
+    assert.equal(arkRevealHeading(false, {...power, earnedHere: false}, words), "Strike First · Step done");
+    assert.equal(arkRevealHeading(true, power, words), "Lesson");
+    assert.equal(arkRevealHeading(false, {...power, name: null}, words), "Earned");
+    assert.equal(arkRevealHeading(false, null, words), "Step done");
 });

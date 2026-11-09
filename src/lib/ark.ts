@@ -1,8 +1,9 @@
 /**
  * Life Sim: Ark Score (AnimalDex docs/life-sim/CONTRACT.md, sections 1, 3, 4,
- * 7, 8, 9 and 10). "I'll do it" on a Your step plays a reveal and moves five
- * stats; later chats and the step's report can revise it; the Diary keeps
- * the history; the profile leads with Ark Score.
+ * 7, 8, 9 and 10). A Your step, once done (owner, 2026-11-09: made after
+ * their report, shaped by how it went; no "I'll do it"), plays a reveal and
+ * moves five stats; later chats can revise it; the Diary keeps the history;
+ * the profile leads with Ark Score.
  *
  * Pure: the routes decode with it, the chat, the Diary and the profile word
  * and order with it, and the tests read it. Every field is read tolerantly:
@@ -457,7 +458,11 @@ type ThreadMessage = {
     status?: string;
     /** The person's report on a step ("I've done it"). */
     stepReportId?: string;
-    companionEvent?: {stepSet?: {id: string | null} | undefined} | undefined;
+    companionEvent?: {
+        stepSet?: {id?: string | null} | undefined;
+        /** The reply that finished a step: its id (a newer server), and whether that step earned the Power. */
+        stepDone?: {id?: string | null; powerEarned?: boolean} | undefined;
+    } | undefined;
 };
 
 /**
@@ -496,8 +501,34 @@ export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & 
     return best?.id ?? null;
 }
 
-/** The reply that set a step: its reveal goes right under it. Null when it is not in the loaded thread. */
+/**
+ * The animal's reply that finished a step (owner, 2026-11-09: the reveal is
+ * made when the step is done, after their report, shaped by how it went):
+ * the newest finished reply whose `stepDone` names it, and whether that step
+ * earned the Power. Null when it is not in the loaded thread.
+ */
+export function arkRevealDone(stepId: string, messages: readonly ThreadMessage[]): {messageId: string; powerEarned: boolean} | null {
+    const wanted = stepId.toLowerCase();
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        if (message.role !== "assistant" || (message.status && message.status !== "complete")) continue;
+        const done = message.companionEvent?.stepDone;
+        if (done?.id && done.id.toLowerCase() === wanted) return {messageId: message.id, powerEarned: done.powerEarned === true};
+    }
+    return null;
+}
+
+/**
+ * Where a step's reveal goes: right under the reply that finished it, else
+ * (an older reveal, made when the step was taken on) under the reply that
+ * set it. Null when neither is in the loaded thread.
+ */
 export function arkRevealAnchorId(stepId: string, messages: readonly ThreadMessage[]): string | null {
+    return arkRevealDone(stepId, messages)?.messageId ?? arkStepSetAnchorId(stepId, messages);
+}
+
+/** The reply that set a step. Null when it is not in the loaded thread. */
+function arkStepSetAnchorId(stepId: string, messages: readonly ThreadMessage[]): string | null {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
         const message = messages[index];
         if (message.role !== "assistant" || (message.status && message.status !== "complete")) continue;
@@ -505,6 +536,27 @@ export function arkRevealAnchorId(stepId: string, messages: readonly ThreadMessa
         if (id && id.toLowerCase() === stepId.toLowerCase()) return message.id;
     }
     return null;
+}
+
+/** Whose Power heads a reveal in the chat, and whether the step it follows earned it. */
+export type ArkRevealPower = {name: string | null; speciesProfileId: string | null; earnedHere: boolean};
+
+/**
+ * A reveal's header, beside the animal's Power icon (owner, 2026-11-09, in
+ * place of "EARNED" and sparkles): "{power} earned" on the step that earned
+ * it, "{power} · Step done" on a later one, "Lesson" for a loss. Without a
+ * Power name: "Earned" / "Step done".
+ */
+export function arkRevealHeading(
+    lesson: boolean,
+    power: ArkRevealPower | null,
+    words: {lesson: string; earned: string; stepDone: string; powerEarned: string; powerStepDone: string}
+): string {
+    if (lesson) return words.lesson;
+    const name = power?.name?.trim();
+    const filled = (template: string) => template.split("{power}").join(name ?? "");
+    if (power?.earnedHere) return name ? filled(words.powerEarned) : words.earned;
+    return name ? filled(words.powerStepDone) : words.stepDone;
 }
 
 /** The newest reveal per step, and every revision, from a newest-first ledger read for one animal. */

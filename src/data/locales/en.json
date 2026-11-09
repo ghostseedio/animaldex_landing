@@ -2840,7 +2840,7 @@
         "placeholder": "Tell {name} how it went",
         "attach": "Add a photo or video",
         "attachNote": "Optional. It's kept in your record with {name}, and only you can see it.",
-        "attachBonus": "Add a photo or video of you doing it · +5 XP",
+        "attachBonus": "Optional: add a photo or video of you doing it for +5 XP",
         "send": "Tell {name}",
         "more": "Tell {name} more",
         "strip": "Telling {name} how your step went"
@@ -2918,6 +2918,9 @@
       },
       "earned": "Earned",
       "lesson": "Lesson",
+      "powerEarned": "{power} earned",
+      "powerStepDone": "{power} · Step done",
+      "stepDone": "Step done",
       "revised": "Revised",
       "undone": "Undone",
       "lessonExperience": "+{n} Experience from the lesson",

@@ -5,8 +5,13 @@
  * owner's spec, "UI and UX guidance"): everything inline in the chat, no
  * window, no toast.
  *
- *   - the reveal after "I'll do it": the animal's reaction and its story
- *     beats as its own messages, one after another, then the numbers: each
+ *   - the reveal once a step is done (owner, 2026-11-09: made after their
+ *     report, shaped by how it went, and drawn under the animal's reply that
+ *     finished the step): the animal's reaction and its story beats as its
+ *     own messages, one after another, then the numbers in the same special
+ *     message as the step's (`AskSpecialBubble`), headed by the animal's own
+ *     Power icon and name ("{Power} earned" on the step that earned it,
+ *     "{Power} · Step done" after; a Lesson stays a Lesson); each
  *     stat that moved in its own row (name, +3 / −2, a bar that fills or
  *     drains) and Money counting up or down in the reader's currency. Gains
  *     are neon; a loss is a Lesson, amber, with the Experience it gave;
@@ -22,22 +27,23 @@
 
 import {useEffect, useRef, useState, type ReactNode} from "react";
 import Link from "@/app/[locale]/_components/link";
-import {AskReplyBubbles, AskSpecialBubble, AskSpecialShell} from "@/components/ask-animaldex/ask-messenger";
+import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
+import {AskReplyBubbles, AskSpecialBubble, AskSpecialLabel} from "@/components/ask-animaldex/ask-messenger";
 import {fillWords, type CompanionWords} from "@/lib/companion-bond";
 import {
     arkBarValue,
     arkChangeHasLoss,
     arkChangeRows,
     arkCountAt,
-    arkRevealSkipShowsNote,
     arkRevisionDirection,
     arkRowIsLoss,
     arkSignedMoney,
     arkSignedNumber,
     arkVisibleStats,
+    arkRevealHeading,
     arkWithUndone,
     type ArkChange,
-    type ArkRevealSkip,
+    type ArkRevealPower,
     type ArkStat,
     type ArkStats
 } from "@/lib/ark";
@@ -176,8 +182,16 @@ function ReviseIcon() {
  * here, so it arrives a message at a time and counts; otherwise (the thread
  * reopened) it is all there, at its final values.
  */
-export function ArkRevealMessages({reveal, fresh, reducedMotion, faceUrl, speakerName, words, money, locale, onPlayed}: {
+export function ArkRevealMessages({reveal, power = null, plain = true, fresh, reducedMotion, faceUrl, speakerName, words, money, locale, onPlayed}: {
     reveal: ArkChange;
+    /**
+     * The chat's plain thread (its replies have no bubble and no face): the
+     * numbers take the same full-width special card as the step card in the
+     * reply above them. False: beside the animal's face, as a bubbled thread.
+     */
+    plain?: boolean;
+    /** The animal's Power, for the header; null draws the header without it. */
+    power?: ArkRevealPower | null;
     fresh: boolean;
     reducedMotion: boolean;
     faceUrl: string | null;
@@ -209,21 +223,29 @@ export function ArkRevealMessages({reveal, fresh, reducedMotion, faceUrl, speake
         onPlayed?.();
     }, [fresh, numbersIn, progress, onPlayed]);
     const lesson = reveal.kind === "lesson" || arkChangeHasLoss(reveal);
+    const heading = arkRevealHeading(lesson, power, words.ark);
     return (
         <div className="flex flex-col" data-testid={`ark-reveal-${lesson ? "lesson" : "earned"}`}>
             {beats.slice(0, shown).map((beat, index) => (
                 <div key={index} className={`pt-1 ${animate ? "ask-ark-arrive" : ""}`} data-testid="ark-beat">
-                    <AskReplyBubbles plain text={beat} isLive={false} avatarUrl={faceUrl} speakerName={speakerName} photoUrl={null} photoAlt="" />
+                    <AskReplyBubbles plain={plain} text={beat} isLive={false} avatarUrl={faceUrl} speakerName={speakerName} photoUrl={null} photoAlt="" />
                 </div>
             ))}
             {numbersIn ? (
                 <div className={`pt-1.5 ${animate ? "ask-ark-arrive" : ""}`}>
-                    <AskSpecialBubble avatarUrl={faceUrl} testId="ark-numbers">
-                        <section className="flex min-w-[240px] flex-col gap-2.5 sm:min-w-[300px]" aria-label={lesson ? words.ark.lesson : words.ark.earned} aria-live={fresh ? "polite" : undefined}>
-                            <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em]" style={{color: lesson ? LESSON : NEON}}>
-                                {lesson ? <LessonIcon /> : <SparkIcon />}
-                                <span>{lesson ? words.ark.lesson : words.ark.earned}</span>
-                            </p>
+                    {/* The step card's own container (AskSpecialBubble → AskSpecialShell): its radius, width, inset and neon edge. */}
+                    <AskSpecialBubble avatarUrl={faceUrl} plain={plain} testId="ark-numbers">
+                        <section className="flex flex-col gap-2.5" aria-label={heading} aria-live={fresh ? "polite" : undefined}>
+                            <AskSpecialLabel
+                                tint={lesson ? LESSON : null}
+                                icon={(
+                                    <span className="grid h-3.5 w-3.5 shrink-0 place-items-center" data-testid="ark-power-icon">
+                                        <AnimalPowerIcon speciesProfileId={power?.speciesProfileId ?? reveal.speciesProfileId} size={14} gap={0} fallback={lesson ? <LessonIcon /> : <SparkIcon />} />
+                                    </span>
+                                )}
+                            >
+                                <span data-testid="ark-reveal-heading">{heading}</span>
+                            </AskSpecialLabel>
                             <ArkChangeNumbers change={reveal} words={words.ark} money={money} locale={locale} progress={progress} />
                         </section>
                     </AskSpecialBubble>
@@ -234,21 +256,11 @@ export function ArkRevealMessages({reveal, fresh, reducedMotion, faceUrl, speake
 }
 
 /**
- * Why "I'll do it" played no reveal, quietly: only for this animal's once-a-day
- * cap. A sensitive problem is never announced; `no_change`, `already` and any
- * reason this build does not know show nothing (the daily cap is gone).
- */
-export function ArkRevealSkippedNote({reason, name, words}: {reason: ArkRevealSkip; name: string; words: CompanionWords}) {
-    const line = arkRevealSkipShowsNote(reason) ? fillWords(words.ark.skippedAnimalCap, {name}) : null;
-    return line ? <p className="pl-9 pt-1.5 text-[11px] leading-4 text-white/50" data-testid="ark-reveal-skipped">{line}</p> : null;
-}
-
-/**
  * A revision, under the message that caused it: what it was ("it went
  * better" / "worse"), what they said, and the numbers, animating when it has
  * just arrived. Undo is the Diary's (`onUndo` there).
  */
-export function ArkRevisionCard({revision, animate, words, money, locale, onUndo, undoing = false, problem = null, framed = true}: {
+export function ArkRevisionCard({revision, animate, words, money, locale, onUndo, undoing = false, problem = null, framed = true, plain = true}: {
     revision: ArkChange;
     animate: boolean;
     words: CompanionWords;
@@ -259,6 +271,8 @@ export function ArkRevisionCard({revision, animate, words, money, locale, onUndo
     problem?: string | null;
     /** In the chat: its own card, lined up with the animal's messages. In the Diary: bare, inside the entry. */
     framed?: boolean;
+    /** The chat's plain thread: full width, as the step card in a reply (see `ArkRevealMessages`). */
+    plain?: boolean;
 }) {
     const progress = useArkProgress(animate, true);
     const direction = arkRevisionDirection(revision);
@@ -271,11 +285,8 @@ export function ArkRevisionCard({revision, animate, words, money, locale, onUndo
         ? fillWords(words.ark.revisedFrom, {words: revision.statement})
         : revision.source === "report" ? words.ark.revisedFromReport : null;
     const body = (
-        <section className={`flex min-w-[240px] flex-col gap-2.5 sm:min-w-[300px] ${undone ? "opacity-60" : ""}`} aria-label={title} data-testid={`ark-revision-${undone ? "undone" : direction}`}>
-            <p role="heading" aria-level={3} className="flex items-center gap-1.5 text-[11px] font-black uppercase leading-4 tracking-[0.12em]" style={{color: tint}}>
-                <ReviseIcon />
-                <span>{title}</span>
-            </p>
+        <section className={`flex flex-col gap-2.5 ${undone ? "opacity-60" : ""}`} aria-label={title} data-testid={`ark-revision-${undone ? "undone" : direction}`}>
+            <AskSpecialLabel icon={<ReviseIcon />} tint={tint}>{title}</AskSpecialLabel>
             {said ? <p className="text-[13px] italic leading-5 text-white/70">{said}</p> : null}
             <ArkChangeNumbers change={revision} words={words.ark} money={money} locale={locale} progress={progress} />
             {onUndo && !undone ? (
@@ -295,12 +306,10 @@ export function ArkRevisionCard({revision, animate, words, money, locale, onUndo
         </section>
     );
     if (!framed) return body;
+    // The step card's own container, lined up with the animal's messages.
     return (
-        <div className={`flex items-end gap-2 pr-2 pt-1.5 ${animate ? "ask-ark-arrive" : ""}`}>
-            <span aria-hidden="true" className="w-7 shrink-0" />
-            <div className="flex min-w-0 flex-1 flex-col items-start">
-                <AskSpecialShell testId="ark-revision-card">{body}</AskSpecialShell>
-            </div>
+        <div className={`pt-1.5 ${animate ? "ask-ark-arrive" : ""}`}>
+            <AskSpecialBubble avatarUrl={null} showsFace={false} plain={plain} testId="ark-revision-card">{body}</AskSpecialBubble>
         </div>
     );
 }

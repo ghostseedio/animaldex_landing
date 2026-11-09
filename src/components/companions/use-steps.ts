@@ -24,7 +24,6 @@ import {
     type StepProblemCode,
     type StepRecordWithMedia
 } from "@/lib/your-step";
-import {decodeArkChange, arkRevealSkip, type ArkChange, type ArkRevealSkip} from "@/lib/ark";
 import {normalizeCompanionLoop, type AskCompanionLoop} from "@/lib/ask-animaldex/companion-loop";
 
 const OPEN_STEP_EVENT = "animaldex:open-step";
@@ -113,27 +112,6 @@ async function post(body: Record<string, unknown>): Promise<{ok: true; payload: 
     }
 }
 
-/** "I'll do it", answered: the step now, and the Life Sim reveal it played (or why none). */
-export type StepAccepted = {step: AnimalStep; reveal: ArkChange | null; revealSkipped: ArkRevealSkip | null};
-
-/**
- * "I'll do it": the step as the server now holds it, and its reveal
- * (docs/life-sim/CONTRACT.md, section 3). An old server sends no reveal.
- */
-export async function acceptStep(step: AnimalStep): Promise<StepCallResult<StepAccepted>> {
-    const result = await post({action: "accept", stepId: step.id});
-    if (!result.ok) return result;
-    const reveal = decodeArkChange(result.payload.reveal);
-    return {
-        ok: true,
-        value: {
-            step: decodeStepResult(result.payload.step) ?? {...step, acceptedAt: step.acceptedAt ?? new Date().toISOString()},
-            reveal,
-            revealSkipped: reveal ? null : arkRevealSkip(result.payload.revealSkipped)
-        }
-    };
-}
-
 /** "A different step": the step is dropped (a no-op on one no longer open). */
 export async function dropStep(step: AnimalStep): Promise<StepCallResult<null>> {
     const result = await post({action: "drop", stepId: step.id});
@@ -141,23 +119,16 @@ export async function dropStep(step: AnimalStep): Promise<StepCallResult<null>> 
 }
 
 /**
- * "Make this my step": the Trial replaces any open step, accepted at once.
- * Life Sim: the reveal comes from `accept_animal_step_v1` right after
- * (a Trials card's step is untagged, so it reveals with `story: []`). The
- * step stands even when that second call fails: no reveal then.
+ * "Make this my step": the Trial replaces any open step. Nothing is accepted
+ * (owner, 2026-11-09: one button, no "I'll do it"): the step shows "I've done
+ * it", and its Life Sim reveal comes once it is done, as any step's. A reveal
+ * an older server still sends here is ignored.
  */
-export async function stepFromTrial(speciesProfileId: string, frequency: StepFrequency): Promise<StepCallResult<StepAccepted>> {
+export async function stepFromTrial(speciesProfileId: string, frequency: StepFrequency): Promise<StepCallResult<AnimalStep>> {
     const result = await post({action: "fromTrial", speciesProfileId, frequency});
     if (!result.ok) return result;
     const step = decodeStepResult(result.payload.step);
-    if (!step) return {ok: false, code: "step_unavailable"};
-    const accepted = await acceptStep(step);
-    return {
-        ok: true,
-        value: accepted.ok
-            ? {...accepted.value, step: {...accepted.value.step, trialFrequency: accepted.value.step.trialFrequency ?? step.trialFrequency}}
-            : {step, reveal: null, revealSkipped: null}
-    };
+    return step ? {ok: true, value: step} : {ok: false, code: "step_unavailable"};
 }
 
 /**

@@ -9,9 +9,10 @@
  * AnimalWarmupOfferSection, AnimalWarmupQuestionMessage, DebateOfferSection):
  *
  *   - the step: "YOUR STEP" with the walking figure (and the Trial's
- *     difficulty), the step in bold, its loop, then [I'll do it] / [I did it]
- *     and [A different step]; once finished, "DONE TOGETHER"; dropped or
- *     replaced, the words alone, dimmed;
+ *     difficulty), the step in bold, its loop, then ONE button, [I've done
+ *     it], and [A different step] (owner, 2026-11-09: no "I'll do it"); once
+ *     finished, "DONE TOGETHER" and no action at all; dropped or replaced,
+ *     the words alone, dimmed, no action either;
  *   - done: "DONE TOGETHER · +5 XP", the step, Share; on the first done step
  *     the Power earned: its name large, "{name}'s Power is yours · Earned in
  *     your own life", their photo and their own words, about a second of
@@ -39,7 +40,7 @@ import {type AnimalTrial, frequencyAccent, instructionsPreview, sortTrials, tria
 import {fillWords, trialDifficultyText, trialDifficulty, type CompanionWords} from "@/lib/companion-bond";
 import {askWarmupChoiceMark, type AskStepResolution} from "@/lib/ask-animaldex/special-messages";
 import type {AskWarmupItem} from "@/lib/ask-animaldex/thread";
-import {stepCardState, type StepFrequency} from "@/lib/your-step";
+import type {StepFrequency} from "@/lib/your-step";
 import {
     stepDoneLabel,
     stepProofBonusLine,
@@ -104,11 +105,13 @@ function ShareChip({label, onShare}: {label: string; onShare: () => void}) {
 // MARK: - The step
 
 /**
- * The last section of the bubble that set the step. Live, not accepted: [I'll
- * do it] [A different step], where "I'll do it" plays the Life Sim reveal under
- * this message (docs/life-sim/CONTRACT.md, section 3); accepted: [I've done it]
- * [A different step], which puts the message bar in report mode (the report
- * still earns the Power, as before); reported: "Tell {name} more". A step
+ * The last section of the bubble that set the step. Live: [I've done it] [A
+ * different step] (and Start a debate, Ask another animal), where "I've done
+ * it" puts the message bar in report mode; reported: "Tell {name} more". There
+ * is no accepting first (owner, 2026-11-09, after the phone test: one
+ * button): the Life Sim reveal comes once the step is done, under the reply
+ * that finished it. Done, or dropped or replaced: the quiet state alone, never
+ * a button (the owner saw actions on an ended step). A step
  * picked from a Trial shows that Trial's loop and its difficulty. When no
  * reply in the thread carries the open step (set in an earlier conversation,
  * or the thread cleared), this section is the whole of one more animal
@@ -152,6 +155,7 @@ export function AskStepSection({
     const live = resolution.kind === "live" ? resolution.step : null;
     const frequency = live?.trialFrequency ?? trialFrequency;
     const closed = resolution.kind === "closed";
+    const ended = closed || resolution.kind === "done";
     // The Trial loop plays only on the live step (owner, 2026-11-09): never on one replaced, done or still resolving.
     const loop = useTrialMotionStoryboard(speciesProfileId, frequency, Boolean(live));
     return (
@@ -161,14 +165,13 @@ export function AskStepSection({
             data-testid={`special-step-${resolution.kind}`}
         >
             <AskSpecialLabel icon={<AskWalkIcon />} trailing={difficultyTrailing(frequency, words)}>{words.journey.step.pinnedLabel}</AskSpecialLabel>
-            <p className={`text-[15px] font-bold leading-6 ${closed ? "text-white/60" : "text-white"}`}>{live?.step ?? text}</p>
+            <p className={`text-[15px] font-bold leading-6 ${ended ? "text-white/60" : "text-white"}`}>{live?.step ?? text}</p>
             {loop.storyboard && live ? <LoopInPlace storyboard={loop.storyboard} captions={loop.captions} label={live?.step ?? text} /> : null}
             {live ? (
                 busy ? <Working /> : (
                     <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={onPrimary} className={PRIMARY} data-testid={stepCardState(live) === "offered" ? "step-accept" : "step-did-it"}>
-                            {/* Life Sim: not yet taken on, "I'll do it" plays the reveal; then "I've done it" reports. */}
-                            {stepCardState(live) === "offered" ? words.journey.step.accept : stepPrimaryLabel(live, name, words)}
+                        <button type="button" onClick={onPrimary} className={PRIMARY} data-testid="step-did-it">
+                            {stepPrimaryLabel(live, name, words)}
                         </button>
                         <button type="button" onClick={onOther} className={SECONDARY}>
                             {words.journey.step.other}

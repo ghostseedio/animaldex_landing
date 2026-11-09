@@ -2,11 +2,11 @@
 
 import {useMemo, useState, type ReactNode} from "react";
 import {AskReplyBubbles, AskUserBubble} from "@/components/ask-animaldex/ask-messenger";
-import {AskStepSection} from "@/components/ask-animaldex/ask-special";
+import {AskDoneSection, AskEarnedSection, AskStepSection} from "@/components/ask-animaldex/ask-special";
+import {StepReportComposer} from "@/components/companions/step-views";
 import {
     ArkBarsPanel,
     ArkRevealMessages,
-    ArkRevealSkippedNote,
     ArkRevisionCard,
     ArkScoreCard,
     ArkStepsPowersTiles
@@ -25,6 +25,9 @@ const STEP = id(1);
 const FOCUS = id(2);
 const SPECIES = id(3);
 const FACE = getSpeciesArtworkRoute("komodo-dragon");
+const POWER = "Strike First";
+/** A Power icon as the icon route answers it (line art in the text colour). */
+const POWER_ICON_SVG = '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="none" stroke="currentColor"/></svg>';
 
 /** A Lesson (contract section 8): the story mentions the real £600; the balance moves by a share. */
 const LESSON_ROW = {
@@ -166,6 +169,10 @@ function installGalleryFetch() {
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
         // The route answers decoded entries.
+        if (url.includes("/api/animal-power-icons")) {
+            const ids = new URL(url, window.location.origin).searchParams.get("ids")?.split(",") ?? [];
+            return json({icons: Object.fromEntries(ids.map((one) => [one, POWER_ICON_SVG]))});
+        }
         if (url.includes("/api/app/diary")) return json({entries: decodeProblemDiary(DIARY), visibility: teenMode ? "private" : "public", teen: teenMode, ark: true});
         if (url.includes("/api/app/ark") && init?.method === "POST") {
             const body = JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>;
@@ -186,25 +193,28 @@ function Frame({title, width, children}: {title: string; width: number; children
     );
 }
 
-/** The real step card; "I'll do it" plays the reveal right under it, as the chat does. */
-function LiveStep({words, money, locale, reveal, skip}: {
+/**
+ * The real step card with ONE button (owner, 2026-11-09): "I've done it"
+ * sends a report; the animal's reply finishes the step (its done or Power
+ * earned section), the step card goes quiet, and the reveal arrives under
+ * that reply, headed by the Power.
+ */
+function LiveStep({words, money, locale, reveal, earnsPower}: {
     words: CompanionWords;
     money: (usd: number) => string;
     locale: string;
-    reveal: ArkChange | null;
-    skip?: "animal_cap";
+    reveal: ArkChange;
+    earnsPower: boolean;
 }) {
     const offered = decodeAnimalStep({id: STEP, step: "Buy the materials today, before the price goes up."}) as AnimalStep;
-    const [step, setStep] = useState<AnimalStep>(offered);
+    const [state, setState] = useState<"live" | "done" | "closed">("live");
     const [busy, setBusy] = useState(false);
-    const [played, setPlayed] = useState<{reveal: ArkChange | null; skip: typeof skip | null} | null>(null);
     const [run, setRun] = useState(0);
-    const accept = () => {
+    const done = () => {
         setBusy(true);
         window.setTimeout(() => {
             setBusy(false);
-            setStep({...step, acceptedAt: new Date().toISOString()});
-            setPlayed({reveal, skip: skip ?? null});
+            setState("done");
             setRun((current) => current + 1);
         }, 400);
     };
@@ -220,32 +230,85 @@ function LiveStep({words, money, locale, reveal, skip}: {
                 photoAlt=""
                 special={(
                     <AskStepSection
-                        text={step.step}
-                        resolution={{kind: "live", step}}
+                        text={offered.step}
+                        resolution={state === "live" ? {kind: "live", step: offered} : {kind: state}}
                         trialFrequency={null}
                         speciesProfileId={null}
                         name="Komodo dragon"
                         words={words}
                         busy={busy}
                         problem={null}
-                        onPrimary={() => (step.acceptedAt ? undefined : accept())}
-                        onOther={() => setStep(offered)}
+                        onPrimary={done}
+                        onOther={() => setState("closed")}
+                        onStartDebate={() => undefined}
+                        onAskAnother={{label: "Ask another animal", onClick: () => undefined}}
                     />
                 )}
             />
-            {played?.skip ? <ArkRevealSkippedNote reason={played.skip} name="Komodo dragon" words={words} /> : null}
-            {played?.reveal ? (
-                <ArkRevealMessages key={run} reveal={played.reveal} fresh reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
+            {state === "done" ? (
+                <>
+                    <div className="pt-3.5"><AskUserBubble text="Bought the lot this morning. The boxes are in the hallway." label="You" /></div>
+                    <div className="pt-3.5">
+                        <AskReplyBubbles
+                            plain
+                            text="You moved before the herd. That is the whole of it."
+                            isLive={false}
+                            avatarUrl={FACE}
+                            speakerName="Komodo dragon"
+                            photoUrl={null}
+                            photoAlt=""
+                            special={earnsPower ? (
+                                <AskEarnedSection powerName={POWER} speciesProfileId={SPECIES} name="Komodo dragon" xp={10} words={words} report={null} burst={false} onBurstEnd={() => undefined} shareLabel="Share" onShare={() => undefined} />
+                            ) : (
+                                <AskDoneSection xp={10} step={offered.step} words={words} shareLabel="Share" onShare={() => undefined} />
+                            )}
+                        />
+                    </div>
+                    <ArkRevealMessages
+                        key={run}
+                        reveal={reveal}
+                        power={{name: POWER, speciesProfileId: SPECIES, earnedHere: earnsPower}}
+                        fresh
+                        reducedMotion={false}
+                        faceUrl={FACE}
+                        speakerName="Komodo dragon"
+                        words={words}
+                        money={money}
+                        locale={locale}
+                    />
+                </>
             ) : null}
-            {played ? (
-                <button type="button" className="mt-3 self-start text-[11px] font-bold text-white/50 underline" onClick={() => {
-                    setStep(offered);
-                    setPlayed(null);
-                }}>
+            {state !== "live" ? (
+                <button type="button" className="mt-3 self-start text-[11px] font-bold text-white/50 underline" onClick={() => setState("live")}>
                     reset
                 </button>
             ) : null}
         </div>
+    );
+}
+
+/** The report sheet (the chat's on a narrow screen, the Bond tab's): its proof line says it is optional. */
+function ReportSheetButton({words}: {words: CompanionWords}) {
+    const [open, setOpen] = useState(false);
+    return (
+        <>
+            <button type="button" data-testid="open-report-sheet" className="self-start rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-white" onClick={() => setOpen(true)}>
+                Open the report sheet
+            </button>
+            {open ? (
+                <StepReportComposer
+                    name="Komodo dragon"
+                    words={words}
+                    sendingLabel="…"
+                    closeLabel="Close"
+                    onCancel={() => setOpen(false)}
+                    onSubmit={async () => {
+                        setOpen(false);
+                        return null;
+                    }}
+                />
+            ) : null}
+        </>
     );
 }
 
@@ -265,27 +328,30 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
             <h1 className="font-display text-3xl text-white">Life Sim gallery</h1>
 
             <div className="flex flex-wrap items-start gap-8">
-                <Frame title="Step, I'll do it (tap it: a Lesson)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={lesson} />
+                <Frame title="Step, one button (I've done it: Power earned)" width={416}>
+                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower />
                 </Frame>
-                <Frame title="Step, I'll do it (tap it: Earned)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={earned} />
+                <Frame title="Step, one button (I've done it: a later step)" width={416}>
+                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower={false} />
                 </Frame>
-                <Frame title="Step, I'll do it (tap it: this animal's cap)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={null} skip="animal_cap" />
+                <Frame title="Step, one button (I've done it: a Lesson)" width={416}>
+                    <LiveStep words={words} money={money} locale={locale} reveal={lesson} earnsPower={false} />
+                </Frame>
+                <Frame title="Report sheet" width={416}>
+                    <ReportSheetButton words={words} />
                 </Frame>
             </div>
 
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Reveal, Lesson, playing" width={416}>
                     <button type="button" className="mb-2 text-[11px] font-bold text-white/50 underline" onClick={() => setReplay((n) => n + 1)}>replay</button>
-                    <ArkRevealMessages key={replay} reveal={lesson} fresh reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
+                    <ArkRevealMessages key={replay} reveal={lesson} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
                 </Frame>
                 <Frame title="Reveal, Earned, thread reopened" width={416}>
-                    <ArkRevealMessages reveal={earned} fresh={false} reducedMotion={false} faceUrl={getSpeciesArtworkRoute("javan-rhino")} speakerName="Javan rhino" words={words} money={money} locale={locale} />
+                    <ArkRevealMessages reveal={earned} power={{name: "Slow Charge", speciesProfileId: id(6), earnedHere: true}} fresh={false} reducedMotion={false} faceUrl={getSpeciesArtworkRoute("javan-rhino")} speakerName="Javan rhino" words={words} money={money} locale={locale} />
                 </Frame>
                 <Frame title="Reveal, numbers alone (no story yet)" width={416}>
-                    <ArkRevealMessages reveal={{...earned, story: [], reaction: null}} fresh={false} reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
+                    <ArkRevealMessages reveal={{...earned, story: [], reaction: null}} power={{name: POWER, speciesProfileId: SPECIES, earnedHere: false}} fresh={false} reducedMotion={false} faceUrl={FACE} speakerName="Komodo dragon" words={words} money={money} locale={locale} />
                 </Frame>
             </div>
 

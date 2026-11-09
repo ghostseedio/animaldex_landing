@@ -113,8 +113,8 @@ export const YOUR_STEP_COPY = {
         placeholder: "Tell {name} how it went",
         attach: "Add a photo or video",
         attachNote: "Optional. It's kept in your record with {name}, and only you can see it.",
-        /** Proof bonus (owner, 2026-10-31): report mode's attach caption. Optional; a step counts without it. */
-        attachBonus: "Add a photo or video of you doing it · +5 XP",
+        /** Proof bonus (owner, 2026-10-31): report mode's attach caption. Optional, and it says so (owner, 2026-11-09); a step counts without it. */
+        attachBonus: "Optional: add a photo or video of you doing it for +5 XP",
         send: "Tell {name}",
         /** The step's first button once a report is attached: it opens report mode again. */
         more: "Tell {name} more",
@@ -337,6 +337,12 @@ export const ARK_COPY = {
     /** The reveal's label and the Diary's states. */
     earned: "Earned",
     lesson: "Lesson",
+    /** The reveal's header beside the animal's Power icon (owner, 2026-11-09): the step that earned the Power… */
+    powerEarned: "{power} earned",
+    /** …a later step with it… */
+    powerStepDone: "{power} · Step done",
+    /** …and without a Power name. */
+    stepDone: "Step done",
     revised: "Revised",
     undone: "Undone",
     /** A loss is a lesson, with what it taught next to it. */

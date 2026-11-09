@@ -116,7 +116,6 @@ import {
     cleanStepReport,
     isStepVideoFile,
     reportingStep,
-    stepCardState,
     stepReportReady,
     MAX_STEP_REPORT_CHARACTERS,
     STEP_MEDIA_ACCEPT,
@@ -129,7 +128,6 @@ import {notingTrainingResult, trainingCanStart} from "@/lib/species-training";
 import {submitSpeciesTraining, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 import {
-    acceptStep,
     attachStepReport,
     dropStep,
     noteOpenStep,
@@ -139,18 +137,19 @@ import {
     useOpenStepUpdates
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
-import {ArkRevealMessages, ArkRevealSkippedNote, ArkRevisionCard} from "@/components/ark/ark-views";
+import {ArkRevealMessages, ArkRevisionCard} from "@/components/ark/ark-views";
 import {arkMoneyFormatter, fetchArkChanges, useDisplayCurrency} from "@/components/ark/use-ark";
 import {
     ARK_EVENTS,
+    arkIsReveal,
     arkIsRevision,
     arkRevealAnchorId,
+    arkRevealDone,
     arkRevealShownParams,
     arkRevisionAnchorId,
     arkRevisionShownParams,
     arkThreadChanges,
-    type ArkChange,
-    type ArkRevealSkip
+    type ArkChange
 } from "@/lib/ark";
 import {
     AskDebateOfferSection,
@@ -1844,7 +1843,7 @@ function AskConversation({
         setReportPreview(null);
         setReporting(null);
     }, [openStep, setReportPreview]);
-    // MARK: Life Sim (docs/life-sim/CONTRACT.md): the reveal after "I'll do it", revisions under their messages
+    // MARK: Life Sim (docs/life-sim/CONTRACT.md): the reveal once a step is done, revisions under their messages
 
     const displayCurrency = useDisplayCurrency();
     const arkMoney = useMemo(() => arkMoneyFormatter(displayCurrency, locale), [displayCurrency, locale]);
@@ -1852,10 +1851,11 @@ function AskConversation({
     const [ark, setArk] = useState<{threadKey: string; changes: ArkChange[]; loaded: boolean}>(() => ({threadKey, changes: [], loaded: false}));
     /** Changes that arrived while this chat was open: they play in, the rest are already there. */
     const [arkFresh, setArkFresh] = useState<ReadonlySet<string>>(() => new Set());
-    /** "I'll do it" played no reveal because of a cap: a quiet line under the step. */
-    const [arkSkip, setArkSkip] = useState<{stepId: string; reason: ArkRevealSkip} | null>(null);
     const arkRef = useRef(ark);
     arkRef.current = ark;
+    /** The thread as of this render, for the timers that read the Ark again once a reply is out. */
+    const messagesRef = useRef(messages);
+    messagesRef.current = messages;
     const reloadArk = useCallback(async () => {
         if (!ownerChat) return;
         const key = threadKey;
@@ -1864,16 +1864,21 @@ function AskConversation({
         const current = arkRef.current;
         if (current.threadKey === key && current.loaded) {
             const known = new Set(current.changes.map((change) => change.id));
-            const arrived = changes.filter((change) => !known.has(change.id) && arkIsRevision(change));
+            // A reveal now arrives here too, after the reply that finished its step (owner, 2026-11-09).
+            const arrived = changes.filter((change) => !known.has(change.id) && (arkIsRevision(change) || arkIsReveal(change)));
             if (arrived.length > 0) {
                 sticksToBottom.current = true;
                 setArkFresh((fresh) => new Set([...Array.from(fresh), ...arrived.map((change) => change.id)]));
+                for (const change of arrived) {
+                    if (arkIsReveal(change)) trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(change, companionSpeciesProfileId));
+                }
             }
         }
         setArk({threadKey: key, changes, loaded: true});
-    }, [ownerChat, threadKey]);
+    }, [ownerChat, threadKey, companionSpeciesProfileId]);
     // When the chat opens, then after each reply: the memory call that may
-    // revise a step runs once the reply is out, so it is read again a little later.
+    // revise a step runs once the reply is out, so it is read again a little
+    // later; a reply that finished a step is read sooner, for its reveal.
     useEffect(() => {
         if (!ownerChat) return;
         void reloadArk();
@@ -1883,47 +1888,19 @@ function AskConversation({
         const finished = wasSending.current && !isSending;
         wasSending.current = isSending;
         if (!finished || !ownerChat) return;
-        const timers = [4_000, 12_000].map((delay) => window.setTimeout(() => void reloadArk(), delay));
+        const newest = messagesRef.current[messagesRef.current.length - 1];
+        const finishedStep = newest?.role === "assistant" && Boolean(newest.companionEvent?.stepDone);
+        const timers = [...(finishedStep ? [1_200] : []), 4_000, 12_000].map((delay) => window.setTimeout(() => void reloadArk(), delay));
         return () => timers.forEach((timer) => window.clearTimeout(timer));
     }, [isSending, ownerChat, reloadArk]);
-    /** A step just taken on: its reveal plays here (and is counted), or why none is said for a cap. */
-    const noteArkAccepted = useCallback((stepId: string, reveal: ArkChange | null, revealSkipped: ArkRevealSkip | null) => {
-        if (reveal) {
-            sticksToBottom.current = true;
-            setArkFresh((fresh) => new Set([...Array.from(fresh), reveal.id]));
-            setArk((current) => ({
-                threadKey,
-                loaded: current.threadKey === threadKey && current.loaded,
-                changes: [reveal, ...(current.threadKey === threadKey ? current.changes.filter((change) => change.id !== reveal.id) : [])]
-            }));
-            trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(reveal, companionSpeciesProfileId));
-        } else if (revealSkipped) {
-            setArkSkip({stepId, reason: revealSkipped});
-            trackEvent(ARK_EVENTS.revealSkipped, {reason: revealSkipped});
-        }
-    }, [threadKey, companionSpeciesProfileId]);
-    /** "I'll do it": the step is taken on and its reveal plays right here, under the message that set it. */
-    const acceptAndReveal = useCallback(async (step: AnimalStep) => {
-        if (isSending && greetingState !== "loading") return;
-        setStepBusy(true);
-        setStepProblem(null);
-        const result = await acceptStep(step);
-        setStepBusy(false);
-        if (!result.ok) {
-            setStepProblem(stepProblemText(result.code, words));
-            return;
-        }
-        setOpenStep(result.value.step);
-        noteArkAccepted(step.id, result.value.reveal, result.value.revealSkipped);
-    }, [isSending, greetingState, words, setOpenStep, noteArkAccepted]);
-    /** Not yet taken on: "I'll do it". Taken on: "I've done it" (or "Tell {name} more") puts the bar in report mode. */
-    const stepPrimary = useCallback((step: AnimalStep) => {
-        if (stepCardState(step) === "offered") {
-            void acceptAndReveal(step);
-            return;
-        }
+    /**
+     * "I've done it" (or "Tell {name} more") puts the bar in report mode: one
+     * button, no accepting first (owner, 2026-11-09). The reveal comes once
+     * the step is done, after the reply to their report.
+     */
+    const stepPrimary = useCallback((_step: AnimalStep) => {
         startReport();
-    }, [startReport, acceptAndReveal]);
+    }, [startReport]);
     /** "A different step": the step is dropped, then they ask for a different one, as their own message. */
     const stepOther = useCallback((step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;
@@ -2176,10 +2153,8 @@ function AskConversation({
                 setTrialProblem({messageId, text: stepProblemText(result.code, words)});
                 return;
             }
-            const step = {...result.value.step, trialFrequency: result.value.step.trialFrequency ?? frequency};
+            const step = {...result.value, trialFrequency: result.value.trialFrequency ?? frequency};
             setOpenStep(step);
-            // Life Sim: the Trial's step is taken on at once, so its reveal plays now (numbers only: no story yet).
-            noteArkAccepted(step.id, result.value.reveal, result.value.revealSkipped);
             // The reply now carries that step instead of its Trials, with its loop.
             const offered = messages.find((message) => message.id === messageId);
             updateMessage(messageId, {
@@ -2189,7 +2164,7 @@ function AskConversation({
             const message = trialPickedMessage(frequency, words);
             if (message) submit(message, "chip");
         });
-    }, [companionSpeciesProfileId, setOpenStep, submit, words, updateMessage, messages, noteArkAccepted]);
+    }, [companionSpeciesProfileId, setOpenStep, submit, words, updateMessage, messages]);
 
     // MARK: Debates (3.2)
 
@@ -2418,10 +2393,11 @@ function AskConversation({
     // Steps the animal saw done in this thread: their sections say so.
     const doneStepIds = useMemo(() => askDoneStepIds(messages), [messages]);
     /**
-     * Life Sim in this thread: each reveal under the reply that set its
-     * step, each revision under the person's message that caused it
-     * (contract section 4). A reveal whose reply is not loaded goes with the
-     * open step's own message, or, just played, at the end.
+     * Life Sim in this thread: each reveal under the animal's reply that
+     * finished its step (an older one, made when a step was taken on, under
+     * the reply that set it), each revision under the person's message that
+     * caused it (contract section 4). A reveal whose reply is not loaded goes
+     * with the open step's own message, or, just played, at the end.
      */
     const arkThread = useMemo(() => {
         if (!ownerChat || ark.threadKey !== threadKey) return null;
@@ -2534,6 +2510,12 @@ function AskConversation({
         <ArkRevealMessages
             key={`ark-${reveal.id}`}
             reveal={reveal}
+            // The animal's own Power heads it: "{Power} earned" when the reply that finished this step earned it.
+            power={{
+                name: hints.principleName?.trim() || null,
+                speciesProfileId: companionSpeciesProfileId,
+                earnedHere: reveal.stepId ? arkRevealDone(reveal.stepId, messages)?.powerEarned === true : false
+            }}
             fresh={arkFresh.has(reveal.id)}
             reducedMotion={reducedMotion}
             faceUrl={faceUrl}
@@ -2543,20 +2525,16 @@ function AskConversation({
             locale={locale}
         />
     );
-    /** "No reveal today" under the open step, for a cap only. */
-    const arkSkipNote = arkSkip && openStep?.id === arkSkip.stepId
-        ? <ArkRevealSkippedNote key="ark-skip" reason={arkSkip.reason} name={speakerName} words={words} />
-        : null;
-    /** What the Ark adds after a message in the thread: the reveal of the step it set, the revisions it caused. */
+    /** What the Ark adds after a message in the thread: the reveal of the step it finished, the revisions it caused. */
     const arkBlocks = (message: AskMessage) => {
         const blocks = arkThread?.after.get(message.id);
-        const skip = message.id === stepCarrierId ? arkSkipNote : null;
-        if (!blocks && !skip) return null;
+        if (!blocks) return null;
+        // The reveal follows the reply once it is all there, never under words still being typed out.
+        const typing = pacer.revealing && pacer.messageId === message.id;
         return (
             <>
-                {skip}
-                {blocks?.reveals.map(arkReveal)}
-                {blocks?.revisions.map((revision) => (
+                {typing ? null : blocks.reveals.map(arkReveal)}
+                {blocks.revisions.map((revision) => (
                     <ArkRevisionCard
                         key={`ark-${revision.id}`}
                         revision={revision}
@@ -2577,7 +2555,6 @@ function AskConversation({
             data-testid="thread-step"
         >
             <AskSpecialBubble avatarUrl={faceUrl}>{stepSection(threadStep, false)}</AskSpecialBubble>
-            {stepCarrierId === null ? arkSkipNote : null}
             {arkThread?.withThreadStep.map(arkReveal)}
         </div>
     ) : null;
@@ -3398,12 +3375,13 @@ function AskConversation({
                                         </p>
                                         <p className="mt-0.5 truncate text-[13px] leading-5 text-white/80" title={openStep.step}>{openStep.step}</p>
                                         {!reporting.file ? (
-                                            // The proof bonus, said where you add it: optional, never required.
+                                            // The proof bonus, said where you add it: optional, never required, and it reads so
+                                            // (owner, 2026-11-09): "Optional:" first, in the strip's quiet grey, not a neon call to action.
                                             <button
                                                 type="button"
                                                 onClick={() => reportFileRef.current?.click()}
                                                 disabled={reporting.sending}
-                                                className="mt-1 block max-w-full text-left text-[11px] font-semibold leading-4 text-primary-300/90 transition-colors hover:text-primary-200 disabled:opacity-40"
+                                                className="mt-1 block max-w-full text-left text-[11px] font-medium leading-4 text-white/55 transition-colors hover:text-white/80 disabled:opacity-40"
                                                 data-testid="report-proof-hint"
                                             >
                                                 {words.journey.report.attachBonus}
