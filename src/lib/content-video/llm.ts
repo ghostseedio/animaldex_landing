@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import sharp from "sharp";
 import {
     buildPlanUserPrompt,
@@ -72,12 +72,12 @@ async function prepareImages(source: VideoSource): Promise<PlanImage[]> {
 
 function providers(): Provider[] {
     const list: Provider[] = [];
-    const claudeKey = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const claudeKey = anthropicApiKey();
     if (claudeKey) {
         list.push({
             name: "claude",
             generate: async ({system, schema}, user, images) => {
-                const client = new Anthropic({apiKey: claudeKey});
+                const client = anthropicClient({apiKey: claudeKey});
                 const response = await client.beta.messages.create({
                     model: process.env.CONTENT_VIDEO_CLAUDE_MODEL?.trim() || "claude-opus-5-5",
                     max_tokens: 8000,

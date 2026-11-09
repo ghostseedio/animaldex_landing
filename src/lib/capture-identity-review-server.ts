@@ -1,6 +1,6 @@
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import {findReviewCandidates, type CaptureForReview} from "@/lib/capture-identity-review";
 import {createSignedStorageUrl} from "@/lib/capture-storage-image";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
@@ -189,12 +189,12 @@ type Provider = {name: string; run: (prompt: string, images: Array<{mediaType: s
 function providers(): Provider[] {
     const list: Provider[] = [];
 
-    const claudeKey = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const claudeKey = anthropicApiKey();
     if (claudeKey) {
         list.push({
             name: process.env.CLAUDE_IDENTITY_REVIEW_MODEL?.trim() || "claude-opus-5-5",
             run: async (prompt, images) => {
-                const client = new Anthropic({apiKey: claudeKey});
+                const client = anthropicClient({apiKey: claudeKey});
                 const response = await client.beta.messages.create({
                     model: process.env.CLAUDE_IDENTITY_REVIEW_MODEL?.trim() || "claude-opus-5-5",
                     max_tokens: 4000,

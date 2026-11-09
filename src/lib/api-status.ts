@@ -1,6 +1,7 @@
 import {API_PROVIDERS, classifyProviderReply, higgsfieldCreditFailure, monthStartUTC, sumAnthropicCostReport, sumOpenAICosts, type ApiHealth, type ApiProvider} from "@/lib/api-status-core";
 import {higgsfieldAuthorization, keyframePayload, textToImagePath} from "@/lib/content-video/higgsfield";
 import {listContentVideos, spentTodayUSD} from "@/lib/content-video/store";
+import {anthropicApiKey, anthropicKeyFallbackFetch} from "@/lib/anthropic-keys";
 
 // /admin/api-status: a one-token probe per AI provider (a fraction of a cent
 // each; Higgsfield's is a free price estimate), plus spend where the provider
@@ -38,9 +39,9 @@ function message(result: {health: ApiHealth; status: number; body: string}) {
 }
 
 async function claude(now: Date): Promise<ApiStatus> {
-    const key = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const key = anthropicApiKey();
     if (!key) return {provider: "claude", health: "not_configured", message: "CLAUDE_API_KEY is not set", latencyMs: null, monthSpendUSD: null, spendSource: null};
-    const result = await probe(() => fetch("https://api.anthropic.com/v1/messages", {
+    const result = await probe(() => anthropicKeyFallbackFetch()("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
         body: JSON.stringify({model: process.env.API_STATUS_CLAUDE_MODEL?.trim() || "claude-haiku-5-5", max_tokens: 1, messages: [{role: "user", content: "ping"}]}),

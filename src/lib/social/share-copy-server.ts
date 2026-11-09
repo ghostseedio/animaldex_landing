@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import publishedTrials from "@/data/published-animal-trials.json";
 import {getSpeciesPageData} from "@/data/database-species-pages";
 import {resolveSpeciesBehaviorProfileForPage} from "@/data/species-behavior-lessons";
@@ -65,10 +65,10 @@ export type GeneratedShareCopy = {copy: ShareCopy; source: "claude" | "template"
 
 /** Claude's draft held to the rules, or the template when there is no key or the call fails. */
 export async function generateShareCopy(context: SpeciesShareContext): Promise<GeneratedShareCopy> {
-    const key = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const key = anthropicApiKey();
     if (!key) return {copy: buildTemplateCopy(context), source: "template", error: "CLAUDE_API_KEY is not configured"};
     try {
-        const client = new Anthropic({apiKey: key});
+        const client = anthropicClient({apiKey: key});
         const response = await client.beta.messages.create({
             model: process.env.CLAUDE_SOCIAL_COPY_MODEL?.trim() || "claude-opus-5-5",
             max_tokens: 4000,

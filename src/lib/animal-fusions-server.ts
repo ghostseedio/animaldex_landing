@@ -1,6 +1,6 @@
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {
     buildAnimalFusionSlug,
@@ -337,12 +337,12 @@ const RECIPE_JSON_SCHEMA = {
 function fusionProviders(): FusionProvider[] {
     const providers: FusionProvider[] = [];
 
-    const claudeKey = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const claudeKey = anthropicApiKey();
     if (claudeKey) {
         providers.push({
             name: "claude",
             generate: async ({systemPrompt, userPrompt}) => {
-                const client = new Anthropic({apiKey: claudeKey});
+                const client = anthropicClient({apiKey: claudeKey});
                 const response = await client.beta.messages.create({
                     model: process.env.CLAUDE_PRINCIPLE_FUSION_MODEL?.trim() || "claude-opus-5-5",
                     max_tokens: 16000,

@@ -25,7 +25,7 @@ import "server-only";
  * than any spoken-reply allowance, so a spoken reply needs no count of its own.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicClient} from "@/lib/anthropic-keys";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {ASK_QUESTION_MAX, type AskViewer} from "@/lib/ask-animaldex/request";
@@ -152,7 +152,7 @@ function claudeCallAnswerSource(params: {
     signal?: AbortSignal;
 }): AnswerDeltaSource {
     return async (emit) => {
-        const client = new Anthropic({apiKey: params.key, timeout: 90_000, maxRetries: 0});
+        const client = anthropicClient({apiKey: params.key, timeout: 90_000, maxRetries: 0});
         const stream = client.beta.messages.stream({
             model: params.model,
             max_tokens: 3000,

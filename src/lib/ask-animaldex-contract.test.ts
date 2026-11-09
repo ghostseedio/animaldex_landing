@@ -104,7 +104,8 @@ test("the animal is Claude first, then Gemini, then OpenAI, exactly as the app d
     const code = readCode("src/lib/ask-animaldex/providers.ts");
     // Claude Opus 5.5 speaks as the animal, through the official SDK, with the
     // system prompt cached, effort as the only dial and server-side fallbacks.
-    assert.match(providers, /from "@anthropic-ai\/sdk"/);
+    // The SDK client comes from anthropic-keys, which adds the CLAUDE_API_KEY_2 fallback.
+    assert.match(providers, /from "@\/lib\/anthropic-keys"/);
     assert.match(providers, /"claude-opus-5-5"/);
     assert.match(code, /betas: \["server-side-fallback-2026-07-01"\]/);
     assert.match(code, /fallbacks: "default"/);
@@ -115,7 +116,7 @@ test("the animal is Claude first, then Gemini, then OpenAI, exactly as the app d
     assert.match(code, /if \(options\.animalVoice && claudeAskKey\(\)\) providers\.push\("claude"\)/);
     assert.ok(code.indexOf('providers.push("claude")') < code.indexOf('providers.push("gemini")'));
     assert.ok(code.indexOf('providers.push("gemini")') < code.indexOf('providers.push("openai")'));
-    assert.match(code, /CLAUDE_API_KEY/);
+    assert.match(code, /anthropicApiKey\(\)/);
     assert.match(code, /ANIMAL_CHAT_PROVIDER/);
     assert.match(providers, /gemini-2\.5-flash/);
     assert.match(providers, /streamGenerateContent\?alt=sse/);

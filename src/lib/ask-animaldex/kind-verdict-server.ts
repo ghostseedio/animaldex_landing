@@ -7,7 +7,7 @@
  * a new one is kept for the next person.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicClient} from "@/lib/anthropic-keys";
 import {
     ASK_HELD_MATCH_FLOOR,
     ASK_KIND_VERDICT_MAX_TOKENS,
@@ -66,7 +66,7 @@ export async function requestAskTurnRead(params: {
     fetchImpl?: typeof fetch;
 }): Promise<AskTurnRead | null> {
     try {
-        const client = new Anthropic({
+        const client = anthropicClient({
             apiKey: params.key,
             timeout: params.timeoutMs ?? 5_000,
             // The reply goes ahead without a verdict rather than wait for a retry.

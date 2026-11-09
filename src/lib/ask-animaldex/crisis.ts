@@ -15,7 +15,7 @@
 /// answers, it overrules the word list both ways: a figure of speech is not a
 /// crisis, and a crisis in other words is one.
 
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicClient} from "@/lib/anthropic-keys";
 
 type Env = (name: string) => string | undefined;
 const defaultEnv: Env = (name) => process.env[name]?.trim() || undefined;
@@ -112,7 +112,7 @@ export async function requestCrisisCheck(params: {
     fetchImpl?: typeof fetch;
 }): Promise<CrisisCheck | null> {
     try {
-        const client = new Anthropic({
+        const client = anthropicClient({
             apiKey: params.apiKey,
             fetch: (input, init) => (params.fetchImpl ?? fetch)(input, init),
             timeout: params.timeoutMs ?? 4_000,

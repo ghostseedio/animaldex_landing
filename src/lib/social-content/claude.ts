@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import sharp from "sharp";
 import {parseModelJson} from "@/lib/content-video/plan";
 
@@ -13,7 +13,7 @@ const USD_PER_INPUT_TOKEN = 4 / 1_000_000;
 const USD_PER_OUTPUT_TOKEN = 20 / 1_000_000;
 
 export function isClaudeReady() {
-    return Boolean(process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim());
+    return Boolean(anthropicApiKey());
 }
 
 /** A page photo the writer sees, by its number. */
@@ -31,10 +31,10 @@ async function photo(image: PromptImage) {
 export type StructuredReply = {value: unknown; usd: number; loadedImages: number[]};
 
 export async function structuredClaude(input: {system: string; user: string; schema: Record<string, unknown>; images?: PromptImage[]; effort?: "low" | "medium" | "high"}): Promise<StructuredReply> {
-    const apiKey = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const apiKey = anthropicApiKey();
     if (!apiKey) throw new Error("CLAUDE_API_KEY is not set on the server");
     const photos = (await Promise.all((input.images ?? []).slice(0, 12).map(photo))).filter((entry): entry is {index: number; data: string} => entry !== null);
-    const client = new Anthropic({apiKey});
+    const client = anthropicClient({apiKey});
     const response = await client.beta.messages.create({
         model: process.env.SOCIAL_CONTENT_CLAUDE_MODEL?.trim() || "claude-opus-5-5",
         max_tokens: 16000,

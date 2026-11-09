@@ -18,7 +18,7 @@ import "server-only";
  * by `gemini-2.5-flash`, and OpenAI is its fallback.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import type {AskChatEffort} from "@/lib/ask-animaldex/persona";
 import type {AskConversationTurn} from "@/lib/ask-animaldex/prompt";
 
@@ -51,7 +51,7 @@ export function resolveOpenAIAskModel(): string {
 /** The same secret names the edge function and the website's other Claude callers read. */
 export function claudeAskKey(): string | null {
     if (process.env.ANIMAL_CHAT_PROVIDER?.trim().toLowerCase() === "gemini") return null;
-    return process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim() || null;
+    return anthropicApiKey() ?? null;
 }
 
 export function geminiAskKey(): string | null {
@@ -191,7 +191,7 @@ export function claudeAnswerSource(params: SourceParams & {
     fallback?: boolean;
 }): AnswerDeltaSource {
     return async (emit) => {
-        const client = new Anthropic({apiKey: params.key, timeout: 90_000, maxRetries: 0});
+        const client = anthropicClient({apiKey: params.key, timeout: 90_000, maxRetries: 0});
         const stream = client.beta.messages.stream({
             model: params.model,
             max_tokens: params.maxTokens ?? 6000,
@@ -486,7 +486,7 @@ async function requestClaudeJSON(params: {
     // One retry: this is already the last resort for a reader whose stream
     // died, and a dropped connection (seen once on a cold dev server) is
     // worth one more try before the answer comes from another model.
-    const client = new Anthropic({apiKey: params.key, timeout: 60_000, maxRetries: 1});
+    const client = anthropicClient({apiKey: params.key, timeout: 60_000, maxRetries: 1});
     const response = await client.beta.messages.create({
         model: params.model,
         max_tokens: 8000,

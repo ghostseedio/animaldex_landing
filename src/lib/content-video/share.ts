@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import {normalizeShareCopy, parseShareCopy, SHARE_COPY_JSON_SCHEMA, type ShareCopy} from "@/lib/social/share-copy";
 import {loadPageSource} from "@/lib/content-video/page-sources";
 import {sourcePath} from "@/lib/content-video/source-paths";
@@ -95,11 +95,11 @@ export async function blogShareCopy(id: string, regenerate: boolean): Promise<Bl
     const planned = credit(normalizeShareCopy(row.plan.share, context));
     if (!regenerate) return {copy: planned, source: row.llm_provider === "claude" ? "claude" : "template"};
 
-    const key = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const key = anthropicApiKey();
     if (!key) return {copy: planned, source: "template", error: "CLAUDE_API_KEY is not configured"};
     try {
         const source = await loadPageSource(row.source_type, row.source_slug);
-        const client = new Anthropic({apiKey: key});
+        const client = anthropicClient({apiKey: key});
         const response = await client.beta.messages.create({
             model: process.env.CLAUDE_SOCIAL_COPY_MODEL?.trim() || "claude-opus-5-5",
             max_tokens: 4000,

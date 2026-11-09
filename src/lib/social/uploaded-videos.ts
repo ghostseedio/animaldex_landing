@@ -1,5 +1,5 @@
 import {randomUUID} from "crypto";
-import Anthropic from "@anthropic-ai/sdk";
+import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {CONTENT_VIDEO_BUCKET, publicStorageUrl} from "@/lib/content-video/store";
 import {normalizeShareCopy, parseShareCopy, SHARE_COPY_JSON_SCHEMA, type ShareCopy} from "@/lib/social/share-copy";
@@ -202,10 +202,10 @@ export async function uploadedShareCopy(id: string, regenerate: boolean): Promis
     if (row.share && !regenerate) return {copy: normalizeShareCopy(row.share, context), source: "claude"};
     const fallback = normalizeShareCopy(row.share ?? placeholderCopy(row), context);
 
-    const key = process.env.CLAUDE_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+    const key = anthropicApiKey();
     if (!key) return {copy: fallback, source: "template", error: "CLAUDE_API_KEY is not configured"};
     try {
-        const client = new Anthropic({apiKey: key});
+        const client = anthropicClient({apiKey: key});
         const response = await client.beta.messages.create({
             model: process.env.CLAUDE_SOCIAL_COPY_MODEL?.trim() || "claude-opus-5-5",
             max_tokens: 4000,
