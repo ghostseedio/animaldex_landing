@@ -62,7 +62,11 @@ export function buildCrisisCheckPrompt(input: CrisisCheckInput): string {
         "someone, being hurt or threatened by someone at this moment, or in a medical emergency? In any language, and in",
         "slang. Jokes, song lyrics, games, fiction, figures of speech (\"this traffic is killing me\", \"I could die of",
         "embarrassment\") and a past that is over are not. Sadness, stress, grief or loneliness on their own are concern,",
-        "not crisis. When unsure between concern and crisis, say crisis.",
+        "not crisis. Judge the message itself: the earlier turns only tell you what it refers to. A message with no sign of",
+        "risk of its own (\"just talk about life\", \"ok\", a change of subject) is crisis only when it plainly continues an",
+        "earlier statement that they want to die or hurt themselves or someone (\"I've decided\" after \"I want to end it\");",
+        "a sad or lonely conversation before it does not make it one. When the message itself shows a real sign of risk and",
+        "you are unsure between concern and crisis, say crisis.",
         ...(input.teen
             ? ["The person is 13 to 17: any sign they want to hurt themselves, or that an adult is hurting or threatening them, is crisis."]
             : []),
