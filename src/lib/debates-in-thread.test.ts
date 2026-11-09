@@ -59,33 +59,37 @@ test("each turn's name: the nickname for the asker's own animals, else the speci
 
 test("Voting closes in a short time, in the reader's language, and says nothing once it has passed", () => {
     const now = Date.parse("2026-10-31T12:00:00Z");
-    assert.equal(debateClosesIn("2026-10-31T17:00:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 5 hours");
-    assert.equal(debateClosesIn("2026-10-31T12:20:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 20 minutes");
+    assert.equal(debateClosesIn("2026-10-31T17:00:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 5h");
+    assert.equal(debateClosesIn("2026-10-31T12:20:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 20m");
     assert.equal(debateClosesIn("2026-11-03T12:00:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 3 days");
-    assert.equal(debateClosesIn("2026-10-31T13:00:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 1 hour");
+    assert.equal(debateClosesIn("2026-10-31T13:00:00Z", COMPANION_WORDS_EN, "en", now), "Voting closes in 1h");
     assert.equal(debateClosesIn("2026-10-31T11:00:00Z", COMPANION_WORDS_EN, "en", now), null);
     assert.equal(debateClosesIn(null, COMPANION_WORDS_EN, "en", now), null);
-    assert.match(debateClosesIn("2026-10-31T17:00:00Z", {...COMPANION_WORDS_EN, debate: {...COMPANION_WORDS_EN.debate, votingClosesIn: "Voting ditutup dalam {time}"}}, "id", now) ?? "", /^Voting ditutup dalam 5 jam$/);
+    assert.match(debateClosesIn("2026-10-31T17:00:00Z", {...COMPANION_WORDS_EN, debate: {...COMPANION_WORDS_EN.debate, votingClosesIn: "Voting ditutup dalam {time}"}}, "id", now) ?? "", /^Voting ditutup dalam 5 j$/);
 });
 
-test("one countdown for every vote: hours under 48 h (minutes under 1 h), otherwise days rounded up", () => {
+test("one vote clock, the apps' (iOS DebateVoteClock): minutes up, hours down under 48 h, then days up", () => {
     const hour = 3600e3;
+    const minute = 60e3;
     const now = Date.parse("2026-11-09T12:00:00Z");
     const at = (ms: number) => new Date(now + ms).toISOString();
     // The owner's report: a 48-hour vote with about 40 hours left said "1 day".
-    assert.equal(debateClosesIn(at(40 * hour), COMPANION_WORDS_EN, "en", now), "Voting closes in 40 hours");
-    assert.equal(debateClosesIn(at(47.9 * hour), COMPANION_WORDS_EN, "en", now), "Voting closes in 47 hours");
-    assert.equal(debateClosesIn(at(24 * hour), COMPANION_WORDS_EN, "en", now), "Voting closes in 24 hours");
-    assert.equal(debateClosesIn(at(48 * hour), COMPANION_WORDS_EN, "en", now), "Voting closes in 2 days");
+    assert.equal(debateClosesIn(at(40 * hour + 12 * minute), COMPANION_WORDS_EN, "en", now), "Voting closes in 40h");
+    assert.deepEqual(debateTimeLeft(40 * hour + 12 * minute), {value: 40, unit: "hour"});
+    assert.deepEqual(debateTimeLeft(47 * hour + 59 * minute), {value: 47, unit: "hour"});
+    assert.deepEqual(debateTimeLeft(hour), {value: 1, unit: "hour"});
+    assert.deepEqual(debateTimeLeft(35 * minute), {value: 35, unit: "minute"});
+    assert.deepEqual(debateTimeLeft(34 * minute + 1000), {value: 35, unit: "minute"});
+    assert.deepEqual(debateTimeLeft(20e3), {value: 1, unit: "minute"});
+    assert.equal(debateClosesIn(at(35 * minute), COMPANION_WORDS_EN, "en", now), "Voting closes in 35m");
+    assert.deepEqual(debateTimeLeft(48 * hour), {value: 2, unit: "day"});
+    assert.deepEqual(debateTimeLeft(49 * hour), {value: 3, unit: "day"});
+    assert.deepEqual(debateTimeLeft(72 * hour), {value: 3, unit: "day"});
     assert.equal(debateClosesIn(at(49 * hour), COMPANION_WORDS_EN, "en", now), "Voting closes in 3 days");
-    assert.equal(debateClosesIn(at(59 * 60e3), COMPANION_WORDS_EN, "en", now), "Voting closes in 59 minutes");
-    assert.equal(debateClosesIn(at(20e3), COMPANION_WORDS_EN, "en", now), "Voting closes in 1 minute");
-    assert.deepEqual(debateTimeLeft(90 * 60e3), {value: 2, unit: "hour"});
-    assert.deepEqual(debateTimeLeft(39.6 * hour), {value: 40, unit: "hour"});
-    assert.deepEqual(debateTimeLeft(72 * hour + 1), {value: 4, unit: "day"});
     assert.equal(debateTimeLeft(0), null);
-    assert.equal(debateTimeLeft(-5), null);
+    assert.equal(debateTimeLeft(-60e3), null);
     assert.equal(debateTimeLeft(Number.NaN), null);
+    assert.equal(debateClosesIn(at(-1000), COMPANION_WORDS_EN, "en", now), null);
 });
 
 test("the in-thread debate words are the SPEC's", () => {

@@ -79,7 +79,7 @@ function installGalleryFetch() {
         if (url.includes("/api/app/debates?id=")) {
             await new Promise((resolve) => setTimeout(resolve, 400));
             const full = {
-                id: id(901), visibility: "public", status: "voting", is_asker: true, host_capture_id: HOST, asked_public: true,
+                id: id(901), visibility: "public", status: "voting", is_asker: true, turns: [], host_capture_id: HOST, asked_public: true,
                 participants: participants(3, true), report: report(3), my_way: id(103),
                 voting_deadline_at: new Date(Date.now() + 40 * HOUR).toISOString(), votes_total: 2
             };
@@ -108,7 +108,7 @@ export default function DebatesGalleryClient({words, locale}: {words: CompanionW
     const chosenOwn = debate({participants: participants(3, true), report: report(3), my_way: id(102), voting_deadline_at: deadline});
     // Back in the host's chat: the row My debates sends (no report, no chosen way); the block reads the rest.
     const listRow = decodeDebate({id: id(901), visibility: "public", status: "voting", role: "asker", participants: participants(3, true), created_at: "2026-11-09T08:00:00Z"}) as Debate;
-    const card = (count: number) => debate({id: id(910 + count), is_asker: false, participants: participants(count, false), report: report(count), problem_public: "Someone was offered the lead of their design team after two years. They love the craft but want more say in where the work goes. Should they take it, or stay a designer and grow their influence another way, without losing the parts of the job they love most?", voting_deadline_at: deadline, votes_total: 5, can_vote: true});
+    const card = (count: number, extra: Record<string, unknown> = {}) => debate({id: id(910 + count), is_asker: false, ...extra, participants: participants(count, false), report: {...report(count), try_first: "Ask for a one-month trial as lead before you decide."}, problem_public: "Someone was offered the lead of their design team after two years. They love the craft but want more say in where the work goes. Should they take it, or stay a designer and grow their influence another way, without losing the parts of the job they love most?", voting_deadline_at: deadline, votes_total: 5, can_vote: true, ...extra});
     return (
         <div className="flex flex-col gap-10 px-6 py-8">
             <h1 className="font-display text-3xl text-white">Debates gallery</h1>
@@ -132,14 +132,17 @@ export default function DebatesGalleryClient({words, locale}: {words: CompanionW
             </div>
 
             <div className="flex flex-wrap items-start gap-8">
-                <Frame title="E. Explore card, 7 animals, phone (375 × 700)" width={375} height={700}>
+                <Frame title="E. Explore card, 7 animals, phone slot (375 × 670)" width={375} height={670}>
                     <DebatePost debate={card(7)} words={words} signedIn locale={locale} />
                 </Frame>
                 <Frame title="E. Explore card, 7 animals, desktop column (560 × 760)" width={560} height={760}>
                     <DebatePost debate={card(7)} words={words} signedIn locale={locale} />
                 </Frame>
-                <Frame title="E. Explore card, 3 animals (no +N), phone" width={375} height={700}>
-                    <DebatePost debate={card(3)} words={words} signedIn locale={locale} />
+                <Frame title="E. Explore card, voted for the 6th animal (kept among the 3), rolled over" width={375} height={670}>
+                    <DebatePost debate={card(7, {my_vote: id(106), can_vote: false, rollovers: 1, voting_deadline_at: new Date(Date.now() + 20 * HOUR).toISOString()})} words={words} signedIn locale={locale} />
+                </Frame>
+                <Frame title="E. Explore card, a small slot (375 × 520): steps down to faces" width={375} height={520}>
+                    <DebatePost debate={card(7)} words={words} signedIn locale={locale} />
                 </Frame>
             </div>
 

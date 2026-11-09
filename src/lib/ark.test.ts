@@ -383,7 +383,9 @@ test("the Diary's public notice says what public means, and no Diary word mentio
         const all = Object.values(words).join(" ").toLowerCase();
         assert.doesNotMatch(all, /summar|ringkasan|hide|sembunyi|approve|setuj/);
     }
-    assert.match(COMPANION_WORDS_EN.ark.diary.publicNotice, /debates you asked in public/);
-    assert.match(COMPANION_WORDS_EN.ark.diary.publicNotice, /life bars/);
+    // The apps' words exactly (iOS ff32eac8).
+    assert.equal(COMPANION_WORDS_EN.ark.diary.publicNotice, "Your diary is public. Other people see your public debates on your Diary tab, and your Ark bars. Make it private to keep your bars to yourself.");
+    assert.equal(COMPANION_WORDS_EN.ark.diary.publicCaption, "Others see your public debates and your Ark bars.");
+    assert.equal(COMPANION_WORDS_EN.ark.diary.privateNotice, "Others see your public debates, not your Ark bars.");
     assert.equal("summaryTitle" in COMPANION_WORDS_EN.ark.diary, false);
 });

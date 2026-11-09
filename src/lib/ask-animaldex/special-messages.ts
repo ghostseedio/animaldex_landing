@@ -202,12 +202,20 @@ export function askThreadStepIndex(params: {
     greetingPending: boolean;
     /** The reply being typed out right now, if any. */
     revealingId: string | null;
+    /**
+     * When the step was set (`set_at`). One set after the chat opened (a
+     * debate way chosen while it was open, owner 2026-11-09) sits after the
+     * last message before it, under the debate, not up in the history.
+     */
+    setAt?: string | null;
 }): number | null {
     const {step, messages} = params;
     if (!step || askStepCarrierId(messages, step) !== null) return null;
+    const setAt = Date.parse(params.setAt ?? "");
+    const after = Number.isFinite(setAt) && setAt > params.openedAt ? setAt : params.openedAt;
     for (let index = messages.length - 1; index >= 0; index -= 1) {
         const written = Date.parse(messages[index].createdAt);
-        if (Number.isFinite(written) && written < params.openedAt) return index + 1;
+        if (Number.isFinite(written) && written < after) return index + 1;
     }
     const hello = messages.findIndex((message) => message.isGreeting === true);
     if (hello >= 0) {

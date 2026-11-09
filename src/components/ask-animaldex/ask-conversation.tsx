@@ -2412,7 +2412,8 @@ function AskConversation({
         messages,
         openedAt: visit.openedAt,
         greetingPending: awaitingGreeting,
-        revealingId: pacer.revealing ? pacer.messageId : null
+        revealingId: pacer.revealing ? pacer.messageId : null,
+        setAt: threadStep && openStep && threadStep.id === openStep.id ? openStep.setAt : null
     }) : null;
     // Steps the animal saw done in this thread: their sections say so.
     const doneStepIds = useMemo(() => askDoneStepIds(messages), [messages]);

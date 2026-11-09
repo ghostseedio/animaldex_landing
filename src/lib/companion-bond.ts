@@ -261,6 +261,11 @@ export const DEBATE_COPY = {
      */
     wayNext: "Next: {animal} gives you a step from this way. Doing it earns {animal}'s Power, {power}.",
     wayNextNoPower: "Next: {animal} gives you a step from this way. Doing it earns {animal}'s Power.",
+    /** The host turns another animal's way (one they have not caught) into their step. */
+    wayNextTurns: "Next: {animal} turns {chosen}'s way into your step. Doing it earns {animal}'s Power, {power}.",
+    wayNextTurnsNoPower: "Next: {animal} turns {chosen}'s way into your step. Doing it earns {animal}'s Power.",
+    /** That animal's Power is already theirs. */
+    wayNextEarned: "Next: {animal} gives you a step from this way. Do it, then tell {animal} how it went.",
     /** A public debate's card with more animals than it shows (at most 3). */
     moreCount: "+{n} more",
     /** A way they tried that did not work (2026-11-03): the others are there to try. */
@@ -301,7 +306,7 @@ export const DEBATE_COPY = {
     // Ask the public (V2 section 6; iOS 390e5c2a).
     askPublic: "Ask the public",
     askPublicTitle: "Ask the public?",
-    askPublicNote: "Your problem and the animals' ways are rewritten without names, places or details that could identify anyone. You read it before it goes up. It shows on Explore and on your profile. The community votes for 48 hours, longer until at least 3 people have. Nothing is at stake.",
+    askPublicNote: "Your problem and the animals' ways are rewritten without names, places or details that could identify anyone. You read it before it goes up. It shows on Explore and on your profile. The community votes for 48 hours, then 24 hours more at a time until at least 3 people have voted and one way leads. Nothing is at stake.",
     askPublicGo: "Prepare it",
     askPublicDrafting: "Taking out names and details…",
     askPublicReview: "This is what people will see, on Explore and on your profile. Change anything you'd rather keep to yourself.",
@@ -366,16 +371,18 @@ export const ARK_COPY = {
     /** Someone else's profile with a private diary: the bars stay theirs. */
     barsPrivate: "Their life bars show only on a public diary.",
     /**
-     * The Diary's switch and its notice (contract section 7). No public
-     * summaries (owner, 2026-11-09): public means others see the debates you
-     * asked in public and your life bars, never a problem or a step.
+     * The Diary's switch, its first-time notice and its caption (contract
+     * section 7, iOS ff32eac8). No public summaries (owner, 2026-11-09): your
+     * public debates show on your Diary tab either way; Public shows others
+     * your Ark bars too.
      */
     diary: {
         public: "Public",
         private: "Private",
         visibility: "Diary",
-        publicNotice: "Your diary is public. Others see the debates you asked in public and your life bars. Your problems, steps and words stay private.",
-        privateNotice: "Your diary is private. Your life bars show only to you. Debates you asked in public still show on your profile.",
+        publicNotice: "Your diary is public. Other people see your public debates on your Diary tab, and your Ark bars. Make it private to keep your bars to yourself.",
+        publicCaption: "Others see your public debates and your Ark bars.",
+        privateNotice: "Others see your public debates, not your Ark bars.",
         teenNotice: "Your diary is private.",
         gotIt: "Got it",
         makePrivate: "Make private",

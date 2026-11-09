@@ -42,11 +42,13 @@ import {
     debateResultLines,
     debateSpeakerLine,
     debateStatusText,
+    debateStepAnimal,
     debateVotesText,
     debateWayNextLine
 } from "@/lib/debate-words";
 import {debateIsOwnOnly} from "@/lib/debates";
 import {voteOnDebate, noteDebateChanged} from "@/components/debates/use-debates";
+import {useCompanions} from "@/components/companions/use-companions";
 
 export function debateFaceUrl(participant: Pick<DebateParticipant, "slug"> | null | undefined): string | null {
     return participant?.slug ? getSpeciesImageRoute(participant.slug) : null;
@@ -89,135 +91,10 @@ export function DebateFaces({debate, size = 26}: {debate: Debate; size?: number}
     );
 }
 
-/** "+4 more" under a card's first three animals: shows the rest in place. */
-export function DebateMoreAnimals({more, words, onShow}: {more: number; words: CompanionWords; onShow: () => void}) {
-    if (more <= 0) return null;
-    return (
-        <button
-            type="button"
-            onClick={onShow}
-            className="inline-flex min-h-9 items-center self-start rounded-full border border-white/12 bg-white/[0.05] px-3.5 text-xs font-bold text-white transition-colors hover:bg-white/10"
-            data-testid="debate-more-animals"
-        >
-            {fillWords(words.debate.moreCount, {n: more})}
-        </button>
-    );
-}
-
-function ReportLine({label, text}: {label: string; text: string | null}) {
-    if (!text) return null;
-    return (
-        <p className="text-[13px] leading-5 text-white/75">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{label} · </span>
-            {text}
-        </p>
-    );
-}
-
-/**
- * "Debate report": the problem in one line, each animal's way with the
- * lesson behind it, where it fits and what it costs, and what to try first.
- * It never picks a winner. The asker gets "Try {name}'s way" on each animal
- * (their private choice, never a vote); on an animal that is not theirs,
- * "Capture a {species} to earn its Power."
- */
-export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay, choosing, chosenId, problem}: {
-    debate: Debate;
-    words: CompanionWords;
-    /** The band's edge-to-edge margins in its column. */
-    bleed?: string;
-    /** The asker only. */
-    onTryWay?: (participant: DebateParticipant) => void;
-    choosing?: string | null;
-    chosenId?: string | null;
-    problem?: string | null;
-}) {
-    const report = debate.report;
-    if (!report) return null;
-    const web = words.debateWeb;
-    return (
-        <section aria-label={words.debate.reportTitle} className={`${bleed} border-y border-white/[0.08] bg-white/[0.025] py-4`}>
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary-200/85">{words.debate.reportTitle}</p>
-            {report.problem ? <p className="mt-2 font-display text-lg font-black leading-6 text-white">{report.problem}</p> : null}
-            <div className="mt-3 flex flex-col divide-y divide-white/[0.06]">
-                {debate.participants.map((participant) => {
-                    const way = reportWayFor(report, participant);
-                    if (!way) return null;
-                    const name = debateAnimalName(participant);
-                    const color = debateColor(participant);
-                    const chosen = chosenId === participant.id;
-                    const tried = !chosen && debate.triedParticipantIds.includes(participant.id);
-                    return (
-                        <div key={participant.id} className="flex flex-col gap-1.5 py-3">
-                            <div className="flex items-center gap-2">
-                                <AskAnimalFace url={debateFaceUrl(participant)} size={26} />
-                                <span className="text-sm font-bold" style={{color}}>{name}</span>
-                                {participant.powerName ? <span className="min-w-0 truncate text-[11px] font-semibold text-white/40">{participant.powerName}</span> : null}
-                            </div>
-                            <p className="text-[15px] leading-6 text-white">{way.way}</p>
-                            <ReportLine label={web.reportLesson} text={way.lesson} />
-                            <ReportLine label={web.reportFits} text={way.fits} />
-                            <ReportLine label={web.reportCosts} text={way.costs} />
-                            {onTryWay && tried ? (
-                                <p className="mt-1.5 text-[13px] font-semibold text-white/60" data-testid="debate-tried-way">{words.debate.didntWorkForYou}</p>
-                            ) : onTryWay ? (
-                                <div className="mt-1.5 flex flex-col items-start gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => onTryWay(participant)}
-                                        disabled={Boolean(choosing)}
-                                        aria-pressed={chosen}
-                                        className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-[13px] font-black transition-colors disabled:opacity-60 ${
-                                            chosen ? "bg-white text-black" : "bg-primary-400 text-black hover:bg-primary-300 active:bg-primary-500"
-                                        }`}
-                                    >
-                                        {choosing === participant.id ? web.choosing : fillWords(words.debate.tryWay, {name})}
-                                    </button>
-                                    {!participant.isAskerOwned && !participant.ownerIsMe ? (
-                                        <span className="text-[11px] leading-4 text-white/50">{fillWords(words.debate.catchToEarn, {species: participant.animal})}</span>
-                                    ) : null}
-                                </div>
-                            ) : null}
-                        </div>
-                    );
-                })}
-            </div>
-            {report.tryFirst ? (
-                <p className="mt-2 border-t border-white/[0.08] pt-3 text-sm leading-6 text-white/85">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-300">{web.reportTryFirst} · </span>
-                    {report.tryFirst}
-                </p>
-            ) : null}
-            {problem ? <p role="alert" className="mt-2 text-xs text-white/60">{problem}</p> : null}
-        </section>
-    );
-}
-
-/**
- * "Which animal has the best way for this?": one Vote per animal, the counts,
- * "You voted" on the one they chose, "You can't vote on a debate you're in"
- * for its people, and the result once it is settled.
- */
-export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", onChange, locale, expanded = true, onShowAll}: {
-    debate: Debate;
-    words: CompanionWords;
-    signedIn: boolean;
-    bleed?: string;
-    onChange?: (debate: Debate) => void;
-    locale?: string;
-    /** False on Explore's card: the first three animals, then "+N more" (`onShowAll`). */
-    expanded?: boolean;
-    onShowAll?: () => void;
-}) {
+/** One Vote: the call, then the counts as they stand after it, here and on every surface showing the debate. */
+export function useDebateVote(debate: Debate, words: CompanionWords, onChange?: (debate: Debate) => void) {
     const [voting, setVoting] = useState<string | null>(null);
     const [problem, setProblem] = useState<string | null>(null);
-    if (debate.visibility !== "public") return null;
-    const state = debateVoteState(debate, signedIn);
-    const results = debateResultLines(debate, words);
-    const showsCounts = state.kind !== "vote" || debate.status !== "voting";
-    const closesIn = debate.status === "voting" ? debateClosesIn(debate.votingDeadlineAt, words, locale) : null;
-    const {shown, more} = debateCardAnimals(debate.participants, expanded || !onShowAll);
-
     const vote = (participant: DebateParticipant) => {
         if (voting) return;
         setVoting(participant.id);
@@ -244,63 +121,7 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
             noteDebateChanged(next);
         });
     };
-
-    return (
-        <section aria-label={words.debate.voteQuestion} className={`${bleed} border-y border-white/[0.08] py-4`}>
-            <p className="text-sm font-black text-white">{words.debate.voteQuestion}</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-white/45">
-                {debateVotesText(debate.totalVotes, words)}
-                {debate.status === "voting" && debate.rollovers > 0 ? ` · ${words.debate.rollover}` : closesIn ? ` · ${closesIn}` : ""}
-            </p>
-            <div className="mt-3 flex flex-col gap-2">
-                {shown.map((participant) => {
-                    const name = debateAnimalName(participant);
-                    const mine = state.kind === "voted" && state.participantId === participant.id;
-                    const won = debate.status === "settled" && debate.winnerParticipantId === participant.id;
-                    return (
-                        <div key={participant.id} className="flex items-center gap-2.5">
-                            <span className="shrink-0 rounded-full">
-                                <AskAnimalFace url={debateFaceUrl(participant)} size={28} />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className={`block truncate text-sm font-bold ${won ? "text-primary-200" : "text-white"}`}>{name}</span>
-                                {mine ? <span className="block text-[11px] font-semibold text-primary-200">{words.debate.voted}</span> : null}
-                            </span>
-                            {/* Per-animal counts only once the server shows them (not to someone who could still be swayed). */}
-                            {showsCounts && participant.votes !== null ? (
-                                <span className="shrink-0 text-xs font-bold tabular-nums text-white/60">{participant.votes}</span>
-                            ) : null}
-                            {state.kind === "vote" ? (
-                                <button
-                                    type="button"
-                                    onClick={() => vote(participant)}
-                                    disabled={Boolean(voting)}
-                                    aria-label={`${words.debate.vote}: ${name}`}
-                                    className="min-h-9 shrink-0 rounded-full bg-primary-400 px-4 text-xs font-black text-black transition-colors hover:bg-primary-300 active:bg-primary-500 disabled:opacity-60"
-                                >
-                                    {words.debate.vote}
-                                </button>
-                            ) : null}
-                        </div>
-                    );
-                })}
-                {onShowAll ? <DebateMoreAnimals more={more} words={words} onShow={onShowAll} /> : null}
-            </div>
-            {state.kind === "own" ? <p className="mt-3 text-xs leading-5 text-white/60">{words.debate.cantVoteOwn}</p> : null}
-            {state.kind === "ineligible" ? <p className="mt-3 text-xs leading-5 text-white/60">{words.debateWeb.ineligible}</p> : null}
-            {state.kind === "signIn" ? (
-                <Link href="/account" className="mt-3 inline-flex min-h-9 items-center rounded-full bg-primary-400 px-4 text-xs font-black text-black">
-                    {words.debateWeb.signInToVote}
-                </Link>
-            ) : null}
-            {results.length > 0 ? (
-                <div className="mt-3 flex flex-col gap-1">
-                    {results.map((line) => <p key={line} className="text-sm font-bold text-white">{line}</p>)}
-                </div>
-            ) : null}
-            {problem ? <p role="alert" className="mt-2 text-xs text-white/60">{problem}</p> : null}
-        </section>
-    );
+    return {voting, problem, vote};
 }
 
 /** A debate in a list: the faces, the problem, where it stands. Opens the debate. */
@@ -432,6 +253,12 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
         ? debate.participants.map((participant) => ({participant, way: reportWayFor(report, participant)})).filter((entry) => entry.way !== null)
         : [];
     const chosen = chosenId ? debate.participants.find((participant) => participant.id === chosenId) ?? null : null;
+    // What comes next under the chosen way: whether the step animal's Power is already theirs (their animals' list).
+    const companions = useCompanions(Boolean(onTryWay && chosen));
+    const stepAnimal = chosen ? debateStepAnimal(debate, chosen) : null;
+    const stepSpecies = stepAnimal?.speciesProfileId?.toLowerCase() ?? null;
+    const stepPowerEarned = Boolean(stepSpecies && companions.rows.some((row) => row.speciesProfileId.toLowerCase() === stepSpecies && row.powerEarned));
+    const nextLine = chosen && onTryWay ? debateWayNextLine(debate, chosen, words, stepPowerEarned) : null;
     const header = (template: string) => fillWords(template, {text: ""}).replace(/[:\s]+$/, "");
     return (
         <div ref={ref} className="ask-special-stack flex flex-col">
@@ -458,10 +285,17 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                         choosingLabel={web.choosing}
                                         ownsSpecies={participant.isAskerOwned || participant.ownerIsMe}
                                         qualities={qualities}
-                                        nextLine={chosen?.id === participant.id ? debateWayNextLine(debate, chosen, words) : null}
+                                        nextLine={chosen?.id === participant.id ? nextLine : null}
                                     />
                                 ))}
                             </div>
+                            {/* A chosen way the report draws no row for still says what comes next. */}
+                            {chosen && nextLine && !ways.some(({participant}) => participant.id === chosen.id) ? (
+                                <div className="flex flex-col gap-1" data-testid="debate-chosen">
+                                    <p className="text-[13px] font-semibold leading-5 text-white/70">{fillWords(words.debate.youChose, {name: debateAnimalName(chosen)})}</p>
+                                    <p className="text-[13px] font-semibold leading-5 text-white" data-testid="debate-way-next">{nextLine}</p>
+                                </div>
+                            ) : null}
                         </>
                     ) : wide ? (
                         <div className="max-w-full overflow-x-auto rounded-panel" style={{boxShadow: "inset 0 0 0 1px var(--ask-hairline)"}} data-testid="debate-report-table">
@@ -524,9 +358,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                         chosen ? (
                             <div className="flex flex-col gap-1" data-testid="debate-chosen">
                                 <p className="text-[13px] font-semibold leading-5 text-white/70">{fillWords(words.debate.youChose, {name: debateAnimalName(chosen)})}</p>
-                                {debateWayNextLine(debate, chosen, words) ? (
-                                    <p className="text-[13px] font-semibold leading-5 text-white" data-testid="debate-way-next">{debateWayNextLine(debate, chosen, words)}</p>
-                                ) : null}
+                                {nextLine ? <p className="text-[13px] font-semibold leading-5 text-white" data-testid="debate-way-next">{nextLine}</p> : null}
                                 {!chosen.isAskerOwned && !chosen.ownerIsMe ? (
                                     <p className="text-[12px] leading-4 text-white/50">{fillWords(words.debate.catchToEarn, {species: chosen.animal})}</p>
                                 ) : null}
@@ -632,7 +464,8 @@ export function DebateVoteSection({debate, words, locale, signedIn, onChange}: {
             <AskSpecialLabel icon={<VoteIcon />}>{words.debate.communityVote}</AskSpecialLabel>
             <p className="text-[13px] font-semibold leading-5 text-white/70">
                 {debateVotesText(debate.totalVotes, words)}
-                {debate.status === "voting" ? ` · ${debate.rollovers > 0 ? words.debate.rollover : closesIn ?? words.debateWeb.statusVoting}` : ""}
+                {/* The clock shows after a rollover too (iOS ff32eac8). */}
+                {debate.status === "voting" ? ` · ${[debate.rollovers > 0 ? words.debate.rollover : null, closesIn].filter(Boolean).join(" · ") || words.debateWeb.statusVoting}` : ""}
             </p>
             {state.kind === "vote" || showsCounts ? (
                 <div className="flex flex-col gap-1.5">

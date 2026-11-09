@@ -198,6 +198,14 @@ export type Debate = {
     publicRefused: boolean;
     /** "Ask the public" is open to the asker. */
     canAskPublic: boolean;
+    /**
+     * The debate as `debate_v2` / `debate_v1` give it to this viewer (`turns`
+     * and `is_asker` are in it). A list row is a summary: `my_debates_v1` has
+     * no report and no turns, and the Discover views give everyone, the asker
+     * too, only the public copy. A summary never replaces what a full read
+     * gave (`mergeDebate`, iOS `DebateReadMerge`).
+     */
+    isFullRead: boolean;
 };
 
 /** Who a candidate is (V2): one of the person's own cards, a wild animal (a kind they have not caught: no card), or another person's card from the v1 roster. */
@@ -609,40 +617,71 @@ export function decodeDebate(raw: unknown): Debate | null {
         solution: decodeDebateSolution(row.solution ? {solution: row.solution} : null),
         publicWays,
         publicRefused: bool(first(row, "public_refused", "publicRefused")),
-        canAskPublic: bool(first(row, "can_ask_public", "canAskPublic"))
+        canAskPublic: bool(first(row, "can_ask_public", "canAskPublic")),
+        // A debate this site already decoded says so itself; a server row by its keys.
+        isFullRead: typeof row.isFullRead === "boolean" ? row.isFullRead : "turns" in row && "is_asker" in row
     };
 }
 
 /**
- * A newer copy of a debate laid over the one on screen. Copies differ in
- * what they carry: a row of My debates (`my_debates_v1`) has no report and
- * no chosen way, a vote's answer only the counts. A copy that leaves a thing
- * out never takes it away (owner, 2026-11-09: back in the host's chat after
- * choosing a way, the debate stays, its chosen way marked). Only the server
- * saying so moves them: a reopened way (`tried_ways`) clears the choice.
+ * A new read of a debate joining the copy on screen (iOS `DebateReadMerge`,
+ * owner 2026-11-09, debate d4db8150). Lists read debates too (`my_debates_v1`,
+ * the Discover views) and their summary used to replace the asker's full
+ * read: the report, the "You chose" line and the ways went. A full read (or
+ * any read over a summary) is taken whole, keeping the turns and, from a
+ * summary, the report it lacks. A summary over a full read brings only where
+ * the vote stands: status, the count, the deadline, rollovers, boosted, the
+ * winner, when it settled, each animal's votes, opening, heart and rewards,
+ * and any animal that joined since. The asker's pick and the viewer's vote
+ * stay when a read does not carry them.
  */
-export function mergeDebate(current: Debate, next: Debate): Debate {
-    if (current.id !== next.id) return next;
-    const chosen = current.chosenParticipantId;
-    const reopened = chosen !== null && next.triedParticipantIds.includes(chosen);
+export function mergeDebate(existing: Debate | null | undefined, incoming: Debate): Debate {
+    if (!existing || existing.id !== incoming.id) return incoming;
+    let merged: Debate;
+    if (incoming.isFullRead || !existing.isFullRead) {
+        merged = {...incoming};
+        if (merged.turns.length === 0) merged.turns = existing.turns;
+        if (merged.report === null && !incoming.isFullRead) merged.report = existing.report;
+        if (merged.participants.length === 0) merged.participants = existing.participants;
+    } else {
+        merged = {
+            ...existing,
+            status: incoming.status,
+            votingDeadlineAt: incoming.votingDeadlineAt ?? existing.votingDeadlineAt,
+            rollovers: incoming.rollovers,
+            boosted: incoming.boosted,
+            winnerParticipantId: incoming.winnerParticipantId ?? existing.winnerParticipantId,
+            settledAt: incoming.settledAt ?? existing.settledAt,
+            totalVotes: incoming.totalVotes ?? existing.totalVotes,
+            reportStatus: incoming.reportStatus === "ready" ? "ready" : existing.reportStatus,
+            participants: joinedParticipants(existing.participants, incoming.participants)
+        };
+    }
     return {
-        ...current,
-        ...next,
-        participants: next.participants.length > 0 ? next.participants : current.participants,
-        turns: next.turns.length > 0 ? next.turns : current.turns,
-        report: next.report ?? current.report,
-        // The asker is the asker on every copy; a public copy only leaves it unsaid.
-        askerIsMe: next.askerIsMe || current.askerIsMe,
-        problemPrivate: next.problemPrivate ?? current.problemPrivate,
-        hostCaptureId: next.hostCaptureId ?? current.hostCaptureId,
-        chosenParticipantId: next.chosenParticipantId ?? (reopened ? null : chosen),
-        triedParticipantIds: next.triedParticipantIds.length > 0 ? next.triedParticipantIds : current.triedParticipantIds,
-        // A vote is final.
-        myVote: next.myVote ?? current.myVote,
-        votingDeadlineAt: next.votingDeadlineAt ?? current.votingDeadlineAt,
-        createdAt: next.createdAt ?? current.createdAt,
-        solution: next.solution ?? current.solution
+        ...merged,
+        // (A server summary never carries them; this site's own copy just after a choice or a vote does.)
+        chosenParticipantId: merged.chosenParticipantId ?? existing.chosenParticipantId ?? incoming.chosenParticipantId,
+        myVote: merged.myVote ?? existing.myVote ?? incoming.myVote
     };
+}
+
+/** The full read's animals with the summary's counts and results on them, and any animal that joined since. */
+function joinedParticipants(full: DebateParticipant[], summary: DebateParticipant[]): DebateParticipant[] {
+    const joined = full.map((participant) => {
+        const row = summary.find((item) => item.id === participant.id);
+        if (!row) return participant;
+        return {
+            ...participant,
+            votes: row.votes ?? participant.votes,
+            heartLost: row.heartLost || participant.heartLost,
+            creditsWon: row.creditsWon || participant.creditsWon,
+            xpAwarded: row.xpAwarded || participant.xpAwarded,
+            opening: participant.opening ?? row.opening,
+            isWinner: row.isWinner || participant.isWinner
+        };
+    });
+    const known = new Set(full.map((participant) => participant.id));
+    return [...joined, ...summary.filter((participant) => !known.has(participant.id))].sort((a, b) => a.seat - b.seat);
 }
 
 export function decodeDebates(raw: unknown): Debate[] {

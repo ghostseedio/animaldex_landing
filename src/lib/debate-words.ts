@@ -147,33 +147,36 @@ export function debateCast(debate: Debate, and = "&"): string {
 }
 
 /**
- * The time left on a vote, in one unit (owner, 2026-11-09): under 1 hour
- * in minutes, under 48 hours in hours, otherwise in days rounded up. So a
- * new public vote of 48 hours reads in hours ("40 hours", never "1 day"),
- * and 2 days and an hour reads "3 days". Null once it has passed.
+ * The time left on a vote (iOS `DebateVoteClock`, owner 2026-11-09), never
+ * rounded down into a shorter unit: under 1 hour minutes rounded up (at
+ * least 1), under 48 hours whole hours rounded down ("40h": a day and a
+ * half never reads "1 day"), from 48 hours whole days rounded up. Null
+ * once it has passed.
  */
 export function debateTimeLeft(ms: number): {value: number; unit: "minute" | "hour" | "day"} | null {
     if (!Number.isFinite(ms) || ms <= 0) return null;
-    const minutes = ms / 60_000;
-    if (minutes < 60) return {value: Math.max(1, Math.round(minutes)), unit: "minute"};
-    if (minutes < 48 * 60) return {value: Math.max(1, Math.min(47, Math.round(minutes / 60))), unit: "hour"};
-    return {value: Math.ceil(minutes / (24 * 60)), unit: "day"};
+    const seconds = ms / 1000;
+    if (seconds < 3600) return {value: Math.max(1, Math.ceil(seconds / 60)), unit: "minute"};
+    if (seconds < 48 * 3600) return {value: Math.floor(seconds / 3600), unit: "hour"};
+    return {value: Math.ceil(seconds / 86400), unit: "day"};
 }
 
 /**
- * "Voting closes in 5 hours" (docs/rich-chat/SPEC.md, section 2.4): the
- * time left (`debateTimeLeft`), in the reader's language; null once it has
- * passed or when the debate has no deadline. Every vote countdown says it
- * this way: the chat's vote section and Explore's card.
+ * "Voting closes in 40h" (docs/rich-chat/SPEC.md, section 2.5): the time
+ * left (`debateTimeLeft`) in the reader's language, minutes and hours short
+ * ("35m", "40h") and days in full ("3 days"), as the apps say it; null once
+ * it has passed or when the debate has no deadline. Every vote countdown
+ * says it this way, after a rollover too: the chat's vote section and
+ * Explore's card.
  */
 export function debateClosesIn(deadline: string | null | undefined, words: CompanionWords, locale = "en", now = Date.now()): string | null {
     const at = Date.parse(deadline ?? "");
     const left = Number.isFinite(at) ? debateTimeLeft(at - now) : null;
     if (!left) return null;
     const {value, unit} = left;
-    let time = `${value} ${unit}${value === 1 ? "" : "s"}`;
+    let time = unit === "day" ? `${value} day${value === 1 ? "" : "s"}` : `${value}${unit === "hour" ? "h" : "m"}`;
     try {
-        time = new Intl.NumberFormat(locale, {style: "unit", unit, unitDisplay: "long"}).format(value);
+        time = new Intl.NumberFormat(locale, {style: "unit", unit, unitDisplay: unit === "day" ? "long" : "narrow"}).format(value);
     } catch {
         // The English, then.
     }
@@ -233,16 +236,26 @@ export function debateStepAnimal(debate: Pick<Debate, "participants">, chosen: D
 }
 
 /**
- * Under the chosen way (owner, 2026-11-09): what happens next, never only
- * the qualities. "Next: Luna gives you a step from this way. Doing it earns
- * Luna's Power, Patient Pressure." The Power is earned by doing the step,
- * never by choosing.
+ * Under the chosen way (owner, 2026-11-09; iOS `DebateCopy.chosenNext`):
+ * what happens next, never only the qualities. "Next: Luna gives you a step
+ * from this way. Doing it earns Luna's Power, Pack Pursuit."; when the host
+ * turns another animal's way into the step, "Next: Luna turns Komodo
+ * Dragon's way into your step. …"; when the step animal's Power is already
+ * theirs (`stepPowerEarned`), "Do it, then tell Luna how it went." The
+ * Power is earned by doing the step, never by choosing.
  */
-export function debateWayNextLine(debate: Pick<Debate, "participants">, chosen: DebateParticipant, words: CompanionWords): string | null {
+export function debateWayNextLine(debate: Pick<Debate, "participants">, chosen: DebateParticipant, words: CompanionWords, stepPowerEarned = false): string | null {
     const animal = debateStepAnimal(debate, chosen);
     if (!animal) return null;
     const name = debateAnimalName(animal);
+    if (stepPowerEarned) return fillWords(words.debate.wayNextEarned, {animal: name});
     const power = animal.powerName?.trim();
+    if (animal.id !== chosen.id) {
+        const way = debateAnimalName(chosen);
+        return power
+            ? fillWords(words.debate.wayNextTurns, {animal: name, chosen: way, power})
+            : fillWords(words.debate.wayNextTurnsNoPower, {animal: name, chosen: way});
+    }
     return power
         ? fillWords(words.debate.wayNext, {animal: name, power})
         : fillWords(words.debate.wayNextNoPower, {animal: name});
@@ -255,4 +268,32 @@ export const DEBATE_CARD_ANIMALS = 3;
 export function debateCardAnimals<T>(participants: readonly T[], expanded = false, max = DEBATE_CARD_ANIMALS): {shown: T[]; more: number} {
     if (expanded || participants.length <= max) return {shown: [...participants], more: 0};
     return {shown: participants.slice(0, max), more: participants.length - max};
+}
+
+/** Faces beside "+N more" on Explore's card. */
+export const DEBATE_CARD_HIDDEN_FACES = 4;
+
+/**
+ * Which animals Explore's card shows (iOS `DebateDiscoverLayout`): three at
+ * most, in seat order, with the one the viewer voted for (else the winner)
+ * always among them; the rest go behind "+N more".
+ */
+export function debateDiscoverRows<T extends {id: string; seat: number}>(participants: readonly T[], kept: string | null | undefined, max = DEBATE_CARD_ANIMALS): {shown: T[]; hidden: T[]} {
+    const ordered = [...participants].sort((a, b) => a.seat - b.seat);
+    if (ordered.length <= max) return {shown: ordered, hidden: []};
+    const shown = ordered.slice(0, max);
+    const keptRow = kept ? ordered.find((participant) => participant.id === kept) : undefined;
+    if (keptRow && !shown.some((participant) => participant.id === keptRow.id)) shown[max - 1] = keptRow;
+    const ids = new Set(shown.map((participant) => participant.id));
+    return {shown: shown.sort((a, b) => a.seat - b.seat), hidden: ordered.filter((participant) => !ids.has(participant.id))};
+}
+
+/** How much Explore's card holds, most first: it steps down until it fits its slot, never cut and never scrolled. */
+export const DEBATE_CARD_DENSITIES = ["full", "noOpenings", "minimal", "faces"] as const;
+export type DebateCardDensity = (typeof DEBATE_CARD_DENSITIES)[number];
+
+/** The next, smaller density, or null at the smallest. */
+export function debateCardNextDensity(density: DebateCardDensity): DebateCardDensity | null {
+    const index = DEBATE_CARD_DENSITIES.indexOf(density);
+    return DEBATE_CARD_DENSITIES[index + 1] ?? null;
 }

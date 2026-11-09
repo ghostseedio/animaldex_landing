@@ -388,10 +388,10 @@ function rememberNotice() {
 /**
  * Life Sim (contract section 7): the profile-wide switch, at the top of the
  * Diary. A "Public" (or "Private") label always shows; the first time there
- * is an entry, a plain notice says what public means: others see the
- * debates you asked in public and your Ark bars, never your problems or
- * steps (owner, 2026-11-09: no public summaries). A teen's diary is
- * private, with no public option.
+ * is an entry, a plain notice says what public means, and a caption under
+ * the switch always says what others see: your public debates either way,
+ * your Ark bars only while public (owner, 2026-11-09: no public summaries;
+ * iOS ff32eac8). A teen's diary is private, with no public option.
  */
 function DiaryVisibilityBand({visibility, teen, hasEntries, words, onChange}: {
     visibility: ArkDiaryVisibility;
@@ -451,7 +451,10 @@ function DiaryVisibilityBand({visibility, teen, hasEntries, words, onChange}: {
                     </button>
                 </div>
             ) : null}
-            {!isPublic && !teen ? <p className="text-[11px] leading-4 text-white/45">{words.privateNotice}</p> : null}
+            {/* What others see, always said (iOS ff32eac8): your public debates either way; your Ark bars only while public. */}
+            {!teen && !(noticeOpen && isPublic) ? (
+                <p className="text-[11px] leading-4 text-white/45" data-testid="diary-visibility-caption">{isPublic ? words.publicCaption : words.privateNotice}</p>
+            ) : null}
             {problem ? <p role="alert" className="text-[11px] leading-4 text-white/60">{problem}</p> : null}
         </div>
     );

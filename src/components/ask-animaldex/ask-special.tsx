@@ -152,7 +152,8 @@ export function AskStepSection({
     const live = resolution.kind === "live" ? resolution.step : null;
     const frequency = live?.trialFrequency ?? trialFrequency;
     const closed = resolution.kind === "closed";
-    const loop = useTrialMotionStoryboard(speciesProfileId, frequency, !closed);
+    // The Trial loop plays only on the live step (owner, 2026-11-09): never on one replaced, done or still resolving.
+    const loop = useTrialMotionStoryboard(speciesProfileId, frequency, Boolean(live));
     return (
         <section
             className={`flex flex-col gap-2.5 ${closed ? "opacity-75" : ""}`}
@@ -161,7 +162,7 @@ export function AskStepSection({
         >
             <AskSpecialLabel icon={<AskWalkIcon />} trailing={difficultyTrailing(frequency, words)}>{words.journey.step.pinnedLabel}</AskSpecialLabel>
             <p className={`text-[15px] font-bold leading-6 ${closed ? "text-white/60" : "text-white"}`}>{live?.step ?? text}</p>
-            {loop.storyboard && !closed ? <LoopInPlace storyboard={loop.storyboard} captions={loop.captions} label={live?.step ?? text} /> : null}
+            {loop.storyboard && live ? <LoopInPlace storyboard={loop.storyboard} captions={loop.captions} label={live?.step ?? text} /> : null}
             {live ? (
                 busy ? <Working /> : (
                     <div className="flex flex-wrap items-center gap-2">

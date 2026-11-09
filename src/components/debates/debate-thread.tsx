@@ -146,13 +146,13 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
             // Every surface holding this debate keeps the choice (a list row never carries it).
             noteDebateChanged({...debate, chosenParticipantId: participant.id});
             // The server set the step from this way on the animal it belongs to, replacing that
-            // animal's old open step: read its loop again, so the old one stops showing as the
-            // active step and the new one shows "I'll do it" (owner, 2026-11-09).
+            // animal's old open step: read the loops of the chosen animal (when it is theirs)
+            // and the host again, so the old step stops showing as the active one and the new
+            // one shows "I'll do it" (owner, 2026-11-09).
             const host = debate.participants.find((item) => item.seat === 0) ?? null;
-            const stepSpecies = choice.stepSource === "own_animal"
-                ? choice.speciesProfileId ?? participant.speciesProfileId
-                : host?.speciesProfileId ?? null;
-            void refreshCompanionLoop(stepSpecies);
+            const chosenSpecies = choice.speciesProfileId
+                ?? (participant.isAskerOwned || participant.ownerIsMe ? participant.speciesProfileId : null);
+            for (const species of Array.from(new Set([chosenSpecies, host?.speciesProfileId ?? null]))) void refreshCompanionLoop(species);
             const captureId = choice.captureId
                 ?? (choice.stepSource === "own_animal" && (participant.ownerIsMe || participant.isAskerOwned) ? participant.captureId : debate.hostCaptureId);
             if (!captureId) return;
