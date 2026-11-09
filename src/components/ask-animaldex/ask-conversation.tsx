@@ -135,6 +135,7 @@ import {
     noteOpenStep,
     stepFromTrial,
     stepReportThumbnail,
+    useCompanionLoopUpdates,
     useOpenStepUpdates
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
@@ -718,6 +719,13 @@ function AskConversation({
         setCompanionLoop((current) => (current?.openStep?.id === step?.id && current?.openStep?.acceptedAt === step?.acceptedAt
             ? current
             : {...(current ?? EMPTY_COMPANION_LOOP), openStep: step, openTrial: step?.step ?? null}));
+    }, []));
+    // Read again after a debate way was chosen (`refreshCompanionLoop`): the server set this
+    // animal's step from the way, replacing the old one, on the debate's problem. The old
+    // step's card goes quiet and the new one shows "I'll do it" (owner, 2026-11-09).
+    useCompanionLoopUpdates(ownerChat ? companionSpeciesProfileId : null, useCallback((loop: AskCompanionLoop) => {
+        setCompanionLoop(loop);
+        setLoopLoaded(true);
     }, []));
     // "I did it": the message bar's report mode (docs/your-step/INLINE.md),
     // with the one photo or video they added; below 340 px, the sheet.

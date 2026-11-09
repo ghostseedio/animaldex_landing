@@ -24,7 +24,7 @@ import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/pr
 import {PROBLEM_DIARY_WORD_KEYS, type ProblemDiaryWords} from "@/lib/problem-diary";
 import {loadAppFeatureFlags} from "@/data/app-feature-flags";
 import {isAppFeatureOn} from "@/lib/app-feature-flags";
-import {decodeArkStats, decodePublicDiary, type ArkPublicDiaryEntry, type ArkStats} from "@/lib/ark";
+import {decodeArkStats, type ArkStats} from "@/lib/ark";
 import {decodeProblemDiary} from "@/lib/problem-diary";
 
 /**
@@ -33,10 +33,10 @@ import {decodeProblemDiary} from "@/lib/problem-diary";
  * diary), and, on your own profile, how many problems your Diary holds.
  * Null on any error, an old server included.
  */
-async function getViewerArk(profileUserId: string, isOwner: boolean, signedIn: boolean): Promise<{stats: ArkStats | null; problems: number | null; publicDiary: ArkPublicDiaryEntry[]}> {
+async function getViewerArk(profileUserId: string, isOwner: boolean, signedIn: boolean): Promise<{stats: ArkStats | null; problems: number | null}> {
     const supabase = signedIn ? createSupabaseServerClient() : null;
-    if (!supabase) return {stats: null, problems: null, publicDiary: []};
-    const [stats, diary, publicDiary] = await Promise.all([
+    if (!supabase) return {stats: null, problems: null};
+    const [stats, diary] = await Promise.all([
         Promise.resolve(supabase.rpc("ark_stats_v1", {p_user_id: isOwner ? null : profileUserId}))
             .then((result) => (result.error ? null : decodeArkStats(result.data)))
             .catch(() => null),
@@ -44,15 +44,10 @@ async function getViewerArk(profileUserId: string, isOwner: boolean, signedIn: b
             ? Promise.resolve(supabase.rpc("my_problem_diary_v1", {p_limit: 100}))
                 .then((result) => (result.error ? null : decodeProblemDiary(result.data).length))
                 .catch(() => null)
-            : Promise.resolve(null),
-        // Someone else's approved summaries, while their diary is public (contract section 7).
-        isOwner
-            ? Promise.resolve([] as ArkPublicDiaryEntry[])
-            : Promise.resolve(supabase.rpc("public_diary_v1", {p_user_id: profileUserId}))
-                .then((result) => (result.error ? [] : decodePublicDiary(result.data)))
-                .catch(() => [] as ArkPublicDiaryEntry[])
+            : Promise.resolve(null)
     ]);
-    return {stats, problems: diary, publicDiary};
+    // No public diary summaries (owner, 2026-11-09): someone else's Diary tab is their public debates.
+    return {stats, problems: diary};
 }
 
 function profilePath(handle: string) {
@@ -344,7 +339,6 @@ export async function ProfilePageBody({
                 publicDebates={publicDebates}
                 ark={ark}
                 problemsWorkedThrough={viewerArk.problems}
-                publicDiary={viewerArk.publicDiary}
                 diaryWords={viewer.isOwner
                     ? Object.fromEntries(PROBLEM_DIARY_WORD_KEYS.map((key) => [key, t(`diary.${key}`)])) as ProblemDiaryWords
                     : null}

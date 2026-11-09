@@ -126,8 +126,6 @@ const DIARY = [
         slug: "komodo-dragon",
         steps: [{id: STEP, step: "Buy the materials today", status: "open", set_at: "2026-11-09T09:30:00Z"}],
         ark: {state: "revised", changes: [LESSON_ROW, BETTER_ROW, WORSE_ROW]},
-        public_summary: "Someone weighed spending a lot up front on stock for a small business, or testing a small batch first.",
-        hidden: false,
         sensitive: false
     },
     {
@@ -141,8 +139,6 @@ const DIARY = [
         slug: "javan-rhino",
         steps: [{id: id(4), step: "Ask her to lunch, no agenda", status: "done", outcome: "worked", set_at: "2026-11-07T10:00:00Z", done_at: "2026-11-08T10:00:00Z", account: "We went for lunch on Sunday."}],
         ark: {state: "earned", changes: [EARNED_ROW]},
-        public_summary: null,
-        hidden: false,
         sensitive: false
     },
     {
@@ -155,8 +151,6 @@ const DIARY = [
         slug: "asian-elephant",
         steps: [],
         ark: {state: null, changes: []},
-        public_summary: null,
-        hidden: false,
         sensitive: true
     }
 ];
@@ -177,9 +171,7 @@ function installGalleryFetch() {
             const body = JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>;
             await new Promise((resolve) => setTimeout(resolve, 350));
             if (body.action === "undo") return json({ok: true, change: {...WORSE_ROW, undone_at: new Date().toISOString()}});
-            if (body.action === "draft") return json({ok: true, publicOk: true, text: "Someone tried to reconnect with a family member they kept missing, starting with a low-key lunch."});
-            if (body.action === "approve") return json({ok: true, text: body.text});
-            return json({ok: true, visibility: body.visibility, hidden: body.hidden});
+            return json({ok: true, visibility: body.visibility});
         }
         return real(input, init);
     };

@@ -2,7 +2,7 @@
 
 /**
  * Life Sim in the browser (docs/life-sim/CONTRACT.md): the calls behind the
- * revision cards, the Diary's Undo, switch, Hide and public summary, and the
+ * revision cards, the Diary's Undo and Public/Private switch, and the
  * reader's display currency. The server is the authority: these only say
  * what it answered, and every caller puts back what it showed on a failure.
  */
@@ -79,31 +79,6 @@ export async function undoArkRevision(changeId: string): Promise<ArkCallResult<A
 export async function setDiaryVisibility(visibility: ArkDiaryVisibility): Promise<ArkCallResult<ArkDiaryVisibility>> {
     const result = await post({action: "visibility", visibility});
     return result.ok ? {ok: true, value: visibility} : result;
-}
-
-export async function hideDiaryEntry(focusId: string, hidden: boolean): Promise<ArkCallResult<boolean>> {
-    const result = await post({action: "hide", focusId, hidden});
-    return result.ok ? {ok: true, value: hidden} : result;
-}
-
-/** The anonymised draft (edge `diary_public_draft`): its text, or that it stays private. */
-export async function draftDiarySummary(focusId: string, edited?: string): Promise<ArkCallResult<{publicOk: true; text: string} | {publicOk: false}>> {
-    const result = await post({action: "draft", focusId, ...(edited ? {text: edited} : {})});
-    if (!result.ok) return result;
-    return result.payload.publicOk === true && typeof result.payload.text === "string"
-        ? {ok: true, value: {publicOk: true, text: result.payload.text}}
-        : {ok: true, value: {publicOk: false}};
-}
-
-/** Takes the approved summary back: the entry is private again. */
-export async function withdrawDiarySummary(focusId: string): Promise<ArkCallResult<null>> {
-    const result = await post({action: "withdraw", focusId});
-    return result.ok ? {ok: true, value: null} : result;
-}
-
-export async function approveDiarySummary(focusId: string, text: string): Promise<ArkCallResult<string>> {
-    const result = await post({action: "approve", focusId, text});
-    return result.ok ? {ok: true, value: typeof result.payload.text === "string" ? result.payload.text : text} : result;
 }
 
 function readCurrencyCookie(): string | null {

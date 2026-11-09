@@ -32,7 +32,19 @@ import {
     type DebateQuality
 } from "@/lib/debates";
 import {DEBATE_SECONDARY_CHIP, DebatePlusIcon, DebateQualitiesLine, DebateRatedWay, DebateSealIcon, DebateWildTag} from "@/components/debates/debate-v2-views";
-import {debateCast, debateClosesIn, debateHeadline, debateLine, debateProblemText, debateResultLines, debateSpeakerLine, debateStatusText, debateVotesText} from "@/lib/debate-words";
+import {
+    debateCardAnimals,
+    debateCast,
+    debateClosesIn,
+    debateHeadline,
+    debateLine,
+    debateProblemText,
+    debateResultLines,
+    debateSpeakerLine,
+    debateStatusText,
+    debateVotesText,
+    debateWayNextLine
+} from "@/lib/debate-words";
 import {debateIsOwnOnly} from "@/lib/debates";
 import {voteOnDebate, noteDebateChanged} from "@/components/debates/use-debates";
 
@@ -49,11 +61,12 @@ export function debateColor(participant: Pick<DebateParticipant, "seat"> | null 
     return participant ? ASK_GROUP_COLORS[Math.max(0, participant.seat) % ASK_GROUP_COLORS.length] : "rgb(var(--c-ink-300))";
 }
 
-/** The animals' faces, overlapping, each set off from the next by the page's own colour. */
+/** The animals' faces, overlapping, each set off from the next by the page's own colour; past three, "+N". */
 export function DebateFaces({debate, size = 26}: {debate: Debate; size?: number}) {
+    const {shown, more} = debateCardAnimals(debate.participants);
     return (
         <span className="flex shrink-0 items-center">
-            {debate.participants.map((participant, index) => (
+            {shown.map((participant, index) => (
                 <span
                     key={participant.id}
                     className="rounded-full bg-canvas-950"
@@ -62,7 +75,32 @@ export function DebateFaces({debate, size = 26}: {debate: Debate; size?: number}
                     <AskAnimalFace url={debateFaceUrl(participant)} size={size} />
                 </span>
             ))}
+            {more > 0 ? (
+                <span
+                    className="grid place-items-center rounded-full bg-white/[0.12] text-[10px] font-black tabular-nums text-white"
+                    style={{width: size, height: size, marginLeft: -size * 0.3, boxShadow: "0 0 0 1.5px rgb(var(--c-canvas-950))"}}
+                    aria-hidden="true"
+                    data-testid="debate-faces-more"
+                >
+                    +{more}
+                </span>
+            ) : null}
         </span>
+    );
+}
+
+/** "+4 more" under a card's first three animals: shows the rest in place. */
+export function DebateMoreAnimals({more, words, onShow}: {more: number; words: CompanionWords; onShow: () => void}) {
+    if (more <= 0) return null;
+    return (
+        <button
+            type="button"
+            onClick={onShow}
+            className="inline-flex min-h-9 items-center self-start rounded-full border border-white/12 bg-white/[0.05] px-3.5 text-xs font-bold text-white transition-colors hover:bg-white/10"
+            data-testid="debate-more-animals"
+        >
+            {fillWords(words.debate.moreCount, {n: more})}
+        </button>
     );
 }
 
@@ -160,12 +198,16 @@ export function DebateReportBand({debate, words, bleed = "-mx-4 px-4", onTryWay,
  * "You voted" on the one they chose, "You can't vote on a debate you're in"
  * for its people, and the result once it is settled.
  */
-export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", onChange}: {
+export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", onChange, locale, expanded = true, onShowAll}: {
     debate: Debate;
     words: CompanionWords;
     signedIn: boolean;
     bleed?: string;
     onChange?: (debate: Debate) => void;
+    locale?: string;
+    /** False on Explore's card: the first three animals, then "+N more" (`onShowAll`). */
+    expanded?: boolean;
+    onShowAll?: () => void;
 }) {
     const [voting, setVoting] = useState<string | null>(null);
     const [problem, setProblem] = useState<string | null>(null);
@@ -173,6 +215,8 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
     const state = debateVoteState(debate, signedIn);
     const results = debateResultLines(debate, words);
     const showsCounts = state.kind !== "vote" || debate.status !== "voting";
+    const closesIn = debate.status === "voting" ? debateClosesIn(debate.votingDeadlineAt, words, locale) : null;
+    const {shown, more} = debateCardAnimals(debate.participants, expanded || !onShowAll);
 
     const vote = (participant: DebateParticipant) => {
         if (voting) return;
@@ -206,10 +250,10 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
             <p className="text-sm font-black text-white">{words.debate.voteQuestion}</p>
             <p className="mt-0.5 text-[11px] font-semibold text-white/45">
                 {debateVotesText(debate.totalVotes, words)}
-                {debate.status === "voting" && debate.rollovers > 0 ? ` · ${words.debate.rollover}` : ""}
+                {debate.status === "voting" && debate.rollovers > 0 ? ` · ${words.debate.rollover}` : closesIn ? ` · ${closesIn}` : ""}
             </p>
             <div className="mt-3 flex flex-col gap-2">
-                {debate.participants.map((participant) => {
+                {shown.map((participant) => {
                     const name = debateAnimalName(participant);
                     const mine = state.kind === "voted" && state.participantId === participant.id;
                     const won = debate.status === "settled" && debate.winnerParticipantId === participant.id;
@@ -240,6 +284,7 @@ export function DebateVotePanel({debate, words, signedIn, bleed = "-mx-4 px-4", 
                         </div>
                     );
                 })}
+                {onShowAll ? <DebateMoreAnimals more={more} words={words} onShow={onShowAll} /> : null}
             </div>
             {state.kind === "own" ? <p className="mt-3 text-xs leading-5 text-white/60">{words.debate.cantVoteOwn}</p> : null}
             {state.kind === "ineligible" ? <p className="mt-3 text-xs leading-5 text-white/60">{words.debateWeb.ineligible}</p> : null}
@@ -413,6 +458,7 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                                         choosingLabel={web.choosing}
                                         ownsSpecies={participant.isAskerOwned || participant.ownerIsMe}
                                         qualities={qualities}
+                                        nextLine={chosen?.id === participant.id ? debateWayNextLine(debate, chosen, words) : null}
                                     />
                                 ))}
                             </div>
@@ -478,6 +524,9 @@ export function DebateReportSections({debate, words, locale, onTryWay, choosing,
                         chosen ? (
                             <div className="flex flex-col gap-1" data-testid="debate-chosen">
                                 <p className="text-[13px] font-semibold leading-5 text-white/70">{fillWords(words.debate.youChose, {name: debateAnimalName(chosen)})}</p>
+                                {debateWayNextLine(debate, chosen, words) ? (
+                                    <p className="text-[13px] font-semibold leading-5 text-white" data-testid="debate-way-next">{debateWayNextLine(debate, chosen, words)}</p>
+                                ) : null}
                                 {!chosen.isAskerOwned && !chosen.ownerIsMe ? (
                                     <p className="text-[12px] leading-4 text-white/50">{fillWords(words.debate.catchToEarn, {species: chosen.animal})}</p>
                                 ) : null}

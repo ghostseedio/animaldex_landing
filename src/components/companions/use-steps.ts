@@ -8,7 +8,7 @@
  * answered, and every caller puts back what it showed when a call fails.
  */
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {extractTrialFrames} from "@/lib/animal-trial-frames";
 import {askStepReportThumb} from "@/lib/ask-animaldex/thread";
 import {
@@ -25,6 +25,7 @@ import {
     type StepRecordWithMedia
 } from "@/lib/your-step";
 import {decodeArkChange, arkRevealSkip, type ArkChange, type ArkRevealSkip} from "@/lib/ark";
+import {normalizeCompanionLoop, type AskCompanionLoop} from "@/lib/ask-animaldex/companion-loop";
 
 const OPEN_STEP_EVENT = "animaldex:open-step";
 
@@ -48,6 +49,50 @@ export function useOpenStepUpdates(speciesProfileId: string | null | undefined, 
         window.addEventListener(OPEN_STEP_EVENT, listener);
         return () => window.removeEventListener(OPEN_STEP_EVENT, listener);
     }, [speciesProfileId, onChange]);
+}
+
+const COMPANION_LOOP_EVENT = "animaldex:companion-loop";
+
+type CompanionLoopDetail = {speciesProfileId: string; loop: AskCompanionLoop};
+
+/** Follows `refreshCompanionLoop` for one animal: its focus and open step as the server now holds them. */
+export function useCompanionLoopUpdates(speciesProfileId: string | null | undefined, onChange: (loop: AskCompanionLoop) => void) {
+    const callback = useRef(onChange);
+    callback.current = onChange;
+    useEffect(() => {
+        const wanted = speciesProfileId?.toLowerCase() ?? null;
+        if (!wanted) return;
+        const listener = (event: Event) => {
+            const detail = (event as CustomEvent<CompanionLoopDetail>).detail;
+            if (detail?.speciesProfileId === wanted) callback.current(detail.loop);
+        };
+        window.addEventListener(COMPANION_LOOP_EVENT, listener);
+        return () => window.removeEventListener(COMPANION_LOOP_EVENT, listener);
+    }, [speciesProfileId]);
+}
+
+/**
+ * Reads one animal's loop again and tells every surface (the chat, the
+ * card's Bond tab, "Your steps"). After a debate way is chosen the server
+ * sets that animal's step from the way and replaces its old open step,
+ * focused on the debate's problem (owner, 2026-11-09): the old step must not
+ * stay on screen as the active one, and the new one shows "I'll do it".
+ * Null when it could not be read (what is shown then stays).
+ */
+export async function refreshCompanionLoop(speciesProfileId: string | null | undefined): Promise<AskCompanionLoop | null> {
+    const species = speciesProfileId?.toLowerCase() ?? null;
+    if (!species || typeof window === "undefined") return null;
+    try {
+        const response = await fetch(`/api/ask/companion?speciesProfileId=${encodeURIComponent(species)}`, {headers: {Accept: "application/json"}, cache: "no-store"});
+        const payload = response.ok ? await response.json() as {loop?: unknown} : null;
+        const loop = normalizeCompanionLoop(payload?.loop);
+        if (!loop) return null;
+        window.dispatchEvent(new CustomEvent<CompanionLoopDetail>(COMPANION_LOOP_EVENT, {detail: {speciesProfileId: species, loop}}));
+        noteOpenStep(species, loop.openStep);
+        return loop;
+    } catch {
+        return null;
+    }
 }
 
 /** A call's outcome: the value, or the code to say in words (`stepProblemText`). */
@@ -211,6 +256,8 @@ export async function stepReportThumbnail(file: File, longEdge = 360): Promise<s
 export function useOpenSteps(enabled = true) {
     const [steps, setSteps] = useState<OpenStepRow[]>([]);
     const [didLoad, setDidLoad] = useState(false);
+    const stepsRef = useRef(steps);
+    stepsRef.current = steps;
 
     const reload = useCallback(async () => {
         if (!enabled) return;
@@ -229,8 +276,13 @@ export function useOpenSteps(enabled = true) {
         void reload();
     }, [reload]);
 
-    // A step accepted, dropped or finished in a chat changes its row at once.
+    // A step accepted, dropped or finished in a chat changes its row at once;
+    // one this list has no row for (set from a debate's way) is read again.
     useOpenStepUpdates(null, useCallback((step: AnimalStep | null, speciesProfileId: string) => {
+        if (step && !stepsRef.current.some((row) => row.speciesProfileId === speciesProfileId)) {
+            void reload();
+            return;
+        }
         setSteps((current) => {
             const index = current.findIndex((row) => row.speciesProfileId === speciesProfileId);
             if (!step) return index < 0 ? current : current.filter((_, at) => at !== index);
@@ -239,7 +291,7 @@ export function useOpenSteps(enabled = true) {
             next[index] = {...next[index], ...step};
             return next;
         });
-    }, []));
+    }, [reload]));
 
     return {steps, didLoad, reload};
 }

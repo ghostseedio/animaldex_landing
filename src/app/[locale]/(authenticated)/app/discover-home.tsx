@@ -929,7 +929,7 @@ export default function DiscoverHome({
                                 {feedSlots.map((slot) => slot.kind === "debate" ? (
                                     // A debate has no /p page and no seen mark: no post id.
                                     <div key={`debate-${slot.debate.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
-                                        <DebatePost debate={slot.debate} words={debateWords as CompanionWords} signedIn={Boolean(viewerUserId)} pinned={slot.pinned} />
+                                        <DebatePost debate={slot.debate} words={debateWords as CompanionWords} signedIn={Boolean(viewerUserId)} pinned={slot.pinned} locale={locale} />
                                     </div>
                                 ) : (
                                     <div

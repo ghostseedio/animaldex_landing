@@ -45,6 +45,7 @@ import {
     debateOffersAskMore,
     debateOffersSolve,
     decodeDebateReport,
+    mergeDebate,
     orderedDebateTurns,
     type Debate,
     type DebateParticipant,
@@ -54,6 +55,7 @@ import {
 } from "@/lib/debates";
 import {debateProblemText} from "@/lib/debate-words";
 import {chooseDebateWay, fetchDebate, loadTopQualities, noteDebateChanged, useDebateUpdates} from "@/components/debates/use-debates";
+import {refreshCompanionLoop} from "@/components/companions/use-steps";
 import {useDebateV2} from "@/components/debates/use-debate-v2";
 import type {DebateEdit} from "@/components/debates/debate-sheet";
 import {AskSpecialBubble, AskTypingBubble} from "@/components/ask-animaldex/ask-messenger";
@@ -141,6 +143,16 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
             setChosenId(participant.id);
             if (participant.speciesProfileId) void loadTopQualities(participant.speciesProfileId).then(setQualities);
             const choice = result.value;
+            // Every surface holding this debate keeps the choice (a list row never carries it).
+            noteDebateChanged({...debate, chosenParticipantId: participant.id});
+            // The server set the step from this way on the animal it belongs to, replacing that
+            // animal's old open step: read its loop again, so the old one stops showing as the
+            // active step and the new one shows "I'll do it" (owner, 2026-11-09).
+            const host = debate.participants.find((item) => item.seat === 0) ?? null;
+            const stepSpecies = choice.stepSource === "own_animal"
+                ? choice.speciesProfileId ?? participant.speciesProfileId
+                : host?.speciesProfileId ?? null;
+            void refreshCompanionLoop(stepSpecies);
             const captureId = choice.captureId
                 ?? (choice.stepSource === "own_animal" && (participant.ownerIsMe || participant.isAskerOwned) ? participant.captureId : debate.hostCaptureId);
             if (!captureId) return;
@@ -227,7 +239,7 @@ export default function DebateThread({
 
     /** The server's copy: its turns win once nothing is typing out. */
     const apply = useCallback((next: Debate, opts: {turns?: boolean} = {}) => {
-        setDebate((current) => ({...current, ...next, participants: next.participants.length > 0 ? next.participants : current.participants}));
+        setDebate((current) => mergeDebate(current, next));
         if (opts.turns !== false && next.turns.length > 0) {
             setShown((current) => mergeTurns(next.turns, current));
         }

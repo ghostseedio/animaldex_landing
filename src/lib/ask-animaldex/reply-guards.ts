@@ -207,12 +207,16 @@ export function newStepAllowed(params: {
     newStep: string | null | undefined;
     reportedDone: boolean;
     userMessage: string;
+    /// A debate way they chose is waiting for its step from this animal
+    /// (companion.chosen_way, AnimalDex migration 20261110100000).
+    chosenWay?: boolean;
     now?: Date;
 }): boolean {
     const open = params.openTrial;
     if (!params.newStep || !open) return true;
     if (open.step.trim().toLowerCase() === params.newStep.trim().toLowerCase()) return true;
     if (params.reportedDone) return true;
+    if (params.chosenWay) return true;
     if (ASKS_FOR_ANOTHER.test(params.userMessage)) return true;
     const setAt = open.set_at ? Date.parse(open.set_at) : Number.NaN;
     if (!Number.isFinite(setAt)) return true;

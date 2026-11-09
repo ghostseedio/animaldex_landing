@@ -18,6 +18,7 @@ import {
     decodeDebateWayChoice,
     decodeDebates,
     decodeHeartsResult,
+    mergeDebate,
     type Debate,
     type DebateCandidate,
     type DebatePick,
@@ -275,9 +276,7 @@ export function useMyDebates(params: {captureId?: string | null; active?: boolea
             return {
                 ...current,
                 debates: known
-                    ? current.debates.map((item) => (item.id === debate.id
-                        ? {...item, ...debate, participants: debate.participants.length > 0 ? debate.participants : item.participants}
-                        : item))
+                    ? current.debates.map((item) => (item.id === debate.id ? mergeDebate(item, debate) : item))
                     : [debate, ...current.debates]
             };
         });

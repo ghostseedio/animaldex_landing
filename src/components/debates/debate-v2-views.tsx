@@ -139,7 +139,7 @@ function WayHead({participant, words, trailing}: {participant: DebateParticipant
  * and what it costs open under "Why". Once a way is chosen it says so in
  * place, with what earning its Power takes and the qualities it adds.
  */
-export function DebateRatedWay({participant, way, recommended, why, words, chosenId, tried, onTryWay, choosing, choosingLabel, ownsSpecies, qualities}: {
+export function DebateRatedWay({participant, way, recommended, why, words, chosenId, tried, onTryWay, choosing, choosingLabel, ownsSpecies, qualities, nextLine = null}: {
     participant: DebateParticipant;
     way: DebateReportWay;
     recommended: boolean;
@@ -154,6 +154,8 @@ export function DebateRatedWay({participant, way, recommended, why, words, chose
     choosingLabel: string;
     ownsSpecies: boolean;
     qualities: readonly DebateQuality[];
+    /** Under the chosen way: the step it becomes and the Power doing it earns (`debateWayNextLine`). */
+    nextLine?: string | null;
 }) {
     const [open, setOpen] = useState(false);
     const name = debateAnimalName(participant);
@@ -211,6 +213,7 @@ export function DebateRatedWay({participant, way, recommended, why, words, chose
                     </button>
                 ) : null}
             </div>
+            {chosen && nextLine ? <p className="text-[13px] font-semibold leading-5 text-white" data-testid="debate-way-next">{nextLine}</p> : null}
             {chosen && !ownsSpecies ? <p className="text-[11px] leading-4 text-white/55">{fillWords(words.debate.catchToEarn, {species: participant.animal})}</p> : null}
             {chosen ? <DebateQualitiesLine qualities={qualities} words={words} /> : null}
         </div>

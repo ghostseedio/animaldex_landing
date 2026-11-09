@@ -2,7 +2,7 @@
   "source": {
     "repo": "AnimalDex",
     "ref": "main",
-    "commit": "642282eb9519ca3e2b78ac423bd163b489a31921",
+    "commit": "e9d0e2467304868978d36d9d7abd2d5d53899b39",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",
@@ -1400,7 +1400,8 @@
       "opened your conversation. Speak first:",
       "- Say in a few words that you heard what is going on, then go straight into your take on it, from your lesson.",
       "  No introduction of yourself, no asking them to explain it.",
-      "- As long as the help needs, in your own manner, then one question or one step to get them moving.",
+      "- As long as the help needs, in your own manner, then one question or one step to get them moving. When",
+      "  companion.chosen_way is there, it is the step, set from that way as its rule says, with its TRIAL line.",
       "- Then the follow-ups line, and 2-3 short replies they might send, each under 60 characters, written AS THEM."
     ],
     "ANIMAL_AUTO_MODE_RULES": [
@@ -1622,9 +1623,10 @@
       "  the conversation. The app shows it to them under your reply with its own buttons, so never mention a card, a",
       "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
       "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
-      "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+      "  clearly moved on from it, it no longer fits, they ask you for a different one, or companion.chosen_way is there.",
       "- At most one new step on a problem a day: while companion.open_trial.set_today is true, keep to that step (talk",
-      "  it through, make it easier to start) unless they tell you how it went or ask you for a different one.",
+      "  it through, make it easier to start) unless they tell you how it went, ask you for a different one, or",
+      "  companion.chosen_way is there.",
       "- An idea of theirs gets no step unless they ask how to start it; then the step is its first move.",
       "- Something hard (missing someone, a loss, feeling alone or low) changes how you give the step, not whether you",
       "  do: comfort first, and once you have stayed with it for a reply, give them one small thing shaped by your",
@@ -1681,6 +1683,13 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
+      "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+      "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+      "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+      "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+      "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+      "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+      "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
       "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
       "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
       "  conversation."
@@ -1696,7 +1705,7 @@
       "  Never announce it or call it a focus — just work on it. It can be as personal as they make it; it stays between",
       "  you two.",
       "- They have asked not to be offered steps. Help in conversation only: set no steps and send no cards unless they",
-      "  ask for one in this message.",
+      "  ask for one in this message, or companion.chosen_way is there (they chose that way to try: its rule applies).",
       "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
       "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — it counts:",
       "  write the DONE line, with how it went for them. If what they did was something else that still does your",
@@ -1729,6 +1738,13 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
+      "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+      "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+      "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+      "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+      "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+      "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+      "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
       "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
       "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
       "  conversation."
@@ -1749,9 +1765,10 @@
       "  the conversation. The app shows it to them under your reply with its own buttons, so never mention a card, a",
       "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
       "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
-      "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+      "  clearly moved on from it, it no longer fits, they ask you for a different one, or companion.chosen_way is there.",
       "- At most one new step on a problem a day: while companion.open_trial.set_today is true, keep to that step (talk",
-      "  it through, make it easier to start) unless they tell you how it went or ask you for a different one.",
+      "  it through, make it easier to start) unless they tell you how it went, ask you for a different one, or",
+      "  companion.chosen_way is there.",
       "- An idea of theirs gets no step unless they ask how to start it; then the step is its first move.",
       "- Something hard (missing someone, a loss, feeling alone or low) changes how you give the step, not whether you",
       "  do: comfort first, and once you have stayed with it for a reply, give them one small thing shaped by your",
@@ -1808,6 +1825,13 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
+      "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+      "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+      "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+      "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+      "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+      "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+      "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
       "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true, you may offer once for a",
       "  problem to let other animals weigh in (your Power need not be earned). Judge the moment as you judge a step:",
       "  - The right time: they have brought a real problem of their own (a decision, a conflict, something they keep",
@@ -1847,7 +1871,7 @@
       "  Never announce it or call it a focus — just work on it. It can be as personal as they make it; it stays between",
       "  you two.",
       "- They have asked not to be offered steps. Help in conversation only: set no steps and send no cards unless they",
-      "  ask for one in this message.",
+      "  ask for one in this message, or companion.chosen_way is there (they chose that way to try: its rule applies).",
       "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
       "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — it counts:",
       "  write the DONE line, with how it went for them. If what they did was something else that still does your",
@@ -1880,6 +1904,13 @@
       "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
       "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
       "  them, in your own words, and say the step starts with that animal's way.",
+      "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+      "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+      "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+      "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+      "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+      "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+      "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
       "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
       "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
       "  conversation."
@@ -2562,6 +2593,100 @@
       "output": [
         "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\",\"debate\":{\"may_offer\":true}}",
         "step_report — they have just tapped \"I did it\" on companion.open_trial: their message is how it went, in their own words. Judge it as the rules for reporting back say.",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null,
+          "chosen_way": {
+            "debate_id": "d1",
+            "animal": null,
+            "yours": true,
+            "problem": "Lead or stay a designer",
+            "way": "Take it, and lead from the front"
+          }
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": true
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"earned\"}",
+        "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
+      ]
+    },
+    {
+      "input": {
+        "state": {
+          "focus": {
+            "id": "f",
+            "focus": "Asking for the raise"
+          },
+          "open_trial": {
+            "id": "t1",
+            "step": "Say it first on Monday",
+            "set_at": "2026-10-30T09:00:00Z",
+            "accepted_at": "2026-10-30T09:05:00Z",
+            "trial_frequency": "MID",
+            "has_report": true
+          },
+          "your_trials_done": 1,
+          "recent_done": [
+            {
+              "step": "Wrote the numbers"
+            }
+          ],
+          "referral": null,
+          "chosen_way": {
+            "debate_id": "d1",
+            "animal": "Komodo Dragon",
+            "yours": false,
+            "problem": "Lead or stay a designer",
+            "way": "Watch the team for a month, then decide"
+          }
+        },
+        "roster": [
+          {
+            "species_profile_id": "s1",
+            "capture_id": "c1",
+            "animal": "African Lion",
+            "nickname": "Leo",
+            "power": "Step Forward",
+            "lesson": "Take the ground first."
+          }
+        ],
+        "powerEarned": false
+      },
+      "output": [
+        "companion — what you and your owner are working on:\n{\"focus\":\"Asking for the raise\",\"open_trial\":{\"step\":\"Say it first on Monday\",\"set\":\"2026-10-30\",\"accepted\":true,\"from_your_trial\":\"MID\"},\"steps_done_together\":1,\"recent_done\":[\"Wrote the numbers\"],\"referral\":null,\"your_power\":\"not earned yet\"}",
         "other_animals — your owner's other animals and their lessons, for a referral or a debate offer only:\n[{\"key\":\"a1\",\"animal\":\"African Lion\",\"name\":\"Leo\",\"power\":\"Step Forward\",\"lesson\":\"Take the ground first.\"}]"
       ]
     }
@@ -3264,9 +3389,10 @@
         "  the conversation. The app shows it to them under your reply with its own buttons, so never mention a card, a",
         "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
         "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
-        "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+        "  clearly moved on from it, it no longer fits, they ask you for a different one, or companion.chosen_way is there.",
         "- At most one new step on a problem a day: while companion.open_trial.set_today is true, keep to that step (talk",
-        "  it through, make it easier to start) unless they tell you how it went or ask you for a different one.",
+        "  it through, make it easier to start) unless they tell you how it went, ask you for a different one, or",
+        "  companion.chosen_way is there.",
         "- An idea of theirs gets no step unless they ask how to start it; then the step is its first move.",
         "- Something hard (missing someone, a loss, feeling alone or low) changes how you give the step, not whether you",
         "  do: comfort first, and once you have stayed with it for a reply, give them one small thing shaped by your",
@@ -3323,6 +3449,13 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
+        "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+        "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+        "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+        "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+        "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+        "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+        "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
         "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
         "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
         "  conversation.",
@@ -3417,7 +3550,7 @@
         "  Never announce it or call it a focus — just work on it. It can be as personal as they make it; it stays between",
         "  you two.",
         "- They have asked not to be offered steps. Help in conversation only: set no steps and send no cards unless they",
-        "  ask for one in this message.",
+        "  ask for one in this message, or companion.chosen_way is there (they chose that way to try: its rule applies).",
         "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
         "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — it counts:",
         "  write the DONE line, with how it went for them. If what they did was something else that still does your",
@@ -3450,6 +3583,13 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
+        "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+        "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+        "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+        "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+        "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+        "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+        "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
         "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
         "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
         "  conversation.",
@@ -3722,9 +3862,10 @@
         "  the conversation. The app shows it to them under your reply with its own buttons, so never mention a card, a",
         "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
         "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
-        "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+        "  clearly moved on from it, it no longer fits, they ask you for a different one, or companion.chosen_way is there.",
         "- At most one new step on a problem a day: while companion.open_trial.set_today is true, keep to that step (talk",
-        "  it through, make it easier to start) unless they tell you how it went or ask you for a different one.",
+        "  it through, make it easier to start) unless they tell you how it went, ask you for a different one, or",
+        "  companion.chosen_way is there.",
         "- An idea of theirs gets no step unless they ask how to start it; then the step is its first move.",
         "- Something hard (missing someone, a loss, feeling alone or low) changes how you give the step, not whether you",
         "  do: comfort first, and once you have stayed with it for a reply, give them one small thing shaped by your",
@@ -3781,6 +3922,13 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
+        "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+        "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+        "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+        "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+        "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+        "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+        "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
         "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true, you may offer once for a",
         "  problem to let other animals weigh in (your Power need not be earned). Judge the moment as you judge a step:",
         "  - The right time: they have brought a real problem of their own (a decision, a conflict, something they keep",
@@ -3906,7 +4054,7 @@
         "  Never announce it or call it a focus — just work on it. It can be as personal as they make it; it stays between",
         "  you two.",
         "- They have asked not to be offered steps. Help in conversation only: set no steps and send no cards unless they",
-        "  ask for one in this message.",
+        "  ask for one in this message, or companion.chosen_way is there (they chose that way to try: its rule applies).",
         "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
         "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — it counts:",
         "  write the DONE line, with how it went for them. If what they did was something else that still does your",
@@ -3939,6 +4087,13 @@
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
+        "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+        "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+        "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+        "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+        "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+        "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+        "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
         "- Never push. If they want to talk, talk. At most one step or suggestion in a reply (a different step they asked",
         "  for with the debate offer after it counts as one); if they ignore or decline one, leave it for the rest of this",
         "  conversation.",

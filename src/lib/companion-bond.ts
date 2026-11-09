@@ -254,6 +254,15 @@ export const DEBATE_COPY = {
     communityVote: "Community vote",
     votingClosesIn: "Voting closes in {time}",
     youChose: "You chose {name}'s way",
+    /**
+     * Under the chosen way (owner, 2026-11-09): what happens next. The step
+     * is that animal's when it is one of theirs, else the host's; Powers are
+     * earned only by doing it.
+     */
+    wayNext: "Next: {animal} gives you a step from this way. Doing it earns {animal}'s Power, {power}.",
+    wayNextNoPower: "Next: {animal} gives you a step from this way. Doing it earns {animal}'s Power.",
+    /** A public debate's card with more animals than it shows (at most 3). */
+    moreCount: "+{n} more",
     /** A way they tried that did not work (2026-11-03): the others are there to try. */
     wayDidntWork: "{name}'s way didn't work for you",
     didntWorkForYou: "Didn't work for you",
@@ -356,34 +365,23 @@ export const ARK_COPY = {
     collectionEstimate: "Collection estimate",
     /** Someone else's profile with a private diary: the bars stay theirs. */
     barsPrivate: "Their life bars show only on a public diary.",
-    /** The Diary's switch, notice and entry actions (contract section 7). */
+    /**
+     * The Diary's switch and its notice (contract section 7). No public
+     * summaries (owner, 2026-11-09): public means others see the debates you
+     * asked in public and your life bars, never a problem or a step.
+     */
     diary: {
         public: "Public",
         private: "Private",
         visibility: "Diary",
-        publicNotice: "Your diary is public. Only summaries you approve show, never your own words. Sensitive problems are never public.",
-        privateNotice: "Your diary is private. Only you can see it.",
+        publicNotice: "Your diary is public. Others see the debates you asked in public and your life bars. Your problems, steps and words stay private.",
+        privateNotice: "Your diary is private. Your life bars show only to you. Debates you asked in public still show on your profile.",
         teenNotice: "Your diary is private.",
         gotIt: "Got it",
         makePrivate: "Make private",
         makePublic: "Make public",
         changeFailed: "That didn't go through. Try again in a moment.",
-        summaryTitle: "Public summary",
-        summaryHint: "This is all anyone else sees. Your own words stay private.",
-        writeSummary: "Write a public summary",
-        drafting: "Writing it…",
-        approve: "Approve",
-        approved: "Approved",
-        withdraw: "Take it back",
-        notPublic: "This one stays private: it can't be shared safely.",
-        alwaysPrivate: "Always private",
-        hide: "Hide from public",
-        unhide: "Show on public",
-        hidden: "Hidden",
-        history: "What changed",
-        /** Someone else's Diary tab: the summaries they approved. */
-        fromTheirDiary: "From their diary",
-        stepsCount: "{n} steps"
+        history: "What changed"
     }
 } as const;
 

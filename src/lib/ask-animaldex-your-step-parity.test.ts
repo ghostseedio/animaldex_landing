@@ -95,9 +95,11 @@ test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () 
     // brought, not something an animal sent ("Ask another animal", AnimalDex
     // ceeaec79), then from main with the Life Sim lanes merged (AnimalDex
     // 642282eb, edge 7c070fe6; its only change to the older sections is the
-    // visitor's privacy lines), by scripts/generate-your-step-parity-fixture.mts.
+    // visitor's privacy lines), then from main with a debate's chosen way as a
+    // fresh step (AnimalDex e9d0e246: companion.chosen_way, its rule and the
+    // lines that make room for it), by scripts/generate-your-step-parity-fixture.mts.
     assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^642282eb/);
+    assert.match(fixture.source.commit, /^e9d0e246/);
     assert.equal(fixture.source.files.includes("ark-sim.ts"), true);
 });
 

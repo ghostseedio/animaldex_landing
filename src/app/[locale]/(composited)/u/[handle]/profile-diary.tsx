@@ -16,26 +16,19 @@ import {AskAnimalFace} from "@/components/ask-animaldex/ask-messenger";
 import {StepRecordEntry} from "@/components/companions/step-views";
 import {ArkDiaryHistory, ArkStateChip} from "@/components/ark/ark-views";
 import {
-    approveDiarySummary,
     arkMoneyFormatter,
-    draftDiarySummary,
-    hideDiaryEntry,
     setDiaryVisibility,
     undoArkRevision,
-    useDisplayCurrency,
-    withdrawDiarySummary
+    useDisplayCurrency
 } from "@/components/ark/use-ark";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
 import {trackEvent} from "@/lib/analytics";
 import {talkRelativeTime} from "@/lib/ask-animaldex/talk";
 import {
     ARK_EVENTS,
-    ARK_PUBLIC_SUMMARY_MAX,
     arkDiaryVisibilityChoices,
     arkEffectiveVisibility,
-    arkEntryIsPublic,
     arkEntryState,
-    cleanArkSummary,
     type ArkChange,
     type ArkDiaryVisibility
 } from "@/lib/ark";
@@ -153,12 +146,10 @@ function Message({icon, title, action}: {icon: "warning" | "book"; title: string
 }
 
 /** One problem, readable at a glance: the face, the problem in two lines, the chip and when. */
-function DiaryRow({entry, words, arkWords, publicShown, locale, onOpen}: {
+function DiaryRow({entry, words, arkWords, locale, onOpen}: {
     entry: ProblemDiaryEntry;
     words: ProblemDiaryWords;
     arkWords: CompanionWords["ark"];
-    /** It shows on the public diary (approved, not hidden, the switch public). */
-    publicShown: boolean;
     locale: string;
     onOpen: () => void;
 }) {
@@ -187,10 +178,7 @@ function DiaryRow({entry, words, arkWords, publicShown, locale, onOpen}: {
                 <StatusChip status={entry.status} words={words} />
                 {state ? <ArkStateChip state={state} words={arkWords} /> : null}
                 {when ? (
-                    <span className="whitespace-nowrap text-[11px] text-white/40">
-                        {publicShown ? <span className="font-bold text-primary-300">{arkWords.diary.public} · </span> : null}
-                        {when}
-                    </span>
+                    <span className="whitespace-nowrap text-[11px] text-white/40">{when}</span>
                 ) : null}
             </span>
             <span className="absolute bottom-0 right-0 h-px bg-white/[0.08]" style={{left: GUTTER + ART + ART_GAP}} aria-hidden="true" />
@@ -266,152 +254,14 @@ function EventRow({event, isLast, entry, words, locale, onOpenStep}: {
 
 const ACTION = "inline-flex min-h-8 items-center gap-1.5 self-start rounded-full px-3.5 text-xs font-bold transition disabled:opacity-50";
 
-/**
- * Life Sim (contract section 7): what anyone else may see of this problem.
- * Never the problem itself: an anonymised summary they approve (drafted by
- * the debate anonymiser), Hide for this one entry, and nothing at all for a
- * sensitive problem or a teen.
- */
-function DiaryPublicSection({entry, words, teen, onChange}: {
-    entry: ProblemDiaryEntry;
-    words: CompanionWords;
-    teen: boolean;
-    /** Changes the entry as it now stands (an updater: two calls in flight never undo each other). */
-    onChange: (update: (entry: ProblemDiaryEntry) => ProblemDiaryEntry) => void;
-}) {
-    const said = words.ark.diary;
-    const [draft, setDraft] = useState<string | null>(null);
-    /** The text as the anonymiser and the safety check passed it: an edit is checked again. */
-    const [checked, setChecked] = useState<string | null>(null);
-    const [working, setWorking] = useState<"draft" | "approve" | "hide" | "withdraw" | null>(null);
-    const [problem, setProblem] = useState<string | null>(null);
-    const [notPublic, setNotPublic] = useState(false);
-    const focusId = entry.focusId;
-    if (teen || !focusId) return null;
-    if (entry.sensitive) {
-        return <p className="text-[12px] font-semibold text-white/50" data-testid="diary-always-private">{said.alwaysPrivate}</p>;
-    }
-    const writeDraft = async () => {
-        setWorking("draft");
-        setProblem(null);
-        const result = await draftDiarySummary(focusId);
-        setWorking(null);
-        if (!result.ok) return setProblem(said.changeFailed);
-        if (!result.value.publicOk) return setNotPublic(true);
-        setDraft(result.value.text);
-        setChecked(result.value.text);
-    };
-    const approve = async () => {
-        if (draft === null || !cleanArkSummary(draft)) return;
-        // Only ever the exact text diary_public_draft returned: unchanged, that one;
-        // edited, their edit goes back through the check and its answer is approved.
-        let text = checked ?? "";
-        setWorking("approve");
-        setProblem(null);
-        if (draft !== checked) {
-            const check = await draftDiarySummary(focusId, cleanArkSummary(draft));
-            if (!check.ok) {
-                setWorking(null);
-                return setProblem(said.changeFailed);
-            }
-            if (!check.value.publicOk) {
-                setWorking(null);
-                return setProblem(said.notPublic);
-            }
-            text = check.value.text;
-            setDraft(text);
-            setChecked(text);
-        }
-        const result = await approveDiarySummary(focusId, text);
-        setWorking(null);
-        if (!result.ok) {
-            // The database approves only the text the check passed (summary_not_checked otherwise): it is always the draft's own.
-            const unsafe = result.code === "summary_not_safe" || result.code === "summary_is_raw_problem" || result.code === "focus_sensitive";
-            return setProblem(unsafe ? said.notPublic : said.changeFailed);
-        }
-        trackEvent(ARK_EVENTS.diarySummaryApproved, {});
-        setDraft(null);
-        onChange((current) => ({...current, publicSummary: result.value}));
-    };
-    const withdraw = async () => {
-        setWorking("withdraw");
-        setProblem(null);
-        const result = await withdrawDiarySummary(focusId);
-        setWorking(null);
-        if (!result.ok) return setProblem(said.changeFailed);
-        onChange((current) => ({...current, publicSummary: null}));
-    };
-    const toggleHidden = async () => {
-        const hidden = !entry.hidden;
-        setWorking("hide");
-        setProblem(null);
-        onChange((current) => ({...current, hidden}));
-        const result = await hideDiaryEntry(focusId, hidden);
-        setWorking(null);
-        if (!result.ok) {
-            onChange((current) => ({...current, hidden: !hidden}));
-            return setProblem(said.changeFailed);
-        }
-        if (hidden) trackEvent(ARK_EVENTS.diaryEntryHidden, {});
-    };
-    return (
-        <section className="flex flex-col gap-2 border border-white/[0.08] bg-white/[0.03] p-3.5" data-testid="diary-public-summary">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{said.summaryTitle}</p>
-            {draft !== null ? (
-                <>
-                    <textarea
-                        value={draft}
-                        maxLength={ARK_PUBLIC_SUMMARY_MAX}
-                        onChange={(event) => setDraft(event.target.value)}
-                        rows={4}
-                        className="w-full resize-none border border-white/12 bg-black/20 p-2.5 text-[13px] leading-5 text-white outline-none focus:border-primary-400/60"
-                        aria-label={said.summaryTitle}
-                    />
-                    <p className="text-[11px] text-white/45">{said.summaryHint}</p>
-                    <button type="button" onClick={() => void approve()} disabled={working !== null || !cleanArkSummary(draft)} className={`${ACTION} text-black`} style={{backgroundColor: NEON}} data-testid="diary-approve">
-                        {working === "approve" ? "…" : said.approve}
-                    </button>
-                </>
-            ) : entry.publicSummary ? (
-                <>
-                    <p className={`text-[13px] leading-5 ${entry.hidden ? "text-white/45" : "text-white/80"}`}>{entry.publicSummary}</p>
-                    <p className="text-[11px] font-bold text-primary-300">{entry.hidden ? said.hidden : said.approved}</p>
-                </>
-            ) : notPublic ? (
-                <p className="text-[12px] text-white/55">{said.notPublic}</p>
-            ) : (
-                <>
-                    <p className="text-[11px] text-white/45">{said.summaryHint}</p>
-                    <button type="button" onClick={() => void writeDraft()} disabled={working !== null} className={`${ACTION} border border-white/12 bg-white/[0.05] text-white hover:bg-white/10`} data-testid="diary-write-summary">
-                        {working === "draft" ? said.drafting : said.writeSummary}
-                    </button>
-                </>
-            )}
-            {draft === null && entry.publicSummary ? (
-                <button type="button" onClick={() => void withdraw()} disabled={working !== null} className={`${ACTION} border border-white/12 bg-white/[0.05] text-white/80 hover:bg-white/10`} data-testid="diary-withdraw">
-                    {working === "withdraw" ? "…" : said.withdraw}
-                </button>
-            ) : null}
-            {/* Hide matters once something could show: an approved summary. */}
-            {draft === null && entry.publicSummary ? (
-                <button type="button" onClick={() => void toggleHidden()} disabled={working !== null} className={`${ACTION} border border-white/12 bg-white/[0.05] text-white/80 hover:bg-white/10`} data-testid="diary-hide">
-                    {entry.hidden ? said.unhide : said.hide}
-                </button>
-            ) : null}
-            {problem ? <p role="alert" className="text-[11px] leading-4 text-white/60">{problem}</p> : null}
-        </section>
-    );
-}
-
 /** One problem's story, as a pushed screen: back, the animal's name, the problem, then what happened. */
-function DiaryEntryScreen({entry, words, companionWords, locale, money, teen, onChange, onClose}: {
+function DiaryEntryScreen({entry, words, companionWords, locale, money, onChange, onClose}: {
     entry: ProblemDiaryEntry;
     words: ProblemDiaryWords;
     companionWords?: CompanionWords;
     locale: string;
     money: (usd: number) => string;
-    teen: boolean;
-    /** The entry as it now stands (a revision undone, a summary approved, hidden), as an updater. */
+    /** The entry as it now stands (a revision undone), as an updater. */
     onChange: (update: (entry: ProblemDiaryEntry) => ProblemDiaryEntry) => void;
     onClose: () => void;
 }) {
@@ -500,11 +350,6 @@ function DiaryEntryScreen({entry, words, companionWords, locale, money, teen, on
                             />
                         </div>
                     ) : null}
-                    {entry.ark !== null || entry.publicSummary || entry.sensitive ? (
-                        <div className="pt-6">
-                            <DiaryPublicSection entry={entry} words={allWords} teen={teen} onChange={onChange} />
-                        </div>
-                    ) : null}
                 </div>
             </div>
             {openedStep && companionWords ? (
@@ -521,7 +366,8 @@ function DiaryEntryScreen({entry, words, companionWords, locale, money, teen, on
     );
 }
 
-const NOTICE_KEY = "animaldex-diary-public-notice";
+// v2: the notice was rewritten when public summaries went (2026-11-09), so it shows once more.
+const NOTICE_KEY = "animaldex-diary-public-notice-v2";
 
 function noticeSeen(): boolean {
     try {
@@ -542,7 +388,9 @@ function rememberNotice() {
 /**
  * Life Sim (contract section 7): the profile-wide switch, at the top of the
  * Diary. A "Public" (or "Private") label always shows; the first time there
- * is an entry, a plain notice says what public means. A teen's diary is
+ * is an entry, a plain notice says what public means: others see the
+ * debates you asked in public and your Ark bars, never your problems or
+ * steps (owner, 2026-11-09: no public summaries). A teen's diary is
  * private, with no public option.
  */
 function DiaryVisibilityBand({visibility, teen, hasEntries, words, onChange}: {
@@ -692,7 +540,6 @@ export function ProfileDiaryTab({words, companionWords, locale, displayCurrency}
                 entry={entry}
                 words={words}
                 arkWords={allWords.ark}
-                publicShown={ark.on && arkEntryIsPublic(entry, visibility, ark.teen)}
                 locale={locale}
                 onOpen={() => setOpened(entry)}
             />
@@ -718,7 +565,6 @@ export function ProfileDiaryTab({words, companionWords, locale, displayCurrency}
                     companionWords={companionWords}
                     locale={locale}
                     money={money}
-                    teen={ark.teen}
                     onChange={changeEntry}
                     onClose={close}
                 />

@@ -542,45 +542,6 @@ export function arkEffectiveVisibility(visibility: ArkDiaryVisibility | null, te
     return teen ? "private" : visibility ?? "public";
 }
 
-/**
- * Whether an entry shows on the public diary: the switch is public, not a
- * teen, its summary approved, not hidden, not sensitive.
- */
-export function arkEntryIsPublic(entry: {publicSummary: string | null; hidden: boolean; sensitive: boolean}, visibility: ArkDiaryVisibility, teen: boolean): boolean {
-    return !teen && visibility === "public" && Boolean(entry.publicSummary) && !entry.hidden && !entry.sensitive;
-}
-
-/** One entry of someone else's public diary (`public_diary_v1`): only the summary they approved, never the problem. */
-export type ArkPublicDiaryEntry = {
-    focusId: string;
-    publicSummary: string;
-    approvedAt: string | null;
-    animal: string;
-    state: ArkDiaryState | null;
-    steps: ArkSteps;
-};
-
-/** `public_diary_v1`: `{visible, entries}`; nothing while the diary is private (or on an old server). */
-export function decodePublicDiary(raw: unknown): ArkPublicDiaryEntry[] {
-    const row = object(raw);
-    if (!row || row.visible === false) return [];
-    return list(row.entries).flatMap((item) => {
-        const entry = object(item);
-        const focusId = uuid(entry?.focus_id);
-        const publicSummary = text(entry?.public_summary);
-        if (!entry || !focusId || !publicSummary) return [];
-        const steps = object(entry.steps);
-        return [{
-            focusId,
-            publicSummary,
-            approvedAt: text(entry.approved_at),
-            animal: text(entry.animal) ?? "",
-            state: arkDiaryState(entry.state),
-            steps: {total: count(steps?.total), worked: count(steps?.worked), partly: count(steps?.partly), didntWork: count(steps?.didnt_work)}
-        }];
-    });
-}
-
 // MARK: - The profile's Stats order (contract section 9)
 
 export type ArkProfileSection =
@@ -637,9 +598,7 @@ export const ARK_EVENTS = {
     revealSkipped: "ark_reveal_skipped",
     revisionShown: "ark_revision_shown",
     revisionUndone: "ark_revision_undone",
-    diaryVisibilityChanged: "diary_visibility_changed",
-    diarySummaryApproved: "diary_summary_approved",
-    diaryEntryHidden: "diary_entry_hidden"
+    diaryVisibilityChanged: "diary_visibility_changed"
 } as const;
 
 // MARK: - Problems the Ark calls raise
@@ -652,12 +611,7 @@ export const ARK_PROBLEM_CODES = [
     "focus_not_found",
     "invalid_visibility",
     "diary_private_for_teens",
-    "focus_sensitive",
-    "summary_empty",
-    "summary_too_long",
-    "summary_is_raw_problem",
-    "summary_not_checked",
-    "summary_not_safe"
+    "focus_sensitive"
 ] as const;
 
 export type ArkProblemCode = (typeof ARK_PROBLEM_CODES)[number] | "ark_unavailable";
@@ -665,10 +619,4 @@ export type ArkProblemCode = (typeof ARK_PROBLEM_CODES)[number] | "ark_unavailab
 export function arkProblemCode(message: unknown): ArkProblemCode {
     const said = typeof message === "string" ? message.toLowerCase() : "";
     return ARK_PROBLEM_CODES.find((code) => said.includes(code)) ?? "ark_unavailable";
-}
-
-/** The public summary as it is approved: whitespace folded, at most 400 characters (contract section 7). */
-export const ARK_PUBLIC_SUMMARY_MAX = 400;
-export function cleanArkSummary(raw: string): string {
-    return raw.replace(/\s+/g, " ").trim().slice(0, ARK_PUBLIC_SUMMARY_MAX);
 }

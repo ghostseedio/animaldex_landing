@@ -59,18 +59,14 @@ export type ProblemDiaryEntry = {
     powers: ProblemDiaryPower[];
     /** The species' icon-art slug (added by the route), when known. */
     slug?: string | null;
-    /** The problem's id (`focus_id`, or the `focus:` key): what Hide and the public summary act on. */
+    /** The problem's id (`focus_id`, or the `focus:` key). */
     focusId: string | null;
     /**
      * Life Sim (docs/life-sim/CONTRACT.md, section 8): Earned, Lesson or
      * Revised, and every ledger change behind it. Null from an old server.
      */
     ark: {state: ArkDiaryState | null; changes: ArkChange[]} | null;
-    /** The anonymised summary they approved; null until they do. Raw problem text is never public. */
-    publicSummary: string | null;
-    /** Hidden from the public diary on its own. */
-    hidden: boolean;
-    /** A sensitive problem: never public, no stats shown to anyone else. */
+    /** A sensitive problem: no stats shown to anyone else. (No entry is ever public: the Diary has no public summaries.) */
     sensitive: boolean;
 };
 
@@ -185,8 +181,6 @@ export function decodeProblemDiaryEntry(value: unknown): ProblemDiaryEntry | nul
         slug: text(row.slug),
         focusId: focusIdFrom(row, key),
         ark: decodeArk(row.ark),
-        publicSummary: text(row.public_summary),
-        hidden: row.hidden === true,
         sensitive: row.sensitive === true
     };
 }

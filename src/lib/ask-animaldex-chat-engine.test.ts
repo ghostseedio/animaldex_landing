@@ -135,6 +135,8 @@ test("reply guards: a repeated picture, a step a day, the turn's guide", () => {
     const open = {step: "Ask for one hour", set_at: "2026-11-04T09:00:00Z"};
     assert.equal(newStepAllowed({openTrial: open, newStep: "Something new", reportedDone: false, userMessage: "ok", now}), false);
     assert.equal(newStepAllowed({openTrial: open, newStep: "Something new", reportedDone: false, userMessage: "a different step please", now}), true);
+    // A debate's chosen way waiting for its step (AnimalDex e9d0e246) always gets through, even over a same-day step.
+    assert.equal(newStepAllowed({openTrial: open, newStep: "Something new", reportedDone: false, userMessage: "ok", chosenWay: true, now}), true);
     const guide = turnGuideLines({kind: "chat", hasTake: false, message: "hru", replies: []});
     assert.ok(guide[0].startsWith("this_turn — small talk."));
     assert.ok(guide.some((line) => line.includes("hru = how are you")));

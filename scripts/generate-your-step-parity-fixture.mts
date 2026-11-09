@@ -105,7 +105,10 @@ const promptCases = [
     {state: openState, roster, powerEarned: true, stepReport: {media: "2 photos", proof: {status: "unclear", seen: "A dark, blurred room."}}},
     {state: openState, roster, powerEarned: true, stepReport: {media: "a photo", proof: {status: "failed", seen: null}}},
     {state: openState, roster, powerEarned: true, stepReport: {media: "a photo", proof: {status: "confirmed", seen: null}}},
-    {state: openState, roster, powerEarned: true, debateOffer: true, stepReport: {media: null, proof: null}}
+    {state: openState, roster, powerEarned: true, debateOffer: true, stepReport: {media: null, proof: null}},
+    // A debate's chosen way waiting for its step (AnimalDex e9d0e246): the animal's own, and another's.
+    {state: {...openState, chosen_way: {debate_id: "d1", animal: null, yours: true, problem: "Lead or stay a designer", way: "Take it, and lead from the front"}}, roster, powerEarned: true},
+    {state: {...openState, chosen_way: {debate_id: "d1", animal: "Komodo Dragon", yours: false, problem: "Lead or stay a designer", way: "Watch the team for a month, then decide"}}, roster, powerEarned: false}
 ];
 // Two of the owner's other animals, as the marker and the DEBATE line name them (a1, a2).
 const debateRoster = [

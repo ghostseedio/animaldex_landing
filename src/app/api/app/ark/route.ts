@@ -1,10 +1,8 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
-import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
 import {
     arkDiaryVisibility,
     arkProblemCode,
-    cleanArkSummary,
     decodeArkChange,
     decodeArkChanges,
     decodeArkStats
@@ -23,11 +21,9 @@ export const dynamic = "force-dynamic";
  *                                                 `ark_changes_v1`, newest first
  * POST {action: "undo", changeId}                 `undo_ark_revision_v1`
  * POST {action: "visibility", visibility}         `set_diary_visibility_v1`
- * POST {action: "hide", focusId, hidden}          `hide_diary_entry_v1`
- * POST {action: "approve", focusId, text}         `approve_diary_summary_v1`
- * POST {action: "withdraw", focusId}              `approve_diary_summary_v1` with a NULL text
- * POST {action: "draft", focusId[, text]}         `generate-applied-insight` `diary_public_draft`
- *                                                 (with text: their edited summary, checked)
+ *
+ * The Diary has no public summaries (owner, 2026-11-09): nothing here drafts,
+ * approves or hides one, so no entry's words are ever published from the web.
  *
  * Until the migration is live the reads answer `available: false` and the
  * screens show without Ark; the writes answer `{ok: false, code}`.
@@ -105,57 +101,6 @@ export async function POST(request: Request) {
         const {error} = await supabase.rpc("set_diary_visibility_v1", {p_visibility: visibility});
         if (error) return failed("set_diary_visibility_v1", error.message);
         return NextResponse.json({ok: true, visibility});
-    }
-
-    if (action === "hide") {
-        const focusId = uuid(body.focusId);
-        if (!focusId || typeof body.hidden !== "boolean") return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
-        const {error} = await supabase.rpc("hide_diary_entry_v1", {p_focus_id: focusId, p_hidden: body.hidden});
-        if (error) return failed("hide_diary_entry_v1", error.message);
-        return NextResponse.json({ok: true, hidden: body.hidden});
-    }
-
-    if (action === "approve") {
-        const focusId = uuid(body.focusId);
-        // Exactly the text diary_public_draft returned (the database approves only
-        // that stored, checked text: summary_not_checked otherwise), never re-cleaned here.
-        const text = typeof body.text === "string" ? body.text : "";
-        if (!focusId) return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
-        if (!text.trim()) return NextResponse.json({ok: false, code: "summary_empty"}, {status: 400});
-        const {error} = await supabase.rpc("approve_diary_summary_v1", {p_focus_id: focusId, p_text: text});
-        if (error) return failed("approve_diary_summary_v1", error.message);
-        return NextResponse.json({ok: true, text});
-    }
-
-    if (action === "withdraw") {
-        // A NULL text takes the approved summary back: the entry is private again.
-        const focusId = uuid(body.focusId);
-        if (!focusId) return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
-        const {error} = await supabase.rpc("approve_diary_summary_v1", {p_focus_id: focusId, p_text: null});
-        if (error) return failed("approve_diary_summary_v1", error.message);
-        return NextResponse.json({ok: true});
-    }
-
-    if (action === "draft") {
-        const focusId = uuid(body.focusId);
-        if (!focusId) return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
-        // With `text`, the summary they edited is checked as it is instead of a new draft.
-        const edited = typeof body.text === "string" ? cleanArkSummary(body.text) : "";
-        const invoked = await invokeAuthenticatedSupabaseFunctionResponse("generate-applied-insight", {
-            action: "diary_public_draft",
-            focus_id: focusId,
-            ...(edited ? {text: edited} : {})
-        }).catch(() => null);
-        if (!invoked) return NextResponse.json({ok: false, code: "ark_unavailable"}, {status: 502});
-        const payload = invoked.payload && typeof invoked.payload === "object" ? invoked.payload as Record<string, unknown> : {};
-        if (!invoked.ok) return failed("diary_public_draft", String(payload.error ?? payload.code ?? `status ${invoked.status}`));
-        // The draft's text exactly as the edge stored it: approval must send it back unchanged.
-        const text = typeof payload.text === "string" ? payload.text : "";
-        // Not safe to share (or nothing came back): it stays private, and the reason is the server's.
-        if (payload.public_ok !== true || !text.trim()) {
-            return NextResponse.json({ok: true, publicOk: false, reason: typeof payload.reason === "string" ? payload.reason.slice(0, 200) : null});
-        }
-        return NextResponse.json({ok: true, publicOk: true, text});
     }
 
     return NextResponse.json({ok: false, code: "ark_unavailable"}, {status: 400});

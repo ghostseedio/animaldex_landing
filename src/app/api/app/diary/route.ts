@@ -21,8 +21,8 @@ export const dynamic = "force-dynamic";
  * offer Try again, never an empty diary.
  *
  * Life Sim (docs/life-sim/CONTRACT.md, section 7): each entry carries its
- * Ark state and changes, its approved public summary, Hide and sensitive;
- * the answer carries the profile-wide switch (`visibility`, read from the
+ * Ark state and changes and whether it is sensitive (no public summaries,
+ * owner 2026-11-09: no entry's words are ever public); the answer carries the profile-wide switch (`visibility`, read from the
  * diary's envelope or `ark_stats_v1` when the server says it, else the
  * contract's default, public), `teen` (always private, no public option)
  * and `ark` (whether the server has the Ark at all).

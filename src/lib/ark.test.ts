@@ -7,7 +7,6 @@ import {
     arkCountAt,
     arkDiaryVisibilityChoices,
     arkEffectiveVisibility,
-    arkEntryIsPublic,
     arkEntryState,
     arkIsReveal,
     arkIsRevision,
@@ -25,12 +24,10 @@ import {
     arkSignedNumber,
     arkThreadChanges,
     arkVisibleStats,
-    cleanArkSummary,
     decodeArkAccept,
     decodeArkChange,
     decodeArkChanges,
     decodeArkStats,
-    decodePublicDiary,
     arkRevealSkipShowsNote,
     arkWithUndone
 } from "@/lib/ark";
@@ -285,30 +282,20 @@ test("the Diary's switch: public by default, a teen is always private with no pu
     assert.equal(arkEffectiveVisibility(null, false), "public");
     assert.equal(arkEffectiveVisibility("private", false), "private");
     assert.equal(arkEffectiveVisibility("public", true), "private");
-    const approved = {publicSummary: "Someone weighed spending on stock.", hidden: false, sensitive: false};
-    assert.equal(arkEntryIsPublic(approved, "public", false), true);
-    // Never before approval, never hidden, never sensitive, never on a private diary or a teen's.
-    assert.equal(arkEntryIsPublic({...approved, publicSummary: null}, "public", false), false);
-    assert.equal(arkEntryIsPublic({...approved, hidden: true}, "public", false), false);
-    assert.equal(arkEntryIsPublic({...approved, sensitive: true}, "public", false), false);
-    assert.equal(arkEntryIsPublic(approved, "private", false), false);
-    assert.equal(arkEntryIsPublic(approved, "public", true), false);
-    assert.equal(cleanArkSummary(`  ${"word ".repeat(200)}`).length, 400);
 });
 
-test("a Diary entry carries its Ark state, its changes, its summary, Hide and sensitive; an old server's has none", () => {
+test("a Diary entry carries its Ark state, its changes and sensitive, never a public summary; an old server's has none", () => {
     const base = {key: `focus:${FOCUS}`, problem: "Should I spend £600 on materials?", status: "working", animal: "Komodo dragon"};
     const [withArk] = decodeProblemDiary([{...base, ark: {state: "revised", changes: [lessonRow, revisionRow]}, public_summary: "Someone weighed a big purchase.", hidden: true, sensitive: false}]);
     assert.equal(withArk.focusId, FOCUS);
     assert.equal(withArk.ark?.state, "revised");
     assert.equal(withArk.ark?.changes.length, 2);
-    assert.equal(withArk.publicSummary, "Someone weighed a big purchase.");
-    assert.equal(withArk.hidden, true);
+    // The Diary has no public summaries (owner, 2026-11-09): a server's leftover fields are not read.
+    assert.equal("publicSummary" in withArk, false);
+    assert.equal("hidden" in withArk, false);
     assert.equal(withArk.sensitive, false);
     const [old] = decodeProblemDiary([base]);
     assert.equal(old.ark, null);
-    assert.equal(old.publicSummary, null);
-    assert.equal(old.hidden, false);
     assert.equal(arkEntryState(old.ark), null);
     // The state from the changes when the server sends none: Revised, then Lesson, then Earned.
     const reveal = decodeArkChange(lessonRow)!;
@@ -322,13 +309,12 @@ test("a Diary entry carries its Ark state, its changes, its summary, Hide and se
 test("analytics: the contract's event names and parameters", () => {
     assert.deepEqual(Object.values(ARK_EVENTS), [
         "ark_reveal_shown", "ark_reveal_skipped", "ark_revision_shown", "ark_revision_undone",
-        "diary_visibility_changed", "diary_summary_approved", "diary_entry_hidden"
+        "diary_visibility_changed"
     ]);
     assert.deepEqual(arkRevealShownParams(decodeArkChange(lessonRow)!, null), {size: "medium", kind: "lesson", animal_species_id: SPECIES, money_pct: -5});
     assert.equal(arkRevealShownParams(decodeArkChange({...lessonRow, size: null, species_profile_id: null})!, id1(4)).animal_species_id, id1(4));
     assert.equal(arkRevealShownParams(decodeArkChange({...lessonRow, size: null})!, null).size, "medium");
     assert.equal(arkProblemCode("ERROR: diary_private_for_teens"), "diary_private_for_teens");
-    assert.equal(arkProblemCode("summary_is_raw_problem"), "summary_is_raw_problem");
     assert.equal(arkProblemCode("boom"), "ark_unavailable");
 });
 
@@ -392,23 +378,12 @@ test("a report's revision (no message ref) goes under their report on that step,
     assert.equal(arkRevisionAnchorId(report, []), null);
 });
 
-test("someone else's public diary: only approved summaries, nothing while private", () => {
-    const entries = decodePublicDiary({
-        visible: true,
-        entries: [
-            {focus_id: FOCUS, public_summary: "Someone weighed a big purchase for a small business.", approved_at: "2026-11-10T00:00:00Z", animal: "Komodo dragon", state: "revised", steps: {total: 2, worked: 1, partly: 0, didnt_work: 1}},
-            {focus_id: FOCUS, public_summary: "  "},
-            {public_summary: "no id"}
-        ]
-    });
-    assert.deepEqual(entries, [{
-        focusId: FOCUS,
-        publicSummary: "Someone weighed a big purchase for a small business.",
-        approvedAt: "2026-11-10T00:00:00Z",
-        animal: "Komodo dragon",
-        state: "revised",
-        steps: {total: 2, worked: 1, partly: 0, didntWork: 1}
-    }]);
-    assert.deepEqual(decodePublicDiary({visible: false, entries: [{focus_id: FOCUS, public_summary: "x"}]}), []);
-    assert.deepEqual(decodePublicDiary(null), []);
+test("the Diary's public notice says what public means, and no Diary word mentions summaries or hiding", () => {
+    for (const words of [COMPANION_WORDS_EN.ark.diary, companionWords((id as {companions?: unknown}).companions).ark.diary]) {
+        const all = Object.values(words).join(" ").toLowerCase();
+        assert.doesNotMatch(all, /summar|ringkasan|hide|sembunyi|approve|setuj/);
+    }
+    assert.match(COMPANION_WORDS_EN.ark.diary.publicNotice, /debates you asked in public/);
+    assert.match(COMPANION_WORDS_EN.ark.diary.publicNotice, /life bars/);
+    assert.equal("summaryTitle" in COMPANION_WORDS_EN.ark.diary, false);
 });

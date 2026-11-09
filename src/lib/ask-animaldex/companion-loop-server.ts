@@ -23,6 +23,7 @@ import {
     describeStepMedia,
     type DebateChatState,
     parseCompanionRoster,
+    parseCompanionChosenWay,
     parseCompanionState,
     parseCompanionStepDebate,
     resolveReferral,
@@ -211,17 +212,25 @@ export async function loadOwnerCompanion(params: {
         try {
             const settled = await service.rpc("settle_animal_companion_power", base);
             if (settled.error) warn("settle_animal_companion_power", settled.error);
-            const [state, roster] = await Promise.all([
+            // The debate way they chose that this animal is to turn into their step
+            // (AnimalDex migration 20261110100000), read beside the state; before that
+            // migration the call fails and the turn goes on without it.
+            const [state, roster, chosenWay] = await Promise.all([
                 service.rpc("animal_companion_state", base),
                 service.rpc("animal_companion_roster", {
                     p_user_id: params.userId,
                     p_exclude_species_profile_id: params.speciesProfileId,
                     p_limit: 40
-                })
+                }),
+                Promise.resolve(service.rpc("animal_chosen_debate_way_v1", base))
+                    .catch((error: unknown) => ({data: null, error: {message: error instanceof Error ? error.message : String(error)}}))
             ]);
             if (state.error) warn("animal_companion_state", state.error);
             if (roster.error) warn("animal_companion_roster", roster.error);
-            const parsed = parseCompanionState(state.data);
+            if (chosenWay.error) warn("animal_chosen_debate_way_v1", chosenWay.error);
+            const parsedState = parseCompanionState(state.data);
+            const way = chosenWay.error ? null : parseCompanionChosenWay(chosenWay.data);
+            const parsed = parsedState && way ? {...parsedState, chosen_way: way} : parsedState;
             return {
                 state: parsed,
                 roster: parseCompanionRoster(roster.data),
@@ -429,7 +438,8 @@ export async function applyCompanionLines(params: {
             openTrial: params.state?.open_trial ?? null,
             newStep: lines.trial?.step ?? null,
             reportedDone: Boolean(lines.done),
-            userMessage: params.userMessage ?? ""
+            userMessage: params.userMessage ?? "",
+            chosenWay: Boolean(params.state?.chosen_way)
         });
         if (lines.trial && stepAllowed) {
             const {data, error} = await service.rpc("set_animal_companion_trial", {

@@ -613,6 +613,38 @@ export function decodeDebate(raw: unknown): Debate | null {
     };
 }
 
+/**
+ * A newer copy of a debate laid over the one on screen. Copies differ in
+ * what they carry: a row of My debates (`my_debates_v1`) has no report and
+ * no chosen way, a vote's answer only the counts. A copy that leaves a thing
+ * out never takes it away (owner, 2026-11-09: back in the host's chat after
+ * choosing a way, the debate stays, its chosen way marked). Only the server
+ * saying so moves them: a reopened way (`tried_ways`) clears the choice.
+ */
+export function mergeDebate(current: Debate, next: Debate): Debate {
+    if (current.id !== next.id) return next;
+    const chosen = current.chosenParticipantId;
+    const reopened = chosen !== null && next.triedParticipantIds.includes(chosen);
+    return {
+        ...current,
+        ...next,
+        participants: next.participants.length > 0 ? next.participants : current.participants,
+        turns: next.turns.length > 0 ? next.turns : current.turns,
+        report: next.report ?? current.report,
+        // The asker is the asker on every copy; a public copy only leaves it unsaid.
+        askerIsMe: next.askerIsMe || current.askerIsMe,
+        problemPrivate: next.problemPrivate ?? current.problemPrivate,
+        hostCaptureId: next.hostCaptureId ?? current.hostCaptureId,
+        chosenParticipantId: next.chosenParticipantId ?? (reopened ? null : chosen),
+        triedParticipantIds: next.triedParticipantIds.length > 0 ? next.triedParticipantIds : current.triedParticipantIds,
+        // A vote is final.
+        myVote: next.myVote ?? current.myVote,
+        votingDeadlineAt: next.votingDeadlineAt ?? current.votingDeadlineAt,
+        createdAt: next.createdAt ?? current.createdAt,
+        solution: next.solution ?? current.solution
+    };
+}
+
 export function decodeDebates(raw: unknown): Debate[] {
     const outer = object(raw);
     const rows = outer && !debateUuid(outer.id) ? list(first(outer, "debates", "items", "rows")) : list(raw);

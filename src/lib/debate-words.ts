@@ -147,15 +147,30 @@ export function debateCast(debate: Debate, and = "&"): string {
 }
 
 /**
+ * The time left on a vote, in one unit (owner, 2026-11-09): under 1 hour
+ * in minutes, under 48 hours in hours, otherwise in days rounded up. So a
+ * new public vote of 48 hours reads in hours ("40 hours", never "1 day"),
+ * and 2 days and an hour reads "3 days". Null once it has passed.
+ */
+export function debateTimeLeft(ms: number): {value: number; unit: "minute" | "hour" | "day"} | null {
+    if (!Number.isFinite(ms) || ms <= 0) return null;
+    const minutes = ms / 60_000;
+    if (minutes < 60) return {value: Math.max(1, Math.round(minutes)), unit: "minute"};
+    if (minutes < 48 * 60) return {value: Math.max(1, Math.min(47, Math.round(minutes / 60))), unit: "hour"};
+    return {value: Math.ceil(minutes / (24 * 60)), unit: "day"};
+}
+
+/**
  * "Voting closes in 5 hours" (docs/rich-chat/SPEC.md, section 2.4): the
- * time left, short, in the reader's language; null once it has passed or when
- * the debate has no deadline.
+ * time left (`debateTimeLeft`), in the reader's language; null once it has
+ * passed or when the debate has no deadline. Every vote countdown says it
+ * this way: the chat's vote section and Explore's card.
  */
 export function debateClosesIn(deadline: string | null | undefined, words: CompanionWords, locale = "en", now = Date.now()): string | null {
     const at = Date.parse(deadline ?? "");
-    if (!Number.isFinite(at) || at <= now) return null;
-    const minutes = Math.max(1, Math.round((at - now) / 60_000));
-    const [value, unit] = minutes < 60 ? [minutes, "minute"] : minutes < 48 * 60 ? [Math.round(minutes / 60), "hour"] : [Math.round(minutes / (24 * 60)), "day"];
+    const left = Number.isFinite(at) ? debateTimeLeft(at - now) : null;
+    if (!left) return null;
+    const {value, unit} = left;
     let time = `${value} ${unit}${value === 1 ? "" : "s"}`;
     try {
         time = new Intl.NumberFormat(locale, {style: "unit", unit, unitDisplay: "long"}).format(value);
@@ -204,4 +219,40 @@ export function debateQualitiesLabel(qualities: readonly DebateQuality[], words:
 /** "Fit: 82 out of 100": a fit bar read aloud (no number on screen). */
 export function debateFitLabel(fit: number, words: CompanionWords): string {
     return fillWords(words.debate.fitLabel, {fit: Math.max(0, Math.min(100, Math.round(fit)))});
+}
+
+/**
+ * Whose step a chosen way becomes (`choose_debate_way_v1`, SERVER.md): the
+ * asker's own animal of that kind when the way is one of theirs, else the
+ * host's, which turns another animal's way into its own step. Null when
+ * the debate does not say who its host is.
+ */
+export function debateStepAnimal(debate: Pick<Debate, "participants">, chosen: DebateParticipant): DebateParticipant | null {
+    if (chosen.isAskerOwned || chosen.ownerIsMe) return chosen;
+    return debate.participants.find((participant) => participant.seat === 0) ?? null;
+}
+
+/**
+ * Under the chosen way (owner, 2026-11-09): what happens next, never only
+ * the qualities. "Next: Luna gives you a step from this way. Doing it earns
+ * Luna's Power, Patient Pressure." The Power is earned by doing the step,
+ * never by choosing.
+ */
+export function debateWayNextLine(debate: Pick<Debate, "participants">, chosen: DebateParticipant, words: CompanionWords): string | null {
+    const animal = debateStepAnimal(debate, chosen);
+    if (!animal) return null;
+    const name = debateAnimalName(animal);
+    const power = animal.powerName?.trim();
+    return power
+        ? fillWords(words.debate.wayNext, {animal: name, power})
+        : fillWords(words.debate.wayNextNoPower, {animal: name});
+}
+
+/** A public debate's card shows at most this many animals, then "+N more" (owner, 2026-11-09). */
+export const DEBATE_CARD_ANIMALS = 3;
+
+/** The animals a card shows, and how many more there are ("+4 more"). */
+export function debateCardAnimals<T>(participants: readonly T[], expanded = false, max = DEBATE_CARD_ANIMALS): {shown: T[]; more: number} {
+    if (expanded || participants.length <= max) return {shown: [...participants], more: 0};
+    return {shown: participants.slice(0, max), more: participants.length - max};
 }

@@ -49,6 +49,19 @@ export type CompanionOpenTrial = {
     has_report?: boolean;
 };
 export type CompanionReferral = {id: string; from_animal: string; problem: string; at?: string | null};
+/**
+ * The way they chose in a debate that this animal is to turn into their step
+ * (`animal_chosen_debate_way_v1`, AnimalDex migration 20261110100000): there
+ * until a step is set for this animal after the choice. `yours`: the way is
+ * this animal's own kind's; otherwise `animal` is one they have not caught.
+ */
+export type CompanionChosenWay = {
+    debate_id: string;
+    animal: string | null;
+    yours: boolean;
+    problem: string | null;
+    way: string | null;
+};
 
 /** `animal_companion_state`: what the animal knows of the loop with its owner. */
 export type CompanionState = {
@@ -57,6 +70,8 @@ export type CompanionState = {
     your_trials_done: number;
     recent_done: Array<{step: string; done_at?: string | null; evidence?: string | null}>;
     referral: CompanionReferral | null;
+    /** Read beside the state (`animal_chosen_debate_way_v1`), when there is one. */
+    chosen_way?: CompanionChosenWay | null;
 };
 
 /**
@@ -218,6 +233,21 @@ export function parseCompanionState(raw: unknown): CompanionState | null {
     };
 }
 
+export function parseCompanionChosenWay(raw: unknown): CompanionChosenWay | null {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const row = raw as Record<string, unknown>;
+    if (typeof row.debate_id !== "string" || !row.debate_id) return null;
+    const text = (value: unknown, max: number) =>
+        typeof value === "string" && value.trim() ? value.replace(/\s+/g, " ").trim().slice(0, max) : null;
+    return {
+        debate_id: row.debate_id,
+        animal: text(row.animal, 80),
+        yours: row.yours === true,
+        problem: text(row.problem, 300),
+        way: text(row.way, 300)
+    };
+}
+
 export function parseCompanionRoster(raw: unknown): CompanionRosterEntry[] {
     if (!Array.isArray(raw)) return [];
     return raw.flatMap((item, index) => {
@@ -273,9 +303,10 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
                 "  the conversation. The app shows it to them under your reply with its own buttons, so never mention a card, a",
                 "  button or tapping, and never call it a Trial, a challenge, a task, homework or Apply It Your Way, or make it",
                 "  sound like a form. One at a time: while companion.open_trial is open, do not set another unless they have",
-                "  clearly moved on from it, it no longer fits, or they ask you for a different one.",
+                "  clearly moved on from it, it no longer fits, they ask you for a different one, or companion.chosen_way is there.",
                 "- At most one new step on a problem a day: while companion.open_trial.set_today is true, keep to that step (talk",
-                "  it through, make it easier to start) unless they tell you how it went or ask you for a different one.",
+                "  it through, make it easier to start) unless they tell you how it went, ask you for a different one, or",
+                "  companion.chosen_way is there.",
                 "- An idea of theirs gets no step unless they ask how to start it; then the step is its first move.",
                 "- Something hard (missing someone, a loss, feeling alone or low) changes how you give the step, not whether you",
                 "  do: comfort first, and once you have stayed with it for a reply, give them one small thing shaped by your",
@@ -303,7 +334,7 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
             ]
             : [
                 "- They have asked not to be offered steps. Help in conversation only: set no steps and send no cards unless they",
-                "  ask for one in this message."
+                "  ask for one in this message, or companion.chosen_way is there (they chose that way to try: its rule applies)."
             ]),
         "- When they tell you how companion.open_trial went (step_report says they have just reported it, and why):",
         "  if they did it, or an honest version of it — it happened, even if it went badly or only partly — it counts:",
@@ -337,6 +368,13 @@ export function companionLoopRules(params: {offersSteps: boolean; debates?: bool
         "  another animal's way in a debate, help them do that way: when it is your way, your take is how to do it in",
         "  their life; when it is another animal's (one they have not caught), turn that animal's way into one step for",
         "  them, in your own words, and say the step starts with that animal's way.",
+        "- companion.chosen_way: they have just chosen a way to try in a debate on their problem (chosen_way.problem, now",
+        "  your focus with them): chosen_way.yours is true when it is your own way, else it is chosen_way.animal's, one they",
+        "  have not caught. This reply sets their step from it: the first concrete move of that way in their life, said as",
+        "  you would (another animal's way turned into one step for them that starts with that animal's way), and its TRIAL",
+        "  line, even when companion.open_trial is open or was set today; the new step replaces it. Never ask them to explain",
+        "  the problem or the way again. The one exception is the hard-moment rule: when they sound hopeless, as if nothing",
+        "  matters, or may be hurting themselves or in danger, no step; stay with them as that rule says.",
         ...(params.debates && params.offersSteps
             ? [
                 "- Other animals' ways (companion.debate): only while companion.debate.may_offer is true, you may offer once for a",
@@ -535,6 +573,16 @@ export function companionPromptLines(params: {
             referral: state.referral
                 ? {from: state.referral.from_animal, problem: state.referral.problem}
                 : null,
+            ...(state.chosen_way
+                ? {
+                    chosen_way: {
+                        yours: state.chosen_way.yours,
+                        ...(state.chosen_way.yours || !state.chosen_way.animal ? {} : {animal: state.chosen_way.animal}),
+                        problem: state.chosen_way.problem,
+                        way: state.chosen_way.way
+                    }
+                }
+                : {}),
             your_power: params.powerEarned || params.powerJustEarned ? "earned" : "not earned yet",
             ...(params.powerJustEarned ? {power_just_earned: true} : {}),
             ...(params.warmup?.available ? {warmup: {passed: params.warmup.passed, may_offer: params.warmup.may_offer}} : {}),
@@ -573,7 +621,8 @@ export const REFERRAL_OPENING_RULES = [
     "opened your conversation. Speak first:",
     "- Say in a few words that you heard what is going on, then go straight into your take on it, from your lesson.",
     "  No introduction of yourself, no asking them to explain it.",
-    "- As long as the help needs, in your own manner, then one question or one step to get them moving.",
+    "- As long as the help needs, in your own manner, then one question or one step to get them moving. When",
+    "  companion.chosen_way is there, it is the step, set from that way as its rule says, with its TRIAL line.",
     "- Then the follow-ups line, and 2-3 short replies they might send, each under 60 characters, written AS THEM."
 ];
 

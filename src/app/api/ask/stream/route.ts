@@ -1148,7 +1148,10 @@ export async function POST(request: Request) {
                 // Life sim (section 5): a step set in this reply is tagged now, after the
                 // reply, so its reveal can carry its story.
                 onStepSet: (step) => {
-                    void tagStepForSim(owner.service, {userId: ownerUserId, stepId: step.id, animal: stepTagAnimal(), fresh: true, debateWay: null}, {fastJSON: askFastJSON});
+                    // A step set from a debate's chosen way is tagged with that way (looked up
+                    // from the step, AnimalDex e9d0e246); any other new step has none.
+                    const debateWay = loop.state?.chosen_way ? undefined : null;
+                    void tagStepForSim(owner.service, {userId: ownerUserId, stepId: step.id, animal: stepTagAnimal(), fresh: true, debateWay}, {fastJSON: askFastJSON});
                 }
             });
             companionResult = result;
