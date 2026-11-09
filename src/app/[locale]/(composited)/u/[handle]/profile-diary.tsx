@@ -41,9 +41,12 @@ import {
     diaryEventIsWin,
     diaryEventTitle,
     diaryEvents,
+    diaryNextText,
+    diaryOpenStep,
     diaryOutcome,
     diaryOutcomeText,
     diaryStatusText,
+    diaryTalkToText,
     type ProblemDiaryEntry,
     type ProblemDiaryEvent,
     type ProblemDiaryStatus,
@@ -240,7 +243,7 @@ function EventRow({event, isLast, entry, words, locale, onOpenStep}: {
                         {words.stepDoneTitle}
                     </button>
                 ) : null}
-                {event.kind === "stepSet" && entry.speciesProfileId && entry.captureId ? (
+                {event.kind === "stepSet" && !event.step.isClosed && entry.speciesProfileId && entry.captureId ? (
                     // I've done it: the animal's chat, on the report, as the step's card there does.
                     <Link href={`/app/capture/${encodeURIComponent(entry.captureId)}?talk=report`} className={`${CHIP} text-black hover:brightness-105`} style={{backgroundColor: NEON}} data-testid="diary-step-did-it">
                         {words.didIt}
@@ -248,6 +251,24 @@ function EventRow({event, isLast, entry, words, locale, onOpenStep}: {
                 ) : null}
                 {at ? <p className="text-[11px] text-white/40">{at}</p> : null}
             </div>
+        </div>
+    );
+}
+
+/**
+ * What to do now on a problem still being worked on: the open step, and the
+ * animal's chat (on the report when there is a step to report).
+ */
+function DiaryNextMove({entry, captureId, words}: {entry: ProblemDiaryEntry; captureId: string; words: ProblemDiaryWords}) {
+    const open = diaryOpenStep(entry);
+    const href = `/app/capture/${encodeURIComponent(captureId)}?talk=${open ? "report" : "1"}`;
+    return (
+        <div className="flex flex-col gap-2.5 pt-6" data-testid="diary-next-move">
+            {open ? <p className="text-[15px] font-semibold leading-5 text-white">{diaryNextText(open, words)}</p> : null}
+            <Link href={href} className={`${CHIP} text-black hover:brightness-105`} style={{backgroundColor: NEON}} data-testid="diary-talk-to-animal">
+                <Glyph name="bubble" className="h-3.5 w-3.5" />
+                {diaryTalkToText(entry, words)}
+            </Link>
         </div>
     );
 }
@@ -337,6 +358,10 @@ function DiaryEntryScreen({entry, words, companionWords, locale, money, onChange
                             onOpenStep={setOpenedStep}
                         />
                     ))}
+                    {/* The next move is always on screen (owner, 2026-11-10). */}
+                    {entry.status === "working" && entry.speciesProfileId && entry.captureId ? (
+                        <DiaryNextMove entry={entry} captureId={entry.captureId} words={words} />
+                    ) : null}
                     {entry.ark && entry.ark.changes.length > 0 ? (
                         <div className="pt-6">
                             <ArkDiaryHistory

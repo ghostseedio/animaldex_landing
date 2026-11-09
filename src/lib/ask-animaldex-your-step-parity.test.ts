@@ -99,7 +99,7 @@ test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () 
     // fresh step (AnimalDex e9d0e246: companion.chosen_way, its rule and the
     // lines that make room for it), by scripts/generate-your-step-parity-fixture.mts.
     assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^e9d0e246/);
+    assert.match(fixture.source.commit, /^3543005f/);
     assert.equal(fixture.source.files.includes("ark-sim.ts"), true);
 });
 

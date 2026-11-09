@@ -454,6 +454,7 @@ export const DEBATE_WEB_COPY = {
     signInToVote: "Sign in to vote",
     ineligible: "You can vote once your account is a week old and has a public capture.",
     openDebate: "Open the debate",
+    seeDebate: "See the debate",
     yourDebate: "Your debate",
     seeAll: "See all",
     rosterOn: "In public debates",

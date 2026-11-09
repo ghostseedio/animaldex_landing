@@ -21,6 +21,8 @@ export type StepOutcome = "worked" | "partly" | "didnt_work";
 export type ProblemDiaryStep = {
     record: StepRecord;
     isDone: boolean;
+    /** Dropped ("A different step") or replaced: no longer theirs to do (iOS `isClosed`, 2026-11-10). */
+    isClosed?: boolean;
     setAt: string | null;
     /** How it went, as the animal heard it; null before outcomes were kept. */
     outcome: StepOutcome | null;
@@ -128,7 +130,14 @@ function decodeStep(value: unknown): ProblemDiaryStep | null {
     const row = object(value);
     const record = row ? decodeStepRecords([row])[0] : undefined;
     if (!row || !record) return null;
-    return {record, isDone: text(row.status) === "done", setAt: text(row.set_at), outcome: stepOutcome(row.outcome)};
+    const status = text(row.status);
+    return {
+        record,
+        isDone: status === "done",
+        isClosed: status === "dropped" || status === "replaced",
+        setAt: text(row.set_at),
+        outcome: stepOutcome(row.outcome)
+    };
 }
 
 function decodeDebate(value: unknown): ProblemDiaryDebate | null {
@@ -218,6 +227,11 @@ function findLast<T>(items: T[], test: (item: T) => boolean): T | undefined {
     return undefined;
 }
 
+/** The step they are on: the newest neither done nor dropped/replaced. */
+export function diaryOpenStep(entry: Pick<ProblemDiaryEntry, "steps">): ProblemDiaryStep | undefined {
+    return findLast(entry.steps, (step) => !step.isDone && !step.isClosed);
+}
+
 export type ProblemDiaryOutcome =
     | {kind: "earned"; power: string}
     | {kind: "solved"}
@@ -243,7 +257,7 @@ export function diaryOutcome(entry: ProblemDiaryEntry): ProblemDiaryOutcome {
         if (solved) return {kind: "solved"};
         if (worked) return {kind: "stepDone", step: worked.record.step};
     }
-    const open = findLast(entry.steps, (step) => !step.isDone);
+    const open = diaryOpenStep(entry);
     if (open) return {kind: "stepOpen", step: open.record.step};
     const last = findLast(entry.steps, (step) => step.isDone);
     if (last) return last.outcome === "partly" ? {kind: "partly", step: last.record.step} : {kind: "didntWork", step: last.record.step};
@@ -357,6 +371,8 @@ export type ProblemDiaryWords = {
     powerTitle: string;
     openDebate: string;
     didIt: string;
+    next: string;
+    talkTo: string;
     back: string;
 };
 
@@ -365,7 +381,7 @@ export const PROBLEM_DIARY_WORD_KEYS: Array<keyof ProblemDiaryWords> = [
     "earned", "solvedYourWay", "triedWay", "stepDone", "stepOpen", "partlyWorked", "didntWork",
     "itPartlyWorked", "itDidntWork", "animalsWeighedIn", "talkingWith", "movedOn", "brought",
     "weighedIn", "chose", "solvedTitle", "usedIdeas", "stepDoneTitle", "youSaid", "powerTitle",
-    "openDebate", "didIt", "back"
+    "openDebate", "didIt", "next", "talkTo", "back"
 ];
 
 export const PROBLEM_DIARY_WORDS_EN: ProblemDiaryWords = {
@@ -397,6 +413,8 @@ export const PROBLEM_DIARY_WORDS_EN: ProblemDiaryWords = {
     powerTitle: "{power} is yours",
     openDebate: "See the debate",
     didIt: "I've done it",
+    next: "Next: {step}",
+    talkTo: "Talk to {animal}",
     back: "Back"
 };
 
@@ -431,6 +449,15 @@ export function diaryOutcomeText(outcome: ProblemDiaryOutcome, words: ProblemDia
         case "talking": return fill(words.talkingWith, {animal: outcome.animal});
         case "movedOn": return words.movedOn;
     }
+}
+
+/** "Next: {step}" and "Talk to {animal}": the next move on an entry still being worked on. */
+export function diaryNextText(step: ProblemDiaryStep, words: ProblemDiaryWords): string {
+    return fill(words.next, {step: step.record.step});
+}
+
+export function diaryTalkToText(entry: Pick<ProblemDiaryEntry, "nickname" | "animal">, words: ProblemDiaryWords): string {
+    return fill(words.talkTo, {animal: diaryAnimalName(entry)});
 }
 
 /** A moment's title in the problem's story (iOS `ProblemDiaryEventRow.title`). */

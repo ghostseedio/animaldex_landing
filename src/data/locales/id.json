@@ -2432,6 +2432,8 @@
       "powerTitle": "{power} jadi milikmu",
       "openDebate": "Lihat debatnya",
       "didIt": "Sudah kulakukan",
+      "next": "Berikutnya: {step}",
+      "talkTo": "Bicara dengan {animal}",
       "back": "Kembali"
     },
     "cardsEmpty": "Belum ada tangkapan.",
@@ -3127,6 +3129,7 @@
       "signInToVote": "Masuk untuk memilih",
       "ineligible": "Anda bisa memilih setelah akun Anda berumur seminggu dan punya tangkapan publik.",
       "openDebate": "Buka debatnya",
+      "seeDebate": "Lihat debatnya",
       "yourDebate": "Debat Anda",
       "seeAll": "Lihat semua",
       "rosterOn": "Ikut debat publik",

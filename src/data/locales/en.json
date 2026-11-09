@@ -2443,6 +2443,8 @@
       "powerTitle": "{power} is yours",
       "openDebate": "See the debate",
       "didIt": "I've done it",
+      "next": "Next: {step}",
+      "talkTo": "Talk to {animal}",
       "back": "Back"
     },
     "cardsEmpty": "No captures yet.",
@@ -3141,6 +3143,7 @@
       "signInToVote": "Sign in to vote",
       "ineligible": "You can vote once your account is a week old and has a public capture.",
       "openDebate": "Open the debate",
+      "seeDebate": "See the debate",
       "yourDebate": "Your debate",
       "seeAll": "See all",
       "rosterOn": "In public debates",

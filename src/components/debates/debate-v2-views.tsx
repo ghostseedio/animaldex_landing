@@ -21,6 +21,7 @@
  */
 
 import {useEffect, useState, type ReactNode} from "react";
+import Link from "@/app/[locale]/_components/link";
 import {AskAnimalFace, AskSpecialLabel, AskWalkIcon} from "@/components/ask-animaldex/ask-messenger";
 import {ASK_GROUP_COLORS} from "@/lib/ask-animaldex/group-thread";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
@@ -373,7 +374,7 @@ export function DebatePublicWayRow({participant, way}: {participant: DebateParti
  * strangers will read it, [Post it] [Keep it private]; then "In public as"
  * and the words it went up as; or, too personal, that it stays private.
  */
-export function DebateAskPublicSection({debate, stage, words, working, problem, draft, onDraft, onAsk, onPost, onKeepPrivate, onEdit}: {
+export function DebateAskPublicSection({debate, stage, words, working, problem, draft, onDraft, onAsk, onPost, onKeepPrivate, onEdit, debateHref}: {
     debate: Pick<Debate, "participants" | "publicWays">;
     stage: DebateAskPublicStage;
     words: CompanionWords;
@@ -387,6 +388,8 @@ export function DebateAskPublicSection({debate, stage, words, working, problem, 
     onKeepPrivate: () => void;
     /** In the chat, Edit works in the message bar; elsewhere, in a field here. */
     onEdit?: () => void;
+    /** In the chat: the public post itself, where people vote (owner, 2026-11-10). */
+    debateHref?: string;
 }) {
     const [explaining, setExplaining] = useState(false);
     const [editing, setEditing] = useState(false);
@@ -463,6 +466,14 @@ export function DebateAskPublicSection({debate, stage, words, working, problem, 
                 <>
                     {label(words.debate.askPublicPosted)}
                     <p className="text-[14px] font-semibold leading-[22px] text-white">{stage.text}</p>
+                    {debateHref ? (
+                        <div className="flex flex-wrap gap-2">
+                            <Link href={debateHref} className={DEBATE_SECONDARY_CHIP} data-testid="debate-open-public-post">
+                                <PeopleIcon />
+                                {words.debateWeb.seeDebate}
+                            </Link>
+                        </div>
+                    ) : null}
                     {/* The animals other people added, with their ways. */}
                     {ways(debate.participants.filter((participant) => participant.kind === "community"))}
                 </>

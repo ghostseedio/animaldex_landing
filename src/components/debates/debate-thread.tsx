@@ -546,6 +546,7 @@ export default function DebateThread({
                                     onPost={() => void v2.askPublic.post()}
                                     onKeepPrivate={() => void v2.askPublic.keepPrivate()}
                                     onEdit={publicEdit}
+                                    debateHref={chat ? `/app/debates/${encodeURIComponent(debate.id)}` : undefined}
                                 />
                             ) : null}
                         </>
