@@ -14,6 +14,7 @@ import {
     type StepRecordMedia,
     type StepRecordWithMedia
 } from "@/lib/your-step";
+import {decodeArkAccept} from "@/lib/ark";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,9 @@ export const dynamic = "force-dynamic";
  * GET ?speciesProfileId= the done steps with one animal (`animal_step_records_v1`),
  *                        newest first, each photo or video signed for an hour: the
  *                        Bond tab's "Your record with {name}".
- * POST {action: "accept", stepId}                   "I'll do it" (`accept_animal_step_v1`).
+ * POST {action: "accept", stepId}                   "I'll do it" (`accept_animal_step_v1`), with its
+ *                                                   Life Sim reveal (`reveal`, `revealSkipped`) when the
+ *                                                   server plays one (docs/life-sim/CONTRACT.md, section 3).
  * POST {action: "drop", stepId}                     "Something else" (`drop_animal_step_v1`).
  * POST {action: "fromTrial", speciesProfileId, frequency}
  *                                                   "Make this my step" (`set_animal_step_from_trial_v1`).
@@ -129,7 +132,10 @@ export async function POST(request: Request) {
         const rpc = action === "accept" ? "accept_animal_step_v1" : "drop_animal_step_v1";
         const {data, error} = await supabase.rpc(rpc, {p_step_id: stepId});
         if (error) return failed(rpc, error.message);
-        return NextResponse.json({ok: true, step: action === "accept" ? decodeStepResult(data) : null});
+        if (action === "drop") return NextResponse.json({ok: true, step: null});
+        // An old server answers `{step}` alone: no reveal, nothing skipped.
+        const accepted = decodeArkAccept(data, decodeStepResult);
+        return NextResponse.json({ok: true, step: accepted.step, reveal: accepted.reveal, revealSkipped: accepted.revealSkipped});
     }
 
     if (action === "fromTrial") {
@@ -143,8 +149,10 @@ export async function POST(request: Request) {
             p_frequency: frequency
         });
         if (error) return failed("set_animal_step_from_trial_v1", error.message);
-        const step = decodeStepResult(data);
-        return step ? NextResponse.json({ok: true, step}) : failed("set_animal_step_from_trial_v1", "no step returned");
+        const accepted = decodeArkAccept(data, decodeStepResult);
+        return accepted.step
+            ? NextResponse.json({ok: true, step: accepted.step, reveal: accepted.reveal, revealSkipped: accepted.revealSkipped})
+            : failed("set_animal_step_from_trial_v1", "no step returned");
     }
 
     return NextResponse.json({ok: false, code: "step_unavailable"}, {status: 400});

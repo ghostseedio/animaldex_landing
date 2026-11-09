@@ -304,6 +304,86 @@ export const DEBATE_COPY = {
     offerAnimalWorking: "Your animal is thinking…"
 } as const;
 
+/**
+ * Life Sim: Ark Score (AnimalDex docs/life-sim/CONTRACT.md). UI labels only:
+ * every word an animal says in the reveal or a revision is the model's.
+ */
+export const ARK_COPY = {
+    score: "Ark Score",
+    /** The search row and the collector card: "Ark 143". */
+    scoreShort: "Ark {n}",
+    outOf: "of 500",
+    stats: {
+        money: "Money",
+        relationships: "Relationships",
+        energy: "Energy",
+        reputation: "Reputation",
+        experience: "Experience"
+    },
+    /** The reveal's label and the Diary's states. */
+    earned: "Earned",
+    lesson: "Lesson",
+    revised: "Revised",
+    undone: "Undone",
+    /** A loss is a lesson, with what it taught next to it. */
+    lessonExperience: "+{n} Experience from the lesson",
+    scoreChange: "Ark Score {before} → {after}",
+    /** The revision card under the message that caused it. */
+    revisedBetter: "Revised · it went better",
+    revisedWorse: "Revised · it went worse",
+    revisedSame: "Revised",
+    revisedFrom: "From what you said: “{words}”",
+    revisedFromReport: "From how you said it went",
+    undo: "Undo",
+    undoFailed: "That didn't go through. Try again in a moment.",
+    /** Why "I'll do it" played no reveal: shown only for the caps, never for a sensitive problem. */
+    skippedAnimalCap: "{name} has already moved your stats today. This step still counts.",
+    skippedDailyCap: "That's today's three reveals. This step still counts.",
+    /** The profile's Stats (contract section 9). */
+    latest: "{delta} latest",
+    stepsTaken: "Steps taken",
+    worked: "Worked",
+    partly: "Partly",
+    didntWork: "Didn't work",
+    powersEarned: "Powers earned",
+    crew: "Crew",
+    crewLine: "{animals} animals · {species} species",
+    problemsWorkedThrough: "Problems worked through",
+    publicDebates: "Public debates",
+    collecting: "Collecting",
+    weekSteps: "Steps",
+    weekArkChange: "Ark Score",
+    weekPowers: "Powers",
+    collectionEstimate: "Collection estimate",
+    /** Someone else's profile with a private diary: the bars stay theirs. */
+    barsPrivate: "Their life bars show only on a public diary.",
+    /** The Diary's switch, notice and entry actions (contract section 7). */
+    diary: {
+        public: "Public",
+        private: "Private",
+        visibility: "Diary",
+        publicNotice: "Your diary is public. Only summaries you approve show, never your own words. Sensitive problems are never public.",
+        privateNotice: "Your diary is private. Only you can see it.",
+        teenNotice: "Your diary is private.",
+        gotIt: "Got it",
+        makePrivate: "Make private",
+        makePublic: "Make public",
+        changeFailed: "That didn't go through. Try again in a moment.",
+        summaryTitle: "Public summary",
+        summaryHint: "This is all anyone else sees. Your own words stay private.",
+        writeSummary: "Write a public summary",
+        drafting: "Writing it…",
+        approve: "Approve",
+        approved: "Approved",
+        notPublic: "This one stays private: it can't be shared safely.",
+        alwaysPrivate: "Always private",
+        hide: "Hide from public",
+        unhide: "Show on public",
+        hidden: "Hidden",
+        history: "What changed"
+    }
+} as const;
+
 export const ROSTER_COPY = {
     optIn: "Let my animals join public debates",
     optInNote: "Only animals with their Power earned. Each debate puts 1 heart on it, and a winning animal earns you Credits.",
@@ -460,6 +540,8 @@ export const COMPANION_WORDS_EN = {
     },
     /** 3.2 "Your step": the step card, the report, the record, the Warmup and the Trials. */
     journey: YOUR_STEP_COPY,
+    /** Life Sim: the reveal, revisions, the Diary's states and switch, the profile's Ark stats. */
+    ark: ARK_COPY,
     /** 3.2 Debates: the chat's debate, the sheet, the report, the vote. */
     debate: DEBATE_COPY,
     /** The public roster opt-in (Settings) and its status. */

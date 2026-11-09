@@ -24,6 +24,7 @@ import {
     type StepProblemCode,
     type StepRecordWithMedia
 } from "@/lib/your-step";
+import {decodeArkChange, arkRevealSkip, type ArkChange, type ArkRevealSkip} from "@/lib/ark";
 
 const OPEN_STEP_EVENT = "animaldex:open-step";
 
@@ -67,11 +68,25 @@ async function post(body: Record<string, unknown>): Promise<{ok: true; payload: 
     }
 }
 
-/** "I'll do it": the step as the server now holds it. */
-export async function acceptStep(step: AnimalStep): Promise<StepCallResult<AnimalStep>> {
+/** "I'll do it", answered: the step now, and the Life Sim reveal it played (or why none). */
+export type StepAccepted = {step: AnimalStep; reveal: ArkChange | null; revealSkipped: ArkRevealSkip | null};
+
+/**
+ * "I'll do it": the step as the server now holds it, and its reveal
+ * (docs/life-sim/CONTRACT.md, section 3). An old server sends no reveal.
+ */
+export async function acceptStep(step: AnimalStep): Promise<StepCallResult<StepAccepted>> {
     const result = await post({action: "accept", stepId: step.id});
     if (!result.ok) return result;
-    return {ok: true, value: decodeStepResult(result.payload.step) ?? {...step, acceptedAt: step.acceptedAt ?? new Date().toISOString()}};
+    const reveal = decodeArkChange(result.payload.reveal);
+    return {
+        ok: true,
+        value: {
+            step: decodeStepResult(result.payload.step) ?? {...step, acceptedAt: step.acceptedAt ?? new Date().toISOString()},
+            reveal,
+            revealSkipped: reveal ? null : arkRevealSkip(result.payload.revealSkipped)
+        }
+    };
 }
 
 /** "A different step": the step is dropped (a no-op on one no longer open). */

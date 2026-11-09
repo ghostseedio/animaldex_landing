@@ -39,7 +39,7 @@ import {type AnimalTrial, frequencyAccent, instructionsPreview, sortTrials, tria
 import {fillWords, trialDifficultyText, trialDifficulty, type CompanionWords} from "@/lib/companion-bond";
 import {askWarmupChoiceMark, type AskStepResolution} from "@/lib/ask-animaldex/special-messages";
 import type {AskWarmupItem} from "@/lib/ask-animaldex/thread";
-import type {StepFrequency} from "@/lib/your-step";
+import {stepCardState, type StepFrequency} from "@/lib/your-step";
 import {
     stepDoneLabel,
     stepProofBonusLine,
@@ -105,8 +105,10 @@ function ShareChip({label, onShare}: {label: string; onShare: () => void}) {
 
 /**
  * The last section of the bubble that set the step. Live, not accepted: [I'll
- * do it] [A different step]; accepted: [I did it] [A different step], which puts
- * the message bar in report mode; reported: "Tell {name} more". A step
+ * do it] [A different step], where "I'll do it" plays the Life Sim reveal under
+ * this message (docs/life-sim/CONTRACT.md, section 3); accepted: [I've done it]
+ * [A different step], which puts the message bar in report mode (the report
+ * still earns the Power, as before); reported: "Tell {name} more". A step
  * picked from a Trial shows that Trial's loop and its difficulty. When no
  * reply in the thread carries the open step (set in an earlier conversation,
  * or the thread cleared), this section is the whole of one more animal
@@ -163,8 +165,9 @@ export function AskStepSection({
             {live ? (
                 busy ? <Working /> : (
                     <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={onPrimary} className={PRIMARY}>
-                            {stepPrimaryLabel(live, name, words)}
+                        <button type="button" onClick={onPrimary} className={PRIMARY} data-testid={stepCardState(live) === "offered" ? "step-accept" : "step-did-it"}>
+                            {/* Life Sim: not yet taken on, "I'll do it" plays the reveal; then "I've done it" reports. */}
+                            {stepCardState(live) === "offered" ? words.journey.step.accept : stepPrimaryLabel(live, name, words)}
                         </button>
                         <button type="button" onClick={onOther} className={SECONDARY}>
                             {words.journey.step.other}

@@ -1000,3 +1000,23 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
                 : null
     };
 }
+
+/**
+ * Life Sim (docs/life-sim/CONTRACT.md, section 8): the member profile
+ * summary's Ark Score, Steps taken and Powers earned, which anyone may see
+ * (section 7). Read on its own, so a server without the columns answers
+ * nothing here and the rest of the profile reads as before.
+ */
+export type PublicArkSummary = {arkScore: number | null; stepsTotal: number | null; powersEarned: number | null};
+
+export async function getPublicArkSummary(userId: string): Promise<PublicArkSummary | null> {
+    const params = new URLSearchParams({select: "ark_score,steps_total,powers_earned", user_id: `eq.${userId}`, limit: "1"});
+    const [row] = await fetchRows<Record<string, unknown>>("member_profile_summaries_v1", params);
+    if (!row) return null;
+    const read = (value: unknown) => {
+        const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+        return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
+    };
+    const summary = {arkScore: read(row.ark_score), stepsTotal: read(row.steps_total), powersEarned: read(row.powers_earned)};
+    return summary.arkScore === null ? null : summary;
+}

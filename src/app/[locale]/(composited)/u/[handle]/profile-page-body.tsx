@@ -3,11 +3,10 @@ import ProfileContent from "@/app/[locale]/(composited)/u/[handle]/profile-conte
 import ShareProfileButton from "@/app/[locale]/(composited)/u/[handle]/share-profile-button";
 import {getCurrencyPreference} from "@/data/account-settings";
 import {getAppCaptures} from "@/data/authenticated-app";
-import {getInstagramDisplayText, getPublicProfileCard, normalizePublicHandle, type PublicProfileCapture} from "@/data/public-profiles";
+import {getInstagramDisplayText, getPublicArkSummary, getPublicProfileCard, normalizePublicHandle, type PublicProfileCapture} from "@/data/public-profiles";
 import {
     buildOwnerCompletedSets,
     getMemberListedPacks,
-    getOwnerTradeUnlockSummary,
     getProfileCreditsSummary,
     getProfileSocialState,
     getProfileViewerState
@@ -25,6 +24,30 @@ import {PROFILE_SHOP_LABEL_KEYS} from "@/app/[locale]/(composited)/u/[handle]/pr
 import {PROBLEM_DIARY_WORD_KEYS, type ProblemDiaryWords} from "@/lib/problem-diary";
 import {loadAppFeatureFlags} from "@/data/app-feature-flags";
 import {isAppFeatureOn} from "@/lib/app-feature-flags";
+import {decodeArkStats, type ArkStats} from "@/lib/ark";
+import {decodeProblemDiary} from "@/lib/problem-diary";
+
+/**
+ * Life Sim (docs/life-sim/CONTRACT.md, sections 7 to 9): `ark_stats_v1` as
+ * this viewer may see it (signed in: the four life bars only on a public
+ * diary), and, on your own profile, how many problems your Diary holds.
+ * Null on any error, an old server included.
+ */
+async function getViewerArk(profileUserId: string, isOwner: boolean, signedIn: boolean): Promise<{stats: ArkStats | null; problems: number | null}> {
+    const supabase = signedIn ? createSupabaseServerClient() : null;
+    if (!supabase) return {stats: null, problems: null};
+    const [stats, diary] = await Promise.all([
+        Promise.resolve(supabase.rpc("ark_stats_v1", {p_user_id: isOwner ? null : profileUserId}))
+            .then((result) => (result.error ? null : decodeArkStats(result.data)))
+            .catch(() => null),
+        isOwner
+            ? Promise.resolve(supabase.rpc("my_problem_diary_v1", {p_limit: 100}))
+                .then((result) => (result.error ? null : decodeProblemDiary(result.data).length))
+                .catch(() => null)
+            : Promise.resolve(null)
+    ]);
+    return {stats, problems: diary};
+}
 
 function profilePath(handle: string) {
     return `/u/${encodeURIComponent(handle)}`;
@@ -96,9 +119,10 @@ export async function ProfilePageBody({
 
     if (viewer.isOwner) {
         const completedSets = buildOwnerCompletedSets(profile.powerSetCompletions);
-        const [credits, tradeUnlock, collection, historyCaptures] = await Promise.all([
+        // No trade-unlock bar (Life Sim, contract section 9: trading is paused).
+        const tradeUnlock = null;
+        const [credits, collection, historyCaptures] = await Promise.all([
             getProfileCreditsSummary(),
-            getOwnerTradeUnlockSummary(profile.collectorScore),
             // The owner's real binders, as on iOS (`collectionBinders.filter(\.isComplete)`).
             // Binder progress is built from the viewer's own captures, so only the owner has it.
             getCollectionBinders().catch(() => null),
@@ -137,7 +161,7 @@ export async function ProfilePageBody({
         : Promise.all([getPublicDebates(profile.userId), getCompanionWords(locale)])
             .then(([debates, words]) => ({debates, words}))
             .catch(() => null);
-    const [listedPacks, social, virtualGuides, boughtGuides, publicDebates, featureFlags] = await Promise.all([
+    const [listedPacks, social, virtualGuides, boughtGuides, publicDebates, featureFlags, viewerArk, arkSummary, arkCompanionWords] = await Promise.all([
         listedPacksPromise,
         // Also records this visit as a profile view for a signed-in non-owner.
         getProfileSocialState(profile.userId),
@@ -145,8 +169,21 @@ export async function ProfilePageBody({
         boughtGuidesPromise,
         publicDebatesPromise,
         // The Shop's remote switches (packs and guide sales are paused by them).
-        loadAppFeatureFlags().catch(() => ({}))
+        loadAppFeatureFlags().catch(() => ({})),
+        getViewerArk(profile.userId, viewer.isOwner, viewer.isLoggedIn),
+        // What a signed-out visitor sees: Ark Score, Steps and Powers (contract section 7).
+        getPublicArkSummary(profile.userId).catch(() => null),
+        // The Ark's labels for everyone (the companion words are otherwise the owner's).
+        companionWords ? Promise.resolve(companionWords) : getCompanionWords(locale)
     ]);
+    const ark = viewerArk.stats || arkSummary
+        ? {
+            stats: viewerArk.stats,
+            arkScore: arkSummary?.arkScore ?? null,
+            stepsTotal: arkSummary?.stepsTotal ?? null,
+            powersEarned: arkSummary?.powersEarned ?? null
+        }
+        : null;
     // iOS gates location surfaces on `canViewLocations`; the web can settle the
     // owner and "everyone" cases without a follow graph, and stays private otherwise.
     const canViewLocations = viewer.isOwner || profile.locationVisibility === "everyone";
@@ -297,8 +334,10 @@ export async function ProfilePageBody({
                     bondPowerOne: t("bondPowerOne"),
                     bondPowerMany: t("bondPowerMany")
                 }}
-                companionWords={companionWords}
+                companionWords={companionWords ?? arkCompanionWords}
                 publicDebates={publicDebates}
+                ark={ark}
+                problemsWorkedThrough={viewerArk.problems}
                 diaryWords={viewer.isOwner
                     ? Object.fromEntries(PROBLEM_DIARY_WORD_KEYS.map((key) => [key, t(`diary.${key}`)])) as ProblemDiaryWords
                     : null}

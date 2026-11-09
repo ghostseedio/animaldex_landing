@@ -26,6 +26,7 @@
  * `languageName` asks for the reader's locale, since the site is localized.
  */
 
+import {ANIMAL_VISITOR_ARK_PRIVACY_RULES} from "@/lib/ask-animaldex/ark-prompts";
 import {ASK_MEMORY_RULES} from "@/lib/ask-animaldex/memory-prompt";
 import {
     ANIMAL_AUTO_MODE_RULES,
@@ -913,7 +914,9 @@ function hasCards(options: AskPromptOptions): boolean {
  */
 function companionRules(options: AskPromptOptions): string[] {
     if (options.speakingTo === "visitor") {
-        return options.visitorRelay ? [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_RELAY_RULES] : ANIMAL_VISITOR_RULES;
+        // Life Sim (docs/life-sim/CONTRACT.md, section 7): the owner's diary, stats and problems stay theirs.
+        const visitor = [...ANIMAL_VISITOR_RULES, ...ANIMAL_VISITOR_ARK_PRIVACY_RULES];
+        return options.visitorRelay ? [...visitor, ...ANIMAL_VISITOR_RELAY_RULES] : visitor;
     }
     // A public species chat, as the apps' `loopRules` has it: the mode's lines, then these rules.
     if (options.publicChat) {

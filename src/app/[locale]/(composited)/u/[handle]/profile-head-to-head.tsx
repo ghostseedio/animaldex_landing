@@ -12,6 +12,8 @@ type ComparisonSide = {
     collectorScore: number;
     powerSetScore: number;
     overallScore: number;
+    /** Life Sim: compared in place of Overall when both have it. */
+    arkScore?: number | null;
     indexedSpeciesCount: number;
     wildObservationCount: number;
     rareObservationCount: number;
@@ -155,6 +157,10 @@ export default function ProfileHeadToHeadSheet({
             cancelled = true;
         };
     }, [memberUserId]);
+    // Life Sim (contract section 9): Ark Score in place of Overall once both have one.
+    const headline = comparison && comparison.viewer.arkScore != null && comparison.member.arkScore != null
+        ? {label: "ARK SCORE", viewer: comparison.viewer.arkScore, member: comparison.member.arkScore}
+        : {label: "OVERALL COLLECTION SCORE", viewer: comparison?.viewer.overallScore ?? 0, member: comparison?.member.overallScore ?? 0};
 
     return (
         <div
@@ -198,30 +204,18 @@ export default function ProfileHeadToHeadSheet({
                             </div>
 
                             <div className="flex flex-col items-center gap-2.5 px-4 py-[18px]">
-                                <p className="text-[11px] font-semibold text-white/40">OVERALL COLLECTION SCORE</p>
+                                <p className="text-[11px] font-semibold text-white/40">{headline.label}</p>
                                 <div className="flex w-full items-center text-[34px] font-black">
-                                    <span
-                                        style={{
-                                            color: comparison.viewer.overallScore > comparison.member.overallScore
-                                                ? THEME.neon
-                                                : "#ffffff"
-                                        }}
-                                    >
-                                        {comparison.viewer.overallScore}
+                                    <span style={{color: headline.viewer > headline.member ? THEME.neon : "#ffffff"}}>
+                                        {headline.viewer}
                                     </span>
                                     <span className="mx-auto text-[10px] font-extrabold text-white/[0.62]">
-                                        {comparison.viewer.overallScore === comparison.member.overallScore
+                                        {headline.viewer === headline.member
                                             ? "TIED"
-                                            : `LEADS BY ${Math.abs(comparison.viewer.overallScore - comparison.member.overallScore)}`}
+                                            : `LEADS BY ${Math.abs(headline.viewer - headline.member)}`}
                                     </span>
-                                    <span
-                                        style={{
-                                            color: comparison.member.overallScore > comparison.viewer.overallScore
-                                                ? THEME.neon
-                                                : "#ffffff"
-                                        }}
-                                    >
-                                        {comparison.member.overallScore}
+                                    <span style={{color: headline.member > headline.viewer ? THEME.neon : "#ffffff"}}>
+                                        {headline.member}
                                     </span>
                                 </div>
                             </div>

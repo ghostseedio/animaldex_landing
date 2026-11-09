@@ -19,6 +19,13 @@ export type DiscoverCollectorItem = {
     isPro: boolean;
     /** Matches public profile / iOS collector score (summary score + power-set bonus). */
     collectorScore: number;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 9): Ark Score, shown in
+     * place of Overall, with Steps and Powers. Null on a server without them.
+     */
+    arkScore: number | null;
+    stepsTotal: number | null;
+    powersEarned: number | null;
     scoreTierLabel: string;
     captureCount: number;
     indexedSpeciesCount: number;
@@ -117,6 +124,18 @@ function resolveBestFindImage(captureId: string | null, row: QueryRow | null | u
     return getCaptureImageRoute(captureId);
 }
 
+/** The summary's Ark columns, read on their own so an old server (no columns) changes nothing. */
+async function loadArkSummaries(userIds: string[]) {
+    const rows = await fetchRowsByIds<QueryRow>("member_profile_summaries_v1", "user_id,ark_score,steps_total,powers_earned", "user_id", userIds);
+    const nullable = (row: QueryRow, key: string) => (row[key] == null ? null : readNumber(row, key));
+    return new Map(rows.flatMap((row) => {
+        const userId = readString(row, "user_id");
+        return userId && row.ark_score != null
+            ? [[userId, {arkScore: nullable(row, "ark_score"), stepsTotal: nullable(row, "steps_total"), powersEarned: nullable(row, "powers_earned")}] as const]
+            : [];
+    }));
+}
+
 async function loadDiscoverCollectorRows() {
     const params = new URLSearchParams({
         select: SUMMARY_SELECT,
@@ -144,11 +163,12 @@ async function loadAllDiscoverCollectors() {
     const userIds = summaryRows.map((row) => readString(row, "user_id")).filter(Boolean) as string[];
     const bestFindIds = summaryRows.map((row) => readString(row, "best_find_id")).filter(Boolean) as string[];
 
-    const [profileRows, powerSetRows, bestFindRows, unifiedSpeciesEntries] = await Promise.all([
+    const [profileRows, powerSetRows, bestFindRows, unifiedSpeciesEntries, arkByUser] = await Promise.all([
         fetchRowsByIds<QueryRow>("profiles", PROFILE_SELECT, "id", userIds),
         fetchRowsByIds<QueryRow>("public_profile_power_set_completions_v1", POWER_SET_SELECT, "user_id", userIds),
         fetchRowsByIds<QueryRow>("discover_feed_v1", BEST_FIND_SELECT, "capture_id", bestFindIds),
-        getUnifiedSpeciesEntries()
+        getUnifiedSpeciesEntries(),
+        loadArkSummaries(userIds)
     ]);
     const catalogSpeciesCount = unifiedSpeciesEntries.length;
 
@@ -194,6 +214,9 @@ async function loadAllDiscoverCollectors() {
             bio: readString(profile ?? {}, "bio"),
             isPro: profile?.is_pro === true,
             collectorScore,
+            arkScore: arkByUser.get(userId)?.arkScore ?? null,
+            stepsTotal: arkByUser.get(userId)?.stepsTotal ?? null,
+            powersEarned: arkByUser.get(userId)?.powersEarned ?? null,
             scoreTierLabel: getCollectorScoreBand(collectorScore).tierLabel,
             captureCount: readNumber(summary, "capture_count"),
             indexedSpeciesCount,
@@ -206,6 +229,9 @@ async function loadAllDiscoverCollectors() {
     })
     .filter((item): item is DiscoverCollectorItem => item !== null)
     .sort((left, right) => {
+        // Ark Score first once the server has it; Overall otherwise.
+        const arkDelta = (right.arkScore ?? -1) - (left.arkScore ?? -1);
+        if (arkDelta !== 0) return arkDelta;
         const scoreDelta = right.collectorScore - left.collectorScore;
         if (scoreDelta !== 0) return scoreDelta;
         return (left.username ?? "").localeCompare(right.username ?? "");

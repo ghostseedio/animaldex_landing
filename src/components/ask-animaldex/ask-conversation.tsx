@@ -116,6 +116,7 @@ import {
     cleanStepReport,
     isStepVideoFile,
     reportingStep,
+    stepCardState,
     stepReportReady,
     MAX_STEP_REPORT_CHARACTERS,
     STEP_MEDIA_ACCEPT,
@@ -128,6 +129,7 @@ import {notingTrainingResult, trainingCanStart} from "@/lib/species-training";
 import {submitSpeciesTraining, useSpeciesTraining} from "@/components/animal-detail/species-training/use-species-training";
 import {useTrialMotionCaptionLanguage} from "@/components/trial-motion/use-trial-motion-storyboard";
 import {
+    acceptStep,
     attachStepReport,
     dropStep,
     noteOpenStep,
@@ -136,6 +138,19 @@ import {
     useOpenStepUpdates
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
+import {ArkRevealMessages, ArkRevealSkippedNote, ArkRevisionCard} from "@/components/ark/ark-views";
+import {arkMoneyFormatter, fetchArkChanges, useDisplayCurrency} from "@/components/ark/use-ark";
+import {
+    ARK_EVENTS,
+    arkIsRevision,
+    arkRevealAnchorId,
+    arkRevealShownParams,
+    arkRevisionAnchorId,
+    arkRevisionShownParams,
+    arkThreadChanges,
+    type ArkChange,
+    type ArkRevealSkip
+} from "@/lib/ark";
 import {
     AskDebateOfferSection,
     AskDoneSection,
@@ -1821,10 +1836,83 @@ function AskConversation({
         setReportPreview(null);
         setReporting(null);
     }, [openStep, setReportPreview]);
-    /** "I've done it" (or "Tell {name} more") puts the bar in report mode: no accepting first. */
-    const stepPrimary = useCallback((_step: AnimalStep) => {
+    // MARK: Life Sim (docs/life-sim/CONTRACT.md): the reveal after "I'll do it", revisions under their messages
+
+    const displayCurrency = useDisplayCurrency();
+    const arkMoney = useMemo(() => arkMoneyFormatter(displayCurrency, locale), [displayCurrency, locale]);
+    /** The reader's own ledger (every animal's: a word to this one can revise another's step), newest first. */
+    const [ark, setArk] = useState<{threadKey: string; changes: ArkChange[]; loaded: boolean}>(() => ({threadKey, changes: [], loaded: false}));
+    /** Changes that arrived while this chat was open: they play in, the rest are already there. */
+    const [arkFresh, setArkFresh] = useState<ReadonlySet<string>>(() => new Set());
+    /** "I'll do it" played no reveal because of a cap: a quiet line under the step. */
+    const [arkSkip, setArkSkip] = useState<{stepId: string; reason: ArkRevealSkip} | null>(null);
+    const arkRef = useRef(ark);
+    arkRef.current = ark;
+    const reloadArk = useCallback(async () => {
+        if (!ownerChat) return;
+        const key = threadKey;
+        const changes = await fetchArkChanges({limit: 50});
+        if (!changes) return;
+        const current = arkRef.current;
+        if (current.threadKey === key && current.loaded) {
+            const known = new Set(current.changes.map((change) => change.id));
+            const arrived = changes.filter((change) => !known.has(change.id) && arkIsRevision(change));
+            if (arrived.length > 0) {
+                sticksToBottom.current = true;
+                setArkFresh((fresh) => new Set([...Array.from(fresh), ...arrived.map((change) => change.id)]));
+            }
+        }
+        setArk({threadKey: key, changes, loaded: true});
+    }, [ownerChat, threadKey]);
+    // When the chat opens, then after each reply: the memory call that may
+    // revise a step runs once the reply is out, so it is read again a little later.
+    useEffect(() => {
+        if (!ownerChat) return;
+        void reloadArk();
+    }, [ownerChat, reloadArk]);
+    const wasSending = useRef(false);
+    useEffect(() => {
+        const finished = wasSending.current && !isSending;
+        wasSending.current = isSending;
+        if (!finished || !ownerChat) return;
+        const timers = [4_000, 12_000].map((delay) => window.setTimeout(() => void reloadArk(), delay));
+        return () => timers.forEach((timer) => window.clearTimeout(timer));
+    }, [isSending, ownerChat, reloadArk]);
+    /** "I'll do it": the step is taken on and its reveal plays right here, under the message that set it. */
+    const acceptAndReveal = useCallback(async (step: AnimalStep) => {
+        if (isSending && greetingState !== "loading") return;
+        setStepBusy(true);
+        setStepProblem(null);
+        const result = await acceptStep(step);
+        setStepBusy(false);
+        if (!result.ok) {
+            setStepProblem(stepProblemText(result.code, words));
+            return;
+        }
+        setOpenStep(result.value.step);
+        const {reveal, revealSkipped} = result.value;
+        if (reveal) {
+            sticksToBottom.current = true;
+            setArkFresh((fresh) => new Set([...Array.from(fresh), reveal.id]));
+            setArk((current) => ({
+                threadKey,
+                loaded: current.threadKey === threadKey && current.loaded,
+                changes: [reveal, ...(current.threadKey === threadKey ? current.changes.filter((change) => change.id !== reveal.id) : [])]
+            }));
+            trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(reveal, companionSpeciesProfileId));
+        } else if (revealSkipped) {
+            setArkSkip({stepId: step.id, reason: revealSkipped});
+            trackEvent(ARK_EVENTS.revealSkipped, {reason: revealSkipped});
+        }
+    }, [isSending, greetingState, words, setOpenStep, threadKey, companionSpeciesProfileId]);
+    /** Not yet taken on: "I'll do it". Taken on: "I've done it" (or "Tell {name} more") puts the bar in report mode. */
+    const stepPrimary = useCallback((step: AnimalStep) => {
+        if (stepCardState(step) === "offered") {
+            void acceptAndReveal(step);
+            return;
+        }
         startReport();
-    }, [startReport]);
+    }, [startReport, acceptAndReveal]);
     /** "A different step": the step is dropped, then they ask for a different one, as their own message. */
     const stepOther = useCallback((step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;
@@ -2315,6 +2403,47 @@ function AskConversation({
     }) : null;
     // Steps the animal saw done in this thread: their sections say so.
     const doneStepIds = useMemo(() => askDoneStepIds(messages), [messages]);
+    /**
+     * Life Sim in this thread: each reveal under the reply that set its
+     * step, each revision under the person's message that caused it
+     * (contract section 4). A reveal whose reply is not loaded goes with the
+     * open step's own message, or, just played, at the end.
+     */
+    const arkThread = useMemo(() => {
+        if (!ownerChat || ark.threadKey !== threadKey) return null;
+        const {reveals, revisions} = arkThreadChanges(ark.changes);
+        const after = new Map<string, {reveals: ArkChange[]; revisions: ArkChange[]}>();
+        const slot = (id: string) => {
+            const found = after.get(id) ?? {reveals: [], revisions: []};
+            after.set(id, found);
+            return found;
+        };
+        const withThreadStep: ArkChange[] = [];
+        const atEnd: ArkChange[] = [];
+        reveals.forEach((reveal, stepId) => {
+            const at = arkRevealAnchorId(stepId, messages);
+            if (at) slot(at).reveals.push(reveal);
+            else if (threadStep?.id && threadStep.id.toLowerCase() === stepId) withThreadStep.push(reveal);
+            else if (arkFresh.has(reveal.id)) atEnd.push(reveal);
+        });
+        for (const revision of revisions) {
+            const at = arkRevisionAnchorId(revision, messages);
+            if (at) slot(at).revisions.push(revision);
+        }
+        return {after, withThreadStep, atEnd};
+    }, [ownerChat, ark, threadKey, messages, threadStep, arkFresh]);
+    // A revision that has just arrived here is counted once, as it shows.
+    const revisionsTracked = useRef(new Set<string>());
+    useEffect(() => {
+        if (!arkThread) return;
+        arkThread.after.forEach(({revisions}) => {
+            for (const revision of revisions) {
+                if (!arkFresh.has(revision.id) || revisionsTracked.current.has(revision.id)) continue;
+                revisionsTracked.current.add(revision.id);
+                trackEvent(ARK_EVENTS.revisionShown, arkRevisionShownParams(revision));
+            }
+        });
+    }, [arkThread, arkFresh]);
     // The rows' handlers, one stable object (see `AskRowActions`): each reads
     // this render's closure through the ref, so a memoised row never calls a
     // stale one and never renders again just because a closure was remade.
@@ -2387,6 +2516,45 @@ function AskConversation({
             />
         );
     };
+    const arkReveal = (reveal: ArkChange) => (
+        <ArkRevealMessages
+            key={`ark-${reveal.id}`}
+            reveal={reveal}
+            fresh={arkFresh.has(reveal.id)}
+            reducedMotion={reducedMotion}
+            faceUrl={faceUrl}
+            speakerName={speakerName}
+            words={words}
+            money={arkMoney}
+            locale={locale}
+        />
+    );
+    /** "No reveal today" under the open step, for a cap only. */
+    const arkSkipNote = arkSkip && openStep?.id === arkSkip.stepId
+        ? <ArkRevealSkippedNote key="ark-skip" reason={arkSkip.reason} name={speakerName} words={words} />
+        : null;
+    /** What the Ark adds after a message in the thread: the reveal of the step it set, the revisions it caused. */
+    const arkBlocks = (message: AskMessage) => {
+        const blocks = arkThread?.after.get(message.id);
+        const skip = message.id === stepCarrierId ? arkSkipNote : null;
+        if (!blocks && !skip) return null;
+        return (
+            <>
+                {skip}
+                {blocks?.reveals.map(arkReveal)}
+                {blocks?.revisions.map((revision) => (
+                    <ArkRevisionCard
+                        key={`ark-${revision.id}`}
+                        revision={revision}
+                        animate={arkFresh.has(revision.id) && !reducedMotion}
+                        words={words}
+                        money={arkMoney}
+                        locale={locale}
+                    />
+                ))}
+            </>
+        );
+    };
     /** The open step's own message: the animal's face and the step section, no words above it (those are the model's alone). */
     const threadStepMessage = threadStep && threadStepAt !== null ? (
         <div
@@ -2395,6 +2563,8 @@ function AskConversation({
             data-testid="thread-step"
         >
             <AskSpecialBubble avatarUrl={faceUrl}>{stepSection(threadStep, false)}</AskSpecialBubble>
+            {stepCarrierId === null ? arkSkipNote : null}
+            {arkThread?.withThreadStep.map(arkReveal)}
         </div>
     ) : null;
     const specialSection = (message: AskMessage, special: AskSpecial) => {
@@ -2768,10 +2938,12 @@ function AskConversation({
                                             // Steps and debates need an animal of their own, captured in the app (W13, JRN-6).
                                             askAnotherSignUp={message.id === firstRealProblemId ? signUpOffer : null}
                                         />
+                                        {arkBlocks(message)}
                                         {debateBlocks(message.id)}
                                     </div>
                                 ])}
                                 {threadStepAt === messages.length ? threadStepMessage : null}
+                                {arkThread?.atEnd.map(arkReveal)}
                                 {debateSetupMessage}
                                 {messages.length === 0 && awaitingGreeting ? (
                                     <AskTypingBubble plain avatarUrl={faceUrl} label={labels.typing} />

@@ -13,6 +13,7 @@
  */
 
 import {decodeStepRecords, type StepRecord, type StepRecordMedia} from "@/lib/your-step";
+import {arkDiaryState, decodeArkChanges, type ArkChange, type ArkDiaryState} from "@/lib/ark";
 
 export type ProblemDiaryStatus = "working" | "done" | "moved_on";
 export type StepOutcome = "worked" | "partly" | "didnt_work";
@@ -58,7 +59,30 @@ export type ProblemDiaryEntry = {
     powers: ProblemDiaryPower[];
     /** The species' icon-art slug (added by the route), when known. */
     slug?: string | null;
+    /** The problem's id (`focus_id`, or the `focus:` key): what Hide and the public summary act on. */
+    focusId: string | null;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 8): Earned, Lesson or
+     * Revised, and every ledger change behind it. Null from an old server.
+     */
+    ark: {state: ArkDiaryState | null; changes: ArkChange[]} | null;
+    /** The anonymised summary they approved; null until they do. Raw problem text is never public. */
+    publicSummary: string | null;
+    /** Hidden from the public diary on its own. */
+    hidden: boolean;
+    /** A sensitive problem: never public, no stats shown to anyone else. */
+    sensitive: boolean;
 };
+
+function focusIdFrom(row: Record<string, unknown>, key: string): string | null {
+    return uuid(row.focus_id) ?? (key.startsWith("focus:") ? uuid(key.slice("focus:".length)) : null);
+}
+
+function decodeArk(value: unknown): ProblemDiaryEntry["ark"] {
+    const row = object(value);
+    if (!row) return null;
+    return {state: arkDiaryState(row.state), changes: decodeArkChanges(row.changes)};
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -158,12 +182,24 @@ export function decodeProblemDiaryEntry(value: unknown): ProblemDiaryEntry | nul
             const powerName = text(power?.power_name);
             return power && powerName ? [{animal: text(power.animal) ?? "", powerName, earnedAt: text(power.earned_at)}] : [];
         }),
-        slug: text(row.slug)
+        slug: text(row.slug),
+        focusId: focusIdFrom(row, key),
+        ark: decodeArk(row.ark),
+        publicSummary: text(row.public_summary),
+        hidden: row.hidden === true,
+        sensitive: row.sensitive === true
     };
 }
 
 /** iOS `ProblemDiaryEntry.decodeList`: `[entry]`, or `{entries: [...]}`. */
 export function decodeProblemDiary(raw: unknown): ProblemDiaryEntry[] {
+    if (typeof raw === "string") {
+        try {
+            return decodeProblemDiary(JSON.parse(raw));
+        } catch {
+            return [];
+        }
+    }
     const rows = Array.isArray(raw) ? raw : list(object(raw)?.entries);
     return rows.flatMap((item) => {
         const entry = decodeProblemDiaryEntry(item);

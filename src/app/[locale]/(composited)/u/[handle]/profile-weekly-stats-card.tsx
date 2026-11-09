@@ -1,4 +1,5 @@
 import type {ProfileStatsWeek} from "@/data/profile-authenticated";
+import type {CompanionWords} from "@/lib/companion-bond";
 
 const NEON = "#A7F432";
 
@@ -31,8 +32,37 @@ function Figure({title, value, delta}: {title: string; value: number; delta: num
     );
 }
 
+/**
+ * Life Sim's week (contract section 9, item 9): steps taken, the Ark Score
+ * change and Powers this week, in place of captures.
+ */
+function ArkWeek({week, ark, words}: {week: ProfileStatsWeek; ark: NonNullable<ProfileStatsWeek["ark"]>; words: CompanionWords["ark"]}) {
+    const change = ark.arkScoreChange;
+    return (
+        <section className="space-y-4 border-b border-white/[0.06] bg-[#12351C]/40 p-4" data-testid="profile-week-ark">
+            <div className="flex items-baseline justify-between gap-2 text-[11px] text-white/40">
+                <span className="tracking-[0.1em]">THIS WEEK</span>
+                <span>{rangeLabel(week.currentStart, week.currentEnd)}</span>
+            </div>
+            <div className="flex items-start gap-3.5">
+                <Figure title={words.weekSteps} value={ark.steps} delta={ark.steps - ark.previousSteps} />
+                <span className="h-11 w-px bg-white/10" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium uppercase text-white/40">{words.weekArkChange}</p>
+                    <p className="mt-1 text-[28px] font-extrabold leading-none tabular-nums" style={{color: change < 0 ? "#FFC24B" : NEON}}>
+                        {change > 0 ? `+${change}` : change < 0 ? `\u2212${Math.abs(change)}` : "0"}
+                    </p>
+                </div>
+                <span className="h-11 w-px bg-white/10" aria-hidden="true" />
+                <Figure title={words.weekPowers} value={ark.powers} delta={ark.powers - ark.previousPowers} />
+            </div>
+        </section>
+    );
+}
+
 /** iOS `ProfileWeeklyStatsCard`: "This Week", drawn entirely from `get_profile_stats_overview`. */
-export default function ProfileWeeklyStatsCard({week}: {week: ProfileStatsWeek}) {
+export default function ProfileWeeklyStatsCard({week, arkWords = null}: {week: ProfileStatsWeek; arkWords?: CompanionWords["ark"] | null}) {
+    if (week.ark && arkWords) return <ArkWeek week={week} ark={week.ark} words={arkWords} />;
     const hasActivity = week.captures > 0 || week.previousCaptures > 0;
     const peak = Math.max(1, ...week.daily.map((entry) => entry.captures));
     const best = week.daily.reduce<ProfileStatsWeek["daily"][number] | null>((top, entry) => (!top || entry.captures > top.captures ? entry : top), null);

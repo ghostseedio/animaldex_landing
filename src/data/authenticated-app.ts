@@ -1,5 +1,6 @@
 import "server-only";
 
+import {decodeArkStats} from "@/lib/ark";
 import {emptyBehaviorPrincipleIndex, getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {fetchPowerSetCompletions} from "@/data/power-set-completions";
@@ -68,6 +69,11 @@ export type AppMission = {
 export type AppProgression = {
     /** Verified overall score from `user_progression_summary_v1` (matches iOS profile). */
     overallScore: number;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 9): mission unlocks move to
+     * Ark Score (the server remaps the thresholds). Null on a server without it.
+     */
+    arkScore: number | null;
     tradeUnlockScore: number;
     tradeUnlocked: boolean;
     referralCode: string | null;
@@ -925,7 +931,11 @@ async function loadMissionStatus(supabase: ReturnType<typeof createSupabaseServe
         .order("sort_order", {ascending: true});
 
     if (viewResult.data?.length) {
-        return viewResult.data as QueryRow[];
+        // Life Sim: a status that says whether it is locked (`is_locked`, `unlocked_at`), read on its own.
+        const lockResult = await supabase!.from("user_mission_status_v1").select("slug,is_locked,unlocked_at");
+        if (lockResult.error || !lockResult.data) return viewResult.data as QueryRow[];
+        const locks = new Map((lockResult.data as QueryRow[]).map((row) => [String(row.slug), row]));
+        return (viewResult.data as QueryRow[]).map((row) => ({...row, ...(locks.get(String(row.slug)) ?? {})}));
     }
 
     const [definitionsResult, progressResult] = await Promise.all([
@@ -956,6 +966,7 @@ async function loadMissionStatus(supabase: ReturnType<typeof createSupabaseServe
 export async function getAppProgression(): Promise<AppProgression> {
     const fallback: AppProgression = {
         overallScore: 0,
+        arkScore: null,
         tradeUnlockScore: 1000,
         tradeUnlocked: false,
         referralCode: null,
@@ -966,15 +977,29 @@ export async function getAppProgression(): Promise<AppProgression> {
     if (!session) return fallback;
 
     await session.supabase.rpc("refresh_user_progression", {});
-    const [summary, rows] = await Promise.all([
+    const [summary, rows, arkStats] = await Promise.all([
         loadProgressionSummary(session.supabase, session.user.id),
-        loadMissionStatus(session.supabase, session.user.id)
+        loadMissionStatus(session.supabase, session.user.id),
+        Promise.resolve(session.supabase.rpc("ark_stats_v1", {p_user_id: null}))
+            .then((result) => (result.error ? null : decodeArkStats(result.data)))
+            .catch(() => null)
     ]);
     const overallScore = Number(summary?.verified_overall_score ?? 0);
+    const arkScore = arkStats?.arkScore ?? null;
     const tradeUnlocked = Boolean(summary?.trade_unlocked_at);
+    // The server's own word first (a remapped status says it, and a mission
+    // already unlocked stays unlocked), then the threshold against Ark Score
+    // once there is one, Overall before that.
+    const missionLocked = (row: QueryRow) => {
+        if (typeof row.is_locked === "boolean") return row.is_locked;
+        if (row.unlocked_at) return false;
+        const score = arkScore ?? overallScore;
+        return score < Number(row.unlock_score_min ?? 0) || (Boolean(row.requires_trade_unlocked) && !tradeUnlocked);
+    };
 
     return {
         overallScore,
+        arkScore,
         tradeUnlockScore: Number(summary?.trade_unlock_score ?? 1000),
         tradeUnlocked,
         referralCode: summary?.referral_code ?? null,
@@ -989,7 +1014,7 @@ export async function getAppProgression(): Promise<AppProgression> {
             progressCount: Number(row.progress_count ?? 0),
             completedCount: Number(row.completed_count ?? 0),
             isRepeatable: Boolean(row.is_repeatable),
-            isLocked: overallScore < Number(row.unlock_score_min ?? 0) || (Boolean(row.requires_trade_unlocked) && !tradeUnlocked)
+            isLocked: missionLocked(row)
         }))
     };
 }

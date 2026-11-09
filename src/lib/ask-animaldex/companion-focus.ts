@@ -31,6 +31,7 @@
  * can use it.
  */
 
+import {arkRevisionPromptLine, type ArkMentionRevision} from "@/lib/ask-animaldex/ark-prompts";
 import {ASK_FOLLOW_UP_SENTINEL} from "@/lib/ask-animaldex/prompt";
 import type {StepProofStatus} from "@/lib/ask-animaldex/step-proof";
 
@@ -508,6 +509,11 @@ export function companionPromptLines(params: {
     secondOpinion?: boolean;
     /** For set_today: one new step on a problem a day. */
     now?: Date;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 4): revisions not yet
+     * mentioned, for this reply to mention once. Absent or empty: no line.
+     */
+    arkRevisions?: readonly ArkMentionRevision[];
 }): string[] {
     const {state} = params;
     const open = state?.open_trial ?? null;
@@ -557,7 +563,8 @@ export function companionPromptLines(params: {
                     ...(entry.lesson ? {lesson: entry.lesson} : {})
                 })))
             }`
-            : ""
+            : "",
+        arkRevisionPromptLine(params.arkRevisions ?? [])
     ].filter(Boolean);
 }
 

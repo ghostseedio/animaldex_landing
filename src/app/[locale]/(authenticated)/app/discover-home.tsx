@@ -22,7 +22,7 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type
 import {useRouter} from "next/navigation";
 import DebatePost from "@/components/debates/debate-post";
 import {pinnedDebates, type Debate} from "@/lib/debates";
-import type {CompanionWords} from "@/lib/companion-bond";
+import {ARK_COPY, type CompanionWords} from "@/lib/companion-bond";
 
 type DiscoverSegment = "discover" | "collectors";
 
@@ -263,7 +263,7 @@ function CollectorLoadingSkeleton() {
     );
 }
 
-function CollectorCard({collector}: {collector: DiscoverCollectorItem}) {
+function CollectorCard({collector, arkWords = ARK_COPY}: {collector: DiscoverCollectorItem; arkWords?: CompanionWords["ark"]}) {
     const content = (
         <article className="flex gap-4 border border-white/[0.08] bg-[#121212]/90 p-4 shadow-[0_16px_40px_-30px_rgba(0,0,0,0.95)] transition hover:border-primary-400/25 hover:bg-[#161616] md:p-5">
             {collector.avatarUrl
@@ -277,11 +277,18 @@ function CollectorCard({collector}: {collector: DiscoverCollectorItem}) {
                             {collector.isPro ? <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[0.62rem] font-black uppercase tracking-[0.12em] text-amber-100">Pro</span> : null}
                         </div>
                         {collector.username ? <p className="text-sm text-white/40">@{collector.username}</p> : null}
-                        <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/35">{collector.scoreTierLabel}</p>
+                        {collector.arkScore === null ? <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/35">{collector.scoreTierLabel}</p> : null}
                     </div>
-                    <span className="rounded-full bg-primary-400 px-3 py-1 text-sm font-black tabular-nums text-black">{collector.collectorScore.toLocaleString()}</span>
+                    {/* Life Sim (contract section 9): Ark Score in place of Overall, once the server has it. */}
+                    <span className="rounded-full bg-primary-400 px-3 py-1 text-sm font-black tabular-nums text-black" data-testid="collector-score">
+                        {collector.arkScore !== null
+                            ? arkWords.scoreShort.replace("{n}", collector.arkScore.toLocaleString())
+                            : collector.collectorScore.toLocaleString()}
+                    </span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-bold text-white/50">
+                    {collector.powersEarned !== null && collector.arkScore !== null ? <span className="rounded-full bg-primary-400/10 px-2.5 py-1 text-primary-200">{collector.powersEarned} {arkWords.powersEarned}</span> : null}
+                    {collector.stepsTotal !== null && collector.arkScore !== null ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{collector.stepsTotal} {arkWords.stepsTaken}</span> : null}
                     <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{collector.captureCount} captures</span>
                     <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{collector.indexedSpeciesCount}/{collector.catalogSpeciesCount} indexed</span>
                     {collector.rareFinds > 0 ? <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-amber-200">{collector.rareFinds} rare</span> : null}
@@ -963,7 +970,7 @@ export default function DiscoverHome({
                 // iOS keeps the last collector row and pagination spinner above
                 // the floating tab bar (padding.bottom 124) — same here.
                 <section className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-8 pt-2 [scrollbar-width:none] lg:mx-auto lg:h-auto lg:max-w-3xl lg:overflow-visible lg:px-0 lg:pb-0 lg:pt-0 [&::-webkit-scrollbar]:hidden">
-                    {collectorItems.map((collector) => <CollectorCard key={collector.userId} collector={collector} />)}
+                    {collectorItems.map((collector) => <CollectorCard key={collector.userId} collector={collector} arkWords={debateWords?.ark ?? ARK_COPY} />)}
                     {isLoadingCollectors ? (
                         <CollectorLoadingSkeleton />
                     ) : null}

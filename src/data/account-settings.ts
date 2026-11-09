@@ -6,6 +6,7 @@ import {isAppFeatureOn} from "@/lib/app-feature-flags";
 import {
     type AccountStanding,
     CURRENCY_PREFERENCE_COOKIE,
+    currencyForLanguage,
     EMPTY_ACCOUNT_STANDING,
     type LocationVisibility,
     PUSH_PREFERENCE_COLUMNS,
@@ -51,16 +52,7 @@ export type SettingsOverview = {
 
 /** The locale's currency for "System", from Accept-Language (e.g. en-GB → GBP). */
 function localeCurrency() {
-    const language = headers().get("accept-language")?.split(",")[0]?.trim() ?? "";
-    const region = language.split("-")[1]?.toUpperCase();
-    const byRegion: Record<string, string> = {
-        GB: "GBP", US: "USD", ID: "IDR", AU: "AUD", CA: "CAD", NZ: "NZD", IN: "INR", JP: "JPY", KR: "KRW",
-        SG: "SGD", MY: "MYR", PH: "PHP", TH: "THB", ZA: "ZAR", BR: "BRL", MX: "MXN", CH: "CHF", SE: "SEK",
-        NO: "NOK", DK: "DKK", PL: "PLN", CZ: "CZK", HU: "HUF", RO: "RON", TR: "TRY", IL: "ILS", IS: "ISK",
-        HK: "HKD", CN: "CNY", DE: "EUR", FR: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", IE: "EUR", PT: "EUR",
-        BE: "EUR", AT: "EUR", FI: "EUR", GR: "EUR"
-    };
-    return region ? byRegion[region] ?? null : null;
+    return currencyForLanguage(headers().get("accept-language")?.split(",")[0]?.trim() ?? "");
 }
 
 export function getCurrencyPreference() {

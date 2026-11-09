@@ -127,7 +127,20 @@ export type ProfileStatsWeek = {
     previousCaptures: number;
     previousNewSpecies: number;
     daily: Array<{date: string; captures: number; newSpecies: number}>;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 9, item 9): steps taken,
+     * the Ark Score change and Powers this week, when the overview carries
+     * them (`steps`, `previous_steps`, `ark_score_change`, `powers`,
+     * `previous_powers`; the contract names the figures, not the keys).
+     * Null from a server without them.
+     */
+    ark: {steps: number; previousSteps: number; arkScoreChange: number; powers: number; previousPowers: number} | null;
 };
+
+function signedInteger(value: unknown): number | null {
+    const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+    return Number.isFinite(parsed) ? Math.round(parsed) : null;
+}
 
 function decodeStatsWeek(value: unknown): ProfileStatsWeek | null {
     const row = value as QueryRow | null;
@@ -145,7 +158,16 @@ function decodeStatsWeek(value: unknown): ProfileStatsWeek | null {
         previousNewSpecies: toCount(row.previous_new_species),
         daily: (Array.isArray(row.daily) ? row.daily : [])
             .filter((day: QueryRow) => typeof day?.date === "string")
-            .map((day: QueryRow) => ({date: day.date as string, captures: toCount(day.captures), newSpecies: toCount(day.new_species)}))
+            .map((day: QueryRow) => ({date: day.date as string, captures: toCount(day.captures), newSpecies: toCount(day.new_species)})),
+        ark: row.steps !== undefined || row.ark_score_change !== undefined
+            ? {
+                steps: toCount(row.steps),
+                previousSteps: toCount(row.previous_steps),
+                arkScoreChange: signedInteger(row.ark_score_change) ?? 0,
+                powers: toCount(row.powers),
+                previousPowers: toCount(row.previous_powers)
+            }
+            : null
     };
 }
 
@@ -276,6 +298,7 @@ export async function getOwnerProfileProgression(): Promise<AppProgression | nul
 
     return {
         overallScore,
+        arkScore: null,
         tradeUnlockScore: Number(row?.trade_unlock_score ?? 1000),
         tradeUnlocked: Boolean(row?.trade_unlocked_at),
         referralCode: null,

@@ -149,7 +149,6 @@ export default async function MissionsPage({params}: {params: {locale: string}})
         .sort((left, right) => Date.parse(right.endsAt) - Date.parse(left.endsAt));
     const completed = progression.missions.filter((item) => item.completedCount > 0).length;
     const active = progression.missions.filter((item) => !item.isLocked && item.completedCount === 0).length;
-    const tradePercent = Math.round(progression.overallScore / Math.max(1, progression.tradeUnlockScore) * 100);
 
     return (
         <AppPage>
@@ -165,25 +164,7 @@ export default async function MissionsPage({params}: {params: {locale: string}})
                 <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
             </section>
 
-            <AppSurface>
-                <div className="flex items-center gap-3">
-                    <span className={`flex h-11 w-11 items-center justify-center ring-1 ${progression.tradeUnlocked ? "bg-primary-400 text-black ring-primary-400/20" : "bg-white/5 text-white/40 ring-white/10"}`}>
-                        <AppIcon name={progression.tradeUnlocked ? "check" : "lock"} />
-                    </span>
-                    <div>
-                        <p className="text-[0.63rem] font-black uppercase tracking-wider text-white/35">Progression milestone</p>
-                        <h2 className="font-display text-xl font-bold text-white">{progression.tradeUnlocked ? "Trading unlocked" : "Trading milestone"}</h2>
-                    </div>
-                </div>
-                <div className="mt-5">
-                    <AppProgress value={tradePercent} accent={progression.tradeUnlocked ? "green" : "violet"} />
-                </div>
-                <p className="mt-3 text-sm leading-6 text-white/45">
-                    {progression.tradeUnlocked
-                        ? "Your account can send and accept trades."
-                        : `Trade unlocks at ${progression.tradeUnlockScore} Overall Score. ${progression.overallScore} / ${progression.tradeUnlockScore}`}
-                </p>
-            </AppSurface>
+            {/* No trading milestone (Life Sim, contract section 9: trading is paused, and unlocks go by Ark Score). */}
 
             {shelves.map((shelf) => {
                 const missions = progression.missions.filter((mission) => mission.tier === shelf.key || (shelf.key === "collector" && mission.tier === "legendary"));

@@ -3,6 +3,8 @@ import {createSignedStorageUrl} from "@/lib/capture-storage-image";
 import {decodeProblemDiary, type ProblemDiaryEntry} from "@/lib/problem-diary";
 import {createSupabaseServerClient, createSupabaseServiceClient} from "@/lib/supabase/server";
 import {STEP_MEDIA_BUCKET, isOwnStepMediaPath, stepMediaKind, type StepRecordMedia} from "@/lib/your-step";
+import {arkDiaryVisibility, decodeArkStats} from "@/lib/ark";
+import {loadAgeBand} from "@/lib/ask-animaldex/age-band";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +19,13 @@ export const dynamic = "force-dynamic";
  *
  * A failed read answers 502 so the tab can say "Couldn't load this" and
  * offer Try again, never an empty diary.
+ *
+ * Life Sim (docs/life-sim/CONTRACT.md, section 7): each entry carries its
+ * Ark state and changes, its approved public summary, Hide and sensitive;
+ * the answer carries the profile-wide switch (`visibility`, read from the
+ * diary's envelope or `ark_stats_v1` when the server says it, else the
+ * contract's default, public), `teen` (always private, no public option)
+ * and `ark` (whether the server has the Ark at all).
  */
 
 const DIARY_LIMIT = 100;
@@ -52,7 +61,12 @@ export async function GET() {
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return NextResponse.json({error: "Authentication required."}, {status: 401});
 
-    const {data, error} = await supabase.rpc("my_problem_diary_v1", {p_limit: DIARY_LIMIT});
+    const service = createSupabaseServiceClient();
+    const [{data, error}, stats, band] = await Promise.all([
+        supabase.rpc("my_problem_diary_v1", {p_limit: DIARY_LIMIT}),
+        Promise.resolve(supabase.rpc("ark_stats_v1", {p_user_id: null})).then((result) => (result.error ? null : result.data)).catch(() => null),
+        service ? loadAgeBand(service, user.id) : Promise.resolve("unknown" as const)
+    ]);
     if (error) {
         console.warn("[diary] my_problem_diary_v1 failed", error.message.slice(0, 200));
         return NextResponse.json({error: "The diary could not be read."}, {status: 502});
@@ -70,5 +84,16 @@ export async function GET() {
         )))
     })));
 
-    return NextResponse.json({entries: withMedia}, {headers: {"Cache-Control": "private, no-store"}});
+    const envelope = data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : null;
+    const arkStats = decodeArkStats(stats);
+    const teen = band === "teen" || arkStats?.teen === true;
+    const visibility = teen
+        ? "private"
+        : arkDiaryVisibility(envelope?.visibility) ?? arkDiaryVisibility(envelope?.diary_visibility) ?? arkStats?.diaryVisibility ?? "public";
+    return NextResponse.json({
+        entries: withMedia,
+        visibility,
+        teen,
+        ark: arkStats !== null || entries.some((entry) => entry.ark !== null)
+    }, {headers: {"Cache-Control": "private, no-store"}});
 }

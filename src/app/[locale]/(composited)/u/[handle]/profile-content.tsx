@@ -26,7 +26,6 @@ import {
     ProfileInsightsSection,
     SettingComparisonCard,
     StatChipScroller,
-    StatTile,
     StatsPanel,
     THEME,
     type ProfileBinder,
@@ -58,6 +57,9 @@ import type {VirtualGuideProfile} from "@/data/virtual-wildlife-guides";
 import StoreLink from "@/components/store/store-link";
 import {ProfileDiaryTab} from "@/app/[locale]/(composited)/u/[handle]/profile-diary";
 import {PROBLEM_DIARY_WORDS_EN, type ProblemDiaryWords} from "@/lib/problem-diary";
+import {ArkBarsPanel, ArkScoreCard, ArkStepsPowersTiles} from "@/components/ark/ark-views";
+import {arkProfileSections, type ArkProfileSection, type ArkStats} from "@/lib/ark";
+import {COMPANION_WORDS_EN} from "@/lib/companion-bond";
 
 export type ProfileTab = "history" | "stats" | "diary" | "shop" | "locations";
 
@@ -235,6 +237,15 @@ type ProfileContentProps = {
     surface?: "marketing" | "app";
     /** Settings → Currency (iOS converts the USD collection value). */
     displayCurrency?: string;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, sections 7 and 9): `ark_stats_v1`
+     * as this viewer may see it (signed in), else the summary's Ark Score,
+     * Steps and Powers (a signed-out visitor). Null on a server without Ark:
+     * the Stats tab keeps its other sections, in the same order.
+     */
+    ark?: {stats: ArkStats | null; arkScore: number | null; stepsTotal: number | null; powersEarned: number | null} | null;
+    /** Problems worked through (your own Diary's count), for the Stats tab's Diary row. */
+    problemsWorkedThrough?: number | null;
     /**
      * The remote switches the Shop tab reads (iOS ShopStorefrontView): packs
      * while `card_packs` is on, earning by selling while `creator_earnings`
@@ -524,6 +535,8 @@ export default function ProfileContent({
     signInHref = "/account",
     surface = "marketing",
     displayCurrency = "USD",
+    ark = null,
+    problemsWorkedThrough = null,
     shopFeatures = {cardPacks: false, guideSales: false, creatorEarnings: false}
 }: ProfileContentProps) {
     // Shop and Locations open from the app's drawer on your own profile
@@ -567,6 +580,12 @@ export default function ProfileContent({
     const collectionValue = profile.collectionValueUsd != null && profile.collectionValueUsd > 0
         ? formatDisplayMoney(profile.collectionValueUsd, displayCurrency, locale)
         : null;
+    // Life Sim: Ark Score in place of Overall, Steps and Powers beside it.
+    const arkWords = (companionWords ?? COMPANION_WORDS_EN).ark;
+    const arkStats = ark?.stats ?? null;
+    const arkScore = arkStats?.arkScore ?? ark?.arkScore ?? null;
+    const stepsTotal = arkStats?.steps.total ?? ark?.stepsTotal ?? null;
+    const powersEarned = arkStats?.powersEarned ?? ark?.powersEarned ?? profile.animalPowersEarned ?? null;
     // iOS shows only captures the owner marked as pets, never a guess from the
     // capture's setting.
     const friendPets = profile.pets;
@@ -664,13 +683,11 @@ export default function ProfileContent({
     }, [isWildInsightScope, profile.insights, profile.recentCaptures, profile.wildInsights]);
 
     const statChips = useMemo<ProfileStatChip[]>(() => {
+        // The collecting group (Life Sim, contract section 9, item 10): Captures,
+        // Species and Powers moved up (Crew, Powers earned); Trades made is gone.
         const chips: ProfileStatChip[] = [
-            {title: "Captures", value: String(profile.captureCount), tint: THEME.neon},
-            {title: "Species", value: String(profile.speciesCount), tint: THEME.mint},
-            // Powers earned sits beside the species met: what this person has
-            // been taught, next to what they have found.
-            ...(profile.animalPowersEarned != null
-                ? [{title: "Powers earned", value: String(profile.animalPowersEarned), tint: THEME.neon}]
+            ...(profile.catalogSpeciesCount > 0
+                ? [{title: "Catalog", value: `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%`, tint: THEME.neon}]
                 : []),
             // Neutral words, not a red alarm (as iOS): its re-analysis is free, and the name usually comes.
             {title: labels.statWaitingForName, value: String(profile.unindexedCount), tint: "rgba(255,255,255,0.62)"},
@@ -682,7 +699,6 @@ export default function ProfileContent({
             },
             // iOS omits the chip when the count is not known.
             ...(binders ? [{title: "Binders complete", value: String(binders.length), tint: "rgba(148,84,250,0.95)"}] : []),
-            {title: "Trades made", value: String(profile.tradesMade), tint: "rgba(255,149,0,0.92)"},
             {title: "Missions complete", value: String(profile.missionsCompleted), tint: THEME.mint}
         ];
 
@@ -696,6 +712,133 @@ export default function ProfileContent({
 
         return chips;
     }, [binders, labels.statWaitingForName, profile, speciesDenominator]);
+
+    const statsSections = arkProfileSections({
+        ark: arkScore !== null,
+        isSelf: viewer.isOwner,
+        hasPublicDiary: memberHasPublicDebates,
+        hasFollows: Boolean(followCounts),
+        hasWeek: true
+    });
+    const openDiary = () => setActiveTab("diary");
+    /** One section of the Stats tab, in the contract's order. */
+    const statsSection = (section: ArkProfileSection): React.ReactNode => {
+        switch (section) {
+            case "arkScore":
+                return arkScore !== null ? <ArkScoreCard key={section} stats={{arkScore}} words={arkWords} locale={locale} /> : null;
+            case "bars":
+                return arkStats ? <ArkBarsPanel key={section} stats={arkStats} words={arkWords} money={(usd) => formatDisplayMoney(usd, displayCurrency, locale)} locale={locale} /> : null;
+            case "stepsPowers":
+                return (
+                    <ArkStepsPowersTiles
+                        key={section}
+                        steps={arkStats?.steps ?? {total: stepsTotal ?? 0, worked: 0, partly: 0, didntWork: 0}}
+                        powersEarned={powersEarned ?? 0}
+                        words={arkWords}
+                        locale={locale}
+                        onOpenDiary={viewer.isOwner || memberHasPublicDebates ? openDiary : undefined}
+                    />
+                );
+            case "qualities":
+                return (
+                    <BestForTagsChartCard
+                        key={section}
+                        scores={profile.bestForTagScores}
+                        title={viewer.isOwner ? "YOUR QUALITIES" : `@${profile.username}'S QUALITIES`.toUpperCase()}
+                        isOwner={viewer.isOwner}
+                        usernameHandle={`@${profile.username}`}
+                    />
+                );
+            case "crew":
+                return (
+                    <div key={section} className="flex items-baseline justify-between gap-3 border-b border-white/[0.06] px-[18px] py-3.5" data-testid="profile-crew">
+                        <span className="text-[13px] font-semibold text-white">{arkWords.crew}</span>
+                        <span className="text-[13px] font-semibold text-white/60">
+                            {arkWords.crewLine
+                                .replace("{animals}", formatAppInteger(profile.captureCount, locale))
+                                .replace("{species}", formatAppInteger(profile.speciesCount, locale))}
+                        </span>
+                    </div>
+                );
+            case "problems": {
+                const count = viewer.isOwner ? problemsWorkedThrough : publicDebates?.debates.length ?? null;
+                return (
+                    <button
+                        key={section}
+                        type="button"
+                        onClick={openDiary}
+                        className="flex items-baseline justify-between gap-3 border-b border-white/[0.06] px-[18px] py-3.5 text-left transition hover:bg-white/[0.03]"
+                        data-testid="profile-problems"
+                    >
+                        <span className="text-[13px] font-semibold text-white">{viewer.isOwner ? arkWords.problemsWorkedThrough : arkWords.publicDebates}</span>
+                        <span className="flex items-baseline gap-1.5 text-[13px] font-bold text-white/70">
+                            {count !== null ? formatAppInteger(count, locale) : null}
+                            <span aria-hidden="true" style={{color: THEME.neon}}>↗</span>
+                        </span>
+                    </button>
+                );
+            }
+            case "follows":
+                return followCounts ? (
+                    <FollowCountsRow key={section} counts={followCounts} onOpen={viewer.isLoggedIn ? setFollowList : undefined} />
+                ) : null;
+            case "weekly":
+                return (
+                    <div key={section}>
+                        {social?.week ? <ProfileWeeklyStatsCard week={social.week} arkWords={arkScore !== null ? arkWords : null} /> : null}
+                        {!viewer.isOwner && viewer.isLoggedIn ? <HeadToHeadPrompt onOpen={() => setShowHeadToHead(true)} /> : null}
+                    </div>
+                );
+            case "collecting":
+                return (
+                    <div key={section} data-testid="profile-collecting">
+                        {arkScore !== null ? (
+                            <p className="px-[18px] pb-1 pt-4 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{arkWords.collecting}</p>
+                        ) : (
+                            // No Ark on this server: the collector card stays the headline (never the trade-unlock bar).
+                            <CollectorScoreCard
+                                score={profile.collectorScore}
+                                archetype={profile.collectionArchetype}
+                                catalogCompletion={profile.catalogSpeciesCount > 0
+                                    ? {completed: profile.indexedSpeciesCount, total: profile.catalogSpeciesCount}
+                                    : null}
+                                tradeUnlock={null}
+                            />
+                        )}
+                        <StatChipScroller items={statChips} />
+                        <SettingComparisonCard
+                            wild={profile.wildCount}
+                            zoo={profile.zooCount}
+                            domestic={profile.domesticCount}
+                            farm={profile.farmCount}
+                        />
+                        {viewer.isOwner ? (
+                            <Link
+                                href={`${localePrefix}/app/collection?segment=binders`}
+                                className="flex items-center justify-end gap-1 border-b border-white/[0.06] px-[18px] py-3 text-xs font-bold"
+                                style={{color: THEME.neon}}
+                            >
+                                Browse collection binders <span aria-hidden="true">↗</span>
+                            </Link>
+                        ) : null}
+                        {/* No My Companions here (iOS, owner 2026-11-03): Companions is its own place. */}
+                        {binders ? <CompletedBindersSection binders={binders} /> : null}
+                        {viewer.isOwner && social?.profileViews ? <ProfileViewsCard stats={social.profileViews} /> : null}
+                    </div>
+                );
+            case "bodyStats":
+                return (
+                    <div key={section}>
+                        <AverageTraitsCard stats={profile.averageTraits} />
+                        <ProfileInsightsSection
+                            insights={insights}
+                            isWildScope={isWildInsightScope}
+                            onToggleWildScope={setIsWildInsightScope}
+                        />
+                    </div>
+                );
+        }
+    };
 
     useEffect(() => {
         const onScroll = () => {
@@ -866,11 +1009,18 @@ export default function ProfileContent({
 
             {activeChromePreset === "business" ? (
                 <section className="grid grid-cols-3 gap-2">
-                    {[
-                        [labels.collectionValue, collectionValue ?? "—", "rgba(52,199,89,0.92)"],
-                        ["Overall", formatAppInteger(profile.collectorScore, locale), THEME.neon],
-                        ["Catalog", profile.catalogSpeciesCount > 0 ? `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%` : "—", THEME.mint]
-                    ].map(([title, value, tint]) => (
+                    {(arkScore !== null
+                        // Life Sim (contract section 9, DEFAULT): Ark Score · Powers · Steps.
+                        ? [
+                            [arkWords.score, formatAppInteger(arkScore, locale), THEME.neon],
+                            [arkWords.powersEarned, powersEarned !== null ? formatAppInteger(powersEarned, locale) : "—", THEME.mint],
+                            [arkWords.stepsTaken, stepsTotal !== null ? formatAppInteger(stepsTotal, locale) : "—", "rgba(255,255,255,0.85)"]
+                        ]
+                        : [
+                            [labels.collectionValue, collectionValue ?? "—", "rgba(52,199,89,0.92)"],
+                            ["Overall", formatAppInteger(profile.collectorScore, locale), THEME.neon],
+                            ["Catalog", profile.catalogSpeciesCount > 0 ? `${Math.round((profile.indexedSpeciesCount / profile.catalogSpeciesCount) * 100)}%` : "—", THEME.mint]
+                        ]).map(([title, value, tint]) => (
                         <div key={title} className=" border border-white/10 bg-white/[0.04] p-3">
                             <p className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-white/35">{title}</p>
                             <p className="mt-1 truncate text-[15px] font-extrabold" style={{color: tint}}>{value}</p>
@@ -913,60 +1063,8 @@ export default function ProfileContent({
 
             {activeTab === "stats" ? (
                 <div className={`flex flex-col ${bleed}`}>
-                    <CollectorScoreCard
-                        score={profile.collectorScore}
-                        archetype={profile.collectionArchetype}
-                        catalogCompletion={profile.catalogSpeciesCount > 0
-                            ? {completed: profile.indexedSpeciesCount, total: profile.catalogSpeciesCount}
-                            : null}
-                        tradeUnlock={ownerExtras?.tradeUnlock ?? null}
-                    />
-                    {followCounts ? (
-                        <FollowCountsRow counts={followCounts} onOpen={viewer.isLoggedIn ? setFollowList : undefined} />
-                    ) : null}
-                    {social?.week ? <ProfileWeeklyStatsCard week={social.week} /> : null}
-                    <SettingComparisonCard
-                        wild={profile.wildCount}
-                        zoo={profile.zooCount}
-                        domestic={profile.domesticCount}
-                        farm={profile.farmCount}
-                    />
-                    {!viewer.isOwner && viewer.isLoggedIn ? (
-                        <HeadToHeadPrompt onOpen={() => setShowHeadToHead(true)} />
-                    ) : null}
-                    <StatChipScroller items={statChips} />
-                    {collectionValue ? (
-                        <StatTile
-                            title={labels.collectionValue}
-                            value={collectionValue}
-                            tint="rgba(52,199,89,0.92)"
-                            footerText={labels.netWorthFootnote}
-                        />
-                    ) : null}
-                    <BestForTagsChartCard
-                        scores={profile.bestForTagScores}
-                        title={viewer.isOwner ? "YOUR QUALITIES" : `@${profile.username}'S QUALITIES`.toUpperCase()}
-                        isOwner={viewer.isOwner}
-                        usernameHandle={`@${profile.username}`}
-                    />
-                    {viewer.isOwner ? (
-                        <Link
-                            href={`${localePrefix}/app/collection?segment=binders`}
-                            className="flex items-center justify-end gap-1 border-b border-white/[0.06] px-[18px] py-3 text-xs font-bold"
-                            style={{color: THEME.neon}}
-                        >
-                            Browse collection binders <span aria-hidden="true">↗</span>
-                        </Link>
-                    ) : null}
-                    <AverageTraitsCard stats={profile.averageTraits} />
-                    {viewer.isOwner && social?.profileViews ? <ProfileViewsCard stats={social.profileViews} /> : null}
-                    <ProfileInsightsSection
-                        insights={insights}
-                        isWildScope={isWildInsightScope}
-                        onToggleWildScope={setIsWildInsightScope}
-                    />
-                    {/* No My Companions here (iOS, owner 2026-11-03): Companions is its own place. */}
-                    {binders ? <CompletedBindersSection binders={binders} /> : null}
+                    {/* Life Sim (contract section 9): the step flow first, collecting lower down, body stats last. */}
+                    {statsSections.map((section) => statsSection(section))}
                     {/* "Joined …" lives on Stats now (iOS design pass, 2026-11-06), not in the header. */}
                     {profile.joinedAtLabel ? (
                         <p className="px-[18px] pb-2 pt-[18px] text-[11px] font-semibold text-white/40">
@@ -1059,7 +1157,7 @@ export default function ProfileContent({
 
             {activeTab === "diary" && viewer.isOwner ? (
                 <div className={bleed}>
-                    <ProfileDiaryTab words={diaryWords ?? PROBLEM_DIARY_WORDS_EN} companionWords={companionWords} locale={locale} />
+                    <ProfileDiaryTab words={diaryWords ?? PROBLEM_DIARY_WORDS_EN} companionWords={companionWords} locale={locale} displayCurrency={displayCurrency} />
                 </div>
             ) : null}
 

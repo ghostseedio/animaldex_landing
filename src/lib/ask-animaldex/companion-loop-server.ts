@@ -338,6 +338,11 @@ export async function applyCompanionLines(params: {
     lines: CompanionLines;
     /** What they said, for the one-new-step-a-day rule (they may ask for another). */
     userMessage?: string;
+    /**
+     * A new step was saved from the reply's TRIAL line: Life Sim tags it
+     * (docs/life-sim/CONTRACT.md, section 5), fire and forget.
+     */
+    onStepSet?: (step: {id: string; step: string; problem: string | null}) => void;
 }): Promise<Record<string, unknown>> {
     const {service, userId, speciesProfileId, lines} = params;
     const base = {p_user_id: userId, p_species_profile_id: speciesProfileId};
@@ -411,10 +416,12 @@ export async function applyCompanionLines(params: {
             else if (typeof data === "string" && data) {
                 // The id is the step the card under this reply acts on. The
                 // same step said again keeps its id and where it stood.
+                const isNew = openStep?.id !== data;
                 openStep = openStep?.id === data
                     ? openStep
                     : {id: data, step: lines.trial.step, set_at: new Date().toISOString(), accepted_at: null, trial_frequency: null, has_report: false};
                 event.trial_set = {id: data, step: openStep.step};
+                if (isNew) params.onStepSet?.({id: data, step: lines.trial.step, problem: focus});
             }
         }
         if (lines.refer) {

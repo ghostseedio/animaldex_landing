@@ -250,6 +250,19 @@ export function isSupportedCurrency(code: string | null | undefined): code is st
     return Boolean(code && UNITS_PER_EUR[code.toUpperCase()] != null);
 }
 
+/** A language tag's currency by its region ("en-GB" → GBP), for "System"; null without a known region. */
+export function currencyForLanguage(tag: string | null | undefined): string | null {
+    const region = tag?.trim().split(/[-_]/)[1]?.toUpperCase();
+    const byRegion: Record<string, string> = {
+        GB: "GBP", US: "USD", ID: "IDR", AU: "AUD", CA: "CAD", NZ: "NZD", IN: "INR", JP: "JPY", KR: "KRW",
+        SG: "SGD", MY: "MYR", PH: "PHP", TH: "THB", ZA: "ZAR", BR: "BRL", MX: "MXN", CH: "CHF", SE: "SEK",
+        NO: "NOK", DK: "DKK", PL: "PLN", CZ: "CZK", HU: "HUF", RO: "RON", TR: "TRY", IL: "ILS", IS: "ISK",
+        HK: "HKD", CN: "CNY", DE: "EUR", FR: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", IE: "EUR", PT: "EUR",
+        BE: "EUR", AT: "EUR", FI: "EUR", GR: "EUR"
+    };
+    return region ? byRegion[region] ?? null : null;
+}
+
 /** "system" (or anything unknown) resolves to the locale's currency, else USD. */
 export function resolveDisplayCurrency(preference: string | null | undefined, localeCurrency?: string | null) {
     const normalized = preference?.trim().toUpperCase();

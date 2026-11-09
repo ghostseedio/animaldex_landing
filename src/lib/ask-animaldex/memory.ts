@@ -17,6 +17,9 @@ import {requestAskJSONObject} from "@/lib/ask-animaldex/providers";
 import {parseAskMemoryFacts, type AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import {buildAskMemoryDeltaPrompts, parseAskMemoryDelta} from "@/lib/ask-animaldex/companion";
 import {createAskFollowUp, loadAskJourneyNote, saveAskJourney} from "@/lib/ask-animaldex/chat-records-server";
+import type {SupabaseClient} from "@supabase/supabase-js";
+import {memoryMinCharacters, parseArkMemoryOutcomes} from "@/lib/ask-animaldex/ark-prompts";
+import {applyArkStepOutcomes, loadArkRecentSteps, markArkFocusSensitive} from "@/lib/ask-animaldex/ark-server";
 
 export type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 
@@ -90,13 +93,23 @@ export async function rememberAskTurn(params: {
     allowFollowUp?: boolean;
     /** Teen mode (`age-band.ts`): only light, everyday facts are kept. */
     teen?: boolean;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 6): the reader's own client
+     * (their steps are read as them), the problem this chat is on, and the
+     * person's message id, so a revision this exchange causes lands under it.
+     */
+    ark?: {client: SupabaseClient; focusId: string | null; chatMessageRef: string | null} | null;
 }): Promise<void> {
     if (!params.userId || !params.answer.trim()) return;
-    // "ok", "yes", "thanks": nothing to learn, no call to make.
-    if (params.userMessage.trim().length < 20) return;
     const service = createSupabaseServiceClient();
     if (!service) return;
     const userId = params.userId;
+    // While they have a step taken on in the last 30 days, "sold out!!" is worth the call.
+    const recentSteps = params.ark && params.userMessage.trim().length >= 3
+        ? await loadArkRecentSteps(params.ark.client, service)
+        : [];
+    // "ok", "yes", "thanks": nothing to learn, no call to make.
+    if (params.userMessage.trim().length < memoryMinCharacters(recentSteps)) return;
     try {
         const existingJourney = params.journey ? await loadAskJourneyNote(userId, params.journey.speciesProfileId) : null;
         const prompts = buildAskMemoryDeltaPrompts({
@@ -106,13 +119,20 @@ export async function rememberAskTurn(params: {
             answer: params.answer,
             existingJourney,
             allowFollowUp: params.allowFollowUp === true,
-            teen: params.teen === true
+            teen: params.teen === true,
+            recentSteps
         });
         const raw = await requestAskJSONObject({systemPrompt: prompts.system, userPrompt: prompts.user});
         if (!raw) return;
         const knownIds = new Set(params.existing.map((fact) => fact.id).filter((id): id is string => Boolean(id)));
         const delta = parseAskMemoryDelta(raw, knownIds, {teen: params.teen === true});
         const tasks: Promise<unknown>[] = [];
+        // What it heard about how an earlier step went, and whether the problem turned hard.
+        const ark = parseArkMemoryOutcomes(raw, recentSteps);
+        if (params.ark && ark.stepOutcomes.length > 0) {
+            tasks.push(applyArkStepOutcomes({service, userId, outcomes: ark.stepOutcomes, chatMessageRef: params.ark.chatMessageRef}));
+        }
+        if (params.ark?.focusId && ark.focusSensitive) tasks.push(markArkFocusSensitive(service, userId, params.ark.focusId));
         if (params.journey) {
             tasks.push(saveAskJourney({
                 userId,

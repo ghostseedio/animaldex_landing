@@ -95,6 +95,8 @@ import {loadAskStatQuantiles} from "@/data/ask-stat-quantiles";
 import {loadAskCaptureContext} from "@/data/ask-capture-context";
 import {loadAskRecordExtras} from "@/data/ask-animal-record";
 import {loadAskChatSettings, loadAskMemory, rememberAskTurn} from "@/lib/ask-animaldex/memory";
+import {loadArkUnmentionedRevisions, markArkRevisionsMentioned, tagArkStep} from "@/lib/ask-animaldex/ark-server";
+import type {ArkMentionRevision} from "@/lib/ask-animaldex/ark-prompts";
 import {
     ASK_CRISIS_PATTERN,
     askHistoryAsTurns,
@@ -559,7 +561,7 @@ export async function POST(request: Request) {
     // rounds, one after the other. A hello's daily cap is read here too, unless
     // another animal sent them (referral_id), which the loop below decides.
     const referralRequested = typeof body.referral_id === "string" && UUID_PATTERN.test(body.referral_id.trim());
-    const [memory, companion, quantiles, owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories, holdsSpecies, greetingTaken] =
+    const [memory, companion, quantiles, owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories, holdsSpecies, greetingTaken, arkRevisions] =
         await Promise.all([
             speaksAsAnimal && personalise ? loadAskMemory(viewer.userId) : Promise.resolve([]),
             companionPending,
@@ -601,7 +603,13 @@ export async function POST(request: Request) {
                 : !viewer.userId
                 ? Promise.resolve(false as boolean | null)
                 : speciesIdPending.then((speciesId) => (speciesId ? holdsLiveCard(viewer.userId!, speciesId) : null)),
-            isGreeting && !referralRequested ? takeAskGreeting(request, viewer) : Promise.resolve(null as boolean | null)
+            isGreeting && !referralRequested ? takeAskGreeting(request, viewer) : Promise.resolve(null as boolean | null),
+            // Life Sim (docs/life-sim/CONTRACT.md, section 4): what changed since its last reply, for it to mention once.
+            ownerSpeciesIdPending.then((ownerSpeciesId) =>
+                ownerSpeciesId && viewer.userId && service && personalise && !aboutTrial && !isCall
+                    ? loadArkUnmentionedRevisions(service, viewer.userId, ownerSpeciesId)
+                    : [] as ArkMentionRevision[]
+            )
         ]);
     const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
     const ownerSpeciesId = ownsCapture && viewer.userId ? speciesId : null;
@@ -773,6 +781,7 @@ export async function POST(request: Request) {
                     stepReport: loop.stepReport ? {media: loop.stepReport.media, proof: loop.stepReport.proof ?? null} : null,
                     debateOffer: debate.offer,
                     secondOpinion,
+                    arkRevisions,
                     // On a call: whether a yes may hand the debate over now.
                     ...(callDebates ? {debateHandOver: debate.handOver} : {})
                 })
@@ -808,7 +817,11 @@ export async function POST(request: Request) {
                 answer,
                 journey: ownerSpeciesId ? {speciesProfileId: ownerSpeciesId} : null,
                 allowFollowUp: Boolean(ownerSpeciesId) && followUpsOn,
-                teen
+                teen,
+                // Life Sim (section 6): a word about how an earlier step went revises it, under this message.
+                ark: viewer.client && !isCall && !aboutTrial
+                    ? {client: viewer.client, focusId: ownerSpeciesId ? loop?.state?.focus?.id ?? null : null, chatMessageRef: requestId?.toLowerCase() ?? null}
+                    : null
             }));
             // The angle this take was built on, so the next one is new (`angle.ts`).
             if (chosenAngle && speciesId && service) {
@@ -831,6 +844,8 @@ export async function POST(request: Request) {
         if (ownerSpeciesId) work.push(recordAskCompanionDay(userId, ownerSpeciesId, question ?? ""));
         if (speciesId) work.push(recordAskTalkDay(userId, speciesId));
         if (dueFollowUp) work.push(markAskFollowUpRaised(userId, dueFollowUp.id));
+        // The reply has said them: they are not put to the animal again.
+        if (arkRevisions.length > 0 && service) work.push(markArkRevisionsMentioned(service, userId, arkRevisions.map((revision) => revision.id)));
         void Promise.allSettled(work);
     };
     /**
@@ -1071,7 +1086,20 @@ export async function POST(request: Request) {
                 state: loop.state,
                 roster: loop.roster,
                 lines,
-                userMessage: question ?? ""
+                userMessage: question ?? "",
+                // Life Sim (section 5): a step saved from this reply is tagged, after the reply, fire and forget.
+                onStepSet: (step) => {
+                    void tagArkStep({
+                        service: owner.service,
+                        userId: ownerUserId,
+                        stepId: step.id,
+                        animalName: packet.scope === "species" && packet.species ? packet.species.name : "",
+                        power: packet.scope === "species" && packet.species ? packet.species.power?.principleName ?? null : null,
+                        problem: step.problem,
+                        step: step.step,
+                        teen
+                    });
+                }
             });
             // The offer, in the animal's own words, ends with the debate marker:
             // noted so it is made once, and, when it was allowed, what the chat

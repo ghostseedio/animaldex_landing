@@ -15,6 +15,7 @@
  * thread stays on its Trial).
  */
 
+import {ARK_MEMORY_RULES, ARK_MEMORY_SCHEMA_LINE, arkRecentStepsSection, type ArkRecentStep} from "@/lib/ask-animaldex/ark-prompts";
 import {TEEN_MEMORY_RULE, teenMemoryAllowed} from "@/lib/ask-animaldex/age-band";
 import type {AskMemoryFact} from "@/lib/ask-animaldex/memory-prompt";
 import type {AskSpeciesGrounding} from "@/lib/ask-animaldex/grounding";
@@ -504,7 +505,10 @@ export function parseAskMemoryDelta(raw: unknown, knownIds: Set<string>, options
 /**
  * The extraction prompt, verbatim from the apps' `buildMemoryDeltaPrompts`.
  * The owner's own chat sends their journey so far and, with check-ins on,
- * `allowFollowUp`; everyone else sends neither.
+ * `allowFollowUp`; everyone else sends neither. Life Sim's keys
+ * (`step_outcomes`, `focus_sensitive`, `recent_steps`; `ark-prompts.ts`) are
+ * written to docs/life-sim/CONTRACT.md section 6 ahead of the apps' edge
+ * lane, which is to carry the same lines.
  */
 export function buildAskMemoryDeltaPrompts(params: {
     existing: AskMemoryFact[];
@@ -515,6 +519,12 @@ export function buildAskMemoryDeltaPrompts(params: {
     allowFollowUp?: boolean;
     /** Teen mode (`age-band.ts`): only light, everyday facts. */
     teen?: boolean;
+    /**
+     * Life Sim (docs/life-sim/CONTRACT.md, section 6): the steps they took on
+     * in the last 30 days, from every animal, which this exchange may say
+     * how they went. The call always returns `step_outcomes` and `focus_sensitive`.
+     */
+    recentSteps?: readonly ArkRecentStep[];
 }): {system: string; user: string} {
     const today = new Date().toISOString().slice(0, 10);
     return {
@@ -524,7 +534,8 @@ export function buildAskMemoryDeltaPrompts(params: {
             "Return ONLY the changes, as JSON:",
             '{"add":[{"fact":string,"kind":"context|goal|commitment|outcome|preference"}],',
             ' "update":[{"id":string,"fact":string,"kind":string}], "retire":[id], "journey":string,',
-            ' "follow_up":{"topic":string,"revisit_after_days":number} | null}',
+            ' "follow_up":{"topic":string,"revisit_after_days":number} | null,',
+            ARK_MEMORY_SCHEMA_LINE,
             "Facts: plain statements about the person in the third person, under 160 characters ('Runs a small bakery in",
             "Leeds'). kind: context (who they are, what they do), goal (what they want), commitment (something they said they",
             "will do), outcome (what happened when they tried something), preference (how they like answers).",
@@ -540,6 +551,7 @@ export function buildAskMemoryDeltaPrompts(params: {
                 ? "- follow_up: ONLY when the person explicitly asked the animal to check back, or agreed when it offered (\"ask me next week\", \"yes, check in on me\"). topic = what to ask about, in the person's own terms. Otherwise null."
                 : "- follow_up: always null.",
             ...(params.teen ? [TEEN_MEMORY_RULE] : []),
+            ...ARK_MEMORY_RULES,
             "- If nothing changes, return empty arrays."
         ].join("\n"),
         user: [
@@ -552,6 +564,7 @@ export function buildAskMemoryDeltaPrompts(params: {
                 pinned: fact.pinned === true
             })))}`,
             `current_journey:\n${params.existingJourney?.trim() || "(nothing yet)"}`,
+            arkRecentStepsSection(params.recentSteps ?? []),
             `person_said:\n${params.userMessage}`,
             `animal_answered:\n${params.answer.slice(0, 2000)}`
         ].join("\n\n")
