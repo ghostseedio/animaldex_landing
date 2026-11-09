@@ -503,7 +503,16 @@ type ThreadMessage = {
  * the person's message nearest that time (within ten minutes). Null when the
  * message is not in the loaded thread: the Diary still has it.
  */
-export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & Partial<Pick<ArkChange, "source" | "stepId">>, messages: readonly ThreadMessage[]): string | null {
+export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & Partial<Pick<ArkChange, "source" | "stepId" | "createdAt">>, messages: readonly ThreadMessage[]): string | null {
+    // A revision of a step this thread saw finish, made no earlier than two
+    // minutes before that reply, sits with it, so "Didn't work" and what it
+    // cost read as one (owner, 2026-11-10; iOS ArkThreadRule.anchor).
+    if (change.stepId && change.createdAt) {
+        const finisher = arkStepFinisher(change.stepId, messages);
+        const made = Date.parse(change.createdAt);
+        const finished = finisher ? Date.parse(finisher.createdAt) : Number.NaN;
+        if (finisher && !Number.isNaN(made) && !Number.isNaN(finished) && made >= finished - 2 * 60_000) return finisher.id;
+    }
     const ref = change.chatMessageRef?.trim();
     if (!ref) {
         // A report's revision has no message ref (the database makes it while
@@ -540,12 +549,18 @@ export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & 
  * earned the Power. Null when it is not in the loaded thread.
  */
 export function arkRevealDone(stepId: string, messages: readonly ThreadMessage[]): {messageId: string; powerEarned: boolean} | null {
+    const message = arkStepFinisher(stepId, messages);
+    return message ? {messageId: message.id, powerEarned: message.companionEvent?.stepDone?.powerEarned === true} : null;
+}
+
+/** The newest finished animal reply whose `stepDone` names this step. Null when it is not in the loaded thread. */
+function arkStepFinisher(stepId: string, messages: readonly ThreadMessage[]): ThreadMessage | null {
     const wanted = stepId.toLowerCase();
     for (let index = messages.length - 1; index >= 0; index -= 1) {
         const message = messages[index];
         if (message.role !== "assistant" || (message.status && message.status !== "complete")) continue;
         const done = message.companionEvent?.stepDone;
-        if (done?.id && done.id.toLowerCase() === wanted) return {messageId: message.id, powerEarned: done.powerEarned === true};
+        if (done?.id && done.id.toLowerCase() === wanted) return message;
     }
     return null;
 }
@@ -592,13 +607,14 @@ export function arkRevealHeading(
 }
 
 /**
- * Whether the chat shows a reveal (owner, 2026-11-10): one made by a tap (the
- * old "I'll do it" reward) only under a reply in the thread that finished its
- * step; any other (a report's, a chat's) as before.
+ * Whether the chat shows a reveal as a card (owner, 2026-11-10): one made by
+ * the removed "I'll do it" tap never is (under an open step it read as a
+ * finished one; under a finished one it said "+2" beside "Didn't work"). Its
+ * numbers stay in the bars and the Diary. Any other (a report's, a chat's)
+ * as before.
  */
-export function arkRevealShown(reveal: Pick<ArkChange, "source" | "stepId">, messages: readonly ThreadMessage[]): boolean {
-    if (reveal.source !== "tap") return true;
-    return reveal.stepId ? arkRevealDone(reveal.stepId, messages) !== null : false;
+export function arkRevealShown(reveal: Pick<ArkChange, "source">): boolean {
+    return reveal.source !== "tap";
 }
 
 /** The newest reveal per step, and every revision, from a newest-first ledger read for one animal. */

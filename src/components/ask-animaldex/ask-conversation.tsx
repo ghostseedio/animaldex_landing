@@ -1876,7 +1876,7 @@ function AskConversation({
                 sticksToBottom.current = true;
                 setArkFresh((fresh) => new Set([...Array.from(fresh), ...arrived.map((change) => change.id)]));
                 for (const change of arrived) {
-                    if (arkIsReveal(change) && arkRevealShown(change, messagesRef.current)) trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(change, companionSpeciesProfileId));
+                    if (arkIsReveal(change) && arkRevealShown(change)) trackEvent(ARK_EVENTS.revealShown, arkRevealShownParams(change, companionSpeciesProfileId));
                 }
             }
         }
@@ -2417,8 +2417,8 @@ function AskConversation({
         const withThreadStep: ArkChange[] = [];
         const atEnd: ArkChange[] = [];
         reveals.forEach((reveal, stepId) => {
-            // A tap's reveal (the old "I'll do it" reward) only under the reply that finished its step (owner, 2026-11-10).
-            if (!arkRevealShown(reveal, messages)) return;
+            // A tap's reveal (the removed "I'll do it" reward) is never a card here (owner, 2026-11-10).
+            if (!arkRevealShown(reveal)) return;
             const at = arkRevealAnchorId(stepId, messages);
             if (at) slot(at).reveals.push(reveal);
             else if (threadStep?.id && threadStep.id.toLowerCase() === stepId) withThreadStep.push(reveal);

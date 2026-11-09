@@ -93,14 +93,30 @@ function Bar({value, tint, track = "bg-white/[0.08]"}: {value: number; tint: str
     );
 }
 
-/** One stat that moved: its name, the change, a bar from the old value to the new one. */
-function ChangeRow({change, row, words, money, locale, progress}: {
+/** A small right arrow between a stat's old value and its new one. */
+function FlowArrow() {
+    return (
+        <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="shrink-0 text-white/40">
+            <path d="M1.5 6h8M6.5 2.5 10 6l-3.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+/**
+ * One stat that moved: its name, the change, a bar from the old value to the
+ * new one, and (every stat but Money, which shows its amount) "22 → 21" under
+ * the bar, the new value counting with it (owner, 2026-11-10: "did I lose or
+ * gain energy"; iOS ArkStatChangeRow).
+ */
+function ChangeRow({change, row, words, money, locale, progress, flow}: {
     change: ArkChange;
     row: {stat: ArkStat; before: number; after: number; delta: number};
     words: ArkWords;
     money: (usd: number) => string;
     locale: string;
     progress: number;
+    /** Whether to draw "before → after" (not when the values are not real, see `ArkChangeNumbers`). */
+    flow: boolean;
 }) {
     const loss = arkRowIsLoss(change, row);
     const tint = row.stat === "experience" ? NEON : loss ? LESSON : NEON;
@@ -118,6 +134,13 @@ function ChangeRow({change, row, words, money, locale, progress}: {
                 </span>
             </div>
             <Bar value={value} tint={tint} />
+            {flow && row.stat !== "money" ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold leading-4 tabular-nums" data-testid={`ark-row-${row.stat}-flow`}>
+                    <span className="text-white/40">{row.before}</span>
+                    <FlowArrow />
+                    <span className="text-white">{value}</span>
+                </span>
+            ) : null}
         </li>
     );
 }
@@ -153,6 +176,9 @@ export function ArkChangeNumbers({change, words, money, locale, progress, stats}
     const rows = stats === undefined
         ? arkChangeRows(change).map((row) => ({kind: "moved" as const, ...row}))
         : arkRevealLines(change, stats);
+    // Experience's "before → after" only when its values are real: the reader's
+    // stats, or the change's own Experience row (not the Diary's 0 → delta).
+    const experienceKnown = Boolean(stats) || change.changes.some((item) => item.stat === "experience" && item.delta !== 0);
     const lessonExperience = change.experienceDelta > 0 && arkChangeHasLoss(change)
         ? fillWords(words.lessonExperience, {n: change.experienceDelta})
         : null;
@@ -161,7 +187,7 @@ export function ArkChangeNumbers({change, words, money, locale, progress, stats}
             {rows.length > 0 ? (
                 <ul className="flex flex-col gap-2.5">
                     {rows.map((row) => (row.kind === "moved"
-                        ? <ChangeRow key={row.stat} change={change} row={row} words={words} money={money} locale={locale} progress={progress} />
+                        ? <ChangeRow key={row.stat} change={change} row={row} words={words} money={money} locale={locale} progress={progress} flow={row.stat !== "experience" || experienceKnown} />
                         : <StillRow key={row.stat} stat={row.stat} value={row.value} stats={stats ?? null} words={words} money={money} />
                     ))}
                 </ul>

@@ -450,21 +450,38 @@ test("the chat card lists all five bars in order with the reader's stats: moved 
     assert.deepEqual(revision[4], {kind: "still", stat: "experience", value: 9});
 });
 
-test("a tap's reveal shows only under a reply in the thread that finished its step; a report's as before (owner, 2026-11-10)", () => {
+test("a tap's reveal is never a card in the chat, wherever its step is; a report's is (owner, 2026-11-10)", () => {
     const tap = decodeArkChange(lessonRow)!;
     assert.equal(tap.source, "tap");
-    const set = {id: "set", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepSet: {id: STEP}}};
-    const done = {id: "done", role: "assistant", createdAt: "", status: "complete", companionEvent: {stepDone: {id: STEP}}};
-    const typing = {...done, id: "typing", status: "streaming"};
-    const other = {...done, id: "other", companionEvent: {stepDone: {id: id1(99)}}};
-    assert.equal(arkRevealShown(tap, [set]), false);
-    assert.equal(arkRevealShown(tap, [set, other]), false);
-    assert.equal(arkRevealShown(tap, [set, typing]), false);
-    assert.equal(arkRevealShown(tap, [set, done]), true);
-    assert.equal(arkRevealAnchorId(STEP, [set, done]), "done");
-    assert.equal(arkRevealShown({...tap, stepId: null}, [set, done]), false);
-    // A report's reveal is unchanged: shown, under the reply that set the step when none finished it.
-    const report = {...tap, source: "report" as const};
-    assert.equal(arkRevealShown(report, [set]), true);
-    assert.equal(arkRevealShown(report, []), true);
+    assert.equal(arkRevealShown(tap), false);
+    assert.equal(arkRevealShown({...tap, stepId: null}), false);
+    assert.equal(arkRevealShown({...tap, source: "report" as const}), true);
+    assert.equal(arkRevealShown({...tap, source: "chat" as const}), true);
+});
+
+test("a revision of a step goes under the reply that finished it when made no earlier than 2 minutes before it; otherwise as before (owner, 2026-11-10)", () => {
+    const user = {id: id1(500), role: "user", createdAt: "2026-11-10T09:50:00Z"};
+    const answer = {id: "answer", role: "assistant", createdAt: "2026-11-10T09:50:05Z", status: "complete"};
+    const report = {id: "report", role: "user", createdAt: "2026-11-10T09:59:00Z", stepReportId: STEP};
+    const done = {id: "done", role: "assistant", createdAt: "2026-11-10T10:01:00Z", status: "complete", companionEvent: {stepDone: {id: STEP.toUpperCase()}}};
+    const messages = [user, answer, report, done];
+    // A chat revision (ref = the user's message), made 1 minute before the finishing reply: with that reply.
+    const chat = decodeArkChange(revisionRow)!;
+    assert.equal(chat.stepId, STEP);
+    assert.equal(arkRevisionAnchorId(chat, messages), "done");
+    // Exactly 2 minutes before: still with it; after it: with it.
+    assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T09:59:00Z"}, messages), "done");
+    assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T10:05:00Z"}, messages), "done");
+    // Earlier than 2 minutes before it: placement unchanged (its message ref).
+    assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T09:58:59Z"}, messages), id1(500));
+    // A report's revision: with the finishing reply, else (no finisher) under the report.
+    const fromReport = {...chat, source: "report" as const, chatMessageRef: null};
+    assert.equal(arkRevisionAnchorId(fromReport, messages), "done");
+    assert.equal(arkRevisionAnchorId(fromReport, [user, answer, report]), "report");
+    // A reply still typing, or one that finished another step, is not the finisher.
+    assert.equal(arkRevisionAnchorId(chat, [user, answer, report, {...done, status: "streaming"}]), id1(500));
+    assert.equal(arkRevisionAnchorId(chat, [user, answer, report, {...done, companionEvent: {stepDone: {id: id1(99)}}}]), id1(500));
+    // No step or no time: as before.
+    assert.equal(arkRevisionAnchorId({...chat, stepId: null}, messages), id1(500));
+    assert.equal(arkRevisionAnchorId({...chat, createdAt: null}, messages), id1(500));
 });
