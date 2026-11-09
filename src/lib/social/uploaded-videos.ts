@@ -231,3 +231,179 @@ export async function uploadedShareCopy(id: string, regenerate: boolean): Promis
         return {copy: fallback, source: "template", error: error instanceof Error ? error.message : String(error)};
     }
 }
+
+/** Edits the title and/or notes of an uploaded video. */
+export async function updateUploadedVideo(id: string, input: {title?: string; notes?: string}) {
+    if (!isId(id)) throw new Error("Bad id");
+    const patch: Record<string, string> = {updated_at: new Date().toISOString()};
+    if (typeof input.title === "string") {
+        const title = input.title.trim().slice(0, 200);
+        if (!title) throw new Error("The title cannot be empty");
+        patch.title = title;
+    }
+    if (typeof input.notes === "string") patch.notes = input.notes.trim().slice(0, 4000);
+    const response = await rest(`admin_uploaded_videos?id=eq.${id}`, {method: "PATCH", prefer: "return=representation", body: JSON.stringify(patch)});
+    const [row] = await response.json() as UploadedVideoRow[];
+    if (!row) throw new Error("Video not found");
+    return normalizeRow(row);
+}
+
+// "What happens in it", written for the owner when they leave the notes empty.
+// Gemini first, because it watches the whole video WITH its sound, and the
+// voiceover is most of what these edits say. (Gemini will not fetch our public
+// storage URL itself, so the file goes up through its Files API and is deleted
+// after.) Claude is the fallback, from frames the browser sampled plus the .srt
+// when one was dropped. Each 30–60 s Short costs well under a cent on Gemini
+// Flash at low media resolution.
+
+const DESCRIBE_SYSTEM_PROMPT = `You write the notes for a finished vertical video the AnimalDex team filmed and edited themselves (travel vlogs, wildlife encounters, Shorts with the AnimalDex app's animal cards and animal chats on screen). The team's social captions are drafted from these notes later, so be accurate and concrete. Never guess a place, a species or a number that is not clearly shown, said or written on screen.
+
+Plain text, no markdown, in this shape:
+What happens: 2–4 sentences, in order: the hook moment, the place if shown or said, the animals (common names), what the app shows.
+Voiceover: what is said, close to word for word (or "none").
+On screen: key captions or card text worth quoting (or "none").`;
+
+const GEMINI_API = "https://generativelanguage.googleapis.com";
+
+async function geminiFileFromStorage(key: string, row: UploadedVideoRow) {
+    const source = await fetch(publicStorageUrl(row.video_path), {cache: "no-store"});
+    const size = Number(source.headers.get("content-length"));
+    if (!source.ok || !source.body || !size) throw new Error(`storage_${source.status}`);
+    const start = await fetch(`${GEMINI_API}/upload/v1beta/files?key=${encodeURIComponent(key)}`, {
+        method: "POST",
+        headers: {
+            "X-Goog-Upload-Protocol": "resumable",
+            "X-Goog-Upload-Command": "start",
+            "X-Goog-Upload-Header-Content-Length": String(size),
+            "X-Goog-Upload-Header-Content-Type": "video/mp4",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({file: {display_name: row.video_path.split("/").pop()}}),
+        cache: "no-store"
+    });
+    const uploadUrl = start.headers.get("x-goog-upload-url");
+    if (!start.ok || !uploadUrl) throw new Error(`gemini_upload_start_${start.status}:${(await start.text().catch(() => "")).slice(0, 200)}`);
+    // Streamed straight from storage to Gemini: the file never sits in this server's memory.
+    const uploaded = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {"Content-Length": String(size), "X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize"},
+        body: source.body,
+        cache: "no-store",
+        duplex: "half"
+    } as RequestInit & {duplex: "half"});
+    if (!uploaded.ok) throw new Error(`gemini_upload_${uploaded.status}:${(await uploaded.text().catch(() => "")).slice(0, 200)}`);
+    let file = (await uploaded.json() as {file?: {name: string; uri: string; state?: string}}).file;
+    if (!file?.name) throw new Error("gemini_upload_no_file");
+    const deadline = Date.now() + 120_000;
+    while (file.state === "PROCESSING" && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const polled = await fetch(`${GEMINI_API}/v1beta/${file.name}?key=${encodeURIComponent(key)}`, {cache: "no-store"});
+        if (!polled.ok) throw new Error(`gemini_file_${polled.status}`);
+        file = await polled.json() as {name: string; uri: string; state?: string};
+    }
+    if (file.state && file.state !== "ACTIVE") throw new Error(`gemini_file_${file.state}`);
+    return file;
+}
+
+async function describeWithGemini(key: string, row: UploadedVideoRow, transcript: string) {
+    const file = await geminiFileFromStorage(key, row);
+    try {
+        const model = process.env.UPLOAD_DESCRIBE_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+        const response = await fetch(`${GEMINI_API}/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                systemInstruction: {parts: [{text: DESCRIBE_SYSTEM_PROMPT}]},
+                contents: [{
+                    role: "user",
+                    parts: [
+                        {file_data: {mime_type: "video/mp4", file_uri: file.uri}},
+                        {text: [`Title: ${row.title}`, transcript ? `The exact voiceover script (from its subtitles): ${transcript.slice(0, 3000)}` : ""].filter(Boolean).join("\n")}
+                    ]
+                }],
+                generationConfig: {mediaResolution: "MEDIA_RESOLUTION_LOW", maxOutputTokens: 1500, temperature: 0.3, thinkingConfig: {thinkingBudget: 0}}
+            }),
+            cache: "no-store",
+            signal: AbortSignal.timeout(120_000)
+        });
+        if (!response.ok) throw new Error(`gemini_${response.status}:${(await response.text().catch(() => "")).slice(0, 200)}`);
+        const body = await response.json() as {candidates?: Array<{content?: {parts?: Array<{text?: string}>}}>};
+        const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
+        if (!text) throw new Error("gemini_empty");
+        return text;
+    } finally {
+        await fetch(`${GEMINI_API}/v1beta/${file.name}?key=${encodeURIComponent(key)}`, {method: "DELETE", cache: "no-store"}).catch(() => undefined);
+    }
+}
+
+async function describeWithClaude(row: UploadedVideoRow, frames: string[], transcript: string) {
+    const key = anthropicApiKey();
+    if (!key) throw new Error("CLAUDE_API_KEY is not configured");
+    if (!frames.length && !transcript) throw new Error("no frames or voiceover to describe");
+    const client = anthropicClient({apiKey: key});
+    const response = await client.beta.messages.create({
+        model: process.env.CLAUDE_SOCIAL_COPY_MODEL?.trim() || "claude-opus-5-5",
+        max_tokens: 1500,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        output_config: {effort: "low"},
+        system: `${DESCRIBE_SYSTEM_PROMPT}\n\nYou see evenly spaced frames, not the video, and cannot hear it: if no voiceover script is given, write "Voiceover: unknown (frames only)".`,
+        messages: [{
+            role: "user",
+            content: [
+                ...frames.slice(0, 8).flatMap((data, index) => [
+                    {type: "text" as const, text: `Frame ${index + 1} of ${Math.min(8, frames.length)}:`},
+                    {type: "image" as const, source: {type: "base64" as const, media_type: "image/jpeg" as const, data}}
+                ]),
+                {type: "text" as const, text: [`Title: ${row.title}`, row.duration_seconds ? `Length: ${Math.round(row.duration_seconds)} s` : "", transcript ? `Voiceover script (from its subtitles): ${transcript.slice(0, 3000)}` : ""].filter(Boolean).join("\n")}
+            ]
+        }]
+    });
+    if (response.stop_reason === "refusal") throw new Error("claude_refused");
+    const text = response.content.map((block) => (block.type === "text" ? block.text : "")).join("").trim();
+    if (!text) throw new Error("claude_empty");
+    return text;
+}
+
+export type DescribeResult = {video: UploadedVideoRow; source: "gemini" | "claude" | "kept"; failures: string[]};
+
+/**
+ * Writes "what happens in it" for a video whose notes are empty and saves it.
+ * Notes the owner typed in the meantime are never overwritten.
+ */
+export async function describeUploadedVideo(id: string, input: {frames: string[]; transcript: string}): Promise<DescribeResult> {
+    const row = await getUploadedVideo(id);
+    if (!row) throw new Error("Video not found");
+    if (row.notes.trim()) return {video: row, source: "kept", failures: []};
+    const failures: string[] = [];
+    let text = "";
+    let source: DescribeResult["source"] = "gemini";
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    if (geminiKey) {
+        try {
+            text = await describeWithGemini(geminiKey, row, input.transcript);
+        } catch (error) {
+            failures.push(`gemini: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    } else {
+        failures.push("gemini: GEMINI_API_KEY is not configured");
+    }
+    if (!text) {
+        source = "claude";
+        try {
+            text = await describeWithClaude(row, input.frames, input.transcript);
+        } catch (error) {
+            failures.push(`claude: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    if (!text) throw new Error(`Could not describe the video (${failures.join("; ")})`);
+    // Only fills notes that are still empty.
+    const response = await rest(`admin_uploaded_videos?id=eq.${id}&notes=eq.`, {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: JSON.stringify({notes: text.slice(0, 4000), updated_at: new Date().toISOString()})
+    });
+    const [updated] = await response.json() as UploadedVideoRow[];
+    if (!updated) return {video: (await getUploadedVideo(id)) ?? row, source: "kept", failures};
+    return {video: normalizeRow(updated), source, failures};
+}

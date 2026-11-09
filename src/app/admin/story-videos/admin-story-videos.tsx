@@ -465,7 +465,10 @@ export default function AdminStoryVideos({siteUrl}: {siteUrl: string}) {
             </Section>
             ) : null}
 
-            {tab === "videos" && videoList === "uploaded" ? <AdminUploadedVideos shares={postsByVideo} onShare={(video) => setSharing(uploadedVideoToShareable(video))} onNotice={setNotice} /> : null}
+            {/* Stays mounted (hidden) on other tabs so an upload queue keeps running. */}
+            <div hidden={!(tab === "videos" && videoList === "uploaded")}>
+                <AdminUploadedVideos shares={postsByVideo} onShare={(video) => setSharing(uploadedVideoToShareable(video))} onNotice={setNotice} />
+            </div>
 
             {tab === "videos" && videoList === "generated" ? <AdminBlogVideos siteUrl={siteUrl} shares={postsByVideo} onShare={(video) => setSharing(blogVideoToShareable(video))} onNotice={setNotice} /> : null}
 
