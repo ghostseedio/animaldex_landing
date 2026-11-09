@@ -173,7 +173,7 @@ export default function BondPanel({
             });
     }, [bond, onBondChanged, onStepChange, speciesProfileId]);
 
-    /** "I've done it" (or "Tell {name} more") opens the report: no accepting first. */
+    /** "I've done it" opens the report, no accepting first; "Tell {name} more" (already reported) the plain message bar: the chat decides. */
     const primary = (_step: AnimalStep) => {
         onDidIt();
     };

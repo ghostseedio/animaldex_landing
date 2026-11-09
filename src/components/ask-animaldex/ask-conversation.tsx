@@ -1900,13 +1900,27 @@ function AskConversation({
         return () => timers.forEach((timer) => window.clearTimeout(timer));
     }, [isSending, ownerChat, reloadArk]);
     /**
-     * "I've done it" (or "Tell {name} more") puts the bar in report mode: one
-     * button, no accepting first (owner, 2026-11-09). The reveal comes once
-     * the step is done, after the reply to their report.
+     * "I've done it" puts the bar in report mode: one button, no accepting
+     * first (owner, 2026-11-09). The reveal comes once the step is done,
+     * after the reply to their report. "Tell {name} more", once the step has
+     * a report, is the plain message bar instead: the animal follows the step
+     * from the talk, and in report mode a message like "just talk about life"
+     * went as a step report (owner, 2026-11-10; iOS 33c7b656).
      */
-    const stepPrimary = useCallback((_step: AnimalStep) => {
+    const stepPrimary = useCallback((step: AnimalStep) => {
+        if (step.hasReport) {
+            setShowingBond(false);
+            setShowingMemory(false);
+            setShowingSoundCredits(false);
+            setReportSheet(false);
+            leaveReportMode();
+            speech.stop();
+            sticksToBottom.current = true;
+            requestAnimationFrame(() => composerRef.current?.focus());
+            return;
+        }
         startReport();
-    }, [startReport]);
+    }, [startReport, leaveReportMode, speech]);
     /** "A different step": the step is dropped, then they ask for a different one, as their own message. */
     const stepOther = useCallback((step: AnimalStep) => {
         if (isSending && greetingState !== "loading") return;
@@ -2797,7 +2811,9 @@ function AskConversation({
                                 openStep={openStep}
                                 onStepChange={setOpenStep}
                                 onTalk={() => setShowingBond(false)}
-                                onDidIt={startReport}
+                                onDidIt={() => {
+                                    if (openStep) stepPrimary(openStep);
+                                }}
                                 onDropped={() => {
                                     setShowingBond(false);
                                     submit(words.journey.step.otherMessage, "chip");
