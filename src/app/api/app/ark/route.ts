@@ -117,9 +117,11 @@ export async function POST(request: Request) {
 
     if (action === "approve") {
         const focusId = uuid(body.focusId);
-        const text = typeof body.text === "string" ? cleanArkSummary(body.text) : "";
+        // Exactly the text diary_public_draft returned (the database approves only
+        // that stored, checked text: summary_not_checked otherwise), never re-cleaned here.
+        const text = typeof body.text === "string" ? body.text : "";
         if (!focusId) return NextResponse.json({ok: false, code: "focus_not_found"}, {status: 400});
-        if (!text) return NextResponse.json({ok: false, code: "summary_not_safe"}, {status: 400});
+        if (!text.trim()) return NextResponse.json({ok: false, code: "summary_empty"}, {status: 400});
         const {error} = await supabase.rpc("approve_diary_summary_v1", {p_focus_id: focusId, p_text: text});
         if (error) return failed("approve_diary_summary_v1", error.message);
         return NextResponse.json({ok: true, text});
@@ -147,9 +149,10 @@ export async function POST(request: Request) {
         if (!invoked) return NextResponse.json({ok: false, code: "ark_unavailable"}, {status: 502});
         const payload = invoked.payload && typeof invoked.payload === "object" ? invoked.payload as Record<string, unknown> : {};
         if (!invoked.ok) return failed("diary_public_draft", String(payload.error ?? payload.code ?? `status ${invoked.status}`));
-        const text = typeof payload.text === "string" ? cleanArkSummary(payload.text) : "";
+        // The draft's text exactly as the edge stored it: approval must send it back unchanged.
+        const text = typeof payload.text === "string" ? payload.text : "";
         // Not safe to share (or nothing came back): it stays private, and the reason is the server's.
-        if (payload.public_ok !== true || !text) {
+        if (payload.public_ok !== true || !text.trim()) {
             return NextResponse.json({ok: true, publicOk: false, reason: typeof payload.reason === "string" ? payload.reason.slice(0, 200) : null});
         }
         return NextResponse.json({ok: true, publicOk: true, text});

@@ -1,8 +1,8 @@
 {
   "source": {
     "repo": "AnimalDex",
-    "ref": "5a1ff095",
-    "commit": "5a1ff0952ca71e914fb01ea51fbabba3ddfaeb1a",
+    "ref": "main",
+    "commit": "642282eb9519ca3e2b78ac423bd163b489a31921",
     "files": [
       "animal-focus.ts",
       "animal-companion.ts",

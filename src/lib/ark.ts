@@ -168,6 +168,11 @@ export function arkRevealSkip(value: unknown): ArkRevealSkip | null {
     return wire === "sensitive" || wire === "animal_cap" || wire === "daily_cap" || wire === "already" || wire === "no_change" ? wire : null;
 }
 
+/** Only this animal's once-a-day cap is said (quietly); everything else, unknown reasons included, shows nothing. */
+export function arkRevealSkipShowsNote(reason: unknown): boolean {
+    return arkRevealSkip(reason) === "animal_cap";
+}
+
 export function arkDiaryVisibility(value: unknown): ArkDiaryVisibility | null {
     const wire = text(value)?.toLowerCase();
     return wire === "public" || wire === "private" ? wire : null;

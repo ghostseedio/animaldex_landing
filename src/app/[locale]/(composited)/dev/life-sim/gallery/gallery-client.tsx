@@ -200,7 +200,7 @@ function LiveStep({words, money, locale, reveal, skip}: {
     money: (usd: number) => string;
     locale: string;
     reveal: ArkChange | null;
-    skip?: "animal_cap" | "daily_cap";
+    skip?: "animal_cap";
 }) {
     const offered = decodeAnimalStep({id: STEP, step: "Buy the materials today, before the price goes up."}) as AnimalStep;
     const [step, setStep] = useState<AnimalStep>(offered);
@@ -279,8 +279,8 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
                 <Frame title="Step, I'll do it (tap it: Earned)" width={416}>
                     <LiveStep words={words} money={money} locale={locale} reveal={earned} />
                 </Frame>
-                <Frame title="Step, I'll do it (tap it: daily cap)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={null} skip="daily_cap" />
+                <Frame title="Step, I'll do it (tap it: this animal's cap)" width={416}>
+                    <LiveStep words={words} money={money} locale={locale} reveal={null} skip="animal_cap" />
                 </Frame>
             </div>
 

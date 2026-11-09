@@ -11,7 +11,7 @@ import "server-only";
  * refuses, leaves the animal without the loop, never without an answer.
  */
 
-import {applyStepRevision, outcomeAlreadyRevised, reportRevisionDirection} from "@/lib/ask-animaldex/ark-sim";
+import {applyStepRevision, outcomeAlreadyRevised, recordStepOutcome, reportRevisionDirection} from "@/lib/ask-animaldex/ark-sim";
 import {newStepAllowed} from "@/lib/ask-animaldex/reply-guards";
 import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {invokeAuthenticatedSupabaseFunctionResponse} from "@/lib/supabase/app-functions";
@@ -383,12 +383,13 @@ export async function applyCompanionLines(params: {
                 if (lines.doneOutcome) {
                     const trialDone = event.trial_done as Record<string, unknown>;
                     trialDone.outcome = lines.doneOutcome;
-                    // Life sim: the message the report's revision card sits under (the apps' edge, as reviewed).
-                    const recorded = await service.rpc("record_animal_step_outcome_v1", {
-                        p_user_id: userId,
-                        p_trial_id: trialDone.id,
-                        p_outcome: lines.doneOutcome,
-                        p_chat_message_ref: params.chatMessageRef ?? null
+                    // Life sim: with the message that reported it, retried with the old three
+                    // arguments on a database without that one (the apps' recordStepOutcome).
+                    const recorded = await recordStepOutcome(service, {
+                        userId,
+                        trialId: String(trialDone.id),
+                        outcome: lines.doneOutcome,
+                        chatMessageRef: params.chatMessageRef ?? null
                     });
                     if (recorded.error) warn("record_animal_step_outcome_v1", recorded.error);
                     else if (recorded.data && typeof recorded.data === "object") {

@@ -2916,7 +2916,6 @@
       "undo": "Batalkan",
       "undoFailed": "Belum berhasil. Coba lagi sebentar lagi.",
       "skippedAnimalCap": "{name} sudah mengubah statistikmu hari ini. Langkah ini tetap dihitung.",
-      "skippedDailyCap": "Itu sudah tiga pengungkapan hari ini. Langkah ini tetap dihitung.",
       "latest": "{delta} terakhir",
       "stepsTaken": "Langkah diambil",
       "worked": "Berhasil",

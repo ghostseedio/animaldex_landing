@@ -1,25 +1,25 @@
 /**
-  * Life Sim (Ark Score) on the web's own chat: a port of the apps' edge lane,
-  * `supabase/functions/_shared/ark-sim.ts` (AnimalDex 5a1ff095), held to it by
-  * `ask-animaldex-your-step-parity.test.ts` and its fixture
-  * (`scripts/generate-your-step-parity-fixture.mts`). docs/life-sim/CONTRACT.md
-  * sections 4 to 7:
-  *
-  * - Step tags (section 5): after a step is saved, ONE fast JSON call tags it
-  *   and writes the 2-3 beat story and the animal's reaction the reveal shows.
-  *   A step set without a chat turn (a Trials card, a debate way) is tagged
-  *   lazily on the person's next chat turn, while its reveal is still to come.
-  * - Detection (section 6) lives in the memory call (`companion.ts`
-  *   buildAskMemoryDeltaPrompts); this file loads the steps it judges
-  *   (`ark_recent_revealed_steps`) and acts on the answer, the flag first.
-  * - Revisions mentioned once (section 4), and the visitor's view of its owner
-  *   (section 7).
-  *
-  * The edge's Diary draft (`runDiaryPublicDraft`) is not ported: the web calls
-  * the edge action `diary_public_draft`. Nothing here writes an animal's words.
-  * The code is the edge's, re-indented; iterable spreads are `Array.from`
-  * (this project compiles to ES5).
-  */
+ * Life Sim (Ark Score) on the web's own chat: a port of the apps' edge lane,
+ * `supabase/functions/_shared/ark-sim.ts` (AnimalDex 7c070fe6, on main 642282eb), held to it by
+ * `ask-animaldex-your-step-parity.test.ts` and its fixture
+ * (`scripts/generate-your-step-parity-fixture.mts`). docs/life-sim/CONTRACT.md
+ * sections 4 to 7:
+ *
+ * - Step tags (section 5): after a step is saved, ONE fast JSON call tags it
+ *   and writes the 2-3 beat story and the animal's reaction the reveal shows.
+ *   A step set without a chat turn (a Trials card, a debate way) is tagged
+ *   lazily on the person's next chat turn, while its reveal is still to come.
+ * - Detection (section 6) lives in the memory call (`companion.ts`
+ *   buildAskMemoryDeltaPrompts); this file loads the steps it judges
+ *   (`ark_recent_revealed_steps`) and acts on the answer, the flag first.
+ * - Revisions mentioned once (section 4), and the visitor's view of its owner
+ *   (section 7).
+ *
+ * The edge's Diary draft (`runDiaryPublicDraft`) is not ported: the web calls
+ * the edge action `diary_public_draft`. Nothing here writes an animal's words.
+ * The code is the edge's, re-indented; iterable spreads are `Array.from`
+ * (this project compiles to ES5).
+ */
 
 import {ASK_CRISIS_PATTERN as CRISIS_PATTERN, type AskStepOutcomeDelta as StepOutcomeDelta} from "@/lib/ask-animaldex/companion";
 
@@ -603,6 +603,23 @@ export async function applyLifeSimActions(
             chatSpeciesProfileId: params.chatSpeciesProfileId ?? null,
         });
     }
+}
+
+// record_animal_step_outcome_v1 with the message that reported it
+// (p_chat_message_ref, capped like a revision's), so the database can tell a
+// chat-detected revision and the DONE line's from the same turn apart. A
+// database whose function has no such argument (PostgREST cannot find the
+// function by its named arguments) gets the call it always had.
+export async function recordStepOutcome(
+    admin: ArkAdmin,
+    params: { userId: string; trialId: string; outcome: string; chatMessageRef: string | null },
+): Promise<RpcResult> {
+    const base = { p_user_id: params.userId, p_trial_id: params.trialId, p_outcome: params.outcome };
+    const ref = params.chatMessageRef?.trim() ? params.chatMessageRef.trim().slice(0, 200) : null;
+    if (!ref) return await admin.rpc("record_animal_step_outcome_v1", base);
+    const withRef = await admin.rpc("record_animal_step_outcome_v1", { ...base, p_chat_message_ref: ref });
+    if (!withRef.error || !isMissingFunctionError(withRef.error)) return withRef;
+    return await admin.rpc("record_animal_step_outcome_v1", base);
 }
 
 // The report's outcome as a revision direction (section 4): worked is better,

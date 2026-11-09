@@ -29,6 +29,7 @@ import {
     arkChangeHasLoss,
     arkChangeRows,
     arkCountAt,
+    arkRevealSkipShowsNote,
     arkRevisionDirection,
     arkRowIsLoss,
     arkSignedMoney,
@@ -232,11 +233,13 @@ export function ArkRevealMessages({reveal, fresh, reducedMotion, faceUrl, speake
     );
 }
 
-/** Why "I'll do it" played no reveal, quietly: only for the caps. A sensitive problem is never announced. */
+/**
+ * Why "I'll do it" played no reveal, quietly: only for this animal's once-a-day
+ * cap. A sensitive problem is never announced; `no_change`, `already` and any
+ * reason this build does not know show nothing (the daily cap is gone).
+ */
 export function ArkRevealSkippedNote({reason, name, words}: {reason: ArkRevealSkip; name: string; words: CompanionWords}) {
-    const line = reason === "animal_cap"
-        ? fillWords(words.ark.skippedAnimalCap, {name})
-        : reason === "daily_cap" ? words.ark.skippedDailyCap : null;
+    const line = arkRevealSkipShowsNote(reason) ? fillWords(words.ark.skippedAnimalCap, {name}) : null;
     return line ? <p className="pl-9 pt-1.5 text-[11px] leading-4 text-white/50" data-testid="ark-reveal-skipped">{line}</p> : null;
 }
 

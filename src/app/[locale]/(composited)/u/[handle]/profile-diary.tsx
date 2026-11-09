@@ -302,13 +302,14 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
         setChecked(result.value.text);
     };
     const approve = async () => {
-        let text = cleanArkSummary(draft ?? "");
-        if (!text) return;
+        if (draft === null || !cleanArkSummary(draft)) return;
+        // Only ever the exact text diary_public_draft returned: unchanged, that one;
+        // edited, their edit goes back through the check and its answer is approved.
+        let text = checked ?? "";
         setWorking("approve");
         setProblem(null);
-        // Their own edit goes through the same check as the draft did, before it is approved.
-        if (text !== checked) {
-            const check = await draftDiarySummary(focusId, text);
+        if (draft !== checked) {
+            const check = await draftDiarySummary(focusId, cleanArkSummary(draft));
             if (!check.ok) {
                 setWorking(null);
                 return setProblem(said.changeFailed);
@@ -318,6 +319,8 @@ function DiaryPublicSection({entry, words, teen, onChange}: {
                 return setProblem(said.notPublic);
             }
             text = check.value.text;
+            setDraft(text);
+            setChecked(text);
         }
         const result = await approveDiarySummary(focusId, text);
         setWorking(null);

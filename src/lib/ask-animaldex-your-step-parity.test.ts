@@ -55,7 +55,9 @@ import {
     reportRevisionDirection,
     revealedStepsFromLedger,
     simTagState,
-    visitorOwnerContext
+    recordStepOutcome,
+    visitorOwnerContext,
+    type ArkAdmin
 } from "@/lib/ask-animaldex/ark-sim";
 import {ANIMAL_GREETING_RULES} from "@/lib/ask-animaldex/grounding";
 
@@ -91,11 +93,11 @@ test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () 
     // offer), then after the Talk front door's referral privacy rule (SPEC
     // 6.4, AnimalDex 4403b042), then after referrals became something they
     // brought, not something an animal sent ("Ask another animal", AnimalDex
-    // ceeaec79), then from the Life Sim edge lane (AnimalDex 5a1ff095, on main
-    // 8b3f0cbf; its only change to the older sections is the visitor's
-    // privacy lines), by scripts/generate-your-step-parity-fixture.mts.
-    assert.equal(fixture.source.ref, "5a1ff095");
-    assert.match(fixture.source.commit, /^5a1ff095/);
+    // ceeaec79), then from main with the Life Sim lanes merged (AnimalDex
+    // 642282eb, edge 7c070fe6; its only change to the older sections is the
+    // visitor's privacy lines), by scripts/generate-your-step-parity-fixture.mts.
+    assert.equal(fixture.source.ref, "main");
+    assert.match(fixture.source.commit, /^642282eb/);
     assert.equal(fixture.source.files.includes("ark-sim.ts"), true);
 });
 
@@ -359,4 +361,29 @@ test("Life Sim section 7: a visitor's animal knows only the whitelisted owner co
     for (const item of fixture.lifeSim.visitorOwnerContext) assert.deepEqual(visitorOwnerContext(item.input as Record<string, unknown> | null), item.output, JSON.stringify(item.input));
     // The visitor's rules carry the five privacy lines (checked in full above, as ANIMAL_VISITOR_RULES).
     assert.equal(fixture.arrays.ANIMAL_VISITOR_RULES.some((line) => line.includes("life sim (Ark Score,")), true);
+});
+
+test("Life Sim: the outcome is recorded with the message ref, and again with the old three arguments only when the server lacks it", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const admin = (answer: (args: Record<string, unknown>) => {data: unknown; error: {message?: string; code?: string} | null}): ArkAdmin => ({
+        rpc: async (_fn: string, args: Record<string, unknown>) => {
+            calls.push(args);
+            return answer(args);
+        },
+        from: () => null
+    });
+    const params = {userId: "u", trialId: "t", outcome: "worked", chatMessageRef: `  ${"r".repeat(250)}  `};
+    // A server without the argument: one retry with the old call.
+    await recordStepOutcome(admin((args) => (args.p_chat_message_ref ? {data: null, error: {code: "PGRST202", message: "Could not find the function"}} : {data: {ark_revision: null}, error: null})), params);
+    assert.deepEqual(calls.map((args) => Object.keys(args).sort()), [["p_chat_message_ref", "p_outcome", "p_trial_id", "p_user_id"], ["p_outcome", "p_trial_id", "p_user_id"]]);
+    assert.equal((calls[0].p_chat_message_ref as string).length, 200);
+    // Any other error is the answer: no retry.
+    calls.length = 0;
+    const failed = await recordStepOutcome(admin(() => ({data: null, error: {code: "P0001", message: "boom"}})), params);
+    assert.equal(calls.length, 1);
+    assert.equal(failed.error?.message, "boom");
+    // No ref: the old call only.
+    calls.length = 0;
+    await recordStepOutcome(admin(() => ({data: {}, error: null})), {...params, chatMessageRef: null});
+    assert.deepEqual(Object.keys(calls[0]).sort(), ["p_outcome", "p_trial_id", "p_user_id"]);
 });

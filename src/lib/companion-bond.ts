@@ -336,9 +336,8 @@ export const ARK_COPY = {
     revisedFromReport: "From how you said it went",
     undo: "Undo",
     undoFailed: "That didn't go through. Try again in a moment.",
-    /** Why "I'll do it" played no reveal: shown only for the caps, never for a sensitive problem. */
+    /** Why "I'll do it" played no reveal: shown only for this animal's daily cap, never for a sensitive problem. */
     skippedAnimalCap: "{name} has already moved your stats today. This step still counts.",
-    skippedDailyCap: "That's today's three reveals. This step still counts.",
     /** The profile's Stats (contract section 9). */
     latest: "{delta} latest",
     stepsTaken: "Steps taken",

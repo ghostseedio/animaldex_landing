@@ -2930,7 +2930,6 @@
       "undo": "Undo",
       "undoFailed": "That didn't go through. Try again in a moment.",
       "skippedAnimalCap": "{name} has already moved your stats today. This step still counts.",
-      "skippedDailyCap": "That's today's three reveals. This step still counts.",
       "latest": "{delta} latest",
       "stepsTaken": "Steps taken",
       "worked": "Worked",

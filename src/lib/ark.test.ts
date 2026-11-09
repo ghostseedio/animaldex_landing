@@ -31,6 +31,7 @@ import {
     decodeArkChanges,
     decodeArkStats,
     decodePublicDiary,
+    arkRevealSkipShowsNote,
     arkWithUndone
 } from "@/lib/ark";
 import {formatDisplayMoney} from "@/lib/account-settings";
@@ -138,6 +139,8 @@ test("I'll do it: an old server's {step} alone has no reveal; a new one carries 
         assert.equal(decodeArkAccept({step, reveal: null, reveal_skipped: reason}, decodeStepResult).revealSkipped, reason);
     }
     assert.equal(decodeArkAccept({step, reveal: null, reveal_skipped: "weather"}, decodeStepResult).revealSkipped, null);
+    // Only this animal's cap gets a quiet line; no_change, the old daily cap and unknown reasons show nothing.
+    assert.deepEqual(["animal_cap", "daily_cap", "no_change", "sensitive", "already", "weather", null].map(arkRevealSkipShowsNote), [true, false, false, false, false, false, false]);
     // A revision or an undo is not a reveal.
     assert.equal(decodeArkAccept({step, reveal: revisionRow}, decodeStepResult).reveal, null);
 });
