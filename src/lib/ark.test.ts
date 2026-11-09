@@ -472,32 +472,54 @@ test("a revision of a step goes under the reply that finished it when made no ea
     // Exactly 2 minutes before: still with it; after it: with it.
     assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T09:59:00Z"}, messages), "done");
     assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T10:05:00Z"}, messages), "done");
-    // Earlier than 2 minutes before it: placement unchanged (its message ref).
-    assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T09:58:59Z"}, messages), id1(500));
+    // Earlier than 2 minutes before it: placement unchanged (the answer to its message ref).
+    assert.equal(arkRevisionAnchorId({...chat, createdAt: "2026-11-10T09:58:59Z"}, messages), "answer");
     // A report's revision: with the finishing reply, else (no finisher) under the report.
     const fromReport = {...chat, source: "report" as const, chatMessageRef: null};
     assert.equal(arkRevisionAnchorId(fromReport, messages), "done");
     assert.equal(arkRevisionAnchorId(fromReport, [user, answer, report]), "report");
     // A reply still typing, or one that finished another step, is not the finisher.
-    assert.equal(arkRevisionAnchorId(chat, [user, answer, report, {...done, status: "streaming"}]), id1(500));
-    assert.equal(arkRevisionAnchorId(chat, [user, answer, report, {...done, companionEvent: {stepDone: {id: id1(99)}}}]), id1(500));
+    assert.equal(arkRevisionAnchorId(chat, [user, answer, report, {...done, status: "streaming"}]), "answer");
+    assert.equal(arkRevisionAnchorId(chat, [user, answer, report, {...done, companionEvent: {stepDone: {id: id1(99)}}}]), "answer");
     // No step or no time: as before.
-    assert.equal(arkRevisionAnchorId({...chat, stepId: null}, messages), id1(500));
-    assert.equal(arkRevisionAnchorId({...chat, createdAt: null}, messages), id1(500));
+    assert.equal(arkRevisionAnchorId({...chat, stepId: null}, messages), "answer");
+    assert.equal(arkRevisionAnchorId({...chat, createdAt: null}, messages), "answer");
 });
 
-test("a revision caused by something said after the step was done follows those words, even within the 2 minutes; one the report caused stays with the finishing reply (iOS c723d4a0)", () => {
+test("a revision caused by something said after the step was done follows those words and their answer, even within the 2 minutes; one the report caused stays with the finishing reply (iOS c723d4a0)", () => {
     const report = {id: id1(510), role: "user", createdAt: "2026-11-10T09:59:00Z", stepReportId: STEP};
     const done = {id: "done", role: "assistant", createdAt: "2026-11-10T10:00:00Z", status: "complete", companionEvent: {stepDone: {id: STEP}}};
     const later = {id: id1(520), role: "user", createdAt: "2026-11-10T10:00:40Z"};
     const laterAnswer = {id: "later-answer", role: "assistant", createdAt: "2026-11-10T10:00:50Z", status: "complete"};
     const thread = [report, done, later, laterAnswer];
     const revision = {...decodeArkChange(revisionRow)!, stepId: STEP, chatMessageRef: id1(520), createdAt: "2026-11-10T10:01:00Z"};
-    assert.equal(arkRevisionAnchorId(revision, thread), id1(520));
+    assert.equal(arkRevisionAnchorId(revision, thread), "later-answer");
     // Matched by time (a thread without stable ids): the same.
-    assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: "2026-11-10T10:00:41Z"}, thread), id1(520));
+    assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: "2026-11-10T10:00:41Z"}, thread), "later-answer");
+    // Not answered yet: under those words.
+    assert.equal(arkRevisionAnchorId(revision, [report, done, later]), id1(520));
     // Caused by the report itself: still with the reply that finished it.
     assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: id1(510), createdAt: "2026-11-10T09:59:15Z"}, thread), "done");
     // A ref not in the loaded thread: no trigger, so with the finishing reply.
     assert.equal(arkRevisionAnchorId({...revision, chatMessageRef: id1(999)}, thread), "done");
+});
+
+test("a chat revision goes after the animal's answer to the message that caused it: the last reply before the person's next message, else that message (iOS ArkThreadRule.answerIndex)", () => {
+    const asked = {id: id1(500), role: "user", createdAt: "2026-11-10T10:00:00Z"};
+    const first = {id: "first", role: "assistant", createdAt: "2026-11-10T10:00:05Z", status: "complete"};
+    const second = {id: "second", role: "assistant", createdAt: "2026-11-10T10:00:09Z", status: "complete"};
+    const next = {id: id1(510), role: "user", createdAt: "2026-11-10T10:03:00Z"};
+    const nextAnswer = {id: "next-answer", role: "assistant", createdAt: "2026-11-10T10:03:05Z", status: "complete"};
+    const revision = {chatMessageRef: id1(500)};
+    // Two replies to it: after the last of them, never past the person's next message.
+    assert.equal(arkRevisionAnchorId(revision, [asked, first, second, next, nextAnswer]), "second");
+    // By time: the same.
+    assert.equal(arkRevisionAnchorId({chatMessageRef: "2026-11-10T10:00:30Z"}, [asked, first, second, next, nextAnswer]), "second");
+    // A reply still being written counts as the answer (the thread holds the card until it is typed out).
+    assert.equal(arkRevisionAnchorId(revision, [asked, {...first, status: "streaming"}]), "first");
+    // No answer yet: the message itself; followed straight by their next one: the same.
+    assert.equal(arkRevisionAnchorId(revision, [asked]), id1(500));
+    assert.equal(arkRevisionAnchorId(revision, [asked, next, nextAnswer]), id1(500));
+    // A report's revision (no ref) keeps its place under the report, not the answer to it.
+    assert.equal(arkRevisionAnchorId({chatMessageRef: null, source: "report", stepId: STEP}, [{...asked, stepReportId: STEP}, first]), id1(500));
 });

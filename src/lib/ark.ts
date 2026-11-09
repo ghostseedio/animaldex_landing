@@ -498,10 +498,12 @@ type ThreadMessage = {
 };
 
 /**
- * The user message a revision belongs under (contract section 4): the one
- * whose id is its `chat_message_ref`, or, for a thread without stable ids,
- * the person's message nearest that time (within ten minutes). Null when the
- * message is not in the loaded thread: the Diary still has it.
+ * Where a revision goes in the thread (contract section 4): after the
+ * animal's answer to the person's message that caused it (the one whose id is
+ * its `chat_message_ref`, or, for a thread without stable ids, theirs nearest
+ * that time, within ten minutes), else, with no answer yet, after that
+ * message. Null when the message is not in the loaded thread: the Diary still
+ * has it.
  */
 export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & Partial<Pick<ArkChange, "source" | "stepId" | "createdAt">>, messages: readonly ThreadMessage[]): string | null {
     const ref = change.chatMessageRef?.trim();
@@ -531,7 +533,22 @@ export function arkRevisionAnchorId(change: Pick<ArkChange, "chatMessageRef"> & 
         }
         return arkRevealAnchorId(stepId, messages);
     }
-    return trigger;
+    return trigger === null ? null : arkAnswerId(trigger, messages);
+}
+
+/**
+ * The animal's answer to the person's message: the last reply after it and
+ * before their next message, so a revision follows the exchange that caused
+ * it (iOS ArkThreadRule.answerIndex). The message itself when no reply has
+ * come yet.
+ */
+function arkAnswerId(messageId: string, messages: readonly ThreadMessage[]): string {
+    const start = messages.findIndex((message) => message.id === messageId);
+    let answer = messageId;
+    for (let index = start + 1; start >= 0 && index < messages.length && messages[index].role !== "user"; index += 1) {
+        answer = messages[index].id;
+    }
+    return answer;
 }
 
 /**

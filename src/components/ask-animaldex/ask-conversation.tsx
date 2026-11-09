@@ -2401,8 +2401,9 @@ function AskConversation({
     /**
      * Life Sim in this thread: each reveal under the animal's reply that
      * finished its step (an older one, made when a step was taken on, under
-     * the reply that set it), each revision under the person's message that
-     * caused it (contract section 4). A reveal whose reply is not loaded goes
+     * the reply that set it), each revision under the animal's answer to the
+     * person's message that caused it, else under that message (contract
+     * section 4). A reveal whose reply is not loaded goes
      * with the open step's own message, or, just played, at the end.
      */
     const arkThread = useMemo(() => {
@@ -2538,12 +2539,12 @@ function AskConversation({
     const arkBlocks = (message: AskMessage) => {
         const blocks = arkThread?.after.get(message.id);
         if (!blocks) return null;
-        // The reveal follows the reply once it is all there, never under words still being typed out.
+        // The reveal, and a revision anchored on the reply, follow it once it is all there, never under words still being typed out.
         const typing = pacer.revealing && pacer.messageId === message.id;
         return (
             <>
                 {typing ? null : blocks.reveals.map(arkReveal)}
-                {blocks.revisions.map((revision) => (
+                {typing ? null : blocks.revisions.map((revision) => (
                     <ArkRevisionCard
                         key={`ark-${revision.id}`}
                         revision={revision}
