@@ -170,9 +170,9 @@ export function regionCentre(region: ArkRegion): {x: number; z: number; radius: 
 }
 
 /**
- * Where a region's name is drawn: over its own ground. Between the lake and
- * the wetland for Fresh water (its animals ring the shore), the beach for
- * the Coast, just off the coast for the Ocean, the middle of the land zones' areas for
+ * Where a region's name is drawn: over its own ground. The lake's open
+ * water for Fresh water (its animals ring the shore), the beach for the
+ * Coast, just off the coast for the Ocean, the middle of the land zones' areas for
  * the rest. The scene then nudges each name clear of the tokens on screen.
  */
 export function regionLabelAnchor(region: ArkRegion): {x: number; z: number} {
@@ -185,8 +185,8 @@ export function regionLabelAnchor(region: ArkRegion): {x: number; z: number} {
         case "coast":
             return coastPoint(SHORE_THETA, -BEACH_INSET);
         case "fresh_water":
-            // Between the lake and the wetland: its own water, clear of the ring of animals on the shore.
-            return {x: (LAKE.x + ZONE_SITES.wetland.x) / 2, z: (LAKE.z + ZONE_SITES.wetland.z) / 2 + 2};
+            // Over the lake's open water, inside the ring of animals on its shore.
+            return {x: LAKE.x, z: LAKE.z};
         case "home":
             return {x: ZONE_CENTRES.farm_garden.x - 4, z: ZONE_CENTRES.farm_garden.z + 8};
         default: {

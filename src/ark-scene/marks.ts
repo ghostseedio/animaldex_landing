@@ -62,6 +62,11 @@ export class ContactShadows {
         this.mesh.instanceMatrix = matrices;
     }
 
+    /** Softer where the sun casts real shadows too; the only grounding where it doesn't. */
+    setStrength(opacity: number) {
+        this.material.opacity = opacity;
+    }
+
     set(shadows: Shadow[]) {
         if (shadows.length > this.capacity) this.grow(Math.max(shadows.length, this.capacity * 2));
         shadows.forEach((shadow, i) => {

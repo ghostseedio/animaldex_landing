@@ -51,7 +51,7 @@ type Pick = (roll: number) => DecorKind | null;
 
 /** Per zone: tries per 100 m² (out of MAX_DENSITY), and what each try becomes. */
 const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
-    rainforest: {density: 4.6, pick: (r) => (r < 0.62 ? "rainforest" : r < 0.9 ? "broadleaf" : r < 0.96 ? "shrub" : "rock")},
+    rainforest: {density: 4.8, pick: (r) => (r < 0.55 ? "rainforest" : r < 0.78 ? "broadleaf" : r < 0.96 ? "shrub" : "rock")},
     woodland: {density: 3.4, pick: (r) => (r < 0.6 ? "broadleaf" : r < 0.88 ? "conifer" : r < 0.95 ? "shrub" : "rock")},
     mountains: {density: 1.1, pick: (r) => (r < 0.5 ? "conifer" : r < 0.62 ? "shrub" : "rock")},
     grassland: {density: 0.22, pick: (r) => (r < 0.5 ? "acacia" : r < 0.8 ? "shrub" : "rock")},
@@ -255,7 +255,10 @@ export function grassTufts(count: number): GrassTuft[] {
         const s = sampleGround(x, z);
         if (s.height < 0.35 || s.land < 0.85 || s.height > 20) continue;
         const zone = zoneAt(s);
-        const want = (meadow[zone] ?? 0) * smoothstep(0.25, 0.6, fbm(x * 0.06 - 7, z * 0.06 + 3));
+        // Fuller round the animals' own ground, where the camera comes close.
+        const site = ZONE_SITES[zone];
+        const nearAnimals = site.kind === "land" && Math.hypot(x - site.x, z - site.z) < site.clearing + 6 ? 1.8 : 1;
+        const want = (meadow[zone] ?? 0) * nearAnimals * smoothstep(0.15, 0.5, fbm(x * 0.06 - 7, z * 0.06 + 3) + (nearAnimals > 1 ? 0.2 : 0));
         if (random() > want) continue;
         if (riverDistance(x, z) < 3) continue;
         tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.75 + 0.25 * random() : zone === "mountains" ? 0.4 : 0.15 * random()});

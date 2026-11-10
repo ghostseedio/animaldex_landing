@@ -91,8 +91,8 @@ const FLYERS = new Set(["golden-eagle", "red-tailed-hawk", "african-fish-eagle",
 
 /** Per tier: shadow map size, grass tufts, pixel-ratio cap. */
 const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelRatio: number}> = {
-    high: {shadows: 2048, grass: 16000, pixelRatio: 2},
-    medium: {shadows: 1024, grass: 7000, pixelRatio: 1.5},
+    high: {shadows: 2048, grass: 26000, pixelRatio: 2},
+    medium: {shadows: 1024, grass: 12000, pixelRatio: 1.5},
     low: {shadows: 0, grass: 0, pixelRatio: 1}
 };
 const MAX_GRASS = TIER_SETTINGS.high.grass;
@@ -212,6 +212,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const settings = TIER_SETTINGS[tier];
         lighting.setShadows(renderer, settings.shadows);
         vegetation.setShadows(settings.shadows > 0);
+        shadows.setStrength(settings.shadows > 0 ? 0.14 : 0.3);
         vegetation.setGrassCount(settings.grass);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
@@ -680,7 +681,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const fit = Math.min(vertical, horizontal);
         const radius = aspect < 0.8 ? 84 : 82;
         const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, MAX_DISTANCE);
-        return {target: new Vector3(0, 0, 8), distance, polar: 0.98, azimuth: 0};
+        // Low enough to see the horizon over the island's far shore.
+        return {target: new Vector3(0, 0, aspect < 0.8 ? 12 : 2), distance: distance * 0.94, polar: 1.06, azimuth: 0};
     };
 
     // Keep the view over the world and above the ground.
@@ -845,7 +847,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!newest || options.snapshot.animals.length > 3 || disposed) return;
         const entry = entryById.get(newest.id);
         if (!entry) return;
-        fly(new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + 0.6, entry.place.z), 6 + entry.length * 2.4, 2.6, CLOSE_POLAR);
+        // From the island's edge looking in, so the world (the lake, the trees, the mountain) stands behind it.
+        fly(new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + 0.6, entry.place.z), 9 + entry.length * 2.6, 2.8, 1.22, Math.atan2(entry.place.x, entry.place.z));
     };
     if (opening) {
         // The opening: from high over the sea, a slow descent and arc onto the island.
@@ -908,7 +911,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const viewDistance = camera.position.distanceTo(controls.target);
         lighting.fitShadow(controls.target, viewDistance);
-        post.setTiltShift(Math.min(Math.max((viewDistance - 90) / 200, 0), 0.55));
+        // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
+        post.setTiltShift(Math.min(Math.max((viewDistance - 90) / 200, 0), width < height ? 0.3 : 0.55));
         renderer.info.reset();
         post.render();
         placeLabels();

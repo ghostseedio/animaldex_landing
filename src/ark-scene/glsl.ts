@@ -32,13 +32,13 @@ float arkFbm(vec2 p) {
 }
 `;
 
-/** Cloud shadows drifting over the world: 1 in sun, about 0.68 under a cloud. */
+/** Cloud shadows drifting over the world: 1 in sun, about 0.8 under a cloud. */
 export const CLOUD_GLSL = `
 uniform float arkTime;
 uniform vec2 arkWind;
 float arkCloudShade(vec3 world) {
     vec2 p = world.xz * 0.011 - arkWind * arkTime * 0.016;
-    float cloud = smoothstep(0.52, 0.78, arkFbm(p));
-    return 1.0 - 0.32 * cloud;
+    float cloud = smoothstep(0.5, 0.85, arkFbm(p));
+    return 1.0 - 0.2 * cloud;
 }
 `;

@@ -126,10 +126,10 @@ function broadleaf(variant: number): BufferGeometry {
 
 function rainforest(variant: number): BufferGeometry {
     const random = seeded(211 + variant);
-    const height = 6 + variant * 1.4;
-    // A tall emergent: a high, wide, flattened crown over a lower layer of leaves.
-    const top = randomBlobs(random, 8, height + 0.6, 2.1, 1.15, 0.6);
-    const under = randomBlobs(random, 4, height * 0.55, 1.3, 0.85, 0.75);
+    const height = 4.2 + variant * 1.1;
+    // A full, layered crown: a wide flattened top over a lower tier of leaves that hides the trunk.
+    const top = randomBlobs(random, 9, height + 0.7, 2.2, 1.2, 0.62);
+    const under = randomBlobs(random, 6, height * 0.6, 1.6, 1.0, 0.8);
     return mergeGeometries([trunk(height + 0.5, 0.26, (random() - 0.5) * 0.6), canopy(top, 1), canopy(under, 0)])!;
 }
 

@@ -25,7 +25,7 @@ export const ZONE_PALETTES = {
     // sampled sky #1681b5 mid #015a92 ground #02506a
     open_ocean: {ground: ["#2d5d74", "#244b60"], growth: ["#3f7d7a", "#2f6a6a"], sky: "#1681b5"},
     // sampled sky #c6baab mid #898172 ground #4b4639
-    seashore: {ground: ["#d9c8a3", "#c7b38c"], growth: ["#77705f", "#8a826f"], sky: "#c6baab"},
+    seashore: {ground: ["#cdb990", "#bba67f"], growth: ["#77705f", "#8a826f"], sky: "#c6baab"},
     // sampled sky #b1a591 mid #7f8079 ground #382e26
     river_lake: {ground: ["#8d8a5c", "#7c7550"], growth: ["#6f7a3e", "#8a8a4a"], sky: "#b1a591"},
     // sampled sky #e5d0bb mid #af977a ground #796854
@@ -47,7 +47,7 @@ export const ZONE_PALETTES = {
 } as const satisfies Record<string, ZonePalette>;
 
 /** Fields in the Home region, one per patch. */
-export const FIELD_TONES = ["#9db15a", "#c2b26a", "#7f9a48", "#b39d5e", "#8fa95a"] as const;
+export const FIELD_TONES = ["#93a35e", "#bba872", "#7d9150", "#ac9a68", "#879c5c"] as const;
 
 /** Bare rock on steep ground, snow up high, wet sand at the waterline. */
 export const ROCK = "#857c6c";

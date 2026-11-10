@@ -156,7 +156,7 @@ function groundMaterial(): MeshStandardMaterial {
         rockTone: {value: srgb(ROCK)},
         rockLight: {value: srgb("#a89d8a")},
         snowTone: {value: srgb(SNOW)},
-        mudTone: {value: srgb("#5d5638")},
+        mudTone: {value: srgb("#6e6646")},
         soilTone: {value: srgb("#7a5c3e")},
         hedgeTone: {value: srgb("#3f5a2a")},
         dryGrass: {value: srgb("#b9a35e")}
@@ -216,8 +216,8 @@ float arkWet = 0.0;`)
     ground = mix(ground, sandy, smoothstep(0.15, 0.85, sandW));
 
     // Wetland: dark wet mud in the low hollows, the rest reedy grass.
-    float wetPatch = smoothstep(0.42, 0.62, arkFbm(p * 0.18 + 4.0));
-    ground = mix(ground, mudTone * (0.85 + 0.25 * arkNoise(p * 1.7)), mudW * wetPatch);
+    float wetPatch = smoothstep(0.5, 0.68, arkFbm(p * 0.22 + 4.0));
+    ground = mix(ground, mudTone * (0.85 + 0.25 * arkNoise(p * 1.7)), mudW * wetPatch * 0.7);
     arkWet = max(arkWet, mudW * wetPatch);
 
     // Home: fields a few metres across, turned off the grid, tilled rows, hedgerows between.
@@ -230,20 +230,21 @@ float arkWet = 0.0;`)
         for (int k = 1; k < ${FIELD_TONES.length}; k++) { if (k == pick) field = fieldTones[k]; }
         bool tilled = arkHash(cell + 3.7) > 0.72;
         if (tilled) field = soilTone * (0.85 + 0.25 * (0.5 + 0.5 * sin(f.x * 6.2831 * 9.0)));
-        field *= 1.0 + 0.06 * sin(f.x * 6.2831 * 7.0) * near;
-        field *= 0.92 + 0.16 * arkNoise(p * 0.9);
+        // Crop rows across each field, and the patchiness of real growth.
+        field *= 1.0 + 0.1 * sin(f.x * 6.2831 * 11.0) * near;
+        field *= 0.88 + 0.2 * arkFbm(p * 0.7) + 0.08 * (arkNoise(p * 5.0) - 0.5) * near;
         float farm = smoothstep(0.3, 0.98, farmW + (arkNoise(p * 0.11 + 3.0) - 0.5) * 0.4);
         vec2 edge = abs(fract(f) - 0.5);
-        float hedge = smoothstep(0.455, 0.49, max(edge.x, edge.y)) * smoothstep(0.45, 0.95, farm);
-        field = mix(field, hedgeTone * (0.8 + 0.4 * arkNoise(p * 2.0)), hedge);
+        float hedge = smoothstep(0.468, 0.492, max(edge.x, edge.y)) * smoothstep(0.45, 0.95, farm);
+        field = mix(field, hedgeTone * (0.75 + 0.5 * arkNoise(p * 3.0)), hedge * (0.6 + 0.4 * arkNoise(p * 1.1)));
         ground = mix(ground, field, farm * 0.94);
     }
 
     // Rock wherever it is steep, banded like strata, lighter on the edges.
     float slope = 1.0 - clamp(vArkNormal.y, 0.0, 1.0);
     float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);
-    float strata = 0.5 + 0.5 * sin(world.y * 2.3 + arkFbm(p * 0.2) * 4.0);
-    vec3 rock = mix(rockTone, rockLight, strata * 0.3 + 0.35 * arkNoise(p * 1.3) + 0.15 * arkNoise(p * 4.0));
+    float strata = 0.5 + 0.5 * sin(world.y * 1.1 + arkFbm(p * 0.15) * 6.0);
+    vec3 rock = mix(rockTone, rockLight, strata * 0.12 + 0.45 * arkFbm(p * 0.9) + 0.15 * arkNoise(p * 4.0));
     ground = mix(ground, rock, steep * step(0.3, world.y + 0.4));
 
     // Snow on the peaks and the ice, thinning on steep faces.
