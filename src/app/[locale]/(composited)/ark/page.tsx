@@ -19,7 +19,9 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * or in development `?fixture=1` (about 120 animals), `?fixture=early` (the
  * two real arrivals) or `?fixture=grow` (starts small; more come aboard on
  * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
- * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends).
+ * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends)
+ * or `?fixture=micro` (the v2 fixture plus small animals at their microhabitats:
+ * geckos, spiders and moths on the cottage, ants, bees on flowers, beetles on bark...).
  *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
@@ -37,7 +39,7 @@ export const dynamic = "force-dynamic";
 
 type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
 
-type FixtureMode = "full" | "early" | "grow" | "sizes";
+type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro";
 
 function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     const asked = searchParams.fixture;
@@ -45,6 +47,7 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     if (development && asked === "early") return "early";
     if (development && asked === "grow") return "grow";
     if (development && asked === "sizes") return "sizes";
+    if (development && asked === "micro") return "micro";
     if (development && asked && asked !== "0") return "full";
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
@@ -65,6 +68,7 @@ async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; f
     if (mode === "full") return {snapshot: full, full: null};
     if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
     if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
+    if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
     return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
@@ -106,6 +110,80 @@ function withSizeLineUp(full: ArkSnapshot): ArkSnapshot {
             slot,
             slot_rank: 0
         });
+    });
+    return {...full, animals, counts: {...full.counts, animals: animals.length, species: full.counts.species + extra.length}};
+}
+
+/**
+ * `?fixture=micro`: the v2 fixture plus small animals at every kind of
+ * microhabitat (docs/ark-micro.md): geckos, house spiders, flies, ants and
+ * moths on the cottage (the moths circle the porch light at night), a
+ * mouse round it, hoverflies and butterflies on the flowers, a honey bee
+ * and an anole on bark, beetles and a millipede in the leaf litter, a wall
+ * lizard on the stones, water striders and a newt on the water. A few are
+ * the reader's own (for "My animals"). Three black ants share a slot.
+ */
+function withSmallAnimals(full: ArkSnapshot): ArkSnapshot {
+    type Zone = ArkSnapshot["animals"][number]["zone"];
+    type Activity = NonNullable<ArkSnapshot["animals"][number]["activity"]>;
+    const extra: Array<[string, string, Zone, Activity, boolean, number?]> = [
+        ["mediterranean-house-gecko", "Mediterranean House Gecko", "farm_garden", "nocturnal", true],
+        ["tropical-house-gecko", "Tropical House Gecko", "farm_garden", "nocturnal", false],
+        ["common-house-gecko", "Common House Gecko", "farm_garden", "nocturnal", false],
+        ["mediterranean-house-gecko", "Mediterranean House Gecko", "farm_garden", "nocturnal", false],
+        ["common-house-spider", "Common House Spider", "farm_garden", "any", false],
+        ["common-house-spider", "Common House Spider", "farm_garden", "any", false],
+        ["house-centipede", "House Centipede", "farm_garden", "nocturnal", false],
+        ["house-fly", "House Fly", "farm_garden", "diurnal", false],
+        ["black-ant", "Black Ant", "farm_garden", "diurnal", true, 3],
+        ["red-ant", "Red Ant", "farm_garden", "diurnal", false],
+        ["clothes-house-moth", "Clothes Moth", "farm_garden", "nocturnal", false],
+        ["pantry-moth", "Pantry Moth", "farm_garden", "nocturnal", false],
+        ["plume-moth", "Plume Moth", "farm_garden", "nocturnal", false],
+        ["emerald-moth", "Emerald Moth", "woodland", "nocturnal", true],
+        ["house-mouse", "House Mouse", "farm_garden", "nocturnal", false],
+        ["marmalade-hoverfly", "Marmalade Hoverfly", "farm_garden", "diurnal", false],
+        ["red-admiral", "Red Admiral", "farm_garden", "diurnal", false],
+        ["giant-honey-bee", "Giant Honey Bee", "farm_garden", "diurnal", false],
+        ["western-honey-bee", "Western Honey Bee", "farm_garden", "diurnal", false],
+        ["green-anole", "Green Anole", "farm_garden", "diurnal", false],
+        ["common-wall-lizard", "Common Wall Lizard", "farm_garden", "diurnal", false],
+        ["earwig", "Earwig", "farm_garden", "nocturnal", false],
+        ["firebug", "Firebug", "farm_garden", "diurnal", false],
+        ["red-breasted-nuthatch", "Red-breasted Nuthatch", "woodland", "diurnal", false],
+        ["yellow-spotted-millipede", "Yellow-spotted Millipede", "woodland", "nocturnal", false],
+        ["carpenter-ant", "Carpenter Ant", "woodland", "any", false],
+        ["water-strider", "Water Strider", "river_lake", "diurnal", false],
+        ["damselfly", "Damselfly", "river_lake", "diurnal", false],
+        ["smooth-newt", "Smooth Newt", "river_lake", "any", false],
+        ["bumblebee", "Bumblebee", "grassland", "diurnal", false],
+        ["six-spotted-tiger-beetle", "Six-spotted Tiger Beetle", "grassland", "diurnal", false]
+    ];
+    const animals = [...full.animals];
+    extra.forEach(([slug, name, zone, activity, mine, many = 1], i) => {
+        const slot = Math.max(-1, ...animals.filter((a) => a.zone === zone).map((a) => a.slot ?? -1)) + 1;
+        for (let rank = 0; rank < many; rank++) {
+            animals.push({
+                id: `00000000-0000-4000-9000-${String(i * 10 + rank).padStart(12, "0")}`,
+                species_profile_id: `micro-${slug}`,
+                name,
+                scientific_name: null,
+                model_slug: slug,
+                zone,
+                arrived_at: "2026-11-01T12:00:00Z",
+                brought_by: {label: mine ? "You" : "Voyager 1", named: false},
+                mine,
+                origin: "arrived",
+                generation: 0,
+                condition: "well_fed",
+                born_ark_day: 3,
+                activity,
+                sociality: many > 1 ? "group" : "solitary",
+                bringers: [{label: "Voyager 1", named: false}],
+                slot,
+                slot_rank: rank
+            });
+        }
     });
     return {...full, animals, counts: {...full.counts, animals: animals.length, species: full.counts.species + extra.length}};
 }

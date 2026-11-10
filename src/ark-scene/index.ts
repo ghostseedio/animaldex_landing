@@ -33,6 +33,12 @@
  * speed its pace, dominance and rarity where it stands in its zone
  * (`placement.ts`), intelligence how varied its idles are and how often it
  * glances at a camera close by.
+ *
+ * Small animals live at microhabitats (`micro.ts`, docs/ark-micro.md): on
+ * the cottage at Home, on trunks, flowers, stones, leaf litter and the
+ * pond's surface. Close by they are drawn true to size against them (the
+ * floor and the marker only from afar), crawl on their surface, and moths
+ * circle the porch light at night.
  */
 
 import {
@@ -70,6 +76,8 @@ import {buildMotes} from "@/ark-scene/life";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Shadow} from "@/ark-scene/marks";
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
+import {microDrawnLength, microSpecies, porchLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
+import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -118,6 +126,20 @@ const OPENING_SECONDS = 4.6;
 const GLANCE_WITHIN = 14;
 /** Drawn smaller than this on screen (CSS px), an animal also gets a marker so it can be found. */
 const MARKER_BELOW_PIXELS = 5;
+/**
+ * Small animals at their microhabitats (`micro.ts`): drawn true to size
+ * (their body length L, no floor) close by, never smaller on screen than
+ * this (CSS px) as the camera draws back, until that reaches their usual
+ * drawn length (the floor) and the marker comes back: the floor and the
+ * marker are only for a view from afar.
+ */
+const MICRO_MIN_PIXELS = 16;
+/** Past this distance (m) a small animal's model is not drawn (its marker is), unless it is someone's own or selected. */
+const MICRO_DRAW_WITHIN = 42;
+/** Within this distance (m) of a small animal the camera may come right up to it. */
+const MICRO_CLOSE_WITHIN = 3.5;
+/** How close the camera may come to a small animal (m). */
+const MICRO_MIN_DISTANCE = 0.08;
 
 /** Birds that take to the air above their zone. */
 const FLYERS = new Set(["golden-eagle", "red-tailed-hawk", "african-fish-eagle", "barn-owl", "scarlet-macaw", "grey-heron", "atlantic-puffin"]);
@@ -141,6 +163,14 @@ type Entry = {
     stats: ArkStats;
     /** At the size floor: drawn with a marker so it can be found. */
     floor: boolean;
+    /** Its usual drawn length (m, the floor and the cap applied); `length` is what it is drawn at this frame. */
+    full: number;
+    /** Its body length (m), true to life: a small animal is drawn at it close by. */
+    trueLength: number;
+    /** A small animal at its microhabitat. */
+    micro?: MicroSpecies | null;
+    /** A moth: 0 resting on the wall, 1 circling the porch light (at night); eased. */
+    toLight?: number;
     /** Its idle loops' pace (a swimmer's, a flyer's), from its speed. */
     pace: number;
     arrivedAt: number | null;
@@ -192,6 +222,15 @@ function easeOutBack(t: number): number {
 
 function easeInOut(t: number): number {
     return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+}
+
+/** 0 → 1 → 0 across the two pauses of a crawl (its turn round), eased. */
+function smoothTurn(u: number): number {
+    const step = (a: number, b: number, x: number) => {
+        const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
+        return t * t * (3 - 2 * t);
+    };
+    return step(0.33, 0.48, u) * (1 - step(0.83, 0.98, u));
 }
 
 function phaseOf(id: string): number {
@@ -250,6 +289,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(vegetation.grass);
     const motes = buildMotes(reducedMotion ? 0 : 260);
     scene.add(motes.points);
+    // The cottage at Home, its porch light and the garden pond (the small animals' microhabitats).
+    const micro = buildMicroScene();
+    scene.add(micro.group);
+    micro.setNight(lighting.daylight.night);
 
     const camera = new PerspectiveCamera(FOV, 1, 0.4, 9000);
     const controls = new OrbitControls(camera, canvas);
@@ -278,6 +321,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const settings = TIER_SETTINGS[tier];
         lighting.setShadows(renderer, settings.shadows);
         vegetation.setShadows(settings.shadows > 0);
+        micro.setShadows(settings.shadows > 0);
         shadows.setStrength(settings.shadows > 0 ? 0.14 : 0.3);
         vegetation.setGrassCount(settings.grass);
         species.forEach((meshes) => {
@@ -413,6 +457,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             animal,
             place,
             length: body.display,
+            full: body.display,
+            trueLength: body.metres,
+            micro: place.micro ? microSpecies(animal.model_slug) : null,
             stats: arkStats(animal),
             floor: body.floor,
             pace: loopPace(animal),
@@ -450,7 +497,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
-                ? Object.assign(before, {animal, place, length: body.display, floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)})
+                ? Object.assign(before, {animal, place, length: body.display, full: body.display, trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)})
                 : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
@@ -467,7 +514,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             options.onSelect?.(null);
         }
         // Every species' far model, nearest first, so the whole Ark fills in from where the camera is.
-        const byDistance = Array.from(new Set(next.map((entry) => entry.animal.model_slug)));
+        // (Small animals' models wait until the camera comes close: they are not drawn from afar.)
+        const byDistance = Array.from(new Set(next.filter((entry) => !entry.micro || entry.animal.mine).map((entry) => entry.animal.model_slug)));
         library.ready().then(() => {
             for (const slug of byDistance) if (library.has(slug)) library.request(slug, "far");
         });
@@ -524,6 +572,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (entry.animal.model_slug !== slug) continue;
                 const body = arkBody(entry.animal, model.behaviour.plan);
                 entry.length = body.display;
+                entry.full = body.display;
+                entry.trueLength = body.metres;
                 entry.floor = body.floor;
             }
         }
@@ -539,10 +589,80 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const euler = new Euler(0, 0, 0, "YXZ");
     const scale = new Vector3();
     const position = new Vector3();
+    const basisX = new Vector3();
+    const basisY = new Vector3();
+    const basisZ = new Vector3();
+    const basisMatrix = new Matrix4();
     let counts = {near: 0, far: 0, token: 0};
 
     /** Where an animal is this moment: its spot, or its loop in the water, or its circle in the sky. */
-    type Pose = {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean};
+    type Pose = {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean; surface?: SurfacePoint};
+
+    /**
+     * A small animal on its surface: it crawls slowly to and fro along it (a
+     * glide: the rigs that passed have no clips in the scene yet), turning
+     * round in the pauses; asleep it keeps still. A moth at the cottage
+     * circles the porch light at night, while it is awake.
+     */
+    const LIGHT = porchLight();
+    const microPose = (entry: Entry, time: number): Pose => {
+        const place = entry.place;
+        const micro = place.micro!;
+        const surface = micro.surface;
+        const L = entry.trueLength;
+        const reach = surface === "around" || surface === "roof" ? 0 : surface === "water" ? 0.2 : surface === "flower" ? Math.min(0.02, 2 * L) : Math.min(Math.max(5 * L, 0.03), 0.35);
+        const period = 11 + 9 * entry.phase;
+        const u = (((time / period + entry.phase) % 1) + 1) % 1;
+        // Out (0–0.32), a pause, back (0.5–0.82), a pause; the turn round in each pause.
+        const out = u < 0.32 ? easeInOut(u / 0.32) : u < 0.5 ? 1 : u < 0.82 ? 1 - easeInOut((u - 0.5) / 0.32) : 0;
+        const awake = 1 - entry.rest;
+        const along = reducedMotion ? 0 : reach * out * awake;
+        const point = surfacePoint(micro, entry.animal.zone, along);
+        const turn = reducedMotion || !reach ? 0 : Math.PI * smoothTurn(u) * awake;
+        if (turn) {
+            // Turn the heading about the normal: t cos + (n × t) sin.
+            const c = Math.cos(turn);
+            const sn = Math.sin(turn);
+            const bx = point.ny * point.tz - point.nz * point.ty;
+            const by = point.nz * point.tx - point.nx * point.tz;
+            const bz = point.nx * point.ty - point.ny * point.tx;
+            point.tx = point.tx * c + bx * sn;
+            point.ty = point.ty * c + by * sn;
+            point.tz = point.tz * c + bz * sn;
+        }
+        const k = entry.toLight ?? 0;
+        if (k > 0.001) {
+            // Round the porch light: a loose, wobbling loop, each moth its own.
+            const radius = 0.16 + entry.phase * 0.32;
+            const angle = time * (1.6 + entry.phase * 1.4) * (entry.phase > 0.5 ? 1 : -1) + entry.phase * 40;
+            const lx = LIGHT.x + Math.cos(angle) * radius;
+            const lz = LIGHT.z + 0.18 + Math.sin(angle) * radius * 0.7;
+            const ly = LIGHT.y - 0.05 + Math.sin(time * 3.1 + entry.phase * 17) * 0.09;
+            const e = easeInOut(k);
+            const direction = entry.phase > 0.5 ? 1 : -1;
+            const tx = -Math.sin(angle) * direction;
+            const tz = Math.cos(angle) * direction * 0.7;
+            const length = Math.hypot(tx, tz) || 1;
+            // The wall's normal swings round to up as it takes off.
+            const nx = point.nx * (1 - e);
+            const ny = point.ny * (1 - e) + e;
+            const nz = point.nz * (1 - e);
+            const nl = Math.hypot(nx, ny, nz) || 1;
+            const surfaceNow: SurfacePoint = {
+                x: point.x + (lx - point.x) * e,
+                y: point.y + (ly - point.y) * e,
+                z: point.z + (lz - point.z) * e,
+                nx: nx / nl,
+                ny: ny / nl,
+                nz: nz / nl,
+                tx: point.tx * (1 - e) + (tx / length) * e,
+                ty: point.ty * (1 - e),
+                tz: point.tz * (1 - e) + (tz / length) * e
+            };
+            return {x: surfaceNow.x, z: surfaceNow.z, base: surfaceNow.y, yaw: Math.atan2(surfaceNow.tx, surfaceNow.tz), pitch: 0, roll: 0, afloat: true, surface: surfaceNow};
+        }
+        return {x: point.x, z: point.z, base: point.y, yaw: Math.atan2(point.tx, point.tz), pitch: 0, roll: 0, afloat: true, surface: point};
+    };
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
         // An act's pose, from a replayed event.
         if (entry.act) {
@@ -550,6 +670,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
         }
         const place = entry.place;
+        if (place.micro && !entry.visitor) return microPose(entry, reducedMotion ? 0 : time);
         const plan = model?.behaviour?.plan ?? "";
         const t = reducedMotion ? 0 : time;
         const site = ZONE_SITES[entry.animal.zone];
@@ -623,7 +744,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Seen from far, animals are drawn a little larger, like figures on a model; close up, true to size.
         const exaggerate = 1 + Math.min(Math.max((viewDistance - 40) / 120, 0), 1.3);
 
-        type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number};
+        type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean};
+        const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
         for (const entry of allEntries()) {
             const slug = entry.animal.model_slug;
@@ -647,6 +769,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.air += (target - entry.air) * 0.02;
             }
             entry.lift += ((selectedId === entry.animal.id ? 1 : 0) - entry.lift) * 0.08;
+            let skip = false;
+            if (entry.micro && !entry.act) {
+                // A moth at the cottage goes to the porch light at night while it is awake (not while it is looked at).
+                if (entry.micro.moth && entry.place.micro?.spot === "house") {
+                    const want = entry.awake && night > 0.35 && selectedId !== entry.animal.id && !reducedMotion ? 1 : 0;
+                    entry.toLight = (entry.toLight ?? 0) + (want - (entry.toLight ?? 0)) * Math.min(dt * 0.5, 1);
+                }
+                // True to size close by; never smaller on screen than MICRO_MIN_PIXELS; the usual length (and the marker) from afar.
+                const near = cameraPosition.distanceTo(position.set(entry.place.x, entry.place.ground, entry.place.z));
+                entry.length = microDrawnLength(entry.trueLength, entry.full, near, height, FOV, MICRO_MIN_PIXELS);
+                const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
+                skip = near > MICRO_DRAW_WITHIN && !own;
+                if (!skip && library.has(slug) && !model) library.request(slug, "far");
+            }
             const modelScale = model ? entry.length / model.bodyLength : 1;
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
             const where = pose(entry, model, modelHeight, now);
@@ -655,11 +791,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (distance < LOAD_NEAR_WITHIN && library.has(slug)) library.request(slug, "near");
             sphere.center.copy(position);
             sphere.radius = entry.length * 2 + 3;
-            candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale});
+            candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale, skip});
         }
 
         const nearWanted = candidates
-            .filter((c) => c.visible && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
+            .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
             .sort((a, b) => a.distance - b.distance);
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
@@ -671,7 +807,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             nearIds.add(candidate.entry.animal.id);
         }
         // Models for the nearest MODEL_CAP in view; past that, icons.
-        const modelled = new Set(candidates.filter((c) => c.visible && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, MODEL_CAP).map((c) => c.entry.animal.id));
+        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, MODEL_CAP).map((c) => c.entry.animal.id));
 
         const perMesh = new Map<InstancedMesh, number>();
         const used = new Set<InstancedMesh>();
@@ -686,7 +822,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const {entry} = candidate;
             const level: Level = nearIds.has(entry.animal.id) ? "near" : modelled.has(entry.animal.id) ? "far" : "token";
             entry.level = level;
-            if (!candidate.visible || level === "token") continue;
+            if (!candidate.visible || level === "token" || candidate.skip) continue;
             const need = needs.get(entry.animal.model_slug) ?? {near: 0, far: 0};
             need[level]++;
             needs.set(entry.animal.model_slug, need);
@@ -722,7 +858,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.yawNow = where.yaw;
             const lift = entry.lift * modelHeight * 0.12;
             // Near and awake: now and then it looks round, startles, shakes, bobs or dozes (the talking models' idles, as root motion).
-            if (level === "near" && entry.awake && !entry.act && !entry.visitor && model && !reducedMotion) {
+            if (level === "near" && entry.awake && !entry.act && !entry.visitor && !entry.micro && model && !reducedMotion) {
                 // The sharper it is, the more different things it does (`arkIdleBehaviour`).
                 entry.director ??= new BehaviourDirector(arkIdleBehaviour(model.behaviour, entry.stats.intelligence), IDLE_ABILITIES, BehaviourRandom.seed(animal.id));
                 const idle = entry.director.pose(now, false);
@@ -740,20 +876,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.pitch -= 0.05 * looking;
                 }
             }
-            entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
+            const surface = where.surface;
+            if (surface) entry.middle = (entry.middle ?? new Vector3()).set(where.x + surface.nx * modelHeight / 2, where.base + surface.ny * modelHeight / 2, where.z + surface.nz * modelHeight / 2);
+            else entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
             const rest = Math.max(entry.place.ground, 0);
             const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : 0;
             // Too small to find on its own (at the size floor, or a few pixels across from far): a soft dot over it, and its icon once tapped.
-            if (level !== "token" && !entry.act) {
+            // A small animal at its microhabitat only from afar: close by it is drawn true to size, and found by looking.
+            const fromAfar = !entry.micro || entry.length >= entry.full * 0.999;
+            if ((level !== "token" || candidate.skip) && !entry.act && fromAfar) {
                 const perPixel = 2 * Math.tan(FOV * Math.PI / 360) * candidate.distance / height;
                 const pixels = entry.length * sizeUp / perPixel;
-                if (entry.floor || pixels < MARKER_BELOW_PIXELS) {
+                if (entry.floor || pixels < MARKER_BELOW_PIXELS || candidate.skip) {
                     const top = where.base + lift + modelHeight + Math.max(perPixel * 7, 0.08);
                     dotList.push({x: where.x, y: Math.max(top, rest + 0.1), z: where.z, pixels: marked === 2 ? 11 : 8, alpha: dim ? 0.35 : 1});
                     if (marked === 2 && tokens.loaded(animal.model_slug)) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(top, rest + 0.1) + perPixel * 20, z: where.z, size: 0.5, dim: 0, ring: 2, grow});
                 }
             }
 
+            // A small animal far off: its marker only.
+            if (candidate.skip) continue;
             if (level === "token") {
                 counts.token++;
                 tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(where.base + modelHeight * 0.75, rest + 0.4), z: where.z, size: Math.max(entry.length * 1.1, 1.6), dim, ring: marked, grow});
@@ -785,9 +927,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             else counts.far++;
             const act = entry.act;
             const s = candidate.modelScale * sizeUp * grow * (act ? Math.max(act.scale, 0.001) : 1);
-            euler.set(where.pitch, where.yaw, where.roll);
-            rotation.setFromEuler(euler);
-            position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
+            if (surface) {
+                // On its surface: its back to the surface's normal, heading the way it crawls; its underside on the surface.
+                basisY.set(surface.nx, surface.ny, surface.nz).normalize();
+                basisZ.set(surface.tx, surface.ty, surface.tz);
+                basisZ.addScaledVector(basisY, -basisZ.dot(basisY)).normalize();
+                basisX.crossVectors(basisY, basisZ);
+                rotation.setFromRotationMatrix(basisMatrix.makeBasis(basisX, basisY, basisZ));
+                const up = -model.minY * s + (1 - Math.min(grow, 1)) * -modelHeight * 0.3;
+                position.set(where.x + surface.nx * up, where.base + surface.ny * up, where.z + surface.nz * up);
+            } else {
+                euler.set(where.pitch, where.yaw, where.roll);
+                rotation.setFromEuler(euler);
+                position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
+            }
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
             (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, act ? act.dim : dim, entry.rest);
@@ -804,8 +957,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     strength: grow * (1 - entry.lift * 0.3)
                 });
             }
-            if (marked) {
+            if (marked && !entry.micro) {
                 ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+            } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
+                // A small one on level ground (the litter, a flower, the pond): a ring its own size.
+                ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : MINE, alpha: 1});
             }
         }
 
@@ -830,7 +986,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: Camera
 
     /** A flight eases the target, the distance, and (when given) the angle from straight down and the bearing. */
-    type Flight = {from: Vector3; to: Vector3; fromDistance: number; toDistance: number; fromPolar: number; toPolar: number; fromAzimuth: number; toAzimuth: number; start: number; seconds: number; then?: () => void};
+    type Flight = {from: Vector3; to: Vector3; fromDistance: number; toDistance: number; fromPolar: number; toPolar: number; fromAzimuth: number; toAzimuth: number; start: number; seconds: number; then?: () => void; aim?: () => Vector3 | null};
     let flight: Flight | null = null;
     const offset = new Vector3();
     const spherical = new Spherical();
@@ -860,6 +1016,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!flight) return;
         const t = Math.min((now - flight.start) / flight.seconds, 1);
         const k = easeInOut(t);
+        // Flying to something that moves (a small animal crawling): the destination keeps up with it.
+        const aim = flight.aim?.();
+        if (aim) flight.to.copy(aim);
         controls.target.lerpVectors(flight.from, flight.to, k);
         spherical.radius = flight.fromDistance + (flight.toDistance - flight.fromDistance) * k;
         spherical.phi = flight.fromPolar + (flight.toPolar - flight.fromPolar) * k;
@@ -907,14 +1066,48 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.z += dz;
         }
         const groundUnderTarget = Math.max(heightAt(target.x, target.z), 0);
-        const lift = (groundUnderTarget - target.y) * 0.15;
+        const viewDistance = camera.position.distanceTo(target);
+        // Close up (a gecko on a wall, a beetle on a trunk) the target may stand above the ground: only kept out of it.
+        const lift = (viewDistance < 6 ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
         // (Not while following: a flyer is followed up in the air.)
         if (Math.abs(lift) > 0.001 && !followId) {
             target.y += lift;
             camera.position.y += lift;
         }
-        const floor = Math.max(heightAt(camera.position.x, camera.position.z), 0) + 1.2;
+        // Close to the ground only when close to what it looks at (a small animal), else well above it.
+        const floor = Math.max(heightAt(camera.position.x, camera.position.z), 0) + Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2);
         if (camera.position.y < floor) camera.position.y = floor;
+    };
+
+    /**
+     * Close to a small animal the camera may come right up to it: the
+     * nearest distance and the near plane follow what is in front of it.
+     */
+    const fitCloseUp = () => {
+        const target = controls.target;
+        const selected = selectedId ? findEntry(selectedId) : null;
+        // Looking at a small animal (flying to it, too), or with one close in front.
+        let close = Boolean(selected?.micro);
+        if (!close) {
+            for (const entry of entries) {
+                if (!entry.micro) continue;
+                const dx = entry.place.x - target.x;
+                const dz = entry.place.z - target.z;
+                if (dx * dx + dz * dz < MICRO_CLOSE_WITHIN * MICRO_CLOSE_WITHIN && Math.abs(entry.place.ground - target.y) < MICRO_CLOSE_WITHIN) {
+                    close = true;
+                    break;
+                }
+            }
+        }
+        const want = close ? MICRO_MIN_DISTANCE : 4;
+        // Down at once; back up gently (the camera eases out rather than jumping).
+        controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
+        const distance = camera.position.distanceTo(target);
+        const near = Math.min(Math.max(distance * 0.08, 0.01), 0.4);
+        if (Math.abs(near - camera.near) > camera.near * 0.08) {
+            camera.near = near;
+            camera.updateProjectionMatrix();
+        }
     };
 
     // MARK: Picking
@@ -985,6 +1178,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
             const distance = camera.position.distanceTo(controls.target);
+            if (entry.place.micro) {
+                // (A moth at the light settles back on the wall to be looked at.)
+                entry.toLight = 0;
+                // A small animal: right up to it, from out along its surface (in front of a wall, beside a trunk, above a flower).
+                // The right distance for its size: about a fifth of the view's height.
+                const point = surfacePoint(entry.place.micro, entry.animal.zone);
+                const target = entry.middle ? entry.middle.clone() : new Vector3(point.x, point.y, point.z);
+                const view = viewFrom(point);
+                const closeDistance = Math.min(Math.max(entry.trueLength * 6, 0.12), 3);
+                controls.minDistance = MICRO_MIN_DISTANCE;
+                fly(target, closeDistance, distance > 30 ? 2.2 : 1.4, view.polar, view.azimuth);
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? entry.middle : null);
+                return;
+            }
             // Where it will rest: its own spot (a flyer lands; a swimmer is followed).
             const middle = entry.middle;
             const target = middle ? new Vector3(middle.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, middle.z) : new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, entry.place.z);
@@ -1188,6 +1395,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             place: {x: foot.x, z: foot.z, ground: heightAt(foot.x, foot.z), yaw: visitorYaw(), water: false},
             length: displayLength(next.slug),
+            full: displayLength(next.slug),
+            trueLength: arkBody({model_slug: next.slug}).metres,
             stats: arkStats({model_slug: next.slug}),
             floor: arkBody({model_slug: next.slug}).floor,
             pace: loopPace({model_slug: next.slug}),
@@ -1314,6 +1523,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let lastClock = performance.now() / 1000;
     const setLight = () => {
         lighting.setHours(hoursNow(), fog);
+        micro.setNight(lighting.daylight.night);
         applyHours();
     };
 
@@ -1649,6 +1859,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!reducedMotion && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
         controls.update();
         keepInWorld();
+        fitCloseUp();
         stepTalking(elapsed);
         // The hour: read again every minute (the light changes only a little).
         if (now - lastClock > 60 && !replay) {
@@ -1683,6 +1894,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     controls.target.z += dz;
                     camera.position.x += dx;
                     camera.position.z += dz;
+                    // A small animal crawls up and down its wall or trunk too: kept in view.
+                    const dy = tracked.y - lastTracked.y;
+                    if (findEntry(selectedId)?.micro && Math.abs(dy) < 1) {
+                        controls.target.y += dy;
+                        camera.position.y += dy;
+                    }
                 }
             }
             lastTracked = (lastTracked ?? new Vector3()).copy(tracked);
@@ -1811,6 +2028,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rings.dispose();
             landscape.dispose();
             vegetation.dispose();
+            micro.dispose();
             motes.dispose();
             lighting.dispose();
             post.dispose();

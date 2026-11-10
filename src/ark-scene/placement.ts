@@ -13,7 +13,9 @@
  * spiral's spots on the right ground and clear of trees and rocks: the
  * terrain only, never the other animals), picked by the species' dominance
  * and rarity (see "The stats in placement" below); rank 0 stands on it, the
- * rest close about it. So nobody moves
+ * rest close about it. A small animal (`micro.ts`) takes its slot's point
+ * on its microhabitat instead (a wall of the cottage, a trunk, a flower...),
+ * from the same zone, slot and rank. So nobody moves
  * when another arrives, is born, is eaten or dies, and every viewer sees the
  * same Ark. A departed animal keeps its place (the replay draws it there).
  *
@@ -24,8 +26,9 @@
  */
 
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
+import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
 import {displayLength} from "@/ark-scene/sizes";
-import {arkStats} from "@/ark-scene/stats";
+import {arkBody, arkStats} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {BEACH_INSET, coastRadius, hashString, LAKE, riverDistance, sampleGround, ZONE_SITES, type ZoneSite} from "@/ark-scene/world";
 
@@ -44,6 +47,12 @@ export type Placement = {
     rank?: number;
     /** A rare one partly behind a tree or a rock from the default camera: seen from the far side when flown to. */
     covered?: boolean;
+    /**
+     * A small animal at its microhabitat (`micro.ts`): on the cottage, a
+     * trunk, a flower, a stone, the leaf litter or a pond's surface. Then
+     * `ground` is the height of the surface it is on, and `x`, `z` the point.
+     */
+    micro?: MicroPlace;
 };
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -336,6 +345,19 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         const key = `${zoneKey}#${slotIndex}`;
         const slotHash = hashString(key);
         const ownHash = hashString(animal.id);
+        // A small animal lives at its microhabitat: its slot's point on its spot's surfaces, its rank a step about it.
+        const small = microPlace(animal.model_slug, zoneKey as ArkAnimal["zone"], slotIndex, rank, arkBody(animal).metres);
+        if (small) {
+            const point = surfacePoint(small, zoneKey as ArkAnimal["zone"]);
+            const chosen: Placement = {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), water: small.surface === "water", micro: small};
+            const cluster = clusters.get(key)!;
+            if (cluster.count > 1) {
+                chosen.leader = cluster.leader;
+                chosen.rank = rank;
+            }
+            placed.set(animal.id, chosen);
+            continue;
+        }
         const kind = slotKind(animal, slotIndex);
         const centreIndex = gridIndex(layoutOf(zoneKey, site), kind, slotIndex);
         const centre = gridSpot(zoneKey, site, centreIndex);

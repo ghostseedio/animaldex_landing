@@ -1,0 +1,177 @@
+/**
+ * The microhabitats' scenery (docs/ark-micro.md): where the small animals'
+ * spots are, as world geometry. Pure functions of the world (`world.ts`)
+ * and a fixed seed, so every viewer sees the same cottage, the same flower
+ * patches and the same stones.
+ *
+ * - The cottage at Home, facing the default camera (south, +z), with a
+ *   porch, a porch light, a garden pond beside it, a rockery, a flower bed
+ *   along the front and a tree with leaf litter under it.
+ * - In every other land zone a "micro corner" just past the clearing's edge
+ *   toward the camera: a flower patch, a patch of leaf litter and a few
+ *   stones; the zone's own trees nearby are its bark.
+ *
+ * `decor.ts` adds these items to the world (so the animals' grid keeps
+ * clear of the cottage and the pond); `micro.ts` turns them into spots.
+ */
+
+import type {ArkZone} from "@/ark-scene/types";
+import {LAKE, riverDistance, sampleGround, seeded, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+
+/** The cottage: its middle on the ground, its size (m), turned to face +z (the default camera). */
+export const COTTAGE = (() => {
+    const farm = ZONE_SITES.farm_garden;
+    const x = farm.x + 3;
+    const z = farm.z + 17;
+    return {
+        x,
+        z,
+        /** Faces +z: rotation about y (radians). */
+        rotation: 0,
+        /** Along x, along z, to the eaves. */
+        width: 5.2,
+        depth: 4,
+        wall: 2.6,
+        /** The ridge above the eaves. */
+        ridge: 1.7,
+        /** How far the roof reaches past the walls. */
+        overhang: 0.35,
+        /** The floor: a little above the ground's highest corner, so no wall sinks into the slope. */
+        floor: Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]].map(([sx, sz]) => sampleGround(x + sx * 2.7, z + sz * 2.1).height)) + 0.04,
+        /** The porch: a deck in front of the door, under its own little roof. */
+        porch: {depth: 1.5, width: 2.6, height: 0.16},
+        /** The porch light: on the front wall beside the door (local coordinates). */
+        light: {x: 0.95, y: 1.85, z: 2 + 0.12}
+    };
+})();
+
+/** The garden pond beside the cottage (its water is drawn a little above the ground's highest rim point). */
+export const GARDEN_POND = (() => {
+    const x = COTTAGE.x + 6.4;
+    const z = COTTAGE.z + 1.6;
+    const radius = 1.35;
+    let rim = -Infinity;
+    for (let k = 0; k < 16; k++) {
+        const a = k / 16 * Math.PI * 2;
+        rim = Math.max(rim, sampleGround(x + Math.cos(a) * radius, z + Math.sin(a) * radius).height);
+    }
+    return {x, z, radius, y: Math.max(rim, sampleGround(x, z).height) + 0.05};
+})();
+
+/** The flowers' shapes (`vegetation.ts` draws them): stem height per variant and head radius, in the flower's own metres. */
+export const FLOWER_SHAPE = {stem: [0.36, 0.46, 0.3], head: 0.06, squash: 0.55, /** The head's top above the stem, per shape, in head radii (the daisy's eye, the round head, the cup). */ top: [0.5, 0.5, 0.95]};
+/** How far the instanced decor is sunk into the ground (`vegetation.ts`), except lily pads and leaves. */
+export const DECOR_SINK = 0.08;
+/** The leaves of the litter lie this far above the ground. */
+export const LEAF_LIFT = 0.012;
+
+export type MicroDecorItem = {
+    kind: "cottage" | "pond" | "flower" | "leaf" | "rock" | "broadleaf";
+    variant: number;
+    x: number;
+    y: number;
+    z: number;
+    scale: number;
+    rotation: number;
+    color: string;
+    /** Which zone's micro corner it belongs to (the cottage's are farm_garden). */
+    zone: ArkZone;
+    /** For flowers and leaves: which patch (0 = the zone's own). */
+    patch?: number;
+};
+
+const FLOWER_COLOURS = ["#f2d14b", "#f07a8a", "#f5f1e6", "#b58ae0", "#ef8f45", "#e85d5d"];
+const LEAF_COLOURS = ["#9b6a36", "#7d5430", "#b2813f", "#6e4a2a", "#a3743a"];
+const STONE = ["#958c7c", "#827a6c", "#a0978a"];
+
+/** The land zones that get a micro corner (the sea's two zones have none). */
+export const MICRO_ZONES: ArkZone[] = ["farm_garden", "seashore", "river_lake", "wetland", "rainforest", "woodland", "grassland", "desert", "mountains", "polar"];
+
+function onLand(x: number, z: number): boolean {
+    const s = sampleGround(x, z);
+    return s.height > 0.35 && s.land > 0.9 && riverDistance(x, z) > 4.5 && Math.hypot(x - LAKE.x, z - LAKE.z) > LAKE.r + 2;
+}
+
+/** The corner of a zone where its microhabitats are: just past the clearing, toward the camera where the ground allows. */
+export function microCorner(zone: ArkZone): {x: number; z: number} {
+    if (zone === "farm_garden") return {x: COTTAGE.x, z: COTTAGE.z};
+    const site = ZONE_SITES[zone];
+    const reach = site.kind === "ring" ? LAKE.r + 7 : site.kind === "shore" ? 4 : site.clearing + 1.8;
+    // From the south (toward the camera), sweeping round either way until the ground is right.
+    for (let k = 0; k < 48; k++) {
+        const turn = ((k + 1) >> 1) * (k % 2 ? 1 : -1) * 0.13;
+        const angle = Math.PI / 2 + turn;
+        const x = site.x + Math.cos(angle) * reach;
+        const z = site.z + Math.sin(angle) * reach;
+        if (!onLand(x, z)) continue;
+        const s = sampleGround(x, z);
+        if (zone !== "seashore" && zoneAt(s) !== zone && k < 40) continue;
+        return {x, z};
+    }
+    return {x: site.x, z: site.z};
+}
+
+let cached: MicroDecorItem[] | null = null;
+
+/** Every microhabitat prop, from a fixed seed. */
+export function microDecor(): MicroDecorItem[] {
+    if (cached) return cached;
+    const random = seeded(20261111);
+    const items: MicroDecorItem[] = [];
+    const ground = (x: number, z: number) => sampleGround(x, z).height;
+    const flowerPatch = (zone: ArkZone, cx: number, cz: number, radius: number, count: number, patch: number) => {
+        for (let k = 0; k < count; k++) {
+            // An even scatter (a sunflower spiral), each a little off it.
+            const r = radius * Math.sqrt((k + 0.5) / count);
+            const a = k * 2.39996 + random() * 0.4;
+            const x = cx + Math.cos(a) * r;
+            const z = cz + Math.sin(a) * r;
+            if (!onLand(x, z) && zone !== "seashore") continue;
+            items.push({kind: "flower", variant: k % 3, x, y: ground(x, z), z, scale: 0.8 + random() * 0.45, rotation: random() * Math.PI * 2, color: FLOWER_COLOURS[Math.floor(random() * FLOWER_COLOURS.length)], zone, patch});
+        }
+    };
+    const litterPatch = (zone: ArkZone, cx: number, cz: number, radius: number, count: number, patch: number) => {
+        for (let k = 0; k < count; k++) {
+            const r = radius * Math.sqrt(random());
+            const a = random() * Math.PI * 2;
+            const x = cx + Math.cos(a) * r;
+            const z = cz + Math.sin(a) * r;
+            items.push({kind: "leaf", variant: k % 2, x, y: ground(x, z), z, scale: 0.8 + random() * 0.6, rotation: random() * Math.PI * 2, color: LEAF_COLOURS[Math.floor(random() * LEAF_COLOURS.length)], zone, patch});
+        }
+    };
+    const stones = (zone: ArkZone, cx: number, cz: number, big: number) => {
+        items.push({kind: "rock", variant: 0, x: cx, y: ground(cx, cz), z: cz, scale: big, rotation: random() * Math.PI * 2, color: STONE[0], zone});
+        for (let k = 0; k < 3; k++) {
+            const a = k / 3 * Math.PI * 2 + random();
+            const d = big * (1.05 + random() * 0.5);
+            const x = cx + Math.cos(a) * d;
+            const z = cz + Math.sin(a) * d;
+            items.push({kind: "rock", variant: 1 + (k % 2), x, y: ground(x, z), z, scale: big * (0.4 + random() * 0.25), rotation: random() * Math.PI * 2, color: STONE[1 + (k % 2)], zone});
+        }
+    };
+
+    // Home: the cottage and its garden.
+    const c = COTTAGE;
+    items.push({kind: "cottage", variant: 0, x: c.x, y: c.floor, z: c.z, scale: 1, rotation: c.rotation, color: "#e9dcc3", zone: "farm_garden"});
+    items.push({kind: "pond", variant: 0, x: GARDEN_POND.x, y: GARDEN_POND.y, z: GARDEN_POND.z, scale: GARDEN_POND.radius, rotation: 0, color: "#4f7f86", zone: "farm_garden"});
+    // A flower bed along the front, either side of the porch.
+    flowerPatch("farm_garden", c.x - 2.4, c.z + c.depth / 2 + 1.1, 0.9, 9, 0);
+    flowerPatch("farm_garden", c.x + 2.6, c.z + c.depth / 2 + 1.2, 0.8, 8, 1);
+    // A rockery on the west side; a tree to the east with its fallen leaves.
+    stones("farm_garden", c.x - 5.6, c.z + 1.4, 0.75);
+    const tree = {x: c.x + 4.6, z: c.z - 3.2};
+    items.push({kind: "broadleaf", variant: 1, x: tree.x, y: ground(tree.x, tree.z), z: tree.z, scale: 1.05, rotation: 0.6, color: "#6f8f3a", zone: "farm_garden"});
+    litterPatch("farm_garden", tree.x + 0.4, tree.z + 1.2, 1.5, 34, 0);
+
+    // Every other land zone: a corner of flowers, litter and stones.
+    for (const zone of MICRO_ZONES) {
+        if (zone === "farm_garden") continue;
+        const corner = microCorner(zone);
+        // Laid out across the line of sight, so all three are seen from the default camera.
+        flowerPatch(zone, corner.x - 2.2, corner.z + 0.4, 0.85, 9, 0);
+        litterPatch(zone, corner.x + 0.2, corner.z + 0.8, 1.1, 22, 0);
+        stones(zone, corner.x + 2.6, corner.z + 0.2, zone === "mountains" || zone === "polar" ? 0.85 : 0.65);
+    }
+    cached = items;
+    return items;
+}

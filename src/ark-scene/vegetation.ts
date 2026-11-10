@@ -32,6 +32,7 @@ import {
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {grassTufts, worldDecor, type DecorKind} from "@/ark-scene/decor";
 import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
+import {DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
 
@@ -117,6 +118,36 @@ function randomBlobs(random: () => number, count: number, centreY: number, sprea
 }
 
 // MARK: - Shapes
+
+/**
+ * A tree's trunk as its shape draws it (before the instance's turn and
+ * scale): for the small animals that live on bark (`micro.ts`). `lean` bends
+ * it along local x by lean · (y / height)²; `sides` is the cylinder's.
+ */
+export type Trunk = {height: number; radius: number; top: number; lean: number; sides: number; /** Leaves hide it above this (local m). */ clear: number};
+
+export function trunkOf(kind: DecorKind, variant: number): Trunk | null {
+    switch (kind) {
+        case "broadleaf": {
+            const random = seeded(101 + variant);
+            const height = 2.1 + variant * 0.35;
+            return {height: height + 0.6, radius: 0.2, top: 0.11, lean: (random() - 0.5) * 0.3, sides: 7, clear: height - 0.15};
+        }
+        case "rainforest": {
+            const random = seeded(211 + variant);
+            const height = 4.2 + variant * 1.1;
+            randomBlobs(random, 9, height + 0.7, 2.2, 1.2, 0.62);
+            randomBlobs(random, 6, height * 0.6, 1.6, 1.0, 0.8);
+            return {height: height + 0.5, radius: 0.26, top: 0.143, lean: (random() - 0.5) * 0.6, sides: 7, clear: height * 0.6 - 0.9};
+        }
+        case "orchard":
+            return {height: 1.3, radius: 0.12, top: 0.066, lean: 0, sides: 7, clear: 0.95};
+        case "cactus":
+            return {height: 2.4, radius: 0.24, top: 0.24, lean: 0, sides: 9, clear: 2.35};
+        default:
+            return null;
+    }
+}
 
 function broadleaf(variant: number): BufferGeometry {
     const random = seeded(101 + variant);
@@ -234,7 +265,7 @@ function cactus(): BufferGeometry {
     return mergeGeometries(parts)!;
 }
 
-function rock(variant: number): BufferGeometry {
+export function rock(variant: number): BufferGeometry {
     const random = seeded(551 + variant);
     let geometry: BufferGeometry = new IcosahedronGeometry(0.85, 1);
     geometry.deleteAttribute("normal");
@@ -396,6 +427,75 @@ function orchard(variant: number): BufferGeometry {
     return mergeGeometries([trunk(1.3, 0.12), canopy(randomBlobs(random, 5, 1.85, 0.6, 0.62), 0)])!;
 }
 
+/**
+ * A garden flower (`micro-decor.ts` FLOWER_SHAPE): a stem with two leaves
+ * and a head that takes the instance's colour. Three shapes: a daisy (a
+ * ring of petals round a yellow eye), a round head, a cup. No wind: the
+ * small animals sitting on the heads stay on them.
+ */
+function flower(variant: number): BufferGeometry {
+    const stemHeight = FLOWER_SHAPE.stem[variant];
+    const head = FLOWER_SHAPE.head;
+    const green = new Color("#4f7a34");
+    const parts: BufferGeometry[] = [];
+    const stem = new CylinderGeometry(0.006, 0.008, stemHeight, 5);
+    stem.translate(0, stemHeight / 2, 0);
+    parts.push(finish(stem, (_, t) => 0.7 + 0.3 * t, 0, green));
+    for (const [side, at] of [[1, 0.35], [-1, 0.55]] as const) {
+        const blade = new BufferGeometry();
+        const y = stemHeight * at;
+        blade.setAttribute("position", new BufferAttribute(new Float32Array([0, y, 0, side * 0.07, y + 0.05, 0.018, side * 0.07, y + 0.05, -0.018, 0, y, 0, side * 0.07, y + 0.05, -0.018, side * 0.07, y + 0.05, 0.018]), 3));
+        blade.computeVertexNormals();
+        parts.push(finish(blade, () => 0.9, 0, green));
+    }
+    if (variant === 0) {
+        // A daisy: eight petals round an eye, flat on top of the stem.
+        for (let p = 0; p < 8; p++) {
+            const petal = new IcosahedronGeometry(head * 0.5, 0);
+            petal.scale(1, 0.18, 0.45);
+            petal.translate(head * 0.55, 0, 0);
+            petal.rotateY(p / 8 * Math.PI * 2);
+            petal.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.5, 0);
+            parts.push(finish(petal, () => 1, 1));
+        }
+        const eye = new IcosahedronGeometry(head * 0.38, 1);
+        eye.scale(1, 0.5, 1);
+        eye.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.6, 0);
+        parts.push(finish(eye, () => 1, 0, new Color("#e8b62c")));
+    } else {
+        const bloom = new IcosahedronGeometry(head, 1);
+        bloom.scale(1, FLOWER_SHAPE.squash * (variant === 2 ? 1.5 : 1), 1);
+        bloom.translate(0, stemHeight + (variant === 2 ? head * 0.2 : 0), 0);
+        parts.push(finish(bloom, (_, t) => 0.82 + 0.25 * t, 1));
+    }
+    return mergeGeometries(parts)!;
+}
+
+/** A fallen leaf, lying flat with its edges a little curled. */
+function fallenLeaf(variant: number): BufferGeometry {
+    const length = variant ? 0.11 : 0.085;
+    const width = variant ? 0.05 : 0.06;
+    const points: number[] = [];
+    const steps = 5;
+    for (let i = 0; i < steps; i++) {
+        const t0 = i / steps;
+        const t1 = (i + 1) / steps;
+        const w0 = width * Math.sin(Math.PI * t0);
+        const w1 = width * Math.sin(Math.PI * t1);
+        const z0 = (t0 - 0.5) * length;
+        const z1 = (t1 - 0.5) * length;
+        const curl = 0.008;
+        points.push(0, 0, z0, w0, curl, z0, w1, curl, z1, 0, 0, z0, w1, curl, z1, 0, 0, z1);
+        points.push(0, 0, z0, 0, 0, z1, -w1, curl, z1, 0, 0, z0, -w1, curl, z1, -w0, curl, z0);
+    }
+    const leaf = new BufferGeometry();
+    leaf.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
+    leaf.computeVertexNormals();
+    const normal = leaf.getAttribute("normal");
+    for (let i = 0; i < normal.count; i++) normal.setXYZ(i, 0, 1, 0);
+    return finish(leaf, (_, __, i) => 0.85 + (i % 5) * 0.04, 1);
+}
+
 /** A grass tuft: nine tapered blades leaning out, dark at the root and light at the tip. */
 function tuft(): BufferGeometry {
     const random = seeded(1201);
@@ -473,7 +573,9 @@ const SHAPES: Shape[] = [
     {kind: "barn", variant: 0, build: barn, wind: 0, windHeight: 1, shadow: true},
     {kind: "hay", variant: 0, build: hay, wind: 0, windHeight: 1, shadow: true},
     {kind: "fence", variant: 0, build: fence, wind: 0, windHeight: 1, shadow: true},
-    ...[0, 1, 2].map((variant) => ({kind: "orchard" as const, variant, build: () => orchard(variant), wind: 0.05, windHeight: 2.5, shadow: true}))
+    ...[0, 1, 2].map((variant) => ({kind: "orchard" as const, variant, build: () => orchard(variant), wind: 0.05, windHeight: 2.5, shadow: true})),
+    ...[0, 1, 2].map((variant) => ({kind: "flower" as const, variant, build: () => flower(variant), wind: 0, windHeight: 1, doubleSide: true, shadow: false})),
+    ...[0, 1].map((variant) => ({kind: "leaf" as const, variant, build: () => fallenLeaf(variant), wind: 0, windHeight: 1, doubleSide: true, shadow: false}))
 ];
 
 export type Vegetation = {
@@ -514,7 +616,7 @@ export function buildVegetation(maxGrass: number): Vegetation {
             rotation.setFromAxisAngle(up, item.rotation);
             const s = item.scale;
             scale.set(s, shape.kind === "rock" ? s * (0.8 + 0.4 * ((i * 7) % 5) / 5) : s, s);
-            at.set(item.x, item.y - (shape.kind === "lily" ? 0 : 0.08), item.z);
+            at.set(item.x, item.y + (shape.kind === "lily" ? 0 : shape.kind === "leaf" ? LEAF_LIFT : -DECOR_SINK), item.z);
             matrix.compose(at, rotation, scale);
             mesh.setMatrixAt(i, matrix);
             tint.set(item.color);
