@@ -23,7 +23,7 @@ export type AnalyticsResponse = AnalyticsReport & {
 export type SeriesRow = AnalyticsResponse["series"][number];
 export type PeriodSummary = AnalyticsResponse["current"];
 
-export type MetricsTab = "overview" | "acquisition" | "engagement" | "retention" | "content" | "revenue" | "releases";
+export type MetricsTab = "overview" | "acquisition" | "engagement" | "retention" | "content" | "revenue" | "releases" | "ark";
 export const metricsTabs: Array<{ value: MetricsTab; label: string }> = [
   { value: "overview", label: "Overview" },
   { value: "acquisition", label: "Acquisition" },
@@ -32,4 +32,5 @@ export const metricsTabs: Array<{ value: MetricsTab; label: string }> = [
   { value: "content", label: "Blog & social" },
   { value: "revenue", label: "Revenue" },
   { value: "releases", label: "Releases" },
+  { value: "ark", label: "Ark" },
 ];

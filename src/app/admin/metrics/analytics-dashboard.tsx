@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminPage, Alert, PageHeader, RefreshButton, Segmented, StatGridSkeleton, buttonVariants, cn, fieldClass } from "@/components/admin/ui";
 import { addDays, dayKeyOf, defaultGrain, isDayKey, previousRange, type Grain, type PlatformFilter } from "@/lib/product-analytics";
 import { errorFromBody } from "@/lib/admin-fetch-json";
+import { ArkTab } from "./_analytics/ark";
 import { Content } from "./_analytics/content";
 import { rangeLabel } from "./_analytics/format";
 import { Overview } from "./_analytics/overview";
@@ -197,6 +198,7 @@ export default function AnalyticsDashboard() {
           {tab === "content" ? <Content data={data} /> : null}
           {tab === "revenue" ? <Revenue data={data} /> : null}
           {tab === "releases" ? <Releases data={data} reload={() => void load()} /> : null}
+          {tab === "ark" ? <ArkTab from={range.from} to={range.to} /> : null}
 
           {data.notes.length ? (
             <details className="border border-line-300 bg-surface-900 px-4 py-3 text-xs text-ink-400">

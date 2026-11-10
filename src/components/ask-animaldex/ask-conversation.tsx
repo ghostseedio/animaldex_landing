@@ -139,6 +139,8 @@ import {
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
 import {ArkRevealMessages, ArkRevisionCard} from "@/components/ark/ark-views";
+import {arkStepOutcome} from "@/lib/ark-measure";
+import {trackArk} from "@/lib/ark-measure-client";
 import {arkMoneyFormatter, fetchArkChanges, fetchArkStats, useDisplayCurrency} from "@/components/ark/use-ark";
 import {
     ARK_EVENTS,
@@ -835,6 +837,10 @@ function AskConversation({
         onCompanion: (update) => {
             setCompanionLoop(update.loop);
             noteOpenStep(companionSpeciesProfileId, update.loop.openStep);
+            // Ark measurement (lib/ark-measure): the animal set a step, or saw one done, in this reply.
+            if (update.event.stepSet) trackArk("step_offered", {species_profile_id: companionSpeciesProfileId ?? undefined});
+            const outcome = arkStepOutcome(update.event.stepDone?.outcome);
+            if (update.event.stepDone && outcome) trackArk("step_completed", {outcome});
             // The reply itself shows it: "Done together", or the Power earned, in its bubble.
             if (update.event.stepDone) void reloadCompanions();
             // A debate's way that did not work: the debate is open again, its
@@ -2230,6 +2236,8 @@ function AskConversation({
             }
             const step = {...result.value, trialFrequency: result.value.trialFrequency ?? frequency};
             setOpenStep(step);
+            // A Trial picked as the step is a step offered too, as the server counts it (`set_at`).
+            trackArk("step_offered", {species_profile_id: companionSpeciesProfileId});
             // The reply now carries that step instead of its Trials, with its loop.
             const offered = messages.find((message) => message.id === messageId);
             updateMessage(messageId, {
