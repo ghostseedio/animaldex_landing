@@ -441,6 +441,12 @@
           ]
         }
       }
+    },
+    "ark": {
+      "eyebrow": "Ark",
+      "title": "Dunia hewan yang hidup, dibangun dari langkah yang berhasil",
+      "body": "Saat langkah dari seekor hewan berhasil bagimu, satu dari jenisnya bergabung dengan Ark: satu dunia 3D bersama tempat hewan hidup, makan, dan membesarkan anak dengan aturan berdasarkan panduan lapangan setiap hewan.",
+      "cta": "Lihat Ark"
     }
   },
   "blog": {
@@ -2456,7 +2462,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Bawa Ide Apa Pun ke Seekor Hewan. Setiap Hewan Punya Pelajaran",
     "title": "AnimalDex",
-    "description": "Bicara dengan hewan tentang ide, rencana, atau keputusan apa pun dan dapatkan sudut pandang yang benar-benar berbeda. Setiap hewan menjawab dari perilaku nyata jenisnya, dan setiap hewan yang kamu temui menambah cara pandang baru.",
+    "description": "Bicara dengan hewan tentang ide, rencana, atau keputusan apa pun dan dapatkan sudut pandang yang benar-benar berbeda. Setiap hewan menjawab dari perilaku nyata jenisnya, dan setiap hewan yang kamu temui menambah cara pandang baru. Langkah yang berhasil membawa hewan ke Ark, sebuah dunia hewan bersama.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
@@ -2489,7 +2495,10 @@
       "aplikasi kebun binatang",
       "aplikasi safari",
       "aplikasi debat hewan",
-      "observasi satwa liar yang penuh hormat"
+      "observasi satwa liar yang penuh hormat",
+      "simulasi dunia hewan",
+      "dunia hewan virtual",
+      "simulasi ekosistem hewan"
     ]
   },
   "askAnimalDex": {
@@ -4154,6 +4163,54 @@
       "notAboardTitle": "Belum di Ark",
       "notAboardBody": "Saat langkah yang kamu ambil dengannya berhasil, satu naik ke Ark.",
       "start": "Mulai langkah dengannya",
+      "seeArk": "Lihat Ark"
+    },
+    "share": {
+      "share": "Bagikan",
+      "shareArk": "Bagikan Ark",
+      "shareAnimal": "Bagikan",
+      "copied": "Tautan disalin",
+      "textArk": "Ark di AnimalDex: {animals} dari {species} ada di sana, masing-masing setelah sebuah langkah berhasil.",
+      "textAnimal": "{animal} di Ark AnimalDex: {count} ada di sana.",
+      "cardStatArk": "{animals} dari {species}",
+      "cardStatSpecies": "{count} di Ark · {status}",
+      "cardNotAboard": "Belum ada di Ark",
+      "cardSoon": "Segera dibuka",
+      "cardSubtitle": "Satu dunia hewan bersama. Setiap hewan naik setelah sebuah langkah berhasil.",
+      "cardSpeciesSubtitle": "Hidupnya di Ark mengikuti panduan lapangannya.",
+      "cardNotAboardSubtitle": "Satu naik saat langkah bersamanya berhasil.",
+      "countAboard": "{count} di Ark"
+    },
+    "seo": {
+      "metaTitle": "Ark: Simulasi Dunia Hewan Bersama yang Hidup",
+      "metaDescription": "Dunia hewan 3D bersama yang hidup. Setiap hewan naik setelah sebuah langkah berhasil, lalu makan, membesarkan anak, dan menua dengan aturan dari panduan lapangannya.",
+      "metaFocusTitle": "{animal} di Ark",
+      "metaFocusDescription": "Lihat {animal} di Ark, dunia hewan 3D bersama yang hidup, tempat hidup setiap hewan mengikuti aturan berdasarkan panduan lapangannya.",
+      "aboutEyebrow": "Tentang Ark",
+      "aboutTitle": "Dunia hewan bersama, disimulasikan dari panduan lapangan",
+      "aboutBody": "Ark adalah satu dunia hewan yang dibagi semua orang dan terlihat sama bagi siapa pun. Ini simulasi yang bisa kamu jelajahi dalam 3D: ketuk seekor hewan untuk berkenalan, ikuti ia, atau baca kisah hidupnya.",
+      "liveCounts": "Saat ini {animals} dari {species} hidup di Ark. Dunianya punya tujuh wilayah, dari laut lepas sampai es kutub.",
+      "arriveTitle": "Bagaimana hewan datang",
+      "arriveBody": "Tidak ada yang menaruh hewan dengan tangan. Kamu bicara dengan seekor hewan tentang sesuatu yang nyata dalam hidupmu, mencoba langkah yang ia sarankan, lalu menceritakan hasilnya. Saat langkah itu berhasil, satu dari jenis hewan itu naik dan tetap di sana. Ark menunjukkan spesies dan jumlahnya; apa yang dibicarakan siapa pun tidak pernah ditampilkan.",
+      "lifeTitle": "Bagaimana makanan dan perkembangbiakan menggerakkannya",
+      "lifeBody": "Hidup setiap spesies di Ark didasarkan pada panduan lapangannya di AnimalDex: apa yang ia makan, berapa banyak anaknya dan berapa lama mereka lahir, kapan ia terjaga, apakah ia hidup sendiri, berpasangan, atau berkelompok, dan berapa lama ia hidup di alam liar.",
+      "lifeRules": "Pemangsa hanya memakan hewan yang disebut sebagai makanan dalam panduan lapangannya, atau kelompok tempat hewan itu termasuk, seperti burung. Dua hewan dewasa dari satu jenis membesarkan anak saat ada makanan, satu kelahiran per masa berkembang biak. Hewan yang umur alaminya diketahui akan menua, dan pemburu yang terlalu lama lapar akan mati kelaparan. Satu tahun Ark berlalu setiap 14 hari nyata.",
+      "lifeNote": "Aturannya disederhanakan agar dunia bersama yang kecil bisa berjalan. Ark adalah permainan berdasarkan panduan lapangan setiap hewan, bukan model ilmiah.",
+      "listTitle": "Siapa saja yang ada di Ark",
+      "listIntro": "Setiap spesies di Ark, menurut wilayah, dengan jumlahnya.",
+      "listAboard": "{count} di Ark",
+      "breadcrumbHome": "Beranda"
+    },
+    "species": {
+      "title": "Di Ark",
+      "body": "Ark adalah dunia hewan bersama yang hidup. Setiap hewan naik setelah sebuah langkah berhasil, dan hidup di sana dengan aturan berdasarkan panduan lapangannya.",
+      "aboardOne": "1 {animal} ada di Ark saat ini.",
+      "aboardOther": "{count} {animals} ada di Ark saat ini.",
+      "notAboard": "Belum ada {animal} di Ark. Satu naik saat langkah bersamanya berhasil bagi seseorang.",
+      "notAboardPlain": "Belum ada {animal} di Ark.",
+      "eats": "Makanannya, menurut panduan lapangannya",
+      "eatenBy": "Dimangsa oleh",
+      "see": "Lihat {animal} di Ark",
       "seeArk": "Lihat Ark"
     },
     "herd": {

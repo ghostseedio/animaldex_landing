@@ -46,6 +46,13 @@ test("sitemap indexes the Indonesian homepage and localized qualities, not Engli
     assert.doesNotMatch(source, /listMergedChallengeSitemapEntries/);
 });
 
+test("the Ark (Part 4d) is listed in English and Indonesian", () => {
+    const source = readFileSync(join(repoRoot, "src/lib/build-sitemap.ts"), "utf8");
+    const split = source.indexOf("const staticEntries");
+    assert.match(source.slice(source.indexOf("if (locale !== localeConfig.defaultLocale)"), split), /getAbsoluteUrl\(locale, "\/ark"\)/);
+    assert.match(source.slice(split), /getAbsoluteUrl\(locale, "\/ark"\)/);
+});
+
 test("3.2: the sitemap lists no battle, arena or matchup pages, and the battles use case is the debates one", async () => {
     const source = readFileSync(join(repoRoot, "src/lib/build-sitemap.ts"), "utf8");
     assert.doesNotMatch(source, /\/app\/(arena|matchups|train)\b/);

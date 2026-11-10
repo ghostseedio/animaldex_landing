@@ -145,6 +145,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
                 {url: getAbsoluteUrl(locale, "/qualities")},
                 // Talk (docs/rich-chat/SPEC.md, section 4.1): a real Indonesian page too.
                 {url: getAbsoluteUrl(locale, "/talk")},
+                // The Ark (AnimalDex docs/ark-next.md, Part 4d): its words are in Indonesian too.
+                {url: getAbsoluteUrl(locale, "/ark")},
                 ...getLocalPrincipleSlugs().map((slug) => ({
                     url: getAbsoluteUrl(locale, `/qualities/${slug}`)
                 }))
@@ -155,6 +157,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale)},
             // The full-screen chat. /talk/<slug> is noindex (its canonical is the species page), so only /talk.
             {url: getAbsoluteUrl(locale, "/talk")},
+            // The shared Ark: live, so no lastModified.
+            {url: getAbsoluteUrl(locale, "/ark")},
             {url: getAbsoluteUrl(locale, "/how-it-works"), lastModified: new Date(HOW_IT_WORKS_UPDATED)},
             {url: getAbsoluteUrl(locale, "/advice-fatigue"), lastModified: new Date(ADVICE_FATIGUE_UPDATED)},
             {url: getAbsoluteUrl(locale, "/what-animal-am-i"), lastModified: new Date(WHAT_ANIMAL_AM_I_UPDATED_AT)},

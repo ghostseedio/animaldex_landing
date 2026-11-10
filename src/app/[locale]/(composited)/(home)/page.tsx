@@ -116,7 +116,7 @@ export default async function Home({params}: HomePageProps) {
     const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
     const socialImageUrl = new URL("/images/og-every-animal-has-a-lesson.png", rootSiteUrl).toString();
     // SPEC section 1 (Nov 2026): a different take on any idea, from a real behaviour of the animal's kind.
-    const appSchemaDescription = `Take any idea, plan or decision to an animal and get a genuinely different take. Each of ${formatAnimalCount("en")} species answers from a real behaviour of its kind, its Power, how it lives and its field guide, and turns it into an angle you would not hear elsewhere. The animals remember you and the angles you have already heard, and every real animal you meet and photograph adds a new way of seeing.`;
+    const appSchemaDescription = `Take any idea, plan or decision to an animal and get a genuinely different take. Each of ${formatAnimalCount("en")} species answers from a real behaviour of its kind, its Power, how it lives and its field guide, and turns it into an angle you would not hear elsewhere. The animals remember you and the angles you have already heard, and every real animal you meet and photograph adds a new way of seeing. Steps that work bring animals into the Ark, a live, shared animal world whose rules are based on each animal's field guide.`;
     const disagree = getDisagreeExample(locale, getSpeciesArtworkUrl);
     const orbitCenter: HomeOrbitAnimal = {slug: TRY_TALKING_SPECIES.slug, name: t("chatStill.animal"), image: TRY_TALKING_SPECIES.image};
     const orbitAnimals: HomeOrbitAnimal[] = heroOrbitAnimals.map(({slug, name}) => ({slug, name, image: getSpeciesArtworkUrl(slug)}));
@@ -214,6 +214,8 @@ export default async function Home({params}: HomePageProps) {
             "Hear two more of your animals on the same idea",
             "One step to try, when you want one",
             "Every animal you meet and photograph adds a new way of seeing",
+            // The Ark (AnimalDex docs/ark-next.md, Part 4d): said as it is, a simulation based on field guides.
+            "The Ark: a live, shared 3D animal world, where animals whose steps worked live, eat and raise young by rules based on each animal's field guide",
             "AI animal identification and field-guide context",
             "Collectible wildlife cards and journals",
             "Respectful wildlife observation and habitat curiosity"
@@ -223,6 +225,7 @@ export default async function Home({params}: HomePageProps) {
             {"@type": "Thing", "name": "Talking to animals"},
             {"@type": "Thing", "name": "Perspective-driven AI"},
             {"@type": "Thing", "name": "Animal behaviour"},
+            {"@type": "Thing", "name": "Animal world simulation"},
             {"@type": "Thing", "name": "Animal identification"},
             {"@type": "Thing", "name": "Wildlife learning"},
             {"@type": "Thing", "name": "Wildlife photography"}
@@ -441,6 +444,16 @@ export default async function Home({params}: HomePageProps) {
                         {t("heroHowItWorks")} <span aria-hidden="true">→</span>
                     </Link>
                 </p>
+            </section>
+
+            {/* The Ark (Part 4d): where an animal goes when its step works. */}
+            <section aria-labelledby="home-ark-title" className="relative mx-auto mb-20 flex w-full max-w-5xl flex-col items-center gap-5 px-4 text-center md:px-8 lg:mb-28">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">{t("ark.eyebrow")}</p>
+                <h2 id="home-ark-title" className="max-w-3xl font-display text-3xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white [text-wrap:balance] md:text-5xl">{t("ark.title")}</h2>
+                <p className="max-w-2xl text-base leading-7 text-ink-200 md:text-lg md:leading-8">{t("ark.body")}</p>
+                <Link href="/ark" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary-200/60 px-5 text-sm font-bold text-white transition-colors duration-300 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950">
+                    {t("ark.cta")} <span aria-hidden="true">→</span>
+                </Link>
             </section>
 
             <Anchor id="download" className="md:-top-48" />

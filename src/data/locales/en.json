@@ -441,6 +441,12 @@
           ]
         }
       }
+    },
+    "ark": {
+      "eyebrow": "The Ark",
+      "title": "A live animal world, built by steps that worked",
+      "body": "When a step from an animal works for you, one of its kind joins the Ark: one shared 3D world where animals live, eat and raise young by rules based on each animal's field guide.",
+      "cta": "See the Ark"
     }
   },
   "blog": {
@@ -2467,7 +2473,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Take Any Idea to an Animal. Every Animal Has a Lesson",
     "title": "AnimalDex",
-    "description": "Talk to animals about any idea, plan or decision and get a genuinely different take. Each one answers from a real behaviour of its kind, and every animal you meet adds a new way of seeing.",
+    "description": "Talk to animals about any idea, plan or decision and get a genuinely different take. Each one answers from a real behaviour of its kind, and every animal you meet adds a new way of seeing. Steps that work bring animals into the Ark, a shared animal world.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
@@ -2503,7 +2509,11 @@
       "zoo animal app",
       "safari animal app",
       "animal debate app",
-      "respectful wildlife observation"
+      "respectful wildlife observation",
+      "animal world simulation",
+      "virtual animal world",
+      "animal ecosystem simulation",
+      "shared animal world"
     ]
   },
   "askAnimalDex": {
@@ -4213,6 +4223,54 @@
       "arkLine": "The whole Ark: {animals} of {species}, brought by {founders}.",
       "openArk": "Open the Ark",
       "back": "Back to the profile"
+    },
+    "share": {
+      "share": "Share",
+      "shareArk": "Share the Ark",
+      "shareAnimal": "Share",
+      "copied": "Link copied",
+      "textArk": "The Ark on AnimalDex: {animals} of {species} aboard, each after a step that worked.",
+      "textAnimal": "The {animal} in the Ark on AnimalDex: {count} aboard.",
+      "cardStatArk": "{animals} of {species} aboard",
+      "cardStatSpecies": "{count} aboard · {status}",
+      "cardNotAboard": "Not aboard yet",
+      "cardSoon": "Opens soon",
+      "cardSubtitle": "One shared animal world. Each animal came aboard after a step that worked.",
+      "cardSpeciesSubtitle": "Its life on the Ark follows its field guide.",
+      "cardNotAboardSubtitle": "One comes aboard when a step with it works.",
+      "countAboard": "{count} aboard"
+    },
+    "seo": {
+      "metaTitle": "The Ark: A Live, Shared Animal World Simulation",
+      "metaDescription": "A live, shared 3D animal world. Each animal came aboard after a step that worked, then eats, raises young and grows old by rules based on its field guide.",
+      "metaFocusTitle": "The {animal} in the Ark",
+      "metaFocusDescription": "See the {animal} in the Ark, a live, shared 3D animal world where each animal's life follows rules based on its field guide.",
+      "aboutEyebrow": "About the Ark",
+      "aboutTitle": "A shared animal world, simulated from field guides",
+      "aboutBody": "The Ark is one animal world that everyone shares and sees the same way. It is a simulation you can look around in 3D: tap an animal to meet it, follow it, or read its life story.",
+      "liveCounts": "Right now {animals} of {species} live aboard. Its world has seven regions, from the open ocean to the polar ice.",
+      "arriveTitle": "How animals arrive",
+      "arriveBody": "Nobody places an animal by hand. You talk with an animal about something real in your life, try the step it suggests, and say how it went. When the step works, one of that animal's kind comes aboard and stays. The Ark shows species and counts; what anyone talked about is never shown.",
+      "lifeTitle": "How diets and breeding drive it",
+      "lifeBody": "Each species' life on the Ark is based on its field guide in AnimalDex: what it eats, how many young it has and how long they take, when it is awake, whether it lives alone, in pairs or in groups, and how long it lives in the wild.",
+      "lifeRules": "A predator eats only animals its field guide names as food, or a group they belong to, such as birds. Two adults of a kind raise young when there is food, one litter per breeding period. Animals with a known wild lifespan grow old, and a hunter that stays hungry too long starves. One Ark year passes every 14 real days.",
+      "lifeNote": "The rules are simplified so that a small shared world can run. The Ark is a game based on each animal's field guide, not a scientific model.",
+      "listTitle": "Who is aboard",
+      "listIntro": "Every species on the Ark, by region, with how many are aboard.",
+      "listAboard": "{count} aboard",
+      "breadcrumbHome": "Home"
+    },
+    "species": {
+      "title": "In the Ark",
+      "body": "The Ark is a live, shared animal world. Each animal comes aboard after a step that worked, and lives there by rules based on its field guide.",
+      "aboardOne": "1 {animal} is aboard right now.",
+      "aboardOther": "{count} {animals} are aboard right now.",
+      "notAboard": "No {animal} is aboard yet. One comes aboard when a step with it works for someone.",
+      "notAboardPlain": "No {animal} is aboard yet.",
+      "eats": "Eats, by its field guide",
+      "eatenBy": "Eaten by",
+      "see": "See the {animal} in the Ark",
+      "seeArk": "See the Ark"
     }
   }
 }

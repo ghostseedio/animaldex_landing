@@ -1,6 +1,7 @@
 import "server-only";
 
 import {getAnimalHybrid} from "@/data/animal-hybrids";
+import {readPublicArk} from "@/data/ark-public";
 import {getFusableSpecies, getPublishedAnimalFusion} from "@/data/animal-fusions";
 import {getCollectorPage} from "@/data/collector-pages";
 import {getPublicProfileCard} from "@/data/public-profiles";
@@ -23,6 +24,9 @@ import {getSupportArticleBySlugs} from "@/lib/support-articles";
 import type {OgCardSpec, OgTile} from "@/lib/og/og-card";
 import {profileOgAnimals, profileOgCard} from "@/lib/og/profile-og-card";
 import {STATIC_OG_CARDS} from "@/lib/og/static-og-cards";
+import {arkSpeciesCounts, arkSpeciesShare, isArkSlug} from "@/lib/ark-seo";
+import {fillArkWords} from "@/lib/ark-words";
+import {getArkWords} from "@/loaders/ark-words";
 
 /** Animals most people recognise at a glance, preferred when a card picks from a long list. */
 const FAMOUS_ANIMALS = new Set([
@@ -204,6 +208,47 @@ async function talkHubCard(): Promise<OgCardSpec> {
     };
 }
 
+function counted(count: number, one: string, other: string) {
+    return count === 1 ? one : other.replace("{count}", count.toLocaleString("en"));
+}
+
+/**
+ * The shared Ark (Part 4c): `/api/og/ark.png` shows its most numerous species
+ * with their counts; `/api/og/ark/<slug>.png` one species and how many of it
+ * are aboard. Live counts, so the card is cached for minutes. Counts and
+ * species only, never who brought them.
+ */
+async function arkCard(slug: string | null): Promise<OgCardSpec | null> {
+    if (slug !== null && !isArkSlug(slug)) return null;
+    const [{words}, snapshot] = await Promise.all([getArkWords("en"), readPublicArk()]);
+    const share = words.share;
+    const base: Pick<OgCardSpec, "kicker" | "layout" | "cache"> = {kicker: words.eyebrow, layout: "ark", cache: "short"};
+    if (!slug) {
+        if (!snapshot) return {...base, title: words.eyebrow, stat: share.cardSoon, subtitle: share.cardSubtitle};
+        const {animals, species} = snapshot.counts;
+        const top = arkSpeciesCounts(snapshot);
+        const picked = new Set(await withArtwork(top.map((row) => row.slug), 6));
+        return {
+            ...base,
+            title: words.eyebrow,
+            stat: animals ? fillArkWords(share.cardStatArk, {animals: counted(animals, words.animalsOne, words.animalsOther), species: counted(species, words.speciesOne, words.speciesOther)}) : share.cardSoon,
+            subtitle: share.cardSubtitle,
+            tiles: top.filter((row) => picked.has(row.slug)).slice(0, 6).map((row) => art(row.slug, row.name, fillArkWords(share.countAboard, {count: row.count.toLocaleString("en")})))
+        };
+    }
+    const aboard = arkSpeciesShare(snapshot, slug);
+    // A species not aboard yet still has a card, but only a real one: its page's name.
+    const name = aboard.name ?? (await getSpeciesPageData(slug).catch(() => null))?.name ?? null;
+    if (!name) return null;
+    return {
+        ...base,
+        title: name,
+        stat: aboard.count && aboard.status ? fillArkWords(share.cardStatSpecies, {count: aboard.count.toLocaleString("en"), status: words.hud[aboard.status]}) : snapshot ? share.cardNotAboard : share.cardSoon,
+        subtitle: aboard.count ? share.cardSpeciesSubtitle : share.cardNotAboardSubtitle,
+        tiles: [art(slug)]
+    };
+}
+
 /**
  * Turns an `/api/og/...` path into the card it should draw. Every key is
  * resolved from site data, so the endpoint can't be made to render arbitrary text.
@@ -233,6 +278,8 @@ export async function resolveOgCard(segments: string[]): Promise<OgCardSpec | nu
             return STATIC_OG_CARDS[rest.join("/")] ?? null;
         case "talk":
             return rest.length === 0 ? talkHubCard() : rest.length === 1 ? talkCard(rest[0]) : null;
+        case "ark":
+            return rest.length === 0 ? arkCard(null) : rest.length === 1 ? arkCard(rest[0]) : null;
         default:
             return null;
     }

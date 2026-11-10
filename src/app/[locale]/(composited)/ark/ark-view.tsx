@@ -4,6 +4,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
+import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkHerdKeys} from "@/ark-scene/herds";
@@ -41,6 +42,8 @@ type Props = {
     since?: string | null;
     /** Development: the fixture's public-debate stories let through, as the server's `public_story` flag would. */
     publicStory?: boolean;
+    /** The page's own path ("/ark", "/id/ark"): where a share link points. */
+    shareLocalePath?: string;
 };
 
 /** The contract's refresh: every 45 s while the tab is in front. */
@@ -149,7 +152,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false}: Props) {
+export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -753,6 +756,10 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         onStory={() => setStoryOpen((open) => !open)}
                         onClose={closeCard}
                         focusOnOpen={Boolean(returnFocusRef.current)}
+                        share={{
+                            localePath: shareLocalePath,
+                            text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
+                        }}
                     />
                 ) : null}
 
@@ -787,6 +794,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     beginning={beginning}
                     onSpecies={pickSpecies}
                     onRegion={focus}
+                    shareLocalePath={shareLocalePath}
                 />
             ) : null}
             </div>
@@ -826,6 +834,8 @@ type BandProps = {
     onClose: () => void;
     /** Opened from the keyboard (the panel's row): focus moves to the card's heading. */
     focusOnOpen: boolean;
+    /** Share this animal's kind on the Ark: the page's path and the words that go with the link. */
+    share: {localePath: string; text: string};
 };
 
 /** A card's heading takes focus when it opened from the keyboard; Escape inside the card closes it (A18). */
@@ -874,7 +884,7 @@ function ageText(days: number, words: ArkWords, locale: string): string {
  * in a line (and in full under "Life story", in the band itself), and the
  * next moves: talking to it, or following it.
  */
-function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose, focusOnOpen}: BandProps) {
+function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
@@ -950,6 +960,17 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                             <svg viewBox="0 0 20 20" className={`h-4 w-4 transition-transform ${storyOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l5-5 5 5" /></svg>
                         </button>
                     ) : null}
+                    <ArkShareButton
+                        target="tap_card"
+                        look="pill"
+                        localePath={share.localePath}
+                        slug={animal.model_slug}
+                        title={animal.name}
+                        text={share.text}
+                        label={words.share.shareAnimal}
+                        copied={words.share.copied}
+                        className={`${pill} w-11 shrink-0 border border-line-100 !px-0 text-ink-100 hover:border-primary-400 disabled:opacity-60 sm:w-auto sm:!px-4`}
+                    />
                 </div>
             </div>
         </div>

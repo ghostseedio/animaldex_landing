@@ -28,6 +28,15 @@ export type OgCardSpec = {
     tiles?: OgTile[];
     /** Drawn between two tiles, e.g. "+" for a hybrid or "→" for a Pokémon match. */
     joiner?: string;
+    /**
+     * `ark`: the shared Ark's card (Part 4c), its animals on the Ark's sand
+     * with their counts (`tile.caption`), and `stat` under the title.
+     */
+    layout?: "ark";
+    /** The Ark card's count line, e.g. "2 aboard · a pair". */
+    stat?: string;
+    /** `short`: the card shows live counts, so caches keep it for minutes, not a week. */
+    cache?: "short";
 };
 
 const LIME = "#a3e635";
@@ -248,11 +257,80 @@ function TileRowCard({spec, pictures, icon}: {spec: OgCardSpec; pictures: Array<
     );
 }
 
+/** The Ark's sand, as the scene's own ground (`ark-view`'s #ecdcc4). */
+const ARK_SAND = "#ecdcc4";
+const ARK_INK = "#3d3829";
+
+/**
+ * The shared Ark (or one species in it): the words on the left, and on the
+ * right its animals standing on the Ark's sand, one large or up to six with
+ * their counts. With none aboard, the app icon on the sand.
+ */
+function ArkCard({spec, pictures, icon}: {spec: OgCardSpec; pictures: Array<{tile: OgTile; src: string}>; icon: string | null}) {
+    const one = pictures.length === 1;
+    const imageSize = one ? 300 : pictures.length === 2 ? 190 : pictures.length <= 4 ? 150 : 118;
+    return (
+        <Background>
+            <div style={{display: "flex", flex: 1, padding: "60px 64px 52px 72px", gap: 44}}>
+                <div style={{display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between"}}>
+                    <div style={{display: "flex", flexDirection: "column", gap: 18}}>
+                        <Kicker text={spec.kicker} />
+                        <div style={{display: "flex", fontSize: titleSize(spec.title, false), fontWeight: 700, lineHeight: 1.06, letterSpacing: -1}}>
+                            {spec.title}
+                        </div>
+                        {spec.stat ? (
+                            <div style={{display: "flex", fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: LIME}}>{spec.stat}</div>
+                        ) : null}
+                        {spec.subtitle ? (
+                            <div style={{display: "flex", fontSize: 26, fontWeight: 500, lineHeight: 1.32, color: "#cbd5e1"}}>{spec.subtitle}</div>
+                        ) : null}
+                    </div>
+                    <Brand icon={icon} />
+                </div>
+                <div
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        alignContent: "center",
+                        justifyContent: "center",
+                        alignSelf: "center",
+                        width: 470,
+                        height: 500,
+                        borderRadius: 32,
+                        background: `radial-gradient(circle at 50% 38%, #f6eddc 0%, ${ARK_SAND} 62%, #d9c4a3 100%)`,
+                        border: "2px solid rgba(163,230,53,0.45)",
+                        padding: one ? 0 : "18px 12px",
+                        gap: one ? 0 : 10
+                    }}
+                >
+                    {pictures.length ? pictures.map(({tile, src}, index) => (
+                        <div key={index} style={{display: "flex", flexDirection: "column", alignItems: "center", width: one ? 420 : pictures.length === 2 ? 210 : pictures.length <= 4 ? 200 : 140}}>
+                            <img alt="" src={src} width={imageSize} height={imageSize} />
+                            {tile.label ? (
+                                <div style={{display: "flex", marginTop: one ? 10 : 4, fontSize: one ? 30 : 19, fontWeight: 700, color: ARK_INK, textAlign: "center", lineHeight: 1.1}}>
+                                    {tile.label}
+                                </div>
+                            ) : null}
+                            {tile.caption ? (
+                                <div style={{display: "flex", marginTop: 4, padding: "2px 12px", borderRadius: 999, background: "#1f2a1a", fontSize: one ? 22 : 17, fontWeight: 700, color: LIME}}>
+                                    {tile.caption}
+                                </div>
+                            ) : null}
+                        </div>
+                    )) : icon ? <img alt="" src={icon} width={220} height={220} style={{borderRadius: 48}} /> : null}
+                </div>
+            </div>
+        </Background>
+    );
+}
+
+const SHORT_CACHE_CONTROL = "public, max-age=600, s-maxage=600, stale-while-revalidate=3600";
 const CACHE_CONTROL = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000";
 const PARTIAL_CACHE_CONTROL = "public, max-age=3600, s-maxage=3600";
 
 export async function renderOgCard(spec: OgCardSpec) {
-    const tiles = (spec.tiles ?? []).slice(0, 3);
+    const tiles = (spec.tiles ?? []).slice(0, spec.layout === "ark" ? 6 : 3);
     const many = tiles.length >= 2;
     const [fonts, icon, ...loaded] = await Promise.all([
         loadFonts(),
@@ -264,7 +342,10 @@ export async function renderOgCard(spec: OgCardSpec) {
         .filter((item): item is {tile: OgTile; src: string} => Boolean(item.src));
 
     let element: React.ReactElement;
-    if (pictures.length >= 2) {
+    if (spec.layout === "ark") {
+        const largeIcon = pictures.length ? icon : await loadTileImage({publicPath: "/images/logo.webp"}, 440);
+        element = <ArkCard spec={spec} pictures={pictures} icon={pictures.length ? icon : largeIcon} />;
+    } else if (pictures.length >= 2) {
         element = <TileRowCard spec={spec} pictures={pictures} icon={icon} />;
     } else if (pictures.length === 1) {
         element = <SplitCard spec={{...spec, tiles: [pictures[0].tile]}} picture={pictures[0].src} icon={icon} isIcon={false} />;
@@ -274,7 +355,7 @@ export async function renderOgCard(spec: OgCardSpec) {
     }
 
     // A tile that failed to load may be a transient storage error, so don't pin that card for a week.
-    const cacheControl = pictures.length < tiles.length ? PARTIAL_CACHE_CONTROL : CACHE_CONTROL;
+    const cacheControl = spec.cache === "short" ? SHORT_CACHE_CONTROL : pictures.length < tiles.length ? PARTIAL_CACHE_CONTROL : CACHE_CONTROL;
     // Not next/server's ImageResponse: the @vercel/og copy bundled with Next 13.4
     // can't load its own default font on Node 22 (ENOTDIR), so lay out with
     // Satori (text becomes paths) and rasterise the SVG with sharp.
