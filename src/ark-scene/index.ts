@@ -1259,6 +1259,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         onAct?: (index: number) => void;
         resolve: () => void;
         home: {target: Vector3; distance: number; polar: number; azimuth: number};
+        /** Who stands where a stand-in stood (its place, given again): shown once the act that ends the stand-in is over. */
+        after: Map<Entry, number>;
     };
     let replay: Running | null = null;
 
@@ -1448,6 +1450,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const predator = entryFor(act.predator);
                 if (predator) predator.act = null;
             }
+            run.after.forEach((index, entry) => {
+                if (index !== run.index || !entry.held) return;
+                entry.held = false;
+                entry.arrivedAt = elapsedNow();
+            });
             run.index++;
             // The next act begins (once its models are in) on a later frame.
             if (run.index >= run.acts.length) finishReplay(false);
@@ -1472,7 +1479,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const named = act.kind === "meal" ? [act.predator, act.prey] : act.kind === "death" ? [act.animal] : [];
             for (const animal of named) if (!entryById.has(animal.id)) gone.set(animal.id, animal);
         }
-        const present = entries.map((entry) => entry.animal);
+        // The server's own record of each (its place included), so it stands where it stood.
         const ghostAnimals: ArkAnimal[] = Array.from(gone.values()).map((animal) => ({
             id: animal.id,
             species_profile_id: animal.species_profile_id,
@@ -1483,15 +1490,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             arrived_at: animal.arrived_at ?? "",
             brought_by: {label: "", named: false},
             mine: false,
-            sociality: present.find((other) => other.model_slug === animal.model_slug)?.sociality ?? null,
-            activity: present.find((other) => other.model_slug === animal.model_slug)?.activity ?? null
+            origin: animal.origin ?? undefined,
+            generation: animal.generation ?? undefined,
+            slot: animal.slot,
+            slot_rank: animal.slot_rank,
+            sociality: animal.sociality,
+            activity: animal.activity
         }));
-        const places = ghostAnimals.length ? placeAnimals([...present, ...ghostAnimals]) : new Map<string, Placement>();
+        const places = ghostAnimals.length ? placeAnimals(ghostAnimals) : new Map<string, Placement>();
         ghosts = ghostAnimals.map((animal) => Object.assign(newEntry(animal, places.get(animal.id)!, null), {ghost: true}));
+        const after = new Map<Entry, number>();
         for (const ghost of ghosts) {
             ghost.leader = null;
             // One that came aboard since and is gone already: held back until its own arrival.
             ghost.held = acts.some((act) => (act.kind === "arrival" && act.animal.id === ghost.animal.id) || (act.kind === "birth" && act.young.some((a) => a.id === ghost.animal.id)));
+            // Its place was given again since (only the living hold one): the newcomer waits until it is gone.
+            const end = acts.findIndex((act) => (act.kind === "meal" && act.prey.id === ghost.animal.id) || (act.kind === "death" && act.animal.id === ghost.animal.id));
+            if (end < 0) continue;
+            for (const entry of entries) {
+                if (entry.held || entry.animal.zone !== ghost.animal.zone || Math.hypot(entry.place.x - ghost.place.x, entry.place.z - ghost.place.z) > 0.05) continue;
+                entry.held = true;
+                after.set(entry, end);
+            }
         }
         applyHours();
         // Their models, near and far.
@@ -1522,6 +1542,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             step: null,
             onAct: callbacks?.onAct,
             resolve,
+            after,
             home: view ? {target: view.target, distance: view.distance, polar: view.polar, azimuth: view.azimuth} : {target: controls.target.clone(), distance: spherical.radius, polar: spherical.phi, azimuth: spherical.theta}
         };
         return {skip: () => finishReplay(true), done};

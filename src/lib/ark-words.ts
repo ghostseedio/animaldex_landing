@@ -59,6 +59,14 @@ export type ArkLifeWords = {
     hungry: string;
     old: string;
     asleep: string;
+    ended: string;
+    endedEaten: string;
+    endedOld: string;
+    /** Life v2: a predator dead of long hunger. */
+    starved: string;
+    breeding: string;
+    breedingEstimated: string;
+    breedingPartial: string;
     line: string;
     lineValue: string;
     showStory: string;
@@ -79,6 +87,7 @@ export type ArkReplayWords = {
     meal: string;
     mealPhrase: string;
     death: string;
+    starved: string;
     lastGone: string;
     extinction: string;
     summary: string;
@@ -90,6 +99,8 @@ export type ArkReplayWords = {
     mealsOther: string;
     deathsOne: string;
     deathsOther: string;
+    starvedOne: string;
+    starvedOther: string;
     extinctionsOne: string;
     extinctionsOther: string;
     today: string;

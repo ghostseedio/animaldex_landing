@@ -4,6 +4,7 @@ import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
 import {getLocalePath} from "@/lib/site";
 import {getArkWords} from "@/loaders/ark-words";
+import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 
 /**
@@ -24,7 +25,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  *
  * Life v2 in development: `?fixture=1` is the v2 fixture (born young,
  * condition, activity, sociality) with its event log and life stories
- * (`scripts/generate-ark-life-fixtures.mjs`). `?hour=5.5` pins the light's
+ * (`scripts/generate-ark-life-fixtures.mts`, in the server's shapes). `?hour=5.5` pins the light's
  * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
@@ -57,9 +58,10 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 }
 
 async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null}> {
-    const full = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default as unknown as ArkSnapshot;
+    // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
+    const full = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)!;
     if (mode === "full") return {snapshot: full, full: null};
-    if (mode === "early") return {snapshot: (await import("@/ark-scene/fixtures/snapshot-early.json")).default as unknown as ArkSnapshot, full: null};
+    if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
     return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
@@ -74,7 +76,7 @@ function modelBase(): string {
 /** The fixture's event log and life stories, as the server's reads would answer. */
 async function loadFixtureLife(): Promise<ArkFixtureLife> {
     const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
-    return {events: events.default as unknown[], lives: lives.default as unknown as Record<string, unknown>};
+    return {events: events.default as unknown, lives: lives.default as unknown as Record<string, unknown>};
 }
 
 export default async function ArkPage({params, searchParams}: Props) {

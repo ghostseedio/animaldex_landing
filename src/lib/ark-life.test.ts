@@ -4,6 +4,11 @@ import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {chaseKind} from "@/ark-scene/acts";
+import serverCapture from "@/ark-scene/fixtures/server-capture.json";
+import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
+import fixtureEvents from "@/ark-scene/fixtures/events.json";
+import fixtureLives from "@/ark-scene/fixtures/lives.json";
+import {arkCaptureProblems, decodeArkCapture, type ArkCapture} from "@/lib/ark-capture";
 import {daylightAt, isAwake, sunElevation} from "@/lib/ark-daylight";
 import {
     arkJoinLabels,
@@ -29,48 +34,67 @@ const SNAPSHOT: ArkSnapshot = {
     as_of: null
 };
 
-test("events: nested and flat rows decode, details come from the snapshot, junk is dropped", () => {
-    const events = decodeArkEvents([
-        {id: 3, kind: "meal", at: "2026-11-09T10:00:00Z", animal_id: "lion-1", other_animal_id: "zebra-9", other_name: "Plains Zebra", other_model_slug: "plains-zebra", other_zone: "grassland", payload: {phrase: "zebras"}},
-        {kind: "arrival", at: "2026-11-09T09:00:00Z", animal: {id: "zebra-1"}},
-        {kind: "teleport", at: "2026-11-09T09:00:00Z"},
-        {kind: "birth", at: "not a time"},
+/** One public animal as the server sends it in an event (`voyage_event_animal`). */
+function sent(id: string, slug: string, zone: string, extra: Record<string, unknown> = {}) {
+    return {id, species_profile_id: `sp-${slug}`, name: slug.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "), model_slug: slug, zone, arrived_at: "2026-11-01T00:00:00Z", origin: "arrived", generation: 0, slot: 0, slot_rank: 0, activity: "diurnal", sociality: null, status: "present", ...extra};
+}
+
+function row(id: number, kind: string, at: string, extra: Record<string, unknown> = {}) {
+    return {id, kind, at, ark_day: 40, species_profile_id: null, species: null, animal: null, other: null, phrase: null, parents: [], bringers: [], ...extra};
+}
+
+test("events: the server's rows decode whole (an animal no longer aboard included), junk is dropped, oldest first", () => {
+    const events = decodeArkEvents({events: [
+        row(10, "meal", "2026-11-09T10:00:00.000000Z", {animal: sent("lion-1", "african-lion", "grassland"), other: sent("zebra-9", "plains-zebra", "grassland", {slot: 3, slot_rank: 1, status: "eaten", sociality: "group"}), phrase: "zebras", species: "African Lion"}),
+        row(9, "arrival", "2026-11-09T09:00:00.000000Z", {animal: sent("zebra-1", "plains-zebra", "grassland")}),
+        row(11, "teleport", "2026-11-09T09:00:00Z"),
+        row(12, "birth", "not a time"),
         "nonsense"
-    ], SNAPSHOT);
+    ], next_since: "2026-11-09T10:00:00.000000Z", more: false, as_of: "2026-11-10T00:00:00Z"}, SNAPSHOT);
     assert.equal(events.length, 2);
-    assert.equal(events[0].kind, "arrival");
+    assert.deepEqual(events.map((e) => e.id), ["9", "10"]);
     assert.equal(events[0].animal?.model_slug, "plains-zebra");
-    assert.equal(events[1].animal?.name, "African Lion");
-    assert.equal(events[1].other?.id, "zebra-9");
-    assert.equal(events[1].phrase, "zebras");
+    const meal = events[1];
+    assert.equal(meal.animal?.name, "African Lion");
+    assert.equal(meal.species?.name, "African Lion");
+    assert.deepEqual([meal.other?.id, meal.other?.slot, meal.other?.slot_rank, meal.other?.status, meal.other?.sociality], ["zebra-9", 3, 1, "eaten", "group"]);
+    assert.equal(meal.phrase, "zebras");
+    // A species with no model yet: drawn as the snapshot has it, or left out.
+    const unmodelled = decodeArkEvents([row(1, "arrival", "2026-11-09T09:00:00Z", {animal: {...sent("lion-1", "african-lion", "grassland"), model_slug: null}})], SNAPSHOT);
+    assert.equal(unmodelled[0].animal?.model_slug, "african-lion");
+    assert.equal(decodeArkEvents([row(1, "arrival", "2026-11-09T09:00:00Z", {animal: {...sent("x", "x", "grassland"), model_slug: null}})], null)[0].animal, null);
 });
 
-test("replay: a meal and its eaten row are one act, a litter is one act, an extinction rides on its cause", () => {
-    const prey = {id: "m1", species_profile_id: "sp-marmot", name: "Alpine Marmot", model_slug: "alpine-marmot", zone: "mountains"};
-    const eagle = {id: "e1", species_profile_id: "sp-eagle", name: "Golden Eagle", model_slug: "golden-eagle", zone: "mountains"};
+test("replay: a meal and its eaten row are one act, a litter is one act, an extinction rides on its cause, starvation is a quiet death", () => {
+    const prey = sent("m1", "alpine-marmot", "mountains", {status: "eaten"});
+    const eagle = sent("e1", "golden-eagle", "mountains");
     const events = decodeArkEvents([
-        {kind: "birth", at: "2026-11-08T19:30:00Z", animal: {id: "f1", name: "Plains Zebra", model_slug: "plains-zebra", zone: "grassland"}, parents: ["z1", "z2"], bringers: ["Voyager 2", "Voyager 5"]},
-        {kind: "birth", at: "2026-11-08T19:30:00Z", animal: {id: "f2", name: "Plains Zebra", model_slug: "plains-zebra", zone: "grassland"}, parents: ["z2", "z1"], bringers: ["Voyager 2", "Voyager 5"]},
-        {kind: "meal", at: "2026-11-09T09:15:00Z", animal: eagle, other: prey, phrase: "marmots"},
-        {kind: "eaten", at: "2026-11-09T09:15:00Z", animal: prey, other: eagle},
-        {kind: "extinction", at: "2026-11-09T09:15:00Z", species_profile_id: "sp-marmot", species_name: "Alpine Marmot"},
-        {kind: "hungry", at: "2026-11-09T10:00:00Z", animal: eagle},
-        {kind: "milestone", at: "2026-11-09T11:00:00Z", animal: eagle}
+        row(1, "birth", "2026-11-08T19:30:00Z", {animal: sent("f1", "plains-zebra", "grassland", {origin: "born", generation: 1}), parents: ["z1", "z2"], bringers: [{label: "Voyager 2", named: false}, {label: "Voyager 5", named: false}]}),
+        row(2, "birth", "2026-11-08T19:30:00Z", {animal: sent("f2", "plains-zebra", "grassland", {origin: "born", generation: 1}), parents: ["z2", "z1"], bringers: [{label: "Voyager 2", named: false}, {label: "Voyager 5", named: false}]}),
+        row(3, "meal", "2026-11-09T09:15:00Z", {animal: eagle, other: prey, phrase: "marmots"}),
+        row(4, "eaten", "2026-11-09T09:15:00Z", {animal: prey, other: eagle, phrase: "marmots"}),
+        row(5, "extinction", "2026-11-09T09:15:00Z", {species_profile_id: "sp-alpine-marmot", species: "Alpine Marmot"}),
+        row(6, "hungry", "2026-11-09T10:00:00Z", {animal: eagle}),
+        row(7, "milestone", "2026-11-09T11:00:00Z", {animal: eagle}),
+        row(8, "starved", "2026-11-09T12:00:00Z", {animal: {...eagle, status: "starved"}})
     ], null);
     const plan = planArkReplay(events);
-    assert.deepEqual(plan.acts.map((act) => act.kind), ["birth", "meal"]);
+    assert.deepEqual(plan.acts.map((act) => act.kind), ["birth", "meal", "death"]);
     const birth = plan.acts[0];
     assert.ok(birth.kind === "birth" && birth.young.length === 2);
+    assert.deepEqual(birth.kind === "birth" ? birth.bringers : [], ["Voyager 2", "Voyager 5"]);
     const meal = plan.acts[1];
     assert.ok(meal.kind === "meal" && meal.extinct && meal.phrase === "marmots");
-    assert.deepEqual(plan.summary, {arrivals: 0, births: 2, meals: 1, deaths: 0, extinctions: 1});
+    const starved = plan.acts[2];
+    assert.ok(starved.kind === "death" && starved.cause === "starved" && starved.animal.status === "starved");
+    assert.deepEqual(plan.summary, {arrivals: 0, births: 2, meals: 1, deaths: 0, starved: 1, extinctions: 1});
     assert.equal(isQuietArkReplay(plan.summary), false);
 });
 
 test("replay: capped, keeping the rarest and the newest arrival, still in order", () => {
-    const rows = [];
-    for (let i = 0; i < 12; i++) rows.push({kind: "arrival", at: `2026-11-09T${String(i + 10).padStart(2, "0")}:00:00Z`, animal: {id: `a${i}`, name: "Mallard", model_slug: "mallard", zone: "river_lake"}});
-    rows.push({kind: "death_old", at: "2026-11-09T09:00:00Z", animal: {id: "s1", name: "House Sparrow", model_slug: "house-sparrow", zone: "farm_garden"}});
+    const rows: unknown[] = [];
+    for (let i = 0; i < 12; i++) rows.push(row(i + 1, "arrival", `2026-11-09T${String(i + 10).padStart(2, "0")}:00:00Z`, {animal: sent(`a${i}`, "mallard", "river_lake")}));
+    rows.push(row(20, "death_old", "2026-11-09T09:00:00Z", {animal: sent("s1", "house-sparrow", "farm_garden", {status: "died_old"})}));
     const plan = planArkReplay(decodeArkEvents(rows, null), 3);
     assert.equal(plan.acts.length, 3);
     assert.equal(plan.acts[0].kind, "death");
@@ -79,21 +103,51 @@ test("replay: capped, keeping the rarest and the newest arrival, still in order"
     assert.deepEqual(plan.acts.map((act) => act.at), [...plan.acts.map((act) => act.at)].sort());
 });
 
-test("life: the public story only when the server sends it, labels only, safe defaults", () => {
-    const arrived = decodeArkLife({id: "a1", status: "present", origin: {kind: "arrived", at: "2026-11-01T00:00:00Z", brought_by: "Voyager 7"}, generation: 0, ark_age_days: 100, meals: 2, last_meal: {prey: "House Sparrow", phrase: "birds"}, young_raised: 1, milestones: {count: 3}, story_public: null});
-    assert.ok(arrived);
+test("life: the server's answer decodes whole; the public story only when it sends one; labels only", () => {
+    const voyager = (n: number) => ({label: `Voyager ${n}`, named: false});
+    const arrived = decodeArkLife({id: "a1", species_profile_id: "sp", species: "Jaguar", model_slug: "jaguar", status: "present", origin: {kind: "arrived", at: "2026-11-01T00:00:00Z", brought_by: voyager(7)}, generation: 0, born_ark_day: 10, ark_age_days: 100, ark_age_years: 0.27, condition: "hungry", meals: 2, last_meal: {at: "2026-11-02T00:00:00Z", ark_day: 12, prey: "House Sparrow", prey_species_profile_id: "sp2", phrase: "birds"}, young_raised: 1, ancestor_brought_by: voyager(7), milestones: {count: 3, latest_at: "2026-11-05T00:00:00Z"}, died: null, story_public: null});
+    assert.ok(arrived && arrived.origin.kind === "arrived");
+    assert.equal(arrived.origin.brought_by, "Voyager 7");
     assert.equal(arrived.story_public, null);
-    assert.equal(arrived.origin.kind, "arrived");
     assert.equal(arrived.last_meal?.phrase, "birds");
-    assert.equal(arrived.milestones.count, 3);
-    const told = decodeArkLife({id: "a2", origin: {kind: "born", parents: ["p1", "p2"], parents_brought_by: ["Voyager 2", "Voyager 5"]}, generation: 1, story_public: {kind: "public_debate", problem: "Mornings", way: {animal: "Bee", power: "One Flower"}, debate_id: null}});
-    assert.ok(told && told.origin.kind === "born");
-    assert.deepEqual(told.origin.kind === "born" ? told.origin.parents_brought_by : [], ["Voyager 2", "Voyager 5"]);
-    assert.equal(told.story_public?.problem, "Mornings");
+    assert.deepEqual(arrived.milestones, {count: 3, latest_at: "2026-11-05T00:00:00Z"});
+    assert.equal(arrived.condition, "hungry");
+    assert.equal(arrived.ancestor_brought_by, "Voyager 7");
+    const born = decodeArkLife({id: "a2", status: "starved", origin: {kind: "born", at: "2026-11-08T00:00:00Z", parents: ["p1", "p2"], born_to: [voyager(2), voyager(5)], breeding_source: "estimate"}, generation: 1, condition: null, died: {at: "2026-11-09T00:00:00Z", kind: "starved"}, milestones: {count: 0, latest_at: null}, story_public: {kind: "public_debate", problem: "Mornings", way: {animal: "Bee", power: "One Flower"}, debate_id: null}});
+    assert.ok(born && born.origin.kind === "born");
+    assert.deepEqual(born.origin.kind === "born" ? [born.origin.born_to, born.origin.breeding_source] : [], [["Voyager 2", "Voyager 5"], "estimate"]);
+    assert.equal(born.status, "starved");
+    assert.deepEqual(born.died, {at: "2026-11-09T00:00:00Z", kind: "starved"});
+    assert.equal(born.condition, null);
+    assert.equal(born.story_public?.problem, "Mornings");
     // A private-looking shape never comes through as a story.
     assert.equal(decodeArkLife({id: "a3", story_public: {kind: "private_chat", problem: "secret"}})?.story_public, null);
     assert.equal(decodeArkLife(null), null);
     assert.equal(arkJoinLabels(["Voyager 2", "Voyager 5"], "en"), "Voyager 2 and Voyager 5");
+});
+
+test("the server's own answers (the rolled-back production rehearsal's capture) are read whole", () => {
+    const capture = serverCapture as unknown as ArkCapture;
+    assert.deepEqual(arkCaptureProblems(capture), []);
+    const decoded = decodeArkCapture(capture);
+    assert.deepEqual(decoded.lost, []);
+    // The meal and its eaten row are one act; the eaten hawk (no longer aboard) is drawn from the event, where it stood.
+    const meal = decoded.plan.acts.find((act) => act.kind === "meal");
+    assert.ok(meal && meal.kind === "meal" && meal.prey.status === "eaten" && meal.prey.slot !== null && meal.phrase === "birds" && meal.extinct);
+    assert.equal(decoded.plan.acts.filter((act) => act.kind === "meal").length, 1);
+    const starved = decoded.plan.acts.find((act) => act.kind === "death");
+    assert.ok(starved && starved.kind === "death" && starved.cause === "starved");
+    const young = Array.from(decoded.lives.values()).find((life) => life?.origin.kind === "born");
+    assert.ok(young && young.status === "starved" && young.died?.kind === "starved");
+    assert.ok(young.origin.kind === "born" && young.origin.breeding_source === "estimate" && young.origin.born_to.every((label) => /^Voyager \d+$/.test(label)));
+    // No id of a person anywhere: every label is "Voyager N" (nobody here chose to be named).
+    assert.ok(!/user_id|owner|bringer_ids|step|debate_id/.test(JSON.stringify(capture)));
+});
+
+test("the development fixtures are the server's shapes exactly, and read whole", () => {
+    const capture = {snapshot: fixtureV2, events: fixtureEvents, lives: fixtureLives} as unknown as ArkCapture;
+    assert.deepEqual(arkCaptureProblems(capture), []);
+    assert.deepEqual(decodeArkCapture(capture).lost, []);
 });
 
 test("last visit: storage that throws means a first visit, never an error", () => {
@@ -146,22 +200,23 @@ test("daylight: 17:00 is the v1 golden hour; night is the moon's; who sleeps", (
 test("snapshot: v2 fields decode when present and stay absent from a v1 answer", () => {
     const v1 = decodeArkSnapshot({voyage: {slug: "first"}, animals: [{id: "a", model_slug: "mallard", name: "Mallard", arrived_at: "2026-11-01T00:00:00Z", zone: "river_lake"}]});
     assert.equal(v1?.animals[0].origin, undefined);
+    assert.equal(v1?.animals[0].slot, undefined);
     assert.equal(v1?.ark_day, undefined);
-    const v2 = decodeArkSnapshot({voyage: {slug: "first"}, ark_day: 286.5, animals: [{id: "b", model_slug: "plains-zebra", name: "Plains Zebra", born_at: "2026-11-08T19:30:00Z", zone: "grassland", origin: "born", generation: 1, condition: "hungry", activity: "diurnal", sociality: "group", parents: ["p1", "p2"], bringers: [{label: "Voyager 2"}, {label: "Voyager 5"}]}]});
+    const v2 = decodeArkSnapshot({voyage: {slug: "first", ark_day: 286.5}, animals: [{id: "b", model_slug: "plains-zebra", name: "Plains Zebra", arrived_at: "2026-11-08T19:30:00Z", zone: "grassland", brought_by: null, origin: "born", generation: 1, condition: "hungry", born_ark_day: 270.1, activity: "diurnal", sociality: "group", bringers: [{label: "Voyager 2", named: false}, {label: "Voyager 5", named: false}], slot: 4, slot_rank: 2}]});
     const born = v2?.animals[0];
     assert.equal(v2?.ark_day, 286.5);
     assert.equal(born?.origin, "born");
     assert.equal(born?.arrived_at, "2026-11-08T19:30:00Z");
-    assert.deepEqual(born?.parents, ["p1", "p2"]);
+    assert.deepEqual([born?.slot, born?.slot_rank], [4, 2]);
     assert.equal(born?.sociality, "group");
     assert.equal(born?.bringers?.length, 2);
 });
 
-test("placement: a group gathers, the young stand by a parent, the same for every viewer", () => {
-    const herd = Array.from({length: 6}, (_, i) => animal(`z${i}`, "plains-zebra", "grassland", `2026-11-0${i + 1}T00:00:00Z`, {sociality: "group"}));
-    const loners = Array.from({length: 6}, (_, i) => animal(`c${i}`, "cheetah", "grassland", `2026-11-0${i + 1}T01:00:00Z`, {sociality: "solitary"}));
-    const foal = animal("foal", "plains-zebra", "grassland", "2026-11-09T00:00:00Z", {sociality: "group", origin: "born", parents: ["z2", "z3"]});
-    const all = [...herd, ...loners, foal];
+test("placement: from the server's places alone, so nobody moves when another leaves; a cluster stands together", () => {
+    const zebra = (i: number, slot: number, rank: number) => animal(`z${i}`, "plains-zebra", "grassland", `2026-11-0${i + 1}T00:00:00Z`, {sociality: "group", slot, slot_rank: rank});
+    const herd = Array.from({length: 6}, (_, i) => zebra(i, 1, i));
+    const loners = Array.from({length: 6}, (_, i) => animal(`c${i}`, "cheetah", "grassland", `2026-11-0${i + 1}T01:00:00Z`, {sociality: "solitary", slot: [0, 2, 3, 4, 5, 6][i], slot_rank: 0}));
+    const all = [...herd, ...loners];
     const placed = placeAnimals(all);
     const again = placeAnimals([...all].reverse());
     for (const a of all) assert.deepEqual(placed.get(a.id), again.get(a.id));
@@ -173,9 +228,16 @@ test("placement: a group gathers, the young stand by a parent, the same for ever
     };
     assert.ok(spread(herd.map((a) => a.id)) < spread(loners.map((a) => a.id)), "the herd is tighter than the loners");
     assert.equal(placed.get("z3")?.leader, "z0");
-    const parent = placed.get("z2")!;
-    const young = placed.get("foal")!;
-    assert.ok(Math.hypot(parent.x - young.x, parent.z - young.z) < 4, "the foal is beside a parent");
+    // The herd's first one and a loner of an earlier slot leave: everyone else stands exactly where they stood.
+    const after = placeAnimals(all.filter((a) => a.id !== "z0" && a.id !== "c0"));
+    after.forEach((place, id) => {
+        const before = placed.get(id)!;
+        assert.deepEqual([place.x, place.z, place.yaw], [before.x, before.z, before.yaw], id);
+    });
+    assert.equal(after.get("z3")?.leader, "z1");
+    // A v1 answer (no places): given by the server's rules in arrival order; a group species gathers.
+    const v1 = placeAnimals(all.map(({slot: _s, slot_rank: _r, ...rest}) => rest));
+    assert.equal(v1.get("z3")?.leader, "z0");
 });
 
 test("chases: each kind for the animals it suits, a cut-away where a glide would look wrong", () => {

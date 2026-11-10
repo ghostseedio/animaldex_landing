@@ -1,5 +1,6 @@
 /**
- * `voyage_public_v1`'s (or v2's) answer, checked: anything malformed is dropped (an
+ * `voyage_public_v2`'s answer (life v2 contract, section 4.1), or v1's (the
+ * same without the life fields), checked: anything malformed is dropped (an
  * animal with an unknown zone stands in the Home region, as the server
  * places a species it has no zone for), never the whole Ark.
  */
@@ -18,6 +19,11 @@ function count(value: unknown): number {
     return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
 }
 
+/** A whole number >= 0, or null. */
+function whole(value: unknown): number | null {
+    return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
 function zone(value: unknown): ArkZone {
     return typeof value === "string" && ZONES.has(value) ? value as ArkZone : "farm_garden";
 }
@@ -28,8 +34,8 @@ function animal(raw: unknown): ArkAnimal | null {
     const id = text(row.id);
     const slug = text(row.model_slug);
     const name = text(row.name);
-    // A young one born aboard: its birth stands for its arrival.
-    const arrived = text(row.arrived_at) ?? text(row.born_at);
+    // A young one born aboard: arrived_at is its birth.
+    const arrived = text(row.arrived_at);
     if (!id || !slug || !name || !arrived) return null;
     const by = row.brought_by && typeof row.brought_by === "object" ? row.brought_by as Record<string, unknown> : {};
     const bringers = (Array.isArray(row.bringers) ? row.bringers : [])
@@ -37,19 +43,19 @@ function animal(raw: unknown): ArkAnimal | null {
         .filter((b): b is Record<string, unknown> => b !== null && Boolean(text(b.label)))
         .slice(0, 4)
         .map((b) => ({label: text(b.label) as string, named: b.named === true}));
-    const parents = Array.isArray(row.parents) ? row.parents.map(text).filter((p): p is string => Boolean(p)) : [];
-    const generation = Number(row.generation);
-    const bornDay = Number(row.born_ark_day);
     // v2's fields, each only when the server sent it.
     const life: Partial<ArkAnimal> = {};
     if (row.origin === "arrived" || row.origin === "born") life.origin = row.origin;
-    if (Number.isFinite(generation) && generation >= 0) life.generation = Math.floor(generation);
+    const generation = whole(row.generation);
+    if (generation !== null) life.generation = generation;
     if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
-    if (row.born_ark_day !== null && row.born_ark_day !== undefined && Number.isFinite(bornDay)) life.born_ark_day = bornDay;
+    if (typeof row.born_ark_day === "number" && Number.isFinite(row.born_ark_day)) life.born_ark_day = row.born_ark_day;
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
     if (bringers.length) life.bringers = bringers;
-    if (parents.length === 2) life.parents = [parents[0], parents[1]];
+    const slot = whole(row.slot);
+    const rank = whole(row.slot_rank);
+    if (slot !== null && rank !== null) Object.assign(life, {slot, slot_rank: rank});
     return {
         id,
         species_profile_id: text(row.species_profile_id) ?? "",
@@ -85,6 +91,6 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         zones,
         animals: animals.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at)),
         as_of: text(row.as_of),
-        ...(Number.isFinite(Number(row.ark_day)) && row.ark_day !== null && row.ark_day !== undefined ? {ark_day: Number(row.ark_day)} : {})
+        ...(typeof voyage.ark_day === "number" && Number.isFinite(voyage.ark_day) ? {ark_day: voyage.ark_day} : {})
     };
 }

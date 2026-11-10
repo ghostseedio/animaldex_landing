@@ -16,7 +16,7 @@ import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 export type {ArkWords} from "@/lib/ark-words";
 
 /** Development's fixture: the event log and life stories as the server's reads would answer. */
-export type ArkFixtureLife = {events: unknown[]; lives: Record<string, unknown>};
+export type ArkFixtureLife = {events: unknown; lives: Record<string, unknown>};
 
 type Props = {
     locale: string;
@@ -91,7 +91,7 @@ function actCaption(act: ArkAct, words: ArkWords, locale: string, animals: ArkAn
                 + (act.phrase ? ` · ${fillArkWords(w.mealPhrase, {phrase: act.phrase})}` : "")
                 + gone(act.prey.name, act.extinct);
         case "death":
-            return fillArkWords(w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
+            return fillArkWords(act.cause === "starved" ? w.starved : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
         case "extinction":
             return fillArkWords(w.extinction, {animal: act.species});
     }
@@ -106,6 +106,7 @@ function replaySummary(summary: ArkReplaySummary, since: Date, words: ArkWords, 
         part(summary.births, w.birthsOne, w.birthsOther),
         part(summary.meals, w.mealsOne, w.mealsOther),
         part(summary.deaths, w.deathsOne, w.deathsOther),
+        part(summary.starved, w.starvedOne, w.starvedOther),
         part(summary.extinctions, w.extinctionsOne, w.extinctionsOther)
     ].filter((p): p is string => Boolean(p));
     const when = arkSinceWhen(since, new Date(), locale, {today: w.today, yesterday: w.yesterday, weekday: w.weekday, date: w.date});
@@ -625,7 +626,7 @@ type BandProps = {
 /** What the band knows about an animal's life: the life story when the server sent one, else the snapshot's v2 fields. */
 function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | null, locale: string) {
     const born = life ? life.origin.kind === "born" : animal.origin === "born";
-    const parentsBy = life?.origin.kind === "born" ? life.origin.parents_brought_by : animal.bringers?.map((b) => b.label) ?? [];
+    const parentsBy = life?.origin.kind === "born" ? life.origin.born_to : animal.bringers?.map((b) => b.label) ?? [];
     const ageDays = life?.ark_age_days ?? (arkDay !== null && typeof animal.born_ark_day === "number" ? Math.max(arkDay - animal.born_ark_day, 0) : null);
     return {
         born,
@@ -735,6 +736,11 @@ function ArkLifeStory({animal, life, facts, words, locale}: {animal: ArkAnimal; 
     if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
     if (facts.ageDays !== null) rows.push([w.age, ageText(facts.ageDays, words, locale)]);
     if (facts.condition) rows.push([w.condition, w[facts.condition]]);
+    if (life?.died) rows.push([w.ended, life.died.kind === "starved" ? w.starved : life.died.kind === "eaten" ? w.endedEaten : w.endedOld]);
+    // A young one whose breeding the server estimated (its record gives none, or only part): said so.
+    if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {
+        rows.push([w.breeding, life.origin.breeding_source === "estimate" ? w.breedingEstimated : w.breedingPartial]);
+    }
     if (life && life.meals > 0) {
         const last = life.last_meal;
         const detail = last ? ` · ${fillArkWords(w.lastMeal, {prey: withArticle(last.prey, words)})}${last.phrase ? ` (${fillArkWords(w.dietSays, {phrase: last.phrase})})` : ""}` : "";

@@ -2,8 +2,9 @@ import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
 
 /**
- * The shared Ark's data, as `voyage_public_v1` returns it (Ark v1 contract,
- * section 2), and the scene's interface (section 5).
+ * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
+ * section 4.1; `voyage_public_v1`'s answer is the same without the life
+ * fields), and the scene's interface (Ark v1 contract, section 5).
  */
 
 export const ARK_ZONES = [
@@ -67,8 +68,14 @@ export type ArkAnimal = {
     sociality?: ArkSociality | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
-    /** The young's parents (animal ids), so it stands beside them. */
-    parents?: [string, string] | null;
+    /**
+     * Where it stands, decided by the server once, when it came aboard or was
+     * born: a cluster in its zone (`slot`) and its place in it (`slot_rank`,
+     * 0 on the slot's spot). Absent from a v1 answer (placement then gives
+     * them in arrival order).
+     */
+    slot?: number | null;
+    slot_rank?: number | null;
 };
 
 export type ArkSnapshot = {
@@ -77,7 +84,7 @@ export type ArkSnapshot = {
     zones: Array<{key: ArkZone; animals: number}>;
     animals: ArkAnimal[];
     as_of: string | null;
-    /** The Ark's own day (v2): 1 Ark year = 14 real days, counted by the server. */
+    /** The Ark's own day (v2's `voyage.ark_day`): 1 Ark year = 14 real days, counted by the server. */
     ark_day?: number | null;
 };
 

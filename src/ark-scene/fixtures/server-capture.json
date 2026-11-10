@@ -1,0 +1,442 @@
+{
+ "lives": {
+  "22222222-2222-4222-8222-222222222222": {
+   "id": "22222222-2222-4222-8222-222222222222",
+   "died": {
+    "at": "2026-11-10T09:24:01Z",
+    "kind": "starved"
+   },
+   "meals": 0,
+   "origin": {
+    "at": "2026-11-10T09:24:01Z",
+    "kind": "born",
+    "born_to": [
+     {
+      "label": "Voyager 2",
+      "named": false
+     }
+    ],
+    "parents": [
+     "d0ad046c-d44d-4685-ac90-38a85be7a0df"
+    ],
+    "breeding_source": "estimate"
+   },
+   "status": "starved",
+   "species": "Komodo Dragon",
+   "condition": null,
+   "last_meal": null,
+   "generation": 1,
+   "milestones": {
+    "count": 0,
+    "latest_at": null
+   },
+   "model_slug": "komodo-dragon",
+   "ark_age_days": 0,
+   "born_ark_day": 40,
+   "story_public": null,
+   "young_raised": 0,
+   "ark_age_years": 0,
+   "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08",
+   "ancestor_brought_by": {
+    "label": "Voyager 2",
+    "named": false
+   }
+  },
+  "d0ad046c-d44d-4685-ac90-38a85be7a0df": {
+   "id": "d0ad046c-d44d-4685-ac90-38a85be7a0df",
+   "died": null,
+   "meals": 1,
+   "origin": {
+    "at": "2026-11-09T23:48:47Z",
+    "kind": "arrived",
+    "brought_by": {
+     "label": "Voyager 2",
+     "named": false
+    }
+   },
+   "status": "present",
+   "species": "Komodo Dragon",
+   "condition": "well_fed",
+   "last_meal": {
+    "at": "2026-11-10T09:24:01Z",
+    "prey": "Red-tailed Hawk",
+    "phrase": "birds",
+    "ark_day": 40.5,
+    "prey_species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+   },
+   "generation": 0,
+   "milestones": {
+    "count": 1,
+    "latest_at": "2026-11-10T09:24:01Z"
+   },
+   "model_slug": "komodo-dragon",
+   "ark_age_days": 10.4,
+   "born_ark_day": 28.306,
+   "story_public": null,
+   "young_raised": 1,
+   "ark_age_years": 0.03,
+   "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08",
+   "ancestor_brought_by": {
+    "label": "Voyager 2",
+    "named": false
+   }
+  },
+  "f0e37ea8-95cb-4d9f-83b5-a9ae545fda4f": {
+   "id": "f0e37ea8-95cb-4d9f-83b5-a9ae545fda4f",
+   "died": {
+    "at": "2026-11-10T09:24:01Z",
+    "kind": "eaten"
+   },
+   "meals": 0,
+   "origin": {
+    "at": "2026-11-08T21:45:21Z",
+    "kind": "arrived",
+    "brought_by": {
+     "label": "Voyager 1",
+     "named": false
+    }
+   },
+   "status": "eaten",
+   "species": "Red-tailed Hawk",
+   "condition": null,
+   "last_meal": null,
+   "generation": 0,
+   "milestones": {
+    "count": 0,
+    "latest_at": null
+   },
+   "model_slug": "red-tailed-hawk",
+   "ark_age_days": 38.7,
+   "born_ark_day": 0,
+   "story_public": null,
+   "young_raised": 0,
+   "ark_age_years": 0.11,
+   "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2",
+   "ancestor_brought_by": {
+    "label": "Voyager 1",
+    "named": false
+   }
+  }
+ },
+ "events": {
+  "more": false,
+  "as_of": "2026-11-10T09:24:01.955467Z",
+  "events": [
+   {
+    "at": "2026-11-08T21:45:21.431391Z",
+    "id": 1,
+    "kind": "arrival",
+    "other": null,
+    "animal": {
+     "id": "f0e37ea8-95cb-4d9f-83b5-a9ae545fda4f",
+     "name": "Red-tailed Hawk",
+     "slot": 0,
+     "zone": "woodland",
+     "origin": "arrived",
+     "status": "eaten",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "pair",
+     "arrived_at": "2026-11-08T21:45:21Z",
+     "generation": 0,
+     "model_slug": "red-tailed-hawk",
+     "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+    },
+    "phrase": null,
+    "ark_day": 0,
+    "parents": [],
+    "species": "Red-tailed Hawk",
+    "bringers": [],
+    "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+   },
+   {
+    "at": "2026-11-09T23:48:47.221773Z",
+    "id": 2,
+    "kind": "arrival",
+    "other": null,
+    "animal": {
+     "id": "d0ad046c-d44d-4685-ac90-38a85be7a0df",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "arrived",
+     "status": "present",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-09T23:48:47Z",
+     "generation": 0,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "phrase": null,
+    "ark_day": 28.306,
+    "parents": [],
+    "species": "Komodo Dragon",
+    "bringers": [],
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 3,
+    "kind": "birth",
+    "other": null,
+    "animal": {
+     "id": "22222222-2222-4222-8222-222222222222",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "born",
+     "status": "starved",
+     "activity": "diurnal",
+     "slot_rank": 1,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-10T09:24:01Z",
+     "generation": 1,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "phrase": null,
+    "ark_day": 40,
+    "parents": [
+     "d0ad046c-d44d-4685-ac90-38a85be7a0df"
+    ],
+    "species": "Komodo Dragon",
+    "bringers": [
+     {
+      "label": "Voyager 2",
+      "named": false
+     }
+    ],
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 4,
+    "kind": "meal",
+    "other": {
+     "id": "f0e37ea8-95cb-4d9f-83b5-a9ae545fda4f",
+     "name": "Red-tailed Hawk",
+     "slot": 0,
+     "zone": "woodland",
+     "origin": "arrived",
+     "status": "eaten",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "pair",
+     "arrived_at": "2026-11-08T21:45:21Z",
+     "generation": 0,
+     "model_slug": "red-tailed-hawk",
+     "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+    },
+    "animal": {
+     "id": "d0ad046c-d44d-4685-ac90-38a85be7a0df",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "arrived",
+     "status": "present",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-09T23:48:47Z",
+     "generation": 0,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "phrase": "birds",
+    "ark_day": 40.5,
+    "parents": [],
+    "species": "Komodo Dragon",
+    "bringers": [],
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 5,
+    "kind": "eaten",
+    "other": {
+     "id": "d0ad046c-d44d-4685-ac90-38a85be7a0df",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "arrived",
+     "status": "present",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-09T23:48:47Z",
+     "generation": 0,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "animal": {
+     "id": "f0e37ea8-95cb-4d9f-83b5-a9ae545fda4f",
+     "name": "Red-tailed Hawk",
+     "slot": 0,
+     "zone": "woodland",
+     "origin": "arrived",
+     "status": "eaten",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "pair",
+     "arrived_at": "2026-11-08T21:45:21Z",
+     "generation": 0,
+     "model_slug": "red-tailed-hawk",
+     "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+    },
+    "phrase": "birds",
+    "ark_day": 40.5,
+    "parents": [],
+    "species": "Red-tailed Hawk",
+    "bringers": [],
+    "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 6,
+    "kind": "extinction",
+    "other": null,
+    "animal": null,
+    "phrase": null,
+    "ark_day": 40.5,
+    "parents": [],
+    "species": "Red-tailed Hawk",
+    "bringers": [],
+    "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 7,
+    "kind": "milestone",
+    "other": null,
+    "animal": {
+     "id": "d0ad046c-d44d-4685-ac90-38a85be7a0df",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "arrived",
+     "status": "present",
+     "activity": "diurnal",
+     "slot_rank": 0,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-09T23:48:47Z",
+     "generation": 0,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "phrase": null,
+    "ark_day": 41,
+    "parents": [],
+    "species": "Komodo Dragon",
+    "bringers": [],
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 8,
+    "kind": "hungry",
+    "other": null,
+    "animal": {
+     "id": "22222222-2222-4222-8222-222222222222",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "born",
+     "status": "starved",
+     "activity": "diurnal",
+     "slot_rank": 1,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-10T09:24:01Z",
+     "generation": 1,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "phrase": null,
+    "ark_day": 41.5,
+    "parents": [],
+    "species": "Komodo Dragon",
+    "bringers": [],
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   },
+   {
+    "at": "2026-11-10T09:24:01.955467Z",
+    "id": 9,
+    "kind": "starved",
+    "other": null,
+    "animal": {
+     "id": "22222222-2222-4222-8222-222222222222",
+     "name": "Komodo Dragon",
+     "slot": 0,
+     "zone": "grassland",
+     "origin": "born",
+     "status": "starved",
+     "activity": "diurnal",
+     "slot_rank": 1,
+     "sociality": "solitary",
+     "arrived_at": "2026-11-10T09:24:01Z",
+     "generation": 1,
+     "model_slug": "komodo-dragon",
+     "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+    },
+    "phrase": null,
+    "ark_day": 42,
+    "parents": [],
+    "species": "Komodo Dragon",
+    "bringers": [],
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   }
+  ],
+  "next_since": "2026-11-10T09:24:01.955467Z"
+ },
+ "snapshot": {
+  "as_of": "2026-11-10T09:24:01Z",
+  "zones": [
+   {
+    "key": "grassland",
+    "animals": 1
+   }
+  ],
+  "counts": {
+   "animals": 1,
+   "species": 1,
+   "founders": 1
+  },
+  "voyage": {
+   "name": "The first Ark",
+   "slug": "first",
+   "ark_day": 38.721,
+   "started_at": "2026-11-08T21:45:21Z"
+  },
+  "animals": [
+   {
+    "id": "d0ad046c-d44d-4685-ac90-38a85be7a0df",
+    "mine": false,
+    "name": "Komodo Dragon",
+    "slot": 0,
+    "zone": "grassland",
+    "origin": "arrived",
+    "activity": "diurnal",
+    "bringers": [
+     {
+      "label": "Voyager 2",
+      "named": false
+     }
+    ],
+    "condition": "well_fed",
+    "slot_rank": 0,
+    "sociality": "solitary",
+    "arrived_at": "2026-11-09T23:48:47Z",
+    "brought_by": {
+     "label": "Voyager 2",
+     "named": false
+    },
+    "generation": 0,
+    "model_slug": "komodo-dragon",
+    "born_ark_day": 28.306,
+    "scientific_name": "Varanus komodoensis",
+    "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08"
+   }
+  ]
+ }
+}
