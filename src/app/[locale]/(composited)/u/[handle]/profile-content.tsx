@@ -58,6 +58,7 @@ import StoreLink from "@/components/store/store-link";
 import {ProfileDiaryTab} from "@/app/[locale]/(composited)/u/[handle]/profile-diary";
 import {PROBLEM_DIARY_WORDS_EN, type ProblemDiaryWords} from "@/lib/problem-diary";
 import {ArkBarsPanel, ArkScoreCard, ArkStepsPowersTiles} from "@/components/ark/ark-views";
+import type {ArkScoreRead} from "@/lib/ark-world";
 import {arkProfileSections, type ArkProfileSection, type ArkStats} from "@/lib/ark";
 import {COMPANION_WORDS_EN} from "@/lib/companion-bond";
 
@@ -243,7 +244,7 @@ type ProfileContentProps = {
      * Steps and Powers (a signed-out visitor). Null on a server without Ark:
      * the Stats tab keeps its other sections, in the same order.
      */
-    ark?: {stats: ArkStats | null; arkScore: number | null; stepsTotal: number | null; powersEarned: number | null} | null;
+    ark?: {stats: ArkStats | null; score: ArkScoreRead | null; weekChange: number | null; stepsTotal: number | null; powersEarned: number | null} | null;
     /** Problems worked through (your own Diary's count), for the Stats tab's Diary row. */
     problemsWorkedThrough?: number | null;
     /**
@@ -583,7 +584,12 @@ export default function ProfileContent({
     // Life Sim: Ark Score in place of Overall, Steps and Powers beside it.
     const arkWords = (companionWords ?? COMPANION_WORDS_EN).ark;
     const arkStats = ark?.stats ?? null;
-    const arkScore = arkStats?.arkScore ?? ark?.arkScore ?? null;
+    // Ark 3.3: the world score (0–100) when the server sends it; the old key only from one that has not switched.
+    const arkScoreRead: ArkScoreRead | null = arkStats
+        ? {value: arkStats.arkScore, outOf: arkStats.arkScoreOutOf, world: arkStats.arkWorld}
+        : ark?.score ?? null;
+    const arkScore = arkScoreRead?.value ?? null;
+    const arkWeekChange = arkStats?.weekChange ?? ark?.weekChange ?? null;
     const stepsTotal = arkStats?.steps.total ?? ark?.stepsTotal ?? null;
     const powersEarned = arkStats?.powersEarned ?? ark?.powersEarned ?? profile.animalPowersEarned ?? null;
     // iOS shows only captures the owner marked as pets, never a guess from the
@@ -726,7 +732,17 @@ export default function ProfileContent({
     const statsSection = (section: ArkProfileSection): React.ReactNode => {
         switch (section) {
             case "arkScore":
-                return arkScore !== null ? <ArkScoreCard key={section} stats={{arkScore}} words={arkWords} locale={locale} /> : null;
+                return arkScoreRead ? (
+                    <ArkScoreCard
+                        key={section}
+                        score={arkScoreRead}
+                        weekChange={arkWeekChange}
+                        words={arkWords}
+                        locale={locale}
+                        isSelf={viewer.isOwner}
+                        animalsHref={`/u/${encodeURIComponent(profile.username)}/ark`}
+                    />
+                ) : null;
             case "bars":
                 return arkStats ? <ArkBarsPanel key={section} stats={arkStats} words={arkWords} money={(usd) => formatDisplayMoney(usd, displayCurrency, locale)} locale={locale} /> : null;
             case "stepsPowers":

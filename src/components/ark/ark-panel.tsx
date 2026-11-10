@@ -17,6 +17,12 @@
  * words, or with the voice when the reply is heard aloud.
  *
  * The scene is loaded only when the panel first opens, so the chat stays fast.
+ *
+ * Part 2 (docs/ark-next.md): when a step that worked brings one of the
+ * reader's animals aboard while the chat is open (`arrival-bus`), the panel,
+ * open then or opened in the next few minutes, reads the Ark again (the
+ * newcomer plays its entrance) and flies to it, face to face. The chat's
+ * arrival line opens the panel on it ("See it in the Ark").
  */
 
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode} from "react";
@@ -26,6 +32,8 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {emitAnimalVoice, onAnimalVoice, voiceIsAbout} from "@/lib/ark/animal-voice";
 import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder";
 import {arkBringerLabel} from "@/lib/ark-life";
+import {emitArkArrival, onArkArrival, recentArkArrival, type ArkArrivalEvent} from "@/lib/ark/arrival-bus";
+import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {loadTalkingModelManifest, TALKING_MODELS_BASE_URL, talkingModelSlugFor} from "@/lib/talking-models/catalog";
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
 
@@ -38,8 +46,18 @@ const MAX_WIDTH = 64;
 
 export type ArkPanelSubject = {slug: string | null; name: string | null; speciesProfileId: string | null};
 
-type ArkPanelContext = {open: boolean; toggle: () => void; words: TalkWords};
+type ArkPanelContext = {open: boolean; toggle: () => void; show: (animal: ArkAnimal) => void; words: TalkWords};
 const PanelContext = createContext<ArkPanelContext | null>(null);
+
+/**
+ * For the chat beside the panel: whether it is open, and `show`, which opens
+ * it on one of the reader's animals (the arrival line's "See it in the Ark").
+ * Null in a chat without a panel.
+ */
+export function useArkPanelControl(): {open: boolean; show: (animal: ArkAnimal) => void} | null {
+    const context = useContext(PanelContext);
+    return useMemo(() => (context ? {open: context.open, show: context.show} : null), [context]);
+}
 
 function readStored(key: string): string | null {
     try {
@@ -126,7 +144,12 @@ export function ArkSplit({subject, words, locale, children}: {subject: ArkPanelS
         writeStored(OPEN_KEY, next ? "open" : "closed");
     }, []);
     const toggle = useCallback(() => setOpenRemembered(!open), [open, setOpenRemembered]);
-    const context = useMemo(() => ({open, toggle, words}), [open, toggle, words]);
+    // Told as an arrival: the panel, open or opening now, flies to it.
+    const show = useCallback((animal: ArkAnimal) => {
+        emitArkArrival({animal, slug: subject.slug, speciesProfileId: subject.speciesProfileId});
+        setOpenRemembered(true);
+    }, [setOpenRemembered, subject.slug, subject.speciesProfileId]);
+    const context = useMemo(() => ({open, toggle, show, words}), [open, toggle, show, words]);
 
     // A phone: a right-to-left swipe across the chat (not from the screen's edge, not over something that scrolls sideways) opens the Ark.
     const chatRef = useRef<HTMLDivElement | null>(null);
@@ -257,11 +280,26 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
     const focusIdRef = useRef<string | null>(null);
     const modelSlugRef = useRef<string | null>(null);
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null>(null);
+    const snapshotRef = useRef<ArkSnapshot | null>(null);
+    snapshotRef.current = snapshot;
     const [failed, setFailed] = useState(false);
     const [ready, setReady] = useState(false);
     const [focus, setFocus] = useState<Focus>(null);
     const [selected, setSelected] = useState<ArkAnimal | null>(null);
     const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, {day: "numeric", month: "short", year: "numeric"}), [locale]);
+
+    // Ark measurement (lib/ark-measure): the panel open is a visit, timed while it is on screen.
+    useEffect(() => startArkSession("chat_panel"), []);
+    // The panel's own move to the chat's animal is not a tap: only the reader's are counted.
+    const autoSelecting = useRef(false);
+    const onSelect = useCallback((animal: ArkAnimal | null) => {
+        setSelected(animal);
+        if (animal && !autoSelecting.current) trackArk("ark_animal_tap", {source: "chat_panel", species_profile_id: animal.species_profile_id || undefined, is_mine: animal.mine});
+    }, []);
+    // The reader's own animals aboard, once the world is on screen: their arrival seen.
+    useEffect(() => {
+        if (ready && snapshot) noteArkArrivalsSeen(snapshot.animals, "chat_panel");
+    }, [ready, snapshot]);
 
     // The Ark, now and every 45 s while the tab is in front.
     useEffect(() => {
@@ -302,7 +340,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                         modelBase: models,
                         talkingBase: TALKING_MODELS_BASE_URL,
                         iconUrl: arkIconUrl,
-                        onSelect: setSelected,
+                        onSelect,
                         reducedMotion,
                         onReady: () => setReady(true)
                     });
@@ -317,6 +355,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                 const aboard = [...snapshot.animals]
                     .filter((animal) => animal.model_slug === modelSlug || (subject.speciesProfileId !== null && animal.species_profile_id === subject.speciesProfileId))
                     .sort((a, b) => b.arrived_at.localeCompare(a.arrived_at))[0];
+                autoSelecting.current = true;
                 if (aboard) {
                     focusIdRef.current = aboard.id;
                     setFocus({kind: "aboard", animal: aboard});
@@ -329,6 +368,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                         handle.select(id, true);
                     }
                 }
+                autoSelecting.current = false;
             })
             .catch(() => setFailed(true));
         return () => {
@@ -349,6 +389,48 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
         else if (event.kind === "text") scene.talkText(event.chunk);
         else scene.talkPulse(0.9);
     }), [subject]);
+
+    // An arrival of the reader's (a step that worked, Part 2): read the Ark again so it plays its entrance, then fly to it.
+    const arrive = useCallback(async (event: ArkArrivalEvent) => {
+        const scene = sceneRef.current;
+        if (!scene || !voiceIsAbout(event, subject)) return;
+        const read = await readSnapshot();
+        const current = read ?? snapshotRef.current;
+        if (!current || sceneRef.current !== scene) return;
+        // Not in the read yet (a cached answer, or the dev fixture): it comes aboard from the chat's own read.
+        const next = current.animals.some((animal) => animal.id === event.animal.id)
+            ? current
+            : {...current, animals: [...current.animals, event.animal], counts: {...current.counts, animals: current.counts.animals + 1}};
+        setSnapshot(next);
+        scene.update(next);
+        focusIdRef.current = event.animal.id;
+        setFocus({kind: "aboard", animal: event.animal});
+        autoSelecting.current = true;
+        scene.select(event.animal.id, true);
+        autoSelecting.current = false;
+        noteArkArrivalsSeen([event.animal], "chat_panel");
+    }, [subject]);
+    useEffect(() => onArkArrival((event) => void arrive(event)), [arrive]);
+    // Opened just after one landed (or from its line): fly to it once the world is drawn.
+    useEffect(() => {
+        if (!ready) return;
+        const recent = recentArkArrival();
+        if (recent) void arrive(recent);
+    }, [ready, arrive]);
+    // Development: `window.__arkArrive()` plays an arrival of this chat's kind in the panel (a copy of a fixture animal, made the reader's).
+    useEffect(() => {
+        if (process.env.NODE_ENV === "production" || !ready) return;
+        const target = window as unknown as {__arkArrive?: (id?: string) => void};
+        target.__arkArrive = (id?: string) => {
+            const base = snapshotRef.current?.animals.find((animal) => (id ? animal.id === id : animal.model_slug === modelSlugRef.current)) ?? snapshotRef.current?.animals[0];
+            if (!base) return;
+            const animal = id ? {...base, mine: true} : {...base, id: `${base.id.slice(0, -4)}${Math.floor(1000 + Math.random() * 8999)}`, mine: true, arrived_at: new Date().toISOString(), brought_by: {label: "Voyager 1", named: false}};
+            emitArkArrival({animal, slug: subject.slug, speciesProfileId: subject.speciesProfileId});
+        };
+        return () => {
+            delete target.__arkArrive;
+        };
+    }, [ready, subject]);
 
     // Development: a canned reply typed into the panel every few seconds (`?arktalk=1`), through the same path the chat uses.
     useEffect(() => {

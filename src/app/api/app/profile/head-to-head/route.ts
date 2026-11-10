@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {decodeArkStats} from "@/lib/ark";
+import {readArkScore} from "@/lib/ark-world";
 
 type StatsRow = Record<string, any>;
 
@@ -13,8 +14,8 @@ function toSide(row: StatsRow | undefined) {
         collectorScore: Number(row.collector_score ?? 0),
         powerSetScore: Number(row.power_set_score ?? 0),
         overallScore: Number(row.overall_score ?? 0),
-        /** Life Sim: Ark Score in place of Overall (the home widget's head-to-head, contract section 9). */
-        arkScore: optional(row.ark_score),
+        /** Ark 3.3: the world score (`ark_world_score`, 0–100); the old `ark_score` only from a server that has not switched. */
+        arkScore: readArkScore(row)?.value ?? null,
         indexedSpeciesCount: Number(row.indexed_species_count ?? 0),
         wildObservationCount: Number(row.wild_observation_count ?? 0),
         rareObservationCount: Number(row.rare_observation_count ?? 0),
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     const rows = (data ?? []) as StatsRow[];
     const viewer = toSide(rows.find((row) => row.is_viewer === true));
     const member = toSide(rows.find((row) => row.is_viewer !== true));
-    // The head-to-head RPC may not carry Ark Score yet: `ark_stats_v1` does, for both (anyone may see it).
+    // The head-to-head RPC may not carry Ark Score yet: `ark_stats_v1` does, for both (anyone may see it), the world score once the server has it.
     if (viewer && member && (viewer.arkScore === null || member.arkScore === null)) {
         const [mine, theirs] = await Promise.all([
             Promise.resolve(supabase.rpc("ark_stats_v1", {p_user_id: null})).then((result) => (result.error ? null : decodeArkStats(result.data))).catch(() => null),

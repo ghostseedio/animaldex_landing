@@ -337,7 +337,7 @@ test("every Ark word ships in every locale the site has, and the reader's locale
     assert.equal(indonesian.ark.stats.money, "Uang");
     assert.equal(COMPANION_WORDS_EN.ark.score, "Ark Score");
     // The placeholders survive translation.
-    for (const key of ["lessonExperience", "scoreChange", "revisedFrom", "skippedAnimalCap", "latest", "crewLine", "scoreShort"] as const) {
+    for (const key of ["lessonExperience", "revisedFrom", "skippedAnimalCap", "latest", "crewLine", "scoreShort", "outOf", "scoreWeek", "offerNew", "offerNewAn", "offerPair", "offerMilestone", "arrival", "arrivalAn"] as const) {
         const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
         assert.deepEqual(placeholders(indonesian.ark[key]), placeholders(ARK_COPY[key]), key);
     }

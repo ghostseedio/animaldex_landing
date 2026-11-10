@@ -326,7 +326,37 @@ export const ARK_COPY = {
     score: "Ark Score",
     /** The search row and the collector card: "Ark 143". */
     scoreShort: "Ark {n}",
-    outOf: "of 500",
+    /** Under the headline: "of 100" (the world score); "of 500" only from a server that has not switched. */
+    outOf: "of {max}",
+    /**
+     * The new Ark Score (docs/ark-spec.md section 2): your contribution to
+     * the shared Ark, 0–100, moved only by your own arrivals.
+     */
+    scoreAbout: "Your part in the shared Ark",
+    scoreWeek: "{delta} this week",
+    myAnimals: "My animals in the Ark",
+    theirAnimals: "Their animals in the Ark",
+    /** Head to head, when a side has no Ark Score at all. */
+    notInArk: "Not in the Ark yet",
+    /** The five bars' card (no total). */
+    life: "Life",
+    /** The one-time explanation band over the score (dismissed for good, per browser). */
+    explainTitle: "Ark Score has changed",
+    explainBody: "It is now your part in the shared Ark, from 0 to 100. Everyone starts at 50. It moves only when a step of yours works and brings an animal aboard: one that balances the Ark lifts it, one that crowds it lowers it. Nobody else's animals can change it. Your life bars are below, as before.",
+    explainDismiss: "Got it",
+    /**
+     * Part 2 (docs/ark-next.md): one line under a live step card, by the
+     * reader's living count of that species aboard (`voyage_step_offer_state_v1`),
+     * and one line in the thread when a step that worked brought the animal
+     * aboard. UI labels, never the animal's words. "An" before a vowel in English.
+     */
+    offerNew: "If this works, a {species} comes aboard the Ark",
+    offerNewAn: "If this works, an {species} comes aboard the Ark",
+    offerPair: "If this works, your {species} pair will be complete",
+    offerMilestone: "If this works, your {species} pair gains a milestone",
+    arrival: "A {species} came aboard the Ark",
+    arrivalAn: "An {species} came aboard the Ark",
+    arrivalSee: "See it in the Ark",
     stats: {
         money: "Money",
         relationships: "Relationships",
@@ -347,7 +377,6 @@ export const ARK_COPY = {
     undone: "Undone",
     /** A loss is a lesson, with what it taught next to it. */
     lessonExperience: "+{n} Experience from the lesson",
-    scoreChange: "Ark Score {before} → {after}",
     /** The revision card under the message that caused it. */
     revisedBetter: "Revised · it went better",
     revisedWorse: "Revised · it went worse",

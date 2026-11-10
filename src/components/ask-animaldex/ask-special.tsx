@@ -129,7 +129,8 @@ export function AskStepSection({
     onPrimary,
     onOther,
     onStartDebate,
-    onAskAnother
+    onAskAnother,
+    arkOffer = null
 }: {
     /** The step's words as the reply set them (the open step's while live). */
     text: string;
@@ -151,6 +152,11 @@ export function AskStepSection({
     onStartDebate?: () => void;
     /** "Ask another animal" (2026-11-07): another of theirs picks the problem up, with it fed in. */
     onAskAnother?: {label: string; onClick: () => void};
+    /**
+     * Part 2 (docs/ark-next.md): what the step means for the Ark, one line
+     * under the live card ("If this works, a Red Fox comes aboard the Ark").
+     */
+    arkOffer?: ReactNode;
 }) {
     const live = resolution.kind === "live" ? resolution.step : null;
     const frequency = live?.trialFrequency ?? trialFrequency;
@@ -194,6 +200,7 @@ export function AskStepSection({
                     {words.journey.done.chip}
                 </p>
             ) : null}
+            {live && arkOffer ? arkOffer : null}
             {live && problem ? <Problem>{problem}</Problem> : null}
         </section>
     );

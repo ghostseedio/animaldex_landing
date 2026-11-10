@@ -227,6 +227,28 @@ export type ArkWords = {
     herd: ArkHerdWords;
     lite: ArkLiteWords;
     a11y: ArkA11yWords;
+    person: ArkPersonWords;
+};
+
+/** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */
+export type ArkPersonWords = {
+    metaTitle: string;
+    title: string;
+    titleSelf: string;
+    scoreAbout: string;
+    scoreAboutSelf: string;
+    outOf: string;
+    summary: string;
+    anonymousTitle: string;
+    anonymousBody: string;
+    selfPrivate: string;
+    selfNamed: string;
+    noneSelf: string;
+    since: string;
+    see: string;
+    arkLine: string;
+    openArk: string;
+    back: string;
 };
 
 /** "{count} animals" and the like: every `{key}` filled from `values`, unknown keys left as they are. */

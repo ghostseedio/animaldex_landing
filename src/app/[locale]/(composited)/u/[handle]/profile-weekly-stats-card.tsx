@@ -39,7 +39,8 @@ function Figure({title, value, delta}: {title: string; value: number; delta: num
  * change and Powers this week, in place of captures.
  */
 function ArkWeek({week, ark, words}: {week: ProfileStatsWeek; ark: NonNullable<ProfileStatsWeek["ark"]>; words: CompanionWords["ark"]}) {
-    const change = ark.arkScoreChange;
+    // Ark 3.3: the world score's week (its locked contributions); the old sum's only from an older server.
+    const change = ark.worldChange ?? ark.arkScoreChange;
     return (
         <section className="space-y-4 border-b border-white/[0.06] bg-[#12351C]/40 p-4" data-testid="profile-week-ark">
             <div className="flex items-baseline justify-between gap-2 text-[11px] text-white/40">

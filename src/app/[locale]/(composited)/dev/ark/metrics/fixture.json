@@ -1,0 +1,29 @@
+{
+  "_comment": "Made-up rows in the shape /api/admin/analytics/ark reads (no real accounts or steps). User 9 is a dev tester.",
+  "testers": ["00000000-0000-4000-8000-000000000009"],
+  "trials": [
+    {"user_id": "00000000-0000-4000-8000-000000000009", "set_at": "2026-10-29T21:00:00Z", "done_at": null, "status": "replaced", "outcome": null},
+    {"user_id": "00000000-0000-4000-8000-000000000001", "set_at": "2026-10-30T09:00:00Z", "done_at": "2026-10-31T09:00:00Z", "status": "done", "outcome": null},
+    {"user_id": "00000000-0000-4000-8000-000000000002", "set_at": "2026-11-01T09:00:00Z", "done_at": null, "status": "dropped", "outcome": null},
+    {"user_id": "00000000-0000-4000-8000-000000000001", "set_at": "2026-11-03T09:00:00Z", "done_at": "2026-11-04T09:00:00Z", "status": "done", "outcome": "didnt_work"},
+    {"user_id": "00000000-0000-4000-8000-000000000003", "set_at": "2026-11-05T09:00:00Z", "done_at": "2026-11-08T21:40:00Z", "status": "done", "outcome": "worked"},
+    {"user_id": "00000000-0000-4000-8000-000000000009", "set_at": "2026-11-06T09:00:00Z", "done_at": "2026-11-09T23:45:00Z", "status": "done", "outcome": "worked"},
+    {"user_id": "00000000-0000-4000-8000-000000000004", "set_at": "2026-11-10T02:00:00Z", "done_at": null, "status": "open", "outcome": null}
+  ],
+  "arrivals": [
+    {"animal_id": "00000000-0000-4000-8000-000000000101", "owner_user_id": "00000000-0000-4000-8000-000000000003", "arrived_at": "2026-11-08T21:45:00Z"},
+    {"animal_id": "00000000-0000-4000-8000-000000000102", "owner_user_id": "00000000-0000-4000-8000-000000000009", "arrived_at": "2026-11-09T23:48:00Z"}
+  ],
+  "seen": [
+    {"user_id": "00000000-0000-4000-8000-000000000003", "animal_id": "00000000-0000-4000-8000-000000000101", "seen_at": "2026-11-10T03:00:00Z", "surface": "chat_panel"}
+  ],
+  "events": [
+    {"event": "ark_open", "source": "chat_panel", "seconds": null, "created_at": "2026-11-10T02:00:00Z"},
+    {"event": "ark_session_seconds", "source": "chat_panel", "seconds": 48, "created_at": "2026-11-10T02:01:00Z"},
+    {"event": "ark_open", "source": "ark_page", "seconds": null, "created_at": "2026-11-10T03:00:00Z"},
+    {"event": "ark_session_seconds", "source": "ark_page", "seconds": 132, "created_at": "2026-11-10T03:02:00Z"},
+    {"event": "ark_open", "source": "capture_band", "seconds": null, "created_at": "2026-11-10T04:00:00Z"},
+    {"event": "ark_animal_tap", "source": "ark_page", "seconds": null, "created_at": "2026-11-10T03:01:00Z"},
+    {"event": "ark_follow_animal", "source": "ark_page", "seconds": null, "created_at": "2026-11-10T03:01:30Z"}
+  ]
+}

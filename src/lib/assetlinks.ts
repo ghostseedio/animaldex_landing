@@ -1,6 +1,10 @@
 /**
  * Android App Links: the statement `/.well-known/assetlinks.json` serves so
- * Android verifies `app.animaldex` for animaldex.app links (/p, /u/).
+ * Android verifies `app.animaldex` for animaldex.app links (/p, /u/, and
+ * since Ark 3.3 /ark, /ark/* and /u/{handle}/ark, with their /id twins).
+ * The statement is for the whole domain (`handle_all_urls`): which paths the
+ * app opens is its own intent filter (`IncomingAppLink.kt`), so the Ark's
+ * paths need nothing here beyond this one statement.
  *
  * The fingerprints are public (anyone can read them off the installed app),
  * so they live here as the fallback: without them the file was `[]` and

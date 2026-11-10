@@ -7,6 +7,7 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkSpeciesAboard, pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {noteArkArrivalsSeen} from "@/lib/ark-measure-client";
 
 /**
  * The Ark on a capture's card: whether this species is aboard the shared
@@ -78,6 +79,14 @@ export default function ArkCaptureBand({speciesProfileId, slug, name, words, onT
         };
     }, [given]);
 
+    // "Yours is aboard" on the card is the reader seeing their own arrival (Ark measurement, lib/ark-measure).
+    const mineAboard = given === undefined && snapshot ? arkSpeciesAboard(snapshot, {speciesProfileId, slug}).animals.filter((animal) => animal.mine) : [];
+    const mineKey = mineAboard.map((animal) => animal.id).join(",");
+    useEffect(() => {
+        if (mineAboard.length) noteArkArrivalsSeen(mineAboard, "capture_band");
+        // Keyed by the ids: a new snapshot with the same animals asks nothing again.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mineKey]);
     if (!snapshot || (!speciesProfileId && !slug)) return null;
     const copy = words.capture;
     const aboard = arkSpeciesAboard(snapshot, {speciesProfileId, slug});
@@ -101,7 +110,7 @@ export default function ArkCaptureBand({speciesProfileId, slug, name, words, onT
                         {copy.start}
                         <span aria-hidden="true">→</span>
                     </button>
-                    <Link href="/ark" className="text-sm font-bold text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline">
+                    <Link href="/ark?from=capture" className="text-sm font-bold text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline">
                         {copy.seeArk}
                     </Link>
                 </div>
@@ -131,7 +140,7 @@ export default function ArkCaptureBand({speciesProfileId, slug, name, words, onT
                 </div>
             </div>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pl-[3.375rem]">
-                <Link href={`/ark?focus=${encodeURIComponent(focus)}`} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary-400 px-4 text-sm font-black text-black transition-colors hover:bg-primary-300">
+                <Link href={`/ark?focus=${encodeURIComponent(focus)}&from=capture`} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary-400 px-4 text-sm font-black text-black transition-colors hover:bg-primary-300">
                     {copy.see}
                     <span aria-hidden="true">→</span>
                 </Link>

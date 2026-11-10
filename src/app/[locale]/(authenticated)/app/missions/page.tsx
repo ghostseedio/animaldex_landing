@@ -164,7 +164,7 @@ export default async function MissionsPage({params}: {params: {locale: string}})
                 <AppMetric label="Referrals" value={progression.qualifiedReferrals} accent="gold" />
             </section>
 
-            {/* No trading milestone (Life Sim, contract section 9: trading is paused, and unlocks go by Ark Score). */}
+            {/* No trading milestone (Life Sim, contract section 9: trading is paused). Missions unlock on collection points (Ark 3.3, contract A.4), not Ark Score. */}
 
             {shelves.map((shelf) => {
                 const missions = progression.missions.filter((mission) => mission.tier === shelf.key || (shelf.key === "collector" && mission.tier === "legendary"));
@@ -194,7 +194,13 @@ export default async function MissionsPage({params}: {params: {locale: string}})
                                             <AppProgress value={percent} accent={shelf.accent === "blue" ? "green" : shelf.accent} />
                                         </div>
                                         <div className="mt-2 flex justify-between text-xs font-bold text-white/35">
-                                            <span>{mission.isLocked ? "Locked" : mission.completedCount ? "Complete" : `${mission.progressCount}/${mission.targetCount}`}</span>
+                                            <span data-testid={`mission-state-${mission.slug}`}>
+                                                {mission.isLocked
+                                                    ? mission.unlockCollectionPoints !== null && progression.overallScore < mission.unlockCollectionPoints
+                                                        ? `Unlocks at ${mission.unlockCollectionPoints.toLocaleString()} collection points (${progression.overallScore.toLocaleString()} now)`
+                                                        : "Locked"
+                                                    : mission.completedCount ? "Complete" : `${mission.progressCount}/${mission.targetCount}`}
+                                            </span>
                                             {mission.isRepeatable ? <span>Repeatable</span> : null}
                                         </div>
                                     </AppSurface>
