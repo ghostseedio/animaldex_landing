@@ -116,6 +116,10 @@ export default memo(function SideMenu({variant, words, companionWords, profile, 
                     </button>
                 ) : null}
                 {/* No "meet one now" row here (parity with iOS, 2026-11-06): the full switcher behind View all keeps Meet one now. */}
+                {/* Sign out ends the list, inside the scroll, so the padding above lets it scroll clear of the floating face; pinned below the list it sat under the face (the owner's phone, 2026-11-10). */}
+                {isAuthenticated && onSignOut ? (
+                    <button type="button" onClick={onSignOut} className="mt-2 flex h-11 w-full items-center px-4 text-left text-sm font-bold text-white/40 transition hover:text-white" data-testid="side-menu-sign-out">{words.signOut}</button>
+                ) : null}
             </div>
             {searchOpen ? (
                 // The search over the whole menu (the owner, 2026-11-06: as the Claude app's): the field, a round × beside it, then the recents or whatever matches of their animals and the places.
@@ -175,9 +179,6 @@ export default memo(function SideMenu({variant, words, companionWords, profile, 
                     <AppIcon name="camera" /> {words.capture}
                 </Link>
             </div>
-            {isAuthenticated && onSignOut ? (
-                <button onClick={onSignOut} className="shrink-0 px-4 pb-3 text-left text-xs font-bold text-white/35 transition hover:text-white">{words.signOut}</button>
-            ) : null}
         </div>
     );
 });

@@ -231,6 +231,9 @@ import TalkCapabilities from "@/components/ask-animaldex/talk-capabilities";
  * the page (UX pass WEB-23): the debate setup and its turns, the bond panel,
  * the naming sheet and the report composer.
  */
+/** How often an open, visible signed-in thread reads the account's copy again. */
+const LIVE_HISTORY_INTERVAL_MS = 4000;
+
 const DebateSetup = dynamic(() => import("@/components/debates/debate-sheet"));
 const DebateThread = dynamic(() => import("@/components/debates/debate-thread"));
 const DebateQuietSection = dynamic(() => import("@/components/debates/debate-thread").then((module) => module.DebateQuietSection));
@@ -951,6 +954,10 @@ function AskConversation({
     const historyKey = context?.signedIn && context.subject.scope === "species" && !subject.trialContext
         ? serverThreadKey({captureId: subject.captureId ?? null, speciesProfileId: context.speciesProfileId ?? null})
         : null;
+    // Each tick reads the account's thread again, so a turn on their phone
+    // shows here without a refresh (the owner, 2026-11-10: "it should update in
+    // real-time both ways"); the ticks are set below, past `animalTalking`.
+    const [historySyncTick, setHistorySyncTick] = useState(0);
     useEffect(() => {
         if (!historyKey) return;
         let cancelled = false;
@@ -965,7 +972,7 @@ function AskConversation({
         return () => {
             cancelled = true;
         };
-    }, [historyKey, transformThread]);
+    }, [historyKey, transformThread, historySyncTick]);
 
     // A question the launcher was opened with is sent once, and only once the
     // subject has resolved — otherwise it would be answered from the wrong
@@ -1243,6 +1250,28 @@ function AskConversation({
     }, [messages, retry]);
     // Typing counts as talking: Stop stays until the last word is shown.
     const animalTalking = isSending || pacer.revealing;
+    // The open thread follows their other devices: read again every few
+    // seconds while this tab is on screen, and at once when it comes back.
+    // Never while the animal is answering here (the merge would leave that
+    // turn alone anyway; this saves the read). The phone's turn is stored
+    // once it is answered, so the question and the reply arrive together.
+    const animalTalkingRef = useRef(animalTalking);
+    animalTalkingRef.current = animalTalking;
+    useEffect(() => {
+        if (!historyKey) return;
+        const tick = () => {
+            if (document.visibilityState !== "visible" || animalTalkingRef.current) return;
+            setHistorySyncTick((value) => value + 1);
+        };
+        const timer = window.setInterval(tick, LIVE_HISTORY_INTERVAL_MS);
+        document.addEventListener("visibilitychange", tick);
+        window.addEventListener("focus", tick);
+        return () => {
+            window.clearInterval(timer);
+            document.removeEventListener("visibilitychange", tick);
+            window.removeEventListener("focus", tick);
+        };
+    }, [historyKey]);
     // With something typed the button sends, over a greeting or a reply that
     // is only still typing out; a reply still arriving is stopped first.
     const showStop = !debateEdit && ((isSending && greetingState !== "loading") || (animalTalking && composer.trim().length === 0));
@@ -3266,11 +3295,12 @@ function AskConversation({
                                     icon: <BellIcon />,
                                     onSelect: toggleAnimalMuted
                                 }]),
+                                // A plain row that opens it, as iOS's menu (the owner, 2026-11-10: a
+                                // switch here read as turning memory off); its Back closes it.
                                 ...(context?.signedIn ? [{
                                     label: labels.memoryOpen,
                                     icon: <MemoryIcon />,
-                                    checked: showingMemory,
-                                    onSelect: showingMemory ? () => setShowingMemory(false) : openMemory
+                                    onSelect: openMemory
                                 }] : []),
                                 // What the two of you are working on, and letting it go.
                                 ...(ownerChat && companionLoop?.focus ? [{

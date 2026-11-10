@@ -454,7 +454,9 @@ test("a tap's reveal is never a card in the chat, wherever its step is; a report
     const tap = decodeArkChange(lessonRow)!;
     assert.equal(tap.source, "tap");
     assert.equal(arkRevealShown(tap), false);
-    assert.equal(arkRevealShown({...tap, stepId: null}), false);
+    // Bound first: a fresh literal's extra `stepId` fails `next build`'s type check.
+    const stepless = {...tap, stepId: null};
+    assert.equal(arkRevealShown(stepless), false);
     assert.equal(arkRevealShown({...tap, source: "report" as const}), true);
     assert.equal(arkRevealShown({...tap, source: "chat" as const}), true);
 });
