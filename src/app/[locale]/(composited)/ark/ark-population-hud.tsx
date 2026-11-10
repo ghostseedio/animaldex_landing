@@ -6,6 +6,7 @@ import {REGION_ZONES, type ArkRegion, type ArkSnapshot} from "@/ark-scene/types"
 import {arkPopulation, type ArkPairStatus, type ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 
 /**
  * Who is aboard the Ark, species by species: the totals, then every species
@@ -168,8 +169,7 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                                         >
                                             {selected ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-primary-400" /> : null}
                                             <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src={getSpeciesArtworkUrl(row.slug)} alt="" width={36} height={36} loading="lazy" className="h-[82%] w-[82%] object-contain" />
+                                                <ArkSpeciesIcon src={getSpeciesArtworkUrl(row.slug)} size={36} className="h-[82%] w-[82%] object-contain" />
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="flex items-center gap-2">

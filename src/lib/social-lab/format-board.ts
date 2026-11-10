@@ -37,6 +37,7 @@ export const FORMATS = {
     pokemon: {label: "Real-life Pokémon", family: "video", strategy: "transplant", what: "A real animal, two design clues, the Pokémon it matches, a fact that beats the game."},
     app_story: {label: "App species story", family: "video", strategy: "out_execute", what: "The app's own story video of one species."},
     real_footage: {label: "Real footage (uploaded)", family: "video", strategy: "transplant", what: "Phone or camera footage edited by hand and uploaded."},
+    ark: {label: "Ark clip (recorded scene)", family: "video", strategy: "out_execute", what: "A scripted shot of the live Ark (day to night, an arrival, a meal chase, a follow, a flyover, meet the species) with captions from stored data."},
     carousel_page: {label: "Page carousel", family: "carousel", strategy: "out_execute", what: "A page told in 5–8 slides."},
     carousel_usual_vs_animal: {label: "Carousel: the usual vs the animal", family: "carousel", strategy: "transplant", what: "An everyday idea, the usual answer, and an animal's take."},
     carousel_five_animals: {label: "Carousel: 5 animals, 1 idea", family: "carousel", strategy: "transplant", what: "One idea, five animals' takes, \"which one is you?\"."},
@@ -62,7 +63,8 @@ export const SOURCE_FORMAT: Record<string, FormatKey> = {
     scan: "scan",
     you_vs: "you_vs",
     would_you_rather: "would_you_rather",
-    pokemon: "pokemon"
+    pokemon: "pokemon",
+    ark: "ark"
 };
 
 /** Which format a post is, from what it was made of. Null when we cannot tell. */

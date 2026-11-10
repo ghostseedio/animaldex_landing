@@ -1,4 +1,5 @@
 import type {Metadata} from "next";
+import ArkRecordView from "@/app/[locale]/(composited)/ark/ark-record-view";
 import ArkView, {type ArkFixtureLife} from "@/app/[locale]/(composited)/ark/ark-view";
 import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
@@ -18,7 +19,12 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * Local testing before the migration is applied: `NEXT_PUBLIC_ARK_FIXTURE=1`,
  * or in development `?fixture=1` (about 120 animals), `?fixture=early` (the
  * two real arrivals) or `?fixture=grow` (starts small; more come aboard on
- * every refresh, to see the entrances).
+ * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
+ * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends)
+ * or `?fixture=micro` (the v2 fixture plus small animals at their microhabitats:
+ * geckos, spiders and moths on the cottage, ants, bees on flowers, beetles on bark...)
+ * or `?fixture=layers` (that plus the vertical layers: primates, a sloth and birds in the
+ * canopy, moles underground, crabs and an octopus on the reef floor, the deep's fish, a whale shark).
  *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
@@ -30,19 +36,27 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
  * server's `public_story` flag would.
+ *
+ * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
+ * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
+ * camera and clock driven by `window.__arkDirector`. With `?fixture=1` it is
+ * the fixture (samples only); otherwise the live Ark.
  */
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string}};
 
-type FixtureMode = "full" | "early" | "grow";
+type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers";
 
 function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     const asked = searchParams.fixture;
     const development = process.env.NODE_ENV === "development";
     if (development && asked === "early") return "early";
     if (development && asked === "grow") return "grow";
+    if (development && asked === "sizes") return "sizes";
+    if (development && asked === "micro") return "micro";
+    if (development && asked === "layers") return "layers";
     if (development && asked && asked !== "0") return "full";
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
@@ -62,9 +76,190 @@ async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; f
     const full = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)!;
     if (mode === "full") return {snapshot: full, full: null};
     if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
+    if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
+    if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null};
+    if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
     return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
+}
+
+/**
+ * `?fixture=sizes`: the v2 fixture with the ends of the size scale aboard
+ * (the stats addendum's screenshots): a ladybird at the floor, a house mouse,
+ * a giraffe (taller than long), a blue whale and a flamingo, each in a slot of its own.
+ */
+function withSizeLineUp(full: ArkSnapshot): ArkSnapshot {
+    const extra: Array<[string, string, ArkSnapshot["animals"][number]["zone"]]> = [
+        ["seven-spot-ladybird", "Seven-spot Ladybird", "farm_garden"],
+        ["house-mouse", "House Mouse", "farm_garden"],
+        ["giraffe", "Giraffe", "grassland"],
+        ["blue-whale", "Blue Whale", "open_ocean"],
+        ["greater-flamingo", "Greater Flamingo", "wetland"]
+    ];
+    const animals = [...full.animals];
+    extra.forEach(([slug, name, zone], i) => {
+        const slot = Math.max(-1, ...animals.filter((a) => a.zone === zone).map((a) => a.slot ?? -1)) + 1;
+        animals.push({
+            id: `00000000-0000-4000-8000-00000000000${i}`,
+            species_profile_id: `size-${slug}`,
+            name,
+            scientific_name: null,
+            model_slug: slug,
+            zone,
+            arrived_at: "2026-11-01T12:00:00Z",
+            brought_by: {label: "Voyager 1", named: false},
+            mine: false,
+            origin: "arrived",
+            generation: 0,
+            condition: "well_fed",
+            born_ark_day: 3,
+            activity: "any",
+            sociality: "solitary",
+            bringers: [{label: "Voyager 1", named: false}],
+            slot,
+            slot_rank: 0
+        });
+    });
+    return {...full, animals, counts: {...full.counts, animals: animals.length, species: full.counts.species + extra.length}};
+}
+
+/**
+ * `?fixture=micro`: the v2 fixture plus small animals at every kind of
+ * microhabitat (docs/ark-micro.md): geckos, house spiders, flies, ants and
+ * moths on the cottage (the moths circle the porch light at night), a
+ * mouse round it, hoverflies and butterflies on the flowers, a honey bee
+ * and an anole on bark, beetles and a millipede in the leaf litter, a wall
+ * lizard on the stones, water striders and a newt on the water. A few are
+ * the reader's own (for "My animals"). Three black ants share a slot.
+ */
+function withSmallAnimals(full: ArkSnapshot): ArkSnapshot {
+    type Zone = ArkSnapshot["animals"][number]["zone"];
+    type Activity = NonNullable<ArkSnapshot["animals"][number]["activity"]>;
+    const extra: Array<[string, string, Zone, Activity, boolean, number?]> = [
+        ["mediterranean-house-gecko", "Mediterranean House Gecko", "farm_garden", "nocturnal", true],
+        ["tropical-house-gecko", "Tropical House Gecko", "farm_garden", "nocturnal", false],
+        ["common-house-gecko", "Common House Gecko", "farm_garden", "nocturnal", false],
+        ["mediterranean-house-gecko", "Mediterranean House Gecko", "farm_garden", "nocturnal", false],
+        ["common-house-spider", "Common House Spider", "farm_garden", "any", false],
+        ["common-house-spider", "Common House Spider", "farm_garden", "any", false],
+        ["house-centipede", "House Centipede", "farm_garden", "nocturnal", false],
+        ["house-fly", "House Fly", "farm_garden", "diurnal", false],
+        ["black-ant", "Black Ant", "farm_garden", "diurnal", true, 3],
+        ["red-ant", "Red Ant", "farm_garden", "diurnal", false],
+        ["clothes-house-moth", "Clothes Moth", "farm_garden", "nocturnal", false],
+        ["pantry-moth", "Pantry Moth", "farm_garden", "nocturnal", false],
+        ["plume-moth", "Plume Moth", "farm_garden", "nocturnal", false],
+        ["emerald-moth", "Emerald Moth", "woodland", "nocturnal", true],
+        ["house-mouse", "House Mouse", "farm_garden", "nocturnal", false],
+        ["marmalade-hoverfly", "Marmalade Hoverfly", "farm_garden", "diurnal", false],
+        ["red-admiral", "Red Admiral", "farm_garden", "diurnal", false],
+        ["giant-honey-bee", "Giant Honey Bee", "farm_garden", "diurnal", false],
+        ["western-honey-bee", "Western Honey Bee", "farm_garden", "diurnal", false],
+        ["green-anole", "Green Anole", "farm_garden", "diurnal", false],
+        ["common-wall-lizard", "Common Wall Lizard", "farm_garden", "diurnal", false],
+        ["earwig", "Earwig", "farm_garden", "nocturnal", false],
+        ["firebug", "Firebug", "farm_garden", "diurnal", false],
+        ["red-breasted-nuthatch", "Red-breasted Nuthatch", "woodland", "diurnal", false],
+        ["yellow-spotted-millipede", "Yellow-spotted Millipede", "woodland", "nocturnal", false],
+        ["carpenter-ant", "Carpenter Ant", "woodland", "any", false],
+        ["water-strider", "Water Strider", "river_lake", "diurnal", false],
+        ["damselfly", "Damselfly", "river_lake", "diurnal", false],
+        ["smooth-newt", "Smooth Newt", "river_lake", "any", false],
+        ["bumblebee", "Bumblebee", "grassland", "diurnal", false],
+        ["six-spotted-tiger-beetle", "Six-spotted Tiger Beetle", "grassland", "diurnal", false]
+    ];
+    const animals = [...full.animals];
+    extra.forEach(([slug, name, zone, activity, mine, many = 1], i) => {
+        const slot = Math.max(-1, ...animals.filter((a) => a.zone === zone).map((a) => a.slot ?? -1)) + 1;
+        for (let rank = 0; rank < many; rank++) {
+            animals.push({
+                id: `00000000-0000-4000-9000-${String(i * 10 + rank).padStart(12, "0")}`,
+                species_profile_id: `micro-${slug}`,
+                name,
+                scientific_name: null,
+                model_slug: slug,
+                zone,
+                arrived_at: "2026-11-01T12:00:00Z",
+                brought_by: {label: mine ? "You" : "Voyager 1", named: false},
+                mine,
+                origin: "arrived",
+                generation: 0,
+                condition: "well_fed",
+                born_ark_day: 3,
+                activity,
+                sociality: many > 1 ? "group" : "solitary",
+                bringers: [{label: "Voyager 1", named: false}],
+                slot,
+                slot_rank: rank
+            });
+        }
+    });
+    return {...full, animals, counts: {...full.counts, animals: animals.length, species: full.counts.species + extra.length}};
+}
+
+/**
+ * `?fixture=layers`: the micro fixture plus an animal of every layer and mode
+ * (docs/ark-micro.md, "Layers"): primates climbing and leaping, a sloth
+ * hanging, a toucan perching in the canopy; moles and mole-rats underground;
+ * crabs and an octopus on the reef floor, a glowing pineapplefish, a whale
+ * shark at the plankton, the deep's lanternfish, loosejaw (glowing) and giant
+ * squid; a tawny owl and a gull for the moments.
+ */
+function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
+    type Zone = ArkSnapshot["animals"][number]["zone"];
+    type Activity = NonNullable<ArkSnapshot["animals"][number]["activity"]>;
+    const extra: Array<[string, string, Zone, Activity, number?]> = [
+        ["spider-monkey", "Spider Monkey", "rainforest", "diurnal", 3],
+        ["siamang", "Siamang", "rainforest", "diurnal"],
+        ["sumatran-orangutan", "Sumatran Orangutan", "rainforest", "diurnal"],
+        ["tufted-capuchin", "Tufted Capuchin", "rainforest", "diurnal"],
+        ["brown-throated-sloth", "Brown-throated Sloth", "rainforest", "any"],
+        ["keel-billed-toucan", "Keel-billed Toucan", "rainforest", "diurnal"],
+        ["clouded-leopard", "Clouded Leopard", "rainforest", "nocturnal"],
+        ["red-squirrel", "Red Squirrel", "woodland", "diurnal"],
+        ["star-nosed-mole", "Star-nosed Mole", "woodland", "any"],
+        ["naked-mole-rat", "Naked Mole-rat", "desert", "any", 2],
+        ["cape-golden-mole", "Cape Golden Mole", "desert", "nocturnal"],
+        ["northern-hairy-nosed-wombat", "Northern Hairy-nosed Wombat", "grassland", "nocturnal"],
+        ["red-spotted-guard-crab", "Red-spotted Guard Crab", "coral_reef", "any"],
+        ["wonderpus-octopus", "Wonderpus Octopus", "coral_reef", "any"],
+        ["common-octopus", "Common Octopus", "coral_reef", "nocturnal"],
+        ["australian-pineapplefish", "Australian Pineapplefish", "coral_reef", "nocturnal"],
+        ["whale-shark", "Whale Shark", "open_ocean", "any"],
+        ["stoplight-loosejaw", "Stoplight Loosejaw", "open_ocean", "any"],
+        ["spotted-lanternfish", "Spotted Lanternfish", "open_ocean", "any", 3],
+        ["giant-squid", "Giant Squid", "open_ocean", "any"],
+        ["tawny-owl", "Tawny Owl", "woodland", "nocturnal"],
+        ["herring-gull", "Herring Gull", "seashore", "diurnal"]
+    ];
+    const animals = [...base.animals];
+    extra.forEach(([slug, name, zone, activity, many = 1], i) => {
+        const slot = Math.max(-1, ...animals.filter((a) => a.zone === zone).map((a) => a.slot ?? -1)) + 1;
+        for (let rank = 0; rank < many; rank++) {
+            animals.push({
+                id: `00000000-0000-4000-a000-${String(i * 10 + rank).padStart(12, "0")}`,
+                species_profile_id: `layer-${slug}`,
+                name,
+                scientific_name: null,
+                model_slug: slug,
+                zone,
+                arrived_at: "2026-11-01T12:00:00Z",
+                brought_by: {label: "Voyager 1", named: false},
+                mine: false,
+                origin: "arrived",
+                generation: 0,
+                condition: "well_fed",
+                born_ark_day: 3,
+                activity,
+                sociality: many > 1 ? "group" : "solitary",
+                bringers: [{label: "Voyager 1", named: false}],
+                slot,
+                slot_rank: rank
+            });
+        }
+    });
+    return {...base, animals, counts: {...base.counts, animals: animals.length, species: base.counts.species + extra.length}};
 }
 
 function modelBase(): string {
@@ -90,6 +285,8 @@ export default async function ArkPage({params, searchParams}: Props) {
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
     const fixtureLife = mode ? await loadFixtureLife() : null;
+    const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
+    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase()} events={fixtureLife?.events ?? null} />;
     return (
         <ArkView
             locale={params.locale}

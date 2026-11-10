@@ -1,8 +1,8 @@
-import type {SourceType} from "@/lib/content-video/plan";
+import type {VideoSourceType} from "@/lib/content-video/plan";
 
 // Page-family labels and paths, safe for client components (no data imports).
 
-export const SOURCE_LABELS: Record<SourceType, string> = {
+export const SOURCE_LABELS: Record<VideoSourceType, string> = {
     blog: "Blog post",
     comparison: "Comparison battle",
     hybrid: "Hybrid reveal",
@@ -14,10 +14,11 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
     scan: "Scan reveal (our footage)",
     you_vs: "You vs the animal",
     would_you_rather: "Would you rather",
-    pokemon: "Real-life Pokémon"
+    pokemon: "Real-life Pokémon",
+    ark: "Ark clip (recorded scene)"
 };
 
-export function sourcePath(type: SourceType, slug: string) {
+export function sourcePath(type: VideoSourceType, slug: string) {
     switch (type) {
         case "blog": return `/blog/${slug}`;
         case "comparison": return `/comparisons/${slug}`;
@@ -32,5 +33,7 @@ export function sourcePath(type: SourceType, slug: string) {
         case "you_vs": return `/animals/${slug}`;
         case "would_you_rather": return `/comparisons/${slug}`;
         case "pokemon": return `/pokemon-animals/${slug}`;
+        // An Ark clip is filmed in the shared Ark: its page is the Ark itself.
+        case "ark": return "/ark";
     }
 }

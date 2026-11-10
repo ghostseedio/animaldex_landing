@@ -5,6 +5,7 @@
  * places a species it has no zone for), never the whole Ark.
  */
 
+import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stats";
 import {ARK_ZONES, type ArkAnimal, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {arkActivity} from "@/lib/ark-daylight";
 
@@ -53,6 +54,19 @@ function animal(raw: unknown): ArkAnimal | null {
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
     if (bringers.length) life.bringers = bringers;
+    // The species' stats and stored length, when the server sends them (else the scene reads the catalogue's).
+    const statsRow = row.stats && typeof row.stats === "object" ? row.stats as Record<string, unknown> : {};
+    const stats: Partial<ArkStats> = {};
+    for (const key of ARK_STAT_KEYS) {
+        const value = statsRow[key] ?? (key === "size" ? row.size : undefined);
+        if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100) stats[key] = value;
+    }
+    if (Object.keys(stats).length) life.stats = stats;
+    if (typeof row.length_m === "number" && Number.isFinite(row.length_m) && row.length_m > 0) {
+        life.length_m = row.length_m;
+        const phrase = text(row.length_phrase);
+        if (phrase) life.length_phrase = phrase;
+    }
     const slot = whole(row.slot);
     const rank = whole(row.slot_rank);
     if (slot !== null && rank !== null) Object.assign(life, {slot, slot_rank: rank});

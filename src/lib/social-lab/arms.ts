@@ -250,6 +250,8 @@ export const KIND_DIMENSIONS = {
     you_vs: ["intent", "ending", "voice"],
     would_you_rather: ["intent", "ending", "voice"],
     pokemon: ["intent", "ending", "voice"],
+    // Ark clips (Nov 2026): recorded from the live Ark with stored-data captions and no voice; only their length varies.
+    ark: ["length"],
     carousel: ["carouselFormat", "intent", "hookStyle"],
     text: ["textFormat"]
 } as const satisfies Record<string, readonly Dimension[]>;

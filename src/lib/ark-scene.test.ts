@@ -6,7 +6,19 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {ARK_ZONES, type ArkSnapshot} from "@/ark-scene/types";
+import type {Placement} from "@/ark-scene/placement";
+import {arkBody} from "@/ark-scene/stats";
 import {sampleGround, ZONE_SITES} from "@/ark-scene/world";
+
+/**
+ * Apart: on the ground 0.9 m between any two; a small animal at its
+ * microhabitat (`micro.ts`, a gecko on a wall, a beetle on a trunk) at
+ * least a body length from anyone, in 3D.
+ */
+function apart(p: Placement, q: Placement, lengthP: number, lengthQ: number): boolean {
+    if (!p.micro && !q.micro) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
+    return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max(lengthP, lengthQ, 0.02);
+}
 
 const full = decodeArkSnapshot(fixture)!;
 
@@ -41,10 +53,11 @@ test("every animal stands on its zone's kind of ground, apart from the others", 
             assert.ok(ground.height > 0.1 && ground.land < 0.995, `${animal.name} on the beach`);
         }
     }
-    const list = Array.from(places.values());
-    for (let i = 0; i < list.length; i++) {
-        for (let j = i + 1; j < list.length; j++) {
-            assert.ok(Math.hypot(list[i].x - list[j].x, list[i].z - list[j].z) > 0.9, "no two animals in one spot");
+    for (let i = 0; i < full.animals.length; i++) {
+        for (let j = i + 1; j < full.animals.length; j++) {
+            const a = full.animals[i];
+            const b = full.animals[j];
+            assert.ok(apart(places.get(a.id)!, places.get(b.id)!, arkBody(a).metres, arkBody(b).metres), `${a.model_slug} and ${b.model_slug} in one spot`);
         }
     }
 });
@@ -76,7 +89,7 @@ test("a departure never moves anyone: the v2 fixture's places are the server's, 
             if (!sameCluster && a.slot_rank !== 0 && b.slot_rank !== 0) continue;
             const p = before.get(a.id)!;
             const q = before.get(b.id)!;
-            assert.ok(Math.hypot(p.x - q.x, p.z - q.z) > 0.9, `${a.model_slug} ${a.slot}/${a.slot_rank} and ${b.model_slug} ${b.slot}/${b.slot_rank} in one spot`);
+            assert.ok(apart(p, q, arkBody(a).metres, arkBody(b).metres), `${a.model_slug} ${a.slot}/${a.slot_rank} and ${b.model_slug} ${b.slot}/${b.slot_rank} in one spot`);
         }
     }
 });

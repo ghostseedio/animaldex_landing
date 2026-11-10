@@ -138,6 +138,12 @@ export class ArkLighting {
         this.apply(daylightAt(hours), fog);
     }
 
+    /** Under the sea: the sky and the night dome are hidden (the water is all round). */
+    setUnderwater(under: boolean) {
+        this.sky.visible = !under;
+        this.nightDome.visible = !under;
+    }
+
     private apply(day: ArkDaylight, fog: Fog | null) {
         this.current = day;
         const sunDirection = new Vector3().setFromSphericalCoords(1, MathUtils.degToRad(90 - day.elevation), MathUtils.degToRad(day.azimuth));

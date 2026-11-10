@@ -21,6 +21,7 @@ import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {parseTalkingGlb} from "@/components/ask-animaldex/voice-call/talking-model-renderer";
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
+import {bodyAxisExtent} from "@/ark-scene/stats";
 
 export type ArkManifest = {
     models: Record<string, string>;
@@ -39,6 +40,8 @@ export type SpeciesModel = {
     minY: number;
     height: number;
     length: number;
+    /** Its extent along its body-length axis (`bodyAxisExtent`): the drawn size is measured on it. */
+    bodyLength: number;
 };
 
 type Wanted = "far" | "near";
@@ -148,6 +151,11 @@ export class ModelLibrary {
         return this.models.size;
     }
 
+    /** Still loading or waiting to load something (the recorder waits for this before a shot). */
+    get busy(): boolean {
+        return !this.manifest || this.active > 0 || this.queue.length > 0;
+    }
+
     /** Ask for a level; the far one comes first, and both come at once from a fallback. */
     request(slug: string, level: Wanted) {
         if (level === "near") this.request(slug, "far");
@@ -208,7 +216,8 @@ export class ModelLibrary {
                 behaviour,
                 minY: box.min.y,
                 height: box.max.y - box.min.y,
-                length: Math.max(box.max.z - box.min.z, 0.05)
+                length: Math.max(box.max.z - box.min.z, 0.05),
+                bodyLength: Math.max(bodyAxisExtent(slug, behaviour?.plan, {x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z}), 0.05)
             };
             this.models.set(slug, model);
         }

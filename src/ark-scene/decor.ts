@@ -12,6 +12,7 @@
  * it is drawn depends on the device.
  */
 
+import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -32,7 +33,16 @@ export type DecorKind =
     | "barn"
     | "hay"
     | "fence"
-    | "orchard";
+    | "orchard"
+    // The microhabitats (`micro-decor.ts`): the cottage and its pond are drawn by `micro-scene.ts`, the rest instanced here.
+    | "cottage"
+    | "pond"
+    | "flower"
+    | "leaf"
+    // The canopy's trees (`micro-decor.ts` canopyTree): limbs to perch, climb and hang on.
+    | "canopy"
+    // A lamp post at each land zone's micro corner (drawn by `micro-scene.ts`).
+    | "lamp";
 
 export type DecorItem = {
     kind: DecorKind;
@@ -237,8 +247,17 @@ export function worldDecor(): DecorItem[] {
         }
     }
 
-    cached = items;
-    return items;
+    // The microhabitats: the cottage at Home with its garden, and a corner of flowers, litter and stones in every land zone.
+    // Nothing of the farm stands in the cottage, its porch or its pond.
+    const clear = (item: DecorItem) => {
+        const inCottage = Math.abs(item.x - COTTAGE.x) < COTTAGE.width / 2 + 1.4 && item.z - COTTAGE.z < COTTAGE.depth / 2 + COTTAGE.porch.depth + 1.6 && COTTAGE.z - item.z < COTTAGE.depth / 2 + 1.4;
+        return !inCottage && Math.hypot(item.x - GARDEN_POND.x, item.z - GARDEN_POND.z) > GARDEN_POND.radius + 0.8;
+    };
+    const kept = items.filter(clear);
+    for (const item of microDecor()) kept.push({kind: item.kind, variant: item.variant, x: item.x, y: item.y, z: item.z, scale: item.scale, rotation: item.rotation, color: item.color});
+
+    cached = kept;
+    return kept;
 }
 
 /** Grass tufts, densest on the meadows, thinning to nothing on sand, rock, snow and the fields. */
@@ -261,6 +280,8 @@ export function grassTufts(count: number): GrassTuft[] {
         const want = (meadow[zone] ?? 0) * nearAnimals * smoothstep(0.15, 0.5, fbm(x * 0.06 - 7, z * 0.06 + 3) + (nearAnimals > 1 ? 0.2 : 0));
         if (random() > want) continue;
         if (riverDistance(x, z) < 3) continue;
+        // Not through the garden pond's water or the cottage's floor.
+        if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
         tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.75 + 0.25 * random() : zone === "mountains" ? 0.4 : 0.15 * random()});
     }
     return tufts;
@@ -268,16 +289,18 @@ export function grassTufts(count: number): GrassTuft[] {
 
 /** Trunks, rocks and buildings the animals keep clear of: a coarse grid of (x, z, radius). */
 export class DecorObstacles {
-    private readonly cells = new Map<string, Array<[number, number, number]>>();
+    private readonly cells = new Map<string, Array<[number, number, number, number]>>();
     private static readonly CELL = 6;
 
     constructor(items: DecorItem[]) {
         for (const item of items) {
-            if (item.kind === "coral" || item.kind === "reed" || item.kind === "lily" || item.kind === "kelp" || item.kind === "fence") continue;
-            const radius = item.kind === "rock" ? 0.9 * item.scale : item.kind === "barn" ? 5.5 : item.kind === "hay" ? 1.1 : 0.9;
+            if (item.kind === "coral" || item.kind === "reed" || item.kind === "lily" || item.kind === "kelp" || item.kind === "fence" || item.kind === "flower" || item.kind === "leaf") continue;
+            const radius = item.kind === "rock" ? 0.9 * item.scale : item.kind === "barn" ? 5.5 : item.kind === "cottage" ? 4.4 : item.kind === "pond" ? item.scale + 0.5 : item.kind === "lamp" ? 0.3 : item.kind === "hay" ? 1.1 : 0.9;
+            // Tall enough to stand between an animal and the camera: trees, shrubs, cacti, a big rock.
+            const tall = item.kind === "rock" ? radius >= 0.65 : item.kind !== "hay" && item.kind !== "barn" && item.kind !== "pond";
             const key = this.key(item.x, item.z);
             const list = this.cells.get(key) ?? [];
-            list.push([item.x, item.z, radius]);
+            list.push([item.x, item.z, radius, tall ? 1 : 0]);
             this.cells.set(key, list);
         }
     }
@@ -293,6 +316,27 @@ export class DecorObstacles {
             for (let dz = -1; dz <= 1; dz++) {
                 for (const [ox, oz, r] of this.cells.get(`${cx + dx},${cz + dz}`) ?? []) {
                     if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Something tall just in front of this spot as the default camera sees
+     * it (from the south, +z): a tree, a shrub or a big rock between about 1
+     * and 5.5 m nearer the camera and across the line of sight, so an animal
+     * here is partly behind it from afar and in plain view from close by.
+     */
+    covers(x: number, z: number): boolean {
+        const cx = Math.floor(x / DecorObstacles.CELL);
+        const cz = Math.floor(z / DecorObstacles.CELL);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = 0; dz <= 1; dz++) {
+                for (const [ox, oz, r, tall] of this.cells.get(`${cx + dx},${cz + dz}`) ?? []) {
+                    if (!tall) continue;
+                    const ahead = oz - z;
+                    if (ahead > 0.9 + r * 0.5 && ahead < 5.5 && Math.abs(ox - x) < r + 0.3) return true;
                 }
             }
         }
