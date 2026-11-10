@@ -33,6 +33,8 @@ import {captureValidityNotice} from "@/lib/capture-validity-notice";
 import {captureStarCount} from "@/lib/capture-star-rating";
 import {CAPTURE_WORDS_EN, type CaptureWords} from "@/lib/capture-words";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
+import ArkCaptureBand from "@/components/animal-detail/ark-capture-band";
+import type {ArkWords} from "@/lib/ark-words";
 import type {AppCaptureDetail} from "@/data/authenticated-app";
 import type {DiscoverCaptureItem, DiscoverCollectorRef, DiscoverMediaAsset} from "@/data/discover-timeline";
 import type {EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
@@ -85,6 +87,8 @@ type CaptureDetailClientProps = {
     animalDexNumber?: number | null;
     /** The binders the species sits in ("Appears in"; "Added to" on a first capture). */
     binders?: SpeciesBinderLink[];
+    /** The Ark band's words: whether this species is aboard the shared Ark. */
+    arkWords?: ArkWords;
 };
 
 type CohortPage = {
@@ -174,7 +178,8 @@ export default function CaptureDetailClient({
     companionWords: words = COMPANION_WORDS_EN,
     captureWords = CAPTURE_WORDS_EN,
     animalDexNumber = null,
-    binders = []
+    binders = [],
+    arkWords
 }: CaptureDetailClientProps) {
     const cardWords = captureWords.card;
     const router = useRouter();
@@ -650,6 +655,18 @@ export default function CaptureDetailClient({
                                     power={animalPower.power}
                                     speciesProfileId={speciesProfileId}
                                     words={cardWords}
+                                />
+                            </div>
+                        ) : null}
+                        {/* The Ark: is this species aboard, and the next move (see it, or a step that brings one). */}
+                        {arkWords && !capture.hasUncertaintyFallback && (speciesProfileId || speciesSlug) ? (
+                            <div className="-mx-5">
+                                <ArkCaptureBand
+                                    speciesProfileId={speciesProfileId}
+                                    slug={speciesSlug ? resolvedSpeciesSlug : null}
+                                    name={speciesName}
+                                    words={arkWords}
+                                    onTalk={() => talk()}
                                 />
                             </div>
                         ) : null}
