@@ -113,6 +113,7 @@ import {
     type ArkVisitor
 } from "@/ark-scene/types";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
+import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
@@ -210,7 +211,12 @@ type Entry = {
     visitor?: boolean;
     /** Which way it faced when last drawn. */
     yawNow?: number;
-    /** Awake by its species' activity and the hour; `rest` eases to 1 asleep. */
+    /**
+     * What it is doing now (`behaviour-state.ts`): the one state its animation, where it is drawn,
+     * the tap card and follow mode all read. Never changed by selecting or following it.
+     */
+    state: ArkBehaviourState;
+    /** Awake (`state` not asleep); `rest` eases to 1 asleep. */
     awake: boolean;
     rest: number;
     /** The loop's angle now, for a swimmer or a flyer (it slows asleep). */
@@ -547,9 +553,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Snapshot
 
+    /** The hour's sun, which says who is asleep (from the species' activity only; none known: awake by day). */
+    let sunElevation = lighting.daylight.elevation;
+    /** A bird of the air over land: it flies while awake. */
+    const fliesOver = (animal: ArkAnimal) => FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea";
+    /** Its one behaviour state now: the hour and its species, and whether it is acting out a server event. Never the selection. */
+    const stateOf = (entry: Pick<Entry, "animal" | "visitor" | "act">): ArkBehaviourState =>
+        behaviourState({activity: entry.animal.activity, elevation: sunElevation, flyer: fliesOver(entry.animal), acting: Boolean(entry.act), visitor: entry.visitor, reducedMotion});
+
     const newEntry = (animal: ArkAnimal, place: Placement, arrivedAt: number | null): Entry => {
         const phase = phaseOf(animal.id);
         const body = arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan);
+        // It starts as it is now: a sleeping hawk on its roost, an awake one in the air (no drop from the sky on load).
+        const state = stateOf({animal, visitor: false, act: null});
+        const targets = animationTargets(state);
         return {
             animal,
             place,
@@ -566,23 +583,39 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             phase,
             middle: null,
             drawnHeight: 1,
-            air: FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea" ? 1 : 0,
+            air: targets.air,
             lift: 0,
-            awake: true,
-            rest: 0,
+            state,
+            awake: !state.asleep,
+            rest: targets.rest,
             loop: phase * Math.PI * 2
         };
     };
 
-    /** Who is asleep this hour: from the species' activity only (none known: awake by day). */
-    let sunElevation = lighting.daylight.elevation;
+    /** The selected animal's state as last told to the page (its tap card). */
+    let toldState: ArkBehaviourState | null = null;
+    const tellState = () => {
+        const entry = selectedId ? findEntry(selectedId) : null;
+        const state = entry ? entry.state : null;
+        if (sameBehaviour(state, toldState)) return;
+        toldState = state;
+        if (entry && state) options.onBehaviour?.(entry.animal.id, state);
+    };
+    /** Each animal's state for the hour (and the act it is in): who is asleep, who is in the air. */
+    const refreshState = (entry: Entry) => {
+        entry.state = stateOf(entry);
+        entry.awake = !entry.state.asleep;
+        if (reducedMotion) {
+            const targets = animationTargets(entry.state);
+            entry.rest = targets.rest;
+            entry.air = targets.air;
+        }
+    };
     const applyHours = () => {
         sunElevation = lighting.daylight.elevation;
-        for (const entry of allEntries()) {
-            entry.awake = entry.visitor ? true : isAwake(entry.animal.activity ?? null, sunElevation);
-            if (reducedMotion) entry.rest = entry.awake ? 0 : 1;
-        }
+        for (const entry of allEntries()) refreshState(entry);
         for (const herd of herds) for (const member of herd.members) member.awake = isAwake(member.activity ?? null, sunElevation);
+        tellState();
     };
 
     /** The badge over a herd: its count, tappable (the population panel is the way in for the keyboard). */
@@ -1229,26 +1262,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.middle = null;
                 continue;
             }
-            // Asleep eases in; an animal in an act is wide awake.
-            const restTarget = entry.awake || entry.act ? 0 : 1;
-            if (!reducedMotion) entry.rest += (restTarget - entry.rest) * Math.min(dt * 1.5, 1);
+            // Its one state (the hour, its species, an act it is in) sets what it does: asleep eases in, a flyer
+            // takes to the air or comes down to its roost. Selecting or following it never changes this.
+            refreshState(entry);
+            const targets = animationTargets(entry.state);
+            if (!reducedMotion) entry.rest += (targets.rest - entry.rest) * Math.min(dt * 1.5, 1);
             // Loops (a swimmer's, a flyer's) slow almost to a stop asleep.
             const plan = model?.behaviour?.plan ?? "";
             const pace = 1 - 0.85 * entry.rest;
             // Its speed sets the pace: a tuna laps the reef, a turtle drifts.
             if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(plan)) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace;
             else if (entry.air > 0.001) entry.loop += dt * (0.16 + entry.phase * 0.08) * pace * entry.pace;
-            // A flyer that is selected comes down to its spot (unless followed), and so does a sleeping one; otherwise it takes to the air again.
-            if (FLYERS.has(slug) && ZONE_SITES[entry.animal.zone]?.kind !== "sea" && !entry.act) {
-                const target = (selectedId === entry.animal.id && followId !== entry.animal.id) || reducedMotion || !entry.awake ? 0 : 1;
-                entry.air += (target - entry.air) * 0.02;
-            }
+            // A flyer comes down to its roost to sleep and takes to the air again awake (an act flies its own path).
+            if (fliesOver(entry.animal) && !entry.act) entry.air += (targets.air - entry.air) * 0.02;
             entry.lift += ((selectedId === entry.animal.id ? 1 : 0) - entry.lift) * 0.08;
             let skip = false;
             if (entry.micro && !entry.act) {
-                // A moth at the cottage goes to the porch light at night while it is awake (not while it is looked at).
+                // A moth at the cottage goes to the porch light at night while it is awake (looked at or not).
                 if (entry.micro.moth && (entry.place.micro?.spot === "house" || entry.place.micro?.spot === "lamp")) {
-                    const want = entry.awake && night > 0.35 && selectedId !== entry.animal.id && !reducedMotion ? 1 : 0;
+                    const want = entry.awake && night > 0.35 && !reducedMotion ? 1 : 0;
                     entry.toLight = (entry.toLight ?? 0) + (want - (entry.toLight ?? 0)) * Math.min(dt * 0.5, 1);
                 }
                 // True to size close by; never smaller on screen than MICRO_MIN_PIXELS; the usual length (and the marker) from afar.
@@ -1277,6 +1309,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale, skip});
         }
 
+        // The page's tap card says what the selected animal is doing now, from the same state.
+        tellState();
         const nearWanted = candidates
             .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
             .sort((a, b) => a.distance - b.distance);
@@ -1615,7 +1649,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
         const looked = selectedId ? findEntry(selectedId) : null;
-        const aloft = viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro));
+        const aloft = viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
         const lift = (aloft ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
         // (Not while following: a flyer is followed up in the air.)
         if (Math.abs(lift) > 0.001 && !followId) {
@@ -1934,6 +1968,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (followId && followId !== id) endFollow();
         const entry = findEntry(id);
         options.onSelect?.(entry?.animal ?? null);
+        toldState = null;
+        tellState();
         if (entry && flyTo) {
             // A selection from the page (the HUD, `?focus=`) ends the opening, as a touch does.
             opening = false;
@@ -1941,8 +1977,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             lastTouch = performance.now() / 1000;
             const distance = camera.position.distanceTo(controls.target);
             if (entry.place.micro) {
-                // (A moth at the light settles back on the wall to be looked at.)
-                entry.toLight = 0;
                 // A small animal: right up to it, from out along its surface (in front of a wall, beside a trunk, above a flower).
                 // The right distance for its size: about a fifth of the view's height.
                 const point = surfacePoint(entry.place.micro, entry.animal.zone);
@@ -1960,6 +1994,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 fly(under(), Math.min(3 + entry.length * 2.2, 14), distance > 30 ? 2 : 1.4, 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
+                return;
+            }
+            // A bird of the air in flight stays in the air: the camera goes up to it and keeps it in view.
+            const aloft = entry.state.airborne && entry.air > 0.5;
+            if (aloft && !close) {
+                const at = middleNow(entry);
+                fly(at, 8 + entry.length * 4, distance > 30 ? 2 : 1.4, CLOSE_POLAR);
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? middleNow(entry) : null);
                 return;
             }
             // A canopy animal: up at its height, from the clearing's side of its tree (the forest round it would hide it).
@@ -2246,6 +2288,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             air: 0,
             lift: 0,
             visitor: true,
+            state: behaviourState({activity: null, elevation: 0, flyer: false, visitor: true}),
             awake: true,
             rest: 0,
             loop: 0
@@ -2849,9 +2892,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     controls.target.z += dz;
                     camera.position.x += dx;
                     camera.position.z += dz;
-                    // A small animal crawls up and down its wall or trunk too: kept in view.
+                    // A small animal crawls up and down its wall or trunk, a flyer climbs and comes down: kept in view.
                     const dy = tracked.y - lastTracked.y;
-                    if (findEntry(selectedId)?.micro && Math.abs(dy) < 1) {
+                    const trackedEntry = findEntry(selectedId);
+                    if ((trackedEntry?.micro || (trackedEntry && trackedEntry.air > 0.001)) && Math.abs(dy) < 1) {
                         controls.target.y += dy;
                         camera.position.y += dy;
                     }
@@ -2983,6 +3027,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
         },
+        behaviour: (id) => findEntry(id)?.state ?? null,
         heightAt: (x, z) => Math.max(heightAt(x, z), 0),
         preload: async (slugs) => {
             await library.ready();
