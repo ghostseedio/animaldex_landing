@@ -12,6 +12,8 @@ import {
     ArkStepsPowersTiles
 } from "@/components/ark/ark-views";
 import {arkMoneyFormatter} from "@/components/ark/use-ark";
+import {ArkArrivalLine, ArkStepOfferNote} from "@/components/ark/ark-chat-lines";
+import type {ArkStepOfferState} from "@/lib/ark-world";
 import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profile-weekly-stats-card";
 import {ProfileDiaryTab} from "@/app/[locale]/(composited)/u/[handle]/profile-diary";
 import {decodeArkChange, decodeArkStats, type ArkChange, type ArkStats} from "@/lib/ark";
@@ -105,6 +107,9 @@ const WORSE_ROW = {
 };
 
 const SELF_STATS = {
+    // Ark 3.3 (contract A.3): the world score and its week, beside the old key the live web still reads.
+    ark_world_score: 62,
+    ark_world_week_change: 5,
     ark_score: 142,
     is_self: true,
     bars_visible: true,
@@ -199,12 +204,16 @@ function Frame({title, width, children}: {title: string; width: number; children
  * earned section), the step card goes quiet, and the reveal arrives under
  * that reply, headed by the Power.
  */
-function LiveStep({words, money, locale, reveal, earnsPower}: {
+function LiveStep({words, money, locale, reveal, earnsPower, offer = null, arrives = false}: {
     words: CompanionWords;
     money: (usd: number) => string;
     locale: string;
     reveal: ArkChange;
     earnsPower: boolean;
+    /** Part 2: the Ark line under the live card, by the reader's living count. */
+    offer?: ArkStepOfferState | null;
+    /** Part 2: the step worked and a Komodo came aboard (the line plays in under the reveal). */
+    arrives?: boolean;
 }) {
     const offered = decodeAnimalStep({id: STEP, step: "Buy the materials today, before the price goes up."}) as AnimalStep;
     const [state, setState] = useState<"live" | "done" | "closed">("live");
@@ -242,6 +251,7 @@ function LiveStep({words, money, locale, reveal, earnsPower}: {
                         onOther={() => setState("closed")}
                         onStartDebate={() => undefined}
                         onAskAnother={{label: "Ask another animal", onClick: () => undefined}}
+                        arkOffer={offer ? <ArkStepOfferNote offer={{state: offer, species: "Komodo Dragon"}} words={words.ark} locale={locale} /> : null}
                     />
                 )}
             />
@@ -277,6 +287,7 @@ function LiveStep({words, money, locale, reveal, earnsPower}: {
                         money={money}
                         locale={locale}
                     />
+                    {arrives ? <ArkArrivalLine key={`arrival-${run}`} species="Komodo Dragon" slug="komodo-dragon" fresh words={words.ark} locale={locale} onSee={() => undefined} /> : null}
                 </>
             ) : null}
             {state !== "live" ? (
@@ -330,13 +341,13 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
 
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Step, one button (I've done it: Power earned)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower />
+                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower offer="new" arrives />
                 </Frame>
                 <Frame title="Step, one button (I've done it: a later step)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower={false} />
+                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower={false} offer="pair_complete" arrives />
                 </Frame>
                 <Frame title="Step, one button (I've done it: a Lesson)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={lesson} earnsPower={false} />
+                    <LiveStep words={words} money={money} locale={locale} reveal={lesson} earnsPower={false} offer="milestone" />
                 </Frame>
                 <Frame title="Report sheet" width={416}>
                     <ReportSheetButton words={words} />
@@ -377,7 +388,7 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Profile Stats, your own" width={416}>
                     <div className="-mx-4 -my-4">
-                        <ArkScoreCard stats={self} words={words.ark} locale={locale} />
+                        <ArkScoreCard score={{value: self.arkScore, outOf: self.arkScoreOutOf, world: self.arkWorld}} weekChange={self.weekChange} isSelf animalsHref="/u/lendawg/ark" words={words.ark} locale={locale} />
                         <ArkBarsPanel stats={self} words={words.ark} money={money} locale={locale} />
                         <ArkStepsPowersTiles steps={self.steps} powersEarned={self.powersEarned} words={words.ark} locale={locale} onOpenDiary={() => undefined} />
                         <ProfileWeeklyStatsCard
@@ -391,16 +402,21 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
                                 previousCaptures: 2,
                                 previousNewSpecies: 0,
                                 daily: [],
-                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, powers: 1, previousPowers: null}
+                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, worldChange: 5, powers: 1, previousPowers: null}
                             }}
                         />
                     </div>
                 </Frame>
                 <Frame title="Profile Stats, someone else, private diary" width={416}>
                     <div className="-mx-4 -my-4">
-                        <ArkScoreCard stats={other} words={words.ark} locale={locale} />
+                        <ArkScoreCard score={{value: other.arkScore, outOf: other.arkScoreOutOf, world: other.arkWorld}} weekChange={other.weekChange} animalsHref="/u/someone/ark" words={words.ark} locale={locale} explain={false} />
                         <ArkBarsPanel stats={other} words={words.ark} money={money} locale={locale} />
                         <ArkStepsPowersTiles steps={other.steps} powersEarned={other.powersEarned} words={words.ark} locale={locale} />
+                    </div>
+                </Frame>
+                <Frame title="Profile Stats, a server before 3.3 (old key, of 500)" width={416}>
+                    <div className="-mx-4 -my-4">
+                        <ArkScoreCard score={{value: 142, outOf: 500, world: false}} words={words.ark} locale={locale} />
                     </div>
                 </Frame>
                 <Frame title={teen ? "Diary, teen" : "Diary, your own"} width={416}>

@@ -1,4 +1,5 @@
 import "server-only";
+import {missionIsLocked, missionUnlockCollectionPoints} from "@/lib/ark-world";
 
 import {decodeArkStats} from "@/lib/ark";
 import {emptyBehaviorPrincipleIndex, getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
@@ -64,14 +65,17 @@ export type AppMission = {
     completedCount: number;
     isRepeatable: boolean;
     isLocked: boolean;
+    /** Ark 3.3 (contract A.4): the collection points it opens at (`unlock_collection_points`); null when the server does not say. */
+    unlockCollectionPoints: number | null;
 };
 
 export type AppProgression = {
     /** Verified overall score from `user_progression_summary_v1` (matches iOS profile). */
     overallScore: number;
     /**
-     * Life Sim (docs/life-sim/CONTRACT.md, section 9): mission unlocks move to
-     * Ark Score (the server remaps the thresholds). Null on a server without it.
+     * The Ark Score (Ark 3.3: the world score, 0–100; the old 0–500 sum from
+     * a server that has not switched). Null on a server without it. Missions
+     * no longer unlock on it: they unlock on collection points (contract A.4).
      */
     arkScore: number | null;
     tradeUnlockScore: number;
@@ -924,14 +928,24 @@ async function loadProgressionSummary(supabase: ReturnType<typeof createSupabase
     } satisfies QueryRow;
 }
 
+const MISSION_STATUS_SELECT = "slug,tier,sort_order,title,detail,reward_credits,target_count,progress_count,unlock_score_min,requires_trade_unlocked,is_repeatable,completed_count,unlocked_at";
+
 async function loadMissionStatus(supabase: ReturnType<typeof createSupabaseServerClient>, userId: string) {
-    const viewResult = await supabase!
+    // unlocked_at is the server's word: a mission it has opened stays open. The view has no
+    // is_locked column; asking for one failed the whole read, so every mission above the
+    // person's Ark Score showed locked (431 people, docs/ark-mission-bugs.md). The same goes
+    // for `unlock_collection_points` (Ark 3.3, the last column): asked for first, and
+    // without it when the server does not have it yet.
+    let viewResult: {data: QueryRow[] | null; error: unknown} = await supabase!
         .from("user_mission_status_v1")
-        // unlocked_at is the server's word: a mission it has opened stays open. The view has no
-        // is_locked column; asking for one failed the whole read, so every mission above the
-        // person's Ark Score showed locked (431 people, docs/ark-mission-bugs.md).
-        .select("slug,tier,sort_order,title,detail,reward_credits,target_count,progress_count,unlock_score_min,requires_trade_unlocked,is_repeatable,completed_count,unlocked_at")
+        .select(`${MISSION_STATUS_SELECT},unlock_collection_points`)
         .order("sort_order", {ascending: true});
+    if (viewResult.error) {
+        viewResult = await supabase!
+            .from("user_mission_status_v1")
+            .select(MISSION_STATUS_SELECT)
+            .order("sort_order", {ascending: true});
+    }
 
     if (viewResult.data?.length) return viewResult.data as QueryRow[];
 
@@ -984,15 +998,15 @@ export async function getAppProgression(): Promise<AppProgression> {
     const overallScore = Number(summary?.verified_overall_score ?? 0);
     const arkScore = arkStats?.arkScore ?? null;
     const tradeUnlocked = Boolean(summary?.trade_unlocked_at);
-    // The server's own word first (a remapped status says it, and a mission
-    // already unlocked stays unlocked), then the threshold against Ark Score
-    // once there is one, Overall before that.
-    const missionLocked = (row: QueryRow) => {
-        if (typeof row.is_locked === "boolean") return row.is_locked;
-        if (row.unlocked_at) return false;
-        const score = arkScore ?? overallScore;
-        return score < Number(row.unlock_score_min ?? 0) || (Boolean(row.requires_trade_unlocked) && !tradeUnlocked);
-    };
+    // The server's own word first (a mission already unlocked stays unlocked),
+    // then collection points (verified Overall) against `unlock_collection_points`
+    // (Ark 3.3, contract A.4); an older server's Ark-scale threshold against the
+    // old Ark Score (lib/ark-world `missionIsLocked`).
+    const missionLocked = (row: QueryRow) => missionIsLocked(row, {
+        collectionPoints: overallScore,
+        tradeUnlocked,
+        legacyArkScore: arkStats?.legacyArkScore ?? null
+    });
 
     return {
         overallScore,
@@ -1011,7 +1025,8 @@ export async function getAppProgression(): Promise<AppProgression> {
             progressCount: Number(row.progress_count ?? 0),
             completedCount: Number(row.completed_count ?? 0),
             isRepeatable: Boolean(row.is_repeatable),
-            isLocked: missionLocked(row)
+            isLocked: missionLocked(row),
+            unlockCollectionPoints: missionUnlockCollectionPoints(row)
         }))
     };
 }

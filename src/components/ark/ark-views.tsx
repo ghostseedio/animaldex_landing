@@ -20,12 +20,19 @@
  *   - the profile's Ark Score card, its five bars with their latest change,
  *     and the Steps / Powers tiles.
  *
+ * Ark 3.3 (docs/ark-spec.md sections 2 and 7.6): the Ark Score is the world
+ * score, your part in the shared Ark, 0–100 (50 with no arrivals), moved only
+ * by your own arrivals. The reveal and the Diary no longer show a score line;
+ * the five bars are their own "Life" card, with no total; a one-time band
+ * over the score says what changed (dismissed for good, per browser).
+ *
  * Every word an animal says here is the model's (`story`, `reaction`); the
  * labels are UI. Under Reduce Motion everything is drawn at once, at its
  * final values.
  */
 
 import {useEffect, useRef, useState, type ReactNode} from "react";
+import {ARK_SCORE_EXPLAINED_KEY, arkScoreShare, arkSignedChange, type ArkScoreRead} from "@/lib/ark-world";
 import Link from "@/app/[locale]/_components/link";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 import {AskReplyBubbles, AskSpecialBubble, AskSpecialLabel} from "@/components/ask-animaldex/ask-messenger";
@@ -147,7 +154,8 @@ function ChangeRow({change, row, words, money, locale, progress, flow}: {
 
 /** A stat that did not move (the chat's card, all five bars): its name, its value, its bar, quiet and with no change. */
 function StillRow({stat, value, stats, words, money}: {stat: ArkStat; value: number; stats: ArkStats | null; words: ArkWords; money: (usd: number) => string}) {
-    const amount = stat === "money" && stats?.bars.money ? money(stats.bars.money.balanceCents / 100) : null;
+    const balance = stat === "money" ? stats?.bars.money?.balanceCents ?? null : null;
+    const amount = balance !== null ? money(balance / 100) : null;
     return (
         <li className="flex flex-col gap-1 opacity-[0.42]" data-testid={`ark-row-${stat}`} data-still="true">
             <div className="flex items-baseline justify-between gap-3 text-[13px] leading-5">
@@ -160,8 +168,8 @@ function StillRow({stat, value, stats, words, money}: {stat: ArkStat; value: num
 }
 
 /**
- * The numbers of a reveal or a revision: the rows, a lesson's Experience, and
- * Ark Score before → after. `stats` (the chat passes it, null until it reads):
+ * The numbers of a reveal or a revision: the rows and a lesson's Experience
+ * (no Ark Score line since 3.3: the score moves only with arrivals). `stats` (the chat passes it, null until it reads):
  * Money, Relationships, Energy, Reputation and Experience, every bar, the
  * still ones quiet (`arkRevealLines`); left out (the Diary): the moved rows.
  */
@@ -193,11 +201,6 @@ export function ArkChangeNumbers({change, words, money, locale, progress, stats}
                 </ul>
             ) : null}
             {lessonExperience ? <p className="text-[12px] font-semibold leading-4" style={{color: LESSON}}>{lessonExperience}</p> : null}
-            {change.arkScore ? (
-                <p className="text-[12px] font-bold leading-4 text-white/60 tabular-nums" data-testid="ark-score-change">
-                    {fillWords(words.scoreChange, {before: change.arkScore.before, after: arkCountAt(change.arkScore.before, change.arkScore.after, progress)})}
-                </p>
-            ) : null}
         </div>
     );
 }
@@ -388,27 +391,99 @@ function Tile({title, value, children, href, onOpen}: {title: string; value: str
     );
 }
 
-/** 1. The headline: Ark Score, 0–500. */
-export function ArkScoreCard({stats, words, locale}: {stats: Pick<ArkStats, "arkScore">; words: ArkWords; locale: string}) {
+function readExplained(): boolean {
+    try {
+        return window.localStorage.getItem(ARK_SCORE_EXPLAINED_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * The one-time band over the new Ark Score: what it is now, inline (never a
+ * modal), until "Got it". Remembered per browser; shown again where storage
+ * is blocked only until dismissed on that page.
+ */
+export function ArkScoreExplainer({words}: {words: ArkWords}) {
+    const [shown, setShown] = useState(false);
+    useEffect(() => {
+        setShown(!readExplained());
+    }, []);
+    if (!shown) return null;
+    const dismiss = () => {
+        setShown(false);
+        try {
+            window.localStorage.setItem(ARK_SCORE_EXPLAINED_KEY, "1");
+        } catch {
+            // For this page, then.
+        }
+    };
     return (
-        <section className="border-b border-white/[0.06] px-[18px] py-5" data-testid="profile-ark-score">
+        <div className="mt-4 border border-primary-400/25 bg-primary-400/[0.06] px-3.5 py-3" role="note" data-testid="ark-score-explainer">
+            <p className="text-[13px] font-bold leading-5 text-white">{words.explainTitle}</p>
+            <p className="mt-1 text-[12px] leading-[18px] text-white/70">{words.explainBody}</p>
+            <button
+                type="button"
+                onClick={dismiss}
+                className="mt-2.5 inline-flex min-h-8 items-center rounded-full bg-primary-400 px-3.5 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300"
+                data-testid="ark-score-explainer-dismiss"
+            >
+                {words.explainDismiss}
+            </button>
+        </div>
+    );
+}
+
+/**
+ * 1. The headline: Ark Score, your part in the shared Ark (0–100; an older
+ * server's 0–500 until it switches), this week's change, the way to your
+ * animals aboard, and, the first time, what changed.
+ */
+export function ArkScoreCard({score, weekChange = null, words, locale, animalsHref, isSelf = false, explain = true}: {
+    score: Pick<ArkScoreRead, "value" | "outOf" | "world">;
+    /** This week's change to the world score (`ark_world_week_change`). */
+    weekChange?: number | null;
+    words: ArkWords;
+    locale: string;
+    /** `/u/{handle}/ark`: their animals in the Ark. */
+    animalsHref?: string;
+    isSelf?: boolean;
+    /** The one-time band (the world score only). */
+    explain?: boolean;
+}) {
+    return (
+        <section className="border-b border-white/[0.06] px-[18px] py-5" data-testid="profile-ark-score" data-ark-world={score.world ? "true" : "false"}>
             <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{words.score}</p>
             <p className="mt-1 flex items-baseline gap-2">
-                <span className="font-display text-[44px] font-black leading-none tabular-nums" style={{color: NEON}}>
-                    {new Intl.NumberFormat(locale).format(stats.arkScore)}
+                <span className="font-display text-[44px] font-black leading-none tabular-nums" style={{color: NEON}} data-testid="profile-ark-score-value">
+                    {new Intl.NumberFormat(locale).format(score.value)}
                 </span>
-                <span className="text-sm font-semibold text-white/40">{words.outOf}</span>
+                <span className="text-sm font-semibold text-white/40">{fillWords(words.outOf, {max: score.outOf})}</span>
+                {score.world && weekChange !== null && weekChange !== 0 ? (
+                    <span className="ml-auto text-[12px] font-bold tabular-nums" style={{color: weekChange < 0 ? LESSON : NEON}} data-testid="profile-ark-score-week">
+                        {fillWords(words.scoreWeek, {delta: arkSignedChange(weekChange)})}
+                    </span>
+                ) : null}
             </p>
-            <span className="mt-3 block"><Bar value={(stats.arkScore / 500) * 100} tint={NEON} /></span>
+            <span className="mt-3 block"><Bar value={arkScoreShare(score)} tint={NEON} /></span>
+            {score.world ? <p className="mt-2 text-[12px] leading-4 text-white/50">{words.scoreAbout}</p> : null}
+            {animalsHref ? (
+                <Link href={animalsHref} className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-200 hover:text-primary-100" data-testid="profile-ark-animals">
+                    {isSelf ? words.myAnimals : words.theirAnimals}
+                    <span aria-hidden="true">→</span>
+                </Link>
+            ) : null}
+            {score.world && explain ? <ArkScoreExplainer words={words} /> : null}
         </section>
     );
 }
 
-/** 2. The five bars (Experience alone for others without a public diary), each with its latest change. */
+/** 2. Life: the five bars (Experience alone for others without a public diary), each with its latest change. No total. */
 export function ArkBarsPanel({stats, words, money, locale}: {stats: ArkStats; words: ArkWords; money: (usd: number) => string; locale: string}) {
     const visible = arkVisibleStats(stats);
     return (
-        <section className="flex flex-col gap-3 border-b border-white/[0.06] px-[18px] py-4" data-testid="profile-ark-bars">
+        <section className="flex flex-col gap-3 border-b border-white/[0.06] px-[18px] py-4" data-testid="profile-ark-bars" aria-label={words.life}>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{words.life}</p>
             <ul className="flex flex-col gap-3">
                 {visible.map((stat) => {
                     const value = arkBarValue(stats, stat);
@@ -420,7 +495,7 @@ export function ArkBarsPanel({stats, words, money, locale}: {stats: ArkStats; wo
                             <div className="flex items-baseline justify-between gap-3 text-[13px] leading-5">
                                 <span className="font-semibold text-white">{statName(stat, words)}</span>
                                 <span className="flex items-baseline gap-2 tabular-nums">
-                                    {stat === "money" && stats.bars.money ? <span className="text-white/60">{money(stats.bars.money.balanceCents / 100)}</span> : null}
+                                    {stat === "money" && stats.bars.money?.balanceCents != null ? <span className="text-white/60">{money(stats.bars.money.balanceCents / 100)}</span> : null}
                                     <span className="font-bold text-white">{value}</span>
                                     {latest ? (
                                         <span className="text-[11px] font-bold" style={{color: tint}}>

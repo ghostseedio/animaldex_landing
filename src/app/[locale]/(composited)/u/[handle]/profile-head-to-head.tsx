@@ -12,7 +12,7 @@ type ComparisonSide = {
     collectorScore: number;
     powerSetScore: number;
     overallScore: number;
-    /** Life Sim: compared in place of Overall when both have it. */
+    /** Ark 3.3: the world score (0–100), the headline; null when that side is not in the Ark at all. */
     arkScore?: number | null;
     indexedSpeciesCount: number;
     wildObservationCount: number;
@@ -158,9 +158,11 @@ export default function ProfileHeadToHeadSheet({
         };
     }, [memberUserId]);
     // Life Sim (contract section 9): Ark Score in place of Overall once both have one.
-    const headline = comparison && comparison.viewer.arkScore != null && comparison.member.arkScore != null
-        ? {label: "ARK SCORE", viewer: comparison.viewer.arkScore, member: comparison.member.arkScore}
-        : {label: "OVERALL COLLECTION SCORE", viewer: comparison?.viewer.overallScore ?? 0, member: comparison?.member.overallScore ?? 0};
+    // Ark 3.3 (docs/ark-spec.md section 7.6): the world score both sides, with no Overall fallback;
+    // a side without one says so. Collection points stay in the sections below.
+    const headline = {label: "ARK SCORE", viewer: comparison?.viewer.arkScore ?? null, member: comparison?.member.arkScore ?? null};
+    const bothScored = headline.viewer !== null && headline.member !== null;
+    const scoreText = (value: number | null) => (value === null ? <span className="text-[13px] font-bold text-white/50">Not in the Ark yet</span> : value);
 
     return (
         <div
@@ -206,16 +208,18 @@ export default function ProfileHeadToHeadSheet({
                             <div className="flex flex-col items-center gap-2.5 px-4 py-[18px]">
                                 <p className="text-[11px] font-semibold text-white/40">{headline.label}</p>
                                 <div className="flex w-full items-center text-[34px] font-black">
-                                    <span style={{color: headline.viewer > headline.member ? THEME.neon : "#ffffff"}}>
-                                        {headline.viewer}
+                                    <span style={{color: bothScored && headline.viewer! > headline.member! ? THEME.neon : "#ffffff"}} data-testid="head-to-head-viewer-ark">
+                                        {scoreText(headline.viewer)}
                                     </span>
                                     <span className="mx-auto text-[10px] font-extrabold text-white/[0.62]">
-                                        {headline.viewer === headline.member
-                                            ? "TIED"
-                                            : `LEADS BY ${Math.abs(headline.viewer - headline.member)}`}
+                                        {!bothScored
+                                            ? null
+                                            : headline.viewer === headline.member
+                                                ? "TIED"
+                                                : `LEADS BY ${Math.abs(headline.viewer! - headline.member!)}`}
                                     </span>
-                                    <span style={{color: headline.member > headline.viewer ? THEME.neon : "#ffffff"}}>
-                                        {headline.member}
+                                    <span style={{color: bothScored && headline.member! > headline.viewer! ? THEME.neon : "#ffffff"}} data-testid="head-to-head-member-ark">
+                                        {scoreText(headline.member)}
                                     </span>
                                 </div>
                             </div>

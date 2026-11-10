@@ -1,4 +1,5 @@
 import "server-only";
+import {readArkScore, readArkWorldWeekChange, type ArkScoreRead} from "@/lib/ark-world";
 import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
@@ -1006,17 +1007,38 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
  * summary's Ark Score, Steps taken and Powers earned, which anyone may see
  * (section 7). Read on its own, so a server without the columns answers
  * nothing here and the rest of the profile reads as before.
+ *
+ * Ark 3.3 (docs/ark-spec.md section 7.6): the Ark Score is the world score
+ * (`ark_world_score`, 0–100, with `ark_world_week_change`); the old
+ * `ark_score` (0–500) is read only from a server without the new columns.
+ * `life` (the five bars) is read but shown only where the bars may be.
  */
-export type PublicArkSummary = {arkScore: number | null; stepsTotal: number | null; powersEarned: number | null};
+export type PublicArkSummary = {
+    score: ArkScoreRead;
+    /** Kept for the callers that only want the number. */
+    arkScore: number;
+    weekChange: number | null;
+    stepsTotal: number | null;
+    powersEarned: number | null;
+};
+
+const ARK_SUMMARY_SELECT = "ark_world_score,ark_world_week_change,ark_score,steps_total,powers_earned";
+const ARK_SUMMARY_SELECT_BEFORE_3_3 = "ark_score,steps_total,powers_earned";
 
 export async function getPublicArkSummary(userId: string): Promise<PublicArkSummary | null> {
-    const params = new URLSearchParams({select: "ark_score,steps_total,powers_earned", user_id: `eq.${userId}`, limit: "1"});
-    const [row] = await fetchRows<Record<string, unknown>>("member_profile_summaries_v1", params);
+    const read = async (select: string) => {
+        const params = new URLSearchParams({select, user_id: `eq.${userId}`, limit: "1"});
+        const [row] = await fetchRows<Record<string, unknown>>("member_profile_summaries_v1", params);
+        return row ?? null;
+    };
+    // A server without the 3.3 columns refuses the whole select: ask again the old way.
+    const row = await read(ARK_SUMMARY_SELECT) ?? await read(ARK_SUMMARY_SELECT_BEFORE_3_3);
     if (!row) return null;
-    const read = (value: unknown) => {
+    const count = (value: unknown) => {
         const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
         return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
     };
-    const summary = {arkScore: read(row.ark_score), stepsTotal: read(row.steps_total), powersEarned: read(row.powers_earned)};
-    return summary.arkScore === null ? null : summary;
+    const score = readArkScore(row);
+    if (!score) return null;
+    return {score, arkScore: score.value, weekChange: readArkWorldWeekChange(row), stepsTotal: count(row.steps_total), powersEarned: count(row.powers_earned)};
 }

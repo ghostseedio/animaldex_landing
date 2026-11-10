@@ -2910,7 +2910,23 @@
     "ark": {
       "score": "Ark Score",
       "scoreShort": "Ark {n}",
-      "outOf": "of 500",
+      "outOf": "of {max}",
+      "scoreAbout": "Your part in the shared Ark",
+      "scoreWeek": "{delta} this week",
+      "myAnimals": "My animals in the Ark",
+      "theirAnimals": "Their animals in the Ark",
+      "notInArk": "Not in the Ark yet",
+      "life": "Life",
+      "explainTitle": "Ark Score has changed",
+      "explainBody": "It is now your part in the shared Ark, from 0 to 100. Everyone starts at 50. It moves only when a step of yours works and brings an animal aboard: one that balances the Ark lifts it, one that crowds it lowers it. Nobody else's animals can change it. Your life bars are below, as before.",
+      "explainDismiss": "Got it",
+      "offerNew": "If this works, a {species} comes aboard the Ark",
+      "offerNewAn": "If this works, an {species} comes aboard the Ark",
+      "offerPair": "If this works, your {species} pair will be complete",
+      "offerMilestone": "If this works, your {species} pair gains a milestone",
+      "arrival": "A {species} came aboard the Ark",
+      "arrivalAn": "An {species} came aboard the Ark",
+      "arrivalSee": "See it in the Ark",
       "stats": {
         "money": "Money",
         "relationships": "Relationships",
@@ -2926,7 +2942,6 @@
       "revised": "Revised",
       "undone": "Undone",
       "lessonExperience": "+{n} Experience from the lesson",
-      "scoreChange": "Ark Score {before} → {after}",
       "revisedBetter": "Revised · it went better",
       "revisedWorse": "Revised · it went worse",
       "revisedSame": "Revised",
@@ -4134,6 +4149,25 @@
       "notAboardBody": "When a step you take with it works, one comes aboard.",
       "start": "Start a step with it",
       "seeArk": "See the Ark"
+    },
+    "person": {
+      "metaTitle": "{name}'s animals in the Ark",
+      "title": "{name}'s animals in the Ark",
+      "titleSelf": "My animals in the Ark",
+      "scoreAbout": "Their part in the shared Ark",
+      "scoreAboutSelf": "Your part in the shared Ark",
+      "outOf": "of {max}",
+      "summary": "{animals} aboard, {species}",
+      "anonymousTitle": "Anonymous aboard",
+      "anonymousBody": "{name} travels anonymously: on the Ark their animals show as a Voyager number, never a name. Names show only for people who choose to show theirs.",
+      "selfPrivate": "Only you see this list. On the Ark, others see your animals as brought by {label}.",
+      "selfNamed": "Your name shows on your animals in the Ark.",
+      "noneSelf": "None of your animals is aboard yet. When a step from one of your animals works, that animal comes aboard.",
+      "since": "Since {date}",
+      "see": "See in the Ark",
+      "arkLine": "The whole Ark: {animals} of {species}, brought by {founders}.",
+      "openArk": "Open the Ark",
+      "back": "Back to the profile"
     }
   }
 }

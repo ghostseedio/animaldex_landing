@@ -34,7 +34,7 @@ export function friendlyCreditOfferError(error: unknown) {
         return "You do not have enough credits for that offer.";
     }
     if (normalized.includes("trade_unlock_score_required")) {
-        return "Trading unlocks at 1000 overall score.";
+        return "Trading unlocks at 1000 collection points.";
     }
 
     return message || "Credit offer failed.";

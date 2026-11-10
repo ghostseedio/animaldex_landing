@@ -13,7 +13,14 @@
  * The server computes every number. Nothing here invents a change: the
  * client only shows what the ledger says, and works out the Money bar and
  * Ark Score only to draw a count-up between two values the server sent.
+ *
+ * Ark 3.3 (docs/ark-spec.md section 7.6): the Ark Score is now the world
+ * score, 0–100 (`ark_world_score`, lib/ark-world); the old `ark_score` is read
+ * only from a server that has not switched. The reveal and the Diary no
+ * longer show a score line, though a change still decodes its `ark_score`.
  */
+
+import {decodeArkLife, readArkScore, readArkWorldWeekChange} from "@/lib/ark-world";
 
 export const ARK_LIFE_STATS = ["money", "relationships", "energy", "reputation"] as const;
 export const ARK_STATS = [...ARK_LIFE_STATS, "experience"] as const;
@@ -63,8 +70,11 @@ export type ArkChange = {
 };
 
 export type ArkBars = {
-    /** Null when the viewer may not see the life bars (contract section 7). */
-    money: {bar: number; balanceCents: number} | null;
+    /**
+     * Null when the viewer may not see the life bars (contract section 7).
+     * `balanceCents` is null when only the bar is sent (`life.money_bar`).
+     */
+    money: {bar: number; balanceCents: number | null} | null;
     relationships: number | null;
     energy: number | null;
     reputation: number | null;
@@ -75,7 +85,19 @@ export type ArkSteps = {total: number; worked: number; partly: number; didntWork
 
 /** `ark_stats_v1`: the viewer's own, or someone else's within section 7. */
 export type ArkStats = {
+    /**
+     * The Ark Score shown: the world score (`ark_world_score`, 0–100) once the
+     * server sends it, else the old Life Sim sum (`ark_score`, 0–500).
+     */
     arkScore: number;
+    /** 100 for the world score, 500 for the old key (lib/ark-world `readArkScore`). */
+    arkScoreOutOf: 100 | 500;
+    /** True when `arkScore` is the world score. */
+    arkWorld: boolean;
+    /** This week's change to the world score (`ark_world_week_change`); null when not sent. */
+    weekChange: number | null;
+    /** The old Life Sim sum (`ark_score`) while a server still sends it: only the old mission thresholds read it. */
+    legacyArkScore: number | null;
     isSelf: boolean;
     barsVisible: boolean;
     bars: ArkBars;
@@ -290,8 +312,16 @@ function bar(value: unknown, min: number, fallback: number | null): number | nul
 export function decodeArkStats(raw: unknown): ArkStats | null {
     const row = object(raw);
     if (!row) return null;
-    const score = integer(row.ark_score);
-    const bars = object(row.bars);
+    const score = readArkScore(row);
+    // The five bars: `bars` as before, or the new `life` (no total).
+    const life = decodeArkLife(row.life);
+    const bars = object(row.bars) ?? (life ? {
+        money: life.moneyBar !== null ? {bar: life.moneyBar} : null,
+        relationships: life.relationships,
+        energy: life.energy,
+        reputation: life.reputation,
+        experience: life.experience
+    } : null);
     if (score === null || !bars) return null;
     const barsVisible = row.bars_visible !== false;
     const money = object(bars.money);
@@ -306,12 +336,16 @@ export function decodeArkStats(raw: unknown): ArkStats | null {
     }
     const steps = object(row.steps);
     return {
-        arkScore: Math.max(0, Math.min(500, score)),
+        arkScore: score.value,
+        arkScoreOutOf: score.outOf,
+        arkWorld: score.world,
+        weekChange: readArkWorldWeekChange(row),
+        legacyArkScore: integer(row.ark_score),
         isSelf: row.is_self === true,
         barsVisible,
         bars: {
             money: barsVisible && money && (moneyBar !== null || balance !== null)
-                ? {bar: moneyBar ?? arkMoneyBar(balance ?? 0), balanceCents: Math.max(0, balance ?? 0)}
+                ? {bar: moneyBar ?? arkMoneyBar(balance ?? 0), balanceCents: balance === null ? null : Math.max(0, balance)}
                 : null,
             relationships: barsVisible ? bar(bars.relationships, 0, null) : null,
             energy: barsVisible ? bar(bars.energy, 0, null) : null,

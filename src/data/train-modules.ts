@@ -1,4 +1,5 @@
 import "server-only";
+import {missionIsLocked} from "@/lib/ark-world";
 
 import type {AppIconName} from "@/app/[locale]/(authenticated)/app/_components/app-icon";
 import {getAppJournalEntries} from "@/data/authenticated-app";
@@ -199,15 +200,29 @@ async function getTrainPackIndexStatus(supabase: SupabaseClient, userId: string)
     };
 }
 
+/**
+ * Open missions not yet done. Ark 3.3 (docs/ark-spec.md section 7.6, contract
+ * A.4): this compared verified Overall with `unlock_score_min`, which the
+ * Life Sim migration put on the Ark scale (a fifth of the Overall number), so
+ * missions read as open too early. Now the server's `unlocked_at` first, then
+ * collection points against `unlock_collection_points`; an older server's
+ * Ark-scale number never opens a mission here on its own (lib/ark-world).
+ */
 async function getTrainMissionIndexStatus(supabase: SupabaseClient, userId: string) {
+    const missionStatus = async () => {
+        const withPoints = await supabase
+            .from("user_mission_status_v1")
+            .select("unlock_score_min,unlock_collection_points,unlocked_at,requires_trade_unlocked,completed_count");
+        return withPoints.error
+            ? supabase.from("user_mission_status_v1").select("unlock_score_min,unlocked_at,requires_trade_unlocked,completed_count")
+            : withPoints;
+    };
     const [summaryResult, missionsResult] = await Promise.all([
         supabase
             .from("user_progression_summary_v1")
             .select("verified_overall_score,trade_unlocked_at")
             .maybeSingle(),
-        supabase
-            .from("user_mission_status_v1")
-            .select("unlock_score_min,requires_trade_unlocked,completed_count")
+        missionStatus()
     ]);
 
     let overallScore = Number((summaryResult.data as QueryRow | null)?.verified_overall_score ?? 0);
@@ -245,8 +260,7 @@ async function getTrainMissionIndexStatus(supabase: SupabaseClient, userId: stri
     }
 
     return missionRows.filter((row) => {
-        const locked = overallScore < Number(row.unlock_score_min ?? 0)
-            || (Boolean(row.requires_trade_unlocked) && !tradeUnlocked);
+        const locked = missionIsLocked(row, {collectionPoints: overallScore, tradeUnlocked, legacyArkScore: null});
         return !locked && Number(row.completed_count ?? 0) === 0;
     }).length;
 }

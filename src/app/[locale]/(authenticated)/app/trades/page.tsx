@@ -58,7 +58,7 @@ export default async function TradesPage({
                 <AppEmpty
                     icon="trade"
                     title="Trading is locked"
-                    detail={`Trading unlocks at ${progression.tradeUnlockScore} overall score. You are at ${progression.overallScore} / ${progression.tradeUnlockScore}.`}
+                    detail={`Trading unlocks at ${progression.tradeUnlockScore} collection points. You are at ${progression.overallScore} / ${progression.tradeUnlockScore}.`}
                 />
             )}
         </AppPage>

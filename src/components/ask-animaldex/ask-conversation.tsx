@@ -139,6 +139,9 @@ import {
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
 import {ArkRevealMessages, ArkRevisionCard} from "@/components/ark/ark-views";
+import {ArkArrivalLine, ArkStepOfferNote} from "@/components/ark/ark-chat-lines";
+import {useArkArrivals, useArkStepOffer} from "@/components/ark/use-ark-chat";
+import {useArkPanelControl} from "@/components/ark/ark-panel";
 import {arkStepOutcome} from "@/lib/ark-measure";
 import {trackArk} from "@/lib/ark-measure-client";
 import {arkMoneyFormatter, fetchArkChanges, fetchArkStats, useDisplayCurrency} from "@/components/ark/use-ark";
@@ -1960,6 +1963,26 @@ function AskConversation({
         const timers = [...(finishedStep ? [1_200] : []), 4_000, 12_000].map((delay) => window.setTimeout(() => void reloadArk(), delay));
         return () => timers.forEach((timer) => window.clearTimeout(timer));
     }, [isSending, ownerChat, reloadArk]);
+    // MARK: The shared Ark (Part 2, docs/ark-next.md): the step's line, and the arrival a step that worked brings
+
+    const arkSpecies = useMemo(() => ({
+        speciesProfileId: companionSpeciesProfileId ?? null,
+        slug: resolvedSubject.slug ?? null,
+        name: hints.animalName ?? resolvedSubject.name ?? null
+    }), [companionSpeciesProfileId, resolvedSubject.slug, resolvedSubject.name, hints.animalName]);
+    /** Read again after an arrival: the pair it completed changes the line. */
+    const [arkOfferVersion, setArkOfferVersion] = useState(0);
+    const arkOffer = useArkStepOffer({enabled: ownerChat && Boolean(openStep), species: arkSpecies, refreshKey: arkOfferVersion});
+    const arkArrivals = useArkArrivals({
+        enabled: ownerChat,
+        species: arkSpecies,
+        messages,
+        onArrived: () => {
+            sticksToBottom.current = true;
+            setArkOfferVersion((version) => version + 1);
+        }
+    });
+    const arkPanel = useArkPanelControl();
     /**
      * "I've done it" puts the bar in report mode: one button, no accepting
      * first (owner, 2026-11-09). The reveal comes once the step is done,
@@ -2584,6 +2607,7 @@ function AskConversation({
                 words={words}
                 busy={stepBusyNow}
                 problem={stepProblem}
+                arkOffer={arkOffer && resolution.kind === "live" ? <ArkStepOfferNote offer={arkOffer} words={words.ark} locale={locale} /> : null}
                 onPrimary={() => {
                     if (resolution.kind === "live") stepPrimary(resolution.step);
                 }}
@@ -2634,6 +2658,22 @@ function AskConversation({
                     />
                 ))}
             </>
+        );
+    };
+    /** The animal a worked step brought aboard, under the reply that finished it (after its reveal), never under words still being typed out. */
+    const arkArrivalBlock = (message: AskMessage) => {
+        const arrival = arkArrivals.get(message.id);
+        if (!arrival || (pacer.revealing && pacer.messageId === message.id)) return null;
+        return (
+            <ArkArrivalLine
+                key={`ark-arrival-${arrival.animal.id}`}
+                species={arrival.animal.name}
+                slug={arrival.animal.model_slug}
+                fresh={arrival.fresh && !reducedMotion}
+                words={words.ark}
+                locale={locale}
+                onSee={arkPanel ? () => arkPanel.show(arrival.animal) : undefined}
+            />
         );
     };
     /** The open step's own message: the animal's face and the step section, no words above it (those are the model's alone). */
@@ -3021,6 +3061,7 @@ function AskConversation({
                                             askAnotherSignUp={message.id === firstRealProblemId ? signUpOffer : null}
                                         />
                                         {arkBlocks(message)}
+                                        {arkArrivalBlock(message)}
                                         {debateBlocks(message.id)}
                                     </div>
                                 ])}

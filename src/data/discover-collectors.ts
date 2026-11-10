@@ -5,6 +5,7 @@ import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {resolvePublicOverallScore} from "@/data/public-profiles";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {getCollectorScoreBand} from "@/lib/collector-score";
+import {readArkScore} from "@/lib/ark-world";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {rowIsHomoSapiens} from "@/lib/people-never-public";
 
@@ -22,6 +23,7 @@ export type DiscoverCollectorItem = {
     /**
      * Life Sim (docs/life-sim/CONTRACT.md, section 9): Ark Score, shown in
      * place of Overall, with Steps and Powers. Null on a server without them.
+     * Ark 3.3: the world score, 0–100 (the list keeps its collection order).
      */
     arkScore: number | null;
     stepsTotal: number | null;
@@ -130,12 +132,17 @@ function resolveBestFindImage(captureId: string | null, row: QueryRow | null | u
  * never sorted by: the view works Ark Score out per row.
  */
 async function loadArkSummaries(userIds: string[]) {
-    const rows = await fetchRowsByIds<QueryRow>("member_profile_summaries_v1", "user_id,ark_score,steps_total,powers_earned", "user_id", userIds);
+    // Ark 3.3: the world score (`ark_world_score`, 0–100); a server without the column refuses the select, so the old one is asked then.
+    const withWorld = await fetchRowsByIds<QueryRow>("member_profile_summaries_v1", "user_id,ark_world_score,steps_total,powers_earned", "user_id", userIds);
+    const rows = withWorld.length || !userIds.length
+        ? withWorld
+        : await fetchRowsByIds<QueryRow>("member_profile_summaries_v1", "user_id,ark_score,steps_total,powers_earned", "user_id", userIds);
     const nullable = (row: QueryRow, key: string) => (row[key] == null ? null : readNumber(row, key));
     return new Map(rows.flatMap((row) => {
         const userId = readString(row, "user_id");
-        return userId && row.ark_score != null
-            ? [[userId, {arkScore: nullable(row, "ark_score"), stepsTotal: nullable(row, "steps_total"), powersEarned: nullable(row, "powers_earned")}] as const]
+        const score = readArkScore(row);
+        return userId && score
+            ? [[userId, {arkScore: score.value, stepsTotal: nullable(row, "steps_total"), powersEarned: nullable(row, "powers_earned")}] as const]
             : [];
     }));
 }

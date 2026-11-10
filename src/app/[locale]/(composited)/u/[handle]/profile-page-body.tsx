@@ -180,7 +180,8 @@ export async function ProfilePageBody({
     const ark = viewerArk.stats || arkSummary
         ? {
             stats: viewerArk.stats,
-            arkScore: arkSummary?.arkScore ?? null,
+            score: arkSummary?.score ?? null,
+            weekChange: arkSummary?.weekChange ?? null,
             stepsTotal: arkSummary?.stepsTotal ?? null,
             powersEarned: arkSummary?.powersEarned ?? null
         }

@@ -1,4 +1,5 @@
 import "server-only";
+import {readArkWorldWeekChange} from "@/lib/ark-world";
 
 import {
     type AppProgression
@@ -133,7 +134,16 @@ export type ProfileStatsWeek = {
      * `ark_week` (`{start, steps, ark_score_change, powers}`, the owner only;
      * `previous_*` read when a server adds them). Null without it.
      */
-    ark: {steps: number; previousSteps: number | null; arkScoreChange: number; powers: number; previousPowers: number | null} | null;
+    ark: {
+        steps: number;
+        previousSteps: number | null;
+        /** The old Life Sim sum's change (`ark_week.ark_score_change`), shown only when the world's is not sent. */
+        arkScoreChange: number;
+        /** Ark 3.3: this week's change to the world score (`ark_world_week_change`); null from an older server. */
+        worldChange: number | null;
+        powers: number;
+        previousPowers: number | null;
+    } | null;
 };
 
 function signedInteger(value: unknown): number | null {
@@ -141,19 +151,20 @@ function signedInteger(value: unknown): number | null {
     return Number.isFinite(parsed) ? Math.round(parsed) : null;
 }
 
-function decodeArkWeek(value: unknown): ProfileStatsWeek["ark"] {
+function decodeArkWeek(value: unknown, overview?: unknown): ProfileStatsWeek["ark"] {
     const row = value && typeof value === "object" && !Array.isArray(value) ? value as QueryRow : null;
     if (!row) return null;
     return {
         steps: toCount(row.steps),
         previousSteps: row.previous_steps == null ? null : toCount(row.previous_steps),
         arkScoreChange: signedInteger(row.ark_score_change) ?? 0,
+        worldChange: readArkWorldWeekChange(overview) ?? readArkWorldWeekChange(row),
         powers: toCount(row.powers),
         previousPowers: row.previous_powers == null ? null : toCount(row.previous_powers)
     };
 }
 
-function decodeStatsWeek(value: unknown, arkWeek?: unknown): ProfileStatsWeek | null {
+function decodeStatsWeek(value: unknown, arkWeek?: unknown, overview?: unknown): ProfileStatsWeek | null {
     const row = value as QueryRow | null;
     if (!row || typeof row !== "object") return null;
     const currentStart = typeof row.current_start === "string" ? row.current_start : null;
@@ -170,7 +181,7 @@ function decodeStatsWeek(value: unknown, arkWeek?: unknown): ProfileStatsWeek | 
         daily: (Array.isArray(row.daily) ? row.daily : [])
             .filter((day: QueryRow) => typeof day?.date === "string")
             .map((day: QueryRow) => ({date: day.date as string, captures: toCount(day.captures), newSpecies: toCount(day.new_species)})),
-        ark: decodeArkWeek(arkWeek)
+        ark: decodeArkWeek(arkWeek, overview)
     };
 }
 
@@ -243,7 +254,7 @@ export async function getProfileSocialState(profileUserId: string): Promise<Prof
         followCounts: counts
             ? {followers: toCount(counts.followers), following: toCount(counts.following)}
             : await fetchFollowCountsAsServer(profileUserId),
-        week: decodeStatsWeek(data?.week, data?.ark_week),
+        week: decodeStatsWeek(data?.week, data?.ark_week, data),
         profileViews: isOwner && views
             ? {thisWeek: toCount(views.this_week), previousWeek: toCount(views.previous_week), allTime: toCount(views.all_time)}
             : null,
