@@ -86,7 +86,7 @@ function clamp01(v: number): number {
 
 /** The parent a young one keeps to: one of those aboard, chosen from its own id so every viewer agrees. */
 export function chosenParent(id: string, parents: string[] | null | undefined): string | null {
-    const aboard = [...new Set((parents ?? []).filter(Boolean))].sort();
+    const aboard = Array.from(new Set((parents ?? []).filter(Boolean))).sort();
     if (!aboard.length) return null;
     return aboard[hash32(id, "parent") % aboard.length];
 }
