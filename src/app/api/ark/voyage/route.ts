@@ -1,4 +1,4 @@
-import {NextResponse} from "next/server";
+import {NextResponse, type NextRequest} from "next/server";
 import {readArkVoyage} from "@/data/ark-voyage";
 
 export const runtime = "nodejs";
@@ -9,8 +9,15 @@ export const dynamic = "force-dynamic";
  * page's 45-second refresh and the apps' WebView. A signed-in reader's
  * answer marks their own animals, so it is never cached; an anonymous one
  * is the same for everyone and may be, briefly.
+ *
+ * In development, `?fixture=1` answers the v2 fixture (as `/ark?fixture=1`),
+ * for `/ark/embed.html?fixture=1`.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+    if (process.env.NODE_ENV === "development" && request.nextUrl.searchParams.get("fixture") === "1") {
+        const fixture = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+        return NextResponse.json({available: true, snapshot: fixture}, {headers: {"Cache-Control": "no-store"}});
+    }
     const read = await readArkVoyage();
     const cache = read.signedIn ? "private, no-store" : "public, s-maxage=30, stale-while-revalidate=60";
     if (!read.available) return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});

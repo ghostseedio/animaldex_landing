@@ -4,6 +4,7 @@ import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
 import {getLocalePath} from "@/lib/site";
 import {getArkWords} from "@/loaders/ark-words";
+import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 
@@ -36,11 +37,15 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
  * server's `public_story` flag would.
+ *
+ * `?lang=<app language>` (any of the apps' 44, e.g. `ja`, `ar`, `zh-Hant`)
+ * shows the Ark's words in that language from its Ark-only bundle
+ * (`src/lib/ark-languages.ts`), English key by key, right to left where it reads so.
  */
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; lang?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -57,8 +62,13 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
 
-export async function generateMetadata({params}: Props): Promise<Metadata> {
-    const {words} = await getArkWords(params.locale);
+/** `?lang=`: the app language asked for, if any (the site locale otherwise). */
+function langOf(searchParams: Props["searchParams"]): string | null {
+    return typeof searchParams.lang === "string" ? searchParams.lang.slice(0, 35) : null;
+}
+
+export async function generateMetadata({params, searchParams}: Props): Promise<Metadata> {
+    const {words} = await getArkWords(params.locale, langOf(searchParams));
     return {
         title: words.metaTitle,
         description: words.metaDescription,
@@ -147,15 +157,16 @@ export default async function ArkPage({params, searchParams}: Props) {
     const development = process.env.NODE_ENV === "development";
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
-    const [{words, talk}, data] = await Promise.all([
-        getArkWords(params.locale),
+    const [{words, talk, language}, data] = await Promise.all([
+        getArkWords(params.locale, langOf(searchParams)),
         mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
     const fixtureLife = mode ? await loadFixtureLife(mode) : null;
-    return (
+    const otherLanguage = langOf(searchParams) !== null && language !== params.locale;
+    const view = (
         <ArkView
-            locale={params.locale}
+            locale={otherLanguage ? language : params.locale}
             initial={snapshot}
             growFrom={data.fixture?.full ?? null}
             fixture={Boolean(mode)}
@@ -170,4 +181,6 @@ export default async function ArkPage({params, searchParams}: Props) {
             publicStory={Boolean(mode) && searchParams.publicStory === "1"}
         />
     );
+    // Another language than the site's: its own lang and direction, so screen readers and right-to-left scripts read it right.
+    return otherLanguage ? <div lang={language} dir={arkDirection(language)}>{view}</div> : view;
 }

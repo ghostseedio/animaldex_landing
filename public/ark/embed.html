@@ -19,8 +19,10 @@
  *
  * Query: ?snapshot=<url> (default /api/ark/voyage, refreshed every 45 s while
  * visible), ?models=<ark model folder>, ?talking=<talking model folder>, ?mine=1,
- * ?lang=<locale> (the herds' counts), ?label=<the world's accessible name, in the app's language>,
- * ?lite=1|0 (the lighter view; absent: the device decides).
+ * ?lang=<app language> (any of the apps' 44: the Ark's words from /api/ark/words, English key by key,
+ * the page's lang and dir, the herds' counts), ?label=<the world's accessible name; default: the Ark's own, in ?lang>,
+ * ?regions=1 (the seven regions' names drawn over the world from far, in ?lang),
+ * ?lite=1|0 (the lighter view; absent: the device decides), ?fixture=1 (development: the v2 fixture).
  * From the host (postMessage or window.AnimalDexArkHost):
  *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id, closeUp?}  {type: "ark:region", region}
  *   {type: "ark:visitor", visitor: {slug, name, label} | null}   the chat's animal visiting (not aboard): answered with
@@ -36,7 +38,7 @@
  */
 (function () {
   var params = new URLSearchParams(location.search);
-  var snapshotUrl = params.get("snapshot") || "/api/ark/voyage";
+  var snapshotUrl = params.get("snapshot") || (params.get("fixture") === "1" ? "/api/ark/voyage?fixture=1" : "/api/ark/voyage");
   var models = params.get("models") || "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
   var talking = params.get("talking") || models.replace(/\/ark\/?$/, "");
   var icons = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -45,7 +47,28 @@
   var lang = params.get("lang") || undefined;
   var lite = params.get("lite") === "1" ? true : params.get("lite") === "0" ? false : null;
   var motion = matchMedia("(prefers-reduced-motion: reduce)");
-  if (lang) document.documentElement.lang = lang;
+  var RTL = /^(ar|he|iw|fa|ur)([-_]|$)/i;
+  if (lang) {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = RTL.test(lang) ? "rtl" : "ltr";
+  }
+  // The Ark's words in the app's language (null until read, or if the read fails: the scene then shows numbers only).
+  var words = null;
+  // Never waited on for long: offline, the scene comes up after 2.5 s without them.
+  var wordsRead = Promise.race([new Promise(function (resolve) { setTimeout(resolve, 2500); }), fetch("/api/ark/words?lang=" + encodeURIComponent(lang || "en"))
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (body) {
+      if (!body || !body.ark) return;
+      words = body.ark;
+      document.documentElement.lang = body.language;
+      document.documentElement.dir = body.dir;
+      document.title = words.metaTitle || document.title;
+    })
+    .catch(function () {})]);
+
+  function fill(template, values) {
+    return String(template).replace(/\{(\w+)\}/g, function (match, key) { return key in values ? String(values[key]) : match; });
+  }
 
   function tell(message) {
     var text = JSON.stringify(message);
@@ -65,8 +88,12 @@
       mineOnly: params.get("mine") === "1",
       reducedMotion: motion.matches,
       lite: lite,
-      canvasLabel: params.get("label") || undefined,
-      herdBadge: function (count) { return count.toLocaleString(lang); },
+      canvasLabel: params.get("label") || (words && words.a11y && words.a11y.scene) || undefined,
+      regionLabels: params.get("regions") === "1" && words ? words.regions : undefined,
+      herdBadge: function (count) {
+        var number = count.toLocaleString(lang);
+        return words && words.herd && words.herd.badge ? fill(words.herd.badge, {count: number}) : number;
+      },
       onSelect: function (animal) { tell({type: "ark:selected", animal: animal}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
@@ -75,15 +102,14 @@
   }
 
   function read() {
-    return fetch(snapshotUrl, {cache: "no-store"})
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (body) { show(Ark.decodeArkSnapshot(body && body.snapshot ? body.snapshot : body)); })
+    return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead])
+      .then(function (both) { var body = both[0]; show(Ark.decodeArkSnapshot(body && body.snapshot ? body.snapshot : body)); })
       .catch(function () {});
   }
 
   function receive(message) {
     if (!message || typeof message !== "object") return;
-    if (message.type === "ark:snapshot") show(Ark.decodeArkSnapshot(message.snapshot));
+    if (message.type === "ark:snapshot") { var snapshot = Ark.decodeArkSnapshot(message.snapshot); wordsRead.then(function () { show(snapshot); }); }
     else if (scene && message.type === "ark:mine") scene.setMineOnly(Boolean(message.value));
     else if (scene && message.type === "ark:select") scene.select(message.id || null, Boolean(message.closeUp));
     else if (scene && message.type === "ark:region") scene.focusRegion(message.region || null);

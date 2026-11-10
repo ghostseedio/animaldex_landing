@@ -239,6 +239,15 @@ function phaseOf(id: string): number {
     return ((h >>> 0) % 10000) / 10000;
 }
 
+/**
+ * Letter-spacing for a label's text: the tracking asked for where the script
+ * takes it (Latin, Cyrillic, Greek), none elsewhere, since spacing breaks
+ * Devanagari's and Bengali's head-strokes, Thai's clusters and Arabic's joins.
+ */
+export function arkTracking(text: string, tracking: string): string {
+    return /^[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{N}\p{P}\p{S}\p{Z}]*$/u.test(text) ? tracking : "normal";
+}
+
 /** A development override for measuring each tier (`window.__arkQuality = "low"` before mounting). */
 function forcedTier(): QualityTier | null {
     const asked = (globalThis as {__arkQuality?: string}).__arkQuality;
@@ -406,7 +415,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             transform: "translate(-50%, -50%)",
             whiteSpace: "nowrap",
             font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
-            letterSpacing: "0.16em",
+            letterSpacing: arkTracking(text, "0.16em"),
             textTransform: "uppercase",
             color: "rgba(255, 252, 244, 0.95)",
             textShadow: "0 1px 2px rgba(30, 24, 12, 0.5), 0 0 16px rgba(30, 24, 12, 0.4)",
@@ -1658,6 +1667,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             labelLayer.appendChild(visitorLabel);
         }
         visitorLabel.textContent = next.label;
+        visitorLabel.style.letterSpacing = arkTracking(next.label, "0.04em");
         return id;
     };
 
