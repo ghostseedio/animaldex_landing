@@ -97,9 +97,11 @@ test("the fixture is the apps' main with step outcomes (owner, 2026-11-03)", () 
     // 642282eb, edge 7c070fe6; its only change to the older sections is the
     // visitor's privacy lines), then from main with a debate's chosen way as a
     // fresh step (AnimalDex e9d0e246: companion.chosen_way, its rule and the
-    // lines that make room for it), by scripts/generate-your-step-parity-fixture.mts.
+    // lines that make room for it), then from main with steps that never run
+    // out (AnimalDex 6ad99c4c: asking what to do or what's next gets the step,
+    // first mention or not), by scripts/generate-your-step-parity-fixture.mts.
     assert.equal(fixture.source.ref, "main");
-    assert.match(fixture.source.commit, /^3543005f/);
+    assert.match(fixture.source.commit, /^6ad99c4c/);
     assert.equal(fixture.source.files.includes("ark-sim.ts"), true);
 });
 

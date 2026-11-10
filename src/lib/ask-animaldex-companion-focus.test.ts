@@ -174,7 +174,7 @@ test("the Warmup is offered once, in the first conversation, while it is not pas
 
 test("the step rules: plain words, no proof, no refusal, no lesson check, Trials for a different step", () => {
     const rules = companionLoopRules({offersSteps: true}).join("\n");
-    assert.equal(/never mention a card, a\s+button or tapping/.test(rules), true);
+    assert.equal(/never mention a\s+card, a\s+button or tapping/.test(rules), true);
     assert.equal(rules.includes("Never ask for proof or to see anything"), true);
     assert.equal(/Never refuse it, never say it does not count, and never mention attempts, limits, waiting or\s+tomorrow/.test(rules), true);
     assert.equal(/something else that still does your\s+lesson, it counts the same/.test(rules), true);
