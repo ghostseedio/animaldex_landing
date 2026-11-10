@@ -1045,3 +1045,8 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
 .text-diagram-caption { color: var(--diagram-muted); font-size: 0.8125rem; line-height: 1.6; }
 .text-diagram-equivalent > summary { color: var(--diagram-muted); }
 .text-diagram-equivalent > summary:hover { color: var(--diagram-text); }
+
+/* The Ark panel over the chat on a phone: in from the right, like the page it is. */
+.ark-panel-over { animation: arkPanelIn 260ms var(--ease-spring) both; }
+@keyframes arkPanelIn { from { transform: translateX(32px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ark-panel-over { animation: none; } }

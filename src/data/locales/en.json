@@ -3333,7 +3333,20 @@
     "tryAgain": "Try again",
     "ogAlt": "Talk to animals on AnimalDex",
     "capStepHere": "Tell {animal} about something real, and it can give you one step to try, right here.",
-    "capDebatesInApp": "Bring other animals in to argue your problem out. Capture one in the app to start."
+    "capDebatesInApp": "Bring other animals in to argue your problem out. Capture one in the app to start.",
+    "arkOpen": "Ark",
+    "arkOpenLabel": "Open the Ark beside the chat",
+    "arkClose": "Close the Ark",
+    "arkBack": "Back to the chat",
+    "arkTitle": "The Ark",
+    "arkCount": "{animals} aboard",
+    "arkAboard": "Aboard the Ark",
+    "arkBroughtBy": "Brought by {founder} · arrived {date}",
+    "arkVisiting": "Visiting: not aboard yet",
+    "arkComesAboard": "When a step with it works, one comes aboard.",
+    "arkOpenFull": "Open the full Ark",
+    "arkLoading": "Bringing the Ark into view",
+    "arkUnavailable": "The Ark couldn't load just now."
   },
   "talkFrontDoor": {
     "placeholder": "What's on your mind?",

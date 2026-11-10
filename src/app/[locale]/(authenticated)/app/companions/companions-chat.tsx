@@ -32,6 +32,7 @@ import {COMPANIONS_SWITCH_EVENT} from "@/components/companions/use-companion-ros
 import {referAnimal} from "@/components/debates/use-debates";
 import {CompanionRow} from "./companion-row";
 import {getSpeciesImageRoute} from "@/lib/species-image-public";
+import {ArkPanelButton, ArkSplit} from "@/components/ark/ark-panel";
 
 export type CompanionsChatEntry = {row: CompanionTabRow; line: ReturnType<typeof rosterLine>; time: number | null};
 
@@ -194,6 +195,8 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
             onOpenAnimal: openAnimalInPlace,
             initialQuestion: null,
             appHref: "/#download",
+            // The Ark beside the chat, like an artifact (the owner, 2026-11-10).
+            headerAccessory: <ArkPanelButton />,
             subject: {
                 subject,
                 avatarUrl,
@@ -220,6 +223,7 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
         }
         : null), [currentId, subject, openSwitcher, talk, avatarUrl, words.list.switcher, words.list.captureAnAnimal, words.list.takePhoto, words.list.uploadFromRoll, othersUnread, coarsePointer, onCaptureFile, profileName, rows.length, askAnotherAnimal, openAnimalInPlace]);
 
+    const arkSubject = useMemo(() => ({slug: currentSlug, name: currentAnimal, speciesProfileId: currentId}), [currentSlug, currentAnimal, currentId]);
     if (!current || !page) return null;
     return (
         <div
@@ -239,7 +243,9 @@ export default function CompanionsChat({entries, cards, words, labels, talk, loc
                     companionSpeciesProfileId={current.speciesProfileId}
                     referralId={switchedReferral?.speciesProfileId === current.speciesProfileId ? switchedReferral.referralId : null}
                 />
-                <AskConversation key={current.speciesProfileId} labels={labels} presentation="page" page={page} />
+                <ArkSplit subject={arkSubject} words={talk} locale={locale}>
+                    <AskConversation key={current.speciesProfileId} labels={labels} presentation="page" page={page} />
+                </ArkSplit>
             </main>
             {/* "Ask another animal" (the owner, 2026-11-07): their other animals in the switcher's look, without this one. */}
             {picker ? (

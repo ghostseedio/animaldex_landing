@@ -81,6 +81,7 @@ import {useAskAnimalDex} from "@/components/ask-animaldex/ask-animaldex-provider
 import {askContextRequestBody, fetchAskContext} from "@/components/ask-animaldex/ask-context-prefetch";
 import {useAskThread} from "@/components/ask-animaldex/use-ask-thread";
 import {usePrefersReducedMotion, useReplyPacer} from "@/components/ask-animaldex/use-reply-pacer";
+import {emitAnimalVoice} from "@/lib/ark/animal-voice";
 import {askMarkdownPlainText} from "@/lib/ask-animaldex/markdown";
 import {askThreadKey, type AskLimitNotice, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {askThinkingPhases} from "@/lib/ask-animaldex/thinking-phases";
@@ -477,6 +478,8 @@ export type AskConversationPage = {
     initialQuestion: string | null;
     /** Where the app is ("Get the app"). */
     appHref: string;
+    /** Beside the header's own buttons (the Ark panel's toggle). */
+    headerAccessory?: React.ReactNode;
     /**
      * Who the page is about, from the page itself (the address and the
      * server's animal), so the conversation opens on the right thread in the
@@ -1250,6 +1253,26 @@ function AskConversation({
     }, [messages, retry]);
     // Typing counts as talking: Stop stays until the last word is shown.
     const animalTalking = isSending || pacer.revealing;
+    // Tell anything beside the chat (the Ark panel) that it is talking, what appears, and each word heard.
+    const voiceSubject = useMemo(() => ({slug: resolvedSubject.slug ?? null, speciesProfileId: context?.speciesProfileId ?? null}), [resolvedSubject.slug, context?.speciesProfileId]);
+    const voiceTalking = messenger && (animalTalking || speech.isPlaying);
+    useEffect(() => {
+        if (!messenger) return;
+        emitAnimalVoice({kind: "talking", active: voiceTalking, ...voiceSubject});
+    }, [messenger, voiceTalking, voiceSubject]);
+    const shownRef = useRef<{id: string | null; length: number}>({id: null, length: 0});
+    useEffect(() => {
+        if (!messenger) return;
+        const id = pacer.messageId ?? null;
+        const text = pacer.visibleText ?? "";
+        const before = shownRef.current;
+        const from = before.id === id && text.length >= before.length ? before.length : 0;
+        shownRef.current = {id, length: text.length};
+        if (id && text.length > from) emitAnimalVoice({kind: "text", chunk: text.slice(from), ...voiceSubject});
+    }, [messenger, pacer.messageId, pacer.visibleText, voiceSubject]);
+    useEffect(() => {
+        if (messenger && speech.isPlaying && speech.cursor) emitAnimalVoice({kind: "spoken", ...voiceSubject});
+    }, [messenger, speech.isPlaying, speech.cursor, voiceSubject]);
     // The open thread follows their other devices: read again every few
     // seconds while this tab is on screen, and at once when it comes back.
     // Never while the animal is answering here (the merge would leave that
@@ -3240,6 +3263,7 @@ function AskConversation({
                     >
                         <PencilIcon />
                     </button>}
+                    {onPage && page?.headerAccessory ? page.headerAccessory : null}
                     {messenger ? (
                         <span className={onPage && page?.switcher ? "[&>div>button]:h-9 [&>div>button]:w-9 [&>div>button]:bg-white/10 [&>div>button]:text-white [&>div>button]:backdrop-blur-xl" : ""}>
                         <AskChatOptions

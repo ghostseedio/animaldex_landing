@@ -155,6 +155,16 @@ const ZONE_CENTRES: Record<LandZone, {x: number; z: number}> = {
     polar: {x: ZONE_SITES.polar.x + 4, z: ZONE_SITES.polar.z - 4}
 };
 
+/**
+ * The visitors' landing (the chat's animal shown in the Ark before one is
+ * aboard): a small jetty on the beach a little along from the Coast's
+ * animals. A land animal stands at its foot; a swimmer waits off its end.
+ */
+export const VISITOR_LANDING = (() => {
+    const theta = SHORE_THETA + 0.3;
+    return {theta, foot: coastPoint(theta, -(BEACH_INSET + 0.8)), end: coastPoint(theta, 7.5), deckFrom: coastPoint(theta, -3.5), deckTo: coastPoint(theta, 6)};
+})();
+
 /** A region's middle, for its label and for flying to it. */
 export function regionCentre(region: ArkRegion): {x: number; z: number; radius: number} {
     const sites = REGION_ZONES[region].map((zone) => ZONE_SITES[zone]);

@@ -18,9 +18,14 @@
  * The shared Ark, bare, for the apps' WebView (Ark v1 contract, section 5).
  *
  * Query: ?snapshot=<url> (default /api/ark/voyage, refreshed every 45 s while
- * visible), ?models=<ark model folder>, ?mine=1.
+ * visible), ?models=<ark model folder>, ?talking=<talking model folder>, ?mine=1.
  * From the host (postMessage or window.AnimalDexArkHost):
- *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id}  {type: "ark:region", region}
+ *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id, closeUp?}  {type: "ark:region", region}
+ *   {type: "ark:visitor", visitor: {slug, name, label} | null}   the chat's animal visiting (not aboard): answered with
+ *                                                                {type: "ark:visitor-id", id}, for select and talking
+ *   {type: "ark:talking", talking: {slug, animalId, active}}     an animal starts or stops talking (its full talking model stands in)
+ *   {type: "ark:talk-text", chunk}                               more of its reply as it is typed: the jaw says it
+ *   {type: "ark:talk-pulse", level}                              the reply heard aloud: its loudness now, 0…1
  * To the host: {type: "ark:selected", animal} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.
  */
@@ -28,6 +33,7 @@
   var params = new URLSearchParams(location.search);
   var snapshotUrl = params.get("snapshot") || "/api/ark/voyage";
   var models = params.get("models") || "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
+  var talking = params.get("talking") || models.replace(/\/ark\/?$/, "");
   var icons = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
   var Ark = window.AnimalDexArk;
   var scene = null;
@@ -45,6 +51,7 @@
     scene = Ark.mountArk(document.getElementById("ark"), {
       snapshot: snapshot,
       modelBase: models,
+      talkingBase: talking,
       iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
       mineOnly: params.get("mine") === "1",
       reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -64,8 +71,12 @@
     if (!message || typeof message !== "object") return;
     if (message.type === "ark:snapshot") show(Ark.decodeArkSnapshot(message.snapshot));
     else if (scene && message.type === "ark:mine") scene.setMineOnly(Boolean(message.value));
-    else if (scene && message.type === "ark:select") scene.select(message.id || null);
+    else if (scene && message.type === "ark:select") scene.select(message.id || null, Boolean(message.closeUp));
     else if (scene && message.type === "ark:region") scene.focusRegion(message.region || null);
+    else if (scene && message.type === "ark:visitor") tell({type: "ark:visitor-id", id: scene.setVisitor(message.visitor || null)});
+    else if (scene && message.type === "ark:talking") scene.setTalking(message.talking || null);
+    else if (scene && message.type === "ark:talk-text") scene.talkText(String(message.chunk || ""));
+    else if (scene && message.type === "ark:talk-pulse") scene.talkPulse(Number(message.level) || 0);
   }
   window.AnimalDexArkHost = {send: receive};
   window.addEventListener("message", function (event) { receive(event.data); });

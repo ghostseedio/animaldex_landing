@@ -82,7 +82,21 @@ export const TALK_WORDS_EN = {
     /** Under the first real answer: steps and debates need a captured animal, so the app (W13). */
     signUpForMore: "Get the app to keep your steps and start debates",
     /** A share card's alt text. */
-    ogAlt: "Talk to animals on AnimalDex"
+    ogAlt: "Talk to animals on AnimalDex",
+    /** The Ark beside the chat (its panel, like an artifact's). */
+    arkOpen: "Ark",
+    arkOpenLabel: "Open the Ark beside the chat",
+    arkClose: "Close the Ark",
+    arkBack: "Back to the chat",
+    arkTitle: "The Ark",
+    arkCount: "{animals} aboard",
+    arkAboard: "Aboard the Ark",
+    arkBroughtBy: "Brought by {founder} \u00b7 arrived {date}",
+    arkVisiting: "Visiting: not aboard yet",
+    arkComesAboard: "When a step with it works, one comes aboard.",
+    arkOpenFull: "Open the full Ark",
+    arkLoading: "Bringing the Ark into view",
+    arkUnavailable: "The Ark couldn't load just now."
 };
 
 export type TalkWords = typeof TALK_WORDS_EN;

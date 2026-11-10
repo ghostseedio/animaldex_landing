@@ -39,7 +39,12 @@ import {
     Vector3,
     WebGLRenderer,
     Euler,
-    type MeshStandardMaterial
+    BoxGeometry,
+    CylinderGeometry,
+    Group,
+    Mesh,
+    MeshStandardMaterial,
+    type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
@@ -54,6 +59,7 @@ import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {buildLandscape} from "@/ark-scene/terrain";
 import {buildVegetation} from "@/ark-scene/vegetation";
+import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {
     ARK_REGIONS,
     type ArkAnimal,
@@ -61,9 +67,11 @@ import {
     type ArkSceneHandle,
     type ArkSceneOptions,
     type ArkSceneStats,
-    type ArkSnapshot
+    type ArkSnapshot,
+    type ArkTalking,
+    type ArkVisitor
 } from "@/ark-scene/types";
-import {heightAt, regionCentre, regionLabelAnchor, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
 export {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -113,6 +121,10 @@ type Entry = {
     air: number;
     /** 0…1 the selected lift, eased. */
     lift: number;
+    /** The chat's animal visiting (never one of the Ark's). */
+    visitor?: boolean;
+    /** Which way it faced when last drawn. */
+    yawNow?: number;
 };
 
 type SpeciesMeshes = {
@@ -227,6 +239,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const species = new Map<string, SpeciesMeshes>();
     let entries: Entry[] = [];
     let entryById = new Map<string, Entry>();
+    // The visitor (a panel beside a chat only): drawn and pickable, never counted.
+    let visitor: Entry | null = null;
+    let visitorLabel: HTMLSpanElement | null = null;
+    let jetty: Group | null = null;
+    const allEntries = () => (visitor ? [...entries, visitor] : entries);
+    const findEntry = (id: string | null) => (id ? entryById.get(id) ?? (visitor?.animal.id === id ? visitor : null) : null);
+    // Who is talking, and the full model that stands in for them.
+    const talking = {
+        target: null as ArkTalking | null,
+        actor: null as TalkingActor | null,
+        mouth: new TextMouth(),
+        pulse: 0,
+        pulseAt: 0,
+        lastActive: 0,
+        open: 0,
+        weight: 0
+    };
+    let talkingModels: TalkingModelSource | null = null;
     let mineOnly = Boolean(options.mineOnly);
     let selectedId: string | null = null;
     let disposed = false;
@@ -274,7 +304,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // What the names keep clear of: every animal (or icon) on screen.
         const taken: Box[] = [];
         if (show) {
-            for (const entry of entries) {
+            for (const entry of allEntries()) {
                 if (!entry.middle) continue;
                 tokenPoint.copy(entry.middle).project(camera);
                 if (tokenPoint.z > 1) continue;
@@ -429,6 +459,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const plan = model?.behaviour?.plan ?? "";
         const t = reducedMotion ? 0 : time;
         const site = ZONE_SITES[entry.animal.zone];
+        // The visitor: at the jetty's foot, or a swimmer floating off its end.
+        if (entry.visitor) {
+            const swims = SWIMMING_PLANS.has(plan);
+            const spot = swims ? VISITOR_LANDING.end : VISITOR_LANDING.foot;
+            const ground = heightAt(spot.x, spot.z);
+            const yaw = visitorYaw();
+            return {x: spot.x, z: spot.z, base: swims ? -modelHeight * 0.35 : Math.max(ground, 0.05), yaw, pitch: 0, roll: 0, afloat: swims};
+        }
         // The sea's swimmers: slow loops about their spot, the reef's under the clear shallows.
         if (site?.kind === "sea" && SWIMMING_PLANS.has(plan)) {
             const radius = 2.2 + entry.phase * 3 + entry.length * 0.6;
@@ -479,7 +517,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number};
         const candidates: Candidate[] = [];
-        for (const entry of entries) {
+        for (const entry of allEntries()) {
             const slug = entry.animal.model_slug;
             const model = library.get(slug);
             // A flyer that is selected comes down to its spot; otherwise takes to the air again.
@@ -559,6 +597,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.middle = null;
                 continue;
             }
+            entry.yawNow = where.yaw;
             const lift = entry.lift * modelHeight * 0.12;
             entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
             const rest = Math.max(entry.place.ground, 0);
@@ -567,6 +606,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (level === "token") {
                 counts.token++;
                 tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(where.base + modelHeight * 0.75, rest + 0.4), z: where.z, size: Math.max(entry.length * 1.1, 1.6), dim, ring: marked, grow});
+                continue;
+            }
+
+            // The one talking: its full talking model stands in its place.
+            const actor = talking.actor;
+            if (actor?.ready && talking.weight > 0 && talking.target?.animalId === animal.id && actor.slug === animal.model_slug) {
+                const as = (entry.length / actor.length) * sizeUp;
+                const bob = talking.open * 0.06;
+                euler.set(where.pitch + bob, where.yaw + Math.sin(now * 1.1) * 0.05 * talking.weight, where.roll + Math.sin(now * 0.7) * 0.02 * talking.weight);
+                actor.root.rotation.copy(euler);
+                actor.root.position.set(where.x, where.base + lift - actor.minY * as, where.z);
+                actor.root.scale.setScalar(as);
+                actor.root.visible = true;
+                if (!where.afloat) shadowList.push({x: where.x, y: rest, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: 1});
+                if (marked) ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                counts.near++;
                 continue;
             }
 
@@ -717,7 +772,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const y = clientY - rect.top;
         let best: Entry | null = null;
         let bestScore = Infinity;
-        for (const entry of entries) {
+        for (const entry of allEntries()) {
             if (!entry.middle) continue;
             projected.copy(entry.middle).project(camera);
             if (projected.z > 1) continue;
@@ -746,18 +801,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return best;
     };
 
-    const select = (id: string | null, flyTo: boolean) => {
+    const select = (id: string | null, flyTo: boolean, close = false) => {
         selectedId = id;
-        const entry = id ? entryById.get(id) : null;
+        const entry = findEntry(id);
         options.onSelect?.(entry?.animal ?? null);
         if (entry && flyTo) {
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
             const distance = camera.position.distanceTo(controls.target);
             // Where it will rest: its own spot (a flyer lands; a swimmer is followed).
-            const target = new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, entry.place.z);
-            const close = distance > 40 ? 10 + entry.length * 4 : Math.min(distance, 10 + entry.length * 6);
-            fly(target, close, 1.3, CLOSE_POLAR);
+            const middle = entry.middle;
+            const target = middle ? new Vector3(middle.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, middle.z) : new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, entry.place.z);
+            if (close) {
+                // Face to face: low, near, from three-quarters in front, where its mouth can be seen.
+                // A visitor is seen from along the beach, with the jetty beside it rather than under the camera.
+                fly(target, 3.5 + entry.length * 2, 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
+                return;
+            }
+            const distanceTo = distance > 40 ? 10 + entry.length * 4 : Math.min(distance, 10 + entry.length * 6);
+            fly(target, distanceTo, 1.3, CLOSE_POLAR);
         }
     };
 
@@ -865,6 +927,177 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         afterOpening();
     }
 
+    // MARK: Visitor and talking
+
+    /** The visitor faces along the beach, a little toward the sea: seen face on from the sand, the jetty beside it. */
+    const visitorYaw = () => Math.atan2(-Math.sin(VISITOR_LANDING.theta), Math.cos(VISITOR_LANDING.theta)) + 0.3;
+
+    /** A small jetty at the landing: planks on posts, from the beach out over the water. */
+    const buildJetty = (): Group => {
+        const group = new Group();
+        const wood = new MeshStandardMaterial({color: new Color("#8a6a4a"), roughness: 0.85, metalness: 0});
+        const dark = new MeshStandardMaterial({color: new Color("#5e4632"), roughness: 0.9, metalness: 0});
+        const from = VISITOR_LANDING.deckFrom;
+        const to = VISITOR_LANDING.deckTo;
+        const length = Math.hypot(to.x - from.x, to.z - from.z);
+        const angle = Math.atan2(to.x - from.x, to.z - from.z);
+        const geometries: BufferGeometry[] = [];
+        const planks = Math.round(length / 0.5);
+        for (let i = 0; i < planks; i++) {
+            const plank = new BoxGeometry(1.7, 0.08, 0.42);
+            geometries.push(plank);
+            const mesh = new Mesh(plank, i % 3 === 0 ? dark : wood);
+            mesh.position.set(0, 0.38, -length / 2 + (i + 0.5) * (length / planks));
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+        }
+        for (let i = 0; i <= 3; i++) {
+            for (const side of [-0.78, 0.78]) {
+                const post = new CylinderGeometry(0.07, 0.08, 1.8, 6);
+                geometries.push(post);
+                const mesh = new Mesh(post, dark);
+                mesh.position.set(side, -0.5, -length / 2 + (i / 3) * length);
+                mesh.castShadow = true;
+                group.add(mesh);
+            }
+        }
+        group.position.set((from.x + to.x) / 2, 0, (from.z + to.z) / 2);
+        group.rotation.y = angle;
+        group.userData.dispose = () => {
+            geometries.forEach((geometry) => geometry.dispose());
+            wood.dispose();
+            dark.dispose();
+        };
+        return group;
+    };
+
+    const setVisitor = (next: ArkVisitor | null): string | null => {
+        if (!next) {
+            if (selectedId && visitor && selectedId === visitor.animal.id) select(null, false);
+            visitor = null;
+            visitorLabel?.remove();
+            visitorLabel = null;
+            if (jetty) {
+                scene.remove(jetty);
+                (jetty.userData.dispose as () => void)();
+                jetty = null;
+            }
+            return null;
+        }
+        const id = `visitor:${next.slug}`;
+        const foot = VISITOR_LANDING.foot;
+        visitor = {
+            animal: {
+                id,
+                species_profile_id: "",
+                name: next.name,
+                scientific_name: null,
+                model_slug: next.slug,
+                zone: "seashore",
+                arrived_at: "",
+                brought_by: {label: "", named: false},
+                mine: false
+            },
+            place: {x: foot.x, z: foot.z, ground: heightAt(foot.x, foot.z), yaw: visitorYaw(), water: false},
+            length: displayLength(next.slug, null),
+            arrivedAt: performance.now() / 1000,
+            level: "far",
+            phase: phaseOf(id),
+            middle: null,
+            drawnHeight: 1,
+            air: 0,
+            lift: 0,
+            visitor: true
+        };
+        library.ready().then(() => {
+            if (library.has(next.slug)) {
+                library.request(next.slug, "far");
+                library.request(next.slug, "near");
+            }
+        });
+        if (!jetty) {
+            jetty = buildJetty();
+            scene.add(jetty);
+        }
+        if (!visitorLabel) {
+            visitorLabel = document.createElement("span");
+            Object.assign(visitorLabel.style, {
+                position: "absolute",
+                left: "0",
+                top: "0",
+                whiteSpace: "nowrap",
+                font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+                letterSpacing: "0.04em",
+                color: "rgba(255, 252, 244, 0.96)",
+                padding: "6px 9px",
+                borderRadius: "999px",
+                background: "rgba(14, 20, 14, 0.62)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                opacity: "0",
+                transition: "opacity 300ms ease",
+                willChange: "transform"
+            });
+            labelLayer.appendChild(visitorLabel);
+        }
+        visitorLabel.textContent = next.label;
+        return id;
+    };
+
+    const visitorPoint = new Vector3();
+    const placeVisitorLabel = () => {
+        if (!visitorLabel) return;
+        const middle = visitor?.middle;
+        if (!middle) {
+            visitorLabel.style.opacity = "0";
+            return;
+        }
+        visitorPoint.copy(middle).setY(middle.y + (visitor?.drawnHeight ?? 1) * 0.55 + 0.25).project(camera);
+        const visible = visitorPoint.z < 1 && Math.abs(visitorPoint.x) < 1.05 && Math.abs(visitorPoint.y) < 1.05;
+        visitorLabel.style.opacity = visible ? "1" : "0";
+        if (visible) visitorLabel.style.transform = `translate(${((visitorPoint.x + 1) / 2 * width).toFixed(1)}px, ${((1 - visitorPoint.y) / 2 * height).toFixed(1)}px) translate(-50%, -100%) translateY(-6px)`;
+    };
+
+    const setTalking = (next: ArkTalking | null) => {
+        const now = performance.now() / 1000;
+        if (!next || !next.active) {
+            if (talking.target) talking.target = {...talking.target, active: false};
+            talking.mouth.flush(now - started / 1000);
+            return;
+        }
+        const changed = !talking.target || talking.target.slug !== next.slug || talking.target.animalId !== next.animalId;
+        if (changed) talking.mouth.clear();
+        talking.target = {...next};
+        talking.lastActive = now;
+        if (!talking.actor || talking.actor.slug !== next.slug) {
+            talking.actor?.dispose();
+            talkingModels ??= talkingSource(options.talkingBase ?? options.modelBase.replace(/\/ark\/?$/, ""));
+            const actor = new TalkingActor(next.slug, talkingModels, () => undefined);
+            talking.actor = actor;
+            scene.add(actor.root);
+        }
+    };
+
+    /** Each frame: the mouth from the text (or the voice), and the swap back once it has been quiet a while. */
+    let lastTalkStep = 0;
+    const stepTalking = (elapsed: number) => {
+        const actor = talking.actor;
+        const delta = lastTalkStep ? Math.min(elapsed - lastTalkStep, 0.1) : 0;
+        lastTalkStep = elapsed;
+        if (!actor) return;
+        const active = Boolean(talking.target?.active);
+        const now = performance.now() / 1000;
+        if (active) talking.lastActive = now;
+        const fromVoice = now - talking.pulseAt < 0.25 ? talking.pulse : 0;
+        const want = reducedMotion ? 0 : Math.max(talking.mouth.level(elapsed), fromVoice);
+        talking.open = actor.ready ? actor.setMouth(want, delta) : 0;
+        const speaking = active || talking.mouth.speaking || now - talking.lastActive < 1.4;
+        talking.weight = speaking ? 1 : 0;
+        // Shown again by updateInstances when its animal is drawn this frame.
+        actor.root.visible = false;
+    };
+
     // MARK: Loop
 
     const frameTimes: number[] = [];
@@ -891,9 +1124,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!reducedMotion && !flight && !selectedId && !opening && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
         controls.update();
         keepInWorld();
+        stepTalking(elapsed);
         updateInstances(elapsed);
         // Follow a selected animal that moves (a swimmer's loop).
-        const tracked = selectedId ? entryById.get(selectedId)?.middle : null;
+        const tracked = selectedId ? findEntry(selectedId)?.middle : null;
         if (tracked && !flight && pointers === 0) {
             if (lastTracked) {
                 const dx = tracked.x - lastTracked.x;
@@ -916,6 +1150,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         renderer.info.reset();
         post.render();
         placeLabels();
+        placeVisitorLabel();
 
         const spent = performance.now() - startedAt;
         frameTimes.push(spent);
@@ -952,13 +1187,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking};
 
     return {
         update: (snapshot) => setSnapshot(snapshot, true),
         setMineOnly: (value) => {
             mineOnly = value;
         },
-        select: (id) => select(id, true),
+        select: (id, closeUp) => select(id, true, Boolean(closeUp)),
+        setVisitor,
+        setTalking,
+        talkText: (chunk) => {
+            if (!talking.target) return;
+            talking.mouth.feed(chunk, performance.now() / 1000 - started / 1000);
+        },
+        talkPulse: (level) => {
+            talking.pulse = Math.min(Math.max(level, 0), 1);
+            talking.pulseAt = performance.now() / 1000;
+            talking.lastActive = talking.pulseAt;
+        },
         setViewInset: (bottomPixels) => {
             insetTarget = Math.max(0, Math.min(bottomPixels, height * 0.6));
         },
@@ -1000,6 +1247,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 meshes.nearMaterial?.dispose();
                 meshes.farMaterial?.dispose();
             });
+            talking.actor?.dispose();
+            if (jetty) (jetty.userData.dispose as () => void)();
             library.dispose();
             tokens.dispose();
             shadows.dispose();

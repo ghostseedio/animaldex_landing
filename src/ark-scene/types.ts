@@ -85,20 +85,46 @@ export type ArkSceneOptions = {
     onReady?: () => void;
     /** Honour prefers-reduced-motion: no idle motion, no camera flights. */
     reducedMotion?: boolean;
+    /**
+     * The full talking models (`<talkingBase>/manifest.json`, `<slug>/<version>.g1.glb|.jpg|.json`),
+     * swapped in while an animal talks. Default: `modelBase` without its trailing `/ark`.
+     */
+    talkingBase?: string;
 };
+
+/** The chat's animal shown in the Ark while none of its kind is aboard: never counted, only in a panel beside its chat. */
+export type ArkVisitor = {slug: string; name: string; /** Its label in the scene, e.g. "Visiting: not aboard yet". */ label: string};
+
+/** Who is talking: the animal's id (an aboard animal's, or the visitor's), its model slug, and whether it is talking now. */
+export type ArkTalking = {slug: string; animalId: string | null; active: boolean};
 
 export type ArkSceneHandle = {
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;
-    /** Select (and fly to) an animal, or clear the selection. */
-    select: (id: string | null) => void;
+    /** Select (and fly to) an animal, or clear the selection; `closeUp` comes face to face with it (the chat's panel). */
+    select: (id: string | null, closeUp?: boolean) => void;
     /**
      * Pixels at the foot of the view covered by the page (a tap band): the
      * view's middle moves up by half of it, so what the camera looks at
      * stays in sight above the band. 0 gives the whole view back.
      */
     setViewInset: (bottomPixels: number) => void;
+    /**
+     * Show the chat's animal as a visitor at the landing (or none). Returns
+     * the visitor's id, which `select` and `setTalking` take.
+     */
+    setVisitor: (visitor: ArkVisitor | null) => string | null;
+    /**
+     * An animal starts or stops talking: while active its full talking model
+     * stands in for it, its mouth moved by `talkText` or `talkPulse`; it goes
+     * back to the light model a moment after it stops.
+     */
+    setTalking: (talking: ArkTalking | null) => void;
+    /** More of the reply as it is typed: the mouth says it syllable by syllable. */
+    talkText: (chunk: string) => void;
+    /** The reply heard aloud: how loud it is now (0…1), as the voice call's meter. */
+    talkPulse: (level: number) => void;
     /** Fly to a region, or back to the whole world with null. */
     focusRegion: (region: ArkRegion | null) => void;
     stats: () => ArkSceneStats;

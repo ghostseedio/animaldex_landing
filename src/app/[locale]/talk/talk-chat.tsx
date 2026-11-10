@@ -35,6 +35,7 @@ import {getLocalePath} from "@/lib/site";
 import {askDeclaredSubject} from "@/lib/ask-animaldex/subject";
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
 import {useTalkShell} from "@/app/[locale]/talk/talk-shell";
+import {ArkPanelButton, ArkSplit} from "@/components/ark/ark-panel";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -87,8 +88,11 @@ export default function TalkChat({slug, name, power, locale}: {
         },
         initialQuestion: query?.ask ?? null,
         appHref: "/#download",
-        subject
+        subject,
+        // The Ark beside the chat, like an artifact (the owner, 2026-11-10).
+        headerAccessory: <ArkPanelButton />
     }), [openSidebar, words, router, locale, query?.ask, subject]);
+    const arkSubject = useMemo(() => ({slug, name, speciesProfileId: companionSpeciesProfileId}), [slug, name, companionSpeciesProfileId]);
 
     return (
         <>
@@ -104,7 +108,9 @@ export default function TalkChat({slug, name, power, locale}: {
                 />
             ) : null}
             {subject ? (
-                <AskConversation labels={labels} presentation="page" page={page} />
+                <ArkSplit subject={arkSubject} words={words} locale={locale}>
+                    <AskConversation labels={labels} presentation="page" page={page} />
+                </ArkSplit>
             ) : (
                 <TalkChatShell
                     name={name}
