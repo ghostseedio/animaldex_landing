@@ -4018,6 +4018,47 @@
       "open_land": "Open land",
       "high_cold": "High and cold",
       "home": "Home"
+    },
+    "hud": {
+      "label": "Who is aboard",
+      "title": "Aboard",
+      "show": "Who is aboard",
+      "hide": "Hide who is aboard",
+      "statAnimals": "Animals",
+      "statSpecies": "Species",
+      "statFounders": "Founders",
+      "pairsLine": "{paired} of {species} have their pair",
+      "single": "needs a mate",
+      "pair": "a pair",
+      "more": "more than a pair",
+      "crowded": "crowded",
+      "yours": "Yours",
+      "flyTo": "Fly to {region}",
+      "rowLabel": "{animal}: {count}, {status}",
+      "showAll": "Show all {count} species",
+      "showFewer": "Show fewer",
+      "earlyTitle": "Two of each is the aim",
+      "earlyBody": "Every kind aboard is waiting for its mate. When a step with that animal works for someone, another of its kind comes aboard.",
+      "bring": "Bring an animal aboard"
+    },
+    "story": {
+      "generic": "Came aboard after a step that worked",
+      "debate": "Brought aboard after: ‘{problem}’ · the {animal}'s way ({power}) worked",
+      "openDebate": "Read the debate"
+    },
+    "capture": {
+      "aboardOne": "In the Ark: 1 {animal} aboard",
+      "aboardOther": "In the Ark: {count} {animals} aboard",
+      "mineOnly": "the one you brought",
+      "mineOne": "including one you brought",
+      "mineOther": "including {count} you brought",
+      "needsMate": "It's waiting for a mate. When a step with it works, another comes aboard.",
+      "see": "See it in the Ark",
+      "bringMate": "Start a step with it",
+      "notAboardTitle": "Not in the Ark yet",
+      "notAboardBody": "When a step you take with it works, one comes aboard.",
+      "start": "Start a step with it",
+      "seeArk": "See the Ark"
     }
   }
 }

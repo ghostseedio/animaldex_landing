@@ -1,9 +1,9 @@
 import type {Metadata} from "next";
-import ArkView, {type ArkWords} from "@/app/[locale]/(composited)/ark/ark-view";
+import ArkView from "@/app/[locale]/(composited)/ark/ark-view";
 import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
 import {getLocalePath} from "@/lib/site";
-import {loadLocaleMessages} from "@/loaders/locale";
+import {getArkWords} from "@/loaders/ark-words";
 import type {ArkSnapshot} from "@/ark-scene/types";
 
 /**
@@ -18,11 +18,14 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * or in development `?fixture=1` (about 120 animals), `?fixture=early` (the
  * two real arrivals) or `?fixture=grow` (starts small; more come aboard on
  * every refresh, to see the entrances).
+ *
+ * `?focus=<species_profile_id or slug>` flies to that species on load (the
+ * capture page's "See it in the Ark"), the reader's own one first.
  */
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string}};
 
 type FixtureMode = "full" | "early" | "grow";
 
@@ -35,30 +38,8 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
 
-const EN_FALLBACK_LOCALE = "en";
-
-async function arkWords(locale: string): Promise<{words: ArkWords; talk: {a: string; an: string}}> {
-    const [english, local] = await Promise.all([
-        loadLocaleMessages(EN_FALLBACK_LOCALE),
-        locale === EN_FALLBACK_LOCALE ? Promise.resolve(null) : loadLocaleMessages(locale).catch(() => null)
-    ]);
-    // Other locales fall back to English key by key.
-    const pick = (path: string[]): unknown => {
-        const read = (messages: Record<string, unknown> | null) => path.reduce<unknown>((at, key) => (at && typeof at === "object" ? (at as Record<string, unknown>)[key] : undefined), messages);
-        return read(local) ?? read(english);
-    };
-    const englishArk = english.ark as Record<string, unknown>;
-    const words = Object.fromEntries(Object.entries(englishArk).map(([key, value]) => {
-        if (value && typeof value === "object") {
-            return [key, Object.fromEntries(Object.keys(value).map((inner) => [inner, String(pick(["ark", key, inner]) ?? "")]))];
-        }
-        return [key, String(pick(["ark", key]) ?? "")];
-    })) as ArkWords;
-    return {words, talk: {a: String(pick(["talkPage", "animalTitleA"]) ?? "Talk to a {animal}"), an: String(pick(["talkPage", "animalTitleAn"]) ?? "Talk to an {animal}")}};
-}
-
 export async function generateMetadata({params}: Props): Promise<Metadata> {
-    const {words} = await arkWords(params.locale);
+    const {words} = await getArkWords(params.locale);
     return {
         title: words.metaTitle,
         description: words.metaDescription,
@@ -85,7 +66,7 @@ function modelBase(): string {
 export default async function ArkPage({params, searchParams}: Props) {
     const mode = fixtureMode(searchParams);
     const [{words, talk}, data] = await Promise.all([
-        arkWords(params.locale),
+        getArkWords(params.locale),
         mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
@@ -99,6 +80,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             words={words}
             talkTitles={talk}
             modelBase={modelBase()}
+            focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
         />
     );
 }

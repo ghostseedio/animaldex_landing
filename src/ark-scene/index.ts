@@ -806,6 +806,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const entry = findEntry(id);
         options.onSelect?.(entry?.animal ?? null);
         if (entry && flyTo) {
+            // A selection from the page (the HUD, `?focus=`) ends the opening, as a touch does.
+            opening = false;
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
             const distance = camera.position.distanceTo(controls.target);

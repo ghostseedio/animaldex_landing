@@ -14,6 +14,7 @@ import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getCompanionWords} from "@/loaders/companion-words";
 import {getCaptureWords} from "@/loaders/capture-words";
+import {getArkWords} from "@/loaders/ark-words";
 import {getSpeciesBinderLinks} from "@/data/collection-binders";
 
 function toQualitySlug(value: string) {
@@ -24,11 +25,12 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
     // iOS opens every card in the same ScanResultView: an owned entry
     // (`isSavedEntry`) or a public one with a `spotter`. Try the owner read
     // first, then the public Discover row.
-    const [owned, context, companionWords, captureWords] = await Promise.all([
+    const [owned, context, companionWords, captureWords, {words: arkWords}] = await Promise.all([
         getAppCaptureDetail(params.id),
         getAuthenticatedAppContext(),
         getCompanionWords(params.locale),
-        getCaptureWords(params.locale)
+        getCaptureWords(params.locale),
+        getArkWords(params.locale)
     ]);
     const [publicDetail, ownedMediaAssets, isMarkedAsPet] = await Promise.all([
         owned ? null : getPublicCaptureDetail(params.id),
@@ -75,6 +77,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
                 speciesName={capture.animalName}
                 companionWords={companionWords}
                 captureWords={captureWords}
+                arkWords={arkWords}
             />
         );
     }
@@ -203,6 +206,7 @@ export default async function CaptureResultPage({params}: {params: {locale: stri
             play={play}
             companionWords={companionWords}
             captureWords={captureWords}
+            arkWords={arkWords}
             animalDexNumber={entry.databaseSource?.animalDexNumber ?? publicDetail?.animalDexNumber ?? null}
             binders={binders}
         />
