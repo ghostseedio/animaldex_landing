@@ -12,6 +12,8 @@ import {arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkR
 import {fixtureArkStory} from "@/lib/ark-story";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
+import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 
 export type {ArkWords} from "@/lib/ark-words";
 
@@ -153,6 +155,26 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
     const replayRef = useRef<{skip: () => void} | null>(null);
     const replayAsked = useRef(false);
     const worldRef = useRef<HTMLDivElement | null>(null);
+    // Ark measurement (lib/ark-measure): how the reader got here (`?from=capture` from a capture card, `?from=share` from a shared link).
+    const sourceRef = useRef<ArkSource>("ark_page");
+    const autoSelecting = useRef(false);
+    const replaySkipped = useRef(false);
+    const onSelect = useCallback((animal: ArkAnimal | null) => {
+        setSelected(animal);
+        if (animal && !autoSelecting.current) trackArk("ark_animal_tap", {source: sourceRef.current, species_profile_id: animal.species_profile_id, is_mine: animal.mine});
+    }, []);
+    useEffect(() => {
+        // Only a real Ark is a visit: not the "opens soon" page before the migration.
+        if (!initial) return;
+        try {
+            sourceRef.current = arkPageSource(new URLSearchParams(window.location.search).get("from"));
+        } catch {
+            sourceRef.current = "ark_page";
+        }
+        return startArkSession(sourceRef.current);
+        // One visit per page.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         try {
@@ -190,7 +212,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
                         iconUrl: getSpeciesArtworkUrl,
-                        onSelect: setSelected,
+                        onSelect,
                         mineOnly: false,
                         regionLabels: words.regions,
                         reducedMotion,
@@ -201,7 +223,12 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     sceneRef.current = handle;
                     // "See it in the Ark" (`?focus=`): straight to that species, the reader's own first.
                     const focused = arkPickAnimal(arkFocusAnimals(snapshotRef.current ?? initial, focusOn), null);
-                    if (focused) handle.select(focused.id);
+                    if (focused) {
+                        // The page's own flight to `?focus=` is not a tap.
+                        autoSelecting.current = true;
+                        handle.select(focused.id);
+                        autoSelecting.current = false;
+                    }
                     if (process.env.NODE_ENV !== "production") {
                         (window as unknown as {__arkScene?: ArkSceneHandle}).__arkScene = handle;
                         // Development: every act in the fixture's log, to play one by hand (`__arkScene.play([__arkActs[i]])`).
@@ -292,6 +319,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
         const next = !following;
         scene.follow(next ? selected.id : null);
         setFollowing(next);
+        if (next) trackArk("ark_follow_animal", {source: sourceRef.current, species_profile_id: selected.species_profile_id});
     };
 
     // MARK: While you were away
@@ -324,15 +352,22 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                 return;
             }
             setReplay({acts: plan.acts, index: 0, summary: line});
+            replaySkipped.current = false;
             const run = scene.play(plan.acts, {onAct: (index) => setReplay((now) => (now ? {...now, index} : now))});
             replayRef.current = run;
             void run.done.then(() => {
+                trackArk("ark_replay_viewed", {events_count: events.length, skipped: replaySkipped.current});
                 replayRef.current = null;
                 setReplay(null);
                 setSummary(line);
             });
         });
     }, [ready, since, fixtureLife, focusOn, words, locale]);
+
+    // The reader's own animals aboard, once the world is on screen: their arrival seen (and again after a refresh brings one).
+    useEffect(() => {
+        if (ready && snapshot && !fixture) noteArkArrivalsSeen(snapshot.animals, sourceRef.current);
+    }, [ready, snapshot, fixture]);
 
     useEffect(() => {
         if (!summary) return;
@@ -517,7 +552,10 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                                 </p>
                                 <p key={replay.index} className="rows-in mt-0.5 text-sm font-semibold leading-snug text-white [text-wrap:balance]">{actCaption(replay.acts[replay.index], words, locale, snapshot?.animals ?? [])}</p>
                             </div>
-                            <button type="button" onClick={() => replayRef.current?.skip()} className={`${pill} min-h-9 shrink-0 border border-line-100 px-4 text-[13px] text-ink-100 hover:border-primary-400`}>
+                            <button type="button" onClick={() => {
+                                replaySkipped.current = true;
+                                replayRef.current?.skip();
+                            }} className={`${pill} min-h-9 shrink-0 border border-line-100 px-4 text-[13px] text-ink-100 hover:border-primary-400`}>
                                 {words.replay.skip}
                             </button>
                         </div>

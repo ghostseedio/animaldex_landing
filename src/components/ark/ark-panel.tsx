@@ -24,6 +24,7 @@ import Link from "@/app/[locale]/_components/link";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {emitAnimalVoice, onAnimalVoice, voiceIsAbout} from "@/lib/ark/animal-voice";
+import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {loadTalkingModelManifest, TALKING_MODELS_BASE_URL, talkingModelSlugFor} from "@/lib/talking-models/catalog";
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
@@ -262,6 +263,19 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
     const [selected, setSelected] = useState<ArkAnimal | null>(null);
     const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, {day: "numeric", month: "short", year: "numeric"}), [locale]);
 
+    // Ark measurement (lib/ark-measure): the panel open is a visit, timed while it is on screen.
+    useEffect(() => startArkSession("chat_panel"), []);
+    // The panel's own move to the chat's animal is not a tap: only the reader's are counted.
+    const autoSelecting = useRef(false);
+    const onSelect = useCallback((animal: ArkAnimal | null) => {
+        setSelected(animal);
+        if (animal && !autoSelecting.current) trackArk("ark_animal_tap", {source: "chat_panel", species_profile_id: animal.species_profile_id || undefined, is_mine: animal.mine});
+    }, []);
+    // The reader's own animals aboard, once the world is on screen: their arrival seen.
+    useEffect(() => {
+        if (ready && snapshot) noteArkArrivalsSeen(snapshot.animals, "chat_panel");
+    }, [ready, snapshot]);
+
     // The Ark, now and every 45 s while the tab is in front.
     useEffect(() => {
         let stopped = false;
@@ -301,7 +315,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                         modelBase: models,
                         talkingBase: TALKING_MODELS_BASE_URL,
                         iconUrl: getSpeciesArtworkUrl,
-                        onSelect: setSelected,
+                        onSelect,
                         reducedMotion,
                         onReady: () => setReady(true)
                     });
@@ -316,6 +330,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                 const aboard = [...snapshot.animals]
                     .filter((animal) => animal.model_slug === modelSlug || (subject.speciesProfileId !== null && animal.species_profile_id === subject.speciesProfileId))
                     .sort((a, b) => b.arrived_at.localeCompare(a.arrived_at))[0];
+                autoSelecting.current = true;
                 if (aboard) {
                     focusIdRef.current = aboard.id;
                     setFocus({kind: "aboard", animal: aboard});
@@ -328,6 +343,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                         handle.select(id, true);
                     }
                 }
+                autoSelecting.current = false;
             })
             .catch(() => setFailed(true));
         return () => {
