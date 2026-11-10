@@ -1,6 +1,8 @@
 /**
  * Animals seen from far: each species' icon art (the apps' `animals/<slug>.webp`)
- * on a round token that faces the camera, one draw call for all of them.
+ * with a soft shadow of its own shape, facing the camera; one draw call for
+ * all of them. Only a last resort: most animals are drawn as models at every
+ * distance.
  *
  * The icons are drawn into one atlas as they load. A token keeps a readable
  * size on screen however far away it is (between MIN_PIXELS and MAX_PIXELS),
@@ -82,27 +84,33 @@ uniform vec3 dimTint;
 varying vec2 vUv;
 varying vec4 vCell;
 varying vec4 vState;
+vec4 cellSample(vec2 at, float bias) {
+    if (at.x <= 0.0 || at.x >= 1.0 || at.y <= 0.0 || at.y >= 1.0) return vec4(0.0);
+    return texture2D(atlas, vCell.xy + at * vCell.zw, bias);
+}
 void main() {
     vec2 p = vUv - 0.5;
     float r = length(p) * 2.0;
     float aa = fwidth(r) * 1.2;
-    float disc = 1.0 - smoothstep(0.84 - aa, 0.84 + aa, r);
-    float shadow = (1.0 - smoothstep(0.7, 1.0, length(p - vec2(0.0, -0.035)) * 2.0)) * 0.28;
-    vec3 colour = backdrop;
-    vec2 iconUv = p / 0.66 + 0.5;
-    if (vCell.z > 0.0 && iconUv.x > 0.0 && iconUv.x < 1.0 && iconUv.y > 0.0 && iconUv.y < 1.0) {
-        vec4 icon = texture2D(atlas, vCell.xy + iconUv * vCell.zw);
-        colour = mix(colour, icon.rgb, icon.a);
+    vec2 at = p / 0.9 + 0.5;
+    vec4 icon = vCell.z > 0.0 ? cellSample(at, 0.0) : vec4(0.0);
+    // A soft shadow from the icon's own shape, cast a little down.
+    float shadow = vCell.z > 0.0 ? cellSample(at + vec2(0.0, 0.07), 2.5).a * 0.42 : (1.0 - smoothstep(0.1, 0.35, r)) * 0.5;
+    vec3 colour = icon.rgb;
+    float alpha = icon.a + shadow * (1.0 - icon.a);
+    colour = mix(vec3(0.05, 0.05, 0.04), colour, icon.a / max(alpha, 0.001));
+    // The viewer's own, or the selected one: a thin ring of light about it.
+    if (vState.y > 0.5) {
+        float ring = smoothstep(0.86 - aa, 0.9, r) * (1.0 - smoothstep(0.94, 0.98 + aa, r));
+        vec3 ringColour = vState.y > 1.5 ? selectedRing : mineRing;
+        colour = mix(colour, ringColour, ring);
+        alpha = max(alpha, ring);
     }
-    float band = smoothstep(0.7 - aa, 0.7 + aa, r) * disc;
-    vec3 ring = vState.y > 1.5 ? selectedRing : vState.y > 0.5 ? mineRing : edge;
-    float ringWidth = vState.y > 0.5 ? 1.0 : 0.35;
-    colour = mix(colour, ring, band * ringWidth);
     float grey = dot(colour, vec3(0.299, 0.587, 0.114));
     colour = mix(colour, mix(vec3(grey), dimTint, 0.5), vState.x * 0.7);
-    float alpha = (disc + shadow * (1.0 - disc)) * (1.0 - 0.45 * vState.x);
+    alpha *= 1.0 - 0.5 * vState.x;
     if (alpha < 0.01) discard;
-    gl_FragColor = vec4(disc > 0.0 ? colour : vec3(0.0), alpha);
+    gl_FragColor = vec4(colour, alpha);
     #include <colorspace_fragment>
     #include <fog_fragment>
 }
@@ -182,8 +190,8 @@ export class IconTokens {
     /** The screen's scale: world units per CSS pixel at one unit from the camera. */
     setViewport(fovDegrees: number, heightPixels: number, compact: boolean) {
         this.material.uniforms.worldPerPixel.value = 2 * Math.tan(fovDegrees * Math.PI / 360) / Math.max(heightPixels, 1);
-        this.material.uniforms.minPixels.value = compact ? 30 : 34;
-        this.material.uniforms.maxPixels.value = compact ? 60 : 72;
+        this.material.uniforms.minPixels.value = compact ? 22 : 24;
+        this.material.uniforms.maxPixels.value = compact ? 40 : 46;
     }
 
     /** The token's size on screen at this distance, in CSS pixels (for picking). */

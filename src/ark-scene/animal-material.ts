@@ -111,7 +111,7 @@ export type AnimalMaterialOptions = {
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
-    const material = new MeshStandardMaterial({map: options.map, roughness: 0.82, metalness: 0});
+    const material = new MeshStandardMaterial({map: options.map, roughness: 0.78, metalness: 0, envMapIntensity: 0.9});
     const motion = motionUniforms(options.behaviour) ?? {
         motionKind: 0,
         motionAxis: 0,
@@ -149,7 +149,9 @@ ${IDLE}`);
             .replace("#include <common>", `#include <common>
 varying float vArkDim;
 uniform vec3 arkDimTint;`)
-            .replace("#include <opaque_fragment>", `#include <opaque_fragment>
+            .replace("#include <opaque_fragment>", `// A warm rim where the surface turns away: the low sun catching fur and feathers at the edge.
+outgoingLight += vec3(1.0, 0.82, 0.6) * pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0) * 0.22 * (1.0 - vArkDim);
+#include <opaque_fragment>
 {
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
     gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, vArkDim * 0.82);

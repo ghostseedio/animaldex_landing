@@ -1,43 +1,41 @@
 /**
- * The world's ground, water, sky and what grows on it: one terrain mesh
- * coloured per vertex from the zones' palettes, one water plane that reads
- * the depth under it from a small map, a sky dome, and one instanced mesh
- * per kind of decor. Ten draw calls for the whole landscape.
+ * The world's ground and water.
+ *
+ * Ground: one heightfield mesh, one shader. Each vertex carries its zones'
+ * blended base colour (with ambient occlusion baked from the ground's own
+ * hollows) and four layer weights — sand, wet mud, farmland, snow — and the
+ * fragment shader paints the detail from world-space noise: grass with
+ * clumps and dry patches, sand with ripples, rock wherever the slope is
+ * steep (banded like strata), snow on the peaks and the ice, wet mud at the
+ * wetland, tilled fields with hedgerows at Home, darker wet sand at the
+ * waterline, and cloud shadows drifting over all of it.
+ *
+ * Water: one plane that reads the depth under it from a map made with the
+ * ground. Turquoise over the reef's shallows, deep blue offshore, calmer and
+ * greener on the lake and the river; procedural waves for the normal, the
+ * sky in it by Fresnel, the sun's glint, and foam lines along every shore.
+ * Clear in the shallows, so what swims there shows through.
  */
 
 import {
-    BackSide,
     BufferAttribute,
-    BufferGeometry,
     Color,
-    ConeGeometry,
-    CylinderGeometry,
     DataTexture,
-    DodecahedronGeometry,
-    DoubleSide,
-    Group,
-    IcosahedronGeometry,
-    InstancedMesh,
     LinearFilter,
-    Matrix4,
     Mesh,
-    MeshLambertMaterial,
+    MeshStandardMaterial,
     PlaneGeometry,
-    Quaternion,
     RGBAFormat,
     ShaderMaterial,
-    SphereGeometry,
     UniformsLib,
     UniformsUtils,
-    Vector3,
-    type Material
+    type BufferGeometry
 } from "three";
-import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {worldDecor, type DecorKind} from "@/ark-scene/decor";
-import {FIELD_TONES, ROCK, SKY, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
+import {ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
+import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
 
-const SEGMENTS = 132;
+const SEGMENTS = 200;
 
 function srgb(hex: string): Color {
     return new Color(hex);
@@ -49,30 +47,31 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     const geometry = new PlaneGeometry(TERRAIN_HALF * 2, TERRAIN_HALF * 2, SEGMENTS, SEGMENTS);
     geometry.rotateX(-Math.PI / 2);
     const position = geometry.getAttribute("position") as BufferAttribute;
-    const colors = new Float32Array(position.count * 3);
-    // How much of each vertex is farmland: the fragment shader draws the fields there, crisp at any distance.
-    const farmland = new Float32Array(position.count);
+    const count = position.count;
+    const size = SEGMENTS + 1;
+    const colors = new Float32Array(count * 3);
+    const layers = new Float32Array(count * 4);
+    const heights = new Float32Array(count);
     const color = new Color();
     const mix = new Color();
     const palettes = Object.fromEntries(Object.entries(ZONE_PALETTES).map(([zone, palette]) => [zone, [srgb(palette.ground[0]), srgb(palette.ground[1])]])) as Record<string, [Color, Color]>;
     const sand = srgb(ZONE_PALETTES.seashore.ground[0]);
-    const wetSand = srgb(WET_SAND);
     const reefFloor = srgb(ZONE_PALETTES.coral_reef.ground[0]);
     const seaFloor = srgb(ZONE_PALETTES.open_ocean.ground[0]);
-    const snow = srgb(SNOW);
 
     // The water plane reads depth (r), reef (g) and fresh water (b) from this map.
-    const size = SEGMENTS + 1;
-    const depthPixels = new Uint8Array(size * size * 4);
+    const depthPixels = new Uint8Array(count * 4);
 
-    for (let i = 0; i < position.count; i++) {
+    for (let i = 0; i < count; i++) {
         const x = position.getX(i);
         const z = position.getZ(i);
         const sample = sampleGround(x, z);
         position.setY(i, sample.height);
+        heights[i] = sample.height;
+        const w = sample.weights;
 
         color.setRGB(0, 0, 0);
-        for (const [zone, weight] of Object.entries(sample.weights)) {
+        for (const [zone, weight] of Object.entries(w)) {
             if (weight < 0.004) continue;
             const [a, b] = palettes[zone];
             mix.copy(a).lerp(b, fbm(x * 0.07 + 11, z * 0.07 - 3));
@@ -80,50 +79,63 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
             color.g += mix.g * weight;
             color.b += mix.b * weight;
         }
-        farmland[i] = (sample.weights.farm_garden ?? 0) * smoothstep(0.6, 1, sample.land) * (sample.height > 0.2 ? 1 : 0);
-        const polar = sample.weights.polar ?? 0;
-        // A beach round the coast, except where the coast is ice.
-        const beach = (1 - smoothstep(0.45, 1, sample.land)) * (1 - polar);
+        const polar = w.polar ?? 0;
+        const beach = (1 - smoothstep(0.45, 1, sample.land)) * (1 - polar) * (1 - sample.cliff);
         color.lerp(sand, beach * 0.85);
-        if (sample.height < 0.25 && sample.height > -0.5) color.lerp(wetSand, 0.45 * (1 - polar));
-        // Snow up high.
-        color.lerp(snow, smoothstep(17, 26, sample.height + 3 * (noise(x * 0.3, z * 0.3) - 0.5)));
-        // Under water: the floor fades to the sea's colour with depth, bright sand on the reef.
         if (sample.height < 0) {
-            const depth = -sample.height;
             const floor = mix.copy(seaFloor).lerp(reefFloor, sample.reef);
-            color.lerp(floor, smoothstep(0.2, 3, depth));
+            color.lerp(floor, smoothstep(0.2, 3, -sample.height));
         }
         colors[i * 3] = color.r;
         colors[i * 3 + 1] = color.g;
         colors[i * 3 + 2] = color.b;
 
-        // PlaneGeometry rows run from -z (top) to +z: the map's row 0 is z = -HALF.
-        const column = i % size;
-        const row = Math.floor(i / size);
-        const at = (row * size + column) * 4;
+        // Layers: sand (beaches, desert, the reef floor), wet mud (wetland), farmland, snow.
+        const sandLayer = Math.min(1, beach + (w.desert ?? 0) * 0.9 + (w.seashore ?? 0) * 0.7 + (sample.height < 0 ? sample.reef : 0));
+        const mud = (w.wetland ?? 0) * smoothstep(0.2, 1, sample.land) * (1 - beach);
+        const farmland = (w.farm_garden ?? 0) * smoothstep(0.6, 1, sample.land) * (sample.height > 0.2 ? 1 : 0);
+        const snow = Math.max(polar * smoothstep(0.3, 1, sample.land), smoothstep(16, 25, sample.height + 3 * (noise(x * 0.3, z * 0.3) - 0.5)));
+        layers[i * 4] = sandLayer;
+        layers[i * 4 + 1] = mud;
+        layers[i * 4 + 2] = farmland;
+        layers[i * 4 + 3] = snow;
+
+        const at = i * 4;
         const depth = Math.max(-sample.height, 0);
         depthPixels[at] = Math.min(255, Math.round(depth / 12 * 255));
         depthPixels[at + 1] = Math.round(sample.reef * 255);
-        const fresh = smoothstep(LAKE.r + 4, LAKE.r, Math.hypot(x - LAKE.x, z - LAKE.z)) + (sample.river < 4 && sample.inland > 6 ? 1 : 0);
+        const fresh = smoothstep(LAKE.r + 4, LAKE.r, Math.hypot(x - LAKE.x, z - LAKE.z)) + (sample.river < 5 && sample.inland > 4 ? 1 : 0);
         depthPixels[at + 2] = Math.round(Math.min(fresh, 1) * 255);
         depthPixels[at + 3] = 255;
     }
-    geometry.computeVertexNormals();
 
-    // Steep ground shows bare rock.
-    const normal = geometry.getAttribute("normal") as BufferAttribute;
-    const rock = srgb(ROCK);
-    for (let i = 0; i < position.count; i++) {
-        const steep = smoothstep(0.86, 0.62, normal.getY(i));
-        if (steep <= 0 || position.getY(i) < 0.5) continue;
-        color.setRGB(colors[i * 3], colors[i * 3 + 1], colors[i * 3 + 2]).lerp(rock, steep * 0.8);
-        colors[i * 3] = color.r;
-        colors[i * 3 + 1] = color.g;
-        colors[i * 3 + 2] = color.b;
+    // Ambient occlusion from the ground's own shape: a vertex lower than its
+    // neighbours (a gully, the foot of a slope) gets less sky.
+    const reach = 3;
+    for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
+            const i = row * size + column;
+            let sum = 0;
+            let n = 0;
+            for (let dr = -reach; dr <= reach; dr += reach) {
+                for (let dc = -reach; dc <= reach; dc += reach) {
+                    const r = row + dr;
+                    const c = column + dc;
+                    if (r < 0 || c < 0 || r >= size || c >= size || (dr === 0 && dc === 0)) continue;
+                    sum += heights[r * size + c];
+                    n++;
+                }
+            }
+            const hollow = Math.max(sum / n - heights[i], 0);
+            const ao = 1 - Math.min(hollow * 0.22, 0.42);
+            colors[i * 3] *= ao;
+            colors[i * 3 + 1] *= ao;
+            colors[i * 3 + 2] *= ao;
+        }
     }
+    geometry.computeVertexNormals();
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
-    geometry.setAttribute("farmland", new BufferAttribute(farmland, 1));
+    geometry.setAttribute("arkLayers", new BufferAttribute(layers, 4));
 
     const depth = new DataTexture(depthPixels, size, size, RGBAFormat);
     depth.flipY = false;
@@ -131,6 +143,124 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     depth.minFilter = LinearFilter;
     depth.needsUpdate = true;
     return {geometry, depth};
+}
+
+function groundMaterial(): MeshStandardMaterial {
+    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.94, metalness: 0});
+    const uniforms = {
+        arkTime: ARK_TIME,
+        arkWind: ARK_WIND,
+        fieldTones: {value: FIELD_TONES.map(srgb)},
+        sandTone: {value: srgb(ZONE_PALETTES.seashore.ground[0])},
+        wetSand: {value: srgb(WET_SAND)},
+        rockTone: {value: srgb(ROCK)},
+        rockLight: {value: srgb("#a89d8a")},
+        snowTone: {value: srgb(SNOW)},
+        mudTone: {value: srgb("#5d5638")},
+        soilTone: {value: srgb("#7a5c3e")},
+        hedgeTone: {value: srgb("#3f5a2a")},
+        dryGrass: {value: srgb("#b9a35e")}
+    };
+    material.customProgramCacheKey = () => "ark-ground";
+    material.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, uniforms);
+        shader.vertexShader = shader.vertexShader
+            .replace("#include <common>", `#include <common>
+attribute vec4 arkLayers;
+varying vec4 vArkLayers;
+varying vec3 vArkWorld;
+varying vec3 vArkNormal;`)
+            .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
+vArkWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+vArkNormal = normalize(mat3(modelMatrix) * objectNormal);
+vArkLayers = arkLayers;`);
+        shader.fragmentShader = shader.fragmentShader
+            .replace("#include <common>", `#include <common>
+varying vec4 vArkLayers;
+varying vec3 vArkWorld;
+varying vec3 vArkNormal;
+uniform vec3 fieldTones[${FIELD_TONES.length}];
+uniform vec3 sandTone;
+uniform vec3 wetSand;
+uniform vec3 rockTone;
+uniform vec3 rockLight;
+uniform vec3 snowTone;
+uniform vec3 mudTone;
+uniform vec3 soilTone;
+uniform vec3 hedgeTone;
+uniform vec3 dryGrass;
+${NOISE_GLSL}
+${CLOUD_GLSL}
+float arkWet = 0.0;`)
+            .replace("#include <color_fragment>", `#include <color_fragment>
+{
+    vec3 world = vArkWorld;
+    vec2 p = world.xz;
+    float near = 1.0 - smoothstep(40.0, 160.0, distance(cameraPosition, world));
+    float sandW = vArkLayers.x;
+    float mudW = vArkLayers.y;
+    float farmW = vArkLayers.z;
+    float snowW = vArkLayers.w;
+    vec3 base = diffuseColor.rgb;
+
+    // Grass and earth: clumps, dry patches, a fine grain close up.
+    float clumps = arkFbm(p * 0.45);
+    float patches = smoothstep(0.55, 0.8, arkFbm(p * 0.06 + 9.0));
+    vec3 ground = base * (0.84 + 0.32 * clumps);
+    ground = mix(ground, dryGrass * (0.8 + 0.3 * clumps), patches * 0.32 * (1.0 - sandW) * (1.0 - snowW));
+    ground *= 1.0 + (arkNoise(p * 3.1) - 0.5) * 0.16 * near;
+
+    // Sand: wind ripples, lighter crests.
+    float ripple = sin(dot(p, vec2(0.82, 0.57)) * 2.4 + arkFbm(p * 0.3) * 6.0) * 0.5 + 0.5;
+    vec3 sandy = mix(base, sandTone, 0.35) * (0.9 + 0.12 * ripple * near + 0.08 * arkNoise(p * 0.8));
+    ground = mix(ground, sandy, smoothstep(0.15, 0.85, sandW));
+
+    // Wetland: dark wet mud in the low hollows, the rest reedy grass.
+    float wetPatch = smoothstep(0.42, 0.62, arkFbm(p * 0.18 + 4.0));
+    ground = mix(ground, mudTone * (0.85 + 0.25 * arkNoise(p * 1.7)), mudW * wetPatch);
+    arkWet = max(arkWet, mudW * wetPatch);
+
+    // Home: fields a few metres across, turned off the grid, tilled rows, hedgerows between.
+    if (farmW > 0.01) {
+        vec2 f = vec2(dot(p, vec2(0.94, 0.34)) / 9.0, dot(p, vec2(-0.34, 0.94)) / 6.5);
+        f.x += floor(f.y) * 0.37;
+        vec2 cell = floor(f);
+        int pick = int(floor(arkHash(cell * 1.31 + 7.0) * ${FIELD_TONES.length}.0));
+        vec3 field = fieldTones[0];
+        for (int k = 1; k < ${FIELD_TONES.length}; k++) { if (k == pick) field = fieldTones[k]; }
+        bool tilled = arkHash(cell + 3.7) > 0.72;
+        if (tilled) field = soilTone * (0.85 + 0.25 * (0.5 + 0.5 * sin(f.x * 6.2831 * 9.0)));
+        field *= 1.0 + 0.06 * sin(f.x * 6.2831 * 7.0) * near;
+        field *= 0.92 + 0.16 * arkNoise(p * 0.9);
+        float farm = smoothstep(0.3, 0.98, farmW + (arkNoise(p * 0.11 + 3.0) - 0.5) * 0.4);
+        vec2 edge = abs(fract(f) - 0.5);
+        float hedge = smoothstep(0.455, 0.49, max(edge.x, edge.y)) * smoothstep(0.45, 0.95, farm);
+        field = mix(field, hedgeTone * (0.8 + 0.4 * arkNoise(p * 2.0)), hedge);
+        ground = mix(ground, field, farm * 0.94);
+    }
+
+    // Rock wherever it is steep, banded like strata, lighter on the edges.
+    float slope = 1.0 - clamp(vArkNormal.y, 0.0, 1.0);
+    float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);
+    float strata = 0.5 + 0.5 * sin(world.y * 2.3 + arkFbm(p * 0.2) * 4.0);
+    vec3 rock = mix(rockTone, rockLight, strata * 0.3 + 0.35 * arkNoise(p * 1.3) + 0.15 * arkNoise(p * 4.0));
+    ground = mix(ground, rock, steep * step(0.3, world.y + 0.4));
+
+    // Snow on the peaks and the ice, thinning on steep faces.
+    float snow = snowW * (1.0 - steep * 0.75);
+    ground = mix(ground, snowTone * (0.94 + 0.06 * arkNoise(p * 0.7)), smoothstep(0.25, 0.75, snow));
+
+    // The waterline: wet, darker sand just above the water.
+    float waterline = 1.0 - smoothstep(0.0, 0.55, world.y);
+    ground = mix(ground, wetSand * 0.82, waterline * smoothstep(-0.6, 0.0, world.y) * 0.75 * (1.0 - snowW));
+    arkWet = max(arkWet, waterline * 0.8);
+
+    diffuseColor.rgb = ground * arkCloudShade(world);
+}`)
+            .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+roughnessFactor = mix(roughnessFactor, 0.32, arkWet);`);
+    };
+    return material;
 }
 
 // MARK: - Water
@@ -153,20 +283,41 @@ const WATER_FRAGMENT = `
 #include <fog_pars_fragment>
 uniform sampler2D depthMap;
 uniform float halfSize;
-uniform float time;
 uniform vec3 deep;
 uniform vec3 open;
 uniform vec3 shallow;
 uniform vec3 reef;
 uniform vec3 lake;
-uniform vec3 sky;
+uniform vec3 skyHorizon;
+uniform vec3 skyZenith;
 uniform vec3 sunDirection;
 uniform vec3 sunColor;
+uniform vec3 foamColor;
 varying vec3 vWorld;
+${NOISE_GLSL}
+${CLOUD_GLSL}
 
-float ripple(vec2 p) {
-    return sin(p.x * 0.9 + time * 0.6) * sin(p.y * 0.7 - time * 0.45) * 0.5
-         + sin(p.x * 0.31 - p.y * 0.42 + time * 0.3) * 0.5;
+// Gentle swell: a few travelling waves; returns the slope (dh/dx, dh/dz).
+vec2 waves(vec2 p, float t, float calm) {
+    vec2 slope = vec2(0.0);
+    vec2 dirs[4];
+    dirs[0] = normalize(vec2(1.0, 0.35));
+    dirs[1] = normalize(vec2(-0.4, 1.0));
+    dirs[2] = normalize(vec2(0.75, -0.65));
+    dirs[3] = normalize(vec2(-0.9, -0.2));
+    float freqs[4];
+    freqs[0] = 0.42; freqs[1] = 0.67; freqs[2] = 1.13; freqs[3] = 1.71;
+    for (int i = 0; i < 4; i++) {
+        float f = freqs[i];
+        float a = 0.05 / (1.0 + float(i)) * calm;
+        float phase = dot(dirs[i], p) * f + t * sqrt(9.8 * f) * 0.55;
+        slope += dirs[i] * cos(phase) * a * f;
+    }
+    // Small ripples from noise.
+    float e = 0.35;
+    float n0 = arkNoise(p * 1.6 + t * 0.4);
+    slope += vec2(arkNoise(p * 1.6 + vec2(e, 0.0) + t * 0.4) - n0, arkNoise(p * 1.6 + vec2(0.0, e) + t * 0.4) - n0) * 0.18 * calm;
+    return slope;
 }
 
 void main() {
@@ -176,28 +327,41 @@ void main() {
     float depth = mix(10.0, at.r * 12.0, inside);
     float reefy = at.g * inside;
     float fresh = at.b * inside;
+    float distanceToEye = distance(cameraPosition, vWorld);
 
-    vec3 colour = mix(shallow, open, smoothstep(0.2, 3.5, depth));
-    colour = mix(colour, deep, smoothstep(4.0, 11.0, depth));
-    colour = mix(colour, reef, reefy * (1.0 - smoothstep(2.0, 6.0, depth)) * 0.85);
-    colour = mix(colour, lake, fresh);
-
-    // A calm surface: a slow ripple tilts the normal a touch, the sky and the sun on it.
-    vec2 p = vWorld.xz;
-    // The ripple fades with distance, before it is finer than a pixel and shimmers into stripes.
-    float near = 1.0 - smoothstep(25.0, 90.0, distance(cameraPosition, vWorld));
-    vec3 n = normalize(vec3(ripple(p) * 0.06 * near, 1.0, ripple(p.yx * 1.3 + 4.0) * 0.06 * near));
+    // Fresh water is calmer; far away the waves fade before they shimmer.
+    float calm = mix(1.0, 0.35, fresh) * (1.0 - smoothstep(60.0, 260.0, distanceToEye) * 0.85);
+    vec2 slope = waves(vWorld.xz, arkTime, calm);
+    vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
     vec3 view = normalize(cameraPosition - vWorld);
-    float fresnel = pow(1.0 - max(dot(n, view), 0.0), 4.0);
-    colour = mix(colour, sky, fresnel * 0.55);
-    vec3 halfway = normalize(view + sunDirection);
-    colour += sunColor * pow(max(dot(n, halfway), 0.0), 180.0) * 0.6;
 
-    // The waterline: a pale edge where it meets the shore.
-    colour = mix(colour, vec3(0.92, 0.9, 0.84), (1.0 - smoothstep(0.0, 0.18, depth)) * 0.5 * inside);
+    // Colour through the water: shallow turquoise to deep blue, the reef's own, the lake's green.
+    vec3 body = mix(shallow, open, smoothstep(0.2, 3.5, depth));
+    body = mix(body, deep, smoothstep(4.0, 11.0, depth));
+    body = mix(body, reef, reefy * (1.0 - smoothstep(2.0, 6.5, depth)) * 0.9);
+    body = mix(body, lake * mix(1.0, 0.8, smoothstep(0.5, 3.0, depth)), fresh);
+    body *= arkCloudShade(vWorld);
 
-    float alpha = mix(0.55, 1.0, smoothstep(0.1, 6.0, depth));
-    alpha = max(alpha, fresh * 0.86);
+    // The sky in it (Fresnel), and the low sun's glint.
+    float facing = max(dot(n, view), 0.0);
+    float fresnel = 0.02 + 0.98 * pow(1.0 - facing, 5.0);
+    vec3 r = reflect(-view, n);
+    vec3 skyColour = mix(skyHorizon, skyZenith, pow(clamp(r.y, 0.0, 1.0), 0.6));
+    vec3 colour = mix(body, skyColour, clamp(fresnel * 1.15, 0.0, 0.85));
+    float glint = pow(max(dot(r, sunDirection), 0.0), 220.0);
+    colour += sunColor * glint * 2.2 * arkCloudShade(vWorld);
+
+    // Foam: lines that run up the shore and fade, broken by noise; a lacy edge where water meets land.
+    float shore = 1.0 - smoothstep(0.0, 1.1, depth);
+    float lines = smoothstep(0.65, 1.0, sin(depth * 9.0 - arkTime * 1.4 + arkNoise(vWorld.xz * 0.5) * 3.0));
+    float lace = smoothstep(0.35, 0.75, arkNoise(vWorld.xz * 1.8 + arkTime * 0.3));
+    float foam = shore * (lines * 0.55 + (1.0 - smoothstep(0.0, 0.18, depth)) * 0.9) * mix(0.55, 1.0, lace) * inside * (1.0 - fresh * 0.75);
+    colour = mix(colour, foamColor, clamp(foam, 0.0, 0.9));
+
+    // Clear in the shallows, so what lives there shows through; opaque where it's deep.
+    float alpha = mix(0.32, 1.0, smoothstep(0.1, 5.0, depth));
+    alpha = max(alpha, max(fresnel, foam));
+    alpha = max(alpha, fresh * 0.82);
     gl_FragColor = vec4(colour, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -205,7 +369,7 @@ void main() {
 }
 `;
 
-function waterMesh(depth: DataTexture, sunDirection: Vector3): {mesh: Mesh; material: ShaderMaterial} {
+function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
     const material = new ShaderMaterial({
         vertexShader: WATER_VERTEX,
         fragmentShader: WATER_FRAGMENT,
@@ -214,15 +378,18 @@ function waterMesh(depth: DataTexture, sunDirection: Vector3): {mesh: Mesh; mate
             {
                 depthMap: {value: null},
                 halfSize: {value: TERRAIN_HALF},
-                time: {value: 0},
                 deep: {value: srgb(WATER.deep)},
                 open: {value: srgb(WATER.open)},
                 shallow: {value: srgb(WATER.shallow)},
                 reef: {value: srgb(WATER.reef)},
                 lake: {value: srgb(WATER.lake)},
-                sky: {value: srgb(SKY.horizon)},
-                sunDirection: {value: sunDirection.clone()},
-                sunColor: {value: srgb(SKY.sun)}
+                skyHorizon: {value: srgb("#e3d4bf")},
+                skyZenith: {value: srgb("#7fa2c0")},
+                sunDirection: {value: null},
+                sunColor: {value: srgb("#fff0d6")},
+                foamColor: {value: srgb("#f4f1ea")},
+                arkTime: {value: 0},
+                arkWind: {value: null}
             }
         ]),
         transparent: true,
@@ -230,238 +397,41 @@ function waterMesh(depth: DataTexture, sunDirection: Vector3): {mesh: Mesh; mate
         fog: true
     });
     material.uniforms.depthMap.value = depth;
-    const geometry = new PlaneGeometry(2400, 2400, 1, 1);
+    // Shared, live values.
+    material.uniforms.arkTime = ARK_TIME;
+    material.uniforms.arkWind = ARK_WIND;
+    material.uniforms.sunDirection = ARK_SUN;
+    const geometry = new PlaneGeometry(4000, 4000, 1, 1);
     geometry.rotateX(-Math.PI / 2);
     const mesh = new Mesh(geometry, material);
     mesh.renderOrder = 2;
     return {mesh, material};
 }
 
-// MARK: - Sky
-
-function skyDome(sunDirection: Vector3): Mesh {
-    const material = new ShaderMaterial({
-        vertexShader: `
-varying vec3 vDirection;
-void main() {
-    vDirection = normalize(position);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}`,
-        fragmentShader: `
-uniform vec3 zenith;
-uniform vec3 horizon;
-uniform vec3 sunColor;
-uniform vec3 sunDirection;
-varying vec3 vDirection;
-void main() {
-    float up = clamp(vDirection.y, 0.0, 1.0);
-    vec3 colour = mix(horizon, zenith, pow(up, 0.55));
-    float sun = max(dot(normalize(vDirection), sunDirection), 0.0);
-    colour += sunColor * (pow(sun, 24.0) * 0.35 + pow(sun, 600.0) * 0.6);
-    gl_FragColor = vec4(colour, 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-}`,
-        uniforms: {
-            zenith: {value: srgb(SKY.zenith)},
-            horizon: {value: srgb(SKY.horizon)},
-            sunColor: {value: srgb(SKY.sun)},
-            sunDirection: {value: sunDirection.clone()}
-        },
-        side: BackSide,
-        depthWrite: false,
-        fog: false
-    });
-    const mesh = new Mesh(new SphereGeometry(2600, 32, 16), material);
-    mesh.renderOrder = -10;
-    mesh.frustumCulled = false;
-    return mesh;
-}
-
-// MARK: - Decor
-
-/** A part of a decor shape: its geometry and a shade (1 = the instance's colour). */
-function part(geometry: BufferGeometry, shade: number, lift = 0, shadeLow = shade): BufferGeometry {
-    const flat = geometry.index ? geometry.toNonIndexed() : geometry;
-    flat.deleteAttribute("uv");
-    const position = flat.getAttribute("position");
-    flat.computeBoundingBox();
-    const box = flat.boundingBox!;
-    const colors = new Float32Array(position.count * 3);
-    // How much of each vertex is farmland: the fragment shader draws the fields there, crisp at any distance.
-    const farmland = new Float32Array(position.count);
-    for (let i = 0; i < position.count; i++) {
-        const t = (position.getY(i) - box.min.y) / Math.max(box.max.y - box.min.y, 1e-4);
-        const value = shadeLow + (shade - shadeLow) * t;
-        colors[i * 3] = value;
-        colors[i * 3 + 1] = value;
-        colors[i * 3 + 2] = value;
-    }
-    flat.setAttribute("color", new BufferAttribute(colors, 3));
-    if (lift) flat.translate(0, lift, 0);
-    return flat;
-}
-
-function decorGeometry(kind: DecorKind): BufferGeometry {
-    const trunk = (height: number, radius: number) => {
-        const geometry = new CylinderGeometry(radius * 0.7, radius, height, 5);
-        return part(geometry, 0.55, height / 2);
-    };
-    switch (kind) {
-        case "broadleaf": {
-            const canopy = new IcosahedronGeometry(1.35, 1);
-            canopy.scale(1, 0.85, 1);
-            return mergeGeometries([trunk(1.8, 0.17), part(canopy, 1.08, 2.7, 0.72)])!;
-        }
-        case "conifer": {
-            const tiers = [
-                part(new ConeGeometry(1.15, 1.9, 7), 0.95, 1.6, 0.68),
-                part(new ConeGeometry(0.88, 1.6, 7), 1.0, 2.45, 0.74),
-                part(new ConeGeometry(0.6, 1.3, 7), 1.06, 3.25, 0.8)
-            ];
-            return mergeGeometries([trunk(1.2, 0.13), ...tiers])!;
-        }
-        case "acacia": {
-            const crown = new CylinderGeometry(2.3, 1.5, 0.55, 9);
-            return mergeGeometries([trunk(2.6, 0.13), part(crown, 1.05, 2.75, 0.7)])!;
-        }
-        case "rock": {
-            const rock = new DodecahedronGeometry(0.8, 0);
-            rock.scale(1.15, 0.62, 0.95);
-            return part(rock, 1.05, 0.15, 0.78);
-        }
-        case "reed": {
-            const blades = [-0.18, 0, 0.16].map((offset, i) => {
-                const blade = new ConeGeometry(0.05, 1.3 + 0.3 * i, 4);
-                blade.translate(offset, (1.3 + 0.3 * i) / 2, (i - 1) * 0.12);
-                return part(blade, 1.05, 0, 0.75);
-            });
-            return mergeGeometries(blades)!;
-        }
-        case "coral": {
-            const coral = new IcosahedronGeometry(0.55, 0);
-            coral.scale(1, 0.85, 1);
-            return part(coral, 1.08, 0.2, 0.8);
-        }
-    }
-}
-
-function decorMeshes(): Array<{mesh: InstancedMesh; material: Material}> {
-    const items = worldDecor();
-    const kinds: DecorKind[] = ["broadleaf", "conifer", "acacia", "rock", "reed", "coral"];
-    const meshes: Array<{mesh: InstancedMesh; material: Material}> = [];
-    const matrix = new Matrix4();
-    const rotation = new Quaternion();
-    const up = new Vector3(0, 1, 0);
-    const scale = new Vector3();
-    const at = new Vector3();
-    const color = new Color();
-    for (const kind of kinds) {
-        const mine = items.filter((item) => item.kind === kind);
-        if (!mine.length) continue;
-        const material = new MeshLambertMaterial({vertexColors: true, flatShading: kind !== "reed"});
-        if (kind === "reed") material.side = DoubleSide;
-        const mesh = new InstancedMesh(decorGeometry(kind), material, mine.length);
-        mine.forEach((item, i) => {
-            rotation.setFromAxisAngle(up, item.rotation);
-            const s = item.scale;
-            scale.set(s, kind === "rock" ? s * (0.8 + 0.4 * ((i * 7) % 5) / 5) : s, s);
-            at.set(item.x, item.y - 0.12, item.z);
-            matrix.compose(at, rotation, scale);
-            mesh.setMatrixAt(i, matrix);
-            mesh.setColorAt(i, color.set(item.color));
-        });
-        mesh.computeBoundingSphere();
-        meshes.push({mesh, material});
-    }
-    return meshes;
-}
-
 // MARK: - The landscape
 
 export type Landscape = {
-    group: Group;
-    sky: Mesh;
-    tick: (time: number) => void;
+    ground: Mesh;
+    water: Mesh;
     dispose: () => void;
 };
 
-export function buildLandscape(sunDirection: Vector3): Landscape {
-    const group = new Group();
+export function buildLandscape(): Landscape {
     const {geometry, depth} = groundGeometry();
-    const groundMaterial = new MeshLambertMaterial({vertexColors: true});
-    // Close up, the ground has grain: two octaves of world-space noise shade it a few percent.
-    groundMaterial.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader
-            .replace("#include <common>", "#include <common>\nattribute float farmland;\nvarying float vFarmland;\nvarying vec3 vGroundWorld;")
-            .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvGroundWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvFarmland = farmland;");
-        shader.uniforms.fieldTones = {value: FIELD_TONES.map(srgb)};
-        shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", `#include <common>
-varying vec3 vGroundWorld;
-varying float vFarmland;
-uniform vec3 fieldTones[${FIELD_TONES.length}];
-float groundHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float groundNoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(groundHash(i), groundHash(i + vec2(1.0, 0.0)), f.x), mix(groundHash(i + vec2(0.0, 1.0)), groundHash(i + vec2(1.0, 1.0)), f.x), f.y);
-}`)
-            .replace("#include <color_fragment>", `#include <color_fragment>
-{
-    float fade = 1.0 - smoothstep(30.0, 110.0, distance(cameraPosition, vGroundWorld));
-    float grain = groundNoise(vGroundWorld.xz * 1.7) * 0.55 + groundNoise(vGroundWorld.xz * 0.35) * 0.45;
-    // Home's patchwork: fields a few metres across, turned a little off the grid, hedges between them.
-    if (vFarmland > 0.01) {
-        vec2 f = vec2(dot(vGroundWorld.xz, vec2(0.94, 0.34)) / 9.0, dot(vGroundWorld.xz, vec2(-0.34, 0.94)) / 6.5);
-        f.x += floor(f.y) * 0.37;
-        vec2 cell = floor(f);
-        int pick = int(floor(groundHash(cell * 1.31 + 7.0) * ${FIELD_TONES.length}.0));
-        vec3 field = fieldTones[0];
-        for (int k = 1; k < ${FIELD_TONES.length}; k++) { if (k == pick) field = fieldTones[k]; }
-        vec2 edge = abs(fract(f) - 0.5);
-        // The farmland's edge wanders and fades into the next zone, hedges first.
-        float farm = smoothstep(0.3, 0.98, vFarmland + (groundNoise(vGroundWorld.xz * 0.11 + 3.0) - 0.5) * 0.4);
-        float hedge = smoothstep(0.455, 0.49, max(edge.x * 1.0, edge.y)) * smoothstep(0.45, 0.95, farm);
-        field *= mix(1.0, 0.62, hedge);
-        // Rows across each field, faint.
-        field *= 1.0 + 0.05 * sin(f.x * 6.2831 * 7.0) * fade;
-        diffuseColor.rgb = mix(diffuseColor.rgb, field, farm * 0.92);
-    }
-    diffuseColor.rgb *= 1.0 + (grain - 0.5) * 0.16 * fade;
-}`);
-    };
-    const ground = new Mesh(geometry, groundMaterial);
-    group.add(ground);
-
-    const water = waterMesh(depth, sunDirection);
-    group.add(water.mesh);
-
-    const decor = decorMeshes();
-    for (const {mesh} of decor) group.add(mesh);
-
-    const sky = skyDome(sunDirection);
-
+    const material = groundMaterial();
+    const ground = new Mesh(geometry, material);
+    ground.receiveShadow = true;
+    ground.castShadow = true;
+    const water = waterMesh(depth);
     return {
-        group,
-        sky,
-        tick: (time) => {
-            water.material.uniforms.time.value = time;
-        },
+        ground,
+        water: water.mesh,
         dispose: () => {
             geometry.dispose();
-            groundMaterial.dispose();
+            material.dispose();
             depth.dispose();
             water.mesh.geometry.dispose();
             water.material.dispose();
-            for (const {mesh, material} of decor) {
-                mesh.geometry.dispose();
-                material.dispose();
-                mesh.dispose();
-            }
-            sky.geometry.dispose();
-            (sky.material as Material).dispose();
         }
     };
 }

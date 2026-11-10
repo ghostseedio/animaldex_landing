@@ -1,20 +1,43 @@
 /**
- * What grows and lies about in each zone: trees in the forests, an acacia
- * here and there on the grassland, conifers on the lower slopes, reeds in
- * the wetland, rocks on the shore and in the desert, ice on the polar coast,
- * coral under the reef's shallows. Placed once from a fixed seed, kept out
- * of each site's clearing (the animals' ground), off the water and away
- * from the river, so every viewer sees the same world.
+ * What grows and stands in each zone, placed once from a fixed seed so every
+ * viewer sees the same world: layered rainforest canopy, mixed woodland,
+ * conifers climbing the mountain, acacias on the savanna, cacti and dry
+ * shrubs in the desert, palms on the coast, reeds and lily pads in the
+ * wetland and the lake, coral and kelp on the reef, rocks in clusters, and
+ * at Home a barn, hay bales, an orchard and fences. Kept out of each site's
+ * clearing (the animals' ground), off the water where they don't belong and
+ * away from the river.
+ *
+ * Grass is placed separately (`grassBlades`): it is dense, and how much of
+ * it is drawn depends on the device.
  */
 
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
-import {fbm, LAKE, riverDistance, sampleGround, seeded, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
-export type DecorKind = "broadleaf" | "conifer" | "acacia" | "rock" | "reed" | "coral";
+export type DecorKind =
+    | "broadleaf"
+    | "rainforest"
+    | "conifer"
+    | "acacia"
+    | "palm"
+    | "shrub"
+    | "cactus"
+    | "rock"
+    | "reed"
+    | "lily"
+    | "coral"
+    | "kelp"
+    | "barn"
+    | "hay"
+    | "fence"
+    | "orchard";
 
 export type DecorItem = {
     kind: DecorKind;
+    /** Which of the kind's shapes. */
+    variant: number;
     x: number;
     y: number;
     z: number;
@@ -24,32 +47,51 @@ export type DecorItem = {
     color: string;
 };
 
-/** Per zone: how many tries per 100 m², and what each try grows into. */
-const GROWTH: Partial<Record<ArkZone, {density: number; pick: (r: number) => DecorKind | null}>> = {
-    rainforest: {density: 4.2, pick: (r) => (r < 0.9 ? "broadleaf" : "rock")},
-    woodland: {density: 3, pick: (r) => (r < 0.55 ? "broadleaf" : r < 0.92 ? "conifer" : "rock")},
-    mountains: {density: 0.9, pick: (r) => (r < 0.55 ? "conifer" : "rock")},
-    grassland: {density: 0.12, pick: (r) => (r < 0.75 ? "acacia" : "rock")},
-    desert: {density: 0.12, pick: () => "rock"},
-    wetland: {density: 2.4, pick: (r) => (r < 0.9 ? "reed" : "broadleaf")},
-    river_lake: {density: 0.45, pick: (r) => (r < 0.55 ? "reed" : r < 0.85 ? "broadleaf" : "rock")},
-    farm_garden: {density: 0.14, pick: (r) => (r < 0.85 ? "broadleaf" : "rock")},
-    seashore: {density: 0.18, pick: () => "rock"},
-    polar: {density: 0.22, pick: () => "rock"}
+type Pick = (roll: number) => DecorKind | null;
+
+/** Per zone: tries per 100 m² (out of MAX_DENSITY), and what each try becomes. */
+const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
+    rainforest: {density: 4.6, pick: (r) => (r < 0.62 ? "rainforest" : r < 0.9 ? "broadleaf" : r < 0.96 ? "shrub" : "rock")},
+    woodland: {density: 3.4, pick: (r) => (r < 0.6 ? "broadleaf" : r < 0.88 ? "conifer" : r < 0.95 ? "shrub" : "rock")},
+    mountains: {density: 1.1, pick: (r) => (r < 0.5 ? "conifer" : r < 0.62 ? "shrub" : "rock")},
+    grassland: {density: 0.22, pick: (r) => (r < 0.5 ? "acacia" : r < 0.8 ? "shrub" : "rock")},
+    desert: {density: 0.4, pick: (r) => (r < 0.32 ? "cactus" : r < 0.66 ? "shrub" : "rock")},
+    wetland: {density: 2.6, pick: (r) => (r < 0.88 ? "reed" : r < 0.94 ? "broadleaf" : "shrub")},
+    river_lake: {density: 0.7, pick: (r) => (r < 0.5 ? "reed" : r < 0.8 ? "broadleaf" : "rock")},
+    farm_garden: {density: 0.12, pick: (r) => (r < 0.7 ? "broadleaf" : "shrub")},
+    seashore: {density: 0.22, pick: (r) => (r < 0.45 ? "palm" : "rock")},
+    polar: {density: 0.3, pick: () => "rock"}
 };
+
+const MAX_DENSITY = 5;
 
 function tone(zone: ArkZone, kind: DecorKind, r: number): string {
     const palette = ZONE_PALETTES[zone];
-    if (kind === "rock") {
-        if (zone === "polar") return r < 0.5 ? "#e4edf2" : "#d2e0e8";
-        if (zone === "desert") return r < 0.5 ? "#b98a5e" : "#a87b52";
-        return r < 0.5 ? "#8a8273" : "#7a7365";
+    switch (kind) {
+        case "rock":
+            if (zone === "polar") return r < 0.5 ? "#eef4f7" : "#dbe6ec";
+            if (zone === "desert") return r < 0.5 ? "#c39066" : "#ad7f58";
+            if (zone === "mountains") return r < 0.5 ? "#8f877a" : "#7b7468";
+            return r < 0.5 ? "#958c7c" : "#827a6c";
+        case "reed":
+            return r < 0.5 ? "#b2a565" : "#8f8f4f";
+        case "shrub":
+            if (zone === "desert") return r < 0.5 ? "#9c8a5a" : "#8a7a4c";
+            return r < 0.5 ? "#5f7535" : "#6f7f3c";
+        case "cactus":
+            return r < 0.5 ? "#6d8a4c" : "#5d7a44";
+        case "palm":
+            return r < 0.5 ? "#6f8f3a" : "#7d9a42";
+        case "acacia":
+            return r < 0.5 ? "#6f7c38" : "#7d8540";
+        case "conifer":
+            return r < 0.5 ? "#3f5a35" : "#4a6439";
+        case "rainforest":
+            return r < 0.33 ? "#3e6a2c" : r < 0.66 ? "#355f29" : "#4b7531";
+        default:
+            return r < 0.5 ? palette.growth[0] : palette.growth[1];
     }
-    if (kind === "reed") return r < 0.5 ? "#a99a5e" : "#8d8a4a";
-    return r < 0.5 ? palette.growth[0] : palette.growth[1];
 }
-
-const MAX_DENSITY = 5;
 
 let cached: DecorItem[] | null = null;
 
@@ -57,6 +99,7 @@ export function worldDecor(): DecorItem[] {
     if (cached) return cached;
     const random = seeded(20261110);
     const items: DecorItem[] = [];
+    const push = (item: DecorItem) => items.push(item);
     const area = (TERRAIN_HALF * 2) ** 2;
     const tries = Math.round(area / 100 * MAX_DENSITY);
     for (let i = 0; i < tries; i++) {
@@ -67,54 +110,168 @@ export function worldDecor(): DecorItem[] {
         const toneRoll = random();
         const sizeRoll = random();
         const rotation = random() * Math.PI * 2;
+        const variantRoll = random();
         const sample = sampleGround(x, z);
-        if (sample.height < 0.35 || sample.land < 0.6) continue;
+        if (sample.height < 0.3 || sample.land < 0.45) continue;
         const zone = zoneAt(sample);
         const growth = GROWTH[zone];
         if (!growth) continue;
-        // Patchy, not even: denser where the noise is high.
-        const patch = 0.35 + 1.3 * fbm(x * 0.05 + 40, z * 0.05 - 40);
+        // Patchy, not even: groves and glades.
+        const patch = 0.25 + 1.4 * fbm(x * 0.05 + 40, z * 0.05 - 40);
         if (roll > growth.density / MAX_DENSITY * patch) continue;
         const site = ZONE_SITES[zone];
         if (Math.hypot(x - site.x, z - site.z) < site.clearing) continue;
-        if (riverDistance(x, z) < 4.5) continue;
-        if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.5) continue;
+        if (riverDistance(x, z) < 4) continue;
+        if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
-        // Reeds keep to the water's edge; trees thin out up the mountain.
-        if (kind === "reed" && sample.height > 1.4) continue;
-        if (kind === "conifer" && sample.height > 22) continue;
+        // Reeds keep to the water's edge; trees thin out up the mountain; palms keep to the sand.
+        if (kind === "reed" && sample.height > 1.3) continue;
+        if (kind === "conifer" && sample.height > 24) continue;
         if (kind === "broadleaf" && zone === "mountains") continue;
-        const scale = kind === "rock" ? 0.5 + 1.2 * sizeRoll * sizeRoll : 0.75 + 0.5 * sizeRoll;
-        items.push({kind, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll)});
+        if (kind === "palm" && sample.land > 0.97) continue;
+        if (sample.cliff > 0.4 && kind !== "rock" && sample.land < 0.8) continue;
+        const scale = kind === "rock" ? 0.5 + 1.3 * sizeRoll * sizeRoll : 0.75 + 0.55 * sizeRoll;
+        const variant = Math.floor(variantRoll * 3);
+        push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll)});
+        // Rocks come in clusters: a big one and a few smaller about it.
+        if (kind === "rock") {
+            const extra = 1 + Math.floor(random() * 3);
+            for (let k = 0; k < extra; k++) {
+                const angle = random() * Math.PI * 2;
+                const distance = scale * (0.9 + random() * 0.9);
+                const rx = x + Math.cos(angle) * distance;
+                const rz = z + Math.sin(angle) * distance;
+                const ground = sampleGround(rx, rz).height;
+                push({kind: "rock", variant: Math.floor(random() * 3), x: rx, y: ground, z: rz, scale: scale * (0.3 + random() * 0.4), rotation: random() * Math.PI * 2, color: tone(zone, "rock", random())});
+            }
+        }
     }
 
-    // Coral on the reef's floor.
-    const reef = ZONE_SITES.coral_reef;
-    for (let i = 0; i < 140; i++) {
+    // Rocks along the cliffs and the shore, half in the water: the waves break round them.
+    for (let i = 0; i < 260; i++) {
+        const theta = random() * Math.PI * 2;
+        const x0 = Math.cos(theta);
+        const z0 = Math.sin(theta);
+        let placed = false;
+        for (let r = 60; r < 100 && !placed; r += 0.8) {
+            const s = sampleGround(x0 * r, z0 * r);
+            if (s.height < 0.15 && s.height > -0.9) {
+                const site = ZONE_SITES.seashore;
+                if (Math.hypot(x0 * r - site.x, z0 * r - site.z) < 16) break;
+                if (riverDistance(x0 * r, z0 * r) < 6) break;
+                if (s.cliff < 0.3 && random() > 0.35) break;
+                const zone = zoneAt(s);
+                push({kind: "rock", variant: Math.floor(random() * 3), x: x0 * r, y: s.height, z: z0 * r, scale: 0.6 + random() * 1.4, rotation: random() * Math.PI * 2, color: tone(zone === "polar" ? "polar" : "seashore", "rock", random())});
+                placed = true;
+            }
+        }
+    }
+
+    // Lily pads on the lake's still margins and the wetland's pools.
+    for (let i = 0; i < 520; i++) {
+        const nearLake = random() < 0.55;
         const angle = random() * Math.PI * 2;
-        const radius = 4 + 24 * Math.sqrt(random());
+        const x = nearLake ? LAKE.x + Math.cos(angle) * (LAKE.r - 1.5 - random() * 3) : ZONE_SITES.wetland.x + (random() * 2 - 1) * 22;
+        const z = nearLake ? LAKE.z + Math.sin(angle) * (LAKE.r - 1.5 - random() * 3) : ZONE_SITES.wetland.z + (random() * 2 - 1) * 22;
+        const s = sampleGround(x, z);
+        if (s.height > -0.12 || s.height < -1.6) continue;
+        if (noise(x * 0.4, z * 0.4) < 0.45) continue;
+        push({kind: "lily", variant: Math.floor(random() * 3), x, y: 0.02, z, scale: 0.6 + random() * 0.6, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#5f8a3c" : "#6e9844"});
+    }
+
+    // The reef: coral heads and fans on the shallow floor, kelp swaying a little deeper.
+    const reef = ZONE_SITES.coral_reef;
+    const corals = ["#ef8a76", "#f0b25f", "#e0708f", "#c68fd6", "#f6c98d", "#ff9f6e"];
+    for (let i = 0; i < 520; i++) {
+        const angle = random() * Math.PI * 2;
+        const radius = 3 + 30 * Math.sqrt(random());
         const x = reef.x + Math.cos(angle) * radius;
         const z = reef.z + Math.sin(angle) * radius;
         const height = sampleGround(x, z).height;
-        if (height > -0.6 || height < -4) continue;
-        const colours = ["#e98a73", "#e6b25f", "#d9708a", "#c58fd0", "#f0c48a"];
-        items.push({kind: "coral", x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: colours[Math.floor(random() * colours.length)]});
+        if (height > -0.7 || height < -6) continue;
+        if (height < -2.6 && random() < 0.7) {
+            // Kelp never breaks the surface: its tallest ribbon (3.4 m) stays under.
+            const scale = Math.min(0.7 + random() * 0.7, (-height - 0.5) / 3.4);
+            if (scale < 0.35) continue;
+            push({kind: "kelp", variant: Math.floor(random() * 3), x, y: height, z, scale, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#6f7a2e" : "#8a8a35"});
+        } else {
+            push({kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]});
+        }
+    }
+
+    // Home: a barn on the fields' edge, hay bales, an orchard in rows, and fences along the lanes.
+    const farm = ZONE_SITES.farm_garden;
+    const onFarm = (x: number, z: number) => {
+        const s = sampleGround(x, z);
+        return s.height > 0.4 && s.land > 0.9 && zoneAt(s) === "farm_garden" && riverDistance(x, z) > 5 && Math.hypot(x - farm.x, z - farm.z) > farm.clearing + 1;
+    };
+    const barn = {x: farm.x - 15, z: farm.z + 9};
+    if (onFarm(barn.x, barn.z)) push({kind: "barn", variant: 0, x: barn.x, y: sampleGround(barn.x, barn.z).height, z: barn.z, scale: 1, rotation: 0.35, color: "#9a4a36"});
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 6; col++) {
+            const x = farm.x + 16 + col * 3.2 + (row % 2) * 1.6;
+            const z = farm.z - 6 + row * 3.4;
+            if (!onFarm(x, z)) continue;
+            push({kind: "orchard", variant: (row + col) % 3, x, y: sampleGround(x, z).height, z, scale: 0.85 + random() * 0.25, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#5f8a3a" : "#6b9440"});
+        }
+    }
+    for (let i = 0; i < 60; i++) {
+        const x = farm.x + (random() * 2 - 1) * 30;
+        const z = farm.z + (random() * 2 - 1) * 24;
+        if (!onFarm(x, z) || noise(x * 0.12, z * 0.12) < 0.5) continue;
+        push({kind: "hay", variant: 0, x, y: sampleGround(x, z).height, z, scale: 0.9 + random() * 0.2, rotation: random() * Math.PI, color: "#d8b45c"});
+    }
+    // Fences: lines of posts and rails along the field boundaries (the fields' own grid, turned as the shader turns them).
+    const along = {x: 0.94, z: 0.34};
+    const across = {x: -0.34, z: 0.94};
+    for (const line of [-2, 1, 3]) {
+        for (let k = -14; k < 14; k++) {
+            // A field boundary every 6.5 m across, segments 2.4 m long along it.
+            const u = k * 2.4;
+            const v = line * 6.5 + 0.2;
+            const wx = along.x * u + across.x * v;
+            const wz = along.z * u + across.z * v;
+            if (!onFarm(wx, wz) || noise(wx * 0.08 + 11, wz * 0.08) < 0.35) continue;
+            push({kind: "fence", variant: 0, x: wx, y: sampleGround(wx, wz).height, z: wz, scale: 1, rotation: -Math.atan2(along.z, along.x), color: "#8a6a48"});
+        }
     }
 
     cached = items;
     return items;
 }
 
-/** Trunks and rocks the animals keep clear of: a coarse grid of (x, z, radius). */
+/** Grass tufts, densest on the meadows, thinning to nothing on sand, rock, snow and the fields. */
+export type GrassTuft = {x: number; y: number; z: number; scale: number; rotation: number; zone: ArkZone; dry: number};
+
+export function grassTufts(count: number): GrassTuft[] {
+    const random = seeded(77001);
+    const tufts: GrassTuft[] = [];
+    const meadow: Partial<Record<ArkZone, number>> = {grassland: 1, woodland: 0.75, farm_garden: 0.55, river_lake: 0.85, wetland: 0.6, rainforest: 0.45, mountains: 0.35, seashore: 0.12};
+    let guard = 0;
+    while (tufts.length < count && guard++ < count * 12) {
+        const x = (random() * 2 - 1) * 100;
+        const z = (random() * 2 - 1) * 100;
+        const s = sampleGround(x, z);
+        if (s.height < 0.35 || s.land < 0.85 || s.height > 20) continue;
+        const zone = zoneAt(s);
+        const want = (meadow[zone] ?? 0) * smoothstep(0.25, 0.6, fbm(x * 0.06 - 7, z * 0.06 + 3));
+        if (random() > want) continue;
+        if (riverDistance(x, z) < 3) continue;
+        tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.75 + 0.25 * random() : zone === "mountains" ? 0.4 : 0.15 * random()});
+    }
+    return tufts;
+}
+
+/** Trunks, rocks and buildings the animals keep clear of: a coarse grid of (x, z, radius). */
 export class DecorObstacles {
     private readonly cells = new Map<string, Array<[number, number, number]>>();
     private static readonly CELL = 6;
 
     constructor(items: DecorItem[]) {
         for (const item of items) {
-            if (item.kind === "coral" || item.kind === "reed") continue;
-            const radius = item.kind === "rock" ? 0.9 * item.scale : 0.9;
+            if (item.kind === "coral" || item.kind === "reed" || item.kind === "lily" || item.kind === "kelp" || item.kind === "fence") continue;
+            const radius = item.kind === "rock" ? 0.9 * item.scale : item.kind === "barn" ? 5.5 : item.kind === "hay" ? 1.1 : 0.9;
             const key = this.key(item.x, item.z);
             const list = this.cells.get(key) ?? [];
             list.push([item.x, item.z, radius]);

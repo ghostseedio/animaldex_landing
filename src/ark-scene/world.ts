@@ -213,6 +213,8 @@ export type GroundSample = {
     river: number;
     /** 0…1 how close to the coral reef (for the sea floor's colour). */
     reef: number;
+    /** 0…1 how much of a sea cliff this stretch of coast is. */
+    cliff: number;
 };
 
 function distanceToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
@@ -253,9 +255,19 @@ function zoneHeight(zone: LandZone, x: number, z: number): number {
             return 1.1 + 1.6 * dune * dune + 0.6 * n;
         }
         case "mountains": {
-            const ridge = 1 - Math.abs(2 * fbm(x * 0.028 + 3.1, z * 0.028 - 1.7) - 1);
+            // Ridged: three octaves of folded noise, sharp crests and gullies, highest at the back.
+            let ridge = 0;
+            let amplitude = 1;
+            let frequency = 0.026;
+            for (let i = 0; i < 3; i++) {
+                const r = 1 - Math.abs(2 * fbm(x * frequency + 3.1 + i * 7, z * frequency - 1.7 - i * 3) - 1);
+                ridge += r * r * amplitude;
+                amplitude *= 0.42;
+                frequency *= 2.15;
+            }
+            ridge /= 1.6;
             const back = smoothstep(-25, -75, z);
-            return 2.5 + 30 * ridge * ridge * (0.45 + 0.75 * back) + 3 * n;
+            return 2.5 + 36 * ridge * (0.4 + 0.8 * back) + 2 * n;
         }
         case "polar":
             return 1.8 + 2.2 * n;
@@ -308,7 +320,11 @@ export function sampleGround(x: number, z: number): GroundSample {
     const reefSite = ZONE_SITES.coral_reef;
     const reef = smoothstep(30, 8, Math.hypot(x - reefSite.x, z - reefSite.z));
     const seaFloor = -1.1 - Math.min(Math.max(-inland, 0) * 0.32, 9) * (1 - 0.75 * reef) + 0.5 * (fbm(x * 0.08, z * 0.08) - 0.5);
-    height = inland > -1 ? seaFloor + (height - seaFloor) * smoothstep(-1, 8, inland) : seaFloor;
+    // Cliffs where the forest, the mountains and the ice meet the sea: the land stops short and drops.
+    const sheltered = (weights.seashore ?? 0) + (weights.farm_garden ?? 0) + (weights.river_lake ?? 0) + (weights.wetland ?? 0);
+    const cliff = smoothstep(0.5, 0.68, noise(theta * 2.6 + 4, 0.5)) * Math.max(0, 1 - sheltered * 2.5) * smoothstep(12, 22, riverDistance(x, z));
+    const reach = 8 - 6 * cliff;
+    height = inland > -1 ? seaFloor + (height + 2.6 * cliff * smoothstep(0, 3, inland) - seaFloor) * smoothstep(-1, reach, inland) : seaFloor;
 
     // The lake and its river.
     const lakeEdge = LAKE.r + 2.2 * (fbm(x * 0.12, z * 0.12) - 0.5);
@@ -323,7 +339,7 @@ export function sampleGround(x: number, z: number): GroundSample {
         height = height + (-1.3 - height) * smoothstep(width + 2.5, width * 0.4, river);
     }
 
-    return {height, weights, land, inland, river, reef};
+    return {height, weights, land, inland, river, reef, cliff};
 }
 
 export function heightAt(x: number, z: number): number {

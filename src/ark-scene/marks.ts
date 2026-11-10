@@ -5,6 +5,7 @@
  * draw call each.
  */
 
+import {ARK_TIME} from "@/ark-scene/glsl";
 import {
     CanvasTexture,
     Color,
@@ -45,7 +46,7 @@ export class ContactShadows {
     private readonly rotation = new Matrix4();
 
     constructor() {
-        this.material = new MeshBasicMaterial({color: 0x1d1a12, alphaMap: this.texture, transparent: true, opacity: 0.3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
+        this.material = new MeshBasicMaterial({color: 0x1d1a12, alphaMap: this.texture, transparent: true, opacity: 0.22, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
         const geometry = new PlaneGeometry(1, 1);
         geometry.rotateX(-Math.PI / 2);
         this.mesh = new InstancedMesh(geometry, this.material, 1);
@@ -101,9 +102,11 @@ attribute vec3 ringColor;
 attribute float ringAlpha;
 varying vec3 vColor;
 varying float vAlpha;
+varying float vR;
 void main() {
     vColor = ringColor;
     vAlpha = ringAlpha;
+    vR = length(position.xz);
     vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
@@ -113,12 +116,19 @@ void main() {
 #include <fog_pars_fragment>
 varying vec3 vColor;
 varying float vAlpha;
+varying float vR;
+uniform float arkTime;
 void main() {
-    gl_FragColor = vec4(vColor, vAlpha);
+    // A thin bright line at 0.86 with a soft glow either side, breathing slowly.
+    float line = 1.0 - smoothstep(0.0, 0.035, abs(vR - 0.86));
+    float glow = 1.0 - smoothstep(0.0, 0.14, abs(vR - 0.86));
+    float pulse = 0.82 + 0.18 * sin(arkTime * 2.2);
+    float a = (line * 0.9 + glow * 0.35) * vAlpha * pulse;
+    gl_FragColor = vec4(vColor * (1.0 + line * 0.6), a);
     #include <colorspace_fragment>
     #include <fog_fragment>
 }`,
-            uniforms: UniformsUtils.merge([UniformsLib.fog]),
+            uniforms: {...UniformsUtils.merge([UniformsLib.fog]), arkTime: ARK_TIME},
             transparent: true,
             depthWrite: false,
             fog: true,
@@ -126,7 +136,7 @@ void main() {
             polygonOffsetFactor: -4,
             polygonOffsetUnits: -4
         });
-        const geometry = new RingGeometry(0.93, 1, 64, 1);
+        const geometry = new RingGeometry(0.7, 1, 72, 1);
         geometry.rotateX(-Math.PI / 2);
         this.mesh = new InstancedMesh(geometry, this.material, 1);
         this.mesh.frustumCulled = false;
