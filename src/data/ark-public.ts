@@ -36,8 +36,29 @@ async function rpc(name: string, revalidate: number): Promise<{data: unknown; er
     }
 }
 
-/** `voyage_public_v2` (life v2), else `voyage_public_v1`; null before the Ark's migration or when the read fails. */
-export async function readPublicArk(revalidate = 300): Promise<ArkSnapshot | null> {
+/**
+ * `voyage_public_v2` (life v2), else `voyage_public_v1`; null before the Ark's migration or when the read fails.
+ *
+ * One read per process per window, whatever Next's data cache does: every
+ * species page reads it, and in CI the fetch cache's writes can fail (as the
+ * Power icon index's did, lib/animal-power-icons-server), which would make
+ * each of thousands of static pages read the Ark again. A null is not kept.
+ */
+export function readPublicArk(revalidate = 300): Promise<ArkSnapshot | null> {
+    const now = Date.now();
+    const hit = publicArkMemo.get(revalidate);
+    if (hit && now - hit.at < revalidate * 1000) return hit.promise;
+    const promise = loadPublicArk(revalidate).then((snapshot) => {
+        if (!snapshot) publicArkMemo.delete(revalidate);
+        return snapshot;
+    });
+    publicArkMemo.set(revalidate, {at: now, promise});
+    return promise;
+}
+
+const publicArkMemo = new Map<number, {at: number; promise: Promise<ArkSnapshot | null>}>();
+
+async function loadPublicArk(revalidate: number): Promise<ArkSnapshot | null> {
     let read = await rpc("voyage_public_v2", revalidate);
     if (read.error && isMissingArkFunction(read.error)) read = await rpc("voyage_public_v1", revalidate);
     if (read.error) return null;

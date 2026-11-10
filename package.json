@@ -10,7 +10,7 @@
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
     "dev:clean": "node scripts/dev-clean.js",
-    "prebuild": "node scripts/generatePublicImageAssets.js",
+    "prebuild": "node scripts/generatePublicImageAssets.js && node scripts/build-ark-bundle.mjs",
     "build": "next build",
     "postinstall": "rm -rf node_modules/solar-icon-set/node_modules/@types",
     "assets:manifest": "node scripts/generatePublicImageAssets.js",

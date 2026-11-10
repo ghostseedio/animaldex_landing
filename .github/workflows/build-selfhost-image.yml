@@ -243,6 +243,11 @@ jobs:
           expect_status "/id/animals/tiger" 308 "/animals/tiger"
           expect_status "/animals/definitely-not-a-real-animaldex-slug" 404
           expect_status "/sitemap.xml" 200
+          # The apps' Ark panel (3.3) loads /ark/embed.html, which needs the packed scene
+          # (built by `prebuild`, gitignored): without it the panel is blank.
+          expect_status "/ark/embed.html" 200
+          expect_status "/ark/ark-scene.js" 200
+          expect_status "/ark" 200
           # Trial Loops: the hub must ship server-rendered posters. Next 13.5's minifier once
           # blanked them silently (the renderer catches and returns null), so check the markup.
           if ! curl -sS "${PROXY[@]}" "http://127.0.0.1:${HOST_PORT}/animal-trials" | grep -q 'viewBox="0 0 360 202"'; then
