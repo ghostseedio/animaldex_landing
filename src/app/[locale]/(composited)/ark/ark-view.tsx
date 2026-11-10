@@ -33,6 +33,8 @@ type Props = {
     words: ArkWords;
     talkTitles: {a: string; an: string};
     modelBase: string;
+    /** Development's `?rig=`: another rig folder, or null for no rigs; absent: beside the model set. */
+    rigBase?: string | null;
     /** `?focus=`: a species_profile_id or slug to fly to once the Ark is in view. */
     focus?: string | null;
     fixtureLife?: ArkFixtureLife | null;
@@ -152,7 +154,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
+export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -272,6 +274,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     handle = mountArk(el, {
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
+                        ...(rigBase !== undefined ? {rigBase} : {}),
                         iconUrl: arkIconUrl,
                         onSelect,
                         onHerd: setHerd,

@@ -78,11 +78,57 @@ uniform float tailBaseZ;
 uniform float tailLength;
 `;
 
+/**
+ * A rigged animal (`rig-player.ts`): per vertex four bones of the rig's
+ * bone texture (a row per frame, three texels per bone: the 3×4 rows), per
+ * instance the clip now (A: its frame's row, the next row, how far between,
+ * and the rig's weight against the rest pose) and the clip it is leaving
+ * (B: the same three, and how much of it is left). At weight 0 the mesh is
+ * in its rest pose, which is the near model's: the swap never pops.
+ */
+const RIG_DECLARATIONS = `
+uniform highp sampler2D arkBones;
+attribute vec4 arkJoints;
+attribute vec4 arkWeights;
+attribute vec4 arkRigA;
+attribute vec4 arkRigB;
+mat4 arkBone(float row, float bone) {
+    int x = int(bone + 0.5) * 3;
+    int y = int(row + 0.5);
+    vec4 r0 = texelFetch(arkBones, ivec2(x, y), 0);
+    vec4 r1 = texelFetch(arkBones, ivec2(x + 1, y), 0);
+    vec4 r2 = texelFetch(arkBones, ivec2(x + 2, y), 0);
+    return mat4(r0.x, r1.x, r2.x, 0.0, r0.y, r1.y, r2.y, 0.0, r0.z, r1.z, r2.z, 0.0, r0.w, r1.w, r2.w, 1.0);
+}
+mat4 arkBoneAt(vec3 at, float bone) {
+    return arkBone(at.x, bone) * (1.0 - at.z) + arkBone(at.y, bone) * at.z;
+}
+mat4 arkSkinAt(vec3 at) {
+    return arkBoneAt(at, arkJoints.x) * arkWeights.x + arkBoneAt(at, arkJoints.y) * arkWeights.y
+        + arkBoneAt(at, arkJoints.z) * arkWeights.z + arkBoneAt(at, arkJoints.w) * arkWeights.w;
+}
+`;
+
+/** The skin matrix this frame (before the normals), then applied to the position. */
+const RIG_SKIN = `
+mat4 arkSkin = arkSkinAt(arkRigA.xyz);
+if (arkRigB.w > 0.001) arkSkin = arkSkin * (1.0 - arkRigB.w) + arkSkinAt(arkRigB.xyz) * arkRigB.w;
+arkSkin = mat4(1.0) * (1.0 - arkRigA.w) + arkSkin * arkRigA.w;
+objectNormal = normalize(mat3(arkSkin) * objectNormal);
+`;
+
 const IDLE = `
+#ifdef ARK_RIG
+transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
+#endif
 #ifdef ARK_MOTION
 {
     vec3 arkOrigin = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     float motionGain = 1.0 - smoothstep(18.0, 25.0, distance(arkOrigin, cameraPosition));
+#ifdef ARK_RIG
+    // The rig's own idle takes over from the procedural one as it fades in.
+    motionGain *= 1.0 - arkRigA.w;
+#endif
     // Asleep (the hour and the species' activity): still, the head down, breathing slow.
     float arkRest = arkInstance.z;
     if (arkRest > 0.001 && arkDroop > 0.0) {
@@ -131,6 +177,8 @@ export type AnimalMaterialOptions = {
     minY: number;
     maxY: number;
     animated: boolean;
+    /** A rigged mesh: its bone texture (`rig-player.ts`). */
+    rig?: Texture | null;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -159,15 +207,20 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         arkDroop: {value: DROOPING_PLANS.has(options.behaviour?.plan ?? "") ? 0.32 : 0},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}]))
     };
-    if (options.animated) material.defines = {ARK_MOTION: ""};
-    material.customProgramCacheKey = () => (options.animated ? "ark-animal-near" : "ark-animal-far");
+    if (options.rig) uniforms.arkBones = {value: options.rig};
+    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {})};
+    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? "-rig" : ""}`;
+    material.customProgramCacheKey = () => key;
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>
 attribute vec3 arkInstance;
 varying float vArkDim;
-${MOTION_DECLARATIONS}`)
+${MOTION_DECLARATIONS}
+${options.rig ? RIG_DECLARATIONS : ""}`)
+            .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
+${options.rig ? RIG_SKIN : ""}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 vArkDim = arkInstance.y;
 ${IDLE}`);
