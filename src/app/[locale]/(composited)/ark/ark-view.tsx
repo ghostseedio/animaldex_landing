@@ -12,6 +12,7 @@ import {arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkR
 import {fixtureArkStory} from "@/lib/ark-story";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 
 export type {ArkWords} from "@/lib/ark-words";
 
@@ -667,8 +668,7 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
             <div className="mx-auto w-full max-w-[86rem] px-4 py-3.5 md:px-8 md:py-4">
                 <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-x-3 md:grid-cols-[4rem_minmax(0,1fr)_auto] md:gap-x-5">
                     <span className="flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] md:h-16 md:w-16">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getSpeciesArtworkUrl(animal.model_slug)} alt="" width={64} height={64} className="h-[82%] w-[82%] object-contain" />
+                        <ArkSpeciesIcon src={getSpeciesArtworkUrl(animal.model_slug)} size={64} className="h-[82%] w-[82%] object-contain" />
                     </span>
                     <div className="min-w-0">
                         <h2 className="truncate font-display text-lg font-extrabold leading-tight text-white md:text-xl">{animal.name}</h2>

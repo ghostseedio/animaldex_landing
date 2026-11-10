@@ -191,6 +191,14 @@ export function buildLayersScene(): LayersScene {
     disposables.push(pitMaterial);
     const planes = [new Plane(), new Plane(), new Plane(), new Plane()];
     const clipped: Material[] = [];
+    /** The planes parked: one of them has every point on its outer side, so nothing is inside all four and nothing is clipped. */
+    const park = () => {
+        planes[0].set(new Vector3(1, 0, 0), -1e6);
+        planes[1].set(new Vector3(-1, 0, 0), -1e6);
+        planes[2].set(new Vector3(0, 0, 1), -1e6);
+        planes[3].set(new Vector3(0, 1, 0), 1e6);
+    };
+    park();
     const PIT_HALF = 3.2;
     const PIT_FRONT = 4.5;
     const PIT_BACK = 1.4;
@@ -237,12 +245,7 @@ export function buildLayersScene(): LayersScene {
         pit.visible = open;
         if (tunnels) tunnels.visible = open;
         if (!view) {
-            for (const material of clipped) {
-                if (material.clippingPlanes?.length) {
-                    material.clippingPlanes = [];
-                    material.needsUpdate = true;
-                }
-            }
+            park();
             return false;
         }
         const f = view.towardCamera.clone().setY(0).normalize();
@@ -253,13 +256,6 @@ export function buildLayersScene(): LayersScene {
         planes[1].set(s.clone().negate(), s.dot(c) - PIT_HALF);
         planes[2].set(f, -f.dot(c) - PIT_FRONT);
         planes[3].set(f.clone().negate(), f.dot(c) - PIT_BACK);
-        for (const material of clipped) {
-            if (material.clippingPlanes !== planes) {
-                material.clippingPlanes = planes;
-                material.clipIntersection = true;
-                material.needsUpdate = true;
-            }
-        }
         // The pit's walls along the box's back and sides.
         const corner = (across: number, out: number) => c.clone().addScaledVector(s, across).addScaledVector(f, out).setY(0);
         const backLeft = corner(-PIT_HALF, -PIT_BACK);
@@ -383,7 +379,14 @@ export function buildLayersScene(): LayersScene {
             glow.visible = n > 0;
         },
         clip: (materials) => {
-            clipped.push(...materials);
+            // The clipped materials keep their four planes for good (parked out of the way while the cutaway is
+            // closed): opening it then only moves the planes, so no shader is compiled again and nothing hitches.
+            for (const material of materials) {
+                material.clippingPlanes = planes;
+                material.clipIntersection = true;
+                material.needsUpdate = true;
+                clipped.push(material);
+            }
         },
         step: (time) => {
             if (shafts.visible) {

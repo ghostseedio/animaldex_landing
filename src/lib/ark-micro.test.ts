@@ -84,3 +84,19 @@ test("microhabitats: true size close by, never under the minimum on screen, the 
     assert.equal(microDrawnLength(L, full, 0.1, 800, 38, 16), L);
     assert.equal(microDrawnLength(L, full, 150, 800, 38, 16), full);
 });
+
+test("rigged clips: read only for a rig that passed and a clip it lists; otherwise null, and the motion stays procedural", async () => {
+    const {ARK_RIG_MANIFEST, rigClip} = await import("@/ark-scene/rig-clips");
+    const manifest = {species: {
+        "mediterranean-house-gecko": {state: "passed", clips: {walk: {frames: 24, loop: true, seconds: 0.35}}},
+        "common-house-spider": {state: "fallback", clips: ["idle", "walk", "run"]},
+        "black-ant": {state: "passed", clips: {idle: {frames: 48, loop: true, seconds: 2}}}
+    }};
+    assert.equal(rigClip(manifest, "mediterranean-house-gecko", "walk")?.frames, 24);
+    assert.equal(rigClip(manifest, "common-house-spider", "walk"), null, "a fallback rig is never read");
+    assert.equal(rigClip(manifest, "black-ant", "walk"), null, "a clip the passed rig doesn't list");
+    assert.equal(rigClip(manifest, "nobody", "walk"), null);
+    // Nothing is published yet: the scene has no manifest, so every animal moves procedurally.
+    assert.equal(ARK_RIG_MANIFEST, null);
+    assert.equal(rigClip(ARK_RIG_MANIFEST, "mediterranean-house-gecko", "walk"), null);
+});

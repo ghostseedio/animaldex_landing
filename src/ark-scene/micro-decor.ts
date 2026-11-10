@@ -97,7 +97,7 @@ export function limbAt(limb: CanopyLimb, trunkRadius: number, t: number): {x: nu
 export const CANOPY_TREES: Partial<Record<ArkZone, number>> = {rainforest: 4, woodland: 4, river_lake: 2, wetland: 2, grassland: 2, mountains: 2};
 
 export type MicroDecorItem = {
-    kind: "cottage" | "pond" | "flower" | "leaf" | "rock" | "broadleaf" | "canopy";
+    kind: "cottage" | "pond" | "flower" | "leaf" | "rock" | "broadleaf" | "canopy" | "lamp";
     variant: number;
     x: number;
     y: number;
@@ -114,6 +114,17 @@ export type MicroDecorItem = {
 const FLOWER_COLOURS = ["#f2d14b", "#f07a8a", "#f5f1e6", "#b58ae0", "#ef8f45", "#e85d5d"];
 const LEAF_COLOURS = ["#9b6a36", "#7d5430", "#b2813f", "#6e4a2a", "#a3743a"];
 const STONE = ["#958c7c", "#827a6c", "#a0978a"];
+
+/** A lamp post: its height to the lamp, the post's radius. */
+export const LAMP = {height: 2.4, radius: 0.055};
+
+/** Where a land zone's lamp post stands (behind its micro corner), on the ground. Home has the porch light instead. */
+export function zoneLamp(zone: ArkZone): {x: number; y: number; z: number} {
+    const corner = microCorner(zone);
+    const x = corner.x - 0.4;
+    const z = corner.z - 1.5;
+    return {x, y: sampleGround(x, z).height, z};
+}
 
 /** The land zones that get a micro corner (the sea's two zones have none). */
 export const MICRO_ZONES: ArkZone[] = ["farm_garden", "seashore", "river_lake", "wetland", "rainforest", "woodland", "grassland", "desert", "mountains", "polar"];
@@ -219,6 +230,9 @@ export function microDecor(): MicroDecorItem[] {
         flowerPatch(zone, corner.x - 2.2, corner.z + 0.4, 0.85, 9, 0);
         litterPatch(zone, corner.x + 0.2, corner.z + 0.8, 1.1, 22, 0);
         stones(zone, corner.x + 2.6, corner.z + 0.2, zone === "mountains" || zone === "polar" ? 0.85 : 0.65);
+        // A lamp post behind the patches, lit at night: the zone's own "porch light" for its moths.
+        const lamp = zoneLamp(zone);
+        items.push({kind: "lamp", variant: 0, x: lamp.x, y: lamp.y, z: lamp.z, scale: 1, rotation: 0, color: "#2f2a26", zone});
     }
     cached = items;
     return items;

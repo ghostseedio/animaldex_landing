@@ -79,10 +79,12 @@ const FLOOR_CLASSES = new Set(["Malacostraca", "Asteroidea", "Echinoidea", "Holo
 const FILTER = /(?:^|-)(?:manta|mobula|whale-shark|basking-shark|blue-whale|fin-whale|humpback|right-whale|bowhead|minke|sei-whale|brydes|gray-whale|grey-whale)(?:-|$)/;
 const OCTOPUS = /(?:^|-)(?:octopus)(?:-|$)/;
 
-const UNDERGROUND = /\b(?:underground|subterranean|fossorial|tunnels|tunnelling|tunneling|spends? most of (?:its|their) (?:life|lives|time) (?:underground|in burrows))\b/i;
+/** Underground only when the text says the animal itself lives there ("lives underground", "fossorial", "digs tunnels"), not a place it lists ("wet tunnels"). */
+const UNDERGROUND = /\b(?:lives? (?:mostly |almost entirely )?underground|living underground|(?:spends?|spent) (?:most of (?:its|their) (?:life|lives|time) )?underground|subterranean|fossorial|digs? (?:its own |long |extensive )?tunnels|tunnel systems? (?:it|they) digs?|underground (?:tunnels|burrow systems|colonies|life))\b/i;
 const UNDERGROUND_FAMILIES = new Set(["Talpidae", "Bathyergidae", "Spalacidae", "Chrysochloridae", "Geomyidae", "Notoryctidae", "Ctenomyidae", "Caeciliidae", "Amphisbaenidae", "Megascolecidae", "Lumbricidae", "Gryllotalpidae"]);
 const UNDERGROUND_CLASSES = new Set(["Mammalia", "Amphibia", "Squamata", "Clitellata", "Insecta"]);
-const BURROW = /\b(?:burrows?|burrowing|digs?|digging|warrens?)\b/i;
+/** A burrow of its own: the animal digs, or lives, rests, sleeps or nests in burrows (not a list of places that has "burrows" in it). */
+const BURROW = /\b(?:digs?|digging|dug|burrowing|burrow-dwelling|warrens?|(?:lives?|living|rests?|resting|sleeps?|sleeping|shelters?|sheltering|nests?|nesting|roosts?|hides?|spends? the day|spent) (?:\w+ ){0,3}in (?:its own |their own |a |their |its |old |abandoned )?(?:\w+ )?burrows?|(?:its|their) (?:own )?burrows?)\b/i;
 const BURROW_CLASSES = new Set(["Mammalia", "Squamata", "Amphibia", "Testudines", "Aves", "Malacostraca"]);
 
 const TREES = /\b(?:canopy|canopies|treetops?|tree tops|arboreal|in (?:the )?trees|among (?:the )?trees|tree branches|branches|perch(?:es|ing)?|tree-dwelling|trees? holes?|roosts? in trees|climbs? trees|in tall trees|forest trees)\b/i;
@@ -111,7 +113,8 @@ function classify(row: Row): Result {
 
     // The sea.
     if (row.zone === "coral_reef" || row.zone === "open_ocean") {
-        const deep = find(DEEP, ["habitat", "look"]);
+        // Deep only from where it lives (`typical_habitat`), never from where people watch it ("from boats crossing deep water").
+        const deep = find(DEEP, ["habitat"]);
         const glow = find(GLOW);
         if (deep) return {layer: "deep", mode: "swim", reason: say(deep), flags: glow ? "g" : "", confident: true};
         const floor = FLOOR_CLASSES.has(row.class ?? "") || (plan !== null && FLOOR_PLANS.has(plan) && row.class !== "Cephalopoda") || OCTOPUS.test(row.slug);
@@ -141,7 +144,8 @@ function classify(row: Row): Result {
         }
     }
     // The ground; a burrow by it when its text says it digs or lives in one.
-    const burrow = BURROW_CLASSES.has(cls) ? find(BURROW, ["habitat", "look", "sleep"]) : null;
+    // Its own burrow: from where it lives or sleeps, not from what a watcher sees by it ("basking near a burrow mouth").
+    const burrow = BURROW_CLASSES.has(cls) ? find(BURROW, ["habitat", "sleep"]) : null;
     return {layer: "ground", mode: "", reason: burrow ? say(burrow) : anyText ? "no tree, burrow or sea phrase" : "no usable text (on the ground by default)", flags: burrow ? "b" : "", confident: anyText};
 }
 

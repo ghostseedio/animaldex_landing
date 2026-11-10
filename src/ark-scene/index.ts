@@ -54,6 +54,7 @@ import {
     PerspectiveCamera,
     Quaternion,
     Scene,
+    Raycaster,
     Sphere,
     Spherical,
     Vector3,
@@ -76,8 +77,9 @@ import {buildMotes} from "@/ark-scene/life";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Shadow} from "@/ark-scene/marks";
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
-import {microDrawnLength, microSpecies, porchLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
+import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
+import {ARK_RIG_MANIFEST, rigClip} from "@/ark-scene/rig-clips";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
@@ -638,12 +640,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * round in the pauses; asleep it keeps still. A moth at the cottage
      * circles the porch light at night, while it is awake.
      */
-    const LIGHT = porchLight();
     const microPose = (entry: Entry, time: number): Pose => {
         const place = entry.place;
         const micro = place.micro!;
         const surface = micro.surface;
         const L = entry.trueLength;
+        // Procedural: a glide (a rigged walk only when the published manifest has one that passed; none is published yet).
+        const walk = rigClip(ARK_RIG_MANIFEST, entry.animal.model_slug, "walk");
+        void walk;
         const reach = surface === "around" || surface === "roof" ? 0 : surface === "water" ? 0.2 : surface === "flower" ? Math.min(0.02, 2 * L) : Math.min(Math.max(5 * L, 0.03), 0.35);
         const period = 11 + 9 * entry.phase;
         const u = (((time / period + entry.phase) % 1) + 1) % 1;
@@ -669,9 +673,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Round the porch light: a loose, wobbling loop, each moth its own.
             const radius = 0.16 + entry.phase * 0.32;
             const angle = time * (1.6 + entry.phase * 1.4) * (entry.phase > 0.5 ? 1 : -1) + entry.phase * 40;
-            const lx = LIGHT.x + Math.cos(angle) * radius;
-            const lz = LIGHT.z + 0.18 + Math.sin(angle) * radius * 0.7;
-            const ly = LIGHT.y - 0.05 + Math.sin(time * 3.1 + entry.phase * 17) * 0.09;
+            const light = nightLight(micro, entry.animal.zone);
+            // Round a lamp post's lamp all the way; round the porch light in front of the wall.
+            const flat = micro.spot === "lamp" ? 1 : 0.7;
+            const lx = light.x + light.out.x + Math.cos(angle) * radius;
+            const lz = light.z + light.out.z + Math.sin(angle) * radius * flat;
+            const ly = light.y - 0.05 + Math.sin(time * 3.1 + entry.phase * 17) * 0.09;
             const e = easeInOut(k);
             const direction = entry.phase > 0.5 ? 1 : -1;
             const tx = -Math.sin(angle) * direction;
@@ -945,7 +952,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             let skip = false;
             if (entry.micro && !entry.act) {
                 // A moth at the cottage goes to the porch light at night while it is awake (not while it is looked at).
-                if (entry.micro.moth && entry.place.micro?.spot === "house") {
+                if (entry.micro.moth && (entry.place.micro?.spot === "house" || entry.place.micro?.spot === "lamp")) {
                     const want = entry.awake && night > 0.35 && selectedId !== entry.animal.id && !reducedMotion ? 1 : 0;
                     entry.toLight = (entry.toLight ?? 0) + (want - (entry.toLight ?? 0)) * Math.min(dt * 0.5, 1);
                 }
@@ -1421,6 +1428,97 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return bearings[0];
     };
 
+    // MARK: Leaves in the way
+
+    /** The plants that can stand between the camera and an animal up a tree (never the grass). */
+    const TREE_KINDS = new Set(["canopy", "rainforest", "broadleaf", "conifer", "acacia", "palm", "orchard", "shrub", "cactus"]);
+    const occluders = vegetation.meshes.filter((mesh) => TREE_KINDS.has(mesh.userData.kind as string));
+    const rays = new Raycaster();
+    const rayFrom = new Vector3();
+    const rayTo = new Vector3();
+    /** What is hit between a camera position and a target, short of the animal itself (its own perch within `slack` m). */
+    const back = new Vector3();
+    const blockers = (from: Vector3, to: Vector3, slack: number): Array<{mesh: InstancedMesh; distance: number; instance: number}> => {
+        const span = from.distanceTo(to);
+        rays.set(from, rayTo.copy(to).sub(from).normalize());
+        rays.near = 0;
+        rays.far = Math.max(span - slack, 0.01);
+        const hits = rays.intersectObjects(occluders, false).map((hit) => ({mesh: hit.object as InstancedMesh, distance: hit.distance, instance: hit.instanceId ?? -1}));
+        // And back from the animal to the camera: leaves are single-sided, so a camera inside a pad of leaves only
+        // sees it from the inside (no hit one way, a hit the other).
+        rays.set(back.copy(to), rayTo.copy(from).sub(to).normalize());
+        rays.near = slack;
+        rays.far = span;
+        for (const hit of rays.intersectObjects(occluders, false)) hits.push({mesh: hit.object as InstancedMesh, distance: span - hit.distance, instance: hit.instanceId ?? -1});
+        rays.near = 0;
+        return hits;
+    };
+    const cameraAt = (target: Vector3, distance: number, polar: number, azimuth: number) => rayFrom.copy(target).add(offset.setFromSpherical(spherical.set(distance, polar, azimuth)));
+    /**
+     * A view of an animal up a tree with nothing in the way: its mode's own
+     * angle first, then turned either side, from higher and lower, a little
+     * nearer. Else the mode's own (the leaves in the way fade while it is
+     * looked at: `foldTrees`).
+     */
+    const clearCanopyView = (target: Vector3, distance: number, polar: number, azimuth: number, length: number) => {
+        const slack = Math.max(length * 0.6, 0.35);
+        for (const near of [1, 0.75, 0.55]) {
+            for (const turn of [0, 0.6, -0.6, 1.2, -1.2, Math.PI / 2 + 0.4, -Math.PI / 2 - 0.4, Math.PI]) {
+                for (const tilt of [polar, 2.45, 1.55, 1.0]) {
+                    const from = cameraAt(target, distance * near, tilt, azimuth + turn);
+                    if (from.y < Math.max(heightAt(from.x, from.z), 0) + 0.3) continue;
+                    if (!blockers(from, target, slack).length) return {distance: distance * near, polar: tilt, azimuth: azimuth + turn};
+                }
+            }
+        }
+        return {distance, polar, azimuth};
+    };
+    /**
+     * The trees still between the camera and the animal looked at up a tree
+     * (no clear view was found, or the camera was moved): those trees are
+     * folded away (their instance shrunk to nothing) while it is looked at,
+     * and stand again after. Checked a few times a second; never the
+     * animal's own perch (within its slack).
+     */
+    let foldCheck = 0;
+    const folded = new Map<InstancedMesh, Map<number, Matrix4>>();
+    const unfold = (keep: Set<string>) => {
+        folded.forEach((instances, mesh) => {
+            instances.forEach((original, index) => {
+                if (keep.has(`${mesh.id}#${index}`)) return;
+                mesh.setMatrixAt(index, original);
+                mesh.instanceMatrix.needsUpdate = true;
+                instances.delete(index);
+            });
+            if (!instances.size) folded.delete(mesh);
+        });
+    };
+    const foldTrees = (now: number) => {
+        if (now - foldCheck < 0.25) return;
+        foldCheck = now;
+        const looked = selectedId ? findEntry(selectedId) : null;
+        const keep = new Set<string>();
+        if (looked?.place.canopy && looked.middle && !flight) {
+            // Shrunk ones are not hit again: keep what is folded while it is still in the way (tested at full size).
+            const hits = blockers(rayFrom.copy(camera.position), looked.middle, Math.max(looked.length * 0.6, 0.35));
+            for (const hit of hits) {
+                // (Never a canopy tree: the animal may be on it. Those the view search keeps out of the way.)
+                if (hit.instance < 0 || hit.mesh.userData.kind === "canopy") continue;
+                keep.add(`${hit.mesh.id}#${hit.instance}`);
+                let instances = folded.get(hit.mesh);
+                if (!instances) folded.set(hit.mesh, (instances = new Map()));
+                if (instances.has(hit.instance)) continue;
+                const original = new Matrix4();
+                hit.mesh.getMatrixAt(hit.instance, original);
+                instances.set(hit.instance, original);
+                hit.mesh.setMatrixAt(hit.instance, new Matrix4().makeScale(0, 0, 0).setPosition(new Vector3().setFromMatrixPosition(original)));
+                hit.mesh.instanceMatrix.needsUpdate = true;
+            }
+            folded.forEach((instances, mesh) => instances.forEach((_, index) => keep.add(`${mesh.id}#${index}`)));
+        }
+        unfold(keep);
+    };
+
     /** Where an animal's middle is now, drawn or not (off screen, or a layer not drawn from here). */
     const middleNow = (entry: Entry): Vector3 => {
         if (entry.middle) return entry.middle.clone();
@@ -1485,7 +1583,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     azimuth = Math.cos(side - toSite) >= 0 ? side : side + Math.PI;
                     polar = place.mode === "hang" ? 2.55 : 2.15;
                 }
-                fly(target, 2.6 + entry.length * 2.2, distance > 30 ? 2 : 1.4, polar, azimuth);
+                // The first view, of the mode's own and some others round it, with no leaves or limbs between.
+                const view = clearCanopyView(target, 2.6 + entry.length * 2.2, polar, azimuth, entry.length);
+                fly(target, view.distance, distance > 30 ? 2 : 1.4, view.polar, view.azimuth);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? middleNow(entry) : null);
                 return;
             }
@@ -2167,6 +2267,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         keepInWorld();
         fitCloseUp();
         stepLayers(elapsed);
+        foldTrees(elapsed);
+        micro.step(camera.position);
         stepTalking(elapsed);
         // The hour: read again every minute (the light changes only a little).
         if (now - lastClock > 60 && !replay) {
@@ -2257,7 +2359,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking, lighting, entries: () => allEntries(), replaying: () => Boolean(replay), following: () => followId};
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking, lighting, entries: () => allEntries(), replaying: () => Boolean(replay), following: () => followId, occlusion: () => {
+        const looked = selectedId ? findEntry(selectedId) : null;
+        return looked?.middle ? blockers(camera.position.clone(), looked.middle, 0.35).map((hit) => ({kind: hit.mesh.userData.kind, distance: hit.distance})) : null;
+    }};
 
     return {
         update: (snapshot) => setSnapshot(snapshot, true),

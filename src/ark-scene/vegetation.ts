@@ -644,6 +644,7 @@ export function buildVegetation(maxGrass: number): Vegetation {
         const geometry = shape.build();
         const material = foliageMaterial(shape.wind, shape.windHeight, shape.doubleSide);
         const mesh = new InstancedMesh(geometry, material, mine.length);
+        mesh.userData.kind = shape.kind;
         const tints = new Float32Array(mine.length * 3);
         mine.forEach((item, i) => {
             rotation.setFromAxisAngle(up, item.rotation);

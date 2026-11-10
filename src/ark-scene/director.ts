@@ -64,6 +64,8 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
     let tracked: Point | null = null;
     let home: ArkCameraView = handle.homeView();
     let anchor: ArkCameraView = home;
+    /** Which way the subject faced as the shot began (a moment heads that way). */
+    let anchorYaw = 0;
 
     const subjectPoint = (): Point | null => {
         if (!direction?.subject) return null;
@@ -129,14 +131,18 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
             case "whale_surface":
             case "owl_swoop":
             case "primate_drop": {
-                // A cross-layer moment: the camera holds on the animal, wide enough for where the moment takes it
-                // (out to sea and down into it, up through the surface, down to the ground and back), drifting round.
-                const centre = track(t < d.lead ? 0.3 : 0.08) ?? anchor.target;
+                // A cross-layer moment: the camera keeps the animal in the middle of the frame as the moment takes it
+                // (out to sea and down into it, up through the surface, off its branch to the ground and back): it
+                // follows closely (a fast swoop would leave a slow follow behind), wide enough for the whole path,
+                // from the side of the path rather than along it, drifting round a little.
+                const centre = track(t < d.lead ? 0.3 : 0.35) ?? anchor.target;
                 const size = subjectSize();
-                const wide = d.kind === "seabird_dive" ? 26 : d.kind === "whale_surface" ? 14 + size.length * 2 : d.kind === "owl_swoop" ? 11 : 8 + size.length * 2;
+                const wide = d.kind === "seabird_dive" ? 24 : d.kind === "whale_surface" ? 14 + size.length * 2 : d.kind === "owl_swoop" ? 13 : 8 + size.length * 2;
                 const push = ease(clamp01(t / Math.max(d.lead, 0.1)));
-                const polar = d.kind === "whale_surface" ? 1.2 : d.kind === "seabird_dive" ? 1.0 : 1.15;
-                return {target: {x: centre.x, y: Math.max(centre.y, d.kind === "whale_surface" ? -0.5 : centre.y), z: centre.z}, distance: lerp(wide * 1.5, wide, push), polar, azimuth: anchor.azimuth + 0.05 * t};
+                const polar = d.kind === "whale_surface" ? 1.2 : d.kind === "seabird_dive" ? 1.0 : 1.12;
+                // Across the way it heads (an owl swoops forward from its branch): a quarter turn from its facing.
+                const across = d.kind === "owl_swoop" || d.kind === "primate_drop" ? anchorYaw + Math.PI / 2 : anchor.azimuth;
+                return {target: {x: centre.x, y: Math.max(centre.y, d.kind === "whale_surface" ? -0.5 : centre.y), z: centre.z}, distance: lerp(wide * 1.5, wide, push), polar, azimuth: across + 0.03 * t};
             }
             case "meal_chase": {
                 const at = subjectPoint() ?? {x: 0, y: 0, z: 0};
@@ -195,7 +201,10 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
             while (Date.now() < until) {
                 const first = next.subject ? handle.locate(next.subject) : null;
                 // "Meet": from in front and to one side of it (its face, not its back); otherwise from outside the island looking in.
-                if (first && !tracked) anchor = {...home, target: {x: first.x, y: first.y, z: first.z}, azimuth: next.kind === "meet" ? first.yaw + 0.55 : outward(first)};
+                if (first && !tracked) {
+                    anchor = {...home, target: {x: first.x, y: first.y, z: first.z}, azimuth: next.kind === "meet" ? first.yaw + 0.55 : outward(first)};
+                    anchorYaw = first.yaw;
+                }
                 const view = viewAt(next, 0, plannedTotal(next));
                 if (view) handle.setView(view);
                 clock.tick(0);

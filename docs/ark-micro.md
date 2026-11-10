@@ -28,14 +28,15 @@ Flags per species: `m` a moth (Lepidoptera outside the butterfly families: to th
 
 | Spot | Species |
 |---|---|
-| house | **126** (82 of the Home zone; 44 of other zones whose text names a building first, most of them moths whose `where_to_look` says "lit windows" or "porch lights") |
-| bark | **55** |
-| flowers | **66** |
-| rocks | **68** |
-| leaf_litter | **136** |
+| house | **82** (Home zone only, since the fix pass) |
+| lamp | **25** (insects and spiders of other zones whose text names lights at night: their own zone's lamp post) |
+| bark | **58** |
+| flowers | **69** |
+| rocks | **70** |
+| leaf_litter | **137** |
 | pond_surface | **43** |
 | none, at sea (reef, open ocean) | 121 |
-| none, text names no spot | 583 (207 birds, 108 mammals, 102 insects, 61 with no taxonomy class, 24 turtles...) |
+| none, text names no spot | 593 (mostly birds, mammals and insects) |
 | **no usable habitat text** | **24** |
 
 **Five examples per spot, with their phrases:**
@@ -45,7 +46,10 @@ Flags per species: `m` a moth (Lepidoptera outside the butterfly families: to th
   - House Centipede: habitat "Basements, bathrooms, cellars, wall voids,…"
   - Wall Spider: habitat "Walls, stones, window frames and outdoor…"
   - Mediterranean House Gecko: habitat "…above all the walls and outbuildings of towns and…"
+  - House Fly: habitat "Homes, farms, compost, refuse, animal…"
+- **lamp** (fix pass; examples)
   - Eupterote Fabia Moth (rainforest): look "…walls near lights for broad brown…"
+  - Emerald Moth (woodland): habitat "…foliage by day and come to lights at night."
 - **bark**
   - Mossy Leaf-tailed Gecko: habitat "…clinging to tree trunks and branches crusted with bark,…"
   - Peanut-headed Lanternfly: look "Check the trunks of large forest trees at head…"
@@ -144,7 +148,7 @@ In `scratchpad/ark/web-shots/micro/` (`?fixture=micro`; `?hour=11` day, `?hour=2
 ## 3. What's weak
 
 - **No rigged clips:** every crawl is a glide, legs still. The passing gecko and ant rigs aren't published or loadable yet.
-- **The `where_to_look` text is advice to people, not habitat.** 44 species of other zones go to the cottage, most of them moths because "check lit windows and porch lights" names a building first. For moths that matches the owner's porch-light rule; for a rainforest moth it means leaving its zone for Home.
+- **The `where_to_look` text is advice to people, not habitat.** "Check lit windows and porch lights" puts 25 insects of other zones at their own zone's lamp post (since the fix pass, never at the Home cottage). Their stated habitat may not mention lights at all.
   - The pond's surface sends non-fresh-water species (a rainforest tree frog) to the garden pond at Home.
   - Some phrases misfire: a desert locust's "moist sandy soil" is leaf litter, a woodlouse is classed Gastropoda in `species_taxonomy`, and the downy woodpecker's `where_to_look` ("rocky banks") is wrong in the data.
 - **583 small species name no spot,** mostly birds and mammals; they stand in their zones as before. The 24 with no text are listed above.
@@ -174,11 +178,11 @@ It runs over the live catalogue export of 2026-11-10 (2,465 species).
 | Layer | Species | How placed with confidence |
 |---|---|---|
 | **canopy** | **203** (perch 124, climb 70, leap 6, hang 3) | Birds that fly, with a tree phrase (canopy, treetops, branches, perches) before any ground phrase. Mammals, reptiles and frogs need a plain "arboreal / canopy / treetops / lives in trees" in `typical_habitat`. Sloths by family (hang), gibbons and lemurs leap, bats hang. 37 are primates (flag `p`). |
-| **ground** | **1,744**, plus **164** with a burrow drawn by them (flag `b`) | The rest. A burrow when the text says burrows, digs or warrens. |
-| **underground** | **29** | Moles, mole-rats, golden moles, zokors and the like by family, or "underground / subterranean / fossorial / tunnels" in the habitat text. |
-| **reef** (coral_reef zone) | **129** (swim 89, floor 38, filter 2) | Floor: crabs, stars, urchins, molluscs, octopus. Filter: mantas. |
-| **open_sea** (open_ocean zone) | **121** (swim 102, floor 12, filter 7) | Filter: whale shark, basking shark, the baleen whales. |
-| **deep** | **45** (2 glow at night) | "Deep sea / abyssal / midwater / twilight zone / bathypelagic / hydrothermal vents / continental slopes / seamounts" in the text. **Glow** only where the text says so: the stoplight loosejaw ("bioluminescent zones") and the Australian pineapplefish ("two small glowing points"). The firefly squid and the lanternfish say it only in Power-voice names ("Blueglow", "Glowmigration"), which don't count. |
+| **ground** | **1,833**, plus **89** with a burrow drawn by them (flag `b`) | The rest. A burrow when the text says burrows, digs or warrens. |
+| **underground** | **15** (fix pass: only when the text says the animal itself lives underground) | Moles, mole-rats, golden moles, zokors and the like by family, or "underground / subterranean / fossorial / tunnels" in the habitat text. |
+| **reef** (coral_reef zone) | **132** (swim 91, floor 39, filter 2) | Floor: crabs, stars, urchins, molluscs, octopus. Filter: mantas. |
+| **open_sea** (open_ocean zone) | **133** (swim 108, floor 16, filter 9) | Filter: whale shark, basking shark, the baleen whales. |
+| **deep** | **30** (2 glow at night; fix pass: from `typical_habitat` only) | "Deep sea / abyssal / midwater / twilight zone / bathypelagic / hydrothermal vents / continental slopes / seamounts" in the text. **Glow** only where the text says so: the stoplight loosejaw ("bioluminescent zones") and the Australian pineapplefish ("two small glowing points"). The firefly squid and the lanternfish say it only in Power-voice names ("Blueglow", "Glowmigration"), which don't count. |
 | **no usable text** (on the ground by default) | **30** | american-green-tree-frog, australasian-pipit, buru-babirusa, caddisfly, common-soil-centipede, common-toad, coopers-hawk, false-widow-spider, giant-house-spider, great-spangled-fritillary, greater-antillean-grackle, grey-heron, hairy-rove-beetle, javanese-mud-dauber, lace-bug, masked-lapwing, mediterranean-sand-smelt, northern-white-cheeked-gibbon, peaceful-dove, pennsylvania-ground-beetle, poplar-gall-aphid, red-cotton-stainer-bug, ruby-pyrausta-moth, sand-lizard, silver-gull, song-thrush, stone-centipede, swimming-crab, vapourer-moth, western-fence-lizard |
 
 **Examples:**
@@ -218,7 +222,7 @@ The ecology is unchanged: the server's realm filter already keeps land, water an
 - **Camera:** looking at a canopy animal, the camera comes from where the leaves don't hide it. That is from above for one on the crown, from below for a hanger, from below and square to the limb for one on it, and level with one on the trunk.
 
 **Underground** (`layers.ts` `burrowAt` / `tunnelPoint`, `layers-scene.ts`):
-- **On the surface:** each underground animal has a burrow mouth at its spot (a dark mouth with two mounds of dug earth), and moles get molehills along their tunnel. The 164 ground diggers get a burrow mouth beside them.
+- **On the surface:** each underground animal has a burrow mouth at its spot (a dark mouth with two mounds of dug earth), and moles get molehills along their tunnel. The 89 ground diggers get a burrow mouth beside them.
 - **In the tunnel:** the animal spends most of its time in its chamber, 0.6–0.9 m down at the end of a 2.2 m tunnel. Now and then it runs up the tunnel and peeks out of the mouth for a few seconds. Asleep it stays down.
 - **The cutaway** opens when an underground animal is looked at (or with `setCutaway(true)`):
   - clipping planes remove the ground, the grass and the plants in a box in front of it;
@@ -298,12 +302,45 @@ Underwater, the land layer is skipped: 39–56 draw calls against 142–179 abov
 - **Procedural motion only.** No climbing, leaping, hanging or burrowing clips are marked pass, and the scene can't load rig clips: limbs glide, leaps are arcs, hangers sway rigidly.
 - **Canopy close-ups are often cluttered** by the limbs' leaf pads (the sloth, the toucan, the siamang). The camera picks a side by the animal's mode but doesn't ray-test for leaves.
 - **Classification errors from the text:**
-  - "Deep water" in `where_to_look` makes the false killer whale "deep".
-  - The common treeshrew is "underground" from "wet tunnels".
+  - (Fixed in the fix pass: the false killer whale is no longer "deep".)
+  - (Fixed in the fix pass: the common treeshrew is no longer "underground".)
   - Meerkats and fennec foxes were taken out of underground: "burrow systems" now means a burrow by a ground animal.
-  - 1,744 species have no layer phrase and stay on the ground, including many forest birds whose text names the forest but not the trees.
+  - 1,833 species have no layer phrase and stay on the ground, including many forest birds whose text names the forest but not the trees.
 - **Glow:** the stored data supports glow for only 2 species.
 - **The wetland's ground never dips below the water** where its animals are, so its pond dwellers use the lake.
 - **The cutaway** is a box in front of the target, not a true section, and toggling it recompiles the clipped materials once (a short hitch).
 - **Underwater from the surface:** the water surface is drawn single-sided from below by a separate plane, so from just under it the far surface reads flat.
 - **No changes to the server or the ecology** (as asked): layers are visual only.
+
+
+---
+
+# Fix pass (2026-11-11)
+
+The coordinator's six points, on `ark-micro`. Before and after shots are in `scratchpad/ark/web-shots/fixpass/` (`before/`, `after/`, `compare-canopy.png`, `compare-light.png`, `list-after.png`, `after/owl-strip.jpg`).
+
+1. **Leaves in the way of canopy close-ups** (`index.ts`):
+   - **Clear-view search:** looking at a canopy animal, the camera raycasts from each candidate position to it, both ways, because the leaves are single-sided and a camera inside a pad sees it only from inside. It tries the mode's own angle, then turned either side, higher and lower, and nearer, and takes the first with nothing in between (the animal's own perch excepted).
+   - **Folding:** forest trees still in the way while it is looked at (checked four times a second) fold away, their instance shrunk to nothing, and stand again after. The canopy trees themselves never fold, since the animal may be on one.
+   - **Result:** the sloth (hanging), the toucan, the siamang and the capuchin are all in view (`compare-canopy.png`).
+2. **Each zone's own spot:**
+   - **The cottage is for the Home zone only** (and the domestic list): 82 species. An insect or spider of another zone whose text names lights at night (porch lights, lit windows, moth traps, light traps) now lives at its own zone's **lamp post**: 25 species, 22 of them moths.
+   - **Lamp posts:** one stands at each other land zone's micro corner, lit at night, and its moths circle it.
+   - **False killer whale:** "deep" is read from `typical_habitat` only (never from a watcher's "boats crossing deep water"), so it is now open sea.
+   - **Common treeshrew:** "underground" needs the animal itself to live there ("lives underground", "fossorial", "subterranean", "digs tunnels"), not "wet tunnels" in a list of places. A burrow needs the animal to dig or to live, rest, sleep or nest in burrows, read from the habitat and sleep text, not the watcher's. So the treeshrew is now on the ground.
+   - **Recounts:** underground 15, deep 30, ground diggers with a burrow 89.
+3. **The owl swoop in frame:** the director follows a moment's subject closely (0.35 a frame), from across its path, wide enough for the whole swoop. `after/owl-strip.jpg` shows six frames of a real director run (`/ark?record=1`), the owl in frame throughout, airborne then down.
+4. **The porch light's glow:**
+   - The halo is an additive sprite with an HDR colour (3.2, 2.5, 1.5) and no fog, so it survives the tone mapping and feeds the bloom. The bulb's emissive is twice as strong.
+   - From close by the halo scales down with the distance, so it never floods a close-up of something on the lamp.
+   - See `compare-light.png`.
+5. **Broken icons:** `ark-species-icon.tsx` falls back to the placeholder art (`/images/placeholders/species-no-image.svg`) on any failed or missing icon, in the side list and the selection card. The Yellow-spotted Millipede row now shows the placeholder (`list-after.png`), and so does the sloth's card.
+6. **Cutaway shader:** the clipped materials keep their four clipping planes for good, parked out of the way while the cutaway is closed, so opening it only moves the planes and no shader is compiled again. Measured at 4× CPU throttle:
+
+   | Step | Worst frame | Frames over 50 ms |
+   |---|---|---|
+   | Open | 33 ms (the pit's geometry being built) | none |
+   | Close | 17 ms | none |
+   | Open again | 17 ms | none |
+
+**Rigged clips:** left out (not published; flight waits on the owner). `ark-scene/rig-clips.ts` `rigClip(manifest, slug, clip)` returns a clip only for a rig marked `passed` that lists the clip with its frames. A fallback rig, a missing clip or no manifest gives null. The scene's manifest is null until the rig output is published, so every animal keeps its procedural motion (tested).

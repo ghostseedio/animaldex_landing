@@ -8,8 +8,9 @@
  * glow, lit from dusk). Beside it the garden pond, its water ringed with
  * stones.
  *
- * Five draw calls in all: the house, the glass, the bulb, the glow and the
- * pond's water.
+ * And a lamp post at every other land zone's micro corner, lit at night: its
+ * moths' porch light. About ten draw calls in all (the house, the glass, the
+ * bulbs, the glows, the posts, the pond's water and stones).
  */
 
 import {
@@ -20,16 +21,18 @@ import {
     CanvasTexture,
     CircleGeometry,
     Color,
+    CylinderGeometry,
     Group,
     IcosahedronGeometry,
     Mesh,
     MeshStandardMaterial,
     Sprite,
     SpriteMaterial,
+    Vector3,
     type Material
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
+import {COTTAGE, GARDEN_POND, LAMP, microDecor} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {heightAt, seeded} from "@/ark-scene/world";
 
@@ -103,6 +106,8 @@ export type MicroScene = {
     /** 0 by day, 1 at full night: the windows and the porch light come on. */
     setNight: (night: number) => void;
     setShadows: (on: boolean) => void;
+    /** Each frame: a glow seen from close by is smaller, so it never floods a close-up of what rests on its lamp. */
+    step: (camera: Vector3) => void;
     triangles: number;
     dispose: () => void;
 };
@@ -191,13 +196,50 @@ export function buildMicroScene(): MicroScene {
     const bulb = new Mesh(bulbGeometry, bulbMaterial);
     house.add(bulb);
 
+    // The glow: an additive sprite brighter than white (the frame is lit in HDR, so it survives the tone mapping and
+    // feeds the bloom), not fogged, drawn after everything.
     const glowMap = glowTexture();
-    const glowMaterial = new SpriteMaterial({map: glowMap, color: new Color("#ffd9a0"), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0});
+    const glowMaterial = new SpriteMaterial({map: glowMap, color: new Color(3.2, 2.5, 1.5), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false});
     const glow = new Sprite(glowMaterial);
     glow.position.set(C.light.x, C.light.y + 0.06, C.light.z + 0.14);
-    glow.scale.setScalar(2.4);
-    glow.renderOrder = 2;
+    glow.scale.setScalar(2.6);
+    glow.renderOrder = 4;
     house.add(glow);
+
+    // The lamp posts at the other zones' micro corners: a post, a lantern and its glow.
+    const lamps = microDecor().filter((item) => item.kind === "lamp");
+    const postParts: BufferGeometry[] = [];
+    const lampBulbs: BufferGeometry[] = [];
+    const lampGlows: Sprite[] = [];
+    const iron = new Color("#2f2a26");
+    for (const lamp of lamps) {
+        const post = new CylinderGeometry(LAMP.radius * 0.8, LAMP.radius, LAMP.height, 8);
+        post.translate(lamp.x, lamp.y + LAMP.height / 2, lamp.z);
+        postParts.push(shaded(post, iron, (y) => 0.8 + 0.2 * Math.min((y - lamp.y) / LAMP.height, 1)));
+        const cap = new CylinderGeometry(0.02, 0.17, 0.12, 6);
+        cap.translate(lamp.x, lamp.y + LAMP.height + 0.2, lamp.z);
+        postParts.push(shaded(cap, iron));
+        const foot = new CylinderGeometry(LAMP.radius * 1.8, LAMP.radius * 2.2, 0.25, 8);
+        foot.translate(lamp.x, lamp.y + 0.1, lamp.z);
+        postParts.push(shaded(foot, iron, () => 0.85));
+        const bulb = new IcosahedronGeometry(0.09, 1);
+        bulb.scale(1, 1.3, 1);
+        bulb.translate(lamp.x, lamp.y + LAMP.height + 0.06, lamp.z);
+        lampBulbs.push(bulb);
+        const halo = new Sprite(glowMaterial);
+        halo.position.set(lamp.x, lamp.y + LAMP.height + 0.06, lamp.z);
+        halo.scale.setScalar(2.6);
+        halo.renderOrder = 4;
+        lampGlows.push(halo);
+        group.add(halo);
+    }
+    const postGeometry = postParts.length ? mergeGeometries(postParts)! : new BufferGeometry();
+    const postMesh = new Mesh(postGeometry, new MeshStandardMaterial({vertexColors: true, roughness: 0.6, metalness: 0.3}));
+    postMesh.castShadow = true;
+    group.add(postMesh);
+    const lampBulbGeometry = lampBulbs.length ? mergeGeometries(lampBulbs)! : new BufferGeometry();
+    const lampBulbMesh = new Mesh(lampBulbGeometry, bulbMaterial);
+    group.add(lampBulbMesh);
 
     // The garden pond: still water ringed with stones.
     const pond = GARDEN_POND;
@@ -225,23 +267,32 @@ export function buildMicroScene(): MicroScene {
     rimMesh.receiveShadow = true;
     group.add(rimMesh);
 
-    const meshes = [houseMesh, rimMesh];
-    const materials: Material[] = [material, glassMaterial, bulbMaterial, glowMaterial, waterMaterial];
-    const geometries = [houseGeometry, glassGeometry, bulbGeometry, waterGeometry, rimMesh.geometry];
+    const meshes = [houseMesh, rimMesh, postMesh];
+    const materials: Material[] = [material, glassMaterial, bulbMaterial, glowMaterial, waterMaterial, postMesh.material as Material];
+    const geometries = [houseGeometry, glassGeometry, bulbGeometry, waterGeometry, rimMesh.geometry, postGeometry, lampBulbGeometry];
     const triangles = geometries.reduce((sum, geometry) => sum + (geometry.index ? geometry.index.count : geometry.getAttribute("position").count) / 3, 0);
     const warm = new Color("#ffc679");
+    const haloAt = new Vector3();
     return {
         group,
         setNight: (night) => {
             const on = Math.min(Math.max((night - 0.15) / 0.5, 0), 1);
             glassMaterial.emissive.copy(warm);
             glassMaterial.emissiveIntensity = 1.6 * on;
-            bulbMaterial.emissiveIntensity = 0.2 + 4.5 * on;
+            bulbMaterial.emissiveIntensity = 0.2 + 9 * on;
             glowMaterial.opacity = on;
             glow.visible = on > 0.01;
+            for (const halo of lampGlows) halo.visible = on > 0.01;
         },
         setShadows: (on) => {
             for (const mesh of meshes) mesh.castShadow = on;
+        },
+        step: (cameraAt) => {
+            for (const halo of [glow, ...lampGlows]) {
+                if (!halo.visible) continue;
+                halo.getWorldPosition(haloAt);
+                halo.scale.setScalar(Math.min(Math.max(haloAt.distanceTo(cameraAt) * 0.35, 0.25), 2.6));
+            }
         },
         triangles,
         dispose: () => {

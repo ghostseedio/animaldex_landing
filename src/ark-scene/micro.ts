@@ -17,12 +17,12 @@
 
 import table from "@/ark-scene/microhabitats.json";
 import {worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, LEAF_LIFT, microCorner, microDecor, type MicroDecorItem} from "@/ark-scene/micro-decor";
+import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, LAMP, LEAF_LIFT, microCorner, microDecor, zoneLamp, type MicroDecorItem} from "@/ark-scene/micro-decor";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {rock, trunkOf} from "@/ark-scene/vegetation";
 import {hashString, heightAt, LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 
-export const MICRO_SPOTS = ["house", "bark", "flowers", "rocks", "leaf_litter", "pond_surface"] as const;
+export const MICRO_SPOTS = ["house", "lamp", "bark", "flowers", "rocks", "leaf_litter", "pond_surface"] as const;
 export type MicroSpot = typeof MICRO_SPOTS[number];
 
 type Row = [string, string] | [string, string, string];
@@ -62,7 +62,7 @@ function flags(slug: string): string {
 
 // MARK: Surfaces
 
-export type MicroSurface = "wall" | "roof" | "around" | "bark" | "flower" | "rock" | "litter" | "water";
+export type MicroSurface = "wall" | "roof" | "around" | "bark" | "flower" | "rock" | "litter" | "water" | "post";
 
 /**
  * A small animal's place: which surface, which host on it (a wall, a tree,
@@ -116,6 +116,16 @@ function cottageDirection(lx: number, ly: number, lz: number): [number, number, 
 export function porchLight(): {x: number; y: number; z: number} {
     const [x, y, z] = cottageWorld(C.light.x, C.light.y, C.light.z + 0.1);
     return {x, y, z};
+}
+
+/** The light a small animal's moths circle at night: the porch light at Home, its zone's lamp elsewhere. */
+export function nightLight(place: MicroPlace, zone: ArkZone): {x: number; y: number; z: number; out: {x: number; z: number}} {
+    if (place.spot === "lamp") {
+        const lamp = zoneLamp(hostZone(zone));
+        return {x: lamp.x, y: lamp.y + LAMP.height + 0.05, z: lamp.z, out: {x: 0, z: 0}};
+    }
+    const light = porchLight();
+    return {...light, out: {x: 0, z: 0.18}};
 }
 
 /** The four walls: their length along, and how to turn (along, up) into the cottage's frame. */
@@ -361,7 +371,7 @@ function pool(zone: ArkZone): Pool {
 
 // MARK: Places and points
 
-const SURFACE_OF: Record<MicroSpot, MicroSurface> = {house: "wall", bark: "bark", flowers: "flower", rocks: "rock", leaf_litter: "litter", pond_surface: "water"};
+const SURFACE_OF: Record<MicroSpot, MicroSurface> = {house: "wall", lamp: "post", bark: "bark", flowers: "flower", rocks: "rock", leaf_litter: "litter", pond_surface: "water"};
 
 /**
  * A small animal's place from its zone, its slot and its rank, and its
@@ -422,6 +432,7 @@ function hostCount(surface: MicroSurface, zone: ArkZone): number {
             return Math.max(stones(zone).length, 1);
         case "litter":
         case "water":
+        case "post":
             return 1;
     }
 }
@@ -528,6 +539,14 @@ export function surfacePoint(place: MicroPlace, zone: ArkZone, along = 0): Surfa
             const z = patch.z + Math.sin(angle) * r + hz * (place.offAlong + along) + hx * place.offAcross;
             const [nx, ny, nz] = groundNormal(x, z);
             return {x, y: heightAt(x, z) + LEAF_LIFT + 0.006, z, nx, ny, nz, tx: hx, ty: 0, tz: hz};
+        }
+        case "post": {
+            // On the lamp post of its zone: round it and up it, heading up.
+            const lamp = zoneLamp(hostZone(zone));
+            const angle = (place.a - 0.5) * Math.PI * 1.6 + (place.offAcross + along * Math.sin(place.heading)) / LAMP.radius;
+            const h = clamp(0.5 + place.b * (LAMP.height - 0.9) + place.offAlong + along * Math.cos(place.heading), 0.3, LAMP.height - 0.25);
+            const r = LAMP.radius + 0.006;
+            return {x: lamp.x + Math.sin(angle) * r, y: lamp.y + h, z: lamp.z + Math.cos(angle) * r, nx: Math.sin(angle), ny: 0, nz: Math.cos(angle), tx: 0, ty: 1, tz: 0};
         }
         case "water": {
             const water = pool(zone === "river_lake" || zone === "wetland" ? "river_lake" : "farm_garden");

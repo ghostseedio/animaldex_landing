@@ -40,7 +40,9 @@ export type DecorKind =
     | "flower"
     | "leaf"
     // The canopy's trees (`micro-decor.ts` canopyTree): limbs to perch, climb and hang on.
-    | "canopy";
+    | "canopy"
+    // A lamp post at each land zone's micro corner (drawn by `micro-scene.ts`).
+    | "lamp";
 
 export type DecorItem = {
     kind: DecorKind;
@@ -293,7 +295,7 @@ export class DecorObstacles {
     constructor(items: DecorItem[]) {
         for (const item of items) {
             if (item.kind === "coral" || item.kind === "reed" || item.kind === "lily" || item.kind === "kelp" || item.kind === "fence" || item.kind === "flower" || item.kind === "leaf") continue;
-            const radius = item.kind === "rock" ? 0.9 * item.scale : item.kind === "barn" ? 5.5 : item.kind === "cottage" ? 4.4 : item.kind === "pond" ? item.scale + 0.5 : item.kind === "hay" ? 1.1 : 0.9;
+            const radius = item.kind === "rock" ? 0.9 * item.scale : item.kind === "barn" ? 5.5 : item.kind === "cottage" ? 4.4 : item.kind === "pond" ? item.scale + 0.5 : item.kind === "lamp" ? 0.3 : item.kind === "hay" ? 1.1 : 0.9;
             // Tall enough to stand between an animal and the camera: trees, shrubs, cacti, a big rock.
             const tall = item.kind === "rock" ? radius >= 0.65 : item.kind !== "hay" && item.kind !== "barn" && item.kind !== "pond";
             const key = this.key(item.x, item.z);

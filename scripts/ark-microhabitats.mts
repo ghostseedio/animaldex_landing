@@ -24,15 +24,16 @@
  * against a wall, a trunk or a flower makes a visible difference.
  *
  * Spots, in order:
- * 1. house: the cottage at Home. Domestic animals (a cat, a dog, a house
- *    sparrow, a house mouse and the other pets below), whatever their size,
- *    live around it. A small one of the Home zone whose text names a
- *    building anywhere (walls, roofs, houses, lit windows, lights at
- *    night...) lives on it; one of another zone only when a building is the
- *    first place its text names.
+ * 1. house: the cottage at Home, for the Home zone's own only. Domestic
+ *    animals (a cat, a dog, a house sparrow, a house mouse and the other pets
+ *    below), whatever their size, live around it. A small one of the Home
+ *    zone whose text names a building anywhere (walls, roofs, houses, lit
+ *    windows, lights at night...) lives on it.
  * 2. otherwise the spot whose phrase comes first in `typical_habitat` (the
- *    range keys dropped), then in `where_to_look`: house, bark, flowers,
- *    rocks, leaf_litter, pond_surface. Each spot only takes the classes that can
+ *    range keys dropped), then in `where_to_look`: bark, flowers, rocks,
+ *    leaf_litter, pond_surface, and lamp: an insect or spider of another zone
+ *    whose text names lights at night (porch lights, lit windows, moth
+ *    traps...) lives at its own zone's lamp post (moths circle it at night). Each spot only takes the classes that can
  *    live on it (no bird on leaf litter, no fish on the pond's surface), and
  *    nothing of the open sea or the reef takes a spot at all.
  * 3. none: the animal stands in its zone as before.
@@ -57,7 +58,7 @@ const raw = JSON.parse(readFileSync(input, "utf8")) as {rows: Row[]} | Row[];
 const rows = (Array.isArray(raw) ? raw : raw.rows).slice().sort((a, b) => a.slug.localeCompare(b.slug));
 
 export const SMALL_SIZE = 15;
-const SPOTS = ["house", "bark", "flowers", "rocks", "leaf_litter", "pond_surface"] as const;
+const SPOTS = ["house", "lamp", "bark", "flowers", "rocks", "leaf_litter", "pond_surface"] as const;
 type Spot = typeof SPOTS[number] | "none";
 
 /** Pets and house-dwellers that live around the cottage, whatever their size (the owner's list: cats, dogs, house sparrows, mice). */
@@ -68,7 +69,10 @@ const SEA_ZONES = new Set(["coral_reef", "open_ocean"]);
 
 const INVERTEBRATE_LAND = ["Insecta", "Arachnida", "Chilopoda", "Diplopoda", "Gastropoda", "Collembola", "Clitellata", "Malacostraca", "Entognatha"];
 const ALLOWED: Record<Exclude<Spot, "none">, (row: Row) => boolean> = {
-    house: (row) => !["Actinopterygii", "Chondrichthyes"].includes(row.class ?? ""),
+    // The cottage is at Home: only the Home zone's own (and the domestic list) live there.
+    house: (row) => row.zone === "farm_garden" && !["Actinopterygii", "Chondrichthyes"].includes(row.class ?? ""),
+    // Elsewhere, insects and spiders whose text names lights at night go to their own zone's lamp (a lamp post by its micro corner).
+    lamp: (row) => row.zone !== "farm_garden" && ["Insecta", "Arachnida"].includes(row.class ?? ""),
     // Birds on bark only if they forage there (woodpeckers, nuthatches, treecreepers, woodcreepers); squirrels and dormice climb it.
     bark: (row) => [...INVERTEBRATE_LAND, "Squamata", "Amphibia"].includes(row.class ?? "")
         || (row.class === "Aves" && ["Picidae", "Sittidae", "Certhiidae", "Climacteridae", "Dendrocolaptidae"].includes(row.family ?? ""))
@@ -84,6 +88,7 @@ const ALLOWED: Record<Exclude<Spot, "none">, (row: Row) => boolean> = {
 
 const PATTERNS: Record<Exclude<Spot, "none">, RegExp> = {
     house: /\b(?:houses?|homes\b|human (?:homes|dwellings|habitation|structures)|dwellings?|buildings\b|(?<!(?:rock|stone|cave|canyon|cliff|gorge|tree|garden|dry-stone|dry stone|mountain|harbour|harbor|sea|quarry|limestone)[\s-])walls?\b(?! lizards?)|ceilings?|roofs?|rooftops?|roof (?:spaces|tiles)|eaves|porch(?:es)?|verandas?|attics?|sheds?|outbuildings?|garages?|cellars?|basements?|indoors|man-made structures|artificial lights?|(?<!away from )(?:street|porch|outdoor|house|electric|security) ?lights?|lights at night|(?<!away from |street |the )lights\b|lamps?|lit (?:windows|walls|porches|buildings)|(?<!wing )windows\b|window ?(?:sills?|frames)|kitchens?|pantries|bathrooms?|stored (?:grain|food|products)|wardrobes?|closets?)/i,
+    lamp: /(?<!away from )\b(?:porch lights?|outdoor lights?|street ?(?:lights?|lamps?)|security lights?|artificial lights?|lights at night|(?<!away from |street |the )lights\b|lamps?|lit (?:windows|walls|porches|buildings|shop fronts)|moth (?:traps?|sheets?)|light traps?)/i,
     bark: /\b(?:bark|tree ?trunks?|trunks|on trees|tree holes?|tree hollows?|tree cavit(?:y|ies)|tree crevices|dead (?:trees|wood|branches|timber)|standing deadwood|deadwood|snags|tree stumps?|stumps)\b/i,
     flowers: /\b(?:flowers?|flowering|blossoms?|blooms?|blooming|nectar|wildflowers?|flower-rich)\b/i,
     rocks: /\b(?:rocks?|rocky|stones?|stony|boulders?|crevices|cliffs?|scree|outcrops?|stone walls?|rock walls?|talus|ledges)\b/i,
@@ -133,23 +138,19 @@ function classify(row: Row, rigPassed: Set<string>): Result | null {
     for (const [field, text] of fields) {
         if (!usable(text)) continue;
         let best: {spot: Spot; index: number; match: string} | null = null;
-        let first = Infinity;
+        // The spot whose phrase comes first (of those its class can take; the house only at Home, a lamp only elsewhere).
         for (const spot of SPOTS) {
+            if (!ALLOWED[spot](row)) continue;
             const found = PATTERNS[spot].exec(text);
             if (!found) continue;
-            if (spot !== "house") first = Math.min(first, found.index);
-            // Away from Home, the house only when a building is the first place named, by any spot (the cottage is at Home, not in their zone).
-            if (spot === "house" && row.zone !== "farm_garden" && found.index > first) continue;
-            if (!ALLOWED[spot](row)) continue;
             if (!best || found.index < best.index) best = {spot, index: found.index, match: found[0]};
         }
-        if (best?.spot === "house" && row.zone !== "farm_garden" && best.index > first) best = null;
         // At Home a building wins wherever it is named: those that live with people live at the house.
         const house = row.zone === "farm_garden" ? PATTERNS.house.exec(text) : null;
         if (house && ALLOWED.house(row)) best = {spot: "house", index: house.index, match: house[0]};
         if (best) return {spot: best.spot, reason: `${field}: "${phraseAt(text, best.index, best.match.length)}"`, field, match: best.match, flags: flags(best.spot)};
     }
-    // A moth at Home with nothing better: to the porch light.
+    // A moth at Home with nothing better: to the porch light (elsewhere it stays in its zone).
     if (isMoth(row) && row.zone === "farm_garden") return {spot: "house", reason: "taxonomy: a moth (Lepidoptera, not a butterfly family) in the Home zone", field: "taxonomy", match: "moth", flags: flags("house")};
     const any = fields.some(([, text]) => usable(text));
     return {spot: "none", reason: any ? "no spot phrase in the stored text" : "no usable habitat text", field: "none", match: "", flags: ""};
