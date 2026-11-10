@@ -1708,11 +1708,14 @@ function AskConversation({
         : labels.thinking;
 
     const lastMessageId = messages[messages.length - 1]?.id ?? null;
-    // Before the context arrives, a species thread is about to be greeted:
-    // show the animal typing rather than flashing the static openers first.
+    // The animal is typing in an empty chat only when a hello is really on its
+    // way: one being written now, or a referral's (the only hello left since
+    // the owner removed the animal's greeting on 2026-11-06). Every other empty
+    // chat shows the fixed greeting at once; waiting on canGreet left the
+    // typing dots up forever (owner, /talk/komodo-dragon, 2026-11-10).
     const awaitingGreeting = messages.length === 0
         && greetingState !== "failed"
-        && (context === null ? subject.scope === "species" : canGreet);
+        && (greetingState === "loading" || (greetsForReferral && greetingState !== "done"));
 
     const copyMessage = (message: AskMessage) => {
         // The animal's own markdown (headings, tables, diagrams as written); the site-wide assistant's reads as prose.
