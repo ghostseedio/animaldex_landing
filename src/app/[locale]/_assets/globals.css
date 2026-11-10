@@ -812,8 +812,8 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
 
 /* A special message (docs/your-step/INLINE.md): the animal's own bubble with
    an even neon outline (32%) and a flat neon wash (6%), the same on every
-   platform (iOS AnimalSpecialMessageBubble). The edge colour stays for the
-   composer's strips (report, edit, dictation). */
+   platform (iOS AnimalSpecialMessageBubble). The edge colour stays for a
+   picked row in the debate sheets. */
 :root,
 .theme-dark {
     --ask-special-edge: #A7F432;
@@ -833,6 +833,14 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
    neon wash over the bubble's own fill: no edge on one side, no gradient. */
 .ask-special {
     background-image: linear-gradient(var(--ask-special-wash), var(--ask-special-wash));
+    box-shadow: inset 0 0 0 1px var(--ask-special-outline);
+}
+
+/* The message bar's strips (telling how a step went, editing a debate, dictation):
+   the special message's even 1px outline over its wash, never a solid left edge
+   (iOS AnimalMessageBarStripBackground, ad31aa51; AnimalDexRadius.pill). */
+.ask-bar-strip {
+    border-radius: 24px;
     box-shadow: inset 0 0 0 1px var(--ask-special-outline);
 }
 

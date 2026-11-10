@@ -81,8 +81,8 @@ export function DictationStrip({phase, priming, startedAt, name, copy, level, on
                     : null;
     return (
         <div
-            className="-mx-4 -mt-3 mb-3 flex items-center gap-3 border-b border-primary-400/20 bg-primary-400/[0.07] py-2 pl-[19px] pr-4"
-            style={{boxShadow: "inset 3px 0 0 var(--ask-special-edge)"}}
+            // The message bar's strips look alike: the special message's wash and even outline (iOS ad31aa51).
+            className="ask-bar-strip mb-2.5 flex items-center gap-3 bg-primary-400/[0.07] py-2 pl-3 pr-2.5"
             role={quiet ? "alert" : "status"}
             data-testid="dictation-strip"
         >

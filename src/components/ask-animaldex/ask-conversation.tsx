@@ -2334,7 +2334,8 @@ function AskConversation({
         if (!pending || !ownerChat) return;
         if (pending === "report" && loopLoaded) {
             pendingActionRef.current = null;
-            if (openStep) startReport();
+            // A step already reported opens the plain bar, as "Tell {name} more" does (iOS a4e6ea7f).
+            if (openStep) stepPrimary(openStep);
         } else if (pending === "warmup" && training?.speciesProfileId) {
             // Only once this animal's quiz has been read, never on a read for no animal.
             pendingActionRef.current = null;
@@ -2343,7 +2344,7 @@ function AskConversation({
             pendingActionRef.current = null;
             if (debatesOffered) openDebateSheet(null);
         }
-    }, [actionRequest, ownerChat, loopLoaded, openStep, training, startReport, startWarmup, myDebates.loaded, animalBond.didLoad, debatesOffered, openDebateSheet]);
+    }, [actionRequest, ownerChat, loopLoaded, openStep, training, stepPrimary, startWarmup, myDebates.loaded, animalBond.didLoad, debatesOffered, openDebateSheet]);
 
     /** Report this reply: files it for review, as the reader. */
     const sendReport = useCallback(async (choice: AskReportChoice) => {
@@ -3390,9 +3391,8 @@ function AskConversation({
                             {reporting && openStep ? (
                                 // Report mode (docs/your-step/INLINE.md): what this message is, the step, and ✕ to leave it.
                                 <div
-                                    className="-mx-4 -mt-3 mb-3 flex items-start gap-3 border-b border-primary-400/20 bg-primary-400/[0.07] py-2.5 pl-[19px] pr-4"
-                                    // The neon edge of the special message it answers.
-                                    style={{boxShadow: "inset 3px 0 0 var(--ask-special-edge)"}}
+                                    // The look of the special message it answers: its wash and even outline (iOS ad31aa51).
+                                    className="ask-bar-strip mb-2.5 flex items-start gap-3 bg-primary-400/[0.07] py-2.5 pl-3 pr-2.5"
                                     data-testid="report-strip"
                                 >
                                     <div className="min-w-0 flex-1">
@@ -3464,8 +3464,7 @@ function AskConversation({
                             {debateEdit ? (
                                 // Edit mode (docs/rich-chat/SPEC.md, section 2.2): what is being edited, and ✕ to leave it.
                                 <div
-                                    className="-mx-4 -mt-3 mb-3 flex items-center gap-3 border-b border-primary-400/20 bg-primary-400/[0.07] py-2.5 pl-[19px] pr-4"
-                                    style={{boxShadow: "inset 3px 0 0 var(--ask-special-edge)"}}
+                                    className="ask-bar-strip mb-2.5 flex items-center gap-3 bg-primary-400/[0.07] py-2.5 pl-3 pr-2.5"
                                     data-testid="debate-edit-strip"
                                 >
                                     <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] font-bold leading-4 text-primary-300">
