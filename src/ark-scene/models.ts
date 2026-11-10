@@ -151,6 +151,11 @@ export class ModelLibrary {
         return this.models.size;
     }
 
+    /** Still loading or waiting to load something (the recorder waits for this before a shot). */
+    get busy(): boolean {
+        return !this.manifest || this.active > 0 || this.queue.length > 0;
+    }
+
     /** Ask for a level; the far one comes first, and both come at once from a fallback. */
     request(slug: string, level: Wanted) {
         if (level === "near") this.request(slug, "far");

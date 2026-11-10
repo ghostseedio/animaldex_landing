@@ -3,15 +3,16 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {ClapperboardPlay, Eye, EyeClosed, Health, MagicStick3, Share, TrashBinMinimalistic} from "solar-icon-set";
 import {contentVideoIdFromPath, videoProblems, type VideoProblem} from "@/lib/content-video/fix";
-import {SOURCE_TYPES, type SourceType, type TimelineEntry, type VideoPlan} from "@/lib/content-video/plan";
+import {SOURCE_TYPES, type SourceType, type TimelineEntry, type VideoPlan, type VideoSourceType} from "@/lib/content-video/plan";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
+import AdminArkClipMaker from "@/app/admin/story-videos/admin-ark-clip-maker";
 import type {ContentVideoClip, ContentVideoStatus} from "@/lib/content-video/store";
 import {SOCIAL_PLATFORM_LABELS, type SocialPostRow} from "@/lib/social/types";
 import {Alert, Badge, Button, Card, cn, EmptyState, fieldClass, Segmented, Skeleton, Spinner} from "@/components/admin/ui";
 
 export type BlogVideo = {
     id: string;
-    source_type: SourceType;
+    source_type: VideoSourceType;
     source_slug: string;
     source_title: string;
     status: ContentVideoStatus;
@@ -162,7 +163,11 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
         setError("");
         try {
             await api(`/api/admin/content-videos/${video.id}`, {method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({action})});
-            if (action === "publish") onNotice(`Published on ${sourcePath(video.source_type, video.source_slug)}. ${video.source_type === "blog" ? "The post updates within five minutes." : "It shows on the page now, and is baked into the page's HTML at the next deploy."}`);
+            if (action === "publish") {
+                onNotice(video.source_type === "ark"
+                    ? `Published: /videos/ark/${video.source_slug} and the video sitemap. Auto-share can post it now, within the daily caps.`
+                    : `Published on ${sourcePath(video.source_type, video.source_slug)}. ${video.source_type === "blog" ? "The post updates within five minutes." : "It shows on the page now, and is baked into the page's HTML at the next deploy."}`);
+            }
             await load();
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Unable to update");
@@ -203,6 +208,7 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                         </Button>
                     </div>
                     <p className="border-t border-line-300 px-3 py-2 text-xs text-ink-500">The autopilot makes one each run (every three hours, within the clip budget) and posts them. Use this for one more, now.</p>
+                    <AdminArkClipMaker />
                 </Card>
             ) : null}
 
@@ -271,7 +277,7 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                                         {video.status === "ready" && (
                                             <>
                                                 <Button size="sm" variant="primary" onClick={() => onShare(video)} disabled={disabled}><Share size={14} />Share</Button>
-                                                {video.published_at ? null : <Button size="sm" onClick={() => act(video, "publish")} disabled={disabled}><Eye size={14} />Show on page</Button>}
+                                                {video.published_at ? null : <Button size="sm" onClick={() => act(video, "publish")} disabled={disabled}><Eye size={14} />{video.source_type === "ark" ? "Publish" : "Show on page"}</Button>}
                                             </>
                                         )}
                                         {fixable && (
@@ -281,8 +287,8 @@ export default function AdminBlogVideos({siteUrl, shares, onShare, onNotice}: Pr
                                             <details className="relative ml-auto">
                                                 <summary className="cursor-pointer list-none px-2 py-1 text-xs font-black text-ink-400 hover:text-white" aria-label="More actions">•••</summary>
                                                 <div className="absolute bottom-full right-0 z-10 mb-1 flex w-40 flex-col border border-line-300 bg-canvas-900 p-1">
-                                                    {video.status === "ready" ? <button type="button" onClick={() => act(video, "rerender")} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50">Re-edit (no new spend)</button> : null}
-                                                    {video.status === "ready" && !fixable ? <button type="button" onClick={() => fix(video, problems)} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50"><Health size={12} className="mr-1 inline" />Check &amp; fix</button> : null}
+                                                    {video.status === "ready" && video.source_type !== "ark" ? <button type="button" onClick={() => act(video, "rerender")} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50">Re-edit (no new spend)</button> : null}
+                                                    {video.status === "ready" && !fixable && video.source_type !== "ark" ? <button type="button" onClick={() => fix(video, problems)} disabled={disabled || working} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5 disabled:opacity-50"><Health size={12} className="mr-1 inline" />Check &amp; fix</button> : null}
                                                     {video.published_at ? <button type="button" onClick={() => act(video, "unpublish")} disabled={disabled} className="px-2 py-1.5 text-left text-xs text-ink-200 hover:bg-white/5"><EyeClosed size={12} className="mr-1 inline" />Take off the page</button> : null}
                                                     <button type="button" onClick={() => act(video, "archive")} disabled={disabled} className="px-2 py-1.5 text-left text-xs text-red-200 hover:bg-red-400/10"><TrashBinMinimalistic size={12} className="mr-1 inline" />Archive</button>
                                                 </div>

@@ -112,5 +112,7 @@ export function applyFootage(plan: VideoPlan, source: Pick<VideoSource, "lesson"
 export function planHasAiImagery(plan: Pick<VideoPlan, "scenes" | "format"> | null | undefined) {
     if (!plan) return true;
     return plan.scenes.some((scene) => !scene.footage && (scene.visual === "ai_clip" || Boolean(scene.keyframePrompt)))
-        || plan.format === "battle" || plan.format === "creature";
+        || plan.format === "battle" || plan.format === "creature"
+        // An Ark clip shows the Ark's AI-made 3D models: TikTok's AI label stays on.
+        || plan.format === "ark";
 }

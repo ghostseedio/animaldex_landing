@@ -19,7 +19,7 @@ import {
 } from "@/lib/content-video/higgsfield";
 import {BATTLE_NEGATIVE_PROMPT} from "@/lib/content-video/formats";
 import {generateVideoPlan} from "@/lib/content-video/llm";
-import {AI_CLIP_SECONDS, applyStatCards, buildAss, buildTimeline, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
+import {AI_CLIP_SECONDS, applyStatCards, buildAss, buildTimeline, isRecordedSourceType, type VideoPlan, type VideoSource} from "@/lib/content-video/plan";
 import {portraitCrop, renderVideo, runFfmpeg, type SceneVisual} from "@/lib/content-video/render";
 import {loadImageBytes} from "@/lib/content-video/source";
 import {loadPageSource, sourcePath} from "@/lib/content-video/page-sources";
@@ -102,7 +102,10 @@ async function runJob(id: string) {
         row = {...row!, ...patch} as ContentVideoRow;
     };
     try {
-        const source = await loadPageSource(row.source_type, row.source_slug);
+        // A recorded clip (an Ark clip) has no page to make a video from: it is recorded again, never re-made here.
+        if (isRecordedSourceType(row.source_type)) throw new Error("Recorded clips are made by their recorder (scripts/ark-clips.mts), not the video maker");
+        const sourceType = row.source_type;
+        const source = await loadPageSource(sourceType, row.source_slug);
         if (!source) throw new Error(`${sourcePath(row.source_type, row.source_slug)} no longer exists or has too few images`);
 
         if (row.status === "scripting" || !row.plan) {

@@ -1,5 +1,5 @@
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
-import type {SourceType, TimelineEntry, VideoPlan} from "@/lib/content-video/plan";
+import type {SourceType, TimelineEntry, VideoPlan, VideoSourceType} from "@/lib/content-video/plan";
 
 // Service-role access to admin_content_videos and the content-videos bucket
 // (supabase/migrations/20261010120000_admin_content_videos.sql).
@@ -28,7 +28,8 @@ export type ContentVideoClip = {
 
 export type ContentVideoRow = {
     id: string;
-    source_type: SourceType;
+    /** A page family the video maker builds from, or a recorded kind (`ark`: Ark clips, scripts/ark-clips.mts). */
+    source_type: VideoSourceType;
     source_slug: string;
     source_title: string;
     status: ContentVideoStatus;
@@ -102,7 +103,7 @@ export async function findContentVideoByPath(videoPath: string) {
 }
 
 /** Slugs of one page family that already have a live (not archived) video. */
-export async function usedSourceSlugs(type: SourceType = "blog") {
+export async function usedSourceSlugs(type: VideoSourceType = "blog") {
     const response = await expectOk(await rest(`admin_content_videos?select=source_slug&archived_at=is.null&source_type=eq.${type}`), "Loading used pages");
     return new Set((await response.json() as Array<{source_slug: string}>).map((row) => row.source_slug));
 }
@@ -118,6 +119,34 @@ export async function insertContentVideo(type: SourceType, slug: string, title: 
     await expectOk(response, "Creating blog video");
     const [row] = await response.json() as ContentVideoRow[];
     return row ? normalizeRow(row) : null;
+}
+
+/**
+ * A recorded clip (an Ark clip), finished before its row exists: inserted
+ * ready, with its file and poster already in the bucket. Unpublished: the
+ * admin's Publish is the approval, as for page videos (it puts the clip on
+ * its watch page, the video sitemap and the auto-share queue). Null when the
+ * slug already has a live clip.
+ */
+export async function insertRecordedContentVideo(row: {
+    source_type: Exclude<VideoSourceType, SourceType>;
+    source_slug: string;
+    source_title: string;
+    plan: VideoPlan;
+    timeline: TimelineEntry[];
+    video_path: string;
+    poster_path: string;
+    duration_seconds: number;
+}): Promise<ContentVideoRow | null> {
+    const response = await rest("admin_content_videos", {
+        method: "POST",
+        prefer: "return=representation",
+        body: JSON.stringify({...row, status: "ready", progress: null, clips: [], estimated_usd: 0, llm_provider: null, tts_provider: null, published_at: null})
+    });
+    if (response.status === 409) return null;
+    await expectOk(response, "Saving the recorded clip");
+    const [saved] = await response.json() as ContentVideoRow[];
+    return saved ? normalizeRow(saved) : null;
 }
 
 export type ContentVideoPatch = Partial<Omit<ContentVideoRow, "id" | "source_type" | "source_slug" | "created_at" | "updated_at">>;
@@ -168,7 +197,7 @@ export type PublishedContentVideo = {
 
 export const CONTENT_VIDEO_CACHE_TAG = "content-videos";
 
-export async function getPublishedContentVideo(slug: string, type: SourceType = "blog"): Promise<PublishedContentVideo | null> {
+export async function getPublishedContentVideo(slug: string, type: VideoSourceType = "blog"): Promise<PublishedContentVideo | null> {
     if (!getSupabaseUrl() || !getSupabaseServiceKey()) return null;
     try {
         const response = await rest(
@@ -193,7 +222,7 @@ export async function getPublishedContentVideo(slug: string, type: SourceType = 
     }
 }
 
-export type PublishedContentVideoListing = PublishedContentVideo & {type: SourceType; slug: string; sourceTitle: string};
+export type PublishedContentVideoListing = PublishedContentVideo & {type: VideoSourceType; slug: string; sourceTitle: string};
 
 /** Every published page video, newest first, for the video sitemap. Empty when the database is unreachable. */
 export async function listPublishedContentVideos(): Promise<PublishedContentVideoListing[]> {
@@ -223,7 +252,7 @@ export async function listPublishedContentVideos(): Promise<PublishedContentVide
 }
 
 /** One published video with its source page and timeline: what a /videos watch page shows. */
-export async function getPublishedVideoForWatch(type: SourceType, slug: string): Promise<PublishedContentVideoListing | null> {
+export async function getPublishedVideoForWatch(type: VideoSourceType, slug: string): Promise<PublishedContentVideoListing | null> {
     if (!getSupabaseUrl() || !getSupabaseServiceKey()) return null;
     try {
         const response = await rest(

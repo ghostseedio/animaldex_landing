@@ -4,6 +4,9 @@ import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {contentVideoBusy, isContentVideoRunning, resumeStatus, startContentVideoJob} from "@/lib/content-video/runner";
 import {CONTENT_VIDEO_CACHE_TAG, getContentVideo, publicStorageUrl, updateContentVideo} from "@/lib/content-video/store";
 import {fixPlan, videoProblems} from "@/lib/content-video/fix";
+import {isRecordedSourceType} from "@/lib/content-video/plan";
+import {submitIndexNow} from "@/lib/indexnow";
+import {videoWatchPath} from "@/lib/video-sitemap";
 
 type Action = "publish" | "unpublish" | "resume" | "rerender" | "archive" | "fix";
 
@@ -27,12 +30,18 @@ export async function PATCH(request: NextRequest, {params}: {params: {id: string
         const row = await getContentVideo(params.id);
         if (!row || row.archived_at) return NextResponse.json({error: "Video not found"}, {status: 404});
         if (isContentVideoRunning(row.id)) return NextResponse.json({error: "This video is still being made"}, {status: 409});
+        // An Ark clip is recorded, not made: it can be published, taken down or archived, never re-made here.
+        if (isRecordedSourceType(row.source_type) && (body.action === "resume" || body.action === "rerender" || body.action === "fix")) {
+            return NextResponse.json({error: "Ark clips are recorded with scripts/ark-clips.mts: record it again instead"}, {status: 400});
+        }
 
         switch (body.action) {
             case "publish":
                 if (row.status !== "ready") return NextResponse.json({error: "Only a finished video can be published"}, {status: 400});
                 await updateContentVideo(row.id, {published_at: new Date().toISOString()});
                 revalidatePost(row.source_slug);
+                // An Ark clip lives on its own watch page: tell the search engines, as the autopilot does for page videos.
+                if (row.source_type === "ark") void submitIndexNow([videoWatchPath(row.source_type, row.source_slug), "/videos"]);
                 return NextResponse.json({ok: true});
             case "unpublish":
                 await updateContentVideo(row.id, {published_at: null});

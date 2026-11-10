@@ -1,6 +1,7 @@
 import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
 import {normalizeShareCopy, parseShareCopy, SHARE_COPY_JSON_SCHEMA, type ShareCopy} from "@/lib/social/share-copy";
 import {loadPageSource} from "@/lib/content-video/page-sources";
+import {isRecordedSourceType} from "@/lib/content-video/plan";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import {getAbsoluteUrl} from "@/lib/site";
 import {
@@ -98,7 +99,8 @@ export async function blogShareCopy(id: string, regenerate: boolean): Promise<Bl
     const key = anthropicApiKey();
     if (!key) return {copy: planned, source: "template", error: "CLAUDE_API_KEY is not configured"};
     try {
-        const source = await loadPageSource(row.source_type, row.source_slug);
+        // An Ark clip has no page behind it: its own captions (stored data and live counts) are the source.
+        const source = isRecordedSourceType(row.source_type) ? null : await loadPageSource(row.source_type, row.source_slug);
         const client = anthropicClient({apiKey: key});
         const response = await client.beta.messages.create({
             model: process.env.CLAUDE_SOCIAL_COPY_MODEL?.trim() || "claude-opus-5-5",
@@ -114,6 +116,7 @@ export async function blogShareCopy(id: string, regenerate: boolean): Promise<Bl
                     `URL: ${url}`,
                     `The video opens on: "${row.plan.hookText}"`,
                     `Narration:\n${row.plan.scenes.map((scene) => scene.narration).join(" ")}`,
+                    row.source_type === "ark" ? "This video is a screen recording of the AnimalDex Ark, a shared 3D world on animaldex.app/ark where animals come aboard when someone tries an animal's advice and it works. Its 3D animal models are AI-made: say so naturally once. Use only what its captions say; never name or describe any person, and say nothing about anyone's problem or chat. Use \"See the Ark live: <url>\" where the format asks for \"Full article: <url>\"." : "",
                     row.plan.format === "battle" || row.plan.format === "creature" || row.plan.format === "you_vs" || row.plan.format === "would_you_rather" ? "The video is AI-generated: mention it naturally once (e.g. \"AI-imagined\")." : "",
                     source ? `\nArticle summary: ${source.description}\n\nArticle text:\n${source.text.slice(0, 6000)}` : ""
                 ].join("\n")

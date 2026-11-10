@@ -91,6 +91,7 @@ import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour
 import {
     ARK_REGIONS,
     type ArkAnimal,
+    type ArkCameraView,
     type ArkReplayRun,
     type ArkRegion,
     type ArkSceneHandle,
@@ -100,6 +101,7 @@ import {
     type ArkTalking,
     type ArkVisitor
 } from "@/ark-scene/types";
+import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
@@ -142,7 +144,7 @@ const MICRO_CLOSE_WITHIN = 3.5;
 const MICRO_MIN_DISTANCE = 0.08;
 
 /** Birds that take to the air above their zone. */
-const FLYERS = new Set(["golden-eagle", "red-tailed-hawk", "african-fish-eagle", "barn-owl", "scarlet-macaw", "grey-heron", "atlantic-puffin"]);
+const FLYERS = ARK_FLYERS;
 
 /** Per tier: shadow map size, grass tufts, pixel-ratio cap. */
 const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelRatio: number}> = {
@@ -1295,7 +1297,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     setSnapshot(options.snapshot, false);
     const home = homeView();
-    let opening = !reducedMotion;
+    // A recording (`?record=1`) starts on its first shot's view: no opening flight.
+    let opening = !reducedMotion && !options.recording;
     const newest = [...options.snapshot.animals].sort((a, b) => b.arrived_at.localeCompare(a.arrived_at))[0];
     const afterOpening = () => {
         opening = false;
@@ -1856,7 +1859,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepFlight(now);
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
-        if (!reducedMotion && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
+        if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
         controls.update();
         keepInWorld();
         fitCloseUp();
@@ -1977,6 +1980,54 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         setViewInset: (bottomPixels) => {
             insetTarget = Math.max(0, Math.min(bottomPixels, height * 0.6));
+        },
+        view: (): ArkCameraView => {
+            spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
+            return {target: {x: controls.target.x, y: controls.target.y, z: controls.target.z}, distance: spherical.radius, polar: spherical.phi, azimuth: spherical.theta};
+        },
+        homeView: (): ArkCameraView => {
+            const view = homeView();
+            return {target: {x: view.target.x, y: view.target.y, z: view.target.z}, distance: view.distance, polar: view.polar, azimuth: view.azimuth};
+        },
+        setView: (view) => {
+            // Exactly this view, now: any flight (a replay's way home) is dropped.
+            flight = null;
+            controls.autoRotate = false;
+            lastTouch = performance.now() / 1000;
+            spherical.set(Math.min(Math.max(view.distance, controls.minDistance), MAX_DISTANCE), view.polar, view.azimuth);
+            controls.target.set(view.target.x, view.target.y, view.target.z);
+            camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
+            controls.update();
+        },
+        locate: (id) => {
+            const entry = findEntry(id);
+            if (!entry) return null;
+            const ground = Math.max(entry.place.ground, 0);
+            const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
+            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
+        },
+        heightAt: (x, z) => Math.max(heightAt(x, z), 0),
+        preload: async (slugs) => {
+            await library.ready();
+            for (const slug of slugs) {
+                if (!library.has(slug)) continue;
+                library.request(slug, "far");
+                library.request(slug, "near");
+                tokens.ensure(slug);
+            }
+        },
+        loading: () => library.busy,
+        hold: (id) => {
+            const entry = findEntry(id);
+            if (entry) entry.held = true;
+        },
+        arrive: (id) => {
+            const entry = findEntry(id);
+            if (!entry) return;
+            // As a replay's arrival: on the ground first (a flyer then takes to the air), with the entrance's grow and ripple.
+            entry.held = false;
+            entry.air = 0;
+            entry.arrivedAt = elapsedNow();
         },
         focusRegion: (region) => {
             controls.autoRotate = false;

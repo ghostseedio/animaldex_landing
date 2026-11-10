@@ -41,11 +41,32 @@ export function isSourceType(value: unknown): value is SourceType {
 }
 
 /**
+ * Kinds of video kept in admin_content_videos that are recorded, not made by
+ * the AI video maker from a page: `ark` is an Ark clip (headless recording of
+ * the Ark scene, scripts/ark-clips.mts). They share the table, the watch
+ * pages, the video sitemap, the hook lab and auto-share, but never the
+ * maker's runner (no page source, no script, no render).
+ */
+export const RECORDED_SOURCE_TYPES = ["ark"] as const;
+export type RecordedSourceType = (typeof RECORDED_SOURCE_TYPES)[number];
+export const VIDEO_SOURCE_TYPES = [...SOURCE_TYPES, ...RECORDED_SOURCE_TYPES] as const;
+export type VideoSourceType = (typeof VIDEO_SOURCE_TYPES)[number];
+
+export function isVideoSourceType(value: unknown): value is VideoSourceType {
+    return typeof value === "string" && (VIDEO_SOURCE_TYPES as readonly string[]).includes(value);
+}
+
+export function isRecordedSourceType(value: unknown): value is RecordedSourceType {
+    return typeof value === "string" && (RECORDED_SOURCE_TYPES as readonly string[]).includes(value);
+}
+
+/**
  * editorial: narrated photo edit. battle: VS card + AI fight. creature: AI reveal of an imagined animal.
  * lesson: what one animal teaches you (dark & gold). guess / pokemon: a quiz with a reveal. scan: our footage.
  * you_vs: the viewer against one animal, three rounds. would_you_rather: two animals' powers, pick one.
+ * ark: a recorded Ark clip (no AI imagery of its own; the Ark's 3D models are AI-made).
  */
-export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess" | "scan" | "you_vs" | "would_you_rather" | "pokemon";
+export type VideoFormat = "editorial" | "battle" | "creature" | "lesson" | "guess" | "scan" | "you_vs" | "would_you_rather" | "pokemon" | "ark";
 
 /**
  * The look of a video. "house": Barlow, lime, punch-ins, a brisk voice.
@@ -162,7 +183,8 @@ export type CreatureFacts = {
 
 export type VideoSource = {
     type: SourceType;
-    format: VideoFormat;
+    /** A page's format (an Ark clip is recorded, never made from a page). */
+    format: Exclude<VideoFormat, "ark">;
     slug: string;
     title: string;
     description: string;
