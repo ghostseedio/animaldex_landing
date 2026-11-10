@@ -1334,7 +1334,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const place = entry.place;
         const wander = (entry.wander ??= {x: 0, z: 0, heading: place.yaw, walking: false, until: now + 3 + entry.phase * 6, tx: 0, tz: 0, trips: 0});
-        const free = Boolean(entry.rigOn) && (entry.rig?.weight ?? 0) >= 0.999 && entry.awake && selectedId !== entry.animal.id;
+        // Only awake (its one behaviour state); being looked at or followed changes nothing.
+        const free = Boolean(entry.rigOn) && (entry.rig?.weight ?? 0) >= 0.999 && entry.state.kind === "awake";
         if (!free) {
             wander.walking = false;
             wander.until = Math.max(wander.until, now + 2);
@@ -1394,7 +1395,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * on — by the distance it moved for walking, running, climbing, slithering,
      * hopping and swimming (so the feet stay planted whatever the pace), with
      * the path for a leap or a burrow's emerge, by time otherwise. Null: draw
-     * it procedural.
+     * it procedural. The clip follows the animal's one behaviour state
+     * (`behaviour-state.ts`): asleep, its idle (slowed); flying, no rig at all
+     * (flight clips are held: the shader glide); awake, what the scene is doing
+     * with it.
      */
     const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
         const slug = entry.animal.model_slug;
@@ -1405,7 +1409,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return null;
         }
         const state = (entry.rig ??= newRigState());
-        const target = entry.rigOn && entry.air <= 0.001 && !entry.visitor ? 1 : 0;
+        // Reduced motion: no rigs (the scene's clock stands still, so nothing would fade): straight back to the near model.
+        if (reducedMotion) {
+            state.weight = 0;
+            state.last = null;
+            return null;
+        }
+        const target = entry.rigOn && !entry.state.airborne && entry.air <= 0.001 && !entry.visitor ? 1 : 0;
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);
@@ -1422,7 +1432,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let sync = 0;
         const place = entry.place;
         const up = where.surface ? where.surface.ny : 1;
-        if (place.canopy && !entry.visitor) {
+        if (entry.state.asleep && !entry.act) {
+            // Asleep: its idle, slow (and the head lowered by the material's droop); never a walk.
+        } else if (place.canopy && !entry.visitor) {
             const kind = place.canopy.mode;
             const move = (up < 0.6 ? clip("climb") : null) ?? clip("walk") ?? clip("climb");
             if (kind === "hang" && clip("hang")) want = "hang";
