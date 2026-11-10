@@ -1,70 +1,118 @@
 /**
- * Golden-hour light: three's physically based Sky as the backdrop, the same
- * sky turned into image-based light (PMREM) so every material picks it up,
- * a warm low sun with soft shadows fitted to what the camera sees, and a
- * hemisphere fill. The haze colour is the sky's own horizon, so the far sea
- * melts into it.
+ * The light of the hour (`lib/ark-daylight.ts`, from the viewer's clock):
+ * three's physically based Sky as the backdrop, the same sky turned into
+ * image-based light (PMREM) so every material picks it up, a sun (the moon at
+ * night) with soft shadows fitted to what the camera sees, and a hemisphere
+ * fill. The haze colour follows the sky's horizon, so the far sea melts into
+ * it. At night a dome of deep blue with stars is laid over the sky.
+ *
+ * At 17:00 it is the v1 Ark's golden hour exactly. The sky's light is built
+ * again only when the sun has moved a few degrees (a few times an hour).
  */
 
 import {
+    BackSide,
     Color,
     DirectionalLight,
     HemisphereLight,
     MathUtils,
+    Mesh,
     PMREMGenerator,
     Scene,
+    ShaderMaterial,
+    SphereGeometry,
     Vector3,
+    type Fog,
     type Texture,
     type WebGLRenderer
 } from "three";
 import {Sky} from "three/examples/jsm/objects/Sky.js";
-import {ARK_SUN} from "@/ark-scene/glsl";
+import {ARK_DAYLIGHT, ARK_GLINT, ARK_RIM, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME} from "@/ark-scene/glsl";
+import {daylightAt, type ArkDaylight} from "@/lib/ark-daylight";
 
-/** Degrees above the horizon, and the bearing it shines from (west-north-west, behind the island's left shoulder). */
-const SUN_ELEVATION = 17;
-const SUN_AZIMUTH = -118;
+const SKY_SETTINGS = {turbidity: 5.5, rayleigh: 1.35, mieCoefficient: 0.0045, mieDirectionalG: 0.82};
+
+/** The night: a deep blue dome, lighter at the horizon, with stars that twinkle a little. Faded in with `night`. */
+const NIGHT_VERTEX = `
+varying vec3 vDirection;
+void main() {
+    vDirection = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position.z = gl_Position.w;
+}`;
+const NIGHT_FRAGMENT = `
+uniform vec3 horizon;
+uniform vec3 zenith;
+uniform float night;
+uniform float arkTime;
+varying vec3 vDirection;
+float starHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+void main() {
+    vec3 d = normalize(vDirection);
+    float up = clamp(d.y, 0.0, 1.0);
+    vec3 colour = mix(horizon, zenith, pow(up, 0.55));
+    // Stars: one per cell of a fine grid on the sphere, most of them dark.
+    vec3 cell = floor(d * 180.0);
+    float h = starHash(cell);
+    float star = smoothstep(0.9965, 1.0, h) * smoothstep(0.04, 0.3, d.y);
+    star *= 0.65 + 0.35 * sin(arkTime * (1.5 + h * 3.0) + h * 40.0);
+    colour += vec3(0.85, 0.9, 1.0) * star * 1.6;
+    gl_FragColor = vec4(colour, night);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+}`;
 
 export class ArkLighting {
     readonly sky: Sky;
     readonly sun: DirectionalLight;
     readonly fill: HemisphereLight;
-    readonly environment: Texture;
+    environment: Texture;
     /** The haze at the horizon, for the fog. */
     readonly horizon = new Color("#d9c9b4");
     private readonly direction = new Vector3();
+    private readonly nightDome: Mesh;
+    private readonly nightMaterial: ShaderMaterial;
+    private readonly pmrem: PMREMGenerator;
+    private readonly skyScene = new Scene();
+    private readonly skyCopy = new Sky();
+    private readonly nightCopy: Mesh;
+    /** The elevation (rounded) the sky's light was last built for. */
+    private builtFor: number | null = null;
+    private current: ArkDaylight;
 
-    constructor(renderer: WebGLRenderer, scene: Scene) {
-        const phi = MathUtils.degToRad(90 - SUN_ELEVATION);
-        const theta = MathUtils.degToRad(SUN_AZIMUTH);
-        this.direction.setFromSphericalCoords(1, phi, theta);
-        ARK_SUN.value.copy(this.direction);
-
+    constructor(private readonly renderer: WebGLRenderer, private readonly scene: Scene, hours = 17) {
+        this.current = daylightAt(hours);
         this.sky = new Sky();
         this.sky.scale.setScalar(4500);
-        const uniforms = this.sky.material.uniforms;
-        uniforms.turbidity.value = 5.5;
-        uniforms.rayleigh.value = 1.35;
-        uniforms.mieCoefficient.value = 0.0045;
-        uniforms.mieDirectionalG.value = 0.82;
-        uniforms.sunPosition.value.copy(this.direction);
+        Object.assign(this.sky.material.uniforms.turbidity, {value: SKY_SETTINGS.turbidity});
+        this.sky.material.uniforms.rayleigh.value = SKY_SETTINGS.rayleigh;
+        this.sky.material.uniforms.mieCoefficient.value = SKY_SETTINGS.mieCoefficient;
+        this.sky.material.uniforms.mieDirectionalG.value = SKY_SETTINGS.mieDirectionalG;
         this.sky.frustumCulled = false;
         this.sky.renderOrder = -10;
 
-        // The sky, once, as light for every surface.
-        const pmrem = new PMREMGenerator(renderer);
-        const skyScene = new Scene();
-        const skyCopy = new Sky();
-        skyCopy.scale.setScalar(4500);
-        Object.assign(skyCopy.material.uniforms.turbidity, {value: 5.5});
-        skyCopy.material.uniforms.rayleigh.value = 1.35;
-        skyCopy.material.uniforms.mieCoefficient.value = 0.0045;
-        skyCopy.material.uniforms.mieDirectionalG.value = 0.82;
-        skyCopy.material.uniforms.sunPosition.value.copy(this.direction);
-        skyScene.add(skyCopy);
-        this.environment = pmrem.fromScene(skyScene, 0, 0.1, 6000).texture;
-        skyCopy.geometry.dispose();
-        skyCopy.material.dispose();
-        pmrem.dispose();
+        this.nightMaterial = new ShaderMaterial({
+            vertexShader: NIGHT_VERTEX,
+            fragmentShader: NIGHT_FRAGMENT,
+            uniforms: {horizon: {value: new Color()}, zenith: {value: new Color()}, night: {value: 0}, arkTime: ARK_TIME},
+            side: BackSide,
+            transparent: true,
+            depthWrite: false,
+            fog: false
+        });
+        this.nightDome = new Mesh(new SphereGeometry(4000, 32, 16), this.nightMaterial);
+        this.nightDome.frustumCulled = false;
+        this.nightDome.renderOrder = -9;
+
+        // The copies the sky's light is made from.
+        this.skyCopy.scale.setScalar(4500);
+        this.skyCopy.material.uniforms.turbidity.value = SKY_SETTINGS.turbidity;
+        this.skyCopy.material.uniforms.rayleigh.value = SKY_SETTINGS.rayleigh;
+        this.skyCopy.material.uniforms.mieCoefficient.value = SKY_SETTINGS.mieCoefficient;
+        this.skyCopy.material.uniforms.mieDirectionalG.value = SKY_SETTINGS.mieDirectionalG;
+        this.nightCopy = new Mesh(this.nightDome.geometry, this.nightMaterial);
+        this.skyScene.add(this.skyCopy, this.nightCopy);
+        this.pmrem = new PMREMGenerator(renderer);
 
         this.sun = new DirectionalLight(new Color("#ffd9a8"), 2.6);
         this.sun.castShadow = false;
@@ -74,9 +122,61 @@ export class ArkLighting {
         this.sun.shadow.camera.far = 900;
         this.fill = new HemisphereLight(new Color("#c9dbe8"), new Color("#6f6248"), 0.55);
 
-        scene.add(this.sky, this.sun, this.sun.target, this.fill);
+        this.environment = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
+        scene.add(this.sky, this.nightDome, this.sun, this.sun.target, this.fill);
         scene.environment = this.environment;
         scene.environmentIntensity = 0.75;
+        this.apply(this.current, null);
+    }
+
+    get daylight(): ArkDaylight {
+        return this.current;
+    }
+
+    /** The light for this hour; the sky's light is built again only when the sun has moved enough. */
+    setHours(hours: number, fog: Fog | null) {
+        this.apply(daylightAt(hours), fog);
+    }
+
+    private apply(day: ArkDaylight, fog: Fog | null) {
+        this.current = day;
+        const sunDirection = new Vector3().setFromSphericalCoords(1, MathUtils.degToRad(90 - day.elevation), MathUtils.degToRad(day.azimuth));
+        this.direction.setFromSphericalCoords(1, MathUtils.degToRad(90 - day.light.elevation), MathUtils.degToRad(day.light.azimuth));
+        // The water glints toward the light that is up: the sun, or the moon.
+        ARK_SUN.value.copy(this.direction);
+        ARK_GLINT.value.set(day.light.color).multiplyScalar(day.elevation > -2 ? 1 : 0.6);
+        ARK_SKY_HORIZON.value.set(day.horizon);
+        ARK_SKY_ZENITH.value.set(day.zenith);
+        ARK_DAYLIGHT.value = day.daylight;
+        ARK_RIM.value.setRGB(1.0, 0.82, 0.6).multiplyScalar(day.rim);
+
+        this.sky.material.uniforms.sunPosition.value.copy(sunDirection);
+        this.skyCopy.material.uniforms.sunPosition.value.copy(sunDirection);
+        this.sky.visible = day.night < 0.995;
+        this.nightMaterial.uniforms.horizon.value.set(day.horizon);
+        this.nightMaterial.uniforms.zenith.value.set(day.zenith);
+        this.nightMaterial.uniforms.night.value = day.night;
+        this.nightDome.visible = day.night > 0.005;
+        this.nightCopy.visible = this.nightDome.visible;
+        this.skyCopy.visible = this.sky.visible;
+
+        this.sun.color.set(day.light.color);
+        this.sun.intensity = day.light.intensity;
+        this.fill.color.set(day.fill.sky);
+        this.fill.groundColor.set(day.fill.ground);
+        this.fill.intensity = day.fill.intensity;
+        this.horizon.set(day.fog);
+        if (fog) fog.color.copy(this.horizon);
+        this.scene.environmentIntensity = day.environment;
+
+        const key = Math.round(day.elevation / 3);
+        if (this.builtFor !== key) {
+            this.builtFor = key;
+            const next = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
+            this.scene.environment = next;
+            this.environment.dispose();
+            this.environment = next;
+        }
     }
 
     /** Soft shadows from a map this many texels wide; 0 for none. */
@@ -115,6 +215,11 @@ export class ArkLighting {
         this.environment.dispose();
         this.sky.geometry.dispose();
         this.sky.material.dispose();
+        this.skyCopy.geometry.dispose();
+        this.skyCopy.material.dispose();
+        this.nightDome.geometry.dispose();
+        this.nightMaterial.dispose();
+        this.pmrem.dispose();
         this.sun.shadow.map?.dispose();
     }
 }

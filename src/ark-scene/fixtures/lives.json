@@ -1,0 +1,3214 @@
+{
+ "e70fa67a-7e60-4968-ab05-74033872434c": {
+  "id": "e70fa67a-7e60-4968-ab05-74033872434c",
+  "species": "Domestic Goat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T09:16:01Z",
+   "brought_by": "Voyager 17"
+  },
+  "generation": 0,
+  "ark_age_days": 286,
+  "ark_age_years": 0.78,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-10-31T14:37:40Z"
+  },
+  "ancestor_brought_by": "Voyager 17",
+  "story_public": null
+ },
+ "843e7b90-0225-4040-a2f8-5422c8fd6835": {
+  "id": "843e7b90-0225-4040-a2f8-5422c8fd6835",
+  "species": "Harbor Seal",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T12:04:21Z",
+   "brought_by": "Voyager 26"
+  },
+  "generation": 0,
+  "ark_age_days": 283,
+  "ark_age_years": 0.78,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 26",
+  "story_public": null
+ },
+ "9650250d-035d-4e7a-a21c-dd4520530606": {
+  "id": "9650250d-035d-4e7a-a21c-dd4520530606",
+  "species": "African Lion",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T13:12:17Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 282,
+  "ark_age_years": 0.77,
+  "condition": "well_fed",
+  "meals": 1,
+  "last_meal": {
+   "at": "2026-11-07T15:20:00Z",
+   "prey": "Plains Zebra",
+   "phrase": "zebras"
+  },
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "68bd4158-a6eb-438c-ae02-a4e9191cdf8b": {
+  "id": "68bd4158-a6eb-438c-ae02-a4e9191cdf8b",
+  "species": "Domestic Cat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T14:02:24Z",
+   "brought_by": "Voyager 4"
+  },
+  "generation": 0,
+  "ark_age_days": 281,
+  "ark_age_years": 0.77,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 4",
+  "story_public": null
+ },
+ "71d8b7c4-eff8-4472-a771-3323be8b7a22": {
+  "id": "71d8b7c4-eff8-4472-a771-3323be8b7a22",
+  "species": "Domestic Goat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T14:08:20Z",
+   "brought_by": "Voyager 33"
+  },
+  "generation": 0,
+  "ark_age_days": 281,
+  "ark_age_years": 0.77,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 33",
+  "story_public": null
+ },
+ "3eb4e7df-2da8-4468-acd6-0a1d619c020e": {
+  "id": "3eb4e7df-2da8-4468-acd6-0a1d619c020e",
+  "species": "Dromedary Camel",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T14:08:21Z",
+   "brought_by": "Voyager 8"
+  },
+  "generation": 0,
+  "ark_age_days": 281,
+  "ark_age_years": 0.77,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 8",
+  "story_public": null
+ },
+ "30eb9944-5374-4f2f-a5df-ae91963bc44b": {
+  "id": "30eb9944-5374-4f2f-a5df-ae91963bc44b",
+  "species": "Great White Shark",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T14:08:31Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 281,
+  "ark_age_years": 0.77,
+  "condition": "well_fed",
+  "meals": 1,
+  "last_meal": {
+   "at": "2026-11-09T13:05:00Z",
+   "prey": "Harbor Seal",
+   "phrase": "seals"
+  },
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "408ac1de-1f71-47bf-a57e-167450b47931": {
+  "id": "408ac1de-1f71-47bf-a57e-167450b47931",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T15:39:00Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 280,
+  "ark_age_years": 0.77,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "6033a1c6-0321-47e9-afcb-022e395ec23e": {
+  "id": "6033a1c6-0321-47e9-afcb-022e395ec23e",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T17:24:06Z",
+   "brought_by": "Voyager 35"
+  },
+  "generation": 0,
+  "ark_age_days": 278,
+  "ark_age_years": 0.76,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 2,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 35",
+  "story_public": null
+ },
+ "81b3a682-715b-4832-a25e-bbfe0ced231c": {
+  "id": "81b3a682-715b-4832-a25e-bbfe0ced231c",
+  "species": "African Clawed Frog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T19:55:41Z",
+   "brought_by": "Voyager 32"
+  },
+  "generation": 0,
+  "ark_age_days": 275,
+  "ark_age_years": 0.75,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-01T12:19:06Z"
+  },
+  "ancestor_brought_by": "Voyager 32",
+  "story_public": null
+ },
+ "d11e283d-9235-4caa-a41c-2c8096bb1281": {
+  "id": "d11e283d-9235-4caa-a41c-2c8096bb1281",
+  "species": "Golden Eagle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T23:02:42Z",
+   "brought_by": "Voyager 8"
+  },
+  "generation": 0,
+  "ark_age_days": 272,
+  "ark_age_years": 0.75,
+  "condition": "well_fed",
+  "meals": 1,
+  "last_meal": {
+   "at": "2026-11-09T09:15:00Z",
+   "prey": "Alpine Marmot",
+   "phrase": "marmots"
+  },
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 8",
+  "story_public": null
+ },
+ "0b92b235-df9b-4c94-a2e8-9eb329c092cd": {
+  "id": "0b92b235-df9b-4c94-a2e8-9eb329c092cd",
+  "species": "Fennec Fox",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-30T23:31:33Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 271,
+  "ark_age_years": 0.74,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "1f7a900b-fb6e-4172-a114-ad0420d13917": {
+  "id": "1f7a900b-fb6e-4172-a114-ad0420d13917",
+  "species": "Emperor Penguin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T04:07:42Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 266,
+  "ark_age_years": 0.73,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "24f42634-bcc3-4e01-a237-c3e9eb5f5684": {
+  "id": "24f42634-bcc3-4e01-a237-c3e9eb5f5684",
+  "species": "Red Fox",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T05:16:52Z",
+   "brought_by": "Voyager 37"
+  },
+  "generation": 0,
+  "ark_age_days": 265,
+  "ark_age_years": 0.73,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 37",
+  "story_public": null
+ },
+ "9a6cafd6-34d2-4572-a917-6b142cfbcd29": {
+  "id": "9a6cafd6-34d2-4572-a917-6b142cfbcd29",
+  "species": "Scarlet Macaw",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T06:42:34Z",
+   "brought_by": "Voyager 28"
+  },
+  "generation": 0,
+  "ark_age_days": 263,
+  "ark_age_years": 0.72,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 28",
+  "story_public": null
+ },
+ "7a5d3f22-85c2-4d55-a3b5-b0225f578ab3": {
+  "id": "7a5d3f22-85c2-4d55-a3b5-b0225f578ab3",
+  "species": "House Sparrow",
+  "status": "died_old",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T08:20:20Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 243,
+  "ark_age_years": 0.67,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "bab5293b-9d8f-4893-a64a-80e082e1955a": {
+  "id": "bab5293b-9d8f-4893-a64a-80e082e1955a",
+  "species": "African Bush Elephant",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T09:11:02Z",
+   "brought_by": "Voyager 17"
+  },
+  "generation": 0,
+  "ark_age_days": 261,
+  "ark_age_years": 0.72,
+  "condition": "old",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 17",
+  "story_public": null
+ },
+ "94b55d20-8b59-415c-a38f-f072b6a87322": {
+  "id": "94b55d20-8b59-415c-a38f-f072b6a87322",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T10:16:40Z",
+   "brought_by": "Voyager 6"
+  },
+  "generation": 0,
+  "ark_age_days": 259,
+  "ark_age_years": 0.71,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 6",
+  "story_public": null
+ },
+ "0ba2e963-8a5b-46d5-a41c-eb3a7dad70d9": {
+  "id": "0ba2e963-8a5b-46d5-a41c-eb3a7dad70d9",
+  "species": "Scarlet Macaw",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T11:27:18Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 258,
+  "ark_age_years": 0.71,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-02T08:46:18Z"
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "8a429db7-74b3-44d3-a8a9-ff233c078721": {
+  "id": "8a429db7-74b3-44d3-a8a9-ff233c078721",
+  "species": "European Rabbit",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T11:49:22Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 258,
+  "ark_age_years": 0.71,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "05db70aa-177c-4a2a-a5cd-09a9ba0cc3d8": {
+  "id": "05db70aa-177c-4a2a-a5cd-09a9ba0cc3d8",
+  "species": "Atlantic Puffin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T11:50:47Z",
+   "brought_by": "Voyager 38"
+  },
+  "generation": 0,
+  "ark_age_days": 258,
+  "ark_age_years": 0.71,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 38",
+  "story_public": null
+ },
+ "6850b3b4-34aa-4d53-a77c-120ce3a2a177": {
+  "id": "6850b3b4-34aa-4d53-a77c-120ce3a2a177",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T13:49:12Z",
+   "brought_by": "Voyager 13"
+  },
+  "generation": 0,
+  "ark_age_days": 255,
+  "ark_age_years": 0.7,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 2,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 13",
+  "story_public": null
+ },
+ "4f41b06a-142f-4772-af0f-a85c6671151e": {
+  "id": "4f41b06a-142f-4772-af0f-a85c6671151e",
+  "species": "House Sparrow",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T14:19:05Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 255,
+  "ark_age_years": 0.7,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "92575248-25da-47bc-a2a2-c08873f20925": {
+  "id": "92575248-25da-47bc-a2a2-c08873f20925",
+  "species": "American Alligator",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T14:58:08Z",
+   "brought_by": "Voyager 20"
+  },
+  "generation": 0,
+  "ark_age_days": 254,
+  "ark_age_years": 0.7,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 20",
+  "story_public": null
+ },
+ "3c50c8cb-acbe-4ae4-a7e4-c2e3da56ecef": {
+  "id": "3c50c8cb-acbe-4ae4-a7e4-c2e3da56ecef",
+  "species": "African Forest Buffalo",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T15:47:26Z",
+   "brought_by": "Voyager 17"
+  },
+  "generation": 0,
+  "ark_age_days": 253,
+  "ark_age_years": 0.69,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 17",
+  "story_public": null
+ },
+ "9d9d88e6-5701-4ac6-a211-d6c81842b75e": {
+  "id": "9d9d88e6-5701-4ac6-a211-d6c81842b75e",
+  "species": "Grey Heron",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T19:34:39Z",
+   "brought_by": "Voyager 21"
+  },
+  "generation": 0,
+  "ark_age_days": 249,
+  "ark_age_years": 0.68,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 21",
+  "story_public": null
+ },
+ "13b01a24-d631-4423-a8c3-8ea5b85ab52c": {
+  "id": "13b01a24-d631-4423-a8c3-8ea5b85ab52c",
+  "species": "Barn Owl",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-10-31T23:00:05Z",
+   "brought_by": "Voyager 21"
+  },
+  "generation": 0,
+  "ark_age_days": 246,
+  "ark_age_years": 0.67,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 21",
+  "story_public": null
+ },
+ "45625d0a-4fb4-4293-aaf3-3d161a4a454f": {
+  "id": "45625d0a-4fb4-4293-aaf3-3d161a4a454f",
+  "species": "Atlantic Herring",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T00:51:55Z",
+   "brought_by": "Voyager 15"
+  },
+  "generation": 0,
+  "ark_age_days": 243,
+  "ark_age_years": 0.67,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-02T12:04:01Z"
+  },
+  "ancestor_brought_by": "Voyager 15",
+  "story_public": null
+ },
+ "40028f91-7848-4234-ae8c-8a726dde9ef2": {
+  "id": "40028f91-7848-4234-ae8c-8a726dde9ef2",
+  "species": "Mallard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T01:12:49Z",
+   "brought_by": "Voyager 35"
+  },
+  "generation": 0,
+  "ark_age_days": 243,
+  "ark_age_years": 0.67,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 35",
+  "story_public": null
+ },
+ "319f5782-be4f-427c-afc6-082dcd21221c": {
+  "id": "319f5782-be4f-427c-afc6-082dcd21221c",
+  "species": "House Cricket",
+  "status": "eaten",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T01:25:20Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 235,
+  "ark_age_years": 0.64,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "619323fe-64ba-4cd4-a6be-7f015e8227a5": {
+  "id": "619323fe-64ba-4cd4-a6be-7f015e8227a5",
+  "species": "Meerkat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T02:27:51Z",
+   "brought_by": "Voyager 10"
+  },
+  "generation": 0,
+  "ark_age_days": 242,
+  "ark_age_years": 0.66,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 10",
+  "story_public": null
+ },
+ "a68d4b90-76e8-4aef-a8df-43607852ec8e": {
+  "id": "a68d4b90-76e8-4aef-a8df-43607852ec8e",
+  "species": "African Clawed Frog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T05:39:34Z",
+   "brought_by": "Voyager 15"
+  },
+  "generation": 0,
+  "ark_age_days": 238,
+  "ark_age_years": 0.65,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 15",
+  "story_public": null
+ },
+ "7e064631-af06-4a31-ad37-da180e1a688c": {
+  "id": "7e064631-af06-4a31-ad37-da180e1a688c",
+  "species": "Green Sea Turtle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T07:00:22Z",
+   "brought_by": "Voyager 21"
+  },
+  "generation": 0,
+  "ark_age_days": 237,
+  "ark_age_years": 0.65,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 21",
+  "story_public": null
+ },
+ "8aaba237-d019-47f4-a08f-505404fec60a": {
+  "id": "8aaba237-d019-47f4-a08f-505404fec60a",
+  "species": "House Cricket",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T10:14:00Z",
+   "brought_by": "Voyager 29"
+  },
+  "generation": 0,
+  "ark_age_days": 233,
+  "ark_age_years": 0.64,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 29",
+  "story_public": null
+ },
+ "71e868aa-8809-470e-a323-4655d2aadb0a": {
+  "id": "71e868aa-8809-470e-a323-4655d2aadb0a",
+  "species": "Mallard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T12:50:19Z",
+   "brought_by": "Voyager 12"
+  },
+  "generation": 0,
+  "ark_age_days": 230,
+  "ark_age_years": 0.63,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 12",
+  "story_public": null
+ },
+ "f11dee99-c625-43de-aa41-6a7e8e334830": {
+  "id": "f11dee99-c625-43de-aa41-6a7e8e334830",
+  "species": "Mallard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T15:57:45Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 227,
+  "ark_age_years": 0.62,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "5038e7c9-05fc-42b5-a6fc-176f757d4f35": {
+  "id": "5038e7c9-05fc-42b5-a6fc-176f757d4f35",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T17:39:11Z",
+   "brought_by": "Voyager 17"
+  },
+  "generation": 0,
+  "ark_age_days": 225,
+  "ark_age_years": 0.62,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-04T00:32:21Z"
+  },
+  "ancestor_brought_by": "Voyager 17",
+  "story_public": null
+ },
+ "d94be221-1df4-43eb-aedb-ed2f22f4bb05": {
+  "id": "d94be221-1df4-43eb-aedb-ed2f22f4bb05",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T17:59:13Z",
+   "brought_by": "Voyager 35"
+  },
+  "generation": 0,
+  "ark_age_days": 225,
+  "ark_age_years": 0.62,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 35",
+  "story_public": null
+ },
+ "7ccf673d-578f-4091-afb4-9f6d8c13a953": {
+  "id": "7ccf673d-578f-4091-afb4-9f6d8c13a953",
+  "species": "American Alligator",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T21:05:12Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 222,
+  "ark_age_years": 0.61,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "e1032628-76be-4f8e-a5a9-bd83f679e386": {
+  "id": "e1032628-76be-4f8e-a5a9-bd83f679e386",
+  "species": "Eurasian Wolf",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-01T23:37:52Z",
+   "brought_by": "Voyager 7"
+  },
+  "generation": 0,
+  "ark_age_days": 219,
+  "ark_age_years": 0.6,
+  "condition": "hungry",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 7",
+  "story_public": null
+ },
+ "c4376947-eb41-4d4e-a1fb-8a93f43db819": {
+  "id": "c4376947-eb41-4d4e-a1fb-8a93f43db819",
+  "species": "Green Sea Turtle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T03:18:17Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 215,
+  "ark_age_years": 0.59,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "81d9030a-1dad-4cd6-a940-3a9c1a2518a3": {
+  "id": "81d9030a-1dad-4cd6-a940-3a9c1a2518a3",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T05:23:00Z",
+   "brought_by": "Voyager 29"
+  },
+  "generation": 0,
+  "ark_age_days": 213,
+  "ark_age_years": 0.58,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 29",
+  "story_public": null
+ },
+ "30155be2-189c-479b-a16e-9fd0079c4196": {
+  "id": "30155be2-189c-479b-a16e-9fd0079c4196",
+  "species": "Snow Leopard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T12:08:55Z",
+   "brought_by": "Voyager 24"
+  },
+  "generation": 0,
+  "ark_age_days": 205,
+  "ark_age_years": 0.56,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 24",
+  "story_public": null
+ },
+ "f29d1d93-e6b2-45f4-a6fa-2ce36215ba03": {
+  "id": "f29d1d93-e6b2-45f4-a6fa-2ce36215ba03",
+  "species": "Komodo Dragon",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T12:47:52Z",
+   "brought_by": "Voyager 22"
+  },
+  "generation": 0,
+  "ark_age_days": 204,
+  "ark_age_years": 0.56,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 22",
+  "story_public": null
+ },
+ "6b094390-dfba-49ae-af4f-9bea20e7f42e": {
+  "id": "6b094390-dfba-49ae-af4f-9bea20e7f42e",
+  "species": "Capybara",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T13:18:29Z",
+   "brought_by": "Voyager 25"
+  },
+  "generation": 0,
+  "ark_age_days": 204,
+  "ark_age_years": 0.56,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 25",
+  "story_public": null
+ },
+ "66098889-a783-4516-a482-542972aae744": {
+  "id": "66098889-a783-4516-a482-542972aae744",
+  "species": "Meerkat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T15:34:00Z",
+   "brought_by": "Voyager 13"
+  },
+  "generation": 0,
+  "ark_age_days": 201,
+  "ark_age_years": 0.55,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-03T20:13:02Z"
+  },
+  "ancestor_brought_by": "Voyager 13",
+  "story_public": null
+ },
+ "da692575-d140-4bd8-ac98-f13ff7763aa8": {
+  "id": "da692575-d140-4bd8-ac98-f13ff7763aa8",
+  "species": "Great White Shark",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T16:14:08Z",
+   "brought_by": "Voyager 22"
+  },
+  "generation": 0,
+  "ark_age_days": 201,
+  "ark_age_years": 0.55,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 22",
+  "story_public": null
+ },
+ "ab6ceeb1-65da-4222-abd9-45bc8db76c67": {
+  "id": "ab6ceeb1-65da-4222-abd9-45bc8db76c67",
+  "species": "Eurasian Wolf",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T20:06:59Z",
+   "brought_by": "Voyager 25"
+  },
+  "generation": 0,
+  "ark_age_days": 196,
+  "ark_age_years": 0.54,
+  "condition": "hungry",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 25",
+  "story_public": null
+ },
+ "e930afc8-3bb7-413d-ad4e-111f2c6eb7fd": {
+  "id": "e930afc8-3bb7-413d-ad4e-111f2c6eb7fd",
+  "species": "European Rabbit",
+  "status": "eaten",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T21:03:39Z",
+   "brought_by": "Voyager 27"
+  },
+  "generation": 0,
+  "ark_age_days": 161,
+  "ark_age_years": 0.44,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 27",
+  "story_public": null
+ },
+ "f8f79c02-dcf7-4022-ab1f-805bd0f69a07": {
+  "id": "f8f79c02-dcf7-4022-ab1f-805bd0f69a07",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-02T22:07:13Z",
+   "brought_by": "Voyager 19"
+  },
+  "generation": 0,
+  "ark_age_days": 194,
+  "ark_age_years": 0.53,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 19",
+  "story_public": null
+ },
+ "943426bd-c2df-4934-ad64-e00302f3f571": {
+  "id": "943426bd-c2df-4934-ad64-e00302f3f571",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T02:19:14Z",
+   "brought_by": "Voyager 25"
+  },
+  "generation": 0,
+  "ark_age_days": 190,
+  "ark_age_years": 0.52,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 25",
+  "story_public": null
+ },
+ "cce3376e-f505-4445-a385-7a1a210c6643": {
+  "id": "cce3376e-f505-4445-a385-7a1a210c6643",
+  "species": "Alpine Marmot",
+  "status": "eaten",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T03:11:30Z",
+   "brought_by": "Voyager 8"
+  },
+  "generation": 0,
+  "ark_age_days": 163,
+  "ark_age_years": 0.45,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 8",
+  "story_public": null
+ },
+ "1becaa08-5547-4ffd-ae7b-eb4d7e8e8695": {
+  "id": "1becaa08-5547-4ffd-ae7b-eb4d7e8e8695",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T03:53:31Z",
+   "brought_by": "Voyager 22"
+  },
+  "generation": 0,
+  "ark_age_days": 188,
+  "ark_age_years": 0.52,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 22",
+  "story_public": null
+ },
+ "b7fd1164-5dac-44f5-ac47-8ba01505dd94": {
+  "id": "b7fd1164-5dac-44f5-ac47-8ba01505dd94",
+  "species": "Atlantic Herring",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T04:03:21Z",
+   "brought_by": "Voyager 20"
+  },
+  "generation": 0,
+  "ark_age_days": 188,
+  "ark_age_years": 0.52,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 20",
+  "story_public": null
+ },
+ "56f30fc5-857c-4bcd-a2c4-27df5e1a6fd4": {
+  "id": "56f30fc5-857c-4bcd-a2c4-27df5e1a6fd4",
+  "species": "African Lion",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T05:51:12Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 186,
+  "ark_age_years": 0.51,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-06T03:56:52Z"
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "67e733ce-0935-4a7e-a08e-d27798a9344b": {
+  "id": "67e733ce-0935-4a7e-a08e-d27798a9344b",
+  "species": "American Bullfrog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T06:09:48Z",
+   "brought_by": "Voyager 3"
+  },
+  "generation": 0,
+  "ark_age_days": 186,
+  "ark_age_years": 0.51,
+  "condition": "well_fed",
+  "meals": 1,
+  "last_meal": {
+   "at": "2026-11-10T02:00:00Z",
+   "prey": "House Cricket",
+   "phrase": "insects"
+  },
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 3",
+  "story_public": null
+ },
+ "70bb2e69-3dca-4fa7-a2be-e4f9357d8b75": {
+  "id": "70bb2e69-3dca-4fa7-a2be-e4f9357d8b75",
+  "species": "Domestic Dog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T07:05:11Z",
+   "brought_by": "Voyager 11"
+  },
+  "generation": 0,
+  "ark_age_days": 185,
+  "ark_age_years": 0.51,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 11",
+  "story_public": null
+ },
+ "4c28954a-df2a-49bb-abb3-6bf123f07c28": {
+  "id": "4c28954a-df2a-49bb-abb3-6bf123f07c28",
+  "species": "Atlantic Puffin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T08:04:41Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 184,
+  "ark_age_years": 0.5,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "9fa5f69c-444f-4374-a3a3-b923917d3fc5": {
+  "id": "9fa5f69c-444f-4374-a3a3-b923917d3fc5",
+  "species": "Harbor Seal",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T09:35:46Z",
+   "brought_by": "Voyager 8"
+  },
+  "generation": 0,
+  "ark_age_days": 182,
+  "ark_age_years": 0.5,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 8",
+  "story_public": null
+ },
+ "1a8d9759-9aed-4ad1-a3fe-47936cc258da": {
+  "id": "1a8d9759-9aed-4ad1-a3fe-47936cc258da",
+  "species": "Meerkat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T12:03:53Z",
+   "brought_by": "Voyager 19"
+  },
+  "generation": 0,
+  "ark_age_days": 179,
+  "ark_age_years": 0.49,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 19",
+  "story_public": null
+ },
+ "f6982f53-c13b-4f18-a611-1522853236d4": {
+  "id": "f6982f53-c13b-4f18-a611-1522853236d4",
+  "species": "Atlantic Herring",
+  "status": "eaten",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T13:25:26Z",
+   "brought_by": "Voyager 38"
+  },
+  "generation": 0,
+  "ark_age_days": 149,
+  "ark_age_years": 0.41,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 38",
+  "story_public": null
+ },
+ "7409fdf2-4c88-4107-aa64-3640bf137a74": {
+  "id": "7409fdf2-4c88-4107-aa64-3640bf137a74",
+  "species": "African Fish Eagle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T15:19:07Z",
+   "brought_by": "Voyager 23"
+  },
+  "generation": 0,
+  "ark_age_days": 176,
+  "ark_age_years": 0.48,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 23",
+  "story_public": null
+ },
+ "c8b99560-772a-4390-a3a4-7d3a9cfda08b": {
+  "id": "c8b99560-772a-4390-a3a4-7d3a9cfda08b",
+  "species": "Reef Manta Ray",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T17:36:14Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 173,
+  "ark_age_years": 0.47,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "94e3a6aa-f039-40ac-aba8-ef47b287b806": {
+  "id": "94e3a6aa-f039-40ac-aba8-ef47b287b806",
+  "species": "Domestic Dog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T18:31:06Z",
+   "brought_by": "Voyager 26"
+  },
+  "generation": 0,
+  "ark_age_days": 172,
+  "ark_age_years": 0.47,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-04T22:21:34Z"
+  },
+  "ancestor_brought_by": "Voyager 26",
+  "story_public": null
+ },
+ "18420e67-434b-4e7a-a7a6-7903bf8ecd4b": {
+  "id": "18420e67-434b-4e7a-a7a6-7903bf8ecd4b",
+  "species": "Domestic Goat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T22:18:41Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 168,
+  "ark_age_years": 0.46,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "5185908a-a930-4da3-a1d0-0cb534bbea6f": {
+  "id": "5185908a-a930-4da3-a1d0-0cb534bbea6f",
+  "species": "Jaguar",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-03T23:16:16Z",
+   "brought_by": "Voyager 3"
+  },
+  "generation": 0,
+  "ark_age_days": 167,
+  "ark_age_years": 0.46,
+  "condition": "hungry",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 3",
+  "story_public": null
+ },
+ "c6c47ca3-e548-45b1-a1b7-39633c8f38cb": {
+  "id": "c6c47ca3-e548-45b1-a1b7-39633c8f38cb",
+  "species": "Snow Leopard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T01:46:15Z",
+   "brought_by": "Voyager 9"
+  },
+  "generation": 0,
+  "ark_age_days": 164,
+  "ark_age_years": 0.45,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 9",
+  "story_public": null
+ },
+ "9e43b42b-fef7-4fa6-ad0c-8b872506b0cb": {
+  "id": "9e43b42b-fef7-4fa6-ad0c-8b872506b0cb",
+  "species": "Grey Heron",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T03:41:14Z",
+   "brought_by": "Voyager 3"
+  },
+  "generation": 0,
+  "ark_age_days": 162,
+  "ark_age_years": 0.44,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 3",
+  "story_public": null
+ },
+ "4b359794-f34d-44db-aa2e-27a5161bcf27": {
+  "id": "4b359794-f34d-44db-aa2e-27a5161bcf27",
+  "species": "Grey Heron",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T04:49:45Z",
+   "brought_by": "Voyager 35"
+  },
+  "generation": 0,
+  "ark_age_days": 161,
+  "ark_age_years": 0.44,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 35",
+  "story_public": null
+ },
+ "4958d077-8bb8-4ded-afd0-820185eb036e": {
+  "id": "4958d077-8bb8-4ded-afd0-820185eb036e",
+  "species": "Humpback Whale",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T06:36:40Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 159,
+  "ark_age_years": 0.44,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "03578306-c0c1-40d9-a6dc-8f4e8ae81fb7": {
+  "id": "03578306-c0c1-40d9-a6dc-8f4e8ae81fb7",
+  "species": "Acorn Barnacle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T06:43:37Z",
+   "brought_by": "Voyager 17"
+  },
+  "generation": 0,
+  "ark_age_days": 159,
+  "ark_age_years": 0.44,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 17",
+  "story_public": null
+ },
+ "c4ef6079-5eb5-4ee9-ab0d-73e832151930": {
+  "id": "c4ef6079-5eb5-4ee9-ab0d-73e832151930",
+  "species": "European Rabbit",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T09:00:11Z",
+   "brought_by": "Voyager 7"
+  },
+  "generation": 0,
+  "ark_age_days": 156,
+  "ark_age_years": 0.43,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 7",
+  "story_public": null
+ },
+ "2b235bb8-548f-46a2-a20a-e75d4ea6d6a0": {
+  "id": "2b235bb8-548f-46a2-a20a-e75d4ea6d6a0",
+  "species": "House Cricket",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T10:59:20Z",
+   "brought_by": "Voyager 38"
+  },
+  "generation": 0,
+  "ark_age_days": 154,
+  "ark_age_years": 0.42,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-05T15:38:06Z"
+  },
+  "ancestor_brought_by": "Voyager 38",
+  "story_public": null
+ },
+ "da345d3c-57cc-457c-a6da-20e4b73cba77": {
+  "id": "da345d3c-57cc-457c-a6da-20e4b73cba77",
+  "species": "Great White Shark",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T13:17:22Z",
+   "brought_by": "Voyager 25"
+  },
+  "generation": 0,
+  "ark_age_days": 152,
+  "ark_age_years": 0.42,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 25",
+  "story_public": null
+ },
+ "78bec58b-157a-4323-ad1f-69f5a6b69064": {
+  "id": "78bec58b-157a-4323-ad1f-69f5a6b69064",
+  "species": "Cheetah",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T18:53:47Z",
+   "brought_by": "Voyager 30"
+  },
+  "generation": 0,
+  "ark_age_days": 146,
+  "ark_age_years": 0.4,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 30",
+  "story_public": null
+ },
+ "d608e0a4-aa1e-4c63-a0ae-be558acfbd8d": {
+  "id": "d608e0a4-aa1e-4c63-a0ae-be558acfbd8d",
+  "species": "Emperor Penguin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T20:41:18Z",
+   "brought_by": "Voyager 36"
+  },
+  "generation": 0,
+  "ark_age_days": 144,
+  "ark_age_years": 0.39,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 36",
+  "story_public": null
+ },
+ "3fdc69bd-b591-4960-a39b-6f90867f3c22": {
+  "id": "3fdc69bd-b591-4960-a39b-6f90867f3c22",
+  "species": "Bluefin Tuna",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T22:08:37Z",
+   "brought_by": "Voyager 15"
+  },
+  "generation": 0,
+  "ark_age_days": 142,
+  "ark_age_years": 0.39,
+  "condition": "well_fed",
+  "meals": 1,
+  "last_meal": {
+   "at": "2026-11-09T06:40:00Z",
+   "prey": "Atlantic Herring",
+   "phrase": "herring"
+  },
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 15",
+  "story_public": null
+ },
+ "094572bb-50e4-40c4-af53-61f363a1e576": {
+  "id": "094572bb-50e4-40c4-af53-61f363a1e576",
+  "species": "African Lion",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-04T22:34:55Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 142,
+  "ark_age_years": 0.39,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "dc03b8d9-fc60-4944-a703-238840d2948f": {
+  "id": "dc03b8d9-fc60-4944-a703-238840d2948f",
+  "species": "Atlantic Herring",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T03:22:13Z",
+   "brought_by": "Voyager 27"
+  },
+  "generation": 0,
+  "ark_age_days": 136,
+  "ark_age_years": 0.37,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 27",
+  "story_public": null
+ },
+ "98657eea-14fb-493c-a282-b24c3f8fd2b4": {
+  "id": "98657eea-14fb-493c-a282-b24c3f8fd2b4",
+  "species": "Alpine Ibex",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T05:20:23Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 134,
+  "ark_age_years": 0.37,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "8c103d67-d404-471c-ab3f-2725ba125e02": {
+  "id": "8c103d67-d404-471c-ab3f-2725ba125e02",
+  "species": "African Rock Python",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T06:11:04Z",
+   "brought_by": "Voyager 11"
+  },
+  "generation": 0,
+  "ark_age_days": 133,
+  "ark_age_years": 0.36,
+  "condition": "well_fed",
+  "meals": 1,
+  "last_meal": {
+   "at": "2026-11-09T01:40:00Z",
+   "prey": "European Rabbit",
+   "phrase": "rabbits"
+  },
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 11",
+  "story_public": null
+ },
+ "a8d5ccc3-4692-4fd8-a748-6449084e748a": {
+  "id": "a8d5ccc3-4692-4fd8-a748-6449084e748a",
+  "species": "African Lion",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T08:16:33Z",
+   "brought_by": "Voyager 4"
+  },
+  "generation": 0,
+  "ark_age_days": 131,
+  "ark_age_years": 0.36,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-06T18:03:32Z"
+  },
+  "ancestor_brought_by": "Voyager 4",
+  "story_public": null
+ },
+ "461ed2c0-d188-4a88-aba6-9981e9ebabb5": {
+  "id": "461ed2c0-d188-4a88-aba6-9981e9ebabb5",
+  "species": "Harbor Seal",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T08:20:01Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 131,
+  "ark_age_years": 0.36,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "375736b0-cd15-478f-a820-d2c72ea9e448": {
+  "id": "375736b0-cd15-478f-a820-d2c72ea9e448",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T08:51:06Z",
+   "brought_by": "Voyager 11"
+  },
+  "generation": 0,
+  "ark_age_days": 131,
+  "ark_age_years": 0.36,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 11",
+  "story_public": null
+ },
+ "f1f4b108-7454-4b77-a8c1-a1dfd7df6e8e": {
+  "id": "f1f4b108-7454-4b77-a8c1-a1dfd7df6e8e",
+  "species": "Grey Heron",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T10:44:32Z",
+   "brought_by": "Voyager 3"
+  },
+  "generation": 0,
+  "ark_age_days": 128,
+  "ark_age_years": 0.35,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 3",
+  "story_public": null
+ },
+ "dab90c8b-43b3-42ab-ad4b-5090fb472ae9": {
+  "id": "dab90c8b-43b3-42ab-ad4b-5090fb472ae9",
+  "species": "Atlantic Herring",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T11:43:57Z",
+   "brought_by": "Voyager 30"
+  },
+  "generation": 0,
+  "ark_age_days": 127,
+  "ark_age_years": 0.35,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 30",
+  "story_public": null
+ },
+ "d4f7b720-c0e2-4f38-a8de-082a575449f1": {
+  "id": "d4f7b720-c0e2-4f38-a8de-082a575449f1",
+  "species": "Polar Bear",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T11:59:05Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 127,
+  "ark_age_years": 0.35,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "92e9046f-c2d0-462b-af43-4e0b4275fb11": {
+  "id": "92e9046f-c2d0-462b-af43-4e0b4275fb11",
+  "species": "Green Sea Turtle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T17:12:36Z",
+   "brought_by": "Voyager 36"
+  },
+  "generation": 0,
+  "ark_age_days": 121,
+  "ark_age_years": 0.33,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 36",
+  "story_public": null
+ },
+ "8d41dd79-f8d7-4d1c-a877-d9e94431847f": {
+  "id": "8d41dd79-f8d7-4d1c-a877-d9e94431847f",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T17:14:52Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 121,
+  "ark_age_years": 0.33,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "c608c472-7706-4919-abfc-0856e577516b": {
+  "id": "c608c472-7706-4919-abfc-0856e577516b",
+  "species": "Atlantic Puffin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T22:13:58Z",
+   "brought_by": "Voyager 16"
+  },
+  "generation": 0,
+  "ark_age_days": 116,
+  "ark_age_years": 0.32,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 16",
+  "story_public": null
+ },
+ "123b1d3c-9359-43f4-a7fb-80bc6ef9b2d1": {
+  "id": "123b1d3c-9359-43f4-a7fb-80bc6ef9b2d1",
+  "species": "Capybara",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-05T22:22:51Z",
+   "brought_by": "Voyager 24"
+  },
+  "generation": 0,
+  "ark_age_days": 116,
+  "ark_age_years": 0.32,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-08T00:55:23Z"
+  },
+  "ancestor_brought_by": "Voyager 24",
+  "story_public": null
+ },
+ "68a2bb81-6854-43ff-a3bb-a6248f092731": {
+  "id": "68a2bb81-6854-43ff-a3bb-a6248f092731",
+  "species": "Humpback Whale",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T01:46:15Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 112,
+  "ark_age_years": 0.31,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "c01297d3-3aa5-4065-aaef-1badd84c543c": {
+  "id": "c01297d3-3aa5-4065-aaef-1badd84c543c",
+  "species": "Scarlet Macaw",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T07:06:52Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 106,
+  "ark_age_years": 0.29,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "1dea9a3c-6fc7-409b-ac95-77002d14b86e": {
+  "id": "1dea9a3c-6fc7-409b-ac95-77002d14b86e",
+  "species": "American Lobster",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T08:28:33Z",
+   "brought_by": "Voyager 26"
+  },
+  "generation": 0,
+  "ark_age_days": 105,
+  "ark_age_years": 0.29,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 26",
+  "story_public": null
+ },
+ "51f8ca48-92a7-4a22-acc5-4d23c944384a": {
+  "id": "51f8ca48-92a7-4a22-acc5-4d23c944384a",
+  "species": "Bluefin Tuna",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T09:46:59Z",
+   "brought_by": "Voyager 21"
+  },
+  "generation": 0,
+  "ark_age_days": 103,
+  "ark_age_years": 0.28,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 21",
+  "story_public": null
+ },
+ "04c9a730-25ad-4506-a4a7-e7327a216552": {
+  "id": "04c9a730-25ad-4506-a4a7-e7327a216552",
+  "species": "Green Sea Turtle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T09:54:32Z",
+   "brought_by": "Voyager 14"
+  },
+  "generation": 0,
+  "ark_age_days": 103,
+  "ark_age_years": 0.28,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 14",
+  "story_public": null
+ },
+ "19de67b3-f161-4472-a730-fe605bb7066a": {
+  "id": "19de67b3-f161-4472-a730-fe605bb7066a",
+  "species": "Atlantic Puffin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T12:08:48Z",
+   "brought_by": "Voyager 6"
+  },
+  "generation": 0,
+  "ark_age_days": 101,
+  "ark_age_years": 0.28,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 6",
+  "story_public": null
+ },
+ "b830e5e8-443c-4a6c-a105-982abbd58d42": {
+  "id": "b830e5e8-443c-4a6c-a105-982abbd58d42",
+  "species": "Red-tailed Hawk",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T12:39:07Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 100,
+  "ark_age_years": 0.27,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "22f6e9d3-aeeb-4c03-a622-842d152d6c1f": {
+  "id": "22f6e9d3-aeeb-4c03-a622-842d152d6c1f",
+  "species": "Domestic Dog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T12:56:57Z",
+   "brought_by": "Voyager 20"
+  },
+  "generation": 0,
+  "ark_age_days": 100,
+  "ark_age_years": 0.27,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 20",
+  "story_public": null
+ },
+ "7b437992-06f7-403f-a80e-dbc7c4921029": {
+  "id": "7b437992-06f7-403f-a80e-dbc7c4921029",
+  "species": "Harbor Seal",
+  "status": "eaten",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T14:31:42Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 77,
+  "ark_age_years": 0.21,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-09T11:08:12Z"
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "9cdf63b1-c24c-4dd4-a0ff-b4273d3c09d1": {
+  "id": "9cdf63b1-c24c-4dd4-a0ff-b4273d3c09d1",
+  "species": "Domestic Goat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T15:03:05Z",
+   "brought_by": "Voyager 7"
+  },
+  "generation": 0,
+  "ark_age_days": 98,
+  "ark_age_years": 0.27,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 7",
+  "story_public": null
+ },
+ "355d6f33-9568-448e-abec-ead23c561b8f": {
+  "id": "355d6f33-9568-448e-abec-ead23c561b8f",
+  "species": "House Sparrow",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T15:36:37Z",
+   "brought_by": "Voyager 7"
+  },
+  "generation": 0,
+  "ark_age_days": 97,
+  "ark_age_years": 0.27,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 7",
+  "story_public": null
+ },
+ "17eced97-3ac1-43d9-ae0a-8f129efec5d6": {
+  "id": "17eced97-3ac1-43d9-ae0a-8f129efec5d6",
+  "species": "Scarlet Macaw",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-06T21:51:58Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 90,
+  "ark_age_years": 0.25,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "ab7597b7-ac19-4ef9-a7a4-3cb622c87a6e": {
+  "id": "ab7597b7-ac19-4ef9-a7a4-3cb622c87a6e",
+  "species": "African Bush Elephant",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-07T00:11:22Z",
+   "brought_by": "Voyager 13"
+  },
+  "generation": 0,
+  "ark_age_days": 88,
+  "ark_age_years": 0.24,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 13",
+  "story_public": null
+ },
+ "81f51c8e-0f5e-4f64-a649-e9caedaea812": {
+  "id": "81f51c8e-0f5e-4f64-a649-e9caedaea812",
+  "species": "Roe Deer",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-07T01:22:48Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 86,
+  "ark_age_years": 0.24,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "dbdca5b5-858e-40cd-addb-52aeaab3e81d": {
+  "id": "dbdca5b5-858e-40cd-addb-52aeaab3e81d",
+  "species": "Domestic Goat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-07T12:23:50Z",
+   "brought_by": "Voyager 19"
+  },
+  "generation": 0,
+  "ark_age_days": 75,
+  "ark_age_years": 0.21,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 19",
+  "story_public": null
+ },
+ "a5d957c8-96b4-41b8-a7df-c78203e803f0": {
+  "id": "a5d957c8-96b4-41b8-a7df-c78203e803f0",
+  "species": "Domestic Cat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-07T13:06:51Z",
+   "brought_by": "Voyager 26"
+  },
+  "generation": 0,
+  "ark_age_days": 74,
+  "ark_age_years": 0.2,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 26",
+  "story_public": null
+ },
+ "3ab8af50-7371-45ac-a8dc-0ef35823ee2d": {
+  "id": "3ab8af50-7371-45ac-a8dc-0ef35823ee2d",
+  "species": "Green Sea Turtle",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-07T13:41:01Z",
+   "brought_by": "Voyager 12"
+  },
+  "generation": 0,
+  "ark_age_days": 73,
+  "ark_age_years": 0.2,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 12",
+  "story_public": null
+ },
+ "a6eebb8d-eafd-4710-ade9-7037a2f389ad": {
+  "id": "a6eebb8d-eafd-4710-ade9-7037a2f389ad",
+  "species": "Red Fox",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-07T19:22:12Z",
+   "brought_by": "Voyager 1"
+  },
+  "generation": 0,
+  "ark_age_days": 67,
+  "ark_age_years": 0.18,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-10T05:37:47Z"
+  },
+  "ancestor_brought_by": "Voyager 1",
+  "story_public": null
+ },
+ "3e6f38b8-8229-44d5-ad02-4d65b5c9e4e1": {
+  "id": "3e6f38b8-8229-44d5-ad02-4d65b5c9e4e1",
+  "species": "House Sparrow",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T00:10:14Z",
+   "brought_by": "Voyager 25"
+  },
+  "generation": 0,
+  "ark_age_days": 62,
+  "ark_age_years": 0.17,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 25",
+  "story_public": null
+ },
+ "779c5221-9690-4222-a158-0aef51dcce72": {
+  "id": "779c5221-9690-4222-a158-0aef51dcce72",
+  "species": "Domestic Dog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T01:17:21Z",
+   "brought_by": "Voyager 16"
+  },
+  "generation": 0,
+  "ark_age_days": 61,
+  "ark_age_years": 0.17,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 16",
+  "story_public": null
+ },
+ "17a93615-9be6-4635-a101-17352dd2b315": {
+  "id": "17a93615-9be6-4635-a101-17352dd2b315",
+  "species": "Atlantic Puffin",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T02:27:01Z",
+   "brought_by": "Voyager 10"
+  },
+  "generation": 0,
+  "ark_age_days": 59,
+  "ark_age_years": 0.16,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 10",
+  "story_public": null
+ },
+ "26c15211-34aa-4f72-a4f4-b28fd48e63e0": {
+  "id": "26c15211-34aa-4f72-a4f4-b28fd48e63e0",
+  "species": "Alpine Ibex",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T03:10:47Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 58,
+  "ark_age_years": 0.16,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "65eb0bcb-ac98-4735-aaea-80be267fb898": {
+  "id": "65eb0bcb-ac98-4735-aaea-80be267fb898",
+  "species": "Dromedary Camel",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T04:26:35Z",
+   "brought_by": "Voyager 19"
+  },
+  "generation": 0,
+  "ark_age_days": 57,
+  "ark_age_years": 0.16,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 19",
+  "story_public": null
+ },
+ "da37e9d2-a6ce-4d4b-a292-e5f18ed76115": {
+  "id": "da37e9d2-a6ce-4d4b-a292-e5f18ed76115",
+  "species": "Plains Zebra",
+  "status": "eaten",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T06:36:42Z",
+   "brought_by": "Voyager 10"
+  },
+  "generation": 0,
+  "ark_age_days": -17,
+  "ark_age_years": -0.05,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 10",
+  "story_public": null
+ },
+ "27628794-dacf-4a40-a573-b0768e68fb78": {
+  "id": "27628794-dacf-4a40-a573-b0768e68fb78",
+  "species": "Grey Heron",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T07:50:50Z",
+   "brought_by": "Voyager 23"
+  },
+  "generation": 0,
+  "ark_age_days": 53,
+  "ark_age_years": 0.15,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 23",
+  "story_public": null
+ },
+ "e25b80a7-e84b-4c4c-a0dd-e7e318fbb8f6": {
+  "id": "e25b80a7-e84b-4c4c-a0dd-e7e318fbb8f6",
+  "species": "Mallard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T09:56:49Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 51,
+  "ark_age_years": 0.14,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "ee68875e-973e-4e25-a0a1-99706f6da7b7": {
+  "id": "ee68875e-973e-4e25-a0a1-99706f6da7b7",
+  "species": "American Alligator",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T12:12:27Z",
+   "brought_by": "Voyager 32"
+  },
+  "generation": 0,
+  "ark_age_days": 49,
+  "ark_age_years": 0.13,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-10T10:04:06Z"
+  },
+  "ancestor_brought_by": "Voyager 32",
+  "story_public": null
+ },
+ "fb128e0c-26ed-4365-a5ae-43893c8df0a1": {
+  "id": "fb128e0c-26ed-4365-a5ae-43893c8df0a1",
+  "species": "Dromedary Camel",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T12:35:39Z",
+   "brought_by": "Voyager 3"
+  },
+  "generation": 0,
+  "ark_age_days": 48,
+  "ark_age_years": 0.13,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 3",
+  "story_public": null
+ },
+ "82fe3303-e539-480a-a235-7d67ff291d5b": {
+  "id": "82fe3303-e539-480a-a235-7d67ff291d5b",
+  "species": "Harbor Seal",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T15:41:50Z",
+   "brought_by": "Voyager 9"
+  },
+  "generation": 0,
+  "ark_age_days": 45,
+  "ark_age_years": 0.12,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 9",
+  "story_public": null
+ },
+ "0e7bd7d1-3b0c-42ad-a663-ba4004b0fe6b": {
+  "id": "0e7bd7d1-3b0c-42ad-a663-ba4004b0fe6b",
+  "species": "African Lion",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T18:05:39Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 42,
+  "ark_age_years": 0.12,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "f133c90e-1c26-4675-a61f-fbd141c09c2b": {
+  "id": "f133c90e-1c26-4675-a61f-fbd141c09c2b",
+  "species": "Harbor Seal",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-08T22:02:39Z",
+   "brought_by": "Voyager 18"
+  },
+  "generation": 0,
+  "ark_age_days": 38,
+  "ark_age_years": 0.1,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 18",
+  "story_public": null
+ },
+ "a68ebff1-3481-4c81-ac4c-1c2dc9b0292c": {
+  "id": "a68ebff1-3481-4c81-ac4c-1c2dc9b0292c",
+  "species": "Red Fox",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T04:11:36Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 31,
+  "ark_age_years": 0.08,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "367df66c-77b8-4482-af5e-a47441410701": {
+  "id": "367df66c-77b8-4482-af5e-a47441410701",
+  "species": "African Clawed Frog",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T06:52:43Z",
+   "brought_by": "Voyager 33"
+  },
+  "generation": 0,
+  "ark_age_days": 28,
+  "ark_age_years": 0.08,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 33",
+  "story_public": null
+ },
+ "87af4a90-b378-41a2-ad5d-bc3acc8b7ab8": {
+  "id": "87af4a90-b378-41a2-ad5d-bc3acc8b7ab8",
+  "species": "Capybara",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T12:53:59Z",
+   "brought_by": "Voyager 34"
+  },
+  "generation": 0,
+  "ark_age_days": 22,
+  "ark_age_years": 0.06,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 34",
+  "story_public": null
+ },
+ "9852863d-0e9d-4412-aabd-cdcf82877a1e": {
+  "id": "9852863d-0e9d-4412-aabd-cdcf82877a1e",
+  "species": "Alpine Ibex",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T13:25:15Z",
+   "brought_by": "Voyager 14"
+  },
+  "generation": 0,
+  "ark_age_days": 21,
+  "ark_age_years": 0.06,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 14",
+  "story_public": null
+ },
+ "3e0abc89-599b-4dfc-af89-1f793fbab266": {
+  "id": "3e0abc89-599b-4dfc-af89-1f793fbab266",
+  "species": "Mallard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T19:27:52Z",
+   "brought_by": "Voyager 21"
+  },
+  "generation": 0,
+  "ark_age_days": 15,
+  "ark_age_years": 0.04,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-12T11:12:38Z"
+  },
+  "ancestor_brought_by": "Voyager 21",
+  "story_public": null
+ },
+ "cbff26f9-5d25-4e99-a02e-5aa37a489190": {
+  "id": "cbff26f9-5d25-4e99-a02e-5aa37a489190",
+  "species": "African Lion",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T20:51:21Z",
+   "brought_by": "Voyager 13"
+  },
+  "generation": 0,
+  "ark_age_days": 13,
+  "ark_age_years": 0.04,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 13",
+  "story_public": null
+ },
+ "42d20f3d-f72a-40cd-ac9a-00ea118c58d2": {
+  "id": "42d20f3d-f72a-40cd-ac9a-00ea118c58d2",
+  "species": "House Sparrow",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T21:11:29Z",
+   "brought_by": "Voyager 5"
+  },
+  "generation": 0,
+  "ark_age_days": 13,
+  "ark_age_years": 0.04,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 5",
+  "story_public": null
+ },
+ "dd7e0246-54ab-475d-a973-bfb54e41df52": {
+  "id": "dd7e0246-54ab-475d-a973-bfb54e41df52",
+  "species": "Domestic Goat",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-09T22:39:23Z",
+   "brought_by": "Voyager 13"
+  },
+  "generation": 0,
+  "ark_age_days": 11,
+  "ark_age_years": 0.03,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 13",
+  "story_public": null
+ },
+ "466893cf-d05a-441d-ab03-a5e35e44f0b0": {
+  "id": "466893cf-d05a-441d-ab03-a5e35e44f0b0",
+  "species": "Eurasian Wolf",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-10T01:36:53Z",
+   "brought_by": "Voyager 2"
+  },
+  "generation": 0,
+  "ark_age_days": 8,
+  "ark_age_years": 0.02,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 2",
+  "story_public": null
+ },
+ "683db5bd-f838-4431-a398-5de41552c615": {
+  "id": "683db5bd-f838-4431-a398-5de41552c615",
+  "species": "Capybara",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-10T02:44:32Z",
+   "brought_by": "Voyager 10"
+  },
+  "generation": 0,
+  "ark_age_days": 7,
+  "ark_age_years": 0.02,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 10",
+  "story_public": null
+ },
+ "1b3d9450-d879-4958-a945-e0d235e96e82": {
+  "id": "1b3d9450-d879-4958-a945-e0d235e96e82",
+  "species": "Atlantic Trumpetfish",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-10T02:50:43Z",
+   "brought_by": "Voyager 6"
+  },
+  "generation": 0,
+  "ark_age_days": 7,
+  "ark_age_years": 0.02,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 6",
+  "story_public": null
+ },
+ "edba14b2-780c-4181-ad50-4c858e2ad813": {
+  "id": "edba14b2-780c-4181-ad50-4c858e2ad813",
+  "species": "Mallard",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-10T03:07:37Z",
+   "brought_by": "Voyager 32"
+  },
+  "generation": 0,
+  "ark_age_days": 6,
+  "ark_age_years": 0.02,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 32",
+  "story_public": null
+ },
+ "add2ed98-1a4a-47a9-af7b-8cecd090e232": {
+  "id": "add2ed98-1a4a-47a9-af7b-8cecd090e232",
+  "species": "Arctic Fox",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-10T03:40:57Z",
+   "brought_by": "Voyager 14"
+  },
+  "generation": 0,
+  "ark_age_days": 6,
+  "ark_age_years": 0.02,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 14",
+  "story_public": null
+ },
+ "fa430525-ac5b-4769-a935-a752743c1a9f": {
+  "id": "fa430525-ac5b-4769-a935-a752743c1a9f",
+  "species": "Grey Heron",
+  "status": "present",
+  "origin": {
+   "kind": "arrived",
+   "at": "2026-11-10T05:00:50Z",
+   "brought_by": "Voyager 23"
+  },
+  "generation": 0,
+  "ark_age_days": 4,
+  "ark_age_years": 0.01,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 1,
+   "latest": "2026-11-11T20:30:13Z"
+  },
+  "ancestor_brought_by": "Voyager 23",
+  "story_public": null
+ },
+ "d0440992-5d7c-4db8-a35b-741f8ca88ed4": {
+  "id": "d0440992-5d7c-4db8-a35b-741f8ca88ed4",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "born",
+   "at": "2026-11-08T19:30:00Z",
+   "parents": [
+    "6033a1c6-0321-47e9-afcb-022e395ec23e",
+    "6850b3b4-34aa-4d53-a77c-120ce3a2a177"
+   ],
+   "parents_brought_by": [
+    "Voyager 35",
+    "Voyager 13"
+   ]
+  },
+  "generation": 1,
+  "ark_age_days": 41,
+  "ark_age_years": 0.11,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 35",
+  "story_public": null
+ },
+ "6983e1ac-e5e7-489b-a741-7da848e9779d": {
+  "id": "6983e1ac-e5e7-489b-a741-7da848e9779d",
+  "species": "Plains Zebra",
+  "status": "present",
+  "origin": {
+   "kind": "born",
+   "at": "2026-11-08T19:30:00Z",
+   "parents": [
+    "6033a1c6-0321-47e9-afcb-022e395ec23e",
+    "6850b3b4-34aa-4d53-a77c-120ce3a2a177"
+   ],
+   "parents_brought_by": [
+    "Voyager 35",
+    "Voyager 13"
+   ]
+  },
+  "generation": 1,
+  "ark_age_days": 41,
+  "ark_age_years": 0.11,
+  "condition": "well_fed",
+  "meals": 0,
+  "last_meal": null,
+  "young_raised": 0,
+  "milestones": {
+   "count": 0,
+   "latest": null
+  },
+  "ancestor_brought_by": "Voyager 35",
+  "story_public": null
+ }
+}

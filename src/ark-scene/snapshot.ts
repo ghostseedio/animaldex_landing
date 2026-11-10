@@ -1,10 +1,11 @@
 /**
- * `voyage_public_v1`'s answer, checked: anything malformed is dropped (an
+ * `voyage_public_v1`'s (or v2's) answer, checked: anything malformed is dropped (an
  * animal with an unknown zone stands in the Home region, as the server
  * places a species it has no zone for), never the whole Ark.
  */
 
 import {ARK_ZONES, type ArkAnimal, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
+import {arkActivity} from "@/lib/ark-daylight";
 
 const ZONES = new Set<string>(ARK_ZONES);
 
@@ -27,9 +28,28 @@ function animal(raw: unknown): ArkAnimal | null {
     const id = text(row.id);
     const slug = text(row.model_slug);
     const name = text(row.name);
-    const arrived = text(row.arrived_at);
+    // A young one born aboard: its birth stands for its arrival.
+    const arrived = text(row.arrived_at) ?? text(row.born_at);
     if (!id || !slug || !name || !arrived) return null;
     const by = row.brought_by && typeof row.brought_by === "object" ? row.brought_by as Record<string, unknown> : {};
+    const bringers = (Array.isArray(row.bringers) ? row.bringers : [])
+        .map((b) => (b && typeof b === "object" ? b as Record<string, unknown> : null))
+        .filter((b): b is Record<string, unknown> => b !== null && Boolean(text(b.label)))
+        .slice(0, 4)
+        .map((b) => ({label: text(b.label) as string, named: b.named === true}));
+    const parents = Array.isArray(row.parents) ? row.parents.map(text).filter((p): p is string => Boolean(p)) : [];
+    const generation = Number(row.generation);
+    const bornDay = Number(row.born_ark_day);
+    // v2's fields, each only when the server sent it.
+    const life: Partial<ArkAnimal> = {};
+    if (row.origin === "arrived" || row.origin === "born") life.origin = row.origin;
+    if (Number.isFinite(generation) && generation >= 0) life.generation = Math.floor(generation);
+    if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
+    if (row.born_ark_day !== null && row.born_ark_day !== undefined && Number.isFinite(bornDay)) life.born_ark_day = bornDay;
+    if ("activity" in row) life.activity = arkActivity(row.activity);
+    if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
+    if (bringers.length) life.bringers = bringers;
+    if (parents.length === 2) life.parents = [parents[0], parents[1]];
     return {
         id,
         species_profile_id: text(row.species_profile_id) ?? "",
@@ -39,7 +59,8 @@ function animal(raw: unknown): ArkAnimal | null {
         zone: zone(row.zone),
         arrived_at: arrived,
         brought_by: {label: text(by.label) ?? "", named: by.named === true},
-        mine: row.mine === true
+        mine: row.mine === true,
+        ...life
     };
 }
 
@@ -63,6 +84,7 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         },
         zones,
         animals: animals.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at)),
-        as_of: text(row.as_of)
+        as_of: text(row.as_of),
+        ...(Number.isFinite(Number(row.ark_day)) && row.ark_day !== null && row.ark_day !== undefined ? {ark_day: Number(row.ark_day)} : {})
     };
 }

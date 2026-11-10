@@ -3,12 +3,24 @@
  * shadows, and value noise in world space.
  */
 
-import {Vector2, Vector3} from "three";
+import {Color, Vector2, Vector3} from "three";
 
 /** Seconds, for water, wind, clouds and anything else that moves on its own. */
 export const ARK_TIME = {value: 0};
 /** Where the sun is (normalised, pointing at it). */
 export const ARK_SUN = {value: new Vector3(-0.8, 0.32, -0.5).normalize()};
+/**
+ * The light of the hour (`daylight.ts`), for the materials that light
+ * themselves: the water's sky and body, the icons. 1 at full day, about 0.2
+ * at night.
+ */
+export const ARK_DAYLIGHT = {value: 1};
+/** The sky's horizon and zenith as the water reflects them, and the glint's colour (the sun's, or the moon's). */
+export const ARK_SKY_HORIZON = {value: new Color("#e3d4bf")};
+export const ARK_SKY_ZENITH = {value: new Color("#7fa2c0")};
+export const ARK_GLINT = {value: new Color("#fff0d6")};
+/** The warm rim on the animals (`animal-material.ts`): its colour times its strength this hour. */
+export const ARK_RIM = {value: new Color(1.0, 0.82, 0.6).multiplyScalar(0.22)};
 /** Wind: direction and strength, for grass, reeds, trees and clouds. */
 export const ARK_WIND = {value: new Vector2(0.8, 0.35)};
 

@@ -1,6 +1,7 @@
 /**
  * The animals' material: the skin, lit like the rest of the world, drawn
- * instanced. Each instance carries `arkInstance` = (phase, dim).
+ * instanced. Each instance carries `arkInstance` = (phase, dim, rest): rest
+ * is 1 asleep (still, the head lowered, breathing slow).
  *
  * The near level moves on its own: the call's idle motion
  * (`talking-model-renderer.ts`: breathing, the slow sway and look round, and
@@ -16,6 +17,7 @@
 import {Color, MeshStandardMaterial, type Texture} from "three";
 import {motionUniforms, type TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {SKY} from "@/ark-scene/palettes";
+import {ARK_RIM} from "@/ark-scene/glsl";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -59,6 +61,7 @@ const MOTION_BODY = `
 
 const MOTION_DECLARATIONS = `
 uniform float arkClock;
+uniform float arkDroop;
 uniform float motionKind;
 uniform float motionAxis;
 uniform float motionAmp;
@@ -80,16 +83,34 @@ const IDLE = `
 {
     vec3 arkOrigin = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     float motionGain = 1.0 - smoothstep(18.0, 25.0, distance(arkOrigin, cameraPosition));
+    // Asleep (the hour and the species' activity): still, the head down, breathing slow.
+    float arkRest = arkInstance.z;
+    if (arkRest > 0.001 && arkDroop > 0.0) {
+        float headFrom = motionStill - (motionStill - motionRear) * 0.14;
+        float into = smoothstep(headFrom, motionStill + 0.04, transformed.z);
+        float droop = arkDroop * arkRest * into;
+        float py = mix(motionBottom, motionTop, 0.7);
+        float dy = transformed.y - py;
+        float dz = transformed.z - headFrom;
+        float cd = cos(droop);
+        float sd = sin(droop);
+        transformed.y = py + dy * cd - dz * sd;
+        transformed.z = headFrom + dy * sd + dz * cd;
+    }
     if (motionGain > 0.0) {
+        float awake = motionGain * (1.0 - 0.9 * arkRest);
         float motionClock = arkClock + arkInstance.x * 61.0;
         // A tail wags now and then, not all the time.
-        float tailAngle = motionGain * 0.28 * sin(motionClock * 2.6) * smoothstep(0.4, 0.8, sin(motionClock * 0.23 + arkInstance.x * 9.0));
-        ${MOTION_BODY}
-        // Breathing, and the call's slow sway and look round (its root motion).
-        float breathe = 1.0 + 0.012 * motionGain * sin(motionClock * 1.7);
+        float tailAngle = awake * 0.28 * sin(motionClock * 2.6) * smoothstep(0.4, 0.8, sin(motionClock * 0.23 + arkInstance.x * 9.0));
+        {
+            float motionGain = awake;
+            ${MOTION_BODY}
+        }
+        // Breathing (slower and deeper asleep), and the call's slow sway and look round (its root motion).
+        float breathe = 1.0 + motionGain * mix(0.012 * sin(motionClock * 1.7), 0.018 * sin(motionClock * 0.9), arkRest);
         transformed.y = motionBottom + (transformed.y - motionBottom) * breathe;
-        float yaw = 0.07 * motionGain * sin(motionClock * 0.29);
-        float pitch = 0.02 * motionGain * sin(motionClock * 0.61);
+        float yaw = 0.07 * awake * sin(motionClock * 0.29);
+        float pitch = 0.02 * awake * sin(motionClock * 0.61);
         float cy = cos(yaw);
         float sy = sin(yaw);
         transformed.xz = vec2(cy * transformed.x + sy * transformed.z, -sy * transformed.x + cy * transformed.z);
@@ -100,6 +121,8 @@ const IDLE = `
 }
 #endif
 `;
+
+const DROOPING_PLANS = new Set(["mammal", "bird", "reptile", "frog", "turtle"]);
 
 export type AnimalMaterialOptions = {
     map: Texture | null;
@@ -131,6 +154,9 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     const uniforms: Record<string, {value: unknown}> = {
         arkClock: ARK_CLOCK,
         arkDimTint: {value: new Color(SKY.horizon)},
+        arkRim: ARK_RIM,
+        // How far the head goes down asleep: animals with a head and neck to lower.
+        arkDroop: {value: DROOPING_PLANS.has(options.behaviour?.plan ?? "") ? 0.32 : 0},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}]))
     };
     if (options.animated) material.defines = {ARK_MOTION: ""};
@@ -139,7 +165,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>
-attribute vec2 arkInstance;
+attribute vec3 arkInstance;
 varying float vArkDim;
 ${MOTION_DECLARATIONS}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
@@ -148,9 +174,10 @@ ${IDLE}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying float vArkDim;
-uniform vec3 arkDimTint;`)
+uniform vec3 arkDimTint;
+uniform vec3 arkRim;`)
             .replace("#include <opaque_fragment>", `// A warm rim where the surface turns away: the low sun catching fur and feathers at the edge.
-outgoingLight += vec3(1.0, 0.82, 0.6) * pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0) * 0.22 * (1.0 - vArkDim);
+outgoingLight += arkRim * pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0) * (1.0 - vArkDim);
 #include <opaque_fragment>
 {
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));

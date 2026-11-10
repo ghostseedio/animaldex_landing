@@ -31,7 +31,7 @@ import {
     UniformsUtils,
     type BufferGeometry
 } from "three";
-import {ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
+import {ARK_DAYLIGHT, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
 
@@ -294,6 +294,7 @@ uniform vec3 skyZenith;
 uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 foamColor;
+uniform float daylight;
 varying vec3 vWorld;
 ${NOISE_GLSL}
 ${CLOUD_GLSL}
@@ -341,7 +342,7 @@ void main() {
     body = mix(body, deep, smoothstep(4.0, 11.0, depth));
     body = mix(body, reef, reefy * (1.0 - smoothstep(2.0, 6.5, depth)) * 0.9);
     body = mix(body, lake * mix(1.0, 0.8, smoothstep(0.5, 3.0, depth)), fresh);
-    body *= arkCloudShade(vWorld);
+    body *= arkCloudShade(vWorld) * mix(0.1, 1.0, daylight * daylight);
 
     // The sky in it (Fresnel), and the low sun's glint.
     float facing = max(dot(n, view), 0.0);
@@ -357,7 +358,7 @@ void main() {
     float lines = smoothstep(0.65, 1.0, sin(depth * 9.0 - arkTime * 1.4 + arkNoise(vWorld.xz * 0.5) * 3.0));
     float lace = smoothstep(0.35, 0.75, arkNoise(vWorld.xz * 1.8 + arkTime * 0.3));
     float foam = shore * (lines * 0.55 + (1.0 - smoothstep(0.0, 0.18, depth)) * 0.9) * mix(0.55, 1.0, lace) * inside * (1.0 - fresh * 0.75);
-    colour = mix(colour, foamColor, clamp(foam, 0.0, 0.9));
+    colour = mix(colour, foamColor * mix(0.2, 1.0, daylight), clamp(foam, 0.0, 0.9));
 
     // Clear in the shallows, so what lives there shows through; opaque where it's deep.
     float alpha = mix(0.32, 1.0, smoothstep(0.1, 5.0, depth));
@@ -390,7 +391,8 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
                 sunColor: {value: srgb("#fff0d6")},
                 foamColor: {value: srgb("#f4f1ea")},
                 arkTime: {value: 0},
-                arkWind: {value: null}
+                arkWind: {value: null},
+                daylight: {value: 1}
             }
         ]),
         transparent: true,
@@ -402,6 +404,11 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
     material.uniforms.arkTime = ARK_TIME;
     material.uniforms.arkWind = ARK_WIND;
     material.uniforms.sunDirection = ARK_SUN;
+    // The hour's light (`daylight.ts`): the sky it reflects, the glint (the moon's at night), how lit the water is.
+    material.uniforms.skyHorizon = ARK_SKY_HORIZON;
+    material.uniforms.skyZenith = ARK_SKY_ZENITH;
+    material.uniforms.sunColor = ARK_GLINT;
+    material.uniforms.daylight = ARK_DAYLIGHT;
     const geometry = new PlaneGeometry(4000, 4000, 1, 1);
     geometry.rotateX(-Math.PI / 2);
     const mesh = new Mesh(geometry, material);

@@ -27,6 +27,7 @@ import {
     Vector3,
     type Camera
 } from "three";
+import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
 
 const CELL = 128;
 const PAD = 6;
@@ -84,6 +85,7 @@ uniform vec3 dimTint;
 varying vec2 vUv;
 varying vec4 vCell;
 varying vec4 vState;
+uniform float daylight;
 vec4 cellSample(vec2 at, float bias) {
     if (at.x <= 0.0 || at.x >= 1.0 || at.y <= 0.0 || at.y >= 1.0) return vec4(0.0);
     return texture2D(atlas, vCell.xy + at * vCell.zw, bias);
@@ -108,6 +110,8 @@ void main() {
     }
     float grey = dot(colour, vec3(0.299, 0.587, 0.114));
     colour = mix(colour, mix(vec3(grey), dimTint, 0.5), vState.x * 0.7);
+    // Dimmer at night, as everything lit is.
+    colour *= mix(0.5, 1.0, daylight);
     alpha *= 1.0 - 0.5 * vState.x;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(colour, alpha);
@@ -166,6 +170,7 @@ export class IconTokens {
             fog: true
         });
         this.material.uniforms.atlas.value = this.texture;
+        this.material.uniforms.daylight = ARK_DAYLIGHT;
         this.mesh = new InstancedMesh(new PlaneGeometry(1, 1), this.material, 1);
         this.mesh.frustumCulled = false;
         this.mesh.renderOrder = 5;

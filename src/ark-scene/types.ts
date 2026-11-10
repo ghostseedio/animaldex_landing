@@ -1,3 +1,6 @@
+import type {ArkActivity} from "@/lib/ark-daylight";
+import type {ArkAct} from "@/lib/ark-life";
+
 /**
  * The shared Ark's data, as `voyage_public_v1` returns it (Ark v1 contract,
  * section 2), and the scene's interface (section 5).
@@ -37,6 +40,11 @@ export const ZONE_REGION: Record<ArkZone, ArkRegion> = Object.fromEntries(
     ARK_REGIONS.flatMap((region) => REGION_ZONES[region].map((zone) => [zone, region]))
 ) as Record<ArkZone, ArkRegion>;
 
+/** How an animal is doing, as the server says (`voyage_public_v2`). */
+export type ArkCondition = "well_fed" | "hungry" | "old";
+/** The species' stored social life: `group` gathers in a cluster, `pair` stays close. */
+export type ArkSociality = "solitary" | "pair" | "group";
+
 export type ArkAnimal = {
     id: string;
     species_profile_id: string;
@@ -47,6 +55,20 @@ export type ArkAnimal = {
     arrived_at: string;
     brought_by: {label: string; named: boolean};
     mine: boolean;
+    // Ark life v2 (`voyage_public_v2`): absent from a v1 snapshot.
+    /** Came aboard after a step, or was born on the Ark. */
+    origin?: "arrived" | "born";
+    /** 0 for an arrival, a parent's plus one for the young. */
+    generation?: number;
+    condition?: ArkCondition | null;
+    born_ark_day?: number | null;
+    /** The species' stored activity: when it sleeps (the scene's day and night). */
+    activity?: ArkActivity | null;
+    sociality?: ArkSociality | null;
+    /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
+    bringers?: Array<{label: string; named: boolean}>;
+    /** The young's parents (animal ids), so it stands beside them. */
+    parents?: [string, string] | null;
 };
 
 export type ArkSnapshot = {
@@ -55,6 +77,8 @@ export type ArkSnapshot = {
     zones: Array<{key: ArkZone; animals: number}>;
     animals: ArkAnimal[];
     as_of: string | null;
+    /** The Ark's own day (v2): 1 Ark year = 14 real days, counted by the server. */
+    ark_day?: number | null;
 };
 
 export type ArkSceneStats = {
@@ -90,7 +114,14 @@ export type ArkSceneOptions = {
      * swapped in while an animal talks. Default: `modelBase` without its trailing `/ark`.
      */
     talkingBase?: string;
+    /** A fixed hour (0–24) for the light and who is asleep; default: the viewer's clock, read every minute. */
+    hours?: number | null;
+    /** The camera stopped following (a drag, or the animal left). */
+    onFollowEnd?: () => void;
 };
+
+/** A replay running (`play`): skip it to jump to the Ark as it is now. */
+export type ArkReplayRun = {skip: () => void; done: Promise<void>};
 
 /** The chat's animal shown in the Ark while none of its kind is aboard: never counted, only in a panel beside its chat. */
 export type ArkVisitor = {slug: string; name: string; /** Its label in the scene, e.g. "Visiting: not aboard yet". */ label: string};
@@ -127,6 +158,17 @@ export type ArkSceneHandle = {
     talkPulse: (level: number) => void;
     /** Fly to a region, or back to the whole world with null. */
     focusRegion: (region: ArkRegion | null) => void;
+    /** The camera follows this animal until any drag (or null to stop). */
+    follow: (id: string | null) => void;
+    /** Pin the hour (0–24), or back to the viewer's clock with null. */
+    setHours: (hours: number | null) => void;
+    /**
+     * Act out what the server says happened ("while you were away"): each act
+     * in turn, at speed, from the Ark as it is now (who arrived is held back
+     * until its act, who was eaten or died stands in until then). Never
+     * decides anything: the acts come from the event log.
+     */
+    play: (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}) => ArkReplayRun;
     stats: () => ArkSceneStats;
     dispose: () => void;
 };

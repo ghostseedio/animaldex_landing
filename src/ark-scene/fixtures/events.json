@@ -1,0 +1,2894 @@
+[
+ {
+  "id": "1",
+  "kind": "arrival",
+  "at": "2026-10-30T09:16:01Z",
+  "ark_day": 0,
+  "animal": {
+   "id": "e70fa67a-7e60-4968-ab05-74033872434c",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-30T09:16:01Z"
+  },
+  "bringers": [
+   "Voyager 17"
+  ]
+ },
+ {
+  "id": "2",
+  "kind": "arrival",
+  "at": "2026-10-30T12:04:21Z",
+  "ark_day": 3,
+  "animal": {
+   "id": "843e7b90-0225-4040-a2f8-5422c8fd6835",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-10-30T12:04:21Z"
+  },
+  "bringers": [
+   "Voyager 26"
+  ]
+ },
+ {
+  "id": "3",
+  "kind": "arrival",
+  "at": "2026-10-30T13:12:17Z",
+  "ark_day": 4.3,
+  "animal": {
+   "id": "9650250d-035d-4e7a-a21c-dd4520530606",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-10-30T13:12:17Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "4",
+  "kind": "arrival",
+  "at": "2026-10-30T14:02:24Z",
+  "ark_day": 5.2,
+  "animal": {
+   "id": "68bd4158-a6eb-438c-ae02-a4e9191cdf8b",
+   "species_profile_id": "555cb6c8-a84b-4174-af25-69f16aa89fac",
+   "name": "Domestic Cat",
+   "model_slug": "domestic-cat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-30T14:02:24Z"
+  },
+  "bringers": [
+   "Voyager 4"
+  ]
+ },
+ {
+  "id": "5",
+  "kind": "arrival",
+  "at": "2026-10-30T14:08:20Z",
+  "ark_day": 5.3,
+  "animal": {
+   "id": "71d8b7c4-eff8-4472-a771-3323be8b7a22",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-30T14:08:20Z"
+  },
+  "bringers": [
+   "Voyager 33"
+  ]
+ },
+ {
+  "id": "6",
+  "kind": "arrival",
+  "at": "2026-10-30T14:08:21Z",
+  "ark_day": 5.3,
+  "animal": {
+   "id": "3eb4e7df-2da8-4468-acd6-0a1d619c020e",
+   "species_profile_id": "c93861b3-507c-4a02-be8c-ee2a78f42059",
+   "name": "Dromedary Camel",
+   "model_slug": "dromedary-camel",
+   "zone": "desert",
+   "arrived_at": "2026-10-30T14:08:21Z"
+  },
+  "bringers": [
+   "Voyager 8"
+  ]
+ },
+ {
+  "id": "7",
+  "kind": "arrival",
+  "at": "2026-10-30T14:08:31Z",
+  "ark_day": 5.3,
+  "animal": {
+   "id": "30eb9944-5374-4f2f-a5df-ae91963bc44b",
+   "species_profile_id": "951cf99f-fbaf-4148-8607-243d0886fc6e",
+   "name": "Great White Shark",
+   "model_slug": "great-white-shark",
+   "zone": "open_ocean",
+   "arrived_at": "2026-10-30T14:08:31Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "8",
+  "kind": "arrival",
+  "at": "2026-10-30T15:39:00Z",
+  "ark_day": 6.9,
+  "animal": {
+   "id": "408ac1de-1f71-47bf-a57e-167450b47931",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-10-30T15:39:00Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "9",
+  "kind": "arrival",
+  "at": "2026-10-30T17:24:06Z",
+  "ark_day": 8.8,
+  "animal": {
+   "id": "6033a1c6-0321-47e9-afcb-022e395ec23e",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-10-30T17:24:06Z"
+  },
+  "bringers": [
+   "Voyager 35"
+  ]
+ },
+ {
+  "id": "10",
+  "kind": "arrival",
+  "at": "2026-10-30T19:55:41Z",
+  "ark_day": 11.6,
+  "animal": {
+   "id": "81b3a682-715b-4832-a25e-bbfe0ced231c",
+   "species_profile_id": "221476ab-f99f-433b-98f0-806952ae871c",
+   "name": "African Clawed Frog",
+   "model_slug": "african-clawed-frog",
+   "zone": "river_lake",
+   "arrived_at": "2026-10-30T19:55:41Z"
+  },
+  "bringers": [
+   "Voyager 32"
+  ]
+ },
+ {
+  "id": "11",
+  "kind": "arrival",
+  "at": "2026-10-30T23:02:42Z",
+  "ark_day": 15,
+  "animal": {
+   "id": "d11e283d-9235-4caa-a41c-2c8096bb1281",
+   "species_profile_id": "dd6c1cdd-777d-466b-a70b-3f9176c6552f",
+   "name": "Golden Eagle",
+   "model_slug": "golden-eagle",
+   "zone": "mountains",
+   "arrived_at": "2026-10-30T23:02:42Z"
+  },
+  "bringers": [
+   "Voyager 8"
+  ]
+ },
+ {
+  "id": "12",
+  "kind": "arrival",
+  "at": "2026-10-30T23:31:33Z",
+  "ark_day": 15.5,
+  "animal": {
+   "id": "0b92b235-df9b-4c94-a2e8-9eb329c092cd",
+   "species_profile_id": "7e428b17-f4e6-4a74-a5c2-22307c871dda",
+   "name": "Fennec Fox",
+   "model_slug": "fennec-fox",
+   "zone": "desert",
+   "arrived_at": "2026-10-30T23:31:33Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "13",
+  "kind": "arrival",
+  "at": "2026-10-31T04:07:42Z",
+  "ark_day": 20.5,
+  "animal": {
+   "id": "1f7a900b-fb6e-4172-a114-ad0420d13917",
+   "species_profile_id": "94b20d06-3ffd-430c-81ad-f0393251a38f",
+   "name": "Emperor Penguin",
+   "model_slug": "emperor-penguin",
+   "zone": "polar",
+   "arrived_at": "2026-10-31T04:07:42Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "14",
+  "kind": "arrival",
+  "at": "2026-10-31T05:16:52Z",
+  "ark_day": 21.7,
+  "animal": {
+   "id": "24f42634-bcc3-4e01-a237-c3e9eb5f5684",
+   "species_profile_id": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
+   "name": "Red Fox",
+   "model_slug": "red-fox",
+   "zone": "woodland",
+   "arrived_at": "2026-10-31T05:16:52Z"
+  },
+  "bringers": [
+   "Voyager 37"
+  ]
+ },
+ {
+  "id": "15",
+  "kind": "arrival",
+  "at": "2026-10-31T06:42:34Z",
+  "ark_day": 23.3,
+  "animal": {
+   "id": "9a6cafd6-34d2-4572-a917-6b142cfbcd29",
+   "species_profile_id": "2636e62a-6f59-4a98-9289-a8e5c130c4b3",
+   "name": "Scarlet Macaw",
+   "model_slug": "scarlet-macaw",
+   "zone": "rainforest",
+   "arrived_at": "2026-10-31T06:42:34Z"
+  },
+  "bringers": [
+   "Voyager 28"
+  ]
+ },
+ {
+  "id": "16",
+  "kind": "arrival",
+  "at": "2026-10-31T08:20:20Z",
+  "ark_day": 25.1,
+  "animal": {
+   "id": "7a5d3f22-85c2-4d55-a3b5-b0225f578ab3",
+   "species_profile_id": "97d337c1-dc48-4b01-aaca-57bd9cb65a57",
+   "name": "House Sparrow",
+   "model_slug": "house-sparrow",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-31T08:20:20Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "17",
+  "kind": "arrival",
+  "at": "2026-10-31T09:11:02Z",
+  "ark_day": 26,
+  "animal": {
+   "id": "bab5293b-9d8f-4893-a64a-80e082e1955a",
+   "species_profile_id": "9923af79-7ca3-411d-b232-5668b7c3c5ba",
+   "name": "African Bush Elephant",
+   "model_slug": "african-bush-elephant",
+   "zone": "grassland",
+   "arrived_at": "2026-10-31T09:11:02Z"
+  },
+  "bringers": [
+   "Voyager 17"
+  ]
+ },
+ {
+  "id": "18",
+  "kind": "arrival",
+  "at": "2026-10-31T10:16:40Z",
+  "ark_day": 27.2,
+  "animal": {
+   "id": "94b55d20-8b59-415c-a38f-f072b6a87322",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-10-31T10:16:40Z"
+  },
+  "bringers": [
+   "Voyager 6"
+  ]
+ },
+ {
+  "id": "19",
+  "kind": "arrival",
+  "at": "2026-10-31T11:27:18Z",
+  "ark_day": 28.4,
+  "animal": {
+   "id": "0ba2e963-8a5b-46d5-a41c-eb3a7dad70d9",
+   "species_profile_id": "2636e62a-6f59-4a98-9289-a8e5c130c4b3",
+   "name": "Scarlet Macaw",
+   "model_slug": "scarlet-macaw",
+   "zone": "rainforest",
+   "arrived_at": "2026-10-31T11:27:18Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "20",
+  "kind": "arrival",
+  "at": "2026-10-31T11:49:22Z",
+  "ark_day": 28.8,
+  "animal": {
+   "id": "8a429db7-74b3-44d3-a8a9-ff233c078721",
+   "species_profile_id": "9eaa0538-add6-4613-afce-74acec86c07f",
+   "name": "European Rabbit",
+   "model_slug": "european-rabbit",
+   "zone": "grassland",
+   "arrived_at": "2026-10-31T11:49:22Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "21",
+  "kind": "arrival",
+  "at": "2026-10-31T11:50:47Z",
+  "ark_day": 28.9,
+  "animal": {
+   "id": "05db70aa-177c-4a2a-a5cd-09a9ba0cc3d8",
+   "species_profile_id": "cabff44d-59a9-48a8-b226-cc9784870f73",
+   "name": "Atlantic Puffin",
+   "model_slug": "atlantic-puffin",
+   "zone": "seashore",
+   "arrived_at": "2026-10-31T11:50:47Z"
+  },
+  "bringers": [
+   "Voyager 38"
+  ]
+ },
+ {
+  "id": "22",
+  "kind": "arrival",
+  "at": "2026-10-31T13:49:12Z",
+  "ark_day": 31,
+  "animal": {
+   "id": "6850b3b4-34aa-4d53-a77c-120ce3a2a177",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-10-31T13:49:12Z"
+  },
+  "bringers": [
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "23",
+  "kind": "arrival",
+  "at": "2026-10-31T14:19:05Z",
+  "ark_day": 31.6,
+  "animal": {
+   "id": "4f41b06a-142f-4772-af0f-a85c6671151e",
+   "species_profile_id": "97d337c1-dc48-4b01-aaca-57bd9cb65a57",
+   "name": "House Sparrow",
+   "model_slug": "house-sparrow",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-31T14:19:05Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "153",
+  "kind": "milestone",
+  "at": "2026-10-31T14:37:40Z",
+  "ark_day": 31.9,
+  "animal": {
+   "id": "e70fa67a-7e60-4968-ab05-74033872434c",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-30T09:16:01Z"
+  }
+ },
+ {
+  "id": "24",
+  "kind": "arrival",
+  "at": "2026-10-31T14:58:08Z",
+  "ark_day": 32.3,
+  "animal": {
+   "id": "92575248-25da-47bc-a2a2-c08873f20925",
+   "species_profile_id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "name": "American Alligator",
+   "model_slug": "american-alligator",
+   "zone": "wetland",
+   "arrived_at": "2026-10-31T14:58:08Z"
+  },
+  "bringers": [
+   "Voyager 20"
+  ]
+ },
+ {
+  "id": "25",
+  "kind": "arrival",
+  "at": "2026-10-31T15:47:26Z",
+  "ark_day": 33.2,
+  "animal": {
+   "id": "3c50c8cb-acbe-4ae4-a7e4-c2e3da56ecef",
+   "species_profile_id": "c97a7415-0076-40ab-a131-e9e7be38acd7",
+   "name": "African Forest Buffalo",
+   "model_slug": "african-forest-buffalo",
+   "zone": "rainforest",
+   "arrived_at": "2026-10-31T15:47:26Z"
+  },
+  "bringers": [
+   "Voyager 17"
+  ]
+ },
+ {
+  "id": "26",
+  "kind": "arrival",
+  "at": "2026-10-31T19:34:39Z",
+  "ark_day": 37.3,
+  "animal": {
+   "id": "9d9d88e6-5701-4ac6-a211-d6c81842b75e",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-10-31T19:34:39Z"
+  },
+  "bringers": [
+   "Voyager 21"
+  ]
+ },
+ {
+  "id": "27",
+  "kind": "arrival",
+  "at": "2026-10-31T23:00:05Z",
+  "ark_day": 41,
+  "animal": {
+   "id": "13b01a24-d631-4423-a8c3-8ea5b85ab52c",
+   "species_profile_id": "77afa7fe-b132-4d7c-8ee5-fd32f3de64f6",
+   "name": "Barn Owl",
+   "model_slug": "barn-owl",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-31T23:00:05Z"
+  },
+  "bringers": [
+   "Voyager 21"
+  ]
+ },
+ {
+  "id": "28",
+  "kind": "arrival",
+  "at": "2026-11-01T00:51:55Z",
+  "ark_day": 43,
+  "animal": {
+   "id": "45625d0a-4fb4-4293-aaf3-3d161a4a454f",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-01T00:51:55Z"
+  },
+  "bringers": [
+   "Voyager 15"
+  ]
+ },
+ {
+  "id": "29",
+  "kind": "arrival",
+  "at": "2026-11-01T01:12:49Z",
+  "ark_day": 43.4,
+  "animal": {
+   "id": "40028f91-7848-4234-ae8c-8a726dde9ef2",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T01:12:49Z"
+  },
+  "bringers": [
+   "Voyager 35"
+  ]
+ },
+ {
+  "id": "30",
+  "kind": "arrival",
+  "at": "2026-11-01T01:25:20Z",
+  "ark_day": 43.6,
+  "animal": {
+   "id": "319f5782-be4f-427c-afc6-082dcd21221c",
+   "species_profile_id": "8c976e79-364b-4b3a-ac3b-c2fb475f3357",
+   "name": "House Cricket",
+   "model_slug": "house-cricket",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T01:25:20Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "31",
+  "kind": "arrival",
+  "at": "2026-11-01T02:27:51Z",
+  "ark_day": 44.8,
+  "animal": {
+   "id": "619323fe-64ba-4cd4-a6be-7f015e8227a5",
+   "species_profile_id": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
+   "name": "Meerkat",
+   "model_slug": "meerkat",
+   "zone": "desert",
+   "arrived_at": "2026-11-01T02:27:51Z"
+  },
+  "bringers": [
+   "Voyager 10"
+  ]
+ },
+ {
+  "id": "32",
+  "kind": "arrival",
+  "at": "2026-11-01T05:39:34Z",
+  "ark_day": 48.2,
+  "animal": {
+   "id": "a68d4b90-76e8-4aef-a8df-43607852ec8e",
+   "species_profile_id": "221476ab-f99f-433b-98f0-806952ae871c",
+   "name": "African Clawed Frog",
+   "model_slug": "african-clawed-frog",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T05:39:34Z"
+  },
+  "bringers": [
+   "Voyager 15"
+  ]
+ },
+ {
+  "id": "33",
+  "kind": "arrival",
+  "at": "2026-11-01T07:00:22Z",
+  "ark_day": 49.7,
+  "animal": {
+   "id": "7e064631-af06-4a31-ad37-da180e1a688c",
+   "species_profile_id": "33c095ca-654c-49ba-9c7e-a115eb1e3337",
+   "name": "Green Sea Turtle",
+   "model_slug": "green-sea-turtle",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-01T07:00:22Z"
+  },
+  "bringers": [
+   "Voyager 21"
+  ]
+ },
+ {
+  "id": "34",
+  "kind": "arrival",
+  "at": "2026-11-01T10:14:00Z",
+  "ark_day": 53.2,
+  "animal": {
+   "id": "8aaba237-d019-47f4-a08f-505404fec60a",
+   "species_profile_id": "8c976e79-364b-4b3a-ac3b-c2fb475f3357",
+   "name": "House Cricket",
+   "model_slug": "house-cricket",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T10:14:00Z"
+  },
+  "bringers": [
+   "Voyager 29"
+  ]
+ },
+ {
+  "id": "154",
+  "kind": "milestone",
+  "at": "2026-11-01T12:19:06Z",
+  "ark_day": 55.5,
+  "animal": {
+   "id": "81b3a682-715b-4832-a25e-bbfe0ced231c",
+   "species_profile_id": "221476ab-f99f-433b-98f0-806952ae871c",
+   "name": "African Clawed Frog",
+   "model_slug": "african-clawed-frog",
+   "zone": "river_lake",
+   "arrived_at": "2026-10-30T19:55:41Z"
+  }
+ },
+ {
+  "id": "35",
+  "kind": "arrival",
+  "at": "2026-11-01T12:50:19Z",
+  "ark_day": 56,
+  "animal": {
+   "id": "71e868aa-8809-470e-a323-4655d2aadb0a",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T12:50:19Z"
+  },
+  "bringers": [
+   "Voyager 12"
+  ]
+ },
+ {
+  "id": "36",
+  "kind": "arrival",
+  "at": "2026-11-01T15:57:45Z",
+  "ark_day": 59.4,
+  "animal": {
+   "id": "f11dee99-c625-43de-aa41-6a7e8e334830",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T15:57:45Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "37",
+  "kind": "arrival",
+  "at": "2026-11-01T17:39:11Z",
+  "ark_day": 61.3,
+  "animal": {
+   "id": "5038e7c9-05fc-42b5-a6fc-176f757d4f35",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-11-01T17:39:11Z"
+  },
+  "bringers": [
+   "Voyager 17"
+  ]
+ },
+ {
+  "id": "38",
+  "kind": "arrival",
+  "at": "2026-11-01T17:59:13Z",
+  "ark_day": 61.6,
+  "animal": {
+   "id": "d94be221-1df4-43eb-aedb-ed2f22f4bb05",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-01T17:59:13Z"
+  },
+  "bringers": [
+   "Voyager 35"
+  ]
+ },
+ {
+  "id": "39",
+  "kind": "arrival",
+  "at": "2026-11-01T21:05:12Z",
+  "ark_day": 65,
+  "animal": {
+   "id": "7ccf673d-578f-4091-afb4-9f6d8c13a953",
+   "species_profile_id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "name": "American Alligator",
+   "model_slug": "american-alligator",
+   "zone": "wetland",
+   "arrived_at": "2026-11-01T21:05:12Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "40",
+  "kind": "arrival",
+  "at": "2026-11-01T23:37:52Z",
+  "ark_day": 67.7,
+  "animal": {
+   "id": "e1032628-76be-4f8e-a5a9-bd83f679e386",
+   "species_profile_id": "7e9f08f2-4e40-4b4d-ad16-b5eedb1ae730",
+   "name": "Eurasian Wolf",
+   "model_slug": "eurasian-wolf",
+   "zone": "woodland",
+   "arrived_at": "2026-11-01T23:37:52Z"
+  },
+  "bringers": [
+   "Voyager 7"
+  ]
+ },
+ {
+  "id": "41",
+  "kind": "arrival",
+  "at": "2026-11-02T03:18:17Z",
+  "ark_day": 71.7,
+  "animal": {
+   "id": "c4376947-eb41-4d4e-a1fb-8a93f43db819",
+   "species_profile_id": "33c095ca-654c-49ba-9c7e-a115eb1e3337",
+   "name": "Green Sea Turtle",
+   "model_slug": "green-sea-turtle",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-02T03:18:17Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "42",
+  "kind": "arrival",
+  "at": "2026-11-02T05:23:00Z",
+  "ark_day": 74,
+  "animal": {
+   "id": "81d9030a-1dad-4cd6-a940-3a9c1a2518a3",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-02T05:23:00Z"
+  },
+  "bringers": [
+   "Voyager 29"
+  ]
+ },
+ {
+  "id": "155",
+  "kind": "milestone",
+  "at": "2026-11-02T08:46:18Z",
+  "ark_day": 77.7,
+  "animal": {
+   "id": "0ba2e963-8a5b-46d5-a41c-eb3a7dad70d9",
+   "species_profile_id": "2636e62a-6f59-4a98-9289-a8e5c130c4b3",
+   "name": "Scarlet Macaw",
+   "model_slug": "scarlet-macaw",
+   "zone": "rainforest",
+   "arrived_at": "2026-10-31T11:27:18Z"
+  }
+ },
+ {
+  "id": "156",
+  "kind": "milestone",
+  "at": "2026-11-02T12:04:01Z",
+  "ark_day": 81.3,
+  "animal": {
+   "id": "45625d0a-4fb4-4293-aaf3-3d161a4a454f",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-01T00:51:55Z"
+  }
+ },
+ {
+  "id": "43",
+  "kind": "arrival",
+  "at": "2026-11-02T12:08:55Z",
+  "ark_day": 81.3,
+  "animal": {
+   "id": "30155be2-189c-479b-a16e-9fd0079c4196",
+   "species_profile_id": "a3443f40-ec07-428d-a235-3501905e42ac",
+   "name": "Snow Leopard",
+   "model_slug": "snow-leopard",
+   "zone": "mountains",
+   "arrived_at": "2026-11-02T12:08:55Z"
+  },
+  "bringers": [
+   "Voyager 24"
+  ]
+ },
+ {
+  "id": "44",
+  "kind": "arrival",
+  "at": "2026-11-02T12:47:52Z",
+  "ark_day": 82,
+  "animal": {
+   "id": "f29d1d93-e6b2-45f4-a6fa-2ce36215ba03",
+   "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08",
+   "name": "Komodo Dragon",
+   "model_slug": "komodo-dragon",
+   "zone": "grassland",
+   "arrived_at": "2026-11-02T12:47:52Z"
+  },
+  "bringers": [
+   "Voyager 22"
+  ]
+ },
+ {
+  "id": "45",
+  "kind": "arrival",
+  "at": "2026-11-02T13:18:29Z",
+  "ark_day": 82.6,
+  "animal": {
+   "id": "6b094390-dfba-49ae-af4f-9bea20e7f42e",
+   "species_profile_id": "cab37a09-7d3d-4585-af64-0fffcbbe4e70",
+   "name": "Capybara",
+   "model_slug": "capybara",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-02T13:18:29Z"
+  },
+  "bringers": [
+   "Voyager 25"
+  ]
+ },
+ {
+  "id": "46",
+  "kind": "arrival",
+  "at": "2026-11-02T15:34:00Z",
+  "ark_day": 85.1,
+  "animal": {
+   "id": "66098889-a783-4516-a482-542972aae744",
+   "species_profile_id": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
+   "name": "Meerkat",
+   "model_slug": "meerkat",
+   "zone": "desert",
+   "arrived_at": "2026-11-02T15:34:00Z"
+  },
+  "bringers": [
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "47",
+  "kind": "arrival",
+  "at": "2026-11-02T16:14:08Z",
+  "ark_day": 85.8,
+  "animal": {
+   "id": "da692575-d140-4bd8-ac98-f13ff7763aa8",
+   "species_profile_id": "951cf99f-fbaf-4148-8607-243d0886fc6e",
+   "name": "Great White Shark",
+   "model_slug": "great-white-shark",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-02T16:14:08Z"
+  },
+  "bringers": [
+   "Voyager 22"
+  ]
+ },
+ {
+  "id": "48",
+  "kind": "arrival",
+  "at": "2026-11-02T20:06:59Z",
+  "ark_day": 90,
+  "animal": {
+   "id": "ab6ceeb1-65da-4222-abd9-45bc8db76c67",
+   "species_profile_id": "7e9f08f2-4e40-4b4d-ad16-b5eedb1ae730",
+   "name": "Eurasian Wolf",
+   "model_slug": "eurasian-wolf",
+   "zone": "woodland",
+   "arrived_at": "2026-11-02T20:06:59Z"
+  },
+  "bringers": [
+   "Voyager 25"
+  ]
+ },
+ {
+  "id": "49",
+  "kind": "arrival",
+  "at": "2026-11-02T21:03:39Z",
+  "ark_day": 91,
+  "animal": {
+   "id": "e930afc8-3bb7-413d-ad4e-111f2c6eb7fd",
+   "species_profile_id": "9eaa0538-add6-4613-afce-74acec86c07f",
+   "name": "European Rabbit",
+   "model_slug": "european-rabbit",
+   "zone": "grassland",
+   "arrived_at": "2026-11-02T21:03:39Z"
+  },
+  "bringers": [
+   "Voyager 27"
+  ]
+ },
+ {
+  "id": "50",
+  "kind": "arrival",
+  "at": "2026-11-02T22:07:13Z",
+  "ark_day": 92.2,
+  "animal": {
+   "id": "f8f79c02-dcf7-4022-ab1f-805bd0f69a07",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-02T22:07:13Z"
+  },
+  "bringers": [
+   "Voyager 19"
+  ]
+ },
+ {
+  "id": "51",
+  "kind": "arrival",
+  "at": "2026-11-03T02:19:14Z",
+  "ark_day": 96.7,
+  "animal": {
+   "id": "943426bd-c2df-4934-ad64-e00302f3f571",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-11-03T02:19:14Z"
+  },
+  "bringers": [
+   "Voyager 25"
+  ]
+ },
+ {
+  "id": "52",
+  "kind": "arrival",
+  "at": "2026-11-03T03:11:30Z",
+  "ark_day": 97.7,
+  "animal": {
+   "id": "cce3376e-f505-4445-a385-7a1a210c6643",
+   "species_profile_id": "3a508734-7f33-4b71-a125-190978788ac2",
+   "name": "Alpine Marmot",
+   "model_slug": "alpine-marmot",
+   "zone": "mountains",
+   "arrived_at": "2026-11-03T03:11:30Z"
+  },
+  "bringers": [
+   "Voyager 8"
+  ]
+ },
+ {
+  "id": "53",
+  "kind": "arrival",
+  "at": "2026-11-03T03:53:31Z",
+  "ark_day": 98.4,
+  "animal": {
+   "id": "1becaa08-5547-4ffd-ae7b-eb4d7e8e8695",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-11-03T03:53:31Z"
+  },
+  "bringers": [
+   "Voyager 22"
+  ]
+ },
+ {
+  "id": "54",
+  "kind": "arrival",
+  "at": "2026-11-03T04:03:21Z",
+  "ark_day": 98.6,
+  "animal": {
+   "id": "b7fd1164-5dac-44f5-ac47-8ba01505dd94",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-03T04:03:21Z"
+  },
+  "bringers": [
+   "Voyager 20"
+  ]
+ },
+ {
+  "id": "55",
+  "kind": "arrival",
+  "at": "2026-11-03T05:51:12Z",
+  "ark_day": 100.6,
+  "animal": {
+   "id": "56f30fc5-857c-4bcd-a2c4-27df5e1a6fd4",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-03T05:51:12Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "56",
+  "kind": "arrival",
+  "at": "2026-11-03T06:09:48Z",
+  "ark_day": 100.9,
+  "animal": {
+   "id": "67e733ce-0935-4a7e-a08e-d27798a9344b",
+   "species_profile_id": "398571ec-d21e-4319-a187-e4235111026c",
+   "name": "American Bullfrog",
+   "model_slug": "american-bullfrog",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-03T06:09:48Z"
+  },
+  "bringers": [
+   "Voyager 3"
+  ]
+ },
+ {
+  "id": "57",
+  "kind": "arrival",
+  "at": "2026-11-03T07:05:11Z",
+  "ark_day": 101.9,
+  "animal": {
+   "id": "70bb2e69-3dca-4fa7-a2be-e4f9357d8b75",
+   "species_profile_id": "e00f6c22-7259-4809-a4a8-572543ef9df0",
+   "name": "Domestic Dog",
+   "model_slug": "domestic-dog",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-03T07:05:11Z"
+  },
+  "bringers": [
+   "Voyager 11"
+  ]
+ },
+ {
+  "id": "58",
+  "kind": "arrival",
+  "at": "2026-11-03T08:04:41Z",
+  "ark_day": 103,
+  "animal": {
+   "id": "4c28954a-df2a-49bb-abb3-6bf123f07c28",
+   "species_profile_id": "cabff44d-59a9-48a8-b226-cc9784870f73",
+   "name": "Atlantic Puffin",
+   "model_slug": "atlantic-puffin",
+   "zone": "seashore",
+   "arrived_at": "2026-11-03T08:04:41Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "59",
+  "kind": "arrival",
+  "at": "2026-11-03T09:35:46Z",
+  "ark_day": 104.6,
+  "animal": {
+   "id": "9fa5f69c-444f-4374-a3a3-b923917d3fc5",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-03T09:35:46Z"
+  },
+  "bringers": [
+   "Voyager 8"
+  ]
+ },
+ {
+  "id": "60",
+  "kind": "arrival",
+  "at": "2026-11-03T12:03:53Z",
+  "ark_day": 107.3,
+  "animal": {
+   "id": "1a8d9759-9aed-4ad1-a3fe-47936cc258da",
+   "species_profile_id": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
+   "name": "Meerkat",
+   "model_slug": "meerkat",
+   "zone": "desert",
+   "arrived_at": "2026-11-03T12:03:53Z"
+  },
+  "bringers": [
+   "Voyager 19"
+  ]
+ },
+ {
+  "id": "61",
+  "kind": "arrival",
+  "at": "2026-11-03T13:25:26Z",
+  "ark_day": 108.8,
+  "animal": {
+   "id": "f6982f53-c13b-4f18-a611-1522853236d4",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-03T13:25:26Z"
+  },
+  "bringers": [
+   "Voyager 38"
+  ]
+ },
+ {
+  "id": "62",
+  "kind": "arrival",
+  "at": "2026-11-03T15:19:07Z",
+  "ark_day": 110.9,
+  "animal": {
+   "id": "7409fdf2-4c88-4107-aa64-3640bf137a74",
+   "species_profile_id": "e261d062-bb60-4500-9bfc-64a51916e512",
+   "name": "African Fish Eagle",
+   "model_slug": "african-fish-eagle",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-03T15:19:07Z"
+  },
+  "bringers": [
+   "Voyager 23"
+  ]
+ },
+ {
+  "id": "63",
+  "kind": "arrival",
+  "at": "2026-11-03T17:36:14Z",
+  "ark_day": 113.3,
+  "animal": {
+   "id": "c8b99560-772a-4390-a3a4-7d3a9cfda08b",
+   "species_profile_id": "9a20c7bf-7563-44e7-a96b-4e786c3f44d5",
+   "name": "Reef Manta Ray",
+   "model_slug": "reef-manta-ray",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-03T17:36:14Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "64",
+  "kind": "arrival",
+  "at": "2026-11-03T18:31:06Z",
+  "ark_day": 114.3,
+  "animal": {
+   "id": "94e3a6aa-f039-40ac-aba8-ef47b287b806",
+   "species_profile_id": "e00f6c22-7259-4809-a4a8-572543ef9df0",
+   "name": "Domestic Dog",
+   "model_slug": "domestic-dog",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-03T18:31:06Z"
+  },
+  "bringers": [
+   "Voyager 26"
+  ]
+ },
+ {
+  "id": "158",
+  "kind": "milestone",
+  "at": "2026-11-03T20:13:02Z",
+  "ark_day": 116.2,
+  "animal": {
+   "id": "66098889-a783-4516-a482-542972aae744",
+   "species_profile_id": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
+   "name": "Meerkat",
+   "model_slug": "meerkat",
+   "zone": "desert",
+   "arrived_at": "2026-11-02T15:34:00Z"
+  }
+ },
+ {
+  "id": "65",
+  "kind": "arrival",
+  "at": "2026-11-03T22:18:41Z",
+  "ark_day": 118.5,
+  "animal": {
+   "id": "18420e67-434b-4e7a-a7a6-7903bf8ecd4b",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-03T22:18:41Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "66",
+  "kind": "arrival",
+  "at": "2026-11-03T23:16:16Z",
+  "ark_day": 119.5,
+  "animal": {
+   "id": "5185908a-a930-4da3-a1d0-0cb534bbea6f",
+   "species_profile_id": "a636182e-6fd8-4750-a88e-c8180cebeb22",
+   "name": "Jaguar",
+   "model_slug": "jaguar",
+   "zone": "rainforest",
+   "arrived_at": "2026-11-03T23:16:16Z"
+  },
+  "bringers": [
+   "Voyager 3"
+  ]
+ },
+ {
+  "id": "157",
+  "kind": "milestone",
+  "at": "2026-11-04T00:32:21Z",
+  "ark_day": 120.9,
+  "animal": {
+   "id": "5038e7c9-05fc-42b5-a6fc-176f757d4f35",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-11-01T17:39:11Z"
+  }
+ },
+ {
+  "id": "67",
+  "kind": "arrival",
+  "at": "2026-11-04T01:46:15Z",
+  "ark_day": 122.2,
+  "animal": {
+   "id": "c6c47ca3-e548-45b1-a1b7-39633c8f38cb",
+   "species_profile_id": "a3443f40-ec07-428d-a235-3501905e42ac",
+   "name": "Snow Leopard",
+   "model_slug": "snow-leopard",
+   "zone": "mountains",
+   "arrived_at": "2026-11-04T01:46:15Z"
+  },
+  "bringers": [
+   "Voyager 9"
+  ]
+ },
+ {
+  "id": "68",
+  "kind": "arrival",
+  "at": "2026-11-04T03:41:14Z",
+  "ark_day": 124.3,
+  "animal": {
+   "id": "9e43b42b-fef7-4fa6-ad0c-8b872506b0cb",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-11-04T03:41:14Z"
+  },
+  "bringers": [
+   "Voyager 3"
+  ]
+ },
+ {
+  "id": "69",
+  "kind": "arrival",
+  "at": "2026-11-04T04:49:45Z",
+  "ark_day": 125.5,
+  "animal": {
+   "id": "4b359794-f34d-44db-aa2e-27a5161bcf27",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-11-04T04:49:45Z"
+  },
+  "bringers": [
+   "Voyager 35"
+  ]
+ },
+ {
+  "id": "70",
+  "kind": "arrival",
+  "at": "2026-11-04T06:36:40Z",
+  "ark_day": 127.5,
+  "animal": {
+   "id": "4958d077-8bb8-4ded-afd0-820185eb036e",
+   "species_profile_id": "78277eba-8a75-4f28-a41e-edf73f4d4014",
+   "name": "Humpback Whale",
+   "model_slug": "humpback-whale",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-04T06:36:40Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "71",
+  "kind": "arrival",
+  "at": "2026-11-04T06:43:37Z",
+  "ark_day": 127.6,
+  "animal": {
+   "id": "03578306-c0c1-40d9-a6dc-8f4e8ae81fb7",
+   "species_profile_id": "fb210102-bd80-46c5-aa9e-579e9e43a29f",
+   "name": "Acorn Barnacle",
+   "model_slug": "acorn-barnacle",
+   "zone": "seashore",
+   "arrived_at": "2026-11-04T06:43:37Z"
+  },
+  "bringers": [
+   "Voyager 17"
+  ]
+ },
+ {
+  "id": "72",
+  "kind": "arrival",
+  "at": "2026-11-04T09:00:11Z",
+  "ark_day": 130.1,
+  "animal": {
+   "id": "c4ef6079-5eb5-4ee9-ab0d-73e832151930",
+   "species_profile_id": "9eaa0538-add6-4613-afce-74acec86c07f",
+   "name": "European Rabbit",
+   "model_slug": "european-rabbit",
+   "zone": "grassland",
+   "arrived_at": "2026-11-04T09:00:11Z"
+  },
+  "bringers": [
+   "Voyager 7"
+  ]
+ },
+ {
+  "id": "73",
+  "kind": "arrival",
+  "at": "2026-11-04T10:59:20Z",
+  "ark_day": 132.2,
+  "animal": {
+   "id": "2b235bb8-548f-46a2-a20a-e75d4ea6d6a0",
+   "species_profile_id": "8c976e79-364b-4b3a-ac3b-c2fb475f3357",
+   "name": "House Cricket",
+   "model_slug": "house-cricket",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-04T10:59:20Z"
+  },
+  "bringers": [
+   "Voyager 38"
+  ]
+ },
+ {
+  "id": "74",
+  "kind": "arrival",
+  "at": "2026-11-04T13:17:22Z",
+  "ark_day": 134.7,
+  "animal": {
+   "id": "da345d3c-57cc-457c-a6da-20e4b73cba77",
+   "species_profile_id": "951cf99f-fbaf-4148-8607-243d0886fc6e",
+   "name": "Great White Shark",
+   "model_slug": "great-white-shark",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-04T13:17:22Z"
+  },
+  "bringers": [
+   "Voyager 25"
+  ]
+ },
+ {
+  "id": "75",
+  "kind": "arrival",
+  "at": "2026-11-04T18:53:47Z",
+  "ark_day": 140.8,
+  "animal": {
+   "id": "78bec58b-157a-4323-ad1f-69f5a6b69064",
+   "species_profile_id": "742b057b-47c4-447a-a61c-53d0b28c5e00",
+   "name": "Cheetah",
+   "model_slug": "cheetah",
+   "zone": "grassland",
+   "arrived_at": "2026-11-04T18:53:47Z"
+  },
+  "bringers": [
+   "Voyager 30"
+  ]
+ },
+ {
+  "id": "76",
+  "kind": "arrival",
+  "at": "2026-11-04T20:41:18Z",
+  "ark_day": 142.8,
+  "animal": {
+   "id": "d608e0a4-aa1e-4c63-a0ae-be558acfbd8d",
+   "species_profile_id": "94b20d06-3ffd-430c-81ad-f0393251a38f",
+   "name": "Emperor Penguin",
+   "model_slug": "emperor-penguin",
+   "zone": "polar",
+   "arrived_at": "2026-11-04T20:41:18Z"
+  },
+  "bringers": [
+   "Voyager 36"
+  ]
+ },
+ {
+  "id": "77",
+  "kind": "arrival",
+  "at": "2026-11-04T22:08:37Z",
+  "ark_day": 144.3,
+  "animal": {
+   "id": "3fdc69bd-b591-4960-a39b-6f90867f3c22",
+   "species_profile_id": "71fa2b4a-3968-4cab-94ad-a196a5a6c096",
+   "name": "Bluefin Tuna",
+   "model_slug": "bluefin-tuna",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-04T22:08:37Z"
+  },
+  "bringers": [
+   "Voyager 15"
+  ]
+ },
+ {
+  "id": "160",
+  "kind": "milestone",
+  "at": "2026-11-04T22:21:34Z",
+  "ark_day": 144.6,
+  "animal": {
+   "id": "94e3a6aa-f039-40ac-aba8-ef47b287b806",
+   "species_profile_id": "e00f6c22-7259-4809-a4a8-572543ef9df0",
+   "name": "Domestic Dog",
+   "model_slug": "domestic-dog",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-03T18:31:06Z"
+  }
+ },
+ {
+  "id": "78",
+  "kind": "arrival",
+  "at": "2026-11-04T22:34:55Z",
+  "ark_day": 144.8,
+  "animal": {
+   "id": "094572bb-50e4-40c4-af53-61f363a1e576",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-04T22:34:55Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "79",
+  "kind": "arrival",
+  "at": "2026-11-05T03:22:13Z",
+  "ark_day": 150,
+  "animal": {
+   "id": "dc03b8d9-fc60-4944-a703-238840d2948f",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-05T03:22:13Z"
+  },
+  "bringers": [
+   "Voyager 27"
+  ]
+ },
+ {
+  "id": "80",
+  "kind": "arrival",
+  "at": "2026-11-05T05:20:23Z",
+  "ark_day": 152.2,
+  "animal": {
+   "id": "98657eea-14fb-493c-a282-b24c3f8fd2b4",
+   "species_profile_id": "889edb60-58bb-4daf-b514-dc3e1d63e55c",
+   "name": "Alpine Ibex",
+   "model_slug": "alpine-ibex",
+   "zone": "mountains",
+   "arrived_at": "2026-11-05T05:20:23Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "81",
+  "kind": "arrival",
+  "at": "2026-11-05T06:11:04Z",
+  "ark_day": 153.1,
+  "animal": {
+   "id": "8c103d67-d404-471c-ab3f-2725ba125e02",
+   "species_profile_id": "496902c3-51d9-442e-8d5c-2ea85cd13cff",
+   "name": "African Rock Python",
+   "model_slug": "african-rock-python",
+   "zone": "grassland",
+   "arrived_at": "2026-11-05T06:11:04Z"
+  },
+  "bringers": [
+   "Voyager 11"
+  ]
+ },
+ {
+  "id": "82",
+  "kind": "arrival",
+  "at": "2026-11-05T08:16:33Z",
+  "ark_day": 155.4,
+  "animal": {
+   "id": "a8d5ccc3-4692-4fd8-a748-6449084e748a",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-05T08:16:33Z"
+  },
+  "bringers": [
+   "Voyager 4"
+  ]
+ },
+ {
+  "id": "83",
+  "kind": "arrival",
+  "at": "2026-11-05T08:20:01Z",
+  "ark_day": 155.4,
+  "animal": {
+   "id": "461ed2c0-d188-4a88-aba6-9981e9ebabb5",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-05T08:20:01Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "84",
+  "kind": "arrival",
+  "at": "2026-11-05T08:51:06Z",
+  "ark_day": 156,
+  "animal": {
+   "id": "375736b0-cd15-478f-a820-d2c72ea9e448",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-05T08:51:06Z"
+  },
+  "bringers": [
+   "Voyager 11"
+  ]
+ },
+ {
+  "id": "85",
+  "kind": "arrival",
+  "at": "2026-11-05T10:44:32Z",
+  "ark_day": 158,
+  "animal": {
+   "id": "f1f4b108-7454-4b77-a8c1-a1dfd7df6e8e",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-11-05T10:44:32Z"
+  },
+  "bringers": [
+   "Voyager 3"
+  ]
+ },
+ {
+  "id": "86",
+  "kind": "arrival",
+  "at": "2026-11-05T11:43:57Z",
+  "ark_day": 159.1,
+  "animal": {
+   "id": "dab90c8b-43b3-42ab-ad4b-5090fb472ae9",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-05T11:43:57Z"
+  },
+  "bringers": [
+   "Voyager 30"
+  ]
+ },
+ {
+  "id": "87",
+  "kind": "arrival",
+  "at": "2026-11-05T11:59:05Z",
+  "ark_day": 159.4,
+  "animal": {
+   "id": "d4f7b720-c0e2-4f38-a8de-082a575449f1",
+   "species_profile_id": "832e1e7e-8059-4d6b-8d05-4b9101eb9ce5",
+   "name": "Polar Bear",
+   "model_slug": "polar-bear",
+   "zone": "polar",
+   "arrived_at": "2026-11-05T11:59:05Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "161",
+  "kind": "milestone",
+  "at": "2026-11-05T15:38:06Z",
+  "ark_day": 163.3,
+  "animal": {
+   "id": "2b235bb8-548f-46a2-a20a-e75d4ea6d6a0",
+   "species_profile_id": "8c976e79-364b-4b3a-ac3b-c2fb475f3357",
+   "name": "House Cricket",
+   "model_slug": "house-cricket",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-04T10:59:20Z"
+  }
+ },
+ {
+  "id": "88",
+  "kind": "arrival",
+  "at": "2026-11-05T17:12:36Z",
+  "ark_day": 165.1,
+  "animal": {
+   "id": "92e9046f-c2d0-462b-af43-4e0b4275fb11",
+   "species_profile_id": "33c095ca-654c-49ba-9c7e-a115eb1e3337",
+   "name": "Green Sea Turtle",
+   "model_slug": "green-sea-turtle",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-05T17:12:36Z"
+  },
+  "bringers": [
+   "Voyager 36"
+  ]
+ },
+ {
+  "id": "89",
+  "kind": "arrival",
+  "at": "2026-11-05T17:14:52Z",
+  "ark_day": 165.1,
+  "animal": {
+   "id": "8d41dd79-f8d7-4d1c-a877-d9e94431847f",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-11-05T17:14:52Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "90",
+  "kind": "arrival",
+  "at": "2026-11-05T22:13:58Z",
+  "ark_day": 170.5,
+  "animal": {
+   "id": "c608c472-7706-4919-abfc-0856e577516b",
+   "species_profile_id": "cabff44d-59a9-48a8-b226-cc9784870f73",
+   "name": "Atlantic Puffin",
+   "model_slug": "atlantic-puffin",
+   "zone": "seashore",
+   "arrived_at": "2026-11-05T22:13:58Z"
+  },
+  "bringers": [
+   "Voyager 16"
+  ]
+ },
+ {
+  "id": "91",
+  "kind": "arrival",
+  "at": "2026-11-05T22:22:51Z",
+  "ark_day": 170.7,
+  "animal": {
+   "id": "123b1d3c-9359-43f4-a7fb-80bc6ef9b2d1",
+   "species_profile_id": "cab37a09-7d3d-4585-af64-0fffcbbe4e70",
+   "name": "Capybara",
+   "model_slug": "capybara",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-05T22:22:51Z"
+  },
+  "bringers": [
+   "Voyager 24"
+  ]
+ },
+ {
+  "id": "92",
+  "kind": "arrival",
+  "at": "2026-11-06T01:46:15Z",
+  "ark_day": 174.4,
+  "animal": {
+   "id": "68a2bb81-6854-43ff-a3bb-a6248f092731",
+   "species_profile_id": "78277eba-8a75-4f28-a41e-edf73f4d4014",
+   "name": "Humpback Whale",
+   "model_slug": "humpback-whale",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-06T01:46:15Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "159",
+  "kind": "milestone",
+  "at": "2026-11-06T03:56:52Z",
+  "ark_day": 176.7,
+  "animal": {
+   "id": "56f30fc5-857c-4bcd-a2c4-27df5e1a6fd4",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-03T05:51:12Z"
+  }
+ },
+ {
+  "id": "93",
+  "kind": "arrival",
+  "at": "2026-11-06T07:06:52Z",
+  "ark_day": 180.2,
+  "animal": {
+   "id": "c01297d3-3aa5-4065-aaef-1badd84c543c",
+   "species_profile_id": "2636e62a-6f59-4a98-9289-a8e5c130c4b3",
+   "name": "Scarlet Macaw",
+   "model_slug": "scarlet-macaw",
+   "zone": "rainforest",
+   "arrived_at": "2026-11-06T07:06:52Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "94",
+  "kind": "arrival",
+  "at": "2026-11-06T08:28:33Z",
+  "ark_day": 181.6,
+  "animal": {
+   "id": "1dea9a3c-6fc7-409b-ac95-77002d14b86e",
+   "species_profile_id": "5b8aaadf-ac28-418c-ac54-b4daaefee08e",
+   "name": "American Lobster",
+   "model_slug": "american-lobster",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-06T08:28:33Z"
+  },
+  "bringers": [
+   "Voyager 26"
+  ]
+ },
+ {
+  "id": "95",
+  "kind": "arrival",
+  "at": "2026-11-06T09:46:59Z",
+  "ark_day": 183.1,
+  "animal": {
+   "id": "51f8ca48-92a7-4a22-acc5-4d23c944384a",
+   "species_profile_id": "71fa2b4a-3968-4cab-94ad-a196a5a6c096",
+   "name": "Bluefin Tuna",
+   "model_slug": "bluefin-tuna",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-06T09:46:59Z"
+  },
+  "bringers": [
+   "Voyager 21"
+  ]
+ },
+ {
+  "id": "96",
+  "kind": "arrival",
+  "at": "2026-11-06T09:54:32Z",
+  "ark_day": 183.2,
+  "animal": {
+   "id": "04c9a730-25ad-4506-a4a7-e7327a216552",
+   "species_profile_id": "33c095ca-654c-49ba-9c7e-a115eb1e3337",
+   "name": "Green Sea Turtle",
+   "model_slug": "green-sea-turtle",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-06T09:54:32Z"
+  },
+  "bringers": [
+   "Voyager 14"
+  ]
+ },
+ {
+  "id": "97",
+  "kind": "arrival",
+  "at": "2026-11-06T12:08:48Z",
+  "ark_day": 185.6,
+  "animal": {
+   "id": "19de67b3-f161-4472-a730-fe605bb7066a",
+   "species_profile_id": "cabff44d-59a9-48a8-b226-cc9784870f73",
+   "name": "Atlantic Puffin",
+   "model_slug": "atlantic-puffin",
+   "zone": "seashore",
+   "arrived_at": "2026-11-06T12:08:48Z"
+  },
+  "bringers": [
+   "Voyager 6"
+  ]
+ },
+ {
+  "id": "98",
+  "kind": "arrival",
+  "at": "2026-11-06T12:39:07Z",
+  "ark_day": 186.2,
+  "animal": {
+   "id": "b830e5e8-443c-4a6c-a105-982abbd58d42",
+   "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2",
+   "name": "Red-tailed Hawk",
+   "model_slug": "red-tailed-hawk",
+   "zone": "woodland",
+   "arrived_at": "2026-11-06T12:39:07Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "99",
+  "kind": "arrival",
+  "at": "2026-11-06T12:56:57Z",
+  "ark_day": 186.5,
+  "animal": {
+   "id": "22f6e9d3-aeeb-4c03-a622-842d152d6c1f",
+   "species_profile_id": "e00f6c22-7259-4809-a4a8-572543ef9df0",
+   "name": "Domestic Dog",
+   "model_slug": "domestic-dog",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-06T12:56:57Z"
+  },
+  "bringers": [
+   "Voyager 20"
+  ]
+ },
+ {
+  "id": "100",
+  "kind": "arrival",
+  "at": "2026-11-06T14:31:42Z",
+  "ark_day": 188.2,
+  "animal": {
+   "id": "7b437992-06f7-403f-a80e-dbc7c4921029",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-06T14:31:42Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "101",
+  "kind": "arrival",
+  "at": "2026-11-06T15:03:05Z",
+  "ark_day": 188.8,
+  "animal": {
+   "id": "9cdf63b1-c24c-4dd4-a0ff-b4273d3c09d1",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-06T15:03:05Z"
+  },
+  "bringers": [
+   "Voyager 7"
+  ]
+ },
+ {
+  "id": "102",
+  "kind": "arrival",
+  "at": "2026-11-06T15:36:37Z",
+  "ark_day": 189.4,
+  "animal": {
+   "id": "355d6f33-9568-448e-abec-ead23c561b8f",
+   "species_profile_id": "97d337c1-dc48-4b01-aaca-57bd9cb65a57",
+   "name": "House Sparrow",
+   "model_slug": "house-sparrow",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-06T15:36:37Z"
+  },
+  "bringers": [
+   "Voyager 7"
+  ]
+ },
+ {
+  "id": "162",
+  "kind": "milestone",
+  "at": "2026-11-06T18:03:32Z",
+  "ark_day": 192.1,
+  "animal": {
+   "id": "a8d5ccc3-4692-4fd8-a748-6449084e748a",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-05T08:16:33Z"
+  }
+ },
+ {
+  "id": "103",
+  "kind": "arrival",
+  "at": "2026-11-06T21:51:58Z",
+  "ark_day": 196.2,
+  "animal": {
+   "id": "17eced97-3ac1-43d9-ae0a-8f129efec5d6",
+   "species_profile_id": "2636e62a-6f59-4a98-9289-a8e5c130c4b3",
+   "name": "Scarlet Macaw",
+   "model_slug": "scarlet-macaw",
+   "zone": "rainforest",
+   "arrived_at": "2026-11-06T21:51:58Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "104",
+  "kind": "arrival",
+  "at": "2026-11-07T00:11:22Z",
+  "ark_day": 198.7,
+  "animal": {
+   "id": "ab7597b7-ac19-4ef9-a7a4-3cb622c87a6e",
+   "species_profile_id": "9923af79-7ca3-411d-b232-5668b7c3c5ba",
+   "name": "African Bush Elephant",
+   "model_slug": "african-bush-elephant",
+   "zone": "grassland",
+   "arrived_at": "2026-11-07T00:11:22Z"
+  },
+  "bringers": [
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "105",
+  "kind": "arrival",
+  "at": "2026-11-07T01:22:48Z",
+  "ark_day": 200,
+  "animal": {
+   "id": "81f51c8e-0f5e-4f64-a649-e9caedaea812",
+   "species_profile_id": "f636fcbb-5525-414f-a3d5-ba143dab4698",
+   "name": "Roe Deer",
+   "model_slug": "roe-deer",
+   "zone": "woodland",
+   "arrived_at": "2026-11-07T01:22:48Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "106",
+  "kind": "arrival",
+  "at": "2026-11-07T12:23:50Z",
+  "ark_day": 212,
+  "animal": {
+   "id": "dbdca5b5-858e-40cd-addb-52aeaab3e81d",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-07T12:23:50Z"
+  },
+  "bringers": [
+   "Voyager 19"
+  ]
+ },
+ {
+  "id": "107",
+  "kind": "arrival",
+  "at": "2026-11-07T13:06:51Z",
+  "ark_day": 212.8,
+  "animal": {
+   "id": "a5d957c8-96b4-41b8-a7df-c78203e803f0",
+   "species_profile_id": "555cb6c8-a84b-4174-af25-69f16aa89fac",
+   "name": "Domestic Cat",
+   "model_slug": "domestic-cat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-07T13:06:51Z"
+  },
+  "bringers": [
+   "Voyager 26"
+  ]
+ },
+ {
+  "id": "108",
+  "kind": "arrival",
+  "at": "2026-11-07T13:41:01Z",
+  "ark_day": 213.4,
+  "animal": {
+   "id": "3ab8af50-7371-45ac-a8dc-0ef35823ee2d",
+   "species_profile_id": "33c095ca-654c-49ba-9c7e-a115eb1e3337",
+   "name": "Green Sea Turtle",
+   "model_slug": "green-sea-turtle",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-07T13:41:01Z"
+  },
+  "bringers": [
+   "Voyager 12"
+  ]
+ },
+ {
+  "id": "137",
+  "kind": "meal",
+  "at": "2026-11-07T15:20:00Z",
+  "ark_day": 215.2,
+  "animal": {
+   "id": "9650250d-035d-4e7a-a21c-dd4520530606",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-10-30T13:12:17Z"
+  },
+  "other": {
+   "id": "da37e9d2-a6ce-4d4b-a292-e5f18ed76115",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-08T06:36:42Z"
+  },
+  "phrase": "zebras"
+ },
+ {
+  "id": "138",
+  "kind": "eaten",
+  "at": "2026-11-07T15:20:00Z",
+  "ark_day": 215.2,
+  "animal": {
+   "id": "da37e9d2-a6ce-4d4b-a292-e5f18ed76115",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-08T06:36:42Z"
+  },
+  "other": {
+   "id": "9650250d-035d-4e7a-a21c-dd4520530606",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-10-30T13:12:17Z"
+  },
+  "phrase": "zebras"
+ },
+ {
+  "id": "109",
+  "kind": "arrival",
+  "at": "2026-11-07T19:22:12Z",
+  "ark_day": 219.5,
+  "animal": {
+   "id": "a6eebb8d-eafd-4710-ade9-7037a2f389ad",
+   "species_profile_id": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
+   "name": "Red Fox",
+   "model_slug": "red-fox",
+   "zone": "woodland",
+   "arrived_at": "2026-11-07T19:22:12Z"
+  },
+  "bringers": [
+   "Voyager 1"
+  ]
+ },
+ {
+  "id": "110",
+  "kind": "arrival",
+  "at": "2026-11-08T00:10:14Z",
+  "ark_day": 224.8,
+  "animal": {
+   "id": "3e6f38b8-8229-44d5-ad02-4d65b5c9e4e1",
+   "species_profile_id": "97d337c1-dc48-4b01-aaca-57bd9cb65a57",
+   "name": "House Sparrow",
+   "model_slug": "house-sparrow",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-08T00:10:14Z"
+  },
+  "bringers": [
+   "Voyager 25"
+  ]
+ },
+ {
+  "id": "163",
+  "kind": "milestone",
+  "at": "2026-11-08T00:55:23Z",
+  "ark_day": 225.6,
+  "animal": {
+   "id": "123b1d3c-9359-43f4-a7fb-80bc6ef9b2d1",
+   "species_profile_id": "cab37a09-7d3d-4585-af64-0fffcbbe4e70",
+   "name": "Capybara",
+   "model_slug": "capybara",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-05T22:22:51Z"
+  }
+ },
+ {
+  "id": "111",
+  "kind": "arrival",
+  "at": "2026-11-08T01:17:21Z",
+  "ark_day": 226,
+  "animal": {
+   "id": "779c5221-9690-4222-a158-0aef51dcce72",
+   "species_profile_id": "e00f6c22-7259-4809-a4a8-572543ef9df0",
+   "name": "Domestic Dog",
+   "model_slug": "domestic-dog",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-08T01:17:21Z"
+  },
+  "bringers": [
+   "Voyager 16"
+  ]
+ },
+ {
+  "id": "112",
+  "kind": "arrival",
+  "at": "2026-11-08T02:27:01Z",
+  "ark_day": 227.2,
+  "animal": {
+   "id": "17a93615-9be6-4635-a101-17352dd2b315",
+   "species_profile_id": "cabff44d-59a9-48a8-b226-cc9784870f73",
+   "name": "Atlantic Puffin",
+   "model_slug": "atlantic-puffin",
+   "zone": "seashore",
+   "arrived_at": "2026-11-08T02:27:01Z"
+  },
+  "bringers": [
+   "Voyager 10"
+  ]
+ },
+ {
+  "id": "113",
+  "kind": "arrival",
+  "at": "2026-11-08T03:10:47Z",
+  "ark_day": 228,
+  "animal": {
+   "id": "26c15211-34aa-4f72-a4f4-b28fd48e63e0",
+   "species_profile_id": "889edb60-58bb-4daf-b514-dc3e1d63e55c",
+   "name": "Alpine Ibex",
+   "model_slug": "alpine-ibex",
+   "zone": "mountains",
+   "arrived_at": "2026-11-08T03:10:47Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "114",
+  "kind": "arrival",
+  "at": "2026-11-08T04:26:35Z",
+  "ark_day": 229.4,
+  "animal": {
+   "id": "65eb0bcb-ac98-4735-aaea-80be267fb898",
+   "species_profile_id": "c93861b3-507c-4a02-be8c-ee2a78f42059",
+   "name": "Dromedary Camel",
+   "model_slug": "dromedary-camel",
+   "zone": "desert",
+   "arrived_at": "2026-11-08T04:26:35Z"
+  },
+  "bringers": [
+   "Voyager 19"
+  ]
+ },
+ {
+  "id": "115",
+  "kind": "arrival",
+  "at": "2026-11-08T06:36:42Z",
+  "ark_day": 231.8,
+  "animal": {
+   "id": "da37e9d2-a6ce-4d4b-a292-e5f18ed76115",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-08T06:36:42Z"
+  },
+  "bringers": [
+   "Voyager 10"
+  ]
+ },
+ {
+  "id": "116",
+  "kind": "arrival",
+  "at": "2026-11-08T07:50:50Z",
+  "ark_day": 233.1,
+  "animal": {
+   "id": "27628794-dacf-4a40-a573-b0768e68fb78",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-11-08T07:50:50Z"
+  },
+  "bringers": [
+   "Voyager 23"
+  ]
+ },
+ {
+  "id": "117",
+  "kind": "arrival",
+  "at": "2026-11-08T09:56:49Z",
+  "ark_day": 235.4,
+  "animal": {
+   "id": "e25b80a7-e84b-4c4c-a0dd-e7e318fbb8f6",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-08T09:56:49Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "118",
+  "kind": "arrival",
+  "at": "2026-11-08T12:12:27Z",
+  "ark_day": 237.8,
+  "animal": {
+   "id": "ee68875e-973e-4e25-a0a1-99706f6da7b7",
+   "species_profile_id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "name": "American Alligator",
+   "model_slug": "american-alligator",
+   "zone": "wetland",
+   "arrived_at": "2026-11-08T12:12:27Z"
+  },
+  "bringers": [
+   "Voyager 32"
+  ]
+ },
+ {
+  "id": "119",
+  "kind": "arrival",
+  "at": "2026-11-08T12:35:39Z",
+  "ark_day": 238.3,
+  "animal": {
+   "id": "fb128e0c-26ed-4365-a5ae-43893c8df0a1",
+   "species_profile_id": "c93861b3-507c-4a02-be8c-ee2a78f42059",
+   "name": "Dromedary Camel",
+   "model_slug": "dromedary-camel",
+   "zone": "desert",
+   "arrived_at": "2026-11-08T12:35:39Z"
+  },
+  "bringers": [
+   "Voyager 3"
+  ]
+ },
+ {
+  "id": "120",
+  "kind": "arrival",
+  "at": "2026-11-08T15:41:50Z",
+  "ark_day": 241.6,
+  "animal": {
+   "id": "82fe3303-e539-480a-a235-7d67ff291d5b",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-08T15:41:50Z"
+  },
+  "bringers": [
+   "Voyager 9"
+  ]
+ },
+ {
+  "id": "121",
+  "kind": "arrival",
+  "at": "2026-11-08T18:05:39Z",
+  "ark_day": 244.2,
+  "animal": {
+   "id": "0e7bd7d1-3b0c-42ad-a663-ba4004b0fe6b",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-08T18:05:39Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "139",
+  "kind": "birth",
+  "at": "2026-11-08T19:30:00Z",
+  "ark_day": 245.8,
+  "animal": {
+   "id": "d0440992-5d7c-4db8-a35b-741f8ca88ed4",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-08T19:30:00Z"
+  },
+  "parents": [
+   "6033a1c6-0321-47e9-afcb-022e395ec23e",
+   "6850b3b4-34aa-4d53-a77c-120ce3a2a177"
+  ],
+  "bringers": [
+   "Voyager 35",
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "140",
+  "kind": "birth",
+  "at": "2026-11-08T19:30:00Z",
+  "ark_day": 245.8,
+  "animal": {
+   "id": "6983e1ac-e5e7-489b-a741-7da848e9779d",
+   "species_profile_id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "model_slug": "plains-zebra",
+   "zone": "grassland",
+   "arrived_at": "2026-11-08T19:30:00Z"
+  },
+  "parents": [
+   "6033a1c6-0321-47e9-afcb-022e395ec23e",
+   "6850b3b4-34aa-4d53-a77c-120ce3a2a177"
+  ],
+  "bringers": [
+   "Voyager 35",
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "122",
+  "kind": "arrival",
+  "at": "2026-11-08T22:02:39Z",
+  "ark_day": 248.5,
+  "animal": {
+   "id": "f133c90e-1c26-4675-a61f-fbd141c09c2b",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-08T22:02:39Z"
+  },
+  "bringers": [
+   "Voyager 18"
+  ]
+ },
+ {
+  "id": "141",
+  "kind": "meal",
+  "at": "2026-11-09T01:40:00Z",
+  "ark_day": 252.5,
+  "animal": {
+   "id": "8c103d67-d404-471c-ab3f-2725ba125e02",
+   "species_profile_id": "496902c3-51d9-442e-8d5c-2ea85cd13cff",
+   "name": "African Rock Python",
+   "model_slug": "african-rock-python",
+   "zone": "grassland",
+   "arrived_at": "2026-11-05T06:11:04Z"
+  },
+  "other": {
+   "id": "e930afc8-3bb7-413d-ad4e-111f2c6eb7fd",
+   "species_profile_id": "9eaa0538-add6-4613-afce-74acec86c07f",
+   "name": "European Rabbit",
+   "model_slug": "european-rabbit",
+   "zone": "grassland",
+   "arrived_at": "2026-11-02T21:03:39Z"
+  },
+  "phrase": "rabbits"
+ },
+ {
+  "id": "142",
+  "kind": "eaten",
+  "at": "2026-11-09T01:40:00Z",
+  "ark_day": 252.5,
+  "animal": {
+   "id": "e930afc8-3bb7-413d-ad4e-111f2c6eb7fd",
+   "species_profile_id": "9eaa0538-add6-4613-afce-74acec86c07f",
+   "name": "European Rabbit",
+   "model_slug": "european-rabbit",
+   "zone": "grassland",
+   "arrived_at": "2026-11-02T21:03:39Z"
+  },
+  "other": {
+   "id": "8c103d67-d404-471c-ab3f-2725ba125e02",
+   "species_profile_id": "496902c3-51d9-442e-8d5c-2ea85cd13cff",
+   "name": "African Rock Python",
+   "model_slug": "african-rock-python",
+   "zone": "grassland",
+   "arrived_at": "2026-11-05T06:11:04Z"
+  },
+  "phrase": "rabbits"
+ },
+ {
+  "id": "123",
+  "kind": "arrival",
+  "at": "2026-11-09T04:11:36Z",
+  "ark_day": 255.2,
+  "animal": {
+   "id": "a68ebff1-3481-4c81-ac4c-1c2dc9b0292c",
+   "species_profile_id": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
+   "name": "Red Fox",
+   "model_slug": "red-fox",
+   "zone": "woodland",
+   "arrived_at": "2026-11-09T04:11:36Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "143",
+  "kind": "meal",
+  "at": "2026-11-09T06:40:00Z",
+  "ark_day": 257.9,
+  "animal": {
+   "id": "3fdc69bd-b591-4960-a39b-6f90867f3c22",
+   "species_profile_id": "71fa2b4a-3968-4cab-94ad-a196a5a6c096",
+   "name": "Bluefin Tuna",
+   "model_slug": "bluefin-tuna",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-04T22:08:37Z"
+  },
+  "other": {
+   "id": "f6982f53-c13b-4f18-a611-1522853236d4",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-03T13:25:26Z"
+  },
+  "phrase": "herring"
+ },
+ {
+  "id": "144",
+  "kind": "eaten",
+  "at": "2026-11-09T06:40:00Z",
+  "ark_day": 257.9,
+  "animal": {
+   "id": "f6982f53-c13b-4f18-a611-1522853236d4",
+   "species_profile_id": "edc0b45a-6e81-4922-a810-45006c39b412",
+   "name": "Atlantic Herring",
+   "model_slug": "atlantic-herring",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-03T13:25:26Z"
+  },
+  "other": {
+   "id": "3fdc69bd-b591-4960-a39b-6f90867f3c22",
+   "species_profile_id": "71fa2b4a-3968-4cab-94ad-a196a5a6c096",
+   "name": "Bluefin Tuna",
+   "model_slug": "bluefin-tuna",
+   "zone": "open_ocean",
+   "arrived_at": "2026-11-04T22:08:37Z"
+  },
+  "phrase": "herring"
+ },
+ {
+  "id": "124",
+  "kind": "arrival",
+  "at": "2026-11-09T06:52:43Z",
+  "ark_day": 258.1,
+  "animal": {
+   "id": "367df66c-77b8-4482-af5e-a47441410701",
+   "species_profile_id": "221476ab-f99f-433b-98f0-806952ae871c",
+   "name": "African Clawed Frog",
+   "model_slug": "african-clawed-frog",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-09T06:52:43Z"
+  },
+  "bringers": [
+   "Voyager 33"
+  ]
+ },
+ {
+  "id": "145",
+  "kind": "meal",
+  "at": "2026-11-09T09:15:00Z",
+  "ark_day": 260.7,
+  "animal": {
+   "id": "d11e283d-9235-4caa-a41c-2c8096bb1281",
+   "species_profile_id": "dd6c1cdd-777d-466b-a70b-3f9176c6552f",
+   "name": "Golden Eagle",
+   "model_slug": "golden-eagle",
+   "zone": "mountains",
+   "arrived_at": "2026-10-30T23:02:42Z"
+  },
+  "other": {
+   "id": "cce3376e-f505-4445-a385-7a1a210c6643",
+   "species_profile_id": "3a508734-7f33-4b71-a125-190978788ac2",
+   "name": "Alpine Marmot",
+   "model_slug": "alpine-marmot",
+   "zone": "mountains",
+   "arrived_at": "2026-11-03T03:11:30Z"
+  },
+  "phrase": "marmots"
+ },
+ {
+  "id": "146",
+  "kind": "eaten",
+  "at": "2026-11-09T09:15:00Z",
+  "ark_day": 260.7,
+  "animal": {
+   "id": "cce3376e-f505-4445-a385-7a1a210c6643",
+   "species_profile_id": "3a508734-7f33-4b71-a125-190978788ac2",
+   "name": "Alpine Marmot",
+   "model_slug": "alpine-marmot",
+   "zone": "mountains",
+   "arrived_at": "2026-11-03T03:11:30Z"
+  },
+  "other": {
+   "id": "d11e283d-9235-4caa-a41c-2c8096bb1281",
+   "species_profile_id": "dd6c1cdd-777d-466b-a70b-3f9176c6552f",
+   "name": "Golden Eagle",
+   "model_slug": "golden-eagle",
+   "zone": "mountains",
+   "arrived_at": "2026-10-30T23:02:42Z"
+  },
+  "phrase": "marmots"
+ },
+ {
+  "id": "147",
+  "kind": "extinction",
+  "at": "2026-11-09T09:15:00Z",
+  "ark_day": 260.7,
+  "species_profile_id": "3a508734-7f33-4b71-a125-190978788ac2",
+  "species_name": "Alpine Marmot"
+ },
+ {
+  "id": "164",
+  "kind": "milestone",
+  "at": "2026-11-09T11:08:12Z",
+  "ark_day": 262.7,
+  "animal": {
+   "id": "7b437992-06f7-403f-a80e-dbc7c4921029",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-06T14:31:42Z"
+  }
+ },
+ {
+  "id": "125",
+  "kind": "arrival",
+  "at": "2026-11-09T12:53:59Z",
+  "ark_day": 264.7,
+  "animal": {
+   "id": "87af4a90-b378-41a2-ad5d-bc3acc8b7ab8",
+   "species_profile_id": "cab37a09-7d3d-4585-af64-0fffcbbe4e70",
+   "name": "Capybara",
+   "model_slug": "capybara",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-09T12:53:59Z"
+  },
+  "bringers": [
+   "Voyager 34"
+  ]
+ },
+ {
+  "id": "148",
+  "kind": "meal",
+  "at": "2026-11-09T13:05:00Z",
+  "ark_day": 264.9,
+  "animal": {
+   "id": "30eb9944-5374-4f2f-a5df-ae91963bc44b",
+   "species_profile_id": "951cf99f-fbaf-4148-8607-243d0886fc6e",
+   "name": "Great White Shark",
+   "model_slug": "great-white-shark",
+   "zone": "open_ocean",
+   "arrived_at": "2026-10-30T14:08:31Z"
+  },
+  "other": {
+   "id": "7b437992-06f7-403f-a80e-dbc7c4921029",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-06T14:31:42Z"
+  },
+  "phrase": "seals"
+ },
+ {
+  "id": "149",
+  "kind": "eaten",
+  "at": "2026-11-09T13:05:00Z",
+  "ark_day": 264.9,
+  "animal": {
+   "id": "7b437992-06f7-403f-a80e-dbc7c4921029",
+   "species_profile_id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "model_slug": "harbor-seal",
+   "zone": "seashore",
+   "arrived_at": "2026-11-06T14:31:42Z"
+  },
+  "other": {
+   "id": "30eb9944-5374-4f2f-a5df-ae91963bc44b",
+   "species_profile_id": "951cf99f-fbaf-4148-8607-243d0886fc6e",
+   "name": "Great White Shark",
+   "model_slug": "great-white-shark",
+   "zone": "open_ocean",
+   "arrived_at": "2026-10-30T14:08:31Z"
+  },
+  "phrase": "seals"
+ },
+ {
+  "id": "126",
+  "kind": "arrival",
+  "at": "2026-11-09T13:25:15Z",
+  "ark_day": 265.2,
+  "animal": {
+   "id": "9852863d-0e9d-4412-aabd-cdcf82877a1e",
+   "species_profile_id": "889edb60-58bb-4daf-b514-dc3e1d63e55c",
+   "name": "Alpine Ibex",
+   "model_slug": "alpine-ibex",
+   "zone": "mountains",
+   "arrived_at": "2026-11-09T13:25:15Z"
+  },
+  "bringers": [
+   "Voyager 14"
+  ]
+ },
+ {
+  "id": "150",
+  "kind": "death_old",
+  "at": "2026-11-09T16:20:00Z",
+  "ark_day": 268.4,
+  "animal": {
+   "id": "7a5d3f22-85c2-4d55-a3b5-b0225f578ab3",
+   "species_profile_id": "97d337c1-dc48-4b01-aaca-57bd9cb65a57",
+   "name": "House Sparrow",
+   "model_slug": "house-sparrow",
+   "zone": "farm_garden",
+   "arrived_at": "2026-10-31T08:20:20Z"
+  }
+ },
+ {
+  "id": "127",
+  "kind": "arrival",
+  "at": "2026-11-09T19:27:52Z",
+  "ark_day": 271.8,
+  "animal": {
+   "id": "3e0abc89-599b-4dfc-af89-1f793fbab266",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-09T19:27:52Z"
+  },
+  "bringers": [
+   "Voyager 21"
+  ]
+ },
+ {
+  "id": "169",
+  "kind": "hungry",
+  "at": "2026-11-09T20:00:00Z",
+  "ark_day": 272.4,
+  "animal": {
+   "id": "e1032628-76be-4f8e-a5a9-bd83f679e386",
+   "species_profile_id": "7e9f08f2-4e40-4b4d-ad16-b5eedb1ae730",
+   "name": "Eurasian Wolf",
+   "model_slug": "eurasian-wolf",
+   "zone": "woodland",
+   "arrived_at": "2026-11-01T23:37:52Z"
+  }
+ },
+ {
+  "id": "128",
+  "kind": "arrival",
+  "at": "2026-11-09T20:51:21Z",
+  "ark_day": 273.3,
+  "animal": {
+   "id": "cbff26f9-5d25-4e99-a02e-5aa37a489190",
+   "species_profile_id": "15d407cf-1155-4680-a1ff-125de0644832",
+   "name": "African Lion",
+   "model_slug": "african-lion",
+   "zone": "grassland",
+   "arrived_at": "2026-11-09T20:51:21Z"
+  },
+  "bringers": [
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "129",
+  "kind": "arrival",
+  "at": "2026-11-09T21:11:29Z",
+  "ark_day": 273.7,
+  "animal": {
+   "id": "42d20f3d-f72a-40cd-ac9a-00ea118c58d2",
+   "species_profile_id": "97d337c1-dc48-4b01-aaca-57bd9cb65a57",
+   "name": "House Sparrow",
+   "model_slug": "house-sparrow",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-09T21:11:29Z"
+  },
+  "bringers": [
+   "Voyager 5"
+  ]
+ },
+ {
+  "id": "130",
+  "kind": "arrival",
+  "at": "2026-11-09T22:39:23Z",
+  "ark_day": 275.3,
+  "animal": {
+   "id": "dd7e0246-54ab-475d-a973-bfb54e41df52",
+   "species_profile_id": "cc0c5230-0b10-40f6-a43e-08492d01ddfd",
+   "name": "Domestic Goat",
+   "model_slug": "domestic-goat",
+   "zone": "farm_garden",
+   "arrived_at": "2026-11-09T22:39:23Z"
+  },
+  "bringers": [
+   "Voyager 13"
+  ]
+ },
+ {
+  "id": "131",
+  "kind": "arrival",
+  "at": "2026-11-10T01:36:53Z",
+  "ark_day": 278.5,
+  "animal": {
+   "id": "466893cf-d05a-441d-ab03-a5e35e44f0b0",
+   "species_profile_id": "7e9f08f2-4e40-4b4d-ad16-b5eedb1ae730",
+   "name": "Eurasian Wolf",
+   "model_slug": "eurasian-wolf",
+   "zone": "woodland",
+   "arrived_at": "2026-11-10T01:36:53Z"
+  },
+  "bringers": [
+   "Voyager 2"
+  ]
+ },
+ {
+  "id": "151",
+  "kind": "meal",
+  "at": "2026-11-10T02:00:00Z",
+  "ark_day": 278.9,
+  "animal": {
+   "id": "67e733ce-0935-4a7e-a08e-d27798a9344b",
+   "species_profile_id": "398571ec-d21e-4319-a187-e4235111026c",
+   "name": "American Bullfrog",
+   "model_slug": "american-bullfrog",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-03T06:09:48Z"
+  },
+  "other": {
+   "id": "319f5782-be4f-427c-afc6-082dcd21221c",
+   "species_profile_id": "8c976e79-364b-4b3a-ac3b-c2fb475f3357",
+   "name": "House Cricket",
+   "model_slug": "house-cricket",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T01:25:20Z"
+  },
+  "phrase": "insects"
+ },
+ {
+  "id": "152",
+  "kind": "eaten",
+  "at": "2026-11-10T02:00:00Z",
+  "ark_day": 278.9,
+  "animal": {
+   "id": "319f5782-be4f-427c-afc6-082dcd21221c",
+   "species_profile_id": "8c976e79-364b-4b3a-ac3b-c2fb475f3357",
+   "name": "House Cricket",
+   "model_slug": "house-cricket",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-01T01:25:20Z"
+  },
+  "other": {
+   "id": "67e733ce-0935-4a7e-a08e-d27798a9344b",
+   "species_profile_id": "398571ec-d21e-4319-a187-e4235111026c",
+   "name": "American Bullfrog",
+   "model_slug": "american-bullfrog",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-03T06:09:48Z"
+  },
+  "phrase": "insects"
+ },
+ {
+  "id": "132",
+  "kind": "arrival",
+  "at": "2026-11-10T02:44:32Z",
+  "ark_day": 279.7,
+  "animal": {
+   "id": "683db5bd-f838-4431-a398-5de41552c615",
+   "species_profile_id": "cab37a09-7d3d-4585-af64-0fffcbbe4e70",
+   "name": "Capybara",
+   "model_slug": "capybara",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-10T02:44:32Z"
+  },
+  "bringers": [
+   "Voyager 10"
+  ]
+ },
+ {
+  "id": "133",
+  "kind": "arrival",
+  "at": "2026-11-10T02:50:43Z",
+  "ark_day": 279.8,
+  "animal": {
+   "id": "1b3d9450-d879-4958-a945-e0d235e96e82",
+   "species_profile_id": "2ae9e497-95d0-4239-aaca-95653accdc85",
+   "name": "Atlantic Trumpetfish",
+   "model_slug": "atlantic-trumpetfish",
+   "zone": "coral_reef",
+   "arrived_at": "2026-11-10T02:50:43Z"
+  },
+  "bringers": [
+   "Voyager 6"
+  ]
+ },
+ {
+  "id": "134",
+  "kind": "arrival",
+  "at": "2026-11-10T03:07:37Z",
+  "ark_day": 280.1,
+  "animal": {
+   "id": "edba14b2-780c-4181-ad50-4c858e2ad813",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-10T03:07:37Z"
+  },
+  "bringers": [
+   "Voyager 32"
+  ]
+ },
+ {
+  "id": "135",
+  "kind": "arrival",
+  "at": "2026-11-10T03:40:57Z",
+  "ark_day": 280.7,
+  "animal": {
+   "id": "add2ed98-1a4a-47a9-af7b-8cecd090e232",
+   "species_profile_id": "4c451e1c-c219-43c0-ae67-050ca8c6dca4",
+   "name": "Arctic Fox",
+   "model_slug": "arctic-fox",
+   "zone": "polar",
+   "arrived_at": "2026-11-10T03:40:57Z"
+  },
+  "bringers": [
+   "Voyager 14"
+  ]
+ },
+ {
+  "id": "136",
+  "kind": "arrival",
+  "at": "2026-11-10T05:00:50Z",
+  "ark_day": 282.2,
+  "animal": {
+   "id": "fa430525-ac5b-4769-a935-a752743c1a9f",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-11-10T05:00:50Z"
+  },
+  "bringers": [
+   "Voyager 23"
+  ]
+ },
+ {
+  "id": "165",
+  "kind": "milestone",
+  "at": "2026-11-10T05:37:47Z",
+  "ark_day": 282.8,
+  "animal": {
+   "id": "a6eebb8d-eafd-4710-ade9-7037a2f389ad",
+   "species_profile_id": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
+   "name": "Red Fox",
+   "model_slug": "red-fox",
+   "zone": "woodland",
+   "arrived_at": "2026-11-07T19:22:12Z"
+  }
+ },
+ {
+  "id": "166",
+  "kind": "milestone",
+  "at": "2026-11-10T10:04:06Z",
+  "ark_day": 287.7,
+  "animal": {
+   "id": "ee68875e-973e-4e25-a0a1-99706f6da7b7",
+   "species_profile_id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "name": "American Alligator",
+   "model_slug": "american-alligator",
+   "zone": "wetland",
+   "arrived_at": "2026-11-08T12:12:27Z"
+  }
+ },
+ {
+  "id": "168",
+  "kind": "milestone",
+  "at": "2026-11-11T20:30:13Z",
+  "ark_day": 325.1,
+  "animal": {
+   "id": "fa430525-ac5b-4769-a935-a752743c1a9f",
+   "species_profile_id": "aea852bd-a138-48d0-a3a1-d2dde88ac92b",
+   "name": "Grey Heron",
+   "model_slug": "grey-heron",
+   "zone": "wetland",
+   "arrived_at": "2026-11-10T05:00:50Z"
+  }
+ },
+ {
+  "id": "167",
+  "kind": "milestone",
+  "at": "2026-11-12T11:12:38Z",
+  "ark_day": 341,
+  "animal": {
+   "id": "3e0abc89-599b-4dfc-af89-1f793fbab266",
+   "species_profile_id": "400d4e58-9c5f-4b3d-a50e-a2e9d943b139",
+   "name": "Mallard",
+   "model_slug": "mallard",
+   "zone": "river_lake",
+   "arrived_at": "2026-11-09T19:27:52Z"
+  }
+ }
+]

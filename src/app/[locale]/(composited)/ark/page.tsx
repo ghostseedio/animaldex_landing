@@ -1,5 +1,5 @@
 import type {Metadata} from "next";
-import ArkView from "@/app/[locale]/(composited)/ark/ark-view";
+import ArkView, {type ArkFixtureLife} from "@/app/[locale]/(composited)/ark/ark-view";
 import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
 import {getLocalePath} from "@/lib/site";
@@ -21,11 +21,19 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
+ *
+ * Life v2 in development: `?fixture=1` is the v2 fixture (born young,
+ * condition, activity, sociality) with its event log and life stories
+ * (`scripts/generate-ark-life-fixtures.mjs`). `?hour=5.5` pins the light's
+ * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
+ * from then on (otherwise from the last visit, kept in localStorage), and
+ * `?publicStory=1` lets the fixture's public-debate stories through, as the
+ * server's `public_story` flag would.
  */
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
 
 type FixtureMode = "full" | "early" | "grow";
 
@@ -49,7 +57,7 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 }
 
 async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null}> {
-    const full = (await import("@/ark-scene/fixtures/snapshot.json")).default as unknown as ArkSnapshot;
+    const full = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default as unknown as ArkSnapshot;
     if (mode === "full") return {snapshot: full, full: null};
     if (mode === "early") return {snapshot: (await import("@/ark-scene/fixtures/snapshot-early.json")).default as unknown as ArkSnapshot, full: null};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
@@ -63,13 +71,23 @@ function modelBase(): string {
     return process.env.NODE_ENV === "development" ? "/api/dev/ark-models/v1/ark" : `${TALKING_MODELS_BASE_URL}/ark`;
 }
 
+/** The fixture's event log and life stories, as the server's reads would answer. */
+async function loadFixtureLife(): Promise<ArkFixtureLife> {
+    const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
+    return {events: events.default as unknown[], lives: lives.default as unknown as Record<string, unknown>};
+}
+
 export default async function ArkPage({params, searchParams}: Props) {
     const mode = fixtureMode(searchParams);
+    const development = process.env.NODE_ENV === "development";
+    const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
+    const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
     const [{words, talk}, data] = await Promise.all([
         getArkWords(params.locale),
         mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
+    const fixtureLife = mode ? await loadFixtureLife() : null;
     return (
         <ArkView
             locale={params.locale}
@@ -81,6 +99,10 @@ export default async function ArkPage({params, searchParams}: Props) {
             talkTitles={talk}
             modelBase={modelBase()}
             focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
+            fixtureLife={fixtureLife}
+            hours={Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 24) : null}
+            since={since}
+            publicStory={Boolean(mode) && searchParams.publicStory === "1"}
         />
     );
 }

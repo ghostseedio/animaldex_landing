@@ -19,6 +19,13 @@
  * view do the farthest become icons (`icons.ts`). Birds of the air circle
  * above their zone, sea animals swim slow loops; a tapped one comes to rest
  * and lifts a little in a ring of light.
+ *
+ * Life v2: the light follows the viewer's clock (`lib/ark-daylight.ts`) and
+ * animals sleep by their species' activity (still, the head lowered); near
+ * ones look round, startle, shake, bob and doze now and then (the talking
+ * models' idles, as root motion); a herd or a school keeps together; the
+ * camera can follow one animal; and `play` acts out the server's events
+ * since the last visit (`acts.ts`). The scene decides nothing that happens.
  */
 
 import {
@@ -47,7 +54,9 @@ import {
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
+import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
+import {DustPuffs} from "@/ark-scene/dust";
 import {ARK_TIME} from "@/ark-scene/glsl";
 import {IconTokens, type TokenInstance} from "@/ark-scene/icons";
 import {buildMotes} from "@/ark-scene/life";
@@ -60,9 +69,13 @@ import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {buildLandscape} from "@/ark-scene/terrain";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
+import {isAwake, localHours} from "@/lib/ark-daylight";
+import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
+import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
     ARK_REGIONS,
     type ArkAnimal,
+    type ArkReplayRun,
     type ArkRegion,
     type ArkSceneHandle,
     type ArkSceneOptions,
@@ -125,6 +138,21 @@ type Entry = {
     visitor?: boolean;
     /** Which way it faced when last drawn. */
     yawNow?: number;
+    /** Awake by its species' activity and the hour; `rest` eases to 1 asleep. */
+    awake: boolean;
+    rest: number;
+    /** The loop's angle now, for a swimmer or a flyer (it slows asleep). */
+    loop: number;
+    /** The group's or pair's first one, which a school or a flock keeps to. */
+    leader?: Entry | null;
+    /** The near level's idle behaviours (look, startle, shake, bob, doze), made when first near. */
+    director?: BehaviourDirector | null;
+    /** Held back until its act in a replay (it arrived, or was born, since the last visit). */
+    held?: boolean;
+    /** In a replay only: an animal that is gone now (eaten, or died), standing in until its act. */
+    ghost?: boolean;
+    /** An act's pose, drawn in place of its own. */
+    act?: ActPose | null;
 };
 
 type SpeciesMeshes = {
@@ -187,8 +215,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const reducedMotion = Boolean(options.reducedMotion);
     const scene = new Scene();
-    const lighting = new ArkLighting(renderer, scene);
-    scene.fog = new Fog(lighting.horizon, 420, 1700);
+    // The hour: pinned by the page (development's `?hour=`), or the viewer's own clock.
+    let pinnedHours = typeof options.hours === "number" && Number.isFinite(options.hours) ? options.hours : null;
+    const hoursNow = () => pinnedHours ?? localHours(new Date());
+    const lighting = new ArkLighting(renderer, scene, hoursNow());
+    const fog = new Fog(lighting.horizon, 420, 1700);
+    scene.fog = fog;
+    const dust = new DustPuffs();
+    scene.add(dust.points);
 
     const landscape = buildLandscape();
     scene.add(landscape.ground, landscape.water);
@@ -243,8 +277,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let visitor: Entry | null = null;
     let visitorLabel: HTMLSpanElement | null = null;
     let jetty: Group | null = null;
-    const allEntries = () => (visitor ? [...entries, visitor] : entries);
+    /** A replay's stand-ins for animals that are gone now. */
+    let ghosts: Entry[] = [];
+    const allEntries = () => (visitor || ghosts.length ? [...entries, ...ghosts, ...(visitor ? [visitor] : [])] : entries);
     const findEntry = (id: string | null) => (id ? entryById.get(id) ?? (visitor?.animal.id === id ? visitor : null) : null);
+    /** The animal the camera follows (until any drag). */
+    let followId: string | null = null;
     // Who is talking, and the full model that stands in for them.
     const talking = {
         target: null as ArkTalking | null,
@@ -348,8 +386,38 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Snapshot
 
+    const newEntry = (animal: ArkAnimal, place: Placement, arrivedAt: number | null): Entry => {
+        const phase = phaseOf(animal.id);
+        return {
+            animal,
+            place,
+            length: displayLength(animal.model_slug, null),
+            arrivedAt,
+            level: "far",
+            phase,
+            middle: null,
+            drawnHeight: 1,
+            air: FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea" ? 1 : 0,
+            lift: 0,
+            awake: true,
+            rest: 0,
+            loop: phase * Math.PI * 2
+        };
+    };
+
+    /** Who is asleep this hour: from the species' activity only (none known: awake by day). */
+    let sunElevation = lighting.daylight.elevation;
+    const applyHours = () => {
+        sunElevation = lighting.daylight.elevation;
+        for (const entry of allEntries()) {
+            entry.awake = entry.visitor ? true : isAwake(entry.animal.activity ?? null, sunElevation);
+            if (reducedMotion) entry.rest = entry.awake ? 0 : 1;
+        }
+    };
+
     const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
-        const now = performance.now() / 1000;
+        // The entrance's clock is the frame's (seconds since the scene started).
+        const now = (performance.now() - started) / 1000;
         const places = placeAnimals(snapshot.animals);
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
@@ -357,25 +425,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const place = places.get(animal.id)!;
             const before = entryById.get(animal.id);
             const entry: Entry = before
-                ? {...before, animal, place}
-                : {
-                    animal,
-                    place,
-                    length: displayLength(animal.model_slug, null),
-                    arrivedAt: entrances ? now : null,
-                    level: "far",
-                    phase: phaseOf(animal.id),
-                    middle: null,
-                    drawnHeight: 1,
-                    air: FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea" ? 1 : 0,
-                    lift: 0
-                };
+                ? Object.assign(before, {animal, place})
+                : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
             tokens.ensure(animal.model_slug);
         }
         entries = next;
         entryById = nextById;
+        // A school or a flock keeps to its first one.
+        for (const entry of next) entry.leader = entry.place.leader && entry.place.leader !== entry.animal.id ? nextById.get(entry.place.leader) ?? null : null;
+        applyHours();
+        if (followId && !entryById.has(followId)) endFollow();
         if (selectedId && !entryById.has(selectedId)) {
             selectedId = null;
             options.onSelect?.(null);
@@ -418,7 +479,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         mesh = new InstancedMesh(source.geometry, material, capacity);
         mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-        const instance = new InstancedBufferAttribute(new Float32Array(capacity * 2), 2);
+        const instance = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
         instance.setUsage(DynamicDrawUsage);
         source.geometry.setAttribute("arkInstance", instance);
         mesh.frustumCulled = false;
@@ -455,6 +516,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Where an animal is this moment: its spot, or its loop in the water, or its circle in the sky. */
     type Pose = {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean};
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
+        // An act's pose, from a replayed event.
+        if (entry.act) {
+            const act = entry.act;
+            return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
+        }
         const place = entry.place;
         const plan = model?.behaviour?.plan ?? "";
         const t = reducedMotion ? 0 : time;
@@ -469,25 +535,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // The sea's swimmers: slow loops about their spot, the reef's under the clear shallows.
         if (site?.kind === "sea" && SWIMMING_PLANS.has(plan)) {
-            const radius = 2.2 + entry.phase * 3 + entry.length * 0.6;
-            const speed = (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1);
-            const angle = entry.phase * Math.PI * 2 + t * speed;
-            const x = place.x + Math.cos(angle) * radius;
-            const z = place.z + Math.sin(angle) * radius;
+            // A school keeps to its first one: the same loop, a little behind and to the side.
+            const lead = entry.leader && !entry.leader.act ? entry.leader : null;
+            const follower = lead ? (entry.place.rank ?? 1) : 0;
+            const owner = lead ?? entry;
+            const direction = owner.phase > 0.5 ? 1 : -1;
+            const radius = 2.2 + owner.phase * 3 + owner.length * 0.6 + (follower ? ((follower % 3) - 1) * 0.9 : 0);
+            const angle = lead ? lead.loop - direction * follower * (0.1 + entry.length * 0.04) : entry.loop;
+            const centre = lead ? lead.place : place;
+            const x = centre.x + Math.cos(angle) * radius;
+            const z = centre.z + Math.sin(angle) * radius;
             const reef = entry.animal.zone === "coral_reef";
             const depth = reef ? 0.55 + 0.35 * entry.phase + modelHeight * 0.5 : modelHeight * (0.38 + 0.12 * Math.sin(t * 0.3 + entry.phase * 9));
+            const speed = direction;
             // Tangent to the loop: model heads face +z.
             const yaw = Math.atan2(-Math.sin(angle) * Math.sign(speed), Math.cos(angle) * Math.sign(speed));
             return {x, z, base: -depth, yaw, pitch: 0, roll: 0, afloat: true};
         }
         // Birds of the air: a wide circle above their zone, banked into the turn.
         if (entry.air > 0.001) {
-            const radius = 6 + entry.phase * 6;
-            const speed = 0.16 + entry.phase * 0.08;
-            const angle = entry.phase * Math.PI * 2 + t * speed;
-            const altitude = 9 + entry.phase * 6 + Math.sin(t * 0.4 + entry.phase * 7) * 0.8;
-            const ax = place.x + Math.cos(angle) * radius - radius;
-            const az = place.z + Math.sin(angle) * radius;
+            // A pair flies together: the mate a little behind on the first one's circle.
+            const lead = entry.leader && !entry.leader.act && entry.leader.air > 0.5 ? entry.leader : null;
+            const owner = lead ?? entry;
+            const radius = 6 + owner.phase * 6;
+            const angle = lead ? lead.loop - 0.22 * (entry.place.rank ?? 1) : entry.loop;
+            const altitude = 9 + owner.phase * 6 + Math.sin(t * 0.4 + entry.phase * 7) * 0.8 + (lead ? 0.8 : 0);
+            const centre = lead ? lead.place : place;
+            const ax = centre.x + Math.cos(angle) * radius - radius;
+            const az = centre.z + Math.sin(angle) * radius;
             const ground = Math.max(place.ground, 0);
             const yawAir = Math.atan2(-Math.sin(angle), Math.cos(angle));
             const k = easeInOut(entry.air);
@@ -504,10 +579,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let base = place.ground;
         if (place.water && place.ground < -0.45) base = -(SWIMMING_PLANS.has(plan) ? 0.5 : 0.28) * modelHeight;
         else if (place.water) base = Math.max(place.ground, -0.3);
-        return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: 0, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        // Asleep: a little lower at the front, as the head goes down.
+        return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
     };
 
+    let lastUpdate = 0;
+    const IDLE_ABILITIES = {jaw: false, eyes: true, nose: false, tail: false};
     const updateInstances = (now: number) => {
+        const dt = reducedMotion || !lastUpdate ? 0 : Math.min(now - lastUpdate, 0.1);
+        lastUpdate = now;
         projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
         frustum.setFromProjectionMatrix(projection);
         const cameraPosition = camera.position;
@@ -520,9 +600,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const entry of allEntries()) {
             const slug = entry.animal.model_slug;
             const model = library.get(slug);
-            // A flyer that is selected comes down to its spot; otherwise takes to the air again.
-            if (FLYERS.has(slug) && ZONE_SITES[entry.animal.zone]?.kind !== "sea") {
-                const target = selectedId === entry.animal.id || reducedMotion ? 0 : 1;
+            if (entry.held || entry.act?.hidden) {
+                entry.middle = null;
+                continue;
+            }
+            // Asleep eases in; an animal in an act is wide awake.
+            const restTarget = entry.awake || entry.act ? 0 : 1;
+            if (!reducedMotion) entry.rest += (restTarget - entry.rest) * Math.min(dt * 1.5, 1);
+            // Loops (a swimmer's, a flyer's) slow almost to a stop asleep.
+            const plan = model?.behaviour?.plan ?? "";
+            const pace = 1 - 0.85 * entry.rest;
+            if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(plan)) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace;
+            else if (entry.air > 0.001) entry.loop += dt * (0.16 + entry.phase * 0.08) * pace;
+            // A flyer that is selected comes down to its spot (unless followed), and so does a sleeping one; otherwise it takes to the air again.
+            if (FLYERS.has(slug) && ZONE_SITES[entry.animal.zone]?.kind !== "sea" && !entry.act) {
+                const target = (selectedId === entry.animal.id && followId !== entry.animal.id) || reducedMotion || !entry.awake ? 0 : 1;
                 entry.air += (target - entry.air) * 0.02;
             }
             entry.lift += ((selectedId === entry.animal.id ? 1 : 0) - entry.lift) * 0.08;
@@ -599,6 +691,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             entry.yawNow = where.yaw;
             const lift = entry.lift * modelHeight * 0.12;
+            // Near and awake: now and then it looks round, startles, shakes, bobs or dozes (the talking models' idles, as root motion).
+            if (level === "near" && entry.awake && !entry.act && !entry.visitor && model && !reducedMotion) {
+                entry.director ??= new BehaviourDirector(model.behaviour, IDLE_ABILITIES, BehaviourRandom.seed(animal.id));
+                const idle = entry.director.pose(now, false);
+                where.yaw += idle.yaw;
+                where.pitch += idle.pitch;
+                where.roll += idle.roll;
+                where.base += idle.lift * candidate.modelScale;
+            }
             entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
             const rest = Math.max(entry.place.ground, 0);
             const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : 0;
@@ -632,13 +733,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             used.add(mesh);
             if (level === "near") counts.near++;
             else counts.far++;
-            const s = candidate.modelScale * sizeUp * grow;
+            const act = entry.act;
+            const s = candidate.modelScale * sizeUp * grow * (act ? Math.max(act.scale, 0.001) : 1);
             euler.set(where.pitch, where.yaw, where.roll);
             rotation.setFromEuler(euler);
             position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXY(index, entry.phase, dim);
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, act ? act.dim : dim, entry.rest);
 
             if (!where.afloat) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
@@ -755,7 +857,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const groundUnderTarget = Math.max(heightAt(target.x, target.z), 0);
         const lift = (groundUnderTarget - target.y) * 0.15;
-        if (Math.abs(lift) > 0.001) {
+        // (Not while following: a flyer is followed up in the air.)
+        if (Math.abs(lift) > 0.001 && !followId) {
             target.y += lift;
             camera.position.y += lift;
         }
@@ -773,7 +876,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let best: Entry | null = null;
         let bestScore = Infinity;
         for (const entry of allEntries()) {
-            if (!entry.middle) continue;
+            if (!entry.middle || entry.ghost) continue;
             projected.copy(entry.middle).project(camera);
             if (projected.z > 1) continue;
             const sx = (projected.x + 1) / 2 * width;
@@ -803,6 +906,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const select = (id: string | null, flyTo: boolean, close = false) => {
         selectedId = id;
+        if (followId && followId !== id) endFollow();
         const entry = findEntry(id);
         options.onSelect?.(entry?.animal ?? null);
         if (entry && flyTo) {
@@ -835,6 +939,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             opening = false;
             flight = null;
         }
+        // A touch during a replay skips it: the Ark as it is now.
+        if (replay) finishReplay(true, true);
         down = pointers === 1 ? {x: event.clientX, y: event.clientY, time: performance.now(), id: event.pointerId} : null;
     };
     const onPointerUp = (event: PointerEvent) => {
@@ -846,6 +952,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (moved > 8 || !quick) return;
         const hit = pick(event.clientX, event.clientY);
         select(hit ? hit.animal.id : null, Boolean(hit));
+    };
+    const onPointerMove = (event: PointerEvent) => {
+        // Any drag ends following.
+        if (followId && down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 8) endFollow();
+        else if (followId && pointers > 1) endFollow();
     };
     const onPointerCancel = () => {
         pointers = Math.max(pointers - 1, 0);
@@ -860,6 +971,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointercancel", onPointerCancel);
     canvas.addEventListener("wheel", onWheel, {passive: true});
 
@@ -889,6 +1001,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         tokens.setViewport(FOV, height, width < 640);
         post.setSize(width, height, pixelRatio);
         motes.setPixelRatio(pixelRatio);
+        dust.setPixelRatio(pixelRatio);
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(el);
@@ -1003,14 +1116,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             place: {x: foot.x, z: foot.z, ground: heightAt(foot.x, foot.z), yaw: visitorYaw(), water: false},
             length: displayLength(next.slug, null),
-            arrivedAt: performance.now() / 1000,
+            arrivedAt: (performance.now() - started) / 1000,
             level: "far",
             phase: phaseOf(id),
             middle: null,
             drawnHeight: 1,
             air: 0,
             lift: 0,
-            visitor: true
+            visitor: true,
+            awake: true,
+            rest: 0,
+            loop: 0
         };
         library.ready().then(() => {
             if (library.has(next.slug)) {
@@ -1100,6 +1216,317 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         actor.root.visible = false;
     };
 
+    // MARK: Following
+
+    const endFollow = () => {
+        if (!followId) return;
+        followId = null;
+        options.onFollowEnd?.();
+    };
+
+    const follow = (id: string | null) => {
+        if (!id || !findEntry(id)) {
+            followId = null;
+            return;
+        }
+        followId = id;
+        controls.autoRotate = false;
+        lastTouch = performance.now() / 1000;
+    };
+
+    // MARK: The hour
+
+    let lastClock = performance.now() / 1000;
+    const setLight = () => {
+        lighting.setHours(hoursNow(), fog);
+        applyHours();
+    };
+
+    // MARK: Replay ("while you were away")
+
+    type Running = {
+        acts: ArkAct[];
+        index: number;
+        begun: boolean;
+        /** Since when the next act has waited for its models (a chase needs the body plan). */
+        waitFrom: number | null;
+        /** When the current act's acting began (after the camera's flight); null while flying. */
+        actingFrom: number | null;
+        seconds: number;
+        lastT: number;
+        /** The current act, each frame: t is seconds since the acting began. */
+        step: ((t: number, last: number, now: number) => void) | null;
+        onAct?: (index: number) => void;
+        resolve: () => void;
+        home: {target: Vector3; distance: number; polar: number; azimuth: number};
+    };
+    let replay: Running | null = null;
+
+    const elapsedNow = () => (performance.now() - started) / 1000;
+    const inWater = (entry: Entry) => ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.place.water;
+
+    /** Where an entry is now and how big, as the acts take it. */
+    const bodyOf = (entry: Entry): ActBody => {
+        const model = library.get(entry.animal.model_slug);
+        const modelScale = model ? entry.length / model.length : 1;
+        const height = model ? model.height * modelScale : entry.length * 0.6;
+        const saved = entry.act;
+        entry.act = null;
+        const where = pose(entry, model, height, elapsedNow());
+        entry.act = saved;
+        return {x: where.x, z: where.z, base: where.base, yaw: where.yaw, length: entry.length, height};
+    };
+
+    const entryFor = (animal: ArkEventAnimal): Entry | null => findEntry(animal.id) ?? ghosts.find((ghost) => ghost.animal.id === animal.id) ?? null;
+
+    /** The camera across a chase: side on, the short way round from where it looks now. */
+    const sideOn = (dx: number, dz: number) => {
+        spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
+        const across = Math.atan2(dz, -dx);
+        const options2 = [across, across + Math.PI];
+        const delta = (a: number) => Math.abs(Math.atan2(Math.sin(a - spherical.theta), Math.cos(a - spherical.theta)));
+        return delta(options2[0]) <= delta(options2[1]) ? options2[0] : options2[1];
+    };
+
+    /** A polar angle from which the camera sees `focus` over the hills: lower (more from above) until nothing is in the way. */
+    const clearPolar = (focus: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number) => {
+        for (let phi = polar; phi > 0.55; phi -= 0.12) {
+            let blocked = false;
+            for (let k = 0.15; k < 1 && !blocked; k += 0.1) {
+                const r = distance * k;
+                const x = focus.x + Math.sin(phi) * Math.sin(azimuth) * r;
+                const y = focus.y + Math.cos(phi) * r;
+                const z = focus.z + Math.sin(phi) * Math.cos(azimuth) * r;
+                if (heightAt(x, z) > y - 0.4) blocked = true;
+            }
+            if (!blocked) return phi;
+        }
+        return 0.55;
+    };
+
+    const beginAct = (run: Running) => {
+        const act = run.acts[run.index];
+        run.actingFrom = null;
+        run.step = null;
+        run.lastT = 0;
+        run.onAct?.(run.index);
+        const toFrame = (focus: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number | undefined, seconds: number, then: () => void) => {
+            spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
+            const bearing = azimuth ?? spherical.theta;
+            fly(new Vector3(focus.x, focus.y, focus.z), distance, reducedMotion ? 0 : 1.2, clearPolar(focus, distance, polar, bearing), bearing, () => {
+                run.seconds = seconds;
+                run.actingFrom = performance.now() / 1000;
+                then();
+            });
+        };
+        if (act.kind === "arrival" || act.kind === "birth") {
+            const arrivals = (act.kind === "arrival" ? [act.animal] : act.young).map(entryFor).filter((entry): entry is Entry => Boolean(entry));
+            const first = arrivals[0];
+            if (!first) {
+                run.seconds = 0.4;
+                run.actingFrom = performance.now() / 1000;
+                return;
+            }
+            const parent = act.kind === "birth" ? act.parents.map((id) => findEntry(id)).find(Boolean) ?? null : null;
+            const focus = parent ?? first;
+            toFrame({x: (first.place.x + focus.place.x) / 2, y: Math.max(first.place.ground, 0) + 0.5, z: (first.place.z + focus.place.z) / 2}, 8 + first.length * 3.2, 1.12, undefined, act.kind === "arrival" ? ARRIVAL_SECONDS : BIRTH_SECONDS, () => {
+                run.step = (t) => {
+                    arrivals.forEach((entry, i) => {
+                        if (entry.held && t >= 0.15 + i * 0.35) {
+                            entry.held = false;
+                            // A flyer comes aboard on the ground, then takes to the air.
+                            entry.air = 0;
+                            entry.arrivedAt = elapsedNow();
+                        }
+                    });
+                };
+            });
+            return;
+        }
+        if (act.kind === "death") {
+            const entry = entryFor(act.animal);
+            if (!entry) {
+                run.seconds = 0.4;
+                run.actingFrom = performance.now() / 1000;
+                return;
+            }
+            const body = bodyOf(entry);
+            entry.act = deathPose(body, 0);
+            toFrame({x: body.x, y: Math.max(body.base, 0) + body.height * 0.4, z: body.z}, 7 + body.length * 3, 1.15, undefined, DEATH_SECONDS, () => {
+                run.step = (t) => {
+                    entry.act = deathPose(body, t);
+                };
+            });
+            return;
+        }
+        if (act.kind === "extinction") {
+            run.seconds = EXTINCTION_SECONDS;
+            run.actingFrom = performance.now() / 1000;
+            return;
+        }
+        // A meal.
+        const predator = entryFor(act.predator);
+        const prey = entryFor(act.prey);
+        if (!predator || !prey) {
+            run.seconds = 0.4;
+            run.actingFrom = performance.now() / 1000;
+            return;
+        }
+        const model = library.get(predator.animal.model_slug);
+        const kind = chaseKind({
+            predatorSlug: predator.animal.model_slug,
+            predatorPlan: model?.behaviour?.plan ?? null,
+            predatorWater: inWater(predator),
+            preyWater: inWater(prey),
+            predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea"
+        });
+        const stage: MealStage = mealStage(kind, bodyOf(predator), bodyOf(prey));
+        // Both hold where they are while the camera comes.
+        prey.act = stage.prey(0);
+        if (kind !== "cutaway") predator.act = stage.predator(0);
+        const dx = prey.place.x - predator.place.x;
+        const dz = prey.place.z - predator.place.z;
+        const azimuth = kind === "cutaway" ? undefined : sideOn(dx, dz);
+        toFrame(stage.focus, stage.distance, stage.polar, azimuth, stage.seconds, () => {
+            let turned = false;
+            run.step = (t, last, now) => {
+                prey.act = stage.prey(t);
+                if (kind !== "cutaway") predator.act = stage.predator(t);
+                for (const puff of stage.puffs(last, t)) dust.add(puff, now);
+                if (stage.turnAt !== undefined && t >= stage.turnAt && !turned) {
+                    // The cut-away: the camera turns aside, out to the sea's horizon, while it happens.
+                    turned = true;
+                    const out = Math.hypot(stage.focus.x, stage.focus.z) > 1 ? Math.atan2(stage.focus.x, stage.focus.z) : 0;
+                    const target = new Vector3(stage.focus.x + Math.sin(out) * 26, 1.5, stage.focus.z + Math.cos(out) * 26);
+                    // From behind the prey's spot, looking out: the camera's bearing is the way back toward the island.
+                    fly(target, 30, reducedMotion ? 0 : 1.3, 1.34, out + Math.PI);
+                }
+            };
+        });
+    };
+
+    /** The Ark as it is now: everyone in place, the stand-ins gone; the view goes back unless a touch took it. */
+    const finishReplay = (skipped: boolean, touched = false) => {
+        const run = replay;
+        if (!run) return;
+        replay = null;
+        for (const entry of entries) {
+            if (entry.held) {
+                entry.held = false;
+                entry.arrivedAt = skipped ? null : entry.arrivedAt;
+            }
+            entry.act = null;
+        }
+        ghosts = [];
+        dust.clear();
+        flight = null;
+        if (!touched) fly(run.home.target, run.home.distance, 1.6, run.home.polar, run.home.azimuth);
+        run.resolve();
+    };
+
+    /** A meal's two models, loaded (or not to be had): the chase depends on the eater's body plan and both sizes. */
+    const modelsReady = (act: ArkAct) => act.kind !== "meal" || [act.predator.model_slug, act.prey.model_slug].every((slug) => !library.has(slug) || Boolean(library.get(slug)));
+
+    const stepReplay = (now: number) => {
+        const run = replay;
+        if (!run || opening) return;
+        if (!run.begun) {
+            run.waitFrom ??= now;
+            if (!modelsReady(run.acts[run.index]) && now - run.waitFrom < 4) return;
+            run.waitFrom = null;
+            run.begun = true;
+            beginAct(run);
+        }
+        if (run.actingFrom === null) return;
+        const t = now - run.actingFrom;
+        run.step?.(t, run.lastT, now);
+        run.lastT = t;
+        if (t >= run.seconds) {
+            // The act's end: whoever moved goes back to its own place (the camera is moving on).
+            const act = run.acts[run.index];
+            if (act.kind === "meal") {
+                const predator = entryFor(act.predator);
+                if (predator) predator.act = null;
+            }
+            run.index++;
+            // The next act begins (once its models are in) on a later frame.
+            if (run.index >= run.acts.length) finishReplay(false);
+            else run.begun = false;
+        }
+    };
+
+    const play = (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}): ArkReplayRun => {
+        if (replay) finishReplay(true);
+        if (!acts.length) return {skip: () => undefined, done: Promise.resolve()};
+        // Who arrived or was born since: held back until their act.
+        for (const act of acts) {
+            const ids = act.kind === "arrival" ? [act.animal.id] : act.kind === "birth" ? act.young.map((a) => a.id) : [];
+            for (const id of ids) {
+                const entry = entryById.get(id);
+                if (entry) entry.held = true;
+            }
+        }
+        // Who is gone now (eaten, or died): standing in where they were until their act.
+        const gone = new Map<string, ArkEventAnimal>();
+        for (const act of acts) {
+            const named = act.kind === "meal" ? [act.predator, act.prey] : act.kind === "death" ? [act.animal] : [];
+            for (const animal of named) if (!entryById.has(animal.id)) gone.set(animal.id, animal);
+        }
+        const present = entries.map((entry) => entry.animal);
+        const ghostAnimals: ArkAnimal[] = Array.from(gone.values()).map((animal) => ({
+            id: animal.id,
+            species_profile_id: animal.species_profile_id,
+            name: animal.name,
+            scientific_name: null,
+            model_slug: animal.model_slug,
+            zone: animal.zone,
+            arrived_at: animal.arrived_at ?? "",
+            brought_by: {label: "", named: false},
+            mine: false,
+            sociality: present.find((other) => other.model_slug === animal.model_slug)?.sociality ?? null,
+            activity: present.find((other) => other.model_slug === animal.model_slug)?.activity ?? null
+        }));
+        const places = ghostAnimals.length ? placeAnimals([...present, ...ghostAnimals]) : new Map<string, Placement>();
+        ghosts = ghostAnimals.map((animal) => Object.assign(newEntry(animal, places.get(animal.id)!, null), {ghost: true}));
+        for (const ghost of ghosts) {
+            ghost.leader = null;
+            // One that came aboard since and is gone already: held back until its own arrival.
+            ghost.held = acts.some((act) => (act.kind === "arrival" && act.animal.id === ghost.animal.id) || (act.kind === "birth" && act.young.some((a) => a.id === ghost.animal.id)));
+        }
+        applyHours();
+        // Their models, near and far.
+        const slugs = new Set(acts.flatMap((act) => (act.kind === "meal" ? [act.predator.model_slug, act.prey.model_slug] : act.kind === "death" || act.kind === "arrival" ? [act.animal.model_slug] : act.kind === "birth" ? act.young.map((a) => a.model_slug) : [])));
+        library.ready().then(() => {
+            slugs.forEach((slug) => {
+                if (!library.has(slug)) return;
+                library.request(slug, "far");
+                library.request(slug, "near");
+                tokens.ensure(slug);
+            });
+        });
+        controls.autoRotate = false;
+        spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
+        const view = opening ? homeView() : null;
+        let resolve = () => undefined as void;
+        const done = new Promise<void>((r) => {
+            resolve = r;
+        });
+        replay = {
+            acts,
+            index: 0,
+            begun: false,
+            waitFrom: null,
+            actingFrom: null,
+            seconds: 0,
+            lastT: 0,
+            step: null,
+            onAct: callbacks?.onAct,
+            resolve,
+            home: view ? {target: view.target, distance: view.distance, polar: view.polar, azimuth: view.azimuth} : {target: controls.target.clone(), distance: spherical.radius, polar: spherical.phi, azimuth: spherical.theta}
+        };
+        return {skip: () => finishReplay(true), done};
+    };
+
     // MARK: Loop
 
     const frameTimes: number[] = [];
@@ -1123,13 +1550,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepFlight(now);
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
-        if (!reducedMotion && !flight && !selectedId && !opening && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
+        if (!reducedMotion && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
         controls.update();
         keepInWorld();
         stepTalking(elapsed);
+        // The hour: read again every minute (the light changes only a little).
+        if (now - lastClock > 60 && !replay) {
+            lastClock = now;
+            setLight();
+        }
+        stepReplay(now);
         updateInstances(elapsed);
-        // Follow a selected animal that moves (a swimmer's loop).
-        const tracked = selectedId ? findEntry(selectedId)?.middle : null;
+        dust.step(now);
+        // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
+        const followed = followId ? findEntry(followId) : null;
+        if (followed?.middle && !flight && pointers === 0) {
+            const k = reducedMotion ? 1 : 0.12;
+            const dx = (followed.middle.x - controls.target.x) * k;
+            const dy = (followed.middle.y - followed.drawnHeight * 0.1 - controls.target.y) * k;
+            const dz = (followed.middle.z - controls.target.z) * k;
+            controls.target.x += dx;
+            controls.target.y += dy;
+            controls.target.z += dz;
+            camera.position.x += dx;
+            camera.position.y += dy;
+            camera.position.z += dz;
+        }
+        // Otherwise a selected animal that moves (a swimmer's loop) is kept in view.
+        const tracked = selectedId && !followed ? findEntry(selectedId)?.middle : null;
         if (tracked && !flight && pointers === 0) {
             if (lastTracked) {
                 const dx = tracked.x - lastTracked.x;
@@ -1189,7 +1637,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking};
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking, lighting, entries: () => allEntries(), replaying: () => Boolean(replay), following: () => followId};
 
     return {
         update: (snapshot) => setSnapshot(snapshot, true),
@@ -1197,6 +1645,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mineOnly = value;
         },
         select: (id, closeUp) => select(id, true, Boolean(closeUp)),
+        follow,
+        setHours: (hours) => {
+            pinnedHours = typeof hours === "number" && Number.isFinite(hours) ? hours : null;
+            setLight();
+        },
+        play,
         setVisitor,
         setTalking,
         talkText: (chunk) => {
@@ -1240,6 +1694,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             visibility.disconnect();
             canvas.removeEventListener("pointerdown", onPointerDown);
             canvas.removeEventListener("pointerup", onPointerUp);
+            canvas.removeEventListener("pointermove", onPointerMove);
             canvas.removeEventListener("pointercancel", onPointerCancel);
             canvas.removeEventListener("wheel", onWheel);
             controls.dispose();
@@ -1250,6 +1705,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 meshes.farMaterial?.dispose();
             });
             talking.actor?.dispose();
+            replay = null;
+            dust.dispose();
             if (jetty) (jetty.userData.dispose as () => void)();
             library.dispose();
             tokens.dispose();

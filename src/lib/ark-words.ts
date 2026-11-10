@@ -32,6 +32,76 @@ export type ArkHudWords = {
 
 export type ArkStoryWords = {generic: string; debate: string; openDebate: string};
 
+/** The tap card's life story (life v2). */
+export type ArkLifeWords = {
+    bornAboard: string;
+    bornTo: string;
+    bornToValue: string;
+    born: string;
+    generation: string;
+    generationArrived: string;
+    generationBorn: string;
+    generationShort: string;
+    age: string;
+    ageYears: string;
+    ageYear: string;
+    ageDays: string;
+    ageDay: string;
+    meals: string;
+    lastMeal: string;
+    dietSays: string;
+    young: string;
+    noYoung: string;
+    milestones: string;
+    milestonesValue: string;
+    condition: string;
+    well_fed: string;
+    hungry: string;
+    old: string;
+    asleep: string;
+    line: string;
+    lineValue: string;
+    showStory: string;
+    hideStory: string;
+    follow: string;
+    followHint: string;
+    anonymous: string;
+};
+
+/** "While you were away": the replay's captions and its summary line. */
+export type ArkReplayWords = {
+    title: string;
+    skip: string;
+    progress: string;
+    arrival: string;
+    birthOne: string;
+    birthOther: string;
+    meal: string;
+    mealPhrase: string;
+    death: string;
+    lastGone: string;
+    extinction: string;
+    summary: string;
+    arrivalsOne: string;
+    arrivalsOther: string;
+    birthsOne: string;
+    birthsOther: string;
+    mealsOne: string;
+    mealsOther: string;
+    deathsOne: string;
+    deathsOther: string;
+    extinctionsOne: string;
+    extinctionsOther: string;
+    today: string;
+    yesterday: string;
+    weekday: string;
+    date: string;
+    a: string;
+    an: string;
+    dismiss: string;
+};
+
+
 export type ArkCaptureWords = {
     aboardOne: string;
     aboardOther: string;
@@ -82,6 +152,8 @@ export type ArkWords = {
     regions: Record<ArkRegion, string>;
     hud: ArkHudWords;
     story: ArkStoryWords;
+    life: ArkLifeWords;
+    replay: ArkReplayWords;
     capture: ArkCaptureWords;
 };
 
