@@ -464,8 +464,9 @@ export function DebateVoteSection({debate, words, locale, signedIn, onChange}: {
             <AskSpecialLabel icon={<VoteIcon />}>{words.debate.communityVote}</AskSpecialLabel>
             <p className="text-[13px] font-semibold leading-5 text-white/70">
                 {debateVotesText(debate.totalVotes, words)}
-                {/* The clock shows after a rollover too (iOS ff32eac8). */}
-                {debate.status === "voting" ? ` · ${[debate.rollovers > 0 ? words.debate.rollover : null, closesIn].filter(Boolean).join(" · ") || words.debateWeb.statusVoting}` : ""}
+                {/* The clock shows after a rollover too (iOS ff32eac8); once the asker has
+                    chosen a way, no clock or rollover is left over (iOS 6db4f601). */}
+                {debate.status === "voting" && !debate.chosenParticipantId ? ` · ${[debate.rollovers > 0 ? words.debate.rollover : null, closesIn].filter(Boolean).join(" · ") || words.debateWeb.statusVoting}` : ""}
             </p>
             {state.kind === "vote" || showsCounts ? (
                 <div className="flex flex-col gap-1.5">

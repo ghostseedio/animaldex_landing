@@ -144,7 +144,15 @@ export function useTryDebateWay(debate: Debate | null, words: CompanionWords, ch
             if (participant.speciesProfileId) void loadTopQualities(participant.speciesProfileId).then(setQualities);
             const choice = result.value;
             // Every surface holding this debate keeps the choice (a list row never carries it).
-            noteDebateChanged({...debate, chosenParticipantId: participant.id});
+            const chosen: Debate = {...debate, chosenParticipantId: participant.id};
+            noteDebateChanged(chosen);
+            // Choosing a way ends a public vote on the server (20261110120000): read it
+            // again so the countdown goes at once (iOS b05433b9).
+            if (debate.status === "voting") {
+                void fetchDebate(debate.id).then(({debate: fresh}) => {
+                    if (fresh) noteDebateChanged(mergeDebate(chosen, fresh));
+                });
+            }
             // The server set the step from this way on the animal it belongs to, replacing that
             // animal's old open step: read the loops of the chosen animal (when it is theirs)
             // and the host again, so the old step stops showing as the active one and the new

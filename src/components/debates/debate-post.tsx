@@ -71,7 +71,9 @@ export default function DebatePost({debate: seed, words, signedIn, pinned = fals
     const state = debateVoteState(debate, signedIn);
     const openings = debateOpenings(debate);
     const {shown, hidden} = debateDiscoverRows(debate.participants, debate.myVote ?? debate.winnerParticipantId);
-    const closesIn = debate.status === "voting" ? debateClosesIn(debate.votingDeadlineAt, words, locale) : null;
+    // Once the asker has chosen a way, no clock or rollover is left over (iOS 6db4f601).
+    const openVote = debate.status === "voting" && !debate.chosenParticipantId;
+    const closesIn = openVote ? debateClosesIn(debate.votingDeadlineAt, words, locale) : null;
     const results = debate.status === "settled" || debate.status === "draw" ? debateResultLines(debate, words) : [];
     const href = `/app/debates/${encodeURIComponent(debate.id)}`;
 
@@ -192,7 +194,7 @@ export default function DebatePost({debate: seed, words, signedIn, pinned = fals
             )}
 
             <div className="mt-3 flex flex-col gap-1">
-                {debate.rollovers > 0 && debate.status === "voting" ? note(words.debate.rollover) : null}
+                {debate.rollovers > 0 && openVote ? note(words.debate.rollover) : null}
                 {state.kind === "own" ? note(words.debate.cantVoteOwn) : null}
                 {state.kind === "ineligible" && !ballot.problem ? note(words.debateWeb.ineligible) : null}
                 {state.kind === "signIn" ? (
