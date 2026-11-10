@@ -25,13 +25,16 @@ import {
     MeshStandardMaterial,
     Quaternion,
     BoxGeometry,
+    CanvasTexture,
     CircleGeometry,
+    SRGBColorSpace,
     Vector3,
     type Material
 } from "three";
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {grassTufts, worldDecor, type DecorKind} from "@/ark-scene/decor";
-import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
+import {forestFill, grassTufts, worldDecor, type DecorKind} from "@/ark-scene/decor";
+import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
+import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
@@ -39,9 +42,13 @@ import {seeded} from "@/ark-scene/world";
 // MARK: - Building blocks
 
 /** Every part ends up with the same attributes: position, normal, color, arkLeaf (1 = takes the instance's tint and the wind). */
-function finish(geometry: BufferGeometry, shade: (y: number, t: number, i: number) => number, leaf: number, colour: Color = WHITE): BufferGeometry {
+function finish(geometry: BufferGeometry, shade: (y: number, t: number, i: number) => number, leaf: number, colour: Color = WHITE, keepUv = false): BufferGeometry {
     const flat = geometry.index ? geometry.toNonIndexed() : geometry;
-    if (flat.getAttribute("uv")) flat.deleteAttribute("uv");
+    // Every part samples the foliage texture: leaf cards their own leaves, everything else its opaque white corner.
+    if (!keepUv || !flat.getAttribute("uv")) {
+        const corner = new Float32Array(flat.getAttribute("position").count * 2).fill(0.985);
+        flat.setAttribute("uv", new BufferAttribute(corner, 2));
+    }
     if (!flat.getAttribute("normal")) flat.computeVertexNormals();
     flat.computeBoundingBox();
     const box = flat.boundingBox!;
@@ -85,7 +92,7 @@ function canopy(blobs: Blob[], detail = 1): BufferGeometry {
     for (const blob of blobs) centre.add(new Vector3(blob.x, blob.y, blob.z));
     centre.divideScalar(blobs.length);
     const parts = blobs.map((blob, index) => {
-        const sphere = new IcosahedronGeometry(blob.r, detail);
+        const sphere = new IcosahedronGeometry(blob.r * 0.82, detail);
         sphere.scale(1, blob.squash ?? 0.82, 1);
         sphere.translate(blob.x, blob.y, blob.z);
         const position = sphere.getAttribute("position");
@@ -101,9 +108,50 @@ function canopy(blobs: Blob[], detail = 1): BufferGeometry {
         const variation = 0.92 + ((index * 37) % 11) / 55;
         return finish(sphere, (y) => {
             const inside = Math.min(Math.max((y - (blob.y - blob.r)) / (blob.r * 2), 0), 1);
-            return variation * (0.58 + 0.55 * inside);
+            return variation * (0.5 + 0.5 * inside);
         }, 1);
     });
+    // Batch 1: leaf cards round each blob (alpha-cut clusters of leaves), so crowns have ragged, leafy edges, not balls.
+    const random = seeded(Math.round(Math.abs(centre.x * 131 + centre.y * 71 + centre.z * 37 + blobs.length * 7)) + 5);
+    const cards: number[] = [];
+    const cardUv: number[] = [];
+    const cardNormal: number[] = [];
+    const cardShade: number[] = [];
+    const dir = new Vector3();
+    const side = new Vector3();
+    const up = new Vector3();
+    const facing = new Vector3();
+    for (const blob of blobs) {
+        const count = 6 + Math.round(blob.r * 6);
+        for (let c = 0; c < count; c++) {
+            dir.set(random() * 2 - 1, random() * 1.6 - 0.5, random() * 2 - 1).normalize();
+            const reach = blob.r * (0.55 + 0.45 * random());
+            const cx = blob.x + dir.x * reach;
+            const cy = blob.y + dir.y * reach * (blob.squash ?? 0.82);
+            const cz = blob.z + dir.z * reach;
+            const size = blob.r * (0.75 + 0.45 * random());
+            facing.copy(dir).add(new Vector3(random() - 0.5, random() - 0.3, random() - 0.5)).normalize();
+            side.set(0, 1, 0).cross(facing);
+            if (side.lengthSq() < 1e-4) side.set(1, 0, 0);
+            side.normalize().multiplyScalar(size / 2);
+            up.copy(facing).cross(side).normalize().multiplyScalar(size / 2);
+            const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [cx + side.x * a + up.x * b, cy + side.y * a + up.y * b, cz + side.z * a + up.z * b]);
+            const uvs = [[0, 0], [0.92, 0], [0.92, 0.92], [0, 0.92]];
+            for (const k of [0, 1, 2, 0, 2, 3]) {
+                cards.push(...corners[k]);
+                cardUv.push(...uvs[k]);
+                const out = new Vector3(corners[k][0], corners[k][1], corners[k][2]).sub(centre).normalize();
+                cardNormal.push(out.x, out.y, out.z);
+                const inside = Math.min(Math.max((corners[k][1] - (blob.y - blob.r)) / (blob.r * 2), 0), 1);
+                cardShade.push(0.62 + 0.5 * inside);
+            }
+        }
+    }
+    const leaves = new BufferGeometry();
+    leaves.setAttribute("position", new BufferAttribute(new Float32Array(cards), 3));
+    leaves.setAttribute("normal", new BufferAttribute(new Float32Array(cardNormal), 3));
+    leaves.setAttribute("uv", new BufferAttribute(new Float32Array(cardUv), 2));
+    parts.push(finish(leaves, (_, __, i) => cardShade[i], 1, WHITE, true));
     return mergeGeometries(parts)!;
 }
 
@@ -298,7 +346,7 @@ function cactus(): BufferGeometry {
 
 export function rock(variant: number): BufferGeometry {
     const random = seeded(551 + variant);
-    let geometry: BufferGeometry = new IcosahedronGeometry(0.85, 1);
+    let geometry: BufferGeometry = new IcosahedronGeometry(0.85, 3);
     geometry.deleteAttribute("normal");
     geometry.deleteAttribute("uv");
     geometry = mergeVertices(geometry);
@@ -310,7 +358,10 @@ export function rock(variant: number): BufferGeometry {
         const dir = v.clone().normalize();
         let push = 0;
         for (const bump of bumps) push += Math.max(dir.dot(bump), 0) ** 3 * 0.22;
-        v.multiplyScalar(0.85 + push - 0.08 * Math.abs(dir.y));
+        // Weathered: a few flat facets and cracks over the lumps (batch 1).
+        const facet = Math.floor((dir.x * 2.3 + dir.z * 1.7 + 4) % 3) * 0.015;
+        const grain = (Math.sin(dir.x * 13.1 + variant) * Math.sin(dir.z * 11.7 + dir.y * 9.3) ) * 0.035;
+        v.multiplyScalar(0.85 + push - 0.08 * Math.abs(dir.y) + facet + grain);
         position.setXYZ(i, v.x * 1.1, v.y * 0.62, v.z * 0.95);
     }
     geometry.computeVertexNormals();
@@ -531,11 +582,13 @@ function fallenLeaf(variant: number): BufferGeometry {
 function tuft(): BufferGeometry {
     const random = seeded(1201);
     const points: number[] = [];
-    for (let b = 0; b < 9; b++) {
+    // Batch 1: more, finer blades of mixed height (short lawn round long stems), not a few big flat spikes.
+    for (let b = 0; b < 14; b++) {
         const angle = random() * Math.PI * 2;
-        const lean = 0.15 + random() * 0.25;
-        const height = 0.32 + random() * 0.28;
-        const width = 0.035;
+        const lean = 0.12 + random() * 0.3;
+        const tall = random();
+        const height = tall > 0.8 ? 0.42 + random() * 0.22 : 0.14 + random() * 0.22;
+        const width = 0.012 + random() * 0.014;
         const ox = Math.cos(angle) * 0.08 * random();
         const oz = Math.sin(angle) * 0.08 * random();
         const tx = ox + Math.cos(angle) * lean * height;
@@ -550,17 +603,72 @@ function tuft(): BufferGeometry {
     // Grass is lit as if it faced up, so it reads like the lawn it stands on.
     const normal = geometry.getAttribute("normal");
     for (let i = 0; i < normal.count; i++) normal.setXYZ(i, 0, 1, 0);
-    return finish(geometry, (_, t) => 0.45 + 0.75 * t, 1);
+    return finish(geometry, (_, t) => 0.62 + 0.55 * t, 1);
 }
 
 // MARK: - Material
 
+/**
+ * The foliage texture (batch 1), drawn once in code: clusters of grey leaves on clear ground (the leaf cards
+ * take their colour from the tree's tint), and an opaque white corner that every solid part samples.
+ */
+let foliageTexture: CanvasTexture | null = null;
+function leafTexture(): CanvasTexture | null {
+    if (foliageTexture) return foliageTexture;
+    if (typeof document === "undefined") return null;
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext("2d");
+    if (!g) return null;
+    const random = seeded(4242);
+    g.clearRect(0, 0, size, size);
+    for (let i = 0; i < 150; i++) {
+        const a = random() * Math.PI * 2;
+        const r = Math.sqrt(random()) * 98;
+        const x = 118 + Math.cos(a) * r;
+        const y = 124 + Math.sin(a) * r * 0.92;
+        const length = 13 + random() * 11;
+        const tone = Math.round(150 + 100 * random() * (1 - (y / size) * 0.4));
+        g.save();
+        g.translate(x, y);
+        g.rotate(a + (random() - 0.5) * 1.6);
+        g.fillStyle = `rgb(${tone},${tone},${tone})`;
+        g.beginPath();
+        g.ellipse(0, 0, length, length * 0.42, 0, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = `rgba(0,0,0,0.25)`;
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(-length * 0.9, 0);
+        g.lineTo(length * 0.9, 0);
+        g.stroke();
+        g.restore();
+    }
+    // A few twigs through the cluster.
+    g.strokeStyle = "rgb(70,60,50)";
+    g.lineWidth = 2;
+    for (let i = 0; i < 5; i++) {
+        g.beginPath();
+        g.moveTo(118, 210);
+        g.lineTo(118 + (random() - 0.5) * 160, 40 + random() * 120);
+        g.stroke();
+    }
+    g.fillStyle = "#ffffff";
+    g.fillRect(size - 12, 0, 12, 12);
+    foliageTexture = new CanvasTexture(canvas);
+    foliageTexture.colorSpace = SRGBColorSpace;
+    foliageTexture.anisotropy = 4;
+    return foliageTexture;
+}
+
 /** The shared foliage material: vertex colour × the instance's tint (leaves only), swaying with the wind above `windHeight`. */
-function foliageMaterial(windAmount: number, windHeight: number, doubleSide = false): MeshStandardMaterial {
-    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.88, metalness: 0});
-    if (doubleSide) material.side = DoubleSide;
+function foliageMaterial(windAmount: number, windHeight: number, doubleSide = false, cards = false): MeshStandardMaterial {
+    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.88, metalness: 0, map: leafTexture()});
+    if (doubleSide || cards) material.side = DoubleSide;
+    if (cards) material.alphaTest = 0.45;
     const uniforms = {arkTime: ARK_TIME, arkWind: ARK_WIND, windAmount: {value: windAmount}, windHeight: {value: windHeight}};
-    material.customProgramCacheKey = () => `ark-foliage-${doubleSide ? 2 : 1}`;
+    material.customProgramCacheKey = () => `ark-foliage-${doubleSide ? 2 : 1}-${cards ? "c" : "s"}`;
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -580,6 +688,61 @@ vColor.rgb *= mix(vec3(1.0), arkTint, arkLeaf);`)
     float bend = pow(max(transformed.y, 0.0) / windHeight, 2.0) * windAmount * arkLeaf;
     transformed.xz += arkWind * sway * bend;
 }`);
+    };
+    return material;
+}
+
+/**
+ * Rocks (batch 1): the CC0 rock texture from the ground's array, projected three ways in world space (no stretching
+ * on any face), moss on the dry tops, darker and glossy where the sea wets them, a pale salt line above that.
+ */
+function rockMaterial(): MeshStandardMaterial {
+    const material = foliageMaterial(0, 1);
+    material.map = null;
+    const uniforms = {groundAlbedo: ARK_GROUND_TEXTURES.albedo, groundNormal: ARK_GROUND_TEXTURES.normal, groundReady: ARK_GROUND_TEXTURES.ready};
+    const base = material.onBeforeCompile;
+    material.customProgramCacheKey = () => "ark-rock-1";
+    material.onBeforeCompile = (shader, renderer) => {
+        base(shader, renderer);
+        Object.assign(shader.uniforms, uniforms);
+        shader.vertexShader = shader.vertexShader
+            .replace("#include <common>", "#include <common>\nvarying vec3 vRockWorld;\nvarying vec3 vRockNormal;")
+            .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
+vRockWorld = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+vRockNormal = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);`);
+        shader.fragmentShader = shader.fragmentShader
+            .replace("#include <common>", `#include <common>
+varying vec3 vRockWorld;
+varying vec3 vRockNormal;
+uniform highp sampler2DArray groundAlbedo;
+uniform float groundReady;
+${NOISE_GLSL}
+float rockShadeH = 0.0;`)
+            .replace("#include <color_fragment>", `#include <color_fragment>
+{
+    vec3 w = vRockWorld;
+    vec3 n = normalize(vRockNormal);
+    vec3 k = pow(abs(n), vec3(4.0));
+    k /= (k.x + k.y + k.z);
+    vec3 detail = vec3(1.0);
+    if (groundReady > 0.5) {
+        float s = 0.45;
+        vec3 t = texture(groundAlbedo, vec3(w.zy * s, 5.0)).rgb * k.x + texture(groundAlbedo, vec3(w.xz * s, 5.0)).rgb * k.y + texture(groundAlbedo, vec3(w.xy * s, 5.0)).rgb * k.z;
+        detail = t / vec3(0.227, 0.144, 0.08);
+        detail = mix(vec3(dot(detail, vec3(0.3333))), detail, 0.35);
+    }
+    vec3 c = diffuseColor.rgb * detail;
+    float top = smoothstep(0.55, 0.9, n.y) * smoothstep(0.4, 0.7, arkFbm(w.xz * 0.9 + w.y));
+    float dry = smoothstep(0.35, 0.9, w.y);
+    c = mix(c, vec3(0.2, 0.27, 0.1) * (0.7 + 0.6 * arkNoise(w.xz * 6.0)), top * dry * 0.8);
+    float wet = 1.0 - smoothstep(0.1, 0.55, w.y);
+    c *= mix(1.0, 0.55, wet);
+    c = mix(c, c * 1.25 + 0.025, smoothstep(0.5, 0.58, w.y) * (1.0 - smoothstep(0.58, 0.75, w.y)) * 0.6);
+    diffuseColor.rgb = c;
+    rockShadeH = wet;
+}`)
+            .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+roughnessFactor = mix(roughnessFactor, 0.3, rockShadeH);`);
     };
     return material;
 }
@@ -617,6 +780,8 @@ export type Vegetation = {
     grass: InstancedMesh;
     setGrassCount: (count: number) => void;
     setShadows: (on: boolean) => void;
+    /** The forest fill (graphics pass): the share of the extra trees drawn, 0…1, by tier. */
+    setFill: (fraction: number) => void;
     triangles: number;
     dispose: () => void;
 };
@@ -627,6 +792,8 @@ function variantCount(kind: DecorKind): number {
 
 export function buildVegetation(maxGrass: number): Vegetation {
     const items = worldDecor();
+    const fill = forestFill();
+    const fillMeshes: Array<{mesh: InstancedMesh; base: number; extra: number; triangles: number}> = [];
     const meshes: InstancedMesh[] = [];
     const materials: Material[] = [];
     const matrix = new Matrix4();
@@ -639,10 +806,13 @@ export function buildVegetation(maxGrass: number): Vegetation {
     let triangles = 0;
 
     for (const shape of SHAPES) {
-        const mine = items.filter((item) => item.kind === shape.kind && item.variant % variantCount(shape.kind) === shape.variant);
+        const own = items.filter((item) => item.kind === shape.kind && item.variant % variantCount(shape.kind) === shape.variant);
+        const extra = fill.filter((item) => item.kind === shape.kind && item.variant % variantCount(shape.kind) === shape.variant);
+        const mine = [...own, ...extra];
         if (!mine.length) continue;
         const geometry = shape.build();
-        const material = foliageMaterial(shape.wind, shape.windHeight, shape.doubleSide);
+        const cards = ["broadleaf", "rainforest", "acacia", "orchard", "canopy", "shrub"].includes(shape.kind);
+        const material = shape.kind === "rock" ? rockMaterial() : foliageMaterial(shape.wind, shape.windHeight, shape.doubleSide, cards);
         const mesh = new InstancedMesh(geometry, material, mine.length);
         mesh.userData.kind = shape.kind;
         const tints = new Float32Array(mine.length * 3);
@@ -662,7 +832,9 @@ export function buildVegetation(maxGrass: number): Vegetation {
         mesh.computeBoundingSphere();
         mesh.receiveShadow = true;
         if (shape.shadow) shadowCasters.push(mesh);
-        triangles += (geometry.getAttribute("position").count / 3) * mine.length;
+        const perInstance = geometry.getAttribute("position").count / 3;
+        triangles += perInstance * own.length;
+        if (extra.length) fillMeshes.push({mesh, base: own.length, extra: extra.length, triangles: perInstance});
         meshes.push(mesh);
         materials.push(material);
     }
@@ -681,7 +853,7 @@ export function buildVegetation(maxGrass: number): Vegetation {
         rotation.setFromAxisAngle(up, t.rotation);
         matrix.compose(at.set(t.x, t.y - 0.03, t.z), rotation, scale.setScalar(t.scale));
         grass.setMatrixAt(i, matrix);
-        tint.set(ZONE_PALETTES[t.zone].ground[0]).lerp(green, 0.35).lerp(dry, t.dry * 0.5).multiplyScalar(1.12);
+        tint.set(ZONE_PALETTES[t.zone].ground[0]).lerp(green, 0.5).lerp(dry, t.dry * 0.45).multiplyScalar(1.1);
         grassTints[i * 3] = tint.r;
         grassTints[i * 3 + 1] = tint.g;
         grassTints[i * 3 + 2] = tint.b;
@@ -702,8 +874,11 @@ export function buildVegetation(maxGrass: number): Vegetation {
         setShadows: (on) => {
             for (const mesh of shadowCasters) mesh.castShadow = on;
         },
+        setFill: (fraction) => {
+            for (const entry of fillMeshes) entry.mesh.count = entry.base + Math.round(entry.extra * Math.min(Math.max(fraction, 0), 1));
+        },
         get triangles() {
-            return triangles + grassTriangles * grass.count;
+            return triangles + grassTriangles * grass.count + fillMeshes.reduce((sum, entry) => sum + (entry.mesh.count - entry.base) * entry.triangles, 0);
         },
         dispose: () => {
             for (const mesh of [...meshes, grass]) {

@@ -29,11 +29,19 @@ import {
     ShaderMaterial,
     UniformsLib,
     UniformsUtils,
+    Vector3,
     type BufferGeometry
 } from "three";
-import {ARK_DAYLIGHT, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
+import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
+import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
+
+/** How rough the sea is: 1 in the usual breeze, more in wind and storms (set with the environment). */
+export const WATER_WIND = {value: 1};
+
+/** 1 on the low tier: one texture sample per layer and no normal maps. */
+export const ARK_GROUND_LITE = {value: 0};
 
 const SEGMENTS = 200;
 
@@ -51,6 +59,8 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     const size = SEGMENTS + 1;
     const colors = new Float32Array(count * 3);
     const layers = new Float32Array(count * 4);
+    // Batch 1 (graphics): forest floor, open ground (grassland and desert: bare soil patches), wet bank (river and lake), cliff.
+    const layers2 = new Float32Array(count * 4);
     const heights = new Float32Array(count);
     const color = new Color();
     const mix = new Color();
@@ -99,6 +109,12 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
         layers[i * 4 + 1] = mud;
         layers[i * 4 + 2] = farmland;
         layers[i * 4 + 3] = snow;
+        const land = smoothstep(0.3, 1, sample.land);
+        layers2[i * 4] = ((w.rainforest ?? 0) + (w.woodland ?? 0) + (w.mountains ?? 0) * 0.35) * land * (1 - snow);
+        layers2[i * 4 + 1] = ((w.grassland ?? 0) + (w.desert ?? 0) * 0.5 + (w.mountains ?? 0) * 0.3) * land;
+        const lakeBank = smoothstep(LAKE.r + 5, LAKE.r + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z));
+        layers2[i * 4 + 2] = Math.max(lakeBank, smoothstep(6.5, 2.5, sample.river) * (sample.inland > 3 ? 1 : 0)) * (1 - snow);
+        layers2[i * 4 + 3] = sample.cliff;
 
         const at = i * 4;
         const depth = Math.max(-sample.height, 0);
@@ -136,6 +152,7 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     geometry.computeVertexNormals();
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
     geometry.setAttribute("arkLayers", new BufferAttribute(layers, 4));
+    geometry.setAttribute("arkLayers2", new BufferAttribute(layers2, 4));
 
     const depth = new DataTexture(depthPixels, size, size, RGBAFormat);
     depth.flipY = false;
@@ -163,26 +180,44 @@ function groundMaterial(): MeshStandardMaterial {
         soilTone: {value: srgb("#7a5c3e")},
         hedgeTone: {value: srgb("#3f5a2a")},
         dryGrass: {value: srgb("#b9a35e")},
-        arkCaustics: ARK_CAUSTICS
+        arkCaustics: ARK_CAUSTICS,
+        groundAlbedo: ARK_GROUND_TEXTURES.albedo,
+        groundNormal: ARK_GROUND_TEXTURES.normal,
+        groundReady: ARK_GROUND_TEXTURES.ready,
+        groundMeans: {value: GROUND_MEANS.map(([r, g, b]) => new Vector3(r, g, b))},
+        groundLite: ARK_GROUND_LITE,
+        envWetness: ARK_ENV.wetness,
+        envSnow: ARK_ENV.snow
     };
-    material.customProgramCacheKey = () => "ark-ground";
+    material.customProgramCacheKey = () => "ark-ground-2";
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>
 attribute vec4 arkLayers;
+attribute vec4 arkLayers2;
 varying vec4 vArkLayers;
+varying vec4 vArkLayers2;
 varying vec3 vArkWorld;
 varying vec3 vArkNormal;`)
             .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
 vArkWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vArkNormal = normalize(mat3(modelMatrix) * objectNormal);
-vArkLayers = arkLayers;`);
+vArkLayers = arkLayers;
+vArkLayers2 = arkLayers2;`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying vec4 vArkLayers;
+varying vec4 vArkLayers2;
 varying vec3 vArkWorld;
 varying vec3 vArkNormal;
+uniform highp sampler2DArray groundAlbedo;
+uniform highp sampler2DArray groundNormal;
+uniform float groundReady;
+uniform float groundLite;
+uniform float envWetness;
+uniform float envSnow;
+uniform vec3 groundMeans[9];
 uniform vec3 fieldTones[${FIELD_TONES.length}];
 uniform float arkCaustics;
 float arkCausticAt(vec2 p, float t) {
@@ -205,6 +240,30 @@ uniform vec3 hedgeTone;
 uniform vec3 dryGrass;
 ${NOISE_GLSL}
 ${CLOUD_GLSL}
+// The texture layers (ground-textures.ts), sampled twice at turned scales and blended by noise, so no tile repeats.
+vec3 arkGroundTex(float layer, vec2 p, float scale) {
+    vec2 a = p * scale;
+    vec3 c = texture(groundAlbedo, vec3(a, layer)).rgb;
+    if (groundLite > 0.5) return c;
+    vec2 b = mat2(0.8, -0.6, 0.6, 0.8) * p * scale * 0.61 + vec2(0.37, 0.71);
+    return mix(c, texture(groundAlbedo, vec3(b, layer)).rgb, smoothstep(0.3, 0.7, arkNoise(p * 0.09 + layer * 7.0)));
+}
+vec3 arkGroundNor(float layer, vec2 p, float scale) {
+    vec2 a = p * scale;
+    vec3 n = texture(groundNormal, vec3(a, layer)).xyz;
+    vec2 b = mat2(0.8, -0.6, 0.6, 0.8) * p * scale * 0.61 + vec2(0.37, 0.71);
+    vec3 m = texture(groundNormal, vec3(b, layer)).xyz;
+    // The second sample is turned: turn its x/y back before blending.
+    vec2 mxy = mat2(0.8, 0.6, -0.6, 0.8) * (m.xy * 2.0 - 1.0);
+    vec3 nb = vec3(mxy, m.z * 2.0 - 1.0);
+    return normalize(mix(n * 2.0 - 1.0, nb, smoothstep(0.3, 0.7, arkNoise(p * 0.09 + layer * 7.0))));
+}
+vec3 arkGroundTriplanar(float layer, vec3 w, vec3 n, float scale) {
+    vec3 k = pow(abs(n), vec3(4.0));
+    k /= (k.x + k.y + k.z);
+    return texture(groundAlbedo, vec3(w.zy * scale, layer)).rgb * k.x + texture(groundAlbedo, vec3(w.xz * scale, layer)).rgb * k.y + texture(groundAlbedo, vec3(w.xy * scale, layer)).rgb * k.z;
+}
+vec3 arkGroundDetailN = vec3(0.0, 0.0, 1.0);
 float arkWet = 0.0;`)
             .replace("#include <color_fragment>", `#include <color_fragment>
 {
@@ -214,7 +273,8 @@ float arkWet = 0.0;`)
     float sandW = vArkLayers.x;
     float mudW = vArkLayers.y;
     float farmW = vArkLayers.z;
-    float snowW = vArkLayers.w;
+    // Snow cover from the weather (the island clock): the snow line comes down the mountain.
+    float snowW = max(vArkLayers.w, envSnow * smoothstep(17.0 - 9.0 * envSnow, 21.0 - 9.0 * envSnow, world.y + 2.0 * (arkNoise(p * 0.3) - 0.5)));
     vec3 base = diffuseColor.rgb;
 
     // Grass and earth: clumps, dry patches, a fine grain close up.
@@ -270,6 +330,56 @@ float arkWet = 0.0;`)
     ground = mix(ground, wetSand * 0.82, waterline * smoothstep(-0.6, 0.0, world.y) * 0.75 * (1.0 - snowW));
     arkWet = max(arkWet, waterline * 0.8);
 
+    // The photo textures (batch 1): each layer's texture divided by its mean, times the colour the ground had there,
+    // so the zones keep their hue and the ground gains real detail; fading to the plain colour far away.
+    if (groundReady > 0.5) {
+        float dist = distance(cameraPosition, world);
+        float fade = 1.0 - smoothstep(70.0, 260.0, dist);
+        float forestW = vArkLayers2.x;
+        float openW = vArkLayers2.y;
+        float bankW = vArkLayers2.z;
+        // Weights, in the order they cover each other.
+        float wSand = smoothstep(0.15, 0.85, sandW) * (1.0 - snowW);
+        float wWet = waterline * smoothstep(-0.6, 0.0, world.y) * (1.0 - snowW);
+        float wForest = smoothstep(0.25, 0.7, forestW) * smoothstep(0.35, 0.65, arkFbm(p * 0.08 + 2.0) + 0.25) * (1.0 - wSand);
+        float wSoil = openW * smoothstep(0.6, 0.78, arkFbm(p * 0.11 + 5.0)) * 0.85 * (1.0 - wSand);
+        float wMud = max(mudW * wetPatch, bankW * smoothstep(0.35, 0.7, arkFbm(p * 0.3 + 1.0) + bankW * 0.4)) * (1.0 - wSand);
+        float wFarm = farmW > 0.01 ? smoothstep(0.3, 0.98, farmW + (arkNoise(p * 0.11 + 3.0) - 0.5) * 0.4) : 0.0;
+        float wRock = steep * step(0.3, world.y + 0.4);
+        float wSnow = smoothstep(0.25, 0.75, snow);
+        vec3 n = normalize(vArkNormal);
+        // The ground's colour under the new layers: the forest floor browner, bare soil, dark wet banks.
+        ground = mix(ground, ground * vec3(0.78, 0.66, 0.5) + vec3(0.03, 0.02, 0.0), wForest * 0.75);
+        ground = mix(ground, soilTone * 1.05, wSoil * 0.55);
+        ground = mix(ground, mudTone * 1.1, wMud * 0.6);
+        arkWet = max(arkWet, wMud * 0.6);
+        vec3 tex = arkGroundTex(0.0, p, 0.34) / groundMeans[0];
+        vec3 nor = groundLite > 0.5 ? vec3(0.0, 0.0, 1.0) : arkGroundNor(0.0, p, 0.34);
+        vec3 col = tex;
+        #define ARK_LAYER(L, W, S) if (W > 0.01) { vec3 t_ = arkGroundTex(L, p, S) / groundMeans[int(L)]; col = mix(col, t_, W); if (groundLite < 0.5) nor = normalize(mix(nor, arkGroundNor(L, p, S), W)); }
+        ARK_LAYER(1.0, wForest, 0.4)
+        ARK_LAYER(2.0, wSoil, 0.3)
+        ARK_LAYER(6.0, wMud, 0.33)
+        ARK_LAYER(3.0, wSand, 0.25)
+        ARK_LAYER(4.0, wWet, 0.25)
+        if (wFarm > 0.01) {
+            col = mix(col, arkGroundTex(8.0, p, 0.3) / groundMeans[8], wFarm * 0.55);
+        }
+        if (wRock > 0.01) {
+            vec3 r_ = arkGroundTriplanar(5.0, world, n, 0.2) / groundMeans[5];
+            col = mix(col, r_, wRock);
+            nor = normalize(mix(nor, vec3(0.0, 0.0, 1.0), wRock * 0.5));
+        }
+        ARK_LAYER(7.0, wSnow, 0.18)
+        // Detail strength: full up close, gone far away; the plain colour (with the cloud shade) is under it.
+        col = mix(vec3(1.0), col, fade);
+        ground *= col;
+        // A little of the textures' own colour, so grass looks like grass and not tinted paper.
+        arkGroundDetailN = normalize(mix(vec3(0.0, 0.0, 1.0), nor, fade * 0.9));
+    }
+    // Rain-wet ground: darker and glossier (sand dries first).
+    ground *= mix(1.0, 0.74, envWetness * (1.0 - 0.4 * sandW) * (1.0 - snowW));
+    arkWet = max(arkWet, envWetness * 0.75 * (1.0 - snowW));
     diffuseColor.rgb = ground * arkCloudShade(world);
     // The sun's caustics on the sea floor, fading with depth.
     if (world.y < -0.05 && arkCaustics > 0.0) {
@@ -278,7 +388,16 @@ float arkWet = 0.0;`)
     }
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
-roughnessFactor = mix(roughnessFactor, 0.32, arkWet);`);
+roughnessFactor = mix(roughnessFactor, 0.32, arkWet);`)
+            .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
+if (groundReady > 0.5 && groundLite < 0.5) {
+    // The layers' normal maps, in world space round the ground's own normal (u along +x, v along +z), then to view space.
+    vec3 nw = normalize(vArkNormal);
+    vec3 tw = normalize(vec3(1.0, 0.0, 0.0) - nw * nw.x);
+    vec3 bw = cross(tw, nw);
+    vec3 pw = normalize(tw * arkGroundDetailN.x + bw * arkGroundDetailN.y + nw * arkGroundDetailN.z);
+    normal = normalize((viewMatrix * vec4(pw, 0.0)).xyz);
+}`);
     };
     return material;
 }
@@ -314,6 +433,8 @@ uniform vec3 sunDirection;
 uniform vec3 sunColor;
 uniform vec3 foamColor;
 uniform float daylight;
+uniform float seaLevel;
+uniform float windStrength;
 varying vec3 vWorld;
 ${NOISE_GLSL}
 ${CLOUD_GLSL}
@@ -345,13 +466,13 @@ void main() {
     vec2 uv = (vWorld.xz + halfSize) / (2.0 * halfSize);
     float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
     vec3 at = texture2D(depthMap, clamp(uv, 0.0, 1.0)).rgb;
-    float depth = mix(10.0, at.r * 12.0, inside);
+    float depth = mix(10.0, at.r * 12.0, inside) + seaLevel;
     float reefy = at.g * inside;
     float fresh = at.b * inside;
     float distanceToEye = distance(cameraPosition, vWorld);
 
     // Fresh water is calmer; far away the waves fade before they shimmer.
-    float calm = mix(1.0, 0.35, fresh) * (1.0 - smoothstep(60.0, 260.0, distanceToEye) * 0.85);
+    float calm = mix(1.0, 0.35, fresh) * (1.0 - smoothstep(60.0, 260.0, distanceToEye) * 0.85) * windStrength;
     vec2 slope = waves(vWorld.xz, arkTime, calm);
     vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
     vec3 view = normalize(cameraPosition - vWorld);
@@ -367,20 +488,22 @@ void main() {
     float facing = max(dot(n, view), 0.0);
     float fresnel = 0.02 + 0.98 * pow(1.0 - facing, 5.0);
     vec3 r = reflect(-view, n);
-    vec3 skyColour = mix(skyHorizon, skyZenith, pow(clamp(r.y, 0.0, 1.0), 0.6));
-    vec3 colour = mix(body, skyColour, clamp(fresnel * 1.15, 0.0, 0.85));
+    vec3 skyColour = mix(skyHorizon, skyZenith, pow(clamp(r.y, 0.0, 1.0), 0.35));
+    vec3 colour = mix(body, skyColour, clamp(fresnel * 1.1, 0.0, 0.72));
     float glint = pow(max(dot(r, sunDirection), 0.0), 220.0);
-    colour += sunColor * glint * 2.2 * arkCloudShade(vWorld);
+    // A tight glint and a broader sheen, broken by the ripples.
+    float sheen = pow(max(dot(r, sunDirection), 0.0), 28.0) * 0.12;
+    colour += sunColor * (glint * 2.6 + sheen) * arkCloudShade(vWorld);
 
     // Foam: lines that run up the shore and fade, broken by noise; a lacy edge where water meets land.
-    float shore = 1.0 - smoothstep(0.0, 1.1, depth);
-    float lines = smoothstep(0.65, 1.0, sin(depth * 9.0 - arkTime * 1.4 + arkNoise(vWorld.xz * 0.5) * 3.0));
+    float shore = 1.0 - smoothstep(0.0, 1.5, depth);
+    float lines = smoothstep(0.6, 1.0, sin(depth * 7.0 - arkTime * 1.4 + arkNoise(vWorld.xz * 0.5) * 3.0));
     float lace = smoothstep(0.35, 0.75, arkNoise(vWorld.xz * 1.8 + arkTime * 0.3));
     float foam = shore * (lines * 0.55 + (1.0 - smoothstep(0.0, 0.18, depth)) * 0.9) * mix(0.55, 1.0, lace) * inside * (1.0 - fresh * 0.75);
     colour = mix(colour, foamColor * mix(0.2, 1.0, daylight), clamp(foam, 0.0, 0.9));
 
     // Clear in the shallows, so what lives there shows through; opaque where it's deep.
-    float alpha = mix(0.32, 1.0, smoothstep(0.1, 5.0, depth));
+    float alpha = mix(0.2, 1.0, smoothstep(0.1, 5.5, depth));
     alpha = max(alpha, max(fresnel, foam));
     alpha = max(alpha, fresh * 0.82);
     gl_FragColor = vec4(colour, alpha);
@@ -411,7 +534,9 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
                 foamColor: {value: srgb("#f4f1ea")},
                 arkTime: {value: 0},
                 arkWind: {value: null},
-                daylight: {value: 1}
+                daylight: {value: 1},
+                seaLevel: {value: 0},
+                windStrength: {value: 1}
             }
         ]),
         transparent: true,
@@ -428,6 +553,8 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
     material.uniforms.skyZenith = ARK_SKY_ZENITH;
     material.uniforms.sunColor = ARK_GLINT;
     material.uniforms.daylight = ARK_DAYLIGHT;
+    material.uniforms.seaLevel = ARK_ENV.seaLevel;
+    material.uniforms.windStrength = WATER_WIND;
     const geometry = new PlaneGeometry(4000, 4000, 1, 1);
     geometry.rotateX(-Math.PI / 2);
     const mesh = new Mesh(geometry, material);

@@ -69,8 +69,9 @@ type Key = {
 };
 
 /** Keyframes by the sun's elevation; the morning's low light is a little cooler and pinker than the evening's. */
-const NIGHT: Key = {at: -14, sun: "#a9bdf0", sunIntensity: 1.5, sky: "#5a70a8", ground: "#3a4258", fill: 1.15, fog: "#1c2840", horizon: "#2c3a5a", zenith: "#0d1528", environment: 0.32, daylight: 0.22, rim: 0};
-const BLUE_EVENING: Key = {at: -5, sun: "#c9a2bc", sunIntensity: 1.1, sky: "#7381ad", ground: "#2e2c36", fill: 0.95, fog: "#55557a", horizon: "#6f6384", zenith: "#2d3a60", environment: 0.4, daylight: 0.42, rim: 0.05};
+// Graphics pass, batch 1: a brighter blue moonlight that keeps shapes and hues readable (moon key, cool sky fill, more sky light).
+const NIGHT: Key = {at: -14, sun: "#b7c9ff", sunIntensity: 2.7, sky: "#7891d0", ground: "#4a5676", fill: 1.55, fog: "#22314f", horizon: "#33466e", zenith: "#0f1b36", environment: 0.62, daylight: 0.34, rim: 0.06};
+const BLUE_EVENING: Key = {at: -5, sun: "#c9a8c8", sunIntensity: 1.6, sky: "#7d8cbc", ground: "#3a3a48", fill: 1.15, fog: "#55557a", horizon: "#6f6384", zenith: "#2d3a60", environment: 0.52, daylight: 0.46, rim: 0.08};
 const BLUE_MORNING: Key = {...BLUE_EVENING, sun: "#b8a6c8", sky: "#65739a", fog: "#5b5a78", horizon: "#7d6e8c"};
 const LOW_EVENING: Key = {at: 4, sun: "#ffad78", sunIntensity: 2.0, sky: "#b6bfd6", ground: "#5c4a3a", fill: 0.8, fog: "#dcae90", horizon: "#e6b998", zenith: "#7d92b4", environment: 0.65, daylight: 0.78, rim: 0.26};
 const LOW_MORNING: Key = {...LOW_EVENING, sun: "#ffbc90", fog: "#e2b8a6", horizon: "#e9c0ae", zenith: "#8aa0c0"};
