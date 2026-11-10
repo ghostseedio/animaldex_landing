@@ -139,8 +139,8 @@ export class TalkingActor {
     minY = -0.5;
     length = 1;
     height = 1;
-    /** Its longest side (x, y or z): what the drawn size is measured on. */
-    longest = 1;
+    /** Its extent across x (with height and length: what `bodyAxisExtent` measures the drawn size on). */
+    width = 1;
     ready = false;
     private readonly hinge = new Group();
     private cavity: Mesh | null = null;
@@ -231,7 +231,7 @@ export class TalkingActor {
         this.minY = box.min.y;
         this.height = box.max.y - box.min.y;
         this.length = Math.max(box.max.z - box.min.z, 0.05);
-        this.longest = Math.max(box.max.x - box.min.x, this.height, this.length, 0.05);
+        this.width = Math.max(box.max.x - box.min.x, 0.05);
         this.setMouth(0, 0);
     }
 

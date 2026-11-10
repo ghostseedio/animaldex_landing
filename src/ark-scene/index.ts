@@ -73,7 +73,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
-import {arkBody, arkIdleBehaviour, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
+import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {buildLandscape} from "@/ark-scene/terrain";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
@@ -135,7 +135,7 @@ type Level = "near" | "far" | "token";
 type Entry = {
     animal: ArkAnimal;
     place: Placement;
-    /** Its drawn length (m, the longest side): from its stored length or its size stat (`stats.ts`). */
+    /** Its drawn body length (m, head to tail): from its stored length or its size stat (`stats.ts`). */
     length: number;
     /** The species' stats: looks and behaviour only. */
     stats: ArkStats;
@@ -647,7 +647,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.air += (target - entry.air) * 0.02;
             }
             entry.lift += ((selectedId === entry.animal.id ? 1 : 0) - entry.lift) * 0.08;
-            const modelScale = model ? entry.length / model.longest : 1;
+            const modelScale = model ? entry.length / model.bodyLength : 1;
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
             const where = pose(entry, model, modelHeight, now);
             position.set(where.x, Math.max(where.base, 0), where.z);
@@ -763,7 +763,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // The one talking: its full talking model stands in its place.
             const actor = talking.actor;
             if (actor?.ready && talking.weight > 0 && talking.target?.animalId === animal.id && actor.slug === animal.model_slug) {
-                const as = (entry.length / actor.longest) * sizeUp;
+                const as = (entry.length / Math.max(bodyAxisExtent(actor.slug, model?.behaviour?.plan, {x: actor.width, y: actor.height, z: actor.length}), 0.05)) * sizeUp;
                 const bob = talking.open * 0.06;
                 euler.set(where.pitch + bob, where.yaw + Math.sin(now * 1.1) * 0.05 * talking.weight, where.roll + Math.sin(now * 0.7) * 0.02 * talking.weight);
                 actor.root.rotation.copy(euler);
@@ -1345,7 +1345,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Where an entry is now and how big, as the acts take it. */
     const bodyOf = (entry: Entry): ActBody => {
         const model = library.get(entry.animal.model_slug);
-        const modelScale = model ? entry.length / model.longest : 1;
+        const modelScale = model ? entry.length / model.bodyLength : 1;
         const height = model ? model.height * modelScale : entry.length * 0.6;
         const saved = entry.act;
         entry.act = null;

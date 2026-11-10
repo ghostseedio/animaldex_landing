@@ -173,6 +173,43 @@ export function arkBody(animal: ArkStatsSource, plan?: string | null): ArkBody {
     return {metres, source, display: screenLength(metres), floor: raw <= ARK_SIZE_FLOOR};
 }
 
+/**
+ * Birds measured bill to tail, along the body, however tall they stand: on
+ * long legs or a long neck (waders, cranes, ratites), or level-bodied with
+ * the head held up (fowl, ducks, geese, grebes).
+ */
+const ALONG = /(heron|egret|bittern|stork|jabiru|marabou|adjutant|openbill|crane|brolga|flamingo|ibis|spoonbill|shoebill|hamerkop|hammerkop|secretarybird|bustard|seriema|ostrich|emu|rhea|cassowary|stilt|avocet|limpkin|trumpeter|fowl|duck|goose|grebe)/;
+/** Birds whose body runs upright, measured top to bottom. */
+const UPRIGHT_BIRDS = /(?:^|-)(?:penguin|owl|potoo|frogmouth)(?:-|$)/;
+/** Others measured top to bottom because that is how their body runs: seahorses, sea dragons, garden eels, gibbons. */
+const UPRIGHT = /(?:^|-)(?:seahorse|seadragon|garden-eel|gibbon|siamang)(?:-|$)/;
+/** Body plans with no head-to-tail axis lying down: measured by their height. */
+const UPRIGHT_PLANS = new Set(["sessile", "jellyfish", "worm"]);
+
+/**
+ * The model's extent along the axis its body length is measured on, so the
+ * model is scaled by `D / this` (L is a body length, head to tail).
+ *
+ * - Along z (the models face +z): a giraffe, a flamingo or a heron then
+ *   stands as tall as its legs and neck make it, a snake and a fish lie
+ *   along their length.
+ * - Along y for an animal whose body runs upright, measured top to bottom
+ *   (penguins, owls, perched birds that sit up tall such as hawks and
+ *   macaws, seahorses, gibbons, corals, jellyfish, worms): its height.
+ * - A z extent that is degenerate (under a fifth of the longest side):
+ *   the longest horizontal one.
+ */
+export function bodyAxisExtent(slug: string, plan: string | null | undefined, extent: {x: number; y: number; z: number}): number {
+    const x = Math.max(extent.x, 0.001);
+    const y = Math.max(extent.y, 0.001);
+    const z = Math.max(extent.z, 0.001);
+    const bird = plan === "bird";
+    const upright = UPRIGHT.test(slug) || (bird && UPRIGHT_BIRDS.test(slug)) || (UPRIGHT_PLANS.has(plan ?? "") && y > z) || (bird && y > z * 1.2 && !ALONG.test(slug));
+    if (upright) return y;
+    if (z < 0.2 * Math.max(x, y, z)) return Math.max(x, z);
+    return z;
+}
+
 // MARK: Speed
 
 /** How fast it moves, in its own body lengths a second: 0.6 at speed 0, 2 at speed 100. */

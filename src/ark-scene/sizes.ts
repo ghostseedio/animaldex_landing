@@ -1,6 +1,6 @@
 /**
- * How big each animal stands in the world. The models are all about one
- * unit on their longest side (`ark.json` `extent`), so the size comes from
+ * How big each animal stands in the world. The models are all one unit
+ * long, head toward +z (`ark.json` `extent`), so the size comes from
  * the data alone (`stats.ts` `arkBody`):
  *
  * - its body length L: the stored measurement where there is one, else
@@ -8,7 +8,9 @@
  *   (`L = 0.33 · mass^(1/3)`, an estimate);
  * - drawn at `D = clamp(1.2 · L^0.6, 0.18, 9)` metres, so a mouse is still
  *   seen beside an elephant and a whale doesn't swallow the bay; the model
- *   is scaled by `D / its longest side`.
+ *   is scaled by `D / its extent along its body-length axis` (`stats.ts`
+ *   `bodyAxisExtent`: z, head to tail, so a giraffe stands taller than an
+ *   elephant; y for a body that runs upright, such as a penguin or an owl).
  *
  * Below the floor the animal also gets a small marker so it can be found.
  */

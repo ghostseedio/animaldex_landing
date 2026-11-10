@@ -19,7 +19,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * or in development `?fixture=1` (about 120 animals), `?fixture=early` (the
  * two real arrivals) or `?fixture=grow` (starts small; more come aboard on
  * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
- * plus a ladybird, a mouse, a giraffe and a blue whale: the size scale's ends).
+ * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends).
  *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
@@ -73,14 +73,15 @@ async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; f
 /**
  * `?fixture=sizes`: the v2 fixture with the ends of the size scale aboard
  * (the stats addendum's screenshots): a ladybird at the floor, a house mouse,
- * a giraffe (taller than long), a blue whale, each in a slot of its own.
+ * a giraffe (taller than long), a blue whale and a flamingo, each in a slot of its own.
  */
 function withSizeLineUp(full: ArkSnapshot): ArkSnapshot {
     const extra: Array<[string, string, ArkSnapshot["animals"][number]["zone"]]> = [
         ["seven-spot-ladybird", "Seven-spot Ladybird", "farm_garden"],
         ["house-mouse", "House Mouse", "farm_garden"],
         ["giraffe", "Giraffe", "grassland"],
-        ["blue-whale", "Blue Whale", "open_ocean"]
+        ["blue-whale", "Blue Whale", "open_ocean"],
+        ["greater-flamingo", "Greater Flamingo", "wetland"]
     ];
     const animals = [...full.animals];
     extra.forEach(([slug, name, zone], i) => {

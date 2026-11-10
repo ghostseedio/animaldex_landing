@@ -21,6 +21,7 @@ import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {parseTalkingGlb} from "@/components/ask-animaldex/voice-call/talking-model-renderer";
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
+import {bodyAxisExtent} from "@/ark-scene/stats";
 
 export type ArkManifest = {
     models: Record<string, string>;
@@ -39,8 +40,8 @@ export type SpeciesModel = {
     minY: number;
     height: number;
     length: number;
-    /** Its longest side (x, y or z; the giraffe's is its height): the drawn size is measured on it. */
-    longest: number;
+    /** Its extent along its body-length axis (`bodyAxisExtent`): the drawn size is measured on it. */
+    bodyLength: number;
 };
 
 type Wanted = "far" | "near";
@@ -211,7 +212,7 @@ export class ModelLibrary {
                 minY: box.min.y,
                 height: box.max.y - box.min.y,
                 length: Math.max(box.max.z - box.min.z, 0.05),
-                longest: Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z, 0.05)
+                bodyLength: Math.max(bodyAxisExtent(slug, behaviour?.plan, {x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z}), 0.05)
             };
             this.models.set(slug, model);
         }

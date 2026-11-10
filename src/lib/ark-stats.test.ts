@@ -4,7 +4,7 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mealStage, type ActBody} from "@/ark-scene/acts";
 import {allocateArkPlaces, placeAnimals, slotKind, zoneLayout} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
-import {ARK_SIZE_CAP, ARK_SIZE_FLOOR, arkBody, arkIdleBehaviour, arkStats, bodyLengthsPerSecond, glance, glancePeriod, massFromSize, moveSpeed, screenLength} from "@/ark-scene/stats";
+import {ARK_SIZE_CAP, ARK_SIZE_FLOOR, arkBody, bodyAxisExtent, arkIdleBehaviour, arkStats, bodyLengthsPerSecond, glance, glancePeriod, massFromSize, moveSpeed, screenLength} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {ZONE_SITES} from "@/ark-scene/world";
 
@@ -37,6 +37,30 @@ test("size: the stored length where there is one, else the size stat through mas
     assert.ok(arkBody({model_slug: "domestic-cat", stats: {size: 92}}).display > 3);
     // A species the catalogue lacks: its body plan, labelled as such.
     assert.equal(arkBody({model_slug: "no-such-animal"}, "bird").source, "plan");
+});
+
+test("size is a body length: models are scaled along their head-to-tail axis, so tall ones stand tall and upright ones by their height", () => {
+    // Extents from the ark model set (ark.json), head toward +z.
+    const scaleOf = (slug: string, plan: string, extent: {x: number; y: number; z: number}) => arkBody({model_slug: slug}).display / bodyAxisExtent(slug, plan, extent);
+    const giraffe = {x: 0.2749, y: 1.28, z: 1};
+    const elephant = {x: 0.4883, y: 0.7318, z: 1};
+    assert.equal(bodyAxisExtent("giraffe", "mammal", giraffe), 1);
+    assert.ok(scaleOf("giraffe", "mammal", giraffe) * giraffe.y > scaleOf("african-bush-elephant", "mammal", elephant) * elephant.y, "a giraffe stands taller than an elephant");
+    // Waders along the body (legs and neck add height); a snake and a fish along their length.
+    assert.equal(bodyAxisExtent("greater-flamingo", "bird", {x: 0.37, y: 1.59, z: 1}), 1);
+    assert.equal(bodyAxisExtent("grey-heron", "bird", {x: 0.585, y: 1.27, z: 1}), 1);
+    assert.equal(bodyAxisExtent("african-rock-python", "snake", {x: 0.29, y: 0.08, z: 1}), 1);
+    assert.equal(bodyAxisExtent("bluefin-tuna", "fish", {x: 0.18, y: 0.31, z: 1}), 1);
+    // Upright bodies by their height: a penguin, an owl, a hawk sitting up, a seahorse, a jellyfish. "Lowland" is not an owl.
+    assert.equal(bodyAxisExtent("emperor-penguin", "bird", {x: 1.14, y: 1.91, z: 1}), 1.91);
+    assert.equal(bodyAxisExtent("barn-owl", "bird", {x: 0.64, y: 1.32, z: 1}), 1.32);
+    assert.equal(bodyAxisExtent("coopers-hawk", "bird", {x: 0.5, y: 1.3, z: 1}), 1.3);
+    assert.equal(bodyAxisExtent("pot-bellied-seahorse", "fish", {x: 0.3, y: 1.83, z: 1}), 1.83);
+    assert.equal(bodyAxisExtent("moon-jellyfish", "jellyfish", {x: 1, y: 2.36, z: 1}), 2.36);
+    assert.equal(bodyAxisExtent("western-lowland-gorilla", "mammal", {x: 0.69, y: 1.17, z: 1}), 1);
+    assert.equal(bodyAxisExtent("owl-butterfly", "butterfly", {x: 1.2, y: 0.4, z: 1}), 1);
+    // A degenerate z: the longest horizontal side.
+    assert.equal(bodyAxisExtent("flat-thing", "fish", {x: 1, y: 0.3, z: 0.1}), 1);
 });
 
 test("snapshot: stats and a stored length decode when the server sends them", () => {
