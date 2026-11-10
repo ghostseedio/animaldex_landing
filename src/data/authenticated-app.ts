@@ -927,16 +927,13 @@ async function loadProgressionSummary(supabase: ReturnType<typeof createSupabase
 async function loadMissionStatus(supabase: ReturnType<typeof createSupabaseServerClient>, userId: string) {
     const viewResult = await supabase!
         .from("user_mission_status_v1")
-        .select("slug,tier,sort_order,title,detail,reward_credits,target_count,progress_count,unlock_score_min,requires_trade_unlocked,is_repeatable,completed_count")
+        // unlocked_at is the server's word: a mission it has opened stays open. The view has no
+        // is_locked column; asking for one failed the whole read, so every mission above the
+        // person's Ark Score showed locked (431 people, docs/ark-mission-bugs.md).
+        .select("slug,tier,sort_order,title,detail,reward_credits,target_count,progress_count,unlock_score_min,requires_trade_unlocked,is_repeatable,completed_count,unlocked_at")
         .order("sort_order", {ascending: true});
 
-    if (viewResult.data?.length) {
-        // Life Sim: a status that says whether it is locked (`is_locked`, `unlocked_at`), read on its own.
-        const lockResult = await supabase!.from("user_mission_status_v1").select("slug,is_locked,unlocked_at");
-        if (lockResult.error || !lockResult.data) return viewResult.data as QueryRow[];
-        const locks = new Map((lockResult.data as QueryRow[]).map((row) => [String(row.slug), row]));
-        return (viewResult.data as QueryRow[]).map((row) => ({...row, ...(locks.get(String(row.slug)) ?? {})}));
-    }
+    if (viewResult.data?.length) return viewResult.data as QueryRow[];
 
     const [definitionsResult, progressResult] = await Promise.all([
         supabase!
