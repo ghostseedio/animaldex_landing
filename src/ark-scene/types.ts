@@ -2,6 +2,7 @@ import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
+import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -155,6 +156,11 @@ export type ArkSceneOptions = {
     /** The species icon art (the `animals` bucket's `<slug>.webp`). */
     iconUrl: (slug: string) => string;
     onSelect?: (animal: ArkAnimal | null) => void;
+    /**
+     * What the selected animal is doing now (`behaviour-state.ts`), when it is selected and whenever that changes:
+     * the tap card's state line reads this, the same state the scene animates, never a clock of its own.
+     */
+    onBehaviour?: (id: string, state: ArkBehaviourState) => void;
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
@@ -259,6 +265,8 @@ export type ArkSceneHandle = {
     setView: (view: ArkCameraView) => void;
     /** Where an animal (or a replay's stand-in) is now; null when it is not in the scene. */
     locate: (id: string) => ArkLocated | null;
+    /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
+    behaviour: (id: string) => ArkBehaviourState | null;
     /** The ground's height at a point (never below the sea). */
     heightAt: (x: number, z: number) => number;
     /** Ask for these species' models, near and far (resolves once asked; `loading` says when they are in). */
