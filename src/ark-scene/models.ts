@@ -39,6 +39,8 @@ export type SpeciesModel = {
     minY: number;
     height: number;
     length: number;
+    /** Its longest side (x, y or z; the giraffe's is its height): the drawn size is measured on it. */
+    longest: number;
 };
 
 type Wanted = "far" | "near";
@@ -208,7 +210,8 @@ export class ModelLibrary {
                 behaviour,
                 minY: box.min.y,
                 height: box.max.y - box.min.y,
-                length: Math.max(box.max.z - box.min.z, 0.05)
+                length: Math.max(box.max.z - box.min.z, 0.05),
+                longest: Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z, 0.05)
             };
             this.models.set(slug, model);
         }

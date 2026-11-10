@@ -205,6 +205,11 @@ export class IconTokens {
         return Math.min(Math.max(sizeMetres / perPixel, this.material.uniforms.minPixels.value), this.material.uniforms.maxPixels.value);
     }
 
+    /** Whether a species' icon is in the atlas (one that failed to load never is). */
+    loaded(slug: string): boolean {
+        return this.cells.get(slug)?.loaded === true;
+    }
+
     /** Starts loading a species' icon into the atlas. */
     ensure(slug: string) {
         if (this.cells.has(slug) || this.disposed) return;

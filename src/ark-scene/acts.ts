@@ -16,6 +16,11 @@
  *
  * The prey startles, then fades. Each stage is a pure function of the time
  * since it began.
+ *
+ * The predator's speed stat sets how fast it covers the ground (`speed`, in
+ * m/s: 0.6 to 2 of its own body lengths a second, `stats.ts`): a cheetah is
+ * on its prey at once, a tortoise takes its time, and a slow one starts
+ * nearer. Only the look of it: the meal itself is the server's.
  */
 
 import {SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -58,7 +63,7 @@ export type ActPose = {
     hidden: boolean;
 };
 
-export type ActBody = {x: number; z: number; base: number; yaw: number; length: number; height: number};
+export type ActBody = {x: number; z: number; base: number; yaw: number; length: number; height: number; /** How fast it moves (m/s), from its speed stat; absent: the stage's own pace. */ speed?: number};
 
 export type Puff = {x: number; y: number; z: number; size: number; kind: "dust" | "bubble"};
 
@@ -133,7 +138,35 @@ function preyPart(prey: ActBody, away: {x: number; z: number}, startle: number, 
  * A meal acted out: the predator comes from where it is (or from nearer, if
  * it lives far off) to the prey.
  */
+/** The stage as drawn at its own pace, with the stretch the predator covers ground in, and how far it goes. */
+type PacedStage = MealStage & {moving?: [number, number]; travel?: number};
+
+/**
+ * A meal acted out: the predator comes from where it is (or from nearer, if
+ * it lives far off) to the prey, at its own speed when it has one: the
+ * stretch it covers the ground in is drawn out or cut short (between 0.6
+ * and 2 times the stage's own pace) and the rest of the stage moves with it.
+ */
 export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody): MealStage {
+    const stage = pacedStage(kind, predator, prey);
+    const {moving, travel, ...plain} = stage;
+    if (!moving || !travel || !predator.speed || !(predator.speed > 0)) return plain;
+    const [from, to] = moving;
+    const window = to - from;
+    const wanted = Math.min(Math.max(travel / predator.speed, window * 0.6), window * 2);
+    const k = wanted / window;
+    // Real time to the stage's own: as it was before the stretch, slowed or hurried through it, shifted after.
+    const own = (t: number) => (t <= from ? t : t <= from + wanted ? from + (t - from) / k : t - (wanted - window));
+    return {
+        ...plain,
+        seconds: plain.seconds + wanted - window,
+        predator: (t) => plain.predator(own(t)),
+        prey: (t) => plain.prey(own(t)),
+        puffs: (a, b) => plain.puffs(own(a), own(b))
+    };
+}
+
+function pacedStage(kind: ChaseKind, predator: ActBody, prey: ActBody): PacedStage {
     let dx = prey.x - predator.x;
     let dz = prey.z - predator.z;
     let distance = Math.hypot(dx, dz);
@@ -143,7 +176,8 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody): Me
         distance = 1;
     }
     const dir = {x: dx / distance, z: dz / distance};
-    const reach = kind === "swoop" ? 10 : kind === "dart" ? 7 : 8;
+    // A slow one starts nearer, so its chase isn't a long crawl across the view.
+    const reach = Math.min(kind === "swoop" ? 10 : kind === "dart" ? 7 : 8, predator.speed && predator.speed > 0 ? Math.max(3, predator.speed * 2.6) : Infinity);
     // Never across the island: it comes into view from its side, at most this far off.
     const from = distance > reach ? {x: prey.x - dir.x * reach, z: prey.z - dir.z * reach} : {x: predator.x, z: predator.z};
     const gap = Math.max((predator.length + prey.length) * 0.42, 0.5);
@@ -217,7 +251,10 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody): Me
                 return pose;
             },
             prey: preyPose,
-            puffs: (a, b) => (a <= caughtAt && caughtAt < b ? [{x: strike.x, y: Math.max(prey.base, 0) + 0.1, z: strike.z, size: prey.length * 1.2, kind: "dust"}] : [])
+            puffs: (a, b) => (a <= caughtAt && caughtAt < b ? [{x: strike.x, y: Math.max(prey.base, 0) + 0.1, z: strike.z, size: prey.length * 1.2, kind: "dust"}] : []),
+            // A dive is quicker than a run: it falls as well as flies.
+            moving: [0.8, caughtAt],
+            travel: (Math.hypot(strike.x - start.x, strike.z - start.z) + (altitude - strikeY)) * 0.5
         };
     }
 
@@ -258,7 +295,9 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody): Me
                 return pose;
             },
             prey: preyPart(prey, dir, 0.95, caughtAt, flee, false),
-            puffs: (a, b) => (a <= caughtAt && caughtAt < b ? [{x: end.x, y: 0.05, z: end.z, size: prey.length * 1.4 + 0.6, kind: "bubble"}] : [])
+            puffs: (a, b) => (a <= caughtAt && caughtAt < b ? [{x: end.x, y: 0.05, z: end.z, size: prey.length * 1.4 + 0.6, kind: "bubble"}] : []),
+            moving: [0, caughtAt],
+            travel: Math.hypot(stop.x - from.x, stop.z - from.z)
         };
     }
 
@@ -332,6 +371,8 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody): Me
             return pose;
         },
         prey: preyPart(prey, dir, startle, caughtAt, flee, true),
+        moving: [moveFrom, caughtAt],
+        travel,
         puffs: (a, b) => {
             const out: Puff[] = [];
             if (kind !== "slither") {

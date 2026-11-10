@@ -268,16 +268,18 @@ export function grassTufts(count: number): GrassTuft[] {
 
 /** Trunks, rocks and buildings the animals keep clear of: a coarse grid of (x, z, radius). */
 export class DecorObstacles {
-    private readonly cells = new Map<string, Array<[number, number, number]>>();
+    private readonly cells = new Map<string, Array<[number, number, number, number]>>();
     private static readonly CELL = 6;
 
     constructor(items: DecorItem[]) {
         for (const item of items) {
             if (item.kind === "coral" || item.kind === "reed" || item.kind === "lily" || item.kind === "kelp" || item.kind === "fence") continue;
             const radius = item.kind === "rock" ? 0.9 * item.scale : item.kind === "barn" ? 5.5 : item.kind === "hay" ? 1.1 : 0.9;
+            // Tall enough to stand between an animal and the camera: trees, shrubs, cacti, a big rock.
+            const tall = item.kind === "rock" ? radius >= 0.65 : item.kind !== "hay" && item.kind !== "barn";
             const key = this.key(item.x, item.z);
             const list = this.cells.get(key) ?? [];
-            list.push([item.x, item.z, radius]);
+            list.push([item.x, item.z, radius, tall ? 1 : 0]);
             this.cells.set(key, list);
         }
     }
@@ -293,6 +295,27 @@ export class DecorObstacles {
             for (let dz = -1; dz <= 1; dz++) {
                 for (const [ox, oz, r] of this.cells.get(`${cx + dx},${cz + dz}`) ?? []) {
                     if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Something tall just in front of this spot as the default camera sees
+     * it (from the south, +z): a tree, a shrub or a big rock between about 1
+     * and 5.5 m nearer the camera and across the line of sight, so an animal
+     * here is partly behind it from afar and in plain view from close by.
+     */
+    covers(x: number, z: number): boolean {
+        const cx = Math.floor(x / DecorObstacles.CELL);
+        const cz = Math.floor(z / DecorObstacles.CELL);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = 0; dz <= 1; dz++) {
+                for (const [ox, oz, r, tall] of this.cells.get(`${cx + dx},${cz + dz}`) ?? []) {
+                    if (!tall) continue;
+                    const ahead = oz - z;
+                    if (ahead > 0.9 + r * 0.5 && ahead < 5.5 && Math.abs(ox - x) < r + 0.3) return true;
                 }
             }
         }

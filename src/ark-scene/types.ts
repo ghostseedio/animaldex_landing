@@ -1,5 +1,6 @@
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
+import type {ArkStats} from "@/ark-scene/stats";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -76,6 +77,13 @@ export type ArkAnimal = {
      */
     slot?: number | null;
     slot_rank?: number | null;
+    // The species' stats (docs/ark-next.md, stats addendum): looks and behaviour only. When the
+    // snapshot carries none, the scene reads the catalogue's (`stats.ts`, `species-stats.json`).
+    /** The five stats, 0–100. */
+    stats?: Partial<ArkStats> | null;
+    /** A stored body length in metres (`voyage_species_traits.length_m`), and the phrase it came from. */
+    length_m?: number | null;
+    length_phrase?: string | null;
 };
 
 export type ArkSnapshot = {

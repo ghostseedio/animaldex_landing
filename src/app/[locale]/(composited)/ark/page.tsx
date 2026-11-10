@@ -18,7 +18,8 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * Local testing before the migration is applied: `NEXT_PUBLIC_ARK_FIXTURE=1`,
  * or in development `?fixture=1` (about 120 animals), `?fixture=early` (the
  * two real arrivals) or `?fixture=grow` (starts small; more come aboard on
- * every refresh, to see the entrances).
+ * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
+ * plus a ladybird, a mouse, a giraffe and a blue whale: the size scale's ends).
  *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
@@ -36,13 +37,14 @@ export const dynamic = "force-dynamic";
 
 type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
 
-type FixtureMode = "full" | "early" | "grow";
+type FixtureMode = "full" | "early" | "grow" | "sizes";
 
 function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     const asked = searchParams.fixture;
     const development = process.env.NODE_ENV === "development";
     if (development && asked === "early") return "early";
     if (development && asked === "grow") return "grow";
+    if (development && asked === "sizes") return "sizes";
     if (development && asked && asked !== "0") return "full";
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
@@ -62,9 +64,49 @@ async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; f
     const full = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)!;
     if (mode === "full") return {snapshot: full, full: null};
     if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
+    if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
     return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
+}
+
+/**
+ * `?fixture=sizes`: the v2 fixture with the ends of the size scale aboard
+ * (the stats addendum's screenshots): a ladybird at the floor, a house mouse,
+ * a giraffe (taller than long), a blue whale, each in a slot of its own.
+ */
+function withSizeLineUp(full: ArkSnapshot): ArkSnapshot {
+    const extra: Array<[string, string, ArkSnapshot["animals"][number]["zone"]]> = [
+        ["seven-spot-ladybird", "Seven-spot Ladybird", "farm_garden"],
+        ["house-mouse", "House Mouse", "farm_garden"],
+        ["giraffe", "Giraffe", "grassland"],
+        ["blue-whale", "Blue Whale", "open_ocean"]
+    ];
+    const animals = [...full.animals];
+    extra.forEach(([slug, name, zone], i) => {
+        const slot = Math.max(-1, ...animals.filter((a) => a.zone === zone).map((a) => a.slot ?? -1)) + 1;
+        animals.push({
+            id: `00000000-0000-4000-8000-00000000000${i}`,
+            species_profile_id: `size-${slug}`,
+            name,
+            scientific_name: null,
+            model_slug: slug,
+            zone,
+            arrived_at: "2026-11-01T12:00:00Z",
+            brought_by: {label: "Voyager 1", named: false},
+            mine: false,
+            origin: "arrived",
+            generation: 0,
+            condition: "well_fed",
+            born_ark_day: 3,
+            activity: "any",
+            sociality: "solitary",
+            bringers: [{label: "Voyager 1", named: false}],
+            slot,
+            slot_rank: 0
+        });
+    });
+    return {...full, animals, counts: {...full.counts, animals: animals.length, species: full.counts.species + extra.length}};
 }
 
 function modelBase(): string {
