@@ -34,8 +34,13 @@ test("every animal stands on its zone's kind of ground, apart from the others", 
         const height = sampleGround(place.x, place.z).height;
         if (ZONE_SITES[animal.zone].kind === "sea") assert.ok(height < -1.2, `${animal.name} at sea`);
         if (ZONE_SITES[animal.zone].kind === "land") assert.ok(height > 0.25, `${animal.name} on land`);
+        if (ZONE_SITES[animal.zone].kind === "shore") {
+            // On the beach: dry, and still within the sand strip by the water.
+            const ground = sampleGround(place.x, place.z);
+            assert.ok(ground.height > 0.1 && ground.land < 0.995, `${animal.name} on the beach`);
+        }
     }
-    const list = [...places.values()];
+    const list = Array.from(places.values());
     for (let i = 0; i < list.length; i++) {
         for (let j = i + 1; j < list.length; j++) {
             assert.ok(Math.hypot(list[i].x - list[j].x, list[i].z - list[j].z) > 0.9, "no two animals in one spot");
@@ -46,5 +51,5 @@ test("every animal stands on its zone's kind of ground, apart from the others", 
 test("an arrival never moves the animals already aboard", () => {
     const before = placeAnimals(full.animals.slice(0, 80));
     const after = placeAnimals(full.animals);
-    for (const [id, place] of before) assert.deepEqual(after.get(id), place);
+    before.forEach((place, id) => assert.deepEqual(after.get(id), place));
 });

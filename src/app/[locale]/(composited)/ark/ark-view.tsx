@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import {ARK_REGIONS, REGION_ZONES, ZONE_REGION, type ArkAnimal, type ArkRegion, type ArkSceneHandle, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
@@ -136,6 +136,28 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
     useEffect(() => {
         sceneRef.current?.setMineOnly(mineOnly);
     }, [mineOnly]);
+
+    // On a phone the tap band covers the foot of the world: the view moves up so the animal stays above it.
+    const bandRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        const band = bandRef.current;
+        const scene = sceneRef.current;
+        if (!scene) return;
+        if (!selected || !band) {
+            scene.setViewInset(0);
+            return;
+        }
+        const phone = window.matchMedia("(max-width: 767px)");
+        const apply = () => scene.setViewInset(phone.matches ? band.getBoundingClientRect().height : 0);
+        apply();
+        const observer = new ResizeObserver(apply);
+        observer.observe(band);
+        phone.addEventListener?.("change", apply);
+        return () => {
+            observer.disconnect();
+            phone.removeEventListener?.("change", apply);
+        };
+    }, [selected]);
 
     // MARK: Refresh
 
@@ -303,6 +325,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
 
                 {selected ? (
                     <ArkAnimalBand
+                        bandRef={bandRef}
                         animal={selected}
                         words={words}
                         talk={talkTitle(selected.name, talkTitles)}
@@ -322,7 +345,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                                     {words.wholeWorld}
                                 </button>
                             </li>
-                            {ARK_REGIONS.map((key) => (
+                            {/* Only regions with animals: a row of zeros reads as empty. */}
+                            {ARK_REGIONS.filter((key) => regionCounts[key] > 0).map((key) => (
                                 <li key={key}>
                                     <button
                                         type="button"
@@ -361,9 +385,9 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
 }
 
 /** The tapped animal, as a band along the scene's foot: who it is, and the next move — talking to it. */
-function ArkAnimalBand({animal, words, talk, arrived, onClose}: {animal: ArkAnimal; words: ArkWords; talk: string; arrived: string; onClose: () => void}) {
+function ArkAnimalBand({bandRef, animal, words, talk, arrived, onClose}: {bandRef: React.Ref<HTMLDivElement>; animal: ArkAnimal; words: ArkWords; talk: string; arrived: string; onClose: () => void}) {
     return (
-        <div className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-label={animal.name}>
+        <div ref={bandRef} className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-label={animal.name}>
             <div className="mx-auto grid w-full max-w-[86rem] grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-4 py-3.5 md:grid-cols-[4rem_minmax(0,1fr)_auto_auto] md:gap-x-5 md:px-8 md:py-4">
                 <span className="flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] md:h-16 md:w-16">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

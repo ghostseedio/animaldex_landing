@@ -13,7 +13,7 @@
 
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import type {ArkAnimal} from "@/ark-scene/types";
-import {hashString, LAKE, riverDistance, sampleGround, ZONE_SITES, type ZoneSite} from "@/ark-scene/world";
+import {BEACH_INSET, coastRadius, hashString, LAKE, riverDistance, sampleGround, ZONE_SITES, type ZoneSite} from "@/ark-scene/world";
 
 export type Placement = {
     x: number;
@@ -30,6 +30,18 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const MAX_SLOTS = 6000;
 
 function slot(site: ZoneSite, index: number): {x: number; z: number} {
+    if (site.kind === "shore") {
+        // Along the beach: out from the middle either way, a second row a little inland once the first is full.
+        const perRow = 8;
+        const row = Math.floor(index / perRow);
+        const along = index % perRow;
+        const step = ((along + 1) >> 1) * (along % 2 ? 1 : -1) + (row % 2) * 0.5;
+        const theta = site.theta ?? 0;
+        const inset = BEACH_INSET + row * 1.6;
+        const angle = theta + step * site.spacing / (coastRadius(theta) - inset);
+        const radius = coastRadius(angle) - inset;
+        return {x: Math.cos(angle) * radius, z: Math.sin(angle) * radius};
+    }
     if (site.kind === "ring") {
         let ring = 0;
         let first = 0;
@@ -70,12 +82,14 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
             const base = slot(site, index);
             // A little give, so the spiral never reads as a pattern.
             const jitterAngle = ((hash >>> 8) % 360) / 180 * Math.PI + index;
-            const jitter = site.spacing * 0.22 * (((hash >>> 16) % 100) / 100);
+            const jitter = site.spacing * (site.kind === "shore" ? 0.12 : 0.22) * (((hash >>> 16) % 100) / 100);
             const x = base.x + Math.cos(jitterAngle) * jitter;
             const z = base.z + Math.sin(jitterAngle) * jitter;
             const ground = sampleGround(x, z);
             if (site.kind === "sea") {
                 if (ground.height > -1.4) continue;
+            } else if (site.kind === "shore") {
+                if (ground.height < 0.12 || riverDistance(x, z) < 3 || obstacles.blocked(x, z, 0.6)) continue;
             } else if (site.kind === "land") {
                 if (ground.height < 0.3 || ground.land < 0.7 || riverDistance(x, z) < 3) continue;
                 if (obstacles.blocked(x, z, 0.8)) continue;

@@ -421,11 +421,13 @@ float groundNoise(vec2 p) {
         vec3 field = fieldTones[0];
         for (int k = 1; k < ${FIELD_TONES.length}; k++) { if (k == pick) field = fieldTones[k]; }
         vec2 edge = abs(fract(f) - 0.5);
-        float hedge = smoothstep(0.455, 0.49, max(edge.x * 1.0, edge.y));
+        // The farmland's edge wanders and fades into the next zone, hedges first.
+        float farm = smoothstep(0.3, 0.98, vFarmland + (groundNoise(vGroundWorld.xz * 0.11 + 3.0) - 0.5) * 0.4);
+        float hedge = smoothstep(0.455, 0.49, max(edge.x * 1.0, edge.y)) * smoothstep(0.45, 0.95, farm);
         field *= mix(1.0, 0.62, hedge);
         // Rows across each field, faint.
         field *= 1.0 + 0.05 * sin(f.x * 6.2831 * 7.0) * fade;
-        diffuseColor.rgb = mix(diffuseColor.rgb, field, smoothstep(0.25, 0.75, vFarmland));
+        diffuseColor.rgb = mix(diffuseColor.rgb, field, farm * 0.92);
     }
     diffuseColor.rgb *= 1.0 + (grain - 0.5) * 0.16 * fade;
 }`);

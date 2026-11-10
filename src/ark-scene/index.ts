@@ -56,7 +56,7 @@ import {
     type ArkSceneStats,
     type ArkSnapshot
 } from "@/ark-scene/types";
-import {heightAt, regionCentre, WORLD_RADIUS} from "@/ark-scene/world";
+import {heightAt, regionCentre, regionLabelAnchor, WORLD_RADIUS} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
 export {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -217,16 +217,60 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         labels.set(region, label);
     }
     const labelPoint = new Vector3();
+    const tokenPoint = new Vector3();
+    const labelSizes = new Map<ArkRegion, {w: number; h: number}>();
+    /** Nudges tried in turn, in CSS pixels: on the spot, then above, below and beside it, further each time. */
+    const NUDGES: Array<[number, number]> = [[0, 0], [0, -26], [0, 26], [0, -44], [0, 44], [-1, 0], [1, 0], [0, -64], [0, 64], [-1, -30], [1, -30], [-1, 30], [1, 30], [0, -88], [0, 88]];
+    type Box = [number, number, number, number];
+    const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
     const placeLabels = () => {
         const distance = camera.position.distanceTo(controls.target);
-        const show = distance > 95 ? 1 : 0;
+        const show = distance > 95;
+        // What the names must keep clear of: every token on screen.
+        const taken: Box[] = [];
+        if (show) {
+            for (const entry of entries) {
+                if (entry.level !== "token" || !entry.middle) continue;
+                tokenPoint.copy(entry.middle).project(camera);
+                if (tokenPoint.z > 1) continue;
+                const sx = (tokenPoint.x + 1) / 2 * width;
+                const sy = (1 - tokenPoint.y) / 2 * height;
+                const pixels = tokens.pixelSize(Math.max(entry.length * 1.1, 1.6), camera.position.distanceTo(entry.middle));
+                taken.push([sx - pixels / 2, sy - pixels, sx + pixels / 2, sy]);
+            }
+        }
         labels.forEach((label, region) => {
-            const centre = regionCentre(region);
-            labelPoint.set(centre.x, Math.max(heightAt(centre.x, centre.z), 0) + 9, centre.z).project(camera);
-            const visible = show && labelPoint.z < 1 && Math.abs(labelPoint.x) < 1.1 && Math.abs(labelPoint.y) < 1.1;
+            const anchor = regionLabelAnchor(region);
+            // The mountains' name reads over their slopes, not down in the saddle.
+            labelPoint.set(anchor.x, Math.max(heightAt(anchor.x, anchor.z), 0) + (region === "high_cold" ? 14 : 0), anchor.z).project(camera);
+            const visible = show && labelPoint.z < 1 && Math.abs(labelPoint.x) < 1.05 && Math.abs(labelPoint.y) < 1.05;
             label.style.opacity = visible ? "1" : "0";
-            // Above the region's middle, clear of the tokens standing there.
-            if (visible) label.style.transform = `translate(${((labelPoint.x + 1) / 2 * width).toFixed(1)}px, ${((1 - labelPoint.y) / 2 * height).toFixed(1)}px) translate(-50%, -100%) translateY(-34px)`;
+            if (!visible) return;
+            let size = labelSizes.get(region);
+            if (!size || !size.w) {
+                size = {w: label.offsetWidth, h: label.offsetHeight};
+                labelSizes.set(region, size);
+            }
+            const ax = (labelPoint.x + 1) / 2 * width;
+            const ay = (1 - labelPoint.y) / 2 * height;
+            let best: Box | null = null;
+            let bestCost = Infinity;
+            for (const [dx, dy] of NUDGES) {
+                // Kept inside the view, so a name near the edge is never cut off.
+                const cx = Math.min(Math.max(ax + dx * (size.w / 2 + 30), size.w / 2 + 10), width - size.w / 2 - 10);
+                const cy = ay + dy;
+                const box: Box = [cx - size.w / 2 - 6, cy - size.h / 2 - 4, cx + size.w / 2 + 6, cy + size.h / 2 + 4];
+                const cost = taken.reduce((sum, other) => sum + overlap(box, other), 0);
+                if (cost < bestCost) {
+                    best = box;
+                    bestCost = cost;
+                }
+                if (cost === 0) break;
+            }
+            const box = best!;
+            // Other names keep a line's distance from this one, so two never read as one.
+            taken.push([box[0] - 8, box[1] - 12, box[2] + 8, box[3] + 12]);
+            label.style.transform = `translate(${((box[0] + box[2]) / 2).toFixed(1)}px, ${((box[1] + box[3]) / 2).toFixed(1)}px) translate(-50%, -50%)`;
         });
     };
 
@@ -653,13 +697,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Size
 
+    // The view's inset at the foot (setViewInset), eased toward its target.
+    let inset = 0;
+    let insetTarget = 0;
+    const applyInset = () => {
+        if (inset < 0.5) camera.clearViewOffset();
+        else camera.setViewOffset(width, height, 0, inset / 2, width, height);
+        camera.updateProjectionMatrix();
+    };
+    const stepInset = () => {
+        if (inset === insetTarget) return false;
+        inset += (insetTarget - inset) * (reducedMotion ? 1 : 0.18);
+        if (Math.abs(insetTarget - inset) < 0.5) inset = insetTarget;
+        applyInset();
+        return true;
+    };
+
     const resize = () => {
         const rect = el.getBoundingClientRect();
         width = Math.max(1, Math.round(rect.width));
         height = Math.max(1, Math.round(rect.height));
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
-        camera.updateProjectionMatrix();
+        applyInset();
         tokens.setViewport(FOV, height, width < 640);
         dirty = true;
     };
@@ -706,6 +766,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const startedAt = performance.now();
         const now = startedAt / 1000;
         stepFlight(now);
+        if (stepInset()) dirty = true;
         const moved = controls.update();
         if (moved || flight) keepInWorld();
         if (!dirty && !moved && !animating && !flight) return;
@@ -752,6 +813,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             dirty = true;
         },
         select: (id) => select(id, true),
+        setViewInset: (bottomPixels) => {
+            insetTarget = Math.max(0, Math.min(bottomPixels, height * 0.6));
+            dirty = true;
+        },
         focusRegion: (region) => {
             if (!region) {
                 const view = homeView();

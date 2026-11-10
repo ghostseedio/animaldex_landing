@@ -107,18 +107,25 @@ export type ZoneSite = {
     z: number;
     /** Metres between neighbouring animals. */
     spacing: number;
-    /** Land animals stand, sea animals float; the lake's sit in a ring round its shore. */
-    kind: "land" | "sea" | "ring";
+    /** Land animals stand, sea animals float; the lake's sit in a ring round its shore; the coast's along the beach. */
+    kind: "land" | "sea" | "ring" | "shore";
+    /** For the shore: the bearing of the stretch of coast it starts from. */
+    theta?: number;
     /** The open ground kept clear of trees and rocks about the site. */
     clearing: number;
 };
 
 const SOUTH = Math.PI / 2;
+/** The coast's stretch of beach: south-east of the river's mouth, clear of the fields. */
+const SHORE_THETA = SOUTH - 0.3;
+/** Metres inside the coast line where the beach is dry: the waterline is at about 4.5. */
+export const BEACH_INSET = 5.6;
 
 /** Where each zone's animals gather. */
 export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
     farm_garden: {x: 8, z: 34, spacing: 2.6, kind: "land", clearing: 13},
-    seashore: {...coastPoint(SOUTH - 0.22, -7), spacing: 2.6, kind: "land", clearing: 10},
+    // On the beach itself, just above the waterline (about 4.5 m inside the coast line), facing the sea.
+    seashore: {...coastPoint(SHORE_THETA, -6), spacing: 2.4, kind: "shore", clearing: 8, theta: SHORE_THETA},
     coral_reef: {...coastPoint(SOUTH + 0.62, 15), spacing: 4.2, kind: "sea", clearing: 0},
     open_ocean: {...coastPoint(SOUTH - 0.5, 30), spacing: 7, kind: "sea", clearing: 0},
     river_lake: {x: LAKE.x, z: LAKE.z, spacing: 2.6, kind: "ring", clearing: LAKE.r + 6},
@@ -137,7 +144,7 @@ type LandZone = typeof LAND_ZONES[number];
 /** Where the land zones' areas are centred (the lake's is its eastern shore, so the water itself stays the lake's). */
 const ZONE_CENTRES: Record<LandZone, {x: number; z: number}> = {
     farm_garden: {x: 6, z: 36},
-    seashore: {x: ZONE_SITES.seashore.x, z: ZONE_SITES.seashore.z + 4},
+    seashore: coastPoint(SHORE_THETA, -3),
     river_lake: {x: LAKE.x - 4, z: LAKE.z - 2},
     wetland: {x: 22, z: 12},
     rainforest: {x: -48, z: 20},
@@ -156,10 +163,40 @@ export function regionCentre(region: ArkRegion): {x: number; z: number; radius: 
     const spread = Math.max(...sites.map((site) => Math.hypot(site.x - x, site.z - z)));
     if (region === "ocean") {
         // Its two sites sit either side of the coast's middle: the label belongs out at sea.
-        const out = (coastRadius(Math.atan2(z, x)) + 34) / Math.hypot(x, z);
+        const out = (coastRadius(Math.atan2(z, x)) + 16) / Math.hypot(x, z);
         return {x: x * out, z: z * out, radius: spread + 16};
     }
     return {x, z, radius: spread + 16};
+}
+
+/**
+ * Where a region's name is drawn: over its own ground. Between the lake and
+ * the wetland for Fresh water (its animals ring the shore), the beach for
+ * the Coast, just off the coast for the Ocean, the middle of the land zones' areas for
+ * the rest. The scene then nudges each name clear of the tokens on screen.
+ */
+export function regionLabelAnchor(region: ArkRegion): {x: number; z: number} {
+    switch (region) {
+        case "ocean": {
+            // Just off the southern coast, between the reef and the open water.
+            const theta = Math.atan2(ZONE_SITES.coral_reef.z + ZONE_SITES.open_ocean.z, ZONE_SITES.coral_reef.x + ZONE_SITES.open_ocean.x);
+            return coastPoint(theta, 9);
+        }
+        case "coast":
+            return coastPoint(SHORE_THETA, -BEACH_INSET);
+        case "fresh_water":
+            // Between the lake and the wetland: its own water, clear of the ring of animals on the shore.
+            return {x: (LAKE.x + ZONE_SITES.wetland.x) / 2, z: (LAKE.z + ZONE_SITES.wetland.z) / 2 + 2};
+        case "home":
+            return {x: ZONE_CENTRES.farm_garden.x - 4, z: ZONE_CENTRES.farm_garden.z + 8};
+        default: {
+            const zones = REGION_ZONES[region] as readonly LandZone[];
+            return {
+                x: zones.reduce((sum, zone) => sum + ZONE_CENTRES[zone].x, 0) / zones.length,
+                z: zones.reduce((sum, zone) => sum + ZONE_CENTRES[zone].z, 0) / zones.length
+            };
+        }
+    }
 }
 
 // MARK: - Sampling

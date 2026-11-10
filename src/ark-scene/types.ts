@@ -93,6 +93,12 @@ export type ArkSceneHandle = {
     setMineOnly: (mineOnly: boolean) => void;
     /** Select (and fly to) an animal, or clear the selection. */
     select: (id: string | null) => void;
+    /**
+     * Pixels at the foot of the view covered by the page (a tap band): the
+     * view's middle moves up by half of it, so what the camera looks at
+     * stays in sight above the band. 0 gives the whole view back.
+     */
+    setViewInset: (bottomPixels: number) => void;
     /** Fly to a region, or back to the whole world with null. */
     focusRegion: (region: ArkRegion | null) => void;
     stats: () => ArkSceneStats;
