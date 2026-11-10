@@ -5,6 +5,9 @@
  *
  * Two of each kind is the ideal (ark-spec "Decisions": pair calibration), so
  * every species carries its pair status against two.
+ *
+ * Breeds count as their kind (A1): a Labrador and a Poodle are one Domestic
+ * Dog row, its breeds named inside it, as the server counts pairs and the cap.
  */
 
 import {ARK_REGIONS, ZONE_REGION, type ArkAnimal, type ArkRegion, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
@@ -21,8 +24,11 @@ export function arkPairStatus(count: number): ArkPairStatus {
     return count >= ARK_CROWDED_FROM ? "crowded" : "more";
 }
 
+/** A breed (a look) inside its kind's row (A1). */
+export type ArkBreed = {key: string; speciesProfileId: string; slug: string; name: string; count: number};
+
 export type ArkSpeciesRow = {
-    /** The species' key: its canonical species_profile_id, or its model slug when that is missing. */
+    /** The species' key: its kind's species_profile_id (A1), else its own, else its model slug. */
     key: string;
     speciesProfileId: string;
     slug: string;
@@ -35,6 +41,8 @@ export type ArkSpeciesRow = {
     status: ArkPairStatus;
     /** Its animals, newest arrival first. */
     animals: ArkAnimal[];
+    /** The looks inside it when it is a kind with breeds aboard (more than one look, or a look that isn't the kind itself); else empty. */
+    breeds: ArkBreed[];
 };
 
 export type ArkRegionGroup = {region: ArkRegion; animals: number; species: ArkSpeciesRow[]};
@@ -48,7 +56,13 @@ export type ArkPopulation = {
     single: number;
 };
 
-export function arkSpeciesKey(animal: Pick<ArkAnimal, "species_profile_id" | "model_slug">): string {
+/** The row an animal counts in: its kind (A1), else its own species. */
+export function arkSpeciesKey(animal: Pick<ArkAnimal, "species_profile_id" | "model_slug" | "kind_species_profile_id">): string {
+    return animal.kind_species_profile_id || animal.species_profile_id || `slug:${animal.model_slug}`;
+}
+
+/** The look's own key (a breed's, not its kind's): what the scene draws and herds by. */
+export function arkLookKey(animal: Pick<ArkAnimal, "species_profile_id" | "model_slug">): string {
     return animal.species_profile_id || `slug:${animal.model_slug}`;
 }
 
@@ -68,7 +82,8 @@ export function arkPopulation(snapshot: ArkSnapshot | null): ArkPopulation {
                 count: 0,
                 mine: 0,
                 status: "single",
-                animals: []
+                animals: [],
+                breeds: []
             };
             bySpecies.set(key, row);
         }
@@ -80,6 +95,22 @@ export function arkPopulation(snapshot: ArkSnapshot | null): ArkPopulation {
     for (const row of rows) {
         row.status = arkPairStatus(row.count);
         row.animals.sort((a, b) => b.arrived_at.localeCompare(a.arrived_at));
+        // A kind with breeds aboard (A1): named for the kind, its breeds inside.
+        const looks = new Map<string, ArkBreed>();
+        for (const animal of row.animals) {
+            const look = arkLookKey(animal);
+            const breed = looks.get(look) ?? {key: look, speciesProfileId: animal.species_profile_id, slug: animal.model_slug, name: animal.name, count: 0};
+            breed.count++;
+            looks.set(look, breed);
+        }
+        const kindId = row.animals.find((animal) => animal.kind_species_profile_id)?.kind_species_profile_id ?? null;
+        if (kindId && (looks.size > 1 || !looks.has(kindId))) {
+            row.breeds = Array.from(looks.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+            const own = row.animals.find((animal) => animal.species_profile_id === kindId);
+            row.name = row.animals.find((animal) => animal.kind_name)?.kind_name ?? own?.name ?? row.breeds.map((breed) => breed.name).join(" · ");
+            row.speciesProfileId = kindId;
+            if (own) row.slug = own.model_slug;
+        }
     }
     const regions = ARK_REGIONS
         .map((region) => {
@@ -112,15 +143,18 @@ export function arkFocusAnimals(snapshot: ArkSnapshot | null, focus: string | nu
     const wanted = focus?.trim().toLowerCase();
     if (!wanted || !snapshot) return [];
     return snapshot.animals
-        .filter((animal) => animal.species_profile_id.toLowerCase() === wanted || animal.model_slug.toLowerCase() === wanted)
+        .filter((animal) => animal.species_profile_id.toLowerCase() === wanted || animal.model_slug.toLowerCase() === wanted || (animal.kind_species_profile_id ?? "").toLowerCase() === wanted)
         .sort((a, b) => b.arrived_at.localeCompare(a.arrived_at));
 }
 
 /** One species on the Ark, for a capture of it: matched by its profile id or its slug. */
 export function arkSpeciesAboard(snapshot: ArkSnapshot | null, species: {speciesProfileId?: string | null; slug?: string | null}): {count: number; mine: number; status: ArkPairStatus | null; animals: ArkAnimal[]} {
     const ids = new Set([species.speciesProfileId, species.slug].map((value) => value?.trim().toLowerCase()).filter((value): value is string => Boolean(value)));
-    const animals = (snapshot?.animals ?? [])
-        .filter((animal) => ids.has(animal.species_profile_id.toLowerCase()) || ids.has(animal.model_slug.toLowerCase()))
+    const all = snapshot?.animals ?? [];
+    const matched = all.filter((animal) => ids.has(animal.species_profile_id.toLowerCase()) || ids.has(animal.model_slug.toLowerCase()) || ids.has((animal.kind_species_profile_id ?? "").toLowerCase()));
+    // Breeds count as their kind (A1): a Labrador's capture counts every Domestic Dog aboard.
+    const kinds = new Set(matched.map((animal) => animal.kind_species_profile_id).filter((id): id is string => Boolean(id)));
+    const animals = (kinds.size ? all.filter((animal) => matched.includes(animal) || kinds.has(animal.kind_species_profile_id ?? "") || kinds.has(animal.species_profile_id)) : matched)
         .sort((a, b) => b.arrived_at.localeCompare(a.arrived_at));
     return {count: animals.length, mine: animals.filter((animal) => animal.mine).length, status: animals.length ? arkPairStatus(animals.length) : null, animals};
 }

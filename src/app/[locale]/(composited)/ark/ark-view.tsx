@@ -4,14 +4,15 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
-import type {ArkAnimal, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
-import {arkFocusAnimals, arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
+import {arkHerdKeys} from "@/ark-scene/herds";
+import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkPopulation, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
 import {isAwake, localHours, sunElevation} from "@/lib/ark-daylight";
-import {arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
+import {arkBringerLabel, arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
 import {fixtureArkStory} from "@/lib/ark-story";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 
 export type {ArkWords} from "@/lib/ark-words";
@@ -47,6 +48,8 @@ const GROW_REFRESH_MS = 8_000;
 const BEGINNING_BELOW = 24;
 /** The desktop HUD's fold, kept per reader. */
 const FOLD_KEY = "ark.hud.folded";
+/** The lighter view (A18), when the reader chose: "1" on, "0" off; absent: decided by the device. */
+const LITE_KEY = "ark.lite";
 
 /** A tapped animal's life story (`voyage_animal_life_v1`): fetched once per animal per visit. */
 type LifeState = {id: string; life: ArkLife | null; loading: boolean};
@@ -81,11 +84,22 @@ function actCaption(act: ArkAct, words: ArkWords, locale: string, animals: ArkAn
             return fillArkWords(w.arrival, {aAnimal: capitalised(withArticle(act.animal.name, words))});
         case "birth": {
             const fromParents = act.parents.map((id) => animals.find((animal) => animal.id === id)?.brought_by.label ?? "").filter(Boolean);
-            const bringers = arkJoinLabels(act.bringers.length ? act.bringers : fromParents, locale);
+            const bringers = arkJoinLabels(act.bringers.length ? act.bringers : fromParents, locale, words.formerVoyager);
             const first = act.young[0];
+            // Hatched from a clutch (A9).
+            if (act.fromEgg) {
+                return act.young.length === 1
+                    ? fillArkWords(w.hatchedOne, {aAnimal: capitalised(withArticle(first.name, words)), bringers})
+                    : fillArkWords(w.hatchedOther, {count: act.young.length.toLocaleString(locale), animal: first.name, bringers});
+            }
             return act.young.length === 1
                 ? fillArkWords(w.birthOne, {aAnimal: capitalised(withArticle(first.name, words)), bringers})
                 : fillArkWords(w.birthOther, {count: act.young.length.toLocaleString(locale), animal: first.name, bringers});
+        }
+        case "laid": {
+            const aAnimal = capitalised(withArticle(act.animal.name, words));
+            if (act.eggs === 1) return fillArkWords(w.laidOne, {aAnimal});
+            return act.eggs ? fillArkWords(w.laidOther, {aAnimal, count: act.eggs.toLocaleString(locale)}) : fillArkWords(w.laidSome, {aAnimal});
         }
         case "meal":
             return fillArkWords(w.meal, {predator: act.predator.name, aPrey: withArticle(act.prey.name, words)})
@@ -104,7 +118,9 @@ function replaySummary(summary: ArkReplaySummary, since: Date, words: ArkWords, 
     const part = (count: number, one: string, other: string) => (count ? counted(count, one, other, locale) : null);
     const parts = [
         part(summary.arrivals, w.arrivalsOne, w.arrivalsOther),
-        part(summary.births, w.birthsOne, w.birthsOther),
+        part(summary.laid, w.laidCountOne, w.laidCountOther),
+        part(summary.hatched, w.hatchedCountOne, w.hatchedCountOther),
+        part(summary.births - summary.hatched, w.birthsOne, w.birthsOther),
         part(summary.meals, w.mealsOne, w.mealsOther),
         part(summary.deaths, w.deathsOne, w.deathsOther),
         part(summary.starved, w.starvedOne, w.starvedOther),
@@ -154,6 +170,39 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
     const replayRef = useRef<{skip: () => void} | null>(null);
     const replayAsked = useRef(false);
     const worldRef = useRef<HTMLDivElement | null>(null);
+    // A herd (A14): a species so popular it is drawn as representatives and a count; tapping it gives the species.
+    const [herd, setHerd] = useState<ArkHerdInfo | null>(null);
+    // The lighter view (A18): the reader's choice (null: the device decides) and whether it is on now.
+    const [liteChoice, setLiteChoice] = useState<boolean | null>(null);
+    const [liteOn, setLiteOn] = useState(false);
+    const [reducedMotion, setReducedMotion] = useState(false);
+    // What a screen reader hears: arrivals, what was selected, the replay's summary.
+    const [announcement, setAnnouncement] = useState("");
+    // Where focus goes back to when a card opened from the keyboard (the panel's row) closes.
+    const returnFocusRef = useRef<HTMLElement | null>(null);
+    const lastMetRef = useRef<string | null>(null);
+    const herdKeys = useMemo(() => arkHerdKeys(snapshot?.animals ?? []), [snapshot]);
+    // The selected herd's row in the panel: its kind's (A1).
+    const herdAnimal = herd ? snapshot?.animals.find((animal) => arkLookKey(animal) === herd.key) ?? null : null;
+    const herdSpeciesKey = herdAnimal ? arkSpeciesKey(herdAnimal) : null;
+
+    useEffect(() => {
+        try {
+            const stored = window.localStorage.getItem(LITE_KEY);
+            if (stored === "1" || stored === "0") setLiteChoice(stored === "1");
+        } catch {
+            // No storage: the device decides.
+        }
+        const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+        if (!query) return;
+        setReducedMotion(query.matches);
+        const changed = () => {
+            setReducedMotion(query.matches);
+            sceneRef.current?.setReducedMotion(query.matches);
+        };
+        query.addEventListener?.("change", changed);
+        return () => query.removeEventListener?.("change", changed);
+    }, []);
 
     useEffect(() => {
         try {
@@ -183,6 +232,13 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
         let disposed = false;
         let handle: ArkSceneHandle | null = null;
         const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+        let storedLite: boolean | null = null;
+        try {
+            const stored = window.localStorage.getItem(LITE_KEY);
+            if (stored === "1" || stored === "0") storedLite = stored === "1";
+        } catch {
+            // The device decides.
+        }
         import("@/ark-scene")
             .then(({mountArk}) => {
                 if (disposed) return;
@@ -190,8 +246,13 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     handle = mountArk(el, {
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
-                        iconUrl: getSpeciesArtworkUrl,
+                        iconUrl: arkIconUrl,
                         onSelect: setSelected,
+                        onHerd: setHerd,
+                        herdBadge: (count) => fillArkWords(words.herd.badge, {count: count.toLocaleString(locale)}),
+                        canvasLabel: words.a11y.scene,
+                        lite: storedLite,
+                        onTier: (_tier, lite) => setLiteOn(lite),
                         mineOnly: false,
                         regionLabels: words.regions,
                         reducedMotion,
@@ -205,6 +266,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     if (focused) handle.select(focused.id);
                     if (process.env.NODE_ENV !== "production") {
                         (window as unknown as {__arkScene?: ArkSceneHandle}).__arkScene = handle;
+                        (window as unknown as {__arkSnapshot?: ArkSnapshot | null}).__arkSnapshot = snapshotRef.current ?? initial;
                         // Development: every act in the fixture's log, to play one by hand (`__arkScene.play([__arkActs[i]])`).
                         if (fixtureLife) (window as unknown as {__arkActs?: ArkAct[]}).__arkActs = planArkReplay(decodeArkEvents(fixtureLife.events, snapshotRef.current ?? initial), 1000).acts;
                     }
@@ -233,7 +295,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
         const band = bandRef.current;
         const scene = sceneRef.current;
         if (!scene) return;
-        if (!selected || !band) {
+        if (!(selected || herd) || !band) {
             scene.setViewInset(0);
             return;
         }
@@ -247,7 +309,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
             observer.disconnect();
             phone.removeEventListener?.("change", apply);
         };
-    }, [selected]);
+    }, [selected, herd]);
 
     // MARK: Its life story
 
@@ -286,6 +348,43 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
             });
         return () => controller.abort();
     }, [selected, fixture, fixtureLife, publicStory]);
+
+    // What a screen reader hears when a card opens (A18).
+    useEffect(() => {
+        if (selected) setAnnouncement(fillArkWords(words.a11y.selected, {animal: selected.name}));
+    }, [selected, words]);
+    useEffect(() => {
+        if (herd) setAnnouncement(fillArkWords(words.a11y.herdSelected, {animal: herd.name, count: herd.count.toLocaleString(locale)}));
+    }, [herd, words, locale]);
+    useEffect(() => {
+        if (arrival) setAnnouncement(words.newArrival.replace("{animal}", arrival.name));
+    }, [arrival, words]);
+    useEffect(() => {
+        if (summary) setAnnouncement(summary);
+    }, [summary]);
+
+    /** A card closed: focus back where it came from (the panel's row), else the world. */
+    const closeCard = useCallback(() => {
+        const scene = sceneRef.current;
+        if (selected) scene?.select(null);
+        if (herd) scene?.selectHerd(null);
+        setAnnouncement(words.a11y.closed);
+        const back = returnFocusRef.current;
+        returnFocusRef.current = null;
+        if (back && document.contains(back)) back.focus();
+        else if (back) mountRef.current?.querySelector("canvas")?.focus();
+    }, [selected, herd, words]);
+
+    const toggleLite = () => {
+        const next = !(liteChoice ?? liteOn);
+        setLiteChoice(next);
+        try {
+            window.localStorage.setItem(LITE_KEY, next ? "1" : "0");
+        } catch {
+            // For this visit.
+        }
+        sceneRef.current?.setLite(next);
+    };
 
     const toggleFollow = () => {
         const scene = sceneRef.current;
@@ -439,11 +538,29 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
     };
 
     const pickSpecies = (row: ArkSpeciesRow) => {
+        // From the panel: focus comes back to its row when the card closes.
+        returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setRegion(null);
+        // A herd (A14): the species, with its count (a kind's row: its herd of a breed, A1).
+        const herdKey = [row.key, ...row.breeds.map((breed) => breed.key)].find((key) => herdKeys.has(key));
+        if (herdKey && sceneRef.current?.selectHerd(herdKey)) {
+            showWorld();
+            return;
+        }
         const animal = arkPickAnimal(row.animals, selected?.id ?? null);
         if (!animal) return;
-        setRegion(null);
         sceneRef.current?.select(animal.id);
         showWorld();
+    };
+
+    /** "Meet one" on a herd's card: the next of its animals, the reader's own first. */
+    const meetOne = () => {
+        if (!herd || !snapshot) return;
+        const members = snapshot.animals.filter((animal) => arkLookKey(animal) === herd.key).sort((a, b) => b.arrived_at.localeCompare(a.arrived_at));
+        const animal = arkPickAnimal(members, lastMetRef.current);
+        if (!animal) return;
+        lastMetRef.current = animal.id;
+        sceneRef.current?.select(animal.id);
     };
 
     const beginning = Boolean(snapshot && snapshot.counts.animals < BEGINNING_BELOW);
@@ -453,8 +570,27 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
             {/* Band 1: what this is, and how many are aboard. */}
             <section aria-labelledby="ark-title" className="border-b border-line-200 bg-canvas-950">
                 <div className="mx-auto w-full max-w-[86rem] px-4 py-5 md:px-8 md:py-7">
-                    <div className="flex min-h-9 items-center justify-between gap-3">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300">{words.eyebrow}</p>
+                    <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                        <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300">{words.eyebrow}</p>
+                        <div className="ml-auto flex shrink-0 items-center gap-2">
+                        {snapshot ? (
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={liteChoice ?? liteOn}
+                                aria-describedby="ark-lite-hint"
+                                onClick={toggleLite}
+                                title={words.lite.hint}
+                                className={`${pill} min-h-9 shrink-0 border px-3 text-[13px] ${(liteChoice ?? liteOn) ? "border-primary-400/70 text-primary-100" : "border-line-100 text-ink-200 hover:border-primary-400"}`}
+                            >
+                                <span aria-hidden="true" className={`relative inline-block h-4 w-7 rounded-full transition-colors motion-reduce:transition-none ${(liteChoice ?? liteOn) ? "bg-primary-400/80" : "bg-white/20"}`}>
+                                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-[left] duration-200 motion-reduce:transition-none ${(liteChoice ?? liteOn) ? "left-[0.875rem]" : "left-0.5"}`} />
+                                </span>
+                                {words.lite.label}
+                                {liteChoice === null && liteOn ? <span className="hidden text-[11px] font-semibold text-ink-400 sm:inline">· {words.lite.auto}</span> : null}
+                                <span id="ark-lite-hint" className="sr-only">{words.lite.hint}</span>
+                            </button>
+                        ) : null}
                         {showMineToggle ? (
                             <button
                                 type="button"
@@ -469,6 +605,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                                 {words.myAnimals}
                             </button>
                         ) : null}
+                        </div>
                     </div>
                     <h1 id="ark-title" className="mt-1 max-w-4xl font-display text-[1.65rem] font-extrabold leading-[1.05] tracking-tight text-white [text-wrap:balance] sm:text-3xl md:text-[2.5rem]">
                         {words.title}
@@ -476,6 +613,14 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     <p className="mt-2 text-sm leading-relaxed text-ink-200 md:text-base" aria-live="polite">{status}</p>
                 </div>
             </section>
+
+            {/* What a screen reader hears as it happens (A18): arrivals, a card opening, the replay's summary. */}
+            <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
+            {snapshot ? (
+                <a href="#ark-aboard" className="sr-only focus:not-sr-only focus:absolute focus:z-10 focus:m-2 focus:rounded-full focus:bg-primary-400 focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-canvas-950">
+                    {words.a11y.skipToList}
+                </a>
+            ) : null}
 
             {/* Band 2: the world, edge to edge, and who is aboard (beside it on a desktop, under it on a phone). */}
             <div className="w-full md:flex md:h-[max(30rem,min(calc(100svh-18.5rem),56rem))]">
@@ -497,11 +642,12 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                 {failed && snapshot ? (
                     <div className="absolute inset-0 overflow-y-auto bg-canvas-950 px-4 py-6 md:px-8">
                         <p className="text-sm text-ink-200">{words.noWebgl}</p>
+                        {/* By species with its count (a thousand of one kind is one row, A14). */}
                         <ul className="mt-4 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {snapshot.animals.map((animal) => (
-                                <li key={animal.id} className="flex items-baseline justify-between gap-3 border-b border-line-300 py-2 text-sm">
-                                    <span className="font-bold text-white">{animal.name}</span>
-                                    <span className="text-ink-400">{words.zones[animal.zone]}</span>
+                            {arkPopulation(snapshot).regions.flatMap((group) => group.species).map((row) => (
+                                <li key={row.key} className="flex items-baseline justify-between gap-3 border-b border-line-300 py-2 text-sm">
+                                    <span className="min-w-0"><span className="font-bold text-white">{row.name}</span> <span className="text-ink-400">· {words.zones[row.zone]}</span></span>
+                                    <span className="shrink-0 tabular-nums text-ink-200">{fillArkWords(words.hud.countStatus, {count: row.count.toLocaleString(locale), status: words.hud[row.status]})}</span>
                                 </li>
                             ))}
                         </ul>
@@ -525,12 +671,13 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     </div>
                 ) : null}
 
-                {summary && !replay && !selected ? (
-                    <div role="status" className="rows-in absolute inset-x-0 top-0 z-[1] border-b border-line-200 bg-canvas-950/[0.9] backdrop-blur-xl">
+                {summary && !replay && !selected && !herd ? (
+                    <div className="rows-in absolute inset-x-0 top-0 z-[1] border-b border-line-200 bg-canvas-950/[0.9] backdrop-blur-xl">
                         <div className="mx-auto flex w-full max-w-[86rem] items-center gap-3 px-4 py-2.5 md:px-8">
                             <p className="min-w-0 flex-1 text-sm leading-snug text-ink-100">
                                 <span className="mr-2 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-300">{words.replay.title}</span>
                                 <span className="font-semibold text-white">{summary}</span>
+                                {reducedMotion ? <span className="mt-0.5 block text-[12px] text-ink-400">{words.a11y.motionReduced}</span> : null}
                             </p>
                             <button type="button" onClick={() => setSummary(null)} aria-label={words.replay.dismiss} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white">
                                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -539,8 +686,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     </div>
                 ) : null}
 
-                {arrival && !selected && !replay && !summary ? (
-                    <div role="status" className="rows-in absolute inset-x-0 top-0 border-b border-line-200 bg-canvas-950/[0.92] backdrop-blur-xl">
+                {arrival && !selected && !herd && !replay && !summary ? (
+                    <div className="rows-in absolute inset-x-0 top-0 border-b border-line-200 bg-canvas-950/[0.92] backdrop-blur-xl">
                         <div className="mx-auto flex w-full max-w-[86rem] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
                             <p className="min-w-0 truncate text-sm font-semibold text-white">{words.newArrival.replace("{animal}", arrival.name)}</p>
                             <button type="button" onClick={() => sceneRef.current?.select(arrival.id)} className="shrink-0 text-sm font-bold text-primary-300 underline-offset-4 hover:underline">
@@ -565,7 +712,22 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         onFollow={toggleFollow}
                         storyOpen={storyOpen}
                         onStory={() => setStoryOpen((open) => !open)}
-                        onClose={() => sceneRef.current?.select(null)}
+                        onClose={closeCard}
+                        focusOnOpen={Boolean(returnFocusRef.current)}
+                    />
+                ) : null}
+
+                {herd && !selected ? (
+                    <ArkHerdBand
+                        bandRef={bandRef}
+                        herd={herd}
+                        zone={snapshot?.animals.find((animal) => arkLookKey(animal) === herd.key)?.zone ?? null}
+                        words={words}
+                        locale={locale}
+                        talk={isArkPlaceholderSlug(herd.slug) ? null : talkTitle(herd.name, talkTitles)}
+                        onMeet={meetOne}
+                        onClose={closeCard}
+                        focusOnOpen={Boolean(returnFocusRef.current)}
                     />
                 ) : null}
             </section>
@@ -575,7 +737,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     snapshot={snapshot}
                     words={words}
                     locale={locale}
-                    selectedKey={selected ? arkSpeciesKey(selected) : null}
+                    selectedKey={selected ? arkSpeciesKey(selected) : herdSpeciesKey}
+                    herdKeys={herdKeys}
                     arrivalKey={arrival ? arkSpeciesKey(arrival) : null}
                     region={region}
                     folded={folded}
@@ -622,16 +785,35 @@ type BandProps = {
     storyOpen: boolean;
     onStory: () => void;
     onClose: () => void;
+    /** Opened from the keyboard (the panel's row): focus moves to the card's heading. */
+    focusOnOpen: boolean;
 };
 
+/** A card's heading takes focus when it opened from the keyboard; Escape inside the card closes it (A18). */
+function useCardFocus(key: string, focusOnOpen: boolean, onClose: () => void) {
+    const headingRef = useRef<HTMLHeadingElement | null>(null);
+    useEffect(() => {
+        if (focusOnOpen) headingRef.current?.focus({preventScroll: true});
+        // Only when another card opens.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+    const onKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key !== "Escape") return;
+        event.stopPropagation();
+        onClose();
+    };
+    return {headingRef, onKeyDown};
+}
+
 /** What the band knows about an animal's life: the life story when the server sent one, else the snapshot's v2 fields. */
-function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | null, locale: string) {
+function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | null, locale: string, former: string) {
     const born = life ? life.origin.kind === "born" : animal.origin === "born";
     const parentsBy = life?.origin.kind === "born" ? life.origin.born_to : animal.bringers?.map((b) => b.label) ?? [];
     const ageDays = life?.ark_age_days ?? (arkDay !== null && typeof animal.born_ark_day === "number" ? Math.max(arkDay - animal.born_ark_day, 0) : null);
     return {
         born,
-        bringers: arkJoinLabels(born ? parentsBy : [life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label], locale),
+        hatched: life?.origin.kind === "born" && life.origin.from_egg,
+        bringers: arkJoinLabels(born ? parentsBy : [life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label], locale, former),
         generation: life ? life.generation : animal.generation ?? null,
         ageDays,
         condition: life?.condition ?? animal.condition ?? null
@@ -653,9 +835,12 @@ function ageText(days: number, words: ArkWords, locale: string): string {
  * in a line (and in full under "Life story", in the band itself), and the
  * next moves: talking to it, or following it.
  */
-function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose}: BandProps) {
+function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose, focusOnOpen}: BandProps) {
     const life = state?.life ?? null;
-    const facts = lifeFacts(animal, life, arkDay, locale);
+    const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
+    // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
+    const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
+    const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager);
     const chips = [
         facts.generation !== null && facts.generation > 0 ? fillArkWords(words.life.generationShort, {n: facts.generation}) : null,
         facts.ageDays !== null ? ageText(facts.ageDays, words, locale) : null,
@@ -664,14 +849,14 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
     ].filter((chip): chip is string => Boolean(chip));
     const hasLife = Boolean(life) || animal.origin !== undefined;
     return (
-        <div ref={bandRef} className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-label={animal.name}>
+        <div ref={bandRef} onKeyDown={onKeyDown} className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-labelledby={`ark-card-${animal.id}`}>
             <div className="mx-auto w-full max-w-[86rem] px-4 py-3.5 md:px-8 md:py-4">
                 <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-x-3 md:grid-cols-[4rem_minmax(0,1fr)_auto] md:gap-x-5">
                     <span className="flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] md:h-16 md:w-16">
-                        <ArkSpeciesIcon src={getSpeciesArtworkUrl(animal.model_slug)} size={64} className="h-[82%] w-[82%] object-contain" />
+                        <ArkSpeciesIcon src={arkIconUrl(animal.model_slug)} size={64} className="h-[82%] w-[82%] object-contain" />
                     </span>
                     <div className="min-w-0">
-                        <h2 className="truncate font-display text-lg font-extrabold leading-tight text-white md:text-xl">{animal.name}</h2>
+                        <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="truncate font-display text-lg font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-xl">{animal.name}</h2>
                         {/* On a phone the open life story needs the room: the name in Latin and the chips (said again below) step aside. */}
                         {animal.scientific_name ? <p className={`truncate text-[13px] italic text-ink-400 ${storyOpen ? "hidden md:block" : ""}`}>{animal.scientific_name}</p> : null}
                         <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px]">
@@ -681,7 +866,7 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                             ) : (
                                 <div className="flex gap-1.5"><dt className="text-ink-400">{words.broughtBy}</dt><dd className="font-semibold text-ink-100">{facts.bringers}</dd></div>
                             )}
-                            <div className="flex gap-1.5"><dt className="text-ink-400">{facts.born ? words.life.born : words.arrived}</dt><dd className="font-semibold text-ink-100">{arrived}</dd></div>
+                            <div className="flex gap-1.5"><dt className="text-ink-400">{facts.hatched ? words.life.hatched : facts.born ? words.life.born : words.arrived}</dt><dd className="font-semibold text-ink-100">{arrived}</dd></div>
                         </dl>
                         {chips.length ? (
                             <p className={`mt-1.5 flex-wrap gap-1.5 ${storyOpen ? "hidden md:flex" : "flex"}`}>
@@ -690,9 +875,10 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                                 ))}
                             </p>
                         ) : null}
-                        <ArkStoryLine state={state} born={facts.born} words={words} />
+                        <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} words={words} />
+                        {placeholder ? <p className="mt-1 text-[12px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                     </div>
-                    <button type="button" onClick={onClose} aria-label={words.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white">
+                    <button type="button" onClick={onClose} aria-label={words.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                 </div>
@@ -700,10 +886,12 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                 {storyOpen ? <ArkLifeStory animal={animal} life={life} facts={facts} words={words} locale={locale} /> : null}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2 md:pl-[5.25rem]">
-                    <Link href={`/talk/${animal.model_slug}`} className={`${pill} w-full bg-primary-400 text-canvas-950 hover:bg-primary-100 sm:w-auto`}>
-                        {talk}
-                        <span aria-hidden="true">→</span>
-                    </Link>
+                    {placeholder ? null : (
+                        <Link href={`/talk/${animal.model_slug}`} className={`${pill} w-full bg-primary-400 text-canvas-950 hover:bg-primary-100 sm:w-auto`}>
+                            {talk}
+                            <span aria-hidden="true">→</span>
+                        </Link>
+                    )}
                     <button
                         type="button"
                         aria-pressed={following}
@@ -722,6 +910,54 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                             {storyOpen ? words.life.hideStory : words.life.showStory}
                             <svg viewBox="0 0 20 20" className={`h-4 w-4 transition-transform ${storyOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l5-5 5 5" /></svg>
                         </button>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * A herd's card (A14): the species, how many are aboard and how many are
+ * the reader's, its pair status, and the way to meet one of them.
+ */
+function ArkHerdBand({bandRef, herd, zone, words, locale, talk, onMeet, onClose, focusOnOpen}: {bandRef: React.Ref<HTMLDivElement>; herd: ArkHerdInfo; zone: ArkAnimal["zone"] | null; words: ArkWords; locale: string; talk: string | null; onMeet: () => void; onClose: () => void; focusOnOpen: boolean}) {
+    const {headingRef, onKeyDown} = useCardFocus(herd.key, focusOnOpen, onClose);
+    const count = herd.count.toLocaleString(locale);
+    const status = arkPairStatus(herd.count);
+    return (
+        <div ref={bandRef} onKeyDown={onKeyDown} className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-labelledby="ark-herd-title">
+            <div className="mx-auto w-full max-w-[86rem] px-4 py-3.5 md:px-8 md:py-4">
+                <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-x-3 md:grid-cols-[4rem_minmax(0,1fr)_auto] md:gap-x-5">
+                    <span className="flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] md:h-16 md:w-16">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={arkIconUrl(herd.slug)} alt="" onError={arkIconFallback} width={64} height={64} className="h-[82%] w-[82%] object-contain" />
+                    </span>
+                    <div className="min-w-0">
+                        <h2 id="ark-herd-title" ref={headingRef} tabIndex={-1} className="truncate font-display text-lg font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-xl">{fillArkWords(words.herd.title, {animal: herd.name})}</h2>
+                        <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px]">
+                            <div className="flex gap-1.5"><dt className="sr-only">{words.hud.statAnimals}</dt><dd className="font-display text-base font-extrabold tabular-nums text-white">{fillArkWords(words.herd.count, {count})}</dd></div>
+                            {zone ? <div className="flex gap-1.5"><dt className="text-ink-400">{words.lives}</dt><dd className="font-semibold text-ink-100">{words.zones[zone]}</dd></div> : null}
+                        </dl>
+                        <p className="mt-1.5 flex flex-wrap gap-1.5">
+                            <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[12px] font-semibold text-ink-100">{words.hud[status]}</span>
+                            {herd.mine > 0 ? <span className="rounded-full bg-primary-400/15 px-2 py-0.5 text-[12px] font-semibold text-primary-200">{herd.mine === 1 ? words.herd.mineOne : fillArkWords(words.herd.mineOther, {count: herd.mine.toLocaleString(locale)})}</span> : null}
+                        </p>
+                        <p className="mt-1.5 text-[13px] leading-snug text-ink-200">{words.herd.note}</p>
+                    </div>
+                    <button type="button" onClick={onClose} aria-label={words.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 md:pl-[5.25rem]">
+                    <button type="button" onClick={onMeet} className={`${pill} flex-1 bg-primary-400 text-canvas-950 hover:bg-primary-100 sm:flex-none`}>
+                        {words.herd.meet}
+                    </button>
+                    {talk ? (
+                        <Link href={`/talk/${herd.slug}`} className={`${pill} flex-1 border border-line-100 px-4 text-ink-100 hover:border-primary-400 sm:flex-none`}>
+                            {talk}
+                            <span aria-hidden="true">→</span>
+                        </Link>
                     ) : null}
                 </div>
             </div>
@@ -749,7 +985,9 @@ function ArkLifeStory({animal, life, facts, words, locale}: {animal: ArkAnimal; 
     if (life) rows.push([w.young, life.young_raised > 0 ? life.young_raised.toLocaleString(locale) : w.noYoung]);
     if (life && life.milestones.count > 0) rows.push([w.milestones, fillArkWords(w.milestonesValue, {count: life.milestones.count.toLocaleString(locale)})]);
     // Its line, further back than its parents (the third generation on).
-    if (facts.born && (facts.generation ?? 0) >= 2 && life?.ancestor_brought_by) rows.push([w.line, fillArkWords(w.lineValue, {bringer: life.ancestor_brought_by})]);
+    if (facts.born && (facts.generation ?? 0) >= 2 && life?.ancestor_brought_by) rows.push([w.line, fillArkWords(w.lineValue, {bringer: arkBringerLabel(life.ancestor_brought_by, words.formerVoyager)})]);
+    // A3: the step that brought it was revised after it arrived; it stays aboard.
+    if (life?.revision) rows.push([w.revised, life.revision.worked ? w.revisedWorked : w.revisedNot]);
     return (
         <div className="rows-in mt-3 max-h-[24svh] overflow-y-auto overscroll-contain border-t border-line-300 pt-2.5 md:max-h-[30svh] md:pl-[5.25rem]" aria-label={`${w.showStory}: ${animal.name}`}>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-2 xl:grid-cols-4">
@@ -771,14 +1009,14 @@ function ArkLifeStory({animal, life, facts, words, locale}: {animal: ArkAnimal; 
  * that worked only when the life story carries `story_public`, which the
  * server sends only while its `public_story` flag is on. Never anything private.
  */
-function ArkStoryLine({state, born, words}: {state: LifeState | null; born: boolean; words: ArkWords}) {
+function ArkStoryLine({state, born, hatched, words}: {state: LifeState | null; born: boolean; hatched: boolean; words: ArkWords}) {
     if (!state || state.loading) return <p aria-hidden="true" className="mt-1.5 h-[1.125rem]" />;
     const told = state.life?.story_public ?? null;
     return (
         <p className="rows-in mt-1.5 flex items-start gap-1.5 text-[13px] leading-snug text-ink-200">
             <svg viewBox="0 0 16 16" className="mt-[3px] h-3 w-3 shrink-0 text-primary-300" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" /></svg>
             <span className="min-w-0">
-                {told ? fillArkWords(words.story.debate, {problem: told.problem, animal: told.way.animal, power: told.way.power}) : born ? words.life.bornAboard : words.story.generic}
+                {told ? fillArkWords(words.story.debate, {problem: told.problem, animal: told.way.animal, power: told.way.power}) : hatched ? words.life.hatchedAboard : born ? words.life.bornAboard : words.story.generic}
                 {told?.debate_id ? (
                     <>
                         {" "}

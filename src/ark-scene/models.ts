@@ -7,7 +7,8 @@
  *
  * `<base>/manifest.json` → `{models: {slug: version}}`, files at
  * `<base>/<slug>/<version>.near.glb | .far.glb | .ark.json`. A species not
- * in it has no model and is drawn as its icon at every distance.
+ * in it, or whose files fail to load, is drawn as the neutral placeholder
+ * figure (`placeholder.ts`, owner decision A13): never a broken model.
  *
  * The local development route also lists `fallback` species: those with
  * only the full talking model (`assets/<slug>.glb`, the g1 layout, read by
@@ -22,6 +23,7 @@ import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {parseTalkingGlb} from "@/components/ask-animaldex/voice-call/talking-model-renderer";
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {bodyAxisExtent} from "@/ark-scene/stats";
+import {placeholderGeometry} from "@/ark-scene/placeholder";
 
 export type ArkManifest = {
     models: Record<string, string>;
@@ -42,6 +44,8 @@ export type SpeciesModel = {
     length: number;
     /** Its extent along its body-length axis (`bodyAxisExtent`): the drawn size is measured on it. */
     bodyLength: number;
+    /** The neutral figure standing in for a species with no model (A13). */
+    placeholder?: boolean;
 };
 
 type Wanted = "far" | "near";
@@ -138,9 +142,26 @@ export class ModelLibrary {
         return this.manifestReady;
     }
 
-    /** Whether a species has any model to load (false until the manifest is in). */
-    has(slug: string): boolean {
+    /**
+     * Whether a species can be drawn: once the manifest is in, every one can
+     * (a species it doesn't list gets the placeholder figure).
+     */
+    has(_slug: string): boolean {
+        return Boolean(this.manifest);
+    }
+
+    /** Whether the model set lists this species (false: the placeholder stands in). */
+    listed(slug: string): boolean {
         return Boolean(this.manifest && (this.manifest.models[slug] || this.manifest.fallback?.[slug]));
+    }
+
+    /** How many species are drawn as the placeholder. */
+    get placeholderCount(): number {
+        let n = 0;
+        this.models.forEach((model) => {
+            if (model.placeholder) n++;
+        });
+        return n;
     }
 
     get(slug: string): SpeciesModel | undefined {
@@ -175,7 +196,10 @@ export class ModelLibrary {
             this.active++;
             this.load(next.slug, next.level)
                 .catch((error) => {
-                    if (!this.disposed) console.warn(`[ark] ${next.slug} ${next.level}`, error instanceof Error ? error.message : error);
+                    if (this.disposed) return;
+                    console.warn(`[ark] ${next.slug} ${next.level}`, error instanceof Error ? error.message : error);
+                    // Files that don't load: the placeholder, never a broken model (or nothing).
+                    if (!this.models.get(next.slug)?.far) this.placeholder(next.slug);
                 })
                 .finally(() => {
                     this.active--;
@@ -243,7 +267,11 @@ export class ModelLibrary {
             this.onLoad(slug);
             return;
         }
-        if (!this.manifest?.fallback?.[slug] || this.models.get(slug)) return;
+        if (this.models.get(slug)) return;
+        if (!this.manifest?.fallback?.[slug]) {
+            this.placeholder(slug);
+            return;
+        }
         // The full talking model: body and jaw as one mesh, its skin beside it.
         const [buffer, json, map] = await Promise.all([
             fetch(this.url(slug, "g1.glb"), {signal: this.abort.signal}).then((response) => {
@@ -279,7 +307,28 @@ export class ModelLibrary {
         const behaviour = (json && typeof json === "object" ? (json as {behaviour?: TalkingBehaviour}).behaviour : null) ?? null;
         const model = this.remember(slug, behaviour, whole);
         model.far = whole;
-        model.near = whole;
+        // A copy for the near level (each level's instances set their own attribute on the geometry).
+        model.near = {...whole, geometry: merged.clone()};
+        this.onLoad(slug);
+    }
+
+    /** The neutral figure for a species with no model (its own copy: each species has its own instances). */
+    private placeholder(slug: string) {
+        if (this.disposed) return;
+        const geometry = placeholderGeometry();
+        const level: ModelLevel = {geometry, map: null, triangles: triangles(geometry)};
+        const known = this.models.get(slug);
+        if (known) {
+            known.far ??= level;
+            known.near ??= {...level, geometry: geometry.clone()};
+            this.onLoad(slug);
+            return;
+        }
+        const model = this.remember(slug, null, level);
+        model.placeholder = true;
+        model.far = level;
+        // Its own copy for the near level: each level's instances carry their own attribute on the geometry.
+        model.near = {...level, geometry: geometry.clone()};
         this.onLoad(slug);
     }
 

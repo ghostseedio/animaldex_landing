@@ -71,6 +71,9 @@ import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
 import {DustPuffs} from "@/ark-scene/dust";
+import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
+import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
+import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
 import {ARK_TIME} from "@/ark-scene/glsl";
 import {IconTokens, type TokenInstance} from "@/ark-scene/icons";
 import {buildMotes} from "@/ark-scene/life";
@@ -84,6 +87,7 @@ import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} f
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
+import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -92,12 +96,13 @@ import {buildLandscape} from "@/ark-scene/terrain";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake, localHours} from "@/lib/ark-daylight";
-import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
+import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
     ARK_REGIONS,
     type ArkAnimal,
     type ArkCameraView,
+    type ArkHerdInfo,
     type ArkReplayRun,
     type ArkRegion,
     type ArkSceneHandle,
@@ -120,11 +125,15 @@ const NEAR_INSTANCE_CAP = 150;
 const NEAR_SPECIES_CAP = 60;
 /** Past this many animals in view, the farthest are drawn as icons. */
 const MODEL_CAP = 150;
+/** The lighter view (A18): fewer near models, fewer models before icons. */
+const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
 const LOAD_NEAR_WITHIN = 48;
 const FOV = 38;
 const MAX_DISTANCE = 340;
 const ENTRANCE_SECONDS = 1.6;
 const RIPPLE_SECONDS = 2.6;
+/** A clutch being laid, in a replay. */
+const LAID_SECONDS = 2.6;
 /** Close to an animal the camera looks more across the ground than down on it (radians from straight down). */
 const CLOSE_POLAR = 1.13;
 /** Seconds without a touch before the view starts to drift. */
@@ -225,6 +234,36 @@ type SpeciesMeshes = {
     farMaterial: MeshStandardMaterial | null;
 };
 
+/** A herd's members past its representatives (A14): standing where the server placed them, drawn cheaply. */
+type HerdDraw = {
+    info: ArkHerd;
+    slug: string;
+    /** A member, for its size and stats (all of a species are drawn the same size). */
+    sample: ArkAnimal;
+    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]}>;
+    centre: {x: number; z: number};
+    radius: number;
+    /** The member nearest the middle: the badge stands over it. */
+    anchor: number;
+    length: number;
+    colour: Color | null;
+    /** The figures' and specks' matrices, kept until the drawn scale changes. */
+    scale: number;
+    figureMatrices: Float32Array;
+    speckMatrices: Float32Array;
+    /** Members nearest the camera first, sorted now and then. */
+    order: Uint32Array;
+    sortedAt: number;
+    sortedFrom: Vector3;
+    /** Each member's middle this frame (for picking), NaN when not drawn. */
+    middles: Float32Array;
+    badge: HTMLButtonElement;
+    /** This frame: how many as models, how many as specks, the drawn height. */
+    figures: number;
+    specks: number;
+    height: number;
+};
+
 const MINE = new Color("#b9f75a");
 const SELECTED = new Color("#fff4dc");
 const ARRIVAL = new Color("#fff3d6");
@@ -253,6 +292,15 @@ function phaseOf(id: string): number {
     return ((h >>> 0) % 10000) / 10000;
 }
 
+/**
+ * Letter-spacing for a label's text: the tracking asked for where the script
+ * takes it (Latin, Cyrillic, Greek), none elsewhere, since spacing breaks
+ * Devanagari's and Bengali's head-strokes, Thai's clusters and Arabic's joins.
+ */
+export function arkTracking(text: string, tracking: string): string {
+    return /^[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{N}\p{P}\p{S}\p{Z}]*$/u.test(text) ? tracking : "normal";
+}
+
 /** A development override for measuring each tier (`window.__arkQuality = "low"` before mounting). */
 function forcedTier(): QualityTier | null {
     const asked = (globalThis as {__arkQuality?: string}).__arkQuality;
@@ -277,6 +325,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     canvas.style.touchAction = "none";
     canvas.style.outline = "none";
     canvas.tabIndex = 0;
+    // The world takes the keyboard (A18): arrows move the view, + and − zoom, Esc closes the card.
+    canvas.setAttribute("role", "application");
+    if (options.canvasLabel) canvas.setAttribute("aria-label", options.canvasLabel);
     if (getComputedStyle(el).position === "static") el.style.position = "relative";
     el.appendChild(canvas);
 
@@ -285,7 +336,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     Object.assign(labelLayer.style, {position: "absolute", inset: "0", pointerEvents: "none", overflow: "hidden"});
     el.appendChild(labelLayer);
 
-    const reducedMotion = Boolean(options.reducedMotion);
+    let reducedMotion = Boolean(options.reducedMotion);
+    /** The lighter view (A18): the reader's choice, or (null) on whenever the device's tier is low. */
+    let liteChoice: boolean | null = typeof options.lite === "boolean" ? options.lite : null;
+    const autoTier = tier;
+    const liteOn = () => liteChoice ?? tier === "low";
+    const caps = () => (liteOn() ? LITE_CAPS : {near: NEAR_INSTANCE_CAP, nearSpecies: NEAR_SPECIES_CAP, models: MODEL_CAP});
     const scene = new Scene();
     // The hour: pinned by the page (development's `?hour=`), or the viewer's own clock.
     let pinnedHours = typeof options.hours === "number" && Number.isFinite(options.hours) ? options.hours : null;
@@ -295,13 +351,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.fog = fog;
     const dust = new DustPuffs();
     scene.add(dust.points);
+    // Clutches laid and hatching, in a replay (A9).
+    const nests = new ArkNests();
+    scene.add(nests.root);
 
     const landscape = buildLandscape();
     scene.add(landscape.ground, landscape.water);
     const vegetation = buildVegetation(MAX_GRASS);
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
-    const motes = buildMotes(reducedMotion ? 0 : 260);
+    const motes = buildMotes(260);
+    motes.points.visible = !reducedMotion;
     scene.add(motes.points);
     // The cottage at Home, its porch light and the garden pond (the small animals' microhabitats).
     const micro = buildMicroScene();
@@ -331,12 +391,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const shadows = new ContactShadows();
     const rings = new GroundRings();
-    const tokens = new IconTokens(options.iconUrl);
+    // A placeholder species (A13) has no icon art: the generic figure's.
+    const tokens = new IconTokens((slug) => (isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : options.iconUrl(slug)));
     const dots = new FindDots();
-    scene.add(shadows.mesh, rings.mesh, tokens.mesh, dots.mesh);
+    const specks = new HerdSpecks();
+    scene.add(shadows.mesh, rings.mesh, tokens.mesh, dots.mesh, specks.meshes["four-legged"].mesh, specks.meshes.oval.mesh);
 
     const post = new ArkPost(renderer, scene, camera, tier);
     const applyTier = (next: QualityTier) => {
+        const liteBefore = liteOn();
         tier = next;
         const settings = TIER_SETTINGS[tier];
         lighting.setShadows(renderer, settings.shadows);
@@ -350,7 +413,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         post.setTier(tier);
         pixelRatio = Math.min(window.devicePixelRatio || 1, settings.pixelRatio);
         renderer.setPixelRatio(pixelRatio);
+        motes.points.visible = !reducedMotion && !liteOn();
         resize();
+        options.onTier?.(tier, liteOn());
+        // The lighter view came on (or went off) with the tier: fewer of each herd drawn one by one.
+        if (liteBefore !== liteOn() && herds.length) setSnapshot(current, false);
     };
 
     const library = new ModelLibrary(options.modelBase, 4);
@@ -381,6 +448,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let talkingModels: TalkingModelSource | null = null;
     let mineOnly = Boolean(options.mineOnly);
     let selectedId: string | null = null;
+    // Herds (A14): the snapshot as last given, every id aboard, and who must be drawn one by one.
+    let current: ArkSnapshot = options.snapshot;
+    let aboard = new Set<string>();
+    let herds: HerdDraw[] = [];
+    let selectedHerd: string | null = null;
+    /** Pinned representatives: the one selected (a herd member promoted), and a replay's animals. */
+    let selectionPin: string | null = null;
+    let replayPins = new Set<string>();
+    let placedFor: ArkSnapshot | null = null;
+    let placedAll = new Map<string, Placement>();
     let disposed = false;
     let width = 1;
     let height = 1;
@@ -402,7 +479,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             transform: "translate(-50%, -50%)",
             whiteSpace: "nowrap",
             font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
-            letterSpacing: "0.16em",
+            letterSpacing: arkTracking(text, "0.16em"),
             textTransform: "uppercase",
             color: "rgba(255, 252, 244, 0.95)",
             textShadow: "0 1px 2px rgba(30, 24, 12, 0.5), 0 0 16px rgba(30, 24, 12, 0.4)",
@@ -505,15 +582,130 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.awake = entry.visitor ? true : isAwake(entry.animal.activity ?? null, sunElevation);
             if (reducedMotion) entry.rest = entry.awake ? 0 : 1;
         }
+        for (const herd of herds) for (const member of herd.members) member.awake = isAwake(member.activity ?? null, sunElevation);
+    };
+
+    /** The badge over a herd: its count, tappable (the population panel is the way in for the keyboard). */
+    const herdBadge = (count: number) => options.herdBadge?.(count) ?? `\u00d7 ${count.toLocaleString()}`;
+    const makeBadge = (key: string): HTMLButtonElement => {
+        const badge = document.createElement("button");
+        badge.type = "button";
+        badge.tabIndex = -1;
+        Object.assign(badge.style, {
+            position: "absolute",
+            left: "0",
+            top: "0",
+            whiteSpace: "nowrap",
+            font: "700 12px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+            letterSpacing: "0.02em",
+            color: "rgba(255, 252, 244, 0.98)",
+            padding: "6px 10px",
+            borderRadius: "999px",
+            background: "rgba(14, 20, 14, 0.66)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            opacity: "0",
+            pointerEvents: "none",
+            cursor: "pointer",
+            transition: "opacity 300ms ease, background-color 200ms ease",
+            willChange: "transform"
+        });
+        badge.addEventListener("click", (event) => {
+            event.stopPropagation();
+            selectHerd(key, true);
+        });
+        // A touch on the badge is the badge's, not the world's.
+        badge.addEventListener("pointerdown", (event) => event.stopPropagation());
+        labelLayer.appendChild(badge);
+        return badge;
+    };
+
+    /** The herds' members past their representatives, at their own places (A14). */
+    const buildHerds = (snapshot: ArkSnapshot, found: Map<string, ArkHerd>, places: Map<string, Placement>) => {
+        const byId = new Map(snapshot.animals.map((animal) => [animal.id, animal]));
+        const before = new Map(herds.map((herd) => [herd.info.key, herd]));
+        const next: HerdDraw[] = [];
+        found.forEach((info) => {
+            const animals = info.massed.map((id) => byId.get(id)).filter((animal): animal is ArkAnimal => Boolean(animal));
+            if (!animals.length) return;
+            const members = animals.map((animal) => {
+                const place = places.get(animal.id)!;
+                return {id: animal.id, x: place.x, z: place.z, ground: place.ground, yaw: place.yaw, water: place.water, phase: phaseOf(animal.id), mine: animal.mine, awake: true, activity: animal.activity ?? null};
+            });
+            const cx = members.reduce((sum, m) => sum + m.x, 0) / members.length;
+            const cz = members.reduce((sum, m) => sum + m.z, 0) / members.length;
+            let radius = 0;
+            let anchor = 0;
+            let nearest = Infinity;
+            members.forEach((m, i) => {
+                const d = Math.hypot(m.x - cx, m.z - cz);
+                radius = Math.max(radius, d);
+                if (d < nearest) {
+                    nearest = d;
+                    anchor = i;
+                }
+            });
+            const old = before.get(info.key);
+            before.delete(info.key);
+            const sample = animals[0];
+            const body = arkBody(sample, library.get(sample.model_slug)?.behaviour?.plan);
+            next.push({
+                info,
+                slug: info.slug,
+                sample,
+                members,
+                centre: {x: cx, z: cz},
+                radius,
+                anchor,
+                length: body.display,
+                colour: old?.colour ?? null,
+                scale: 0,
+                figureMatrices: new Float32Array(members.length * 16),
+                speckMatrices: new Float32Array(members.length * 16),
+                order: Uint32Array.from(members.map((_, i) => i)),
+                sortedAt: 0,
+                sortedFrom: new Vector3(Infinity, 0, 0),
+                middles: new Float32Array(members.length * 3).fill(Number.NaN),
+                badge: old?.badge ?? makeBadge(info.key),
+                figures: 0,
+                specks: 0,
+                height: 1
+            });
+        });
+        before.forEach((herd) => herd.badge.remove());
+        herds = next;
+        for (const herd of herds) herd.badge.textContent = herdBadge(herd.info.count);
+        if (selectedHerd && !herds.some((herd) => herd.info.key === selectedHerd)) selectHerd(null, false);
+    };
+
+    /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
+    const refreshLive = () => {
+        if (herds.length || replayPins.size || selectionPin) setSnapshot(current, false);
     };
 
     const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
-        const places = placeAnimals(snapshot.animals);
+        current = snapshot;
+        aboard = new Set(snapshot.animals.map((animal) => animal.id));
+        // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
+        if (placedFor !== snapshot) {
+            placedAll = placeAnimals(snapshot.animals);
+            placedFor = snapshot;
+        }
+        const places = placedAll;
+        // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
+        const pins = new Set<string>(replayPins);
+        if (selectionPin) pins.add(selectionPin);
+        if (followId) pins.add(followId);
+        // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
+        const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
+        const representatives = arkRepresentatives(snapshot.animals, {pinned: pins, live: liteOn() ? ARK_HERD_LIVE_LITE : ARK_HERD_LIVE, from: herdOff ? Number.POSITIVE_INFINITY : undefined});
+        buildHerds(snapshot, representatives.herds, places);
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {
+            if (!representatives.live.has(animal.id)) continue;
             const place = places.get(animal.id)!;
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
@@ -550,8 +742,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             options.onSelect?.(null);
         }
         // Every species' far model, nearest first, so the whole Ark fills in from where the camera is.
-        // (Small animals' models wait until the camera comes close: they are not drawn from afar.)
-        const byDistance = Array.from(new Set(next.filter((entry) => !entry.micro || entry.animal.mine).map((entry) => entry.animal.model_slug)));
+        // (Small animals' models wait until the camera comes close: they are not drawn from afar. Herds' far models are.)
+        const byDistance = Array.from(new Set([...next.filter((entry) => !entry.micro || entry.animal.mine).map((entry) => entry.animal.model_slug), ...herds.map((herd) => herd.slug)]));
         library.ready().then(() => {
             for (const slug of byDistance) if (library.has(slug)) library.request(slug, "far");
         });
@@ -578,7 +770,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let material = level === "near" ? meshes.nearMaterial : meshes.farMaterial;
         if (!material) {
             const box = source.geometry.boundingBox!;
-            material = animalMaterial({map: source.map, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: level === "near" && !reducedMotion});
+            material = animalMaterial({map: source.map, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: level === "near" && !reducedMotion && !model.placeholder});
+            // The placeholder figure (A13): warm clay from its own vertex colours, a little softer.
+            if (model.placeholder) {
+                material.vertexColors = true;
+                material.roughness = 0.9;
+            }
             if (level === "near") meshes.nearMaterial = material;
             else meshes.farMaterial = material;
         }
@@ -629,7 +826,105 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const basisY = new Vector3();
     const basisZ = new Vector3();
     const basisMatrix = new Matrix4();
-    let counts = {near: 0, far: 0, token: 0};
+    let counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0};
+    const DIM_SPECK = new Color("#cfc3ad");
+
+    /** A herd this frame: how many members are drawn (nearest first), how many of them as models. */
+    type HerdPlan = {slug: string; order: Uint32Array; members: HerdDraw["members"]; figureMatrices: Float32Array; speckMatrices: Float32Array; colour: Color | null; drawn: number; figures: number; width: number; depth: number; herd: HerdDraw; shape: SpeckShape};
+    const herdSphere = new Sphere();
+    const herdPosition = new Vector3();
+    const herdRotation = new Quaternion();
+    const herdScale = new Vector3();
+    const herdMatrix = new Matrix4();
+    const up = new Vector3(0, 1, 0);
+
+    /**
+     * Which of each herd's members are drawn this frame and how (A14): every
+     * one in view; the nearest, up to the tier's budget and while bigger than
+     * a few pixels, as the far model standing still; the rest as specks. The
+     * matrices are worked out again only when the drawn scale changes.
+     */
+    const planHerds = (cameraPosition: Vector3, exaggerate: number, now: number): HerdPlan[] => {
+        const plans: HerdPlan[] = [];
+        if (!herds.length) return plans;
+        const budgetTier: QualityTier = liteOn() ? "low" : tier;
+        let budget: number = HERD_FIGURE_BUDGET[budgetTier];
+        for (const herd of herds) {
+            herd.middles.fill(Number.NaN);
+            const model = library.get(herd.slug);
+            const far = model?.far;
+            if (!model || !far) continue;
+            herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
+            herdSphere.radius = herd.radius + herd.length * 2 + 4;
+            if (!frustum.intersectsSphere(herdSphere)) continue;
+            const body = arkBody(herd.sample, model.behaviour?.plan);
+            herd.length = body.display;
+            const sizeUp = 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / herd.length, 0.25), 1);
+            const modelScale = herd.length / model.bodyLength;
+            const s = modelScale * sizeUp;
+            const tall = model.height * s;
+            herd.height = tall;
+            const box = far.geometry.boundingBox!;
+            const width = (box.max.x - box.min.x) * s;
+            const depth = model.length * s;
+            const plan = model.behaviour?.plan ?? "";
+            const swims = SWIMMING_PLANS.has(plan);
+            const sea = ZONE_SITES[herd.sample.zone]?.kind === "sea";
+            const shape: SpeckShape = !swims && (plan === "mammal" || plan === "reptile" || plan === "" || model.placeholder) ? "four-legged" : "oval";
+            if (Math.abs(s - herd.scale) > herd.scale * 0.004) {
+                herd.scale = s;
+                herd.members.forEach((member, i) => {
+                    // Standing (or floating, a swimmer at sea) still at its own place, as the server placed it.
+                    let base = member.ground;
+                    if (sea && swims) base = -tall * (zoneReef(herd) ? 0.9 : 0.4);
+                    else if (member.water && member.ground < -0.45) base = -(swims ? 0.5 : 0.28) * tall;
+                    else if (member.water) base = Math.max(member.ground, -0.3);
+                    herdRotation.setFromAxisAngle(up, member.yaw);
+                    herdPosition.set(member.x, base - model.minY * s, member.z);
+                    herdMatrix.compose(herdPosition, herdRotation, herdScale.set(s, s, s));
+                    herdMatrix.toArray(herd.figureMatrices, i * 16);
+                    // The speck: a generic figure the member's size (a four-legged one, or an oval on a bird or a swimmer's body).
+                    if (shape === "oval") {
+                        herdPosition.set(member.x, base + tall * 0.2, member.z);
+                        herdMatrix.compose(herdPosition, herdRotation, herdScale.set(width * 0.7, tall * 0.6, depth * 0.85));
+                    } else {
+                        herdPosition.set(member.x, base, member.z);
+                        herdMatrix.compose(herdPosition, herdRotation, herdScale.set(width * 0.9, tall * 0.95, depth * 0.95));
+                    }
+                    herdMatrix.toArray(herd.speckMatrices, i * 16);
+                });
+            }
+            // Nearest first: sorted again when the camera has moved, or a while has passed.
+            if (herd.sortedFrom.distanceToSquared(cameraPosition) > 4 || now - herd.sortedAt > 0.5) {
+                herd.sortedFrom.copy(cameraPosition);
+                herd.sortedAt = now;
+                const d = new Float32Array(herd.members.length);
+                herd.members.forEach((m, i) => {
+                    d[i] = (m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2 + (Math.max(m.ground, 0) - cameraPosition.y) ** 2;
+                });
+                herd.order.sort((a, b) => d[a] - d[b]);
+            }
+            const perPixelAt = 2 * Math.tan(FOV * Math.PI / 360) / height;
+            let figures = 0;
+            for (let k = 0; k < herd.order.length; k++) {
+                const m = herd.members[herd.order[k]];
+                const distance = Math.hypot(m.x - cameraPosition.x, Math.max(m.ground, 0) - cameraPosition.y, m.z - cameraPosition.z);
+                if (figures === k && budget > 0 && herd.length * sizeUp / (perPixelAt * distance) >= HERD_SPECK_BELOW_PIXELS) {
+                    figures++;
+                    budget--;
+                }
+                const i = herd.order[k];
+                herd.middles[i * 3] = m.x;
+                herd.middles[i * 3 + 1] = herd.figureMatrices[i * 16 + 13] + tall * 0.5 + model.minY * s;
+                herd.middles[i * 3 + 2] = m.z;
+            }
+            herd.figures = figures;
+            herd.specks = herd.members.length - figures;
+            plans.push({slug: herd.slug, order: herd.order, members: herd.members, figureMatrices: herd.figureMatrices, speckMatrices: herd.speckMatrices, colour: herd.colour, drawn: herd.members.length, figures, width, depth, herd, shape});
+        }
+        return plans;
+    };
+    const zoneReef = (herd: HerdDraw) => herd.sample.zone === "coral_reef";
 
     /** Where an animal is this moment: its spot, or its loop in the water, or its circle in the sky. */
     type Pose = {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean; surface?: SurfacePoint};
@@ -987,15 +1282,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             .sort((a, b) => a.distance - b.distance);
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
+        const cap = caps();
         for (const candidate of nearWanted) {
-            if (nearIds.size >= NEAR_INSTANCE_CAP) break;
+            if (nearIds.size >= cap.near) break;
             const slug = candidate.entry.animal.model_slug;
-            if (!nearSpecies.has(slug) && nearSpecies.size >= NEAR_SPECIES_CAP) continue;
+            if (!nearSpecies.has(slug) && nearSpecies.size >= cap.nearSpecies) continue;
             nearSpecies.add(slug);
             nearIds.add(candidate.entry.animal.id);
         }
         // Models for the nearest MODEL_CAP in view; past that, icons.
-        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, MODEL_CAP).map((c) => c.entry.animal.id));
+        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, cap.models).map((c) => c.entry.animal.id));
 
         const perMesh = new Map<InstancedMesh, number>();
         const used = new Set<InstancedMesh>();
@@ -1003,7 +1299,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const shadowList: Shadow[] = [];
         const ringList: Ring[] = [];
         const dotList: FindDot[] = [];
-        counts = {near: 0, far: 0, token: 0};
+        counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0};
 
         const needs = new Map<string, {near: number; far: number}>();
         for (const candidate of candidates) {
@@ -1014,6 +1310,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const need = needs.get(entry.animal.model_slug) ?? {near: 0, far: 0};
             need[level]++;
             needs.set(entry.animal.model_slug, need);
+        }
+        // The herds' members (A14): how many as the far model this frame, the rest as specks.
+        const herdPlans = planHerds(cameraPosition, exaggerate, now);
+        for (const herd of herdPlans) {
+            if (!herd.figures) continue;
+            const need = needs.get(herd.slug) ?? {near: 0, far: 0};
+            need.far += herd.figures;
+            needs.set(herd.slug, need);
         }
         needs.forEach((need, slug) => {
             const model = library.get(slug)!;
@@ -1152,6 +1456,38 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : MINE, alpha: 1});
             }
         }
+
+        // The herds' figures after their species' representatives, in the same far mesh (one draw call); the specks in one mesh for all.
+        specks.begin();
+        for (const herd of herdPlans) {
+            const model = library.get(herd.slug);
+            const mesh = species.get(herd.slug)?.far ?? null;
+            const instance = mesh ? mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute : null;
+            const target = mesh ? mesh.instanceMatrix.array as Float32Array : null;
+            let index = mesh ? perMesh.get(mesh) ?? 0 : 0;
+            const colour = herd.herd.colour ?? (herd.herd.colour = model?.far ? textureColour(model.far.map, model.placeholder ? "#b9a789" : "#8f7f66") : null);
+            for (let k = 0; k < herd.drawn; k++) {
+                const i = herd.order[k];
+                const member = herd.members[i];
+                const dim = mineOnly && !member.mine ? 1 : 0;
+                if (k < herd.figures && mesh && target && instance && model) {
+                    const at = index * 16;
+                    for (let j = 0; j < 16; j++) target[at + j] = herd.figureMatrices[i * 16 + j];
+                    instance.setXYZ(index, member.phase, dim, member.awake ? 0 : 1);
+                    index++;
+                    counts.herdFigures++;
+                    if (!member.water && shadowList.length < 900) shadowList.push({x: member.x, y: Math.max(member.ground, 0), z: member.z, width: Math.max(herd.width, 0.3), length: herd.depth, yaw: member.yaw, strength: 1});
+                } else if (colour) {
+                    specks.push(herd.shape, herd.speckMatrices, i * 16, dim ? DIM_SPECK : colour);
+                    counts.herdSpecks++;
+                }
+            }
+            if (mesh && index > (perMesh.get(mesh) ?? 0)) {
+                perMesh.set(mesh, index);
+                used.add(mesh);
+            }
+        }
+        specks.end();
 
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) {
@@ -1409,6 +1745,64 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return best;
     };
 
+    /** A tap on a herd's members (not on one of its representatives): the herd, for its species card. */
+    const pickHerd = (clientX: number, clientY: number): HerdDraw | null => {
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        let best: HerdDraw | null = null;
+        let bestScore = Infinity;
+        for (const herd of herds) {
+            const perPixelAt = 2 * Math.tan(FOV * Math.PI / 360) / height;
+            for (let i = 0; i < herd.members.length; i++) {
+                const mx = herd.middles[i * 3];
+                if (Number.isNaN(mx)) continue;
+                projected.set(mx, herd.middles[i * 3 + 1], herd.middles[i * 3 + 2]);
+                const distance = camera.position.distanceTo(projected);
+                projected.project(camera);
+                if (projected.z > 1) continue;
+                const sx = (projected.x + 1) / 2 * width;
+                const sy = (1 - projected.y) / 2 * height;
+                const radius = Math.max(Math.max(herd.length, herd.height) / (perPixelAt * distance) / 2, 12);
+                const d = Math.hypot(x - sx, y - sy);
+                if (d < radius && d / radius < bestScore) {
+                    best = herd;
+                    bestScore = d / radius;
+                }
+            }
+        }
+        return best;
+    };
+
+    const herdInfo = (herd: HerdDraw): ArkHerdInfo => ({key: herd.info.key, slug: herd.slug, name: herd.info.name, count: herd.info.count, mine: herd.info.mine});
+
+    /** A herd selected: its species card in the page, the camera over the whole herd (A14). */
+    const selectHerd = (key: string | null, flyTo: boolean): boolean => {
+        const herd = key ? herds.find((h) => h.info.key === key) ?? null : null;
+        if (key && !herd) return false;
+        selectedHerd = herd ? herd.info.key : null;
+        for (const h of herds) h.badge.dataset.selected = h === herd ? "1" : "";
+        if (herd) {
+            if (selectedId) select(null, false);
+            options.onHerd?.(herdInfo(herd));
+            if (flyTo) {
+                opening = false;
+                controls.autoRotate = false;
+                lastTouch = performance.now() / 1000;
+                // Every one of them in view (with the representatives, who stand among them).
+                const live = entries.filter((entry) => herdKeyOf(entry.animal) === herd.info.key);
+                let reach = herd.radius;
+                for (const entry of live) reach = Math.max(reach, Math.hypot(entry.place.x - herd.centre.x, entry.place.z - herd.centre.z));
+                const target = new Vector3(herd.centre.x, Math.max(heightAt(herd.centre.x, herd.centre.z), 0), herd.centre.z);
+                fly(target, Math.min(Math.max(reach * 2.4 + 12, 24), 160), 1.4, 0.95);
+            }
+        } else {
+            options.onHerd?.(null);
+        }
+        return true;
+    };
+    const herdKeyOf = (animal: ArkAnimal) => animal.species_profile_id || `slug:${animal.model_slug}`;
+
     /** A bearing away from the south from which the ground doesn't hide `target` (the first clear one; else the side). */
     const clearAzimuth = (target: Vector3, distance: number, polar: number, phase: number): number => {
         const side = phase < 0.5 ? 1 : -1;
@@ -1529,6 +1923,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
 
     const select = (id: string | null, flyTo: boolean, close = false) => {
+        // A herd member that isn't one of its representatives comes forward to be met (A14); the last one goes back.
+        const pin = id && ((!entryById.has(id) && aboard.has(id)) || id === selectionPin) ? id : null;
+        if (pin !== selectionPin) {
+            selectionPin = pin;
+            refreshLive();
+        }
+        if (id && selectedHerd) selectHerd(null, false);
         selectedId = id;
         if (followId && followId !== id) endFollow();
         const entry = findEntry(id);
@@ -1633,6 +2034,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         down = null;
         if (moved > 8 || !quick) return;
         const hit = pick(event.clientX, event.clientY);
+        if (!hit) {
+            const herd = pickHerd(event.clientX, event.clientY);
+            if (herd) {
+                selectHerd(herd.info.key, true);
+                return;
+            }
+            if (selectedHerd) selectHerd(null, false);
+        }
         select(hit ? hit.animal.id : null, Boolean(hit));
     };
     const onPointerMove = (event: PointerEvent) => {
@@ -1656,6 +2065,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointercancel", onPointerCancel);
     canvas.addEventListener("wheel", onWheel, {passive: true});
+    // The keyboard (A18): arrows move the view (OrbitControls), + and − zoom, Esc closes the card.
+    controls.listenToKeyEvents(canvas);
+    controls.keyPanSpeed = 14;
+    const onKey = (event: KeyboardEvent) => {
+        lastTouch = performance.now() / 1000;
+        if (opening) {
+            opening = false;
+            flight = null;
+        }
+        if (event.key === "Escape") {
+            if (replay) finishReplay(true, true);
+            else if (selectedId) select(null, false);
+            else if (selectedHerd) selectHerd(null, false);
+            return;
+        }
+        if (event.key === "+" || event.key === "=" || event.key === "-" || event.key === "_") {
+            event.preventDefault();
+            const distance = camera.position.distanceTo(controls.target);
+            const next = Math.min(Math.max(distance * (event.key === "+" || event.key === "=" ? 0.8 : 1.25), controls.minDistance), MAX_DISTANCE);
+            fly(controls.target.clone(), next, 0.35);
+        }
+    };
+    canvas.addEventListener("keydown", onKey);
 
     // MARK: Size
 
@@ -1850,6 +2282,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             labelLayer.appendChild(visitorLabel);
         }
         visitorLabel.textContent = next.label;
+        visitorLabel.style.letterSpacing = arkTracking(next.label, "0.04em");
         return id;
     };
 
@@ -1865,6 +2298,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const visible = visitorPoint.z < 1 && Math.abs(visitorPoint.x) < 1.05 && Math.abs(visitorPoint.y) < 1.05;
         visitorLabel.style.opacity = visible ? "1" : "0";
         if (visible) visitorLabel.style.transform = `translate(${((visitorPoint.x + 1) / 2 * width).toFixed(1)}px, ${((1 - visitorPoint.y) / 2 * height).toFixed(1)}px) translate(-50%, -100%) translateY(-6px)`;
+    };
+
+    /** Each herd's count badge over its middle, while the herd is in view and the camera isn't among it. */
+    const badgePoint = new Vector3();
+    const placeBadges = () => {
+        for (const herd of herds) {
+            const badge = herd.badge;
+            const member = herd.members[herd.anchor];
+            const shown = member && !Number.isNaN(herd.middles[herd.anchor * 3]);
+            if (!shown) {
+                badge.style.opacity = "0";
+                badge.style.pointerEvents = "none";
+                continue;
+            }
+            badgePoint.set(member.x, Math.max(member.ground, 0) + herd.height * 1.25 + 0.4, member.z);
+            const near = camera.position.distanceTo(badgePoint) < 10;
+            badgePoint.project(camera);
+            const visible = !near && !replay && badgePoint.z < 1 && Math.abs(badgePoint.x) < 1.02 && Math.abs(badgePoint.y) < 1.02;
+            badge.style.opacity = visible ? "1" : "0";
+            badge.style.pointerEvents = visible ? "auto" : "none";
+            badge.style.background = badge.dataset.selected ? "rgba(167, 244, 50, 0.9)" : "rgba(14, 20, 14, 0.66)";
+            badge.style.color = badge.dataset.selected ? "#0e140e" : "rgba(255, 252, 244, 0.98)";
+            if (visible) badge.style.transform = `translate(${((badgePoint.x + 1) / 2 * width).toFixed(1)}px, ${((1 - badgePoint.y) / 2 * height).toFixed(1)}px) translate(-50%, -100%)`;
+        }
     };
 
     const setTalking = (next: ArkTalking | null) => {
@@ -1997,6 +2454,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return 0.55;
     };
 
+    /**
+     * Where a clutch is laid: where the young will stand once they hatch
+     * (when that is in the same replay), else beside the parent, a body
+     * length to its side.
+     */
+    const nestSpot = (parent: Entry, acts: ArkAct[], index: number) => {
+        const plan = library.get(parent.animal.model_slug)?.behaviour?.plan;
+        const kind = nestKind({plan, slug: parent.animal.model_slug, water: inWater(parent)});
+        const size = Math.min(Math.max(parent.length * 0.55, 0.25), 1.6);
+        const laid = acts[index];
+        for (let i = index + 1; i < acts.length; i++) {
+            const later = acts[i];
+            if (later.kind !== "birth" || arkHatchNest(acts, i) !== laid) continue;
+            const young = later.young.map(entryFor).find((entry): entry is Entry => Boolean(entry));
+            if (young) return {x: young.place.x, y: Math.max(young.place.ground, 0) + (kind === "spawn" ? -0.05 : 0), z: young.place.z, size, kind};
+        }
+        const body = bodyOf(parent);
+        const side = parent.phase > 0.5 ? 1 : -1;
+        const x = body.x + Math.cos(body.yaw) * side * parent.length * 0.9;
+        const z = body.z - Math.sin(body.yaw) * side * parent.length * 0.9;
+        return {x, y: Math.max(heightAt(x, z), 0) + (kind === "spawn" ? -0.05 : 0), z, size, kind};
+    };
+
     const beginAct = (run: Running) => {
         const act = run.acts[run.index];
         run.actingFrom = null;
@@ -2012,6 +2492,60 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 then();
             });
         };
+        if (act.kind === "laid") {
+            // A clutch appears beside the parent: where its young will stand when they hatch in this replay, else at its side.
+            const parent = entryFor(act.animal);
+            if (!parent) {
+                run.seconds = 0.4;
+                run.actingFrom = performance.now() / 1000;
+                return;
+            }
+            const spot = nestSpot(parent, run.acts, run.index);
+            toFrame({x: spot.x, y: spot.y + 0.3, z: spot.z}, 5 + parent.length * 2.4, 1.1, undefined, LAID_SECONDS, () => {
+                let laid = false;
+                run.step = (_t, _last, now) => {
+                    if (laid) return;
+                    laid = true;
+                    nests.lay(act.nest, spot, spot.size, spot.kind, act.eggs, now);
+                };
+            });
+            return;
+        }
+        if (act.kind === "birth" && act.fromEgg) {
+            // They hatch: from the clutch laid earlier in this replay, else from one at the young's place.
+            const young = act.young.map(entryFor).filter((entry): entry is Entry => Boolean(entry));
+            const first = young[0];
+            if (!first) {
+                run.seconds = 0.4;
+                run.actingFrom = performance.now() / 1000;
+                return;
+            }
+            const laid = arkHatchNest(run.acts, run.index);
+            const nestId = laid?.nest ?? `hatch:${first.animal.id}`;
+            const parent = act.parents.map((id) => findEntry(id)).find(Boolean) ?? null;
+            const plan = library.get((parent ?? first).animal.model_slug)?.behaviour?.plan;
+            const kind = nestKind({plan, slug: (parent ?? first).animal.model_slug, water: inWater(parent ?? first)});
+            const at = nests.where(nestId) ?? {x: first.place.x, y: Math.max(first.place.ground, 0) + (kind === "spawn" ? -0.05 : 0), z: first.place.z, size: Math.min(Math.max((parent ?? first).length * 0.55, 0.25), 1.6)};
+            toFrame({x: at.x, y: at.y + 0.3, z: at.z}, 5 + first.length * 3, 1.1, undefined, BIRTH_SECONDS + ArkNests.YOUNG_AFTER, () => {
+                let hatched = false;
+                run.step = (t, _last, now) => {
+                    if (!hatched) {
+                        hatched = true;
+                        // A clutch laid before the last visit: it is there already, its eggs about to hatch.
+                        if (!nests.has(nestId)) nests.lay(nestId, at, at.size, kind, young.length, now - 3);
+                        nests.hatch(nestId, now);
+                    }
+                    young.forEach((entry, i) => {
+                        if (entry.held && t >= ArkNests.YOUNG_AFTER + i * 0.25) {
+                            entry.held = false;
+                            entry.air = 0;
+                            entry.arrivedAt = elapsedNow();
+                        }
+                    });
+                };
+            });
+            return;
+        }
         if (act.kind === "arrival" || act.kind === "birth") {
             const arrivals = (act.kind === "arrival" ? [act.animal] : act.young).map(entryFor).filter((entry): entry is Entry => Boolean(entry));
             const first = arrivals[0];
@@ -2112,7 +2646,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         ghosts = [];
         dust.clear();
+        nests.clear();
         flight = null;
+        if (replayPins.size) {
+            replayPins = new Set();
+            refreshLive();
+        }
         if (!touched) fly(run.home.target, run.home.distance, 1.6, run.home.polar, run.home.azimuth);
         run.resolve();
     };
@@ -2156,6 +2695,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const play = (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}): ArkReplayRun => {
         if (replay) finishReplay(true);
         if (!acts.length) return {skip: () => undefined, done: Promise.resolve()};
+        // Everyone the acts name is drawn one by one while it plays, a herd's members too (A14).
+        replayPins = new Set(acts.flatMap((act) => (act.kind === "meal" ? [act.predator.id, act.prey.id] : act.kind === "birth" ? act.young.map((a) => a.id) : act.kind === "extinction" ? [] : [act.animal.id])));
+        refreshLive();
         // Who arrived or was born since: held back until their act.
         for (const act of acts) {
             const ids = act.kind === "arrival" ? [act.animal.id] : act.kind === "birth" ? act.young.map((a) => a.id) : [];
@@ -2168,7 +2710,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const gone = new Map<string, ArkEventAnimal>();
         for (const act of acts) {
             const named = act.kind === "meal" ? [act.predator, act.prey] : act.kind === "death" ? [act.animal] : [];
-            for (const animal of named) if (!entryById.has(animal.id)) gone.set(animal.id, animal);
+            for (const animal of named) if (!aboard.has(animal.id)) gone.set(animal.id, animal);
         }
         // The server's own record of each (its place included), so it stands where it stood.
         const ghostAnimals: ArkAnimal[] = Array.from(gone.values()).map((animal) => ({
@@ -2206,7 +2748,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         applyHours();
         // Their models, near and far.
-        const slugs = new Set(acts.flatMap((act) => (act.kind === "meal" ? [act.predator.model_slug, act.prey.model_slug] : act.kind === "death" || act.kind === "arrival" ? [act.animal.model_slug] : act.kind === "birth" ? act.young.map((a) => a.model_slug) : [])));
+        const slugs = new Set(acts.flatMap((act) => (act.kind === "meal" ? [act.predator.model_slug, act.prey.model_slug] : act.kind === "death" || act.kind === "arrival" || act.kind === "laid" ? [act.animal.model_slug] : act.kind === "birth" ? act.young.map((a) => a.model_slug) : [])));
         library.ready().then(() => {
             slugs.forEach((slug) => {
                 if (!library.has(slug)) return;
@@ -2257,8 +2799,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const startedAt = performance.now();
         const now = startedAt / 1000;
         const elapsed = (startedAt - started) / 1000;
-        ARK_TIME.value = elapsed;
-        if (!reducedMotion) ARK_CLOCK.value = elapsed % 3600;
+        // Reduced motion: the water, the grass and the animals hold still (A18).
+        if (!reducedMotion) {
+            ARK_TIME.value = elapsed;
+            ARK_CLOCK.value = elapsed % 3600;
+        }
         stepFlight(now);
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
@@ -2278,6 +2823,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepReplay(now);
         updateInstances(elapsed);
         dust.step(now);
+        nests.step(now);
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
         const followed = followId ? findEntry(followId) : null;
         if (followed?.middle && !flight && pointers === 0) {
@@ -2323,6 +2869,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         post.render();
         placeLabels();
         placeVisitorLabel();
+        placeBadges();
 
         const spent = performance.now() - startedAt;
         frameTimes.push(spent);
@@ -2370,6 +2917,27 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mineOnly = value;
         },
         select: (id, closeUp) => select(id, true, Boolean(closeUp)),
+        selectHerd: (key) => selectHerd(key, true),
+        setLite: (lite) => {
+            liteChoice = lite;
+            const want: QualityTier = lite === true ? "low" : lite === false && tier === "low" ? (forced ?? (autoTier === "low" ? "medium" : autoTier)) : lite === null ? (forced ?? autoTier) : tier;
+            if (want !== tier) applyTier(want);
+            else options.onTier?.(tier, liteOn());
+            motes.points.visible = !reducedMotion && !liteOn();
+            // Fewer (or more) of each herd drawn one by one.
+            if (herds.length) setSnapshot(current, false);
+        },
+        setReducedMotion: (reduced) => {
+            if (reduced === reducedMotion) return;
+            reducedMotion = reduced;
+            motes.points.visible = !reducedMotion && !liteOn();
+            if (reduced) {
+                flight = null;
+                controls.autoRotate = false;
+                if (replay) finishReplay(true, true);
+                applyHours();
+            }
+        },
         follow,
         setHours: (hours) => {
             pinnedHours = typeof hours === "number" && Number.isFinite(hours) ? hours : null;
@@ -2470,7 +3038,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             far: counts.far,
             sprites: counts.token,
             pixelRatio,
-            modelsLoaded: library.loadedCount
+            modelsLoaded: library.loadedCount,
+            herdFigures: counts.herdFigures,
+            herdSpecks: counts.herdSpecks,
+            live: entries.length,
+            placeholders: library.placeholderCount,
+            tier,
+            lite: liteOn()
         }),
         dispose: () => {
             disposed = true;
@@ -2482,6 +3056,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             canvas.removeEventListener("pointermove", onPointerMove);
             canvas.removeEventListener("pointercancel", onPointerCancel);
             canvas.removeEventListener("wheel", onWheel);
+            canvas.removeEventListener("keydown", onKey);
+            controls.stopListenToKeyEvents();
+            herds.forEach((herd) => herd.badge.remove());
+            specks.dispose();
             controls.dispose();
             species.forEach((meshes) => {
                 meshes.near?.dispose();
@@ -2492,6 +3070,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             talking.actor?.dispose();
             replay = null;
             dust.dispose();
+            nests.dispose();
             if (jetty) (jetty.userData.dispose as () => void)();
             library.dispose();
             tokens.dispose();

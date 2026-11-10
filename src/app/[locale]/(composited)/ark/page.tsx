@@ -5,6 +5,7 @@ import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
 import {getLocalePath} from "@/lib/site";
 import {getArkWords} from "@/loaders/ark-words";
+import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 
@@ -26,6 +27,11 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * or `?fixture=layers` (that plus the vertical layers: primates, a sloth and birds in the
  * canopy, moles underground, crabs and an octopus on the reef floor, the deep's fish, a whale shark).
  *
+ * The edge cases (docs/ark-next.md part 8), in development: `?fixture=herd1000`
+ * (1,000 Plains Zebras, A14), `?fixture=herd5` (1,000 over five species),
+ * `?fixture=placeholder` (species with no Ark model, A13) and `?fixture=eggs`
+ * (clutches laid and hatching, A9; add `&since=2026-11-08T00:00:00Z` to replay them).
+ *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
  *
@@ -41,13 +47,19 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
  * camera and clock driven by `window.__arkDirector`. With `?fixture=1` it is
  * the fixture (samples only); otherwise the live Ark.
+ *
+ * `?lang=<app language>` (any of the apps' 44, e.g. `ja`, `ar`, `zh-Hant`)
+ * shows the Ark's words in that language from its Ark-only bundle
+ * (`src/lib/ark-languages.ts`), English key by key, right to left where it reads so.
  */
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string}};
 
-type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers";
+type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
+
+const EDGE_MODES = new Set<FixtureMode>(["herd1000", "herd5", "placeholder", "eggs"]);
 
 function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     const asked = searchParams.fixture;
@@ -57,12 +69,18 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     if (development && asked === "sizes") return "sizes";
     if (development && asked === "micro") return "micro";
     if (development && asked === "layers") return "layers";
+    if (development && asked && EDGE_MODES.has(asked as FixtureMode)) return asked as FixtureMode;
     if (development && asked && asked !== "0") return "full";
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
 
-export async function generateMetadata({params}: Props): Promise<Metadata> {
-    const {words} = await getArkWords(params.locale);
+/** `?lang=`: the app language asked for, if any (the site locale otherwise). */
+function langOf(searchParams: Props["searchParams"]): string | null {
+    return typeof searchParams.lang === "string" ? searchParams.lang.slice(0, 35) : null;
+}
+
+export async function generateMetadata({params, searchParams}: Props): Promise<Metadata> {
+    const {words} = await getArkWords(params.locale, langOf(searchParams));
     return {
         title: words.metaTitle,
         description: words.metaDescription,
@@ -73,7 +91,14 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
-    const full = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)!;
+    const raw = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+    if (EDGE_MODES.has(mode)) {
+        const edge = await import("@/ark-scene/fixtures/edge");
+        const base = JSON.parse(JSON.stringify(raw)) as Parameters<typeof edge.herdFixture>[0];
+        const built = mode === "herd1000" || mode === "herd5" ? edge.herdFixture(base, mode) : mode === "placeholder" ? edge.placeholderFixture(base) : edge.eggsFixture(base).snapshot;
+        return {snapshot: decodeArkSnapshot(built)!, full: null};
+    }
+    const full = decodeArkSnapshot(raw)!;
     if (mode === "full") return {snapshot: full, full: null};
     if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
     if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
@@ -268,9 +293,14 @@ function modelBase(): string {
     return process.env.NODE_ENV === "development" ? "/api/dev/ark-models/v1/ark" : `${TALKING_MODELS_BASE_URL}/ark`;
 }
 
-/** The fixture's event log and life stories, as the server's reads would answer. */
-async function loadFixtureLife(): Promise<ArkFixtureLife> {
+/** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
+async function loadFixtureLife(mode: FixtureMode): Promise<ArkFixtureLife> {
     const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
+    if (mode === "eggs") {
+        const edge = await import("@/ark-scene/fixtures/edge");
+        const raw = JSON.parse(JSON.stringify((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)) as Parameters<typeof edge.eggsFixture>[0];
+        return {events: edge.eggsFixture(raw).events, lives: lives.default as unknown as Record<string, unknown>};
+    }
     return {events: events.default as unknown, lives: lives.default as unknown as Record<string, unknown>};
 }
 
@@ -279,17 +309,18 @@ export default async function ArkPage({params, searchParams}: Props) {
     const development = process.env.NODE_ENV === "development";
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
-    const [{words, talk}, data] = await Promise.all([
-        getArkWords(params.locale),
+    const [{words, talk, language}, data] = await Promise.all([
+        getArkWords(params.locale, langOf(searchParams)),
         mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
-    const fixtureLife = mode ? await loadFixtureLife() : null;
+    const fixtureLife = mode ? await loadFixtureLife(mode) : null;
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
     if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase()} events={fixtureLife?.events ?? null} />;
-    return (
+    const otherLanguage = langOf(searchParams) !== null && language !== params.locale;
+    const view = (
         <ArkView
-            locale={params.locale}
+            locale={otherLanguage ? language : params.locale}
             initial={snapshot}
             growFrom={data.fixture?.full ?? null}
             fixture={Boolean(mode)}
@@ -304,4 +335,6 @@ export default async function ArkPage({params, searchParams}: Props) {
             publicStory={Boolean(mode) && searchParams.publicStory === "1"}
         />
     );
+    // Another language than the site's: its own lang and direction, so screen readers and right-to-left scripts read it right.
+    return otherLanguage ? <div lang={language} dir={arkDirection(language)}>{view}</div> : view;
 }

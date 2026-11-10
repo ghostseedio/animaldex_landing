@@ -37,6 +37,12 @@ export const ARK_PUBLIC_SHAPES = {
     died: ["at", "kind"]
 } as const;
 
+/**
+ * Keys the edge-case reads add (`20261113120000`, A13 and A3), allowed but not
+ * required, so a capture from before or after that migration both check.
+ */
+export const ARK_PUBLIC_EDGE_KEYS: ReadonlySet<string> = new Set(["placeholder", "revision", "kind_species_profile_id", "kind_name"]);
+
 const MARK_BEGIN = "CAPTURE_BEGIN";
 const MARK_END = "CAPTURE_END";
 
@@ -103,7 +109,9 @@ function keys(value: unknown): string {
 export function arkCaptureProblems(capture: ArkCapture): string[] {
     const problems: string[] = [];
     const expect = (what: string, value: unknown, shape: readonly string[]) => {
-        if (keys(value) !== shape.join(",")) problems.push(`${what}: keys ${keys(value)}`);
+        const row = record(value);
+        const own = row ? Object.keys(row).filter((key) => !ARK_PUBLIC_EDGE_KEYS.has(key)).sort().join(",") : String(value);
+        if (own !== shape.join(",")) problems.push(`${what}: keys ${keys(value)}`);
     };
     const labelsOk = (what: string, value: unknown) => {
         if (!Array.isArray(value)) return problems.push(`${what}: not a list`);
