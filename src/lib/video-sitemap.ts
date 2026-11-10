@@ -1,4 +1,4 @@
-import type {SourceType} from "@/lib/content-video/plan";
+import type {VideoSourceType} from "@/lib/content-video/plan";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import type {PublishedContentVideoListing} from "@/lib/content-video/store";
 
@@ -20,16 +20,16 @@ function escapeXml(value: string) {
 }
 
 /** The canonical (English, unprefixed) page a video lives on. */
-export function videoPageUrl(siteUrl: string, type: SourceType, slug: string) {
+export function videoPageUrl(siteUrl: string, type: VideoSourceType, slug: string) {
     return new URL(sourcePath(type, slug), siteUrl).toString();
 }
 
 /** The video's own watch page path. */
-export function videoWatchPath(type: SourceType, slug: string) {
+export function videoWatchPath(type: VideoSourceType, slug: string) {
     return `/videos/${type}/${slug}`;
 }
 
-export function videoWatchUrl(siteUrl: string, type: SourceType, slug: string) {
+export function videoWatchUrl(siteUrl: string, type: VideoSourceType, slug: string) {
     return new URL(videoWatchPath(type, slug), siteUrl).toString();
 }
 

@@ -1,7 +1,7 @@
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
-import {isSourceType} from "@/lib/content-video/plan";
+import {isVideoSourceType} from "@/lib/content-video/plan";
 import {SOURCE_LABELS, sourcePath} from "@/lib/content-video/source-paths";
 import {getPublishedVideoForWatch, listPublishedContentVideos} from "@/lib/content-video/store";
 import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
@@ -22,7 +22,7 @@ export function generateStaticParams() {
 type WatchPageProps = {params: {locale: string; type: string; slug: string}};
 
 async function load(params: WatchPageProps["params"]) {
-    if (params.locale !== "en" || !isSourceType(params.type)) return null;
+    if (params.locale !== "en" || !isVideoSourceType(params.type)) return null;
     return getPublishedVideoForWatch(params.type, params.slug);
 }
 
@@ -66,6 +66,7 @@ export default async function VideoWatchPage({params}: WatchPageProps) {
     const articlePath = sourcePath(video.type, video.slug);
     const scenes = video.timeline.filter((entry) => entry.kind !== "end" && entry.narration);
     const transcript = scenes.map((entry) => entry.narration).join(" ");
+    const ark = video.type === "ark";
     const more = (await listPublishedContentVideos()).filter((other) => other.posterUrl && !(other.type === video.type && other.slug === video.slug)).slice(0, 12);
 
     const schema = {
@@ -107,16 +108,24 @@ export default async function VideoWatchPage({params}: WatchPageProps) {
                     <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">{SOURCE_LABELS[video.type]} · Video{video.durationSeconds ? ` · ${clock(video.durationSeconds)}` : ""}</p>
                     <h1 className="font-display text-4xl leading-tight text-white sm:text-5xl">{video.title}</h1>
                     {video.hookText ? <p className="text-lg font-bold uppercase tracking-wide text-primary-100">{video.hookText}</p> : null}
-                    <p className="text-lg leading-8 text-ink-200">
-                        A short from AnimalDex, from{" "}
-                        <Link href={articlePath} className="font-bold text-white underline decoration-primary-400 underline-offset-4">{video.sourceTitle}</Link>
-                        . Every claim in it comes from that page, which has the full detail and sources.
-                    </p>
+                    {ark ? (
+                        <p className="text-lg leading-8 text-ink-200">
+                            A clip recorded in{" "}
+                            <Link href={articlePath} className="font-bold text-white underline decoration-primary-400 underline-offset-4">the AnimalDex Ark</Link>
+                            , the shared world where animals come aboard when someone tries an animal&apos;s advice and it works. Its captions come from each animal&apos;s stored field guide and the Ark&apos;s live counts.
+                        </p>
+                    ) : (
+                        <p className="text-lg leading-8 text-ink-200">
+                            A short from AnimalDex, from{" "}
+                            <Link href={articlePath} className="font-bold text-white underline decoration-primary-400 underline-offset-4">{video.sourceTitle}</Link>
+                            . Every claim in it comes from that page, which has the full detail and sources.
+                        </p>
+                    )}
                     <div className="flex flex-wrap gap-3">
-                        <Link href={articlePath} className="bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950">Read the full {video.type === "comparison" ? "matchup" : video.type === "ranking" ? "ranking" : "story"}</Link>
+                        <Link href={articlePath} className="bg-primary-400 px-5 py-3 text-sm font-black text-canvas-950">{ark ? "See the Ark live" : `Read the full ${video.type === "comparison" ? "matchup" : video.type === "ranking" ? "ranking" : "story"}`}</Link>
                         <Link href="/talk-to-animals" className="border border-line-300 px-5 py-3 text-sm font-black text-white">Talk to any animal</Link>
                     </div>
-                    <p className="text-xs text-ink-500">Published {new Date(video.publishedAt).toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})}. AI-narrated, with motion added to some images.</p>
+                    <p className="text-xs text-ink-500">Published {new Date(video.publishedAt).toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"})}. {ark ? "Recorded in the Ark; its 3D animal models are AI-made." : "AI-narrated, with motion added to some images."}</p>
                 </div>
             </div>
 

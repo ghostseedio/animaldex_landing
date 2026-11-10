@@ -1,4 +1,5 @@
 import type {Metadata} from "next";
+import ArkRecordView from "@/app/[locale]/(composited)/ark/ark-record-view";
 import ArkView, {type ArkFixtureLife} from "@/app/[locale]/(composited)/ark/ark-view";
 import {readArkVoyage} from "@/data/ark-voyage";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
@@ -30,11 +31,16 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
  * server's `public_story` flag would.
+ *
+ * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
+ * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
+ * camera and clock driven by `window.__arkDirector`. With `?fixture=1` it is
+ * the fixture (samples only); otherwise the live Ark.
  */
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string}};
 
 type FixtureMode = "full" | "early" | "grow";
 
@@ -90,6 +96,8 @@ export default async function ArkPage({params, searchParams}: Props) {
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
     const fixtureLife = mode ? await loadFixtureLife() : null;
+    const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
+    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase()} events={fixtureLife?.events ?? null} />;
     return (
         <ArkView
             locale={params.locale}

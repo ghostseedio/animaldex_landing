@@ -1,4 +1,4 @@
-import type {VideoPlan} from "@/lib/content-video/plan";
+import {isRecordedSourceType, type VideoPlan} from "@/lib/content-video/plan";
 import type {ContentVideoClip, ContentVideoStatus} from "@/lib/content-video/store";
 
 // The "Fix" button on /admin/story-videos: what is wrong with a page video,
@@ -33,6 +33,8 @@ export function withCurrentVideoPaths<T extends {media_path: string}>(posts: T[]
 }
 
 export type FixableVideo = {
+    /** A recorded clip (an Ark clip) is never fixed here: it has no script, voice or AI shots to redo. */
+    source_type?: string;
     status: ContentVideoStatus;
     plan: VideoPlan | null;
     clips: ContentVideoClip[];
@@ -88,6 +90,7 @@ function missingShots(video: FixableVideo) {
  */
 export function videoProblems(video: FixableVideo, {fileMissing = false}: {fileMissing?: boolean} = {}): VideoProblem[] {
     if (video.running) return [];
+    if (isRecordedSourceType(video.source_type)) return [{code: "not_editable", label: "Recorded by the Ark clip recorder: record it again (scripts/ark-clips.mts) instead of fixing it here"}];
     const inProgress = video.status !== "ready" && video.status !== "failed";
     if (video.status === "failed") return [{code: "failed", label: "Stopped with an error"}];
     if (inProgress) return [{code: "interrupted", label: "Stopped part-way (the server restarted)"}];

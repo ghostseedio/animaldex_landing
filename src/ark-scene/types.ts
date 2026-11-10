@@ -125,7 +125,18 @@ export type ArkSceneOptions = {
     hours?: number | null;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
+    /**
+     * A recording (`/ark?record=1`, the marketing clip recorder): no opening
+     * flight and no idle drift, so every camera move is the director's.
+     */
+    recording?: boolean;
 };
+
+/** A camera view: what it looks at, how far, the angle from straight down, and the bearing (radians). */
+export type ArkCameraView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};
+
+/** Where an animal is drawn now (its middle), the ground under it, its length and height, whether it is awake, and its heading. */
+export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number};
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
 export type ArkReplayRun = {skip: () => void; done: Promise<void>};
@@ -177,5 +188,24 @@ export type ArkSceneHandle = {
      */
     play: (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}) => ArkReplayRun;
     stats: () => ArkSceneStats;
+    // The recorder's camera (`?record=1`, src/ark-scene/director.ts); harmless elsewhere.
+    /** The camera's view now. */
+    view: () => ArkCameraView;
+    /** The whole world in view, as the page opens on it. */
+    homeView: () => ArkCameraView;
+    /** Put the camera exactly there now (any flight is dropped). */
+    setView: (view: ArkCameraView) => void;
+    /** Where an animal (or a replay's stand-in) is now; null when it is not in the scene. */
+    locate: (id: string) => ArkLocated | null;
+    /** The ground's height at a point (never below the sea). */
+    heightAt: (x: number, z: number) => number;
+    /** Ask for these species' models, near and far (resolves once asked; `loading` says when they are in). */
+    preload: (slugs: string[]) => Promise<void>;
+    /** True while any model is still loading. */
+    loading: () => boolean;
+    /** Keep an animal out of sight until `arrive` (the recorder's new arrival). */
+    hold: (id: string) => void;
+    /** A held animal comes aboard now, with the entrance it has in a replay. */
+    arrive: (id: string) => void;
     dispose: () => void;
 };
