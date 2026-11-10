@@ -13,7 +13,12 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
-import {GOLDEN_PLACES, GOLDEN_TIMES, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import {attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
+import {displayLength} from "@/ark-scene/sizes";
+import {Box3, Group, Quaternion, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
+import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
@@ -42,6 +47,57 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         },
         reef: () => ZONE_SITES.coral_reef
     };
+}
+
+type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}};
+
+/** A micro shot: the species' near model on the chosen attach point (its up along the point's normal), and the view onto it. */
+async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDEN_MICRO)[GoldenPlace]>, holder: {current: Object3D | null}): Promise<{view: ArkCameraView; anchor: string}> {
+    const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+    const near = place(shot.near);
+    const candidates = attachPoints({tag: shot.tag, near: {x: near.x, z: near.z, radius: shot.tag === "leaf" ? 40 : 18}});
+    // The lowest leaf (closest to the camera's reach), the front wall (facing +z, toward the default camera), else the nearest.
+    const scored = candidates.map((point) => ({point, score: shot.tag === "leaf" ? point.position.y : shot.tag === "house_wall" ? -point.normal.z * 10 + Math.abs(point.position.y - 1.6) : Math.hypot(point.position.x - near.x, point.position.z - near.z)}));
+    scored.sort((a, b) => a.score - b.score);
+    const point: AttachPoint | undefined = scored[0]?.point;
+    if (!point || !debug) return {view: handle.homeView(), anchor: `missing ${shot.tag}`};
+    if (holder.current) debug.scene.remove(holder.current);
+    const manifest = await (await fetch(`${MODELS}/manifest.json`)).json() as {models: Record<string, string>};
+    const version = manifest.models[shot.slug];
+    const group = new Group();
+    if (version) {
+        const loader = new GLTFLoader();
+        loader.setMeshoptDecoder(MeshoptDecoder);
+        const gltf = await loader.loadAsync(`${MODELS}/${shot.slug}/${version}.near.glb`);
+        const model = gltf.scene;
+        const box = new Box3().setFromObject(model);
+        const size = box.getSize(new Vector3());
+        const length = displayLength(shot.slug);
+        model.scale.setScalar(length / Math.max(size.z, size.x, 1e-3));
+        model.position.y = -box.min.y * model.scale.y;
+        model.traverse((object) => {
+            const mesh = object as Mesh;
+            if (mesh.isMesh) {
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+            }
+        });
+        group.add(model);
+    }
+    const n = new Vector3(point.normal.x, point.normal.y, point.normal.z).normalize();
+    group.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), n).multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), point.yaw));
+    group.position.set(point.position.x, point.position.y, point.position.z);
+    debug.scene.add(group);
+    holder.current = group;
+    debug.controls.minDistance = 0.3;
+    const wall = Math.abs(n.y) < 0.5;
+    const view: ArkCameraView = {
+        target: {x: point.position.x + n.x * 0.05, y: point.position.y + n.y * 0.05, z: point.position.z + n.z * 0.05},
+        distance: shot.distance,
+        polar: wall ? 1.42 : 0.95,
+        azimuth: wall ? Math.atan2(n.x, n.z) : Math.atan2(point.position.x, point.position.z) + 0.4
+    };
+    return {view, anchor: `${point.id} (${shot.slug})`};
 }
 
 type Measure = {
@@ -111,8 +167,11 @@ async function mountGolden(el: HTMLElement) {
             ready = true;
         }
     });
+    // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
+    handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41});
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
+    const holder: {current: Object3D | null} = {current: null};
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
@@ -137,8 +196,13 @@ async function mountGolden(el: HTMLElement) {
             return {settled, stats: handle.stats()};
         },
         /** Frame the named place in the named light; resolves once it is drawn and quiet. */
-        shoot: async (place: GoldenPlace, time: GoldenTime) => {
-            const shot = goldenView(place, world);
+        shoot: async (where: GoldenPlace, time: GoldenTime) => {
+            const micro = GOLDEN_MICRO[where];
+            const shot = micro ? {...(await microShot(handle, micro, holder)), place: where} : goldenView(where, world);
+            if (!micro && holder.current) {
+                (window as unknown as {__arkDebug?: Debug}).__arkDebug?.scene.remove(holder.current);
+                holder.current = null;
+            }
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setView(shot.view);
             // The view keeps itself over the ground for a few frames (setView, then the scene's own limits): hold it there.

@@ -16,7 +16,18 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall"] as const;
+
+/**
+ * The small-animal close-ups (graphics pass): a real catalogue species set on an attach point of the scenery
+ * (`sampler.ts`), framed close. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly.
+ */
+export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "tide_pool" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
+    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 1.3},
+    bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house", distance: 1.1},
+    limpet_tidepool: {slug: "common-limpet", tag: "tide_pool", near: "tide_pools", distance: 1.2},
+    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.4}
+};
 export type GoldenPlace = typeof GOLDEN_PLACES[number];
 
 /** The three lights every shot is taken in (hours on the scene's clock: `src/lib/ark-daylight.ts`). */
@@ -37,7 +48,11 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     house_fields: "House and fields",
     river_pond: "River and pond",
     mountain: "Mountain",
-    reef_underwater: "Underwater reef"
+    reef_underwater: "Underwater reef",
+    caterpillar_leaf: "Small animal on a leaf (no caterpillar model yet: a small butterfly)",
+    bee_flower: "Bee on a flower",
+    limpet_tidepool: "Limpet in a tide pool",
+    gecko_wall: "Gecko on the house wall"
 };
 
 type XZ = {x: number; z: number};
@@ -156,6 +171,13 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             // From the island's middle side, looking up at it.
             return {place, anchor: `peak ${peak.y.toFixed(1)} m`, view: {target: {x: peak.x, y: peak.y * 0.42, z: peak.z}, distance: 96, polar: 1.3, azimuth: bearing(peak, {x: 0, z: 0}) + 0.3}};
         }
+
+        case "caterpillar_leaf":
+        case "bee_flower":
+        case "limpet_tidepool":
+        case "gecko_wall":
+            // Framed by the page itself once the animal is placed (golden-entry.ts `microShot`).
+            return fallback("micro shot: framed on its attach point");
 
         case "reef_underwater": {
             const reef = world.reef();

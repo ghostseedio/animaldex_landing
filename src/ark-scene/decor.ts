@@ -282,7 +282,7 @@ export function grassTufts(count: number): GrassTuft[] {
         if (riverDistance(x, z) < 3) continue;
         // Not through the garden pond's water or the cottage's floor.
         if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
-        tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.75 + 0.25 * random() : zone === "mountains" ? 0.4 : 0.15 * random()});
+        tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.3 + 0.45 * random() : zone === "mountains" ? 0.3 : 0.12 * random()});
     }
     return tufts;
 }
@@ -342,4 +342,72 @@ export class DecorObstacles {
         }
         return false;
     }
+}
+
+// MARK: - Graphics pass: the forest fill
+
+/**
+ * More trees (graphics pass, batch 1): the forests filled in, 5–10× the
+ * decor's own trees, in natural clumps and glades. Visual only: they are not
+ * obstacles and not perches (the decor's own trees keep those jobs), and they
+ * keep out of every site's clearing, the river, the lake, the farm and the
+ * cottage, so no animal stands in one. `rank` (0…1) orders them for the
+ * tiers: a tier draws the ones under its fraction.
+ */
+export type FillItem = DecorItem & {rank: number};
+
+let fillCache: FillItem[] | null = null;
+
+export function forestFill(): FillItem[] {
+    if (fillCache) return fillCache;
+    const random = seeded(20261111);
+    const items: FillItem[] = [];
+    // A coarse grid keeps trunks at least ~2.4 m apart.
+    const taken = new Set<string>();
+    const cell = 2.4;
+    const kinds: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
+        rainforest: {density: 0.32, pick: (r) => (r < 0.6 ? "rainforest" : r < 0.85 ? "broadleaf" : "shrub")},
+        woodland: {density: 0.26, pick: (r) => (r < 0.55 ? "broadleaf" : r < 0.88 ? "conifer" : "shrub")},
+        mountains: {density: 0.12, pick: (r) => (r < 0.82 ? "conifer" : "shrub")},
+        river_lake: {density: 0.05, pick: (r) => (r < 0.7 ? "broadleaf" : "shrub")},
+        wetland: {density: 0.035, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")},
+        grassland: {density: 0.012, pick: (r) => (r < 0.6 ? "acacia" : "shrub")},
+        farm_garden: {density: 0.012, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")}
+    };
+    const tries = 220000;
+    for (let i = 0; i < tries; i++) {
+        const x = (random() * 2 - 1) * TERRAIN_HALF;
+        const z = (random() * 2 - 1) * TERRAIN_HALF;
+        const roll = random();
+        const pickRoll = random();
+        const sizeRoll = random();
+        const toneRoll = random();
+        const rotation = random() * Math.PI * 2;
+        const variant = Math.floor(random() * 3);
+        const rank = random();
+        const sample = sampleGround(x, z);
+        if (sample.height < 0.5 || sample.land < 0.7 || sample.cliff > 0.35) continue;
+        const zone = zoneAt(sample);
+        const growth = kinds[zone];
+        if (!growth) continue;
+        // Clumps and glades: dense where the noise is high, open where it is low.
+        const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
+        if (roll > growth.density * clump * 6) continue;
+        const kind = growth.pick(pickRoll);
+        if (!kind) continue;
+        if (kind === "conifer" && sample.height > 22) continue;
+        const site = ZONE_SITES[zone];
+        if (Math.hypot(x - site.x, z - site.z) < site.clearing + 2) continue;
+        if (riverDistance(x, z) < 5) continue;
+        if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
+        if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
+        const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
+        if (taken.has(key)) continue;
+        taken.add(key);
+        const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : 0.7 + 0.65 * sizeRoll;
+        items.push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank});
+    }
+    items.sort((a, b) => a.rank - b.rank);
+    fillCache = items;
+    return items;
 }

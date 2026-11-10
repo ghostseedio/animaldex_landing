@@ -37,7 +37,7 @@ const arg = (name, fallback) => {
 };
 const flag = (name) => process.argv.includes(`--${name}`);
 
-const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater"];
+const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall"];
 const TIMES = ["day", "dusk", "night"];
 const DEVICES = {
     desktop: {viewport: {width: 1440, height: 900}, deviceScaleFactor: 1, isMobile: false, hasTouch: false, cpuThrottle: 1},
@@ -75,7 +75,9 @@ await build({
     target: ["es2020"],
     minify: true,
     tsconfig: path.join(root, "tsconfig.json"),
-    define: {"process.env.NODE_ENV": JSON.stringify("production")},
+    // Development: the scene exposes __arkDebug (its three.js scene and camera), which the micro shots use to set a
+    // species on an attach point. Nothing else in the scene reads NODE_ENV.
+    define: {"process.env.NODE_ENV": JSON.stringify("development")},
     logLevel: "warning"
 });
 writeFileSync(path.join(site, "golden.html"), `<!doctype html>
@@ -88,12 +90,15 @@ writeFileSync(path.join(site, "golden.html"), `<!doctype html>
 
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
-    const file = path.join(site, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
-    if (!file.startsWith(site) || !existsSync(file)) {
+    // The scene's own art is served from public/ (as the site serves it); the page and its script from .ark-golden/site.
+    const fromPublic = url.pathname.startsWith("/ark/graphics/");
+    const folder = fromPublic ? path.join(root, "public") : site;
+    const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
+    if (!file.startsWith(folder) || !existsSync(file)) {
         response.writeHead(404).end();
         return;
     }
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -181,7 +186,10 @@ if (!studies.length) {
                 log(deviceName, place, time, `${numbers.intervalP50}ms p50 / ${numbers.intervalP95} p95, cpu ${numbers.cpuMs}, drain ${numbers.gpuDrainMs}, ${numbers.drawCalls} calls, ${numbers.triangles} tris, ${numbers.tier}`);
             }
         }
-        if (errors.length) log(deviceName, "page errors:", errors.slice(0, 5).join(" | "));
+        if (errors.length) {
+            writeFileSync(path.join(out, `errors-${deviceName}.txt`), errors.join("\n\n"));
+            log(deviceName, errors.length, "page errors (errors-" + deviceName + ".txt):", errors.filter((e) => !/Failed to load resource/.test(e)).map((e) => e.split("\n").find((l) => /ERROR|Error/.test(l)) ?? e.slice(0, 160)).slice(0, 4).join(" | "));
+        }
         await context.close();
     }
 } else {

@@ -65,9 +65,9 @@ export const SKY = {
 
 /** Water: deep sea, the reef's shallows, the lake. */
 export const WATER = {
-    deep: "#2c6585",
-    open: "#3b7a98",
-    reef: "#5fb8bf",
-    shallow: "#8cc6c0",
-    lake: "#6a9a95"
+    deep: "#123f63",
+    open: "#1f6a8e",
+    reef: "#2fb2b5",
+    shallow: "#58c9bf",
+    lake: "#3f7d76"
 } as const;

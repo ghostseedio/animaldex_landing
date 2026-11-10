@@ -44,8 +44,8 @@ export function lowerTier(tier: QualityTier): QualityTier {
 const GradeShader = {
     uniforms: {
         tDiffuse: {value: null},
-        vignette: {value: 0.28},
-        saturation: {value: 1.08},
+        vignette: {value: 0.07},
+        saturation: {value: 1.1},
         contrast: {value: 1.04}
     },
     vertexShader: `

@@ -27,6 +27,10 @@ import {
     type WebGLRenderer
 } from "three";
 import {Sky} from "three/examples/jsm/objects/Sky.js";
+import {RGBELoader} from "three/examples/jsm/loaders/RGBELoader.js";
+
+/** The CC0 sky (docs/ark-credits.md): where its sun is, as a bearing round y (atan2(z, x)), to turn it onto the scene's sun. */
+const HDRI_SUN_BEARING = 0.59;
 import {ARK_DAYLIGHT, ARK_GLINT, ARK_RIM, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME} from "@/ark-scene/glsl";
 import {daylightAt, type ArkDaylight} from "@/lib/ark-daylight";
 
@@ -79,6 +83,8 @@ export class ArkLighting {
     /** The elevation (rounded) the sky's light was last built for. */
     private builtFor: number | null = null;
     private current: ArkDaylight;
+    /** The photographed sky's light (batch 1), used while the sun is well up; the generated sky's at dusk, dawn and night. */
+    private dayEnvironment: Texture | null = null;
 
     constructor(private readonly renderer: WebGLRenderer, private readonly scene: Scene, hours = 17) {
         this.current = daylightAt(hours);
@@ -129,6 +135,16 @@ export class ArkLighting {
         this.apply(this.current, null);
     }
 
+    /** Load the photographed day sky (once); it takes over the image-based light while the sun is up. */
+    loadDaySky(url: string) {
+        new RGBELoader().load(url, (texture) => {
+            this.dayEnvironment = this.pmrem.fromEquirectangular(texture).texture;
+            texture.dispose();
+            this.builtFor = null;
+            this.apply(this.current, null);
+        }, undefined, () => {});
+    }
+
     get daylight(): ArkDaylight {
         return this.current;
     }
@@ -168,6 +184,8 @@ export class ArkLighting {
 
         this.sun.color.set(day.light.color);
         this.sun.intensity = day.light.intensity;
+        // Moonlight casts softer, lighter shadows than the sun (batch 1: the night stays readable in the shade).
+        this.sun.shadow.intensity = 1 - 0.5 * day.night;
         this.fill.color.set(day.fill.sky);
         this.fill.groundColor.set(day.fill.ground);
         this.fill.intensity = day.fill.intensity;
@@ -175,12 +193,21 @@ export class ArkLighting {
         if (fog) fog.color.copy(this.horizon);
         this.scene.environmentIntensity = day.environment;
 
+        // The photographed sky by day: the image-based light from real clouds and sky, turned so its sun is ours.
+        if (this.dayEnvironment && day.elevation > 12) {
+            this.builtFor = null;
+            this.scene.environment = this.dayEnvironment;
+            this.scene.environmentRotation.set(0, Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING, 0);
+            this.scene.environmentIntensity = day.environment * 1.15;
+            return;
+        }
+        this.scene.environmentRotation.set(0, 0, 0);
         const key = Math.round(day.elevation / 3);
         if (this.builtFor !== key) {
             this.builtFor = key;
             const next = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
             this.scene.environment = next;
-            this.environment.dispose();
+            if (this.environment !== this.dayEnvironment) this.environment.dispose();
             this.environment = next;
         }
     }

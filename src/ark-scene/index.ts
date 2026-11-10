@@ -92,10 +92,15 @@ import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
-import {buildLandscape} from "@/ark-scene/terrain";
+import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
+import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
-import {isAwake, localHours} from "@/lib/ark-daylight";
+import {isAwake} from "@/lib/ark-daylight";
+import {islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
+import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
+import {WATER_WIND} from "@/ark-scene/terrain";
+import type {ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -161,11 +166,14 @@ const MICRO_MIN_DISTANCE = 0.08;
 /** Birds that take to the air above their zone. */
 const FLYERS = ARK_FLYERS;
 
+/** The island's hour offset from UTC: everyone sees the same time of day (graphics pass; `src/lib/ark-clock.ts`). */
+const ISLAND_OFFSET_HOURS = 0;
+
 /** Per tier: shadow map size, grass tufts, pixel-ratio cap. */
-const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelRatio: number}> = {
-    high: {shadows: 2048, grass: 26000, pixelRatio: 2},
-    medium: {shadows: 1024, grass: 12000, pixelRatio: 1.5},
-    low: {shadows: 0, grass: 0, pixelRatio: 1}
+const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelRatio: number; /** The forest fill's share (graphics pass). */ fill: number}> = {
+    high: {shadows: 2048, grass: 56000, pixelRatio: 2, fill: 1},
+    medium: {shadows: 1024, grass: 22000, pixelRatio: 1.5, fill: 0.6},
+    low: {shadows: 0, grass: 0, pixelRatio: 1, fill: 0.3}
 };
 const MAX_GRASS = TIER_SETTINGS.high.grass;
 
@@ -314,7 +322,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // One frame is several passes: count them all (reset at the frame's start).
     renderer.info.autoReset = false;
     renderer.toneMapping = ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.62;
+    renderer.toneMappingExposure = 0.66;
     renderer.shadowMap.type = PCFSoftShadowMap;
     let pixelRatio = Math.min(window.devicePixelRatio || 1, TIER_SETTINGS[tier].pixelRatio);
     renderer.setPixelRatio(pixelRatio);
@@ -345,7 +353,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const scene = new Scene();
     // The hour: pinned by the page (development's `?hour=`), or the viewer's own clock.
     let pinnedHours = typeof options.hours === "number" && Number.isFinite(options.hours) ? options.hours : null;
-    const hoursNow = () => pinnedHours ?? localHours(new Date());
+    // Island time (graphics pass): the same hour for every viewer and the livestream, from the shared clock
+    // (`src/lib/ark-clock.ts`), not the viewer's own clock. `hours` / `setHours` still pin it (golden shots, recordings).
+    const hoursNow = () => pinnedHours ?? islandHours(Date.now(), ISLAND_OFFSET_HOURS);
+    // The weather and tide, from the same clock unless pinned (`setEnvironment`).
+    let pinnedEnvironment: Partial<ArkEnvironment & {windDirection: number}> | null = null;
+    let environmentAt = 0;
+    const voyageStart = Date.parse(options.snapshot.voyage.started_at ?? "") || null;
+    const applyEnvironment = (force = false) => {
+        const nowMs = Date.now();
+        if (!force && nowMs - environmentAt < 2000) return;
+        environmentAt = nowMs;
+        const weather = weatherAt(nowMs, {voyageStartMs: voyageStart, offsetHours: ISLAND_OFFSET_HOURS});
+        const live = {seaLevel: seaLevelAt(nowMs, {mean: 0, springRange: 0.7}), wetness: weather.wetness, snow: weather.mountainSnowCover, wind: weather.wind, storm: weather.storm, windDirection: weather.windDirection};
+        const env = {...live, ...(pinnedEnvironment ?? {})};
+        ARK_ENVIRONMENT.seaLevel.value = env.seaLevel;
+        ARK_ENVIRONMENT.wetness.value = env.wetness;
+        ARK_ENVIRONMENT.snow.value = env.snow;
+        ARK_ENVIRONMENT.wind.value = env.wind;
+        ARK_ENVIRONMENT.storm.value = env.storm;
+        const strength = 0.45 + 1.4 * env.wind + 2 * env.storm;
+        ARK_WIND_VECTOR.value.set(Math.cos(env.windDirection), Math.sin(env.windDirection)).multiplyScalar(strength * 0.95);
+        WATER_WIND.value = 0.6 + 1.2 * env.wind + 1.6 * env.storm;
+    };
     const lighting = new ArkLighting(renderer, scene, hoursNow());
     const fog = new Fog(lighting.horizon, 420, 1700);
     scene.fog = fog;
@@ -356,6 +386,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(nests.root);
 
     const landscape = buildLandscape();
+    const graphicsBase = (options.graphicsBase ?? "/ark/graphics").replace(/\/+$/, "");
+    void loadGroundTextures(graphicsBase);
+    lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     scene.add(landscape.ground, landscape.water);
     const vegetation = buildVegetation(MAX_GRASS);
     for (const mesh of vegetation.meshes) scene.add(mesh);
@@ -407,10 +440,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         micro.setShadows(settings.shadows > 0);
         shadows.setStrength(settings.shadows > 0 ? 0.14 : 0.3);
         vegetation.setGrassCount(settings.grass);
+        vegetation.setFill(settings.fill);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
         post.setTier(tier);
+        ARK_GROUND_LITE.value = tier === "low" ? 1 : 0;
         pixelRatio = Math.min(window.devicePixelRatio || 1, settings.pixelRatio);
         renderer.setPixelRatio(pixelRatio);
         motes.points.visible = !reducedMotion && !liteOn();
@@ -2804,6 +2839,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             ARK_TIME.value = elapsed;
             ARK_CLOCK.value = elapsed % 3600;
         }
+        applyEnvironment();
+        landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
         stepFlight(now);
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
@@ -2864,7 +2901,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const viewDistance = camera.position.distanceTo(controls.target);
         lighting.fitShadow(controls.target, viewDistance);
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
-        post.setTiltShift(Math.min(Math.max((viewDistance - 90) / 200, 0), width < height ? 0.3 : 0.55));
+        post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
         renderer.info.reset();
         post.render();
         placeLabels();
@@ -2876,9 +2913,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (frameTimes.length > 60) frameTimes.shift();
         if (lastDrawn) {
             const interval = startedAt - lastDrawn;
+            // Long gaps (a tab in the background, a stall) stay out of the stats, but the tier check counts slow frames
+            // too: a device drawing at 5 fps must still drop to the low tier (only gaps over 2 s, a hidden page, are skipped).
             if (interval < 250) {
                 frameIntervals.push(interval);
                 if (frameIntervals.length > 60) frameIntervals.shift();
+            }
+            if (interval < 2000) {
                 if (!forced && tier !== "low" && measureFrom && startedAt > measureFrom) {
                     measured.push(interval);
                     if (startedAt - measureFrom > 2000) {
@@ -2942,6 +2983,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setHours: (hours) => {
             pinnedHours = typeof hours === "number" && Number.isFinite(hours) ? hours : null;
             setLight();
+        },
+        setEnvironment: (environment) => {
+            pinnedEnvironment = environment;
+            applyEnvironment(true);
         },
         play,
         setVisitor,
