@@ -23,6 +23,7 @@ import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provide
 import SpeciesGrowthPanel from "@/app/[locale]/(composited)/animals/[slug]/species-growth-panel";
 import SpeciesRankingsSection from "@/app/[locale]/(composited)/animals/[slug]/species-rankings-section";
 import RelatedSpeciesSection from "@/app/[locale]/(composited)/animals/[slug]/related-species-section";
+import SpeciesArkSection, {loadSpeciesArk} from "@/app/[locale]/(composited)/animals/[slug]/species-ark-section";
 import {type EnhancedAnimalPowerProfile} from "@/data/species-animal-power";
 import {getLocationsFeaturingSpecies} from "@/data/species-ask-grounding";
 import {buildSpeciesAskSuggestions, SPECIES_ASK_DAILY_LIMITS, type SpeciesAskGrounding} from "@/lib/species-ask";
@@ -450,7 +451,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
     // Daily ISR: these fetches' revalidate lowers the route's `revalidate = false`.
     // The Power icons share the story media's window, so they add no extra rebuilds.
-    const [storyMedia, powerIconIndex, sightings, speciesGuides, heroArtSrc] = await Promise.all([
+    const [storyMedia, powerIconIndex, sightings, speciesGuides, heroArtSrc, speciesArk] = await Promise.all([
         getSpeciesStoryMedia(entry.slug, locale),
         fetchAnimalPowerIconIndex({revalidate: STORY_MEDIA_REVALIDATE_SECONDS}),
         // Where explorers saw it, and the guides that cover it: both daily, like the page.
@@ -460,7 +461,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             : Promise.resolve([]),
         // The hero's species art as the storage file itself (the committed
         // snapshot during the static build), so it skips the artwork route's 307.
-        getSpeciesArtworkDirectUrl(entry.slug)
+        getSpeciesArtworkDirectUrl(entry.slug),
+        // "In the Ark" (Part 4d): daily, like the page; null hides the section.
+        loadSpeciesArk({slug: entry.slug, speciesProfileId: entry.speciesProfileId ?? null}).catch(() => null)
     ]);
     const sightingPlaces = describeSightingPlaces(sightings, locale);
     const legendaryBeast = getLegendaryEarthBeast(entry.slug);
@@ -1540,6 +1543,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     </Link>
                 </div>
             </section>
+
+            {/* The shared Ark (Part 4d): how many are aboard, its stored diet links, and the way there. */}
+            <SpeciesArkSection slug={entry.slug} speciesProfileId={entry.speciesProfileId ?? null} name={entry.name} ark={speciesArk} />
 
             <section aria-label={t("quickFactsTitle")} className="grid grid-cols-2 overflow-hidden bg-surface-900/55 md:grid-cols-5">
                 {[

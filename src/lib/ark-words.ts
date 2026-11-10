@@ -112,6 +112,59 @@ export type ArkReplayWords = {
     dismiss: string;
 };
 
+/** Share buttons and the share cards (Part 4c). */
+export type ArkShareWords = {
+    share: string;
+    shareArk: string;
+    shareAnimal: string;
+    copied: string;
+    textArk: string;
+    textAnimal: string;
+    cardStatArk: string;
+    cardStatSpecies: string;
+    cardNotAboard: string;
+    cardSoon: string;
+    cardSubtitle: string;
+    cardSpeciesSubtitle: string;
+    cardNotAboardSubtitle: string;
+    countAboard: string;
+};
+
+/** /ark's metadata and its server-rendered words for search (Part 4d). */
+export type ArkSeoWords = {
+    metaTitle: string;
+    metaDescription: string;
+    metaFocusTitle: string;
+    metaFocusDescription: string;
+    aboutEyebrow: string;
+    aboutTitle: string;
+    aboutBody: string;
+    liveCounts: string;
+    arriveTitle: string;
+    arriveBody: string;
+    lifeTitle: string;
+    lifeBody: string;
+    lifeRules: string;
+    lifeNote: string;
+    listTitle: string;
+    listIntro: string;
+    listAboard: string;
+    breadcrumbHome: string;
+};
+
+/** A species page's "In the Ark" (Part 4d). */
+export type ArkSpeciesWords = {
+    title: string;
+    body: string;
+    aboardOne: string;
+    aboardOther: string;
+    notAboard: string;
+    notAboardPlain: string;
+    eats: string;
+    eatenBy: string;
+    see: string;
+    seeArk: string;
+};
 
 export type ArkCaptureWords = {
     aboardOne: string;
@@ -166,6 +219,9 @@ export type ArkWords = {
     life: ArkLifeWords;
     replay: ArkReplayWords;
     capture: ArkCaptureWords;
+    share: ArkShareWords;
+    seo: ArkSeoWords;
+    species: ArkSpeciesWords;
 };
 
 /** "{count} animals" and the like: every `{key}` filled from `values`, unknown keys left as they are. */

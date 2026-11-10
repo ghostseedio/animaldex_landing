@@ -9,7 +9,7 @@ import {formatAnimalCount} from "@/lib/animal-count";
  */
 
 export const HOW_IT_WORKS_PATH = "/how-it-works";
-export const HOW_IT_WORKS_UPDATED = "2026-10-31";
+export const HOW_IT_WORKS_UPDATED = "2026-11-10";
 
 export type HowItWorksDetail = {
     id: "your-step" | "trials" | "debates";
@@ -68,7 +68,8 @@ const en: HowItWorksContent = {
             title: "Advice you do, not advice you read",
             paragraphs: [
                 "Bring an animal you've caught something real: a decision, a habit, a conversation you keep putting off. It says which way it would go and why, from its own life, then gives you one step to try in your own world.",
-                "Do it, tap I did it and tell it how it went. The first step you finish together earns its Power, and its card shows how you earned it. Where the stakes are real, like a job or money, the step is one you can take back."
+                "Do it, tap I did it and tell it how it went. The first step you finish together earns its Power, and its card shows how you earned it. Where the stakes are real, like a job or money, the step is one you can take back.",
+                "When a step works, one of that animal's kind joins the Ark: one shared animal world, open to everyone at animaldex.app/ark, where it lives, eats and raises young by rules based on its field guide."
             ]
         },
         {
@@ -124,7 +125,8 @@ const id: HowItWorksContent = {
             title: "Nasihat yang dilakukan, bukan sekadar dibaca",
             paragraphs: [
                 "Bawakan hewan yang sudah kamu tangkap sesuatu yang nyata: keputusan, kebiasaan, percakapan yang terus kamu tunda. Ia mengatakan ke arah mana ia akan pergi dan mengapa, dari hidupnya sendiri, lalu memberimu satu langkah untuk dicoba di duniamu sendiri.",
-                "Lakukan, ketuk Sudah saya lakukan, lalu ceritakan hasilnya. Langkah pertama yang kalian selesaikan bersama memberimu Kekuatannya, dan kartunya menunjukkan bagaimana kamu mendapatkannya. Saat taruhannya nyata, seperti pekerjaan atau uang, langkahnya adalah langkah yang masih bisa kamu tarik kembali."
+                "Lakukan, ketuk Sudah saya lakukan, lalu ceritakan hasilnya. Langkah pertama yang kalian selesaikan bersama memberimu Kekuatannya, dan kartunya menunjukkan bagaimana kamu mendapatkannya. Saat taruhannya nyata, seperti pekerjaan atau uang, langkahnya adalah langkah yang masih bisa kamu tarik kembali.",
+                "Saat sebuah langkah berhasil, satu dari jenis hewan itu bergabung dengan Bahtera: satu dunia hewan bersama, terbuka untuk semua orang di animaldex.app/ark, tempat ia hidup, makan, dan membesarkan anak dengan aturan berdasarkan panduan lapangannya."
             ]
         },
         {

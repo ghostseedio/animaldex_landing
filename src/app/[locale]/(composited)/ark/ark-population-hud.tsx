@@ -2,6 +2,7 @@
 
 import React, {useEffect, useMemo, useRef} from "react";
 import Link from "@/app/[locale]/_components/link";
+import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import {REGION_ZONES, type ArkRegion, type ArkSnapshot} from "@/ark-scene/types";
 import {arkPopulation, type ArkPairStatus, type ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
@@ -44,7 +45,13 @@ type Props = {
     beginning: boolean;
     onSpecies: (row: ArkSpeciesRow) => void;
     onRegion: (region: ArkRegion | null) => void;
+    /** The page's own path ("/ark", "/id/ark"): where a share link points. */
+    shareLocalePath?: string;
 };
+
+function counted(count: number, one: string, other: string, locale: string): string {
+    return count === 1 ? one : other.replace("{count}", count.toLocaleString(locale));
+}
 
 function PairMeter({count, status}: {count: number; status: ArkPairStatus}) {
     const tone = STATUS_TONE[status].dot;
@@ -56,7 +63,7 @@ function PairMeter({count, status}: {count: number; status: ArkPairStatus}) {
     );
 }
 
-export default function ArkPopulationHud({snapshot, words, locale, selectedKey, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion}: Props) {
+export default function ArkPopulationHud({snapshot, words, locale, selectedKey, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion, shareLocalePath = "/ark"}: Props) {
     const hud = words.hud;
     const listRef = useRef<HTMLDivElement | null>(null);
     // An animal tapped in the world: its species' row comes into the column's view (desktop; the page never scrolls for it).
@@ -101,6 +108,20 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                 <div className="flex items-center justify-between gap-3">
                     <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300">{hud.title}</h2>
                     <div className="flex items-center gap-1">
+                        <ArkShareButton
+                            target="population"
+                            look="icon"
+                            localePath={shareLocalePath}
+                            slug={null}
+                            title={words.eyebrow}
+                            text={fillArkWords(words.share.textArk, {
+                                animals: counted(snapshot.counts.animals, words.animalsOne, words.animalsOther, locale),
+                                species: counted(snapshot.counts.species, words.speciesOne, words.speciesOther, locale)
+                            })}
+                            label={words.share.shareArk}
+                            copied={words.share.copied}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
+                        />
                         <button
                             type="button"
                             aria-pressed={region === null}
