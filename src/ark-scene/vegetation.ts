@@ -32,7 +32,7 @@ import {
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {grassTufts, worldDecor, type DecorKind} from "@/ark-scene/decor";
 import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
-import {DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT} from "@/ark-scene/micro-decor";
+import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
 
@@ -153,6 +153,37 @@ function broadleaf(variant: number): BufferGeometry {
     const random = seeded(101 + variant);
     const height = 2.1 + variant * 0.35;
     return mergeGeometries([trunk(height + 0.6, 0.2, (random() - 0.5) * 0.3), canopy(randomBlobs(random, 6 + variant, height + 1.3, 1.3, 1.05))])!;
+}
+
+/** A canopy tree (`micro-decor.ts` canopyTree): a tall trunk, long limbs under pads of leaves, a crown. */
+function canopyShape(variant: number): BufferGeometry {
+    const tree = canopyTree(variant);
+    const random = seeded(1301 + variant);
+    const parts: BufferGeometry[] = [];
+    const stem = new CylinderGeometry(tree.top, tree.base, tree.height, 9, 4);
+    stem.translate(0, tree.height / 2, 0);
+    parts.push(finish(stem, (_, t) => 0.72 + 0.35 * t, 0, BARK));
+    const up = new Vector3(0, 1, 0);
+    const direction = new Vector3();
+    const turn = new Quaternion();
+    for (const limb of tree.limbs) {
+        const start = limbAt(limb, tree.base, 0);
+        const end = limbAt(limb, tree.base, 1);
+        const length = Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z) + tree.base * 0.8;
+        const piece = new CylinderGeometry(limb.tip, limb.base, length, 7, 2);
+        // Along +y from its base, then turned onto the limb's direction.
+        piece.translate(0, length / 2, 0);
+        direction.set(start.dx, start.dy, start.dz).normalize();
+        turn.setFromUnitVectors(up, direction);
+        piece.applyQuaternion(turn);
+        piece.translate(0, limb.height, 0);
+        parts.push(finish(piece, () => 0.85, 0, BARK));
+        // A pad of leaves over its tip.
+        const pad = randomBlobs(random, 4, 0, 0.55, tree.pad.radius, tree.pad.squash).map((blob) => ({...blob, x: blob.x + end.x, y: blob.y + end.y + tree.pad.lift, z: blob.z + end.z}));
+        parts.push(canopy(pad, 0));
+    }
+    parts.push(canopy(randomBlobs(random, 7, tree.crown.y, 1.2, tree.crown.radius, tree.crown.squash), 1));
+    return mergeGeometries(parts)!;
 }
 
 function rainforest(variant: number): BufferGeometry {
@@ -575,7 +606,9 @@ const SHAPES: Shape[] = [
     {kind: "fence", variant: 0, build: fence, wind: 0, windHeight: 1, shadow: true},
     ...[0, 1, 2].map((variant) => ({kind: "orchard" as const, variant, build: () => orchard(variant), wind: 0.05, windHeight: 2.5, shadow: true})),
     ...[0, 1, 2].map((variant) => ({kind: "flower" as const, variant, build: () => flower(variant), wind: 0, windHeight: 1, doubleSide: true, shadow: false})),
-    ...[0, 1].map((variant) => ({kind: "leaf" as const, variant, build: () => fallenLeaf(variant), wind: 0, windHeight: 1, doubleSide: true, shadow: false}))
+    ...[0, 1].map((variant) => ({kind: "leaf" as const, variant, build: () => fallenLeaf(variant), wind: 0, windHeight: 1, doubleSide: true, shadow: false})),
+    // No wind: the animals on its limbs stay on them.
+    ...[0, 1].map((variant) => ({kind: "canopy" as const, variant, build: () => canopyShape(variant), wind: 0, windHeight: 1, shadow: true}))
 ];
 
 export type Vegetation = {

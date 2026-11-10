@@ -4,6 +4,7 @@ import type {ArkAnimal, ArkSnapshot, ArkZone} from "@/ark-scene/types";
 import type {ArkAct, ArkEvent} from "@/lib/ark-life";
 import {planArkReplay} from "@/lib/ark-life";
 import {pickArkFacts, type ArkFact, type ArkFieldGuide} from "@/lib/ark-clips/facts";
+import {ARK_MOMENTS, canMoment, MOMENT_SECONDS, type ArkMomentKind} from "@/ark-scene/moments";
 
 /**
  * Ark marketing clips (docs/ark-next.md, Part 4b): what each scripted shot
@@ -16,7 +17,9 @@ import {pickArkFacts, type ArkFact, type ArkFieldGuide} from "@/lib/ark-clips/fa
  * at all), and nothing from a problem, debate, chat or memory is read.
  */
 
-export const ARK_SHOTS = ["day_to_night", "arrival", "meal_chase", "follow", "flyover", "meet"] as const;
+export const ARK_SHOTS = ["day_to_night", "arrival", "meal_chase", "follow", "flyover", "meet", ...ARK_MOMENTS] as const;
+/** The cross-layer moments (`ark-scene/moments.ts`): cosmetic, never a meal; available when the Ark has an animal that can act one out. */
+export const ARK_MOMENT_SHOTS: readonly ArkShotKind[] = ARK_MOMENTS;
 export type ArkShotKind = (typeof ARK_SHOTS)[number];
 
 export function isArkShot(value: unknown): value is ArkShotKind {
@@ -29,7 +32,11 @@ export const ARK_SHOT_LABELS: Record<ArkShotKind, string> = {
     meal_chase: "A meal-chase replay",
     follow: "Following one animal",
     flyover: "Flyover of the whole Ark",
-    meet: "Meet the species (field-guide facts)"
+    meet: "Meet the species (field-guide facts)",
+    seabird_dive: "A seabird dives into the sea",
+    whale_surface: "A whale surfaces to blow",
+    owl_swoop: "An owl swoops from its branch",
+    primate_drop: "A primate drops to the ground"
 };
 
 export const CLIP_WIDTH = 1080;
@@ -188,6 +195,19 @@ export function pickArkSubject(snapshot: ArkSnapshot, purpose: "follow" | "meet"
     // Ties go to the earliest arrival, then the id, so the same Ark picks the same animal.
     return [...pool].sort((a, b) => score(b) - score(a) || a.arrived_at.localeCompare(b.arrived_at) || a.id.localeCompare(b.id))[0];
 }
+
+/** Who acts out a cross-layer moment: the first aboard (earliest arrival, then id) whose species can, awake by day first. */
+export function momentSubject(snapshot: ArkSnapshot, kind: ArkMomentKind): ArkAnimal | null {
+    const able = snapshot.animals.filter((animal) => canMoment(kind, animal.model_slug, animal.zone));
+    return [...able].sort((a, b) => Number(awakeByDay(b)) - Number(awakeByDay(a)) || a.arrived_at.localeCompare(b.arrived_at) || a.id.localeCompare(b.id))[0] ?? null;
+}
+
+const MOMENT_HOOKS: Record<ArkMomentKind, (name: string) => string> = {
+    seabird_dive: (name) => `WATCH ${withArticle(name).toUpperCase()} DIVE`,
+    whale_surface: (name) => `${withArticle(name).toUpperCase()} COMES UP TO BREATHE`,
+    owl_swoop: (name) => `${withArticle(name).toUpperCase()} TAKES OFF`,
+    primate_drop: (name) => `${withArticle(name).toUpperCase()} COMES DOWN FROM THE TREES`
+};
 
 /** The newest animal that came aboard (not one born there). */
 export function newestArrival(snapshot: ArkSnapshot): ArkAnimal | null {
@@ -397,6 +417,33 @@ export function planArkShot(kind: ArkShotKind, input: ArkClipInput): ArkShotPlan
                 hookText: hook,
                 direction: direction({hours: {from: hoursFor(animal), to: hoursFor(animal) + 0.4}, lead: 15.4, subject: animal.id, preload: [animal.model_slug]}),
                 cues,
+                subject: subjectOf(animal)
+            };
+        }
+        case "seabird_dive":
+        case "whale_surface":
+        case "owl_swoop":
+        case "primate_drop": {
+            // A cross-layer moment: cosmetic, acted out by the scene; the captions are the live counts and the zone only.
+            const wanted = input.species ? animals.filter((animal) => matchesSpecies(animal, input.species!) && canMoment(kind, animal.model_slug, animal.zone)) : null;
+            const animal = wanted ? wanted[0] ?? null : momentSubject(snapshot, kind);
+            if (!animal) throw new ArkShotUnavailable(`Nobody aboard can act out "${ARK_SHOT_LABELS[kind]}"`);
+            const hook = MOMENT_HOOKS[kind](animal.name);
+            const lead = 3.2;
+            const linger = Math.max(MOMENT_SECONDS[kind] + 1.5, MIN_CLIP_SECONDS - lead - END_SECONDS);
+            return {
+                ...base,
+                slug: sample(`${kind.replace(/_/g, "-")}-${slugify(animal.name)}-${today}`),
+                title: `${capitalised(withArticle(animal.name))} on the AnimalDex Ark: ${ARK_SHOT_LABELS[kind].toLowerCase()}`,
+                hookText: hook,
+                direction: direction({hours: {from: hoursFor(animal), to: hoursFor(animal) + 0.2}, lead, linger, subject: animal.id, preload: [animal.model_slug]}),
+                cues: [
+                    {kind: "hook", text: hook, from: at("start", 0), to: at("start", 3.2)},
+                    {kind: "caption", text: aboardLine(sameSpecies(animals, animal).length), from: at("start", 3.6), to: at("start", 7.8)},
+                    {kind: "caption", text: `It lives in the Ark's ${ZONE_NAMES[animal.zone]}.`, from: at("start", 8.2), to: at("start", 12.0)},
+                    {kind: "caption", text: ARK_HOW_LINE, from: at("start", 12.4), to: at("end", 0)},
+                    endCue()
+                ],
                 subject: subjectOf(animal)
             };
         }

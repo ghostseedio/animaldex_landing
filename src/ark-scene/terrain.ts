@@ -145,6 +145,9 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     return {geometry, depth};
 }
 
+/** How strongly the sun's caustics play on the sea floor (the layers addendum): by day, stronger seen from under the water. */
+export const ARK_CAUSTICS = {value: 0.25};
+
 function groundMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.94, metalness: 0});
     const uniforms = {
@@ -159,7 +162,8 @@ function groundMaterial(): MeshStandardMaterial {
         mudTone: {value: srgb("#6e6646")},
         soilTone: {value: srgb("#7a5c3e")},
         hedgeTone: {value: srgb("#3f5a2a")},
-        dryGrass: {value: srgb("#b9a35e")}
+        dryGrass: {value: srgb("#b9a35e")},
+        arkCaustics: ARK_CAUSTICS
     };
     material.customProgramCacheKey = () => "ark-ground";
     material.onBeforeCompile = (shader) => {
@@ -180,6 +184,16 @@ varying vec4 vArkLayers;
 varying vec3 vArkWorld;
 varying vec3 vArkNormal;
 uniform vec3 fieldTones[${FIELD_TONES.length}];
+uniform float arkCaustics;
+float arkCausticAt(vec2 p, float t) {
+    float c = 0.0;
+    vec2 q = p * 0.85;
+    for (int i = 0; i < 3; i++) {
+        q += vec2(sin(q.y * 1.7 + t * 0.55 + float(i)), cos(q.x * 1.3 - t * 0.47 - float(i))) * 0.42;
+        c += abs(sin(q.x + q.y));
+    }
+    return pow(1.0 - c / 3.0, 5.0) * 6.0;
+}
 uniform vec3 sandTone;
 uniform vec3 wetSand;
 uniform vec3 rockTone;
@@ -257,6 +271,11 @@ float arkWet = 0.0;`)
     arkWet = max(arkWet, waterline * 0.8);
 
     diffuseColor.rgb = ground * arkCloudShade(world);
+    // The sun's caustics on the sea floor, fading with depth.
+    if (world.y < -0.05 && arkCaustics > 0.0) {
+        float under = smoothstep(-0.05, -0.6, world.y) * (1.0 - smoothstep(-4.0, -11.0, world.y));
+        diffuseColor.rgb += vec3(0.75, 0.95, 0.9) * min(arkCausticAt(world.xz, arkTime), 1.5) * under * arkCaustics * 0.12;
+    }
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, 0.32, arkWet);`);

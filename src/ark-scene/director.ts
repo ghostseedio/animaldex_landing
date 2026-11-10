@@ -1,6 +1,7 @@
 import type {RecordClock} from "@/ark-scene/record-clock";
 import type {ArkCameraView, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkDirection, ArkMarks} from "@/lib/ark-clips/shots";
+import {MOMENT_SECONDS} from "@/ark-scene/moments";
 
 /**
  * The clip recorder's director (`/ark?record=1`, `window.__arkDirector`):
@@ -124,6 +125,19 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 const centre = at ? {x: at.x, y: Math.max(at.y - 0.3, framing.target.y), z: at.z} : framing.target;
                 return {target: centre, distance: framing.distance * (1 + 0.25 * ease(clamp01((since - 0.6) / 3))), polar: framing.polar, azimuth: framing.azimuth + 0.085 * since};
             }
+            case "seabird_dive":
+            case "whale_surface":
+            case "owl_swoop":
+            case "primate_drop": {
+                // A cross-layer moment: the camera holds on the animal, wide enough for where the moment takes it
+                // (out to sea and down into it, up through the surface, down to the ground and back), drifting round.
+                const centre = track(t < d.lead ? 0.3 : 0.08) ?? anchor.target;
+                const size = subjectSize();
+                const wide = d.kind === "seabird_dive" ? 26 : d.kind === "whale_surface" ? 14 + size.length * 2 : d.kind === "owl_swoop" ? 11 : 8 + size.length * 2;
+                const push = ease(clamp01(t / Math.max(d.lead, 0.1)));
+                const polar = d.kind === "whale_surface" ? 1.2 : d.kind === "seabird_dive" ? 1.0 : 1.15;
+                return {target: {x: centre.x, y: Math.max(centre.y, d.kind === "whale_surface" ? -0.5 : centre.y), z: centre.z}, distance: lerp(wide * 1.5, wide, push), polar, azimuth: anchor.azimuth + 0.05 * t};
+            }
             case "meal_chase": {
                 const at = subjectPoint() ?? {x: 0, y: 0, z: 0};
                 if (!played) {
@@ -215,6 +229,12 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                     actView = handle.view();
                 });
             }
+            // A cross-layer moment begins as the lead ends (the scene acts it out; cosmetic only).
+            if (d.subject && (d.kind === "seabird_dive" || d.kind === "whale_surface" || d.kind === "owl_swoop" || d.kind === "primate_drop") && index === Math.round(d.lead * DIRECTOR_FPS)) {
+                handle.moment(d.kind, d.subject);
+                marks.act = t;
+                marks.actEnd = t + MOMENT_SECONDS[d.kind];
+            }
             const length = total();
             if (!playing) {
                 const view = viewAt(d, t, Number.isFinite(length) ? length : plannedTotal(d));
@@ -229,7 +249,7 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
             if (finished) {
                 marks.total = now;
                 marks.end = Math.max(now - d.end, 0);
-                if (!d.act && d.kind !== "arrival") {
+                if (!d.act && d.kind !== "arrival" && !(d.kind in MOMENT_SECONDS)) {
                     marks.act = marks.end;
                     marks.actEnd = marks.end;
                 }

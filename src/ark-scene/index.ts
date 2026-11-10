@@ -78,6 +78,10 @@ import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Sha
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, porchLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
+import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
+import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
+import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
+import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -173,6 +177,12 @@ type Entry = {
     micro?: MicroSpecies | null;
     /** A moth: 0 resting on the wall, 1 circling the porch light (at night); eased. */
     toLight?: number;
+    /** Its layer (`layers.ts`): the canopy, the ground, the underground, the reef, the open sea or the deep. */
+    layer: SpeciesLayer;
+    /** Underground and in its tunnel or chamber now (drawn only in the cutaway). */
+    buried?: boolean;
+    /** A cross-layer moment it is acting out (cosmetic): its kind, when it began, where from, its beats still to come. */
+    moment?: {kind: ArkMomentKind; start: number; from: MomentFrom | null; beats: MomentBeat[]} | null;
     /** Its idle loops' pace (a swimmer's, a flyer's), from its speed. */
     pace: number;
     arrivedAt: number | null;
@@ -295,6 +305,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const micro = buildMicroScene();
     scene.add(micro.group);
     micro.setNight(lighting.daylight.night);
+    // The layers: burrows and the cutaway's pit and tunnels, the sea's plankton, glow and underwater light.
+    const layersScene = buildLayersScene();
+    scene.add(layersScene.group);
+    renderer.localClippingEnabled = true;
+    layersScene.clip([landscape.ground.material as MeshStandardMaterial, vegetation.grass.material as MeshStandardMaterial, ...vegetation.meshes.map((mesh) => mesh.material as MeshStandardMaterial)]);
+    const PLANKTON = planktonClouds();
 
     const camera = new PerspectiveCamera(FOV, 1, 0.4, 9000);
     const controls = new OrbitControls(camera, canvas);
@@ -462,6 +478,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             full: body.display,
             trueLength: body.metres,
             micro: place.micro ? microSpecies(animal.model_slug) : null,
+            layer: speciesLayer(animal.model_slug),
             stats: arkStats(animal),
             floor: body.floor,
             pace: loopPace(animal),
@@ -499,7 +516,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
-                ? Object.assign(before, {animal, place, length: body.display, full: body.display, trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)})
+                ? Object.assign(before, {animal, place, length: body.display, full: body.display, trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)})
                 : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
@@ -507,6 +524,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         entries = next;
         entryById = nextById;
+        // The underground's burrows and molehills, and the burrow mouths of the ground's diggers.
+        const burrows = next.flatMap((entry) => (entry.place.burrow ? [entry.place.burrow] : []));
+        const molehills = next.flatMap((entry) => {
+            const burrow = entry.place.burrow;
+            if (!burrow || !/mole/.test(entry.animal.model_slug)) return [];
+            return [0, 1, 2].map((k) => {
+                const at = tunnelPoint(burrow, 0.35 + k * 0.25);
+                return {x: at.x + Math.cos(k * 2.1) * 0.5, z: at.z + Math.sin(k * 2.1) * 0.5};
+            });
+        });
+        const mouths = next.filter((entry) => entry.layer.burrow && !entry.place.burrow && !entry.place.micro && !entry.place.canopy && !entry.place.water).map((entry) => {
+            const side = entry.length * 0.55 + 0.25;
+            return {x: entry.place.x + Math.cos(entry.place.yaw) * side, z: entry.place.z - Math.sin(entry.place.yaw) * side, size: Math.min(Math.max(entry.length * 0.35, 0.18), 0.6)};
+        });
+        layersScene.setBurrows(burrows, molehills, mouths);
         // A school or a flock keeps to its first one.
         for (const entry of next) entry.leader = entry.place.leader && entry.place.leader !== entry.animal.id ? nextById.get(entry.place.leader) ?? null : null;
         applyHours();
@@ -665,6 +697,127 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         return {x: point.x, z: point.z, base: point.y, yaw: Math.atan2(point.tx, point.tz), pitch: 0, roll: 0, afloat: true, surface: point};
     };
+    const nearestCloud = (x: number, z: number) => PLANKTON.reduce((best, cloud) => (Math.hypot(cloud.x - x, cloud.z - z) < Math.hypot(best.x - x, best.z - z) ? cloud : best), PLANKTON[0]);
+
+    /**
+     * A canopy animal on its tree: a percher sits still on its limb or the
+     * crown; a climber crawls to and fro along its limb or up and down the
+     * trunk; a leaper leaps to the next limb now and then and back; a hanger
+     * hangs under its limb, swaying a little. (Procedural: no climbing,
+     * leaping or hanging clips are in the scene.)
+     */
+    const canopyPose = (entry: Entry, time: number): Pose => {
+        const place = entry.place.canopy!;
+        const zone = entry.animal.zone;
+        const awake = 1 - entry.rest;
+        const period = 13 + 9 * entry.phase;
+        const u = (((time / period + entry.phase) % 1) + 1) % 1;
+        const reach = place.mode === "climb" ? (place.limb === -2 ? 0.7 : 0.45) : 0;
+        const out = u < 0.32 ? easeInOut(u / 0.32) : u < 0.5 ? 1 : u < 0.82 ? 1 - easeInOut((u - 0.5) / 0.32) : 0;
+        const point = canopyPoint(zone, place, reach * out * awake);
+        if (reach && !reducedMotion) {
+            const turn = Math.PI * smoothTurn(u) * awake;
+            const c = Math.cos(turn);
+            const sn = Math.sin(turn);
+            const bx = point.ny * point.tz - point.nz * point.ty;
+            const by = point.nz * point.tx - point.nx * point.tz;
+            const bz = point.nx * point.ty - point.ny * point.tx;
+            point.tx = point.tx * c + bx * sn;
+            point.ty = point.ty * c + by * sn;
+            point.tz = point.tz * c + bz * sn;
+        }
+        if (place.mode === "hang" && !reducedMotion) {
+            // A slow sway about the limb.
+            const sway = Math.sin(time * 0.55 + entry.phase * 11) * 0.14;
+            const c = Math.cos(sway);
+            const sn = Math.sin(sway);
+            const bx = point.ty * point.nz - point.tz * point.ny;
+            const by = point.tz * point.nx - point.tx * point.nz;
+            const bz = point.tx * point.ny - point.ty * point.nx;
+            point.nx = point.nx * c + bx * sn;
+            point.ny = point.ny * c + by * sn;
+            point.nz = point.nz * c + bz * sn;
+        }
+        if (place.mode === "leap" && awake > 0.5 && !reducedMotion) {
+            // Over to the next limb (0.42–0.5 of its cycle), a while there, and back (0.92–1).
+            const other = canopyPoint(zone, leapTarget(place), 0);
+            const there = u >= 0.5 && u < 0.92;
+            const k = u >= 0.42 && u < 0.5 ? easeInOut((u - 0.42) / 0.08) : u >= 0.92 ? 1 - easeInOut((u - 0.92) / 0.08) : there ? 1 : 0;
+            if (k > 0) {
+                const flying = k < 1;
+                const arc = flying ? Math.sin(Math.PI * k) * 0.9 : 0;
+                const x = point.x + (other.x - point.x) * k;
+                const y = point.y + (other.y - point.y) * k + arc;
+                const z = point.z + (other.z - point.z) * k;
+                const dx = (other.x - point.x) * (u >= 0.92 ? -1 : 1);
+                const dz = (other.z - point.z) * (u >= 0.92 ? -1 : 1);
+                const length = Math.hypot(dx, dz) || 1;
+                const at = flying ? {x, y, z, nx: 0, ny: 1, nz: 0, tx: dx / length, ty: 0, tz: dz / length} : {...other};
+                return {x: at.x, z: at.z, base: at.y, yaw: Math.atan2(at.tx, at.tz), pitch: 0, roll: 0, afloat: true, surface: at};
+            }
+        }
+        return {x: point.x, z: point.z, base: point.y, yaw: Math.atan2(point.tx, point.tz), pitch: 0, roll: 0, afloat: true, surface: point};
+    };
+
+    /**
+     * An underground animal: in its chamber most of the time (seen only in
+     * the cutaway), now and then along its tunnel to the entrance, where it
+     * peeks out for a few seconds, and back. Asleep it stays in its chamber.
+     */
+    const undergroundPose = (entry: Entry, modelHeight: number, time: number): Pose => {
+        const burrow = entry.place.burrow!;
+        const period = 26 + 14 * entry.phase;
+        const u = entry.awake && !reducedMotion ? (((time / period + entry.phase) % 1) + 1) % 1 : 0;
+        // Along the tunnel: 1 in the chamber, 0 at the entrance.
+        const t = u < 0.45 ? 1 : u < 0.55 ? 1 - easeInOut((u - 0.45) / 0.1) : u < 0.75 ? 0 : u < 0.85 ? easeInOut((u - 0.75) / 0.1) : 1;
+        const peeking = u >= 0.55 && u < 0.75;
+        const at = tunnelPoint(burrow, Math.max(t, 0.02));
+        const ahead = tunnelPoint(burrow, Math.min(Math.max(t, 0.02) + 0.05, 1));
+        const outward = u >= 0.45 && u < 0.75;
+        const yaw = Math.atan2((ahead.x - at.x) * (outward ? -1 : 1), (ahead.z - at.z) * (outward ? -1 : 1));
+        entry.buried = !peeking;
+        if (peeking) {
+            // Head and shoulders out of the mouth, looking about.
+            const rise = Math.sin(Math.PI * Math.min((u - 0.55) / 0.2, 1));
+            return {x: burrow.x, z: burrow.z, base: burrow.ground - modelHeight * (0.75 - 0.5 * rise), yaw: yaw + Math.sin(time * 1.3) * 0.5 * rise, pitch: -0.5 * rise, roll: 0, afloat: true};
+        }
+        return {x: at.x, z: at.z, base: at.y - modelHeight * 0.45, yaw, pitch: 0, roll: 0, afloat: true};
+    };
+
+    /** Splashes on the water (a moment's beats), as rings that spread and fade. */
+    const ripples: Array<{x: number; z: number; start: number}> = [];
+
+    /** A cross-layer moment's pose (cosmetic), or null once it is over. */
+    const momentAt = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose | null => {
+        const moment = entry.moment!;
+        const u = (time - moment.start) / MOMENT_SECONDS[moment.kind];
+        if (u >= 1 || u < 0) {
+            entry.moment = null;
+            return null;
+        }
+        if (!moment.from) {
+            // Where it is as the moment begins.
+            entry.moment = null;
+            const start = pose(entry, model, modelHeight, time);
+            entry.moment = moment;
+            moment.from = {x: start.x, y: start.base, z: start.z, yaw: start.yaw};
+            moment.beats = momentBeats(moment.kind, moment.from, entry.length);
+        }
+        const at = momentPose(moment.kind, moment.from, u, entry.length);
+        const due = moment.beats.filter((beat) => beat.at <= u);
+        if (due.length) {
+            moment.beats = moment.beats.filter((beat) => beat.at > u);
+            const now = performance.now() / 1000;
+            for (const beat of due) {
+                for (let k = 0; k < (beat.kind === "blow" ? 7 : 4); k++) {
+                    dust.add({x: beat.x + (k % 2 ? 1 : -1) * k * 0.08, y: beat.y + (beat.kind === "blow" ? k * 0.4 : 0.05), z: beat.z, size: beat.kind === "blow" ? 0.8 + k * 0.25 : 0.6, kind: "bubble"}, now);
+                }
+                ripples.push({x: beat.x, z: beat.z, start: time});
+            }
+        }
+        return {x: at.x, z: at.z, base: at.y, yaw: at.yaw, pitch: at.pitch, roll: at.roll, afloat: at.afloat};
+    };
+
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
         // An act's pose, from a replayed event.
         if (entry.act) {
@@ -672,8 +825,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
         }
         const place = entry.place;
+        if (entry.moment) {
+            const at = momentAt(entry, model, modelHeight, time);
+            if (at) return at;
+        }
         if (place.micro && !entry.visitor) return microPose(entry, reducedMotion ? 0 : time);
+        // (A bird of the air flies from its perch, and comes back to it to rest.)
+        if (place.canopy && !entry.visitor && entry.air <= 0.001) return canopyPose(entry, reducedMotion ? 0 : time);
+        if (place.burrow && !entry.visitor) return undergroundPose(entry, modelHeight, reducedMotion ? 0 : time);
         const plan = model?.behaviour?.plan ?? "";
+        // The reef's and the sea's bottom-dwellers (crabs, octopus, stars): on the sea floor.
+        if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && entry.layer.mode === "floor") {
+            const sway = reducedMotion ? 0 : Math.sin(time * 0.25 + entry.phase * 9) * 0.25 * (1 - entry.rest);
+            return {x: place.x + Math.cos(place.yaw) * sway, z: place.z - Math.sin(place.yaw) * sway, base: place.ground, yaw: place.yaw, pitch: 0, roll: 0, afloat: true};
+        }
         const t = reducedMotion ? 0 : time;
         const site = ZONE_SITES[entry.animal.zone];
         // The visitor: at the jetty's foot, or a swimmer floating off its end.
@@ -693,11 +858,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const direction = owner.phase > 0.5 ? 1 : -1;
             const radius = 2.2 + owner.phase * 3 + owner.length * 0.6 + (follower ? ((follower % 3) - 1) * 0.9 : 0);
             const angle = lead ? lead.loop - direction * follower * (0.1 + entry.length * 0.04) : entry.loop;
-            const centre = lead ? lead.place : place;
-            const x = centre.x + Math.cos(angle) * radius;
-            const z = centre.z + Math.sin(angle) * radius;
+            // A plankton feeder loops round its nearest plankton cloud.
+            const cloud = entry.layer.mode === "filter" ? nearestCloud(place.x, place.z) : null;
+            const centre = cloud ?? (lead ? lead.place : place);
+            const loopRadius = cloud ? cloud.radius * 0.7 + entry.phase * 2 : radius;
+            const x = centre.x + Math.cos(angle) * loopRadius;
+            const z = centre.z + Math.sin(angle) * loopRadius;
             const reef = entry.animal.zone === "coral_reef";
-            const depth = reef ? 0.55 + 0.35 * entry.phase + modelHeight * 0.5 : modelHeight * (0.38 + 0.12 * Math.sin(t * 0.3 + entry.phase * 9));
+            const floorBelow = -heightAt(x, z);
+            // The deep's swim far down, over deep water (above the floor); the others near the surface.
+            const deep = entry.layer.layer === "deep" ? Math.min(3.8 + entry.phase * 5, Math.max(floorBelow - modelHeight - 0.4, 0.8)) : 0;
+            const depth = deep || (cloud ? Math.min(-cloud.y + Math.sin(t * 0.3 + entry.phase * 9) * 0.4, Math.max(floorBelow - modelHeight, 0.5)) : reef ? 0.55 + 0.35 * entry.phase + modelHeight * 0.5 : modelHeight * (0.38 + 0.12 * Math.sin(t * 0.3 + entry.phase * 9)));
             const speed = direction;
             // Tangent to the loop: model heads face +z.
             const yaw = Math.atan2(-Math.sin(angle) * Math.sign(speed), Math.cos(angle) * Math.sign(speed));
@@ -788,6 +959,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const modelScale = model ? entry.length / model.bodyLength : 1;
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
             const where = pose(entry, model, modelHeight, now);
+            // Only the layer the camera is in is drawn in full: under the sea nothing of the land; above it not the deep;
+            // the underground only in the cutaway (or peeking out of its burrow).
+            const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
+            const atSea = ZONE_SITES[entry.animal.zone]?.kind === "sea";
+            if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && entry.layer.layer === "deep") || (entry.place.burrow && entry.buried && !cutawayOpen))) {
+                entry.middle = null;
+                continue;
+            }
             position.set(where.x, Math.max(where.base, 0), where.z);
             const distance = cameraPosition.distanceTo(position);
             if (distance < LOAD_NEAR_WITHIN && library.has(slug)) library.request(slug, "near");
@@ -979,6 +1158,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
         });
+        // The splashes of the moments.
+        for (let i = ripples.length - 1; i >= 0; i--) {
+            const age = now - ripples[i].start;
+            if (age > 2.4 || age < 0) {
+                ripples.splice(i, 1);
+                continue;
+            }
+            ringList.push({x: ripples[i].x, y: 0.03, z: ripples[i].z, radius: 0.4 + age * 1.7, color: ARRIVAL, alpha: 0.9 * (1 - age / 2.4) ** 1.5});
+        }
+        // The animals that glow, at night: a soft glow on each.
+        const glowing: Array<{x: number; y: number; z: number; strength: number}> = [];
+        if (night > 0.3) {
+            for (const entry of allEntries()) {
+                if (!entry.layer.glow || !entry.middle) continue;
+                glowing.push({x: entry.middle.x, y: entry.middle.y, z: entry.middle.z, strength: Math.min((night - 0.3) / 0.4, 1) * (0.75 + 0.25 * Math.sin(now * 1.7 + entry.phase * 20))});
+            }
+        }
+        layersScene.setGlow(glowing);
         tokens.set(tokenList, camera);
         dots.set(dotList);
         shadows.set(shadowList);
@@ -1067,18 +1264,73 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.x += dx;
             camera.position.z += dz;
         }
-        const groundUnderTarget = Math.max(heightAt(target.x, target.z), 0);
+        const seabed = heightAt(target.x, target.z);
+        // Under the sea (a swimmer looked at, the director's dive) the target stays down there, above the sea floor.
+        const diving = seabed < -0.4 && target.y < -0.15;
+        const groundUnderTarget = diving ? Math.min(target.y, seabed + 0.3) : Math.max(seabed, 0);
         const viewDistance = camera.position.distanceTo(target);
-        // Close up (a gecko on a wall, a beetle on a trunk) the target may stand above the ground: only kept out of it.
-        const lift = (viewDistance < 6 ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
+        // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
+        // may stand above the ground: only kept out of it.
+        const looked = selectedId ? findEntry(selectedId) : null;
+        const aloft = viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro));
+        const lift = (aloft ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
         // (Not while following: a flyer is followed up in the air.)
         if (Math.abs(lift) > 0.001 && !followId) {
             target.y += lift;
             camera.position.y += lift;
         }
         // Close to the ground only when close to what it looks at (a small animal), else well above it.
-        const floor = Math.max(heightAt(camera.position.x, camera.position.z), 0) + Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2);
+        const below = heightAt(camera.position.x, camera.position.z);
+        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
+        // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
+        controls.maxPolarAngle = diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36;
+    };
+
+    // MARK: Layers: underwater and the cutaway
+
+    let underwater = false;
+    let cutawayOpen = false;
+    /** The page's or the director's choice: open, closed, or (null) open when an underground animal is looked at. */
+    let cutawayWanted: boolean | null = null;
+    let cutawayAt: {target: Vector3; azimuth: number} | null = null;
+    const underFog = new Fog(new Color("#2b6f78"), 1, 46);
+    const underDay = new Color("#2f7c85");
+    const underNight = new Color("#0b2229");
+    const stepLayers = (elapsed: number) => {
+        const under = camera.position.y < -0.02 && heightAt(camera.position.x, camera.position.z) < -0.3;
+        if (under !== underwater) {
+            underwater = under;
+            lighting.setUnderwater(under);
+            scene.fog = under ? underFog : fog;
+            vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0;
+            micro.group.visible = !under;
+            ARK_CAUSTICS.value = under ? 0.9 : 0.3;
+        }
+        if (under) {
+            underFog.color.copy(underNight).lerp(underDay, Math.min(Math.max(lighting.daylight.daylight, 0), 1));
+            scene.background = underFog.color;
+        } else if (scene.background) {
+            scene.background = null;
+        }
+        layersScene.setUnderwater(under, camera.position, lighting.daylight.daylight);
+        // The cutaway: in front of what the camera looks at, rebuilt only when that moves on or the camera turns.
+        const selected = selectedId ? findEntry(selectedId) : null;
+        const want = cutawayWanted ?? Boolean(selected?.place.burrow && camera.position.distanceTo(controls.target) < 30);
+        if (!want) {
+            if (cutawayOpen) cutawayOpen = layersScene.setCutaway(null);
+            cutawayAt = null;
+        } else {
+            const middleOfTunnel = selected?.place.burrow ? tunnelPoint(selected.place.burrow, 0.5) : null;
+            const target = middleOfTunnel && selected?.place.burrow ? new Vector3(middleOfTunnel.x, selected.place.burrow.ground, middleOfTunnel.z) : controls.target.clone();
+            const azimuth = Math.atan2(camera.position.x - target.x, camera.position.z - target.z);
+            const turned = cutawayAt ? Math.abs(Math.atan2(Math.sin(azimuth - cutawayAt.azimuth), Math.cos(azimuth - cutawayAt.azimuth))) : Infinity;
+            if (!cutawayAt || cutawayAt.target.distanceTo(target) > 1 || turned > 0.35) {
+                cutawayAt = {target, azimuth};
+                cutawayOpen = layersScene.setCutaway({target, towardCamera: new Vector3(Math.sin(azimuth), 0, Math.cos(azimuth))});
+            }
+        }
+        layersScene.step(elapsed);
     };
 
     /**
@@ -1169,6 +1421,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return bearings[0];
     };
 
+    /** Where an animal's middle is now, drawn or not (off screen, or a layer not drawn from here). */
+    const middleNow = (entry: Entry): Vector3 => {
+        if (entry.middle) return entry.middle.clone();
+        const model = library.get(entry.animal.model_slug);
+        const height = model ? model.height * (entry.length / model.bodyLength) : entry.length * 0.6;
+        const where = pose(entry, model, height, elapsedNow());
+        return new Vector3(where.x, where.base + height / 2, where.z);
+    };
+
     const select = (id: string | null, flyTo: boolean, close = false) => {
         selectedId = id;
         if (followId && followId !== id) endFollow();
@@ -1192,6 +1453,47 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 controls.minDistance = MICRO_MIN_DISTANCE;
                 fly(target, closeDistance, distance > 30 ? 2.2 : 1.4, view.polar, view.azimuth);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? entry.middle : null);
+                return;
+            }
+            // A swimmer under the surface: the camera dives to it, level with it (underwater).
+            const swimming = ZONE_SITES[entry.animal.zone]?.kind === "sea" ? middleNow(entry) : null;
+            if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3 && !close) {
+                const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
+                fly(under(), Math.min(3 + entry.length * 2.2, 14), distance > 30 ? 2 : 1.4, 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
+                return;
+            }
+            // A canopy animal: up at its height, from the clearing's side of its tree (the forest round it would hide it).
+            if (entry.place.canopy && !close) {
+                // Where the leaves don't hide it: from above for one on the crown, from below for one under a limb,
+                // from below and beside its limb for one on it (looking up past the limb, the leaf pads are above it),
+                // level with one on the trunk, out along the trunk's face.
+                const place = entry.place.canopy;
+                const site = ZONE_SITES[entry.animal.zone] ?? ZONE_SITES.farm_garden;
+                const target = middleNow(entry);
+                const point = canopyPoint(entry.animal.zone, place);
+                let azimuth = Math.atan2(site.x - target.x, site.z - target.z);
+                let polar = 2.2;
+                if (place.limb === -1) polar = 0.75;
+                else if (place.limb === -2) {
+                    polar = 1.5;
+                    azimuth = Math.atan2(point.nx, point.nz);
+                } else {
+                    // Square to the limb, on the clearing's side of it.
+                    const side = Math.atan2(point.tz, -point.tx);
+                    const toSite = azimuth;
+                    azimuth = Math.cos(side - toSite) >= 0 ? side : side + Math.PI;
+                    polar = place.mode === "hang" ? 2.55 : 2.15;
+                }
+                fly(target, 2.6 + entry.length * 2.2, distance > 30 ? 2 : 1.4, polar, azimuth);
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? middleNow(entry) : null);
+                return;
+            }
+            // An underground animal: from above its burrow, a little to one side; the cutaway opens in front of it.
+            if (entry.place.burrow && !close) {
+                const burrow = entry.place.burrow;
+                const middle = tunnelPoint(burrow, 0.5);
+                fly(new Vector3(middle.x, burrow.ground - 0.7, middle.z), 5.5 + entry.length * 2, 1.4, 1.2, Math.atan2(Math.sin(burrow.direction + Math.PI / 2), Math.cos(burrow.direction + Math.PI / 2)));
                 return;
             }
             // Where it will rest: its own spot (a flyer lands; a swimmer is followed).
@@ -1400,6 +1702,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             length: displayLength(next.slug),
             full: displayLength(next.slug),
             trueLength: arkBody({model_slug: next.slug}).metres,
+            layer: speciesLayer(next.slug),
             stats: arkStats({model_slug: next.slug}),
             floor: arkBody({model_slug: next.slug}).floor,
             pace: loopPace({model_slug: next.slug}),
@@ -1863,6 +2166,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         controls.update();
         keepInWorld();
         fitCloseUp();
+        stepLayers(elapsed);
         stepTalking(elapsed);
         // The hour: read again every minute (the light changes only a little).
         if (now - lastClock > 60 && !replay) {
@@ -2020,6 +2324,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         hold: (id) => {
             const entry = findEntry(id);
             if (entry) entry.held = true;
+        },
+        moment: (kind, id) => {
+            const now = elapsedNow();
+            const fits = (entry: Entry) => canMoment(kind, entry.animal.model_slug, entry.animal.zone) && !entry.act && !entry.held && (kind !== "primate_drop" || Boolean(entry.place.canopy));
+            const chosen = (id ? findEntry(id) : null) ?? [...entries].sort((a, b) => a.animal.id.localeCompare(b.animal.id)).find(fits) ?? null;
+            if (!chosen || !fits(chosen)) return null;
+            chosen.moment = {kind, start: now, from: null, beats: []};
+            return chosen.animal.id;
+        },
+        setCutaway: (open) => {
+            cutawayWanted = open;
+            cutawayAt = null;
         },
         arrive: (id) => {
             const entry = findEntry(id);

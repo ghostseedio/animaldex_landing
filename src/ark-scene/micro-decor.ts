@@ -65,8 +65,39 @@ export const DECOR_SINK = 0.08;
 /** The leaves of the litter lie this far above the ground. */
 export const LEAF_LIFT = 0.012;
 
+/**
+ * The canopy's trees (the layers addendum): a tall trunk with long limbs
+ * reaching out under pads of leaves, and a crown on top. Birds perch on
+ * the limbs and the crown, primates climb and leap along them, sloths hang
+ * under them, lizards and snakes climb the trunk. In the tree's own metres,
+ * before its turn and scale; the models face +z, angles from +z toward +x.
+ */
+export type CanopyLimb = {angle: number; height: number; length: number; rise: number; base: number; tip: number};
+export type CanopyTree = {height: number; base: number; top: number; limbs: CanopyLimb[]; crown: {y: number; radius: number; squash: number}; pad: {lift: number; radius: number; squash: number}};
+
+export function canopyTree(variant: number): CanopyTree {
+    const height = 6.2 + variant * 0.8;
+    const limbs: CanopyLimb[] = [];
+    for (let k = 0; k < 5; k++) {
+        limbs.push({angle: k * Math.PI * 2 / 5 + variant * 0.4 + 0.3, height: 2.7 + k * 0.62, length: 2.3 + 0.25 * (k % 2), rise: 0.26, base: 0.12, tip: 0.05});
+    }
+    return {height, base: 0.34, top: 0.16, limbs, crown: {y: height + 0.5, radius: 1.5, squash: 0.62}, pad: {lift: 0.8, radius: 0.85, squash: 0.5}};
+}
+
+/** A point along a limb, in the tree's own metres: where its axis is, which way it runs, and its radius there. */
+export function limbAt(limb: CanopyLimb, trunkRadius: number, t: number): {x: number; y: number; z: number; dx: number; dy: number; dz: number; radius: number} {
+    const dx = Math.cos(limb.rise) * Math.sin(limb.angle);
+    const dy = Math.sin(limb.rise);
+    const dz = Math.cos(limb.rise) * Math.cos(limb.angle);
+    const along = trunkRadius * 0.8 + t * limb.length;
+    return {x: dx * along, y: limb.height + dy * along, z: dz * along, dx, dy, dz, radius: limb.base + (limb.tip - limb.base) * t};
+}
+
+/** The land zones' canopy trees: how many stand about each zone's ground (the forests most). */
+export const CANOPY_TREES: Partial<Record<ArkZone, number>> = {rainforest: 4, woodland: 4, river_lake: 2, wetland: 2, grassland: 2, mountains: 2};
+
 export type MicroDecorItem = {
-    kind: "cottage" | "pond" | "flower" | "leaf" | "rock" | "broadleaf";
+    kind: "cottage" | "pond" | "flower" | "leaf" | "rock" | "broadleaf" | "canopy";
     variant: number;
     x: number;
     y: number;
@@ -162,6 +193,23 @@ export function microDecor(): MicroDecorItem[] {
     const tree = {x: c.x + 4.6, z: c.z - 3.2};
     items.push({kind: "broadleaf", variant: 1, x: tree.x, y: ground(tree.x, tree.z), z: tree.z, scale: 1.05, rotation: 0.6, color: "#6f8f3a", zone: "farm_garden"});
     litterPatch("farm_garden", tree.x + 0.4, tree.z + 1.2, 1.5, 34, 0);
+
+    // The canopy's trees: either side of each zone's ground, toward the camera, just past the clearing.
+    for (const [zone, count] of Object.entries(CANOPY_TREES) as Array<[ArkZone, number]>) {
+        const site = ZONE_SITES[zone];
+        const reach = site.kind === "ring" ? LAKE.r + 9 : site.clearing + 3.2;
+        let placed = 0;
+        for (let k = 0; placed < count && k < 40; k++) {
+            const side = k % 2 ? 1 : -1;
+            const angle = Math.PI / 2 + side * (0.75 + 0.42 * Math.floor(k / 2));
+            const x = site.x + Math.cos(angle) * reach;
+            const z = site.z + Math.sin(angle) * reach;
+            if (!onLand(x, z)) continue;
+            if (items.some((item) => Math.hypot(item.x - x, item.z - z) < 3.5)) continue;
+            items.push({kind: "canopy", variant: placed % 2, x, y: ground(x, z), z, scale: 1, rotation: (placed * 1.7 + angle) % (Math.PI * 2), color: zone === "rainforest" ? "#3e6a2c" : zone === "grassland" ? "#7d8540" : "#5f8a3a", zone});
+            placed++;
+        }
+    }
 
     // Every other land zone: a corner of flowers, litter and stones.
     for (const zone of MICRO_ZONES) {

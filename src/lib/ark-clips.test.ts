@@ -10,7 +10,7 @@ import {arkClipCommand} from "@/lib/ark-clips/command";
 import {firstSentence, isPowerVoice, pickArkFacts, type ArkFieldGuide} from "@/lib/ark-clips/facts";
 import {arkClipExperiment, ArkClipRefused, assertPublishable} from "@/lib/ark-clips/publish";
 import {clipProblems} from "@/lib/ark-clips/recorder";
-import {ARK_SHOTS, ArkShotUnavailable, newestArrival, pickArkSubject, placeCues, planArkShot, type ArkMarks} from "@/lib/ark-clips/shots";
+import {ARK_MOMENT_SHOTS, ARK_SHOTS, ArkShotUnavailable, newestArrival, pickArkSubject, placeCues, planArkShot, type ArkMarks} from "@/lib/ark-clips/shots";
 import {videoProblems} from "@/lib/content-video/fix";
 import {planHasAiImagery} from "@/lib/content-video/footage";
 import {isRecordedSourceType, isSourceType, isVideoSourceType, SOURCE_TYPES} from "@/lib/content-video/plan";
@@ -59,9 +59,33 @@ test("field-guide captions are stored first sentences, never the Power's voice",
     assert.deepEqual(pickArkFacts(null), []);
 });
 
+/** A cross-layer moment's shot plans only when someone aboard can act it out: the v2 fixture has no canopy primate. */
+function planned(kind: (typeof ARK_SHOTS)[number], fixture: boolean) {
+    try {
+        return planArkShot(kind, {snapshot, events, fieldGuide: zebraGuide, fixture, now, species: kind === "meet" ? "plains-zebra" : null});
+    } catch (error) {
+        if (error instanceof ArkShotUnavailable && ARK_MOMENT_SHOTS.includes(kind)) return null;
+        throw error;
+    }
+}
+
+test("the cross-layer moments are shot options: the fixture's puffin dives, its humpback surfaces, its barn owl swoops; no primate, no drop", () => {
+    assert.equal(planned("seabird_dive", true)?.subject?.modelSlug, "atlantic-puffin");
+    assert.equal(planned("whale_surface", true)?.subject?.modelSlug, "humpback-whale");
+    assert.equal(planned("owl_swoop", true)?.subject?.modelSlug, "barn-owl");
+    assert.equal(planned("primate_drop", true), null);
+    // Cosmetic only: no act (no meal) in the direction, and the captions are counts, the zone and the general rule.
+    for (const kind of ["seabird_dive", "whale_surface", "owl_swoop"] as const) {
+        const plan = planned(kind, true)!;
+        assert.equal(plan.direction.act, null);
+        assert.doesNotMatch(JSON.stringify(plan.cues), /\b(?:eats?|meals?|hunts?|prey|catch(?:es)?)\b/i);
+    }
+});
+
 test("every shot plans from the fixture as a sample, within 15–45 s", () => {
     for (const kind of ARK_SHOTS) {
-        const plan = planArkShot(kind, {snapshot, events, fieldGuide: zebraGuide, fixture: true, now, species: kind === "meet" ? "plains-zebra" : null});
+        const plan = planned(kind, true);
+        if (!plan) continue;
         assert.equal(plan.dataSource, "fixture");
         assert.match(plan.slug, /^sample-[a-z0-9-]+$/);
         const marks = marksFor(plan, plan.direction.lead, plan.direction.lead + 3.5);
@@ -76,7 +100,8 @@ test("captions never name a person: no bringer labels, no usernames", () => {
     const labels = new Set(snapshot.animals.flatMap((animal) => [animal.brought_by.label, ...(animal.bringers ?? []).map((bringer) => bringer.label)]).filter((label) => label.trim().length > 0));
     assert.ok(labels.size > 0, "the fixture has bringer labels to look for");
     for (const kind of ARK_SHOTS) {
-        const plan = planArkShot(kind, {snapshot, events, fieldGuide: zebraGuide, fixture: false, now, species: kind === "meet" ? "plains-zebra" : null});
+        const plan = planned(kind, false);
+        if (!plan) continue;
         const words = JSON.stringify([plan.cues, plan.title, plan.hookText, arkClipShareCopy(plan)]);
         assert.doesNotMatch(words, /Voyager/i, kind);
         for (const label of Array.from(labels)) assert.ok(!words.includes(label), `${kind} shows "${label}"`);

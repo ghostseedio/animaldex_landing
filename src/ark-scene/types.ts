@@ -1,6 +1,7 @@
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
 import type {ArkStats} from "@/ark-scene/stats";
+import type {ArkMomentKind} from "@/ark-scene/moments";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -215,5 +216,13 @@ export type ArkSceneHandle = {
     hold: (id: string) => void;
     /** A held animal comes aboard now, with the entrance it has in a replay. */
     arrive: (id: string) => void;
+    /**
+     * A cross-layer moment (`moments.ts`: a seabird's dive, a whale surfacing,
+     * an owl's swoop, a primate dropping to the ground), cosmetic only, by
+     * this animal or the first that can: returns who acts it out, or null.
+     */
+    moment: (kind: ArkMomentKind, id?: string | null) => string | null;
+    /** Open the ground's cutaway (true), close it (false), or (null) open it when an underground animal is looked at. */
+    setCutaway: (open: boolean | null) => void;
     dispose: () => void;
 };

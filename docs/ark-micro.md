@@ -153,3 +153,157 @@ In `scratchpad/ark/web-shots/micro/` (`?fixture=micro`; `?hour=11` day, `?hour=2
 - **The porch light's glow sprite is faint after tone mapping;** the bulb and the lit windows carry the night look.
 - **The near plane drops to 1 cm close up,** so depth precision far away is lower while zoomed in. Nothing visible was seen, but there is no logarithmic depth.
 - **The Home grid changed once** because the cottage and the pond are new obstacles: the farm's animals shifted to new spots with this release (not when others arrive or leave).
+
+---
+
+# Layers: canopy, ground, underground, sea
+
+The owner's vertical-layers addendum, on the same branch, after the microhabitats. The island doesn't grow: the layers stack on it, and each zone can take more trees, burrows and feeding grounds later.
+
+## 1. Which layer: `scripts/ark-layers.mts` → `src/ark-scene/layers.json`
+
+The script is deterministic and uses stored data only, keeping the deciding phrase:
+- `voyage_species.zone`;
+- the traits lane's `realm` (`scratchpad/ark/traits.json`);
+- the rig pipeline's body plans (`~/animaldex-talking-models/rig/plans.json`);
+- `typical_habitat` / `where_to_look` / `sleep_pattern`;
+- taxonomy.
+
+It runs over the live catalogue export of 2026-11-10 (2,465 species).
+
+| Layer | Species | How placed with confidence |
+|---|---|---|
+| **canopy** | **203** (perch 124, climb 70, leap 6, hang 3) | Birds that fly, with a tree phrase (canopy, treetops, branches, perches) before any ground phrase. Mammals, reptiles and frogs need a plain "arboreal / canopy / treetops / lives in trees" in `typical_habitat`. Sloths by family (hang), gibbons and lemurs leap, bats hang. 37 are primates (flag `p`). |
+| **ground** | **1,744**, plus **164** with a burrow drawn by them (flag `b`) | The rest. A burrow when the text says burrows, digs or warrens. |
+| **underground** | **29** | Moles, mole-rats, golden moles, zokors and the like by family, or "underground / subterranean / fossorial / tunnels" in the habitat text. |
+| **reef** (coral_reef zone) | **129** (swim 89, floor 38, filter 2) | Floor: crabs, stars, urchins, molluscs, octopus. Filter: mantas. |
+| **open_sea** (open_ocean zone) | **121** (swim 102, floor 12, filter 7) | Filter: whale shark, basking shark, the baleen whales. |
+| **deep** | **45** (2 glow at night) | "Deep sea / abyssal / midwater / twilight zone / bathypelagic / hydrothermal vents / continental slopes / seamounts" in the text. **Glow** only where the text says so: the stoplight loosejaw ("bioluminescent zones") and the Australian pineapplefish ("two small glowing points"). The firefly squid and the lanternfish say it only in Power-voice names ("Blueglow", "Glowmigration"), which don't count. |
+| **no usable text** (on the ground by default) | **30** | american-green-tree-frog, australasian-pipit, buru-babirusa, caddisfly, common-soil-centipede, common-toad, coopers-hawk, false-widow-spider, giant-house-spider, great-spangled-fritillary, greater-antillean-grackle, grey-heron, hairy-rove-beetle, javanese-mud-dauber, lace-bug, masked-lapwing, mediterranean-sand-smelt, northern-white-cheeked-gibbon, peaceful-dove, pennsylvania-ground-beetle, poplar-gall-aphid, red-cotton-stainer-bug, ruby-pyrausta-moth, sand-lizard, silver-gull, song-thrush, stone-centipede, swimming-crab, vapourer-moth, western-fence-lizard |
+
+**Examples:**
+- **canopy**
+  - Harpy Eagle: "Tall rainforest canopy fits…"
+  - Black Giant Squirrel: "…keeping to the upper canopy…"
+  - Blue-naped Parrot: look "…perch high in exposed crowns…"
+  - Siamang: "…Sumatran and Malay rainforest canopies." (leap)
+  - Brown-throated Sloth: taxonomy, Bradypodidae (hang)
+- **underground**
+  - Star-nosed Mole: taxonomy, Talpidae
+  - Cape Golden Mole: taxonomy, Chrysochloridae
+  - Hieroglyphic Cicada: "…nymphs develop underground on plant roots…"
+  - Ball Python: "…is spent underground in abandoned mammal burrows."
+- **deep**
+  - Blobfish: "Deep continental slopes, cold seafloor…"
+  - Vampire Squid: "…deep midwater, cold dark depths…"
+  - Black Swallower: "…the dark mid-water zone…"
+- **burrow**
+  - Burrowing Owl: "…burrow-rich ground."
+  - Crest-tailed Mulgara: "It digs burrows in firm sand…"
+
+Canopy species are placed in their zone. The canopy trees stand in the rainforest (134 canopy species), woodland (30), grassland (12), wetland (9), river and lake (7) and mountains (1). Zones without them borrow the nearest zone's trees: 8 at Home, 1 in the desert, 1 on the shore.
+
+The ecology is unchanged: the server's realm filter already keeps land, water and air apart, and the layers decide nothing that happens.
+
+## 2. The scene
+
+**Canopy** (`micro-decor.ts` `canopyTree`, drawn by `vegetation.ts`, placed by `layers.ts`):
+- **The trees:** 16 canopy trees stand beside the zones' ground: 4 each in the rainforest and woodland, 2 each by the lake, in the wetland, on the grassland and in the mountains. Each is a 6–7 m trunk with five long limbs under pads of leaves, and a crown.
+- **Placement:** a canopy animal takes its slot's point on its zone's limbs, by the same low-discrepancy scheme as the microhabitats, so nobody moves. A troop spreads over the next limbs round.
+- **Perchers** sit toward the limb tips, and one in four on the crown. A bird of the air (`ARK_FLYERS`) still circles and comes back to its perch to rest.
+- **Climbers** crawl to and fro along their limb, or (one in three) up and down the trunk, turning round in the pauses.
+- **Leapers** leap to the next limb on an arc now and then, and back.
+- **Hangers** hang under a limb, back down, swaying slowly.
+- **Procedural only:** the rig manifest has no climbing, leaping or hanging clips marked pass, and no rig clips are loadable in the scene.
+- **Camera:** looking at a canopy animal, the camera comes from where the leaves don't hide it. That is from above for one on the crown, from below for a hanger, from below and square to the limb for one on it, and level with one on the trunk.
+
+**Underground** (`layers.ts` `burrowAt` / `tunnelPoint`, `layers-scene.ts`):
+- **On the surface:** each underground animal has a burrow mouth at its spot (a dark mouth with two mounds of dug earth), and moles get molehills along their tunnel. The 164 ground diggers get a burrow mouth beside them.
+- **In the tunnel:** the animal spends most of its time in its chamber, 0.6–0.9 m down at the end of a 2.2 m tunnel. Now and then it runs up the tunnel and peeks out of the mouth for a few seconds. Asleep it stays down.
+- **The cutaway** opens when an underground animal is looked at (or with `setCutaway(true)`):
+  - clipping planes remove the ground, the grass and the plants in a box in front of it;
+  - a pit of soil with strata (topsoil, clay, a band of stones) shows the tunnels and chambers, drawn hollow so whoever is in them can be seen;
+  - it is rebuilt only when the target moves or the camera turns.
+
+**The sea** (`layers-scene.ts`, `terrain.ts`, `index.ts`):
+- **Underwater mode:** with the camera below the surface (looking at a swimmer dives the camera to it, level with it), the scene switches over:
+  - a blue-green haze (darker at night) replaces the sky;
+  - the surface is seen from below;
+  - shafts of light come down from it by day;
+  - the caustics already play on the sea floor; the ground shader's are stronger underwater.
+- **On the floor:** reef and sea bottom-dwellers (crabs, octopus, stars) sit there and sway a little.
+- **Filter feeders** loop round the nearest of three drifting plankton clouds (two in the open water, one on the reef).
+- **The deep** swim 4–9 m down over deep water.
+- **Glow:** at night the two glowing species glow, a soft pulsing light seen from above and below.
+
+**Only the active layer in full** (decided per frame):
+- under the sea, nothing of the land is drawn: animals, grass and the cottage;
+- above it, the deep isn't drawn;
+- the underground is drawn only in the cutaway (or peeking out).
+
+The reader's own animals and the selected one are always drawn.
+
+**Cross-layer moments** (`moments.ts`, the scene's `moment(kind, id?)`):
+- **seabird_dive:** out over the nearest sea, a plunge with a splash, afloat a moment, back.
+- **whale_surface:** a whale or dolphin (not a whale shark) rises, its back breaks the surface, it blows, it goes down.
+- **owl_swoop:** off its branch (an owl on the ground first flies up), a long low swoop to the ground ahead, and back.
+- **primate_drop:** a canopy primate drops to the ground, sits, turns round, leaps back up.
+
+All four are cosmetic: no other animal takes part, nothing is caught, and the animal ends where it began (tested).
+
+They are **shot options for the livestream director**: `ARK_SHOTS` gains `seabird_dive`, `whale_surface`, `owl_swoop` and `primate_drop` (`lib/ark-clips/shots.ts`, merged from `origin/ark-marketing-clips`).
+- The planner picks a subject that can act it out. Its captions are the live count, the zone and the general rule; there is never a meal word.
+- The director (`ark-scene/director.ts`) holds the camera on the animal and calls `handle.moment` as the lead ends.
+- The v2 fixture has a puffin, a humpback and a barn owl, but no canopy primate, so `primate_drop` is unavailable there (tested).
+
+**Fixtures:** `?fixture=layers` is the micro fixture plus an animal of every layer and mode.
+
+## 3. Screenshots (`scratchpad/ark/web-shots/layers/`)
+
+- **Canopy:**
+  - `canopy-capuchin.png`: a capuchin on a limb, a sloth hanging under one;
+  - `canopy-spider-monkeys.png`: spider monkeys climbing the trunk and on a limb;
+  - `canopy-siamang.png`, `canopy-sloth.png`, `canopy-toucan.png`: these three are cluttered by leaf pads.
+- **Underground cutaway:**
+  - `underground-mole.png`: the pit, the tunnel, the molehills, the mole peeking out;
+  - `underground-mole-rats.png` (earlier pass): a naked mole-rat peeking out on the desert.
+- **Underwater:**
+  - `reef-octopus.png`: a wonderpus on the reef floor, coral, kelp, turtles;
+  - `open-sea-whale-shark.png`: the open water, caustics on the floor;
+  - `deep-night-loosejaw.png`: the deep at night, the loosejaw glowing;
+  - `reef-night-pineapplefish.png`: the reef at night, the pineapplefish glowing.
+- **Moments:**
+  - `moment-whale-surface.png`: a humpback blowing at the surface, with a splash ring;
+  - `moment-seabird-dive.png`: a gull afloat after its dive, with a splash ring;
+  - `moment-primate-drop.png`: an orangutan down on the ground under its tree;
+  - `moment-owl-swoop.png`: the owl is out of frame (weak).
+- **Contact sheets:** `sheet1`–`sheet7.png`.
+
+## 4. Performance (390×844 @3x, 4× CPU throttle, M3 Max, tier settles at medium; all p50 16.7 ms, p95 ≤ 16.8 ms)
+
+| Scenario | Draw calls | Triangles | CPU ms/frame |
+|---|---|---|---|
+| `?fixture=1` overview orbit (with canopy trees and corners) | 142 | 664k | 4.28 |
+| `?fixture=layers` (+55 animals) overview orbit | 179 | 694k | 5.94 |
+| `?fixture=layers` open land idle | 73 | 497k | 3.80 |
+| underwater, whale shark | **39** | 212k | 3.80 |
+| underwater, reef octopus | **56** | 385k | 3.75 |
+| cutaway, mole | 55 | 556k | 3.62 |
+| canopy, capuchin | 58 | 580k | 3.71 |
+
+Underwater, the land layer is skipped: 39–56 draw calls against 142–179 above the water. The canopy trees add about 6 draw calls and 40k triangles to the overview.
+
+## 5. What's weak
+
+- **Procedural motion only.** No climbing, leaping, hanging or burrowing clips are marked pass, and the scene can't load rig clips: limbs glide, leaps are arcs, hangers sway rigidly.
+- **Canopy close-ups are often cluttered** by the limbs' leaf pads (the sloth, the toucan, the siamang). The camera picks a side by the animal's mode but doesn't ray-test for leaves.
+- **Classification errors from the text:**
+  - "Deep water" in `where_to_look` makes the false killer whale "deep".
+  - The common treeshrew is "underground" from "wet tunnels".
+  - Meerkats and fennec foxes were taken out of underground: "burrow systems" now means a burrow by a ground animal.
+  - 1,744 species have no layer phrase and stay on the ground, including many forest birds whose text names the forest but not the trees.
+- **Glow:** the stored data supports glow for only 2 species.
+- **The wetland's ground never dips below the water** where its animals are, so its pond dwellers use the lake.
+- **The cutaway** is a box in front of the target, not a true section, and toggling it recompiles the clipped materials once (a short hitch).
+- **Underwater from the surface:** the water surface is drawn single-sided from below by a separate plane, so from just under it the far surface reads flat.
+- **No changes to the server or the ecology** (as asked): layers are visual only.

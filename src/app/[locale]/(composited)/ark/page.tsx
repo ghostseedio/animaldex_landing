@@ -22,7 +22,9 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
  * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends)
  * or `?fixture=micro` (the v2 fixture plus small animals at their microhabitats:
- * geckos, spiders and moths on the cottage, ants, bees on flowers, beetles on bark...).
+ * geckos, spiders and moths on the cottage, ants, bees on flowers, beetles on bark...)
+ * or `?fixture=layers` (that plus the vertical layers: primates, a sloth and birds in the
+ * canopy, moles underground, crabs and an octopus on the reef floor, the deep's fish, a whale shark).
  *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
@@ -45,7 +47,7 @@ export const dynamic = "force-dynamic";
 
 type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string}};
 
-type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro";
+type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers";
 
 function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     const asked = searchParams.fixture;
@@ -54,6 +56,7 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     if (development && asked === "grow") return "grow";
     if (development && asked === "sizes") return "sizes";
     if (development && asked === "micro") return "micro";
+    if (development && asked === "layers") return "layers";
     if (development && asked && asked !== "0") return "full";
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
@@ -75,6 +78,7 @@ async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; f
     if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
     if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
     if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null};
+    if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
     return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
@@ -192,6 +196,70 @@ function withSmallAnimals(full: ArkSnapshot): ArkSnapshot {
         }
     });
     return {...full, animals, counts: {...full.counts, animals: animals.length, species: full.counts.species + extra.length}};
+}
+
+/**
+ * `?fixture=layers`: the micro fixture plus an animal of every layer and mode
+ * (docs/ark-micro.md, "Layers"): primates climbing and leaping, a sloth
+ * hanging, a toucan perching in the canopy; moles and mole-rats underground;
+ * crabs and an octopus on the reef floor, a glowing pineapplefish, a whale
+ * shark at the plankton, the deep's lanternfish, loosejaw (glowing) and giant
+ * squid; a tawny owl and a gull for the moments.
+ */
+function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
+    type Zone = ArkSnapshot["animals"][number]["zone"];
+    type Activity = NonNullable<ArkSnapshot["animals"][number]["activity"]>;
+    const extra: Array<[string, string, Zone, Activity, number?]> = [
+        ["spider-monkey", "Spider Monkey", "rainforest", "diurnal", 3],
+        ["siamang", "Siamang", "rainforest", "diurnal"],
+        ["sumatran-orangutan", "Sumatran Orangutan", "rainforest", "diurnal"],
+        ["tufted-capuchin", "Tufted Capuchin", "rainforest", "diurnal"],
+        ["brown-throated-sloth", "Brown-throated Sloth", "rainforest", "any"],
+        ["keel-billed-toucan", "Keel-billed Toucan", "rainforest", "diurnal"],
+        ["clouded-leopard", "Clouded Leopard", "rainforest", "nocturnal"],
+        ["red-squirrel", "Red Squirrel", "woodland", "diurnal"],
+        ["star-nosed-mole", "Star-nosed Mole", "woodland", "any"],
+        ["naked-mole-rat", "Naked Mole-rat", "desert", "any", 2],
+        ["cape-golden-mole", "Cape Golden Mole", "desert", "nocturnal"],
+        ["northern-hairy-nosed-wombat", "Northern Hairy-nosed Wombat", "grassland", "nocturnal"],
+        ["red-spotted-guard-crab", "Red-spotted Guard Crab", "coral_reef", "any"],
+        ["wonderpus-octopus", "Wonderpus Octopus", "coral_reef", "any"],
+        ["common-octopus", "Common Octopus", "coral_reef", "nocturnal"],
+        ["australian-pineapplefish", "Australian Pineapplefish", "coral_reef", "nocturnal"],
+        ["whale-shark", "Whale Shark", "open_ocean", "any"],
+        ["stoplight-loosejaw", "Stoplight Loosejaw", "open_ocean", "any"],
+        ["spotted-lanternfish", "Spotted Lanternfish", "open_ocean", "any", 3],
+        ["giant-squid", "Giant Squid", "open_ocean", "any"],
+        ["tawny-owl", "Tawny Owl", "woodland", "nocturnal"],
+        ["herring-gull", "Herring Gull", "seashore", "diurnal"]
+    ];
+    const animals = [...base.animals];
+    extra.forEach(([slug, name, zone, activity, many = 1], i) => {
+        const slot = Math.max(-1, ...animals.filter((a) => a.zone === zone).map((a) => a.slot ?? -1)) + 1;
+        for (let rank = 0; rank < many; rank++) {
+            animals.push({
+                id: `00000000-0000-4000-a000-${String(i * 10 + rank).padStart(12, "0")}`,
+                species_profile_id: `layer-${slug}`,
+                name,
+                scientific_name: null,
+                model_slug: slug,
+                zone,
+                arrived_at: "2026-11-01T12:00:00Z",
+                brought_by: {label: "Voyager 1", named: false},
+                mine: false,
+                origin: "arrived",
+                generation: 0,
+                condition: "well_fed",
+                born_ark_day: 3,
+                activity,
+                sociality: many > 1 ? "group" : "solitary",
+                bringers: [{label: "Voyager 1", named: false}],
+                slot,
+                slot_rank: rank
+            });
+        }
+    });
+    return {...base, animals, counts: {...base.counts, animals: animals.length, species: base.counts.species + extra.length}};
 }
 
 function modelBase(): string {

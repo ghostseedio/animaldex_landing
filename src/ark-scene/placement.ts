@@ -26,6 +26,7 @@
  */
 
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
+import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
@@ -53,6 +54,10 @@ export type Placement = {
      * `ground` is the height of the surface it is on, and `x`, `z` the point.
      */
     micro?: MicroPlace;
+    /** A canopy animal (`layers.ts`): on a limb, the crown or a trunk of its zone's canopy trees; `ground` is the height it is at. */
+    canopy?: CanopyPlace;
+    /** An underground animal: its burrow (the entrance at its spot, the tunnel and the chamber below). */
+    burrow?: Burrow;
 };
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -358,6 +363,22 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
             placed.set(animal.id, chosen);
             continue;
         }
+        // A canopy animal: its slot's point on the zone's canopy trees.
+        const layer = speciesLayer(animal.model_slug);
+        if (layer.layer === "canopy") {
+            const perch = canopyPlace(zoneKey as ArkAnimal["zone"], slotIndex, rank, layer.mode, displayLength(animal));
+            if (perch) {
+                const point = canopyPoint(zoneKey as ArkAnimal["zone"], perch);
+                const chosen: Placement = {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), water: false, canopy: perch};
+                const cluster = clusters.get(key)!;
+                if (cluster.count > 1) {
+                    chosen.leader = cluster.leader;
+                    chosen.rank = rank;
+                }
+                placed.set(animal.id, chosen);
+                continue;
+            }
+        }
         const kind = slotKind(animal, slotIndex);
         const centreIndex = gridIndex(layoutOf(zoneKey, site), kind, slotIndex);
         const centre = gridSpot(zoneKey, site, centreIndex);
@@ -372,6 +393,8 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         // A cluster faces much the same way, each a little turned; a lone one as its slot says.
         if (rank > 0 && site.kind !== "sea") chosen.yaw += (((ownHash >>> 20) % 100) / 100 - 0.5) * 0.9;
         if (kind === "cover" && rank === 0 && obstacles.covers(spot.x, spot.z)) chosen.covered = true;
+        // Underground: its burrow's entrance at its spot.
+        if (layer.layer === "underground" && !chosen.water) chosen.burrow = burrowAt(chosen.x, chosen.z, chosen.ground, `${zoneKey}#${slotIndex}#${rank}`, displayLength(animal));
         const cluster = clusters.get(key)!;
         if (cluster.count > 1) {
             chosen.leader = cluster.leader;

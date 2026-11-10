@@ -38,7 +38,9 @@ export type DecorKind =
     | "cottage"
     | "pond"
     | "flower"
-    | "leaf";
+    | "leaf"
+    // The canopy's trees (`micro-decor.ts` canopyTree): limbs to perch, climb and hang on.
+    | "canopy";
 
 export type DecorItem = {
     kind: DecorKind;
