@@ -1,0 +1,53 @@
+{
+ "voyage": {
+  "slug": "first",
+  "name": "The first Ark",
+  "started_at": "2026-11-02T18:12:05Z"
+ },
+ "counts": {
+  "animals": 2,
+  "species": 2,
+  "founders": 2
+ },
+ "zones": [
+  {
+   "key": "grassland",
+   "animals": 1
+  },
+  {
+   "key": "woodland",
+   "animals": 1
+  }
+ ],
+ "animals": [
+  {
+   "id": "b548ea75-c1c3-4d92-a5f0-e0230f7af375",
+   "species_profile_id": "7e2ffcc3-79dc-4677-87be-b2481eec26c2",
+   "name": "Red-tailed Hawk",
+   "scientific_name": "Buteo jamaicensis",
+   "model_slug": "red-tailed-hawk",
+   "zone": "woodland",
+   "arrived_at": "2026-11-02T18:12:05Z",
+   "brought_by": {
+    "label": "Voyager 1",
+    "named": false
+   },
+   "mine": false
+  },
+  {
+   "id": "750f57cd-e63a-4bf3-a580-4d2c666d7f41",
+   "species_profile_id": "3aa1fb77-3f0b-4a0f-9c86-790111a40c08",
+   "name": "Komodo Dragon",
+   "scientific_name": "Varanus komodoensis",
+   "model_slug": "komodo-dragon",
+   "zone": "grassland",
+   "arrived_at": "2026-11-09T23:48:47Z",
+   "brought_by": {
+    "label": "Voyager 2",
+    "named": false
+   },
+   "mine": false
+  }
+ ],
+ "as_of": "2026-11-10T09:00:00Z"
+}

@@ -18,6 +18,9 @@ const DYNAMIC_ALLOWLIST = [
     // signed-in visitors); reads the intro-language cookie and Accept-Language.
     "app/[locale]/(composited)/account/page.tsx",
     "app/[locale]/(composited)/u/[handle]/page.tsx",
+    // The shared Ark: noindex until launch, read per request as the visitor
+    // (their own animals come back `mine`), with development's ?fixture= switch.
+    "app/[locale]/(composited)/ark/page.tsx",
     "app/[locale]/(composited)/animals/search/page.tsx",
     // On-demand comparisons for unpublished pairs: noindex, robots-disallowed,
     // reads the generated row fresh so a just-generated pair shows at once.

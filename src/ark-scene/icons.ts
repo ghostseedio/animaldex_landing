@@ -1,0 +1,265 @@
+/**
+ * Animals seen from far: each species' icon art (the apps' `animals/<slug>.webp`)
+ * on a round token that faces the camera, one draw call for all of them.
+ *
+ * The icons are drawn into one atlas as they load. A token keeps a readable
+ * size on screen however far away it is (between MIN_PIXELS and MAX_PIXELS),
+ * stands on its animal's spot, and is sorted back to front each frame so
+ * the soft edges overlap cleanly.
+ */
+
+import {
+    CanvasTexture,
+    Color,
+    DynamicDrawUsage,
+    InstancedBufferAttribute,
+    InstancedMesh,
+    LinearFilter,
+    LinearMipmapLinearFilter,
+    Matrix4,
+    PlaneGeometry,
+    ShaderMaterial,
+    SRGBColorSpace,
+    UniformsLib,
+    UniformsUtils,
+    Vector3,
+    type Camera
+} from "three";
+
+const CELL = 128;
+const PAD = 6;
+
+export type TokenInstance = {
+    slug: string;
+    x: number;
+    /** The ground (or water) the token stands on. */
+    y: number;
+    z: number;
+    /** Size in metres when close enough for that to be bigger than MIN_PIXELS. */
+    size: number;
+    dim: number;
+    /** 0 none, 1 the viewer's own, 2 selected. */
+    ring: number;
+    /** 0…1, an entrance's progress. */
+    grow: number;
+};
+
+const VERTEX = `
+#include <common>
+#include <fog_pars_vertex>
+attribute vec4 tokenCell;
+attribute vec4 tokenState;
+uniform float worldPerPixel;
+uniform float minPixels;
+uniform float maxPixels;
+varying vec2 vUv;
+varying vec4 vCell;
+varying vec4 vState;
+void main() {
+    vec4 centre = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    float size = length(instanceMatrix[0].xyz);
+    float perPixel = worldPerPixel * max(-centre.z, 0.001);
+    size = clamp(size, minPixels * perPixel, maxPixels * perPixel) * tokenState.w;
+    vec4 mvPosition = centre;
+    mvPosition.xy += (position.xy + vec2(0.0, 0.5)) * size;
+    gl_Position = projectionMatrix * mvPosition;
+    vUv = uv;
+    vCell = tokenCell;
+    vState = tokenState;
+    #include <fog_vertex>
+}
+`;
+
+const FRAGMENT = `
+#include <common>
+#include <fog_pars_fragment>
+uniform sampler2D atlas;
+uniform vec3 backdrop;
+uniform vec3 edge;
+uniform vec3 mineRing;
+uniform vec3 selectedRing;
+uniform vec3 dimTint;
+varying vec2 vUv;
+varying vec4 vCell;
+varying vec4 vState;
+void main() {
+    vec2 p = vUv - 0.5;
+    float r = length(p) * 2.0;
+    float aa = fwidth(r) * 1.2;
+    float disc = 1.0 - smoothstep(0.84 - aa, 0.84 + aa, r);
+    float shadow = (1.0 - smoothstep(0.7, 1.0, length(p - vec2(0.0, -0.035)) * 2.0)) * 0.28;
+    vec3 colour = backdrop;
+    vec2 iconUv = p / 0.66 + 0.5;
+    if (vCell.z > 0.0 && iconUv.x > 0.0 && iconUv.x < 1.0 && iconUv.y > 0.0 && iconUv.y < 1.0) {
+        vec4 icon = texture2D(atlas, vCell.xy + iconUv * vCell.zw);
+        colour = mix(colour, icon.rgb, icon.a);
+    }
+    float band = smoothstep(0.7 - aa, 0.7 + aa, r) * disc;
+    vec3 ring = vState.y > 1.5 ? selectedRing : vState.y > 0.5 ? mineRing : edge;
+    float ringWidth = vState.y > 0.5 ? 1.0 : 0.35;
+    colour = mix(colour, ring, band * ringWidth);
+    float grey = dot(colour, vec3(0.299, 0.587, 0.114));
+    colour = mix(colour, mix(vec3(grey), dimTint, 0.5), vState.x * 0.7);
+    float alpha = (disc + shadow * (1.0 - disc)) * (1.0 - 0.45 * vState.x);
+    if (alpha < 0.01) discard;
+    gl_FragColor = vec4(disc > 0.0 ? colour : vec3(0.0), alpha);
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+}
+`;
+
+export class IconTokens {
+    readonly mesh: InstancedMesh;
+    private readonly material: ShaderMaterial;
+    private readonly canvas: HTMLCanvasElement;
+    private readonly context: CanvasRenderingContext2D;
+    private readonly texture: CanvasTexture;
+    private readonly cells = new Map<string, {index: number; loaded: boolean}>();
+    private readonly columns: number;
+    private capacity = 0;
+    private cellAttribute!: InstancedBufferAttribute;
+    private stateAttribute!: InstancedBufferAttribute;
+    private atlasDirty = false;
+    private disposed = false;
+    private readonly matrix = new Matrix4();
+    private readonly view = new Vector3();
+    onIconLoad: () => void = () => undefined;
+
+    constructor(private readonly iconUrl: (slug: string) => string, atlasSize = 2048) {
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = atlasSize;
+        this.canvas.height = atlasSize;
+        this.context = this.canvas.getContext("2d") as CanvasRenderingContext2D;
+        this.columns = Math.floor(atlasSize / CELL);
+        this.texture = new CanvasTexture(this.canvas);
+        this.texture.colorSpace = SRGBColorSpace;
+        this.texture.minFilter = LinearMipmapLinearFilter;
+        this.texture.magFilter = LinearFilter;
+        this.texture.flipY = false;
+        this.material = new ShaderMaterial({
+            vertexShader: VERTEX,
+            fragmentShader: FRAGMENT,
+            uniforms: UniformsUtils.merge([
+                UniformsLib.fog,
+                {
+                    atlas: {value: null},
+                    worldPerPixel: {value: 0.01},
+                    minPixels: {value: 30},
+                    maxPixels: {value: 64},
+                    backdrop: {value: new Color("#f6f1e7")},
+                    edge: {value: new Color("#d8cdb9")},
+                    mineRing: {value: new Color("#a7f432")},
+                    selectedRing: {value: new Color("#ffffff")},
+                    dimTint: {value: new Color("#ecdcc4")}
+                }
+            ]),
+            transparent: true,
+            depthWrite: false,
+            fog: true
+        });
+        this.material.uniforms.atlas.value = this.texture;
+        this.mesh = new InstancedMesh(new PlaneGeometry(1, 1), this.material, 1);
+        this.mesh.frustumCulled = false;
+        this.mesh.renderOrder = 5;
+        this.mesh.count = 0;
+        this.grow(64);
+    }
+
+    private grow(capacity: number) {
+        this.capacity = capacity;
+        const geometry = this.mesh.geometry;
+        this.cellAttribute = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
+        this.stateAttribute = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
+        this.cellAttribute.setUsage(DynamicDrawUsage);
+        this.stateAttribute.setUsage(DynamicDrawUsage);
+        geometry.setAttribute("tokenCell", this.cellAttribute);
+        geometry.setAttribute("tokenState", this.stateAttribute);
+        const matrices = new InstancedBufferAttribute(new Float32Array(capacity * 16), 16);
+        matrices.setUsage(DynamicDrawUsage);
+        this.mesh.instanceMatrix = matrices;
+    }
+
+    /** The screen's scale: world units per CSS pixel at one unit from the camera. */
+    setViewport(fovDegrees: number, heightPixels: number, compact: boolean) {
+        this.material.uniforms.worldPerPixel.value = 2 * Math.tan(fovDegrees * Math.PI / 360) / Math.max(heightPixels, 1);
+        this.material.uniforms.minPixels.value = compact ? 30 : 34;
+        this.material.uniforms.maxPixels.value = compact ? 60 : 72;
+    }
+
+    /** The token's size on screen at this distance, in CSS pixels (for picking). */
+    pixelSize(sizeMetres: number, distance: number): number {
+        const perPixel = this.material.uniforms.worldPerPixel.value * Math.max(distance, 0.001);
+        return Math.min(Math.max(sizeMetres / perPixel, this.material.uniforms.minPixels.value), this.material.uniforms.maxPixels.value);
+    }
+
+    /** Starts loading a species' icon into the atlas. */
+    ensure(slug: string) {
+        if (this.cells.has(slug) || this.disposed) return;
+        const index = this.cells.size;
+        if (index >= this.columns * this.columns) return;
+        const cell = {index, loaded: false};
+        this.cells.set(slug, cell);
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.decoding = "async";
+        image.onload = () => {
+            if (this.disposed) return;
+            const x = (index % this.columns) * CELL;
+            const y = Math.floor(index / this.columns) * CELL;
+            const inner = CELL - PAD * 2;
+            const scale = Math.min(inner / image.width, inner / image.height);
+            const w = image.width * scale;
+            const h = image.height * scale;
+            this.context.clearRect(x, y, CELL, CELL);
+            this.context.drawImage(image, x + (CELL - w) / 2, y + (CELL - h) / 2, w, h);
+            cell.loaded = true;
+            this.atlasDirty = true;
+            this.onIconLoad();
+        };
+        image.src = this.iconUrl(slug);
+    }
+
+    /** This frame's tokens; sorted far to near from the camera, marked ones last. */
+    set(tokens: TokenInstance[], camera: Camera) {
+        if (this.atlasDirty) {
+            this.texture.needsUpdate = true;
+            this.atlasDirty = false;
+        }
+        if (tokens.length > this.capacity) this.grow(Math.max(tokens.length, this.capacity * 2));
+        const sorted = tokens
+            .map((token) => {
+                this.view.set(token.x, token.y, token.z).applyMatrix4(camera.matrixWorldInverse);
+                return {token, depth: this.view.z};
+            })
+            // Far to near, and the marked ones (the viewer's own, the selected) over the rest.
+            .sort((a, b) => (a.token.ring > 0 ? 1 : 0) - (b.token.ring > 0 ? 1 : 0) || a.depth - b.depth);
+        const atlasSize = this.canvas.width;
+        sorted.forEach(({token}, i) => {
+            const cell = this.cells.get(token.slug);
+            this.matrix.makeScale(token.size, token.size, token.size).setPosition(token.x, token.y, token.z);
+            this.mesh.setMatrixAt(i, this.matrix);
+            if (cell?.loaded) {
+                const x = (cell.index % this.columns) * CELL;
+                const y = Math.floor(cell.index / this.columns) * CELL;
+                // Rows run down the canvas and the texture isn't flipped: v grows downward, so the icon's top is v0.
+                this.cellAttribute.setXYZW(i, x / atlasSize, (y + CELL) / atlasSize, CELL / atlasSize, -CELL / atlasSize);
+            } else {
+                this.cellAttribute.setXYZW(i, 0, 0, 0, 0);
+            }
+            this.stateAttribute.setXYZW(i, token.dim, token.ring, 0, token.grow);
+        });
+        this.mesh.count = sorted.length;
+        this.mesh.instanceMatrix.needsUpdate = true;
+        this.cellAttribute.needsUpdate = true;
+        this.stateAttribute.needsUpdate = true;
+        this.mesh.visible = sorted.length > 0;
+    }
+
+    dispose() {
+        this.disposed = true;
+        this.mesh.geometry.dispose();
+        this.material.dispose();
+        this.texture.dispose();
+        this.mesh.dispose();
+    }
+}

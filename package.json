@@ -36,7 +36,9 @@
     "symbolism:generate": "node scripts/generateSymbolismPostFiles.cjs",
     "symbolism:queue": "node scripts/generateSymbolismBlogQueue.cjs",
     "symbolism:validate": "node scripts/validateSymbolismPosts.cjs",
-    "symbolism:seed-images": "node scripts/seedSymbolismImages.cjs"
+    "symbolism:seed-images": "node scripts/seedSymbolismImages.cjs",
+    "build:ark": "node scripts/build-ark-bundle.mjs",
+    "ark:fixtures": "node scripts/generate-ark-fixtures.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.1",
