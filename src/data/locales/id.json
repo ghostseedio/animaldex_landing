@@ -2918,7 +2918,7 @@
       "offerNew": "Kalau ini berhasil, seekor {species} naik ke Ark",
       "offerNewAn": "Kalau ini berhasil, seekor {species} naik ke Ark",
       "offerPair": "Kalau ini berhasil, pasangan {species}-mu akan lengkap",
-      "offerMilestone": "Kalau ini berhasil, pasangan {species}-mu mendapat pencapaian",
+      "offerMilestone": "Kalau berhasil, {species} kamu mencapai tonggak baru",
       "arrival": "Seekor {species} naik ke Ark",
       "arrivalAn": "Seekor {species} naik ke Ark",
       "arrivalSee": "Lihat di Ark",
@@ -4237,6 +4237,25 @@
       "closed": "Kartu ditutup",
       "motionReduced": "Gerakan dikurangi: apa yang terjadi diceritakan di sini, bukan diputar.",
       "skipToList": "Langsung ke daftar siapa saja di Ark"
+    },
+    "person": {
+      "metaTitle": "Hewan milik {name} di Ark",
+      "title": "Hewan milik {name} di Ark",
+      "titleSelf": "Hewanku di Ark",
+      "scoreAbout": "Bagiannya di Ark bersama",
+      "scoreAboutSelf": "Bagianmu di Ark bersama",
+      "outOf": "dari {max}",
+      "summary": "{animals} di Ark, {species}",
+      "anonymousTitle": "Anonim di Ark",
+      "anonymousBody": "{name} bepergian secara anonim: di Ark, hewannya ditampilkan sebagai nomor Voyager, tidak pernah sebagai nama. Nama hanya ditampilkan untuk orang yang memilih menampilkan namanya.",
+      "selfPrivate": "Hanya kamu yang melihat daftar ini. Di Ark, orang lain melihat hewanmu sebagai hewan yang dibawa oleh {label}.",
+      "selfNamed": "Namamu ditampilkan pada hewanmu di Ark.",
+      "noneSelf": "Belum ada hewanmu yang naik ke Ark. Saat langkah dari salah satu hewanmu berhasil, hewan itu naik ke Ark.",
+      "since": "Sejak {date}",
+      "see": "Lihat di Ark",
+      "arkLine": "Seluruh Ark: {animals} dari {species}, dibawa oleh {founders}.",
+      "openArk": "Buka Ark",
+      "back": "Kembali ke profil"
     }
   }
 }

@@ -73,7 +73,7 @@ test("the step's line by state, with an before a vowel in English", () => {
     assert.equal(arkStepOfferLine({state: "new", species: "Red Fox"}, words, "en"), "If this works, a Red Fox comes aboard the Ark");
     assert.equal(arkStepOfferLine({state: "new", species: "Arctic Fox"}, words, "en"), "If this works, an Arctic Fox comes aboard the Ark");
     assert.equal(arkStepOfferLine({state: "pair_complete", species: "Red Fox"}, words, "en"), "If this works, your Red Fox pair will be complete");
-    assert.equal(arkStepOfferLine({state: "milestone", species: "Red Fox"}, words, "en"), "If this works, your Red Fox pair gains a milestone");
+    assert.equal(arkStepOfferLine({state: "milestone", species: "Red Fox"}, words, "en"), "If this works, your Red Fox gain a milestone");
     assert.equal(arkArrivalLine("Red Fox", words, "en"), "A Red Fox came aboard the Ark");
     assert.equal(arkArrivalLine("Emu", words, "en"), "An Emu came aboard the Ark");
     // Not English: the plain key.

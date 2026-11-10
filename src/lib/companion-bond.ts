@@ -353,7 +353,7 @@ export const ARK_COPY = {
     offerNew: "If this works, a {species} comes aboard the Ark",
     offerNewAn: "If this works, an {species} comes aboard the Ark",
     offerPair: "If this works, your {species} pair will be complete",
-    offerMilestone: "If this works, your {species} pair gains a milestone",
+    offerMilestone: "If this works, your {species} gain a milestone",
     arrival: "A {species} came aboard the Ark",
     arrivalAn: "An {species} came aboard the Ark",
     arrivalSee: "See it in the Ark",
