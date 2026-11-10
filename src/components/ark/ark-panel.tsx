@@ -24,7 +24,8 @@ import Link from "@/app/[locale]/_components/link";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {emitAnimalVoice, onAnimalVoice, voiceIsAbout} from "@/lib/ark/animal-voice";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder";
+import {arkBringerLabel} from "@/lib/ark-life";
 import {loadTalkingModelManifest, TALKING_MODELS_BASE_URL, talkingModelSlugFor} from "@/lib/talking-models/catalog";
 import type {TalkWords} from "@/lib/ask-animaldex/talk";
 
@@ -300,7 +301,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                         snapshot,
                         modelBase: models,
                         talkingBase: TALKING_MODELS_BASE_URL,
-                        iconUrl: getSpeciesArtworkUrl,
+                        iconUrl: arkIconUrl,
                         onSelect: setSelected,
                         reducedMotion,
                         onReady: () => setReady(true)
@@ -416,7 +417,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                     <div className="flex items-center gap-3">
                         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={getSpeciesArtworkUrl(shown.model_slug)} alt="" width={44} height={44} className="h-[82%] w-[82%] object-contain" />
+                            <img src={arkIconUrl(shown.model_slug)} alt="" onError={arkIconFallback} width={44} height={44} className="h-[82%] w-[82%] object-contain" />
                         </span>
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-[15px] font-semibold leading-5 text-white">{shown.name}</p>
@@ -429,7 +430,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                                 <>
                                     <p className="truncate text-[12px] font-semibold leading-4 text-primary-300">{words.arkAboard}</p>
                                     <p className="truncate text-[12px] leading-4 text-ink-400">
-                                        {words.arkBroughtBy.replace("{founder}", shown.brought_by.label).replace("{date}", shown.arrived_at ? dateFormat.format(new Date(shown.arrived_at)) : "")}
+                                        {words.arkBroughtBy.replace("{founder}", arkBringerLabel(shown.brought_by.label, words.arkFormerVoyager)).replace("{date}", shown.arrived_at ? dateFormat.format(new Date(shown.arrived_at)) : "")}
                                     </p>
                                 </>
                             )}

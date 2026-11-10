@@ -59,10 +59,11 @@ test("events: the server's rows decode whole (an animal no longer aboard include
     assert.equal(meal.species?.name, "African Lion");
     assert.deepEqual([meal.other?.id, meal.other?.slot, meal.other?.slot_rank, meal.other?.status, meal.other?.sociality], ["zebra-9", 3, 1, "eaten", "group"]);
     assert.equal(meal.phrase, "zebras");
-    // A species with no model yet: drawn as the snapshot has it, or left out.
+    // A species with no model yet: drawn as the snapshot has it, else as the placeholder.
     const unmodelled = decodeArkEvents([row(1, "arrival", "2026-11-09T09:00:00Z", {animal: {...sent("lion-1", "african-lion", "grassland"), model_slug: null}})], SNAPSHOT);
     assert.equal(unmodelled[0].animal?.model_slug, "african-lion");
-    assert.equal(decodeArkEvents([row(1, "arrival", "2026-11-09T09:00:00Z", {animal: {...sent("x", "x", "grassland"), model_slug: null}})], null)[0].animal, null);
+    // A species with no Ark model (A13): the placeholder's slug, as the snapshot decodes it, never dropped.
+    assert.equal(decodeArkEvents([row(1, "arrival", "2026-11-09T09:00:00Z", {animal: {...sent("x", "x", "grassland"), model_slug: null}})], null)[0].animal?.model_slug, "placeholder--sp-x");
 });
 
 test("replay: a meal and its eaten row are one act, a litter is one act, an extinction rides on its cause, starvation is a quiet death", () => {
@@ -87,7 +88,7 @@ test("replay: a meal and its eaten row are one act, a litter is one act, an exti
     assert.ok(meal.kind === "meal" && meal.extinct && meal.phrase === "marmots");
     const starved = plan.acts[2];
     assert.ok(starved.kind === "death" && starved.cause === "starved" && starved.animal.status === "starved");
-    assert.deepEqual(plan.summary, {arrivals: 0, births: 2, meals: 1, deaths: 0, starved: 1, extinctions: 1});
+    assert.deepEqual(plan.summary, {arrivals: 0, births: 2, meals: 1, deaths: 0, starved: 1, extinctions: 1, laid: 0, hatched: 0});
     assert.equal(isQuietArkReplay(plan.summary), false);
 });
 

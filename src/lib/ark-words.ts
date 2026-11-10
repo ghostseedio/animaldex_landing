@@ -28,6 +28,12 @@ export type ArkHudWords = {
     earlyTitle: string;
     earlyBody: string;
     bring: string;
+    /** A species drawn as a herd (A14), beside its count. */
+    herdTag: string;
+    /** A kind's breeds aboard (A1), e.g. "breeds: Labrador 3, Poodle 2". */
+    breeds: string;
+    /** "12 · crowded": a count and its pair status. */
+    countStatus: string;
 };
 
 export type ArkStoryWords = {generic: string; debate: string; openDebate: string};
@@ -74,6 +80,15 @@ export type ArkLifeWords = {
     follow: string;
     followHint: string;
     anonymous: string;
+    /** Hatched from an egg (A9). */
+    hatchedAboard: string;
+    hatched: string;
+    /** A species with no Ark model yet (A13): the stand-in figure, said so. */
+    placeholder: string;
+    /** A3: the step that brought it was revised after it arrived (it stays aboard). */
+    revised: string;
+    revisedWorked: string;
+    revisedNot: string;
 };
 
 /** "While you were away": the replay's captions and its summary line. */
@@ -110,6 +125,47 @@ export type ArkReplayWords = {
     a: string;
     an: string;
     dismiss: string;
+    /** Eggs (A9): a clutch laid, and the young that hatch from it. */
+    laidOne: string;
+    laidOther: string;
+    laidSome: string;
+    hatchedOne: string;
+    hatchedOther: string;
+    laidCountOne: string;
+    laidCountOther: string;
+    hatchedCountOne: string;
+    hatchedCountOther: string;
+};
+
+/** A very popular species, drawn as a herd (A14): its badge and its species card. */
+export type ArkHerdWords = {
+    badge: string;
+    title: string;
+    count: string;
+    mineOne: string;
+    mineOther: string;
+    meet: string;
+    meetAnother: string;
+    note: string;
+};
+
+/** The lighter view (A18): fewer details, for a slower device. */
+export type ArkLiteWords = {
+    label: string;
+    auto: string;
+    hint: string;
+};
+
+/** What a screen reader hears (A18). */
+export type ArkA11yWords = {
+    scene: string;
+    list: string;
+    regionCount: string;
+    selected: string;
+    herdSelected: string;
+    closed: string;
+    motionReduced: string;
+    skipToList: string;
 };
 
 
@@ -159,6 +215,8 @@ export type ArkWords = {
     howBody: string;
     howCta: string;
     founderNote: string;
+    /** A deleted account's animals (A5): the server's "Former voyager", in the reader's language. */
+    formerVoyager: string;
     zones: Record<ArkZone, string>;
     regions: Record<ArkRegion, string>;
     hud: ArkHudWords;
@@ -166,6 +224,9 @@ export type ArkWords = {
     life: ArkLifeWords;
     replay: ArkReplayWords;
     capture: ArkCaptureWords;
+    herd: ArkHerdWords;
+    lite: ArkLiteWords;
+    a11y: ArkA11yWords;
 };
 
 /** "{count} animals" and the like: every `{key}` filled from `values`, unknown keys left as they are. */

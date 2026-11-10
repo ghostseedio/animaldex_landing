@@ -3346,7 +3346,8 @@
     "arkComesAboard": "When a step with it works, one comes aboard.",
     "arkOpenFull": "Open the full Ark",
     "arkLoading": "Bringing the Ark into view",
-    "arkUnavailable": "The Ark couldn't load just now."
+    "arkUnavailable": "The Ark couldn't load just now.",
+    "arkFormerVoyager": "Former voyager"
   },
   "talkFrontDoor": {
     "placeholder": "What's on your mind?",
@@ -3996,6 +3997,7 @@
     "howBody": "Talk with an animal about something real in your life. Try the step it suggests, then tell it how it went. When the step works, that animal joins the Ark, and stays.",
     "howCta": "Talk to an animal",
     "founderNote": "Founders are anonymous: each is shown as a Voyager number.",
+    "formerVoyager": "Former voyager",
     "zones": {
       "coral_reef": "Coral reef",
       "open_ocean": "Open ocean",
@@ -4039,7 +4041,10 @@
       "showFewer": "Show fewer",
       "earlyTitle": "Two of each is the aim",
       "earlyBody": "Every kind aboard is waiting for its mate. When a step with that animal works for someone, another of its kind comes aboard.",
-      "bring": "Bring an animal aboard"
+      "bring": "Bring an animal aboard",
+      "herdTag": "herd",
+      "breeds": "breeds: {breeds}",
+      "countStatus": "{count} · {status}"
     },
     "story": {
       "generic": "Came aboard after a step that worked",
@@ -4085,7 +4090,13 @@
       "hideStory": "Hide life story",
       "follow": "Follow",
       "followHint": "Drag to stop following",
-      "anonymous": "Founders stay anonymous: each is a Voyager number."
+      "anonymous": "Founders stay anonymous: each is a Voyager number.",
+      "hatchedAboard": "Hatched on the Ark",
+      "hatched": "Hatched",
+      "placeholder": "Its 3D figure is still being made: a stand-in shows it for now.",
+      "revised": "Its step",
+      "revisedWorked": "revised: it worked again",
+      "revisedNot": "revised: it didn't work after all, but it stays aboard"
     },
     "replay": {
       "title": "While you were away",
@@ -4119,7 +4130,16 @@
       "date": "{date}",
       "a": "a {animal}",
       "an": "an {animal}",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "laidOne": "{aAnimal} laid an egg",
+      "laidOther": "{aAnimal} laid {count} eggs",
+      "laidSome": "{aAnimal} laid a clutch of eggs",
+      "hatchedOne": "{aAnimal} hatched, to the pair brought by {bringers}",
+      "hatchedOther": "{count} {animal} young hatched, to the pair brought by {bringers}",
+      "laidCountOne": "1 clutch laid",
+      "laidCountOther": "{count} clutches laid",
+      "hatchedCountOne": "1 hatched",
+      "hatchedCountOther": "{count} hatched"
     },
     "capture": {
       "aboardOne": "In the Ark: 1 {animal} aboard",
@@ -4134,6 +4154,31 @@
       "notAboardBody": "When a step you take with it works, one comes aboard.",
       "start": "Start a step with it",
       "seeArk": "See the Ark"
+    },
+    "herd": {
+      "badge": "{count}",
+      "title": "{animal} herd",
+      "count": "{count} aboard",
+      "mineOne": "1 is yours",
+      "mineOther": "{count} are yours",
+      "meet": "Meet one",
+      "meetAnother": "Meet another",
+      "note": "So many are aboard that a few are drawn up close and the rest stand together as the herd."
+    },
+    "lite": {
+      "label": "Lighter view",
+      "auto": "on for this device",
+      "hint": "Fewer details, for a smoother Ark on this device"
+    },
+    "a11y": {
+      "scene": "The Ark in 3D. Arrow keys move the view, plus and minus zoom, Escape closes a card. The list of who is aboard follows.",
+      "list": "Every species aboard, by region",
+      "regionCount": "{region}: {count} animals",
+      "selected": "{animal} selected",
+      "herdSelected": "{animal}: {count} aboard",
+      "closed": "Card closed",
+      "motionReduced": "Motion is reduced: what happened is told here instead of played.",
+      "skipToList": "Skip to who is aboard"
     }
   }
 }

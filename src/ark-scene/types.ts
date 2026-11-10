@@ -52,7 +52,22 @@ export type ArkAnimal = {
     species_profile_id: string;
     name: string;
     scientific_name: string | null;
+    /**
+     * The Ark model's slug. A species with no model comes from the server as
+     * `placeholder: true` and `model_slug: null`: it is decoded to
+     * `placeholder--<species id>` (`placeholder.ts`) and drawn as the neutral figure.
+     */
     model_slug: string;
+    /** The species has no Ark model yet (A13): drawn as the neutral placeholder figure. */
+    placeholder?: boolean;
+    /**
+     * Its kind (A1): a breed's parent species (a Labrador's Domestic Dog),
+     * whose pairs, breeding and cap apply. Breeds of one kind are one row in
+     * the population panel. Absent: its own kind.
+     */
+    kind_species_profile_id?: string | null;
+    /** The kind's name, when the server sends it. */
+    kind_name?: string | null;
     zone: ArkZone;
     arrived_at: string;
     brought_by: {label: string; named: boolean};
@@ -108,7 +123,19 @@ export type ArkSceneStats = {
     sprites: number;
     pixelRatio: number;
     modelsLoaded: number;
+    /** Herds (A14): members drawn as the far model, and as the few-pixel figure. */
+    herdFigures: number;
+    herdSpecks: number;
+    /** Animals drawn one by one (everyone outside a herd, and the herds' representatives). */
+    live: number;
+    /** Species drawn as the placeholder figure (A13). */
+    placeholders: number;
+    tier: "high" | "medium" | "low";
+    lite: boolean;
 };
+
+/** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
+export type ArkHerdInfo = {key: string; slug: string; name: string; count: number; mine: number};
 
 export type ArkSceneOptions = {
     snapshot: ArkSnapshot;
@@ -133,6 +160,16 @@ export type ArkSceneOptions = {
     hours?: number | null;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
+    /** A herd was tapped (or its badge), or the herd selection cleared (A14). */
+    onHerd?: (herd: ArkHerdInfo | null) => void;
+    /** A herd's count badge, e.g. "1,000 aboard" (default: the number in the page's locale). */
+    herdBadge?: (count: number) => string;
+    /** The canvas's accessible name (it takes the keyboard: arrows move the view, + and − zoom, Esc closes). */
+    canvasLabel?: string;
+    /** The lighter view (A18): true on, false off, null or absent decided by the device's tier. */
+    lite?: boolean | null;
+    /** The quality tier changed (the lighter view follows it unless the reader chose). */
+    onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
 };
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
@@ -171,6 +208,12 @@ export type ArkSceneHandle = {
     talkText: (chunk: string) => void;
     /** The reply heard aloud: how loud it is now (0…1), as the voice call's meter. */
     talkPulse: (level: number) => void;
+    /** Select a herd (A14): fly to it and show its count (or clear with null). Returns false when the species isn't a herd. */
+    selectHerd: (key: string | null) => boolean;
+    /** The lighter view: true on, false off, null decided by the device. */
+    setLite: (lite: boolean | null) => void;
+    /** Reduced motion turned on or off (prefers-reduced-motion changed): no flights, no idles, everything still. */
+    setReducedMotion: (reduced: boolean) => void;
     /** Fly to a region, or back to the whole world with null. */
     focusRegion: (region: ArkRegion | null) => void;
     /** The camera follows this animal until any drag (or null to stop). */

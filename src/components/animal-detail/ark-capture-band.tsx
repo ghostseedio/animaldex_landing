@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import {useParams} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
@@ -61,6 +62,8 @@ function ArkGlyph() {
 
 export default function ArkCaptureBand({speciesProfileId, slug, name, words, onTalk, snapshot: given}: Props) {
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null | undefined>(given);
+    // The URL's locale (English has no prefix).
+    const locale = useParams<{locale?: string}>()?.locale ?? "en";
     useEffect(() => {
         if (given !== undefined) {
             setSnapshot(given);
@@ -106,13 +109,14 @@ export default function ArkCaptureBand({speciesProfileId, slug, name, words, onT
         );
     }
 
+    // The plural is English's ("Komodo Dragons"); other languages say the count with the name as it is (A17).
     const headline = aboard.count === 1
         ? fillArkWords(copy.aboardOne, {animal: arkName})
-        : fillArkWords(copy.aboardOther, {count: aboard.count, animals: pluralAnimalName(arkName)});
+        : fillArkWords(copy.aboardOther, {count: aboard.count.toLocaleString(locale), animals: locale === "en" ? pluralAnimalName(arkName) : arkName});
     const yours = !aboard.mine ? null
         : aboard.count === 1 ? copy.mineOnly
         : aboard.mine === 1 ? copy.mineOne
-        : fillArkWords(copy.mineOther, {count: aboard.mine});
+        : fillArkWords(copy.mineOther, {count: aboard.mine.toLocaleString(locale)});
     const status = words.hud[aboard.status];
 
     return (

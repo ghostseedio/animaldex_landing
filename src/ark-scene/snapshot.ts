@@ -8,6 +8,7 @@
 import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stats";
 import {ARK_ZONES, type ArkAnimal, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {arkActivity} from "@/lib/ark-daylight";
+import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
 
 const ZONES = new Set<string>(ARK_ZONES);
 
@@ -33,11 +34,13 @@ function animal(raw: unknown): ArkAnimal | null {
     if (!raw || typeof raw !== "object") return null;
     const row = raw as Record<string, unknown>;
     const id = text(row.id);
-    const slug = text(row.model_slug);
     const name = text(row.name);
     // A young one born aboard: arrived_at is its birth.
     const arrived = text(row.arrived_at);
-    if (!id || !slug || !name || !arrived) return null;
+    if (!id || !name || !arrived) return null;
+    // A species with no Ark model (A13): `placeholder: true`, `model_slug: null`. Drawn as the neutral figure.
+    const placeholder = row.placeholder === true || !text(row.model_slug);
+    const slug = text(row.model_slug) ?? arkPlaceholderSlug(text(row.species_profile_id) ?? "", id);
     const by = row.brought_by && typeof row.brought_by === "object" ? row.brought_by as Record<string, unknown> : {};
     const bringers = (Array.isArray(row.bringers) ? row.bringers : [])
         .map((b) => (b && typeof b === "object" ? b as Record<string, unknown> : null))
@@ -70,6 +73,13 @@ function animal(raw: unknown): ArkAnimal | null {
     const slot = whole(row.slot);
     const rank = whole(row.slot_rank);
     if (slot !== null && rank !== null) Object.assign(life, {slot, slot_rank: rank});
+    if (placeholder) life.placeholder = true;
+    const kind = text(row.kind_species_profile_id);
+    if (kind && kind !== text(row.species_profile_id)) {
+        life.kind_species_profile_id = kind;
+        const kindName = text(row.kind_name);
+        if (kindName) life.kind_name = kindName;
+    }
     return {
         id,
         species_profile_id: text(row.species_profile_id) ?? "",

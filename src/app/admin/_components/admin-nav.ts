@@ -82,6 +82,7 @@ export const adminNavGroups: AdminNavGroup[] = [
             {href: "/admin/catalog", label: "Index", icon: Notebook, hint: "Every AnimalDex number"},
             {href: "/admin/indexing", label: "Unindexed", icon: Hourglass, hint: "Captures still awaiting a number"},
             {href: "/admin/identity-review", label: "Identity review", icon: ClipboardCheck, hint: "Same animal under two numbers"},
+            {href: "/admin/ark-models", label: "Ark models missing", icon: GalleryWide, hint: "Species drawn as a stand-in figure"},
         ],
     },
     {

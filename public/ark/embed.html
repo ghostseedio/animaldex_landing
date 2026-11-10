@@ -18,7 +18,9 @@
  * The shared Ark, bare, for the apps' WebView (Ark v1 contract, section 5).
  *
  * Query: ?snapshot=<url> (default /api/ark/voyage, refreshed every 45 s while
- * visible), ?models=<ark model folder>, ?talking=<talking model folder>, ?mine=1.
+ * visible), ?models=<ark model folder>, ?talking=<talking model folder>, ?mine=1,
+ * ?lang=<locale> (the herds' counts), ?label=<the world's accessible name, in the app's language>,
+ * ?lite=1|0 (the lighter view; absent: the device decides).
  * From the host (postMessage or window.AnimalDexArkHost):
  *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id, closeUp?}  {type: "ark:region", region}
  *   {type: "ark:visitor", visitor: {slug, name, label} | null}   the chat's animal visiting (not aboard): answered with
@@ -26,7 +28,10 @@
  *   {type: "ark:talking", talking: {slug, animalId, active}}     an animal starts or stops talking (its full talking model stands in)
  *   {type: "ark:talk-text", chunk}                               more of its reply as it is typed: the jaw says it
  *   {type: "ark:talk-pulse", level}                              the reply heard aloud: its loudness now, 0…1
- * To the host: {type: "ark:selected", animal} through webkit.messageHandlers.ark,
+ *   {type: "ark:herd", key}                                      a herd (a very popular species): fly to it, or null to clear
+ *   {type: "ark:lite", value}                                    the lighter view: true, false, or null (the device decides)
+ * To the host: {type: "ark:selected", animal}, {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
+ * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.
  */
 (function () {
@@ -37,6 +42,10 @@
   var icons = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
   var Ark = window.AnimalDexArk;
   var scene = null;
+  var lang = params.get("lang") || undefined;
+  var lite = params.get("lite") === "1" ? true : params.get("lite") === "0" ? false : null;
+  var motion = matchMedia("(prefers-reduced-motion: reduce)");
+  if (lang) document.documentElement.lang = lang;
 
   function tell(message) {
     var text = JSON.stringify(message);
@@ -54,8 +63,13 @@
       talkingBase: talking,
       iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
       mineOnly: params.get("mine") === "1",
-      reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      reducedMotion: motion.matches,
+      lite: lite,
+      canvasLabel: params.get("label") || undefined,
+      herdBadge: function (count) { return count.toLocaleString(lang); },
       onSelect: function (animal) { tell({type: "ark:selected", animal: animal}); },
+      onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
+      onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       onReady: function () { tell({type: "ark:ready"}); }
     });
   }
@@ -77,7 +91,10 @@
     else if (scene && message.type === "ark:talking") scene.setTalking(message.talking || null);
     else if (scene && message.type === "ark:talk-text") scene.talkText(String(message.chunk || ""));
     else if (scene && message.type === "ark:talk-pulse") scene.talkPulse(Number(message.level) || 0);
+    else if (scene && message.type === "ark:herd") scene.selectHerd(message.key || null);
+    else if (scene && message.type === "ark:lite") scene.setLite(message.value === true ? true : message.value === false ? false : null);
   }
+  if (motion.addEventListener) motion.addEventListener("change", function () { if (scene) scene.setReducedMotion(motion.matches); });
   window.AnimalDexArkHost = {send: receive};
   window.addEventListener("message", function (event) { receive(event.data); });
 

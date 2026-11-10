@@ -5,7 +5,7 @@ import Link from "@/app/[locale]/_components/link";
 import {REGION_ZONES, type ArkRegion, type ArkSnapshot} from "@/ark-scene/types";
 import {arkPopulation, type ArkPairStatus, type ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
+import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder";
 
 /**
  * Who is aboard the Ark, species by species: the totals, then every species
@@ -15,7 +15,13 @@ import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
  * Desktop: a column beside the world, folded to a rail on request. Phone: a
  * band under the world, edge to edge, its first rows open and the rest one
  * tap away.
+ *
+ * For a screen reader (A18) it is a list per region under a heading, each
+ * row a button saying the species, its count and its pair status; a herd
+ * (A14) says so, and opens the species' card rather than one animal's.
  */
+
+const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-300";
 
 /** Rows shown on a phone before "Show all". */
 const PHONE_ROWS = 6;
@@ -31,8 +37,10 @@ type Props = {
     snapshot: ArkSnapshot;
     words: ArkWords;
     locale: string;
-    /** The species of the selected animal, highlighted. */
+    /** The species of the selected animal (or herd), highlighted. */
     selectedKey: string | null;
+    /** Species drawn as a herd (A14). */
+    herdKeys: ReadonlySet<string>;
     /** The species of the newest arrival, while its notice shows. */
     arrivalKey: string | null;
     region: ArkRegion | null;
@@ -56,7 +64,7 @@ function PairMeter({count, status}: {count: number; status: ArkPairStatus}) {
     );
 }
 
-export default function ArkPopulationHud({snapshot, words, locale, selectedKey, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion}: Props) {
+export default function ArkPopulationHud({snapshot, words, locale, selectedKey, herdKeys, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion}: Props) {
     const hud = words.hud;
     const listRef = useRef<HTMLDivElement | null>(null);
     // An animal tapped in the world: its species' row comes into the column's view (desktop; the page never scrolls for it).
@@ -77,14 +85,14 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
 
     if (folded) {
         return (
-            <aside aria-label={hud.label} className="hidden border-l border-line-200 bg-canvas-950 md:flex md:w-14 md:flex-col md:items-center">
+            <aside id="ark-aboard" aria-label={hud.label} className="hidden border-l border-line-200 bg-canvas-950 md:flex md:w-14 md:flex-col md:items-center">
                 <button
                     type="button"
                     onClick={() => onFold(false)}
                     aria-expanded={false}
                     aria-label={hud.show}
                     title={hud.show}
-                    className="flex h-full w-full flex-col items-center gap-3 pt-4 text-ink-200 transition-colors hover:bg-white/[0.04] hover:text-white"
+                    className={`flex h-full w-full flex-col items-center gap-3 pt-4 text-ink-200 transition-colors hover:bg-white/[0.04] hover:text-white ${FOCUS}`}
                 >
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
                     <span className="font-display text-lg font-extrabold tabular-nums text-white">{number(snapshot.counts.animals)}</span>
@@ -95,17 +103,17 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
     }
 
     return (
-        <aside aria-label={hud.label} className="flex flex-col border-t border-line-200 bg-canvas-950 md:h-full md:w-[21rem] md:shrink-0 md:border-l md:border-t-0 lg:w-[23rem]">
+        <aside id="ark-aboard" aria-labelledby="ark-aboard-title" tabIndex={-1} className="flex flex-col outline-none border-t border-line-200 bg-canvas-950 md:h-full md:w-[21rem] md:shrink-0 md:border-l md:border-t-0 lg:w-[23rem]">
             {/* The totals. */}
             <div className="border-b border-line-200 px-4 pb-4 pt-4 md:px-5">
                 <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300">{hud.title}</h2>
+                    <h2 id="ark-aboard-title" className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300"><span className="sr-only">{hud.label}</span><span aria-hidden="true">{hud.title}</span></h2>
                     <div className="flex items-center gap-1">
                         <button
                             type="button"
                             aria-pressed={region === null}
                             onClick={() => onRegion(null)}
-                            className={`inline-flex h-8 items-center rounded-full border px-3 text-[12px] font-semibold transition-colors ${region === null ? "border-primary-400 text-white" : "border-line-200 text-ink-200 hover:border-line-100 hover:text-white"}`}
+                            className={`inline-flex h-8 items-center rounded-full border px-3 text-[12px] font-semibold transition-colors ${FOCUS} ${region === null ? "border-primary-400 text-white" : "border-line-200 text-ink-200 hover:border-line-100 hover:text-white"}`}
                         >
                             {words.wholeWorld}
                         </button>
@@ -115,13 +123,13 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                             aria-expanded
                             aria-label={hud.hide}
                             title={hud.hide}
-                            className="hidden h-8 w-8 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-white/10 hover:text-white md:flex"
+                            className={`hidden h-8 w-8 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-white/10 hover:text-white md:flex ${FOCUS}`}
                         >
                             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
                         </button>
                     </div>
                 </div>
-                <dl className="mt-3 grid grid-cols-3 gap-3" aria-live="polite">
+                <dl className="mt-3 grid grid-cols-3 gap-3">
                     {([["statAnimals", snapshot.counts.animals], ["statSpecies", snapshot.counts.species], ["statFounders", snapshot.counts.founders]] as const).map(([key, value]) => (
                         <div key={key} className="flex flex-col-reverse">
                             <dt className="text-[12px] text-ink-400">{hud[key]}</dt>
@@ -138,49 +146,59 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
             </div>
 
             {/* Every species, by region. */}
-            <div ref={listRef} className="relative min-h-0 flex-1 md:overflow-y-auto md:overscroll-contain">
+            <div ref={listRef} className="relative min-h-0 flex-1 md:overflow-y-auto md:overscroll-contain" role="group" aria-label={words.a11y.list}>
                 {population.regions.map((group) => (
-                    <section key={group.region} aria-label={words.regions[group.region]}>
+                    <section key={group.region} aria-labelledby={`ark-region-${group.region}`}>
+                        <h3 className="m-0">
                         <button
                             type="button"
                             onClick={() => onRegion(group.region)}
                             aria-pressed={region === group.region}
                             aria-label={fillArkWords(hud.flyTo, {region: words.regions[group.region]})}
                             title={REGION_ZONES[group.region].map((zone) => words.zones[zone]).join(" · ")}
-                            className={`${index >= PHONE_ROWS && !expanded ? "hidden md:flex" : "flex"} min-h-10 w-full items-center justify-between gap-3 border-b border-line-300 px-4 pt-3 pb-1.5 text-left transition-colors hover:text-white md:px-5 ${region === group.region ? "text-white" : "text-ink-300"}`}
+                            className={`${index >= PHONE_ROWS && !expanded ? "hidden md:flex" : "flex"} min-h-10 w-full items-center justify-between gap-3 border-b border-line-300 px-4 pt-3 pb-1.5 text-left transition-colors hover:text-white md:px-5 ${FOCUS} ${region === group.region ? "text-white" : "text-ink-300"}`}
                         >
-                            <span className="text-[11px] font-bold uppercase tracking-[0.14em]">{words.regions[group.region]}</span>
+                            <span id={`ark-region-${group.region}`} className="text-[11px] font-bold uppercase tracking-[0.14em]">{words.regions[group.region]}</span>
                             <span className="text-[12px] tabular-nums text-ink-400">{number(group.animals)}</span>
                         </button>
-                        <ul>
+                        </h3>
+                        <ul aria-label={fillArkWords(words.a11y.regionCount, {region: words.regions[group.region], count: number(group.animals)})}>
                             {group.species.map((row) => {
                                 const hidden = index++ >= PHONE_ROWS && !expanded;
                                 const selected = row.key === selectedKey;
                                 const fresh = row.key === arrivalKey;
+                                const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
+                                const label = fillArkWords(hud.rowLabel, {animal: row.name, count: number(row.count), status: status(row.status)}) + (row.breeds.length ? `; ${fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")})}` : "");
                                 return (
                                     <li key={row.key} data-species={row.key} className={hidden ? "hidden md:block" : undefined}>
                                         <button
                                             type="button"
                                             onClick={() => onSpecies(row)}
                                             aria-current={selected ? "true" : undefined}
-                                            aria-label={fillArkWords(hud.rowLabel, {animal: row.name, count: number(row.count), status: status(row.status)})}
-                                            className={`group relative flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-200 md:px-5 ${selected ? "bg-white/[0.07]" : fresh ? "bg-primary-400/[0.10]" : "hover:bg-white/[0.04]"}`}
+                                            aria-label={isHerd ? `${label}, ${hud.herdTag}` : label}
+                                            className={`group relative flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-200 md:px-5 ${FOCUS} ${selected ? "bg-white/[0.07]" : fresh ? "bg-primary-400/[0.10]" : "hover:bg-white/[0.04]"}`}
                                         >
                                             {selected ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-primary-400" /> : null}
                                             <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src={getSpeciesArtworkUrl(row.slug)} alt="" width={36} height={36} loading="lazy" className="h-[82%] w-[82%] object-contain" />
+                                                <img src={arkIconUrl(row.slug)} alt="" onError={arkIconFallback} width={36} height={36} loading="lazy" className="h-[82%] w-[82%] object-contain" />
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="flex items-center gap-2">
                                                     <span className="truncate text-[14px] font-bold text-white">{row.name}</span>
                                                     {row.mine ? <span className="shrink-0 rounded-full bg-primary-400/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.08em] text-primary-200">{hud.yours}</span> : null}
                                                 </span>
-                                                <span className={`block text-[12px] ${STATUS_TONE[row.status].text}`}>{status(row.status)}</span>
+                                                <span className={`block text-[12px] ${STATUS_TONE[row.status].text}`}>{status(row.status)}{isHerd ? <span className="text-ink-400"> · {hud.herdTag}</span> : null}</span>
+                                                {/* A kind with breeds aboard (A1): one row, its breeds named. */}
+                                                {row.breeds.length ? (
+                                                    <span className="block truncate text-[11px] text-ink-400">
+                                                        {row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(" · ")}
+                                                    </span>
+                                                ) : null}
                                             </span>
                                             <span className="flex shrink-0 items-center gap-2.5">
                                                 <PairMeter count={row.count} status={row.status} />
-                                                <span className="w-6 text-right font-display text-base font-extrabold tabular-nums text-white">{number(row.count)}</span>
+                                                <span className="min-w-6 text-right font-display text-base font-extrabold tabular-nums text-white">{number(row.count)}</span>
                                             </span>
                                         </button>
                                     </li>
@@ -195,7 +213,7 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                         type="button"
                         onClick={() => onExpand(!expanded)}
                         aria-expanded={expanded}
-                        className="flex min-h-12 w-full items-center justify-center gap-2 border-t border-line-300 text-sm font-bold text-primary-300 md:hidden"
+                        className={`flex min-h-12 w-full items-center justify-center gap-2 border-t border-line-300 text-sm font-bold text-primary-300 md:hidden ${FOCUS}`}
                     >
                         {expanded ? hud.showFewer : fillArkWords(hud.showAll, {count: number(population.species)})}
                         <span aria-hidden="true" className={`text-xs transition-transform ${expanded ? "rotate-180" : ""}`}>⌄</span>

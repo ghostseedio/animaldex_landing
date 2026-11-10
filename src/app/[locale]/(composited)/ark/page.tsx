@@ -21,6 +21,11 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
  * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends).
  *
+ * The edge cases (docs/ark-next.md part 8), in development: `?fixture=herd1000`
+ * (1,000 Plains Zebras, A14), `?fixture=herd5` (1,000 over five species),
+ * `?fixture=placeholder` (species with no Ark model, A13) and `?fixture=eggs`
+ * (clutches laid and hatching, A9; add `&since=2026-11-08T00:00:00Z` to replay them).
+ *
  * `?focus=<species_profile_id or slug>` flies to that species on load (the
  * capture page's "See it in the Ark"), the reader's own one first.
  *
@@ -37,7 +42,9 @@ export const dynamic = "force-dynamic";
 
 type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string}};
 
-type FixtureMode = "full" | "early" | "grow" | "sizes";
+type FixtureMode = "full" | "early" | "grow" | "sizes" | "herd1000" | "herd5" | "placeholder" | "eggs";
+
+const EDGE_MODES = new Set<FixtureMode>(["herd1000", "herd5", "placeholder", "eggs"]);
 
 function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     const asked = searchParams.fixture;
@@ -45,6 +52,7 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     if (development && asked === "early") return "early";
     if (development && asked === "grow") return "grow";
     if (development && asked === "sizes") return "sizes";
+    if (development && asked && EDGE_MODES.has(asked as FixtureMode)) return asked as FixtureMode;
     if (development && asked && asked !== "0") return "full";
     return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
 }
@@ -61,7 +69,14 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
-    const full = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)!;
+    const raw = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+    if (EDGE_MODES.has(mode)) {
+        const edge = await import("@/ark-scene/fixtures/edge");
+        const base = JSON.parse(JSON.stringify(raw)) as Parameters<typeof edge.herdFixture>[0];
+        const built = mode === "herd1000" || mode === "herd5" ? edge.herdFixture(base, mode) : mode === "placeholder" ? edge.placeholderFixture(base) : edge.eggsFixture(base).snapshot;
+        return {snapshot: decodeArkSnapshot(built)!, full: null};
+    }
+    const full = decodeArkSnapshot(raw)!;
     if (mode === "full") return {snapshot: full, full: null};
     if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
     if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
@@ -116,9 +131,14 @@ function modelBase(): string {
     return process.env.NODE_ENV === "development" ? "/api/dev/ark-models/v1/ark" : `${TALKING_MODELS_BASE_URL}/ark`;
 }
 
-/** The fixture's event log and life stories, as the server's reads would answer. */
-async function loadFixtureLife(): Promise<ArkFixtureLife> {
+/** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
+async function loadFixtureLife(mode: FixtureMode): Promise<ArkFixtureLife> {
     const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
+    if (mode === "eggs") {
+        const edge = await import("@/ark-scene/fixtures/edge");
+        const raw = JSON.parse(JSON.stringify((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)) as Parameters<typeof edge.eggsFixture>[0];
+        return {events: edge.eggsFixture(raw).events, lives: lives.default as unknown as Record<string, unknown>};
+    }
     return {events: events.default as unknown, lives: lives.default as unknown as Record<string, unknown>};
 }
 
@@ -132,7 +152,7 @@ export default async function ArkPage({params, searchParams}: Props) {
         mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
-    const fixtureLife = mode ? await loadFixtureLife() : null;
+    const fixtureLife = mode ? await loadFixtureLife(mode) : null;
     return (
         <ArkView
             locale={params.locale}
