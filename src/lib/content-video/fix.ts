@@ -61,6 +61,18 @@ export function isSilentPlan(plan: VideoPlan | null | undefined) {
     return plan?.experiment?.voice === "no_voice" && !plan.voiceRestoredAt;
 }
 
+/** Why a page video is not posted (auto-share, the Share button, the upload itself). */
+export const NO_VOICEOVER_REASON = "No voiceover: press Fix on the video to record it before it is posted";
+
+/**
+ * A page video nobody speaks in: a silent cut of the retired no-voice arm, or
+ * a render with no voice recorded. It is never posted until Fix gives it its
+ * voice. Rows from before tts_provider was written (null) did speak. Pure.
+ */
+export function lacksVoiceover(video: {tts_provider: string | null; plan: VideoPlan | null}) {
+    return video.tts_provider === "none" || isSilentPlan(video.plan);
+}
+
 /** A failed AI shot worth asking for again: not a wrong-animal verdict and not the per-video cap (both would fail the same way). */
 function retryable(clip: ContentVideoClip) {
     if (clip.status !== "failed") return false;
@@ -97,7 +109,7 @@ export function videoProblems(video: FixableVideo, {fileMissing = false}: {fileM
     if (!video.plan) return [{code: "not_editable", label: "Made outside the video maker, so it can't be re-edited here"}];
 
     const problems: VideoProblem[] = [];
-    if (video.tts_provider === "none" || isSilentPlan(video.plan)) problems.push({code: "no_voice", label: "No voiceover"});
+    if (lacksVoiceover(video)) problems.push({code: "no_voice", label: "No voiceover"});
     const shots = missingShots(video);
     if (shots.scenes.length) {
         problems.push({code: "missing_shots", label: `${shots.scenes.length} AI shot${shots.scenes.length === 1 ? "" : "s"} failed and became a still`, scenes: shots.scenes, usd: shots.usd});

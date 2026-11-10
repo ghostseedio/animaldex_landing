@@ -2,7 +2,7 @@ import {NextRequest, NextResponse} from "next/server";
 import {isSupportAdminRequestAuthorized} from "@/lib/support-admin-auth";
 import {runShareJob} from "@/lib/social/runner";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
-import {shareableContentVideo} from "@/lib/content-video/share";
+import {ContentVideoNotPostable, shareableContentVideo} from "@/lib/content-video/share";
 import {shareableUploadedVideo} from "@/lib/social/uploaded-videos";
 import {insertPost, listPosts, updatePost} from "@/lib/social/store";
 import {fillLinks} from "@/lib/social/platform-copy";
@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ok: true, queued: queued.map((row) => row.platform), skipped});
     } catch (error) {
+        if (error instanceof ContentVideoNotPostable) return NextResponse.json({error: error.message}, {status: 409});
         return NextResponse.json({error: error instanceof Error ? error.message : "Unable to share"}, {status: 500});
     }
 }

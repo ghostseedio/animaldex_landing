@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {contentVideoIdFromPath, fixPlan, isSilentPlan, videoProblems, withCurrentVideoPaths, type FixableVideo} from "./content-video/fix";
+import {contentVideoIdFromPath, fixPlan, isSilentPlan, lacksVoiceover, videoProblems, withCurrentVideoPaths, type FixableVideo} from "./content-video/fix";
+import {chooseExperiment} from "./social-lab/bandit";
+import {KIND_DIMENSIONS, type ExperimentKind} from "./social-lab/arms";
 import type {VideoPlan} from "./content-video/plan";
 
 const ID = "23791d51-f84b-4600-9f30-a567cb6590c5";
@@ -90,4 +92,27 @@ test("a video made outside the video maker says so and is not touched", () => {
     const problems = videoProblems(outside);
     assert.deepEqual(problems.map((problem) => problem.code), ["not_editable"]);
     assert.equal(fixPlan(outside, problems, new Date(), "rendering"), null);
+});
+
+test("a silent cut is never posted until Fix gives it its voice; old rows without a provider did speak", () => {
+    const silentPlan = plan({experiment: {version: 2, voice: "no_voice"} as never});
+    assert.equal(lacksVoiceover({tts_provider: "none", plan: silentPlan}), true);
+    // Planned silent but not rendered since the restore: still silent until the re-edit records a voice.
+    assert.equal(lacksVoiceover({tts_provider: "none", plan: {...silentPlan, voiceRestoredAt: "2026-11-10T00:00:00Z"}}), true);
+    assert.equal(lacksVoiceover({tts_provider: "google", plan: silentPlan}), true);
+    assert.equal(lacksVoiceover({tts_provider: "google", plan: {...silentPlan, voiceRestoredAt: "2026-11-10T00:00:00Z"}}), false);
+    assert.equal(lacksVoiceover({tts_provider: "google", plan: plan()}), false);
+    assert.equal(lacksVoiceover({tts_provider: "elevenlabs", plan: plan()}), false);
+    assert.equal(lacksVoiceover({tts_provider: null, plan: plan()}), false);
+    assert.equal(lacksVoiceover({tts_provider: null, plan: null}), false);
+});
+
+test("the no-voice arm is retired (Nov 10 2026): no new video is planned silent, whatever the lab's numbers", () => {
+    const kinds = (Object.keys(KIND_DIMENSIONS) as ExperimentKind[]).filter((kind) => (KIND_DIMENSIONS[kind] as readonly string[]).includes("voice"));
+    assert.ok(kinds.length >= 9);
+    // Even a lab where no_voice scored perfectly and the AI voice never did.
+    const items = Array.from({length: 40}, (_, index) => ({itemId: `i${index}`, kind: "editorial" as const, experiment: {version: 2, voice: "no_voice" as const}, score: 1, platforms: 1}));
+    for (const kind of kinds) {
+        for (let round = 0; round < 40; round += 1) assert.equal(chooseExperiment(kind, items).voice, "ai_voice", kind);
+    }
 });

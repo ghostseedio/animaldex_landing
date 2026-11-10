@@ -1,4 +1,4 @@
-import {DIMENSIONS, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, type Intent, KIND_DIMENSIONS} from "@/lib/social-lab/arms";
+import {DIMENSIONS, type Dimension, type Experiment, EXPERIMENT_VERSION, type ExperimentKind, type Intent, KIND_DIMENSIONS, RETIRED_ARMS} from "@/lib/social-lab/arms";
 import type {SocialPlatform} from "@/lib/social/types";
 
 // The hook lab's learner, pure. Each published share gets a score in [0, 1]:
@@ -217,7 +217,9 @@ export function chooseExperiment(kind: ExperimentKind, items: ItemScore[], rando
     const experiment: Experiment = {version: EXPERIMENT_VERSION};
     for (const dimension of KIND_DIMENSIONS[kind]) {
         const only = allowed[dimension];
-        const stats = armStats(items, dimension, learningKinds(kind, dimension)).filter((entry) => !only?.length || only.includes(entry.arm));
+        const retired = RETIRED_ARMS[dimension] ?? [];
+        const stats = armStats(items, dimension, learningKinds(kind, dimension))
+            .filter((entry) => !retired.includes(entry.arm) && (!only?.length || only.includes(entry.arm)));
         if (!stats.length) continue;
         (experiment as Record<string, unknown>)[dimension] = pickArm(stats, random);
     }

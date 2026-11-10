@@ -1,4 +1,5 @@
 import {anthropicApiKey, anthropicClient} from "@/lib/anthropic-keys";
+import {lacksVoiceover, NO_VOICEOVER_REASON} from "@/lib/content-video/fix";
 import {normalizeShareCopy, parseShareCopy, SHARE_COPY_JSON_SCHEMA, type ShareCopy} from "@/lib/social/share-copy";
 import {loadPageSource} from "@/lib/content-video/page-sources";
 import {isRecordedSourceType} from "@/lib/content-video/plan";
@@ -32,8 +33,12 @@ export type ShareableContentVideo = {
     sourceType: string;
 };
 
+/** A live page video that must not be posted as it is (a silent cut): the message says what to do. */
+export class ContentVideoNotPostable extends Error {}
+
 function toShareable(row: ContentVideoRow): ShareableContentVideo | null {
     if (row.status !== "ready" || !row.video_path || row.archived_at) return null;
+    if (lacksVoiceover(row)) throw new ContentVideoNotPostable(NO_VOICEOVER_REASON);
     return {
         mediaPath: row.video_path,
         kind: CONTENT_VIDEO_MEDIA_KIND,

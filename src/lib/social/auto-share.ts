@@ -5,7 +5,7 @@ import type {VideoPlan} from "@/lib/content-video/plan";
 import {contentVideoBusy} from "@/lib/content-video/runner";
 import {blogShareCopy} from "@/lib/content-video/share";
 import {sourcePath} from "@/lib/content-video/source-paths";
-import {withCurrentVideoPaths} from "@/lib/content-video/fix";
+import {lacksVoiceover, withCurrentVideoPaths} from "@/lib/content-video/fix";
 import {CONTENT_VIDEO_MEDIA_KIND, listContentVideos} from "@/lib/content-video/store";
 import {getAbsoluteUrl} from "@/lib/site";
 import {maybeSyncPostMetrics} from "@/lib/social-lab/metrics";
@@ -98,7 +98,8 @@ async function candidates(): Promise<Candidate[]> {
             sourceType: null
         })),
         // Only blog videos the admin has put on their page: that is the approval.
-        ...blogs.filter((row) => row.status === "ready" && row.video_path && row.published_at).map((row) => ({
+        // A silent cut waits for Fix to give it its voice (fix.ts lacksVoiceover).
+        ...blogs.filter((row) => row.status === "ready" && row.video_path && row.published_at && !lacksVoiceover(row)).map((row) => ({
             mediaPath: row.video_path!,
             createdAt: row.published_at!,
             kind: CONTENT_VIDEO_MEDIA_KIND,

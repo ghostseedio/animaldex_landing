@@ -103,6 +103,13 @@ export const VOICES = {
 export type Voice = keyof typeof VOICES;
 
 /**
+ * Arms no new item draws. Their old items keep their scores, so the lab's
+ * history stays honest. no_voice: retired Nov 10 2026 by the founder: every
+ * video is voiced (the silent cuts kept being fixed by hand).
+ */
+export const RETIRED_ARMS: Partial<Record<Dimension, readonly string[]>> = {voice: ["no_voice"]};
+
+/**
  * The one reaction a video or carousel is built to get. The writer follows the
  * recipe, the reviewer (review.ts) asks the question before anything is
  * rendered, and the lab judges the item on that reaction's own number.
