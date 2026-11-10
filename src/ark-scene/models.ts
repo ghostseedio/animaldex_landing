@@ -31,7 +31,13 @@ export type ArkManifest = {
     fallback?: Record<string, string>;
 };
 
-export type ModelLevel = {geometry: BufferGeometry; map: Texture | null; triangles: number};
+/**
+ * `facing`: degrees about up the file turns the mesh by (a `facing` node,
+ * `extras.ark_facing`): the 14 birds modelled facing another way are turned
+ * in the file itself, so a rig (`rig-player.ts`) made from the turned mesh
+ * matches it.
+ */
+export type ModelLevel = {geometry: BufferGeometry; map: Texture | null; triangles: number; facing?: number};
 
 export type SpeciesModel = {
     slug: string;
@@ -46,6 +52,8 @@ export type SpeciesModel = {
     bodyLength: number;
     /** The neutral figure standing in for a species with no model (A13). */
     placeholder?: boolean;
+    /** Degrees about up the model's file turns its mesh (`ModelLevel.facing`), 0 for most. */
+    facing: number;
 };
 
 type Wanted = "far" | "near";
@@ -216,8 +224,11 @@ export class ModelLibrary {
         const gltf = await this.loader.loadAsync(url);
         gltf.scene.updateMatrixWorld(true);
         let found: Mesh | null = null;
+        let facing = 0;
         gltf.scene.traverse((object) => {
             if (!found && (object as Mesh).isMesh) found = object as Mesh;
+            const turned = Number((object.userData as {ark_facing?: unknown} | undefined)?.ark_facing);
+            if (Number.isFinite(turned) && turned) facing = turned;
         });
         const mesh = found as Mesh | null;
         if (!mesh) throw new Error("no mesh");
@@ -226,7 +237,7 @@ export class ModelLibrary {
         const map = material?.map ?? null;
         mesh.geometry.dispose();
         material?.dispose();
-        return {geometry, map, triangles: triangles(geometry)};
+        return {geometry, map, triangles: triangles(geometry), facing};
     }
 
     private remember(slug: string, behaviour: TalkingBehaviour | null, level: ModelLevel): SpeciesModel {
@@ -241,7 +252,8 @@ export class ModelLibrary {
                 minY: box.min.y,
                 height: box.max.y - box.min.y,
                 length: Math.max(box.max.z - box.min.z, 0.05),
-                bodyLength: Math.max(bodyAxisExtent(slug, behaviour?.plan, {x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z}), 0.05)
+                bodyLength: Math.max(bodyAxisExtent(slug, behaviour?.plan, {x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z}), 0.05),
+                facing: level.facing ?? 0
             };
             this.models.set(slug, model);
         }

@@ -85,18 +85,77 @@ test("microhabitats: true size close by, never under the minimum on screen, the 
     assert.equal(microDrawnLength(L, full, 150, 800, 38, 16), full);
 });
 
-test("rigged clips: read only for a rig that passed and a clip it lists; otherwise null, and the motion stays procedural", async () => {
-    const {ARK_RIG_MANIFEST, rigClip} = await import("@/ark-scene/rig-clips");
+test("rigged clips: passed rigs, a partial rig's own passing clips; never flight, never a sitting rig's movement, never a fallback", async () => {
+    const {rigClip, rigPlayable, decodeRigIndex, decodeRigEntry} = await import("@/ark-scene/rig-clips");
     const manifest = {species: {
-        "mediterranean-house-gecko": {state: "passed", clips: {walk: {frames: 24, loop: true, seconds: 0.35}}},
+        "mediterranean-house-gecko": {state: "passed", v: "a", clips: {walk: {frames: 24, loop: true, seconds: 0.35, pass: true}}},
         "common-house-spider": {state: "fallback", clips: ["idle", "walk", "run"]},
-        "black-ant": {state: "passed", clips: {idle: {frames: 48, loop: true, seconds: 2}}}
+        "black-ant": {state: "passed", v: "b", clips: {idle: {frames: 48, loop: true, seconds: 2, pass: true}}},
+        // A passed flyer: its flight is held (pass false), and a clip without `pass` is never read.
+        "house-sparrow": {state: "passed", v: "c", clips: {
+            hop: {frames: 12, loop: true, seconds: 0.4, ground_speed: 0.5, pass: true},
+            flap: {frames: 12, loop: true, seconds: 0.3, pass: false, held: "wing cards await owner review"},
+            perch: {frames: 48, loop: true, seconds: 3}
+        }},
+        // A partial rig: only its individually passing clips.
+        "acorn-woodpecker": {state: "partial", v: "d", clips: {
+            walk: {frames: 24, loop: true, seconds: 0.5, ground_speed: 0.1, pass: false},
+            hop: {frames: 12, loop: true, seconds: 0.4, ground_speed: 0.5, pass: true}
+        }},
+        // A sitting rest pose: idle only, whatever its walk's checks said.
+        "agile-wallaby": {state: "partial", v: "e", pose: "sitting (rest pose reviewed from renders)", clips: {
+            idle: {frames: 48, loop: true, seconds: 2, pass: true},
+            walk: {frames: 24, loop: true, seconds: 0.6, ground_speed: 0.1, pass: true}
+        }},
+        // Even a manifest that marks a flight clip as passing never plays it.
+        "barn-owl": {state: "passed", v: "f", clips: {glide: {frames: 24, loop: true, seconds: 2, pass: true}, land: {frames: 24, loop: false, seconds: 1, pass: true}}}
     }};
     assert.equal(rigClip(manifest, "mediterranean-house-gecko", "walk")?.frames, 24);
     assert.equal(rigClip(manifest, "common-house-spider", "walk"), null, "a fallback rig is never read");
     assert.equal(rigClip(manifest, "black-ant", "walk"), null, "a clip the passed rig doesn't list");
     assert.equal(rigClip(manifest, "nobody", "walk"), null);
-    // Nothing is published yet: the scene has no manifest, so every animal moves procedurally.
-    assert.equal(ARK_RIG_MANIFEST, null);
-    assert.equal(rigClip(ARK_RIG_MANIFEST, "mediterranean-house-gecko", "walk"), null);
+    assert.equal(rigClip(manifest, "house-sparrow", "hop")?.frames, 12);
+    assert.equal(rigClip(manifest, "house-sparrow", "flap"), null, "held flight");
+    assert.equal(rigClip(manifest, "house-sparrow", "perch"), null, "a clip not marked as passing");
+    assert.equal(rigClip(manifest, "acorn-woodpecker", "hop")?.frames, 12, "a partial rig's passing clip");
+    assert.equal(rigClip(manifest, "acorn-woodpecker", "walk"), null, "a partial rig's failing clip");
+    assert.equal(rigClip(manifest, "agile-wallaby", "idle")?.frames, 48);
+    assert.equal(rigClip(manifest, "agile-wallaby", "walk"), null, "a sitting rig's movement is held");
+    for (const flight of ["flap", "glide", "takeoff", "land"]) assert.equal(rigClip(manifest, "barn-owl", flight), null, flight);
+    assert.equal(rigPlayable(manifest, "barn-owl"), false, "nothing but flight: no rig to load");
+    assert.equal(rigPlayable(manifest, "acorn-woodpecker"), true);
+    assert.equal(rigPlayable(manifest, "common-house-spider"), false);
+    assert.equal(rigClip(null, "mediterranean-house-gecko", "walk"), null, "no manifest: every animal procedural");
+    // The published manifest: slug -> rig file version; anything else is left out.
+    assert.equal(decodeRigIndex({nope: 1}), null);
+    assert.equal(decodeRigIndex("x"), null);
+    assert.deepEqual(decodeRigIndex({species: {}}), {}, "an empty manifest: every rig off");
+    assert.deepEqual(decodeRigIndex({species: {"red-fox": "8ea446733cd9", "Bad Slug": "8ea446733cd9", lion: "../../x", owl: 3}}), {"red-fox": "8ea446733cd9"});
+    assert.equal(decodeRigEntry({state: "passed", clips: ["idle"]}), null);
+    assert.equal(decodeRigEntry(null), null);
+    assert.ok(decodeRigEntry({state: "partial", clips: {idle: {frames: 48, loop: true, seconds: 2, pass: true}}}));
+});
+
+test("rig player: the rig folder beside the model set, texture rows, planted feet, half floats", async () => {
+    const {rigBaseFrom} = await import("@/ark-scene/rig-clips");
+    const {clipRows, cyclesFor, halfToFloat} = await import("@/ark-scene/rig-player");
+    assert.equal(rigBaseFrom("https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark"), "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig/v1");
+    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark/"), "/api/dev/ark-models/ark-rig/v1");
+    assert.equal(rigBaseFrom("/somewhere/else"), null);
+    const walk = {name: "walk", frames: 24, loop: true, seconds: 0.5, ground_speed: 0.2, pass: true, row: 49, rows: 25};
+    assert.deepEqual(clipRows(walk, 0), [49, 50, 0]);
+    // Looping: the phase wraps, and the last row (the first frame again) closes the cycle.
+    const [r0, r1, t] = clipRows(walk, 1.99);
+    assert.equal(r0, 49 + 23);
+    assert.equal(r1, 49 + 24);
+    assert.ok(t > 0.7 && t < 1);
+    const once = {...walk, name: "leap", loop: false};
+    assert.deepEqual(clipRows(once, 3), [49 + 24, 49 + 24, 0], "a one-shot holds its last frame");
+    // A cycle covers ground_speed × seconds: walking that far is one cycle, whatever the time it took.
+    assert.equal(cyclesFor(walk, 0.1), 1);
+    assert.equal(cyclesFor({...walk, ground_speed: undefined}, 0.1), 0);
+    assert.equal(halfToFloat(0x3c00), 1);
+    assert.equal(halfToFloat(0xc000), -2);
+    assert.equal(halfToFloat(0x3555) > 0.333 && halfToFloat(0x3555) < 0.3334, true);
+    assert.equal(halfToFloat(0), 0);
 });

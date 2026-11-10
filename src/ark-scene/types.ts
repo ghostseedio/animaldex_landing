@@ -134,6 +134,10 @@ export type ArkSceneStats = {
     placeholders: number;
     tier: "high" | "medium" | "low";
     lite: boolean;
+    /** Animals drawn with their rig this frame, rigs loaded, and the rig bytes downloaded this session. */
+    rigged: number;
+    rigsLoaded: number;
+    rigBytes: number;
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
@@ -143,6 +147,12 @@ export type ArkSceneOptions = {
     snapshot: ArkSnapshot;
     /** The ark model set's folder: `<modelBase>/manifest.json`, `<modelBase>/<slug>/<version>.near.glb`. */
     modelBase: string;
+    /**
+     * The rigs' folder (`<rigBase>/manifest.json`, `<rigBase>/<slug>/<v>.rig.glb`): the walking,
+     * climbing and other clips that passed their checks, played on the animals close by.
+     * Default: beside the model set (`…/v1/ark` → `…/ark-rig/v1`); null: no rigs.
+     */
+    rigBase?: string | null;
     /** The species icon art (the `animals` bucket's `<slug>.webp`). */
     iconUrl: (slug: string) => string;
     onSelect?: (animal: ArkAnimal | null) => void;
