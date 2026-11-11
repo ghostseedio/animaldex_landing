@@ -6,7 +6,7 @@
  */
 
 import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stats";
-import {ARK_ZONES, type ArkAnimal, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
+import {ARK_ZONES, type ArkAnimal, type ArkNestRow, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {arkActivity} from "@/lib/ark-daylight";
 import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
 
@@ -94,6 +94,29 @@ function animal(raw: unknown): ArkAnimal | null {
     };
 }
 
+function finite(value: unknown): number | null {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** A clutch row (`nests`, A9): only eggs in a known zone; anything else is dropped. */
+function nestRow(raw: unknown): ArkNestRow | null {
+    if (!raw || typeof raw !== "object") return null;
+    const row = raw as Record<string, unknown>;
+    const species = text(row.species_profile_id);
+    if (!species || row.status !== "egg" || typeof row.zone !== "string" || !ZONES.has(row.zone)) return null;
+    return {
+        species_profile_id: species,
+        name: text(row.name) ?? "",
+        model_slug: text(row.model_slug),
+        zone: row.zone as ArkZone,
+        status: "egg",
+        eggs: whole(row.eggs),
+        laid_ark_day: finite(row.laid_ark_day),
+        hatch_ark_day: finite(row.hatch_ark_day),
+        mine: row.mine === true
+    };
+}
+
 export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
     if (!raw || typeof raw !== "object") return null;
     const row = raw as Record<string, unknown>;
@@ -115,6 +138,7 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         zones,
         animals: animals.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at)),
         as_of: text(row.as_of),
-        ...(typeof voyage.ark_day === "number" && Number.isFinite(voyage.ark_day) ? {ark_day: voyage.ark_day} : {})
+        ...(typeof voyage.ark_day === "number" && Number.isFinite(voyage.ark_day) ? {ark_day: voyage.ark_day} : {}),
+        ...(Array.isArray(row.nests) ? {nests: row.nests.map(nestRow).filter((nest): nest is ArkNestRow => nest !== null)} : {})
     };
 }

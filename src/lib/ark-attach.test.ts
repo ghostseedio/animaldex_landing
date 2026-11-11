@@ -17,9 +17,10 @@ import attachData from "@/ark-scene/tree-attach.json";
 import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {COTTAGE, DECOR_SINK, GARDEN_POND, zoneLamp} from "@/ark-scene/micro-decor";
 import {rockAssetFor, rockAttachPoints} from "@/ark-scene/rock-assets";
+import {defaultHomePlots, fencePostTops as homeFencePosts} from "@/ark-scene/props/home-layout";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {rock} from "@/ark-scene/vegetation";
-import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
+import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, setAttachHomePlots, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
 import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
 import {LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import {snowCover, snowLine} from "@/ark-scene/snow";
@@ -399,6 +400,7 @@ function hostFingerprints(hosts: string[]): Map<string, string> {
         } else if (host === "house") key = COTTAGE;
         else if (host.startsWith("lamp-")) key = zoneLamp(host.slice(5) as never);
         else if (host === "garden-pond") key = GARDEN_POND;
+        else if (host === "paddock" || host === "picket") key = homeFencePosts(defaultHomePlots()).filter((post) => post.fence === host);
         else if (host === "lake") key = LAKE;
         else if (host === "ground") {
             if (!terrain) {
@@ -547,6 +549,23 @@ test("attach: fence posts and roof edges sit on what is drawn (fence posts, the 
     const matrix = new Matrix4().compose(new Vector3(item.x, item.y - DECOR_SINK, item.z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), item.rotation), new Vector3(1, 1, 1));
     [-1.2, 1.2].forEach((x, k) => assert.ok(new Vector3(x, 1.002, 0).applyMatrix4(matrix).distanceTo(new Vector3(tops[k].x, tops[k].y, tops[k].z)) < 1e-9));
     for (const point of allAttachPoints().filter((p) => p.tag === "fence_post")) assert.ok(point.normal.y === 1 && point.forward, point.id);
+    // The props lane's fences (props/home-layout.ts): every post top it lists, 2 mm up, as fence_post:<fence>:<n>.
+    const homeTops = homeFencePosts(defaultHomePlots());
+    assert.ok(homeTops.some((post) => post.fence === "paddock") && homeTops.some((post) => post.fence === "picket"));
+    for (const post of homeTops) {
+        const point = allAttachPoints().find((p) => p.id === `fence_post:${post.fence}:${post.n}`)!;
+        assert.ok(point, `fence_post:${post.fence}:${post.n}`);
+        assert.ok(Math.abs(point.position.y - post.position.y - 0.002) < 1e-9 && point.position.x === post.position.x && point.position.z === post.position.z);
+        assert.deepEqual(point.forward, post.forward);
+    }
+    // The map's plots in place of today's: the posts follow them (and go back).
+    const moved = defaultHomePlots().map((plot) => (plot.kind === "smallholding" ? {...plot, x: plot.x + 5} : plot));
+    setAttachHomePlots(moved);
+    const paddock = allAttachPoints().filter((p) => p.id.startsWith("fence_post:paddock:"));
+    assert.equal(paddock.length, homeFencePosts(moved).filter((post) => post.fence === "paddock").length);
+    homeFencePosts(moved).filter((post) => post.fence === "paddock").forEach((post) => assert.ok(paddock.some((p) => p.id === `fence_post:paddock:${post.n}` && p.position.x === post.position.x)));
+    setAttachHomePlots(null);
+    assert.ok(allAttachPoints().some((p) => p.id === "fence_post:paddock:0" && p.position.x === homeTops.find((post) => post.fence === "paddock")!.position.x));
     // Roofs.
     assert.equal(ROOF_THICKNESS, 0.12);
     for (const line of ["const w = 3.5;", "const d = 2.55;", "const h = 1.9;", "const top = 3.15;"]) assert.ok(veg.includes(line), `barn changed: ${line}`);

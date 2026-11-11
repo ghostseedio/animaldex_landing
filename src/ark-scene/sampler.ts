@@ -21,6 +21,7 @@ import {IcosahedronGeometry, type BufferGeometry} from "three";
 import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
 import {rockAssetFor, rockAttachPoints, rockFaceToward} from "@/ark-scene/rock-assets";
+import {defaultHomePlots, fencePostTops as homeFencePosts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {snowCover} from "@/ark-scene/snow";
 import {treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
@@ -359,6 +360,20 @@ export function resetAttachPoints(): void {
     attachCache = null;
     building = null;
     pending = null;
+    generation++;
+}
+
+/** The home area's plots the props lane's fences stand on (null: today's cottage and barn, props/home-layout.ts). */
+let homePlots: HomePlot[] | null = null;
+
+/**
+ * Give the sampler the home area's plots (the map lane's `homePlots()`; props/index.ts setHomePlots passes them on),
+ * so the `fence_post` points stand on the fences the props draw there. Points already built are built again on next
+ * use. Pass null for today's default (the cottage's plot and the barn's smallholding).
+ */
+export function setAttachHomePlots(plots: HomePlot[] | null): void {
+    homePlots = plots;
+    resetAttachPoints();
 }
 
 function rotateY(x: number, z: number, angle: number): {x: number; z: number} {
@@ -444,6 +459,8 @@ const COTTAGE_ROOF_THICKNESS = 0.12;
 const BARN_ROOF = {top: 3.15, rise: 1.9, half: 2.55};
 
 let building: Generator<void, AttachPoint[], void> | null = null;
+/** Bumped by a reset: a sliced build under way when it happens hands over to a fresh one. */
+let generation = 0;
 let pending: Promise<AttachPoint[]> | null = null;
 let slices: number[] = [];
 
@@ -480,8 +497,14 @@ export function prepareAttachPoints(sliceMs = 6): Promise<AttachPoint[]> {
     building ??= buildAttachPoints();
     slices = [];
     const next = (run: () => void) => (typeof requestAnimationFrame === "function" ? requestAnimationFrame(() => run()) : setTimeout(run, 0));
+    const started0 = generation;
     pending = new Promise((resolve) => {
         const slice = () => {
+            if (generation !== started0) {
+                // Reset meanwhile (new home plots): finish with the build as it now stands.
+                resolve(allAttachPoints());
+                return;
+            }
             if (attachCache) {
                 pending = null;
                 resolve(attachCache);
@@ -788,6 +811,13 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
             points[points.length - 1].forward = forward;
         });
     });
+    // And the fences the props lane draws on the home plots (props/home-layout.ts `fencePostTops`: the paddocks'
+    // post-and-rail and the gardens' picket fences), 2 mm over each post's top: `fence_post:paddock:<n>`,
+    // `fence_post:picket:<n>`.
+    for (const post of homeFencePosts(homePlots ?? defaultHomePlots())) {
+        add("fence_post", post.fence, post.n, {x: post.position.x, y: post.position.y + 0.002, z: post.position.z}, {x: 0, y: 1, z: 0}, zoneOf(post.position.x, post.position.z), Math.atan2(post.forward.x, post.forward.z));
+        points[points.length - 1].forward = post.forward;
+    }
 
     // Roof edges (added 2026-11-11 for the map lane): along the cottage's ridge cap and its eaves' top edges
     // (micro-scene.ts: the ridge's capping box, the roof slabs ROOF_THICKNESS thick, their outer edge 0.35 m past the
