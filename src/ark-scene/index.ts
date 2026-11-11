@@ -823,7 +823,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
         const spaced = spaceHomes(
-            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
+            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && mapHabitatAt(e.animal, x, z, 5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z, 5))})),
             eats,
             (id) => radius.get(id) ?? 3
         );

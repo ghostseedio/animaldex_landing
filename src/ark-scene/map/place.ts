@@ -486,11 +486,16 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
  * the map off, for a species the map does not place, and for a water
  * species (its water is its band's, which the swim test already asks).
  */
-export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: number, z: number): boolean {
+export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: number, z: number, margin = 0): boolean {
     if (!enabled || isHeldOnMap(animal.model_slug) || speciesDepth(animal.model_slug, animal.zone)) return true;
     const species = mapSpecies(animal.model_slug, animal.zone);
     if (!species) return true;
-    return mapPoints().sampler.ground(x, z).tags.some((tag) => species.allowed.has(tag));
+    const sampler = mapPoints().sampler;
+    const holds = (px: number, pz: number) => sampler.ground(px, pz).tags.some((tag) => species.allowed.has(tag));
+    if (holds(x, z)) return true;
+    // Within `margin` of its own ground (a predator's home at the edge of its range: it ranges over its ground from there).
+    for (let k = 0; margin > 0 && k < 8; k++) if (holds(x + Math.sin(k * Math.PI / 4) * margin, z + Math.cos(k * Math.PI / 4) * margin)) return true;
+    return false;
 }
 
 /**

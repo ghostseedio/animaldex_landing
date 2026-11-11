@@ -171,7 +171,7 @@ test("map: a hanger hangs under its limb and a percher sits on top, on the drawn
     assert.ok(hangers >= 2, `${hangers} hangers checked`);
 });
 
-test("map + behaviour spawn spacing: predators 20 m from their prey at spawn (at least 10 m where their ground has no room), their moved homes still on their own ground", () => {
+test("map + behaviour spawn spacing: every predator at least 20 m from its prey at spawn, its moved home on (or within 5 m of) its own ground", () => {
     const world = scheduleWorld(sceneSampler());
     for (const raw of [fixture, fixtureV2]) {
         const snapshot = decodeArkSnapshot(raw)!;
@@ -186,26 +186,22 @@ test("map + behaviour spawn spacing: predators 20 m from their prey at spawn (at
         const items = leaders.map((a) => ({a, place: places.get(a.id)!, profile: behaviourProfile(a.model_slug)}));
         const reach = new Map(items.map((i) => [i.a.id, rangeReach(i.profile, {id: i.a.id, zone: i.a.zone, home: {x: i.place.x, y: i.place.ground, z: i.place.z}, length: displayLength(i.a), sea: false}) + (sizes.has(i.a.id) ? groupSpread(displayLength(i.a), sizes.get(i.a.id)!) : 0)]));
         const spaced = spaceHomes(
-            items.map((i) => ({id: i.a.id, slug: i.a.model_slug, home: {x: i.place.x, z: i.place.z}, length: displayLength(i.a), walkable: (x: number, z: number) => (i.profile.move === "swim" || i.profile.seabed ? world.nav.swimmable(x, z, 0.5) : world.nav.walkable(x, z) && mapHabitatAt(i.a, x, z))})),
+            // (As index.ts wireSchedules: a flyer's home any dry ground on its own, a walker's on the walk grid; either within 5 m of its ground.)
+            items.map((i) => ({id: i.a.id, slug: i.a.model_slug, home: {x: i.place.x, z: i.place.z}, length: displayLength(i.a), walkable: (x: number, z: number) => (i.profile.move === "swim" || i.profile.seabed ? world.nav.swimmable(x, z, 0.5) : i.profile.move === "fly" ? world.sampler.heightAt(x, z) > 0.05 && mapHabitatAt(i.a, x, z, 5) : world.nav.walkable(x, z) && mapHabitatAt(i.a, x, z, 5))})),
             eats,
             (id) => reach.get(id) ?? 3
         );
         const home = (i: (typeof items)[number]) => spaced.get(i.a.id)?.home ?? {x: i.place.x, z: i.place.z};
         let predators = 0;
-        let near = 0;
         for (const i of items) {
             const prey = items.filter((j) => j !== i && eats(i.a.model_slug, j.a.model_slug));
             if (!prey.length) continue;
             predators++;
             const nearest = Math.min(...prey.map((j) => Math.hypot(home(i).x - home(j).x, home(i).z - home(j).z)));
-            // Behaviour's guarantee: at least its safe distance (10 m); the audit's target 20 m wherever its own ground has the room
-            // (where it has not, spaceHomes shrinks both ranges instead).
-            assert.ok(nearest >= 10, `${i.a.model_slug} ${nearest.toFixed(1)} m from its prey`);
-            if (nearest < 20) near++;
-            assert.ok(mapHabitatAt(i.a, home(i).x, home(i).z) || (home(i).x === i.place.x && home(i).z === i.place.z), `${i.a.model_slug} moved off its own ground`);
+            assert.ok(nearest >= 20, `${i.a.model_slug} ${nearest.toFixed(1)} m from its prey`);
+            assert.ok(mapHabitatAt(i.a, home(i).x, home(i).z, 5) || (home(i).x === i.place.x && home(i).z === i.place.z), `${i.a.model_slug} moved off its own ground`);
         }
         assert.ok(predators >= 15, `${predators} predators`);
-        assert.ok(near <= Math.ceil(predators * 0.1), `${near} of ${predators} predators under 20 m from their prey`);
     }
 });
 
