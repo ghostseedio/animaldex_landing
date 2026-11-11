@@ -225,7 +225,7 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 - **Colour.** The duller sex gets `saturation` 0.72 and `value` 0.94 in `sexLook`. It is not applied in the renderer yet: the liveliness wiring lane owns per-instance colour.
 - **Features** (antlers, mane, crest, dewlap, train…) are in the data for 486 species. Models are single meshes from photos, so a hind drawn from a stag's model still has its antlers. Drawing them needs per-sex model variants (assets lane).
 
-**Requiring a male and a female to breed: the harness, not changed.** See the section "What a male + female pair rule would do" below.
+**Requiring a male and a female to breed was not changed.** Breeding is the server's. What such a rule would do is in "What a male + female pair rule would do" below.
 
 ## Measured
 
@@ -322,3 +322,52 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 - Shaking off, bathing and rolling have no phrases; they are body-plan rules or defaults.
 - 625 species have nothing but calls in their stored text: body-plan defaults, flagged.
 - The where-to-look and System Dynamics fields carry instructions and model language; the rules skip those sentences.
+
+## What a male + female pair rule would do (harness; breeding NOT changed)
+
+**What was run.**
+- The real ecology module and harness (AnimalDex `supabase/functions/_shared/ark-ecology`, `scripts/ark/simulate.ts`), copied into this lane's scratch folder. Nothing in either repo changed.
+- 40 seeds × 10 Ark years per scenario, breeding fallback `estimate`. Inputs were the traits and food links in the handover folder (2,507 species).
+- **Today's rule:** the oldest adult pairs with the next oldest, whatever their sex.
+- **The tested rule:** the oldest male with the oldest female, and so on. Sexes are seeded exactly as the scene seeds them (`sexLook`, from the animal's id and the stored ratio). Hermaphrodite and parthenogenetic species pair as today.
+
+Medians over the 40 seeds:
+
+| Scenario | Measure | Today | Male + female | Change |
+|---|---|---|---|---|
+| small (5 users) | births | 886 | 451 | −49% |
+| | predator births | 45 | 4 | −91% |
+| | meals | 910 | 476 | −48% |
+| | animals at the end | 46 | 40 | −13% |
+| | species at the end | 17.5 | 17.5 | 0 |
+| | Ark health at the end | 81 | 88 | +7 |
+| medium (50 users) | births | 7,795 | 3,461 | −56% |
+| | predator births | 1,030 | 249 | −76% |
+| | meals | 8,504 | 4,451 | −48% |
+| | starved | 152 | 116 | −24% |
+| | animals at the end | 331 | 319 | −4% |
+| | species at the end | 163.5 | 162.5 | −1 |
+| predator-heavy | births | 1,185 | 588 | −50% |
+| | predator births | 266 | 78 | −71% |
+| | meals | 1,858 | 1,192 | −36% |
+| | animals at the end | 116 | 115.5 | 0 |
+| | species extinct at the end | 6% | 5% | |
+
+**Unchanged:**
+- the harness verdicts (small PASS, medium PASS, predator-heavy WARN on predators, as today);
+- the extinction and loss criteria;
+- natural deaths;
+- the species that were ever present.
+
+**What it means:**
+- **Births about halve, predators' most.** Over all the daily checks, more than half (11.1 million of 20.9 million) found the species' adults all one sex, and 2,083 species were blocked that way at least once. A species with two animals aboard has an even chance of never breeding.
+- **Populations hardly change.** The population cap holds them, and the predators, with fewer young, eat about 40% fewer meals. So the Ark looks the same size, with about half the birth and egg events in the feed and story.
+- **Colony insects nearly stop breeding.** Their animals are workers, 2% males; they would need their own rule (a queen, a colony) if the owner wants pairs.
+- **Seasonal breeders lose more, with nothing in between.** Under the tested rule a pair, as well as a season, is needed.
+
+**For the owner to decide:**
+1. keep today's rule;
+2. require a male and a female (births halve, as above);
+3. require them only for species with sex differences stored (2,103 species) and keep "any two" for the rest.
+
+This is a server change (ecology tick), so it needs its own migration and harness run if chosen.
