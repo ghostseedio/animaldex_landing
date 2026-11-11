@@ -28,7 +28,7 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
-import {mapPlace, mapPoints, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
+import {mapPlace, mapPoints, settleRoosts, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
 import {hamletPlotsFor, plotOf, plotSpots} from "@/ark-scene/map/hamlet";
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {isHost} from "@/ark-scene/map/species";
@@ -470,6 +470,9 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         placed.set(animal.id, chosen);
     }
     attachToHosts(animals, placed);
+    // Where each sleeps on the schedule (its den, its perch, its roost: `map/place.ts` scheduleRoost), worked out with
+    // its place (in the places worker for a big Ark), so the mount never builds the map's sampler to ask.
+    settleRoosts(animals, placed);
     return placed;
 }
 
