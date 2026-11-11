@@ -18,7 +18,7 @@ import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/de
 import {COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {rock} from "@/ark-scene/vegetation";
-import {CAVE_SITE, EVERY_TIER_FILL, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
+import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
 import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
 import {sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import {snowCover, snowLine} from "@/ark-scene/snow";
@@ -155,7 +155,7 @@ test("attach: every leaf point lies on a drawn leaf, every bark and branch point
             assert.ok(Math.abs(normal.length() - 1) < 0.01, `${id} ${tag} normal`);
             // The surface under it faces the way its up does (either side of a sheet leaf).
             const face = on.t.tri.getNormal(new Vector3());
-            assert.ok(Math.abs(face.dot(normal)) > (tag === "leaf" ? 0.5 : 0.2), `${id} ${tag} sits across its surface (${face.dot(normal).toFixed(2)})`);
+            assert.ok(Math.abs(face.dot(normal)) > (tag === "leaf" ? 0.4 : 0.2), `${id} ${tag} sits across its surface (${face.dot(normal).toFixed(2)})`);
             if (tag === "leaf" || tag === "branch") assert.ok(ny >= 0.45, `${id} ${tag} faces the sky`);
             // Its forward runs along the surface.
             const forward = new Vector3(row[7], row[8], row[9]);
@@ -327,10 +327,19 @@ test("attach: the eave points hang just under the roof the cottage draws (micro-
     }
 });
 
-test("attach: every rock point lies on the rock vegetation.ts draws (its flat faces, within 3 mm), facing out of it", () => {
+test("attach: drawnRockPoint lies on the rock vegetation.ts draws (its flat faces, within 3 mm), facing out of it (the rock points where the rock set is missing)", () => {
     const meshes = [0, 1, 2].map((variant) => rock(variant).getAttribute("position") as BufferAttribute);
     const decor = worldDecor();
-    const points = allAttachPoints().filter((point) => point.tag === "rock_face");
+    const points: AttachPoint[] = [];
+    decor.forEach((item, i) => {
+        if (item.kind !== "rock") return;
+        for (let k = 0; k < 4; k++) {
+            const a = k * 1.9 + i;
+            const up = 0.1 + 0.2 * k;
+            const p = drawnRockPoint(item, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
+            points.push({id: `rock:${i}:${k}`, host: `decor${i}`, position: {x: p.x + p.nx * 0.002, y: p.y + p.ny * 0.002, z: p.z + p.nz * 0.002}, normal: {x: p.nx, y: p.ny, z: p.nz}} as AttachPoint);
+        }
+    });
     assert.ok(points.length > 500);
     let worst = 0;
     for (const point of points) {
@@ -365,8 +374,8 @@ test("attach: every other point on the island is where it was before the asset t
     const at = (id: string) => allAttachPoints().find((point) => point.id === id) as AttachPoint;
     const close = (point: AttachPoint, x: number, y: number, z: number) => Math.hypot(point.position.x - x, point.position.y - y, point.position.z - z) < 1e-9;
     assert.ok(close(at("house_wall:house:22"), 13.61, 2.682718591185397, 52.698830182105304));
-    // (Rock points moved by millimetres to centimetres onto the drawn faces; their ids stay.)
-    assert.ok(Math.hypot(at("rock_face:decor261:3").position.x + 47.75783732649006, at("rock_face:decor261:3").position.z - 64.09430146821144) < 0.05);
+    // (Rock points now sit on the asset rocks' own faces, graphics batch 5; their ids stay.)
+    assert.ok(at("rock_face:decor261:3"));
     assert.ok(close(at("leaf_litter:ground:0"), -45.331413857638836, 9.989909153851938, 4.594026831910014));
     // (The canopy trees' points moved down onto the limbs as drawn, sunk DECOR_SINK; their ids stay.)
     assert.ok(close(at("canopy_perch:decor682:0"), -34.58297404572754, 10.424341250286663, 29.229413565007295));

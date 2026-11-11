@@ -25,6 +25,8 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
+import {kelpStandSpot, reefCloseupSpot} from "@/ark-scene/reef";
+import {pinSeaClock} from "@/ark-scene/fish-schools";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
@@ -51,11 +53,16 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
             return {x: site.x, z: site.z - 6, radius: Math.max(centre.radius * 0.5, 26)};
         },
         reef: () => ZONE_SITES.coral_reef,
+        reefCloseup: () => reefCloseupSpot(),
+        kelpStand: () => kelpStandSpot(),
         forestClearing: () => ZONE_SITES.woodland,
         obstacles: () => goldenObstacles(),
         cropField: () => goldenCropField()
     };
 }
+
+/** The sea's clock for every shot (2026-11-11 10:00 UTC): the fish and the surge start from the same moment each time. */
+const GOLDEN_SEA_EPOCH = 1_794_391_200;
 
 /** Calm weather at mean tide: every golden shot unless it names its own (GOLDEN_WEATHER). */
 const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
@@ -484,6 +491,7 @@ async function mountGolden(el: HTMLElement) {
             }
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
+            pinSeaClock(GOLDEN_SEA_EPOCH);
             const debugNow = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
             const hold = () => {
                 if (micro && debugNow) debugNow.controls.minDistance = holder.minDistance;

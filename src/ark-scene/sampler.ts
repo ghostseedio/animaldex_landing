@@ -20,6 +20,7 @@ import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, micr
 import {IcosahedronGeometry, type BufferGeometry} from "three";
 import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
+import {rockAssetFor, rockAttachPoints, rockFaceToward} from "@/ark-scene/rock-assets";
 import {snowCover} from "@/ark-scene/snow";
 import {treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
@@ -624,10 +625,21 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         yield;
         const zone = zoneOf(item.x, item.z);
         const s = item.scale;
-        // On the drawn surface itself: the very triangles vegetation.ts draws (`drawnRockPoint`), 2 mm off them.
+        // On the drawn surface itself: the asset rock's own faces and ledges (rock-assets.ts, batch 5), else (the rock
+        // set missing, so vegetation.ts draws the procedural rock) the very triangles that draws (`drawnRockPoint`).
+        // Same ids and the same random draws either way.
+        const asset = rockAssetFor(item);
+        const used = new Set<number>();
         for (let k = 0; k < 4; k++) {
             const a = random() * Math.PI * 2;
             const up = 0.1 + random() * 0.75;
+            const face = asset ? rockFaceToward(asset, a, up, used) : null;
+            if (face) {
+                used.add(face.index);
+                const {position, normal} = face.point;
+                add("rock_face", `decor${i}`, k, {x: position.x + normal.x * 0.004, y: position.y + normal.y * 0.004, z: position.z + normal.z * 0.004}, normal, zone);
+                continue;
+            }
             const point = drawnRockPoint(item, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
             add("rock_face", `decor${i}`, k, {x: point.x + point.nx * 0.002, y: point.y + point.ny * 0.002, z: point.z + point.nz * 0.002}, {x: point.nx, y: point.ny, z: point.nz}, zone);
         }
@@ -731,15 +743,21 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         if (item.kind !== "rock" || item.scale < 1.3) return;
         const zone = zoneOf(item.x, item.z);
         if (zone !== "mountains" && zone !== "polar" && zone !== "seashore") return;
-        const top = drawnRockPoint(item, 0, 1, 0);
+        // The asset rock's highest flat ledge (its attach.json, on the drawn lod0 surface), else the drawn procedural top.
+        const asset = rockAssetFor(item);
+        const shelf = asset ? rockAttachPoints(asset).filter((p) => p.tag === "ledge" && p.normal.y >= 0.8).sort((p, q) => q.position.y - p.position.y)[0] : null;
+        if (asset && !shelf) return;
+        const top = shelf
+            ? {x: shelf.position.x + shelf.normal.x * 0.002, y: shelf.position.y + shelf.normal.y * 0.002, z: shelf.position.z + shelf.normal.z * 0.002, nx: shelf.normal.x, ny: shelf.normal.y, nz: shelf.normal.z}
+            : drawnRockPoint(item, 0, 1, 0);
         // Out of the sea at high tide, and flat enough to sit on.
         if (top.ny < 0.8 || top.y < 0.6) return;
         // Facing out to sea, or down the mountain: away from the island's middle, along the shelf.
-        const normal = {x: top.nx, y: top.ny, z: top.nz};
+        const normal = normalise({x: top.nx, y: top.ny, z: top.nz});
         const away = {x: Math.sin(Math.atan2(item.x, item.z)), y: 0, z: Math.cos(Math.atan2(item.x, item.z))};
         const dot = away.x * normal.x + away.z * normal.z;
         const forward = normalise({x: away.x - normal.x * dot, y: -normal.y * dot, z: away.z - normal.z * dot});
-        add("ledge", `decor${i}`, 0, {x: top.x + top.nx * 0.002, y: top.y + top.ny * 0.002, z: top.z + top.nz * 0.002}, normal, zone, yawFor(normal, forward));
+        add("ledge", `decor${i}`, 0, shelf ? {x: top.x, y: top.y, z: top.z} : {x: top.x + top.nx * 0.002, y: top.y + top.ny * 0.002, z: top.z + top.nz * 0.002}, normal, zone, yawFor(normal, forward));
         points[points.length - 1].forward = forward;
     });
     yield;
