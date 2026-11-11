@@ -1267,18 +1267,19 @@ SPECIES = {
                   marks=dict(color=hexc("#4f4038"), lo=-0.2, hi=0.3, foot=hexc("#3b2f28"))),
         bark_top=0.55, card_style="tiers", card_tiers=dict(n=5, apex=0.6, ragged=0.35), card_ribbons=1, card_true_trunk=True),
     "spruce": dict(
-        # Needle foliage only: a ragged, roof-shaped bough along every main branch, tier on tier, and
-        # sprays hanging from the side branches like curtains.
+        # Norway spruce: a ragged, roof-shaped bough along every main branch, tier on tier, a fringe of
+        # hanging branchlets under each, lit needle tips on top, and a dark heart (the crown core) so
+        # no sky shows through. No loose needle stars (they read as specks).
         clumps=dict(kind="bough", levels=[1], width=0.4, roof=[28, 30, 40], segs=[8, 4, 2], fringe=[0.7, 0.6, 0.0],
-                    lod_width=[1, 1.12, 1.35], under=0.6, tip_mix=1.2, share=(0.9, 1.0, 1.0)),
-        wood_share=(0.28, 0.26, 0.22), min_r=[0.0, 0.018, 0.09], leaf_fill=(0.25, 0.0, 0.0), core=dict(scale=0.62, pct=70, color=hexc("#1a2c26"), sides=[10, 7, 6], rings=[9, 6, 4]),
+                    lod_width=[1, 1.12, 1.35], under=0.45, tip_mix=1.5, share=(0.9, 1.0, 1.0)),
+        wood_share=(0.28, 0.26, 0.22), min_r=[0.0, 0.018, 0.09], leaf_fill=(0.0, 0.0, 0.0), core=dict(scale=0.62, pct=70, color=hexc("#1a2c26"), sides=[10, 7, 6], rings=[9, 6, 4]),
         H=12, trunk=dict(length=11.5, radius=0.24, taper=0.12, wobble=0.015, lean=0.015, flare=0.3),
         levels=[dict(count=(40, 48), whorl=4, t=(0.08, 0.98), angle=100, angle_var=8, ratio=0.4, shape="conical",
                      rratio=0.35, bend=0.25, wobble=0.06, abs_length=3.3),
                 dict(per_m=4.0, t=(0.15, 1.0), angle=60, ratio=0.4, rratio=0.5, bend=-0.4, wobble=0.1, planar=0.3)],
         leaves=dict(kind="needles", per_m=10, length=0.12, width=0.014, needles=7, levels=[1, 2], t0=0.15, angle=35,
-                    spread=(0.5, 1.2), droop=0.2, colors=G("#244238", "#2a4a40", "#203a32", "#30524a"),
-                    tip=hexc("#4a6e60"), keep_scale=[1, 1.3, 1.6]),
+                    spread=(0.5, 1.2), droop=0.2, colors=G("#203c32", "#26443a", "#1c362c", "#2c4c40"),
+                    tip=hexc("#6a9474"), keep_scale=[1, 1.3, 1.6]),
         bark=dict(color=hexc("#6b5040"), dark=hexc("#3c2c24"), fx=3, fy=1.2, contrast=1.0), bark_top=0.3, card_style="cone",
         card_ribbons=1),
     "palm": dict(

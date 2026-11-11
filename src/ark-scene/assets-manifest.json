@@ -56,6 +56,10 @@
    "spot": "bark",
    "about": "the top of a bracket fungus"
   },
+  "fungus_cap": {
+   "spot": "leaf_litter",
+   "about": "the top of a mushroom cap"
+  },
   "stem": {
    "spot": "flowers",
    "about": "a plant stem or grass blade; forward runs up it"
@@ -115,10 +119,6 @@
   "sand": {
    "spot": "rocks",
    "about": "sand or shingle between stones"
-  },
-  "fungus_cap": {
-   "spot": "leaf_litter",
-   "about": "the top of a mushroom cap"
   }
  },
  "sets": {
@@ -131,7 +131,7 @@
   "trees": {
    "attach": "trees/attach.json",
    "assets": 33,
-   "bytes": 5426212,
+   "bytes": 4966711,
    "lod0_tris_max": 9500
   }
  },
@@ -5923,68 +5923,68 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -2.609,
+     -3.139,
      -0.023,
-     -3.467
+     -3.659
     ],
     "max": [
-     4.593,
-     13.904,
-     3.661
+     4.522,
+     12.367,
+     4.188
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "trees/pine-a.lod0.glb",
-     "tris": 7492,
-     "verts": 17552,
-     "bytes": 172312,
+     "tris": 7499,
+     "verts": 13031,
+     "bytes": 132184,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/pine-a.lod1.glb",
-     "tris": 2200,
-     "verts": 5323,
-     "bytes": 55456,
+     "tris": 2198,
+     "verts": 3794,
+     "bytes": 43140,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/pine-a.lod2.glb",
-     "tris": 598,
-     "verts": 1459,
-     "bytes": 18312,
+     "tris": 599,
+     "verts": 1106,
+     "bytes": 14980,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "card",
      "file": "trees/pine-a.card.glb",
-     "tris": 312,
-     "verts": 376,
-     "bytes": 5608,
+     "tris": 236,
+     "verts": 264,
+     "bytes": 4796,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 26,
    "wood_tris": [
-    2131,
-    536,
-    143
+    1907,
+    378,
+    65
    ],
-   "leaves": 891,
-   "height": 13.9,
-   "crown_radius": 4.59,
+   "leaves": 587,
+   "height": 12.37,
+   "crown_radius": 4.52,
    "trunk_radius": 0.325,
    "lod_distances": [
-    34.8,
-    83.4,
-    194.7
+    30.9,
+    74.2,
+    173.1
    ]
   },
   "pine-b": {
@@ -5993,23 +5993,23 @@
    "variant": "b",
    "bounds": {
     "min": [
-     -2.99,
+     -2.207,
      -0.047,
-     -5.31
+     -3.904
     ],
     "max": [
-     4.82,
-     12.019,
-     2.891
+     3.584,
+     10.091,
+     2.459
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "trees/pine-b.lod0.glb",
-     "tris": 7500,
-     "verts": 18018,
-     "bytes": 173352,
+     "tris": 7499,
+     "verts": 12827,
+     "bytes": 134680,
      "doubleSided": true,
      "morph": false
     },
@@ -6017,44 +6017,44 @@
      "level": "lod1",
      "file": "trees/pine-b.lod1.glb",
      "tris": 2198,
-     "verts": 5164,
-     "bytes": 54724,
+     "verts": 3573,
+     "bytes": 40924,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/pine-b.lod2.glb",
-     "tris": 600,
-     "verts": 1666,
-     "bytes": 20364,
+     "tris": 597,
+     "verts": 1056,
+     "bytes": 14540,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "card",
      "file": "trees/pine-b.card.glb",
-     "tris": 312,
-     "verts": 376,
-     "bytes": 5600,
+     "tris": 236,
+     "verts": 264,
+     "bytes": 4784,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 26,
    "wood_tris": [
-    1923,
-    602,
+    1781,
+    370,
     55
    ],
-   "leaves": 1168,
-   "height": 12.02,
-   "crown_radius": 5.31,
+   "leaves": 461,
+   "height": 10.09,
+   "crown_radius": 3.9,
    "trunk_radius": 0.325,
    "lod_distances": [
-    30.0,
-    72.1,
-    168.3
+    25.2,
+    60.5,
+    141.3
    ]
   },
   "pine-c": {
@@ -6063,68 +6063,68 @@
    "variant": "c",
    "bounds": {
     "min": [
-     -3.683,
+     -4.503,
      -0.024,
-     -2.863
+     -4.819
     ],
     "max": [
-     2.627,
-     14.637,
-     3.142
+     3.321,
+     13.995,
+     4.793
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "trees/pine-c.lod0.glb",
-     "tris": 7498,
-     "verts": 17348,
-     "bytes": 171204,
+     "tris": 7499,
+     "verts": 12794,
+     "bytes": 129348,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/pine-c.lod1.glb",
-     "tris": 2200,
-     "verts": 5303,
-     "bytes": 56004,
+     "tris": 2198,
+     "verts": 3629,
+     "bytes": 41480,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/pine-c.lod2.glb",
-     "tris": 599,
-     "verts": 1434,
-     "bytes": 18072,
+     "tris": 597,
+     "verts": 1013,
+     "bytes": 13988,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "card",
      "file": "trees/pine-c.card.glb",
-     "tris": 304,
-     "verts": 368,
-     "bytes": 5472,
+     "tris": 236,
+     "verts": 264,
+     "bytes": 4836,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 26,
    "wood_tris": [
-    2273,
-    548,
-    154
+    1849,
+    414,
+    85
    ],
-   "leaves": 632,
-   "height": 14.64,
-   "crown_radius": 3.68,
+   "leaves": 784,
+   "height": 14.0,
+   "crown_radius": 4.82,
    "trunk_radius": 0.325,
    "lod_distances": [
-    36.6,
-    87.8,
-    204.9
+    35.0,
+    84.0,
+    195.9
    ]
   },
   "snag-a": {
@@ -6343,41 +6343,41 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -4.523,
-     -0.696,
-     -4.705
+     -3.803,
+     -0.334,
+     -3.706
     ],
     "max": [
-     3.937,
+     3.098,
      11.516,
-     5.132
+     3.84
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "trees/spruce-a.lod0.glb",
-     "tris": 7494,
-     "verts": 10550,
-     "bytes": 106436,
+     "tris": 4149,
+     "verts": 2642,
+     "bytes": 33440,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/spruce-a.lod1.glb",
-     "tris": 2198,
-     "verts": 3202,
-     "bytes": 36512,
+     "tris": 1693,
+     "verts": 1221,
+     "bytes": 17844,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/spruce-a.lod2.glb",
-     "tris": 597,
-     "verts": 807,
-     "bytes": 11576,
+     "tris": 415,
+     "verts": 409,
+     "bytes": 7696,
      "doubleSided": true,
      "morph": false
     },
@@ -6393,13 +6393,13 @@
    ],
    "attach": 26,
    "wood_tris": [
-    2363,
-    466,
-    209
+    1957,
+    557,
+    119
    ],
    "leaves": 2910,
    "height": 11.52,
-   "crown_radius": 5.13,
+   "crown_radius": 3.84,
    "trunk_radius": 0.312,
    "lod_distances": [
     28.8,
@@ -6413,41 +6413,41 @@
    "variant": "b",
    "bounds": {
     "min": [
-     -2.887,
-     -0.64,
-     -2.467
+     -2.452,
+     -0.224,
+     -1.965
     ],
     "max": [
-     2.764,
+     2.218,
      7.616,
-     2.561
+     2.17
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "trees/spruce-b.lod0.glb",
-     "tris": 7498,
-     "verts": 10712,
-     "bytes": 110264,
+     "tris": 4045,
+     "verts": 2745,
+     "bytes": 34588,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/spruce-b.lod1.glb",
-     "tris": 2198,
-     "verts": 3129,
-     "bytes": 36128,
+     "tris": 1653,
+     "verts": 1189,
+     "bytes": 17300,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/spruce-b.lod2.glb",
-     "tris": 600,
-     "verts": 916,
-     "bytes": 13000,
+     "tris": 363,
+     "verts": 360,
+     "bytes": 7140,
      "doubleSided": true,
      "morph": false
     },
@@ -6463,13 +6463,13 @@
    ],
    "attach": 26,
    "wood_tris": [
-    2535,
-    546,
-    120
+    2077,
+    637,
+    99
    ],
    "leaves": 1270,
    "height": 7.62,
-   "crown_radius": 2.89,
+   "crown_radius": 2.45,
    "trunk_radius": 0.312,
    "lod_distances": [
     19.0,
@@ -6483,41 +6483,41 @@
    "variant": "c",
    "bounds": {
     "min": [
-     -4.844,
-     -1.364,
-     -4.588
+     -3.855,
+     -0.246,
+     -3.745
     ],
     "max": [
-     4.041,
+     2.987,
      14.509,
-     4.189
+     3.475
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "trees/spruce-c.lod0.glb",
-     "tris": 7496,
-     "verts": 10454,
-     "bytes": 105416,
+     "tris": 4157,
+     "verts": 2715,
+     "bytes": 34840,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/spruce-c.lod1.glb",
-     "tris": 2198,
-     "verts": 3101,
-     "bytes": 35372,
+     "tris": 2037,
+     "verts": 1481,
+     "bytes": 21308,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/spruce-c.lod2.glb",
-     "tris": 599,
-     "verts": 778,
-     "bytes": 11148,
+     "tris": 511,
+     "verts": 509,
+     "bytes": 9040,
      "doubleSided": true,
      "morph": false
     },
@@ -6526,20 +6526,20 @@
      "file": "trees/spruce-c.card.glb",
      "tris": 112,
      "verts": 168,
-     "bytes": 3764,
+     "bytes": 3756,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 26,
    "wood_tris": [
-    2379,
-    546,
-    235
+    1453,
+    637,
+    139
    ],
    "leaves": 4036,
    "height": 14.51,
-   "crown_radius": 4.84,
+   "crown_radius": 3.86,
    "trunk_radius": 0.312,
    "lod_distances": [
     36.3,
@@ -6688,5 +6688,5 @@
    ]
   }
  },
- "totalBytes": 7558961
+ "totalBytes": 7099460
 }
