@@ -8,7 +8,7 @@ import {sampleGround} from "@/ark-scene/world";
 import {breedingSeason, headNoun, presenceKey, propsPresence, speciesGroups} from "@/ark-scene/props/presence";
 import {nestProfile} from "@/ark-scene/props/nest-kinds";
 import {conditionsFromArkWeather, dawnBell, dewOf, stubConditions, withOverride} from "@/ark-scene/props/conditions";
-import {CAVE_SITE, caveSite, propsPoints} from "@/ark-scene/props/sampler";
+import {caveSite, propsPoints} from "@/ark-scene/props/sampler";
 import {buildAreas} from "@/ark-scene/props/areas";
 import {buildHomes, buildWebs} from "@/ark-scene/props/homes";
 import {LodBatch, PROPS_TIERS} from "@/ark-scene/props/kit";
@@ -84,13 +84,18 @@ test("props conditions: dew at a still dawn, none at noon or in the wind; the cl
     assert.equal(withOverride(wet, {wind: 1}).dew, 0);
 });
 
-test("props sampler: the cave's site still holds (flat, open, on land); ledges exist; trees are the sampler's alone", () => {
+test("props sampler: the cave (the sampler's place) is flat, open, on land; ledges come from the sampler, up is up, forward out of the cliff", () => {
     const site = caveSite();
     assert.ok(site.y > 1, `cave at ${site.y.toFixed(1)} m`);
-    for (let a = 0; a < 8; a++) assert.ok(site.y - sampleGround(CAVE_SITE.x + Math.cos(a) * 4.5, CAVE_SITE.z + Math.sin(a) * 4.5).height < 0.6, "flat round the outcrop");
-    const near = [...worldDecor(), ...forestFill()].filter((item) => item.kind !== "flower" && item.kind !== "leaf" && Math.hypot(item.x - CAVE_SITE.x, item.z - CAVE_SITE.z) < 6.5);
+    for (let a = 0; a < 8; a++) assert.ok(site.y - sampleGround(site.x + Math.cos(a) * 4.5, site.z + Math.sin(a) * 4.5).height < 0.6, "flat round the outcrop");
+    const near = [...worldDecor(), ...forestFill()].filter((item) => item.kind !== "flower" && item.kind !== "leaf" && Math.hypot(item.x - site.x, item.z - site.z) < 6.5);
     assert.deepEqual(near.map((item) => item.kind), []);
-    assert.ok(propsPoints("ledge").filter((point) => point.zone === "mountains").length > 8);
+    const ledges = propsPoints("ledge");
+    assert.ok(ledges.filter((point) => point.zone === "mountains").length > 8);
+    for (const ledge of ledges.filter((point) => point.host === "ground")) {
+        assert.ok(ledge.normal.y > 0.99, "a ledge's up is up");
+        assert.ok(ledge.forward && Math.abs(Math.atan2(ledge.forward.x, ledge.forward.z) - ledge.yaw) < 1e-6, "its yaw faces forward, out of the cliff");
+    }
     // Deterministic.
     assert.deepEqual(propsPoints("ledge").slice(0, 3), propsPoints("ledge").slice(0, 3));
 });
@@ -104,9 +109,15 @@ test("props build: the areas and every gated home build, the same for every view
     const homes = buildHomes(presence, (id) => places.get(id) ?? null, PROPS_TIERS.high);
     for (const mark of ["ants", "beesHollow", "hiveBox", "turtleNest", "beaverLodge", "slimeWall", "warren", "web"]) assert.ok(homes.marks[mark], mark);
     assert.ok(homes.nests.length >= 5);
-    // The mallard's nest is under the mallard that sits it.
-    const mallard = homes.nests.find((nest) => nest.form === "down_bowl" && nest.sitter && places.get(nest.sitter)?.x === nest.x);
-    assert.ok(mallard, "a ground nest under its sitter");
+    // The mallard's nest: under the mallard when it stands on dry land; when the map has it swimming, on the nearest
+    // dry bank (never in the water), a few strides from it.
+    const mallard = homes.nests.find((nest) => nest.form === "down_bowl" && nest.sitter);
+    assert.ok(mallard, "the mallard has its nest");
+    const sitter = places.get(mallard.sitter!)!;
+    const onLand = !sitter.water && !sitter.micro && !sitter.canopy && surfaceAt(sitter.x, sitter.z).waterDepth === 0;
+    if (onLand) assert.ok(sitter.x === mallard.x && sitter.z === mallard.z, "a ground nest under its sitter");
+    else assert.ok(Math.hypot(sitter.x - mallard.x, sitter.z - mallard.z) < 30, "a ground nest on the bank near its swimming sitter");
+    assert.equal(surfaceAt(mallard.x, mallard.z).waterDepth, 0, "on dry ground");
     const again = buildHomes(presence, (id) => places.get(id) ?? null, PROPS_TIERS.high);
     assert.deepEqual(again.nests, homes.nests);
     const webs = buildWebs(homes.webs);
@@ -139,7 +150,7 @@ import {eggGeometry, nestGeometry, STRAND_FORMS} from "@/ark-scene/props/nest-sh
 import {buildCave} from "@/ark-scene/props/cave";
 import {triangles} from "@/ark-scene/props/kit";
 import {arkBody} from "@/ark-scene/stats";
-import {place as namedPlace, surfaceAt} from "@/ark-scene/sampler";
+import {allAttachPoints, place as namedPlace, surfaceAt} from "@/ark-scene/sampler";
 import {COTTAGE} from "@/ark-scene/micro-decor";
 
 test("props nests by species: the form, the site and the size follow the bird (a weaver's purse is not an eagle's eyrie)", () => {
@@ -286,6 +297,8 @@ test("props nest sites: through the scenery sampler, on the right ground, the sa
                 break;
             case "trunk_hole":
                 assert.match(nest.siteId, /^(bark|tree_hollow):/);
+                // A drawn tree hollow near the bird is taken first.
+                if (allAttachPoints().some((point) => point.tag === "tree_hollow" && Math.hypot(point.position.x - nest.x, point.position.z - nest.z) < 80)) assert.match(nest.siteId, /^tree_hollow:/);
                 break;
             case "ground":
             case "shore":
@@ -301,7 +314,9 @@ test("props nest sites: through the scenery sampler, on the right ground, the sa
                 break;
             case "eaves":
                 assert.ok(Math.hypot(nest.x - COTTAGE.x, nest.z - COTTAGE.z) < Math.hypot(COTTAGE.width, COTTAGE.depth), "at the cottage");
-                assert.ok(nest.y < COTTAGE.floor + COTTAGE.wall, "under the roof");
+                // Under the sampler's eave point (the drawn roof's underside: the slope on the long walls, the verge's peak on the gables).
+                assert.ok(nest.y < COTTAGE.floor + COTTAGE.wall + COTTAGE.ridge, "under the roof");
+                assert.ok(allAttachPoints().some((point) => point.tag === "house_eave" && nest.siteId.startsWith(point.id) && nest.y + nest.radius * 0.9 < point.position.y), "its top under the eave point");
                 break;
             case "bank":
                 assert.match(nest.siteId, /^burrow:/);

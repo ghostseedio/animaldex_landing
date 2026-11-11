@@ -15,6 +15,7 @@ import type {ArkAnimal, ArkCameraView, ArkNestRow, ArkSnapshot, ArkZone} from "@
 import type {PropsConditions} from "@/ark-scene/props/conditions";
 import type {PropsMarks, PropsStats} from "@/ark-scene/props";
 import {nestStage} from "@/ark-scene/props/nest-growth";
+import {place as namedPlace, surfaceAt} from "@/ark-scene/sampler";
 
 const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["black-ant", "Black Ant", "woodland"],
@@ -61,7 +62,7 @@ export function propsFixture(snapshot: ArkSnapshot): ArkSnapshot {
     return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, as_of: new Date().toISOString(), nests};
 }
 
-export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"] as const;
+export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore"] as const;
 export type PropsShot = typeof PROPS_SHOTS[number];
 
 type Locate = (id: string) => {x: number; y: number; z: number} | null;
@@ -69,6 +70,25 @@ type Locate = (id: string) => {x: number; y: number; z: number} | null;
 export type PropsShotPlan = {view: ArkCameraView; hours: number; weather: Partial<PropsConditions> | null; environment: {wetness?: number; snow?: number; wind?: number}; anchor: string; minDistance?: number};
 
 const look = (at: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number, lift = 0): ArkCameraView => ({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth});
+
+/**
+ * A view through something up in the air (a nest on a crown): the scene keeps its camera's target on the ground, so
+ * the target is where the line from the camera through the thing meets the ground beyond it. The camera stands
+ * `out` metres off (toward `azimuth`) and `above` metres higher than the thing.
+ */
+function lookThrough(at: {x: number; y: number; z: number}, azimuth: number, out: number, above: number): ArkCameraView {
+    const sx = Math.sin(azimuth);
+    const sz = Math.cos(azimuth);
+    let run = (out / above) * Math.max(at.y - surfaceAt(at.x, at.z).height, 0.5);
+    let ground = surfaceAt(at.x - sx * run, at.z - sz * run).height;
+    // Twice round, so the ground's height where the line lands is the one it meets.
+    run = (out / above) * Math.max(at.y - ground, 0.5);
+    ground = surfaceAt(at.x - sx * run, at.z - sz * run).height;
+    const target = {x: at.x - sx * run, y: ground, z: at.z - sz * run};
+    const camera = {x: at.x + sx * out, y: at.y + above, z: at.z + sz * out};
+    const distance = Math.hypot(camera.x - target.x, camera.y - target.y, camera.z - target.z);
+    return {target, distance, polar: Math.acos(Math.min(Math.max((camera.y - target.y) / distance, -1), 1)), azimuth};
+}
 
 /** The view, the hour and the weather of a props shot, from where the props are. */
 export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: Locate): PropsShotPlan | null {
@@ -98,9 +118,10 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(nest, nest.radius * 4.5 + 1.5, 1.12, turn, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_heronry": {
-            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
+            // The lowest crown-top platform (the heronry's, on the wetland's trees), from above its crown.
+            const nest = stats.nests.filter((n) => n.form === "platform" && n.site === "tree_top").sort((a, b) => a.y - b.y)[0];
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 12 + 8, 0.35, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            return {view: lookThrough(nest, 0.9, nest.radius * 6 + 3, nest.radius * 3 + 1.5), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_weavers": {
             const nest = stats.nests.find((n) => n.form === "pendant");
@@ -140,7 +161,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const hollow = spots.beesHollow;
             if (!hollow) return null;
             const facing = spots.beesFacing ?? {x: 0, y: 0, z: 1};
-            return {view: look(hollow, 1.5, 1.45, Math.atan2(facing.x, facing.z)), hours: 11, weather: null, environment: calm, anchor: "bees' hollow", minDistance: 0.3};
+            return {view: look(hollow, 1.0, 1.36, Math.atan2(facing.x, facing.z)), hours: 11, weather: null, environment: calm, anchor: "bees' hollow", minDistance: 0.3};
         }
         case "house_night": {
             const chimney = spots.chimney;
@@ -163,9 +184,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         }
         case "cave_roost": {
             const cave = marks.cave;
-            // From just outside the mouth, looking in and a little up at the ceiling.
-            const inside = {x: cave.x - Math.sin(cave.facing) * 2.2, y: cave.y + 2.1, z: cave.z - Math.cos(cave.facing) * 2.2};
-            return {view: look(inside, 6.5, 1.36, cave.facing + 0.2), hours: 11, weather: {cold: 0.75}, environment: calm, anchor: "cave mouth", minDistance: 0.3};
+            // From just outside the mouth, looking in at the roost: the guano heaped on the floor, the stained ceiling above it.
+            const under = {x: cave.roost.x, y: cave.y + 1.1, z: cave.roost.z};
+            return {view: look(under, 5.2, 1.3, cave.facing + 0.12), hours: 11, weather: {cold: 0.75}, environment: calm, anchor: "cave roost", minDistance: 0.3};
         }
         case "turtle_nest": {
             const nest = spots.turtleNest;
@@ -173,6 +194,26 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             // From up the beach, looking down the crawl tracks to the sea.
             const facing = (nest as {facing?: number}).facing ?? Math.atan2(nest.x, nest.z);
             return {view: look(nest, 5.5, 0.95, facing + Math.PI + 0.35), hours: 7.4, weather: null, environment: calm, anchor: "turtle nest + tracks", minDistance: 0.3};
+        }
+        case "mist_dawn": {
+            // Mist lying over the lake at a still dawn, from up the bank.
+            const lake = namedPlace("lake");
+            return {view: look({x: lake.x, y: 0, z: lake.z}, lake.radius * 1.6 + 18, 0.95, 2.4), hours: 6.3, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "mist over the lake at dawn"};
+        }
+        case "mist_meadow": {
+            // At an animal's height in the barn owl's meadow (the farm's mist), where a flat sheet used to read as a band.
+            const owl = stats.nests.find((n) => n.form === "barn");
+            const at = owl?.sitter ? locate(owl.sitter) : null;
+            const spot = at ?? spots.farm;
+            if (!spot) return null;
+            return {view: look(spot, 5, 1.32, 0.6, 0.3), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: at ? "barn owl's meadow, misty dawn" : "farm, misty dawn"};
+        }
+        case "mist_shore": {
+            // Low on the lake's shore (the fox's), looking along the bank through the mist.
+            const lake = namedPlace("lake");
+            const a = 2.2;
+            const shore = {x: lake.x + Math.sin(a) * (lake.radius + 1.5), y: 0, z: lake.z + Math.cos(a) * (lake.radius + 1.5)};
+            return {view: look(shore, 6, 1.3, a + 0.9, 0.4), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "lake shore, misty dawn"};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;

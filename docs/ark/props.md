@@ -14,7 +14,7 @@ The props lane (branch `ark-props`) draws what animals build and what each area 
 | `props/homes.ts` | Nests and eggs, ant mounds and trails, the bees' hollow and hive, the wasps' nest, termite mounds, webs, chrysalises, the warren, worm casts, dens and lairs, the turtles' nest and tracks, the beavers' lodge and dam, and slime trails. |
 | `props/areas.ts` | Details that are always there. House and garden: gutters, a water butt, moss, the path, the fence, the vegetable patch, the bird box, puddles. Farm: hay shelter, loft door, paddock, troughs, mud. Mountain: strata outcrops, scree, drifts, icicles. Grassland: tussocks, wildflower drifts, old termite mounds. |
 | `props/cave.ts` | The cave, plus the bats' roost when bats are aboard. |
-| `props/effects.ts` | Chimney smoke, moths at the porch light, dew, mist, blowing snow and dust. |
+| `props/effects.ts` | Chimney smoke, moths at the porch light, dew, mist, blowing snow and dust. The mist's sheets are draped over the ground and the water every couple of metres, 0.25–1 m up. They fade as the camera comes down to their height or sees them edge-on, and they are soft and broken at their edges, so they never cut across a slope or an animal as a band. |
 | `props/conditions.ts` | The island clock's weather as the props read it. |
 | `props/kit.ts` | Shared pieces: the instanced near/far `LodBatch`, `LodPiece`, the per-tier caps (`PROPS_TIERS`), and the weather-aware material (`propMaterial`, which takes the `growth` option for nests). |
 | `props/golden-props.ts` | The props' close-up golden shots. |
@@ -48,12 +48,12 @@ A weaver's purse is not an eagle's eyrie. `nestProfile(animal)` reads the slug, 
 
 - `ground` / `shore`: under the sitter when it stands on dry land, else a spiral search on `surfaceAt` (dry, gentle ground; sand for `shore`), seated so a nest on a slope never floats off its low side.
 - `water_margin`: where `surfaceAt(x, z).waterDepth` is 5–60 cm near the sitter. A raft floats at the surface.
-- `tree_top`: the highest upward-facing `leaf` attach point of each nearby tree (when the attach lane's `open` is present, only leaves that see the sky).
+- `tree_top`: the highest upward-facing `leaf` attach point of each nearby tree, on its drawn crown, only where `open` ≥ 0.3 (the leaf sees the sky).
 - `tree_fork`: a `branch` point 1.4–7 m up.
 - `branch_tip`: the `branch` points of one tree furthest from its trunk (a colony hangs from one tree).
-- `trunk_hole`: a `tree_hollow` point when the sampler has them, else a sideways `bark` point more than 1 m up.
-- `cliff_ledge`: from the props' steep `ledge` points, uphill to the first level shelf (normal.y ≥ 0.82) with at least a 1 m drop in front.
-- `eaves`: the sampler's `house_eave` points, back and side walls first (the front's is over the porch roof). The nest is seated under the drawn roof's underside (`micro.ts` `roofHeight`).
+- `trunk_hole`: a drawn `tree_hollow` within 80 m (the asset draws the hole), else a sideways `bark` point more than 1 m up, where the props cut a hole.
+- `cliff_ledge`: from the sampler's cliff `ledge` points, uphill (against `forward`) to the first level shelf (normal.y ≥ 0.82) with at least a 1 m drop in front; or straight onto a big rock's `ledge` shelf.
+- `eaves`: the sampler's `house_eave` points (under the drawn roof), back and side walls first (the front's is over the porch roof), the nest's top just under the point, its back to the wall.
 - `bank`: the sampler's `burrow` points.
 
 The props never offset from a canopy or a trunk on their own. The ant trail, the bees' hollow and the webs also use the sampler: the trail runs up a `bark` point's trunk, the hollow is cut at an open-fronted `bark` point, and the webs hang between pairs of `flower_head` points, on the porch, and at the gate.
@@ -78,7 +78,7 @@ The props module also has `nestSites()` (the same list, each with its `stage` no
 
 `node scripts/ark-golden-shots.mjs --props all [--devices desktop,phone]` (or `--props nest_eyrie,web_dawn`). The page is the v2 fixture, plus one of each species whose home shows only when it is aboard, plus a village weaver, a great crested grebe and a house martin, on Ark day 120 of the year with clutches in for the mallard, the heron and the green turtle.
 
-Shots: `bird_nest` (mallard's down bowl), `nest_eyrie`, `nest_heronry`, `nest_weavers`, `nest_growing` (pinned to the day the heron's platform is 55% built), `nest_eaves`, `nest_grebe`, `ants_trunk`, `web_dawn`, `beehive_hollow`, `house_night`, `farm`, `mountain_scree`, `cave_roost`, `turtle_nest`, `snail_trail`.
+Shots: `bird_nest` (mallard's down bowl), `nest_eyrie`, `nest_heronry`, `nest_weavers`, `nest_growing` (pinned to the day the heron's platform is 55% built), `nest_eaves`, `nest_grebe`, `ants_trunk`, `web_dawn`, `beehive_hollow`, `house_night`, `farm`, `mountain_scree`, `cave_roost`, `turtle_nest`, `snail_trail`, `mist_dawn` (mist over the lake), `mist_meadow` (at an animal's height in the barn owl's meadow), `mist_shore` (low on the lake's shore).
 
 ## Budget
 
@@ -92,10 +92,13 @@ These are the props' own draw calls and triangles, worst of nine named places, w
 
 The scene's own phone numbers are 71–171 calls and 1.0–2.3 M triangles (graphics-batches.md). A nest is 1.3–6.1 k triangles at lod0, and only the nests within the tier's near radius are drawn. The test fails if medium goes over 45 calls or 400 k triangles, or low over 30 calls or 200 k.
 
-## Asked of other lanes
+## Other lanes
 
-- **Graphics (sampler):**
-  - a `ledge` attach tag (level shelves above a drop) and a named place `cave`, so `props/sampler.ts` can drop its own `ledges()` and `CAVE_SITE`;
-  - `tree_hollow` points from the assets' `attach.json` (12 exist), which trunk-hole nests prefer.
-  - Note: `house_eave` points sit 0.21 m out at the wall's top (3.80 m). There the long walls' roof is already lower (3.64 m), so the point is above the roof. The props seat their nests under the drawn roof themselves.
-- **Attach lane (`ark-graphics-attach`):** the props' tree nests, hollows, trails and webs use its `leaf`, `branch` and `bark` points. On this branch they are still the old crown heuristics, so tree-top nests can sit inside an asset tree's crown until that lane is merged. Its branch conflicts with `ark-graphics` f04ebfb4 in `asset-trees.ts`, so the props branch does not merge it.
+- **Graphics / attach lane (`ark-graphics-attach`, merged here at 4873e79d):** the props use only the sampler's own tags.
+  - Cliff nesters use `ledge` points. Up is up; the way out of the cliff is `forward` / `yaw`. Rock shelves (`ledge:decorN:0`) hold a nest directly.
+  - The cave uses `place("cave")`, with its `facing`.
+  - Hole nesters and the bees use the drawn `tree_hollow` points; the asset draws the hole itself, and the props add only the comb.
+  - Eave nests sit under the sampler's `house_eave` points, which are under the drawn roof.
+  - Tree-top nests use the attach lane's leaf points on the drawn crowns, only where `open` ≥ 0.3.
+  - The props' own `ledges()`, `CAVE_SITE` and eave workaround are gone.
+- **Golden shots of things up in the air:** the scene keeps its camera target on the ground, so `golden-props.ts` `lookThrough` aims at the ground beyond the nest, on the line from the camera through it.
