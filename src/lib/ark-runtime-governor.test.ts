@@ -106,3 +106,15 @@ test("runtime bridge: ark:visible and ark:power are read strictly; anything malf
     assert.equal(pressureThermal("serious"), "fair");
     assert.equal(pressureThermal("whatever"), "nominal");
 });
+
+test("runtime governor: the visibility hook fires on every flip, the app's ark:visible included (the sound follows it)", () => {
+    const governor = new RenderGovernor(0);
+    const seen: boolean[] = [];
+    governor.onVisibility = (visible) => seen.push(visible);
+    governor.setHostVisible(false);
+    governor.setHostVisible(false);
+    governor.setDocumentHidden(true);
+    governor.setHostVisible(true);
+    governor.setDocumentHidden(false);
+    assert.deepEqual(seen, [false, true], "only real flips: hidden by the app, shown again once both allow");
+});

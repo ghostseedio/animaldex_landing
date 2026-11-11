@@ -3886,7 +3886,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     resizeObserver.observe(el);
     resize();
     // Out of sight (scrolled away, another tab, the app's panel closed): the sound sleeps.
-    const syncSound = () => liveliness.audio.setHidden(!onScreen || document.hidden);
+    // (Runtime: and while the app says its panel is covered or the app is away, `ark:visible` false: the drawing stops, so
+    // does the sound.)
+    const syncSound = () => liveliness.audio.setHidden(!onScreen || document.hidden || !runtime.visible());
+    runtime.onVisibleChange = syncSound;
     document.addEventListener("visibilitychange", syncSound);
     const visibility = new IntersectionObserver(([seen]) => {
         onScreen = seen?.isIntersecting ?? true;
