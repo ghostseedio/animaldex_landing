@@ -27,7 +27,7 @@ export const TRUE_SCALE_SHOTS: Record<string, Shot> = {
     large: {items: [{ref: "oak"}, {slug: "african-bush-elephant"}, {slug: "giraffe"}, {slug: "domestic-horse"}, {slug: "cow"}, {slug: "rhinoceros"}, {ref: "person"}, {ref: "fence"}], gap: 1.6, camera: {distance: 34, height: 4, lookY: 2.2}, grid: 1},
     human: {items: [{ref: "person"}, {slug: "western-lowland-gorilla"}, {slug: "african-lion"}, {slug: "eurasian-wolf"}, {slug: "red-kangaroo"}, {slug: "emperor-penguin"}, {slug: "domestic-dog"}, {slug: "domestic-sheep"}, {ref: "fence"}], gap: 0.8, camera: {distance: 15, height: 1.6, lookY: 0.8}, grid: 1},
     small: {items: [{ref: "fence"}, {slug: "domestic-cat"}, {slug: "european-rabbit"}, {slug: "domestic-chicken"}, {slug: "house-sparrow"}, {slug: "house-mouse"}, {slug: "common-frog"}], gap: 0.25, camera: {distance: 3.6, height: 0.5, lookY: 0.25}, grid: 0.1},
-    insect: {items: [{slug: "house-mouse"}, {slug: "european-rhinoceros-beetle"}, {slug: "western-honey-bee"}, {slug: "seven-spot-ladybird"}, {slug: "black-ant"}, {slug: "house-fly"}], gap: 0.03, camera: {distance: 0.42, height: 0.05, lookY: 0.02, fov: 30}, grid: 0.01}
+    insect: {items: [{slug: "house-mouse"}, {slug: "european-rhinoceros-beetle"}, {slug: "western-honey-bee"}, {slug: "seven-spot-ladybird"}, {slug: "black-ant"}, {slug: "house-fly"}, {slug: "red-admiral"}], gap: 0.03, camera: {distance: 0.42, height: 0.05, lookY: 0.02, fov: 30}, grid: 0.01}
 };
 
 type Debug = {ready: boolean; error?: string; drawn?: Record<string, {drawn: number; height: number; length: number}>};

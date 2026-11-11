@@ -45,6 +45,19 @@ export const BAND_TAGS: Record<WaterClass, readonly MapTag[]> = {
     coast: ["coastal_shallows", "seabed", "kelp", "seagrass", "coral_reef", "sea_surface", "open_ocean", "deep_water"]
 };
 
+/**
+ * Room for the giants (true scale, motion pass §3; decision 35): a swimmer drawn this long or longer (a whale, a whale
+ * shark) has its home in the deepest open water, on cells reserved for it, at least `BIG_SWIMMER_APART` apart; every
+ * other sea cell within `BIG_SWIMMER_CLEAR` of a reserved one is left out of the other swimmers' lists. Static (the
+ * terrain alone), so nobody moves when a whale arrives or leaves.
+ */
+export const BIG_SWIMMER = 6;
+const BIG_SWIMMER_APART = 30;
+const BIG_SWIMMER_CLEAR = 14;
+const BIG_SWIMMER_DEPTH = 9;
+const BIG_SWIMMER_CELLS = 4;
+const OPEN_CLASSES: ReadonlySet<WaterClass> = new Set(["deep", "surface", "upper", "mid"]);
+
 /** The least water (m) a cell of the sea needs for a swimmer's loop about it. */
 export const WATER_MIN_DEPTH = 1.2;
 const GRID = 2.5;
@@ -119,6 +132,7 @@ export function waterTagAt(sampler: ArkMapSampler, cls: WaterClass, x: number, z
 export class WaterCells {
     private lists = new Map<string, Cell[]>();
     private cells: Map<WaterClass, Cell[]> | null = null;
+    private giants: Map<ArkZone, Cell[]> | null = null;
 
     constructor(readonly sampler: ArkMapSampler) {}
 
@@ -143,6 +157,54 @@ export class WaterCells {
         return out;
     }
 
+    /**
+     * The cells reserved for big swimmers, by zone: the open water's cells at least `BIG_SWIMMER_DEPTH` deep, furthest from
+     * the island's middle first, `BIG_SWIMMER_APART` apart, a few a zone.
+     */
+    giantCells(): Map<ArkZone, Cell[]> {
+        if (this.giants) return this.giants;
+        const out = new Map<ArkZone, Cell[]>();
+        const open: Cell[] = [];
+        this.build().forEach((cells, cls) => {
+            if (OPEN_CLASSES.has(cls)) for (const cell of cells) if (cell.depth >= BIG_SWIMMER_DEPTH) open.push(cell);
+        });
+        open.sort((a, b) => Math.hypot(b.x, b.z) - Math.hypot(a.x, a.z) || a.x - b.x || a.z - b.z);
+        const all: Cell[] = [];
+        for (const cell of open) {
+            const list = out.get(cell.zone) ?? [];
+            if (list.length >= BIG_SWIMMER_CELLS || all.some((other) => Math.hypot(other.x - cell.x, other.z - cell.z) < BIG_SWIMMER_APART)) continue;
+            list.push(cell);
+            all.push(cell);
+            out.set(cell.zone, list);
+        }
+        this.giants = out;
+        return out;
+    }
+
+    /** Within the clear water about a big swimmer's reserved cell. */
+    private nearGiant(x: number, z: number): boolean {
+        for (const list of this.giantCells().values()) for (const cell of list) if (Math.hypot(cell.x - x, cell.z - z) < BIG_SWIMMER_CLEAR) return true;
+        return false;
+    }
+
+    /** A big swimmer's cells for its zone (else the nearest zone's that has some), in slot order. */
+    giantListFor(zone: ArkZone): Cell[] {
+        const giants = this.giantCells();
+        const own = giants.get(zone);
+        if (own?.length) return own;
+        const site = ZONE_SITES[zone] ?? ZONE_SITES.farm_garden;
+        let best: Cell[] = [];
+        let distance = Infinity;
+        giants.forEach((list, other) => {
+            const d = Math.hypot(ZONE_SITES[other].x - site.x, ZONE_SITES[other].z - site.z);
+            if (list.length && d < distance) {
+                distance = d;
+                best = list;
+            }
+        });
+        return best;
+    }
+
     /** A class's cells for a zone (its own; else, borrowed, the zone's whose site is nearest), in slot order. */
     listFor(cls: WaterClass, zone: ArkZone): {list: Cell[]; own: boolean} {
         const all = this.build().get(cls) ?? [];
@@ -163,7 +225,8 @@ export class WaterCells {
         const key = `${cls}|${from}`;
         let list = this.lists.get(key);
         if (!list) {
-            const pool = all.filter((cell) => cell.zone === from);
+            // (Clear of the big swimmers' reserved water: decision 35.)
+            const pool = all.filter((cell) => cell.zone === from && !this.nearGiant(cell.x, cell.z));
             const site = ZONE_SITES[from] ?? ZONE_SITES.farm_garden;
             const byNear = [...pool].sort((a, b) => Math.hypot(a.x - site.x, a.z - site.z) - Math.hypot(b.x - site.x, b.z - site.z) || a.x - b.x || a.z - b.z);
             list = [];
@@ -195,7 +258,9 @@ export function waterSpot(cells: WaterCells, depth: SpeciesDepth, zone: ArkZone,
         const spot = waterHomeSpot(depth, zone, slot, rank, length);
         return spot ? {x: spot.x, z: spot.z, cls} : null;
     }
-    const {list, own} = cells.listFor(cls, zone);
+    // A big swimmer (a whale): its zone's reserved deep water, the rest of the sea kept clear about it (decision 35).
+    const giant = length >= BIG_SWIMMER && OPEN_CLASSES.has(cls) ? cells.giantListFor(zone) : [];
+    const {list, own} = giant.length ? {list: giant, own: true} : cells.listFor(cls, zone);
     if (!list.length) {
         const spot = waterHomeSpot({...depth, home: "coast"}, zone, slot, rank, length);
         return spot ? {x: spot.x, z: spot.z, cls: "coast"} : null;

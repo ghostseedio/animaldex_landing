@@ -333,7 +333,8 @@ class WorldSampler implements ArkMapSampler {
             if ((GROUND_TAGS.has(tag) || point.tag === "leaf_litter") && inRock(point.position.x, point.position.z, 0.15)) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
             // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
-            const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.001);
+            // (True scale, motion pass §3: down to 0.1 mm, a fairyfly's 0.16 mm or a mite's 0.5 mm; 1 mm was the old drawn floor.)
+            const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.0001);
             const limb = point.radius !== undefined ? {radius: point.radius, load: point.load, clearAbove: point.clearAbove, clearBelow: point.clearBelow} : {};
             points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw, point.forward), size: {min, max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z)), ...(point.wind ? {source: point} : {}), ...limb});
         }

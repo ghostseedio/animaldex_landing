@@ -164,6 +164,26 @@ const DRAWN_OVERRIDES: Record<string, {drawn: number; why: string}> = {
     "bootlace-worm": {drawn: 1.5, why: "lies coiled: the model is a loose tangle, drawn about 1.5 m long and 0.6 m across"}
 };
 
+/** A wingspan (m) in a phrase ("wingspan 7-8 cm", "Wingspan 25 mm"): its range's middle. */
+function wingspanOf(phrase: string): number | null {
+    const m = /wing\s*span\s*(?:of\s*|about\s*|~\s*)?(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(mm|cm|m)\b/i.exec(phrase);
+    if (!m) return null;
+    const low = Number(m[1]);
+    const high = m[2] ? Number(m[2]) : low;
+    return ((low + high) / 2) * UNIT[m[3].toLowerCase()];
+}
+
+/**
+ * A butterfly or a moth is seen by its wings, and its model is its wings: spread (as wide as long or wider) its width
+ * is the wingspan; folded up over its back its length is a forewing's, about half the wingspan. Drawn length along
+ * z, or null without a wingspan.
+ */
+function wingDrawn(model: ArkJson | null, wingspan: number | null, body: number): number | null {
+    if (!model || !wingspan) return null;
+    const [x, , z] = model.extent;
+    return x / z >= 0.8 ? wingspan * (z / x) : Math.max(body, wingspan * 0.5);
+}
+
 /** The old on-screen length (before true scale): `clamp(1.2 · L^0.6, 0.18, 9)`, for the report. */
 const oldDisplay = (metres: number) => Math.min(Math.max(1.2 * metres ** 0.6, 0.18), 9);
 
@@ -238,7 +258,9 @@ for (const slug of [...slugs].sort()) {
     } else continue;
     counts[source]++;
     const metres = plan === "mammal" ? hb : total;
-    const fitted = drawnLength(slug, plan, model, hb, total);
+    // A butterfly or a moth by its wings (its body alone drew a 5 cm-wingspan butterfly 2 cm across).
+    const wings = plan === "butterfly" ? wingDrawn(model, wingspanOf(gen?.phrase ?? "") ?? wingspanOf(storedPhrase ?? ""), total) : null;
+    const fitted = wings !== null ? {drawn: wings, by: "wingspan", heightRatio: null} : drawnLength(slug, plan, model, hb, total);
     const override = DRAWN_OVERRIDES[slug];
     const {drawn, by, heightRatio} = override ? {drawn: override.drawn, by: `override: ${override.why}`, heightRatio: fitted.heightRatio} : fitted;
     lengths[slug] = [round(drawn), round(metres), SOURCES.indexOf(source)];

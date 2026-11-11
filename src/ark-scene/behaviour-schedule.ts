@@ -414,11 +414,20 @@ export function floats(profile: ArkBehaviourProfile): boolean {
     return profile.move === "swim" ? profile.moves.includes("fly") && !profile.breathes : profile.roost === "water";
 }
 
+/**
+ * The length (m) a swimmer's pace is counted in, at true size: its own up to a metre, √L beyond (cruising speed grows
+ * far slower than length: a 14 m humpback cruises at about 4 m/s, not 16). Motion pass §3 (true scale).
+ */
+export function swimPaceLength(length: number): number {
+    const L = Math.max(length, 0.05);
+    return L <= 1 ? L : Math.sqrt(L);
+}
+
 /** How far it can go in one slot at its own pace (ground, water; flyers go four times as fast). */
 export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
     const flyer = profile.move === "fly";
     // (On foot at its walk's pace; in the air and the water at its own: the walk clip governs only walking.)
-    return (flyer || profile.move === "swim" ? freeBodyLengthsPerSecond(profile) : bodyLengthsPerSecond(profile)) * Math.max(animal.length, 0.05) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
+    return (flyer || profile.move === "swim" ? freeBodyLengthsPerSecond(profile) : bodyLengthsPerSecond(profile)) * (profile.move === "swim" ? swimPaceLength(animal.length) : Math.max(animal.length, 0.05)) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
 }
 
 /**
@@ -955,7 +964,9 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // Air-breathers come up to breathe every few slots, then go back down.
     if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0) {
-        const near = world.nav.nearest(animal.home.x + (random() - 0.5) * 8, animal.home.z + (random() - 0.5) * 8, "swim", 0.6) ?? animal.home;
+        // (Up to a few body lengths off: at true size a 14 m humpback reached its breath ±4 m away in a second and floated.)
+        const wander = Math.max(8, animal.length * 4);
+        const near = world.nav.nearest(animal.home.x + (random() - 0.5) * wander, animal.home.z + (random() - 0.5) * wander, "swim", 0.6) ?? animal.home;
         return {doing: "breathe", to: {x: near.x, y: surfaceAt(near.x, near.z), z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
@@ -1299,7 +1310,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     // (0.85-1.2 of its walk's own pace: its clip plays at 0.85-1.2 its rate.)
     const speed = pace * (0.85 + 0.35 * random());
     // In the air and the water at its own pace (the walk clip's cap is for its feet).
-    const freeSpeed = freeBodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * (speed / pace);
+    // (A swimmer over a metre long at true size: counted in √L, not L, or a 14 m humpback cruised at 16 m/s. Motion pass §3.)
+    const freeSpeed = freeBodyLengthsPerSecond(profile) * (profile.move === "swim" ? swimPaceLength(animal.length) : Math.max(animal.length, 0.05)) * (speed / pace);
     const legs: Leg[] = [];
     /** A walk's path; one its search gave up on (a long way round) on the same stretch of ground is searched further. */
     const walkPath = (a: Spot, b: Spot, nodes: number): NavPoint[] => {

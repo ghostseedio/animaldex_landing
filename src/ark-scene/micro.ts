@@ -596,18 +596,6 @@ export function surfacePoint(place: MicroPlace, zone: ArkZone, along = 0): Surfa
     }
 }
 
-/**
- * How long a small animal at its microhabitat is drawn (m) with the camera
- * `distance` m away: its true length close by, never less than `minPixels`
- * across on screen as the camera draws back, and at most its usual drawn
- * length (the floor applied), where the marker takes over. Continuous in
- * the distance, so zooming never pops it.
- */
-export function microDrawnLength(trueLength: number, full: number, distance: number, viewportHeight: number, fovDegrees: number, minPixels: number): number {
-    const perPixel = 2 * Math.tan(fovDegrees * Math.PI / 360) * Math.max(distance, 0) / Math.max(viewportHeight, 1);
-    return Math.min(Math.max(trueLength, minPixels * perPixel), Math.max(full, trueLength));
-}
-
 /** Where the camera looks from to see a small animal at a point: out along its surface's normal, a little above. */
 export function viewFrom(point: SurfacePoint): {azimuth: number; polar: number} {
     const horizontal = Math.hypot(point.nx, point.nz);
