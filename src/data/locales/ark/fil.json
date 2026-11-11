@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Kumpirmahin muna na edad 18 pataas ka."
             }
+        },
+        "age": {
+            "title": "Mabilis na pagsuri ng edad",
+            "body": "Anong taon ka ipinanganak?",
+            "yearLabel": "Taon ng kapanganakan",
+            "continue": "Magpatuloy",
+            "notNow": "Huwag muna",
+            "note": "Isang beses lang itatanong. Kung wala ka pang 18, numero ng Voyager ang ipapakita sa mga hayop mo sa halip na ang @username mo.",
+            "failed": "Hindi iyon naipadala. Subukan ulit maya-maya."
         }
     },
     "talkPage": {

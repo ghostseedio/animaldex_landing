@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Confirmez d'abord que vous avez 18 ans ou plus."
             }
+        },
+        "age": {
+            "title": "Une petite vérification d'âge",
+            "body": "En quelle année es-tu né(e) ?",
+            "yearLabel": "Année de naissance",
+            "continue": "Continuer",
+            "notNow": "Pas maintenant",
+            "note": "Demandé une seule fois. Avant 18 ans, vos animaux s’affichent avec un numéro de Voyager au lieu de votre @username.",
+            "failed": "L'envoi a échoué. Réessayez dans un instant."
         }
     },
     "talkPage": {

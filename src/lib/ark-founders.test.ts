@@ -175,7 +175,7 @@ test("the setting: shown only when enabled; blocked is off and disabled; earlier
     assert.equal(decodeArkFounderSettings({show_name: true}), null);
     // A stored adult who never chose: on by default, no 18+ tap needed.
     const stored = decodeArkFounderSettings({enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA});
-    assert.deepEqual(stored, {enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA});
+    assert.deepEqual(stored, {enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, ask_age: false, earlier_anonymous: 3, founder: MAYA});
     assert.deepEqual(arkFounderSwitch(stored!), {checked: true, disabled: false});
     // No stored year, not answered (most people): off until turned on with the 18+ tap; the chat asks the name.
     const unknown = decodeArkFounderSettings({enabled: true, show_name: false, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: true, ask_name: true, earlier_anonymous: 0, founder: null});
@@ -190,6 +190,11 @@ test("the setting: shown only when enabled; blocked is off and disabled; earlier
     // Blocked: never asked.
     assert.equal(teen?.ask_name, false);
     assert.deepEqual(arkFounderSwitch(teen!), {checked: false, disabled: true});
+    // "Name now, ask age after" (2026-11-11): no stored year while their @username shows: ask it; never when blocked;
+    // a private profile no longer blocks.
+    assert.equal(decodeArkFounderSettings({enabled: true, show_name: true, blocked: null, adult: "unknown", ask_age: true, founder: MAYA})?.ask_age, true);
+    assert.equal(decodeArkFounderSettings({enabled: true, show_name: false, blocked: "under_18", ask_age: true})?.ask_age, false);
+    assert.equal(decodeArkFounderSettings({enabled: true, blocked: "private_profile"})?.blocked, null);
     assert.equal(decodeArkFounderSettings({enabled: false, blocked: "something_new", adult: "maybe"})?.adult, null);
     assert.equal(decodeArkFounderSettings({enabled: false, blocked: "something_new"})?.blocked, null);
     assert.equal(decodeArkFounderSettings({enabled: true, show_name: false})?.show_name, false);

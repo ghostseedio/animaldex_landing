@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Bekræft først, at du er fyldt 18."
             }
+        },
+        "age": {
+            "title": "Et hurtigt alderstjek",
+            "body": "Hvilket år er du født?",
+            "yearLabel": "Fødselsår",
+            "continue": "Fortsæt",
+            "notNow": "Ikke nu",
+            "note": "Spørges kun én gang. Er du under 18, vises dine dyr med et Voyager-nummer i stedet for dit @username.",
+            "failed": "Det gik ikke igennem. Prøv igen om lidt."
         }
     },
     "talkPage": {

@@ -311,6 +311,9 @@ export type ArkFoundersWords = {
     error: {needsAdult: string};
 };
 
+/** "Name now, ask age after": the age check's own words, asked once on the Ark or the profile (`ArkAgeAsk`). */
+export type ArkAgeAskWords = {title: string; body: string; yearLabel: string; continue: string; notNow: string; note: string; failed: string};
+
 export type ArkWords = {
     metaTitle: string;
     metaDescription: string;
@@ -359,6 +362,7 @@ export type ArkWords = {
     seo: ArkSeoWords;
     species: ArkSpeciesWords;
     founders: ArkFoundersWords;
+    age: ArkAgeAskWords;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

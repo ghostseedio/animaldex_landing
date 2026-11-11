@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Primer confirma que tens 18 anys o més."
             }
+        },
+        "age": {
+            "title": "Una comprovació ràpida d'edat",
+            "body": "En quin any vas néixer?",
+            "yearLabel": "Any de naixement",
+            "continue": "Continua",
+            "notNow": "Ara no",
+            "note": "Només es pregunta un cop. Si tens menys de 18 anys, els teus animals es mostren amb un número de Voyager en lloc del teu @username.",
+            "failed": "No s'ha pogut fer. Torna-ho a provar d'aquí un moment."
         }
     },
     "talkPage": {

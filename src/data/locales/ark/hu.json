@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Előbb erősítsd meg, hogy elmúltál 18 éves."
             }
+        },
+        "age": {
+            "title": "Gyors életkor-ellenőrzés",
+            "body": "Melyik évben születtél?",
+            "yearLabel": "Születési év",
+            "continue": "Folytatás",
+            "notNow": "Most nem",
+            "note": "Csak egyszer kérdezzük. 18 év alatt az állataid a @username helyett Voyager-számmal jelennek meg.",
+            "failed": "Ez nem sikerült. Próbáld újra egy pillanat múlva."
         }
     },
     "talkPage": {

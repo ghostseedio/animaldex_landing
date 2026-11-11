@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Thibitisha kwanza kuwa una umri wa miaka 18 au zaidi."
             }
+        },
+        "age": {
+            "title": "Ukaguzi mfupi wa umri",
+            "body": "Ulizaliwa mwaka gani?",
+            "yearLabel": "Mwaka wa kuzaliwa",
+            "continue": "Endelea",
+            "notNow": "Si sasa",
+            "note": "Huulizwa mara moja tu. Ukiwa chini ya miaka 18, wanyama wako huonyeshwa kwa namba ya Voyager badala ya @username yako.",
+            "failed": "Haikufanikiwa. Jaribu tena baada ya muda mfupi."
         }
     },
     "talkPage": {

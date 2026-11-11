@@ -4354,6 +4354,15 @@
       "error": {
         "needsAdult": "Konfirmasi dulu bahwa usiamu 18 tahun ke atas."
       }
+    },
+    "age": {
+      "title": "Cek usia singkat",
+      "body": "Kamu lahir tahun berapa?",
+      "yearLabel": "Tahun lahir",
+      "continue": "Lanjutkan",
+      "notNow": "Nanti saja",
+      "note": "Ditanyakan sekali. Jika di bawah 18 tahun, hewanmu tampil dengan nomor Voyager, bukan @username-mu.",
+      "failed": "Belum berhasil. Coba lagi sebentar lagi."
     }
   }
 }

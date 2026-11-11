@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Bestätige zuerst, dass du 18 oder älter bist."
             }
+        },
+        "age": {
+            "title": "Eine kurze Altersabfrage",
+            "body": "In welchem Jahr bist du geboren?",
+            "yearLabel": "Geburtsjahr",
+            "continue": "Weiter",
+            "notNow": "Jetzt nicht",
+            "note": "Wird nur einmal gefragt. Unter 18 erscheinen deine Tiere mit einer Voyager-Nummer statt mit deinem @username.",
+            "failed": "Das hat nicht geklappt. Versuch es gleich noch einmal."
         }
     },
     "talkPage": {

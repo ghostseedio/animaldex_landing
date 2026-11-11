@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Primeiro confirme que você tem 18 anos ou mais."
             }
+        },
+        "age": {
+            "title": "Uma verificação rápida de idade",
+            "body": "Em que ano você nasceu?",
+            "yearLabel": "Ano de nascimento",
+            "continue": "Continuar",
+            "notNow": "Agora não",
+            "note": "Perguntamos só uma vez. Se você tiver menos de 18 anos, seus animais aparecem com um número de Voyager em vez do seu @username.",
+            "failed": "Não deu certo. Tente novamente em instantes."
         }
     },
     "talkPage": {

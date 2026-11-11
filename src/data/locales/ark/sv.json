@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Bekräfta först att du har fyllt 18."
             }
+        },
+        "age": {
+            "title": "En snabb ålderskontroll",
+            "body": "Vilket år är du född?",
+            "yearLabel": "Födelseår",
+            "continue": "Fortsätt",
+            "notNow": "Inte nu",
+            "note": "Frågas bara en gång. Är du under 18 visas dina djur med ett Voyager-nummer i stället för ditt @username.",
+            "failed": "Det gick inte igenom. Försök igen om en stund."
         }
     },
     "talkPage": {

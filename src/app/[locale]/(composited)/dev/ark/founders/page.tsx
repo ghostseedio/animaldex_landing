@@ -22,24 +22,24 @@ const LEN = ARK_FIXTURE_FOUNDERS["Voyager 17"];
 
 const STATES: Array<{label: string; settings: ArkFounderSettings}> = [
     {
-        label: "Most people (a handle, never chose): on by default, shown as their @username, no 18+ step",
-        settings: {enabled: true, show_name: true, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: LEN}
+        label: "Most people (a handle, never chose): on by default, shown as their @username, no 18+ step (no year stored: the Ark asks it)",
+        settings: {enabled: true, show_name: true, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: false, ask_name: false, ask_age: true, earlier_anonymous: 0, founder: LEN}
     },
     {
         label: "On, with a photo",
-        settings: {enabled: true, show_name: true, chosen: true, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: MAYA}
+        settings: {enabled: true, show_name: true, chosen: true, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, ask_age: false, earlier_anonymous: 0, founder: MAYA}
     },
     {
         label: "Turned off (opted out): a Voyager number",
-        settings: {enabled: true, show_name: false, chosen: true, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: LEN}
+        settings: {enabled: true, show_name: false, chosen: true, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, ask_age: false, earlier_anonymous: 0, founder: LEN}
     },
     {
         label: "Blocked: a stored under-18 year",
-        settings: {enabled: true, show_name: false, chosen: false, blocked: "under_18", adult: "teen", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: null}
+        settings: {enabled: true, show_name: false, chosen: false, blocked: "under_18", adult: "teen", needs_adult_confirm: false, ask_name: false, ask_age: false, earlier_anonymous: 0, founder: null}
     },
     {
         label: "Blocked: no @handle",
-        settings: {enabled: true, show_name: false, chosen: false, blocked: "no_handle", adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: null}
+        settings: {enabled: true, show_name: false, chosen: false, blocked: "no_handle", adult: "stored", needs_adult_confirm: false, ask_name: false, ask_age: false, earlier_anonymous: 0, founder: null}
     }
 ];
 

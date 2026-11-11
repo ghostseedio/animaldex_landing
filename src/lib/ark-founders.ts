@@ -244,6 +244,11 @@ export type ArkFounderSettings = {
     needs_adult_confirm: boolean;
     /** They haven't answered the name question yet: the chat asks it under an arrival. */
     ask_name: boolean;
+    /**
+     * "Name now, ask age after" (2026-11-11): their @username shows and no birth year is stored, so ask it once,
+     * inline (`ArkAgeAsk`, the age check's words).
+     */
+    ask_age: boolean;
     earlier_anonymous: number;
     founder: ArkFounder | null;
 };
@@ -266,6 +271,7 @@ export function decodeArkFounderSettings(raw: unknown): ArkFounderSettings | nul
         adult: adultOf(row.adult),
         needs_adult_confirm: row.needs_adult_confirm === true,
         ask_name: row.ask_name === true && blocked === null,
+        ask_age: row.ask_age === true && blocked === null,
         earlier_anonymous: earlier,
         founder: decodeArkFounder(row.founder)
     };

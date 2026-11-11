@@ -4369,6 +4369,15 @@
       "error": {
         "needsAdult": "Confirm you're 18 or over first."
       }
+    },
+    "age": {
+      "title": "A quick age check",
+      "body": "What year were you born?",
+      "yearLabel": "Year of birth",
+      "continue": "Continue",
+      "notNow": "Not now",
+      "note": "Asked once. Under 18, your animals show as a Voyager number instead of your @username.",
+      "failed": "That didn't go through. Try again in a moment."
     }
   }
 }

@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Mai întâi confirmă că ai împlinit 18 ani."
             }
+        },
+        "age": {
+            "title": "O verificare rapidă a vârstei",
+            "body": "În ce an te-ai născut?",
+            "yearLabel": "Anul nașterii",
+            "continue": "Continuă",
+            "notNow": "Nu acum",
+            "note": "Te întrebăm o singură dată. Dacă ai sub 18 ani, animalele tale apar cu un număr Voyager în locul numelui tău @username.",
+            "failed": "Nu a mers. Încearcă din nou peste puțin timp."
         }
     },
     "talkPage": {

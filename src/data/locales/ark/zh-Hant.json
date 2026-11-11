@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "請先確認你已滿 18 歲。"
             }
+        },
+        "age": {
+            "title": "快速年齡確認",
+            "body": "你是哪一年出生的？",
+            "yearLabel": "出生年份",
+            "continue": "繼續",
+            "notNow": "暫時不要",
+            "note": "只問一次。未滿 18 歲時，你的動物會顯示 Voyager 編號，而不是你的 @username。",
+            "failed": "沒有成功。請稍後再試。"
         }
     },
     "talkPage": {

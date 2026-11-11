@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Najprije potvrdi da imaš 18 ili više godina."
             }
+        },
+        "age": {
+            "title": "Brza provjera dobi",
+            "body": "Koje si godine rođen(a)?",
+            "yearLabel": "Godina rođenja",
+            "continue": "Nastavi",
+            "notNow": "Ne sada",
+            "note": "Pitamo samo jednom. Ako imaš manje od 18 godina, tvoje se životinje prikazuju s Voyager brojem, a ne s tvojim @username.",
+            "failed": "To nije prošlo. Pokušaj ponovno za trenutak."
         }
     },
     "talkPage": {

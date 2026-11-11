@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Nejdřív potvrď, že ti je 18 nebo víc."
             }
+        },
+        "age": {
+            "title": "Rychlé ověření věku",
+            "body": "Ve kterém roce ses narodil(a)?",
+            "yearLabel": "Rok narození",
+            "continue": "Pokračovat",
+            "notNow": "Teď ne",
+            "note": "Ptáme se jen jednou. Pokud ti ještě není 18, tvá zvířata se ukážou s číslem Voyager místo tvého @username.",
+            "failed": "Nepodařilo se. Zkus to za chvíli znovu."
         }
     },
     "talkPage": {

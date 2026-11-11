@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Bevestig eerst dat je 18 of ouder bent."
             }
+        },
+        "age": {
+            "title": "Een snelle leeftijdscheck",
+            "body": "In welk jaar ben je geboren?",
+            "yearLabel": "Geboortejaar",
+            "continue": "Doorgaan",
+            "notNow": "Niet nu",
+            "note": "Wordt maar één keer gevraagd. Onder de 18 tonen je dieren een Voyager-nummer in plaats van je @username.",
+            "failed": "Dat is niet gelukt. Probeer het zo opnieuw."
         }
     },
     "talkPage": {

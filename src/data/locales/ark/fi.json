@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Vahvista ensin, että olet vähintään 18-vuotias."
             }
+        },
+        "age": {
+            "title": "Nopea ikätarkistus",
+            "body": "Minä vuonna olet syntynyt?",
+            "yearLabel": "Syntymävuosi",
+            "continue": "Jatka",
+            "notNow": "Ei nyt",
+            "note": "Kysytään vain kerran. Jos olet alle 18-vuotias, eläimesi näkyvät Voyager-numerolla eivätkä @usernamella.",
+            "failed": "Se ei mennyt läpi. Yritä uudelleen hetken kuluttua."
         }
     },
     "talkPage": {

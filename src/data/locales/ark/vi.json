@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Hãy xác nhận trước rằng bạn đủ 18 tuổi trở lên."
             }
+        },
+        "age": {
+            "title": "Kiểm tra tuổi nhanh",
+            "body": "Bạn sinh năm nào?",
+            "yearLabel": "Năm sinh",
+            "continue": "Tiếp tục",
+            "notNow": "Để sau",
+            "note": "Chỉ hỏi một lần. Nếu bạn dưới 18 tuổi, các con vật của bạn sẽ hiện số Voyager thay vì @username của bạn.",
+            "failed": "Gửi không thành công. Hãy thử lại sau giây lát."
         }
     },
     "talkPage": {

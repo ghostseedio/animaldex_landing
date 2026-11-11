@@ -17,6 +17,7 @@ import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkAnimalFounders, type ArkFoun
 import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
+import ArkAgeAsk from "@/components/ark/ark-age-ask";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
@@ -754,6 +755,8 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         {words.title}
                     </h1>
                     <p className="mt-2 text-sm leading-relaxed text-ink-200 md:text-base" aria-live="polite">{status}</p>
+                    {/* "Name now, ask age after": once, inline, for someone signed in whose @username shows and whose year isn't stored. */}
+                    {signedIn || Boolean(session.user) ? <ArkAgeAsk words={words.age} className="mt-4 max-w-xl" /> : <ArkAgeAskDev words={words.age} />}
                 </div>
             </section>
 
@@ -1240,6 +1243,12 @@ function ArkStoryLine({state, born, hatched, story, capture, founder, words}: {s
             </span>
         </p>
     );
+}
+
+/** Development's `?arkage=1` without a session: the same question, nothing sent (the component shows only then). */
+function ArkAgeAskDev({words}: {words: ArkWords["age"]}) {
+    if (process.env.NODE_ENV !== "development") return null;
+    return <ArkAgeAsk words={words} className="mt-4 max-w-xl" />;
 }
 
 /** A template with `{name}` filled by a node (a linked name), the words around it as the reader's language has them. */

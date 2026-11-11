@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "먼저 만 18세 이상인지 확인해 주세요."
             }
+        },
+        "age": {
+            "title": "간단한 나이 확인",
+            "body": "몇 년도에 태어났나요?",
+            "yearLabel": "출생 연도",
+            "continue": "계속",
+            "notNow": "나중에",
+            "note": "한 번만 물어봐요. 만 18세 미만이면 내 동물에 @username 대신 Voyager 번호가 표시돼요.",
+            "failed": "전송되지 않았어요. 잠시 후 다시 시도해 주세요."
         }
     },
     "talkPage": {

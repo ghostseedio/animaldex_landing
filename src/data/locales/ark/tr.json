@@ -346,6 +346,15 @@
             "error": {
                 "needsAdult": "Önce 18 yaş ve üzerinde olduğunu onayla."
             }
+        },
+        "age": {
+            "title": "Hızlı bir yaş kontrolü",
+            "body": "Hangi yıl doğdun?",
+            "yearLabel": "Doğum yılı",
+            "continue": "Devam Et",
+            "notNow": "Şimdi değil",
+            "note": "Yalnızca bir kez sorulur. 18 yaşından küçüksen hayvanların @username yerine bir Voyager numarasıyla görünür.",
+            "failed": "Bu gerçekleşmedi. Birazdan tekrar dene."
         }
     },
     "talkPage": {
