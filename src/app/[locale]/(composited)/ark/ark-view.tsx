@@ -13,6 +13,8 @@ import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkPopulation
 import {cardSaysAsleep, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {arkBringerLabel, arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
 import {fixtureArkStory} from "@/lib/ark-story";
+import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkAnimalFounders, type ArkFounder, type ArkFounders, type ArkFounderStory} from "@/lib/ark-founders";
+import {ArkBringerNames, ArkBroughtByFounder, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
@@ -26,6 +28,11 @@ export type ArkFixtureLife = {events: unknown; lives: Record<string, unknown>};
 type Props = {
     locale: string;
     initial: ArkSnapshot | null;
+    /**
+     * The named founders and shared stories beside the snapshot (founders
+     * contract): none while the server's `founder_names` switch is off.
+     */
+    founders?: ArkFounders;
     /** Development's `?fixture=grow`: the whole fixture, handed out a few at a time. */
     growFrom: ArkSnapshot | null;
     fixture: boolean;
@@ -154,11 +161,12 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
+export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null>(initial);
+    const [founders, setFounders] = useState<ArkFounders>(initialFounders);
     const snapshotRef = useRef(snapshot);
     const [selected, setSelected] = useState<ArkAnimal | null>(null);
     /** What the selected animal is doing now, as the scene animates it (never worked out here from a clock of the page's own). */
@@ -278,6 +286,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
                         ...(rigBase !== undefined ? {rigBase} : {}),
+                        // Development: `?behaviour=0` turns the behaviour schedule off (the placed spots, as before).
+                        ...(process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).get("behaviour") === "0" ? {behaviour: false} : {}),
                         iconUrl: arkIconUrl,
                         onSelect,
                         onBehaviour,
@@ -522,9 +532,14 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
             try {
                 const response = await fetch("/api/ark/voyage", {cache: "no-store"});
                 if (!response.ok) return;
-                const body = await response.json() as {snapshot?: unknown};
+                const body = await response.json() as {snapshot?: unknown; founders?: unknown};
                 const next = decodeArkSnapshot(body.snapshot);
-                if (next && !stopped) apply(next);
+                if (next && !stopped) {
+                    apply(next);
+                    // A story shared (or a name shown) can change with the same animals aboard.
+                    const named = decodeArkFounders(body.founders);
+                    setFounders((current) => (JSON.stringify(current) === JSON.stringify(named) ? current : named));
+                }
             } catch {
                 // Offline: the Ark stays as it was until the next refresh.
             }
@@ -755,6 +770,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         talk={talkTitle(selected.name, talkTitles)}
                         arrived={dateFormat.format(new Date(selected.arrived_at))}
                         life={life?.id === selected.id ? life : null}
+                        founders={founders.animals[selected.id] ?? null}
+                        names={founders.names}
                         arkDay={snapshot?.ark_day ?? null}
                         asleep={cardSaysAsleep(selectedState?.id === selected.id ? selectedState.state : sceneRef.current?.behaviour(selected.id))}
                         following={following}
@@ -812,7 +829,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     <div className="max-w-2xl">
                         <h2 id="ark-how" className="font-display text-2xl font-extrabold tracking-tight text-white md:text-3xl">{words.howTitle}</h2>
                         <p className="mt-3 text-base leading-relaxed text-ink-200">{words.howBody}</p>
-                        <p className="mt-3 text-[13px] text-ink-400">{words.founderNote}</p>
+                        {/* Founders: once the server names founders (its switch on), they are no longer all anonymous. */}
+                        {founders.names ? null : <p className="mt-3 text-[13px] text-ink-400">{words.founderNote}</p>}
                     </div>
                     <Link href="/talk" className={`${pill} bg-primary-400 text-canvas-950 hover:bg-primary-100 md:min-h-12 md:px-7 md:text-base`}>
                         {words.howCta}
@@ -832,6 +850,10 @@ type BandProps = {
     talk: string;
     arrived: string;
     life: LifeState | null;
+    /** This animal's founders from the snapshot (shown before its life story reads). */
+    founders: ArkAnimalFounders | null;
+    /** The server names founders (its `founder_names` switch is on). */
+    names: boolean;
     arkDay: number | null;
     asleep: boolean;
     following: boolean;
@@ -862,9 +884,18 @@ function useCardFocus(key: string, focusOnOpen: boolean, onClose: () => void) {
 }
 
 /** What the band knows about an animal's life: the life story when the server sent one, else the snapshot's v2 fields. */
-function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | null, locale: string, former: string) {
+function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | null, locale: string, former: string, named: ArkAnimalFounders | null = null) {
     const born = life ? life.origin.kind === "born" : animal.origin === "born";
     const parentsBy = life?.origin.kind === "born" ? life.origin.born_to : animal.bringers?.map((b) => b.label) ?? [];
+    // Founders: the life story's when it carries them (names on), else the snapshot's.
+    const fromLife = Boolean(life?.founders.names);
+    const broughtByLabel = life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label;
+    const founder: ArkFounder | null = born ? null : fromLife ? life?.founders.brought_by ?? null : named?.brought_by ?? null;
+    const parentFounders: Array<ArkFounder | null> = fromLife ? life?.founders.born_to ?? [] : named?.bringers ?? [];
+    const bringerEntries: ArkBringerEntry[] = born
+        ? parentsBy.map((label, index) => ({label, founder: parentFounders[index] ?? null}))
+        : [{label: broughtByLabel, founder}];
+    const story: ArkFounderStory | null = born ? null : fromLife ? life?.founder_story ?? null : named?.story ?? null;
     const ageDays = life?.ark_age_days ?? (arkDay !== null && typeof animal.born_ark_day === "number" ? Math.max(arkDay - animal.born_ark_day, 0) : null);
     return {
         born,
@@ -872,7 +903,12 @@ function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | nul
         bringers: arkJoinLabels(born ? parentsBy : [life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label], locale, former),
         generation: life ? life.generation : animal.generation ?? null,
         ageDays,
-        condition: life?.condition ?? animal.condition ?? null
+        condition: life?.condition ?? animal.condition ?? null,
+        founder,
+        bringerEntries,
+        anyFounder: bringerEntries.some((entry) => entry.founder !== null),
+        ancestorFounder: life?.founders.ancestor ?? null,
+        story
     };
 }
 
@@ -891,12 +927,12 @@ function ageText(days: number, words: ArkWords, locale: string): string {
  * in a line (and in full under "Life story", in the band itself), and the
  * next moves: talking to it, or following it.
  */
-function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
+function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, names, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
-    const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager);
+    const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
     const chips = [
         facts.generation !== null && facts.generation > 0 ? fillArkWords(words.life.generationShort, {n: facts.generation}) : null,
         facts.ageDays !== null ? ageText(facts.ageDays, words, locale) : null,
@@ -917,8 +953,13 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                         {animal.scientific_name ? <p className={`truncate text-[13px] italic text-ink-400 ${storyOpen ? "hidden md:block" : ""}`}>{animal.scientific_name}</p> : null}
                         <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px]">
                             <div className="flex gap-1.5"><dt className="text-ink-400">{words.lives}</dt><dd className="font-semibold text-ink-100">{words.zones[animal.zone]}</dd></div>
-                            {facts.born ? (
+                            {facts.born && facts.anyFounder ? (
+                                <div className="flex min-w-0 gap-1.5"><dt className="shrink-0 text-ink-400">{words.life.bornTo}</dt><dd className="min-w-0 font-semibold text-ink-100"><ArkFilled template={words.life.bornToValue} name="bringers"><ArkBringerNames entries={facts.bringerEntries} locale={locale} former={words.formerVoyager} /></ArkFilled></dd></div>
+                            ) : facts.born ? (
                                 <div className="flex min-w-0 gap-1.5"><dt className="shrink-0 text-ink-400">{words.life.bornTo}</dt><dd className="min-w-0 font-semibold text-ink-100">{fillArkWords(words.life.bornToValue, {bringers: facts.bringers})}</dd></div>
+                            ) : facts.founder ? (
+                                // A named founder (founders contract, section 5): "Brought by {name}", linked to their profile, with their photo.
+                                <div className="flex min-w-0 gap-1.5"><dt className="sr-only">{words.broughtBy}</dt><dd className="min-w-0"><ArkBroughtByFounder template={words.founders.card.broughtBy} founder={facts.founder} /></dd></div>
                             ) : (
                                 <div className="flex gap-1.5"><dt className="text-ink-400">{words.broughtBy}</dt><dd className="font-semibold text-ink-100">{facts.bringers}</dd></div>
                             )}
@@ -931,7 +972,7 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                                 ))}
                             </p>
                         ) : null}
-                        <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} words={words} />
+                        <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} story={facts.story} words={words} />
                         {placeholder ? <p className="mt-1 text-[12px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                     </div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
@@ -939,7 +980,7 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                     </button>
                 </div>
 
-                {storyOpen ? <ArkLifeStory animal={animal} life={life} facts={facts} words={words} locale={locale} /> : null}
+                {storyOpen ? <ArkLifeStory animal={animal} life={life} facts={facts} names={names || Boolean(life?.founders.names)} words={words} locale={locale} /> : null}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2 md:pl-[5.25rem]">
                     {placeholder ? null : (
@@ -1033,7 +1074,7 @@ function ArkHerdBand({bandRef, herd, zone, words, locale, talk, onMeet, onClose,
 }
 
 /** The life story in full, inside the band: every line from the server's log. */
-function ArkLifeStory({animal, life, facts, words, locale}: {animal: ArkAnimal; life: ArkLife | null; facts: ReturnType<typeof lifeFacts>; words: ArkWords; locale: string}) {
+function ArkLifeStory({animal, life, facts, names, words, locale}: {animal: ArkAnimal; life: ArkLife | null; facts: ReturnType<typeof lifeFacts>; names: boolean; words: ArkWords; locale: string}) {
     const w = words.life;
     const rows: Array<[string, string]> = [];
     if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
@@ -1052,7 +1093,7 @@ function ArkLifeStory({animal, life, facts, words, locale}: {animal: ArkAnimal; 
     if (life) rows.push([w.young, life.young_raised > 0 ? life.young_raised.toLocaleString(locale) : w.noYoung]);
     if (life && life.milestones.count > 0) rows.push([w.milestones, fillArkWords(w.milestonesValue, {count: life.milestones.count.toLocaleString(locale)})]);
     // Its line, further back than its parents (the third generation on).
-    if (facts.born && (facts.generation ?? 0) >= 2 && life?.ancestor_brought_by) rows.push([w.line, fillArkWords(w.lineValue, {bringer: arkBringerLabel(life.ancestor_brought_by, words.formerVoyager)})]);
+    if (facts.born && (facts.generation ?? 0) >= 2 && life?.ancestor_brought_by) rows.push([w.line, fillArkWords(w.lineValue, {bringer: facts.ancestorFounder?.display_name ?? arkBringerLabel(life.ancestor_brought_by, words.formerVoyager)})]);
     // A3: the step that brought it was revised after it arrived; it stays aboard.
     if (life?.revision) rows.push([w.revised, life.revision.worked ? w.revisedWorked : w.revisedNot]);
     return (
@@ -1065,18 +1106,22 @@ function ArkLifeStory({animal, life, facts, words, locale}: {animal: ArkAnimal; 
                     </div>
                 ))}
             </dl>
-            <p className="mt-2 text-[12px] text-ink-400">{w.anonymous}</p>
+            {/* "Founders stay anonymous" only while the server names nobody (its founder_names switch off). */}
+            {names ? null : <p className="mt-2 text-[12px] text-ink-400">{w.anonymous}</p>}
         </div>
     );
 }
 
 /**
- * How it got aboard: "Came aboard after a step that worked", the same for
+ * How it got aboard: the founder's own story when they shared it (founders
+ * contract); otherwise "Came aboard after a step that worked", the same for
  * everyone (or "Born on the Ark"). The public debate's problem and the way
  * that worked only when the life story carries `story_public`, which the
  * server sends only while its `public_story` flag is on. Never anything private.
  */
-function ArkStoryLine({state, born, hatched, words}: {state: LifeState | null; born: boolean; hatched: boolean; words: ArkWords}) {
+function ArkStoryLine({state, born, hatched, story, words}: {state: LifeState | null; born: boolean; hatched: boolean; story: ArkFounderStory | null; words: ArkWords}) {
+    // Founders: the story its founder chose to share, in their words (shown whether or not the founder is named).
+    if (story) return <ArkFounderStoryBlock story={story} title={words.founders.card.howAboard} className="rows-in mt-1.5" />;
     if (!state || state.loading) return <p aria-hidden="true" className="mt-1.5 h-[1.125rem]" />;
     const told = state.life?.story_public ?? null;
     return (
@@ -1095,4 +1140,11 @@ function ArkStoryLine({state, born, hatched, words}: {state: LifeState | null; b
             </span>
         </p>
     );
+}
+
+/** A template with `{name}` filled by a node (a linked name), the words around it as the reader's language has them. */
+function ArkFilled({template, name, children}: {template: string; name: string; children: React.ReactNode}) {
+    const at = template.indexOf(`{${name}}`);
+    if (at < 0) return <>{template}</>;
+    return <>{template.slice(0, at)}{children}{template.slice(at + name.length + 2)}</>;
 }

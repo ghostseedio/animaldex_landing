@@ -57,7 +57,24 @@ export type SpeciesDepth = {
 
 type Row = [string, string, string, string, string, string];
 const ROWS = (table as unknown as {species: Record<string, Row>}).species;
+/** The classifier's reviewed hold list: species at sea that are not water species (a frigatebird, a catalogue error). */
+const HELD = (table as unknown as {held?: Record<string, [string, string]>}).held ?? {};
 const known = new Map<string, SpeciesDepth | null>();
+
+/**
+ * A species the classifier holds off the water (its reviewed hold list,
+ * with the reason): it flies over its zone, awake or asleep, and never
+ * comes down onto the sea. Null for every other species.
+ */
+export function heldOffWater(slug: string): {show: "air"; reason: string} | null {
+    const row = HELD[slug];
+    return row ? {show: "air", reason: row[1]} : null;
+}
+
+/** The hold list (for the tests and the report). */
+export function heldTable(): Record<string, string> {
+    return Object.fromEntries(Object.entries(HELD).map(([slug, row]) => [slug, row[1]]));
+}
 
 /** A sea zone's species the table lacks (newer than it): mid-water, flagged as the default. */
 function fallback(zone: string): SpeciesDepth | null {
@@ -69,6 +86,10 @@ function fallback(zone: string): SpeciesDepth | null {
 export function speciesDepth(slug: string, zone: string): SpeciesDepth | null {
     const key = `${slug}#${zone}`;
     if (known.has(key)) return known.get(key)!;
+    if (HELD[slug]) {
+        known.set(key, null);
+        return null;
+    }
     const row = ROWS[slug];
     const found: SpeciesDepth | null = row
         ? {band: row[0] as DepthBand, water: row[1] as WaterKind, home: row[2] as WaterHome, breathes: row[3].includes("b"), crevice: row[3].includes("c"), deepFloor: row[3].includes("f"), glow: row[3].includes("g"), reason: row[4], source: row[5]}
@@ -208,6 +229,44 @@ export function fitInWater(spec: WaterSpec, height: number): {base: number; midd
     return {base: middle - height / 2, middle};
 }
 
+/**
+ * A school's, a pod's or a pair's member beside its first one, in the first
+ * one's frame (`side` metres to its right, `back` behind): side by side,
+ * one each side in turn, rank 1 and 2 a row out, 3 and 4 the next; each row
+ * 1.3–1.6 body lengths (seeded) from the last, and seeded a little back. So
+ * members swim level with each other, never stacked and never touching: the
+ * nearest two are always at least 1.3 body lengths apart across the line of
+ * travel, and a body is narrower than it is long.
+ */
+export function schoolOffset(rank: number, seed: number, length: number): {side: number; back: number; gap: number} {
+    if (rank <= 0) return {side: 0, back: 0, gap: 0};
+    const row = Math.ceil(rank / 2);
+    const gap = length * (1.3 + 0.3 * seed);
+    return {side: (rank % 2 ? 1 : -1) * row * gap, back: length * 0.4 * ((seed * 5.3 + rank * 0.37) % 1), gap};
+}
+
+/** Where the water is too shallow beside the first one: the member falls in behind instead, a gap per rank (on the first one's loop). */
+export function schoolFile(rank: number, seed: number, length: number): {side: number; back: number} {
+    const {gap} = schoolOffset(rank, seed, length);
+    return {side: 0, back: rank * gap};
+}
+
+/**
+ * A gentle pitch while it changes depth (radians, nose up rising): from its
+ * swim up and down the band against how fast it swims along its loop, at
+ * most 0.2. Level when its depth holds still.
+ */
+export function swimPitch(depth: SpeciesDepth, waterDepth: number, seed: number, clock: number, along: number): number {
+    if (waterMotion(depth) !== "swim" || along <= 1e-6) return 0;
+    const range = swimRange(depth.band, waterDepth);
+    const period = 50 + 60 * ((seed * 7.31) % 1);
+    // d(depth)/dt of the band cycle (m/s); rising when the depth shrinks.
+    const sink = (range.to - range.from) * 0.5 * Math.cos((clock / period + seed) * Math.PI * 2) * Math.PI * 2 / period;
+    const pitch = Math.atan2(sink * (range.aboveFloor ? -1 : 1), along);
+    // Three.js: a positive pitch about x turns the nose (+z) down; sinking is nose down.
+    return Math.min(Math.max(pitch, -0.2), 0.2);
+}
+
 /** Its loop's pace in the water, as a share of a swimmer's: a crab walks, a duck drifts, an octopus keeps to its hole. */
 export function waterPace(motion: WaterMotion): number {
     return motion === "swim" ? 1 : motion === "walk" ? 0.3 : motion === "float" ? 0.35 : 0;
@@ -317,17 +376,18 @@ function coastSpot(zone: ArkZone, index: number): {x: number; z: number} {
  * slot and rank alone like every other place. Null when its zone's own
  * place is its water (the reef, the open ocean).
  */
-export function waterHomeSpot(depth: SpeciesDepth, zone: ArkZone, slot: number, rank: number): {x: number; z: number; home: "lake" | "coast"} | null {
+export function waterHomeSpot(depth: SpeciesDepth, zone: ArkZone, slot: number, rank: number, length = 0): {x: number; z: number; home: "lake" | "coast"} | null {
     const home: "lake" | "coast" | null = depth.water === "fresh" ? "lake" : depth.home === "coast" || ZONE_SITES[zone]?.kind !== "sea" ? "coast" : null;
     if (!home) return null;
     const zoneIndex = Math.max(ARK_ZONES.indexOf(zone), 0);
     // The lake's spots are shared by every zone's fresh-water animals: slot k of zone Z takes spot k · zones + Z.
     const centre = home === "lake" ? lakeSpot(slot * ARK_ZONES.length + zoneIndex) : coastSpot(zone, slot);
     if (rank === 0) return {...centre, home};
-    // Its cluster's others about it, in its water.
+    // Its cluster's others about it, in its water, about 1.3 body lengths apart (a spiral's neighbours are 1.5 c apart).
     const turn = (hashString(`${zone}#${slot}#water`) % 360) / 180 * Math.PI;
+    const c = Math.max(0.95, 0.9 * length);
     for (let k = rank; k < rank + 40; k++) {
-        const radius = 0.95 * Math.sqrt(k);
+        const radius = c * Math.sqrt(k);
         const x = centre.x + Math.cos(k * GOLDEN_ANGLE + turn) * radius;
         const z = centre.z + Math.sin(k * GOLDEN_ANGLE + turn) * radius;
         if (inHomeWater(home, x, z)) return {x, z, home};

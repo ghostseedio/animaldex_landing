@@ -424,6 +424,40 @@ export const ARK_COPY = {
         makePublic: "Make public",
         changeFailed: "That didn't go through. Try again in a moment.",
         history: "What changed"
+    },
+    /**
+     * Founders (founders contract, section 4): the one line under an arrival
+     * in the chat, asking the name first (when the server says to) and then
+     * "Share how this worked?". The same words as the Ark's own
+     * `ark.founders.name|share|error`, here because the chat reads its labels
+     * from `companions`.
+     */
+    founders: {
+        name: {
+            ask: "Show your name on the Ark?",
+            adult: "I'm 18 or over",
+            yes: "Yes, show my name",
+            shown: "Your name shows on the Ark"
+        },
+        share: {
+            ask: "Share how this worked on the Ark?",
+            stepLabel: "What you did",
+            problemPlaceholder: "One line about the problem, in your words (optional)",
+            share: "Share",
+            edit: "Edit",
+            notNow: "Not now",
+            shared: "Shared on the Ark",
+            publicNote: "Everyone who visits the Ark can read this.",
+            notPublic: "This can't be shown publicly. Try other words.",
+            couldNotCheck: "Couldn't check that just now. Try again.",
+            remove: "Remove from the Ark",
+            removed: "Removed from the Ark",
+            askShort: "Share how this worked?",
+            confirmShare: "I'm 18 or over, share"
+        },
+        error: {
+            needsAdult: "Confirm you're 18 or over first."
+        }
     }
 } as const;
 

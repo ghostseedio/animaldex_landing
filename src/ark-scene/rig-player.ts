@@ -84,6 +84,8 @@ export type RigModel = {
     flightOpen: boolean;
     /** The head and neck chain the look turns (`rigLookChain`); null when the rig has no head bone. */
     look: RigLookChain | null;
+    /** Its neck (the look chain's neck bone and rest joint), for the material's look; null without one. */
+    neck: {bone: number; pivot: [number, number, number]} | null;
     /** Last time it was drawn (seconds), for letting it go. */
     usedAt: number;
 };
@@ -424,6 +426,7 @@ export class RigLibrary {
             flight,
             flightOpen: entry.flight_fallback_open === true,
             look,
+            neck: look && look.neck >= 0 ? {bone: look.neck, pivot: look.neckPivot} : null,
             usedAt: 0
         });
         this.onLoad(slug);
@@ -439,6 +442,10 @@ export class RigLibrary {
         this.models.clear();
     }
 }
+
+/** The head-look's bones: the v1 rigs name them `neck` and `head` (the rigging lane's manifest will name the chain). */
+const NECK_NAMES = ["neck", "neck0", "neck_0"];
+const HEAD_NAMES = ["head", "head0", "head_0"];
 
 /**
  * The skinned mesh in its rest pose, in the model's space (what the bone
@@ -468,6 +475,10 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
     const normals = new Float32Array(count * 3);
     const joints = new Uint8Array(count * 4);
     const weights = new Float32Array(count * 4);
+    // How much each vertex turns with the head look: all of the head, most of the neck.
+    const headShare = new Float32Array(count);
+    const headBone = boneNames.findIndex((name) => HEAD_NAMES.includes(name.toLowerCase()));
+    const neckBone = boneNames.findIndex((name) => NECK_NAMES.includes(name.toLowerCase()));
     for (let i = 0; i < count; i++) {
         blended.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         let total = 0;
@@ -476,6 +487,8 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
             const j = skinIndex.getComponent(i, k);
             joints[i * 4 + k] = remap[j] ?? 0;
             weights[i * 4 + k] = w;
+            if (remap[j] === headBone && headBone >= 0) headShare[i] += w;
+            else if (remap[j] === neckBone && neckBone >= 0) headShare[i] += w * 0.6;
             total += w;
             if (w <= 0 || !jointMatrices[j]) continue;
             weighted.copy(jointMatrices[j]);
@@ -485,6 +498,7 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
         }
         if (total > 0 && Math.abs(total - 1) > 1e-3) {
             for (let k = 0; k < 4; k++) weights[i * 4 + k] /= total;
+            headShare[i] /= total;
             const out = blended.elements;
             for (let m = 0; m < 16; m++) out[m] /= total;
         }
@@ -515,6 +529,7 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
     }
     geometry.setAttribute("arkJoints", new BufferAttribute(joints, 4));
     geometry.setAttribute("arkWeights", new BufferAttribute(weights, 4));
+    geometry.setAttribute("arkHead", new BufferAttribute(headShare, 1));
     const index = source.getIndex();
     if (index) geometry.setIndex(new BufferAttribute(index.array.slice(0), 1));
     if (!normal) geometry.computeVertexNormals();

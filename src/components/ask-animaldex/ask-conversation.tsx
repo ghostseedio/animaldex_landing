@@ -2669,6 +2669,7 @@ function AskConversation({
                 key={`ark-arrival-${arrival.animal.id}`}
                 species={arrival.animal.name}
                 slug={arrival.animal.model_slug}
+                animalId={arrival.animal.id}
                 fresh={arrival.fresh && !reducedMotion}
                 words={words.ark}
                 locale={locale}

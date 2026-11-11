@@ -1,0 +1,950 @@
+{
+ "about": "Hand-checked rare fields for scripts/ark-intelligence-profiles.mts (2026-11-11). Every keyword candidate for tool use, sentinels, caching, mixed-species company, cleaners/hosts and playing dead was read by Claude Code; keep=true entries carry the stored field and the verbatim phrase that shows it, keep=false the reason it was not used. A candidate not listed is not used.",
+ "tools": {
+  "american-crow": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "A wild crow has been recorded shaping a splinter of wood and using it to probe a hole, though tool use is rare in this species",
+   "why": "read by Claude Code: the text states it",
+   "value": "shapes a splinter to probe a hole (rare)"
+  },
+  "bearded-vulture": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They may drop bones from height onto rocks to break them open",
+   "why": "read by Claude Code: the text states it",
+   "value": "drops bones onto rocks"
+  },
+  "black-crowned-night-heron": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Some birds have been recorded dropping bread or other bait onto the water to lure fish within reach, mostly in town parks",
+   "why": "read by Claude Code: the text states it",
+   "value": "drops bait to lure fish"
+  },
+  "bornean-orangutan": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They use tools and learned behaviors in some populations",
+   "why": "read by Claude Code: the text states it",
+   "value": "tools in some populations"
+  },
+  "boxer-crab": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Small crab body that carries anemones in both claws",
+   "why": "read by Claude Code: the text states it",
+   "value": "holds anemones in its claws"
+  },
+  "chimpanzee": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "They make and use tools: stripped stems to fish termites from mounds, stone and wooden hammers to",
+   "why": "read by Claude Code: the text states it",
+   "value": "termite-fishing stems, nut-cracking hammers, leaf sponges"
+  },
+  "coconut-octopus": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Use of coconut shells or bivalve shells as portable shelter",
+   "why": "read by Claude Code: the text states it",
+   "value": "carries shells as a portable shelter"
+  },
+  "goffins-cockatoo": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "and tool-like problem solving",
+   "why": "read by Claude Code: the text states it",
+   "value": "tool-like problem solving"
+  },
+  "great-tailed-grackle": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "In experiments it has solved puzzles such as dropping stones into a tube of water to raise the level and reach floating food",
+   "why": "read by Claude Code: the text states it",
+   "value": "drops stones into water to raise food (experiments)"
+  },
+  "hawaiian-crow": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "study published in 2016 found that almost all tested birds used sticks as tools to pry food from holes in wood, a skill seen in very few birds",
+   "why": "read by Claude Code: the text states it",
+   "value": "sticks to pry food from holes"
+  },
+  "long-tailed-macaque": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "and islands in Thailand and Myanmar, some populations use stones as hammers to open oysters, sea snails and nuts",
+   "why": "read by Claude Code: the text states it",
+   "value": "stones as hammers"
+  },
+  "new-caledonian-crow": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "It extracts hidden prey from dead wood and crevices using tools it makes, hooked twigs and stepped strips cut from pandanus leaves",
+   "why": "read by Claude Code: the text states it",
+   "value": "hooked twigs and leaf strips"
+  },
+  "palm-cockatoo": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Cape York in Australia is one of very few birds known to make a tool for producing sound",
+   "why": "read by Claude Code: the text states it",
+   "value": "makes a tool to drum with"
+  },
+  "sea-otter": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Uses stones and other hard objects to break open shellfish",
+   "why": "read by Claude Code: the text states it",
+   "value": "stones to break shellfish"
+  },
+  "spotted-nutcracker": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "To open hard nuts it often wedges them in a crevice or holds them under a foot and hammers with the bill",
+   "why": "read by Claude Code: the text states it",
+   "value": "wedges nuts in a crevice to hammer them"
+  },
+  "sumatran-orangutan": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They have been observed using tools for feeding and comfort",
+   "why": "read by Claude Code: the text states it",
+   "value": "tools for feeding and comfort"
+  },
+  "tufted-capuchin": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Long known as Cebus apella and much used in tool-use studies, it moved with the other robust, tufted capuchins into the genus Sapajus",
+   "why": "read by Claude Code: the text states it",
+   "value": "tool use (studied)"
+  },
+  "western-gorilla": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Congo was photographed testing the depth of a swamp pool with a stick before wading in",
+   "why": "read by Claude Code: the text states it",
+   "value": "tests water depth with a stick"
+  },
+  "white-faced-capuchin": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "National Park, white-faced capuchins have been filmed using stones to break open nuts and shellfish",
+   "why": "read by Claude Code: the text states it",
+   "value": "stones to break nuts and shellfish"
+  },
+  "woodpecker-finch": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Tool use is most frequent in the arid lowlands, where prey is hard to reach, and much rarer in the humid",
+   "why": "read by Claude Code: the text states it",
+   "value": "tool use where prey is hard to reach"
+  },
+  "aardvark": {
+   "keep": false,
+   "why": "metaphor"
+  },
+  "alligator-snapping-turtle": {
+   "keep": false,
+   "why": "a lure is a body part, not a tool"
+  },
+  "asian-small-clawed-otter": {
+   "keep": false,
+   "why": "pebble juggling in captivity, purpose debated"
+  },
+  "ballan-wrasse": {
+   "keep": false,
+   "why": "n/a"
+  },
+  "banded-archerfish": {
+   "keep": false,
+   "why": "water jets: a hunting style, not a tool"
+  },
+  "burrowing-owl": {
+   "keep": false,
+   "why": "dung lining: the text gives no purpose"
+  },
+  "common-octopus": {
+   "keep": false,
+   "why": "shells piled at the den: shelter building; puzzles kept as problem solving"
+  },
+  "common-raven": {
+   "keep": false,
+   "why": "problem solving, no tool named"
+  },
+  "elf-owl": {
+   "keep": false,
+   "why": "n/a"
+  },
+  "european-spider-crab": {
+   "keep": false,
+   "why": "decorating: camouflage"
+  },
+  "humpback-whale": {
+   "keep": false,
+   "why": "bubble rings: cooperative hunting, not a tool"
+  },
+  "japanese-spider-crab": {
+   "keep": false,
+   "why": "decorating: camouflage"
+  },
+  "kea": {
+   "keep": false,
+   "why": "puzzles only: problem solving"
+  }
+ },
+ "sentinel": {
+  "acorn-woodpecker": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "Group members keep watch from high perches, give harsh alarm calls, and chase jays and squirrels away from the granary",
+   "why": "read by Claude Code: the text states it"
+  },
+  "banded-mongoose": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "sends the pack running for the nearest den or thicket, and a raised lookout often watches while the rest feed",
+   "why": "read by Claude Code: the text states it"
+  },
+  "black-tailed-prairie-dog": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Tunnels, lookout posts, social grooming, alarm calls, and coteries turn grassland into communication",
+   "why": "read by Claude Code: the text states it"
+  },
+  "common-dwarf-mongoose": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "noses down while one member climbs a mound, rock or branch as a sentinel and calls the moment danger appears",
+   "why": "read by Claude Code: the text states it"
+  },
+  "florida-scrub-jay": {
+   "keep": true,
+   "field": "look",
+   "phrase": "bare snags in open scrub for a single bird perched high on sentry duty",
+   "why": "read by Claude Code: the text states it"
+  },
+  "greylag-goose": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "hiss, ganders charge intruders, and feeding flocks usually keep some birds on watch",
+   "why": "read by Claude Code: the text states it"
+  },
+  "himalayan-snowcock": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "A bird on lookout gives an alarm call and the covey scatters",
+   "why": "read by Claude Code: the text states it"
+  },
+  "klipspringer": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Large ears and lookout behavior turn stone refuge into an observation post",
+   "why": "read by Claude Code: the text states it"
+  },
+  "meerkat": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Rotating sentries: individuals take watch while others forage",
+   "why": "read by Claude Code: the text states it"
+  },
+  "patas-monkey": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "contain one adult male with several females and young, and the male often keeps watch from a distance",
+   "why": "read by Claude Code: the text states it"
+  },
+  "pinyon-jay": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "While the flock feeds, sentinels watch from treetops and call an alarm, and the birds mob or flee together",
+   "why": "read by Claude Code: the text states it"
+  },
+  "siberian-ibex": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "Herds keep lookouts, give whistling alarm calls and escape onto steep rock",
+   "why": "read by Claude Code: the text states it"
+  },
+  "topi": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Topi often use raised spots such as termite mounds as lookout posts",
+   "why": "read by Claude Code: the text states it"
+  },
+  "uinta-ground-squirrel": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Upright lookout posture for scanning open meadows",
+   "why": "read by Claude Code: the text states it"
+  },
+  "vervet-monkey": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "eagles and snakes, each triggering a different escape, and the group keeps watch while foraging",
+   "why": "read by Claude Code: the text states it"
+  },
+  "yellow-mongoose": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Sentry behavior and group awareness help manage open-country risk",
+   "why": "read by Claude Code: the text states it"
+  },
+  "american-pika": {
+   "keep": false,
+   "why": "calls from its own boulder; solitary"
+  },
+  "australian-wood-duck": {
+   "keep": false,
+   "why": "each feeding bird watches: many eyes, not a sentinel"
+  },
+  "bar-headed-goose": {
+   "keep": false,
+   "why": "the gander guards the nest: parental guard"
+  },
+  "brolga": {
+   "keep": false,
+   "why": "general vigilance"
+  },
+  "burrowing-owl": {
+   "keep": false,
+   "why": "\"sentry-like presence\" is a look, not a role"
+  },
+  "bush-hyrax": {
+   "keep": false,
+   "why": "group vigilance and calls: many eyes, no sentinel named"
+  },
+  "emperor-goose": {
+   "keep": false,
+   "why": "parental guard"
+  },
+  "gerenuk": {
+   "keep": false,
+   "why": "its own lookout while it feeds"
+  },
+  "magpie-goose": {
+   "keep": false,
+   "why": "nest guard"
+  },
+  "red-breasted-goose": {
+   "keep": false,
+   "why": "parental guard"
+  },
+  "rock-hyrax": {
+   "keep": false,
+   "why": "alarm calls, no sentinel named"
+  }
+ },
+ "cache": {
+  "acorn-woodpecker": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "Acorn Woodpecker feeds on acorns, insects, sap, fruit, and cached nuts from drilled holes",
+   "why": "read by Claude Code: the text states it"
+  },
+  "american-kestrel": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Surplus prey is often cached in grass clumps, tree crevices or fence posts and eaten later",
+   "why": "read by Claude Code: the text states it"
+  },
+  "american-red-squirrel": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "Cones are cut green and stored closed, which is why the larder has to be built in a few busy weeks and then held all",
+   "why": "read by Claude Code: the text states it"
+  },
+  "arctic-fox": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "Lemmings, birds, eggs, fish, berries, carrion, and cached food",
+   "why": "read by Claude Code: the text states it"
+  },
+  "arctic-ground-squirrel": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Seeds from an ancient cache in Siberian permafrost, thought to have been made by Arctic ground squirrels",
+   "why": "read by Claude Code: the text states it"
+  },
+  "banner-tailed-kangaroo-rat": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "grass seeds, desert seeds, and some green plant matter cached for later use",
+   "why": "read by Claude Code: the text states it"
+  },
+  "black-billed-magpie": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "black-and-white crow relative of western North America, it hoards surplus food in small ground caches",
+   "why": "read by Claude Code: the text states it"
+  },
+  "california-scrub-jay": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "California Scrub-Jays are corvids known for caching acorns and other food",
+   "why": "read by Claude Code: the text states it"
+  },
+  "campbells-dwarf-hamster": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "the burrow, this small steppe hamster empties them into an underground larder by pushing forward with its front paws",
+   "why": "read by Claude Code: the text states it"
+  },
+  "central-american-agouti": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Scatter-hoarding behavior that stores food across the forest",
+   "why": "read by Claude Code: the text states it"
+  },
+  "clarks-nutcracker": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "By burying seeds and recovering them months later, they survive winter and also help mountain pines spread across",
+   "why": "read by Claude Code: the text states it"
+  },
+  "cliff-chipmunk": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Seeds and nuts carried in its cheek pouches go into caches in crevices and burrows, and it draws on them through cold spells",
+   "why": "read by Claude Code: the text states it"
+  },
+  "coal-tit": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Coal Tit turns tiny size into storage strategy, caching food and moving through conifers with quick decisions that prepare for leaner",
+   "why": "read by Claude Code: the text states it"
+  },
+  "common-raven": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Food caching: ravens hide surplus meals for later use",
+   "why": "read by Claude Code: the text states it"
+  },
+  "desert-kangaroo-rat": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It mainly stores seeds in larders inside its burrow system rather than scattering them in small buried caches",
+   "why": "read by Claude Code: the text states it"
+  },
+  "desert-pocket-mouse": {
+   "keep": true,
+   "field": "story",
+   "phrase": "trips are emptied from the pouches with the forefeet and stored in the burrow as a cache",
+   "why": "read by Claude Code: the text states it"
+  },
+  "eastern-chipmunk": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "North American woodland that spends the winter underground on a hoard of seeds and nuts",
+   "why": "read by Claude Code: the text states it"
+  },
+  "eastern-gray-squirrel": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "in its own hole rather than in one store, a habit called scatter-hoarding, and one animal may make several thousand caches in a season",
+   "why": "read by Claude Code: the text states it"
+  },
+  "eastern-screech-owl": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Surplus prey is often cached in the roost cavity, especially in cold weather, and eaten days later",
+   "why": "read by Claude Code: the text states it"
+  },
+  "eurasian-jay": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Acorn caching stores future food underground",
+   "why": "read by Claude Code: the text states it"
+  },
+  "eurasian-magpie": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Eurasian Magpies are intelligent corvids that cache food, inspect novelty, and adapt to varied habitats",
+   "why": "read by Claude Code: the text states it"
+  },
+  "fox-squirrel": {
+   "keep": true,
+   "field": "story",
+   "phrase": "Through autumn it buries nuts one at a time in scattered spots, then finds many of them again in winter by memory and",
+   "why": "read by Claude Code: the text states it"
+  },
+  "giant-kangaroo-rat": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "to dry in many small, shallow surface pits before being moved to larders inside the burrow",
+   "why": "read by Claude Code: the text states it"
+  },
+  "marsh-tit": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Marsh Tit survives through quiet memory, caching food and working woodland edges with less noise than its close relatives",
+   "why": "read by Claude Code: the text states it"
+  },
+  "mongolian-gerbil": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "and fill its chambers with seeds through the autumn, living on these hoards through winters far below freezing",
+   "why": "read by Claude Code: the text states it"
+  },
+  "ords-kangaroo-rat": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Indian ricegrass seedlings have been found sprouting from seed caches that kangaroo rats, this species among them, failed to recover",
+   "why": "read by Claude Code: the text states it"
+  },
+  "pied-butcherbird": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Butcherbirds may store or wedge captured prey before tearing it apart, which helped give the group its common name",
+   "why": "read by Claude Code: the text states it"
+  },
+  "pika": {
+   "keep": true,
+   "field": "traits",
+   "phrase": "Haypile caching of vegetation for winter food",
+   "why": "read by Claude Code: the text states it"
+  },
+  "pinyon-jay": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "throat lets it carry dozens of pine seeds at a time to its caching areas",
+   "why": "read by Claude Code: the text states it"
+  },
+  "red-bellied-woodpecker": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It wedges acorns, nuts and insects into bark crevices to eat later, sometimes breaking large items into pieces first",
+   "why": "read by Claude Code: the text states it"
+  },
+  "red-breasted-nuthatch": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It caches seeds in bark crevices through autumn and relies on them heavily in winter",
+   "why": "read by Claude Code: the text states it"
+  },
+  "red-fox": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They can cache surplus food for later use",
+   "why": "read by Claude Code: the text states it"
+  },
+  "red-harvester-ant": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Red Harvester Ants collect, sort, and store seeds using trails and organized labor",
+   "why": "read by Claude Code: the text states it"
+  },
+  "red-squirrel": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Red Squirrels cache food so they can survive leaner seasons",
+   "why": "read by Claude Code: the text states it"
+  },
+  "southern-flying-squirrel": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "In autumn it stores acorns and hickory nuts in tree crevices and cavities",
+   "why": "read by Claude Code: the text states it"
+  },
+  "spotted-nutcracker": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "crow speckled with white, the nutcracker spends autumn burying conifer seeds and hazelnuts in thousands of small caches",
+   "why": "read by Claude Code: the text states it"
+  },
+  "vulture-bee": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "with toothed mandibles, carry it home in the crop and store it, processed with their own secretions, in wax pots inside the nest as protein",
+   "why": "read by Claude Code: the text states it"
+  },
+  "winter-white-dwarf-hamster": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "Seeds, shoots and insects, gathered and cached in burrows",
+   "why": "read by Claude Code: the text states it"
+  },
+  "wolverine": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They cache food in cold places such as snow and rock crevices, which helps preserve it for later",
+   "why": "read by Claude Code: the text states it"
+  },
+  "angoumois-grain-moth": {
+   "keep": false,
+   "why": "grain stores are people's"
+  },
+  "black-giant-squirrel": {
+   "keep": false,
+   "why": "text says it does not cache"
+  },
+  "mojave-desert-tortoise": {
+   "keep": false,
+   "why": "a water store in its body"
+  },
+  "roloway-monkey": {
+   "keep": false,
+   "why": "cheek pouches, not a cache"
+  },
+  "varied-carpet-beetle": {
+   "keep": false,
+   "why": "metaphor"
+  }
+ },
+ "mixed": {
+  "abyssinian-ground-hornbill": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Birds have been seen following grazing herds and the edges of grass fires to catch the small animals that are flushed out",
+   "why": "read by Claude Code: the text states it",
+   "value": "grazers"
+  },
+  "asian-fairy-bluebird": {
+   "keep": true,
+   "field": "look",
+   "phrase": "fig trees in forest and watch the upper canopy, where it joins mixed flocks of barbets, bulbuls and green pigeons",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "baya-weaver": {
+   "keep": true,
+   "field": "sleep",
+   "phrase": "season, in reedbeds, sugar cane or tall grass, often alongside other small seed-eating birds",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds (roost)"
+  },
+  "black-headed-gull": {
+   "keep": true,
+   "field": "look",
+   "phrase": "In winter the smallest, most restless gulls in a mixed flock are usually this species",
+   "why": "read by Claude Code: the text states it",
+   "value": "gulls"
+  },
+  "blue-headed-macaw": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "and has been recorded eating clay at riverbank licks alongside other parrots",
+   "why": "read by Claude Code: the text states it",
+   "value": "parrots"
+  },
+  "blue-tit": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "In winter it often joins mixed flocks with other tits, moving through woodland together",
+   "why": "read by Claude Code: the text states it",
+   "value": "tits"
+  },
+  "bornean-bristlehead": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "of up to about ten birds often travel at the centre of mixed-species flocks in the canopy",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "cattle-egret": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Cattle Egrets often feed near cattle, horses, buffalo, or tractors",
+   "why": "read by Claude Code: the text states it",
+   "value": "grazers"
+  },
+  "coal-tit": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "In winter it often travels with goldcrests and other tits in mixed flocks moving through conifers",
+   "why": "read by Claude Code: the text states it",
+   "value": "tits"
+  },
+  "common-flameback": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It often travels in pairs or family parties and sometimes joins mixed flocks of other birds moving through the trees",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "common-green-magpie": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "pairs or in small family groups, and is reported to join mixed-species foraging flocks at times",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "common-myna": {
+   "keep": true,
+   "field": "story",
+   "phrase": "Mynas follow grazing cattle and ploughs, snapping up grasshoppers and other insects disturbed from the",
+   "why": "read by Claude Code: the text states it",
+   "value": "grazers"
+  },
+  "downy-woodpecker": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Outside the breeding season it often travels in mixed flocks with chickadees and nuthatches",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "fork-tailed-drongo": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It often perches on or follows large grazing mammals, snatching insects they disturb from the grass",
+   "why": "read by Claude Code: the text states it",
+   "value": "grazers"
+  },
+  "grey-crowned-crane": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "Birds stamp the ground to flush insects and often follow cattle or antelope to catch what the herd disturbs",
+   "why": "read by Claude Code: the text states it",
+   "value": "grazers"
+  },
+  "javan-munia": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "In rice fields it sometimes feeds in mixed flocks with Scaly-breasted Munias",
+   "why": "read by Claude Code: the text states it",
+   "value": "munias"
+  },
+  "king-bird-of-paradise": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Outside display it sometimes forages in mixed-species flocks with other fruit- and insect-eating birds",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "little-black-cormorant": {
+   "keep": true,
+   "field": "sleep",
+   "phrase": "in trees, often dead trees standing in water, sometimes alongside other cormorants and darters",
+   "why": "read by Claude Code: the text states it",
+   "value": "cormorants (roost)"
+  },
+  "nutmeg-mannikin": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It often joins mixed flocks with other munia species where their ranges overlap",
+   "why": "read by Claude Code: the text states it",
+   "value": "munias"
+  },
+  "oriental-white-eye": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "calling constantly, and often join other small birds in mixed feeding flocks",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "paradise-tanager": {
+   "keep": true,
+   "field": "sleep",
+   "phrase": "Active by day, travelling with mixed-species flocks through the canopy",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "philippine-bulbul": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "Small, restless flocks move through the trees, often mixing with other species, and cling to thin twigs, sometimes hanging sideways, to reach fruit at the",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "pink-necked-green-pigeon": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "At large fruiting figs it is often reported feeding alongside other green pigeons, barbets and starlings",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "red-legged-honeycreeper": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "Canopy movement, flocking with other birds, and quick feeding reduce exposure",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "redwing": {
+   "keep": true,
+   "field": "sleep",
+   "phrase": "in thick hedges, scrub or evergreen plantations, often alongside other thrushes",
+   "why": "read by Claude Code: the text states it",
+   "value": "thrushes (roost)"
+  },
+  "roloway-monkey": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "adult male, keep to the upper canopy and often travel alongside other monkey species",
+   "why": "read by Claude Code: the text states it",
+   "value": "monkeys"
+  },
+  "western-yellow-wagtail": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "It often follows grazing animals to catch insects they disturb",
+   "why": "read by Claude Code: the text states it",
+   "value": "grazers"
+  },
+  "white-browed-fantail": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It often joins mixed flocks of small insect-eating birds moving through the trees, taking insects that the",
+   "why": "read by Claude Code: the text states it",
+   "value": "birds"
+  },
+  "willow-tit": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Pairs usually hold the same territory all year, joining mixed flocks of other tits in winter",
+   "why": "read by Claude Code: the text states it",
+   "value": "tits"
+  },
+  "yellowfin-surgeonfish": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "It is often reported feeding in mixed groups with other surgeonfishes over open ground rather than alone",
+   "why": "read by Claude Code: the text states it",
+   "value": "fish"
+  },
+  "great-crow": {
+   "keep": false,
+   "why": "mimicry ring, not company"
+  },
+  "hecale-longwing": {
+   "keep": false,
+   "why": "mimicry ring, not company"
+  },
+  "tricolored-heron": {
+   "keep": false,
+   "why": "feeds apart from mixed flocks"
+  }
+ },
+ "cleaner": {
+  "bluestreak-cleaner-wrasse": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "each cleaner ate on average about 1,200 parasites and inspected more than 2,000 client fish a day",
+   "why": "read by Claude Code: the text states it",
+   "value": "cleaner"
+  },
+  "boxer-crab": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Boxer Crabs are also called pom-pom crabs because of the anemones they hold",
+   "why": "read by Claude Code: the text states it",
+   "value": "anemone partner"
+  },
+  "caribbean-cleaner-goby": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "unrelated to the Indo-Pacific cleaner wrasse, yet the two fill much the same role on reefs in different oceans",
+   "why": "read by Claude Code: the text states it",
+   "value": "cleaner"
+  },
+  "french-angelfish": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Juveniles may act as cleaner fish for larger animals Adults graze on sponges, algae, and small reef organisms",
+   "why": "read by Claude Code: the text states it",
+   "value": "cleaner (young)"
+  },
+  "giant-oceanic-manta-ray": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They may visit cleaning stations where small fish remove parasites",
+   "why": "read by Claude Code: the text states it",
+   "value": "client"
+  },
+  "gray-angelfish": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Juveniles set up cleaning stations and pick parasites from larger fish",
+   "why": "read by Claude Code: the text states it",
+   "value": "cleaner (young)"
+  },
+  "magnificent-sea-anemone": {
+   "keep": true,
+   "field": "story",
+   "phrase": "surfaces, spreads stinging tentacles into the current, and shelters partner fish",
+   "why": "read by Claude Code: the text states it",
+   "value": "host"
+  },
+  "ocellaris-clownfish": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "They live closely with sea anemones that deter many predators",
+   "why": "read by Claude Code: the text states it",
+   "value": "anemone guest"
+  },
+  "red-billed-oxpecker": {
+   "keep": true,
+   "field": "diet",
+   "phrase": "food is ticks, parasites, blood, skin flakes, insects, and material from host animals",
+   "why": "read by Claude Code: the text states it",
+   "value": "cleaner of large mammals"
+  },
+  "reef-manta-ray": {
+   "keep": true,
+   "field": "sleep",
+   "phrase": "Active by day and night, following plankton: it often visits cleaning stations in daylight and feeds in shallow water after dark",
+   "why": "read by Claude Code: the text states it",
+   "value": "client"
+  },
+  "scarlet-cleaner-shrimp": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Pairs or small groups often share one crevice or cleaning station",
+   "why": "read by Claude Code: the text states it",
+   "value": "cleaner"
+  },
+  "ballan-wrasse": {
+   "keep": false,
+   "why": "only in salmon farms"
+  },
+  "common-house-gecko": {
+   "keep": false,
+   "why": "cleans its own eye"
+  },
+  "lumpfish": {
+   "keep": false,
+   "why": "only in aquaculture"
+  },
+  "tick": {
+   "keep": false,
+   "why": "the parasite, not the cleaner"
+  }
+ },
+ "play_dead": {
+  "blue-tang": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Threatened individuals may lie flat on their side and play dead",
+   "why": "read by Claude Code: the text states it"
+  },
+  "common-carpet-beetle": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "often pull in their legs and antennae and lie still, feigning death",
+   "why": "read by Claude Code: the text states it"
+  },
+  "fowlers-toad": {
+   "keep": true,
+   "field": "predators",
+   "phrase": "toxins, and a threatened toad may puff up, flatten or play dead",
+   "why": "read by Claude Code: the text states it"
+  },
+  "western-hognose-snake": {
+   "keep": true,
+   "field": "facts",
+   "phrase": "Western Hognose Snakes are famous for playing dead when threatened",
+   "why": "read by Claude Code: the text states it"
+  },
+  "zorilla": {
+   "keep": true,
+   "field": "spotlight",
+   "phrase": "It has also been known to go limp and feign death",
+   "why": "read by Claude Code: the text states it"
+  },
+  "elf-owl": {
+   "keep": false,
+   "why": "only once caught; nothing is caught in the scene"
+  }
+ }
+}
