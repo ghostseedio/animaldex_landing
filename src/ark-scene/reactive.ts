@@ -639,7 +639,9 @@ export class ReactiveLayer {
             if (!own && (!caused || caused.id === me.id || !this.eats(caused, me))) continue;
             if (call.threat === me.id) continue;
             const delay = d * 0.09 + 0.08 + unit(me.id, "alarm", Math.floor(call.at * 10)) * 0.22 + (own ? 0 : 0.25) + Math.max(person.fleeDelay - 0.35, 0);
-            agent.heard = {x: call.x, z: call.z, tx: call.tx, tz: call.tz, at: call.at, reactAt: call.at + delay, caller: call.caller, threat: call.threat, flight: false};
+            // Already reacting to an earlier call: the new one carries on at once (no gap while it "hears" it again).
+            const reacting = agent.heard && world.now >= agent.heard.reactAt && world.now - agent.heard.reactAt < 10;
+            agent.heard = {x: call.x, z: call.z, tx: call.tx, tz: call.tz, at: call.at, reactAt: reacting ? Math.min(call.at + delay, world.now) : call.at + delay, caller: call.caller, threat: call.threat, flight: false};
         }
         // Silent spread: one of its group running from a threat sets it off too (a herd runs together), a moment later.
         if (!agent.heard || world.now - agent.heard.at > 10) {
