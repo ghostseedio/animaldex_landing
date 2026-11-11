@@ -1136,8 +1136,6 @@ const TIMED_BY_LENGTH = new Set(["walk", "run", "flee", "stalk", "wade", "crawl"
 
 const ease = (u: number) => u * u * (3 - 2 * u);
 
-/** The most a hold rocks the body on the spot (m): the rest of its motion is the clip's. */
-const HOLD_ROCK = 0.025;
 
 /** Where a key puts it at a time, and its attitude. */
 function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, previous: Key | null, endYaw: number | null = null): {p: P; yaw: number; pitch: number; roll: number; u: number; aloft: boolean} {
@@ -1198,15 +1196,10 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
         if (!(b.id === "clash" && key.face) && flat > 0.03) yaw = turnedBy(key.yawIn, legTurn(from, key.c, c2, to, along, key.yawIn), elapsed, rate);
     }
     // Its own small motion while it holds.
-    // The body only rocks a little on the spot (its clip does the work), fading in and out so the key starts and ends
-    // where it is (a big animal's digging is not its body jerking back and forth). A strike lunges forward and stays
-    // there: the next step goes on from where it struck (a lunge passes through, it does not come back).
+    // On the spot the body holds still: a dig, a peck, a sweep or a scrape is the head's and the clip's (`dig`), a dust
+    // bath the roll's (its root shuffled back and forth twice a second, and read as jitter: a foraging meerkat's way
+    // turned 33 times a minute). It only bobs (heave), and a strike lunges forward and goes on from there.
     const phase = (epoch - key.t0) * (b.rate ?? 1) * Math.PI * 2;
-    const wave = Math.sin(phase);
-    const envelope = Math.max(Math.sin(Math.min(u, 1) * Math.PI), 0);
-    const rock = (amount: number | undefined) => Math.sign(amount ?? 0) * Math.min(Math.abs(amount ?? 0) * length, HOLD_ROCK);
-    const surge = rock(b.surge) * envelope * (b.id === "pull" || b.id === "swipe" ? 1 : wave);
-    const sway = rock(b.sway) * envelope * wave;
     const heave = (b.heave ?? 0) * length * (b.id === "bury" || b.id === "incubate" ? Math.min(u * 4, 1) : 0.5 + 0.5 * Math.sin(phase));
     if (b.motion === "hold") {
         if (b.id === "strike") {
@@ -1214,12 +1207,10 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
             x = from.x + (to.x - from.x) * k;
             y = from.y + (to.y - from.y) * k;
             z = from.z + (to.z - from.z) * k;
-        } else {
-            x += Math.sin(yaw) * surge + Math.cos(yaw) * sway;
-            z += Math.cos(yaw) * surge - Math.sin(yaw) * sway;
         }
         y += heave;
     }
+    const wave = Math.sin(phase);
     // The attitude eases in from the last block's over its first moment.
     const blend = previous ? ease(Math.min((epoch - key.t0) / 0.3, 1)) : 1;
     const pitchNow = (b.pitch ?? 0) + (b.pitchWave ?? 0) * wave;
