@@ -154,7 +154,7 @@ export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
     // Home growth: the grassland's animals gather further north and west (the hamlet's farms are where they stood),
     // and the desert moved onto the new east shore (Home took its old ground).
     grassland: {x: 25, z: -27, spacing: 3, kind: "land", clearing: 14},
-    desert: {x: 103, z: -6, spacing: 2.8, kind: "land", clearing: 12},
+    desert: {x: 102, z: -7, spacing: 2.8, kind: "land", clearing: 12},
     mountains: {x: -8, z: -46, spacing: 2.8, kind: "land", clearing: 11},
     polar: {...coastPoint(-Math.PI / 2 + 0.55, -13), spacing: 2.8, kind: "land", clearing: 11}
 };

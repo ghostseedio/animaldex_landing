@@ -14,7 +14,7 @@
 
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
 import {cropsGrowAt, ORCHARD} from "@/ark-scene/fields";
-import {hamletKeeps} from "@/ark-scene/props/hamlet-land";
+import {hamletKeeps, hamletLotAt} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -77,7 +77,18 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 
 const MAX_DENSITY = 5;
 
-/** The forests and the high ground keep every tree, even near the hamlet's lanes (the river's far bank); the desert keeps its cacti and rocks but on the lanes themselves. */
+/**
+ * Where nothing of the decor grows outside the forests (home growth): on the hamlet's lanes and their verges, and on
+ * its reserved plots and a couple of metres round them (`props/hamlet-land.ts`, the baked footprints): the gardens,
+ * yards and paddocks are the props' and the residents'. Trees stand between the plots and in the fields round them.
+ */
+function inVillage(x: number, z: number): boolean {
+    if (laneDistance(x, z) < LANE_WIDTH / 2 + 2) return true;
+    for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) if (hamletLotAt(x + dx, z + dz)) return true;
+    return false;
+}
+
+/** The forests and the high ground keep every tree, even near the hamlet's lanes (the river's far bank). */
 const FOREST_ZONES: ReadonlySet<ArkZone> = new Set(["rainforest", "woodland", "mountains", "polar"]);
 
 const WOODS_TREES = new Set<DecorKind>(["broadleaf", "rainforest", "conifer"]);
@@ -159,7 +170,7 @@ export function worldDecor(): DecorItem[] {
         if (Math.hypot(x - site.x, z - site.z) < site.clearing) continue;
         if (riverDistance(x, z) < 4) continue;
         // The hamlet's village (home growth): nothing grows on its lanes and the plots along them.
-        if (!FOREST_ZONES.has(zone) && laneDistance(x, z) < (zone === "desert" ? LANE_WIDTH / 2 + 2 : VILLAGE_REACH)) continue;
+        if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
@@ -457,7 +468,7 @@ export function forestFill(): FillItem[] {
         if (riverDistance(x, z) < 5) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
         if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
-        if (!FOREST_ZONES.has(zone) && laneDistance(x, z) < (zone === "desert" ? LANE_WIDTH / 2 + 2 : VILLAGE_REACH)) continue;
+        if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
         if (taken.has(key)) continue;
         taken.add(key);

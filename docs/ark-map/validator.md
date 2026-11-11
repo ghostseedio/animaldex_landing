@@ -2,7 +2,7 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 5834 ms.
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 5936 ms.
 - **Failures:** 0 (0 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
@@ -15,53 +15,53 @@
   - `roost_invalid`: 0
   - `off_walk_grid`: 0
   - `inside_rock`: 0
-- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1010 rigs checked, 6 with too few feet down in some frame (reviewed: 8).
+- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1031 rigs checked, 8 with too few feet down in some frame (reviewed: 8).
 
 | Area | Animals placed there |
 |---|---:|
 | open_water | 282 |
 | reef | 204 |
 | shallows | 214 |
-| rocky_shore | 54 |
+| rocky_shore | 50 |
 | beach | 44 |
-| estuary | 34 |
+| estuary | 40 |
 | cold_cove | 38 |
 | river | 128 |
 | lake_marsh | 614 |
-| grassland | 474 |
-| scrub | 198 |
+| grassland | 476 |
+| scrub | 192 |
 | canopy | 1134 |
-| forest_floor | 534 |
-| underground | 80 |
+| forest_floor | 532 |
+| underground | 78 |
 | desert | 184 |
-| mountain | 318 |
+| mountain | 324 |
 | homestead | 690 |
 
 | Where | Animals |
 |---|---:|
-| on the ground | 3249 |
-| attach point: leaf | 274 |
+| on the ground | 3247 |
+| attach point: leaf | 298 |
 | in the water by its depth band (lake) | 250 |
 | in the water by its depth band (reef) | 196 |
-| attach point: branch | 170 |
+| attach point: branch | 189 |
 | in the water by its depth band (seabed) | 132 |
 | in fresh water (no band) | 118 |
 | in the water by its depth band (mid) | 90 |
 | in the water by its depth band (upper) | 88 |
-| attach point: worm_hole | 66 |
-| attach point: rock_face | 63 |
+| attach point: rock_face | 59 |
 | in the sea (no band) | 58 |
 | in the water by its depth band (coast) | 56 |
-| attach point: burrow_entrance | 51 |
+| attach point: burrow_entrance | 52 |
 | in the water by its depth band (deep) | 48 |
-| attach point: flower_head | 44 |
-| attach point: house_wall | 40 |
-| attach point: roof_edge | 30 |
-| attach point: bark | 26 |
+| attach point: worm_hole | 38 |
+| attach point: house_wall | 36 |
+| attach point: roof_edge | 34 |
+| attach point: flower_head | 33 |
+| attach point: bark | 33 |
 | in the water by its depth band (surface) | 26 |
-| attach point: fence_post | 25 |
 | attach point: tide_pool | 24 |
-| burrow at an attach point | 21 |
+| burrow at an attach point | 23 |
+| attach point: fence_post | 18 |
 | canopy limb (climb) | 16 |
 | burrow | 14 |
 | attach point: porch_light | 13 |
@@ -69,10 +69,10 @@
 | on its host (parasite) | 12 |
 | on its host (rider) | 4 |
 | attach point: house_eave | 3 |
-| attach point: tree_hollow | 3 |
 | attach point: ledge | 2 |
+| attach point: tree_hollow | 2 |
 
-Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 337.
+Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 326.
 
 ## Failures by species
 
@@ -103,6 +103,8 @@ None.
 
 ## Grip check by species
 
+- **joro-spider** (idle): only 1 of 7 grip bones on the surface in a frame (needs 4) (reviewed)
+- **wasp-spider** (idle): only 2 of 8 grip bones on the surface in a frame (needs 4) (reviewed)
 - **blue-crowned-motmot** (idle): only 1 of 2 grip bones on the surface in a frame (needs 2) (reviewed)
 - **cuckoo-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)
 - **mexican-paper-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)
