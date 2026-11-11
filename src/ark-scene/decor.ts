@@ -13,6 +13,7 @@
  */
 
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
+import {cropsGrowAt} from "@/ark-scene/fields";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -292,6 +293,14 @@ export function grassTufts(count: number): GrassTuft[] {
         if (riverDistance(x, z) < 3) continue;
         // Not through the garden pond's water or the cottage's floor.
         if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
+        // Not among the crops (graphics batch 5): meadow grass keeps to the fields' margins and the pasture. The draws
+        // a tuft would take (scale, turn, dryness) are still taken, so the grass everywhere else stays where it was.
+        if (cropsGrowAt(x, z)) {
+            random();
+            random();
+            if (zone !== "mountains") random();
+            continue;
+        }
         tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.3 + 0.45 * random() : zone === "mountains" ? 0.3 : 0.12 * random()});
     }
     return tufts;

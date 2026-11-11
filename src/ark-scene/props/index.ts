@@ -33,7 +33,7 @@ import {ARK_DAY_MS, arkDayAt, weatherAt} from "@/lib/ark-clock";
 import {nestStage, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
 import {buildAreas, type Areas} from "@/ark-scene/props/areas";
 import {chimneyTop, defaultHomePlots, type HomePlot} from "@/ark-scene/props/home-layout";
-import {prepareAttachPoints} from "@/ark-scene/sampler";
+import {prepareAttachPoints, setAttachHomePlots} from "@/ark-scene/sampler";
 import {buildCave, CAVE_ROOST} from "@/ark-scene/props/cave";
 import {conditionsFromArkWeather, PROPS_WEATHER_LOOKS, withOverride, type PropsConditions} from "@/ark-scene/props/conditions";
 import {buildEffects} from "@/ark-scene/props/effects";
@@ -198,6 +198,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         /** The home area's plots (the map lane's `homePlots()`): each gets its own garden or yard, paddock, coop and fences. */
         setHomePlots: (plots: HomePlot[]) => {
             homePlots = plots;
+            setAttachHomePlots(plots); // the sampler's fence_post points follow the same plots (graphics attach)
             if (!areas) return;
             root.remove(areas.group);
             areas.dispose();

@@ -2523,8 +2523,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const looked = selectedId ? findEntry(selectedId) : null;
         const aloft = diving || viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
         const lift = (aloft ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
+        // A golden shot may hold a view the user cannot (development only: golden-entry.ts sets it for one shot).
+        const golden = process.env.NODE_ENV !== "production" ? (window as unknown as {__arkGoldenCamera?: {maxPolar?: number; free?: boolean}}).__arkGoldenCamera : undefined;
         // (Not while following: a flyer is followed up in the air.)
-        if (Math.abs(lift) > 0.001 && !followId) {
+        if (Math.abs(lift) > 0.001 && !followId && !golden?.free) {
             target.y += lift;
             camera.position.y += lift;
         }
@@ -2533,7 +2535,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
         // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
-        controls.maxPolarAngle = diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36;
+        controls.maxPolarAngle = golden?.maxPolar ?? (diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36);
     };
 
     // MARK: Layers: underwater and the cutaway

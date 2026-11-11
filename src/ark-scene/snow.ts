@@ -24,8 +24,8 @@ const NOISE = {
     wander: 3.1,
     /** The wind streaks' mix(0.8, 1, streak), at its mean. */
     streaks: 0.9,
-    /** smoothstep(0.55, 0.85, rib), at its mean: how often a steep face is a bare rib. */
-    ribs: 0.68,
+    /** smoothstep(0.6, 0.88, rib), at its mean: how often a steep face is a bare rib (batch 5). */
+    ribs: 0.62,
     /** How often a rock bed is hard (step(0.42, hash)). */
     hard: 0.58
 };
@@ -53,15 +53,15 @@ function alpine(height: number, slope: number, cover: number, wander: number): n
     const holdTo = mix(0.48, 0.7, high) - 0.12 * NOISE.hard * smoothstep(0.4, 0.6, slope);
     snow *= 1 - smoothstep(holdTo, holdTo + 0.28, slope);
     snow *= NOISE.streaks * smoothstep(0, 0.25, snow);
-    snow *= 1 - NOISE.ribs * smoothstep(0.32, 0.55, slope) * (1 - 0.5 * high);
+    snow *= 1 - NOISE.ribs * smoothstep(0.36, 0.58, slope) * (1 - 0.85 * high);
     return snow;
 }
 
-/** How much of the point the shader paints white: its `smoothstep(0.12, 0.8, snow)`. */
+/** How much of the point the shader paints white: its `snowCover = smoothstep(0.22, 0.6, snow)` (batch 5: a crisper edge). */
 function drawn(weight: number, height: number, slope: number, cover: number): number {
     const high = smoothstep(snowLine(cover) + 2, snowLine(cover) + 11, height);
     const steep = smoothstep(0.22, 0.42, slope);
-    return smoothstep(0.12, 0.8, weight * (1 - steep * 0.5 * (1 - high)));
+    return smoothstep(0.22, 0.6, weight * (1 - steep * 0.5 * (1 - high)));
 }
 
 /**

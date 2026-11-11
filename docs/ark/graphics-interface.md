@@ -9,7 +9,7 @@ The graphics pass owns the terrain and scenery (branch `ark-graphics`). Other la
 - `surface` and `weights` use the ground shader's own layers: `grass, forest_floor, soil, sand, wet_sand, rock, mud, snow, tilled, seabed, lakebed`.
 - `wetness` (0–1) covers the waterline, mud and banks, plus the weather's wetness. Footprints and sheen read it.
 - `waterDepth` is measured at the given sea level, so the tide is included.
-- **Snow** (2026-11-11, `snow.ts`): follows the terrain shader's rule: the ice's own layer, and the mountain's snow above a line at 27 m that the weather's snow cover (`environment.snow`) brings down 12 m, held on all but the steepest faces. `surface` is `snow` only where the shader draws snow whatever its per-pixel noise does, and never where it may not; `weights.snow` is the expected drawn cover. (Before, a band from 19 to 25.5 m, and snow cover painted everything.) The patches of snow on the ledges below the line are not counted. `ark-attach.test` holds snow.ts to terrain.ts's lines.
+- **Snow** (2026-11-11, `snow.ts`, re-derived for graphics batch 5's ribs and crisper edge): follows the terrain shader's rule: the ice's own layer, and the mountain's snow above a line at 27 m that the weather's snow cover (`environment.snow`) brings down 12 m, held on all but the steepest faces. `surface` is `snow` only where the shader draws snow whatever its per-pixel noise does, and never where it may not; `weights.snow` is the expected drawn cover. (Before, a band from 19 to 25.5 m, and snow cover painted everything.) The patches of snow on the ledges below the line are not counted. `ark-attach.test` holds snow.ts to terrain.ts's lines.
 - `groundNormal(x, z)` and `shoreRadius(theta)` are helpers.
 
 ## Named places
@@ -50,7 +50,7 @@ Tree points (`leaf`, `bark`, `branch`, `tree_hollow`) also carry, all optional (
 - `clearBelow`: the clear drop below a `limb` or `canopy_hang`, to anything of its tree or the ground (m);
 - `wind`: how the tree's wind moves the point (see below).
 
-Points are seeded, so every viewer gets the same ones.
+Points are seeded, so every viewer gets the same ones. Since 2026-11-11 each host (a tree, a rock, the house, the pond, the ground's own search) draws from its own seeded stream, so a change to one part of the scenery moves only the points on it. `src/lib/ark-attach.test.ts` keeps a baseline (`src/lib/ark-attach-baseline.json`) of each host's points keyed to what they are made from (its item, its asset and that asset's data, the ground round it; the terrain for the ground's points): a host whose scenery changed may move, any other may not. Re-record it (`ARK_ATTACH_BASELINE=write npx tsx --test src/lib/ark-attach.test.ts`) only after a deliberate change to the points.
 
 | tag | spot | where |
 |---|---|---|
@@ -60,7 +60,7 @@ Points are seeded, so every viewer gets the same ones.
 | `tree_hollow` | bark | the middle of the mouth of each hole drawn in the oaks' and snags' trunks (from attach.json), facing out of the hole, with its `depth`: parrots, owls, a bees' hollow (added 2026-11-11) |
 | `canopy_perch`, `canopy_hang`, `canopy_climb` | canopy | the 16 canopy trees' limbs (2 mm over the top, 2 mm under the underside of the limb as drawn, with `radius`) and trunk. `canopy_hang` also on the asset trees (added 2026-11-11): the underside of a thick limb (radius 3 cm and up) where nothing of the tree is below for at least 1.2 m (`clearBelow`, which also counts the ground): bats, hanging sloths; up to 4 a tree. The canopy trees' points moved down onto the limbs as drawn (they sat 8 cm high: a hanging bat was inside the limb) |
 | `limb` | canopy | for large climbers (added 2026-11-11: sloths, orangutans, tree kangaroos, koalas): the top of thick (radius 3 cm and up), not too steep (top normal y ≥ 0.6) wood up in the asset trees every tier draws, not on palms. Each has `radius`, `load`, `clearAbove` and `clearBelow`; `size` is [0.15, min(1.6, 24 × radius)]. Up to 10 a tree, at least 0.9 m apart, thickest first: about 1,800 points (the forests alone have hundreds, on 60+ trees). Match an animal to a limb by `radius` and `load` |
-| `fence_post` | house | the top of each post of the decor fences (vegetation.ts `fence`; one post where two segments meet), up is up, `forward` along the fence (added 2026-11-11). The current map has no decor fences: the paddock and the picket fence are drawn by the props lane, which should publish their post tops (see below) |
+| `fence_post` | house | the top of each fence post, 2 mm up, up is up, `forward` along the fence (added 2026-11-11): the props lane's paddock (post and rail) and garden picket fences on the home plots (`fence_post:paddock:<n>`, `fence_post:picket:<n>`, from `props/home-layout.ts` `fencePostTops(plots)`; 15 and 20 today), and any decor fences (vegetation.ts `fence`, one post where segments meet; none on today's map). The plots are an input: `setAttachHomePlots(plots)` (the props module's `setHomePlots` passes the map's `homePlots()` on) rebuilds the points on next use; set them before the points are first read |
 | `roof_edge` | house | along the cottage's ridge cap and its two eaves' top edges, and the barn's ridge and eaves; up is up, `forward` along the edge (added 2026-11-11): perching birds, basking lizards |
 | `flower_head` | flowers | the top of each flower |
 | `rock_face` | rocks | round every rock, 2 mm off the flat faces vegetation.ts draws (`drawnRockPoint`), facing out |
@@ -84,10 +84,6 @@ Points are seeded, so every viewer gets the same ones.
 ### Scaling the climbers' points
 
 The owner's captures will bring many more animals aboard. The climbers' points scale by data, not code: each asset tree holds up to 16 `limb` and 8 `canopy_hang` candidates (`scripts/ark-tree-attach.mjs`), of which the sampler keeps up to `TREE_CAP.limb` (10) and `TREE_CAP.canopy_hang` (4) on each tree drawn at every tier. Raise those caps (and the generator's 16/8, 0.9 m spacing) for more; or let small climbers share a thick limb by `load`. The fill trees past rank 0.3 carry none (the low tier does not draw them): raising `EVERY_TIER_FILL` needs the low tier to draw more fill.
-
-### Fences the props lane draws
-
-The paddock's post-and-rail fence and the cottage's picket fence are the props lane's (`props/areas.ts`), so the sampler cannot see their posts. To list them as `fence_post` points, the props lane should export their post tops from a small pure module that does not import the sampler (no cycle), and the sampler will add them under ids `fence_post:paddock:<n>` and `fence_post:picket:<n>`.
 
 ### Wind: an animal on a leaf moves with the leaf
 

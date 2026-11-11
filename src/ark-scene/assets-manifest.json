@@ -122,6 +122,12 @@
   }
  },
  "sets": {
+  "floor": {
+   "attach": "floor/attach.json",
+   "assets": 13,
+   "bytes": 350705,
+   "lod0_tris_max": 3602
+  },
   "plants": {
    "attach": "plants/attach.json",
    "assets": 76,
@@ -137,11 +143,731 @@
   "trees": {
    "attach": "trees/attach.json",
    "assets": 33,
-   "bytes": 4980374,
+   "bytes": 4948004,
    "lod0_tris_max": 9500
   }
  },
  "assets": {
+  "litter-autumn-a": {
+   "set": "floor",
+   "kind": "litter-autumn",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.018,
+     -0.042,
+     -1.0
+    ],
+    "max": [
+     1.0,
+     0.091,
+     1.0
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/litter-autumn-a.lod0.glb",
+     "tris": 1790,
+     "verts": 1831,
+     "bytes": 19044,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/litter-autumn-a.lod1.glb",
+     "tris": 216,
+     "verts": 250,
+     "bytes": 4724,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/litter-autumn-a.lod2.glb",
+     "tris": 8,
+     "verts": 9,
+     "bytes": 2268,
+     "doubleSided": true,
+     "morph": false
+    }
+   ],
+   "attach": 10,
+   "height": 0.03,
+   "group": "litter",
+   "decal": true,
+   "note": "a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+   "lod_distances": [
+    6.0,
+    15.0,
+    40.0
+   ]
+  },
+  "litter-conifer-a": {
+   "set": "floor",
+   "kind": "litter-conifer",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.0,
+     -0.034,
+     -1.0
+    ],
+    "max": [
+     1.0,
+     0.062,
+     1.0
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/litter-conifer-a.lod0.glb",
+     "tris": 2240,
+     "verts": 3141,
+     "bytes": 35276,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/litter-conifer-a.lod1.glb",
+     "tris": 632,
+     "verts": 738,
+     "bytes": 9576,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/litter-conifer-a.lod2.glb",
+     "tris": 8,
+     "verts": 9,
+     "bytes": 2272,
+     "doubleSided": true,
+     "morph": false
+    }
+   ],
+   "attach": 10,
+   "height": 0.03,
+   "group": "litter",
+   "decal": true,
+   "note": "a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+   "lod_distances": [
+    6.0,
+    15.0,
+    40.0
+   ]
+  },
+  "litter-tropical-a": {
+   "set": "floor",
+   "kind": "litter-tropical",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.0,
+     -0.062,
+     -1.002
+    ],
+    "max": [
+     1.018,
+     0.113,
+     1.032
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/litter-tropical-a.lod0.glb",
+     "tris": 380,
+     "verts": 381,
+     "bytes": 5984,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/litter-tropical-a.lod1.glb",
+     "tris": 108,
+     "verts": 115,
+     "bytes": 3376,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/litter-tropical-a.lod2.glb",
+     "tris": 8,
+     "verts": 9,
+     "bytes": 2268,
+     "doubleSided": true,
+     "morph": false
+    }
+   ],
+   "attach": 10,
+   "height": 0.03,
+   "group": "litter",
+   "decal": true,
+   "note": "a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+   "lod_distances": [
+    6.0,
+    15.0,
+    40.0
+   ]
+  },
+  "log-fresh-a": {
+   "set": "floor",
+   "kind": "log-fresh",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.052,
+     -0.055,
+     -0.25
+    ],
+    "max": [
+     2.046,
+     0.574,
+     0.379
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/log-fresh-a.lod0.glb",
+     "tris": 972,
+     "verts": 572,
+     "bytes": 8348,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/log-fresh-a.lod1.glb",
+     "tris": 376,
+     "verts": 248,
+     "bytes": 5016,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/log-fresh-a.lod2.glb",
+     "tris": 110,
+     "verts": 81,
+     "bytes": 3152,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 9,
+   "height": 0.57,
+   "length": 4.07,
+   "group": "log",
+   "decay": "fresh",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "log-fresh-b": {
+   "set": "floor",
+   "kind": "log-fresh",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.298,
+     -0.043,
+     -0.247
+    ],
+    "max": [
+     1.292,
+     0.664,
+     0.561
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/log-fresh-b.lod0.glb",
+     "tris": 972,
+     "verts": 572,
+     "bytes": 8056,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/log-fresh-b.lod1.glb",
+     "tris": 376,
+     "verts": 248,
+     "bytes": 5008,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/log-fresh-b.lod2.glb",
+     "tris": 110,
+     "verts": 81,
+     "bytes": 3140,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 9,
+   "height": 0.66,
+   "length": 2.56,
+   "group": "log",
+   "decay": "fresh",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "log-mossy-a": {
+   "set": "floor",
+   "kind": "log-mossy",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.02,
+     -0.087,
+     -0.352
+    ],
+    "max": [
+     2.023,
+     0.665,
+     0.332
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/log-mossy-a.lod0.glb",
+     "tris": 2478,
+     "verts": 1421,
+     "bytes": 15984,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/log-mossy-a.lod1.glb",
+     "tris": 628,
+     "verts": 389,
+     "bytes": 6452,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/log-mossy-a.lod2.glb",
+     "tris": 110,
+     "verts": 81,
+     "bytes": 3160,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 12,
+   "height": 0.66,
+   "length": 4.03,
+   "group": "log",
+   "decay": "mossy",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "log-mossy-b": {
+   "set": "floor",
+   "kind": "log-mossy",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.313,
+     -0.068,
+     -0.22
+    ],
+    "max": [
+     1.313,
+     0.543,
+     0.467
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/log-mossy-b.lod0.glb",
+     "tris": 2478,
+     "verts": 1421,
+     "bytes": 16180,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/log-mossy-b.lod1.glb",
+     "tris": 628,
+     "verts": 389,
+     "bytes": 6480,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/log-mossy-b.lod2.glb",
+     "tris": 110,
+     "verts": 81,
+     "bytes": 3160,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 12,
+   "height": 0.54,
+   "length": 2.59,
+   "group": "log",
+   "decay": "mossy",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "log-rotten-a": {
+   "set": "floor",
+   "kind": "log-rotten",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.644,
+     -0.173,
+     -0.301
+    ],
+    "max": [
+     1.601,
+     0.601,
+     0.437
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/log-rotten-a.lod0.glb",
+     "tris": 3602,
+     "verts": 2073,
+     "bytes": 21792,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/log-rotten-a.lod1.glb",
+     "tris": 812,
+     "verts": 509,
+     "bytes": 7564,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/log-rotten-a.lod2.glb",
+     "tris": 90,
+     "verts": 76,
+     "bytes": 3120,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 20,
+   "height": 0.6,
+   "length": 3.15,
+   "group": "log",
+   "decay": "rotten",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "log-rotten-b": {
+   "set": "floor",
+   "kind": "log-rotten",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.504,
+     -0.131,
+     -0.229
+    ],
+    "max": [
+     1.479,
+     0.466,
+     0.296
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/log-rotten-b.lod0.glb",
+     "tris": 3602,
+     "verts": 2073,
+     "bytes": 21868,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/log-rotten-b.lod1.glb",
+     "tris": 812,
+     "verts": 509,
+     "bytes": 7588,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/log-rotten-b.lod2.glb",
+     "tris": 90,
+     "verts": 76,
+     "bytes": 3112,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 20,
+   "height": 0.47,
+   "length": 2.94,
+   "group": "log",
+   "decay": "rotten",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "pinecones-pine-a": {
+   "set": "floor",
+   "kind": "pinecones-pine",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.229,
+     -0.009,
+     -0.208
+    ],
+    "max": [
+     0.285,
+     0.056,
+     0.406
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/pinecones-pine-a.lod0.glb",
+     "tris": 1792,
+     "verts": 1680,
+     "bytes": 21340,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/pinecones-pine-a.lod1.glb",
+     "tris": 616,
+     "verts": 343,
+     "bytes": 5392,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/pinecones-pine-a.lod2.glb",
+     "tris": 75,
+     "verts": 48,
+     "bytes": 2644,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 4,
+   "height": 0.06,
+   "group": "litter",
+   "lod_distances": [
+    3.0,
+    8.0,
+    16.0
+   ]
+  },
+  "pinecones-spruce-a": {
+   "set": "floor",
+   "kind": "pinecones-spruce",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.349,
+     -0.009,
+     -0.403
+    ],
+    "max": [
+     0.423,
+     0.062,
+     0.144
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/pinecones-spruce-a.lod0.glb",
+     "tris": 2212,
+     "verts": 2100,
+     "bytes": 26192,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/pinecones-spruce-a.lod1.glb",
+     "tris": 616,
+     "verts": 343,
+     "bytes": 5476,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/pinecones-spruce-a.lod2.glb",
+     "tris": 75,
+     "verts": 48,
+     "bytes": 2664,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 4,
+   "height": 0.06,
+   "group": "litter",
+   "lod_distances": [
+    3.0,
+    8.0,
+    16.0
+   ]
+  },
+  "twigs-a": {
+   "set": "floor",
+   "kind": "twigs",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.556,
+     0.0,
+     -0.671
+    ],
+    "max": [
+     0.663,
+     0.044,
+     0.636
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/twigs-a.lod0.glb",
+     "tris": 704,
+     "verts": 444,
+     "bytes": 6408,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/twigs-a.lod1.glb",
+     "tris": 168,
+     "verts": 126,
+     "bytes": 3548,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/twigs-a.lod2.glb",
+     "tris": 60,
+     "verts": 45,
+     "bytes": 2712,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 8,
+   "height": 0.04,
+   "group": "litter",
+   "lod_distances": [
+    4.0,
+    10.0,
+    20.0
+   ]
+  },
+  "twigs-b": {
+   "set": "floor",
+   "kind": "twigs",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.653,
+     0.0,
+     -0.629
+    ],
+    "max": [
+     0.635,
+     0.045,
+     0.632
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "floor/twigs-b.lod0.glb",
+     "tris": 1356,
+     "verts": 873,
+     "bytes": 10380,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "floor/twigs-b.lod1.glb",
+     "tris": 288,
+     "verts": 216,
+     "bytes": 4512,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "floor/twigs-b.lod2.glb",
+     "tris": 96,
+     "verts": 72,
+     "bytes": 3032,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 8,
+   "height": 0.04,
+   "group": "litter",
+   "lod_distances": [
+    4.0,
+    10.0,
+    20.0
+   ]
+  },
   "bush-blueberry-a": {
    "set": "plants",
    "kind": "bush-blueberry",
@@ -6403,14 +7129,14 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -13.084,
-     -0.046,
-     -12.933
+     -13.101,
+     -0.041,
+     -12.95
     ],
     "max": [
-     10.563,
-     26.521,
-     9.68
+     10.575,
+     26.54,
+     9.697
     ]
    },
    "lods": [
@@ -6418,8 +7144,8 @@
      "level": "lod0",
      "file": "trees/emergent-a.lod0.glb",
      "tris": 9500,
-     "verts": 10058,
-     "bytes": 120644,
+     "verts": 9590,
+     "bytes": 112404,
      "doubleSided": true,
      "morph": false
     },
@@ -6427,8 +7153,8 @@
      "level": "lod1",
      "file": "trees/emergent-a.lod1.glb",
      "tris": 2800,
-     "verts": 2724,
-     "bytes": 35076,
+     "verts": 2606,
+     "bytes": 33248,
      "doubleSided": true,
      "morph": false
     },
@@ -6453,18 +7179,18 @@
    ],
    "attach": 51,
    "wood_tris": [
-    4022,
-    1172,
+    4156,
+    1316,
     276
    ],
    "leaves": 12792,
-   "height": 26.52,
-   "crown_radius": 13.08,
+   "height": 26.54,
+   "crown_radius": 13.1,
    "trunk_radius": 0.55,
    "lod_distances": [
     66.3,
-    159.1,
-    371.3
+    159.2,
+    371.6
    ]
   },
   "emergent-b": {
@@ -6479,7 +7205,7 @@
     ],
     "max": [
      7.596,
-     19.531,
+     19.58,
      4.421
     ]
    },
@@ -6488,8 +7214,8 @@
      "level": "lod0",
      "file": "trees/emergent-b.lod0.glb",
      "tris": 9500,
-     "verts": 12958,
-     "bytes": 159400,
+     "verts": 11412,
+     "bytes": 138188,
      "doubleSided": true,
      "morph": false
     },
@@ -6497,8 +7223,8 @@
      "level": "lod1",
      "file": "trees/emergent-b.lod1.glb",
      "tris": 2799,
-     "verts": 2806,
-     "bytes": 36004,
+     "verts": 2746,
+     "bytes": 34936,
      "doubleSided": true,
      "morph": false
     },
@@ -6523,18 +7249,18 @@
    ],
    "attach": 51,
    "wood_tris": [
-    3142,
+    4044,
     1141,
     210
    ],
    "leaves": 3311,
-   "height": 19.53,
+   "height": 19.58,
    "crown_radius": 7.6,
    "trunk_radius": 0.55,
    "lod_distances": [
-    48.8,
-    117.2,
-    273.4
+    48.9,
+    117.5,
+    274.1
    ]
   },
   "mangrove-a": {
@@ -7868,5 +8594,5 @@
    ]
   }
  },
- "totalBytes": 8299375
+ "totalBytes": 8617710
 }
