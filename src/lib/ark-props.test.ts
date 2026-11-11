@@ -316,7 +316,16 @@ test("props nest sites: through the scenery sampler, on the right ground, the sa
                 assert.ok(Math.hypot(nest.x - COTTAGE.x, nest.z - COTTAGE.z) < Math.hypot(COTTAGE.width, COTTAGE.depth), "at the cottage");
                 // Under the sampler's eave point (the drawn roof's underside: the slope on the long walls, the verge's peak on the gables).
                 assert.ok(nest.y < COTTAGE.floor + COTTAGE.wall + COTTAGE.ridge, "under the roof");
-                assert.ok(allAttachPoints().some((point) => point.tag === "house_eave" && nest.siteId.startsWith(point.id) && nest.y + nest.radius * 0.9 < point.position.y), "its top under the eave point");
+                // Wholly under the drawn roof: its top under the roof's underside at the nest's front edge.
+                {
+                    const eave = allAttachPoints().find((point) => point.tag === "house_eave" && nest.siteId.startsWith(`${point.id}:`))!;
+                    assert.ok(eave, nest.siteId);
+                    const slope = Math.hypot(eave.normal.x, eave.normal.z) / Math.abs(eave.normal.y);
+                    const out = COTTAGE.overhang * 0.6;
+                    const front = nest.radius * (nest.form === "ball" ? 1.4 : 1.02);
+                    const top = nest.y + nest.radius * (nest.form === "ball" ? 1.9 : 1.32);
+                    assert.ok(top < eave.position.y + (out - front) * slope, `${nest.siteId}: top ${top.toFixed(3)} under the roof`);
+                }
                 break;
             case "bank":
                 assert.match(nest.siteId, /^burrow:/);

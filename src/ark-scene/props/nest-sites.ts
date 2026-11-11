@@ -255,13 +255,18 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
                     // Tucked in at the top of the wall, its back to it; a colony spaced along the eave.
                     const wall = wallOut(point);
                     const along = (n - 1) * radius * 2.6;
-                    // The eave point is out under the overhang: back to the wall's face.
-                    const back = COTTAGE.overhang * 0.6 - 0.015;
+                    // The eave point is `out` from the wall under the overhang: the nest goes back against the wall's face.
+                    const out = COTTAGE.overhang * 0.6;
+                    const back = out - 0.004;
                     const x = point.x + Math.cos(wall) * along - Math.sin(wall) * back;
                     const z = point.z - Math.sin(wall) * along - Math.cos(wall) * back;
-                    // The sampler's eave point is under the drawn roof: the nest's top just below it.
-                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.3 : 1.05);
-                    take(`${point.id}:${n}`, {x, y: point.y - 0.01 - tall, z, turn: wall});
+                    // Wholly under the drawn roof: the underside falls away from the wall (the eave point's normal gives
+                    // its slope; none under a gable's verge), so the nest's top is under the underside at its front edge.
+                    const slope = Math.hypot(point.normal.x, point.normal.z) / Math.max(Math.abs(point.normal.y), 1e-3);
+                    const reach = radius * (plan.profile.form === "ball" ? 1.4 : 1.02);
+                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.32 : 1.08);
+                    const underside = point.y + (out - reach) * slope;
+                    take(`${point.id}:${n}`, {x, y: Math.min(underside, point.y + out * slope) - 0.025 - tall, z, turn: wall});
                 }
                 if (out.length >= count) break;
             }
