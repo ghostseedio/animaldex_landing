@@ -225,7 +225,9 @@
             "contest": "Pesaing {animal} sedang bertarung",
             "fishing": "{aAnimal} menangkap seekor ikan",
             "nest": "{aAnimal} sedang membina sarang",
-            "alarm": "{aAnimal} membunyikan amaran bahaya"
+            "alarm": "{aAnimal} membunyikan amaran bahaya",
+            "matedOne": "Sepasang {animals} mengawan",
+            "matedOther": "{count} pasang {animals} mengawan"
         },
         "sound": {
             "label": "Bunyi",

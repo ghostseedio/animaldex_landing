@@ -225,7 +225,9 @@
             "contest": "{animal} คู่แข่งกำลังปะทะกัน",
             "fishing": "{aAnimal} จับปลาได้ตัวหนึ่ง",
             "nest": "{aAnimal} กำลังสร้างรัง",
-            "alarm": "{aAnimal} ส่งเสียงเตือนภัย"
+            "alarm": "{aAnimal} ส่งเสียงเตือนภัย",
+            "matedOne": "{animals} คู่หนึ่งผสมพันธุ์กัน",
+            "matedOther": "{animals} {count} คู่ผสมพันธุ์กัน"
         },
         "sound": {
             "label": "เสียง",

@@ -225,7 +225,9 @@
             "contest": "{animal}: αντίπαλοι συγκρούονται",
             "fishing": "{aAnimal} έπιασε ένα ψάρι",
             "nest": "{aAnimal} χτίζει φωλιά",
-            "alarm": "{aAnimal} έβγαλε κραυγή συναγερμού"
+            "alarm": "{aAnimal} έβγαλε κραυγή συναγερμού",
+            "matedOne": "{animals}: ένα ζευγάρι ζευγάρωσε",
+            "matedOther": "{animals}: {count} ζευγάρια ζευγάρωσαν"
         },
         "sound": {
             "label": "Ήχος",

@@ -4,8 +4,8 @@
  * (its arrivals from the rest of the fixture), `/ark/embed.html?fixture=1` (or `&feed=1` with any `?snapshot=`).
  *
  * Every beat (a few seconds apart in the page) is one thing the server does: arrivals (one more of a lone kind,
- * so it gets its pair; a few of one kind at once; a kind new to the Ark), a litter born, a clutch laid and later
- * hatched, a predator's meal (from the catalogue's food links, never the last of a kind), a death of old age,
+ * so it gets its pair; a few of one kind at once; a kind new to the Ark), a pair mating and its litter born, a
+ * pair mating and its clutch laid and later hatched, a predator's meal (from the catalogue's food links, never the last of a kind), a death of old age,
  * a predator starved. Each beat gives the next snapshot and the event rows exactly as `voyage_events_since_v1`
  * writes them, so the page decodes them as the live ones. Deterministic: the same beats from the same snapshot.
  *
@@ -110,6 +110,11 @@ export class ArkLiveFixtureFeed {
         return {id: ++this.serial, kind, at, ark_day: this.current.ark_day ?? null, species_profile_id: animal?.species_profile_id ?? null, species: animal?.name ?? null, animal: animal ? eventAnimal(animal) : null, other: null, phrase: null, parents: [], bringers: [], ...extra};
     }
 
+    /** A pair bred (`mated`), written before its litter or clutch: one parent as `animal`, the other as `other`. */
+    private mated(at: string, pa: ArkAnimal, pb: ArkAnimal): Record<string, unknown> {
+        return {...this.row("mated", at, pa, {payload: {parents: [pa.id, pb.id]}}), other: eventAnimal(pb)};
+    }
+
     /** One more of a kind already aboard (or a new kind): at its kin's place, the next rank. */
     private another(like: Pick<ArkAnimal, "species_profile_id" | "name" | "model_slug" | "zone"> & Partial<ArkAnimal>, animals: ArkAnimal[], at: string, origin: "arrived" | "born"): ArkAnimal {
         const kin = animals.filter((a) => a.species_profile_id === like.species_profile_id);
@@ -195,7 +200,7 @@ export class ArkLiveFixtureFeed {
                 const litter = 1 + (hashString(`${this.seed}#${this.step}#litter`) % 2);
                 const young: ArkAnimal[] = [];
                 for (let i = 0; i < litter; i++) young.push(this.another({...pa, generation: Math.max(pa.generation ?? 0, pb.generation ?? 0)}, [...animals, ...young], at, "born"));
-                return done([...animals, ...young], young.map((animal) => this.row("birth", at, animal, {parents: [pa.id, pb.id], bringers: [pa.brought_by, pb.brought_by]})));
+                return done([...animals, ...young], [this.mated(at, pa, pb), ...young.map((animal) => this.row("birth", at, animal, {parents: [pa.id, pb.id], bringers: [pa.brought_by, pb.brought_by]}))]);
             }
             case "laid": {
                 const layers = kinds.filter((list) => list.length >= 2 && EGG_LAYERS.has(list[0].model_slug) && !this.clutches.some((c) => c.parents[0].id === list[0].id));
@@ -204,7 +209,7 @@ export class ArkLiveFixtureFeed {
                 const eggs = 2 + (hashString(`${this.seed}#${this.step}#eggs`) % 3);
                 this.clutches.push({parents: [list[0], list[1]], eggs, laidAt: at});
                 // The clutch is in the nests (A9), not among the animals: the animals stay as they are.
-                return done(animals, [this.row("laid", at, list[0], {parents: [list[0].id, list[1].id], payload: {eggs, parents: [list[0].id, list[1].id]}})]);
+                return done(animals, [this.mated(at, list[0], list[1]), this.row("laid", at, list[0], {parents: [list[0].id, list[1].id], payload: {eggs, parents: [list[0].id, list[1].id]}})]);
             }
             case "hatch": {
                 const clutch = this.clutches.shift();

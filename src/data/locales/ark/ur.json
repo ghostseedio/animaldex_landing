@@ -225,7 +225,9 @@
             "contest": "حریف {animal} ٹکرا رہے ہیں",
             "fishing": "{aAnimal} نے ایک مچھلی پکڑی",
             "nest": "{aAnimal} گھونسلا بنا رہا ہے",
-            "alarm": "{aAnimal} نے خطرے کی پکار دی"
+            "alarm": "{aAnimal} نے خطرے کی پکار دی",
+            "matedOne": "{animals} کے ایک جوڑے نے ملاپ کیا",
+            "matedOther": "{animals} کے {count} جوڑوں نے ملاپ کیا"
         },
         "sound": {
             "label": "آواز",

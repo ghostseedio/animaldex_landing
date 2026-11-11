@@ -225,7 +225,9 @@
             "contest": "{animal}: kilpailijat ottavat yhteen",
             "fishing": "{aAnimal} sai kalan",
             "nest": "{aAnimal} rakentaa pesää",
-            "alarm": "{aAnimal} päästi varoitushuudon"
+            "alarm": "{aAnimal} päästi varoitushuudon",
+            "matedOne": "{animals}: pari pariutui",
+            "matedOther": "{animals}: {count} paria pariutui"
         },
         "sound": {
             "label": "Ääni",

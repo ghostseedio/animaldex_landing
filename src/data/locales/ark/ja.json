@@ -225,7 +225,9 @@
             "contest": "{animal}のライバル同士が争っています",
             "fishing": "{aAnimal}が魚を捕まえました",
             "nest": "{aAnimal}が巣を作っています",
-            "alarm": "{aAnimal}が警戒の声を上げました"
+            "alarm": "{aAnimal}が警戒の声を上げました",
+            "matedOne": "{animals}のペアが交尾しました",
+            "matedOther": "{animals}の{count}組のペアが交尾しました"
         },
         "sound": {
             "label": "サウンド",

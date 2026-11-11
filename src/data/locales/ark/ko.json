@@ -225,7 +225,9 @@
             "contest": "{animal} 경쟁자들이 맞붙고 있어요",
             "fishing": "{aAnimal}이(가) 물고기를 잡았어요",
             "nest": "{aAnimal}이(가) 둥지를 짓고 있어요",
-            "alarm": "{aAnimal}이(가) 경계음을 냈어요"
+            "alarm": "{aAnimal}이(가) 경계음을 냈어요",
+            "matedOne": "{animals} 한 쌍이 짝짓기를 했어요",
+            "matedOther": "{animals} {count}쌍이 짝짓기를 했어요"
         },
         "sound": {
             "label": "소리",

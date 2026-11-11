@@ -225,7 +225,9 @@
             "contest": "{animal}: rivaler støter sammen",
             "fishing": "{aAnimal} fanget en fisk",
             "nest": "{aAnimal} bygger reir",
-            "alarm": "{aAnimal} slo alarm"
+            "alarm": "{aAnimal} slo alarm",
+            "matedOne": "{animals}: et par har paret seg",
+            "matedOther": "{animals}: {count} par har paret seg"
         },
         "sound": {
             "label": "Lyd",

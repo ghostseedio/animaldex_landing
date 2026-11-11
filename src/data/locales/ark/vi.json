@@ -225,7 +225,9 @@
             "contest": "Các đối thủ {animal} đang giao chiến",
             "fishing": "{aAnimal} đã bắt được một con cá",
             "nest": "{aAnimal} đang làm tổ",
-            "alarm": "{aAnimal} đã kêu báo động"
+            "alarm": "{aAnimal} đã kêu báo động",
+            "matedOne": "Một cặp {animals} đã giao phối",
+            "matedOther": "{count} cặp {animals} đã giao phối"
         },
         "sound": {
             "label": "Âm thanh",

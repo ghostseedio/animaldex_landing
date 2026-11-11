@@ -225,7 +225,9 @@
             "contest": "હરીફ {animal} ટકરાઈ રહ્યા છે",
             "fishing": "{aAnimal} એ માછલી પકડી",
             "nest": "{aAnimal} માળો બાંધી રહ્યું છે",
-            "alarm": "{aAnimal} એ ચેતવણીનો અવાજ કર્યો"
+            "alarm": "{aAnimal} એ ચેતવણીનો અવાજ કર્યો",
+            "matedOne": "{animals} ની એક જોડીએ સંવનન કર્યું",
+            "matedOther": "{animals} ની {count} જોડીઓએ સંવનન કર્યું"
         },
         "sound": {
             "label": "અવાજ",

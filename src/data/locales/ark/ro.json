@@ -225,7 +225,9 @@
             "contest": "{animal}: rivalii se înfruntă",
             "fishing": "{aAnimal} a prins un pește",
             "nest": "{aAnimal} își face cuib",
-            "alarm": "{aAnimal} a dat un semnal de alarmă"
+            "alarm": "{aAnimal} a dat un semnal de alarmă",
+            "matedOne": "{animals}: o pereche s-a împerecheat",
+            "matedOther": "{animals}: perechi împerecheate: {count}"
         },
         "sound": {
             "label": "Sunet",

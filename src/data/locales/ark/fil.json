@@ -225,7 +225,9 @@
             "contest": "Nagsasagupaan ang magkaribal na {animal}",
             "fishing": "{aAnimal} ang nakahuli ng isda",
             "nest": "{aAnimal} ang gumagawa ng pugad",
-            "alarm": "{aAnimal} ang nagbabala ng panganib"
+            "alarm": "{aAnimal} ang nagbabala ng panganib",
+            "matedOne": "Nagpares ang dalawang {animals}",
+            "matedOther": "Nagpares ang {count} pares ng {animals}"
         },
         "sound": {
             "label": "Tunog",

@@ -225,7 +225,9 @@
             "contest": "{animal}: соперники сходятся в схватке",
             "fishing": "{aAnimal}: поймана рыба",
             "nest": "{aAnimal} строит гнездо",
-            "alarm": "{aAnimal} подаёт сигнал тревоги"
+            "alarm": "{aAnimal} подаёт сигнал тревоги",
+            "matedOne": "{animals}: пара спарилась",
+            "matedOther": "{animals}: спарились пары ({count})"
         },
         "sound": {
             "label": "Звук",

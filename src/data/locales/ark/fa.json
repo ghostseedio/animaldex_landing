@@ -225,7 +225,9 @@
             "contest": "رقبای {animal} درگیر شده‌اند",
             "fishing": "{aAnimal} ماهی‌ای گرفت",
             "nest": "{aAnimal} در حال ساختن لانه است",
-            "alarm": "{aAnimal} بانگ خطر داد"
+            "alarm": "{aAnimal} بانگ خطر داد",
+            "matedOne": "یک جفت {animals} جفت‌گیری کردند",
+            "matedOther": "{count} جفت {animals} جفت‌گیری کردند"
         },
         "sound": {
             "label": "صدا",

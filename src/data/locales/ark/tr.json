@@ -225,7 +225,9 @@
             "contest": "Rakip {animal} bireyleri çarpışıyor",
             "fishing": "{aAnimal} bir balık yakaladı",
             "nest": "{aAnimal} yuva yapıyor",
-            "alarm": "{aAnimal} tehlike çağrısı yaptı"
+            "alarm": "{aAnimal} tehlike çağrısı yaptı",
+            "matedOne": "Bir çift {animals} çiftleşti",
+            "matedOther": "{count} çift {animals} çiftleşti"
         },
         "sound": {
             "label": "Ses",

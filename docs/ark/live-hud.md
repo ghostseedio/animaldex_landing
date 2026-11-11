@@ -43,11 +43,16 @@ what's happening e.g. any animals getting eaten, any mating happening etc."
 - The apps do not pass `hud` yet: showing it in the app panel is one query item (`hud=1` or `hud=log`) in
   `ArkPanelViews.swift` `ArkEmbed.url` and its Android twin, an owner decision.
 
-## Not on the server: mating
-The event log has no mating: `breeding()` in `_shared/ark-ecology/tick.ts` adds the litter (or clutch) in the same
-tick as the pairing, so a birth or `laid` row (both carry `parents`) is the only trace. What the log can show today:
-births and clutches (record) and courtship (seen). Smallest server addition if the owner wants a "mated" line:
-one `kind: "mated"` event pushed in `breeding()` per pair that breeds (`animal_id` = one parent,
-`other_animal_id` = the other), the kind added to the `voyage_events` kind check, and `"mated"` added to
-`ARK_EVENT_KINDS` on the web; it would read "Two Plains Zebras mated" just before their birth line. A gap between
-mating and birth (gestation) would be an ecology change, not a log change.
+## Mating (web ready; server lane adds the event)
+The coordinator's call (2026-11-11): the server lane adds one `kind: "mated"` event per pair that breeds, in
+`breeding()` (`_shared/ark-ecology/tick.ts`), written before its litter's `birth` rows or its clutch's `laid` row,
+with `parents: [id, id]` in the payload, plus the kind in the `voyage_events` kind check. The web reads it now:
+`"mated"` is in `ARK_EVENT_KINDS` (`lib/ark-life.ts`; the replay ignores it), the log says "Two Plains Zebras mated"
+(record style, `ark.live.matedOne` / `matedOther` in all 45 languages) just before the young or eggs line, the
+tap goes to the first parent, and the dev feed writes a `mated` row before every litter and clutch. A server that
+sends only the species and the parents' ids still gets its line. A gap between mating and birth (gestation) would
+be an ecology change.
+
+## The arrival notice
+The page's "new arrival" notice fires for arrivals only (`arkNewArrivals`), never for the young born aboard (they
+were announced as arrivals on refresh before).

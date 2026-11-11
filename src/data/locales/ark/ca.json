@@ -225,7 +225,9 @@
             "contest": "{animal}: dos rivals s'enfronten",
             "fishing": "{aAnimal} ha pescat un peix",
             "nest": "{aAnimal} fa el niu",
-            "alarm": "{aAnimal} ha fet un crit d'alarma"
+            "alarm": "{aAnimal} ha fet un crit d'alarma",
+            "matedOne": "{animals}: una parella s'ha aparellat",
+            "matedOther": "{animals}: {count} parelles s'han aparellat"
         },
         "sound": {
             "label": "So",

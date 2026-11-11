@@ -225,7 +225,9 @@
             "contest": "{animal}: rivalen gaan de strijd aan",
             "fishing": "{aAnimal} ving een vis",
             "nest": "{aAnimal} bouwt een nest",
-            "alarm": "{aAnimal} slaakte een alarmroep"
+            "alarm": "{aAnimal} slaakte een alarmroep",
+            "matedOne": "{animals}: een paar heeft gepaard",
+            "matedOther": "{animals}: {count} paren hebben gepaard"
         },
         "sound": {
             "label": "Geluid",

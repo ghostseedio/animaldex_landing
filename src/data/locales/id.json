@@ -4278,7 +4278,9 @@
       "contest": "Pesaing {animal} sedang beradu",
       "fishing": "{aAnimal} menangkap ikan",
       "nest": "{aAnimal} sedang membuat sarang",
-      "alarm": "{aAnimal} memberi tanda bahaya"
+      "alarm": "{aAnimal} memberi tanda bahaya",
+      "matedOne": "Sepasang {animals} kawin",
+      "matedOther": "{count} pasang {animals} kawin"
     },
     "sound": {
       "label": "Suara",

@@ -27,7 +27,9 @@ import {arkLabelHasFounderKey, decodeArkFounder, decodeArkFounderStory, type Ark
  * (A3): the step that brought an animal was revised after it arrived; the
  * animal stays. Counted in its life story, never acted out.
  */
-export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised"] as const;
+export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised", "mated"] as const;
+/* `mated` (owner, 2026-11-11, the live log): a pair bred, `parents: [id, id]`, written just before its litter's
+ * `birth` rows or its clutch's `laid` row. Said in the live log; not acted out in the replay. */
 export type ArkEventKind = typeof ARK_EVENT_KINDS[number];
 
 export type ArkAnimalStatus = "present" | "eaten" | "died_old" | "starved";

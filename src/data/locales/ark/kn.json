@@ -225,7 +225,9 @@
             "contest": "ಪ್ರತಿಸ್ಪರ್ಧಿ {animal} ಗಳು ಕಾದಾಡುತ್ತಿವೆ",
             "fishing": "{aAnimal} ಒಂದು ಮೀನು ಹಿಡಿಯಿತು",
             "nest": "{aAnimal} ಗೂಡು ಕಟ್ಟುತ್ತಿದೆ",
-            "alarm": "{aAnimal} ಎಚ್ಚರಿಕೆಯ ಕರೆ ನೀಡಿತು"
+            "alarm": "{aAnimal} ಎಚ್ಚರಿಕೆಯ ಕರೆ ನೀಡಿತು",
+            "matedOne": "ಒಂದು ಜೋಡಿ {animals} ಮಿಲನಗೊಂಡಿತು",
+            "matedOther": "{count} ಜೋಡಿ {animals} ಮಿಲನಗೊಂಡವು"
         },
         "sound": {
             "label": "ಧ್ವನಿ",

@@ -31,6 +31,9 @@ export type ArkLiveWords = {
     fishing: string;
     nest: string;
     alarm: string;
+    /** A pair bred (the server's `mated`): "Two Plains Zebras mated". */
+    matedOne: string;
+    matedOther: string;
 };
 
 /** English, as `en.json` has it: the fallback when a reader's words lack `live`. */
@@ -56,5 +59,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     contest: "{animal} rivals are clashing",
     fishing: "{aAnimal} caught a fish",
     nest: "{aAnimal} is building a nest",
-    alarm: "{aAnimal} gave an alarm call"
+    alarm: "{aAnimal} gave an alarm call",
+    matedOne: "Two {animals} mated",
+    matedOther: "{count} pairs of {animals} mated"
 };

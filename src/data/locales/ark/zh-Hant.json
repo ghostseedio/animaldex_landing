@@ -225,7 +225,9 @@
             "contest": "{animal}的對手們正在交鋒",
             "fishing": "{aAnimal}抓到了一條魚",
             "nest": "{aAnimal}正在築巢",
-            "alarm": "{aAnimal}發出了警報叫聲"
+            "alarm": "{aAnimal}發出了警報叫聲",
+            "matedOne": "一對{animals}交配了",
+            "matedOther": "{count} 對{animals}交配了"
         },
         "sound": {
             "label": "聲音",

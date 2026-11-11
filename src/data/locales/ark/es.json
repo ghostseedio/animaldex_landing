@@ -225,7 +225,9 @@
             "contest": "{animal}: dos rivales se enfrentan",
             "fishing": "{aAnimal} atrapó un pez",
             "nest": "{aAnimal} está construyendo un nido",
-            "alarm": "{aAnimal} dio una llamada de alarma"
+            "alarm": "{aAnimal} dio una llamada de alarma",
+            "matedOne": "{animals}: una pareja se apareó",
+            "matedOther": "{animals}: {count} parejas se aparearon"
         },
         "sound": {
             "label": "Sonido",

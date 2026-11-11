@@ -5,8 +5,8 @@
  *
  * Two sources, never mixed up:
  * - **The Ark's record** (`server`): the server's event log (`voyage_events_since_v1`, decoded by
- *   `decodeArkEvents`): arrivals, births and hatchings, clutches laid, meals (the predator named), deaths of old
- *   age, starvation, a kind gone. The server decides every one of them; this only says them.
+ *   `decodeArkEvents`): arrivals, pairs that mated (just before their young or eggs), births and hatchings,
+ *   clutches laid, meals (the predator named), deaths of old age, starvation, a kind gone. The server decides every one of them; this only says them.
  * - **Seen** (`seen`): behaviour the shared deterministic layers are showing right now near the camera, in view
  *   (the recipes' courtship, rival contests, fishing catches of the ambient fish, nest building; the reactive
  *   layer's alarm calls). Said in the present tense, marked "Seen", never a server fact, and never a change in
@@ -24,7 +24,7 @@ import type {ArkEvent, ArkEventAnimal} from "@/lib/ark-life";
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
-export type ArkLiveServerKind = "arrival" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction";
+export type ArkLiveServerKind = "arrival" | "mated" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction";
 export type ArkLiveSeenKind = "courting" | "contest" | "fishing" | "nest" | "alarm";
 export type ArkLiveKind = ArkLiveServerKind | ArkLiveSeenKind | "more";
 export type ArkLiveSource = "server" | "seen";
@@ -90,6 +90,13 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
                 items.push(item);
                 break;
             }
+            case "mated": {
+                // A pair bred: one line, before its young or eggs (the server writes it first).
+                const name = animal?.name || event.species?.name || "";
+                const species = animal ? speciesOf(animal) : event.species?.id || null;
+                if (name) items.push({id: event.id, kind: "mated", source: "server", key: `mated:${species ?? name}`, animal: name, other: null, count: 1, eggs: null, focus: {animalId: event.parents[0] ?? animal?.id ?? null, speciesId: species, zone: animal?.zone ?? null}});
+                break;
+            }
             case "laid":
                 if (animal) items.push({id: event.id, kind: "laid", source: "server", key: `laid:${speciesOf(animal)}`, animal: animal.name, other: null, count: 1, eggs: event.eggs, focus: {...focusOn(animal), animalId: event.parents[0] ?? animal.id}});
                 break;
@@ -111,6 +118,15 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
         }
     }
     return items;
+}
+
+/**
+ * The animals that came aboard between two snapshots: arrivals only, never the young born on the Ark (the
+ * page's "new arrival" notice).
+ */
+export function arkNewArrivals<T extends {id: string; origin?: "arrived" | "born"}>(before: ReadonlyArray<{id: string}>, next: readonly T[]): T[] {
+    const known = new Set(before.map((animal) => animal.id));
+    return next.filter((animal) => !known.has(animal.id) && animal.origin !== "born");
 }
 
 /** The animals a snapshot gained, as items: what the log says when the server's event log can't be read. */
@@ -228,7 +244,7 @@ export type ArkLiveLogOptions = {
 export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
-const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, more: 8};
+const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, more: 8};
 
 /**
  * The log's state: the lines on screen and the items waiting. `push` takes new items, `step` lets the next one
@@ -350,6 +366,8 @@ export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "oth
     switch (line.kind) {
         case "arrival":
             return many ? fillArkWords(live.arrivalOther, {count, animals}) : fillArkWords(live.arrivalOne, {aAnimal});
+        case "mated":
+            return many ? fillArkWords(live.matedOther, {count, animals}) : fillArkWords(live.matedOne, {animals});
         case "birth":
             return many ? fillArkWords(live.birthOther, {count, animal: line.animal}) : fillArkWords(live.birthOne, {aAnimal});
         case "hatched":

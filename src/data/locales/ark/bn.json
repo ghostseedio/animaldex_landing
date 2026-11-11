@@ -225,7 +225,9 @@
             "contest": "প্রতিদ্বন্দ্বী {animal} লড়ছে",
             "fishing": "{aAnimal} একটি মাছ ধরেছে",
             "nest": "{aAnimal} বাসা বানাচ্ছে",
-            "alarm": "{aAnimal} বিপদের ডাক দিয়েছে"
+            "alarm": "{aAnimal} বিপদের ডাক দিয়েছে",
+            "matedOne": "এক জোড়া {animals} মিলিত হয়েছে",
+            "matedOther": "{count} জোড়া {animals} মিলিত হয়েছে"
         },
         "sound": {
             "label": "শব্দ",

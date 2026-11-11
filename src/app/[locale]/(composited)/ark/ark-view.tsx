@@ -5,6 +5,7 @@ import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
 import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
+import {arkNewArrivals} from "@/lib/ark-live-log";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -545,8 +546,8 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         observeLive(next);
         const before = snapshotRef.current;
         if (sameAnimals(before, next)) return;
-        const known = new Set(before?.animals.map((animal) => animal.id) ?? []);
-        const fresh = next.animals.filter((animal) => !known.has(animal.id));
+        // The notice is for arrivals only: the young born on the Ark are the live log's (`arkNewArrivals`).
+        const fresh = arkNewArrivals(before?.animals ?? [], next.animals);
         snapshotRef.current = next;
         setSnapshot(next);
         sceneRef.current?.update(next);

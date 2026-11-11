@@ -225,7 +225,9 @@
             "contest": "منافسو {animal} يتصارعون",
             "fishing": "اصطاد {aAnimal} سمكة",
             "nest": "{aAnimal} يبني عشًا",
-            "alarm": "أطلق {aAnimal} نداء إنذار"
+            "alarm": "أطلق {aAnimal} نداء إنذار",
+            "matedOne": "تزاوج زوج من {animals}",
+            "matedOther": "تزاوج {count} أزواج من {animals}"
         },
         "sound": {
             "label": "الصوت",

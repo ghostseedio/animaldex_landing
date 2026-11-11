@@ -225,7 +225,9 @@
             "contest": "போட்டியாளர் {animal} மோதுகின்றன",
             "fishing": "{aAnimal} ஒரு மீனைப் பிடித்தது",
             "nest": "{aAnimal} கூடு கட்டுகிறது",
-            "alarm": "{aAnimal} எச்சரிக்கை ஒலி எழுப்பியது"
+            "alarm": "{aAnimal} எச்சரிக்கை ஒலி எழுப்பியது",
+            "matedOne": "ஒரு ஜோடி {animals} இணை சேர்ந்தன",
+            "matedOther": "{count} ஜோடி {animals} இணை சேர்ந்தன"
         },
         "sound": {
             "label": "ஒலி",

@@ -225,7 +225,9 @@
             "contest": "{animal}: súperi sa stretávajú",
             "fishing": "{aAnimal} chytá rybu",
             "nest": "{aAnimal} stavia hniezdo",
-            "alarm": "{aAnimal} vydáva varovné volanie"
+            "alarm": "{aAnimal} vydáva varovné volanie",
+            "matedOne": "{animals}: pár sa spáril",
+            "matedOther": "{animals}: spárené páry: {count}"
         },
         "sound": {
             "label": "Zvuk",

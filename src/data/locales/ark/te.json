@@ -225,7 +225,9 @@
             "contest": "ప్రత్యర్థి {animal} లు తలపడుతున్నాయి",
             "fishing": "{aAnimal} ఒక చేపను పట్టుకుంది",
             "nest": "{aAnimal} గూడు కడుతోంది",
-            "alarm": "{aAnimal} హెచ్చరిక కూత పెట్టింది"
+            "alarm": "{aAnimal} హెచ్చరిక కూత పెట్టింది",
+            "matedOne": "ఒక జంట {animals} జతకట్టాయి",
+            "matedOther": "{count} జంటల {animals} జతకట్టాయి"
         },
         "sound": {
             "label": "శబ్దం",

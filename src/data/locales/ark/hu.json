@@ -225,7 +225,9 @@
             "contest": "{animal}: riválisok csapnak össze",
             "fishing": "{aAnimal} halat fogott",
             "nest": "{aAnimal} fészket épít",
-            "alarm": "{aAnimal} riasztó hangot adott"
+            "alarm": "{aAnimal} riasztó hangot adott",
+            "matedOne": "{animals}: egy pár párzott",
+            "matedOther": "{animals}: {count} pár párzott"
         },
         "sound": {
             "label": "Hang",

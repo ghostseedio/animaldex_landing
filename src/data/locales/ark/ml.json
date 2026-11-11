@@ -225,7 +225,9 @@
             "contest": "എതിരാളികളായ {animal} ഏറ്റുമുട്ടുന്നു",
             "fishing": "{aAnimal} ഒരു മീൻ പിടിച്ചു",
             "nest": "{aAnimal} കൂട് കെട്ടുന്നു",
-            "alarm": "{aAnimal} അപായ വിളി മുഴക്കി"
+            "alarm": "{aAnimal} അപായ വിളി മുഴക്കി",
+            "matedOne": "ഒരു ജോഡി {animals} ഇണചേർന്നു",
+            "matedOther": "{count} ജോഡി {animals} ഇണചേർന്നു"
         },
         "sound": {
             "label": "ശബ്ദം",

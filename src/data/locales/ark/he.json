@@ -225,7 +225,9 @@
             "contest": "יריבי {animal} מתעמתים",
             "fishing": "{aAnimal} תפס דג",
             "nest": "{aAnimal} בונה קן",
-            "alarm": "{aAnimal} השמיע קריאת אזעקה"
+            "alarm": "{aAnimal} השמיע קריאת אזעקה",
+            "matedOne": "זוג {animals} הזדווג",
+            "matedOther": "{count} זוגות {animals} הזדווגו"
         },
         "sound": {
             "label": "צליל",

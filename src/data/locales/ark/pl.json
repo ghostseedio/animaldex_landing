@@ -225,7 +225,9 @@
             "contest": "{animal}: rywale ścierają się",
             "fishing": "{aAnimal} łapie rybę",
             "nest": "{aAnimal} buduje gniazdo",
-            "alarm": "{aAnimal} wydaje okrzyk ostrzegawczy"
+            "alarm": "{aAnimal} wydaje okrzyk ostrzegawczy",
+            "matedOne": "{animals}: para się sparzyła",
+            "matedOther": "{animals}: sparzone pary: {count}"
         },
         "sound": {
             "label": "Dźwięk",

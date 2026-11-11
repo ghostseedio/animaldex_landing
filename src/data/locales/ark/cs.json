@@ -225,7 +225,9 @@
             "contest": "{animal}: soupeři se střetávají",
             "fishing": "{aAnimal} chytá rybu",
             "nest": "{aAnimal} staví hnízdo",
-            "alarm": "{aAnimal} vydává varovné volání"
+            "alarm": "{aAnimal} vydává varovné volání",
+            "matedOne": "{animals}: pár se spářil",
+            "matedOther": "{animals}: spářené páry: {count}"
         },
         "sound": {
             "label": "Zvuk",

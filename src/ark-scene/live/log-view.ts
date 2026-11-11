@@ -16,6 +16,7 @@ const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe U
 /** A line's dot, by kind (the record), in the page's palette. */
 const DOT: Record<string, string> = {
     arrival: "#8fd694",
+    mated: "#e7a8dc",
     birth: "#f4b6c8",
     hatched: "#f4b6c8",
     laid: "#efdfa8",

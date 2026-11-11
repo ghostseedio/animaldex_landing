@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkSeenItems, arkSeenKind, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveText} from "./ark-live-log";
+import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkNewArrivals, arkLiveLineText, arkLiveServerItems, arkSeenItems, arkSeenKind, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveText} from "./ark-live-log";
 import {ArkLiveFixtureFeed} from "./ark-live-fixture";
 import {ARK_LIVE_ENGLISH} from "./ark-live-words";
 import {decodeArkEvents} from "./ark-life";
@@ -41,6 +41,36 @@ test("the Ark's record: a meal names the predator and is one line with its eaten
     assert.equal(litter.length, 1);
     assert.equal(litter[0].count, 2);
     assert.equal(arkLiveLineText(litter[0], english, "en"), "2 Plains Zebra young were born");
+});
+
+test("mated: a pair that bred is one line, before its young; folded pairs counted", () => {
+    const zebra = (id: string) => ({id, species_profile_id: "z", name: "Plains Zebra", model_slug: "plains-zebra", zone: "grassland"});
+    const items = arkLiveServerItems(decodeArkEvents([
+        {id: 10, kind: "mated", at: "2026-11-11T10:00:00Z", animal: zebra("p1"), other: zebra("p2"), payload: {parents: ["p1", "p2"]}},
+        {id: 11, kind: "birth", at: "2026-11-11T10:00:00Z", animal: zebra("y1"), parents: ["p1", "p2"]},
+        // A server that sends only the species and the parents' ids still gets its line.
+        {id: 12, kind: "mated", at: "2026-11-11T10:05:00Z", species_profile_id: "c", species: "Mallard", payload: {parents: ["m1", "m2"]}}
+    ], null));
+    assert.deepEqual(items.map((i) => i.kind), ["mated", "birth", "mated"]);
+    assert.equal(items[0].focus.animalId, "p1");
+    assert.equal(arkLiveLineText(items[0], english, "en"), "Two Plains Zebras mated");
+    assert.equal(arkLiveLineText(items[2], english, "en"), "Two Mallards mated");
+    assert.equal(items[2].focus.animalId, "m1");
+    assert.equal(arkLiveLineText({...items[0], count: 3}, english, "en"), "3 pairs of Plains Zebras mated");
+    const log = new ArkLiveLog();
+    log.push(items.slice(0, 2), 0);
+    log.step(0);
+    log.step(ARK_LIVE_LOG_DEFAULTS.gap);
+    assert.deepEqual(log.lines.map((l) => l.kind), ["mated", "birth"], "the pair's line comes first");
+});
+
+test("the arrival notice: arrivals only, never the young born aboard", () => {
+    const before = snapshot.animals.slice(0, 3);
+    const born = {...snapshot.animals[3], origin: "born" as const};
+    const arrived = {...snapshot.animals[4], origin: "arrived" as const};
+    const legacy = {...snapshot.animals[5], origin: undefined};
+    assert.deepEqual(arkNewArrivals(before, [...before, born, arrived, legacy]).map((a) => a.id), [arrived.id, legacy.id]);
+    assert.deepEqual(arkNewArrivals(before, [...before, born]), []);
 });
 
 test("privacy: no line carries a bringer, a person or a place", () => {
@@ -155,12 +185,13 @@ test("the fixture feed: every kind the owner asked about within a cycle, in the 
         if (!step) continue;
         const decoded = decodeArkEvents(step.events, step.snapshot);
         assert.equal(decoded.length, (step.events as unknown[]).length, `${step.beat}: every row decodes`);
+        if (step.beat === "birth" || step.beat === "laid") assert.equal(decoded[0].kind, "mated", `${step.beat}: the pair's mating comes first`);
         for (const event of decoded) kinds.add(event.from_egg ? "hatch" : event.kind);
         current = step.snapshot;
         assert.equal(current.counts.animals, current.animals.length);
         assert.equal(new Set(current.animals.map((a) => a.id)).size, current.animals.length, "no animal twice");
     }
-    for (const kind of ["arrival", "birth", "laid", "hatch", "meal", "eaten", "death_old", "starved"]) assert.ok(kinds.has(kind), `the feed makes ${kind}`);
+    for (const kind of ["arrival", "mated", "birth", "laid", "hatch", "meal", "eaten", "death_old", "starved"]) assert.ok(kinds.has(kind), `the feed makes ${kind}`);
     // No kind ended by the feed.
     const before = new Set(arkPopulation(snapshot).regions.flatMap((r) => r.species.map((s) => s.key)));
     const after = new Set(arkPopulation(current).regions.flatMap((r) => r.species.map((s) => s.key)));

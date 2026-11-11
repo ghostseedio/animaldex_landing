@@ -225,7 +225,9 @@
             "contest": "{animal}: Rivalen kämpfen",
             "fishing": "{aAnimal} hat einen Fisch gefangen",
             "nest": "{aAnimal} baut ein Nest",
-            "alarm": "{aAnimal} stößt einen Warnruf aus"
+            "alarm": "{aAnimal} stößt einen Warnruf aus",
+            "matedOne": "{animals}: ein Paar hat sich gepaart",
+            "matedOther": "{animals}: {count} Paare haben sich gepaart"
         },
         "sound": {
             "label": "Ton",

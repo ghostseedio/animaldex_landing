@@ -4245,7 +4245,9 @@
       "contest": "{animal} rivals are clashing",
       "fishing": "{aAnimal} caught a fish",
       "nest": "{aAnimal} is building a nest",
-      "alarm": "{aAnimal} gave an alarm call"
+      "alarm": "{aAnimal} gave an alarm call",
+      "matedOne": "Two {animals} mated",
+      "matedOther": "{count} pairs of {animals} mated"
     },
     "sound": {
       "label": "Sound",

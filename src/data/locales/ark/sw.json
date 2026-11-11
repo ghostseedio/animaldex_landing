@@ -225,7 +225,9 @@
             "contest": "Wapinzani wa {animal} wanapambana",
             "fishing": "{aAnimal} amekamata samaki",
             "nest": "{aAnimal} anajenga kiota",
-            "alarm": "{aAnimal} alitoa mlio wa tahadhari"
+            "alarm": "{aAnimal} alitoa mlio wa tahadhari",
+            "matedOne": "Jozi ya {animals} imepandana",
+            "matedOther": "Jozi {count} za {animals} zimepandana"
         },
         "sound": {
             "label": "Sauti",

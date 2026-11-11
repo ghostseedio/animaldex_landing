@@ -225,7 +225,9 @@
             "contest": "{animal}: suparnici se sukobljavaju",
             "fishing": "{aAnimal} je ulovio ribu",
             "nest": "{aAnimal} gradi gnijezdo",
-            "alarm": "{aAnimal} oglašava uzbunu"
+            "alarm": "{aAnimal} oglašava uzbunu",
+            "matedOne": "{animals}: par se pario",
+            "matedOther": "{animals}: parilo se parova: {count}"
         },
         "sound": {
             "label": "Zvuk",
