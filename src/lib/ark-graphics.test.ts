@@ -110,6 +110,7 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
             const d = {x: point.position.x - placed!.x, y: point.position.y - placed!.y, z: point.position.z - placed!.z};
             assert.ok(Math.hypot(d.x, d.z) <= reach, "on the rock, not beside it");
             assert.ok(d.y >= b.min[1] * placed!.scale - 0.05 && d.y <= b.max[1] * placed!.scale + 0.05, "within the rock's height");
+            assert.ok(point.position.y >= heightAt(point.position.x, point.position.z) - 0.05 || point.hostKind !== "rock", "not buried in the ground");
         }
     }
 });

@@ -77,7 +77,14 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         const p = point.position;
         // A leaf on top of an orchard tree's crown (its outside, in reach of a close camera).
         if (shot.tag === "leaf") return (point.hostKind === "orchard" ? 0 : point.hostKind === "broadleaf" ? 30 : 60) - point.normal.y * 5 + p.y * 0.2;
-        if (shot.tag === "house_wall") return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4));
+        if (shot.tag === "house_wall") {
+            // Off the side windows (micro-scene.ts: centred 0.4 m off the middle, 1.4 m up, 0.8 × 0.7 m), with a margin:
+            // a gecko half hidden by a window frame is no shot (batch 5).
+            const side = Math.sign(p.x - COTTAGE.x);
+            const windowZ = COTTAGE.z + (side > 0 ? 0.4 : -0.4);
+            const onWindow = Math.abs(p.z - windowZ) < 0.75 && Math.abs(p.y - (COTTAGE.floor + 1.4)) < 0.65;
+            return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4)) + (onWindow ? 20 : 0);
+        }
         if (shot.tag === "rock_face") {
             // Seaward (the camera stands in the shallows), low and wet, near the shore rocks.
             const seaward = (point.normal.x * p.x + point.normal.z * p.z) / (Math.hypot(p.x, p.z) || 1);
@@ -87,7 +94,23 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     };
     const scored = candidates.map((point) => ({point, score: score(point)}));
     scored.sort((a, b) => a.score - b.score);
-    const point: AttachPoint | undefined = scored[0]?.point;
+    // The camera out along the surface's normal, lifted a little: it looks at the animal on its surface, from outside it.
+    const cameraOut = (at: AttachPoint) => {
+        const normal = new Vector3(at.normal.x, at.normal.y, at.normal.z).normalize();
+        const out = normal.clone();
+        if (shot.tag === "leaf") out.set(normal.x + 0.35, 1.6, normal.z + 0.35);
+        else out.y = Math.max(out.y, 0) * 0.55 + 0.35;
+        if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(at.yaw + 0.6) * 0.8, out.y, Math.cos(at.yaw + 0.6) * 0.8);
+        return out.normalize();
+    };
+    // The best point whose camera stands above the ground (batch 5: a real rock's face can look up a beach, and the
+    // camera out along it would stand inside the sand).
+    const clearOfGround = (at: AttachPoint) => {
+        const out = cameraOut(at);
+        const eye = {x: at.position.x + out.x * shot.distance, y: at.position.y + out.y * shot.distance, z: at.position.z + out.z * shot.distance};
+        return eye.y > heightAt(eye.x, eye.z) + 0.15;
+    };
+    const point: AttachPoint | undefined = scored.find((entry) => clearOfGround(entry.point))?.point ?? scored[0]?.point;
     if (!point || !debug) return {view: handle.homeView(), anchor: `missing ${shot.tag}`};
     if (holder.current) debug.scene.remove(holder.current);
     const manifest = await (await fetch(`${MODELS}/manifest.json`)).json() as {models: Record<string, string>};
@@ -119,12 +142,7 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     debug.scene.add(group);
     holder.current = group;
     debug.controls.minDistance = 0.3;
-    // The camera out along the surface's normal, lifted a little: it looks at the animal on its surface, from outside it.
-    const out = n.clone();
-    if (shot.tag === "leaf") out.set(n.x + 0.35, 1.6, n.z + 0.35);
-    else out.y = Math.max(out.y, 0) * 0.55 + 0.35;
-    if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
-    out.normalize();
+    const out = cameraOut(point);
     const view: ArkCameraView = {
         target: {x: point.position.x + n.x * 0.05, y: point.position.y + n.y * 0.05, z: point.position.z + n.z * 0.05},
         distance: shot.distance,
