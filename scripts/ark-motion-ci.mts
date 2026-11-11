@@ -113,7 +113,7 @@ const md = [
     "",
     "| Lane | Metric | Before (release) | Now | Limit | |",
     "|---|---|---|---|---|---|",
-    ...rows.map((row) => `| ${row.lane} | ${row.label}${row.note ? ` (${row.note})` : ""} | ${fmt(row.before)} | ${fmt(row.value)} | ${row.limit} | ${row.pass ? "pass" : "**FAIL**"} |`),
+    ...rows.map((row) => `| ${row.lane} | ${row.label}${row.note ? ` (${row.note})` : ""} | ${fmt(row.before)} | ${row.id === "test" ? (row.value ? "ok" : "not ok") : fmt(row.value)} | ${row.limit} | ${row.pass ? "pass" : "**FAIL**"} |`),
     ...(skipped.length ? ["", "Not run yet:", ...skipped.map((s) => `- ${s}`)] : []),
     ""
 ].join("\n");
