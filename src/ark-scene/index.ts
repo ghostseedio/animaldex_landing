@@ -264,6 +264,8 @@ type Sched = {
     pitch: number;
     /** Its home, group and range worked out (`wireSchedules`, sliced): until then it waits unseen, never beside its prey. */
     wired?: boolean;
+    /** Its schedule worked out once since it was wired (the first step is the costly one: a few a frame, `WARM_MS`). */
+    warm?: boolean;
 };
 
 /** The roost kinds whose way in the props lane draws (`scene-modules.ts` roostOf). */
@@ -980,6 +982,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
+    /** Each schedule's first step after it is wired works out its last slots (where it walks from): a few a frame. */
+    const WARM_MS = 6;
+    let warmFrameMs = 0;
     let scheduledCount = 0;
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -1075,7 +1080,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
                 own.trip = null;
                 own.lead = null;
-                own.pose = null;
+                // (Its last pose is kept to draw until its first step: the first steps are spread over frames.)
+                own.warm = false;
             }
             // A group's members share their leader's place and range (they roost and roam round it).
             for (const e of onIt) {
@@ -1101,8 +1107,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             forgetSchedules();
             // Who meets whom in the behaviour recipes: rival males, a male and a female, two of a group (`behaviour-recipes.ts`).
             wireRecipes(onIt.map((e) => ({animal: e.sched!.animal, profile: e.sched!.profile, slug: e.animal.model_slug, activity: e.animal.activity})));
+            // (A recording, and reduced motion, at once; else each one's first step as the frames come, `WARM_MS`.)
             const epoch = worldMs() / 1000;
-            for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
+            if (options.recording) for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
         };
         // The spacing a slice a frame (`stepSpacing`, as the world's build: at the backfill scale it is the longest task
         // after the mount); the latest wiring asked for wins. A recording wires at once.
@@ -2946,6 +2953,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const epochNow = worldMs() / 1000;
         const hoursFrame = hoursNow();
         behaviourFrameMs = 0;
+        warmFrameMs = 0;
         scheduledCount = 0;
         const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
@@ -2962,11 +2970,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.middle = null;
                 continue;
             }
-            // Its schedule first (where it is and what it is doing now), then its one state from that.
-            if (scheduled(entry)) {
+            // Its schedule first (where it is and what it is doing now), then its one state from that. A first step waits
+            // for a frame with room for it (held where it was drawn; unseen if it never was).
+            if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording) {
+                if (!entry.sched!.pose) {
+                    entry.middle = null;
+                    continue;
+                }
+            } else if (scheduled(entry)) {
                 const started = performance.now();
                 stepSchedule(entry, epochNow, dt);
-                behaviourFrameMs += performance.now() - started;
+                const spent = performance.now() - started;
+                behaviourFrameMs += spent;
+                if (!entry.sched!.warm) {
+                    warmFrameMs += spent;
+                    entry.sched!.warm = true;
+                }
                 scheduledCount++;
             }
             // Its one state (its schedule, or the hour and its species, an act it is in) sets what it does: asleep eases in,
