@@ -74,7 +74,9 @@ ${NOISE_GLSL}`)
 {
     float arkWood = 1.0 - vArkLeafy;
     float arkGrain = arkNoise(vec2(atan(vArkLocal.z, vArkLocal.x) * 5.0, vArkLocal.y * 1.6)) * 0.6 + arkNoise(vArkLocal.xz * 9.0 + vArkLocal.y * 2.0) * 0.4;
-    diffuseColor.rgb *= mix(1.0, 1.55 * (0.72 + 0.56 * arkGrain), arkWood);
+    // Only dark bark is lifted (pale birch and emergent bark stays as it is, or far forests turn to white sticks).
+    float arkLift = mix(1.55, 1.0, smoothstep(0.05, 0.14, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))));
+    diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);
 }`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 #ifdef DOUBLE_SIDED
@@ -102,7 +104,7 @@ nonPerturbedNormal *= faceDirection;
     #if NUM_DIR_LIGHTS > 0
     arkThrough = directionalLights[0].color * clamp(dot(-arkSeen, directionalLights[0].direction), 0.0, 1.0) * 0.25;
     #endif
-    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * (arkSky * ((0.2 + 0.55 * arkDown) * vArkLeafy + 0.3 * (1.0 - vArkLeafy)) + arkThrough * vArkLeafy);
+    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * (arkSky * ((0.2 + 0.55 * arkDown) * vArkLeafy + 0.18 * (1.0 - vArkLeafy)) + arkThrough * vArkLeafy);
 }`);
         if (near) {
             shader.fragmentShader = shader.fragmentShader
