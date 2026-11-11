@@ -24,32 +24,43 @@ The approved proposal is AnimalDex `docs/ark/captures-backfill-dry-run.md` §5.5
   - Residents are posed on their spot or in their door beat.
   - Residents who are indoors aren't drawn, unless they are the reader's own, or selected or followed.
 
+## The home district (home growth, 2026-11-11)
+
+The owner decided to grow the home area before launch, while scenery ids may still shift, so the full cap has land: 16 houses and 6 smallholdings (today's cottage and barn, and 20 reserved plots).
+
+- **Land** (`world.ts` `homeLobe`): the coast's south lobe reaches up to 32 m further out (filling the old bay in front of Home; zero west of the river's mouth, so the reef, the river and the rainforest keep their coast), and an east shoulder takes the east coast up to 30 m out (zero north of the grassland's shore and the cave). Dry land 14,846 → about 21,000 m²; Home's zone 1,802 → about 8,700 m². Zone areas after: rainforest 2,246, woodland 1,816, mountains 2,111, river and lake 1,043, wetland about 710, polar about 1,100, grassland about 1,700, desert about 1,300 m² (the desert moved onto the new east shore, the grassland's animals gather further north-west).
+- **Lanes** (`world.ts` `HAMLET_LANES`): the village street past the cottage's gate and east between the two rows of the east end; the shore lane down to the beach and west along it to the river's mouth; the upper street 38 m behind the village street (back gardens meet between them), its farms on the grassland's edge; a farm track north. The ground paints them (earth, ruts, a grass crown; `fields.ts` `lanesGlsl`), no crop grows on them, and nothing of the decor grows on them or the plots beside them (outside the forests).
+- **Plots** (`hamlet.ts` `HAMLET_PLAN`): each plot set on its lane (a cottage's gate on the verge; a smallholding's yard or paddock on the lane), slid and stood back a little where it must be to fit: on dry, gentle, open land, off every lane, clear of every plot before it, of every zone's clearing, of trees and of the rocks as drawn (`map/rocks.ts` `inRock`). The order is append-only and starts round today's cottage: at 1× (9 houses, 3 smallholdings) the hamlet is the west end and the middle.
+- **Footprints**: a house's covers what the props draw on it (the beds west of the cottage, the compost behind): 13.2 × 14.8 m. A smallholding's: the barn, the props' paddock and coop, and its yard.
+- **The orchard** moved from east of the farm's clearing (where the streets run now) to behind the barn.
+- **The village's fields**: a field whose middle is within 16 m of a lane is grass whole (the greens round the gardens), so no crop strip runs up to a picket fence; crops beyond.
+- `scripts/ark-map-hamlet.mts` writes `hamlet-slots.json` and the props' `hamlet-footprints.json`.
+
 ## Numbers
-From the dry run's population, `scripts/ark-map-scale.mts`:
+From the dry run's population, `scripts/ark-map-scale.mts`; pets out by day measured through the day on the shared clock:
 
 | | 1× (3,140 animals) | 3× (9,420) |
 |---|---:|---:|
-| Residents | 1,198 | 3,594 |
-| Plots used | 7 houses + 3 smallholdings | 7 + 4 (the cap) |
-| Out at once, at most | 98 | 116 |
-| Out on average | 5.9% of residents | 2.3% |
-| Most cat-sized animals in a 1 m cube | **3** (the dry run had 57) | **9** (the dry run had 175) |
-| 1 m cubes over 4, counting midday and midnight | 0 | 24 |
+| Residents | 1,198 (1,053 pets, 145 farm) | 3,594 |
+| Plots used | 9 houses + 3 smallholdings | 16 + 6 (the cap) |
+| Outdoor spots | 252 | 464 |
+| Pets out by day (7–19 h), on average | 125 = **11.9%** | 316 = **10.0%** |
+| Farm animals out by day | 37% | 25% |
+| Out at once, at most | 212 | 429 |
+| Most cat-sized animals in a 1 m cube | 4 | 8 |
+| 1 m cubes over 4 (midday and midnight) | **0** | 20 (wild zones' deep lists: the desert's site, the woods; was 50, most 18) |
 | Plot overlaps, plot capacity, reserved land | 0 | 0 |
 
-**The island's land holds 7 houses and 4 smallholdings in all.**
-- The reserved slots are only those clear of every tree, rock, crop row, river and slope. No scenery is moved, because moving it would shift the scenery's ids.
-- 1× wants 9 houses and 3 smallholdings; 3× wants 16 and 6. Past the slots, residents share the plots there are, and fewer of each are out at once.
-- **Owner decision:** more plots need land. The options are to grow the home petal as a wedge (the graphics lane's terrain) or to clear trees there (the graphics lane's decor, which shifts decor ids once).
-
-**3× crowding** is in wild zones (the forests, the river and lake), which hold far more clusters than their own land at 3×. That is the dry run's rule E: a zone's visible capacity, with the rest resting out of sight. It is the runtime lane's `arkOutside`, and the map can feed it each cluster's lap (`map.level`).
+- **Spots**: a house has 20 (12 on the front lawn, 4 in the passages beside it, 4 in the back garden), a smallholding 24 (12 paddock, 6 yard, 6 round the coop). Every spot is off the props' keep-outs (`onHomeKeepOut`: beds, compost, water butt, hay shelter, hay, troughs, the coop's house), off crops and off lanes; spares stand in. A house's door and window follow its cottage's size; a barn's door its size.
+- **Reserved land works now**: `reservedAt` was always false (its corners wind the other way); no wild animal, perch, burrow or anchor is on or within 1.2 m of a reserved plot, and a wild partner never takes a resident as its host.
+- **Herds**: a resident is never massed into a herd (the backfill view's "307" cats at the old cottage were the herd of every captured cat, standing at one door).
+- **Rule E** (`map/capacity.ts`): `zoneCapacity(zone)`, each zone's own cells plus its attach points (Home also its hamlet spots), in the runtime's `setArkZoneCapacity` shape; `wireZoneCapacity(liveBudget)` hands it over when the runtime lane is in. The crowding check applies it first. At 1× every zone is under its capacity; at 3× the wetland and the grassland are over it (188 rest out of sight).
+- **Scarce lists**: a zone with none or a stray few (under 12) of a tag's cells borrows the nearest roomy zone's list, and past every tag's first lap a cluster takes the least lapped tag. That took the 1× crowding (magpies four deep on one borrowed farm cell) to 0.
 
 ## Other lanes
-- **Graphics:**
-  - Draw a cottage at each house plot and a barn at each smallholding (`barn: true`), in the plot's frame.
-  - Draw lit windows at night (`plotSpots(plot).window`).
-  - Thin the grass, flowers and crop rows under reserved plots (`reservedAt`).
+- **Graphics (batch 6 and on):** `terrain.ts` has one new block (the lanes' paint, after the farm block) and reads `arkLaneDistance` from `fieldsGlsl()`. The island is bigger: the overview (`index.ts` homeView) fits a wider circle centred south-east of the lake; check `groundArrays` and any per-zone tuning against the new coast. `decor.ts`: nothing grows within 26 m of a lane outside the forests, and the orchard is a turned grid behind the barn (`fields.ts` `ORCHARD`).
 - **Props:** the gardens, paddocks, coops and fences come through `setHomePlots`, which is already wired.
-- **Behaviour:** the nav grid's `blocked()` does not yet know the new houses and barns. Residents are off the schedule, but a wild walker's path could cross a new house.
-- **Runtime:** pass `arkOutside` as `hamletState`'s `outside` argument, and apply rule E to wild zones at 3×.
+- **Behaviour:** the nav grid's `blocked()` does not yet know the new houses and barns. Residents are off the schedule, but a wild walker's path could cross a new house (wild animals no longer spawn on reserved land).
+- **Runtime:** pass `arkOutside` as `hamletState`'s `outside` argument; call `wireZoneCapacity(liveBudget)` (or `setArkZoneCapacity(zoneCapacity)`) once at mount. Residents are live entries now (not herds): the hamlet hides those indoors.
+- **Scale fixture** (`scripts/ark-scale-fixture.mts`, on ark-release): it writes no `area`, so the backfill view has no residents (every pet a farm animal of the map, massed in herds). Add `area: s.area === "house" || s.area === "farm" ? s.area : null` to each animal.
 - **Server:** `voyage_animals.area` (`house` | `farm` | null) in the public read.

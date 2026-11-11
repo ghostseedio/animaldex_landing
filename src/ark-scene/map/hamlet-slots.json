@@ -4,8 +4,8 @@
   {
    "id": "smallholding-1",
    "kind": "smallholding",
-   "x": 40.74,
-   "z": 71.276,
+   "x": 40.292,
+   "z": 71.5,
    "rotation": -2.678,
    "barn": true
   },
@@ -33,8 +33,8 @@
   {
    "id": "smallholding-2",
    "kind": "smallholding",
-   "x": 35.024,
-   "z": -0.174,
+   "x": 37.819,
+   "z": 0.944,
    "rotation": 0.464,
    "barn": true
   },
@@ -62,8 +62,8 @@
   {
    "id": "smallholding-3",
    "kind": "smallholding",
-   "x": 50.341,
-   "z": -5.317,
+   "x": 51.683,
+   "z": -5.988,
    "rotation": 0.464,
    "barn": true
   },
@@ -91,9 +91,9 @@
   {
    "id": "smallholding-4",
    "kind": "smallholding",
-   "x": 66.952,
-   "z": -25.153,
-   "rotation": -1.756,
+   "x": 62.123,
+   "z": -27.075,
+   "rotation": 1.385,
    "barn": true
   },
   {

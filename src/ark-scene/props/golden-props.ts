@@ -97,9 +97,10 @@ export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats,
     const props = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
     // Every shot but the growing nest's sees the nests as the fixture's day has them.
     props?.setArkDay(null);
-    // The hamlet's shots: the hamlet at 1× (the dry run's population: 7 houses, 3 smallholdings); every other shot today's two plots.
+    // The hamlet's shots: the whole hamlet at its cap (home growth: 16 houses, 6 smallholdings), the close ones at 1× (the
+    // dry run's population: 9 houses, 3 smallholdings); every other shot today's two plots.
     const withPlots = (globalThis as {__arkPropsModule?: {setHomePlots: (plots: HomePlot[]) => void}}).__arkPropsModule;
-    withPlots?.setHomePlots(shot.startsWith("hamlet") ? homePlots(7 * 130, 3 * 50) : defaultHomePlots());
+    withPlots?.setHomePlots(shot === "hamlet_day" || shot === "hamlet_night" ? homePlots(16 * 130, 6 * 50) : shot.startsWith("hamlet") ? homePlots(1053, 145) : defaultHomePlots());
     const plan = framed(shot, marks, stats, locate);
     if (shot === "nest_growing" && plan) props?.setArkDay(growingDay(stats));
     // Every shot in its own weather: dry and still unless it says otherwise (whatever the island clock says today).
@@ -224,20 +225,20 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         }
         case "hamlet_day":
         case "hamlet_night": {
-            // The whole hamlet from above its middle.
-            const plots = homePlots(7 * 130, 3 * 50);
+            // The whole hamlet at its cap from above its middle (home growth: it spans about 110 m).
+            const plots = homePlots(16 * 130, 6 * 50);
             const middle = {x: plots.reduce((sum, p) => sum + p.x, 0) / plots.length, z: plots.reduce((sum, p) => sum + p.z, 0) / plots.length};
             const night = shot === "hamlet_night";
-            return {view: look({x: middle.x, y: 0, z: middle.z}, 82, 0.85, -0.5), hours: night ? 21.5 : 11, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: `hamlet 1x: ${plots.filter((p) => p.kind === "house").length} houses, ${plots.filter((p) => p.kind === "smallholding").length} smallholdings`};
+            return {view: look({x: middle.x, y: 0, z: middle.z}, 128, 0.85, -0.35), hours: night ? 21.5 : 11, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: `hamlet at its cap: ${plots.filter((p) => p.kind === "house").length} houses, ${plots.filter((p) => p.kind === "smallholding").length} smallholdings`};
         }
         case "hamlet_close_day":
         case "hamlet_close_night": {
-            // Two of the new cottages and a new smallholding, closer.
-            const plots = homePlots(7 * 130, 3 * 50);
-            const chosen = plots.filter((p) => ["house-3", "house-4", "smallholding-2"].includes(p.id));
+            // Two of the new cottages and a new smallholding, closer (the village street by today's cottage, at 1×).
+            const plots = homePlots(1053, 145);
+            const chosen = plots.filter((p) => ["house-1", "house-3", "smallholding-1"].includes(p.id));
             const middle = {x: chosen.reduce((sum, p) => sum + p.x, 0) / chosen.length, z: chosen.reduce((sum, p) => sum + p.z, 0) / chosen.length};
             const night = shot === "hamlet_close_night";
-            return {view: look({x: middle.x, y: 0, z: middle.z}, 34, 1.0, 0.4), hours: night ? 21.5 : 15.5, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: "hamlet: house-3, house-4, smallholding-2"};
+            return {view: look({x: middle.x, y: 0, z: middle.z}, 44, 1.0, 0.4), hours: night ? 21.5 : 15.5, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: "hamlet: house-1, house-3, smallholding-1"};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;

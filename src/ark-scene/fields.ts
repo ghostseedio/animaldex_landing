@@ -56,6 +56,8 @@ export function orchardMiddle(): {x: number; z: number} {
     return {x: farm.x + ORCHARD.x + u * Math.cos(ORCHARD.turn) - v * Math.sin(ORCHARD.turn), z: farm.z + ORCHARD.z + u * Math.sin(ORCHARD.turn) + v * Math.cos(ORCHARD.turn)};
 }
 
+/** A field whose middle is this near a lane is grass (the village's greens and paddocks round its gardens). */
+export const VILLAGE_GREEN = 16;
 /** No crops this near a lane's middle (the lane and a verge each side). */
 export const LANE_CLEAR = LANE_WIDTH / 2 + 0.8;
 
@@ -175,6 +177,8 @@ export function fieldCropAt(x: number, z: number): (FieldPoint & {crop: Exclude<
     const field = fieldAt(x, z);
     const middle = fieldCentre(field.cell);
     for (const out of fieldKeepOuts()) if (Math.hypot(middle.x - out.x, middle.z - out.z) < out.r) return null;
+    // The village's own fields, along its lanes, are grass whole (the gardens and greens between the cottages).
+    if (laneDistance(middle.x, middle.z) < VILLAGE_GREEN) return null;
     if (field.crop === "pasture" || field.edge < HEADLAND) return null;
     return field as FieldPoint & {crop: Exclude<Crop, "pasture">};
 }
@@ -252,6 +256,7 @@ int arkField(vec2 p, out float row, out float along, out float edge, out vec2 ce
     float mv = (cell.y + 0.5) * ${FIELD_SIZE.across.toFixed(1)};
     vec2 middle = vec2(mu * ${ACROSS.z} - mv * ${ALONG.z}, mv * ${ALONG.x} - mu * ${ACROSS.x}) / ${det.toFixed(6)};
     bool inside = arkHamletLot(p) || arkLaneDistance(p) < ${LANE_CLEAR.toFixed(2)};
+    if (arkLaneDistance(middle) < ${VILLAGE_GREEN.toFixed(1)}) inside = true;
 ${keep}
     return inside ? 0 : crop;
 }

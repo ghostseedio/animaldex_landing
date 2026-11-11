@@ -272,7 +272,7 @@ export const HAMLET_PLAN: HamletPlanEntry[] = [
     {kind: "house", lane: 0, at: 33, side: 1},
     {kind: "house", lane: 0, at: 19, side: 1},
     {kind: "house", lane: 0, at: 47, side: -1},
-    {kind: "smallholding", lane: 2, at: 15, side: -1, form: "yard"},
+    {kind: "smallholding", lane: 2, at: 19, side: -1, form: "yard"},
     {kind: "house", lane: 1, at: 44, side: 1},
     {kind: "house", lane: 1, at: 58, side: 1},
     {kind: "house", lane: 0, at: 75, side: -1},
