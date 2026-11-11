@@ -574,7 +574,7 @@ export function shoreOf(slug: string, zone: ArkZone): "cove" | ArkZone | null {
     if (PENGUIN.test(slug)) {
         const species = mapSpecies(slug, zone);
         const polar = zone === "polar" || Boolean(species && POLAR_TAGS.some((tag) => species.allowed.has(tag)));
-        return polar ? "cove" : ZONE_SITES[zone]?.kind === "sea" || zone === "polar" ? "seashore" : zone;
+        return polar ? "cove" : ZONE_SITES[zone]?.kind === "sea" ? "seashore" : zone;
     }
     // The auks that the table puts at sea (murres, guillemots, auklets, murrelets): home on their cliffs and rocks by the sea (they
     // raft on the water and dive from it on their schedule; the puffins already stand on their ledges).
