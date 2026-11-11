@@ -321,6 +321,8 @@ class WorldSampler implements ArkMapSampler {
             if (!tag) continue;
             // Nothing on the hamlet's reserved plots (their fences and gardens come and go with the plots: hamlet.ts).
             if (reservedAt(point.position.x, point.position.z)) continue;
+            // A hole, a burrow's mouth or a fallen leaf on the ground never inside a drawn rock (the asset rocks, `rocks.ts`).
+            if ((GROUND_TAGS.has(tag) || point.tag === "leaf_litter") && inRock(point.position.x, point.position.z, 0.15)) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
             // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
             const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.001);
@@ -357,6 +359,7 @@ class WorldSampler implements ArkMapSampler {
                 const ground = this.ground(x, z);
                 const blocked = decor.some((item) => item.kind !== "leaf" && item.kind !== "flower" && Math.abs(item.x - x) < 1.2 && Math.abs(item.z - z) < 1.2);
                 if (blocked) continue;
+                if (inRock(x, z, 0.2)) continue;
                 if (ground.tags.includes("soil") && roll < 0.5) push("worm_hole", `worm${Math.round(x)},${Math.round(z)}`, x, ground.height + 0.005, z, [0, 1, 0], [1, 0, 0], ground.zone);
                 else if (ground.tags.includes("burrows") && roll < 0.8) push("burrow_entrance", `burrow${Math.round(x)},${Math.round(z)}`, x, ground.height + 0.01, z, [0, 1, 0], [Math.cos(roll * 6.28), 0, Math.sin(roll * 6.28)], ground.zone);
             }
@@ -365,6 +368,9 @@ class WorldSampler implements ArkMapSampler {
         return points;
     }
 }
+
+/** The map's ground-level attach tags (a hole, a burrow's mouth, a fallen leaf): never inside a drawn rock. */
+const GROUND_TAGS: ReadonlySet<AttachTag> = new Set<AttachTag>(["worm_hole", "burrow_entrance"]);
 
 /** The scenery interface's attach tags as the map's (`sampler.ts` ATTACH_MEANS): a pond's surface is the water species' (`water.ts`), hang points not yet used. */
 const SCENERY_TAG: Partial<Record<SceneryTag, AttachTag>> = {

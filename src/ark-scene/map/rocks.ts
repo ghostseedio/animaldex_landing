@@ -17,7 +17,9 @@ import {DECOR_SINK} from "@/ark-scene/micro-decor";
 /** A drawn rock: its middle, its turn, its half-extents along its own x and z, its foot and its top (m). */
 export type DrawnRock = {x: number; z: number; cos: number; sin: number; hx0: number; hx1: number; hz0: number; hz1: number; y0: number; y1: number; reach: number};
 
-const CELL = 4;
+/** The rock index's cell (m): each rock is listed in every cell its reach covers. */
+export const ROCK_CELL = 4;
+const CELL = ROCK_CELL;
 let index: Map<string, DrawnRock[]> | null = null;
 let list: DrawnRock[] | null = null;
 
@@ -63,20 +65,40 @@ function cells(): Map<string, DrawnRock[]> {
 
 /**
  * Does a body (a vertical cylinder of `radius` round x, z, from `base` to
+ * `base + height`) reach into this rock? Without a height: does the rock's
+ * footprint, widened by the radius, cover the point.
+ */
+export function touchesRock(rock: DrawnRock, x: number, z: number, radius: number, base = -Infinity, height = Infinity): boolean {
+    // Into the rock's own frame (three.js turns about +y by its yaw: local x = dx cos − dz sin, local z = dx sin + dz cos).
+    const dx = x - rock.x;
+    const dz = z - rock.z;
+    const lx = dx * rock.cos - dz * rock.sin;
+    const lz = dx * rock.sin + dz * rock.cos;
+    if (lx < rock.hx0 - radius || lx > rock.hx1 + radius || lz < rock.hz0 - radius || lz > rock.hz1 + radius) return false;
+    // (With a body's height: below the rock's foot, or standing on its top, is clear of it.)
+    return !(Number.isFinite(base) && (base + height <= rock.y0 || base >= rock.y1 - 0.02));
+}
+
+/**
+ * Does a body (a vertical cylinder of `radius` round x, z, from `base` to
  * `base + height`) reach into a drawn rock? Without a height: any rock whose
- * footprint (widened by the radius) covers the point.
+ * footprint (widened by the radius) covers the point. Every cell the body
+ * covers is searched, not only the one its middle is in: a rock is listed by
+ * its own reach, so a body at a cell's edge can touch a rock listed only in
+ * the next cell (the behaviour lane's find, 2026-11-11).
  */
 export function inRock(x: number, z: number, radius: number, base = -Infinity, height = Infinity): boolean {
-    for (const rock of cells().get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`) ?? []) {
-        // Into the rock's own frame (three.js turns about +y by its yaw: local x = dx cos − dz sin, local z = dx sin + dz cos).
-        const dx = x - rock.x;
-        const dz = z - rock.z;
-        const lx = dx * rock.cos - dz * rock.sin;
-        const lz = dx * rock.sin + dz * rock.cos;
-        if (lx < rock.hx0 - radius || lx > rock.hx1 + radius || lz < rock.hz0 - radius || lz > rock.hz1 + radius) continue;
-        // (With a body's height: below the rock's foot, or standing on its top, is clear of it.)
-        if (Number.isFinite(base) && (base + height <= rock.y0 || base >= rock.y1 - 0.02)) continue;
-        return true;
+    const grid = cells();
+    // (The widened footprint is a box in the rock's own frame: a turned rock's corner reaches √2 times the radius.)
+    const r = Math.max(radius, 0) * Math.SQRT2;
+    const i0 = Math.floor((x - r) / CELL);
+    const i1 = Math.floor((x + r) / CELL);
+    const j0 = Math.floor((z - r) / CELL);
+    const j1 = Math.floor((z + r) / CELL);
+    for (let i = i0; i <= i1; i++) {
+        for (let j = j0; j <= j1; j++) {
+            for (const rock of grid.get(`${i},${j}`) ?? []) if (touchesRock(rock, x, z, radius, base, height)) return true;
+        }
     }
     return false;
 }

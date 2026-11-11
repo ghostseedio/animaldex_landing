@@ -98,6 +98,7 @@ import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightC
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
@@ -1166,14 +1167,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * Its one behaviour state now: its schedule (or the hour and its species), its breath cycle in the water, and
      * whether it is acting out a server event. Never the selection.
      */
+    /** A scheduled diver's breath from its trip (`breath-trip.ts`); null asleep (its slower breath cycle, where it sleeps). */
+    const scheduledBreath = (own: Sched): number | null => (own.pose?.doing === "sleep" ? null : own.trip ? tripBreath(own.trip, worldMs() / 1000) : 0);
     const stateOf = (entry: Pick<Entry, "animal" | "visitor" | "act"> & Partial<Pick<Entry, "sched" | "moment" | "depth" | "seed">>): ArkBehaviourState => {
         // An air-breather in the water comes up for air on its breath cycle (a floater is at the surface already).
         // (Its band and seed are the entry's own, worked out once, when it has them: this runs every frame.)
         const depth = entry.depth !== undefined ? entry.depth : speciesDepth(entry.animal.model_slug, entry.animal.zone);
-        const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: entry.seed ?? depthSeed(entry.animal.id), clock: clockNow()} : null;
+        const onSchedule = entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment});
+        // (Awake on the schedule: the breath its breathe trip carries, on its way: `breath-trip.ts`.)
+        const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: entry.seed ?? depthSeed(entry.animal.id), clock: clockNow(), breath: onSchedule ? scheduledBreath(entry.sched!) : null} : null;
         // One the classifier holds off the water (a frigatebird) stays aloft, asleep or not: it never comes down onto the sea.
         const aloftAlways = Boolean(heldOffWater(entry.animal.model_slug));
-        const onSchedule = entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment});
         return behaviourState({
             activity: entry.animal.activity,
             elevation: sunElevation,
@@ -2148,7 +2152,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         if (inDepthBand(entry.depth, at, ground) && !act?.own) {
             const clock = clockNow();
-            const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
+            // (Awake, its breath on its way there: `breath-trip.ts`.)
+            const breath = entry.state.breathing ? scheduledBreath(own) ?? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
             // (Under the surface where the tide has it now: `tideFit`.)
             const base = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
