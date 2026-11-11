@@ -36,6 +36,11 @@
  *   codec delay a few milliseconds differently still loops continuous sound.
  * - Start a bed at `offset` seconds into the buffer (inside the loop: the
  *   same moment of it for every viewer at `nowMs`), or at `loopStart`.
+ * - After decoding, call `blendLoopSeam(buffer.getChannelData(0),
+ *   buffer.sampleRate, loopStart, loopSeconds)` once: lossy codecs leave the
+ *   last sample of the loop and its first a little apart (coding noise), a
+ *   faint tick each time round; the blend makes the loop's first 12 ms
+ *   continue from its last sample, using the padding after the loop.
  * - Prefer `url` (Opus in WebM); use `fallbackUrl` (AAC in M4A) where
  *   `canPlayType('audio/webm; codecs="opus"')` is empty (older Safari).
  *
@@ -60,6 +65,13 @@
  * windows (e.g. each second, [t, t + 1000)) and schedule each clap at `at`;
  * a clap is in exactly one window. The storm bed carries the rain and the
  * far rumble between them.
+ *
+ * Beside `ambientMix` (src/lib/ark-sound.ts): these beds stand in for its
+ * waves, wind, river, pond, rain, forest_day, night_insects, dawn_chorus and
+ * thunder, which were habitat banks or had no recording. Play one or the
+ * other for those, never both; `ambientMix` is still the only source for the
+ * underwater, polar-wind and desert-wind habitat banks if the engine wants
+ * them (underwater here is the surf, muffled).
  *
  * The bed table is `ambient-beds.json`; the recordings and their licences are
  * in `docs/ark-credits.md` ("Ambient beds").
@@ -346,6 +358,25 @@ export function approachGain(current: number, target: number, dtSeconds: number,
     if (!(ramp > 0) || !(dtSeconds > 0)) return target;
     const k = 1 - Math.exp(-dtSeconds / (ramp / 3));
     return current + (target - current) * k;
+}
+
+/**
+ * Smooth a decoded bed's loop point in place: the loop's first `blendMs`
+ * fade from the decoded continuation of its end (the padding after the loop
+ * holds the loop's own start, coded as it follows the end) into its own
+ * start, so playback runs from the loop's last sample into its first without
+ * the coding noise's step. Returns the same array. Safe to call once per
+ * buffer; does nothing without the padding.
+ */
+export function blendLoopSeam(data: Float32Array, sampleRate: number, loopStart: number, loopSeconds: number, blendMs = 12): Float32Array {
+    const a = Math.round(loopStart * sampleRate);
+    const b = Math.round((loopStart + loopSeconds) * sampleRate);
+    const n = Math.min(Math.round((blendMs / 1000) * sampleRate), data.length - b, b - a);
+    for (let i = 0; i < n; i++) {
+        const w = (i + 0.5) / n;
+        data[a + i] = data[b + i] * (1 - w) + data[a + i] * w;
+    }
+    return data;
 }
 
 export function bedUrl(id: string, format: "webm" | "m4a", baseUrl = ""): string {

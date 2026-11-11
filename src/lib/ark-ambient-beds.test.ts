@@ -11,6 +11,7 @@ import {
     ambientCredits,
     ambientGains,
     approachGain,
+    blendLoopSeam,
     lightningFlashes,
     loopOffset,
     panToward,
@@ -312,4 +313,28 @@ test("thunder follows each flash by its distance, the same for everyone, once pe
     assert.ok(thunderClaps({fromMs: from, toMs: from + span, storm: 1, yaw: 0.4}, def).some((c) => typeof c.pan === "number"));
     assert.deepEqual(thunderClaps({fromMs: from, toMs: from + span, storm: 0}, def), []);
     assert.deepEqual(thunderClaps({fromMs: from, toMs: from + span, storm: 1}, {...def, ready: false}), []);
+});
+
+test("blendLoopSeam: the loop's first samples continue from its end, then become its own start", () => {
+    const sr = 1000;
+    const loopStart = 0.5;
+    const loopSeconds = 2;
+    // A tone that loops exactly (period 0.2 s), decoded with a slowly wandering coding error: the decoded end
+    // (sample 2499) runs smoothly into the padding (2500, the loop's start coded again) but not into sample 500.
+    const tone = (i: number) => Math.sin((2 * Math.PI * i) / 200);
+    const err = (i: number) => 0.2 * Math.sin(i / 37);
+    const data = new Float32Array(3000);
+    for (let i = 0; i < data.length; i++) data[i] = tone(i) + err(i);
+    const step = (x: Float32Array) => Math.abs(x[2499] - x[500]);
+    const typical = Math.abs(data[2499] - data[2498]);
+    const before = step(data);
+    blendLoopSeam(data, sr, loopStart, loopSeconds, 20);
+    const after = step(data);
+    assert.ok(before > typical * 3, `before ${before} vs ${typical}`);
+    assert.ok(after < typical * 1.5, `after ${after} vs ${typical}`);
+    // Past the blend, the loop's own samples are untouched.
+    assert.ok(Math.abs(data[530] - (tone(530) + err(530))) < 1e-6);
+    // No padding after the loop: nothing changes.
+    const short = new Float32Array(2500).map((_, i) => i);
+    assert.deepEqual(Array.from(blendLoopSeam(short.slice(), sr, loopStart, loopSeconds)), Array.from(short));
 });
