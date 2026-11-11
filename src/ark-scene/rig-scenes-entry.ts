@@ -570,14 +570,14 @@ async function mountIsland(el: HTMLElement) {
                                 tr.turn += Math.abs(turn);
                                 // Whose turning: a recipe episode laid over the schedule (its pose acts), or the schedule's own steps.
                                 const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
-                                const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
+                                const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : `schedule:${(e.sched?.pose as {beat?: string} | null | undefined)?.beat ?? "?"}`;
                                 const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
                                 by.turn += Math.abs(turn);
                                 tr.byRecipe.set(source, by);
                             }
                             {
                                 const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
-                                const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
+                                const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : `schedule:${(e.sched?.pose as {beat?: string} | null | undefined)?.beat ?? "?"}`;
                                 const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
                                 by.moving += span;
                                 tr.byRecipe.set(source, by);
