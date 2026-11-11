@@ -284,8 +284,11 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         } catch {
             // The device decides.
         }
-        import("@/ark-scene")
-            .then(({mountArk}) => {
+        Promise.all([import("@/ark-scene"), import("@/ark-scene/runtime/prebuild")])
+            .then(async ([{mountArk}, {prepareArk}]) => {
+                if (disposed) return;
+                // Runtime: the mount's heavy seeded work (decor, forest, grass, places) in a worker first (docs/ark/runtime.md §7).
+                await prepareArk({snapshot: snapshotRef.current ?? initial});
                 if (disposed) return;
                 try {
                     handle = mountArk(el, {

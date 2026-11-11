@@ -92,8 +92,20 @@
     else if (window.parent !== window) window.parent.postMessage(message, "*");
   }
 
+  // The runtime's prebuild (the mount's heavy seeded work in a worker), once, before the first mount.
+  var prepared = null;
   function show(snapshot) {
     if (!snapshot) return;
+    if (scene) { scene.update(snapshot); return; }
+    if (!prepared && Ark.prepareArk) {
+      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js"}).then(function () { prepared = true; mount(snapshot); });
+      return;
+    }
+    if (prepared !== true && Ark.prepareArk) return;
+    mount(snapshot);
+  }
+
+  function mount(snapshot) {
     if (scene) { scene.update(snapshot); return; }
     scene = Ark.mountArk(document.getElementById("ark"), {
       snapshot: snapshot,

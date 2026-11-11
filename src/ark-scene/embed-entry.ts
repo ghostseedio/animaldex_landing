@@ -5,11 +5,12 @@
  */
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
+import {prepareArk} from "@/ark-scene/runtime/prebuild";
 
 declare global {
     interface Window {
-        AnimalDexArk?: {mountArk: typeof mountArk; decodeArkSnapshot: typeof decodeArkSnapshot};
+        AnimalDexArk?: {mountArk: typeof mountArk; decodeArkSnapshot: typeof decodeArkSnapshot; prepareArk: typeof prepareArk};
     }
 }
 
-window.AnimalDexArk = {mountArk, decodeArkSnapshot};
+window.AnimalDexArk = {mountArk, decodeArkSnapshot, prepareArk};

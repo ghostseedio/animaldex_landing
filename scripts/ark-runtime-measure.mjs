@@ -74,6 +74,23 @@ await build({
     define: {"process.env.NODE_ENV": JSON.stringify("development")},
     logLevel: "warning"
 });
+// The prebuild worker (`--prebuild`), and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
+await build({
+    entryPoints: [path.join(root, "src/ark-scene/runtime/prebuild-worker.ts")],
+    outfile: path.join(site, "ark-prebuild-worker.js"),
+    bundle: true,
+    format: "iife",
+    platform: "browser",
+    target: ["es2020"],
+    minify: true,
+    tsconfig: path.join(root, "tsconfig.json"),
+    define: {"process.env.NODE_ENV": JSON.stringify("development")},
+    logLevel: "warning"
+});
+for (const scale of ["1x", "3x"]) {
+    const from = path.join(root, ".ark-golden", "site", `population-${scale}.json`);
+    if (existsSync(from)) writeFileSync(path.join(site, `population-${scale}.json`), readFileSync(from));
+}
 writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -170,7 +187,7 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}`;
+        const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}`, {waitUntil: "commit", timeout: 120_000});
         await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
         const measured = await page.evaluate(() => window.__arkMeasure);
@@ -220,13 +237,15 @@ for (const deviceName of devices) {
             drawCalls: r.stats.drawCalls,
             triangles: r.stats.triangles,
             runtime: r.runtime,
+            prepared: r.prepared,
+            animals: r.animals,
             tasks,
             longFrames: frames.filter((frame) => frame.blocking > 0 || frame.ms > 100).slice(0, 40),
             samples: r.samples,
             errors: errors.filter((e) => !/Failed to load resource/.test(e)).slice(0, 8)
         };
         results.push(row);
-        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}`);
+        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
         await context.close();
     }
 }
