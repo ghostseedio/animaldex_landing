@@ -153,7 +153,7 @@ async function record(cdp, name) {
 const summary = [];
 if (!perfOnly) {
     const wanted = arg("scenarios", "");
-    for (const name of wanted ? wanted.split(",") : ["predator_herd", "pack_hunt", "squirrel_cache", "avoid_spot", "parents_shield", "storm", "curious_camera", "sentinel_raptor"]) {
+    for (const name of wanted ? wanted.split(",") : ["predator_herd", "pack_hunt", "squirrel_cache", "avoid_spot", "parents_shield", "storm", "curious_camera", "sentinel_raptor", "heads_closeup"]) {
         const {context, page, errors, cdp} = await open("desktop", "quality=high", true);
         const prepared = await page.evaluate(() => window.__arkIntel.prepare());
         log(name, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier}));
@@ -162,9 +162,11 @@ if (!perfOnly) {
         const samples = [];
         const started = Date.now();
         let shot = 0;
-        while (Date.now() - started < seconds * 1000) {
+        // A scenario may ask for longer (the squirrel's return comes after 20 s); --seconds sets the rest.
+        const length = arg("seconds", null) ? seconds : info.seconds ?? seconds;
+        while (Date.now() - started < length * 1000) {
             samples.push(await page.evaluate((watch) => window.__arkIntel.sample(watch), info.watch));
-            const k = Math.floor((Date.now() - started) / ((seconds * 1000) / 5));
+            const k = Math.floor((Date.now() - started) / ((length * 1000) / 5));
             if (k >= shot) {
                 await page.screenshot({path: path.join(out, `${name}-${String(shot).padStart(2, "0")}.png`)});
                 shot++;

@@ -149,7 +149,7 @@ async function mountScenarios(el: HTMLElement) {
     const site = (zone: keyof typeof ZONE_SITES, dx = 0, dz = 0) => ({x: ZONE_SITES[zone].x + dx, z: ZONE_SITES[zone].z + dz});
 
     /** Each scenario arranges its animals and returns what to watch, and `go`: the scripted shared paths start when recording starts. */
-    const SCENARIOS: Record<string, () => Promise<{note: string; watch: string[]; go?: () => void}>> = {
+    const SCENARIOS: Record<string, () => Promise<{note: string; watch: string[]; go?: () => void; seconds?: number}>> = {
         /** A lion walks past a zebra herd: the first to notice calls, the alarm runs through, they bunch and run. */
         predator_herd: async () => {
             const at = site("grassland", 6, 4);
@@ -170,9 +170,10 @@ async function mountScenarios(el: HTMLElement) {
         /** A squirrel buries food, goes about its business, and comes back to dig it up. */
         squirrel_cache: async () => {
             const at = site("woodland", 8, -6);
-            hold("squirrel", at.x, at.z, 3, "forage");
-            view(at.x + 1, at.z, 6, 0.6, 1.05);
-            return {note: "forage slots: bury, then return after 20 s", watch: byPrefix.squirrel};
+            hold("squirrel", at.x, at.z, 1.6, "forage");
+            // Close and low enough to see a squirrel's head go down to dig (at 6 m they were specks), and 45 s: the return comes after 20 s.
+            view(at.x + 0.5, at.z, 3.6, 0.6, 1.2);
+            return {note: "forage: each buries food, feeds and looks round, and comes back to dig it up after 20 s", watch: byPrefix.squirrel, seconds: 45};
         },
         /** After the lion has gone, the zebras keep away from where it was and stay watchful; a second pass, quicker. */
         avoid_spot: async () => {
@@ -213,6 +214,15 @@ async function mountScenarios(el: HTMLElement) {
             view(at.x, at.z, 24, 0.4);
             return {note: "storm 1, rain 1, wind 1", watch: byPrefix.zebra};
         },
+        /** Heads (problem 5): three zebras close up, grazing and looking round on their own; a lion walks past 18 m off and every head comes up and follows it. */
+        heads_closeup: async () => {
+            const at = site("grassland", -6, -8);
+            hold("zebra", at.x, at.z, 2.2, "graze", 3);
+            walk(byPrefix.lion[0], {x: at.x - 30, z: at.z - 18}, {x: at.x + 30, z: at.z - 18}, nowS() + 1e6, 30);
+            // The camera on the zebras' near side; the lion crosses beyond them, left to right.
+            view(at.x, at.z - 2, 7, 0.2, 1.25);
+            return {note: "zebras 7 m from the camera; the lion walks past 18 m beyond them from 8 s", watch: [...byPrefix.zebra.slice(0, 3), byPrefix.lion[0]], go: () => walk(byPrefix.lion[0], {x: at.x - 30, z: at.z - 18}, {x: at.x + 30, z: at.z - 18}, nowS() + 8, 30), seconds: 30};
+        },
         /** Curious, sharp chimpanzees come over to look at the camera; a dull animal would only glance. */
         curious_camera: async () => {
             const at = site("rainforest", 0, 0);
@@ -228,11 +238,12 @@ async function mountScenarios(el: HTMLElement) {
                 debug().pinShared(byPrefix.eagle[0], (epoch: number) => {
                     const u = Math.min(Math.max((epoch - start) / 10, 0), 1);
                     const x = at.x + 60 - 100 * u;
-                    return {x, z: at.z + 3, y: Math.max(heightAt(x, at.z), 0) + 12, yaw: -Math.PI / 2, moving: true, aloft: true, doing: "soar"};
+                    return {x, z: at.z + 3, y: Math.max(heightAt(x, at.z), 0) + 8, yaw: -Math.PI / 2, moving: true, aloft: true, doing: "soar"};
                 });
             eagle(nowS() + 1e6);
-            view(at.x, at.z, 8, 0.5, 1.15);
-            return {note: "the martial eagle comes over 8 s in", watch: [...byPrefix.meerkat, ...byPrefix.eagle], go: () => eagle(nowS() + 8)};
+            // Low and looking along the eagle's line, so the sky it comes in from is in the frame.
+            view(at.x + 1, at.z, 10, -Math.PI / 2 + 0.35, 1.38);
+            return {note: "the martial eagle comes over from the right 8 s in, 8 m up", watch: [...byPrefix.meerkat, ...byPrefix.eagle], go: () => eagle(nowS() + 8), seconds: 24};
         }
     };
 
@@ -257,7 +268,7 @@ async function mountScenarios(el: HTMLElement) {
             // Let the herd settle into its calm business before anything happens.
             await wait(1500);
             result.go?.();
-            return {note: result.note, watch: result.watch};
+            return {note: result.note, watch: result.watch, seconds: result.seconds ?? null};
         },
         sample: (watch: string[]) => {
             const out: Record<string, unknown> = {};
