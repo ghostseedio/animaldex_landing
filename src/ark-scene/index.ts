@@ -122,6 +122,7 @@ import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {poseOnTrip, scheduleWorld, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
@@ -1472,6 +1473,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 length: e.length,
                 size: e.sched.profile.size,
                 speed: e.sched.profile.speed,
+                gait: e.sched.profile.gait,
                 dominance: e.sched.profile.dominance,
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,
@@ -1487,6 +1489,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             });
         }
         reactiveInputs = inputs.length;
+        // Nothing near, or the world's sampler still being built a slice at a time (`worldSamplerReady` on the behaviour
+        // lane's 67d6ddf3; asking for it now would finish the build in one stall): the layer waits a frame.
+        const samplerReady = (worldSampling as unknown as {worldSamplerReady?: () => boolean}).worldSamplerReady;
+        if (!inputs.length || (samplerReady && !samplerReady())) {
+            reactiveMs = performance.now() - t0;
+            return;
+        }
         const sampler = worldSampler();
         reactiveQueries ??= reactiveWorldQueries(sampler, budget.sightSamples);
         reactiveQueries.samples = budget.sightSamples;

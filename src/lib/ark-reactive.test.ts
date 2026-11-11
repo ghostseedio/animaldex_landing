@@ -220,6 +220,28 @@ test("an alarm about a lion far off puts the herd on alert, heads up and on it; 
     assert.ok(herd.filter((z) => near.some((f) => f.out.get(z.id)!.action === "flee")).length >= 4, "when it comes near, they run");
 });
 
+test("with the shared layer's wariness: already watching, it notices sooner, adds no avoiding of its own, and runs only if the predator comes close", () => {
+    const first = (doing: string, lionX: number) => {
+        const layer = new ReactiveLayer({tier: "high"});
+        const zebra = animal("wz", "plains-zebra", 0, 0, {shared: {doing, yaw: Math.PI / 2}});
+        const lion = animal("wl", "african-lion", lionX, 0, {shared: {doing: "rest", moving: false, yaw: -Math.PI / 2}});
+        const frames = run(layer, [zebra, lion], 8);
+        return {
+            noticed: frames.findIndex((f) => f.out.get("wz")!.looking === "wl"),
+            fled: frames.some((f) => f.out.get("wz")!.action === "flee"),
+            moved: Math.max(...frames.map((f) => Math.hypot(f.out.get("wz")!.dx, f.out.get("wz")!.dz)))
+        };
+    };
+    // A lion resting 18 m off (beyond its flight distance), in sight.
+    const grazing = first("graze", 18);
+    const watching = first("watch", 18);
+    assert.ok(watching.noticed >= 0 && watching.noticed <= grazing.noticed, `watching notices no later (${watching.noticed} vs ${grazing.noticed} frames)`);
+    assert.ok(!watching.fled, "it does not run from a lion 18 m off that the shared layer already has it watching");
+    assert.ok(watching.moved < 0.3, `no extra avoiding step on top of the shared one (${watching.moved.toFixed(2)} m)`);
+    // The lion close: it runs all the same.
+    assert.ok(first("watch", 5).fled, "a lion 5 m off: it runs");
+});
+
 // MARK: Scenario 2: a pack acts out a hunt (the pack mates not in the act stalk and stop short)
 
 test("a pack not acting out a meal stalks, fans out and never closes on the prey", () => {

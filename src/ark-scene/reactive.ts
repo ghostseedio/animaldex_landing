@@ -40,6 +40,7 @@ import {canEat, type ArkIntelProfile} from "@/ark-scene/intelligence-profile";
 import {clampLook, headLimits as headLimitsOf, lookAngles, stepHead, wrapAngle, type HeadLimits} from "@/ark-scene/head-look";
 import {animalPersonality, unit, type ArkPersonality} from "@/lib/ark-clock";
 import {alarmLevel} from "@/lib/ark-sound";
+import {GAIT_CADENCE} from "@/ark-scene/behaviour-profile";
 
 export type Vec3 = {x: number; y: number; z: number};
 
@@ -69,6 +70,8 @@ export type ReactiveInput = {
     dominance: number | null;
     /** The speed stat (0–100): how fast it runs from a threat (`fleeSpeed`). Missing: the middle of the scale. */
     speed?: number | null;
+    /** Its rig's fastest ground clip (`behaviours.json` `gait`): it never runs faster than `gait × GAIT_CADENCE` body lengths a second (its feet would slide). */
+    gait?: number | null;
     social: string;
     diet: string;
     intel: ArkIntelProfile;
@@ -225,7 +228,9 @@ export function fleeSpeed(input: ReactiveInput): number {
     const stat = Math.min(Math.max(input.speed ?? 50, 0), 100);
     const length = Math.max(input.length, 0.3);
     const small = Math.min(Math.max(1 / Math.sqrt(Math.max(input.length, 0.2)), 0.8), 2.2);
-    return Math.min(length * (1.5 + 4 * (stat / 100)) * small, 8);
+    // Capped by its rig's fastest clip (agreed with the behaviour lane: the schedule's own cap, so the feet never slide).
+    const rig = input.gait ? length * input.gait * GAIT_CADENCE : Infinity;
+    return Math.min(length * (1.5 + 4 * (stat / 100)) * small, rig, 8);
 }
 
 /**
@@ -717,7 +722,9 @@ export class ReactiveLayer {
                 // Sharper (and warier, and already burnt) animals notice sooner.
                 const burnt = agent.memory.predators.find((m) => m.slug === threat!.input.slug)?.strength ?? 0;
                 // The one on watch is looking for exactly this: it is quickest of all.
-                const delay = Math.max(0.05, person.fleeDelay * (1.2 - p.learning * 0.5) * (agent.onWatch ? 0.35 : 1) - 0.12 * burnt);
+                // (Watching already: on sentinel duty, or the shared layer has it watching a predator it saw at its slot's start.)
+                const watching = agent.onWatch || me.shared.doing === "watch";
+                const delay = Math.max(0.05, person.fleeDelay * (1.2 - p.learning * 0.5) * (watching ? 0.35 : 1) - 0.12 * burnt);
                 agent.threat = {id: threat.input.id, slug: threat.input.slug, x: threat.seen.x, z: threat.seen.z, seen: world.now, noticed: world.now + delay};
             } else {
                 agent.threat.x = threat.seen.x;
@@ -896,7 +903,8 @@ export class ReactiveLayer {
         // Away from a remembered predator spot (it avoids where it saw one), within the envelope.
         const fresh = agent.memory.predators.find((m) => world.now - m.t < 20 + 40 * p.learning && Math.hypot(m.x - me.shared.x, m.z - me.shared.z) < 12);
         // (Not while it reacts: an alert, freezing or withdrawn animal holds still; a fleeing one has its own way.)
-        if (fresh && !REACTING.has(action)) {
+        // (Nor when the shared layer has it watching a predator from the far side of its range: that is the avoiding, done once.)
+        if (fresh && !REACTING.has(action) && me.shared.doing !== "watch") {
             const ux = me.shared.x - fresh.x;
             const uz = me.shared.z - fresh.z;
             const ul = Math.hypot(ux, uz) || 1;
@@ -1054,7 +1062,8 @@ export class ReactiveLayer {
         // Vigilance: alone it looks up a lot; in a herd less ("many eyes"); a sentinel group leaves it to the sentinel.
         const sentinelGroup = p.sentinel && groupSize > 1;
         const vigilance = (0.55 + 0.4 * (1 - n.safety) + (agent.memory.predators.length ? 0.3 : 0)) / Math.sqrt(p.manyEyes ? groupSize : 1) * (sentinelGroup ? 0.5 : 1) * (1 - person.boldness * 0.2);
-        add("scan", vigilance);
+        // On watch in the shared layer (a predator in sight at its slot's start, or its turn to keep watch): it looks round.
+        add("scan", vigilance + (doing === "watch" ? 0.9 : 0));
         if (sentinelGroup && this.isSentinel(me, kin, world)) add("sentinel", 2);
         if (FEEDING.has(doing)) add(doing === "drink" ? "drink" : "feed", 0.6 + (doing === "drink" ? n.thirst : n.hunger));
         if (RESTING.has(doing) && n.energy < 0.6) add("doze", 0.5 + (0.6 - n.energy));

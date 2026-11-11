@@ -1,6 +1,6 @@
 # The flee envelope (intelligence ↔ behaviour)
 
-**Status:** for the behaviour lane to align with. Lane: `ark-intelligence-web`. Numbers come from `src/ark-scene/reactive.ts`, `src/ark-scene/intelligence.json` and `src/ark-scene/sizes.ts` as of 75cd81a3. Where a number changes later, this file changes with it.
+**Status:** agreed with the behaviour lane (67d6ddf3): §6.2 and §6.3. Lane: `ark-intelligence-web`. Numbers come from `src/ark-scene/reactive.ts`, `src/ark-scene/intelligence.json` and `src/ark-scene/sizes.ts` as of 75cd81a3. Where a number changes later, this file changes with it.
 
 **Changes since the first draft (1e0b5ba5):**
 
@@ -153,7 +153,7 @@ Modifiers: stored shy or wary text gives ×1.4, stored curious or bold text ×0.
 |---|---|---|
 | Flee reach (the envelope when fleeing) | `clamp(3.5·L + 1.5, 2, 9)` m, L = drawn length | mouse 2.5, sparrow 2.8, rabbit 3.8, roe deer 6.1, red deer 7.6, elephant 9 |
 | Calm reach (its own business) | `clamp(0.8·L + 0.4, 0.5, 2.5)` m | mouse 0.6, deer 1.8, elephant 2.5 |
-| Flee speed (`fleeSpeed`) | `min(max(L, 0.3) · (1.5 + 4·speed/100) · clamp(1/√L, 0.8, 2.2), 8)` m/s: the speed stat in body lengths a second, with small animals covering more of their own lengths | mouse 1.4, sparrow 2.0, rabbit 2.6, roe deer 4.3, red deer 5.7, elephant 8. A tortoise runs about half as fast as a deer of its length, and withdraws instead |
+| Flee speed (`fleeSpeed`) | `min(max(L, 0.3) · (1.5 + 4·speed/100) · clamp(1/√L, 0.8, 2.2), max(L, 0.3) · gait · 2.5, 8)` m/s: the speed stat in body lengths a second (small animals cover more of their own lengths), capped by the rig's fastest clip (§6.3.4) | Before the gait cap: mouse 1.4, sparrow 2.0, rabbit 2.6, roe deer 4.3, red deer 5.7, elephant 8. With today's gaits: red deer about 2.0, roe deer 1.9, elephant 0.7. A tortoise runs about half as fast as a deer of its length, and withdraws instead |
 | Body turn while fleeing | up to ±1.2 rad off the shared yaw, at 6 rad/s eased | |
 | The dash | reach / speed: about 1 to 2 s | |
 
@@ -185,7 +185,7 @@ It takes its first stored defence that has a refuge within 3 × the flee reach (
 
 - **Blending.** The direction mixes "away" with "toward the refuge" at 0.7 toward the refuge. If the refuge lies toward the threat, it is 0.25 toward the refuge, bent away.
 - **From a raptor overhead.** It makes for cover first (a burrow, a bush, a tree), even when its group is listed first. It bunches with its group only where there is no cover.
-- **Never into the water.** A land animal's offset shortens until it stays on land (`index.ts`, `stepReactive`). So `flee_water` animals (frogs, terrapins, otters) run to the edge, and going in is the shared layer's job (`enter_water`).
+- **Never into the water, never out of it.** A land animal's offset shortens until it stays on land, and a water animal's until it stays in the water at its depth (`offsetShare`). So `flee_water` animals (frogs, terrapins, otters) run to the edge, and going in is the shared layer's job (`enter_water`, agreed in §6.3.5).
 - **`fly_off` birds on the ground** run or hop off within their reach (2.8 to 4 m). A real take-off needs the flight clips, which stay held until the owner approves them (`ARK_FLIGHT_APPROVED`). The proposal for then is in §6.4.
 
 ## 6. How the shared schedule yields, and resumes
@@ -202,25 +202,28 @@ The schedule never yields per viewer. It is a pure function of time and ids, and
 - **Spacing** (`spaceHomes`). Predators' home ranges are kept `max(10, 6·L) + both reaches` from their prey's.
   - The reactive layer only covers what is near the camera, so the shared spacing is what keeps the whole island from looking like predators walking through herds.
   - With spacing, most shared encounters happen at 10 to 25 m, where prey look and alert. The close ones (under 6 m) are the reactive layer's flee.
-- **Stalking towards the edge of its range.** A stalking predator's local offset adds at most its calm reach toward the prey, and stops at `minGap`.
+- **Stalking towards the edge of its range.** The schedule's `stalk` is a shared slow walk to the edge of the predator's own range (its weight is not 0). The local layer adds on top only the crouch, the look, and at most its calm reach toward the prey, and it stops at `minGap`.
+- **Shared wariness** (behaviour 67d6ddf3, `threatAt`, `wireThreats`). A prey animal that, at the start of its slot, sees an awake predator within `WARY_METRES` (35 m) goes to the far side of its range and watches it (`doing: "watch"`, facing it). The local layer composes with it and does not react twice:
+  - Already watching, it notices the predator sooner (its notice delay × 0.35, as for a sentinel), and its head goes to it.
+  - It adds no avoiding step of its own: the remembered-spot push is off while `doing` is `watch`, because the shared layer has done the moving away.
+  - It runs only if the predator comes inside its flight distance (§3), or on its group's flight or an alarm (§2).
+  - With nothing in sight it looks round (`scan` favoured while `doing` is `watch`).
+  - Test: "with the shared layer's wariness …" in `ark-reactive.test.ts`.
 
-### 6.3 What I ask of the behaviour lane (to agree)
+### 6.3 What was asked of the behaviour lane, and agreed
 
 1. **The envelope function.** `reactiveEnvelope` is replaceable: the scene can pass `envelope` to `new ReactiveLayer({envelope})`.
    - If behaviour wants different numbers (for example, the flee reach from the speed stat instead of the length), replace the function; don't fork the layer.
    - I propose keeping the numbers in §4 until the encounter scenarios (`scripts/ark-intelligence-encounters.mts`) say otherwise.
 2. **Pass `doing` honestly.** The layer reads `shared.doing` to choose its calm actions (feed while `graze`/`forage`, doze while `rest`, wait its turn at `drink`). It also reads `moving` (a moving predator is easier to see and hear) and `aloft`.
    - Please keep these names stable, or tell me the new ones.
-   - `stalk` and `flee` in `behaviours.json` are weight 0 in the schedule. Keep them at 0: the local layer does both near the camera.
-3. **Shared wariness (optional, deterministic).** If you want prey far from the camera to react too, for the livestream and the overview, do it in the schedule from shared inputs only: the predator's shared position at the start of a slot. The prey's next goal is then chosen away from it.
-   - That is a shared decision, the same for all viewers, and it fits the local layer: the local layer only adds the look and the dash on top.
-   - Don't use the local layer's output for it.
+   - `flee` in `behaviours.json` is weight 0 in the schedule: the local layer does the flight near the camera. `stalk` is not 0: it is the shared slow walk in §6.2.
+3. **Shared wariness.** Done by behaviour (§6.2): decided in the schedule from shared inputs only (the predator's shared position at the slot's start), never from the local layer's output.
 4. **The animation follows the drawn speed.** `rigFor` measures the speed from the drawn position, offset included, so a flee plays the walk or run clip by speed.
-   - The schedule's gait cap (2.5× the fastest ground clip) does not apply to the local dash. At 5.7 m/s a red deer outruns its walk clip, and the feet slide.
-   - **Either** the rig lane adds a run or gallop clip to the choice, **or** the flee speed is capped by the rig's fastest clip times 2.5, from `gait` in `behaviours.json`. I can take the gait as an input if you agree.
-5. **Water.** Should an amphibious animal (moves include swim) be allowed to drop into shallow water locally, within its flee reach? Today it stops at the edge.
-   - It would need the scene to treat the drawn pose as afloat for that moment.
-   - Your decision: land↔water is your beat.
+   - **Agreed with behaviour:** the flee speed is capped at `gait × 2.5` (`GAIT_CADENCE`) body lengths a second, with `gait` from `behaviours.json` (`ReactiveInput.gait`, which the scene passes). That is the schedule's own cap, so the feet never slide.
+   - With today's clips (median `gait` 0.41) a red deer runs at about 2 m/s, not 5.7. The cap rises by itself when the rig lane's run clips (stride v2) raise `gait`.
+5. **Water. Behaviour's decision:** a fleeing amphibian stops at the water's edge locally; going into the water stays the shared layer's `enter_water`.
+   - The local rule is `offsetShare` in `reactive.ts`. A land animal is never pushed into the water, and a water animal is never pushed onto a shore or out of its depth (6e28f828).
 
 ### 6.4 Later, with the flight clips: `fly_off`
 
