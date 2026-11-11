@@ -222,7 +222,7 @@
             "outOf": "av {max}",
             "summary": "{animals} om bord, {species}",
             "anonymousTitle": "Anonym om bord",
-            "anonymousBody": "{name} reiser anonymt: i Ark vises dyrene deres som et Voyager-nummer, aldri med navn. Navn vises bare for dem som velger å vise sitt.",
+            "anonymousBody": "{name} reiser anonymt: i Ark vises dyrene deres som et Voyager-nummer, aldri med navn.",
             "selfPrivate": "Bare du ser denne listen. I Ark ser andre dyrene dine som tatt med av {label}.",
             "selfNamed": "Navnet ditt vises på dyrene dine i Ark.",
             "noneSelf": "Ingen av dyrene dine er om bord ennå. Når et steg fra et av dyrene dine fungerer, kommer det dyret om bord.",
@@ -288,7 +288,9 @@
                 "private": "Du vises som et Voyager-nummer så lenge profilen din er privat.",
                 "noHandle": "Legg til et @handle i profilen din for å vise navnet ditt.",
                 "earlier": "Dyr du tok med før navn ble vist, står fortsatt som Voyager.",
-                "nameEarlier": "Vis navnet mitt på dem også"
+                "nameEarlier": "Vis navnet mitt på dem også",
+                "confirmAdult": "Når du slår på dette, bekrefter du at du har fylt 18.",
+                "confirmYes": "Ja, jeg har fylt 18"
             },
             "share": {
                 "ask": "Dele i Ark hvordan det fungerte?",
@@ -302,7 +304,9 @@
                 "notPublic": "Dette kan ikke vises offentlig. Prøv andre ord.",
                 "couldNotCheck": "Kunne ikke sjekke det akkurat nå. Prøv igjen.",
                 "remove": "Fjern fra Ark",
-                "removed": "Fjernet fra Ark"
+                "removed": "Fjernet fra Ark",
+                "askShort": "Dele hvordan det fungerte?",
+                "confirmShare": "Jeg har fylt 18, del"
             },
             "card": {
                 "howAboard": "Slik kom det om bord",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Slik kom dyrene deres om bord",
                 "noStories": "Ingen historier delt ennå."
+            },
+            "name": {
+                "ask": "Vise navnet ditt i Ark?",
+                "adult": "Jeg har fylt 18",
+                "yes": "Ja, vis navnet mitt",
+                "shown": "Navnet ditt vises i Ark"
+            },
+            "error": {
+                "needsAdult": "Bekreft først at du har fylt 18."
             }
         }
     },

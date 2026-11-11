@@ -2990,19 +2990,32 @@
         "changeFailed": "That didn't go through. Try again in a moment.",
         "history": "What changed"
       },
-      "founderShare": {
-        "ask": "Share how this worked on the Ark?",
-        "stepLabel": "What you did",
-        "problemPlaceholder": "One line about the problem, in your words (optional)",
-        "share": "Share",
-        "edit": "Edit",
-        "notNow": "Not now",
-        "shared": "Shared on the Ark",
-        "publicNote": "Everyone who visits the Ark can read this.",
-        "notPublic": "This can't be shown publicly. Try other words.",
-        "couldNotCheck": "Couldn't check that just now. Try again.",
-        "remove": "Remove from the Ark",
-        "removed": "Removed from the Ark"
+      "founders": {
+        "name": {
+          "ask": "Show your name on the Ark?",
+          "adult": "I'm 18 or over",
+          "yes": "Yes, show my name",
+          "shown": "Your name shows on the Ark"
+        },
+        "share": {
+          "ask": "Share how this worked on the Ark?",
+          "stepLabel": "What you did",
+          "problemPlaceholder": "One line about the problem, in your words (optional)",
+          "share": "Share",
+          "edit": "Edit",
+          "notNow": "Not now",
+          "shared": "Shared on the Ark",
+          "publicNote": "Everyone who visits the Ark can read this.",
+          "notPublic": "This can't be shown publicly. Try other words.",
+          "couldNotCheck": "Couldn't check that just now. Try again.",
+          "remove": "Remove from the Ark",
+          "removed": "Removed from the Ark",
+          "askShort": "Share how this worked?",
+          "confirmShare": "I'm 18 or over, share"
+        },
+        "error": {
+          "needsAdult": "Confirm you're 18 or over first."
+        }
       }
     },
     "displayName": "{nickname} the {animal}",
@@ -4229,7 +4242,7 @@
       "outOf": "of {max}",
       "summary": "{animals} aboard, {species}",
       "anonymousTitle": "Anonymous aboard",
-      "anonymousBody": "{name} travels anonymously: on the Ark their animals show as a Voyager number, never a name. Names show only for people who choose to show theirs.",
+      "anonymousBody": "{name} travels anonymously: on the Ark their animals show as a Voyager number, never a name.",
       "selfPrivate": "Only you see this list. On the Ark, others see your animals as brought by {label}.",
       "selfNamed": "Your name shows on your animals in the Ark.",
       "noneSelf": "None of your animals is aboard yet. When a step from one of your animals works, that animal comes aboard.",
@@ -4295,7 +4308,9 @@
         "private": "You show as a Voyager number while your profile is private.",
         "noHandle": "Add an @handle to your profile to show your name.",
         "earlier": "Animals you brought before names were shown still say Voyager.",
-        "nameEarlier": "Show my name on them too"
+        "nameEarlier": "Show my name on them too",
+        "confirmAdult": "Turning this on confirms you're 18 or over.",
+        "confirmYes": "Yes, I'm 18 or over"
       },
       "share": {
         "ask": "Share how this worked on the Ark?",
@@ -4309,7 +4324,9 @@
         "notPublic": "This can't be shown publicly. Try other words.",
         "couldNotCheck": "Couldn't check that just now. Try again.",
         "remove": "Remove from the Ark",
-        "removed": "Removed from the Ark"
+        "removed": "Removed from the Ark",
+        "askShort": "Share how this worked?",
+        "confirmShare": "I'm 18 or over, share"
       },
       "card": {
         "howAboard": "How it got aboard",
@@ -4318,6 +4335,15 @@
       "founder": {
         "storiesTitle": "How their animals got aboard",
         "noStories": "No stories shared yet."
+      },
+      "name": {
+        "ask": "Show your name on the Ark?",
+        "adult": "I'm 18 or over",
+        "yes": "Yes, show my name",
+        "shown": "Your name shows on the Ark"
+      },
+      "error": {
+        "needsAdult": "Confirm you're 18 or over first."
       }
     }
   }

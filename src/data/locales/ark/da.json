@@ -222,7 +222,7 @@
             "outOf": "af {max}",
             "summary": "{animals} om bord, {species}",
             "anonymousTitle": "Anonym om bord",
-            "anonymousBody": "{name} rejser anonymt: i Ark vises vedkommendes dyr som et Voyager-nummer, aldrig med et navn. Navne vises kun for dem, der selv vælger at vise deres.",
+            "anonymousBody": "{name} rejser anonymt: i Ark vises vedkommendes dyr som et Voyager-nummer, aldrig med et navn.",
             "selfPrivate": "Kun du ser denne liste. I Ark ser andre dine dyr som bragt af {label}.",
             "selfNamed": "Dit navn vises på dine dyr i Ark.",
             "noneSelf": "Ingen af dine dyr er om bord endnu. Når et skridt fra et af dine dyr virker, kommer det dyr om bord.",
@@ -288,7 +288,9 @@
                 "private": "Du vises som et Voyager-nummer, så længe din profil er privat.",
                 "noHandle": "Tilføj et @handle til din profil for at vise dit navn.",
                 "earlier": "Dyr, du bragte, før navne blev vist, siger stadig Voyager.",
-                "nameEarlier": "Vis også mit navn på dem"
+                "nameEarlier": "Vis også mit navn på dem",
+                "confirmAdult": "Når du slår dette til, bekræfter du, at du er fyldt 18.",
+                "confirmYes": "Ja, jeg er fyldt 18"
             },
             "share": {
                 "ask": "Del i Ark, hvordan det virkede?",
@@ -302,7 +304,9 @@
                 "notPublic": "Det kan ikke vises offentligt. Prøv andre ord.",
                 "couldNotCheck": "Det kunne ikke tjekkes lige nu. Prøv igen.",
                 "remove": "Fjern fra Ark",
-                "removed": "Fjernet fra Ark"
+                "removed": "Fjernet fra Ark",
+                "askShort": "Del, hvordan det virkede?",
+                "confirmShare": "Jeg er fyldt 18, del"
             },
             "card": {
                 "howAboard": "Sådan kom den om bord",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Sådan kom deres dyr om bord",
                 "noStories": "Ingen historier delt endnu."
+            },
+            "name": {
+                "ask": "Vis dit navn i Ark?",
+                "adult": "Jeg er fyldt 18",
+                "yes": "Ja, vis mit navn",
+                "shown": "Dit navn vises i Ark"
+            },
+            "error": {
+                "needsAdult": "Bekræft først, at du er fyldt 18."
             }
         }
     },

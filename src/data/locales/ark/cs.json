@@ -222,7 +222,7 @@
             "outOf": "z {max}",
             "summary": "Na palubě: {animals}, {species}",
             "anonymousTitle": "Anonymně na palubě",
-            "anonymousBody": "{name} cestuje anonymně: v Ark se zvířata tohoto člověka zobrazují jako číslo Voyager, nikdy se jménem. Jména se zobrazují jen u lidí, kteří se rozhodnou své jméno ukázat.",
+            "anonymousBody": "{name} cestuje anonymně: v Ark se zvířata tohoto člověka zobrazují jako číslo Voyager, nikdy se jménem.",
             "selfPrivate": "Tento seznam vidíš jen ty. V Ark ostatní vidí, že tvá zvířata přivedl {label}.",
             "selfNamed": "U tvých zvířat v Ark se zobrazuje tvé jméno.",
             "noneSelf": "Zatím není na palubě žádné z tvých zvířat. Když zafunguje krok od některého z tvých zvířat, to zvíře nastoupí na palubu.",
@@ -288,7 +288,9 @@
                 "private": "Dokud je tvůj profil soukromý, zobrazuješ se jako číslo Voyager.",
                 "noHandle": "Přidej si do profilu @handle, aby se zobrazilo tvoje jméno.",
                 "earlier": "U zvířat, která jsi přivedl(a) dřív, než se jména zobrazovala, je pořád Voyager.",
-                "nameEarlier": "Zobrazit mé jméno i u nich"
+                "nameEarlier": "Zobrazit mé jméno i u nich",
+                "confirmAdult": "Zapnutím potvrzuješ, že ti je 18 nebo víc.",
+                "confirmYes": "Ano, je mi 18 nebo víc"
             },
             "share": {
                 "ask": "Sdílet v Ark, jak to fungovalo?",
@@ -302,7 +304,9 @@
                 "notPublic": "Tohle nelze zobrazit veřejně. Zkus jiná slova.",
                 "couldNotCheck": "Teď se to nepodařilo ověřit. Zkus to znovu.",
                 "remove": "Odebrat z Ark",
-                "removed": "Odebráno z Ark"
+                "removed": "Odebráno z Ark",
+                "askShort": "Sdílet, jak to fungovalo?",
+                "confirmShare": "Je mi 18 nebo víc, sdílet"
             },
             "card": {
                 "howAboard": "Jak se dostalo na palubu",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Jak se jejich zvířata dostala na palubu",
                 "noStories": "Zatím žádné sdílené příběhy."
+            },
+            "name": {
+                "ask": "Zobrazit tvoje jméno v Ark?",
+                "adult": "Je mi 18 nebo víc",
+                "yes": "Ano, zobrazit mé jméno",
+                "shown": "Tvoje jméno se zobrazuje v Ark"
+            },
+            "error": {
+                "needsAdult": "Nejdřív potvrď, že ti je 18 nebo víc."
             }
         }
     },

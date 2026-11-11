@@ -222,7 +222,7 @@
             "outOf": "de {max}",
             "summary": "{animals} a bordo, {species}",
             "anonymousTitle": "Anônimo a bordo",
-            "anonymousBody": "{name} viaja de forma anônima: na Ark, seus animais aparecem com um número de Voyager, nunca com um nome. Os nomes só aparecem para quem escolhe mostrar o seu.",
+            "anonymousBody": "{name} viaja de forma anônima: na Ark, seus animais aparecem com um número de Voyager, nunca com um nome.",
             "selfPrivate": "Só você vê esta lista. Na Ark, os outros veem seus animais como trazidos por {label}.",
             "selfNamed": "Seu nome aparece nos seus animais na Ark.",
             "noneSelf": "Nenhum dos seus animais está a bordo ainda. Quando um passo de um dos seus animais funcionar, esse animal embarca.",
@@ -288,7 +288,9 @@
                 "private": "Você aparece como um número de Voyager enquanto seu perfil for privado.",
                 "noHandle": "Adicione um @handle ao seu perfil para mostrar seu nome.",
                 "earlier": "Os animais que você trouxe antes de os nomes aparecerem ainda mostram Voyager.",
-                "nameEarlier": "Mostrar meu nome neles também"
+                "nameEarlier": "Mostrar meu nome neles também",
+                "confirmAdult": "Ao ativar, você confirma que tem 18 anos ou mais.",
+                "confirmYes": "Sim, tenho 18 anos ou mais"
             },
             "share": {
                 "ask": "Compartilhar na Ark como funcionou?",
@@ -302,7 +304,9 @@
                 "notPublic": "Isto não pode ser mostrado publicamente. Tente outras palavras.",
                 "couldNotCheck": "Não deu para verificar agora. Tente de novo.",
                 "remove": "Remover da Ark",
-                "removed": "Removido da Ark"
+                "removed": "Removido da Ark",
+                "askShort": "Compartilhar como funcionou?",
+                "confirmShare": "Tenho 18 ou mais, compartilhar"
             },
             "card": {
                 "howAboard": "Como embarcou",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Como os animais dessa pessoa embarcaram",
                 "noStories": "Nenhuma história compartilhada ainda."
+            },
+            "name": {
+                "ask": "Mostrar seu nome na Ark?",
+                "adult": "Tenho 18 anos ou mais",
+                "yes": "Sim, mostrar meu nome",
+                "shown": "Seu nome aparece na Ark"
+            },
+            "error": {
+                "needsAdult": "Primeiro confirme que você tem 18 anos ou mais."
             }
         }
     },

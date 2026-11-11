@@ -239,11 +239,11 @@ export type ArkCaptureWords = {
 
 /**
  * Founders (founders contract, section 6): the tap card's "Brought by {name}"
- * and "How it got aboard", a founder's page, the share line under an arrival
- * in the chat and the "Show my name on my Ark animals" setting.
+ * and "How it got aboard", a founder's page, the name question and share line
+ * under an arrival in the chat, and the "Show my name on my Ark animals" setting.
  */
 export type ArkFoundersWords = {
-    settings: {title: string; note: string; under18: string; private: string; noHandle: string; earlier: string; nameEarlier: string};
+    settings: {title: string; note: string; under18: string; private: string; noHandle: string; earlier: string; nameEarlier: string; confirmAdult: string; confirmYes: string};
     share: {
         ask: string;
         stepLabel: string;
@@ -257,9 +257,16 @@ export type ArkFoundersWords = {
         couldNotCheck: string;
         remove: string;
         removed: string;
+        /** After the name question: the shorter "Share how this worked?". */
+        askShort: string;
+        /** The Share button when the one-tap 18+ confirmation is still needed. */
+        confirmShare: string;
     };
     card: {howAboard: string; broughtBy: string};
     founder: {storiesTitle: string; noStories: string};
+    /** The name question under an arrival (owner, 2026-11-11: "one-tap 18+ confirm"). */
+    name: {ask: string; adult: string; yes: string; shown: string};
+    error: {needsAdult: string};
 };
 
 export type ArkWords = {

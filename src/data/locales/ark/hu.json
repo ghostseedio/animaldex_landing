@@ -222,7 +222,7 @@
             "outOf": "/ {max}",
             "summary": "{animals} a fedélzeten, {species}",
             "anonymousTitle": "Névtelenül a fedélzeten",
-            "anonymousBody": "{name} névtelenül utazik: az Arkon az állatai Voyager-számmal jelennek meg, sosem névvel. Név csak azoknál látszik, akik úgy döntenek, hogy megmutatják a sajátjukat.",
+            "anonymousBody": "{name} névtelenül utazik: az Arkon az állatai Voyager-számmal jelennek meg, sosem névvel.",
             "selfPrivate": "Ezt a listát csak te látod. Az Arkon mások úgy látják, hogy az állataidat {label} hozta.",
             "selfNamed": "A neved megjelenik az állataidon az Arkon.",
             "noneSelf": "Még egyik állatod sincs a fedélzeten. Ha valamelyik állatod lépése beválik, az az állat felszáll a fedélzetre.",
@@ -288,7 +288,9 @@
                 "private": "Amíg a profilod privát, Voyager-számként jelensz meg.",
                 "noHandle": "Adj meg egy @handle azonosítót a profilodban, hogy a neved látszódjon.",
                 "earlier": "Azokon az állatokon, amelyeket a nevek megjelenítése előtt hoztál, még mindig Voyager áll.",
-                "nameEarlier": "Rajtuk is mutasd a nevem"
+                "nameEarlier": "Rajtuk is mutasd a nevem",
+                "confirmAdult": "A bekapcsolással megerősíted, hogy elmúltál 18 éves.",
+                "confirmYes": "Igen, elmúltam 18 éves"
             },
             "share": {
                 "ask": "Megosztod az Arkon, hogyan vált be?",
@@ -302,7 +304,9 @@
                 "notPublic": "Ez nem jeleníthető meg nyilvánosan. Próbáld más szavakkal.",
                 "couldNotCheck": "Most nem sikerült ellenőrizni. Próbáld újra.",
                 "remove": "Eltávolítás az Arkról",
-                "removed": "Eltávolítva az Arkról"
+                "removed": "Eltávolítva az Arkról",
+                "askShort": "Megosztod, hogyan vált be?",
+                "confirmShare": "Elmúltam 18, megosztom"
             },
             "card": {
                 "howAboard": "Hogyan szállt fel",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Hogyan szálltak fel az állatai",
                 "noStories": "Még nincs megosztott történet."
+            },
+            "name": {
+                "ask": "Megjelenjen a neved az Arkon?",
+                "adult": "Elmúltam 18 éves",
+                "yes": "Igen, mutasd a nevem",
+                "shown": "A neved megjelenik az Arkon"
+            },
+            "error": {
+                "needsAdult": "Előbb erősítsd meg, hogy elmúltál 18 éves."
             }
         }
     },

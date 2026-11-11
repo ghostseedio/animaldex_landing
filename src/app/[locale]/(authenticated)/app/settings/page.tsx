@@ -107,7 +107,7 @@ export default async function SettingsPage({params}: {params: {locale: string}})
             {debatesEnabled ? <DebateRosterSection initial={optedIn} words={words} /> : null}
 
             {founderSettings?.enabled ? (
-                <ArkFounderNameSection initial={founderSettings} title={arkWords.eyebrow} words={arkWords.founders.settings} broughtBy={arkWords.founders.card.broughtBy} />
+                <ArkFounderNameSection initial={founderSettings} title={arkWords.eyebrow} words={{...arkWords.founders.settings, notNow: arkWords.founders.share.notNow}} broughtBy={arkWords.founders.card.broughtBy} />
             ) : null}
 
             <SettingsSection title="PRIVACY & DATA">

@@ -14,11 +14,13 @@ export const dynamic = "force-dynamic";
  * - GET ?animal=<id>: `voyage_founder_story_draft_v1` — the step to prefill
  *   (never the problem), the story when shared, and whether it may be shared.
  *   `{draft: null}` signed out, before the migration, or when it fails: no line.
- * - POST {animal_id, step, problem?}: to the edge function
+ * - POST {animal_id, step, problem?, confirm_adult?}: to the edge function
  *   `voyage-founder-story` with the reader's own token (it screens the words
- *   and saves them). `{ok: true, story}`, or `{ok: false, problem}` with
- *   `not_public` (other words, the editor stays open), `could_not_check`
- *   (try again) or `unavailable`.
+ *   and saves them). `confirm_adult: true` only when the reader tapped
+ *   "I'm 18 or over, share". `{ok: true, story}`, or `{ok: false, problem}`
+ *   with `not_public` (other words, the editor stays open), `could_not_check`
+ *   (try again), `needs_adult` (the one-tap 18+ confirmation first) or
+ *   `unavailable`.
  * - DELETE ?animal=<id>: `voyage_founder_story_delete_v1` (the author only).
  *
  * Nothing is shared without the reader's tap; this route never fills in a
@@ -54,7 +56,8 @@ export async function POST(request: Request) {
     const checked = arkStoryShareBody(
         typeof raw?.animal_id === "string" ? raw.animal_id : "",
         typeof raw?.step === "string" ? raw.step : "",
-        typeof raw?.problem === "string" ? raw.problem : null
+        typeof raw?.problem === "string" ? raw.problem : null,
+        raw?.confirm_adult === true
     );
     if (!checked.ok) return NextResponse.json({ok: false, problem: "unavailable", error: checked.error}, {status: 400, headers: HEADERS});
 
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
     const body = await upstream.json().catch(() => null);
     const result = arkStoryShareResult(upstream.status, body);
     if (result.ok) return NextResponse.json({ok: true, story: result.story}, {headers: HEADERS});
-    const status = result.problem === "not_public" ? 422 : result.problem === "could_not_check" ? 503 : upstream.status >= 400 ? upstream.status : 502;
+    const status = result.problem === "not_public" ? 422 : result.problem === "could_not_check" ? 503 : result.problem === "needs_adult" ? 403 : upstream.status >= 400 ? upstream.status : 502;
     return NextResponse.json({ok: false, problem: result.problem}, {status, headers: HEADERS});
 }
 

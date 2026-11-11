@@ -120,49 +120,61 @@ export function DebateRosterSection({initial, words}: {initial: boolean | null; 
     );
 }
 
-async function saveArkFounderName(show: boolean): Promise<ArkFounderSettings | null> {
+async function saveArkFounderName(show: boolean, confirmAdult: boolean): Promise<{settings: ArkFounderSettings} | {refusal: "adult_confirmation_required" | "under_18" | null}> {
     try {
         const response = await fetch("/api/ark/founder-settings", {
             method: "POST",
             headers: {"Content-Type": "application/json", Accept: "application/json"},
-            body: JSON.stringify({show}),
+            body: JSON.stringify(confirmAdult ? {show, confirm_adult: true} : {show}),
             cache: "no-store"
         });
-        if (!response.ok) return null;
-        return decodeArkFounderSettings((await response.json() as {settings?: unknown}).settings);
+        const body = await response.json().catch(() => null) as {settings?: unknown; error?: unknown} | null;
+        const settings = response.ok ? decodeArkFounderSettings(body?.settings) : null;
+        if (settings) return {settings};
+        return {refusal: body?.error === "adult_confirmation_required" || body?.error === "under_18" ? body.error : null};
     } catch {
-        return null;
+        return {refusal: null};
     }
 }
 
 /**
  * "Show my name on my Ark animals" (founders contract, section 3): shown only
  * while the server names founders (`enabled`). Blocked (under 18, a private
- * profile, no @handle): off and disabled, with the reason. Animals from
- * before names shipped that still say Voyager (never chosen): a note and the
- * "Show my name on them too" chip, which turns it on for all of them.
+ * profile, no @handle): off and disabled, with the reason. Turning it on
+ * without a stored adult year asks the one-tap 18+ confirmation inline under
+ * the switch ("Turning this on confirms you're 18 or over."), never a dialog;
+ * turning it off never asks. Animals from before names shipped that still say
+ * Voyager: a note and the "Show my name on them too" chip.
  */
-export function ArkFounderNameSection({initial, title, words, broughtBy}: {initial: ArkFounderSettings; title: string; words: ArkFoundersWords["settings"]; broughtBy: string}) {
+export function ArkFounderNameSection({initial, title, words, broughtBy}: {initial: ArkFounderSettings; title: string; words: ArkFoundersWords["settings"] & {notNow: string}; broughtBy: string}) {
     const [settings, setSettings] = useState(initial);
     const [saving, setSaving] = useState(false);
     const [failed, setFailed] = useState(false);
+    /** The inline 18+ confirmation under the switch, while it waits for an answer. */
+    const [confirming, setConfirming] = useState(false);
     const describeError = useUserFacingError();
     const {checked, disabled} = arkFounderSwitch(settings);
     const blockedNote = settings.blocked === "under_18" ? words.under18 : settings.blocked === "private_profile" ? words.private : settings.blocked === "no_handle" ? words.noHandle : null;
-    const save = (show: boolean) => {
+    const save = (show: boolean, confirmAdult = false) => {
         const previous = settings;
         setSettings({...settings, show_name: show, chosen: true});
         setSaving(true);
         setFailed(false);
-        void saveArkFounderName(show).then((next) => {
+        setConfirming(false);
+        void saveArkFounderName(show, confirmAdult).then((result) => {
             setSaving(false);
-            if (next) setSettings(next);
-            else {
-                setSettings(previous);
-                setFailed(true);
+            if ("settings" in result) {
+                setSettings(result.settings);
+                return;
             }
+            setSettings(previous);
+            // The server wants the 18+ tap first: ask it here, in place.
+            if (result.refusal === "adult_confirmation_required") setConfirming(true);
+            else setFailed(true);
         });
     };
+    /** On: the 18+ confirmation first when the server needs it. Off never asks. */
+    const turnOn = () => (settings.needs_adult_confirm ? setConfirming(true) : save(true));
     return (
         <SettingsSection title={title.toUpperCase()} footer={failed ? describeError(new Error("ark_founder_name")) : undefined}>
             <SettingsToggleRow
@@ -171,8 +183,36 @@ export function ArkFounderNameSection({initial, title, words, broughtBy}: {initi
                 subtitle={blockedNote ?? words.note}
                 checked={checked}
                 disabled={disabled || saving}
-                onChange={save}
+                onChange={(next) => (next ? turnOn() : save(false))}
             />
+            {confirming && !settings.blocked ? (
+                <>
+                    <SettingsDivider />
+                    <div className="flex flex-col items-start gap-2 px-4 py-3 pl-[54px]" role="group" aria-label={words.confirmAdult} data-testid="ark-founder-confirm">
+                        <p className="text-[13px] leading-5 text-white/80">{words.confirmAdult}</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => save(true, true)}
+                                disabled={saving}
+                                className="rounded-full bg-primary-400 px-3 py-1.5 text-[12px] font-semibold text-canvas-950 transition-colors hover:bg-primary-300 disabled:opacity-60"
+                                data-testid="ark-founder-confirm-yes"
+                            >
+                                {words.confirmYes}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setConfirming(false)}
+                                disabled={saving}
+                                className="rounded-full px-3 py-1.5 text-[12px] font-semibold text-white/60 transition-colors hover:text-white disabled:opacity-60"
+                                data-testid="ark-founder-confirm-not-now"
+                            >
+                                {words.notNow}
+                            </button>
+                        </div>
+                    </div>
+                </>
+            ) : null}
             {checked && settings.founder ? (
                 <>
                     <SettingsDivider />
@@ -181,14 +221,14 @@ export function ArkFounderNameSection({initial, title, words, broughtBy}: {initi
                     </div>
                 </>
             ) : null}
-            {settings.earlier_anonymous > 0 && !settings.blocked ? (
+            {settings.earlier_anonymous > 0 && !settings.blocked && !confirming ? (
                 <>
                     <SettingsDivider />
                     <div className="flex flex-col items-start gap-2 px-4 py-3 pl-[54px]" data-testid="ark-founder-earlier">
                         <p className="text-[12px] leading-4 text-white/55">{words.earlier}</p>
                         <button
                             type="button"
-                            onClick={() => save(true)}
+                            onClick={turnOn}
                             disabled={saving}
                             className="rounded-full border border-white/14 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-200 disabled:opacity-60"
                         >

@@ -222,7 +222,7 @@
             "outOf": "z {max}",
             "summary": "Na palube: {animals}, {species}",
             "anonymousTitle": "Anonymne na palube",
-            "anonymousBody": "{name} cestuje anonymne: v Ark sa zvieratá tejto osoby zobrazujú ako číslo Voyager, nikdy s menom. Mená sa zobrazujú len pri ľuďoch, ktorí sa rozhodnú ukázať to svoje.",
+            "anonymousBody": "{name} cestuje anonymne: v Ark sa zvieratá tejto osoby zobrazujú ako číslo Voyager, nikdy s menom.",
             "selfPrivate": "Tento zoznam vidíš len ty. V Ark ostatní vidia, že tvoje zvieratá priviedol {label}.",
             "selfNamed": "Pri tvojich zvieratách v Ark sa zobrazuje tvoje meno.",
             "noneSelf": "Zatiaľ nie je na palube žiadne z tvojich zvierat. Keď zafunguje krok od niektorého z tvojich zvierat, to zviera nastúpi na palubu.",
@@ -288,7 +288,9 @@
                 "private": "Kým je tvoj profil súkromný, zobrazuješ sa ako číslo Voyager.",
                 "noHandle": "Pridaj si do profilu @handle, aby sa zobrazilo tvoje meno.",
                 "earlier": "Pri zvieratách, ktoré si priviedol(-la) skôr, než sa mená zobrazovali, je stále Voyager.",
-                "nameEarlier": "Zobraziť moje meno aj pri nich"
+                "nameEarlier": "Zobraziť moje meno aj pri nich",
+                "confirmAdult": "Zapnutím potvrdzuješ, že máš 18 alebo viac rokov.",
+                "confirmYes": "Áno, mám 18 alebo viac"
             },
             "share": {
                 "ask": "Zdieľať v Ark, ako to fungovalo?",
@@ -302,7 +304,9 @@
                 "notPublic": "Toto sa nedá zobraziť verejne. Skús iné slová.",
                 "couldNotCheck": "Teraz sa to nepodarilo overiť. Skús to znova.",
                 "remove": "Odobrať z Ark",
-                "removed": "Odobrané z Ark"
+                "removed": "Odobrané z Ark",
+                "askShort": "Zdieľať, ako to fungovalo?",
+                "confirmShare": "Mám 18 alebo viac, zdieľať"
             },
             "card": {
                 "howAboard": "Ako sa dostalo na palubu",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Ako sa ich zvieratá dostali na palubu",
                 "noStories": "Zatiaľ žiadne zdieľané príbehy."
+            },
+            "name": {
+                "ask": "Zobraziť tvoje meno v Ark?",
+                "adult": "Mám 18 alebo viac",
+                "yes": "Áno, zobraziť moje meno",
+                "shown": "Tvoje meno sa zobrazuje v Ark"
+            },
+            "error": {
+                "needsAdult": "Najprv potvrď, že máš 18 alebo viac rokov."
             }
         }
     },

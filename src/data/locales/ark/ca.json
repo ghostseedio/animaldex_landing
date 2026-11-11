@@ -222,7 +222,7 @@
             "outOf": "de {max}",
             "summary": "{animals} a bord, {species}",
             "anonymousTitle": "Anònim a bord",
-            "anonymousBody": "{name} viatja de manera anònima: a l'Ark, els seus animals es mostren amb un número Voyager, mai amb un nom. Només es mostren els noms de qui tria mostrar el seu.",
+            "anonymousBody": "{name} viatja de manera anònima: a l'Ark, els seus animals es mostren amb un número Voyager, mai amb un nom.",
             "selfPrivate": "Només tu veus aquesta llista. A l'Ark, els altres veuen els teus animals com a portats per {label}.",
             "selfNamed": "El teu nom es mostra als teus animals de l'Ark.",
             "noneSelf": "Cap dels teus animals no és a bord encara. Quan un pas d'un dels teus animals funcioni, aquest animal pujarà a bord.",
@@ -288,7 +288,9 @@
                 "private": "Apareixes com un número Voyager mentre el teu perfil sigui privat.",
                 "noHandle": "Afegeix un @handle al teu perfil per mostrar el teu nom.",
                 "earlier": "Els animals que vas portar abans que es mostressin els noms encara diuen Voyager.",
-                "nameEarlier": "Mostra el meu nom també en aquests"
+                "nameEarlier": "Mostra el meu nom també en aquests",
+                "confirmAdult": "Si ho actives, confirmes que tens 18 anys o més.",
+                "confirmYes": "Sí, tinc 18 anys o més"
             },
             "share": {
                 "ask": "Vols compartir a l'Ark com va funcionar?",
@@ -302,7 +304,9 @@
                 "notPublic": "Això no es pot mostrar públicament. Prova amb altres paraules.",
                 "couldNotCheck": "Ara mateix no s'ha pogut comprovar. Torna-ho a provar.",
                 "remove": "Treu de l'Ark",
-                "removed": "Tret de l'Ark"
+                "removed": "Tret de l'Ark",
+                "askShort": "Vols compartir com va funcionar?",
+                "confirmShare": "Tinc 18 o més, comparteix"
             },
             "card": {
                 "howAboard": "Com va pujar a bord",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Com van pujar a bord els seus animals",
                 "noStories": "Encara no s'ha compartit cap història."
+            },
+            "name": {
+                "ask": "Vols mostrar el teu nom a l'Ark?",
+                "adult": "Tinc 18 anys o més",
+                "yes": "Sí, mostra el meu nom",
+                "shown": "El teu nom es mostra a l'Ark"
+            },
+            "error": {
+                "needsAdult": "Primer confirma que tens 18 anys o més."
             }
         }
     },

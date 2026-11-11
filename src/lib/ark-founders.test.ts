@@ -6,6 +6,7 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import en from "@/data/locales/en.json";
 import id from "@/data/locales/id.json";
 import {
+    arkFounderNameRefusal,
     arkFounderPath,
     arkFounderStories,
     arkFounderSwitch,
@@ -147,22 +148,41 @@ test("a founder's page: null while names are off; the stories newest first as th
     assert.deepEqual(arkFounderStories(null), []);
 });
 
-test("the setting: shown only when enabled; blocked is off and disabled; earlier animals counted", () => {
+test("the setting: shown only when enabled; blocked is off and disabled; earlier animals counted; the 18+ tap", () => {
     assert.equal(decodeArkFounderSettings(null), null);
     assert.equal(decodeArkFounderSettings({show_name: true}), null);
-    const never = decodeArkFounderSettings({enabled: true, show_name: true, chosen: false, blocked: null, earlier_anonymous: 3, founder: MAYA});
-    assert.deepEqual(never, {enabled: true, show_name: true, chosen: false, blocked: null, earlier_anonymous: 3, founder: MAYA});
-    assert.deepEqual(arkFounderSwitch(never!), {checked: true, disabled: false});
-    const teen = decodeArkFounderSettings([{enabled: true, show_name: true, chosen: false, blocked: "under_18", earlier_anonymous: -2, founder: null}]);
+    // A stored adult who never chose: on by default, no 18+ tap needed.
+    const stored = decodeArkFounderSettings({enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA});
+    assert.deepEqual(stored, {enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA});
+    assert.deepEqual(arkFounderSwitch(stored!), {checked: true, disabled: false});
+    // No stored year, not answered (most people): off until turned on with the 18+ tap; the chat asks the name.
+    const unknown = decodeArkFounderSettings({enabled: true, show_name: false, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: true, ask_name: true, earlier_anonymous: 0, founder: null});
+    assert.deepEqual([unknown?.adult, unknown?.needs_adult_confirm, unknown?.ask_name], ["unknown", true, true]);
+    assert.deepEqual(arkFounderSwitch(unknown!), {checked: false, disabled: false});
+    // Before the 18+ change (no such keys): nothing to confirm, nothing to ask.
+    const older = decodeArkFounderSettings({enabled: true, show_name: true, chosen: false, blocked: null, earlier_anonymous: 0, founder: null});
+    assert.deepEqual([older?.adult, older?.needs_adult_confirm, older?.ask_name], [null, false, false]);
+    const teen = decodeArkFounderSettings([{enabled: true, show_name: true, chosen: false, blocked: "under_18", adult: "teen", ask_name: true, earlier_anonymous: -2, founder: null}]);
     assert.equal(teen?.earlier_anonymous, 0);
+    assert.equal(teen?.adult, "teen");
+    // Blocked: never asked.
+    assert.equal(teen?.ask_name, false);
     assert.deepEqual(arkFounderSwitch(teen!), {checked: false, disabled: true});
+    assert.equal(decodeArkFounderSettings({enabled: false, blocked: "something_new", adult: "maybe"})?.adult, null);
     assert.equal(decodeArkFounderSettings({enabled: false, blocked: "something_new"})?.blocked, null);
     assert.equal(decodeArkFounderSettings({enabled: true, show_name: false})?.show_name, false);
+    // The setter's refusals, from PostgREST's error message.
+    assert.equal(arkFounderNameRefusal("adult_confirmation_required"), "adult_confirmation_required");
+    assert.equal(arkFounderNameRefusal("ERROR: under_18"), "under_18");
+    assert.equal(arkFounderNameRefusal("boom"), null);
+    assert.equal(arkFounderNameRefusal(null), null);
 });
 
 test("the share line: the draft, the body's limits, and what each answer means", () => {
     const draft = decodeArkStoryDraft({animal_id: ANIMAL.toUpperCase(), species: "African Lion", step: "Say it first.", story: null, can_share: true, reason: null});
-    assert.deepEqual(draft, {animal_id: ANIMAL, species: "African Lion", step: "Say it first.", story: null, can_share: true, reason: null});
+    assert.deepEqual(draft, {animal_id: ANIMAL, species: "African Lion", step: "Say it first.", story: null, can_share: true, reason: null, needs_adult_confirm: false, ask_name: false});
+    const ask = decodeArkStoryDraft({animal_id: ANIMAL, step: "Say it first.", can_share: true, reason: null, needs_adult_confirm: true, ask_name: true});
+    assert.deepEqual([ask?.needs_adult_confirm, ask?.ask_name], [true, true]);
     assert.equal(decodeArkStoryDraft({animal_id: ANIMAL, can_share: true, reason: "under_18"})?.can_share, false);
     assert.equal(decodeArkStoryDraft({animal_id: ANIMAL, can_share: false, reason: "not_yours"})?.reason, "not_yours");
     assert.equal(decodeArkStoryDraft({animal_id: "nope", can_share: true}), null);
@@ -174,11 +194,15 @@ test("the share line: the draft, the body's limits, and what each answer means",
     assert.deepEqual(arkStoryShareBody(ANIMAL, "x".repeat(301), null), {ok: false, error: "story_too_long"});
     assert.deepEqual(arkStoryShareBody(ANIMAL, "Said it.", "y".repeat(161)), {ok: false, error: "story_too_long"});
     assert.deepEqual(arkStoryShareBody("not-a-uuid", "Said it.", null), {ok: false, error: "invalid_animal_id"});
+    // `confirm_adult` only when the person tapped "I'm 18 or over, share".
+    assert.deepEqual(arkStoryShareBody(ANIMAL, "Said it first.", null, true), {ok: true, body: {animal_id: ANIMAL, step: "Said it first.", confirm_adult: true}});
+    assert.equal("confirm_adult" in (arkStoryShareBody(ANIMAL, "Said it first.", null, false) as {body: object}).body, false);
 
     assert.deepEqual(arkStoryShareResult(200, {ok: true, story: STORY}), {ok: true, story: STORY});
     assert.deepEqual(arkStoryShareResult(422, {error: "not_public", reason: "abuse"}), {ok: false, problem: "not_public"});
     assert.deepEqual(arkStoryShareResult(503, {error: "could_not_check"}), {ok: false, problem: "could_not_check"});
     assert.deepEqual(arkStoryShareResult(403, {error: "founder_stories_disabled"}), {ok: false, problem: "unavailable"});
+    assert.deepEqual(arkStoryShareResult(403, {error: "adult_confirmation_required"}), {ok: false, problem: "needs_adult"});
     assert.deepEqual(arkStoryShareResult(200, {ok: true}), {ok: false, problem: "unavailable"});
 });
 
@@ -211,11 +235,18 @@ test("development's founders fixture: names on, one named founder with a story, 
     assert.equal(decodeArkLife(lives[ARK_FIXTURE_NAMED_ANIMAL])?.founder_story, null);
 });
 
-test("the founders' words: the chat's share line says what the Ark's own words say, in English and Indonesian", () => {
+test("the founders' words: the chat's line says what the Ark's own words say, in English and Indonesian", () => {
+    type Founders = Record<"name" | "share" | "error" | "card" | "settings", Record<string, string>>;
     for (const locale of [en, id]) {
-        const messages = locale as unknown as {ark: {founders: {share: Record<string, string>; card: Record<string, string>}}; companions: {ark: {founderShare: Record<string, string>}}};
-        assert.deepEqual(messages.companions.ark.founderShare, messages.ark.founders.share);
+        const messages = locale as unknown as {ark: {founders: Founders; person: {anonymousBody: string}}; companions: {ark: {founders: Founders}}};
+        const chat = messages.companions.ark.founders;
+        assert.deepEqual(chat, {name: messages.ark.founders.name, share: messages.ark.founders.share, error: messages.ark.founders.error});
         assert.ok(messages.ark.founders.card.broughtBy.includes("{name}"));
+        for (const key of ["askShort", "confirmShare"]) assert.ok(messages.ark.founders.share[key], key);
+        for (const key of ["confirmAdult", "confirmYes"]) assert.ok(messages.ark.founders.settings[key], key);
+        // Names show by default for adults now: the page no longer says names show only by choice.
+        assert.equal(messages.ark.person.anonymousBody.includes("{name}"), true);
     }
-    assert.deepEqual((en as unknown as {companions: {ark: {founderShare: unknown}}}).companions.ark.founderShare, JSON.parse(JSON.stringify(ARK_COPY.founderShare)));
+    assert.equal((en as unknown as {ark: {person: {anonymousBody: string}}}).ark.person.anonymousBody, "{name} travels anonymously: on the Ark their animals show as a Voyager number, never a name.");
+    assert.deepEqual((en as unknown as {companions: {ark: {founders: unknown}}}).companions.ark.founders, JSON.parse(JSON.stringify(ARK_COPY.founders)));
 });

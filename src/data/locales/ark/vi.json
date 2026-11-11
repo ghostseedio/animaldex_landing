@@ -222,7 +222,7 @@
             "outOf": "trên {max}",
             "summary": "{animals} thuộc {species} trên tàu",
             "anonymousTitle": "Ẩn danh trên tàu",
-            "anonymousBody": "{name} đi ẩn danh: trên Ark, các con vật của họ hiện dưới dạng một số Voyager, không bao giờ là tên. Tên chỉ hiện với những người chọn hiển thị tên mình.",
+            "anonymousBody": "{name} đi ẩn danh: trên Ark, các con vật của họ hiện dưới dạng một số Voyager, không bao giờ là tên.",
             "selfPrivate": "Chỉ bạn thấy danh sách này. Trên Ark, người khác thấy các con vật của bạn là do {label} mang đến.",
             "selfNamed": "Tên bạn hiện trên các con vật của bạn trên Ark.",
             "noneSelf": "Chưa con vật nào của bạn lên tàu. Khi một bước từ một con vật của bạn thành công, con vật đó sẽ lên Ark.",
@@ -288,7 +288,9 @@
                 "private": "Bạn hiện dưới dạng một số Voyager khi hồ sơ của bạn ở chế độ riêng tư.",
                 "noHandle": "Thêm một @handle vào hồ sơ để hiện tên của bạn.",
                 "earlier": "Các con vật bạn mang đến trước khi tên được hiển thị vẫn ghi Voyager.",
-                "nameEarlier": "Hiện tên tôi trên chúng nữa"
+                "nameEarlier": "Hiện tên tôi trên chúng nữa",
+                "confirmAdult": "Bật mục này nghĩa là bạn xác nhận mình đủ 18 tuổi trở lên.",
+                "confirmYes": "Có, tôi đủ 18 tuổi trở lên"
             },
             "share": {
                 "ask": "Chia sẻ trên Ark cách việc này đã thành công?",
@@ -302,7 +304,9 @@
                 "notPublic": "Nội dung này không thể hiển thị công khai. Hãy thử từ khác.",
                 "couldNotCheck": "Chưa kiểm tra được lúc này. Hãy thử lại.",
                 "remove": "Xóa khỏi Ark",
-                "removed": "Đã xóa khỏi Ark"
+                "removed": "Đã xóa khỏi Ark",
+                "askShort": "Chia sẻ cách việc này đã thành công?",
+                "confirmShare": "Tôi đủ 18 tuổi, chia sẻ"
             },
             "card": {
                 "howAboard": "Cách nó lên Ark",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Cách các con vật của họ lên Ark",
                 "noStories": "Chưa có câu chuyện nào được chia sẻ."
+            },
+            "name": {
+                "ask": "Hiện tên bạn trên Ark?",
+                "adult": "Tôi đủ 18 tuổi trở lên",
+                "yes": "Có, hiện tên tôi",
+                "shown": "Tên bạn đang hiện trên Ark"
+            },
+            "error": {
+                "needsAdult": "Hãy xác nhận trước rằng bạn đủ 18 tuổi trở lên."
             }
         }
     },

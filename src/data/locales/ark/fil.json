@@ -222,7 +222,7 @@
             "outOf": "sa {max}",
             "summary": "{animals} ang nakasakay, mula sa {species}",
             "anonymousTitle": "Nakasakay nang hindi nagpapakilala",
-            "anonymousBody": "Hindi nagpapakilala si {name} sa paglalakbay: sa Ark, numero ng Voyager ang ipinapakita sa mga hayop niya, hindi kailanman pangalan. Ipinapakita lang ang pangalan ng mga taong pumiling ipakita ito.",
+            "anonymousBody": "Hindi nagpapakilala si {name} sa paglalakbay: sa Ark, numero ng Voyager ang ipinapakita sa mga hayop niya, hindi kailanman pangalan.",
             "selfPrivate": "Ikaw lang ang nakakakita ng listahang ito. Sa Ark, nakikita ng iba na dinala ni {label} ang mga hayop mo.",
             "selfNamed": "Lumalabas ang pangalan mo sa mga hayop mo sa Ark.",
             "noneSelf": "Wala pang nakasakay sa mga hayop mo. Kapag gumana ang isang hakbang mula sa isa sa mga hayop mo, sasakay ang hayop na iyon.",
@@ -288,7 +288,9 @@
                 "private": "Lumalabas ka bilang numero ng Voyager habang pribado ang profile mo.",
                 "noHandle": "Magdagdag ng @handle sa profile mo para maipakita ang pangalan mo.",
                 "earlier": "Voyager pa rin ang nakalagay sa mga hayop na dinala mo bago ipinakita ang mga pangalan.",
-                "nameEarlier": "Ipakita rin ang pangalan ko sa mga iyon"
+                "nameEarlier": "Ipakita rin ang pangalan ko sa mga iyon",
+                "confirmAdult": "Sa pag-on nito, kinukumpirma mong edad 18 pataas ka.",
+                "confirmYes": "Oo, edad 18 pataas ako"
             },
             "share": {
                 "ask": "Ibahagi sa Ark kung paano ito gumana?",
@@ -302,7 +304,9 @@
                 "notPublic": "Hindi ito maipapakita sa publiko. Subukan ang ibang salita.",
                 "couldNotCheck": "Hindi ito ma-check ngayon. Subukan ulit.",
                 "remove": "Alisin sa Ark",
-                "removed": "Inalis sa Ark"
+                "removed": "Inalis sa Ark",
+                "askShort": "Ibahagi kung paano ito gumana?",
+                "confirmShare": "Edad 18 pataas ako, ibahagi"
             },
             "card": {
                 "howAboard": "Paano ito sumakay",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Paano sumakay ang mga hayop nila",
                 "noStories": "Wala pang naibahaging kuwento."
+            },
+            "name": {
+                "ask": "Ipakita ang pangalan mo sa Ark?",
+                "adult": "Edad 18 pataas ako",
+                "yes": "Oo, ipakita ang pangalan ko",
+                "shown": "Nakikita na ang pangalan mo sa Ark"
+            },
+            "error": {
+                "needsAdult": "Kumpirmahin muna na edad 18 pataas ka."
             }
         }
     },

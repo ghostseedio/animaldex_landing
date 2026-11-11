@@ -81,7 +81,7 @@ export function fixtureArkFounderPage(handle: string): ArkFounderPage {
     };
 }
 
-/** The chat's share line in development: a step to prefill, nothing shared yet. */
+/** The chat's share line in development: a step to prefill, nothing shared yet, a known adult (the hook's `?arkfounder=` modes vary it). */
 export function fixtureArkStoryDraft(animalId: string, species: string | null): ArkStoryDraft {
     return {
         animal_id: animalId,
@@ -89,6 +89,8 @@ export function fixtureArkStoryDraft(animalId: string, species: string | null): 
         step: "Tonight, before bed, write the one sentence you want to say to your brother, and send it in the morning.",
         story: null,
         can_share: true,
-        reason: null
+        reason: null,
+        needs_adult_confirm: false,
+        ask_name: false
     };
 }

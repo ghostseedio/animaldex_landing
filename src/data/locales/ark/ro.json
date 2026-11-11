@@ -222,7 +222,7 @@
             "outOf": "din {max}",
             "summary": "La bord — {animals}, {species}",
             "anonymousTitle": "Anonim la bord",
-            "anonymousBody": "{name} călătorește anonim: în Ark, animalele acestei persoane apar cu un număr Voyager, niciodată cu un nume. Numele apar doar la cei care aleg să-l arate pe al lor.",
+            "anonymousBody": "{name} călătorește anonim: în Ark, animalele acestei persoane apar cu un număr Voyager, niciodată cu un nume.",
             "selfPrivate": "Doar tu vezi această listă. În Ark, ceilalți văd animalele tale ca aduse de {label}.",
             "selfNamed": "Numele tău apare la animalele tale din Ark.",
             "noneSelf": "Niciunul dintre animalele tale nu e încă la bord. Când un pas de la unul dintre animalele tale merge, acel animal urcă la bord.",
@@ -288,7 +288,9 @@
                 "private": "Apari ca număr Voyager cât timp profilul tău e privat.",
                 "noHandle": "Adaugă un @handle în profil ca să-ți arăți numele.",
                 "earlier": "Animalele aduse înainte să fie afișate numele arată tot Voyager.",
-                "nameEarlier": "Arată-mi numele și pe ele"
+                "nameEarlier": "Arată-mi numele și pe ele",
+                "confirmAdult": "Activând asta, confirmi că ai împlinit 18 ani.",
+                "confirmYes": "Da, am împlinit 18 ani"
             },
             "share": {
                 "ask": "Împărtășești în Ark cum a mers?",
@@ -302,7 +304,9 @@
                 "notPublic": "Asta nu poate fi afișat public. Încearcă alte cuvinte.",
                 "couldNotCheck": "Nu am putut verifica acum. Încearcă din nou.",
                 "remove": "Scoate din Ark",
-                "removed": "Scos din Ark"
+                "removed": "Scos din Ark",
+                "askShort": "Împărtășești cum a mers?",
+                "confirmShare": "Am împlinit 18 ani, distribuie"
             },
             "card": {
                 "howAboard": "Cum a urcat la bord",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Cum au urcat la bord animalele sale",
                 "noStories": "Nicio poveste împărtășită încă."
+            },
+            "name": {
+                "ask": "Îți arătăm numele în Ark?",
+                "adult": "Am împlinit 18 ani",
+                "yes": "Da, arată-mi numele",
+                "shown": "Numele tău apare în Ark"
+            },
+            "error": {
+                "needsAdult": "Mai întâi confirmă că ai împlinit 18 ani."
             }
         }
     },

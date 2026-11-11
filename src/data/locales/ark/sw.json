@@ -222,7 +222,7 @@
             "outOf": "kati ya {max}",
             "summary": "{animals} ndani, {species}",
             "anonymousTitle": "Ndani bila jina",
-            "anonymousBody": "{name} anasafiri bila jina: kwenye Ark wanyama wake huonyeshwa kama namba ya Voyager, kamwe si jina. Majina huonyeshwa tu kwa watu wanaochagua kuonyesha yao.",
+            "anonymousBody": "{name} anasafiri bila jina: kwenye Ark wanyama wake huonyeshwa kama namba ya Voyager, kamwe si jina.",
             "selfPrivate": "Ni wewe tu unayeona orodha hii. Kwenye Ark, wengine huona wanyama wako kama walioletwa na {label}.",
             "selfNamed": "Jina lako linaonyeshwa kwenye wanyama wako ndani ya Ark.",
             "noneSelf": "Bado hakuna mnyama wako aliye ndani. Hatua kutoka kwa mmoja wa wanyama wako ikifanikiwa, mnyama huyo anapanda Ark.",
@@ -288,7 +288,9 @@
                 "private": "Unaonekana kama namba ya Voyager wakati wasifu wako ni wa faragha.",
                 "noHandle": "Ongeza @handle kwenye wasifu wako ili jina lako lionekane.",
                 "earlier": "Wanyama uliowaleta kabla majina hayajaonyeshwa bado wanaonyesha Voyager.",
-                "nameEarlier": "Onyesha jina langu kwao pia"
+                "nameEarlier": "Onyesha jina langu kwao pia",
+                "confirmAdult": "Kuwasha hili kunathibitisha kuwa una umri wa miaka 18 au zaidi.",
+                "confirmYes": "Ndiyo, nina miaka 18 au zaidi"
             },
             "share": {
                 "ask": "Ungependa kushiriki kwenye Ark jinsi hili lilivyofanikiwa?",
@@ -302,7 +304,9 @@
                 "notPublic": "Hili haliwezi kuonyeshwa hadharani. Jaribu maneno mengine.",
                 "couldNotCheck": "Haikuwezekana kukagua sasa hivi. Jaribu tena.",
                 "remove": "Ondoa kwenye Ark",
-                "removed": "Imeondolewa kwenye Ark"
+                "removed": "Imeondolewa kwenye Ark",
+                "askShort": "Ungependa kushiriki jinsi hili lilivyofanikiwa?",
+                "confirmShare": "Nina miaka 18 au zaidi, shiriki"
             },
             "card": {
                 "howAboard": "Jinsi alivyopanda Ark",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Jinsi wanyama wao walivyopanda Ark",
                 "noStories": "Bado hakuna hadithi zilizoshirikiwa."
+            },
+            "name": {
+                "ask": "Onyesha jina lako kwenye Ark?",
+                "adult": "Nina umri wa miaka 18 au zaidi",
+                "yes": "Ndiyo, onyesha jina langu",
+                "shown": "Jina lako linaonekana kwenye Ark"
+            },
+            "error": {
+                "needsAdult": "Thibitisha kwanza kuwa una umri wa miaka 18 au zaidi."
             }
         }
     },

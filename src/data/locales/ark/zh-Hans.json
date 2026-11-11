@@ -222,7 +222,7 @@
             "outOf": "/ {max}",
             "summary": "船上共有{species}、{animals}",
             "anonymousTitle": "匿名登船",
-            "anonymousBody": "{name}以匿名身份旅行：在 Ark 上，其动物只显示为 Voyager 编号，从不显示名字。只有选择公开自己名字的人，名字才会显示。",
+            "anonymousBody": "{name}以匿名身份旅行：在 Ark 上，其动物只显示为 Voyager 编号，从不显示名字。",
             "selfPrivate": "只有你能看到这份列表。在 Ark 上，其他人看到你的动物是由{label}带来的。",
             "selfNamed": "在 Ark 中，你的动物上会显示你的名字。",
             "noneSelf": "你还没有动物登船。当你的某只动物给出的一步奏效时，那只动物就会登船。",
@@ -288,7 +288,9 @@
                 "private": "你的个人资料设为私密期间，会显示为 Voyager 编号。",
                 "noHandle": "在个人资料中添加 @handle 即可显示你的名字。",
                 "earlier": "在显示名字之前你带来的动物仍显示 Voyager。",
-                "nameEarlier": "也在它们上面显示我的名字"
+                "nameEarlier": "也在它们上面显示我的名字",
+                "confirmAdult": "开启即表示你确认已年满 18 岁。",
+                "confirmYes": "是的，我已年满 18 岁"
             },
             "share": {
                 "ask": "在 Ark 上分享这一步是怎么奏效的？",
@@ -302,7 +304,9 @@
                 "notPublic": "这段内容无法公开显示。换个说法试试。",
                 "couldNotCheck": "暂时无法检查，请重试。",
                 "remove": "从 Ark 移除",
-                "removed": "已从 Ark 移除"
+                "removed": "已从 Ark 移除",
+                "askShort": "分享这一步是怎么奏效的？",
+                "confirmShare": "我已满 18 岁，分享"
             },
             "card": {
                 "howAboard": "它是如何登船的",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "这些动物是如何登船的",
                 "noStories": "还没有分享的故事。"
+            },
+            "name": {
+                "ask": "在 Ark 上显示你的名字？",
+                "adult": "我已年满 18 岁",
+                "yes": "好，显示我的名字",
+                "shown": "你的名字已在 Ark 上显示"
+            },
+            "error": {
+                "needsAdult": "请先确认你已年满 18 岁。"
             }
         }
     },

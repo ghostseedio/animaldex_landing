@@ -222,7 +222,7 @@
             "outOf": "z {max}",
             "summary": "Na pokładzie: {animals}, {species}",
             "anonymousTitle": "Anonimowo na pokładzie",
-            "anonymousBody": "{name} podróżuje anonimowo: w Ark zwierzęta tej osoby mają numer Voyager, nigdy imię. Imiona widać tylko u osób, które zdecydują się je pokazać.",
+            "anonymousBody": "{name} podróżuje anonimowo: w Ark zwierzęta tej osoby mają numer Voyager, nigdy imię.",
             "selfPrivate": "Tylko Ty widzisz tę listę. W Ark inni widzą Twoje zwierzęta jako przywiezione przez: {label}.",
             "selfNamed": "Twoje imię jest widoczne przy Twoich zwierzętach w Ark.",
             "noneSelf": "Żadne z Twoich zwierząt nie jest jeszcze na pokładzie. Gdy zadziała krok od jednego z Twoich zwierząt, to zwierzę wejdzie na pokład.",
@@ -288,7 +288,9 @@
                 "private": "Dopóki twój profil jest prywatny, widać cię jako numer Voyager.",
                 "noHandle": "Dodaj @handle do profilu, aby pokazać swoje imię.",
                 "earlier": "Przy zwierzętach przywiezionych, zanim pokazywano imiona, nadal widnieje Voyager.",
-                "nameEarlier": "Pokaż moje imię także przy nich"
+                "nameEarlier": "Pokaż moje imię także przy nich",
+                "confirmAdult": "Włączając to, potwierdzasz, że masz co najmniej 18 lat.",
+                "confirmYes": "Tak, mam co najmniej 18 lat"
             },
             "share": {
                 "ask": "Udostępnić w Ark, jak to zadziałało?",
@@ -302,7 +304,9 @@
                 "notPublic": "Tego nie można pokazać publicznie. Spróbuj innych słów.",
                 "couldNotCheck": "Nie udało się teraz tego sprawdzić. Spróbuj ponownie.",
                 "remove": "Usuń z Ark",
-                "removed": "Usunięto z Ark"
+                "removed": "Usunięto z Ark",
+                "askShort": "Udostępnić, jak to zadziałało?",
+                "confirmShare": "Mam co najmniej 18 lat, udostępnij"
             },
             "card": {
                 "howAboard": "Jak trafiło na pokład",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Jak ich zwierzęta trafiły na pokład",
                 "noStories": "Brak udostępnionych historii."
+            },
+            "name": {
+                "ask": "Pokazać twoje imię w Ark?",
+                "adult": "Mam co najmniej 18 lat",
+                "yes": "Tak, pokaż moje imię",
+                "shown": "Twoje imię jest widoczne w Ark"
+            },
+            "error": {
+                "needsAdult": "Najpierw potwierdź, że masz co najmniej 18 lat."
             }
         }
     },

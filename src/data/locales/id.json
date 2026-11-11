@@ -2975,19 +2975,32 @@
         "changeFailed": "Belum berhasil. Coba lagi sebentar lagi.",
         "history": "Yang berubah"
       },
-      "founderShare": {
-        "ask": "Bagikan di Ark bagaimana ini berhasil?",
-        "stepLabel": "Yang kamu lakukan",
-        "problemPlaceholder": "Satu baris tentang masalahnya, dengan kata-katamu sendiri (opsional)",
-        "share": "Bagikan",
-        "edit": "Edit",
-        "notNow": "Nanti saja",
-        "shared": "Dibagikan di Ark",
-        "publicNote": "Semua yang mengunjungi Ark bisa membaca ini.",
-        "notPublic": "Ini tidak bisa ditampilkan secara publik. Coba kata-kata lain.",
-        "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
-        "remove": "Hapus dari Ark",
-        "removed": "Dihapus dari Ark"
+      "founders": {
+        "name": {
+          "ask": "Tampilkan namamu di Ark?",
+          "adult": "Aku berusia 18 tahun ke atas",
+          "yes": "Ya, tampilkan namaku",
+          "shown": "Namamu tampil di Ark"
+        },
+        "share": {
+          "ask": "Bagikan di Ark bagaimana ini berhasil?",
+          "stepLabel": "Yang kamu lakukan",
+          "problemPlaceholder": "Satu baris tentang masalahnya, dengan kata-katamu sendiri (opsional)",
+          "share": "Bagikan",
+          "edit": "Edit",
+          "notNow": "Nanti saja",
+          "shared": "Dibagikan di Ark",
+          "publicNote": "Semua yang mengunjungi Ark bisa membaca ini.",
+          "notPublic": "Ini tidak bisa ditampilkan secara publik. Coba kata-kata lain.",
+          "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
+          "remove": "Hapus dari Ark",
+          "removed": "Dihapus dari Ark",
+          "askShort": "Bagikan bagaimana ini berhasil?",
+          "confirmShare": "Aku sudah 18 tahun, bagikan"
+        },
+        "error": {
+          "needsAdult": "Konfirmasi dulu bahwa usiamu 18 tahun ke atas."
+        }
       }
     },
     "displayName": "{nickname} sang {animal}",
@@ -4262,7 +4275,7 @@
       "outOf": "dari {max}",
       "summary": "{animals} di Ark, {species}",
       "anonymousTitle": "Anonim di Ark",
-      "anonymousBody": "{name} bepergian secara anonim: di Ark, hewannya ditampilkan sebagai nomor Voyager, tidak pernah sebagai nama. Nama hanya ditampilkan untuk orang yang memilih menampilkan namanya.",
+      "anonymousBody": "{name} bepergian secara anonim: di Ark, hewannya ditampilkan sebagai nomor Voyager, tidak pernah sebagai nama.",
       "selfPrivate": "Hanya kamu yang melihat daftar ini. Di Ark, orang lain melihat hewanmu sebagai hewan yang dibawa oleh {label}.",
       "selfNamed": "Namamu ditampilkan pada hewanmu di Ark.",
       "noneSelf": "Belum ada hewanmu yang naik ke Ark. Saat langkah dari salah satu hewanmu berhasil, hewan itu naik ke Ark.",
@@ -4280,7 +4293,9 @@
         "private": "Kamu tampil sebagai nomor Voyager selama profilmu privat.",
         "noHandle": "Tambahkan @handle ke profilmu untuk menampilkan namamu.",
         "earlier": "Hewan yang kamu bawa sebelum nama ditampilkan masih bertuliskan Voyager.",
-        "nameEarlier": "Tampilkan namaku di hewan-hewan itu juga"
+        "nameEarlier": "Tampilkan namaku di hewan-hewan itu juga",
+        "confirmAdult": "Dengan menyalakan ini, kamu mengonfirmasi bahwa usiamu 18 tahun ke atas.",
+        "confirmYes": "Ya, aku berusia 18 tahun ke atas"
       },
       "share": {
         "ask": "Bagikan di Ark bagaimana ini berhasil?",
@@ -4294,7 +4309,9 @@
         "notPublic": "Ini tidak bisa ditampilkan secara publik. Coba kata-kata lain.",
         "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
         "remove": "Hapus dari Ark",
-        "removed": "Dihapus dari Ark"
+        "removed": "Dihapus dari Ark",
+        "askShort": "Bagikan bagaimana ini berhasil?",
+        "confirmShare": "Aku sudah 18 tahun, bagikan"
       },
       "card": {
         "howAboard": "Bagaimana ia naik ke Ark",
@@ -4303,6 +4320,15 @@
       "founder": {
         "storiesTitle": "Bagaimana hewan-hewannya naik ke Ark",
         "noStories": "Belum ada cerita yang dibagikan."
+      },
+      "name": {
+        "ask": "Tampilkan namamu di Ark?",
+        "adult": "Aku berusia 18 tahun ke atas",
+        "yes": "Ya, tampilkan namaku",
+        "shown": "Namamu tampil di Ark"
+      },
+      "error": {
+        "needsAdult": "Konfirmasi dulu bahwa usiamu 18 tahun ke atas."
       }
     }
   }

@@ -205,14 +205,26 @@ export function arkFounderStories(page: ArkFounderPage | null): Array<ArkFounder
 
 export type ArkFounderBlocked = "under_18" | "private_profile" | "no_handle";
 
+/** How the server knows they are an adult: a stored birth year, their one-tap "I'm 18 or over", a stored teen year, or not at all. */
+export type ArkFounderAdult = "stored" | "confirmed" | "teen" | "unknown";
+
 export type ArkFounderSettings = {
     enabled: boolean;
     show_name: boolean;
     chosen: boolean;
     blocked: ArkFounderBlocked | null;
+    adult: ArkFounderAdult | null;
+    /** Turning the name on (or sharing) needs the one-tap "I'm 18 or over" (owner, 2026-11-11). */
+    needs_adult_confirm: boolean;
+    /** They haven't answered the name question yet: the chat asks it under an arrival. */
+    ask_name: boolean;
     earlier_anonymous: number;
     founder: ArkFounder | null;
 };
+
+function adultOf(value: unknown): ArkFounderAdult | null {
+    return value === "stored" || value === "confirmed" || value === "teen" || value === "unknown" ? value : null;
+}
 
 /** `voyage_founder_settings_v1()` / `set_voyage_founder_name_v1`'s answer, checked; null when it isn't one. */
 export function decodeArkFounderSettings(raw: unknown): ArkFounderSettings | null {
@@ -225,9 +237,22 @@ export function decodeArkFounderSettings(raw: unknown): ArkFounderSettings | nul
         show_name: row.show_name !== false,
         chosen: row.chosen === true,
         blocked,
+        adult: adultOf(row.adult),
+        needs_adult_confirm: row.needs_adult_confirm === true,
+        ask_name: row.ask_name === true && blocked === null,
         earlier_anonymous: earlier,
         founder: decodeArkFounder(row.founder)
     };
+}
+
+/** The setter's refusals (`set_voyage_founder_name_v1`): the one-tap 18+ confirmation is missing, or a stored teen year. */
+export type ArkFounderNameRefusal = "adult_confirmation_required" | "under_18";
+
+export function arkFounderNameRefusal(message: string | null | undefined): ArkFounderNameRefusal | null {
+    if (!message) return null;
+    if (/adult_confirmation_required/.test(message)) return "adult_confirmation_required";
+    if (/under_18/.test(message)) return "under_18";
+    return null;
 }
 
 /** What the switch shows: off and disabled when blocked, else the server's position. */
@@ -246,6 +271,10 @@ export type ArkStoryDraft = {
     story: ArkFounderStory | null;
     can_share: boolean;
     reason: "disabled" | "not_yours" | "under_18" | null;
+    /** The share must carry `confirm_adult: true` (its button reads "I'm 18 or over, share"). */
+    needs_adult_confirm: boolean;
+    /** Ask the name first, in the same line (founders contract, section 4). */
+    ask_name: boolean;
 };
 
 export function decodeArkStoryDraft(raw: unknown): ArkStoryDraft | null {
@@ -259,26 +288,40 @@ export function decodeArkStoryDraft(raw: unknown): ArkStoryDraft | null {
         step: text(row.step, ARK_STORY_STEP_MAX),
         story: decodeArkFounderStory(row.story),
         can_share: row.can_share === true && reason === null,
-        reason
+        reason,
+        needs_adult_confirm: row.needs_adult_confirm === true,
+        ask_name: row.ask_name === true
     };
 }
 
-/** The share line's body for the edge function, or why it can't go: the step 3–300 characters, the problem 3–160 or left out. */
-export function arkStoryShareBody(animalId: string, step: string, problem: string | null | undefined):
-    | {ok: true; body: {animal_id: string; step: string; problem?: string}}
+/**
+ * The share line's body for the edge function, or why it can't go: the step
+ * 3–300 characters, the problem 3–160 or left out. `confirmAdult` only when
+ * the person tapped the 18+ wording in this share ("I'm 18 or over, share").
+ */
+export function arkStoryShareBody(animalId: string, step: string, problem: string | null | undefined, confirmAdult = false):
+    | {ok: true; body: {animal_id: string; step: string; problem?: string; confirm_adult?: true}}
     | {ok: false; error: "invalid_animal_id" | "story_too_short" | "story_too_long"} {
     if (!UUID.test(animalId)) return {ok: false, error: "invalid_animal_id"};
     const what = step.replace(/\s+/g, " ").trim();
     const why = (problem ?? "").replace(/\s+/g, " ").trim();
     if (what.length < ARK_STORY_STEP_MIN || (why && why.length < ARK_STORY_PROBLEM_MIN)) return {ok: false, error: "story_too_short"};
     if (what.length > ARK_STORY_STEP_MAX || why.length > ARK_STORY_PROBLEM_MAX) return {ok: false, error: "story_too_long"};
-    return {ok: true, body: why ? {animal_id: animalId.toLowerCase(), step: what, problem: why} : {animal_id: animalId.toLowerCase(), step: what}};
+    return {
+        ok: true,
+        body: {
+            animal_id: animalId.toLowerCase(),
+            step: what,
+            ...(why ? {problem: why} : {}),
+            ...(confirmAdult ? {confirm_adult: true as const} : {})
+        }
+    };
 }
 
 /** How a share went, from the edge function's status and body (contract section 3). */
 export type ArkStoryShareResult =
     | {ok: true; story: ArkFounderStory}
-    | {ok: false; problem: "not_public" | "could_not_check" | "unavailable"};
+    | {ok: false; problem: "not_public" | "could_not_check" | "needs_adult" | "unavailable"};
 
 export function arkStoryShareResult(status: number, body: unknown): ArkStoryShareResult {
     const row = record(body);
@@ -288,6 +331,8 @@ export function arkStoryShareResult(status: number, body: unknown): ArkStoryShar
     }
     if (status === 422 || row?.error === "not_public") return {ok: false, problem: "not_public"};
     if (status === 503 || row?.error === "could_not_check") return {ok: false, problem: "could_not_check"};
+    // 403: the one-tap "I'm 18 or over" is still needed for this share.
+    if (row?.error === "adult_confirmation_required") return {ok: false, problem: "needs_adult"};
     // 401/403/400/500: nothing the person can fix with other words; the line says to try again.
     return {ok: false, problem: "unavailable"};
 }

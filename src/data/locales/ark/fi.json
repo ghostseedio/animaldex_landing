@@ -222,7 +222,7 @@
             "outOf": "/ {max}",
             "summary": "Kyydissä {animals}, {species}",
             "anonymousTitle": "Nimettömänä kyydissä",
-            "anonymousBody": "{name} matkustaa nimettömänä: Arkissa hänen eläimensä näkyvät Voyager-numerona, ei koskaan nimellä. Nimet näkyvät vain niillä, jotka valitsevat näyttää omansa.",
+            "anonymousBody": "{name} matkustaa nimettömänä: Arkissa hänen eläimensä näkyvät Voyager-numerona, ei koskaan nimellä.",
             "selfPrivate": "Vain sinä näet tämän listan. Arkissa muut näkevät eläintesi tuojaksi {label}.",
             "selfNamed": "Nimesi näkyy eläimissäsi Arkissa.",
             "noneSelf": "Yksikään eläimistäsi ei ole vielä kyydissä. Kun jonkin eläimesi askel toimii, se eläin nousee kyytiin.",
@@ -288,7 +288,9 @@
                 "private": "Näyt Voyager-numerona niin kauan kuin profiilisi on yksityinen.",
                 "noHandle": "Lisää profiiliisi @handle, niin nimesi näkyy.",
                 "earlier": "Eläimissä, jotka toit ennen kuin nimiä näytettiin, lukee yhä Voyager.",
-                "nameEarlier": "Näytä nimeni myös niissä"
+                "nameEarlier": "Näytä nimeni myös niissä",
+                "confirmAdult": "Kun otat tämän käyttöön, vahvistat olevasi vähintään 18-vuotias.",
+                "confirmYes": "Kyllä, olen vähintään 18-vuotias"
             },
             "share": {
                 "ask": "Jaetaanko Arkissa, miten tämä toimi?",
@@ -302,7 +304,9 @@
                 "notPublic": "Tätä ei voi näyttää julkisesti. Kokeile muita sanoja.",
                 "couldNotCheck": "Tarkistus ei onnistunut juuri nyt. Yritä uudelleen.",
                 "remove": "Poista Arkista",
-                "removed": "Poistettu Arkista"
+                "removed": "Poistettu Arkista",
+                "askShort": "Jaetaanko, miten tämä toimi?",
+                "confirmShare": "Olen vähintään 18, jaa"
             },
             "card": {
                 "howAboard": "Miten se nousi kyytiin",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Miten hänen eläimensä nousivat kyytiin",
                 "noStories": "Tarinoita ei ole vielä jaettu."
+            },
+            "name": {
+                "ask": "Näytetäänkö nimesi Arkissa?",
+                "adult": "Olen vähintään 18-vuotias",
+                "yes": "Kyllä, näytä nimeni",
+                "shown": "Nimesi näkyy Arkissa"
+            },
+            "error": {
+                "needsAdult": "Vahvista ensin, että olet vähintään 18-vuotias."
             }
         }
     },

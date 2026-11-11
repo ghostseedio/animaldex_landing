@@ -222,7 +222,7 @@
             "outOf": "{max} üzerinden",
             "summary": "Gemide {animals}, {species}",
             "anonymousTitle": "Gemide anonim",
-            "anonymousBody": "{name} anonim olarak yolculuk ediyor: Ark'ta hayvanları asla bir isimle değil, bir Voyager numarasıyla görünür. İsimler yalnızca kendi ismini göstermeyi seçen kişiler için görünür.",
+            "anonymousBody": "{name} anonim olarak yolculuk ediyor: Ark'ta hayvanları asla bir isimle değil, bir Voyager numarasıyla görünür.",
             "selfPrivate": "Bu listeyi yalnızca sen görüyorsun. Ark'ta diğerleri hayvanlarını {label} tarafından getirilmiş olarak görür.",
             "selfNamed": "Ark'ta hayvanlarının üzerinde adın görünüyor.",
             "noneSelf": "Hayvanlarından hiçbiri henüz gemide değil. Hayvanlarından birinden gelen bir adım işe yarayınca o hayvan gemiye biner.",
@@ -288,7 +288,9 @@
                 "private": "Profilin gizli olduğu sürece Voyager numarası olarak görünürsün.",
                 "noHandle": "Adını göstermek için profiline bir @handle ekle.",
                 "earlier": "İsimler gösterilmeden önce getirdiğin hayvanlarda hâlâ Voyager yazıyor.",
-                "nameEarlier": "Onlarda da adımı göster"
+                "nameEarlier": "Onlarda da adımı göster",
+                "confirmAdult": "Bunu açarak 18 yaş ve üzerinde olduğunu onaylarsın.",
+                "confirmYes": "Evet, 18 yaş ve üzerindeyim"
             },
             "share": {
                 "ask": "Bunun nasıl işe yaradığını Ark'ta paylaşmak ister misin?",
@@ -302,7 +304,9 @@
                 "notPublic": "Bu herkese açık gösterilemez. Başka kelimeler dene.",
                 "couldNotCheck": "Şu anda kontrol edilemedi. Tekrar dene.",
                 "remove": "Ark'tan kaldır",
-                "removed": "Ark'tan kaldırıldı"
+                "removed": "Ark'tan kaldırıldı",
+                "askShort": "Nasıl işe yaradığını paylaşmak ister misin?",
+                "confirmShare": "18 yaş ve üzerindeyim, paylaş"
             },
             "card": {
                 "howAboard": "Gemiye nasıl bindi",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Hayvanları gemiye nasıl bindi",
                 "noStories": "Henüz paylaşılan hikâye yok."
+            },
+            "name": {
+                "ask": "Adın Ark'ta görünsün mü?",
+                "adult": "18 yaş ve üzerindeyim",
+                "yes": "Evet, adımı göster",
+                "shown": "Adın Ark'ta görünüyor"
+            },
+            "error": {
+                "needsAdult": "Önce 18 yaş ve üzerinde olduğunu onayla."
             }
         }
     },

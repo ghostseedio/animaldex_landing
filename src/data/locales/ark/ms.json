@@ -222,7 +222,7 @@
             "outOf": "daripada {max}",
             "summary": "{animals} di atas kapal, {species}",
             "anonymousTitle": "Tanpa nama di atas kapal",
-            "anonymousBody": "{name} mengembara tanpa nama: di Ark, haiwan mereka ditunjukkan sebagai nombor Voyager, tidak pernah dengan nama. Nama hanya ditunjukkan bagi orang yang memilih untuk menunjukkan nama mereka.",
+            "anonymousBody": "{name} mengembara tanpa nama: di Ark, haiwan mereka ditunjukkan sebagai nombor Voyager, tidak pernah dengan nama.",
             "selfPrivate": "Hanya anda yang melihat senarai ini. Di Ark, orang lain melihat haiwan anda sebagai dibawa oleh {label}.",
             "selfNamed": "Nama anda ditunjukkan pada haiwan anda di Ark.",
             "noneSelf": "Belum ada haiwan anda di atas kapal. Apabila langkah daripada salah satu haiwan anda berjaya, haiwan itu naik ke Ark.",
@@ -288,7 +288,9 @@
                 "private": "Anda ditunjukkan sebagai nombor Voyager selagi profil anda peribadi.",
                 "noHandle": "Tambah @handle pada profil anda untuk menunjukkan nama anda.",
                 "earlier": "Haiwan yang anda bawa sebelum nama ditunjukkan masih tertulis Voyager.",
-                "nameEarlier": "Tunjukkan nama saya pada haiwan itu juga"
+                "nameEarlier": "Tunjukkan nama saya pada haiwan itu juga",
+                "confirmAdult": "Dengan menghidupkan ini, anda mengesahkan bahawa anda berumur 18 tahun ke atas.",
+                "confirmYes": "Ya, saya berumur 18 tahun ke atas"
             },
             "share": {
                 "ask": "Kongsi di Ark bagaimana ini berjaya?",
@@ -302,7 +304,9 @@
                 "notPublic": "Ini tidak boleh ditunjukkan secara umum. Cuba perkataan lain.",
                 "couldNotCheck": "Tidak dapat menyemak sekarang. Cuba lagi.",
                 "remove": "Buang dari Ark",
-                "removed": "Dibuang dari Ark"
+                "removed": "Dibuang dari Ark",
+                "askShort": "Kongsi bagaimana ini berjaya?",
+                "confirmShare": "Saya 18 tahun ke atas, kongsi"
             },
             "card": {
                 "howAboard": "Bagaimana ia naik ke Ark",
@@ -311,6 +315,15 @@
             "founder": {
                 "storiesTitle": "Bagaimana haiwan mereka naik ke Ark",
                 "noStories": "Belum ada cerita dikongsi."
+            },
+            "name": {
+                "ask": "Tunjukkan nama anda di Ark?",
+                "adult": "Saya berumur 18 tahun ke atas",
+                "yes": "Ya, tunjukkan nama saya",
+                "shown": "Nama anda ditunjukkan di Ark"
+            },
+            "error": {
+                "needsAdult": "Sahkan dahulu bahawa anda berumur 18 tahun ke atas."
             }
         }
     },
