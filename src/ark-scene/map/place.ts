@@ -131,6 +131,22 @@ export function wetOf(species: MapSpecies, tag: MapTag): boolean {
     return ["water", "floor", "surface", "ice", "anemone", "station", "fixed"].includes(species.attach);
 }
 
+const CANOPY_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["canopy", "leaves", "trunks_bark", "bamboo", "host_nests"]);
+
+/**
+ * Lives on a canopy tree's limbs (not small, not a water species): its table
+ * says a limb or a trunk; or it hangs or leaps (a sloth, a gibbon); or it is
+ * of the canopy layer (`layers.json`) and climbs or perches, its text naming
+ * the trees (a tree kangaroo, an orangutan, a fish eagle over the lake).
+ */
+export function arborealOf(species: MapSpecies, slug: string): boolean {
+    if (species.small) return species.attach === "limb" || species.attach === "trunk";
+    if (species.attach === "limb" || species.attach === "trunk" || species.move === "hang" || species.move === "leap") return true;
+    if (species.move !== "climb" && species.move !== "perch") return false;
+    // (Trees only as its roost, a cormorant's or a heron's: it lives at the water by day and sleeps in a tree, `roostOf`.)
+    return speciesLayer(slug).layer === "canopy" && Array.from(species.allowed).some((tag) => CANOPY_TAGS.has(tag) && tag !== species.roost);
+}
+
 /** The tags to try, its spawn tag first. */
 function tagsToTry(species: MapSpecies): MapTag[] {
     return [species.spawn, ...Array.from(species.allowed).filter((tag) => tag !== species.spawn && tag !== species.roost)];
@@ -263,9 +279,10 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         }
     }
 
-    // A canopy animal: a limb (or the trunk) of a canopy tree.
-    if (species.attach === "limb" || species.attach === "trunk") {
-        const canopyTag = tags.find((tag) => tag === "canopy" || tag === "leaves" || tag === "trunks_bark" || tag === "bamboo" || tag === "host_nests");
+    // A canopy animal: a limb (or the trunk) of a canopy tree. The owner's rule (2026-11-11): hangers, leapers, and the canopy layer's
+    // climbers and perchers (`layers.json`) grip a real limb, never the ground under it.
+    if (arborealOf(species, animal.model_slug)) {
+        const canopyTag = tags.find((tag) => CANOPY_TAGS.has(tag)) ?? (species.move === "hang" || species.move === "leap" ? "canopy" : undefined);
         if (canopyTag) {
             const hostZone = canopyTrees(zone)[0]?.zone ?? zone;
             const place = canopyPlace(hostZone, key, rank, canopyMode(species), length);

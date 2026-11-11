@@ -5,7 +5,9 @@ import table from "@/ark-scene/map/species.json";
 import {mapPlace, mapPoints, setArkMapSampler} from "@/ark-scene/map/place";
 import {mapHolds, mapSlugs, mapSpecies} from "@/ark-scene/map/species";
 import {MAP_AREAS, MAP_TAGS, TAG_AREA} from "@/ark-scene/map/tags";
-import {failuresBySpecies, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
+import {failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
+import {canopyPoint, canopyTrees} from "@/ark-scene/layers";
+import {arkBody} from "@/ark-scene/stats";
 import {validateGrips} from "@/ark-scene/map/validate-grips";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
@@ -126,4 +128,23 @@ test("map: hangers, climbers and perchers grip their branch, trunk, ledge or wal
     assert.ok(result.checked > 100, `${result.checked} rigs checked`);
     const unreviewed = result.failures.filter((failure) => !REVIEWED.grips[failure.slug]);
     assert.deepEqual(unreviewed.map((f) => `${f.slug} (${f.clip}): ${f.detail}`), []);
+});
+
+test("map: a hanger hangs under its limb and a percher sits on top, on the drawn limb's surface (the sloth half a body length below fails)", () => {
+    const {placed} = validated();
+    let hangers = 0;
+    for (const animal of validatorAnimals()) {
+        const place = placed.get(animal.id);
+        if (!place?.canopy || place.canopy.limb < 0) continue;
+        const tree = canopyTrees(place.canopy.zone ?? animal.zone)[place.canopy.tree % canopyTrees(place.canopy.zone ?? animal.zone).length].item;
+        const point = canopyPoint(animal.zone, place.canopy);
+        assert.ok(offLimb(tree, place.canopy.limb, point) < 0.02, `${animal.model_slug} off its limb`);
+        if (place.canopy.mode !== "hang") continue;
+        hangers++;
+        assert.ok(point.ny < -0.5, `${animal.model_slug} hangs with its back down`);
+        // Half a body length below the limb (the bug): the check sees it.
+        const half = arkBody(animal).metres / 2;
+        assert.ok(offLimb(tree, place.canopy.limb, {...point, y: point.y - half}) > Math.min(half, 0.1) * 0.9, `${animal.model_slug}: a float would be caught`);
+    }
+    assert.ok(hangers >= 2, `${hangers} hangers checked`);
 });

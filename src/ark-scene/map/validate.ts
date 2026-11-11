@@ -31,10 +31,12 @@
  */
 
 import {canopyPoint, canopyTrees, tunnelPoint} from "@/ark-scene/layers";
+import type {DecorItem} from "@/ark-scene/decor";
+import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {mapPoints, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, mapPoints, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {mapSlugs, mapSpecies, mapSpeciesStored} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
@@ -162,11 +164,22 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             const tree = trees[place.canopy.tree % trees.length].item;
             const point = canopyPoint(animal.zone, place.canopy);
             const anchor = sampler.anchors().find((a) => a.name === "canopy_tree" && a.x === tree.x && a.z === tree.z);
-            if (!anchor || !anchor.tags.some((tag) => allowed.has(tag))) fail("invalid_surface", `canopy tree at ${tree.x.toFixed(1)},${tree.z.toFixed(1)}`);
+            // (A hanger or a leaper lives on a limb even where its text names only the forest's kind.)
+            const limbAnyway = species.move === "hang" || species.move === "leap";
+            if (!anchor || !(limbAnyway || anchor.tags.some((tag) => allowed.has(tag)))) fail("invalid_surface", `canopy tree at ${tree.x.toFixed(1)},${tree.z.toFixed(1)}`);
+            if (!arborealOf(species, animal.model_slug)) fail("invalid_surface", `on a limb, but it neither climbs, hangs, leaps nor perches in the trees`);
             if (Math.hypot(point.x - tree.x, point.z - tree.z) > 4.5 * tree.scale || point.y < sampler.ground(point.x, point.z).height + 0.5) fail("floats_or_sinks", `off its tree (${point.y.toFixed(2)} m)`);
             if (Math.abs(Math.hypot(point.nx, point.ny, point.nz) - 1) > 0.02 || Math.abs(point.nx * point.tx + point.ny * point.ty + point.nz * point.tz) > 0.05) fail("wrong_facing", "on its limb");
+            if (place.canopy.limb >= 0) {
+                // Gripping its limb (the owner's sloth): on the drawn limb's own surface, not off it; a hanger under it, a percher on top.
+                const off = offLimb(tree, place.canopy.limb, point);
+                if (off > 0.02) fail("floats_or_sinks", `${off.toFixed(2)} m off its limb's surface (${place.canopy.mode})`);
+                if (place.canopy.mode === "hang" ? point.ny > -0.5 : point.ny < 0.5) fail("wrong_facing", `${place.canopy.mode} with its back ${point.ny > 0 ? "up" : "down"}`);
+            }
             continue;
         }
+        // The owner's rule: hangers, climbers and perchers of the trees only on a real limb.
+        if (arborealOf(species, animal.model_slug)) fail("invalid_surface", `a ${species.move}er of the trees on the ground (${map.tag})`);
         // On the ground, in the water, on the sea floor, a floe, the surface.
         const ground = sampler.ground(place.x, place.z);
         const tag = map.tag!;
@@ -209,6 +222,28 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
         }
     }
     return {failures, animals: animals.length, species: new Set(animals.map((a) => a.model_slug)).size, placed};
+}
+
+/**
+ * How far a point is from the surface of a canopy tree's limb as drawn
+ * (`micro-decor.ts` canopyTree, its item's place, turn and scale): its
+ * distance from the limb's axis less the limb's radius there (m).
+ */
+export function offLimb(item: DecorItem, limbIndex: number, point: {x: number; y: number; z: number}): number {
+    const tree = canopyTree(item.variant % 2);
+    const limb = tree.limbs[limbIndex % tree.limbs.length];
+    const c = Math.cos(item.rotation);
+    const s = Math.sin(item.rotation);
+    // Into the tree's own metres.
+    const wx = (point.x - item.x) / item.scale;
+    const wz = (point.z - item.z) / item.scale;
+    const local = {x: wx * c - wz * s, y: (point.y - item.y + DECOR_SINK) / item.scale, z: wx * s + wz * c};
+    let best = Infinity;
+    for (let k = 0; k <= 200; k++) {
+        const at = limbAt(limb, tree.base, k / 200);
+        best = Math.min(best, Math.abs(Math.hypot(local.x - at.x, local.y - at.y, local.z - at.z) - at.radius));
+    }
+    return best * item.scale;
 }
 
 /** The failures by species: slug -> checks (with the first detail of each). */
