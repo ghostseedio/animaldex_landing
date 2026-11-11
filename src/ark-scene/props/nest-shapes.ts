@@ -284,10 +284,10 @@ function downBowl(w: Weave, lining: NestProfile["lining"]) {
     const inner: Array<[number, number]> = [[0.75, 0.33], [0.6, 0.26], [0.3, 0.17], [0, 0.15]];
     w.lathe(outer, 14, () => w.pick(DRY_GRASS, 0.7), 0.3, 0.07);
     w.lathe(inner, 14, () => w.pick(DRY_GRASS, 0.6), 0.55, 0.05);
-    for (let k = 0; k < 140; k++) {
+    for (let k = 0; k < 120; k++) {
         const h = w.random();
         const y = 0.03 + h * 0.27;
-        w.strand(arc(w, radiusAt(outer, y) + 0.03, y, w.random() * Math.PI * 2, 0.8 + w.random() * 1.4, 0.08), 0.014 + w.random() * 0.01, w.pick(k % 5 ? DRY_GRASS : FRESH_GRASS), 0.04 + 0.62 * h);
+        w.strand(arc(w, radiusAt(outer, y) + 0.03, y, w.random() * Math.PI * 2, 0.8 + w.random() * 1.4, 0.08, 4), 0.014 + w.random() * 0.01, w.pick(k % 5 ? DRY_GRASS : FRESH_GRASS), 0.04 + 0.62 * h);
     }
     // Stems standing round it: the cover it is hidden in.
     for (let k = 0; k < 22; k++) {
@@ -300,7 +300,7 @@ function downBowl(w: Weave, lining: NestProfile["lining"]) {
     }
     // The down (or leaves) the bird adds as it lays.
     const soft = liningPalette(lining);
-    const tufts = lining === "down" ? 46 : 24;
+    const tufts = lining === "down" ? 34 : 24;
     for (let k = 0; k < tufts; k++) {
         const a = w.random() * Math.PI * 2;
         const d = 0.2 + w.random() * 0.62;
