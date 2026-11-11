@@ -31,6 +31,7 @@ import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropI
 import {caveSite, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
+import {defaultHomePlots, type HomePlot} from "@/ark-scene/props/home-layout";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 export type Areas = {
@@ -522,7 +523,8 @@ function grassland(): {tussocks: PropInstance[][]; flowers: PropInstance[]; moun
     return {tussocks, flowers, mounds};
 }
 
-export function buildAreas(tier: PropsTier): Areas {
+export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots()): Areas {
+    void plots;
     const group = new Group();
     group.name = "props:areas";
     const warm = propMaterial();
