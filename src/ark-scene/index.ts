@@ -108,7 +108,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import type {ArkEnvironment} from "@/ark-scene/sampler";
+import {attachSway, type ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -1315,6 +1315,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const awake = 1 - entry.rest;
         const along = reducedMotion ? 0 : reach * out * awake;
         const point = surfacePoint(micro, entry.animal.zone, along);
+        // On a leaf, bark or a branch of a tree in the wind: moved with it as the tree's shader moves it (graphics' `attachSway`).
+        const swaying = micro.attach?.source;
+        if (swaying && !reducedMotion) {
+            const sway = attachSway(swaying, ARK_TIME.value, ARK_WIND_VECTOR.value);
+            point.x += sway.x;
+            point.y += sway.y;
+            point.z += sway.z;
+        }
         const turn = reducedMotion || !reach ? 0 : Math.PI * smoothTurn(u) * awake;
         if (turn) {
             // Turn the heading about the normal: t cos + (n × t) sin.

@@ -305,7 +305,7 @@ class WorldSampler implements ArkMapSampler {
             const tag = SCENERY_TAG[point.tag];
             if (!tag) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
-            points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw), size: {min: Math.min(point.size[0], 0.001), max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z))});
+            points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw), size: {min: Math.min(point.size[0], 0.001), max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z)), ...(point.wind ? {source: point} : {})});
         }
         // What the scenery interface does not offer yet: the reeds' and shrubs' tops (a reed warbler's, a dragonfly's perch).
         const decor = worldDecor();

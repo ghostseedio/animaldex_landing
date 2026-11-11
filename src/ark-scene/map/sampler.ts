@@ -22,6 +22,7 @@
 
 import type {ArkZone} from "@/ark-scene/types";
 import type {MapTag} from "@/ark-scene/map/tags";
+import type {AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
 
 /** The graphics lane's attach-point tags (owner, 2026-11-11). */
 export const ATTACH_TAGS = ["leaf", "branch", "bark", "flower_head", "rock_face", "tide_pool", "house_wall", "house_eave", "porch_light", "worm_hole", "burrow_entrance"] as const;
@@ -42,6 +43,8 @@ export type AttachPoint = {
     size: {min: number; max: number};
     /** The zone it is in (for spreading a zone's animals over its own points). */
     zone: ArkZone;
+    /** The scenery interface's own point, when it sways with its tree (a leaf, bark, a branch): the scene moves the animal with it (`attachSway`). */
+    source?: SceneryPoint;
 };
 
 export type GroundSurface = {
