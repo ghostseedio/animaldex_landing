@@ -75,18 +75,9 @@ await build({
     logLevel: "warning"
 });
 // The prebuild worker (`--prebuild`), and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
-await build({
-    entryPoints: [path.join(root, "src/ark-scene/runtime/prebuild-worker.ts")],
-    outfile: path.join(site, "ark-prebuild-worker.js"),
-    bundle: true,
-    format: "iife",
-    platform: "browser",
-    target: ["es2020"],
-    minify: true,
-    tsconfig: path.join(root, "tsconfig.json"),
-    define: {"process.env.NODE_ENV": JSON.stringify("development")},
-    logLevel: "warning"
-});
+for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
+    await build({entryPoints: [path.join(root, "src/ark-scene/runtime", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify("development")}, logLevel: "warning"});
+}
 for (const scale of ["1x", "3x"]) {
     const from = path.join(root, ".ark-golden", "site", `population-${scale}.json`);
     if (existsSync(from)) writeFileSync(path.join(site, `population-${scale}.json`), readFileSync(from));

@@ -901,8 +901,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!built) return;
         world = built;
         worldBuild = null;
-        // Runtime: who is resting at home is known now; the live budget sits them out first.
-        runtime.restingReady();
+        // Runtime: who is resting at home is known now; the live budget sits them out first. (Only where behaviour has
+        // restingAtRoost: otherwise laying the snapshot out again re-wires every schedule for nothing, a long task.)
+        if ((behaviourSchedule as unknown as {restingAtRoost?: unknown}).restingAtRoost) runtime.restingReady();
         // The schedules that waited start now, each where it is at this moment (wired, then posed, as at load).
         if (pendingWire) {
             const {list, arkDay} = pendingWire;

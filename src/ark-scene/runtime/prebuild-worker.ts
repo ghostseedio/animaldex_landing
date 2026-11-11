@@ -1,14 +1,13 @@
 /**
- * The prebuild worker (runtime/prebuild.ts): the mount's heavy seeded work, off the main thread. Built as
- * `public/ark/ark-prebuild-worker.js` for the apps' embed (scripts/build-ark-bundle.mjs); the site's bundler builds
- * it from `new URL("./prebuild-worker.ts", import.meta.url)`.
+ * The prebuild's scenery worker (runtime/prebuild.ts): the decor, the forest fill and the grass, off the main thread.
+ * Built as `public/ark/ark-prebuild-worker.js` (scripts/build-ark-bundle.mjs); ~20 KB (no three.js).
  */
 
-import {computeArkPrebuild, type ArkPrebuildInput} from "@/ark-scene/runtime/prebuild";
+import {computeScenery} from "@/ark-scene/runtime/prebuild-scenery";
 
-const scope = self as unknown as {onmessage: ((event: MessageEvent<ArkPrebuildInput>) => void) | null; postMessage: (data: unknown, transfer?: Transferable[]) => void};
+const scope = self as unknown as {onmessage: ((event: MessageEvent<{grass: number}>) => void) | null; postMessage: (data: unknown, transfer?: Transferable[]) => void};
 
 scope.onmessage = (event) => {
-    const result = computeArkPrebuild(event.data);
+    const result = computeScenery(event.data.grass);
     scope.postMessage(result, [result.grass.numbers.buffer, result.grass.zones.buffer]);
 };
