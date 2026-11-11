@@ -16,7 +16,7 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees", "fields_close"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "ant_bark", "waves_beach", "storm_trees", "fields_close"] as const;
 
 /** Shots in their own weather (everything else is calm, mean tide). */
 export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: number; cloud: number; wetness: number}>> = {
@@ -25,14 +25,17 @@ export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: n
 };
 
 /**
- * The small-animal close-ups (graphics pass): a real catalogue species set on an attach point of the scenery
- * (`sampler.ts`), framed close. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly.
+ * The small-animal close-ups (graphics pass): a real catalogue species at its true size on an attach point of the
+ * scenery (`sampler.ts`), framed as the scene frames a small animal you tap (its length × 6, 0.12–3 m away) unless
+ * the shot gives a distance. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly
+ * (5 cm, a caterpillar's length); the ant on the bark (5 mm) checks the near plane for the smallest animals.
  */
-export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
-    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.9},
-    bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house", distance: 1.1},
-    limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools", distance: 0.8},
-    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.2}
+export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "bark" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance?: number}>> = {
+    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.55},
+    bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house"},
+    limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools"},
+    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house"},
+    ant_bark: {slug: "black-ant", tag: "bark", near: "forest_floor"}
 };
 export type GoldenPlace = typeof GOLDEN_PLACES[number];
 
@@ -59,6 +62,7 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     bee_flower: "Bee on a flower",
     limpet_tidepool: "Limpet in a tide pool",
     gecko_wall: "Gecko on the house wall",
+    ant_bark: "Ant on a tree's bark (5 mm: the near plane)",
     waves_beach: "Waves running up the beach",
     storm_trees: "Trees in a storm",
     fields_close: "Crop rows close up"
@@ -250,6 +254,7 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
         case "bee_flower":
         case "limpet_tidepool":
         case "gecko_wall":
+        case "ant_bark":
             // Framed by the page itself once the animal is placed (golden-entry.ts `microShot`).
             return fallback("micro shot: framed on its attach point");
 

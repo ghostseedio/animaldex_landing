@@ -888,7 +888,6 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             // short and take no time at all, and the animal jumped to the pause.
             if (Math.hypot(firstPath[firstPath.length - 1].x - midSpot.x, firstPath[firstPath.length - 1].z - midSpot.z) > 0.01) firstPath.push({x: midSpot.x, z: midSpot.z});
             const secondPath = world.nav.path(midSpot, b, "walk", 0.5, 400, maxSlopeOf(animal));
-            if (Math.hypot(firstPath[firstPath.length - 1].x - midSpot.x, firstPath[firstPath.length - 1].z - midSpot.z) > 0.01) firstPath.push({x: midSpot.x, z: midSpot.z});
             if (Math.hypot(secondPath[secondPath.length - 1].x - b.x, secondPath[secondPath.length - 1].z - b.z) > 0.01) secondPath.push({x: b.x, z: b.z});
             const l1 = pathLength(firstPath);
             const l2 = Math.max(pathLength(secondPath), 0.01);
