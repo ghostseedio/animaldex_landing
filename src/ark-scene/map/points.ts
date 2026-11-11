@@ -338,6 +338,37 @@ export class MapPoints {
         return tags;
     }
 
+    private shoreLists = new Map<string, Array<{x: number; z: number}>>();
+
+    /**
+     * Where a diver that hauls out stands (a penguin, a seal): dry ground
+     * within `SHORE_REACH` of the sea, of the shore's tags, clear of scenery
+     * and of the hamlet's land; the cold cove's (its ice running down to the
+     * sea, its rocky shore) or a zone's own coast. Nearest the water first.
+     */
+    shoreList(which: "cove" | ArkZone, centre: {x: number; z: number}): Array<{x: number; z: number}> {
+        let list = this.shoreLists.get(which);
+        if (list) return list;
+        const sea = new Set(this.grid().filter((cell) => cell.wet && this.sampler.ground(cell.x, cell.z).water === "sea").map((cell) => `${Math.round(cell.x / GRID)},${Math.round(cell.z / GRID)}`));
+        const reach = Math.ceil(SHORE_REACH / GRID);
+        const tags = which === "cove" ? COVE_TAGS : COAST_TAGS;
+        const near: Array<{x: number; z: number; water: number; d: number}> = [];
+        for (const cell of this.grid()) {
+            if (cell.wet || !cell.tags.some((tag) => tags.has(tag)) || this.sampler.reserved?.(cell.x, cell.z)) continue;
+            if (which === "cove" ? Math.hypot(cell.x - centre.x, cell.z - centre.z) > COVE_RADIUS : cell.zone !== which) continue;
+            const i = Math.round(cell.x / GRID);
+            const j = Math.round(cell.z / GRID);
+            let water = Infinity;
+            for (let di = -reach; di <= reach; di++) for (let dj = -reach; dj <= reach; dj++) if (sea.has(`${i + di},${j + dj}`)) water = Math.min(water, Math.hypot(di, dj) * GRID);
+            if (water > SHORE_REACH) continue;
+            near.push({x: cell.x, z: cell.z, water, d: Math.hypot(cell.x - centre.x, cell.z - centre.z)});
+        }
+        near.sort((a, b) => a.water - b.water || a.d - b.d || a.x - b.x || a.z - b.z);
+        list = near.map(({x, z}) => ({x, z}));
+        this.shoreLists.set(which, list);
+        return list;
+    }
+
     private limbLists = new Map<string, {list: AttachPoint[]; own: boolean}>();
 
     /**
@@ -397,6 +428,13 @@ export class MapPoints {
         return found;
     }
 }
+
+/** A hauled-out diver's shore: dry ground at most this far from the sea (m). */
+export const SHORE_REACH = 7;
+/** How far round the cold cove's middle its shore reaches (m). */
+const COVE_RADIUS = 34;
+const COVE_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["snow_ice", "tundra", "rocky_shore", "sea_cliffs", "rocks_boulders"]);
+const COAST_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["rocky_shore", "sandy_beach", "sea_cliffs", "rocks_boulders", "mudflat"]);
 
 /** A body's mass a limb must hold, as a share of the limb's load (a margin for a moving, landing body). */
 const LOAD_MARGIN = 1.5;

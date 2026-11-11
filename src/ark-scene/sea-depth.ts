@@ -82,6 +82,20 @@ function fallback(zone: string): SpeciesDepth | null {
     return {band: zone === "coral_reef" ? "reef" : "mid", water: "salt", home: "zone", breathes: false, crevice: false, deepFloor: false, glow: false, reason: "default: not in depth-bands.json", source: "default"};
 }
 
+/**
+ * The divers the table leaves out because they live on land between swims
+ * (the map lane's fix, 2026-11-11: "penguins floating in the ocean"): the
+ * penguins and the seals, sea lions and walrus. On land they stand on their
+ * shore (`map/place.ts` haulsOut); in the water, when their schedule takes
+ * them swimming, they swim under the surface in the upper water and come up
+ * to breathe (porpoising), never float upright on it like a duck.
+ */
+const DIVERS = /(^|-)penguin($|-)|(^|-)seal($|-)|sea-lion|fur-seal|walrus/;
+function diverDepth(slug: string): SpeciesDepth | null {
+    if (!DIVERS.test(slug)) return null;
+    return {band: "upper", water: "salt", home: "coast", breathes: true, crevice: false, deepFloor: false, glow: false, reason: "a diver that hauls out (penguin, seal, sea lion, walrus): it swims in the upper water and breathes at the surface", source: "default"};
+}
+
 /** A species' depth band, or null when it is not a water species (it stands on land, or perches, or is small and at its microhabitat). */
 export function speciesDepth(slug: string, zone: string): SpeciesDepth | null {
     const key = `${slug}#${zone}`;
@@ -93,7 +107,7 @@ export function speciesDepth(slug: string, zone: string): SpeciesDepth | null {
     const row = ROWS[slug];
     const found: SpeciesDepth | null = row
         ? {band: row[0] as DepthBand, water: row[1] as WaterKind, home: row[2] as WaterHome, breathes: row[3].includes("b"), crevice: row[3].includes("c"), deepFloor: row[3].includes("f"), glow: row[3].includes("g"), reason: row[4], source: row[5]}
-        : fallback(zone);
+        : (diverDepth(slug) ?? fallback(zone));
     known.set(key, found);
     return found;
 }

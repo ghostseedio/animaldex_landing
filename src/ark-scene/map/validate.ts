@@ -43,6 +43,7 @@ import {attachFits} from "@/ark-scene/map/sampler";
 import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {inCoral, onFloor, waterSuits} from "@/ark-scene/map/water";
+import {SHORE_REACH} from "@/ark-scene/map/points";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {depthSeed, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion} from "@/ark-scene/sea-depth";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
@@ -169,6 +170,17 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
                     break;
                 }
             }
+            continue;
+        }
+        if (map.shore) {
+            // A diver that hauls out (a penguin, a seal): standing on dry ground by the sea, never floating on it.
+            const g = sampler.ground(place.x, place.z);
+            if (g.water || place.water) fail("wrong_medium", `a ${map.shore} diver in the water at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            if (Math.abs(place.ground - g.height) > 0.05) fail("floats_or_sinks", `at ${place.ground.toFixed(2)}, the ground at ${g.height.toFixed(2)}`);
+            if (sampler.blocked(place.x, place.z, Math.min(Math.max(length * 0.2, 0.1), 0.5))) fail("inside_scenery", `in a rock or building at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            let sea = false;
+            for (let k = 0; k < 16 && !sea; k++) for (let r = 1; r <= SHORE_REACH + 2 && !sea; r += 1) sea = sampler.ground(place.x + Math.sin(k * Math.PI / 8) * r, place.z + Math.cos(k * Math.PI / 8) * r).water === "sea";
+            if (!sea) fail("invalid_surface", `not by the sea at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
             continue;
         }
         // A small flyer with no perch that fits it in reach lands on its ground or its water (section 2: "only at valid perches, the ground or the water").

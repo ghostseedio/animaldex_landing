@@ -2184,7 +2184,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const plan = model?.behaviour?.plan ?? "";
         // A water species (`sea-depth.ts`): in its depth band, its whole body under the surface (a floater on it, a
         // bottom-dweller on the floor, an octopus in its hole), an air-breather up for air when its state says so.
-        if (entry.depth && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
+        // (Only where it is placed in the water: a penguin or a seal standing on its shore has a band for its swims, not for its rest.)
+        if (entry.depth && entry.place.water && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
         // The reef's and the sea's bottom-dwellers (crabs, octopus, stars): on the sea floor.
         if (!entry.depth && atSeaOf(entry) && entry.layer.mode === "floor") {
             const sway = reducedMotion ? 0 : Math.sin(time * 0.25 + entry.phase * 9) * 0.25 * (1 - entry.rest);

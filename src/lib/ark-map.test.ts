@@ -14,7 +14,9 @@ import {displayLength} from "@/ark-scene/sizes";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {reefLandmarks} from "@/ark-scene/reef";
 import {inCoral, onFloor} from "@/ark-scene/map/water";
-import {speciesDepth} from "@/ark-scene/sea-depth";
+import {depthSeed, fitInWater, speciesDepth, SURFACE_CLEAR, waterSpec} from "@/ark-scene/sea-depth";
+import {shoreOf} from "@/ark-scene/map/place";
+import {place as scenePlace} from "@/ark-scene/sampler";
 import {mapHolds, mapSlugs, mapSpecies} from "@/ark-scene/map/species";
 import {MAP_AREAS, MAP_TAGS, TAG_AREA} from "@/ark-scene/map/tags";
 import {failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
@@ -23,6 +25,7 @@ import {arkBody} from "@/ark-scene/stats";
 import {validateGrips} from "@/ark-scene/map/validate-grips";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
+import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
 
 const TABLE = table as unknown as {points: Record<string, Record<string, number>>; species: Record<string, unknown[]>};
@@ -245,4 +248,37 @@ test("map + behaviour: every bird, bat and grazer is on the behaviour schedule (
     }
     assert.deepEqual(off, [], `${off.length} off the schedule: ${off.slice(0, 12).join(", ")}`);
     assert.ok(birds > 1200 && grazers > 400 && perched > 800, `${birds} birds and bats, ${grazers} grazers, ${perched} perched`);
+});
+
+test("map: penguins and seals stand on their shore (the penguins on the cold cove's ice and rocks), held Antarctic ones too; in the water they swim under it", () => {
+    const sampler = mapPoints().sampler;
+    const cove = scenePlace("cold_cove");
+    const penguins = ["african-penguin", "humboldt-penguin", "magellanic-penguin", "galapagos-penguin", "emperor-penguin", "adelie-penguin", "king-penguin", "gentoo-penguin", "macaroni-penguin", "southern-rockhopper-penguin"];
+    const seals = ["harbor-seal", "grey-seal", "ringed-seal", "bearded-seal", "hooded-seal", "walrus", "california-sea-lion", "weddell-seal", "leopard-seal"];
+    const animals: ArkAnimal[] = [...penguins, ...seals].flatMap((slug, i) => [0, 1, 2].map((rank) => ({id: `dive-${slug}-${rank}`, species_profile_id: `dive-${slug}`, name: slug, scientific_name: null, model_slug: slug, zone: (/emperor|adelie|king|gentoo|macaroni|rockhopper|ringed|bearded|hooded|walrus|weddell|leopard/.test(slug) ? "polar" : "seashore") as ArkAnimal["zone"], arrived_at: "2026-11-01T00:00:00Z", brought_by: {label: "Voyager 1", named: false}, mine: false, slot: 40 + i, slot_rank: rank} as ArkAnimal)));
+    const placed = placeAnimals(animals);
+    for (const animal of animals) {
+        const place = placed.get(animal.id)!;
+        const g = sampler.ground(place.x, place.z);
+        assert.ok(!place.water && g.water === null, `${animal.model_slug} in the water`);
+        assert.ok(place.map?.shore, `${animal.model_slug} on a shore`);
+        let sea = false;
+        for (let k = 0; k < 16 && !sea; k++) for (let r = 1; r <= 9 && !sea; r++) sea = sampler.ground(place.x + Math.sin(k * Math.PI / 8) * r, place.z + Math.cos(k * Math.PI / 8) * r).water === "sea";
+        assert.ok(sea, `${animal.model_slug} by the sea`);
+        if (penguins.includes(animal.model_slug)) assert.ok(Math.hypot(place.x - cove.x, place.z - cove.z) < 36, `${animal.model_slug} on the cold cove`);
+        assert.equal(shoreOf(animal.model_slug, animal.zone) === "cove", place.map!.shore === "cove");
+        // In the water (when its schedule takes it swimming): under the surface in the upper water, up only to breathe.
+        const depth = speciesDepth(animal.model_slug, animal.zone)!;
+        assert.ok(depth && depth.breathes && depth.band === "upper", `${animal.model_slug} swims`);
+        const {base} = fitInWater(waterSpec(depth, -6, depthSeed(animal.id), 1000, 0), 0.6);
+        assert.ok(base + 0.6 <= -SURFACE_CLEAR + 1e-9, `${animal.model_slug} floats`);
+    }
+    // A colony stands close, one spot each.
+    for (const slug of penguins) {
+        const spots = [0, 1, 2].map((rank) => placed.get(`dive-${slug}-${rank}`)!);
+        for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+            const d = Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z);
+            assert.ok(d > 0.9 && d < 4, `${slug} ${i} and ${j} ${d.toFixed(2)} m apart`);
+        }
+    }
 });
