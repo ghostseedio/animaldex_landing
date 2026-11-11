@@ -144,7 +144,7 @@ export function worldDecor(): DecorItem[] {
         if (!kind) continue;
         // Reeds keep to the water's edge; trees thin out up the mountain; palms keep to the sand.
         if (kind === "reed" && sample.height > 1.3) continue;
-        if (kind === "conifer" && sample.height > 30) continue;
+        if (kind === "conifer" && sample.height > 36) continue;
         if (kind === "broadleaf" && zone === "mountains") continue;
         if (kind === "palm" && sample.land > 0.97) continue;
         if (sample.cliff > 0.4 && kind !== "rock" && sample.land < 0.8) continue;
@@ -216,7 +216,7 @@ export function worldDecor(): DecorItem[] {
         } else {
             const coral: DecorItem = {kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]};
             // Out of the beach's clear shallows (the same random draws either way, so nothing after moves).
-            if (height < -1.15) push(coral);
+            if (height < -1.9) push(coral);
         }
     }
 
@@ -406,6 +406,7 @@ export function forestFill(): FillItem[] {
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
         if (kind === "conifer" && sample.height > 22) continue;
+        if (sample.height > 8 && Math.hypot(sampleGround(x + 1.5, z).height - sampleGround(x - 1.5, z).height, sampleGround(x, z + 1.5).height - sampleGround(x, z - 1.5).height) / 3 > 0.75) continue;
         const site = ZONE_SITES[zone];
         if (Math.hypot(x - site.x, z - site.z) < site.clearing + 2) continue;
         if (riverDistance(x, z) < 5) continue;

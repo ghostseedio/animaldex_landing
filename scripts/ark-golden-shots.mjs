@@ -14,6 +14,7 @@
  *   node scripts/ark-golden-shots.mjs --study natural,toon,real --label studies
  *   options: --out <dir>  --devices desktop,phone  --places coast_rocks,...  --times day,night
  *            --quality auto|high|medium|low  --gpu metal|swiftshader  --measure <ms>  --headed
+ *            --attach-timing  also time the scenery attach points' build (sampler.ts) after the models are in
  *
  * Devices (GOLDEN_DEVICES in golden-shots.ts):
  *   desktop  1440×900, DPR 1, no throttle, the host GPU
@@ -37,7 +38,7 @@ const arg = (name, fallback) => {
 };
 const flag = (name) => process.argv.includes(`--${name}`);
 
-const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"];
+const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "reef_closeup", "kelp_forest", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "ant_bark", "waves_beach", "storm_trees", "fields_close"];
 const TIMES = ["day", "dusk", "night"];
 const DEVICES = {
     desktop: {viewport: {width: 1440, height: 900}, deviceScaleFactor: 1, isMobile: false, hasTouch: false, cpuThrottle: 1},
@@ -91,14 +92,14 @@ writeFileSync(path.join(site, "golden.html"), `<!doctype html>
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
     // The scene's own art is served from public/ (as the site serves it); the page and its script from .ark-golden/site.
-    const fromPublic = url.pathname.startsWith("/ark/graphics/");
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
     if (!file.startsWith(folder) || !existsSync(file)) {
         response.writeHead(404).end();
         return;
     }
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".glb") ? "model/gltf-binary" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -176,6 +177,12 @@ if (!studies.length) {
         log(deviceName, "preparing (every model in) on", gpuName);
         const prepared = await page.evaluate(() => window.__arkGolden.prepare());
         log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
+        if (flag("attach-timing")) {
+            // The scenery attach points' build (sampler.ts), as the mount pays for it: sync, and sliced where offered.
+            const timing = await page.evaluate(() => window.__arkGolden.attachTiming());
+            log(deviceName, "attach points", JSON.stringify(timing));
+            results.push({device: deviceName, attachTiming: timing});
+        }
         for (const time of times) {
             for (const place of places) {
                 const shot = await page.evaluate(([p, t]) => window.__arkGolden.shoot(p, t), [place, time]);
@@ -221,7 +228,7 @@ await browser.close();
 server.close();
 
 writeFileSync(path.join(out, "numbers.json"), JSON.stringify(results, null, 2));
-const rows = results.map((r) => `| ${r.device} | ${r.study ? `${r.study} / ${r.view}` : r.place} | ${r.time} | ${r.intervalP50} | ${r.intervalP95} | ${r.fps} | ${r.cpuMs ?? "–"} | ${r.gpuDrainMs} | ${r.drawCalls} | ${r.triangles} | ${r.tier ?? "–"} |`);
+const rows = results.filter((r) => r.place || r.study).map((r) => `| ${r.device} | ${r.study ? `${r.study} / ${r.view}` : r.place} | ${r.time} | ${r.intervalP50} | ${r.intervalP95} | ${r.fps} | ${r.cpuMs ?? "–"} | ${r.gpuDrainMs} | ${r.drawCalls} | ${r.triangles} | ${r.tier ?? "–"} |`);
 writeFileSync(path.join(out, "numbers.md"), [
     `Golden shots "${label}", ${new Date().toISOString()}, GPU mode ${gpu} (${results[0]?.gpuName ?? "?"}), quality ${quality}, ${measureMs} ms measured per shot.`,
     "",
