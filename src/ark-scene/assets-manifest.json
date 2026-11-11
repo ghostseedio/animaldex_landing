@@ -143,7 +143,7 @@
   "trees": {
    "attach": "trees/attach.json",
    "assets": 33,
-   "bytes": 4980374,
+   "bytes": 4948004,
    "lod0_tris_max": 9500
   }
  },
@@ -7129,14 +7129,14 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -13.084,
-     -0.046,
-     -12.933
+     -13.101,
+     -0.041,
+     -12.95
     ],
     "max": [
-     10.563,
-     26.521,
-     9.68
+     10.575,
+     26.54,
+     9.697
     ]
    },
    "lods": [
@@ -7144,8 +7144,8 @@
      "level": "lod0",
      "file": "trees/emergent-a.lod0.glb",
      "tris": 9500,
-     "verts": 10058,
-     "bytes": 120644,
+     "verts": 9590,
+     "bytes": 112404,
      "doubleSided": true,
      "morph": false
     },
@@ -7153,8 +7153,8 @@
      "level": "lod1",
      "file": "trees/emergent-a.lod1.glb",
      "tris": 2800,
-     "verts": 2724,
-     "bytes": 35076,
+     "verts": 2606,
+     "bytes": 33248,
      "doubleSided": true,
      "morph": false
     },
@@ -7179,18 +7179,18 @@
    ],
    "attach": 51,
    "wood_tris": [
-    4022,
-    1172,
+    4156,
+    1316,
     276
    ],
    "leaves": 12792,
-   "height": 26.52,
-   "crown_radius": 13.08,
+   "height": 26.54,
+   "crown_radius": 13.1,
    "trunk_radius": 0.55,
    "lod_distances": [
     66.3,
-    159.1,
-    371.3
+    159.2,
+    371.6
    ]
   },
   "emergent-b": {
@@ -7205,7 +7205,7 @@
     ],
     "max": [
      7.596,
-     19.531,
+     19.58,
      4.421
     ]
    },
@@ -7214,8 +7214,8 @@
      "level": "lod0",
      "file": "trees/emergent-b.lod0.glb",
      "tris": 9500,
-     "verts": 12958,
-     "bytes": 159400,
+     "verts": 11412,
+     "bytes": 138188,
      "doubleSided": true,
      "morph": false
     },
@@ -7223,8 +7223,8 @@
      "level": "lod1",
      "file": "trees/emergent-b.lod1.glb",
      "tris": 2799,
-     "verts": 2806,
-     "bytes": 36004,
+     "verts": 2746,
+     "bytes": 34936,
      "doubleSided": true,
      "morph": false
     },
@@ -7249,18 +7249,18 @@
    ],
    "attach": 51,
    "wood_tris": [
-    3142,
+    4044,
     1141,
     210
    ],
    "leaves": 3311,
-   "height": 19.53,
+   "height": 19.58,
    "crown_radius": 7.6,
    "trunk_radius": 0.55,
    "lod_distances": [
-    48.8,
-    117.2,
-    273.4
+    48.9,
+    117.5,
+    274.1
    ]
   },
   "mangrove-a": {
@@ -8594,5 +8594,5 @@
    ]
   }
  },
- "totalBytes": 8650080
+ "totalBytes": 8617710
 }
