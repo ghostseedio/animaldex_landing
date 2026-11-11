@@ -4,6 +4,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
+import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -54,6 +55,8 @@ type Props = {
     publicStory?: boolean;
     /** The page's own path ("/ark", "/id/ark"): where a share link points. */
     shareLocalePath?: string;
+    /** Development's live feed for the live log and bars (`?fixture=1&feed=1`, `?fixture=live`, `?fixture=grow`). */
+    liveFeed?: boolean;
 };
 
 /** The contract's refresh: every 45 s while the tab is in front. */
@@ -162,7 +165,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
+export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -209,6 +212,8 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     // The selected herd's row in the panel: its kind's (A1).
     const herdAnimal = herd ? snapshot?.animals.find((animal) => arkLookKey(animal) === herd.key) ?? null : null;
     const herdSpeciesKey = herdAnimal ? arkSpeciesKey(herdAnimal) : null;
+    // The live log over the world (owner, 2026-11-11): the Ark's record as it happens, and what is seen near the camera.
+    const {hostRef: liveHostRef, observe: observeLive} = useArkLive({sceneRef, snapshotRef, setSnapshot, ready, words, locale, fixture, feed: liveFeed, growFrom, covered: Boolean(selected || herd), reducedMotion});
 
     useEffect(() => {
         try {
@@ -537,6 +542,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     // MARK: Refresh
 
     const apply = useCallback((next: ArkSnapshot) => {
+        observeLive(next);
         const before = snapshotRef.current;
         if (sameAnimals(before, next)) return;
         const known = new Set(before?.animals.map((animal) => animal.id) ?? []);
@@ -545,10 +551,10 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         setSnapshot(next);
         sceneRef.current?.update(next);
         if (before && fresh.length) setArrival(fresh[fresh.length - 1]);
-    }, []);
+    }, [observeLive]);
 
     useEffect(() => {
-        if (fixture && !growFrom) return;
+        if ((fixture && !growFrom) || liveFeed) return;
         let timer: ReturnType<typeof setTimeout> | null = null;
         let lastRead = Date.now();
         let stopped = false;
@@ -599,7 +605,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
             if (timer) clearTimeout(timer);
             document.removeEventListener("visibilitychange", onVisible);
         };
-    }, [apply, fixture, growFrom]);
+    }, [apply, fixture, growFrom, liveFeed]);
 
     useEffect(() => {
         if (!arrival) return;
@@ -760,6 +766,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
             <div className="w-full md:flex md:h-[max(30rem,min(calc(100svh-18.5rem),56rem))]">
             <section ref={worldRef} aria-label={words.eyebrow} className="relative h-[max(26rem,min(66svh,48rem))] w-full overflow-hidden bg-[#ecdcc4] md:h-full md:min-w-0 md:flex-1">
                 {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" onPointerUp={worldTapped} /> : null}
+                {snapshot && !failed ? <div ref={liveHostRef} className="pointer-events-none absolute inset-0" /> : null}
 
                 {snapshot && !failed && !ready ? (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#ecdcc4]">

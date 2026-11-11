@@ -1,5 +1,6 @@
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
+import type {ArkSeenNow} from "@/lib/ark-live-log";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
@@ -362,6 +363,12 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     reactive: (id: string) => ArkReactiveSnapshot | null;
     /** The reactive layer's cost and counts on the last frame (for the perf report and the audit lane). */
     reactiveStats: () => ArkReactiveStats;
+    /**
+     * The live log's "seen" lines (`lib/ark-live-log.ts`): the visible animals near the camera running one of the
+     * logged recipes now (courtship, contests, catches, nest building), and the alarm calls they made in the last
+     * few seconds. Visual only (the shared layers, the same for every viewer); empty while motion is reduced.
+     */
+    seen: () => ArkSeenNow;
     /** The ground's height at a point (never below the sea). */
     heightAt: (x: number, z: number) => number;
     /** Ask for these species' models, near and far (resolves once asked; `loading` says when they are in). */

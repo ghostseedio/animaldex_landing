@@ -63,6 +63,10 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
  * camera and clock driven by `window.__arkDirector`. With `?fixture=1` it is
  * the fixture (samples only); otherwise the live Ark.
  *
+ * The live log and bars in development: `&feed=1` (or `?fixture=live`) runs a made-up feed over the fixture,
+ * what a running tick would send (arrivals, births, clutches, meals, deaths), a beat every 8 s
+ * (`src/lib/ark-live-fixture.ts`); `?fixture=grow` runs it by default (`&feed=0`: the old growth only).
+ *
  * `?lang=<app language>` (any of the apps' 44, e.g. `ja`, `ar`, `zh-Hant`)
  * shows the Ark's words in that language from its Ark-only bundle
  * (`src/lib/ark-languages.ts`), English key by key, right to left where it reads so.
@@ -70,7 +74,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -494,6 +498,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             since={since}
             publicStory={Boolean(mode) && searchParams.publicStory === "1"}
             shareLocalePath={getLocalePath(locale, "/ark")}
+            liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
         </>
