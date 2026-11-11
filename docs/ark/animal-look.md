@@ -105,6 +105,19 @@ With the pass on, the blob gets a dark core where the body meets the ground, fad
 - near animals' shadows lie on the ground's slope (its normal, cached on a 1 m grid);
 - a small animal on a wall, a leaf, a flower or a stone gets its shadow on that surface, under its body, long the way it crawls, lifted by a little of its own size.
 
+### Projected onto the ground (fix of 2026-11-11, the owner's "shadows above them")
+
+A ground shadow used to lie at the animal's **home spot's** height (`entry.place.ground`). The behaviour schedule walks animals off that spot, so it floated over any animal that had walked downhill. The golden `--shadow-audit` found 50 such animals in the fixture: a red fox 3 m, a macaw 12 m, alpine ibex 18 m, a snow leopard 28 m.
+
+Perched birds also got a flat shadow on their limb or post that stuck out into the air, and a primate's canopy leap got one mid-air.
+
+Now:
+- **Ground shadows** are projected straight down onto the ground under where the animal is now (`groundContact` and `AnimalLook.groundUnder`: exact for near animals, a 25 cm grid for the rest).
+  - They are full on the ground and fade as the feet rise. They are gone once the animal is clearly off the ground: flight, a high perch, a climb.
+  - There are none where water covers the ground (swimmers, floaters, a bird over the lake) and none for an animal under the ground.
+- **Surface shadows** remain only on broad surfaces the animal is really on (`SHADOW_SURFACE_TAGS`: a wall, a rock face, a ledge, a log, bark, a leaf; micro animals' walls, leaves, flowers and stones). Never on a limb, a post, a lamp, a canopy pose or a leap.
+- The "My animals" ring lies on the ground under the animal now, too.
+
 ## Golden close-ups
 
 ```
@@ -119,6 +132,8 @@ Each species gets the pass off ("before") then on ("after"):
 - `--detail` comes closer than a viewer can (development only) to judge the surface;
 - `--wet` adds a rain shot;
 - `--rigged` adds a moving shot with the rig playing, to check skinned meshes.
+- `--shadow-audit [--seconds 20]` lists the animals standing far from their home spot's ground (`shadow-audit.json`).
+- `--ids a,b --distance 7 --moving` shoots those very animals, from a fixed distance.
 
 The close-up skins are served from the local build.
 
