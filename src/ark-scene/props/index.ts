@@ -31,14 +31,14 @@ import type {QualityTier} from "@/ark-scene/post";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {ARK_DAY_MS, arkDayAt, weatherAt} from "@/lib/ark-clock";
 import {nestStage, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
-import {buildAreas, type Areas} from "@/ark-scene/props/areas";
+import {buildAreasSteps, type Areas} from "@/ark-scene/props/areas";
 import {chimneyTop, defaultHomePlots, type HomePlot} from "@/ark-scene/props/home-layout";
 import {prepareAttachPoints, setAttachHomePlots} from "@/ark-scene/sampler";
 import {buildCave, CAVE_ROOST} from "@/ark-scene/props/cave";
 import {conditionsFromArkWeather, PROPS_WEATHER_LOOKS, withOverride, type PropsConditions} from "@/ark-scene/props/conditions";
 import {buildEffects} from "@/ark-scene/props/effects";
-import {buildHomes, buildWebs, type Homes} from "@/ark-scene/props/homes";
-import {PROPS_TIERS, PROPS_WEATHER, type LodBatch, type LodPiece} from "@/ark-scene/props/kit";
+import {buildHomesSteps, buildWebs, type Homes} from "@/ark-scene/props/homes";
+import {PROPS_TIERS, PROPS_WEATHER, runSliced, type LodBatch, type LodPiece} from "@/ark-scene/props/kit";
 import {presenceKey, propsPresence} from "@/ark-scene/props/presence";
 
 type Override = Partial<PropsConditions> | string | null | undefined;
@@ -110,6 +110,10 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     effects.setTier(tier.particles);
 
     let homes: Homes | null = null;
+    let homesJob = 0;
+    let areasJob = 0;
+    /** Bumped whenever the homes or the areas are swapped in (the close-up spots' cache). */
+    let homesVersion = 0;
     let webs: ReturnType<typeof buildWebs> | null = null;
     let homesKey = "";
     let snapshot = context.snapshot;
@@ -124,43 +128,79 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             .map((at) => (at ? `${at.x.toFixed(2)},${at.z.toFixed(2)}` : "-"))
             .join(";");
         const key = `${presenceKey(presence)}|${placed}`;
-        if (key === homesKey && homes) return;
+        if (key === homesKey) return;
         homesKey = key;
-        if (homes) {
-            root.remove(homes.group);
-            homes.dispose();
-        }
-        if (webs) {
-            root.remove(webs.lines);
-            webs.lines.geometry.dispose();
-        }
-        homes = buildHomes(presence, context.placeOf, tier);
-        root.add(homes.group);
-        webs = homes.webs.length ? buildWebs(homes.webs) : null;
-        if (webs) root.add(webs.lines);
-        effects.setGlints(webs?.beads ?? new Float32Array(0), homes.slimeGlints);
-        cave.setRoost(homes.roost);
-        homes.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin));
-        moved = true;
+        // Built a few milliseconds a frame (buildHomesSteps, runSliced): the old homes stay until the new are ready. A
+        // build overtaken by a newer one finishes and is thrown away (so nothing it made is left undisposed).
+        const job = ++homesJob;
+        void runSliced(buildHomesSteps(presence, context.placeOf, tier), 6, () => disposed).then((built) => {
+            if (!built) return;
+            if (disposed || job !== homesJob) {
+                built.dispose();
+                return;
+            }
+            if (homes) {
+                root.remove(homes.group);
+                homes.dispose();
+            }
+            if (webs) {
+                root.remove(webs.lines);
+                webs.lines.geometry.dispose();
+                (webs.lines.material as {dispose: () => void}).dispose();
+            }
+            homes = built;
+            homesVersion++;
+            root.add(homes.group);
+            for (const batch of homes.batches) batch.setShadows(shadows);
+            webs = homes.webs.length ? buildWebs(homes.webs) : null;
+            if (webs) root.add(webs.lines);
+            effects.setGlints(webs?.beads ?? new Float32Array(0), homes.slimeGlints);
+            cave.setRoost(homes.roost);
+            homes.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin));
+            moved = true;
+        });
     };
-    const mountScenery = () => {
-        if (disposed || areas) return;
-        areas = buildAreas(tier, homePlots);
-        root.add(areas.group);
-        for (const batch of areas.batches) batch.setShadows(shadows);
-        for (const piece of areas.pieces) piece.setShadows(shadows);
-        rebuildHomes();
-        moved = true;
+    /** Build the areas for the plots now, a few milliseconds a frame, and put them in place of the old ones when done. */
+    const rebuildAreas = () => {
+        const job = ++areasJob;
+        const plots = homePlots;
+        void runSliced(buildAreasSteps(tier, plots), 6, () => disposed).then((built) => {
+            if (!built) return;
+            if (disposed || job !== areasJob) {
+                built.dispose();
+                return;
+            }
+            const first = !areas;
+            if (areas) {
+                root.remove(areas.group);
+                areas.dispose();
+            }
+            areas = built;
+            root.add(areas.group);
+            for (const batch of areas.batches) batch.setShadows(shadows);
+            for (const piece of areas.pieces) piece.setShadows(shadows);
+            areas.buildings.setShadows(shadows);
+            homesVersion++;
+            conditionsAt = -Infinity;
+            // The homes once the areas are in (they share the attach points, already prepared).
+            if (first) rebuildHomes();
+            moved = true;
+        });
     };
-    void prepareAttachPoints(6).then(mountScenery);
+    // The scenery after the first frame: the sampler's attach points a slice a frame, then the areas and the homes
+    // the same way, so the mount has no long task at any population (docs/ark/runtime.md).
+    void prepareAttachPoints(6).then(() => {
+        if (!disposed) rebuildAreas();
+    });
 
     /** The places worth a close look: the nests, the homes' marks, the webs, the cave's mouth. */
     let closeCache: {key: string; spots: Array<{x: number; y: number; z: number}>} = {key: "", spots: []};
     const closeSpots = () => {
-        if (closeCache.key === homesKey) return closeCache.spots;
+        const cacheKey = `${homesKey}|${homesVersion}`;
+        if (closeCache.key === cacheKey) return closeCache.spots;
         const inside = cave.toWorld(new Vector3(0, 1.4, -2));
         const spots = [...(homes?.nests ?? []), ...Object.values(homes?.marks ?? {}), ...Object.values(areas?.marks ?? {}), {x: cave.origin.x, y: cave.origin.y + 1.4, z: cave.origin.z}, inside];
-        closeCache = {key: homesKey, spots};
+        closeCache = {key: cacheKey, spots};
         return spots;
     };
     const batches = (): LodBatch[] => [...(areas?.batches ?? []), ...(homes?.batches ?? [])];
@@ -201,19 +241,13 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             const same = plots.length === homePlots.length && plots.every((plot, i) => plot.id === homePlots[i].id && plot.x === homePlots[i].x && plot.z === homePlots[i].z && plot.rotation === homePlots[i].rotation);
             homePlots = plots;
             setAttachHomePlots(plots); // the sampler's fence_post points follow the same plots (graphics attach)
-            if (!areas || same) return;
-            root.remove(areas.group);
-            areas.dispose();
-            areas = buildAreas(tier, homePlots);
-            root.add(areas.group);
-            for (const batch of areas.batches) batch.setShadows(shadows);
-            for (const piece of areas.pieces) piece.setShadows(shadows);
-            moved = true;
+            // Before the first build, the mount's own build takes the newest plots; after it, a sliced rebuild.
+            if (same || areasJob === 0) return;
+            rebuildAreas();
         },
         setSnapshot: (next: ArkSnapshot) => {
             snapshot = next;
             rebuildHomes();
-            if (homes) for (const batch of homes.batches) batch.setShadows(shadows);
         },
         setHours: (next: number) => {
             hours = next;

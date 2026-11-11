@@ -539,3 +539,86 @@ test("props hamlet land: the baked footprints are still the map's; no crops on a
     // The decor's own items are not moved or removed (their ids, `decor<n>`, stay).
     assert.equal(worldDecor().filter((item) => item.kind === "flower" && hamletLandAt(item.x, item.z)).length, 0);
 });
+
+// MARK: - Built in slices, the same as all at once
+
+import {buildAreasSteps} from "@/ark-scene/props/areas";
+import {buildHomesSteps} from "@/ark-scene/props/homes";
+import {runSliced} from "@/ark-scene/props/kit";
+
+test("props slices: the homes and the areas built a slice at a time are the same as built at once (and they do pause)", async () => {
+    const snapshot = propsFixture(decodeArkSnapshot(fixture)!);
+    const places = placeAnimals(snapshot.animals);
+    const presence = propsPresence(snapshot);
+    const placeOf = (id: string) => places.get(id) ?? null;
+    let steps = 0;
+    const counted = function* <T>(inner: Generator<void, T, void>): Generator<void, T, void> {
+        let next = inner.next();
+        while (!next.done) {
+            steps++;
+            yield;
+            next = inner.next();
+        }
+        return next.value;
+    };
+    // The smallest slices there are: every step its own frame.
+    const sliced = (await runSliced(counted(buildHomesSteps(presence, placeOf, PROPS_TIERS.medium)), 0))!;
+    assert.ok(steps > 20, `${steps} steps`);
+    const whole = buildHomes(presence, placeOf, PROPS_TIERS.medium);
+    const view = (homes: typeof whole) => ({
+        nests: homes.nests,
+        marks: homes.marks,
+        webs: homes.webs,
+        sites: homes.nestSites,
+        batches: homes.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry), batch.far ? geometryHash(batch.far.geometry) : null])
+    });
+    assert.deepEqual(view(sliced), view(whole));
+    const plots = homePlots(7 * 130, 3 * 50);
+    steps = 0;
+    const areasSliced = (await runSliced(counted(buildAreasSteps(PROPS_TIERS.medium, plots)), 0))!;
+    assert.ok(steps > 20, `${steps} area steps`);
+    const areasWhole = buildAreas(PROPS_TIERS.medium, plots);
+    const areaView = (areas: typeof areasWhole) => ({
+        marks: areas.marks,
+        pieces: areas.pieces.map((piece) => [piece.name, geometryHash(piece.near.geometry), piece.far ? geometryHash(piece.far.geometry) : null]),
+        batches: areas.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry)]),
+        buildings: areas.buildings.triangles
+    });
+    assert.deepEqual(areaView(areasSliced), areaView(areasWhole));
+    for (const built of [sliced, whole]) built.dispose();
+    for (const built of [areasSliced, areasWhole]) built.dispose();
+});
+
+// MARK: - Where no animal stands
+
+import {COMPOST, GARDEN_BEDS, onHomeKeepOut, plotKeepOuts, troughSpots, coopSpot as coopAt} from "@/ark-scene/props/home-layout";
+import {plotSpots} from "@/ark-scene/map/hamlet";
+
+test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props draw are listed for the map's spots to avoid", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        const at = (lx: number, lz: number) => frame.toWorld(lx, lz);
+        if (plot.kind === "house") {
+            // Every cabbage row and the wigwam, the compost bin: on a keep-out of this plot.
+            for (let row = 0; row < GARDEN_BEDS.rows; row++) for (const lz of [GARDEN_BEDS.z0 + 0.35, 0.4, GARDEN_BEDS.z1 - 0.35]) {
+                const w = at(GARDEN_BEDS.x0 + row * GARDEN_BEDS.pitch, lz);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "beds", `${plot.id} bed ${row}`);
+            }
+            const bin = at(COMPOST.x, COMPOST.z);
+            assert.equal(onHomeKeepOut(bin.x, bin.z, [plot], 0)?.what, "compost");
+        } else {
+            for (const trough of troughSpots(plot)) {
+                const w = at(trough.x, trough.z);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "trough");
+            }
+            const coop = coopAt(plot);
+            const w = at(coop.x, coop.z);
+            assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "coop");
+        }
+        assert.ok(plotKeepOuts(plot).length >= 3);
+    }
+    // The map's spots today (a report for the map lane, which places on them): how many fall on a keep-out.
+    const clashes = plots.flatMap((plot) => plotSpots(plot).spots.filter((spot) => onHomeKeepOut(spot.x, spot.z, plots)).map((spot) => `${plot.id} ${spot.where} → ${onHomeKeepOut(spot.x, spot.z, plots)!.what}`));
+    console.log(`map spots on a props keep-out: ${clashes.length}${clashes.length ? `: ${clashes.join("; ")}` : ""}`);
+});
