@@ -25,7 +25,7 @@ Every mesh in `public/ark/assets/v1/` (trees, plants, rocks, forest floor) is ge
 
 | Asset | Source | Licence | Author | Committed file(s) |
 |---|---|---|---|---|
-| Trees (12 kinds, 33 variants), plants, rocks, forest floor | generated: `scripts/ark-assets/{trees,plants,rocks,floor}.py` | CC0 1.0 (made in this repo) | AnimalDex (asset lane, 2026-11-11) | `public/ark/assets/v1/<set>/*.glb`, `<set>/attach.json`, `src/ark-scene/assets-manifest.json` |
+| Trees (12 kinds, 33 variants), plants (76), rocks (21: boulders, clusters, cliff faces, scree, pebbles, shells, tide-pool rocks, cave mouths, stalactites, stalagmites), forest floor (13: logs, twigs, cones, leaf litter) | generated: `scripts/ark-assets/{trees,plants,rocks,floor}.py` | CC0 1.0 (made in this repo) | AnimalDex (asset lane, 2026-11-11) | `public/ark/assets/v1/<set>/*.glb`, `<set>/attach.json`, `src/ark-scene/assets-manifest.json` |
 
 Tools (not shipped): Blender 5.2 (GPL-3.0, renders the contact sheets only; nothing from it is in the output), gltfpack 1.3.0 (MIT, npm `gltfpack@1.3.0`, meshopt compression; the same pinned tool the model lane uses), Pillow (HPND, contact-sheet layout), three.js `GLTFLoader` + `MeshoptDecoder` (MIT, existing dependency, `scripts/ark-assets/verify.mjs`).
 

@@ -5,6 +5,8 @@ Run inside Blender (it renders the tiles with Cycles on the CPU), from the repo 
 
   nice -n 10 blender -b --factory-startup -t 6 --python scripts/ark-assets/build.py -- --set trees
   options: --only oak,beech   --no-render   --no-pack   --work <dir>
+           --review   write GLBs, attach.json and the manifest under <work>/review-public instead of the
+                      repo (public/ and src/ark-scene/assets-manifest.json stay untouched)
 
 Then `python3 scripts/ark-assets/sheet.py --set trees --work <dir> --out <dir>` lays the tiles out.
 """
@@ -43,6 +45,7 @@ TAGS = {
     "flower_head": dict(spot="flowers", about="the centre of an open flower, normal out of the flower"),
     "bromeliad": dict(spot="pond_surface", about="the water cup of a bromeliad rosette"),
     "fungus_shelf": dict(spot="bark", about="the top of a bracket fungus"),
+    "fungus_cap": dict(spot="leaf_litter", about="the top of a mushroom cap"),
     "stem": dict(spot="flowers", about="a plant stem or grass blade; forward runs up it"),
     "pad": dict(spot="pond_surface", about="the top of a floating leaf (lily pad)"),
     "rock_face": dict(spot="rocks", about="a rock surface, up-facing or steep"),
@@ -226,22 +229,45 @@ def main():
     ap.add_argument("--no-pack", action="store_true")
     ap.add_argument("--shots", default="", help="only render these tiles (e.g. card); keeps the others")
     ap.add_argument("--variants", default="", help="only these variant letters (e.g. a)")
+    ap.add_argument("--attach-only", action="store_true",
+                    help="rebuild the geometry but write only attach.json and the manifest's attach counts "
+                         "(no GLBs, no renders): for attach-point fixes")
+    ap.add_argument("--review", action="store_true",
+                    help="write outputs under <work>/review-public, leaving public/ and the manifest alone")
     ap.add_argument("--work", default=os.environ.get("ARK_ASSETS_WORK", "/tmp/ark-assets-work"))
     args = ap.parse_args(argv)
     only = [s for s in args.only.split(",") if s]
     work = os.path.abspath(args.work)
     raw_dir = os.path.join(work, "raw", args.set)
     tile_dir = os.path.join(work, "tiles", args.set)
-    out_dir = os.path.join(OUT_BASE, args.set)
+    global MANIFEST
+    out_base = OUT_BASE
+    os.makedirs(work, exist_ok=True)
+    if args.review:
+        out_base = os.path.join(work, "review-public")
+        review_manifest = os.path.join(work, "review-manifest.json")
+        if not os.path.exists(review_manifest) and os.path.exists(MANIFEST):
+            shutil.copy(MANIFEST, review_manifest)
+        repo_attach = os.path.join(OUT_BASE, args.set, "attach.json")
+        os.makedirs(os.path.join(out_base, args.set), exist_ok=True)
+        if not os.path.exists(os.path.join(out_base, args.set, "attach.json")) and os.path.exists(repo_attach):
+            shutil.copy(repo_attach, os.path.join(out_base, args.set, "attach.json"))
+        MANIFEST = review_manifest
+    out_dir = os.path.join(out_base, args.set)
     for d in (raw_dir, tile_dir, out_dir):
         os.makedirs(d, exist_ok=True)
 
     factories = list(load_set(args.set)(only or None))
-    env = None if args.no_render else blender_scene()
+    env = None if (args.no_render or args.attach_only) else blender_scene()
     attach_path = os.path.join(out_dir, "attach.json")
     attach_all = json.load(open(attach_path)) if os.path.exists(attach_path) else {}
     frag_path = os.path.join(work, f"manifest-{args.set}.json")
-    frag = json.load(open(frag_path)) if os.path.exists(frag_path) else {}
+    frag = json.load(open(frag_path)) if os.path.exists(frag_path) else None
+    if frag is None:
+        # A fresh work dir: start from the set's assets already in the manifest, so a partial
+        # (--only) build replaces those assets and keeps the rest of the set.
+        man = json.load(open(MANIFEST)) if os.path.exists(MANIFEST) else {}
+        frag = {k: v for k, v in man.get("assets", {}).items() if v.get("set") == args.set}
     tiles = json.load(open(os.path.join(work, f"tiles-{args.set}.json"))) if os.path.exists(
         os.path.join(work, f"tiles-{args.set}.json")) else {}
     for make in factories:
@@ -250,6 +276,13 @@ def main():
         if args.variants and asset.variant not in args.variants:
             continue
         aid = asset.id
+        if args.attach_only:
+            if aid not in frag:
+                raise SystemExit(f"--attach-only: {aid} is not built yet (no manifest entry)")
+            attach_all[aid] = asset.attach
+            frag[aid]["attach"] = len(asset.attach)
+            print(f"[ark-assets] {aid}: {len(asset.attach)} attach (attach only)", flush=True)
+            continue
         files = []
         levels = [(f"lod{i}", m) for i, m in enumerate(asset.lods)]
         if asset.card is not None and asset.card.parts:
