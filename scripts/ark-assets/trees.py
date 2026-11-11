@@ -454,8 +454,8 @@ def mesh_card(spec, tree, rng):
                 if len(band) < 4:
                     continue
                 proj = band @ axis
-                lo_x = np.percentile(proj, 5) - 0.3
-                hi_x = np.percentile(proj, 95) + 0.3
+                lo_x = np.percentile(proj, 5) - T.get("pad", 0.3)
+                hi_x = np.percentile(proj, 95) + T.get("pad", 0.3)
                 mid, half = (lo_x + hi_x) / 2, (hi_x - lo_x) / 2
                 apex = T.get("apex", 0.4) * (0.6 if i == n - 1 else 1.0)
                 rag = T.get("ragged", 0.3) * th
@@ -1405,12 +1405,20 @@ SPECIES = {
         bark=dict(color=hexc("#7a6a58"), dark=hexc("#4a3e32"), fx=3, fy=1.0, contrast=0.9),
         roots=dict(count=11, **{"from": (1.2, 2.6)}, reach=(1.4, 2.6), radius=0.045), bark_top=0.6, n_branch=16),
     "emergent": dict(
-        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.8, 1.25), points=10, notch=0.7, cup=0.3, face_up=0.6),
+        # A rainforest emergent: a tall clear trunk under a broad umbrella crown, wide and flat-topped,
+        # its mass at the top in layers: a wide ragged pad along the outer part of each main limb and big
+        # up-facing leaf clouds on the shoots above, shaded dark underneath.
+        clumps=[dict(kind="bough", levels=[1], t0=0.4, width=0.42, roof=[12, 14, 18], segs=[6, 3, 2],
+                     fringe=[0.35, 0.3, 0.0], lod_width=[1, 1.15, 1.35], under=0.6, tip_mix=0.6,
+                     weight=(0.3, 0.4, 0.5), share=(0.75, 1.0, 1.0)),
+                dict(kind="fan", levels=[2, 3], per_limb=(1, 2), t=(0.5, 1.0), r=(0.9, 1.3), points=10, notch=0.72,
+                     cup=0.35, droop=0.3, face_up=0.85, tilt=0.15, grow_max=2.4, under=0.55, weight=(0.7, 0.6, 0.5))],
         H=24, trunk=dict(length=19.0, radius=0.55, taper=0.45, wobble=0.02, lean=0.02, flare=0.0),
-        levels=[dict(count=(7, 8), t=(0.8, 1.0), angle=72, angle_var=10, ratio=0.4, shape="inverse", rratio=0.5,
-                     bend=0.15, wobble=0.12, abs_length=9.0),
-                dict(per_m=1.2, t=(0.3, 1.0), angle=55, ratio=0.45, rratio=0.5, bend=0.1, wobble=0.15, planar=0.5),
-                dict(per_m=3.0, t=(0.3, 1.0), angle=50, ratio=0.4, rratio=0.5, bend=0.15, wobble=0.2, rtip=0.006)],
+        levels=[dict(count=(6, 7), t=(0.84, 1.0), angle=58, angle_var=10, ratio=0.4, shape="uniform", rratio=0.5,
+                     bend=0.05, wobble=0.12, abs_length=9.5),
+                dict(per_m=1.1, t=(0.3, 1.0), angle=58, ratio=0.45, rratio=0.5, bend=0.25, wobble=0.15, planar=0.8),
+                dict(per_m=3.0, t=(0.3, 1.0), angle=50, ratio=0.4, rratio=0.5, bend=0.2, wobble=0.2, rtip=0.006,
+                     planar=0.6)],
         leaves=dict(per_m=30, length=0.42, width=0.18, levels=[2, 3], t0=0.3, colors=G("#4e7e2e", "#5a8a36", "#43702a"),
                     tip=hexc("#8aac4a"), fold=0.3, curl=0.1, keep_scale=[1, 1, 1], grow_scale=[1, 1, 1]),
         bark=dict(color=hexc("#a49a86"), dark=hexc("#6e6656"), fx=2, fy=0.6, contrast=0.7,
@@ -1418,7 +1426,8 @@ SPECIES = {
         # Buttresses: wedge fins with real thickness (power 3, 48 sides near so each fin spans several
         # vertices), half the trunk rings in the foot.
         buttress=dict(fins=5, amount=3.2, height=1.4, offset=0.3, power=3), trunk_sides=[48, 24, 6], trunk_rings=[24, 12, 4],
-        lianas=4, bromeliads=7, bark_top=0.75, budget=(9500, 2800, 800), seg_scale=1.5, card_lobes=7, n_branch=24),
+        lianas=4, bromeliads=7, bark_top=0.75, budget=(9500, 2800, 800), seg_scale=1.5, n_branch=24,
+        card_style="tiers", card_tiers=dict(n=3, apex=0.85, ragged=0.3, pad=1.3), card_ribbons=1, card_true_trunk=True),
     "snag": dict(
         H=7, trunk=dict(length=6.0, radius=0.3, taper=0.6, wobble=0.04, lean=0.05, flare=0.45),
         levels=[dict(count=(5, 7), t=(0.35, 0.95), angle=60, angle_var=15, ratio=0.4, shape="hemi", rratio=0.45,
