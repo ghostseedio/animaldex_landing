@@ -695,7 +695,22 @@ function outAtStep(residents: readonly HamletResident[], step: number, hours: (e
     return out;
 }
 
-const stepCache = new Map<string, Map<string, HamletOut>>();
+/**
+ * Who is out at a step, remembered per rotation (`outside`) and clock (`hours`), keyed by the step and the whole
+ * resident list (each one's id and plot): never an answer worked out for another rotation, clock or list (a page's
+ * validator or props asking with the ring before the scene's runtime rotation, or a list that changed in the middle,
+ * would otherwise get the first one's, whichever asked first).
+ */
+const stepCaches = new WeakMap<ArkOutsideFn, WeakMap<(epochSeconds: number) => number, Map<string, Map<string, HamletOut>>>>();
+const residentKeys = new WeakMap<readonly HamletResident[], string>();
+function residentsKey(residents: readonly HamletResident[]): string {
+    let key = residentKeys.get(residents);
+    if (key === undefined) {
+        key = residents.map((r) => `${r.id}@${r.plot.id}`).join(",");
+        residentKeys.set(residents, key);
+    }
+    return key;
+}
 
 /**
  * The hamlet now: who is out and where, and the door beats of the step's
@@ -705,13 +720,19 @@ const stepCache = new Map<string, Map<string, HamletOut>>();
  */
 export function hamletState(residents: readonly HamletResident[], epochSeconds: number, hours: (epochSeconds: number) => number, outside: ArkOutsideFn = ringOutside): {out: Map<string, HamletOut>; beats: Map<string, HamletBeat>} {
     const step = Math.floor(epochSeconds / HAMLET_STEP_SECONDS);
-    const key = (s: number) => `${s}|${residents.length}|${residents[0]?.id ?? ""}|${residents[residents.length - 1]?.id ?? ""}`;
+    let byClock = stepCaches.get(outside);
+    if (!byClock) stepCaches.set(outside, (byClock = new WeakMap()));
+    let stepCache = byClock.get(hours);
+    if (!stepCache) byClock.set(hours, (stepCache = new Map()));
+    const cache = stepCache;
+    const list = residentsKey(residents);
+    const key = (s: number) => `${s}|${list}`;
     const at = (s: number) => {
-        let m = stepCache.get(key(s));
+        let m = cache.get(key(s));
         if (!m) {
             m = outAtStep(residents, s, hours, outside);
-            if (stepCache.size > 8) stepCache.clear();
-            stepCache.set(key(s), m);
+            if (cache.size > 8) cache.clear();
+            cache.set(key(s), m);
         }
         return m;
     };

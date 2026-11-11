@@ -194,3 +194,31 @@ test("hamlet: no resident spot (nor a door) in a pond or at its stones, nor in t
         }
     }
 });
+
+test("hamlet: who is out is the same whoever asked first: never another rotation's, clock's or resident list's answer", () => {
+    // (Visual CI determinism check, 2026-11-11: the step's answer was remembered by the step, the list's length and its
+    // first and last ids only, so a page that asked with another rotation first, or a list changed in its middle, got
+    // that answer.)
+    const animals = residents(1);
+    const placed = placeAnimals(animals);
+    const list: HamletResident[] = animals.map((a) => ({id: a.id, slug: a.model_slug, length: arkBody(a).metres, plot: placed.get(a.id)!.hamlet!.plot}));
+    const t = DAY + 10 * 3600 + 17;
+    const fresh = (outside?: Parameters<typeof hamletState>[3], l = list, h = hours) => JSON.stringify(Array.from(hamletState(l, t, h, outside).out.entries()).map(([id, out]) => [id, out.plot.id, out.spot]));
+    const ring = fresh();
+    // Another rotation (everyone it may take, in reverse), asked at the same step after the ring: its own answer.
+    const everyone = (candidates: ReadonlyArray<{id: string; group: string}>, budget: number) => new Set(candidates.slice().reverse().slice(0, budget).map((c) => c.id));
+    const other = fresh(everyone);
+    assert.notEqual(other, ring, "another rotation gives another answer");
+    assert.equal(fresh(), ring, "the ring's again");
+    // The same rotation asked first the other way round, in a fresh order: the same answers.
+    const otherClock = (epoch: number) => hours(epoch);
+    assert.equal(fresh(everyone, list, otherClock), other);
+    assert.equal(fresh(undefined, list, otherClock), ring);
+    // A list changed in its middle (same length, same first and last): worked out for that list.
+    const swapped = list.slice();
+    const middle = Math.floor(list.length / 2);
+    const moved = list.findIndex((r, i) => i !== middle && i > 0 && i < list.length - 1 && r.plot.id !== list[middle].plot.id);
+    swapped[middle] = {...list[middle], plot: list[moved].plot};
+    const direct = JSON.stringify(Array.from(hamletState(swapped.slice(), t, (e: number) => hours(e)).out.entries()).map(([id, out]) => [id, out.plot.id, out.spot]));
+    assert.equal(fresh(undefined, swapped), direct, "a list changed in its middle gets its own answer");
+});

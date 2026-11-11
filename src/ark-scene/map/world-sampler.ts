@@ -19,6 +19,7 @@ import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround, seeded, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
 import {navGrid} from "@/ark-scene/behaviour-nav";
+import {maskWalkable} from "@/ark-scene/map/walk-mask";
 import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {reservedAt, reservedNear} from "@/ark-scene/map/hamlet";
 import {inRock} from "@/ark-scene/map/rocks";
@@ -113,9 +114,13 @@ class WorldSampler implements ArkMapSampler {
         return reservedAt(x, z);
     }
 
-    /** The behaviour lane's walk grid (`behaviour-nav.ts`, from the graphics lane's scenery): where its walkers can walk. */
+    /**
+     * The behaviour lane's walk grid (`behaviour-nav.ts`, from the graphics lane's scenery): where its walkers can walk.
+     * From its prebuilt mask (`walk-mask.ts`, held to the grid by the map test), so placement never builds the behaviour
+     * world at mount; a slope the mask does not hold asks the grid itself.
+     */
     walkable(x: number, z: number, maxSlope: number): boolean {
-        return navGrid(behaviourSampler()).walkable(x, z, maxSlope);
+        return maskWalkable(x, z, maxSlope) ?? navGrid(behaviourSampler()).walkable(x, z, maxSlope);
     }
 
     /** Beside a rock (a boulder, a stone): within a couple of metres of its side. */

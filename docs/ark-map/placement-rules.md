@@ -44,3 +44,15 @@ Every place is a pure function of the terrain (the graphics lane's `sampler.ts`)
 - **Rig clips that lift too many feet** on a branch or wall (8 species: 3 spiders, 3 wasps, a motmot, a lory). They are reviewed in `validator-holds.json` and are the rig lane's to fix.
 - **Fence posts**: the map takes `fence_post` points, but none exist until the props lane publishes its paddock and picket fences' post tops (graphics-interface.md, "Fences the props lane draws").
 - **Launch points**: the table asks for 481. 412 stand on the ground or in the water, because some tags in some zones have fewer cells than they want. The canopy's 92 are the canopy trees' limbs (`layers.ts`), not ground cells.
+
+## Start-up cost (2026-11-11)
+
+- **The walk grid, prebuilt.** Placement asks whether a walker's spot is on the behaviour lane's walk grid. It reads
+  `src/ark-scene/map/walk-mask.json` (the grid's answer for every 2 m cell at the walker's and the mountain animal's
+  slopes, two bits a cell, 6 KB) instead of building the behaviour sampler and the grid inside the mount (1.25 s on
+  the phone proxy). `src/lib/ark-map.test.ts` holds the mask to the live grid cell for cell; when the terrain or the
+  scenery changes it fails until `npx tsx scripts/ark-map-walk-mask.mts` is run (as the attach baseline is re-recorded).
+- **Roosts with the places.** Each animal's roost on the schedule (`scheduleRoost`: its den, perch or roost) is worked
+  out at the end of `placeAnimals` and kept on its place (`map.den`), so for a big Ark it comes from the places worker
+  and the mount never builds the map's sampler to ask (it was 1.5 s on desktop for the real 3,137-animal Ark, one
+  835 ms task). Asked of a place without it, `scheduleRoost` works it out as before.
