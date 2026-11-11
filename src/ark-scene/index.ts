@@ -199,7 +199,17 @@ const MAX_GRASS = TIER_SETTINGS.high.grass;
 type Level = "near" | "far" | "token";
 
 /** An animal on the behaviour schedule: its profile and home, its trip (and its leader's, for a group's follower), its pose now. */
-type Sched = {animal: ScheduleAnimal; profile: ArkBehaviourProfile; trip: Trip | null; lead: Trip | null; pose: (TripPose & {doing: ArkDoing}) | null; at: number};
+type Sched = {
+    animal: ScheduleAnimal;
+    profile: ArkBehaviourProfile;
+    trip: Trip | null;
+    lead: Trip | null;
+    pose: (TripPose & {doing: ArkDoing}) | null;
+    at: number;
+    /** The ground under its pose and its pitch to the slope, worked out with the pose (not every frame). */
+    ground: number;
+    pitch: number;
+};
 
 type Entry = {
     animal: ArkAnimal;
@@ -414,7 +424,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let clockScale = 1;
     let clockAnchor = Date.now();
     let clockAnchorReal = clockAnchor;
-    const worldMs = () => (clockScale === 1 ? Date.now() : clockAnchor + (Date.now() - clockAnchorReal) * clockScale);
+    const worldMs = () => clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
     const hoursNow = () => pinnedHours ?? islandHours(worldMs(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
     let pinnedEnvironment: Partial<ArkEnvironment & {windDirection: number}> | null = null;
@@ -667,7 +677,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const scheduleOn = options.behaviour !== false;
     let world: ScheduleWorld | null = null;
     /** The places and the walk grid, from the graphics lane's scenery interface (built once, on the first animal). */
-    const scheduleWorldNow = () => (world ??= scheduleWorld(worldSampler()));
+    let behaviourBuildMs = 0;
+    const scheduleWorldNow = () => {
+        if (!world) {
+            const started = performance.now();
+            world = scheduleWorld(worldSampler());
+            behaviourBuildMs = performance.now() - started;
+        }
+        return world;
+    };
+    /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
+    const behaviourTimes: number[] = [];
+    let behaviourFrameMs = 0;
+    let scheduledCount = 0;
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
     const makeSched = (animal: ArkAnimal, place: Placement, length: number): Sched | null => {
@@ -679,7 +701,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             trip: null,
             lead: null,
             pose: null,
-            at: -1
+            at: -1,
+            ground: 0,
+            pitch: 0
         };
     };
     /** Moved by its schedule now (not in an act or a moment, not with reduced motion). */
@@ -719,8 +743,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const own = entry.sched!;
         const watched = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
         if (!own.pose || entry.level !== "far" || watched || epoch - own.at > 0.5 || epoch < own.at) {
-            own.pose = schedulePose(entry, epoch);
+            const at = (own.pose = schedulePose(entry, epoch));
             own.at = epoch;
+            own.ground = heightAt(at.x, at.z);
+            const onLand = !at.aloft && own.ground > 0.02 && Math.abs(at.y - own.ground) < 0.05;
+            // Close by, walkers lean to the slope; far away nobody can see it.
+            own.pitch = onLand && entry.level !== "far" ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0;
         }
         const target = own.pose.aloft ? 1 : 0;
         entry.air += (target - entry.air) * Math.min(dt * 6, 1);
@@ -748,6 +776,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const trip = (sched.trip = tripAt(scheduleWorldNow(), sched.profile, sched.animal, worldMs() / 1000, scheduleHours, animal.activity));
             sched.pose = {...poseOnTrip(scheduleWorldNow(), trip, worldMs() / 1000), doing: trip.doing};
             sched.at = worldMs() / 1000;
+            sched.ground = heightAt(sched.pose.x, sched.pose.z);
         }
         const state = stateOf({animal, visitor: false, act: null, sched});
         const targets = sched?.pose ? {...animationTargets(state), air: sched.pose.aloft ? 1 : 0} : animationTargets(state);
@@ -1393,17 +1422,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Its schedule's pose as the scene draws it: banked into the turn when circling, the head a little down asleep. */
     const fromSchedule = (entry: Entry): Pose => {
-        const at = entry.sched!.pose!;
-        const ground = heightAt(at.x, at.z);
+        const own = entry.sched!;
+        const at = own.pose!;
+        const ground = own.ground;
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
-        const onLand = !at.aloft && ground > 0.02 && Math.abs(at.y - ground) < 0.05;
         const glance = entry.glance ?? 0;
         return {
             x: at.x,
             z: at.z,
             base: at.y,
             yaw: at.yaw + glance,
-            pitch: at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + (onLand ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0),
+            pitch: at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch,
             roll: circling ? -0.35 * entry.air : 0,
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0
         };
@@ -1770,6 +1799,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean; rig: RigModel | null};
         const epochNow = worldMs() / 1000;
+        behaviourFrameMs = 0;
+        scheduledCount = 0;
         const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
         for (const entry of allEntries()) {
@@ -1780,7 +1811,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 continue;
             }
             // Its schedule first (where it is and what it is doing now), then its one state from that.
-            if (scheduled(entry)) stepSchedule(entry, epochNow, dt);
+            if (scheduled(entry)) {
+                const started = performance.now();
+                stepSchedule(entry, epochNow, dt);
+                behaviourFrameMs += performance.now() - started;
+                scheduledCount++;
+            }
             // Its one state (its schedule, or the hour and its species, an act it is in) sets what it does: asleep eases in,
             // a flyer takes to the air or comes down to its roost. Selecting or following it never changes this.
             refreshState(entry);
@@ -1831,7 +1867,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         // The page's tap card says what the selected animal is doing now, from the same state.
         tellState();
-        if (scheduleOn && !reducedMotion) keepApart(candidates, dt);
+        if (scheduleOn && !reducedMotion) {
+            const started = performance.now();
+            keepApart(candidates, dt);
+            behaviourFrameMs += performance.now() - started;
+        }
+        behaviourTimes.push(behaviourFrameMs);
+        if (behaviourTimes.length > 120) behaviourTimes.shift();
         const nearWanted = candidates
             .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
             .sort((a, b) => a.distance - b.distance);
@@ -3579,13 +3621,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         },
         follow,
-        setClockScale: (scale) => {
-            // Development: the world's time runs `scale` times faster from now (a day-night recording); 1 is the clock again.
-            const now = worldMs();
+        setClockScale: (scale, atMs) => {
+            // Development: the world's time runs `scale` times faster from now, or from `atMs` (a day-night recording); 1 is the clock again.
+            const now = typeof atMs === "number" && Number.isFinite(atMs) ? atMs : worldMs();
             clockAnchor = now;
             clockAnchorReal = Date.now();
             clockScale = Math.max(Number.isFinite(scale) ? scale : 1, 1);
-            if (clockScale === 1) clockAnchor = clockAnchorReal = Date.now();
+            if (clockScale === 1 && atMs === undefined) clockAnchor = clockAnchorReal = Date.now();
             setLight();
         },
         setHours: (hours) => {
@@ -3700,6 +3742,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             tier,
             lite: liteOn(),
             rigged: counts.rigged,
+            scheduled: scheduledCount,
+            behaviourMs: Math.round(mean(behaviourTimes) * 1000) / 1000,
+            behaviourBuildMs: Math.round(behaviourBuildMs),
             rigsLoaded: rigs.loadedCount,
             rigBytes: rigs.bytes
         }),

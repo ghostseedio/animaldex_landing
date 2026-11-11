@@ -20,6 +20,54 @@ export const MAX_SLOPE = 0.9;
 /** A mountain animal's (goats, ibex, snow leopards): steep ground is theirs. */
 export const MOUNTAIN_SLOPE = 2.4;
 
+/** A binary min-heap of (priority, cell). */
+class Heap {
+    private readonly keys: number[] = [];
+    private readonly values: number[] = [];
+    get size(): number {
+        return this.keys.length;
+    }
+    push(key: number, value: number) {
+        const keys = this.keys;
+        const values = this.values;
+        let i = keys.length;
+        keys.push(key);
+        values.push(value);
+        while (i > 0) {
+            const parent = (i - 1) >> 1;
+            if (keys[parent] <= key) break;
+            keys[i] = keys[parent];
+            values[i] = values[parent];
+            i = parent;
+        }
+        keys[i] = key;
+        values[i] = value;
+    }
+    pop(): number {
+        const keys = this.keys;
+        const values = this.values;
+        const top = values[0];
+        const lastKey = keys.pop()!;
+        const lastValue = values.pop()!;
+        if (keys.length) {
+            let i = 0;
+            for (;;) {
+                const l = i * 2 + 1;
+                if (l >= keys.length) break;
+                const r = l + 1;
+                const c = r < keys.length && keys[r] < keys[l] ? r : l;
+                if (keys[c] >= lastKey) break;
+                keys[i] = keys[c];
+                values[i] = values[c];
+                i = c;
+            }
+            keys[i] = lastKey;
+            values[i] = lastValue;
+        }
+        return top;
+    }
+}
+
 export class NavGrid {
     readonly version: string;
     /** 1 dry ground with nothing in the way, 0 not. */
@@ -138,17 +186,13 @@ export class NavGrid {
         const goal = gj * SIZE + gi;
         const g = new Map<number, number>([[start, 0]]);
         const from = new Map<number, number>();
-        const open: Array<[number, number]> = [[Math.hypot(gi - si, gj - sj), start]];
+        const open = new Heap();
+        open.push(Math.hypot(gi - si, gj - sj), start);
         let best = start;
         let bestH = Infinity;
         let expanded = 0;
-        while (open.length && expanded < maxNodes) {
-            // A small binary heap would be faster; the open list stays short within a home area.
-            let m = 0;
-            for (let n = 1; n < open.length; n++) if (open[n][0] < open[m][0]) m = n;
-            const [, k] = open[m];
-            open[m] = open[open.length - 1];
-            open.pop();
+        while (open.size && expanded < maxNodes) {
+            const k = open.pop();
             expanded++;
             const i = k % SIZE;
             const j = (k - i) / SIZE;
@@ -171,7 +215,7 @@ export class NavGrid {
                     if (cost >= (g.get(nk) ?? Infinity)) continue;
                     g.set(nk, cost);
                     from.set(nk, k);
-                    open.push([cost + Math.hypot(gi - ni, gj - nj), nk]);
+                    open.push(cost + Math.hypot(gi - ni, gj - nj), nk);
                 }
             }
         }
