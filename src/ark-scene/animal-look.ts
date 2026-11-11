@@ -6,7 +6,7 @@
  * - Each species' surface (fur, feathers, scales, skin, shell, slimy) from
  *   its taxonomy and photo (`animal-look.json`, `animal-look-rules.ts`), drawn
  *   by `animal-look-shader.ts` in the animals' own material.
- * - Wet after rain (the island clock's wetness, `ARK_ENV`) or a swim, dusty on
+ * - Wet after rain (ark-clock's weather: rain and the ground's wetness) or a swim, dusty on
  *   dry open ground: per animal, from its species' realm and where it stands.
  * - Eyes with a catchlight.
  * - Fur shells on the nearest furred mammals, high tier only (`fur-shells.ts`).
@@ -142,6 +142,9 @@ export function attachLook(geometry: BufferGeometry, capacity: number): Instance
 }
 
 // MARK: - Wet and dusty
+
+/** How wet an animal in the water (or living there) looks: wet, not soaked-and-out. */
+export const IN_WATER_WET = 0.5;
 
 const SWIM_SLOT_MS = 15 * 60 * 1000;
 const DRY_MS = 6 * 60 * 1000;
@@ -340,7 +343,8 @@ export class AnimalLook {
         const row = ROWS[animal.slug];
         const flags = row?.[1] ?? 0;
         let wet = this.wetness;
-        if (animal.inWater || flags & LOOK_FLAG.aquatic) wet = 1;
+        // In the water: a sheen, not the dark, glossy look of a coat just out of it (under water the light is soft).
+        if (animal.inWater || flags & LOOK_FLAG.aquatic) wet = Math.max(wet, IN_WATER_WET);
         else if (flags & LOOK_FLAG.semiAquatic && near) wet = Math.max(wet, swimWetness(animal.id, this.islandNow));
         let dust = 0;
         if (flags & LOOK_FLAG.dusty && !animal.onSurface && wet < 0.6 && near && this.dust > 0) dust = this.dustAt(animal.x, animal.z) * this.dust * (1 - wet);

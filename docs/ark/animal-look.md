@@ -62,7 +62,7 @@ The relief is made in the model's rest-pose space, so it stays on the body as it
 
 The scene passes `weatherAt(…)`'s `rain`, `wetness` (the ground's) and `wind` to `AnimalLook.begin`, or a pinned environment's values.
 - **Coat wetness** is `max(min(1, 1.8 × rain), 0.6 × wetness²)`. Coats soak within the rain's first minutes and dry well before the ground does.
-- **In the water or aquatic:** wet through.
+- **In the water or aquatic:** a sheen (0.5), not the dark, glossy look of a coat just out of the water. Under water the light is soft, and a turtle went near-black at 1.
 - **Semi-aquatic:** wet from its own swims as well. In each quarter hour of island time about half of them swim, each ending at a moment of its own (`swimWetness`: a pure function of id and world time). They dry over about six minutes.
 - **Wet look:** darker, glossier and sleeker; fur shells collapse. Each class takes its own share of it: feathers 0.3, because they shed water (a duck on the pond is not soaked); scales and shell 0.85; fur, skin and slime the full amount.
 - **Dust** applies to dusty-flagged animals on bare, dry ground (sand, soil, tilled, some rock; little on grass). It is scaled by the weather: none on wet ground, a little more in a dry wind. It shows as a pale, dry film on the legs and belly.
