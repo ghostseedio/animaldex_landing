@@ -199,6 +199,27 @@ test("after running, it holds its ground while the predator is still in view (it
     }
 });
 
+test("an alarm about a lion far off puts the herd on alert, heads up and on it; nobody runs until it comes near", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const herd = Array.from({length: 5}, (_, i) => animal(`z${i}`, "plains-zebra", (i % 3) * 2.4, Math.floor(i / 3) * 2.4, {shared: {doing: "graze", yaw: i * 1.3}}));
+    const lion = animal("lion", "african-lion", -30, 30, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}});
+    // It walks across 30 m off for 12 s.
+    const far = run(layer, [...herd, lion], 12, {move: (list, t) => {
+        list.find((i) => i.id === "lion")!.shared.x = -30 + (t - 1000) * 3;
+    }});
+    assert.ok(far.some((f) => Array.from(f.out.values()).some((o) => o.called)), "someone calls");
+    assert.ok(herd.every((z) => far.some((f) => f.out.get(z.id)!.looking === "lion")), "every head comes up to it");
+    assert.ok(!far.some((f) => herd.some((z) => f.out.get(z.id)!.action === "flee")), "nobody runs from a lion 30 m off");
+    // Then it turns and walks straight at them: they run.
+    const near = run(layer, [...herd, lion], 10, {start: 1012, move: (list, t) => {
+        const l = list.find((i) => i.id === "lion")!;
+        l.shared.x = 6;
+        l.shared.z = 30 - (t - 1012) * 3;
+        l.shared.yaw = Math.PI;
+    }});
+    assert.ok(herd.filter((z) => near.some((f) => f.out.get(z.id)!.action === "flee")).length >= 4, "when it comes near, they run");
+});
+
 // MARK: Scenario 2: a pack acts out a hunt (the pack mates not in the act stalk and stop short)
 
 test("a pack not acting out a meal stalks, fans out and never closes on the prey", () => {

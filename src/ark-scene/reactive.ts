@@ -381,6 +381,8 @@ export type AlarmCall = {caller: string; slug: string; x: number; z: number; tx:
 
 export type ReactiveOptions = {tier?: ReactiveTier; envelope?: EnvelopeFn; budget?: Partial<ReactiveBudget>};
 
+/** An alarm call about a ground threat sends a listener running when the threat is within this many of its flight distances (a zebra lets a lion walk past 30 m off, watching). */
+const ALARM_FLIGHT = 1.3;
 /** How much further the one on sentinel watch sees: it is looking for exactly this. */
 const SENTINEL_SIGHT = 1.6;
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -741,7 +743,7 @@ export class ReactiveLayer {
                 action = "freeze";
                 target = {...agent.offset};
                 crouchWant = 0.6;
-            } else if (close || (heardNow && (heardNow.flight || Boolean(byId.get(heardNow.threat)?.shared.aloft) || Math.hypot(me.shared.x - heardNow.tx, me.shared.z - heardNow.tz) < flightDistance * 2))) {
+            } else if (close || (heardNow && (heardNow.flight || Boolean(byId.get(heardNow.threat)?.shared.aloft) || Math.hypot(me.shared.x - heardNow.tx, me.shared.z - heardNow.tz) < flightDistance * ALARM_FLIGHT))) {
                 // It runs from what it sees close, from its group running, from an alarm about a raptor (it comes fast),
                 // or from one about a threat not far off; an alarm about one far away on the ground only puts it on
                 // alert (head up, looking where the caller looked).

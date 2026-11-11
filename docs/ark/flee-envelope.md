@@ -104,7 +104,7 @@ What `perceive()` does with those ranges each time it looks:
 - **Alarm calls.** When an animal that calls (stored alarm calls, a sentinel, or a group-living default) notices the predator, it calls. The call reaches its own kind within `hearing × 1.6 × (1 − 0.4·rain)`.
 - **Eavesdropping.** Other group-living species react to the call only when the caller's threat could eat them too.
 - **What a call does.** A listener runs when:
-  - the threat is within twice its flight distance;
+  - the threat is within 1.3 times its flight distance;
   - the threat is in the air (a raptor comes fast);
   - or one of its group is already running (contagious flight).
 
