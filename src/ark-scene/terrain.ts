@@ -633,6 +633,21 @@ float arkWet = 0.0;`)
             arkWet = max(arkWet, (film + left * 0.7) * beachy);
         }
     }
+    // The sea bed (batch 4): under water the beach sand turns to coral sand and rubble (grey-brown fragments in
+    // patches, a coarse grain), much darker than a dry beach, so what grows on the reef stands out from its floor.
+    {
+        float bedDepth = envSeaLevel - world.y;
+        if (bedDepth > 0.02) {
+            float bedW = smoothstep(0.02, 0.6, bedDepth) * smoothstep(0.1, 0.6, sandW);
+            float rubble = smoothstep(0.48, 0.72, arkFbm(p * 0.32 + 3.0));
+            float grain = arkNoise(p * 5.5);
+            vec3 coralSand = ${linearVec3("#9c8e72")} * (0.84 + 0.3 * arkFbm(p * 1.3));
+            vec3 rubbleTone = mix(${linearVec3("#7b7468")}, ${linearVec3("#8d766c")}, arkNoise(p * 0.7)) * (0.7 + 0.5 * grain);
+            vec3 bedTone = mix(coralSand, rubbleTone, rubble * 0.85) * (0.9 + 0.2 * grain);
+            // The ground's own colour there is the reef palette's pale sand: keep its texture detail, take the bed's tone.
+            ground = mix(ground, ground * bedTone / ${linearVec3("#d8c7a6")}, bedW);
+        }
+    }
     // Rain-wet ground: darker and glossier (sand dries first).
     ground *= mix(1.0, 0.74, envWetness * (1.0 - 0.4 * sandW) * (1.0 - snowW));
     arkWet = max(arkWet, envWetness * 0.75 * (1.0 - snowW));
@@ -641,7 +656,7 @@ float arkWet = 0.0;`)
     // blue-green and darker the deeper it lies (never blown out white), with sand ripples on the bed.
     float depthBelow = envSeaLevel - world.y;
     if (depthBelow > 0.0) {
-        vec3 absorb = exp(-depthBelow * vec3(0.42, 0.12, 0.085)) * mix(1.0, 0.82, smoothstep(0.0, 2.0, depthBelow));
+        vec3 absorb = exp(-depthBelow * vec3(0.45, 0.15, 0.1)) * mix(1.0, 0.8, smoothstep(0.0, 2.0, depthBelow));
         float bedRipple = sin(dot(p, vec2(0.6, 0.8)) * 5.5 + arkNoise(p * 0.7) * 4.0) * 0.5 + 0.5;
         diffuseColor.rgb *= absorb * (0.92 + 0.12 * bedRipple * (1.0 - smoothstep(-2.0, 0.0, -depthBelow + 2.0) * 0.0));
     }
@@ -652,7 +667,8 @@ float arkWet = 0.0;`)
     }
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
-roughnessFactor = mix(roughnessFactor, 0.32, arkWet);`)
+// Wet ground shines; a bed under the water does not (batch 4: the reef's sand mirrored the sun and read as snow).
+roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, envSeaLevel - vArkWorld.y)));`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 if (groundReady > 0.5 && groundLite < 0.5) {
     // The layers' normal maps, in world space round the ground's own normal (u along +x, v along +z), then to view space.
