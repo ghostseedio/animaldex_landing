@@ -121,3 +121,32 @@ Each species gets the pass off ("before") then on ("after"):
 - `--rigged` adds a moving shot with the rig playing, to check skinned meshes.
 
 The close-up skins are served from the local build.
+
+## Perf (golden harness, 2026-11-11, the Mac shared with about 17 agents)
+
+**Phone profile** (360×800, DPR 2, 4× CPU throttle, tier medium; the Mac's GPU, not a phone's):
+
+| Species | Look | Frame p50 | p95 | CPU ms | GPU drain ms | Draws |
+|---|---|---|---|---|---|---|
+| red-fox | off | 16.7 | 16.7 | 8.2 | 5.3 | 67 |
+| red-fox | on | 16.7 | 16.8 | 10.4 | 5.5 | 69 |
+| african-lion | off | 16.7 | 16.7 | 10.7 | 4.7 | 77 |
+| african-lion | on | 16.7 | 16.7 | 8.3 | 4.5 | 77 |
+| komodo-dragon | off | 16.7 | 16.7 | 7.4 | 4.4 | 75 |
+| komodo-dragon | on | 16.7 | 16.8 | 7.8 | 3.8 | 75 |
+| mallard | off | 16.7 | 16.8 | 8.8 | 4.5 | 111 |
+| mallard | on | 16.7 | 16.7 | 9.9 | 4.6 | 111 |
+
+Reading: no shells on this tier. The draw count rises by 0–2 and triangles don't change. CPU and GPU stay within run-to-run noise (CPU varies 7–11 ms either way).
+
+**Desktop** (1440×900, tier high, fur shells on): frame p50 is unchanged. Draws rise by 2–12 with shells (one instanced draw per shelled species). CPU rises by about 0.1–0.3 ms. GPU drain swung between 11 and 46 ms from run to run, in both directions, under the shared load, so this harness cannot show the shells' fill cost.
+
+Still to measure: a real mid-range phone (the handover's open item, owner).
+
+## Known issues and notes for other lanes
+
+- **Product camera floor:** a viewer can't come closer than 4 m to a normal-sized animal (`controls.minDistance`, reset every frame), so on desktop most of the surface detail and the fur shells show only when the camera is close to a large animal. On a phone at 4 m a fox fills most of the width. The golden `--detail` shots come closer, for development only. Whether to allow closer is the runtime and camera lane's call.
+- **Fixed in this lane:** fur shells never drew before 2026-11-11 (the shell material found no species).
+- **Graphics lane:** grass is drawn under the lake's surface by the fox's lake shore, where it reads as a pale sheet. A translucent horizontal band crosses the barn owl's meadow in close shots.
+- **Behaviour lane:** lions stand in among the zebras (the lion shots).
+- **Golden harness limits:** a sea animal on the seabed (the lobster) is not framed; canopy animals' detail shots go inside the tree (the macaw).
