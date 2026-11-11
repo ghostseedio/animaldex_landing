@@ -1,7 +1,15 @@
 {
-  "about": "The spawn validator's reviewed hold list (src/ark-scene/map/validate.ts): species it cannot place well on the current terrain, held (not placed: they wait at the landing) until the rule, the data or the terrain is fixed. Each with its reason. Reviewed 2026-11-11.",
+  "about": "The spawn validator's reviewed hold list (src/ark-scene/map/validate.ts): species it cannot place well on the current terrain, held (not placed: they wait at the landing) until the rule, the data or the terrain is fixed; and rigs whose clip lifts too many grip bones off a branch or a wall (validate-grips.ts): placed, the rig lane's to fix. Each with its reason. Reviewed 2026-11-11.",
   "species": {
     "louse": "A group entry that lives only on its hosts' skin (\"Hair, fur, feathers, and skin surface of birds or mammals\"); the scenery has no attach point on an animal, so a small animal cannot sit anywhere true. Held until hosts carry attach points (graphics lane) or the parasite rule shows it on a host.",
     "caddisfly": "No field-guide text (zone fallback: river_lake, tag lake) and no lake attach point (reed leaf) on the current terrain fits it. Held until Part 5 gives it text or the graphics lane's reeds carry attach points."
+  },
+  "grips": {
+    "blue-crowned-motmot": "Its rig's idle lifts more than half its grip bones off the surface in some frame (validate-grips.ts); the scene puts its supporting feet on the branch or wall, so it stands, but the clip is the rig lane's to fix.",
+    "cuckoo-wasp": "Its rig's idle lifts more than half its grip bones off the surface in some frame (validate-grips.ts); the scene puts its supporting feet on the branch or wall, so it stands, but the clip is the rig lane's to fix.",
+    "mexican-paper-wasp": "Its rig's idle lifts more than half its grip bones off the surface in some frame (validate-grips.ts); the scene puts its supporting feet on the branch or wall, so it stands, but the clip is the rig lane's to fix.",
+    "parasitic-wasp": "Its rig's idle lifts more than half its grip bones off the surface in some frame (validate-grips.ts); the scene puts its supporting feet on the branch or wall, so it stands, but the clip is the rig lane's to fix.",
+    "red-lory": "Its rig's idle lifts more than half its grip bones off the surface in some frame (validate-grips.ts); the scene puts its supporting feet on the branch or wall, so it stands, but the clip is the rig lane's to fix.",
+    "black-and-yellow-garden-spider": "Its rig's idle lifts more than half its grip bones off the surface in some frame (validate-grips.ts); the scene puts its supporting feet on the branch or wall, so it stands, but the clip is the rig lane's to fix."
   }
 }

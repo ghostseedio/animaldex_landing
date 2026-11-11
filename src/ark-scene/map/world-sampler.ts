@@ -176,9 +176,11 @@ class WorldSampler implements ArkMapSampler {
             if (depth < 3.5 && s.inland > -18 && ((s.reef > 0.12 && s.reef < 0.55) || (w.seashore ?? 0) > 0.4)) add("seagrass");
             const theta = Math.atan2(z, x);
             if (depth > 2 && depth < 9 && s.inland > -22 && this.cliffAt(theta) > 0.3) add("kelp");
-            if (s.inland < -8 && depth > 3) add("open_ocean", "attached_to_large");
-            if (depth > 2.5) add("sea_surface");
-            if (depth > 7.5) add("deep_water");
+            // The open water is the ring round the island the camera sees (out to 36 m off the coast).
+            const ring = s.inland > -36;
+            if (ring && s.inland < -8 && depth > 3) add("open_ocean", "attached_to_large");
+            if (ring && depth > 2.5) add("sea_surface");
+            if (ring && depth > 7.5) add("deep_water");
             if (estuary && depth < 2) add("estuary", "mudflat");
             if (depth < 1 && s.inland > -3 && this.cliffAt(theta) > 0.25) add("rocky_shore");
             if (this.near(x, z, "floe")) add("sea_ice");
@@ -188,7 +190,8 @@ class WorldSampler implements ArkMapSampler {
             // Dry ground.
             const forest = (w.woodland ?? 0) + (w.rainforest ?? 0);
             const top = Math.max(...Object.values(w));
-            const grade = slope(x, z);
+            // The slope only where the ground can be steep (the mountain, high ground, cliffs): elsewhere it is gentle.
+            const grade = height > 3 || (w.mountains ?? 0) > 0.2 || s.cliff > 0.2 ? slope(x, z) : 0;
             const sandy = s.land < 0.95 && height < 1.8 && s.cliff < 0.3 && (w.polar ?? 0) < 0.3 && s.inland < 12;
             const farm = (w.farm_garden ?? 0) > 0.35;
             const cottage = Math.hypot(x - COTTAGE.x, z - COTTAGE.z);

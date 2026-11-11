@@ -240,7 +240,6 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     }
 
     // Everyone else: a launch point of its tag, in the water or on dry ground.
-    let overflow = false;
     for (let tagIndex = 0; tagIndex < tags.length; tagIndex++) {
         const tag = tags[tagIndex];
         const wet = wetOf(species, tag);
@@ -279,17 +278,21 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         }
         if (level > 0) {
             // Another cluster on this point (more clusters than points): the level-th of the point's satellites, the nearest cells of
-            // its tag a herd's width apart (`points.ts`), so two clusters never share a spot.
-            // (In the overflow round, when every tag is full: the zone's overflow cells of the tag, its slot picking one.)
-            // One cell per level (or slot): never skipping to the next, so two clusters never take the same one; a body too big for the
-            // cell's own spot moves a little within it.
-            const satellites = overflow ? all.overflow(tag, wet, zone) : all.satellites(point, wet, 2.6);
-            const k = overflow ? (partition.own ? slot : slot + 37 * Math.max(ARK_ZONES.indexOf(zone), 0)) % Math.max(satellites.length, 1) : level - 1;
-            let found = false;
-            if (k < satellites.length) {
-                const cell = satellites[k];
+            // its tag a herd's width apart that are nearer it than any other point (`points.ts`), so two clusters never share a spot.
+            // One cell per level: never skipping to the next; a body too big for the cell's own spot moves a little within it.
+            const satellites = all.satellites(point, wet, 2.6);
+            let cell: {x: number; z: number} | null = level - 1 < satellites.length ? satellites[level - 1] : null;
+            if (!cell) {
+                // This tag's ground is full: its next tag's (its text names more than one place); past the last, the partition's
+                // overflow cells, by an ordinal of its own.
+                if (!lastTag) continue;
+                const cells = all.overflowCells(list, wet);
+                if (cells.length) cell = cells[all.overflowOrdinal(list, wet, index, level) % cells.length];
+            }
+            if (cell) {
+                let found = false;
                 for (let n = 0; n < 12 && !found; n++) {
-                    const r = n ? 0.35 * Math.sqrt(n) : 0;
+                    const r = n ? 0.3 * Math.sqrt(n) : 0;
                     const tx = cell.x + Math.cos(n * GOLDEN) * r;
                     const tz = cell.z + Math.sin(n * GOLDEN) * r;
                     if (ok(tx, tz)) {
@@ -299,22 +302,14 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
                     }
                 }
             }
-            // This tag's ground is full (more clusters than it has room for): its next tag's (its text names more than one place);
-            // past the last, round again from the first with the nearest cells, whoever's.
-            if (!found && !lastTag) continue;
-            if (!found && !overflow) {
-                overflow = true;
-                tagIndex = -1;
-                continue;
-            }
         }
-        // A rare kind's cover (stats addendum part 4): something tall just in front of it from the default camera, within about 8 m.
+        // A rare kind's cover (stats addendum part 4): something tall just in front of it from the default camera, within 5 m (never by another point).
         if (kind === "cover" && !wet && sampler.covered && !sampler.covered(cx, cz)) {
-            for (let k = 1; k < 240; k++) {
+            for (let k = 1; k < 100; k++) {
                 const r = 0.5 * Math.sqrt(k);
                 const tx = cx + Math.cos(k * GOLDEN) * r;
                 const tz = cz + Math.sin(k * GOLDEN) * r;
-                if (sampler.covered(tx, tz) && ok(tx, tz)) {
+                if (sampler.covered(tx, tz) && ok(tx, tz) && !all.nearLaunch(tx, tz, 2.4, point)) {
                     cx = tx;
                     cz = tz;
                     break;
@@ -334,7 +329,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
                 const lz = gap * (j * Math.sqrt(3) / 2);
                 const tx = cx + lx * Math.cos(turn) - lz * Math.sin(turn);
                 const tz = cz + lx * Math.sin(turn) + lz * Math.cos(turn);
-                if (!ok(tx, tz)) continue;
+                // Never on another cluster's point.
+                if (!ok(tx, tz) || all.nearLaunch(tx, tz, 1.2, point)) continue;
                 if (++seen === rank) {
                     x = tx;
                     z = tz;
