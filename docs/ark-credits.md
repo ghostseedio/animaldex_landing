@@ -18,3 +18,13 @@ Every asset the Ark scene (`src/ark-scene`, `public/ark`) uses from outside the 
 Processing: the 1k JPG diffuse maps are high-passed (large-scale light drift divided out, so repeats don't show) and resized to 512 px; the OpenGL normal maps are resized to 512 px; each set becomes one layer of a vertical strip, read into a texture array at load. Licences: Poly Haven "Our assets are all licensed as CC0" (polyhaven.com/license, checked 2026-11-11); ambientCG is CC0 1.0 (docs.ambientcg.com/license, checked 2026-11-11, nothing used from it yet).
 
 Tools (not shipped): `playwright-core` (Apache-2.0, existing dev dependency) for the golden-shot harness.
+
+## Asset library (`public/ark/assets/v1`, the asset lane)
+
+Every mesh in `public/ark/assets/v1/` (trees, plants, rocks, forest floor) is generated in this repo by `scripts/ark-assets/` (procedural Python, run inside Blender 5.2 for the contact-sheet renders): no downloaded models, textures or scans. Colour is vertex colour only (no textures, so no KTX2). Made for AnimalDex and released as CC0 1.0 by its authors; no attribution needed.
+
+| Asset | Source | Licence | Author | Committed file(s) |
+|---|---|---|---|---|
+| Trees (12 kinds, 33 variants), plants, rocks, forest floor | generated: `scripts/ark-assets/{trees,plants,rocks,floor}.py` | CC0 1.0 (made in this repo) | AnimalDex (asset lane, 2026-11-11) | `public/ark/assets/v1/<set>/*.glb`, `<set>/attach.json`, `src/ark-scene/assets-manifest.json` |
+
+Tools (not shipped): Blender 5.2 (GPL-3.0, renders the contact sheets only; nothing from it is in the output), gltfpack 1.3.0 (MIT, npm `gltfpack@1.3.0`, meshopt compression; the same pinned tool the model lane uses), Pillow (HPND, contact-sheet layout), three.js `GLTFLoader` + `MeshoptDecoder` (MIT, existing dependency, `scripts/ark-assets/verify.mjs`).
