@@ -126,11 +126,12 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
     const lift = (i: ReactiveInput) => {
         if (g.terrain) i.shared.y = Math.max(heightAt(i.shared.x, i.shared.z), 0);
     };
-    const me = input("prey", prey.slug, g.ox, g.oz, {doing: grazer ? "graze" : "forage", yaw});
+    // Ids per species, so each prey has its own seeded personality (as in the scene), not one shared by all.
+    const me = input(`${prey.slug}#prey`, prey.slug, g.ox, g.oz, {doing: grazer ? "graze" : "forage", yaw});
     lift(me);
     const startAt = toWorld(kind === "pass" ? -35 : d, kind === "pass" ? d : 0);
     const passYaw = Math.atan2(Math.cos(g.heading), Math.sin(g.heading));
-    const hunter = input("pred", predator.slug, startAt.x, startAt.z, {doing: kind === "pass" ? "wander" : "rest", moving: kind === "pass", yaw: kind === "pass" ? passYaw : passYaw + Math.PI});
+    const hunter = input(`${predator.slug}#pred`, predator.slug, startAt.x, startAt.z, {doing: kind === "pass" ? "wander" : "rest", moving: kind === "pass", yaw: kind === "pass" ? passYaw : passYaw + Math.PI});
     const walk = Math.min(Math.max(hunter.length * 1.1, 0.9), 2.2);
     const seconds = kind === "pass" ? 70 / walk + 4 : 22;
     // The camera off to one side, out of the curious-camera range (the camera is measured separately).
@@ -160,13 +161,13 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
         const apart = Math.hypot(hunter.shared.x - me.shared.x, hunter.shared.z - me.shared.z);
         const inRange = apart <= ENCOUNTER_M && t >= 1000 + settle;
         const out = layer.step(kind === "still" && t < 1000 + settle ? [me] : [me, hunter], world(t, camera, g.terrain));
-        const o = out.get("prey");
+        const o = out.get(me.id);
         if (inRange) {
             nearest = Math.min(nearest, apart);
             start ??= t;
         }
         if (start === null || !o) continue;
-        const looking = o.looking === "pred";
+        const looking = o.looking === hunter.id;
         const reacting = REACTIONS.has(o.action) || looking;
         if (reacting && reactedS === null) {
             reactedS = Math.round((t - start) * 100) / 100;
@@ -190,7 +191,7 @@ function heads(row: Row): Heads {
     // Calm: alone, feeding, the camera 30 m off (no threat, no camera interest): its own look-round.
     const layer = new ReactiveLayer({tier: TIER});
     const grazer = behaviourProfile(row.slug).diet === "grazer";
-    const me = input("me", row.slug, 0, 0, {doing: grazer ? "graze" : unit(`${row.slug}#rest`) < 0.5 ? "rest" : "forage", yaw: unit(`${row.slug}#yaw`) * Math.PI * 2});
+    const me = input(`${row.slug}#me`, row.slug, 0, 0, {doing: grazer ? "graze" : unit(`${row.slug}#rest`) < 0.5 ? "rest" : "forage", yaw: unit(`${row.slug}#yaw`) * Math.PI * 2});
     let turned = 0;
     let frames = 0;
     let changes = 0;
@@ -199,7 +200,7 @@ function heads(row: Row): Heads {
     let lo = Infinity;
     let hi = -Infinity;
     for (let k = 0; k < 60 * FPS; k++) {
-        const o = layer.step([me], world(1000 + k / FPS, {x: 0, y: 2.5, z: -30})).get("me");
+        const o = layer.step([me], world(1000 + k / FPS, {x: 0, y: 2.5, z: -30})).get(me.id);
         if (!o) continue;
         frames++;
         if (Math.abs(o.headYaw) > 0.05 || Math.abs(o.headPitch) > 0.05) turned++;
@@ -213,16 +214,43 @@ function heads(row: Row): Heads {
     }
     // The camera close (6 m, eye height), for 40 s: does it look at it?
     const cam = new ReactiveLayer({tier: TIER});
-    const you = input("me", row.slug, 0, 0, {doing: "rest", yaw: unit(`${row.slug}#yaw`) * Math.PI * 2});
+    const you = input(`${row.slug}#you`, row.slug, 0, 0, {doing: "rest", yaw: unit(`${row.slug}#yaw`) * Math.PI * 2});
     let looking = 0;
     let n = 0;
     for (let k = 0; k < 40 * FPS; k++) {
-        const o = cam.step([you], world(2000 + k / FPS, {x: 4.2, y: 1.6, z: 4.2})).get("me");
+        const o = cam.step([you], world(2000 + k / FPS, {x: 4.2, y: 1.6, z: 4.2})).get(you.id);
         if (!o) continue;
         n++;
         if (o.looking === "camera") looking++;
     }
     return {slug: row.slug, plan: row.plan, turnedShare: frames ? turned / frames : 0, changesPerMin: changes, yawRange: Math.round((hi - lo) * 100) / 100, camera: looking > 0, cameraShare: n ? looking / n : 0};
+}
+
+// MARK: Near the camera (grazers): how much of the time they graze, watch the camera, or back off from it
+
+type CameraRow = {slug: string; d: number; moving: boolean; feed: number; camera: number; backOff: number; other: number};
+const CAMERA_ACTIONS = new Set<ReactiveOut["action"]>(["watch_camera", "investigate_camera", "back_off_camera"]);
+function nearCamera(row: Row, d: number, moving: boolean, seed: number): CameraRow {
+    const layer = new ReactiveLayer({tier: TIER});
+    const yaw = unit(`${row.slug}#cam-yaw#${seed}`) * Math.PI * 2;
+    const grazer = behaviourProfile(row.slug).diet === "grazer";
+    const me = input(`${row.slug}#g${seed}`, row.slug, 0, 0, {doing: grazer ? "graze" : "forage", yaw});
+    const counts = {feed: 0, camera: 0, backOff: 0, other: 0};
+    const seconds = 60;
+    for (let k = 0; k < seconds * FPS; k++) {
+        const t = 3000 + k / FPS;
+        // Still at d, or walking in from 14 m to d over the first 20 s (0.5 m/s or so), then still.
+        const r = moving ? Math.max(d, 14 - (14 - d) * Math.min(k / FPS / 20, 1)) : d;
+        const camera = {x: Math.sin(seed) * r, y: 1.6, z: Math.cos(seed) * r};
+        const o = layer.step([me], world(t, camera)).get(me.id);
+        if (!o) continue;
+        if (o.action === "feed") counts.feed++;
+        else if (o.action === "back_off_camera") counts.backOff++;
+        else if (CAMERA_ACTIONS.has(o.action)) counts.camera++;
+        else counts.other++;
+    }
+    const n = seconds * FPS;
+    return {slug: row.slug, d, moving, feed: counts.feed / n, camera: counts.camera / n, backOff: counts.backOff / n, other: counts.other / n};
 }
 
 // MARK: The sample (seeded, stratified by plan)
@@ -244,6 +272,10 @@ for (const {prey, predator} of pairs) {
     for (const d of [2, 4, 6, 9, 13, 18, 24]) runs.push(encounter(prey, predator, "pass", d));
     for (const d of [4, 10, 20]) runs.push(encounter(prey, predator, "still", d));
 }
+const grazers = aboard.filter((r) => ["quadruped"].includes(r.plan) && ["grazer", "browser"].includes(behaviourProfile(r.slug).diet)).sort((a, b) => unit(`c${a.slug}`) - unit(`c${b.slug}`)).slice(0, Math.max(10, Math.round(LIMIT / 5)));
+const cameraRows: CameraRow[] = [];
+for (const r of grazers) for (const d of [5, 8, 11, 14]) for (const seed of [1, 2]) cameraRows.push(nearCamera(r, d, false, seed));
+for (const r of grazers) cameraRows.push(nearCamera(r, 5, true, 3));
 const headRows: Heads[] = [];
 const headSample = aboard.slice().sort((a, b) => unit(`h${a.slug}`) - unit(`h${b.slug}`)).slice(0, LIMIT);
 for (const r of headSample) headRows.push(heads(r));
@@ -303,6 +335,16 @@ const summary = {
         medianCameraShare: median(headed.filter((h) => h.camera).map((h) => Math.round(h.cameraShare * 100) / 100)),
         neverTurn: headed.filter((h) => h.yawRange < 0.05).map((h) => h.slug).slice(0, 20)
     },
+    nearCamera: (() => {
+        const mean = (list: CameraRow[], k: "feed" | "camera" | "backOff" | "other") => Math.round((1000 * list.reduce((a, r) => a + r[k], 0)) / Math.max(list.length, 1)) / 10;
+        const of = (list: CameraRow[]) => ({runs: list.length, feedPct: mean(list, "feed"), watchOrInvestigatePct: mean(list, "camera"), backOffPct: mean(list, "backOff"), otherPct: mean(list, "other")});
+        return {
+            grazers: grazers.length,
+            stillWithin14m: of(cameraRows.filter((r) => !r.moving)),
+            ...Object.fromEntries([5, 8, 11, 14].map((d) => [`still ${d} m`, of(cameraRows.filter((r) => !r.moving && r.d === d))])),
+            approaching: of(cameraRows.filter((r) => r.moving))
+        };
+    })(),
     notReacting: encounters.filter((r) => r.reactedS === null && r.nearest < 10).slice(0, 25).map((r) => `${r.prey} (${r.plan}) ← ${r.predator} ${r.kind} ${r.d} m`),
     closeNoFlee: close.filter((r) => !r.fled).slice(0, 25).map((r) => `${r.prey} (${r.plan}) ← ${r.predator} ${r.kind} ${r.d} m: ${r.defended ? "defends" : r.reactedS !== null ? "reacts, no flight" : "nothing"}`)
 };

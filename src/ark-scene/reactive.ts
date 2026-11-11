@@ -367,6 +367,11 @@ type Agent = {
     mode: ReactiveAction;
     /** On sentinel duty now (its group's turn). */
     onWatch: boolean;
+    /** 0–1: how used it is to the camera (still near it a few seconds: it goes back to its business), and whether the camera is coming at it now. */
+    camHab: number;
+    camApproach: boolean;
+    /** The camera is within its notice range now (for the moment it first notices it). */
+    camNear: boolean;
 };
 
 function newAgent(id: string, now: number): Agent {
@@ -396,7 +401,10 @@ function newAgent(id: string, now: number): Agent {
         nextPerceive: 0,
         lastSeenAt: now,
         mode: "scan",
-        onWatch: false
+        onWatch: false,
+        camHab: 0,
+        camApproach: false,
+        camNear: false
     };
 }
 
@@ -428,6 +436,9 @@ export class ReactiveLayer {
     /** Lines of sight per pair, kept half a second (the terrain doesn't move; an animal walks a step). */
     private sightCache = new Map<string, {t: number; v: number; ttl: number}>();
     private around: (x: number, z: number, r: number) => ReactiveInput[] = () => [];
+    /** The camera's last place and its velocity (m/s), for "is it coming at me". */
+    private camPrev: Vec3 | null = null;
+    private camVel = {x: 0, z: 0};
     budget: ReactiveBudget;
     private envelope: EnvelopeFn;
     stats: ReactiveStats = {agents: 0, perceptions: 0, sightChecks: 0, ms: 0, alarms: 0};
@@ -462,6 +473,13 @@ export class ReactiveLayer {
         const out = new Map<string, ReactiveOut>();
         const stats: ReactiveStats = {agents: 0, perceptions: 0, sightChecks: 0, ms: 0, alarms: 0};
         const cam = world.camera;
+        if (cam && this.camPrev && world.dt > 0) {
+            // Smoothed a little: a jittery orbit is not an approach.
+            const k = Math.min(world.dt * 4, 1);
+            this.camVel.x += ((cam.x - this.camPrev.x) / world.dt - this.camVel.x) * k;
+            this.camVel.z += ((cam.z - this.camPrev.z) / world.dt - this.camVel.z) * k;
+        }
+        this.camPrev = cam ? {...cam} : null;
         const byId = new Map(inputs.map((i) => [i.id, i]));
         const near = cam
             ? inputs
@@ -589,6 +607,7 @@ export class ReactiveLayer {
         const p = me.intel;
         const person = agent.personality;
         this.updateNeeds(agent, me, world, dt);
+        this.updateCamera(me, agent, world, dt);
 
         // Perception, staggered by id so not everyone looks on the same frame.
         const stagger = Math.floor(unit(me.id, "perceive") * this.budget.perceiveEvery);
@@ -990,6 +1009,36 @@ export class ReactiveLayer {
         n.safety = agent.threat ? 0 : clamp01(n.safety + dt * 0.05);
     }
 
+    /**
+     * Getting used to the camera. Near it and the camera not coming at it, an animal habituates in its own few seconds
+     * (3–7 s, half as long again for a shy one) and goes back to its business; a camera walking at it (closing faster
+     * than 0.3 m/s) renews its attention; away from it, it forgets slowly (a minute).
+     */
+    private updateCamera(me: ReactiveInput, agent: Agent, world: ReactiveWorld, dt: number) {
+        const cam = world.camera;
+        if (!cam) return;
+        const d = Math.hypot(cam.x - me.shared.x, cam.z - me.shared.z);
+        const closing = d > 1e-3 ? ((me.shared.x - cam.x) * this.camVel.x + (me.shared.z - cam.z) * this.camVel.z) / d : 0;
+        agent.camApproach = closing > 0.3;
+        const within = Math.min(me.intel.sight * 0.5, 14);
+        const habTime = (3 + 4 * unit(me.id, "cam-hab")) * (agent.personality.boldness < -0.3 ? 1.5 : 1);
+        const near = d < within;
+        // The moment it first notices the camera (or the camera starts coming at it): head up and a look at it for a
+        // second or two (one that pays a still camera no attention just carries on), then it decides again.
+        const noticed = (near && !agent.camNear) || (near && agent.camApproach && agent.camHab > 0.5);
+        if (noticed && !REACTING.has(agent.mode) && (agent.camApproach || !ignoresCamera(me))) {
+            agent.choice = "watch_camera";
+            agent.choiceUntil = world.now + 1 + 1.5 * unit(me.id, "cam-glance", Math.floor(world.now));
+            agent.lookAt = null;
+        }
+        agent.camNear = near;
+        // Watching it is how it gets used to it; going about its business it gets used to it more slowly.
+        const attending = agent.choice === "watch_camera" || agent.choice === "investigate_camera" || agent.choice === "back_off_camera";
+        if (!near) agent.camHab = Math.max(agent.camHab - dt / 60, 0);
+        else if (agent.camApproach) agent.camHab = Math.max(agent.camHab - dt * 0.5, 0);
+        else agent.camHab = Math.min(agent.camHab + dt / (attending ? habTime : habTime * 1.5), 1);
+    }
+
     /** The calm choice with the best score now: needs × what it is doing × who it is, plus its own seeded noise. */
     private choose(me: ReactiveInput, agent: Agent, world: ReactiveWorld, kin: ReactiveInput[], byId: Map<string, ReactiveInput>): ReactiveAction {
         const p = me.intel;
@@ -1020,12 +1069,17 @@ export class ReactiveLayer {
         if (cam) {
             const d = Math.hypot(cam.x - me.shared.x, cam.z - me.shared.z);
             const within = Math.min(p.sight * 0.5, 14);
-            if (d < within) {
+            // Some pay a still camera no attention at all (more of them the less curious the species); a camera walking
+            // at it gets everyone's attention.
+            const ignores = ignoresCamera(me);
+            const fresh = 1 - agent.camHab;
+            if (d < within && (!ignores || agent.camApproach) && fresh > 0.05) {
                 const interest = n.curiosity * (0.3 + p.curiosity) * (0.6 + person.curiosity) * person.glanceRate;
-                add("watch_camera", 0.2 + interest * 0.6, 4);
-                // The sharp and the bold come closer to look; the rest watch from where they are.
-                if (person.boldness > -0.3) add("investigate_camera", 0.1 + interest * 1.3 + 0.5 * p.curiosity * (p.repertoire >= 9 ? 1 : 0.5), 7);
-                if (person.boldness < -0.3 && d < p.flight * 0.6) add("back_off_camera", 1 + (0.6 - person.boldness), 0);
+                add("watch_camera", (0.2 + interest * 0.6) * fresh, 4);
+                // Only a curious species' bold ones come closer to look; the rest watch from where they are.
+                if (person.boldness > -0.1 && p.curiosity >= 0.6) add("investigate_camera", (0.1 + interest * 1.3 + 0.5 * p.curiosity * (p.repertoire >= 9 ? 1 : 0.5)) * (0.3 + 0.7 * fresh), 7);
+                // A shy one moves off from a camera coming at it, or one too close, until it is used to it.
+                if (person.boldness < -0.3 && (agent.camApproach || d < p.flight * 0.6)) add("back_off_camera", (1 + (0.6 - person.boldness)) * (agent.camApproach ? 1 : fresh), 0);
             }
         }
         // The young play a lot; an adult only in its own bouts (a seeded 45 s window, more of them the more playful it is).
@@ -1322,6 +1376,11 @@ export class ReactiveLayer {
             looking
         };
     }
+}
+
+/** It pays a still camera no attention at all (seeded per animal; more of them the less curious the species). */
+function ignoresCamera(me: ReactiveInput): boolean {
+    return unit(me.id, "ignores-camera") < 0.25 + 0.5 * (1 - me.intel.curiosity);
 }
 
 function clamp01(v: number): number {

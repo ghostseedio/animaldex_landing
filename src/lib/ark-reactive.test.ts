@@ -346,6 +346,30 @@ test("a curious, sharp animal comes to look at the camera; a dull one does not",
     assert.ok(!dullFrames.some((f) => f.out.get("dull")!.action === "investigate_camera"));
 });
 
+test("near a still camera grazers get used to it in a few seconds and graze; a camera walking at them gets their attention", () => {
+    const camActions = new Set(["watch_camera", "investigate_camera", "back_off_camera"]);
+    const herd = Array.from({length: 8}, (_, i) => animal(`cam-deer${i}`, i % 2 ? "red-deer" : "plains-zebra", (i % 4) * 3, Math.floor(i / 4) * 3, {shared: {doing: "graze", yaw: i}}));
+    const still = run(new ReactiveLayer({tier: "high"}), herd.map((h) => ({...h, shared: {...h.shared}})), 40, {world: () => ({camera: {x: 4, y: 1.6, z: -6}})});
+    const later = still.slice(10 * 30);
+    let feed = 0;
+    let cam = 0;
+    for (const f of later) for (const h of herd) {
+        const a = f.out.get(h.id)!.action;
+        if (a === "feed") feed++;
+        if (camActions.has(a)) cam++;
+    }
+    const n = later.length * herd.length;
+    assert.ok(feed / n > 0.55, `grazing is the common case near a still camera (${((100 * feed) / n).toFixed(0)}%)`);
+    assert.ok(cam / n < 0.08, `watching it is brief (${((100 * cam) / n).toFixed(0)}%)`);
+    // Some never pay it any attention; some glance up when they first notice it.
+    const glanced = herd.filter((h) => still.slice(0, 5 * 30).some((f) => f.out.get(h.id)!.action === "watch_camera"));
+    assert.ok(glanced.length >= 1 && glanced.length < herd.length, `a glance from some, not all (${glanced.length} of ${herd.length})`);
+    // A camera walking at them from 14 m to 4 m.
+    const walking = run(new ReactiveLayer({tier: "high"}), herd.map((h) => ({...h, shared: {...h.shared}})), 20, {world: (t) => ({camera: {x: 4, y: 1.6, z: -6 - Math.max(10 - (t - 1000) * 0.8, 0)}})});
+    const noticed = herd.filter((h) => walking.some((f) => camActions.has(f.out.get(h.id)!.action)));
+    assert.ok(noticed.length > glanced.length, `an approaching camera gets more attention (${noticed.length} vs ${glanced.length})`);
+});
+
 // MARK: Sentinels and many eyes
 
 test("a sentinel group keeps one on watch at a time (rotating), the rest feed; it calls first at a raptor", () => {
