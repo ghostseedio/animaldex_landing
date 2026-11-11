@@ -344,6 +344,38 @@ test("in a storm, animals go to shelter and keep low", () => {
     assert.ok(!calm.some((f) => Array.from(f.out.values()).some((o) => o.action === "shelter")), "not in fine weather");
 });
 
+test("a storm never sets off alarms by itself: no calls at lions resting 30 m off in a gale; a lion walking right up still gets one", () => {
+    const scene = () => [
+        ...Array.from({length: 8}, (_, i) => animal(`sz${i}`, "plains-zebra", (i % 4) * 3, Math.floor(i / 4) * 3, {shared: {doing: "graze", yaw: i}})),
+        ...Array.from({length: 6}, (_, i) => animal(`sm${i}`, "meerkat", 14 + (i % 3) * 1.5, 6 + Math.floor(i / 3) * 1.5, {shared: {doing: "forage"}})),
+        animal("sl0", "african-lion", -32, 2, {shared: {doing: "rest"}}),
+        animal("sl1", "african-lion", -34, 5, {shared: {doing: "rest"}})
+    ];
+    const calls = (weather: ReactiveWorld["weather"], move?: (list: ReactiveInput[], t: number) => void) => {
+        let n = 0;
+        for (const f of run(new ReactiveLayer({tier: "high"}), scene(), 18, {world: () => ({weather}), move})) f.out.forEach((o) => (n += o.called ? 1 : 0));
+        return n;
+    };
+    // The wind blowing from the lions to the herd (the worst case for scent).
+    let calm = 0;
+    let storm = 0;
+    for (const windDirection of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+        calm += calls({rain: 0, wind: 0.3, windDirection, fog: 0, storm: 0});
+        storm += calls({rain: 1, wind: 1, windDirection, fog: 0, storm: 1, lightning: 1});
+    }
+    assert.ok(storm <= calm, `no more calls in the storm than calm (${storm} vs ${calm})`);
+    assert.equal(storm, 0, "none at resting lions 30 m off");
+    // A lion walking straight into the herd in the storm: somebody calls.
+    const close = calls({rain: 1, wind: 1, windDirection: 0, fog: 0, storm: 1}, (list, t) => {
+        const l = list.find((i) => i.id === "sl0")!;
+        l.shared.x = -32 + (t - 1000) * 3;
+        l.shared.moving = true;
+        l.shared.yaw = Math.PI / 2;
+        l.shared.doing = "wander";
+    });
+    assert.ok(close >= 1, `a lion coming in still gets a call (${close})`);
+});
+
 // MARK: Scenario 7: a curious, sharp animal investigates the camera
 
 test("a curious, sharp animal comes to look at the camera; a dull one does not", () => {
