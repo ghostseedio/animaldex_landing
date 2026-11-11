@@ -833,7 +833,7 @@ type Group = {
 
 export type ReefView = {
     meshes: InstancedMesh[];
-    /** Re-sort near and far round the camera (when it has moved, or every half second) and run the sea's clock. */
+    /** Re-sort near and far round the camera (by its 1 m cell: the same cell, the same versions) and run the sea's clock. */
     update: (camera: Vector3) => void;
     /** The tier's share of the reaches (1 high, about 0.6 medium, about 0.4 low). */
     setReach: (reach: number) => void;
@@ -918,8 +918,11 @@ export function buildReef(): ReefView {
     }
 
     let reach = 1;
-    const last = new Vector3(Infinity, 0, 0);
-    let framesSince = 0;
+    // The camera snapped to a 1 m grid: near and far are a pure function of where the camera is now (its cell), never
+    // of the frames before (when the last re-sort happened), so the same view always draws the same versions.
+    const SNAP = 1;
+    const cell = new Vector3(Infinity, 0, 0);
+    const snapped = new Vector3();
     let triangles = 0;
     const resort = (camera: Vector3) => {
         triangles = 0;
@@ -962,15 +965,15 @@ export function buildReef(): ReefView {
         meshes: groups.flatMap((group) => [group.near, group.far]),
         update: (camera) => {
             ARK_SEA_TIME.value = seaClockSeconds(seaEpochSeconds());
-            framesSince++;
-            if (camera.distanceToSquared(last) < 1 && framesSince < 30) return;
-            framesSince = 0;
-            last.copy(camera);
-            resort(camera);
+            snapped.set((Math.floor(camera.x / SNAP) + 0.5) * SNAP, (Math.floor(camera.y / SNAP) + 0.5) * SNAP, (Math.floor(camera.z / SNAP) + 0.5) * SNAP);
+            // The reef stands still: re-sorted only when the camera moves into another cell (or the tier changes).
+            if (snapped.equals(cell)) return;
+            cell.copy(snapped);
+            resort(snapped);
         },
         setReach: (value) => {
             reach = Math.min(Math.max(value, 0.3), 1);
-            last.set(Infinity, 0, 0);
+            cell.set(Infinity, 0, 0);
         },
         get triangles() {
             return triangles;

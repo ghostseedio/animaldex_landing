@@ -131,3 +131,25 @@ test("fish: chasers split a school round them, it flees and rejoins behind (clos
     // Deterministic.
     assert.deepEqual(flee({x: 1, y: -2.5, z: 0.4}, [seal]), flee({x: 1, y: -2.5, z: 0.4}, [seal]));
 });
+
+test("reef: near and far are a function of the camera's place now, never of the frames before (the visual CI renders twice)", async () => {
+    const {Vector3} = await import("three");
+    const {buildReef} = await import("@/ark-scene/reef-render");
+    const reef = ZONE_SITES.coral_reef;
+    const at = new Vector3(reef.x + 4.3, -1.6, reef.z + 7.9);
+    const draw = (path: Array<[number, number, number]>) => {
+        const view = buildReef();
+        for (const [x, y, z] of path) view.update(new Vector3(x, y, z));
+        view.update(at);
+        const out = view.meshes.map((mesh) => ({kind: mesh.userData.kind as string, count: mesh.count, matrices: Array.from(mesh.instanceMatrix.array.slice(0, mesh.count * 16))}));
+        view.dispose();
+        return out;
+    };
+    // One camera drifting in by a few millimetres a frame (a settling view), one jumping straight there from far off.
+    const drift: Array<[number, number, number]> = [];
+    for (let k = 0; k < 90; k++) drift.push([at.x + 0.9 * 0.93 ** k, at.y + 0.6 * 0.93 ** k, at.z - 0.4 * 0.93 ** k]);
+    const a = draw(drift);
+    const b = draw([[0, 20, 0], [reef.x + 30, -2, reef.z]]);
+    assert.deepEqual(a, b);
+    assert.ok(a.some((mesh) => mesh.count > 0));
+});

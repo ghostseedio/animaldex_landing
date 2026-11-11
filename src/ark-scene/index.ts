@@ -99,6 +99,7 @@ import {NearDetail} from "@/ark-scene/near-detail";
 import {AssetTrees} from "@/ark-scene/asset-trees";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
+import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
 import {islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
@@ -1725,7 +1726,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 cutawayOpen = layersScene.setCutaway({target, towardCamera: new Vector3(Math.sin(azimuth), 0, Math.cos(azimuth))});
             }
         }
-        layersScene.step(elapsed);
+        // The light shafts drift on the sea's shared clock (epoch seconds), not on the time since this page opened.
+        layersScene.step(seaEpochSeconds());
     };
 
     /**
