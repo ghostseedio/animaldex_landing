@@ -280,15 +280,21 @@ test("a sentinel group keeps one on watch at a time (rotating), the rest feed; i
     assert.ok(watchers.size >= 2, `the duty rotates (${watchers.size})`);
     assert.ok(maxAtOnce <= 2, "one on watch at a time (two only at a hand-over)");
     const feeding = frames.slice(-300).reduce((n, f) => n + mob.filter((m) => f.out.get(m.id)!.action === "feed").length, 0);
-    assert.ok(feeding > 300, "the others feed");    // A raptor comes over: the one on watch sees it first (it looks further) and calls; the mob runs for the burrows.
+    assert.ok(feeding > 300, "the others feed");
+    // A raptor comes over: the one on watch sees it first (it looks further) and calls; the mob runs for the burrows.
+    // The martial eagle is the meerkat's main aerial predator and its stored profile swoops. (The bateleur this test
+    // used before is a carrion-first eater since the profile review, so it gets no hunting default and is no threat
+    // in the air: the fixture went stale, the logic did not.)
     const watcher = mob.find((m) => frames[frames.length - 1].out.get(m.id)!.action === "sentinel");
-    const raptor = animal("eagle", "bateleur", 30, 4, {shared: {aloft: true, moving: true, y: 12, doing: "soar"}});
+    assert.ok(watcher, "one is on watch when the raptor comes");
+    assert.ok(intelProfile("martial-eagle").hunt.includes("aerial_swoop") && !intelProfile("martial-eagle").fallback, "the raptor is a stored aerial hunter");
+    const raptor = animal("eagle", "martial-eagle", 30, 4, {shared: {aloft: true, moving: true, y: 12, doing: "soar"}});
     const after = run(layer, [...mob, raptor], 6, {start: 1100, move: (list, t) => {
         list.find((i) => i.id === "eagle")!.shared.x = 30 - (t - 1100) * 5;
     }});
     const firstCall = after.flatMap((f) => Array.from(f.out.entries()).filter(([, o]) => o.called).map(([id]) => id))[0];
     assert.ok(firstCall, "someone calls");
-    if (watcher) assert.equal(firstCall, watcher.id, "the sentinel calls first");
+    assert.equal(firstCall, watcher!.id, "the sentinel calls first");
     const ran = mob.filter((m) => after.some((f) => ["flee", "freeze", "alert"].includes(f.out.get(m.id)!.action)));
     assert.equal(ran.length, mob.length, "the whole mob reacts");
 });
