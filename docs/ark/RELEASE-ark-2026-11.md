@@ -20,9 +20,9 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Assets | `ark-assets` | 874a8d84 | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
 | Reef | `ark-graphics-reef` | 84226995 | Corals, sponges, anemones, kelp, seagrass, 15 ambient fish schools that split round hunters |
 | Attach points | `ark-graphics-attach` | 100f6f6d | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
-| Map | `ark-map` | fd384d86 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
+| Map | `ark-map` | 3b334709 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
-| Behaviour | `ark-behaviour` | 6ad9b3e8 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
+| Behaviour | `ark-behaviour` | 55e98019 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
 | Behaviour recipes | `ark-behaviour-recipes` | 5adf8c29 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c78628ee | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
@@ -30,7 +30,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Animal look | `ark-animal-look` | a20f2e8d | Fur, feathers, scales, eyes, wet and dust, contact shadows, close-up skins (when uploaded) |
 | Liveliness wiring | `ark-liveliness-wiring` | 36b4d8e6 | WebAudio engine (tap only), weather visuals (rain, fog, lightning), sheltering, young, tide, per-instance variation, traces |
 | Ambient sound | `ark-ambient` | e0f92416 | 13 beds and 2 thunder claps (public domain and CC0) |
-| Runtime | `ark-runtime-web` | 1ee10e02 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
+| Runtime | `ark-runtime-web` | 66f6b742 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
 | Founders (web) | `ark-founders-web` | 97fe9811 | Named founders, stories, the one-tap 18+ confirmation |
 | Captures + thrive (web) | `ark-thrive-web` | ab82aa0c | The capture band, condition and family on the tap card, Ark Score v3, the chat offer and result lines; bringers shown as `@username` linked to `/u/{handle}` (owner decision); the age question inline when `ask_age` is set |
 | Home growth | `ark-home-growth` | 7588a2e8 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
@@ -206,21 +206,23 @@ unchanged. Rollback: `recache_ark.py --rollback` (the same re-upload with the ol
   switch is still off). Then open /ark: the header's counts match, a tapped animal's card shows "@handle" linking to
   `/u/{handle}`, and that profile page loads (no 404).
 - **Measured at this scale** (the owner's 3,137-animal snapshot, `scripts/ark-runtime-measure.mjs --prebuild
-  --population-file <it>`, the page's own path, 2 runs each on the shared Mac). With runtime round 5 (1ee10e02, on
-  `ark-release` eb6e6006), and before it (2856dec7):
+  --population-file <it>`, the page's own path, 2 runs each on the shared Mac, a first visit):
 
-  | Device | First frame | Mount (main thread) | In view | Frames once in view | Long tasks after the first frame | Heap | GPU estimate | Draw calls / triangles |
-  |---|---|---|---|---|---|---|---|---|
-  | desktop (host GPU, high tier), round 5 | 3.5–3.6 s | 0.65–0.67 s | **13.6 s** | 60 fps, p95 16.8 ms | 4, longest **76 ms** | 231–261 MB | 68 + 184–189 MB (507–531 models) | |
-  | desktop, before | 3.2 s | 0.72 s | still loading at 30 s | 60 fps, p95 16.8 ms | 3, longest 0.74 s | 180–200 MB | 56–64 + 111–152 MB | 850 / 3.3 M |
-  | phone profile (4× CPU, DPR 2, low tier), round 5 | 6.2–6.4 s | **2.2 s** | 16.5–18.2 s | 60 fps, p95 16.8 ms | 12, longest **0.21 s** | 134–146 MB | 45 + 31 MB (205–210 models) | |
-  | phone profile, before | 5.5 s | 2.7 s | 19–22 s | 60 fps, p95 16.8 ms | 16–17, longest 0.65 s | 157–172 MB | 45 + 32 MB | 149 / 0.36 M |
+  | Device | First frame | Mount (main thread) | View complete | Frames once in view | Long tasks after the first frame | Heap | GPU estimate |
+  |---|---|---|---|---|---|---|---|
+  | desktop (high tier), **round 8** (66f6b742, on 51d4cd58) | 3.0–3.1 s | **0.14 s** | **6.8–8.7 s** | 60 fps, p95 16.7 ms | **none** | 199–260 MB | 59–63 + 187–236 MB (434–500 models) |
+  | desktop, round 5 (1ee10e02) | 3.5–3.6 s | 0.65–0.67 s | 13.6 s | 60 fps, p95 16.8 ms | 4, longest 76 ms | 231–261 MB | 68 + 184–189 MB |
+  | desktop, before (2856dec7) | 3.2 s | 0.72 s | still loading at 30 s | 60 fps | 3, longest 0.74 s | 180–200 MB | 56–64 + 111–152 MB |
+  | phone profile (4× CPU, DPR 2), **round 8** (medium tier) | 5.2 s | **0.51 s** | **9.3–11.9 s** | 58–59 fps, p95 16.8 ms (1–3 frames over 50 ms) | 4–5, longest **90 ms** | 122–128 MB | 38 + 71–76 MB (251–264 models) |
+  | phone profile, round 5 (low tier) | 6.2–6.4 s | 2.2 s | 16.5–18.2 s | 60 fps | 12, longest 0.21 s | 134–146 MB | 45 + 31 MB |
+  | phone profile, before (low tier) | 5.5 s | 2.7 s | 19–22 s | 60 fps | 16–17, longest 0.65 s | 157–172 MB | 45 + 32 MB |
 
-  Round 5 settles the desktop view in about 14 s and keeps every phone task after the first frame near 0.2 s. The phone's
-  16–18 s to a complete view is not CDN misses (the model files are already served cached for a year, §5a); the runtime
-  lane is finding the real cause. What is left first on a phone is the mount itself: one 2.2 s main-thread task before the first frame (6.2–6.4 s in), with the
-  page frozen. Without the prebuild worker the phone's mount holds the main thread 12 s. (Headless Chromium on the Mac's
-  GPU: the phone profile throttles the CPU, not the GPU.)
+  Round 8 (the sliced mount, rounds 6–8: steps outside rAF, props in their own step, floor and wheat in the worker, a
+  capped shader wait, nearest kinds first, 6 fetches at once on phones, places always in the worker): no main-thread task
+  over 0.55 s anywhere (all before the first frame), a phone's view complete in 9–12 s and its frame rate held. The
+  phone's earlier 16–18 s to a complete view was not CDN misses (the model files are served cached for a year, §5a).
+  Without the prebuild worker the phone's mount held the main thread 12 s. (Headless Chromium on the Mac's GPU: the phone
+  profile throttles the CPU, not the GPU.)
 
 ### 7b. The owner's founder decision (2026-11-11, about 21:30 WIB, confirmed again)
 - **`@username` on by default:** every bringer with a handle shows as their `@username` (linked to `/u/{handle}`) once
@@ -273,10 +275,8 @@ own short step at a quiet time. In the chained rehearsal both deadlocked with li
 harmlessly.
 
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` f51368ee (2,247/2,249), both behaviour's (both fail with the recipes off too):**
-  - "groups stay together as loose clusters, never a row": five African lions in an even row at slot 275 (timing dependent).
-  - "an in-place activity barely turns": 1 of 13,763 in-place minutes over one turn, a grey heron's plain watch slot (1.07 turns), no recipe.
-- **Default view** (corrected check, after recipes 5adf8c29, four runs; turning now split by source, `rig-scenes-entry.ts`): walk pace ratio median 0.91–1.00; backwards 0.3–1.7% (one plains zebra 2.1 s backwards in one run); ground turns 0 a minute (median). Grazers over 2 way-turns a minute of movement: plains zebras 4.2 (graze, groom; 16.5 s moving), 6.6 (graze, play) and 18.7 (rest, play, groom; 2.9 s), all from the schedule's own steps (no recipe act); one alpine ibex 28.1 (graze; 3.5 s, 14 m) under a recipes-layer act. The African forest buffalo was under 2 in all four runs. Others over 2: a grey heron 24.6 (wade_spear/wade), Atlantic puffins 3–4 (surface_dive/swim, chase_fish), a goat 6.8 (rest, watch; schedule).
+- **Tests on `ark-release` 68a4b7b9: the full suite green** (2,254/2,254; behaviour 55e98019 fixed the lions in a row and the heron's watch minute). The polar bear's "at the shore nothing jumps" passes on release (the map lane sees it fail only on its own base).
+- **Default view** (corrected check, after behaviour 55e98019 and map 18aec3dd, three runs; turning split by source): walk pace ratio median 0.99–1.02; backwards 0.1–1.8% (one plains zebra 1.6 s backwards in one run); ground turns 0–0.1 a minute (median). **Grazers over 2 way-turns a minute of movement:** plains zebras 2.4 (graze, 11 s moving), 3.3 (watch, graze), 9.6 (graze, groom, play) and 13.1 (graze, 1.3 s only), and an alpine ibex 8.0 (graze, watch): all **the schedule's own steps** (no recipe act). The African forest buffalo's 11.6 (groom) is mostly **the wallow recipe** (walk 29.6, shake_off 39.7 a minute over 1.4 s) on top of 3.2 from the schedule. Others: puffins 3–4 (surface_dive), an emperor penguin 2.5 (chase_fish), a cheetah 5.1 (wander), a dog 6.5 (groom, forage), a harbour seal 6.7 (breathe, swim).
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
@@ -294,11 +294,12 @@ harmlessly.
     bd63e552 and were red on release itself (graphics batches 4–6, props, map and look had changed every shot), so they
     were re-accepted at the release's picture then. The worst-tile limit is looser (90%) on the five shots where an animal
     that loops on its own moves between renders of the same code (one tile per shot, the whole picture under 1.1%).
-  - **On dcadc6ab: 17 of 19 pass.** `desktop-house_fields-day` (changed 1.97% over 1.2%, mean 2.62 over 2.5) and
-    `desktop-house_fields-dusk` (a 60.6% tile over 35%) differ. Looked at, not accepted: the house, fields, light and
-    trees are the same; what moved is a dog by the path, another animal at the left, and the lawn's dig marks, i.e.
-    the behaviour (6ad9b3e8) and recipes (5adf8c29) merged after the reset. Re-accept those two once behaviour
-    55e98019 is in (it moves animals again).
+  - **On 51d4cd58 (runtime round 8): 16 of 19 pass, no page errors.** `desktop-house_fields-day` (changed 1.92%, mean
+    2.60), `desktop-house_fields-dusk` (a 46% tile over 35%) and, since behaviour 55e98019, `desktop-river_pond-day`
+    (changed 2.21%: the elephant drinks on the other side of the lake, the macaw sits elsewhere). Looked at, not
+    accepted, and not added to the noise overrides. House_fields: the map lane showed the schedule poses are identical;
+    the differences are reactive offsets and rig clips carried from real-time frames before the harness freezes the
+    clock. The runtime lane fixes the harness in round 9 and re-accepts those baselines then.
 - `ark-behaviour-audit.yml`: the behaviour audit's key checks (problems 1–7) at today's merged values, the reactive encounter scenario and the map validator; thresholds in `tests/ark-audit/thresholds.json`.
 
 ## 10. Owner questions still open (from the lanes)
