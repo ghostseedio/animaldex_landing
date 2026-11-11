@@ -26,6 +26,9 @@ import {pinSeaClock} from "@/ark-scene/fish-schools";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
+import {propsFixture, propsShot, type PropsShot} from "@/ark-scene/props/golden-props";
+import type {createPropsModule} from "@/ark-scene/props";
+import {goldenObstacles} from "@/ark-scene/golden-world";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -50,7 +53,8 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         reef: () => ZONE_SITES.coral_reef,
         reefCloseup: () => reefCloseupSpot(),
         kelpStand: () => kelpStandSpot(),
-        forestClearing: () => ZONE_SITES.woodland
+        forestClearing: () => ZONE_SITES.woodland,
+        obstacles: () => goldenObstacles()
     };
 }
 
@@ -216,8 +220,10 @@ async function mountGolden(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
-    const snapshot = decodeArkSnapshot(fixture);
-    if (!snapshot) throw new Error("fixture did not decode");
+    const decoded = decodeArkSnapshot(fixture);
+    if (!decoded) throw new Error("fixture did not decode");
+    // The props lane's close-ups (`?props=1`): the props' species aboard, in the breeding season, clutches in.
+    const snapshot = params.get("props") ? propsFixture(decoded) : decoded;
     let ready = false;
     const handle = mountArk(el, {
         snapshot,
@@ -310,6 +316,29 @@ async function mountGolden(el: HTMLElement) {
                 }
             }
             return {anchor: shot.anchor, asked: shot.view, actual: handle.view() as ArkCameraView};
+        },
+        /** A props close-up (`props/golden-props.ts`): framed on where the props module says the thing is, in its light and weather. */
+        shootProps: async (name: PropsShot) => {
+            const props = (globalThis as {__arkPropsModule?: ReturnType<typeof createPropsModule>}).__arkPropsModule;
+            if (!props) return {anchor: "no props module", asked: null, actual: handle.view() as ArkCameraView};
+            const plan = propsShot(name, props.marks(), props.stats(), (id) => handle.locate(id));
+            if (!plan) return {anchor: `missing ${name}`, asked: null, actual: handle.view() as ArkCameraView};
+            if (holder.current) {
+                (window as unknown as {__arkDebug?: Debug}).__arkDebug?.scene.remove(holder.current);
+                holder.current = null;
+            }
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (debug) debug.controls.minDistance = plan.minDistance ?? 4;
+            (globalThis as {__arkPropsWeather?: unknown}).__arkPropsWeather = plan.weather;
+            handle.setEnvironment({seaLevel: 0, storm: 0, windDirection: 0.41, wetness: 0, snow: 0, wind: 0.35, ...plan.environment});
+            handle.setHours(plan.hours);
+            handle.setView(plan.view);
+            for (let i = 0; i < 24; i++) {
+                await nextFrame();
+                if (i < 8) handle.setView(plan.view);
+            }
+            await settle(900, 30_000);
+            return {anchor: plan.anchor, asked: plan.view, actual: handle.view() as ArkCameraView, props: props.stats().drawn};
         },
         measure: async (ms = 3000): Promise<Measure> => {
             const {intervals, drains} = await measureFrames(canvas, ms);

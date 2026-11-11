@@ -29,6 +29,7 @@ import {
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {sampleGround, seeded, zoneAt} from "@/ark-scene/world";
+import {setNearFade} from "@/ark-scene/near-fade";
 
 type DetailKind = "pebble" | "shell" | "seaweed" | "leaf" | "twig" | "pinecone" | "fern" | "mushroom" | "clover";
 const KINDS: DetailKind[] = ["pebble", "shell", "seaweed", "leaf", "twig", "pinecone", "fern", "mushroom", "clover"];
@@ -250,6 +251,8 @@ export class NearDetail {
 
     /** Call each frame with what the camera looks at and how far it is. */
     update(target: {x: number; z: number}, viewDistance: number) {
+        // The near-camera fade's reach follows the view (near-fade.ts): a close-up keeps its subject.
+        setNearFade(viewDistance);
         const show = viewDistance < SHOW_WITHIN && this.share > 0;
         this.group.visible = show;
         if (!show) return;

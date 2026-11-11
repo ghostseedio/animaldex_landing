@@ -2846,7 +2846,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
         }
-        const want = close ? MICRO_MIN_DISTANCE : 4;
+        // A scenery module's close-up (a nest, a web, the cave): the camera may come nearer than usual.
+        let moduleWant = 4;
+        if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
+        const want = close ? MICRO_MIN_DISTANCE : moduleWant;
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
         let distance = camera.position.distanceTo(target);

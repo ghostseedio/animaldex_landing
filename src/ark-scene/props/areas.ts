@@ -22,12 +22,14 @@
  * capped by tier (`kit.ts`).
  */
 
-import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
-import {worldDecor} from "@/ark-scene/decor";
+import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
+import {forestFill, worldDecor} from "@/ark-scene/decor";
+import {cropAt} from "@/ark-scene/fields";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
-import {groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
+import {CAVE_SITE, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
+import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
@@ -41,6 +43,8 @@ export type Areas = {
     chimney: Vector3;
     /** The troughs' and the paddock's middle (for shots). */
     farm: Vector3;
+    /** Where things are (for the golden shots): the highest outcrop with scree below it. */
+    marks: Record<string, {x: number; y: number; z: number}>;
     dispose: () => void;
 };
 
@@ -91,29 +95,31 @@ function garden(): {near: BufferGeometry; far: BufferGeometry; chimney: Vector3;
     parts.push(paint(place(butt, buttAt.x, groundAt(buttAt.x, buttAt.z) + 0.42, buttAt.z), "#3d5a3e", (y) => 0.8 + 0.3 * (y + 0.4)));
 
     // Weathering: rain streaks under the front windows, moss along the plinth, moss cushions on the roof.
-    for (const wx of [-1.75, 1.8]) {
-        for (let k = 0; k < 3; k++) {
-            const streak = new BoxGeometry(0.05 + random() * 0.04, 0.5 + random() * 0.4, 0.004);
-            const at = house(wx - 0.3 + k * 0.3 + random() * 0.1, 0.62 - random() * 0.15, halfD + 0.012);
-            parts.push(paint(place(streak, at.x, at.y, at.z), "#8f8a7c", () => 0.85));
-        }
-    }
     for (const [sx, sz, length, turn] of [[0, halfD, C.width, 0], [0, -halfD, C.width, 0], [halfW, 0, C.depth, Math.PI / 2], [-halfW, 0, C.depth, Math.PI / 2]] as const) {
         const moss = new BoxGeometry(length + 0.14, 0.12, 0.03);
         moss.rotateY(turn);
         const at = house(sx + Math.sign(sx) * 0.07, 0.02, sz + Math.sign(sz) * 0.07);
         parts.push(paint(place(moss, at.x, at.y, at.z), "#5e7a3a", (_, i) => 0.7 + ((i * 7) % 9) / 30));
     }
+    // Moss cushions on the roof: low clumps of small lumps in the lower, damper half, dark olive with lighter tips.
+    const mossTones = ["#4f6430", "#5d7334", "#6e7f3c", "#56602f"];
     for (let k = 0; k < 9; k++) {
         const side = k % 2 ? 1 : -1;
-        const fromRidge = 0.3 + random() * 1.5;
+        const fromRidge = 0.9 + random() * 1.1;
         const x = (random() - 0.5) * (C.width - 0.6);
-        const cushion = new SphereGeometry(0.12 + random() * 0.1, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2);
-        cushion.scale(1.4, 0.4, 1);
         const slope = Math.atan(C.ridge / halfD);
-        cushion.rotateX(side * slope);
-        const at = house(x, roofHeight(fromRidge) + ROOF_THICKNESS - 0.02, side * fromRidge);
-        parts.push(paint(place(cushion, at.x, at.y, at.z), "#6b8a3e", () => 0.85));
+        const lumps = 4 + Math.floor(random() * 5);
+        for (let j = 0; j < lumps; j++) {
+            const lump = new IcosahedronGeometry(0.035 + random() * 0.04, 1);
+            lumpy(lump, 0.35, random);
+            lump.scale(1.3, 0.45, 1.1);
+            lump.rotateX(side * slope);
+            const dx = (random() - 0.5) * 0.22;
+            const dr = (random() - 0.5) * 0.18;
+            const at = house(x + dx, roofHeight(fromRidge + dr) + ROOF_THICKNESS - 0.01, side * (fromRidge + dr));
+            const tone = mossTones[Math.floor(random() * mossTones.length)];
+            parts.push(paint(place(lump, at.x, at.y, at.z), tone, (y) => 0.8 + 0.25 * Math.min(Math.max((y - at.y) * 12 + 0.5, 0), 1)));
+        }
     }
 
     // The bird box on the east wall, facing out.
@@ -286,8 +292,8 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     const doorAt = at(3.3, 0.85);
     parts.push(wood(place(door, doorAt.x, bg + 3.75, doorAt.z, turn + 0.9), "#9b4b36"));
 
-    // The paddock: south of the barn, post and rail, a gate gap toward the yard.
-    const paddock = {x0: -4.5, x1: 5, z0: 3.4, z1: 10.8};
+    // The paddock: beside the barn, post and rail, a gate gap toward the yard; on the side where no tree stands in its fence line.
+    const paddock = clearPaddock(b, c, s);
     const corners: Array<[number, number]> = [[paddock.x0, paddock.z0], [paddock.x1, paddock.z0], [paddock.x1, paddock.z1], [paddock.x0, paddock.z1]];
     for (let e = 0; e < 4; e++) {
         const [ax, az] = corners[e];
@@ -312,7 +318,8 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     const water: BufferGeometry[] = [];
     const mud: PropInstance[] = [];
     const puddles: PropInstance[] = [];
-    for (const [lx, lz, length] of [[2.6, 6.2, 2.2], [1.2, 3.0, 1.6]] as const) {
+    const troughSpots: Array<[number, number, number]> = [[paddock.x0 + (paddock.x1 - paddock.x0) * 0.75, paddock.z0 + (paddock.z1 - paddock.z0) * 0.38, 2.2], [1.2, 3.0, 1.6]];
+    for (const [lx, lz, length] of troughSpots) {
         const p = at(lx, lz);
         const g = groundAt(p.x, p.z);
         troughs.push({x: p.x, y: g, z: p.z, turn, scale: length / 2, tall: 1});
@@ -335,6 +342,71 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     return {near: merge(parts), far: merge(farParts), centre: new Vector3(middle.x, groundAt(middle.x, middle.z), middle.z), troughs, water: merge(water.map((g) => paint(g, "#ffffff"))), mud, puddles};
 }
 
+/** The barn's middle (for the golden shots' framing). */
+function barnMark(): Record<string, {x: number; y: number; z: number}> {
+    const barn = worldDecor().find((item) => item.kind === "barn");
+    return barn ? {barn: {x: barn.x, y: barn.y, z: barn.z}} : {};
+}
+
+/** Trees and rocks the props must not run a fence or a wall through (the decor's and the forest fill's). */
+function obstacles(): Array<{x: number; z: number; r: number}> {
+    const solid = new Set(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "rock", "canopy", "cactus", "shrub", "barn", "hay"]);
+    return [...worldDecor(), ...forestFill()].filter((item) => solid.has(item.kind)).map((item) => ({x: item.x, z: item.z, r: item.kind === "rock" ? item.scale * 0.9 : item.kind === "shrub" ? 0.5 * item.scale : item.kind === "barn" ? 3.6 : 0.45 * Math.max(item.scale, 1)}));
+}
+
+/**
+ * The paddock's rectangle in the barn's frame: of the candidates round the
+ * barn (south and north, shifted along it), the one on open, dry land whose
+ * fence line no tree, rock or the barn stands in (fewest trees inside next).
+ */
+function clearPaddock(b: {x: number; z: number}, c: number, s: number): {x0: number; x1: number; z0: number; z1: number} {
+    const width = 9.5;
+    const depth = 7.4;
+    const near = obstacles().filter((o) => Math.hypot(o.x - b.x, o.z - b.z) < 30);
+    const local = (o: {x: number; z: number}) => {
+        const dx = o.x - b.x;
+        const dz = o.z - b.z;
+        return {x: dx * c - dz * s, z: dx * s + dz * c};
+    };
+    const world = (lx: number, lz: number) => ({x: b.x + lx * c + lz * s, z: b.z - lx * s + lz * c});
+    let best = {x0: -4.5, x1: 5, z0: 3.4, z1: 10.8};
+    let bestScore = Infinity;
+    for (const side of [1, -1]) {
+        for (const shift of [0, -3, 3, -6, 6, -9, 9]) {
+            for (const gap of [3.4, 5]) {
+                const z0 = side > 0 ? gap : -gap - depth;
+                const rect = {x0: shift - width / 2, x1: shift + width / 2, z0, z1: z0 + depth};
+                let score = Math.abs(shift) * 0.05 + (gap - 3.4) * 0.1 + (side < 0 ? 0.2 : 0);
+                for (const [lx, lz] of [[rect.x0, rect.z0], [rect.x1, rect.z0], [rect.x1, rect.z1], [rect.x0, rect.z1], [(rect.x0 + rect.x1) / 2, (rect.z0 + rect.z1) / 2]]) {
+                    const p = world(lx, lz);
+                    const ground = sampleGround(p.x, p.z);
+                    if (ground.land < 0.9 || ground.height < 0.4 || riverDistance(p.x, p.z) < 3) score += 100;
+                }
+                // Grazing land: the graphics lane's fields (`fields.ts`) keep their crops; a paddock goes on pasture.
+                for (let gx = 0; gx < 4; gx++) {
+                    for (let gz = 0; gz < 3; gz++) {
+                        const p = world(rect.x0 + ((gx + 0.5) / 4) * width, rect.z0 + ((gz + 0.5) / 3) * depth);
+                        if (cropAt(p.x, p.z)) score += 4;
+                    }
+                }
+                for (const o of near) {
+                    const p = local(o);
+                    const inside = p.x > rect.x0 && p.x < rect.x1 && p.z > rect.z0 && p.z < rect.z1;
+                    const edge = Math.min(Math.abs(p.x - rect.x0), Math.abs(p.x - rect.x1), Math.abs(p.z - rect.z0), Math.abs(p.z - rect.z1));
+                    const onLine = (p.x > rect.x0 - o.r - 0.6 && p.x < rect.x1 + o.r + 0.6 && p.z > rect.z0 - o.r - 0.6 && p.z < rect.z1 + o.r + 0.6) && (inside ? edge < o.r + 0.6 : true);
+                    if (onLine) score += 10;
+                    else if (inside) score += 1;
+                }
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = rect;
+                }
+            }
+        }
+    }
+    return best;
+}
+
 // MARK: - Mountain and the ice
 
 function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: PropInstance[]; polarDrifts: PropInstance[]; icicles: PropInstance[]} {
@@ -348,7 +420,7 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         // Its back into the slope: a little uphill of the ledge point, sunk in.
         const x = ledge.x - ledge.normal.x * size * 0.3;
         const z = ledge.z - ledge.normal.z * size * 0.3;
-        outcrops.push({x, y: groundAt(x, z) - size * 0.25, z, turn: ledge.yaw, scale: size / 2.5, tint: new Color().setHSL(0.08, 0.1, 0.55 + random() * 0.15)});
+        outcrops.push({x, y: groundAt(x, z) - size * 0.3, z, turn: ledge.yaw, scale: size / 2.5, tint: new Color().setHSL(0.08, 0.06, 0.55 + random() * 0.12)});
         // A fan of scree below it, downhill.
         for (let s = 0; s < 46; s++) {
             const d = size * 0.5 + random() * random() * size * 3.5;
@@ -357,7 +429,10 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
             const pz = ledge.z + ledge.normal.z * d - ledge.normal.x * spread;
             const ground = sampleGround(px, pz);
             if (ground.height < 0.5 || ground.land < 0.9) continue;
-            scree.push({x: px, y: ground.height - 0.02, z: pz, turn: random() * 6, scale: 0.35 + random() * random() * 2.2, tint: new Color().setHSL(0.08, 0.06, 0.45 + random() * 0.25)});
+            // Scree lies where the slope eases to its resting angle, not on the cliff itself.
+            const normal = surfaceAt(px, pz).normal;
+            if (normal.y < 0.72) continue;
+            scree.push({x: px, y: ground.height - 0.03, z: pz, turn: random() * 6, scale: 0.3 + random() * random() * 1.8, tint: new Color().setHSL(0.08, 0.06, 0.4 + random() * 0.18)});
         }
     });
     // Snow drifts: in the lee of rocks and outcrops high on the mountain (shown with the snow), always on the ice.
@@ -372,12 +447,13 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         if (zone !== "polar" && !high) continue;
         const x = item.x + Math.cos(lee - Math.PI) * item.scale * 1.2;
         const z = item.z + Math.sin(lee - Math.PI) * item.scale * 1.2;
-        (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.05, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.8 + item.scale * 0.9});
+        if (zone === "polar" && Math.hypot(x - CAVE_SITE.x, z - CAVE_SITE.z) < 9) continue;
+        (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.08, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.4 + item.scale * 0.35});
     }
     for (const outcrop of outcrops) {
         const ground = sampleGround(outcrop.x, outcrop.z);
         if (ground.height < 16) continue;
-        drifts.push({x: outcrop.x + 1.5, y: ground.height - 0.1, z: outcrop.z + 1.2, turn: 0.4, scale: outcrop.scale * 1.6});
+        drifts.push({x: outcrop.x + 1.2, y: ground.height - 0.12, z: outcrop.z + 1.0, turn: 0.4, scale: outcrop.scale * 0.8});
     }
     const polar = ZONE_SITES.polar;
     for (let k = 0; k < 26; k++) {
@@ -387,7 +463,9 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         const z = polar.z + Math.sin(a) * d;
         const ground = sampleGround(x, z);
         if (ground.land < 0.9 || zoneAt(ground) !== "polar") continue;
-        polarDrifts.push({x, y: ground.height - 0.05, z, turn: random() * 0.6, scale: 1 + random() * 1.8});
+        // Not across the cave's mouth.
+        if (Math.hypot(x - CAVE_SITE.x, z - CAVE_SITE.z) < 9) continue;
+        polarDrifts.push({x, y: ground.height - 0.08, z, turn: random() * 0.6, scale: 0.7 + random() * 1.0});
     }
     // Icicles: under the ice's rock faces.
     const icicles: PropInstance[] = [];
@@ -446,12 +524,12 @@ export function buildAreas(tier: PropsTier): Areas {
     const group = new Group();
     group.name = "props:areas";
     const warm = propMaterial();
-    const cold = propMaterial({cold: true, flatShading: true});
-    const snow = propMaterial({roughness: 0.75});
+    const cold = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5});
+    const snow = propMaterial({roughness: 0.75, texture: 7, textureScale: 0.35, textureStrength: 0.6});
     const foliage = propMaterial({doubleSide: true});
     const water = new MeshStandardMaterial({color: new Color("#4d5f66"), roughness: 0.04, metalness: 0.85, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -2});
     const puddleMaterial = new MeshStandardMaterial({color: new Color("#56646c"), roughness: 0.03, metalness: 0.9, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3});
-    const mudMaterial = propMaterial({roughness: 0.55});
+    const mudMaterial = propMaterial({roughness: 0.55, texture: 6, textureScale: 0.8});
     const batches: LodBatch[] = [];
     const pieces: LodPiece[] = [];
     const addBatch = (batch: LodBatch) => {
@@ -476,7 +554,7 @@ export function buildAreas(tier: PropsTier): Areas {
     addBatch(new LodBatch("troughs", f.troughs, shapes.trough(2), null, warm, {cap: 4, reach: 1.3}));
     const troughWater = new LodPiece("trough-water", f.centre, f.water, null, water, {near: 70, far: 0});
     addPiece(troughWater);
-    addBatch(new LodBatch("mud", f.mud, shapes.heap(0.9, 0.05, "#4f3c2b", 61, 0.12), null, mudMaterial, {cap: 20, reach: 1.1}));
+    addBatch(new LodBatch("mud", f.mud, shapes.heap(0.9, 0.025, "#4f3c2b", 61, 0.05), null, mudMaterial, {cap: 20, reach: 1.1}));
     const puddles = addBatch(new LodBatch("puddles", [...g.puddles, ...f.puddles], shapes.puddle(1), null, puddleMaterial, {cap: 16, reach: 1.2}));
     puddles.hidden = true;
 
@@ -502,6 +580,7 @@ export function buildAreas(tier: PropsTier): Areas {
         pieces,
         chimney: g.chimney,
         farm: f.centre,
+        marks: {chimney: g.chimney, farm: f.centre, ...barnMark(), ...(m.outcrops.length ? {outcrop: m.outcrops.reduce((best, o) => (o.y > best.y && o.y < 30 ? o : best), m.outcrops[0])} : {})},
         setWeather: (w) => {
             puddleMaterial.opacity = Math.min(w.puddles * 1.2, 0.92);
             const key = `${w.puddles > 0.05}|${w.snowCover > 0.35}|${w.cold > 0.55}`;
