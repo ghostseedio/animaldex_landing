@@ -600,3 +600,94 @@ export function rootOffset(model: RigModel, clip: RigClipData, phase: number, ou
     }
     return out;
 }
+
+// MARK: Choosing clips
+
+/** Open-wing flight clips, in the order a flyer with no playable flap holds one (contract: `flight_fallback_open`). */
+export const OPEN_WING_CLIPS = ["glide", "soar", "bank_l", "bank_r", "hover"] as const;
+
+export type FlightClipInput = {
+    /** Whether the rig has a playable clip of that name. */
+    has: (name: string) => boolean;
+    /** The clip playing now (for hysteresis: no flicker between flap and glide on a level path). */
+    current?: string | null;
+    /** The path's climb angle (radians; + up, − down). */
+    climb: number;
+    /** How fast it turns (radians a second; + toward its left, +x: a left turn). */
+    turn: number;
+    /** Its ground speed in body lengths a second. */
+    speed: number;
+    /** The schedule's beat in the air ("glide" on a long glide leg), when it is on the schedule. */
+    beat?: string | null;
+    /** Soaring (the schedule's "soar", a raptor circling a thermal). */
+    soaring?: boolean;
+    /** The shared clock (seconds) and the animal's own seed in [0, 1): flap and glide take turns, the same for every viewer. */
+    clock: number;
+    seed: number;
+    /** The species' share of the time spent gliding (the glide clip's `glide_share`; 0.3 when absent). */
+    glideShare?: number;
+    /** No playable flap (`flight_fallback_open`): an open-wing clip is held. */
+    open?: boolean;
+};
+
+/**
+ * A flyer's clip in the air (contract section 4): it flaps to climb, glides
+ * down, banks into a turn (`bank_l` turning left, `bank_r` right), soars on
+ * a soaring leg, hovers when it hangs still (hummingbirds, kestrels), and on
+ * a level path flaps and glides by turns in the species' own share. A flyer
+ * with no playable flap holds an open-wing clip (never the closed rest
+ * pose). Null: no flight clip at all (the procedural flight).
+ */
+export function flightClip(input: FlightClipInput): string | null {
+    const {has} = input;
+    const current = input.current ?? null;
+    if (input.open || !has("flap")) {
+        if (input.soaring && has("soar")) return "soar";
+        return OPEN_WING_CLIPS.find((name) => has(name)) ?? null;
+    }
+    // Hanging still in the air (a hummingbird at a flower, a kestrel over a field).
+    if (has("hover") && input.speed < (current === "hover" ? 0.4 : 0.25)) return "hover";
+    // Climbing: wing beats.
+    if (input.climb > (current === "flap" ? 0.04 : 0.08)) return "flap";
+    const left = input.turn > 0;
+    const turning = Math.abs(input.turn) > (current === "bank_l" || current === "bank_r" ? 0.08 : 0.12);
+    const bank = turning ? (left ? "bank_l" : "bank_r") : null;
+    if (input.soaring && has("soar")) return bank && has(bank) && Math.abs(input.turn) > 0.5 ? bank : "soar";
+    const share = Math.min(Math.max(input.glideShare ?? 0.3, 0), 1);
+    // Flap and glide by turns over a 7 s cycle, offset per animal: the same at the same moment for every viewer.
+    const cycle = (((input.clock / 7 + input.seed) % 1) + 1) % 1;
+    const gliding = input.beat === "glide" || input.climb < -0.1 || cycle < share;
+    if (gliding && (has("glide") || (bank && has(bank)))) return bank && has(bank) ? bank : "glide";
+    return "flap";
+}
+
+/**
+ * The clip for the schedule's beat while it stays somewhere (contract
+ * section 4; `behaviour-schedule.ts`): bite and chew graze (browse while it
+ * browses), a peck or a drink takes the head down too, a scan looks round,
+ * a shake shakes the water off, and the bank's way in and out of the water
+ * its enter and exit. Null: the beat has no clip of its own (the scene's
+ * walk, run, idle).
+ */
+export function beatClip(beat: string | null | undefined, doing: string | null | undefined, has: (name: string) => boolean): string | null {
+    switch (beat) {
+        case "bite":
+        case "chew":
+            // Head up to leaves while it browses, down to the ground otherwise: never the one for the other.
+            if (doing === "browse") return has("browse") ? "browse" : null;
+            return has("graze") ? "graze" : null;
+        case "peck":
+        case "drink":
+            return has("graze") ? "graze" : null;
+        case "scan":
+            return has("scan") ? "scan" : null;
+        case "shake":
+            return has("shake_off") ? "shake_off" : null;
+        case "enter_water":
+            return has("enter_water") ? "enter_water" : null;
+        case "exit_water":
+            return has("exit_water") ? "exit_water" : null;
+        default:
+            return null;
+    }
+}

@@ -154,3 +154,60 @@ test("rig look: a v2 entry's chain (bones, pivots, limits, share); a v1 file's n
     assert.equal(rigLookLimits("flying_bird", "jungle-owlet").limits_deg.yaw, 170);
     assert.equal(rigLookChain({state: "passed", plan: "quadruped", clips: {}}, "x", ["hips", "chest"], () => [0, 0, 0]), null, "no head bone: no look");
 });
+
+test("rig flight clips: flap to climb, glide down, bank into a turn, soar, hover; open wings held when the flap does not play", async () => {
+    const {flightClip} = await import("@/ark-scene/rig-player");
+    const all = new Set(["flap", "glide", "bank_l", "bank_r", "takeoff", "land"]);
+    const has = (name: string) => all.has(name);
+    const base = {has, climb: 0, turn: 0, speed: 3, clock: 0, seed: 0.5, glideShare: 0.3};
+    assert.equal(flightClip({...base, climb: 0.3}), "flap", "climbing: wing beats");
+    assert.equal(flightClip({...base, climb: -0.3}), "glide", "coming down: a glide");
+    assert.equal(flightClip({...base, climb: -0.3, turn: 0.4}), "bank_l", "a left turn (yaw growing toward +x)");
+    assert.equal(flightClip({...base, climb: -0.3, turn: -0.4}), "bank_r");
+    assert.equal(flightClip({...base, beat: "glide"}), "glide", "the schedule's glide leg");
+    // Level flight: flap and glide by turns in the species' share, the same for every viewer at the same moment.
+    let glides = 0;
+    let flaps = 0;
+    for (let t = 0; t < 70; t += 0.1) {
+        const name = flightClip({...base, clock: t});
+        if (name === "glide") glides++;
+        else if (name === "flap") flaps++;
+    }
+    assert.ok(Math.abs(glides / (glides + flaps) - 0.3) < 0.03, `glide share ${glides / (glides + flaps)}`);
+    assert.equal(flightClip({...base, clock: 12.3}), flightClip({...base, clock: 12.3}), "deterministic");
+    // Hysteresis: a level path with a small climb keeps flapping, a small turn keeps banking.
+    assert.equal(flightClip({...base, climb: 0.05, current: "flap"}), "flap");
+    assert.equal(flightClip({...base, climb: -0.3, turn: 0.1, current: "bank_l"}), "bank_l");
+    assert.equal(flightClip({...base, climb: -0.3, turn: 0.1, current: "glide"}), "glide");
+    // Soarers soar (and bank in a tight turn); hoverers hover when they hang still.
+    const raptor = new Set(["flap", "glide", "soar", "bank_l", "bank_r", "hover"]);
+    assert.equal(flightClip({...base, has: (n) => raptor.has(n), soaring: true}), "soar");
+    assert.equal(flightClip({...base, has: (n) => raptor.has(n), soaring: true, turn: 0.7}), "bank_l");
+    assert.equal(flightClip({...base, has: (n) => raptor.has(n), speed: 0.1}), "hover");
+    // flight_fallback_open: no playable flap; an open-wing clip is held, never a closed pose.
+    const noFlap = new Set(["glide", "bank_l", "bank_r"]);
+    assert.equal(flightClip({...base, has: (n) => noFlap.has(n), climb: 0.3, open: true}), "glide");
+    assert.equal(flightClip({...base, has: (n) => n === "bank_r", open: true}), "bank_r");
+    assert.equal(flightClip({...base, has: () => false, open: true}), null, "no flight clip at all: the procedural flight");
+});
+
+test("rig beat clips: grazing beats head down, a browser's head up, scan, shake_off, into and out of the water", async () => {
+    const {beatClip} = await import("@/ark-scene/rig-player");
+    const deer = new Set(["idle", "walk", "graze", "browse", "scan"]);
+    const has = (name: string) => deer.has(name);
+    assert.equal(beatClip("bite", "graze", has), "graze");
+    assert.equal(beatClip("chew", "graze", has), "graze");
+    assert.equal(beatClip("bite", "browse", has), "browse");
+    assert.equal(beatClip("bite", "browse", (n) => n === "graze"), null, "a grazer's head down never stands in for browsing");
+    assert.equal(beatClip("bite", "graze", (n) => n === "browse"), null, "nor a browser's head up for grazing");
+    assert.equal(beatClip("peck", "forage", has), "graze");
+    assert.equal(beatClip("drink", "drink", has), "graze");
+    assert.equal(beatClip("scan", "watch", has), "scan");
+    const duck = new Set(["idle", "walk", "graze", "scan", "enter_water", "exit_water", "shake_off"]);
+    assert.equal(beatClip("shake", "rest", (n) => duck.has(n)), "shake_off", "the clip is shake_off");
+    assert.equal(beatClip("enter_water", "swim", (n) => duck.has(n)), "enter_water");
+    assert.equal(beatClip("exit_water", "rest", (n) => duck.has(n)), "exit_water");
+    assert.equal(beatClip("shake", "rest", has), null, "no clip: the scene's own");
+    assert.equal(beatClip("walk", "wander", has), null);
+    assert.equal(beatClip(null, null, has), null);
+});
