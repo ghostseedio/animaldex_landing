@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Gemiye nasıl bindi",
-                "broughtBy": "Getiren: {name}"
+                "broughtBy": "Getiren: {name}",
+                "howThriving": "Nasıl serpiliyor"
             },
             "founder": {
                 "storiesTitle": "Hayvanları gemiye nasıl bindi",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Eski voyager",
         "animalTitleA": "{animal} ile konuş",
         "animalTitleAn": "{animal} ile konuş",
-        "arkHowAboard": "Gemiye nasıl bindi"
+        "arkHowAboard": "Gemiye nasıl bindi",
+        "arkHowThriving": "Nasıl serpiliyor"
     },
     "companions": {
         "ark": {

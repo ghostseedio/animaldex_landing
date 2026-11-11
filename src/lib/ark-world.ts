@@ -270,14 +270,14 @@ export function arkArrivalLine(species: string, words: Pick<ArkWorldWords, "arri
  * server sent it) is what makes the reader's animals of that kind thrive
  * (`voyage_step_result_v1`), and, before captures did, what brought one aboard.
  */
-export type ArkWorkedFinisher = {id: string; createdAt: string; stepId?: string | null};
+export type ArkWorkedFinisher = {id: string; createdAt: string; stepId?: string | null; /** The step's own words (`stepDone.step`): the founders' story moment prefills with it (D6), never with the problem. */ stepText?: string | null};
 
 type FinisherMessage = {
     id: string;
     role: string;
     createdAt: string;
     status?: string;
-    companionEvent?: {stepDone?: {outcome?: string; id?: string} | undefined} | undefined;
+    companionEvent?: {stepDone?: {outcome?: string; id?: string; step?: string} | undefined} | undefined;
 };
 
 const STEP_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -289,7 +289,8 @@ export function arkWorkedFinishers(messages: readonly FinisherMessage[]): ArkWor
             && message.companionEvent?.stepDone?.outcome === "worked")
         .map((message) => {
             const stepId = message.companionEvent?.stepDone?.id ?? null;
-            return {id: message.id, createdAt: message.createdAt, stepId: stepId && STEP_ID.test(stepId) ? stepId.toLowerCase() : null};
+            const stepText = message.companionEvent?.stepDone?.step?.replace(/\s+/g, " ").trim() || null;
+            return {id: message.id, createdAt: message.createdAt, stepId: stepId && STEP_ID.test(stepId) ? stepId.toLowerCase() : null, stepText};
         });
 }
 

@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "它是如何登船的",
-                "broughtBy": "由{name}带来"
+                "broughtBy": "由{name}带来",
+                "howThriving": "如何让它茁壮成长"
             },
             "founder": {
                 "storiesTitle": "这些动物是如何登船的",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "前 Voyager",
         "animalTitleA": "与{animal}对话",
         "animalTitleAn": "与{animal}对话",
-        "arkHowAboard": "它是如何登船的"
+        "arkHowAboard": "它是如何登船的",
+        "arkHowThriving": "如何让它茁壮成长"
     },
     "companions": {
         "ark": {

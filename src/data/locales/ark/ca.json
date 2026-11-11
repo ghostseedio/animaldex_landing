@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Com va pujar a bord",
-                "broughtBy": "Portat per {name}"
+                "broughtBy": "Portat per {name}",
+                "howThriving": "Com el fan prosperar"
             },
             "founder": {
                 "storiesTitle": "Com van pujar a bord els seus animals",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Antic voyager",
         "animalTitleA": "Parla amb {animal}",
         "animalTitleAn": "Parla amb {animal}",
-        "arkHowAboard": "Com va pujar a bord"
+        "arkHowAboard": "Com va pujar a bord",
+        "arkHowThriving": "Com el fan prosperar"
     },
     "companions": {
         "ark": {

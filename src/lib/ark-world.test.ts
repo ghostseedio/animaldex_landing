@@ -136,6 +136,8 @@ test("an arrival sits under the reply that finished the worked step it came from
     // The step's id rides along when the server sent one (a uuid only), for its thrive line.
     assert.equal(arkWorkedFinishers([{id: "s", role: "assistant", createdAt: "2026-11-10T10:00:00Z", companionEvent: {stepDone: {outcome: "worked", id: "9A3B8C4D-0000-4000-8000-000000000001"}}}])[0]?.stepId, "9a3b8c4d-0000-4000-8000-000000000001");
     assert.equal(arkWorkedFinishers([{id: "s", role: "assistant", createdAt: "2026-11-10T10:00:00Z", companionEvent: {stepDone: {outcome: "worked", id: "nope"}}}])[0]?.stepId, null);
+    // D6: the step's own words ride along too, the founders' story moment's prefill (never the problem).
+    assert.equal(arkWorkedFinishers([{id: "s", role: "assistant", createdAt: "2026-11-10T10:00:00Z", companionEvent: {stepDone: {outcome: "worked", step: "  Buy the  materials today. "}}}])[0]?.stepText, "Buy the materials today.");
     const animal = (n: number, at: string, extra: Partial<{mine: boolean; origin: "arrived" | "born"; species_profile_id: string; source: "capture" | "step" | null}> = {}) => ({
         id: id(200 + n), species_profile_id: FOX, model_slug: "red-fox", name: "Red Fox", mine: true, arrived_at: at, ...extra
     });

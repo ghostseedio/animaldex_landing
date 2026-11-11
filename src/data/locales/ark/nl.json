@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Hoe het aan boord kwam",
-                "broughtBy": "Meegebracht door {name}"
+                "broughtBy": "Meegebracht door {name}",
+                "howThriving": "Hoe het blijft floreren"
             },
             "founder": {
                 "storiesTitle": "Hoe hun dieren aan boord kwamen",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Voormalige voyager",
         "animalTitleA": "Praat met een {animal}",
         "animalTitleAn": "Praat met een {animal}",
-        "arkHowAboard": "Hoe het aan boord kwam"
+        "arkHowAboard": "Hoe het aan boord kwam",
+        "arkHowThriving": "Hoe het blijft floreren"
     },
     "companions": {
         "ark": {

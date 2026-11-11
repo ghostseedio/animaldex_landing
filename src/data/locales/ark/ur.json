@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "یہ کیسے سوار ہوا",
-                "broughtBy": "لانے والا: {name}"
+                "broughtBy": "لانے والا: {name}",
+                "howThriving": "اسے پھلتا پھولتا کیسے رکھتے ہیں"
             },
             "founder": {
                 "storiesTitle": "ان کے جانور کیسے سوار ہوئے",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "سابق voyager",
         "animalTitleA": "{animal} سے بات کریں",
         "animalTitleAn": "{animal} سے بات کریں",
-        "arkHowAboard": "یہ کیسے سوار ہوا"
+        "arkHowAboard": "یہ کیسے سوار ہوا",
+        "arkHowThriving": "اسے پھلتا پھولتا کیسے رکھتے ہیں"
     },
     "companions": {
         "ark": {

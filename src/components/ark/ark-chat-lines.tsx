@@ -13,12 +13,15 @@
  *   did: "Your Komodo Dragons are thriving", the band it left them in, and the
  *   step's locked Ark Score points ("+30 Ark Score"). Fresh (it landed while
  *   the chat was open), it plays in;
+ * - under that line (D6, owner 2026-11-11: the founders' story moment moved
+ *   from the arrival to the step that worked), when the reader may share it
+ *   (founders contract, section 4): one calm moment, in place, never a window:
+ *   the name question first when the server says to ask it, then "Share how
+ *   this worked?", prefilled with that step's own words and never the problem;
+ *   the story attaches to their animal of the step's kind;
  * - history: under a reply whose step brought an animal aboard (before
  *   captures did), the animal, with its icon; "See it in the Ark" opens the
  *   panel beside the chat on it, when the chat has one.
- * - under that line, when the reader may share it (founders contract,
- *   section 4): one calm moment, in place, never a window: the name question
- *   first when the server says to ask it, then "Share how this worked?".
  */
 
 import {AskSpecialBubble} from "@/components/ask-animaldex/ask-messenger";
@@ -77,7 +80,7 @@ export function ArkStepOfferNote({offer, words, locale}: {offer: ArkStepOffer; w
  * did for their animals of this kind, in the step card's own container, with
  * the kind's icon, the band in plain words, and the step's points.
  */
-export function ArkStepResultLine({result, slug, fresh, words, locale, plain = true}: {
+export function ArkStepResultLine({result, slug, fresh, words, locale, plain = true, share = null}: {
     result: ArkStepResult;
     slug: string | null;
     fresh: boolean;
@@ -85,6 +88,11 @@ export function ArkStepResultLine({result, slug, fresh, words, locale, plain = t
     locale: string;
     /** The chat's plain thread (full width, as the step card); false beside the animal's face. */
     plain?: boolean;
+    /**
+     * D6: the founders' story moment under this line (the newest worked step's only): the reader's animal of the kind
+     * the story attaches to, the step (its id and own words, the prefill), and the line's words. Null: no moment.
+     */
+    share?: {animalId: string; stepId: string | null; stepText: string | null; words: ArkFounderShareWords} | null;
 }) {
     const lines = arkStepResultLines(result, words, locale, pluralAnimalName);
     if (!lines) return null;
@@ -113,19 +121,21 @@ export function ArkStepResultLine({result, slug, fresh, words, locale, plain = t
                         ) : null}
                     </div>
                 </div>
+                {share ? <ArkFounderShareLine animalId={share.animalId} species={result.species} stepId={share.stepId} stepText={share.stepText} words={share.words} /> : null}
             </AskSpecialBubble>
         </div>
     );
 }
 
-/** In the thread (history: a step brought it, before captures did): the animal that came aboard, with its icon. */
-export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plain = true, animalId = null}: {
+/**
+ * In the thread (history: a step brought it, before captures did): the animal that came aboard, with its icon.
+ * The founders' story moment is no longer here (D6): it sits under the step's thrive line.
+ */
+export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plain = true}: {
     species: string;
     slug: string;
     fresh: boolean;
-    words: ArkWorldWords & {arrivalSee: string; founders?: ArkFounderShareWords};
-    /** The animal that came aboard: its share line reads (as the reader) whether its story may be shared. */
-    animalId?: string | null;
+    words: ArkWorldWords & {arrivalSee: string};
     locale: string;
     /** Opens the Ark panel beside the chat on this animal; left out where the chat has none. */
     onSee?: () => void;
@@ -156,7 +166,6 @@ export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plai
                         </button>
                     ) : null}
                 </div>
-                {words.founders && animalId ? <ArkFounderShareLine animalId={animalId} species={species} words={words.founders} /> : null}
             </AskSpecialBubble>
         </div>
     );
@@ -173,7 +182,7 @@ function Tick() {
 }
 
 /**
- * One calm moment under the arrival (founders contract, section 4), in place:
+ * One calm moment under the step's thrive line (founders contract, section 4; D6), in place:
  * first, when the server says to ask, "Show your name on the Ark? I'm 18 or
  * over" (Yes, show my name / Not now); either answer moves the same line on to
  * the story: collapsed (the prefilled step in one line, Share / Edit / Not
@@ -181,8 +190,15 @@ function Tick() {
  * shared without a tap and the problem is never prefilled. While the 18+
  * confirmation is still needed, Share reads "I'm 18 or over, share".
  */
-export function ArkFounderShareLine({animalId, species, words}: {animalId: string; species: string | null; words: ArkFounderShareWords}) {
-    const {state, nameYes, nameNotNow, share, edit, notNow, remove, setStep, setProblem} = useArkFounderShare({animalId, species, enabled: true});
+export function ArkFounderShareLine({animalId, species, words, stepId = null, stepText = null}: {
+    animalId: string;
+    species: string | null;
+    words: ArkFounderShareWords;
+    /** D6: the step that worked this moment sits under (the server prefills with it), and its own words (the prefill's fallback). */
+    stepId?: string | null;
+    stepText?: string | null;
+}) {
+    const {state, nameYes, nameNotNow, share, edit, notNow, remove, setStep, setProblem} = useArkFounderShare({animalId, species, enabled: true, stepId, stepText});
     if (state.phase === "loading") return null;
     const shownNote = state.nameShown ? (
         <p className="mb-2.5 flex items-center gap-1.5 text-[12px] font-semibold leading-4 text-primary-200" role="status" data-testid="ark-name-shown"><Tick />{words.name.shown}</p>

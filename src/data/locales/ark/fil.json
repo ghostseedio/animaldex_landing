@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Paano ito sumakay",
-                "broughtBy": "Dinala ni {name}"
+                "broughtBy": "Dinala ni {name}",
+                "howThriving": "Paano ito pinananatiling masigla"
             },
             "founder": {
                 "storiesTitle": "Paano sumakay ang mga hayop nila",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Dating voyager",
         "animalTitleA": "Kausapin ang {animal}",
         "animalTitleAn": "Kausapin ang {animal}",
-        "arkHowAboard": "Paano ito sumakay"
+        "arkHowAboard": "Paano ito sumakay",
+        "arkHowThriving": "Paano ito pinananatiling masigla"
     },
     "companions": {
         "ark": {

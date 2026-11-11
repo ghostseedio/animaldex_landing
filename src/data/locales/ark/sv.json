@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Så kom det ombord",
-                "broughtBy": "Tagen hit av {name}"
+                "broughtBy": "Tagen hit av {name}",
+                "howThriving": "Så får de det att trivas"
             },
             "founder": {
                 "storiesTitle": "Så kom deras djur ombord",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Tidigare voyager",
         "animalTitleA": "Prata med {animal}",
         "animalTitleAn": "Prata med {animal}",
-        "arkHowAboard": "Så kom det ombord"
+        "arkHowAboard": "Så kom det ombord",
+        "arkHowThriving": "Så får de det att trivas"
     },
     "companions": {
         "ark": {

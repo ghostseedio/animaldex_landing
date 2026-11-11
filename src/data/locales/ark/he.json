@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "איך עלה לסיפון",
-                "broughtBy": "הובא על ידי {name}"
+                "broughtBy": "הובא על ידי {name}",
+                "howThriving": "איך שומרים עליו משגשג"
             },
             "founder": {
                 "storiesTitle": "איך החיות שלהם עלו לסיפון",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "voyager לשעבר",
         "animalTitleA": "דבר עם {animal}",
         "animalTitleAn": "דבר עם {animal}",
-        "arkHowAboard": "איך עלה לסיפון"
+        "arkHowAboard": "איך עלה לסיפון",
+        "arkHowThriving": "איך שומרים עליו משגשג"
     },
     "companions": {
         "ark": {

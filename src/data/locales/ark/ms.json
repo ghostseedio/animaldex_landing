@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Bagaimana ia naik ke Ark",
-                "broughtBy": "Dibawa oleh {name}"
+                "broughtBy": "Dibawa oleh {name}",
+                "howThriving": "Bagaimana ia terus berkembang baik"
             },
             "founder": {
                 "storiesTitle": "Bagaimana haiwan mereka naik ke Ark",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Bekas voyager",
         "animalTitleA": "Bercakap dengan {animal}",
         "animalTitleAn": "Bercakap dengan {animal}",
-        "arkHowAboard": "Bagaimana ia naik ke Ark"
+        "arkHowAboard": "Bagaimana ia naik ke Ark",
+        "arkHowThriving": "Bagaimana ia terus berkembang baik"
     },
     "companions": {
         "ark": {

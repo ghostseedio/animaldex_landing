@@ -3394,7 +3394,8 @@
     "arkLoading": "Menampilkan Ark",
     "arkUnavailable": "Ark tidak bisa dimuat saat ini.",
     "arkFormerVoyager": "Mantan voyager",
-    "arkHowAboard": "Bagaimana ia naik ke Ark"
+    "arkHowAboard": "Bagaimana ia naik ke Ark",
+    "arkHowThriving": "Cara menjaganya tetap berkembang"
   },
   "talkFrontDoor": {
     "placeholder": "Apa yang ada di pikiranmu?",
@@ -4357,7 +4358,8 @@
       },
       "card": {
         "howAboard": "Bagaimana ia naik ke Ark",
-        "broughtBy": "Dibawa oleh {name}"
+        "broughtBy": "Dibawa oleh {name}",
+        "howThriving": "Cara menjaganya tetap berkembang"
       },
       "founder": {
         "storiesTitle": "Bagaimana hewan-hewannya naik ke Ark",

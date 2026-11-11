@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Kako se ukrcala",
-                "broughtBy": "Doveo/la {name}"
+                "broughtBy": "Doveo/la {name}",
+                "howThriving": "Kako joj pomažu da napreduje"
             },
             "founder": {
                 "storiesTitle": "Kako su se njihove životinje ukrcale",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Bivši voyager",
         "animalTitleA": "Razgovaraj: {animal}",
         "animalTitleAn": "Razgovaraj: {animal}",
-        "arkHowAboard": "Kako se ukrcala"
+        "arkHowAboard": "Kako se ukrcala",
+        "arkHowThriving": "Kako joj pomažu da napreduje"
     },
     "companions": {
         "ark": {

@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "तो जहाजावर कसा चढला",
-                "broughtBy": "आणणारे: {name}"
+                "broughtBy": "आणणारे: {name}",
+                "howThriving": "त्याची भरभराट कशी टिकवली जाते"
             },
             "founder": {
                 "storiesTitle": "त्यांचे प्राणी जहाजावर कसे चढले",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "माजी voyager",
         "animalTitleA": "{animal} शी बोला",
         "animalTitleAn": "{animal} शी बोला",
-        "arkHowAboard": "तो जहाजावर कसा चढला"
+        "arkHowAboard": "तो जहाजावर कसा चढला",
+        "arkHowThriving": "त्याची भरभराट कशी टिकवली जाते"
     },
     "companions": {
         "ark": {

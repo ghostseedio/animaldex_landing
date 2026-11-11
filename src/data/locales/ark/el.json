@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Πώς ανέβηκε στο σκάφος",
-                "broughtBy": "Το έφερε {name}"
+                "broughtBy": "Το έφερε {name}",
+                "howThriving": "Πώς το κρατούν ακμαίο"
             },
             "founder": {
                 "storiesTitle": "Πώς ανέβηκαν τα ζώα στο σκάφος",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Πρώην voyager",
         "animalTitleA": "Μίλα με {animal}",
         "animalTitleAn": "Μίλα με {animal}",
-        "arkHowAboard": "Πώς ανέβηκε στο σκάφος"
+        "arkHowAboard": "Πώς ανέβηκε στο σκάφος",
+        "arkHowThriving": "Πώς το κρατούν ακμαίο"
     },
     "companions": {
         "ark": {

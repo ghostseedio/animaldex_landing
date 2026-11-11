@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Hogyan szállt fel",
-                "broughtBy": "Hozta: {name}"
+                "broughtBy": "Hozta: {name}",
+                "howThriving": "Hogyan tartják jó formában"
             },
             "founder": {
                 "storiesTitle": "Hogyan szálltak fel az állatai",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Egykori voyager",
         "animalTitleA": "Beszélj vele: {animal}",
         "animalTitleAn": "Beszélj vele: {animal}",
-        "arkHowAboard": "Hogyan szállt fel"
+        "arkHowAboard": "Hogyan szállt fel",
+        "arkHowThriving": "Hogyan tartják jó formában"
     },
     "companions": {
         "ark": {

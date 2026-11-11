@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Comment il est monté à bord",
-                "broughtBy": "Amené par {name}"
+                "broughtBy": "Amené par {name}",
+                "howThriving": "Comment on l'aide à s'épanouir"
             },
             "founder": {
                 "storiesTitle": "Comment ses animaux sont montés à bord",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Ancien voyager",
         "animalTitleA": "Parler à {animal}",
         "animalTitleAn": "Parler à {animal}",
-        "arkHowAboard": "Comment il est monté à bord"
+        "arkHowAboard": "Comment il est monté à bord",
+        "arkHowThriving": "Comment on l'aide à s'épanouir"
     },
     "companions": {
         "ark": {

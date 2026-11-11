@@ -81,12 +81,15 @@ export function fixtureArkFounderPage(handle: string): ArkFounderPage {
     };
 }
 
-/** The chat's share line in development: a step to prefill, nothing shared yet, a known adult (the hook's `?arkfounder=` modes vary it). */
-export function fixtureArkStoryDraft(animalId: string, species: string | null): ArkStoryDraft {
+/**
+ * The chat's share line in development: a step to prefill, nothing shared yet, a known adult (the hook's `?arkfounder=` modes vary it).
+ * D6 (captures + thrive): the line sits under the step's thrive line, so it prefills with that step's own words when given.
+ */
+export function fixtureArkStoryDraft(animalId: string, species: string | null, stepText: string | null = null): ArkStoryDraft {
     return {
         animal_id: animalId,
         species,
-        step: "Tonight, before bed, write the one sentence you want to say to your brother, and send it in the morning.",
+        step: stepText ?? "Tonight, before bed, write the one sentence you want to say to your brother, and send it in the morning.",
         story: null,
         can_share: true,
         reason: null,

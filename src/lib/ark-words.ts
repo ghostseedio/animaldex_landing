@@ -305,7 +305,8 @@ export type ArkFoundersWords = {
         /** The Share button when the one-tap 18+ confirmation is still needed. */
         confirmShare: string;
     };
-    card: {howAboard: string; broughtBy: string};
+    /** `howThriving` (D6): the story on an animal a capture brought, of a step that keeps it thriving. */
+    card: {howAboard: string; howThriving: string; broughtBy: string};
     founder: {storiesTitle: string; noStories: string};
     /** The name question under an arrival (owner, 2026-11-11: "one-tap 18+ confirm"). */
     name: {ask: string; adult: string; yes: string; shown: string};

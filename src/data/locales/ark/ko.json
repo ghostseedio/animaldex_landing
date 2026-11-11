@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "탑승하게 된 이야기",
-                "broughtBy": "데려온 사람: {name}"
+                "broughtBy": "데려온 사람: {name}",
+                "howThriving": "건강하게 지내도록 한 이야기"
             },
             "founder": {
                 "storiesTitle": "동물들이 탑승하게 된 이야기",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "전 Voyager",
         "animalTitleA": "{animal}에게 말 걸기",
         "animalTitleAn": "{animal}에게 말 걸기",
-        "arkHowAboard": "탑승하게 된 이야기"
+        "arkHowAboard": "탑승하게 된 이야기",
+        "arkHowThriving": "건강하게 지내도록 한 이야기"
     },
     "companions": {
         "ark": {

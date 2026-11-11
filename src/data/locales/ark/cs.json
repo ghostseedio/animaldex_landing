@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Jak se dostalo na palubu",
-                "broughtBy": "Přivedl(a) {name}"
+                "broughtBy": "Přivedl(a) {name}",
+                "howThriving": "Jak mu pomáhají prosperovat"
             },
             "founder": {
                 "storiesTitle": "Jak se jejich zvířata dostala na palubu",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Bývalý voyager",
         "animalTitleA": "Mluvit: {animal}",
         "animalTitleAn": "Mluvit: {animal}",
-        "arkHowAboard": "Jak se dostalo na palubu"
+        "arkHowAboard": "Jak se dostalo na palubu",
+        "arkHowThriving": "Jak mu pomáhají prosperovat"
     },
     "companions": {
         "ark": {

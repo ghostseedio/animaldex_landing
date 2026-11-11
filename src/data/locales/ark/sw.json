@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Jinsi alivyopanda Ark",
-                "broughtBy": "Aliletwa na {name}"
+                "broughtBy": "Aliletwa na {name}",
+                "howThriving": "Jinsi anavyoendelea kustawi"
             },
             "founder": {
                 "storiesTitle": "Jinsi wanyama wao walivyopanda Ark",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Voyager wa zamani",
         "animalTitleA": "Ongea na {animal}",
         "animalTitleAn": "Ongea na {animal}",
-        "arkHowAboard": "Jinsi alivyopanda Ark"
+        "arkHowAboard": "Jinsi alivyopanda Ark",
+        "arkHowThriving": "Jinsi anavyoendelea kustawi"
     },
     "companions": {
         "ark": {

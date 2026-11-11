@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Wie es an Bord kam",
-                "broughtBy": "Gebracht von {name}"
+                "broughtBy": "Gebracht von {name}",
+                "howThriving": "Wie es gedeiht"
             },
             "founder": {
                 "storiesTitle": "Wie ihre Tiere an Bord kamen",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Ehemaliger Voyager",
         "animalTitleA": "Sprich mit {animal}",
         "animalTitleAn": "Sprich mit {animal}",
-        "arkHowAboard": "Wie es an Bord kam"
+        "arkHowAboard": "Wie es an Bord kam",
+        "arkHowThriving": "Wie es gedeiht"
     },
     "companions": {
         "ark": {

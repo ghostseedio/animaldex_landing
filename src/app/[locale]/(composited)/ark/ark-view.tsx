@@ -1210,7 +1210,8 @@ function ArkLifeStory({animal, life, facts, names, words, locale}: {animal: ArkA
  */
 function ArkStoryLine({state, born, hatched, story, capture, words}: {state: LifeState | null; born: boolean; hatched: boolean; story: ArkFounderStory | null; capture: boolean; words: ArkWords}) {
     // Founders: the story its founder chose to share, in their words (shown whether or not the founder is named).
-    if (story) return <ArkFounderStoryBlock story={story} title={words.founders.card.howAboard} className="rows-in mt-1.5" />;
+    // D6: on an animal a capture brought, the shared story is of a step that keeps it thriving.
+    if (story) return <ArkFounderStoryBlock story={story} title={capture ? words.founders.card.howThriving : words.founders.card.howAboard} className="rows-in mt-1.5" />;
     if (!state || state.loading) return <p aria-hidden="true" className="mt-1.5 h-[1.125rem]" />;
     const told = state.life?.story_public ?? null;
     return (

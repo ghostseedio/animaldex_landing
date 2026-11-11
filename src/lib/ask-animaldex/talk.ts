@@ -100,7 +100,9 @@ export const TALK_WORDS_EN = {
     /** A deleted account's animals are brought by a former voyager (A5). */
     arkFormerVoyager: "Former voyager",
     /** Founders: the founder's shared story under the panel's "Brought by" (as the Ark's `founders.card.howAboard`). */
-    arkHowAboard: "How it got aboard"
+    arkHowAboard: "How it got aboard",
+    /** D6: a capture's animal: the founder's story is of a step that keeps it thriving. */
+    arkHowThriving: "How they keep it thriving"
 };
 
 export type TalkWords = typeof TALK_WORDS_EN;

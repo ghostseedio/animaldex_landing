@@ -1992,6 +1992,13 @@ function AskConversation({
             setArkOfferVersion((version) => version + 1);
         }
     });
+    /** D6: the reply whose step result carries the founders' story moment: the newest worked step with one of theirs aboard. */
+    const arkShareAnchor = useMemo(() => {
+        for (let index = messages.length - 1; index >= 0; index--) {
+            if (arkStepResults.get(messages[index].id)?.animal) return messages[index].id;
+        }
+        return null;
+    }, [messages, arkStepResults]);
     const arkPanel = useArkPanelControl();
     /**
      * "I've done it" puts the bar in report mode: one button, no accepting
@@ -2679,6 +2686,10 @@ function AskConversation({
         if (pacer.revealing && pacer.messageId === message.id) return null;
         const arrival = arkArrivals.get(message.id);
         const stepResult = arkStepResults.get(message.id);
+        // D6: the founders' story moment under the newest worked step's line only, once one of theirs of the kind is aboard.
+        const share = stepResult?.animal && message.id === arkShareAnchor
+            ? {animalId: stepResult.animal.id, stepId: stepResult.stepId, stepText: stepResult.stepText, words: words.ark.founders}
+            : null;
         const resultLine = stepResult ? (
             <ArkStepResultLine
                 key={`ark-result-${message.id}`}
@@ -2687,6 +2698,7 @@ function AskConversation({
                 fresh={stepResult.fresh && !reducedMotion}
                 words={words.ark}
                 locale={locale}
+                share={share}
             />
         ) : null;
         if (!arrival) return resultLine;
@@ -2697,7 +2709,6 @@ function AskConversation({
                 key={`ark-arrival-${arrival.animal.id}`}
                 species={arrival.animal.name}
                 slug={arrival.animal.model_slug}
-                animalId={arrival.animal.id}
                 fresh={arrival.fresh && !reducedMotion}
                 words={words.ark}
                 locale={locale}

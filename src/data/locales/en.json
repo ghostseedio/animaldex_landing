@@ -3409,7 +3409,8 @@
     "arkLoading": "Bringing the Ark into view",
     "arkUnavailable": "The Ark couldn't load just now.",
     "arkFormerVoyager": "Former voyager",
-    "arkHowAboard": "How it got aboard"
+    "arkHowAboard": "How it got aboard",
+    "arkHowThriving": "How they keep it thriving"
   },
   "talkFrontDoor": {
     "placeholder": "What's on your mind?",
@@ -4372,7 +4373,8 @@
       },
       "card": {
         "howAboard": "How it got aboard",
-        "broughtBy": "Brought by {name}"
+        "broughtBy": "Brought by {name}",
+        "howThriving": "How they keep it thriving"
       },
       "founder": {
         "storiesTitle": "How their animals got aboard",

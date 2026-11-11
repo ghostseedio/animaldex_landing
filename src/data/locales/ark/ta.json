@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "இது Ark-இல் எப்படி ஏறியது",
-                "broughtBy": "கொண்டு வந்தவர்: {name}"
+                "broughtBy": "கொண்டு வந்தவர்: {name}",
+                "howThriving": "இதை எப்படி செழிப்பாக வைத்திருக்கிறார்கள்"
             },
             "founder": {
                 "storiesTitle": "அவர்களின் விலங்குகள் Ark-இல் எப்படி ஏறின",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "முன்னாள் voyager",
         "animalTitleA": "{animal} உடன் பேசு",
         "animalTitleAn": "{animal} உடன் பேசு",
-        "arkHowAboard": "இது Ark-இல் எப்படி ஏறியது"
+        "arkHowAboard": "இது Ark-இல் எப்படி ஏறியது",
+        "arkHowThriving": "இதை எப்படி செழிப்பாக வைத்திருக்கிறார்கள்"
     },
     "companions": {
         "ark": {

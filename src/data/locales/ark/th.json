@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "ขึ้นเรือมาได้อย่างไร",
-                "broughtBy": "พามาโดย {name}"
+                "broughtBy": "พามาโดย {name}",
+                "howThriving": "ช่วยให้มันเติบโตได้ดีอย่างไร"
             },
             "founder": {
                 "storiesTitle": "สัตว์ของพวกเขาขึ้นเรือมาได้อย่างไร",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "อดีต voyager",
         "animalTitleA": "คุยกับ {animal}",
         "animalTitleAn": "คุยกับ {animal}",
-        "arkHowAboard": "ขึ้นเรือมาได้อย่างไร"
+        "arkHowAboard": "ขึ้นเรือมาได้อย่างไร",
+        "arkHowThriving": "ช่วยให้มันเติบโตได้ดีอย่างไร"
     },
     "companions": {
         "ark": {

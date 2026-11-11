@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "乗り込んだいきさつ",
-                "broughtBy": "連れてきた人：{name}"
+                "broughtBy": "連れてきた人：{name}",
+                "howThriving": "元気に暮らせるようにしたこと"
             },
             "founder": {
                 "storiesTitle": "動物たちが乗り込んだいきさつ",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "元Voyager",
         "animalTitleA": "{animal}と話す",
         "animalTitleAn": "{animal}と話す",
-        "arkHowAboard": "乗り込んだいきさつ"
+        "arkHowAboard": "乗り込んだいきさつ",
+        "arkHowThriving": "元気に暮らせるようにしたこと"
     },
     "companions": {
         "ark": {

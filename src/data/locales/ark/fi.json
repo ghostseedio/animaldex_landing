@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Miten se nousi kyytiin",
-                "broughtBy": "Tuojana {name}"
+                "broughtBy": "Tuojana {name}",
+                "howThriving": "Miten se pysyy hyvinvoivana"
             },
             "founder": {
                 "storiesTitle": "Miten hänen eläimensä nousivat kyytiin",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Entinen voyager",
         "animalTitleA": "Puhu: {animal}",
         "animalTitleAn": "Puhu: {animal}",
-        "arkHowAboard": "Miten se nousi kyytiin"
+        "arkHowAboard": "Miten se nousi kyytiin",
+        "arkHowThriving": "Miten se pysyy hyvinvoivana"
     },
     "companions": {
         "ark": {

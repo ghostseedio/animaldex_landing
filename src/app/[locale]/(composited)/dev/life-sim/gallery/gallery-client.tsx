@@ -290,7 +290,18 @@ function LiveStep({words, money, locale, reveal, earnsPower, offer = null, arriv
                         money={money}
                         locale={locale}
                     />
-                    {arrives ? <ArkStepResultLine key={`result-${run}`} result={arrives} slug="komodo-dragon" fresh words={words.ark} locale={locale} /> : null}
+                    {/* D6: the founders' story moment under the step's thrive line, prefilled with this step; add ?arkfounder=1|name|adult|shared to see it (nothing is sent). */}
+                    {arrives ? (
+                        <ArkStepResultLine
+                            key={`result-${run}`}
+                            result={arrives}
+                            slug="komodo-dragon"
+                            fresh
+                            words={words.ark}
+                            locale={locale}
+                            share={arrives.livingBrought > 0 ? {animalId: "f29d1d93-e6b2-45f4-a6fa-2ce36215ba03", stepId: null, stepText: offered.step, words: words.ark.founders} : null}
+                        />
+                    ) : null}
                 </>
             ) : null}
             {state !== "live" ? (

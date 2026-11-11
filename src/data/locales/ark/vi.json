@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Cách nó lên Ark",
-                "broughtBy": "Người mang đến: {name}"
+                "broughtBy": "Người mang đến: {name}",
+                "howThriving": "Cách giúp nó luôn phát triển tốt"
             },
             "founder": {
                 "storiesTitle": "Cách các con vật của họ lên Ark",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Cựu voyager",
         "animalTitleA": "Trò chuyện với {animal}",
         "animalTitleAn": "Trò chuyện với {animal}",
-        "arkHowAboard": "Cách nó lên Ark"
+        "arkHowAboard": "Cách nó lên Ark",
+        "arkHowThriving": "Cách giúp nó luôn phát triển tốt"
     },
     "companions": {
         "ark": {

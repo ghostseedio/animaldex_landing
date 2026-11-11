@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "كيف صعد على المتن",
-                "broughtBy": "أحضره {name}"
+                "broughtBy": "أحضره {name}",
+                "howThriving": "كيف يبقى مزدهرًا"
             },
             "founder": {
                 "storiesTitle": "كيف صعدت حيواناته على المتن",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "voyager سابق",
         "animalTitleA": "تحدّث إلى {animal}",
         "animalTitleAn": "تحدّث إلى {animal}",
-        "arkHowAboard": "كيف صعد على المتن"
+        "arkHowAboard": "كيف صعد على المتن",
+        "arkHowThriving": "كيف يبقى مزدهرًا"
     },
     "companions": {
         "ark": {

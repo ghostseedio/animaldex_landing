@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Cum a urcat la bord",
-                "broughtBy": "Adus de {name}"
+                "broughtBy": "Adus de {name}",
+                "howThriving": "Cum îl ajută să prospere"
             },
             "founder": {
                 "storiesTitle": "Cum au urcat la bord animalele sale",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Fost voyager",
         "animalTitleA": "Vorbește cu {animal}",
         "animalTitleAn": "Vorbește cu {animal}",
-        "arkHowAboard": "Cum a urcat la bord"
+        "arkHowAboard": "Cum a urcat la bord",
+        "arkHowThriving": "Cum îl ajută să prospere"
     },
     "companions": {
         "ark": {

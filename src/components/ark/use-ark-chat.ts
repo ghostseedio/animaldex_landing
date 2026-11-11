@@ -34,6 +34,7 @@ import {decodeArkFounderSettings, decodeArkFounderStory, decodeArkStoryDraft, ty
 import {noteArkArrivalsSeen} from "@/lib/ark-measure-client";
 import {
     ARK_ARRIVAL_POLL_MS,
+    arkAnimalIsSpecies,
     arkMatchArrivals,
     arkWorkedFinishers,
     decodeArkStepOffer,
@@ -238,7 +239,28 @@ function fixtureStepResult(index: number, species: Species): ArkStepResult {
     return {status: "done", species: species.name ?? "Red Fox", ...shapes[index % shapes.length]};
 }
 
-export type ArkThreadStepResult = {result: ArkStepResult; fresh: boolean};
+/**
+ * One line under a worked step: what it did, whether it just landed, and (D6) the reader's animal of the
+ * kind its founders' story would attach to, with the step it was (its id and its own words for the prefill).
+ */
+export type ArkThreadStepResult = {result: ArkStepResult; fresh: boolean; animal: ArkAnimal | null; stepId: string | null; stepText: string | null};
+
+/**
+ * The reader's own animal of this kind that a step's story attaches to (D6): their living arrived one that
+ * came aboard first (the same one every read; born young are their family line, not theirs to tell).
+ */
+function storyAnimal(snapshot: ArkSnapshot | null, species: Species): ArkAnimal | null {
+    if (!snapshot) return null;
+    const mine = snapshot.animals.filter((animal) => animal.mine && animal.origin !== "born" && !animal.id.startsWith("visitor:") && arkAnimalIsSpecies(animal, species));
+    return mine.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at) || a.id.localeCompare(b.id))[0] ?? null;
+}
+
+/** Development's `?arkresult=1`: the fixture Ark's animal of this kind (else its first), made the reader's. */
+async function fixtureStoryAnimal(species: Species): Promise<ArkAnimal | null> {
+    const snapshot = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot.json")).default);
+    const base = snapshot?.animals.find((animal) => animal.model_slug === species.slug) ?? snapshot?.animals[0];
+    return base ? {...base, name: species.name ?? base.name, model_slug: species.slug ?? base.model_slug, mine: true, origin: "arrived", source: "capture"} : null;
+}
 
 /**
  * The line under each reply that finished a worked step, by that reply's id:
@@ -257,6 +279,8 @@ export function useArkStepResults({enabled, species, messages, onDone}: {
     const finisherKey = finishers.map((finisher) => `${finisher.id}:${finisher.stepId}`).join(",");
     const [found, setFound] = useState<Map<string, ArkStepResult>>(() => new Map());
     const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set());
+    /** D6: the reader's animal of this kind, read with the results (the snapshot, as the reader). */
+    const [animal, setAnimal] = useState<ArkAnimal | null>(null);
     const known = useRef<Set<string> | null>(null);
     const landed = useRef(new Set<string>());
     const onDoneRef = useRef(onDone);
@@ -271,6 +295,7 @@ export function useArkStepResults({enabled, species, messages, onDone}: {
         landed.current = new Set();
         setFound(new Map());
         setFresh(new Set());
+        setAnimal(null);
     }, [speciesKey]);
 
     const read = useCallback(async (only?: ReadonlySet<string>) => {
@@ -283,6 +308,11 @@ export function useArkStepResults({enabled, species, messages, onDone}: {
             for (const [id, result] of answers) if (result) next.set(id, result);
             return next;
         });
+        // D6: one of theirs aboard, for the founders' story moment under the newest step's line.
+        if (answers.some(([, result]) => result?.status === "done" && result.livingBrought > 0)) {
+            const own = devFixture ? await fixtureStoryAnimal(speciesRef.current) : storyAnimal(await readSnapshot(), speciesRef.current);
+            if (own) setAnimal(own);
+        }
         const recent = new Set(current.filter((finisher) => Date.now() - Date.parse(finisher.createdAt) < RECENT_MS).map((finisher) => finisher.id));
         const playIn: string[] = [];
         for (const [id, result] of answers) {
@@ -318,11 +348,22 @@ export function useArkStepResults({enabled, species, messages, onDone}: {
 
     return useMemo(() => {
         const results = new Map<string, ArkThreadStepResult>();
+        const steps = new Map(finishers.map((finisher) => [finisher.id, finisher]));
         found.forEach((result, finisherId) => {
-            if (result.status === "done") results.set(finisherId, {result, fresh: fresh.has(finisherId)});
+            if (result.status !== "done") return;
+            const finisher = steps.get(finisherId);
+            results.set(finisherId, {
+                result,
+                fresh: fresh.has(finisherId),
+                animal: result.livingBrought > 0 ? animal : null,
+                stepId: finisher?.stepId ?? null,
+                stepText: finisher?.stepText ?? null
+            });
         });
         return results;
-    }, [found, fresh]);
+        // The finishers are read through their key.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [found, fresh, animal, finisherKey]);
 }
 
 // MARK: - Founders: one calm moment under an arrival (founders contract, section 4)
@@ -370,11 +411,11 @@ function remembered(key: string): boolean {
     }
 }
 
-async function readDraft(animalId: string, species: string | null): Promise<ArkStoryDraft | null> {
+async function readDraft(animalId: string, species: string | null, stepId: string | null, stepText: string | null): Promise<ArkStoryDraft | null> {
     const fixture = devParam("arkfounder");
     if (fixture) {
         const {fixtureArkStoryDraft} = await import("@/lib/ark-founders-fixture");
-        const draft = fixtureArkStoryDraft(animalId, species);
+        const draft = fixtureArkStoryDraft(animalId, species, stepText);
         if (fixture === "shared") return {...draft, story: {step: draft.step ?? "", problem: "I kept putting off the hard conversation with my brother", shared_at: new Date().toISOString()}};
         // `name`: no stored adult year and no answer yet (most people): the name question first, the 18+ tap needed to share.
         if (fixture === "name") return {...draft, ask_name: true, needs_adult_confirm: true};
@@ -383,7 +424,9 @@ async function readDraft(animalId: string, species: string | null): Promise<ArkS
         return draft;
     }
     try {
-        const response = await fetch(`/api/ark/founder-story?animal=${encodeURIComponent(animalId)}`, {headers: {Accept: "application/json"}, cache: "no-store"});
+        // D6: the step this moment sits under, so the server prefills with it (an older server reads the animal alone).
+        const query = new URLSearchParams({animal: animalId, ...(stepId ? {step: stepId} : {})});
+        const response = await fetch(`/api/ark/founder-story?${query}`, {headers: {Accept: "application/json"}, cache: "no-store"});
         if (!response.ok) return null;
         const body = await response.json() as {draft?: unknown};
         return decodeArkStoryDraft(body.draft);
@@ -453,15 +496,18 @@ async function deleteStory(animalId: string): Promise<boolean> {
 }
 
 /**
- * The line's state for one arrival of the reader's: read once
+ * The line's state for one of the reader's animals: read once
  * (`voyage_founder_story_draft_v1` as the reader), shown only when the server
- * says it may be shared. The name question first when the server says to
+ * says it may be shared. D6 (owner, 2026-11-11): it sits under the thrive
+ * line of the step that worked (`stepId`), prefilled with that step's own
+ * words (the server's, else `stepText`), never the problem; the story attaches
+ * to the reader's animal of the step's kind (`animalId`). The name question first when the server says to
  * ask it; either answer moves the same line on to the story. Nothing is sent
  * without a tap. Development: `?arkfounder=1` (a prefilled step, nothing
  * sent), `=name` (the name question first), `=adult` (sharing needs the 18+
  * tap), `=needsadult` (the server asks for it), `=shared`, `=notpublic`.
  */
-export function useArkFounderShare({animalId, species, enabled}: {animalId: string | null; species: string | null; enabled: boolean}) {
+export function useArkFounderShare({animalId, species, enabled, stepId = null, stepText = null}: {animalId: string | null; species: string | null; enabled: boolean; stepId?: string | null; stepText?: string | null}) {
     const [state, setState] = useState<ArkFounderShareState>({phase: "loading", step: "", problem: "", story: null, busy: false, nameAsked: false, nameShown: false, needsAdult: false, error: null});
     const stateRef = useRef(state);
     stateRef.current = state;
@@ -476,7 +522,7 @@ export function useArkFounderShare({animalId, species, enabled}: {animalId: stri
             return;
         }
         let cancelled = false;
-        void readDraft(animalId, species).then((draft) => {
+        void readDraft(animalId, species, stepId, stepText).then((draft) => {
             if (cancelled) return;
             if (!draft || !draft.can_share) {
                 setState((current) => ({...current, phase: "hidden"}));
@@ -487,7 +533,7 @@ export function useArkFounderShare({animalId, species, enabled}: {animalId: stri
             const askName = draft.ask_name && !remembered(`${NAME_NOT_NOW_KEY}${animalId}`);
             setState({
                 phase: askName ? "name" : storyPhase.current,
-                step: story?.step ?? draft.step ?? "",
+                step: story?.step ?? draft.step ?? stepText ?? "",
                 problem: story?.problem ?? "",
                 story,
                 busy: false,
@@ -500,9 +546,9 @@ export function useArkFounderShare({animalId, species, enabled}: {animalId: stri
         return () => {
             cancelled = true;
         };
-        // `species` only names the fixture's animal.
+        // `species` only names the fixture's animal; `stepText` is the prefill's fallback for the same step.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [animalId, enabled]);
+    }, [animalId, enabled, stepId]);
 
     /** "Yes, show my name" (with the 18+ confirmation it states), then on to the story in the same line. */
     const nameYes = useCallback(async () => {

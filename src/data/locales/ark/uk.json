@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "Як вона потрапила на борт",
-                "broughtBy": "Привіз(ла) {name}"
+                "broughtBy": "Привіз(ла) {name}",
+                "howThriving": "Як їй допомагають процвітати"
             },
             "founder": {
                 "storiesTitle": "Як їхні тварини потрапили на борт",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "Колишній voyager",
         "animalTitleA": "Поговорити: {animal}",
         "animalTitleAn": "Поговорити: {animal}",
-        "arkHowAboard": "Як вона потрапила на борт"
+        "arkHowAboard": "Як вона потрапила на борт",
+        "arkHowThriving": "Як їй допомагають процвітати"
     },
     "companions": {
         "ark": {

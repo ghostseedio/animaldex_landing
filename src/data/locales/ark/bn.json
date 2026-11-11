@@ -343,7 +343,8 @@
             },
             "card": {
                 "howAboard": "কীভাবে জাহাজে উঠল",
-                "broughtBy": "এনেছেন {name}"
+                "broughtBy": "এনেছেন {name}",
+                "howThriving": "কীভাবে এটি ভালো থাকে"
             },
             "founder": {
                 "storiesTitle": "তাঁদের প্রাণীরা কীভাবে জাহাজে উঠল",
@@ -377,7 +378,8 @@
         "arkFormerVoyager": "প্রাক্তন voyager",
         "animalTitleA": "{animal}-এর সঙ্গে কথা বলুন",
         "animalTitleAn": "{animal}-এর সঙ্গে কথা বলুন",
-        "arkHowAboard": "কীভাবে জাহাজে উঠল"
+        "arkHowAboard": "কীভাবে জাহাজে উঠল",
+        "arkHowThriving": "কীভাবে এটি ভালো থাকে"
     },
     "companions": {
         "ark": {
