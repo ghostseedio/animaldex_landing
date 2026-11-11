@@ -14,9 +14,12 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
-import {attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
+import {attachPointAt, attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
-import {Box3, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
+import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
+import {microDrawnLength} from "@/ark-scene/micro";
+import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
+import {Box3, Group, Quaternion, Raycaster, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
@@ -26,7 +29,7 @@ import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
 import {propsFixture, propsShot, type PropsShot} from "@/ark-scene/props/golden-props";
 import type {createPropsModule} from "@/ark-scene/props";
-import {goldenObstacles} from "@/ark-scene/golden-world";
+import {goldenCropField, goldenObstacles} from "@/ark-scene/golden-world";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -50,27 +53,171 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         },
         reef: () => ZONE_SITES.coral_reef,
         forestClearing: () => ZONE_SITES.woodland,
-        obstacles: () => goldenObstacles()
+        obstacles: () => goldenObstacles(),
+        cropField: () => goldenCropField()
     };
 }
 
 /** Calm weather at mean tide: every golden shot unless it names its own (GOLDEN_WEATHER). */
 const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
 
-type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}};
+type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}; lighting?: {sun?: {position: Vector3; target: {position: Vector3}}}};
 
-/** A micro shot: the species' near model on the chosen attach point (its up along the point's normal), and the view onto it. */
-async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDEN_MICRO)[GoldenPlace]>, holder: {current: Object3D | null}): Promise<{view: ArkCameraView; anchor: string}> {
+/** The micro shot on screen: its animal, the closest the camera may come, and how to stop it following its leaf. */
+type Holder = {current: Object3D | null; minDistance: number; stop: (() => void) | null; chosen: Map<string, {point: AttachPoint; out: Vector3; checked: string}>};
+
+const nextFrames = async (count: number) => {
+    for (let i = 0; i < count; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+};
+
+/** The view onto a point from out along its surface, `distance` away, looking at `lift` above it. */
+function viewOnto(point: AttachPoint, out: Vector3, distance: number, lift: number): ArkCameraView {
+    const n = point.normal;
+    return {
+        target: {x: point.position.x + n.x * lift, y: point.position.y + n.y * lift, z: point.position.z + n.z * lift},
+        distance,
+        polar: Math.acos(Math.min(Math.max(out.y, -1), 1)),
+        azimuth: Math.atan2(out.x, out.z)
+    };
+}
+
+/** Out from a tree's point: along its normal, away from the trunk, and (for a leaf) from above. */
+function treeOut(point: AttachPoint): Vector3 {
+    const n = new Vector3(point.normal.x, point.normal.y, point.normal.z);
+    const root = point.wind?.root ?? point.position;
+    const away = new Vector3(point.position.x - root.x, 0, point.position.z - root.z);
+    if (away.lengthSq() > 1e-4) away.normalize();
+    // A leaf from outside the crown and above; bark from beside the trunk, so the trunk runs off to one side.
+    const side = new Vector3(-n.z, 0, n.x);
+    const out = point.tag === "leaf" ? n.clone().addScaledVector(away, 0.8) : n.clone().addScaledVector(side, 1.1);
+    out.y += point.tag === "leaf" ? 0.25 : 0.35;
+    // Never steeper than the controls allow (they keep the camera 0.12–1.36 rad from straight down).
+    out.normalize();
+    const polar = Math.min(Math.max(Math.acos(out.y), 0.2), 1.3);
+    const azimuth = Math.atan2(out.x, out.z);
+    return new Vector3(Math.sin(polar) * Math.sin(azimuth), Math.cos(polar), Math.sin(polar) * Math.cos(azimuth));
+}
+
+/** Where the camera stands, seen from the point: out from a tree (`treeOut`); else out along the surface's normal, lifted a little. */
+function outFrom(point: AttachPoint): Vector3 {
+    if (point.wind) return treeOut(point);
+    const out = new Vector3(point.normal.x, point.normal.y, point.normal.z);
+    out.y = Math.max(out.y, 0) * 0.55 + 0.35;
+    if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
+    return out.normalize();
+}
+
+/** Nothing drawn between the camera and the point (any visible mesh: trees, canopy crowns, rocks, the house). */
+function clearSight(debug: Debug, view: ArkCameraView, point: AttachPoint, skip: Object3D | null): string | null {
+    const meshes: Object3D[] = [];
+    debug.scene.traverseVisible((object) => {
+        const mesh = object as Mesh;
+        if (!mesh.isMesh || object === skip) return;
+        // Instance counts change with the camera: bound them afresh.
+        if ((object as InstancedMesh).isInstancedMesh) (object as InstancedMesh).boundingSphere = null;
+        meshes.push(object);
+    });
+    const from = new Vector3().setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(new Vector3(view.target.x, view.target.y, view.target.z));
+    const to = new Vector3(point.position.x, point.position.y, point.position.z);
+    const length = from.distanceTo(to);
+    const toward = to.clone().sub(from).normalize();
+    const there = new Raycaster(from, toward, 0, Math.max(length - 0.012, 0)).intersectObjects(meshes, false)[0];
+    // And back from just off the point: one-sided surfaces (a rock) are only seen from outside.
+    const back = new Raycaster(to.clone().addScaledVector(toward, -0.012), toward.clone().negate(), 0, Math.max(length - 0.012, 0)).intersectObjects(meshes, false)[0];
+    const hit = there ?? back;
+    return hit ? String(hit.object.userData.kind ?? hit.object.name ?? hit.object.type) : null;
+}
+
+/** The share of the picture (a 7 × 5 grid over its middle 80 %) with something drawn well in front of the subject. */
+function clutterOf(debug: Debug, view: ArkCameraView): number {
+    const meshes: Object3D[] = [];
+    debug.scene.traverseVisible((object) => {
+        if ((object as Mesh).isMesh) meshes.push(object);
+    });
+    const target = new Vector3(view.target.x, view.target.y, view.target.z);
+    const from = new Vector3().setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(target);
+    const forward = target.clone().sub(from).normalize();
+    const right = new Vector3().crossVectors(forward, new Vector3(0, 1, 0)).normalize();
+    const up = new Vector3().crossVectors(right, forward);
+    const tanY = Math.tan((debug.camera.fov * Math.PI) / 360);
+    const tanX = tanY * debug.camera.aspect;
+    let hits = 0;
+    let rays = 0;
+    for (let i = 0; i < 7; i++) {
+        for (let j = 0; j < 5; j++) {
+            const x = (i / 6 - 0.5) * 1.6 * tanX;
+            const y = (j / 4 - 0.5) * 1.6 * tanY;
+            const dir = forward.clone().addScaledVector(right, x).addScaledVector(up, y).normalize();
+            rays++;
+            if (new Raycaster(from, dir, 0, view.distance * 0.8).intersectObjects(meshes, false).length) hits++;
+        }
+    }
+    return hits / rays;
+}
+
+/** Something drawn between the point and the sun (a crown overhead, a neighbour): the point is in shade. */
+function inShade(debug: Debug, point: AttachPoint, sun: Vector3): boolean {
+    const meshes: Object3D[] = [];
+    debug.scene.traverseVisible((object) => {
+        const mesh = object as Mesh;
+        if (!mesh.isMesh) return;
+        // Not the sky, cloud dome or the whole island's ground: only what can stand between a leaf and the sun.
+        const geometry = mesh.geometry;
+        if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+        if ((geometry.boundingSphere?.radius ?? 0) > 120 && !(object as InstancedMesh).isInstancedMesh) return;
+        meshes.push(object);
+    });
+    const from = new Vector3(point.position.x + point.normal.x * 0.01, point.position.y + point.normal.y * 0.01, point.position.z + point.normal.z * 0.01);
+    return new Raycaster(from, sun, 0, 60).intersectObjects(meshes, false).length > 0;
+}
+
+/**
+ * A micro shot: the species' near model at its true size on the chosen attach point (its up along the point's
+ * normal, facing along the surface), following the point's sway in the wind, and the view onto it.
+ */
+async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDEN_MICRO)[GoldenPlace]>, holder: Holder): Promise<{view: ArkCameraView; anchor: string}> {
     const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
     const near = place(shot.near);
-    const candidates = attachPoints({tag: shot.tag, near: {x: near.x, z: near.z, radius: shot.tag === "leaf" ? 40 : 18}});
-    // The lowest leaf (closest to the camera's reach), the front wall (facing +z, toward the default camera), else the nearest.
-    // The lowest leaf; a side wall of the house at eye height (the front is the porch); a low, sea-wet rock face that
-    // faces the sky a little (a limpet's); else the nearest.
+    const length = arkBody({model_slug: shot.slug} as never).metres;
+    // As the scene frames a small animal you tap (index.ts: its length × 6, 0.12–3 m), unless the shot says.
+    const distance = shot.distance ?? Math.min(Math.max(length * 6, 0.12), 3);
+    holder.minDistance = Math.min(0.3, distance * 0.7);
+    // The scene eases its closest distance back out every frame when none of ITS small animals is near the target
+    // (this one is the page's): hold it at the shot's while the shot is up, or the camera drifts out before the picture.
+    const controls = debug?.controls;
+    if (controls && !Object.getOwnPropertyDescriptor(controls, "minDistance")?.get) {
+        Object.defineProperty(controls, "minDistance", {configurable: true, get: () => holder.minDistance, set: () => {}});
+    }
+    // Where the sun is (the shot's own hour comes later, but the morning sun is the same side): lit faces score better.
+    const sunNow = () => {
+        const sunLight = debug?.lighting?.sun;
+        return sunLight ? sunLight.position.clone().sub(sunLight.target.position).normalize() : new Vector3(0.5, 0.7, 0.5).normalize();
+    };
+    let sun = sunNow();
+    // The point is chosen in the morning light whatever the shot's own hour (set after this), so it is the same in all three.
+    if (!holder.chosen.has(shot.slug + shot.tag)) {
+        handle.setHours(GOLDEN_TIMES.day);
+        await nextFrames(2);
+        sun = sunNow();
+    }
+    const lit = (point: AttachPoint) => Math.max(point.normal.x * sun.x + point.normal.y * sun.y + point.normal.z * sun.z, 0);
+    const tree = shot.tag === "leaf" || shot.tag === "bark";
+    const candidates = attachPoints({tag: shot.tag, near: {x: near.x, z: near.z, radius: tree ? 40 : 18}})
+        .filter((point) => !tree || (length >= point.size[0] && length <= point.size[1] * 1.2));
+    // A leaf or bark in the open, on a broadleaf tree's crown or trunk, near the forest floor; a side wall of the
+    // house at eye height (the front is the porch); a low, sea-wet rock face that faces the sky a little (a
+    // limpet's); else the nearest.
     const score = (point: AttachPoint) => {
         const p = point.position;
-        // A leaf on top of an orchard tree's crown (its outside, in reach of a close camera).
-        if (shot.tag === "leaf") return (point.hostKind === "orchard" ? 0 : point.hostKind === "broadleaf" ? 30 : 60) - point.normal.y * 5 + p.y * 0.2;
+        const broadleaf = point.hostKind === "broadleaf" || point.hostKind === "orchard" ? 0 : 20;
+        const asset = point.asset ?? "";
+        if (shot.tag === "leaf") {
+            // A single leaf a hand long (10–23 cm: a caterpillar's leaf, not a 30 cm stylised oak leaf), in the open and the sun.
+            const handsome = point.size[1] >= 0.06 && point.size[1] <= 0.14 ? 0 : 25;
+            return broadleaf + handsome + (point.leaf === "blade" ? 0 : 15) + (1 - (point.open ?? 0)) * 30 + (1 - point.normal.y) * 6 - lit(point) * 8 + Math.hypot(p.x - near.x, p.z - near.z) * 0.05;
+        }
+        // Pale bark (birch, beech) in the sun, about chest height, so a black ant shows on it.
+        if (shot.tag === "bark") return broadleaf + (/^birch/.test(asset) ? 0 : /^beech/.test(asset) ? 4 : 12) + (1 - (point.open ?? 0)) * 30 - lit(point) * 10 + Math.abs(p.y - heightAt(p.x, p.z) - 1.3) * 2 + Math.hypot(p.x - near.x, p.z - near.z) * 0.02;
         if (shot.tag === "house_wall") return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4));
         if (shot.tag === "rock_face") {
             // Seaward (the camera stands in the shallows), low and wet, near the shore rocks.
@@ -79,11 +226,55 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         }
         return Math.hypot(p.x - near.x, p.z - near.z);
     };
-    const scored = candidates.map((point) => ({point, score: score(point)}));
-    scored.sort((a, b) => a.score - b.score);
-    const point: AttachPoint | undefined = scored[0]?.point;
-    if (!point || !debug) return {view: handle.homeView(), anchor: `missing ${shot.tag}`};
+    const ranked = candidates.map((point) => ({point, score: score(point)})).sort((a, b) => a.score - b.score).map(({point}) => point);
+    if (!ranked.length || !debug) return {view: handle.homeView(), anchor: `missing ${shot.tag}`};
     if (holder.current) debug.scene.remove(holder.current);
+    holder.stop?.();
+    holder.stop = null;
+    holder.current = null;
+    const lift = Math.max(length * 0.35, 0.004);
+    let point = ranked[0];
+    let out = outFrom(point);
+    let checked = "";
+    // The same point in every light: chosen once per shot, in the morning (the shot's own hour is set after this).
+    const known = holder.chosen.get(shot.slug + shot.tag);
+    if (known) {
+        point = known.point;
+        out = known.out;
+        checked = known.checked;
+    } else {
+        // Of the best few, one seen from where the camera will be with nothing in between (either way along the sight
+        // line: a camera inside a rock sees nothing of it); on a tree, in the sun if any is (nothing between it and
+        // the sun), then with the least foreground clutter (leaves right in front of the lens).
+        type Option = {point: AttachPoint; out: Vector3; sunlit: boolean; clutter: number; rank: number};
+        const options: Option[] = [];
+        const blockers: string[] = [];
+        let rank = 0;
+        for (const candidate of ranked.slice(0, tree ? 16 : 8)) {
+            rank++;
+            const o = outFrom(candidate);
+            const view = viewOnto(candidate, o, distance, lift);
+            debug.controls.minDistance = holder.minDistance;
+            handle.setView(view);
+            await nextFrames(3);
+            const blocked = clearSight(debug, view, candidate, holder.current);
+            if (blocked) {
+                blockers.push(blocked);
+                continue;
+            }
+            options.push({point: candidate, out: o, sunlit: tree && lit(candidate) > 0.15 && !inShade(debug, candidate, sun), clutter: tree ? clutterOf(debug, view) : 0, rank});
+            if (!tree) break;
+        }
+        options.sort((x, y) => Number(y.sunlit) - Number(x.sunlit) || Math.round(x.clutter * 10) - Math.round(y.clutter * 10) || x.rank - y.rank);
+        const pick = options[0] ?? null;
+        if (pick) {
+            point = pick.point;
+            out = pick.out;
+        }
+        const skipped = blockers.length ? ` (skipped ${blockers.length}: ${Array.from(new Set(blockers)).join("/")})` : "";
+        checked = pick ? `, clear sight${tree ? `${pick.sunlit ? ", in the sun" : ", in shade"}, clutter ${pick.clutter.toFixed(2)}` : ""}${skipped}` : `, no clear sight in the best ${rank}`;
+        holder.chosen.set(shot.slug + shot.tag, {point, out, checked});
+    }
     const manifest = await (await fetch(`${MODELS}/manifest.json`)).json() as {models: Record<string, string>};
     const version = manifest.models[shot.slug];
     const group = new Group();
@@ -94,8 +285,9 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         const model = gltf.scene;
         const box = new Box3().setFromObject(model);
         const size = box.getSize(new Vector3());
-        const length = displayLength(shot.slug);
-        model.scale.setScalar(length / Math.max(size.z, size.x, 1e-3));
+        // True to size close by, never under the scene's 16 pixels (index.ts microDrawnLength), as a tapped animal is.
+        const drawn = microDrawnLength(length, displayLength(shot.slug), distance, window.innerHeight || 900, debug.camera.fov, 16);
+        model.scale.setScalar(drawn / bodyAxisExtent(shot.slug, null, size));
         model.position.y = -box.min.y * model.scale.y;
         model.traverse((object) => {
             const mesh = object as Mesh;
@@ -106,53 +298,32 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         });
         group.add(model);
     }
-    if (shot.tag === "leaf") group.add(nearLeaf());
     const n = new Vector3(point.normal.x, point.normal.y, point.normal.z).normalize();
     group.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), n).multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), point.yaw));
     group.position.set(point.position.x, point.position.y, point.position.z);
     debug.scene.add(group);
     holder.current = group;
-    debug.controls.minDistance = 0.3;
-    // The camera out along the surface's normal, lifted a little: it looks at the animal on its surface, from outside it.
-    const out = n.clone();
-    if (shot.tag === "leaf") out.set(n.x + 0.35, 1.6, n.z + 0.35);
-    else out.y = Math.max(out.y, 0) * 0.55 + 0.35;
-    if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
-    out.normalize();
-    const view: ArkCameraView = {
-        target: {x: point.position.x + n.x * 0.05, y: point.position.y + n.y * 0.05, z: point.position.z + n.z * 0.05},
-        distance: shot.distance,
-        polar: Math.acos(Math.min(Math.max(out.y, -1), 1)),
-        azimuth: Math.atan2(out.x, out.z)
-    };
-    return {view, anchor: `${point.id} (${shot.slug})`};
+    // On a leaf or a trunk it rides the tree's sway (sampler attachPointAt: the tree shader's own motion), set just
+    // before each frame is drawn so it never lags its leaf.
+    if (point.wind) {
+        const chosen = point;
+        const scene = debug.scene;
+        const before = scene.onBeforeRender;
+        scene.onBeforeRender = (...args) => {
+            before.apply(scene, args);
+            const at = attachPointAt(chosen, ARK_TIME.value, ARK_WIND.value);
+            group.position.set(at.x, at.y, at.z);
+            group.updateMatrixWorld(true);
+        };
+        holder.stop = () => {
+            scene.onBeforeRender = before;
+        };
+    }
+    debug.controls.minDistance = holder.minDistance;
+    return {view: viewOnto(point, out, distance, lift), anchor: `${point.id}${point.asset ? ` ${point.asset}` : ""}${point.open !== undefined ? ` open ${point.open}` : ""} (${shot.slug}, ${(length * 100).toFixed(1)} cm at ${distance.toFixed(2)} m${checked})`};
 }
 
-/** A real leaf to sit on (the near version of a crown's leaf: graphics pass), 14 cm long, curved, with a midrib. */
-function nearLeaf(): Mesh {
-    const shape: number[] = [];
-    const steps = 8;
-    for (let i = 0; i < steps; i++) {
-        for (const side of [-1, 1]) {
-            const t0 = i / steps;
-            const t1 = (i + 1) / steps;
-            const w0 = 0.045 * Math.sin(Math.PI * t0) ** 0.8 * side;
-            const w1 = 0.045 * Math.sin(Math.PI * t1) ** 0.8 * side;
-            const z0 = (t0 - 0.5) * 0.14;
-            const z1 = (t1 - 0.5) * 0.14;
-            const c = (t: number, w: number) => -0.012 * Math.sin(Math.PI * t) + Math.abs(w) * 0.25;
-            shape.push(0, c(t0, 0), z0, w0, c(t0, w0), z0, w1, c(t1, w1), z1, 0, c(t0, 0), z0, w1, c(t1, w1), z1, 0, c(t1, 0), z1);
-        }
-    }
-    const geometry = new BufferGeometry();
-    geometry.setAttribute("position", new Float32BufferAttribute(shape, 3));
-    geometry.computeVertexNormals();
-    const mesh = new ThreeMesh(geometry, new MeshStandardMaterial({color: "#5d8a35", roughness: 0.6, side: DoubleSide}));
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.position.y = -0.004;
-    return mesh;
-}
+const debugOf = () => (window as unknown as {__arkDebug?: Debug}).__arkDebug;
 
 type Measure = {
     /** Wall time between drawn frames (what the reader sees), ms. */
@@ -169,6 +340,9 @@ type Measure = {
     lite: boolean;
     pixelRatio: number;
     near: number;
+    /** The camera's near plane (m) and how far it is from what it looks at. */
+    cameraNear: number;
+    cameraDistance: number;
     far: number;
     modelsLoaded: number;
 };
@@ -227,7 +401,7 @@ async function mountGolden(el: HTMLElement) {
     handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
-    const holder: {current: Object3D | null} = {current: null};
+    const holder: Holder = {current: null, minDistance: 0.3, stop: null, chosen: new Map()};
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
@@ -278,23 +452,33 @@ async function mountGolden(el: HTMLElement) {
             const micro = GOLDEN_MICRO[where];
             const shot = micro ? {...(await microShot(handle, micro, holder)), place: where} : goldenView(where, world);
             if (!micro && holder.current) {
-                (window as unknown as {__arkDebug?: Debug}).__arkDebug?.scene.remove(holder.current);
+                const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+                debug?.scene.remove(holder.current);
                 holder.current = null;
+                holder.stop?.();
+                holder.stop = null;
+                // The scene has its closest distance back.
+                if (debug) Object.defineProperty(debug.controls, "minDistance", {configurable: true, enumerable: true, writable: true, value: 4});
             }
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
-            handle.setView(shot.view);
+            const debugNow = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            const hold = () => {
+                if (micro && debugNow) debugNow.controls.minDistance = holder.minDistance;
+                handle.setView(shot.view);
+            };
+            hold();
             // The view keeps itself over the ground for a few frames (setView, then the scene's own limits): hold it there.
             for (let i = 0; i < 20; i++) {
                 await nextFrame();
-                if (i < 6) handle.setView(shot.view);
+                if (i < 6) hold();
             }
             await settle(700, 30_000);
             if (micro) {
                 // The scene eases its closest distance back out each frame when nothing is selected: hold the close-up.
                 const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
                 for (let i = 0; i < 3; i++) {
-                    if (debug) debug.controls.minDistance = 0.3;
+                    if (debug) debug.controls.minDistance = holder.minDistance;
                     handle.setView(shot.view);
                     await nextFrame();
                 }
@@ -341,6 +525,8 @@ async function mountGolden(el: HTMLElement) {
                 pixelRatio: stats.pixelRatio,
                 near: stats.near,
                 far: stats.far,
+                cameraNear: Math.round((debugOf()?.camera.near ?? 0) * 1e5) / 1e5,
+                cameraDistance: Math.round((debugOf()?.camera.position.distanceTo(new Vector3(handle.view().target.x, handle.view().target.y, handle.view().target.z)) ?? 0) * 1e4) / 1e4,
                 modelsLoaded: stats.modelsLoaded
             };
         },

@@ -4,8 +4,10 @@
  * instead of filling the picture with a dark, unlit shard.
  *
  * The fade's reach follows how close the camera is to what it looks at, so a
- * close-up (a bee on a flower 1 m away, a caterpillar on a leaf) keeps its
- * subject: within `NEAR_FADE_SHARE` of the view distance, never past 2.2 m.
+ * close-up keeps its subject: it ends at `NEAR_FADE_SHARE` of the distance to
+ * the orbit target (never past 2.2 m), so only what is well nearer than the
+ * target dissolves: a bee's flower 1 m away, a caterpillar's leaf at 0.55 m and
+ * an ant's bark at 0.12 m all stay whole.
  *
  * Only materials that already cut out (leaf cards) or draw the trees nearest
  * the camera use it, so the GPU keeps its early depth test everywhere else.
@@ -24,7 +26,7 @@ export const NEAR_FADE_MAX = 2.2;
 
 /** Where the fade ends (m) for a camera this far from what it looks at. */
 export function nearFadeEnd(viewDistance: number): number {
-    return Math.min(NEAR_FADE_MAX, Math.max(0.2, viewDistance * NEAR_FADE_SHARE));
+    return Math.min(NEAR_FADE_MAX, Math.max(0, viewDistance) * NEAR_FADE_SHARE);
 }
 
 /** Call each frame with the camera's distance to its target. */

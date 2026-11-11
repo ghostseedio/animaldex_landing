@@ -9,7 +9,9 @@
  */
 
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {microDecor} from "@/ark-scene/micro-decor";
+import {cropAt} from "@/ark-scene/fields";
+import {COTTAGE, microDecor} from "@/ark-scene/micro-decor";
+import {sampleGround, smoothstep, ZONE_SITES} from "@/ark-scene/world";
 
 /** Each kind's reach round its middle at camera height (m, at scale 1): a trunk, a canopy tree's low limbs, a wall. */
 const REACH: Record<string, number> = {
@@ -46,4 +48,34 @@ export function goldenObstacles(): GoldenObstacle[] {
     microDecor().forEach(add);
     cached = list;
     return list;
+}
+
+/**
+ * A field of standing crops near the cottage, for the close shot of the fields (batch 4): the point round which the
+ * most cabbage, cereal or maize grows within 4 m, well inside the farm (where the ground paints the fields fully and
+ * the close-up plants stand), nearest the cottage on a tie.
+ */
+export function goldenCropField(): {x: number; z: number} | null {
+    const farm = ZONE_SITES.farm_garden;
+    let best: {x: number; z: number} | null = null;
+    let bestScore = 0;
+    for (let x = farm.x - 36; x <= farm.x + 36; x += 3) {
+        for (let z = farm.z - 30; z <= farm.z + 30; z += 3) {
+            let grown = 0;
+            for (let dx = -4; dx <= 4; dx += 1) {
+                for (let dz = -4; dz <= 4; dz += 1) {
+                    const crop = cropAt(x + dx, z + dz)?.crop;
+                    if (crop !== "cabbage" && crop !== "cereal" && crop !== "maize") continue;
+                    const s = sampleGround(x + dx, z + dz);
+                    if ((s.weights.farm_garden ?? 0) * smoothstep(0.6, 1, s.land) > 0.85) grown++;
+                }
+            }
+            const score = grown - Math.hypot(x - COTTAGE.x, z - COTTAGE.z) * 0.05;
+            if (score > bestScore) {
+                bestScore = score;
+                best = {x, z};
+            }
+        }
+    }
+    return best;
 }

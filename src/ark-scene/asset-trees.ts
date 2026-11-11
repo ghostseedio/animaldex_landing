@@ -21,15 +21,13 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
-import {ASSETS, ASSET_BASE, treeAssetFor} from "@/ark-scene/tree-assets";
+import {ASSETS, ASSET_BASE, TREE_CLOSE, assetTreePlacement, treeLodDistance} from "@/ark-scene/tree-assets";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {DECOR_SINK} from "@/ark-scene/micro-decor";
-import {heightAt} from "@/ark-scene/world";
 
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
 
-type Instance = {x: number; y: number; z: number; scale: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number};
+type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number};
 
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). */
 function windMaterial(doubleSided: boolean, near = false): MeshStandardMaterial {
@@ -133,23 +131,19 @@ export class AssetTrees {
         const scale = new Vector3();
         const up = new Vector3(0, 1, 0);
         const add = (item: {kind: string; x: number; y: number; z: number; scale: number; rotation: number}, fill: boolean, rank: number) => {
-            const asset = treeAssetFor(item as never);
+            // Where the tree stands, shared with the attach points (none on bare rock faces high on the mountain).
+            const asset = assetTreePlacement(item as never);
             if (!asset) return;
-            // Not on bare rock faces high on the mountain (from afar they read as pockmarks in the rock).
-            if (item.y > 16) {
-                const slope = Math.hypot(heightAt(item.x + 1.5, item.z) - heightAt(item.x - 1.5, item.z), heightAt(item.x, item.z + 1.5) - heightAt(item.x, item.z - 1.5)) / 3;
-                if (slope > 0.8) return;
-            }
             let entry = this.byAsset.get(asset.id);
             if (!entry) {
                 const info = ASSETS[asset.id];
                 entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height};
                 this.byAsset.set(asset.id, entry);
             }
-            const matrix = new Matrix4().compose(position.set(item.x, item.y - DECOR_SINK, item.z), rotation.setFromAxisAngle(up, item.rotation), scale.setScalar(asset.scale));
+            const matrix = new Matrix4().compose(position.set(asset.x, asset.y, asset.z), rotation.setFromAxisAngle(up, asset.rotation), scale.setScalar(asset.scale));
             const frac = (value: number) => value - Math.floor(value);
             const shade = 0.9 + 0.2 * frac(item.x * 7.13 + item.z * 3.71);
-            entry.instances.push({x: item.x, y: item.y, z: item.z, scale: asset.scale, matrix, tint: new Color(shade, shade * (0.97 + 0.06 * frac(item.z * 5.3)), shade), fill, rank});
+            entry.instances.push({x: item.x, y: item.y, z: item.z, scale: asset.scale, height: asset.height, radius: asset.radius, matrix, tint: new Color(shade, shade * (0.97 + 0.06 * frac(item.z * 5.3)), shade), fill, rank});
         };
         worldDecor().forEach((item) => add(item, false, 0));
         forestFill().forEach((item) => add(item, true, item.rank));
@@ -239,7 +233,9 @@ export class AssetTrees {
                     }
                 }
                 const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
-                let level: Level = d < d0 ? "lod0" : d < d1 ? "lod1" : d < d2 ? "lod2" : "card";
+                // Right beside the tree (up in its crown, a close-up on one of its leaves): full detail, the level its attach points are on.
+                const close = d >= d0 && treeLodDistance(instance, camera) < TREE_CLOSE;
+                let level: Level = d < d0 || close ? "lod0" : d < d1 ? "lod1" : d < d2 ? "lod2" : "card";
                 // A level that failed to load falls to the next one that did.
                 let index = LEVELS.indexOf(level);
                 while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;
