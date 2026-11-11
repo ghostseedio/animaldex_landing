@@ -250,8 +250,18 @@ async function mountScenarios(el: HTMLElement) {
         curious_camera: async () => {
             const at = site("rainforest", 0, 0);
             hold("chimp", at.x, at.z, 3, "rest");
-            view(at.x, at.z - 1, 7, Math.PI, 1.2);
-            return {note: "the camera 7 m from the group", watch: byPrefix.chimp};
+            // The camera arrives: from 20 m (out of their notice) in to 7 m over the first 4 s, then still. A camera already
+            // there while the scene settled would have been got used to before the recording started.
+            view(at.x, at.z - 1, 20, Math.PI, 1.2);
+            const arrive = () => {
+                const start = performance.now();
+                const id = setInterval(() => {
+                    const u = Math.min((performance.now() - start) / 4000, 1);
+                    view(at.x, at.z - 1, 20 - 13 * u, Math.PI, 1.2);
+                    if (u >= 1) clearInterval(id);
+                }, 50);
+            };
+            return {note: "the camera walks in from 20 m to 7 m over the first 4 s, then stays", watch: byPrefix.chimp, go: arrive, seconds: 30};
         },
         /** Meerkats with one on watch; a martial eagle comes over: the sentinel calls first and the mob runs. */
         sentinel_raptor: async () => {

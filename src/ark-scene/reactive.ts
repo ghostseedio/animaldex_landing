@@ -1019,7 +1019,7 @@ export class ReactiveLayer {
 
     /**
      * Getting used to the camera. Near it and the camera not coming at it, an animal habituates in its own few seconds
-     * (3–7 s, half as long again for a shy one) and goes back to its business; a camera walking at it (closing faster
+     * (3–7 s, half as long again for a shy one, longer for a very curious species) and goes back to its business; a camera walking at it (closing faster
      * than 0.3 m/s) renews its attention; away from it, it forgets slowly (a minute).
      */
     private updateCamera(me: ReactiveInput, agent: Agent, world: ReactiveWorld, dt: number) {
@@ -1029,7 +1029,8 @@ export class ReactiveLayer {
         const closing = d > 1e-3 ? ((me.shared.x - cam.x) * this.camVel.x + (me.shared.z - cam.z) * this.camVel.z) / d : 0;
         agent.camApproach = closing > 0.3;
         const within = Math.min(me.intel.sight * 0.5, 14);
-        const habTime = (3 + 4 * unit(me.id, "cam-hab")) * (agent.personality.boldness < -0.3 ? 1.5 : 1);
+        // (A very curious species takes longer over it: a chimpanzee up to 2.5x as long as a deer.)
+        const habTime = (3 + 4 * unit(me.id, "cam-hab")) * (agent.personality.boldness < -0.3 ? 1.5 : 1) * (1 + 3 * Math.max(me.intel.curiosity - 0.5, 0));
         const near = d < within;
         // The moment it first notices the camera (or the camera starts coming at it): head up and a look at it for a
         // second or two (one that pays a still camera no attention just carries on), then it decides again.
