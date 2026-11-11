@@ -66,7 +66,7 @@ test("ready beds have both files, small, a loop length and credited free licence
         for (const ext of ["webm", "m4a"]) {
             const file = path.join(dir, `${bed.id}.${ext}`);
             assert.ok(fs.existsSync(file), `${bed.id}.${ext} missing`);
-            assert.ok(fs.statSync(file).size <= 160 * 1024, `${bed.id}.${ext} is over 160 KB`);
+            assert.ok(fs.statSync(file).size <= 150 * 1024, `${bed.id}.${ext} is over 150 KB`);
         }
         assert.ok(bed.sources.length > 0, `${bed.id} has no credits`);
         for (const s of bed.sources) {
@@ -76,6 +76,17 @@ test("ready beds have both files, small, a loop length and credited free licence
             assert.ok(s.recordist && s.source && /^https:\/\//.test(s.page), `${bed.id} credit`);
         }
     }
+});
+
+test("the thunder one-shots, when ready, have their files and credits", () => {
+    const dir = path.join(process.cwd(), "public", AMBIENT_PATH);
+    if (!AMBIENT_THUNDER.ready) return;
+    for (const shot of [AMBIENT_THUNDER.near, AMBIENT_THUNDER.far]) {
+        assert.ok(shot.seconds > 3 && shot.seconds < 30, shot.id);
+        for (const ext of ["webm", "m4a"]) assert.ok(fs.existsSync(path.join(dir, `${shot.id}.${ext}`)), `${shot.id}.${ext} missing`);
+    }
+    assert.ok(AMBIENT_THUNDER.sources.length > 0);
+    for (const s of AMBIENT_THUNDER.sources) assert.ok(["CC0 1.0", "Public domain", "Public Domain Mark 1.0"].includes(s.license));
 });
 
 test("beds that are not ready are never selected", () => {

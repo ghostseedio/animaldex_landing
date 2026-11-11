@@ -287,8 +287,11 @@ def make_bed(recipe: dict, downloads: str, work: str, out_dir: str) -> dict:
     write_wav(loop_wav, loop)
     # Bitrates: as high as ~145 KB a file allows (Opus up to 40k, AAC up to 48k).
     seconds = len(loop) / SR + 2 * PAD
-    budget = int(145 * 1024 * 8 / 1000 / seconds) - 1
-    kbps = {"webm": min(recipe.get("opus_kbps", 40), budget), "m4a": min(recipe.get("aac_kbps", 48), budget)}
+    budget = 145 * 1024 * 8 / 1000 / seconds
+    # Opus's constrained VBR runs ~8% over its target; AudioToolbox only takes 24/32/40/48k for mono.
+    opus = min(recipe.get("opus_kbps", 40), int(budget * 0.9))
+    aac = max([k for k in (24, 32, 40, 48) if k <= min(recipe.get("aac_kbps", 48), budget * 0.97)] or [24])
+    kbps = {"webm": opus, "m4a": aac}
     n = len(loop)
     p = int(PAD * SR)
     decoded = {}

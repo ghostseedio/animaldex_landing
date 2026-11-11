@@ -33,6 +33,7 @@ SOURCES = {
     "nps/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3": {"title": "Stream Soundscape from the Black Canyon Trail, Rocky Mountain NP", "recordist": "J. Job, National Park Service", "license": PD_GOV, "source": "NPS Rocky Mountain sound library", "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm"},
     "nps/romo-MoraineWetlandAmbientROMO51816Final1.mp3": {"title": "Dawn Wetland Soundscape from Moraine Park, Rocky Mountain NP", "recordist": "J. Job, National Park Service", "license": PD_GOV, "source": "NPS Rocky Mountain sound library", "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm"},
     "aporee/StrandNov2712.ogg": {"title": "Glassy Winter Surf, Silver Strand, Coronado CA", "recordist": "Rolf Yngve", "license": "Public Domain Mark 1.0", "source": APOREE, "page": "https://archive.org/details/aporee_15707_18266"},
+    "nps/nri-Thunder.mp3": {"title": "Thunder, NPS Natural Sounds and Night Skies Division", "recordist": NPS, "license": PD_GOV, "source": "NPS Sound Gallery", "page": "https://www.nps.gov/subjects/sound/sounds-thunder.htm"},
     "aporee/wodospadsiklavica11041630.mp3": {"title": "Siklawica waterfall, Zakopane, Poland", "recordist": "alas23/sala", "license": "Public Domain Mark 1.0", "source": APOREE, "page": "https://archive.org/details/aporee_70170_81768"},
 }
 
@@ -45,7 +46,9 @@ def main() -> None:
     with open(args.report, encoding="utf-8") as f:
         report = json.load(f)
     with open(args.recipe, encoding="utf-8") as f:
-        recipes = {r["id"]: r for r in json.load(f)["beds"]}
+        book = json.load(f)
+    recipes = {r["id"]: r for r in book["beds"]}
+    shots = {r["id"]: r for r in book.get("oneshots", [])}
     with open(TABLE, encoding="utf-8") as f:
         table = json.load(f)
     for bed in table["beds"]:
@@ -57,6 +60,19 @@ def main() -> None:
         bed["loopSeconds"] = L
         bed["sources"] = [dict(SOURCES[layer["file"]], segment=[layer["start"], round(layer["start"] + L + recipe["crossfade"], 2)]) for layer in recipe["layers"]]
         bed["ready"] = all(os.path.exists(os.path.join("public", "ark", "sound", "ambient", f"{bed['id']}.{ext}")) for ext in ("webm", "m4a"))
+    thunder = table.get("thunder")
+    if thunder:
+        made = [report.get(thunder[k]["id"]) for k in ("near", "far")]
+        if all(made):
+            sources = []
+            for k in ("near", "far"):
+                shot = shots[thunder[k]["id"]]
+                thunder[k]["seconds"] = report[thunder[k]["id"]]["duration_seconds"]
+                src = dict(SOURCES[shot["file"]], segment=[shot["start"], round(shot["start"] + shot["duration"], 2)])
+                if src not in sources:
+                    sources.append(src)
+            thunder["sources"] = sources
+            thunder["ready"] = all(os.path.exists(os.path.join("public", "ark", "sound", "ambient", f"{thunder[k]['id']}.{ext}")) for k in ("near", "far") for ext in ("webm", "m4a"))
     with open(TABLE, "w", encoding="utf-8") as f:
         f.write(json.dumps(table, indent=4, ensure_ascii=False) + "\n")
 
