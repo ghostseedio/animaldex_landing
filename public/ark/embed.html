@@ -9,7 +9,10 @@
   html, body { margin: 0; height: 100%; background: #ecdcc4; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   #ark { position: fixed; inset: 0; }
   /* Sound (liveliness): off until this is tapped, inside the panel (a host's message can't start audio). */
-  #ark-sound { position: fixed; right: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); width: 36px; height: 36px; border: 0; border-radius: 18px; background: rgba(20, 24, 22, 0.55); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* The end side (right in left-to-right, left in Arabic, Hebrew, Persian, Urdu), clear of the app's close button,
+     which sits at the start side. */
+  #ark-sound { position: fixed; inset-inline-end: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); width: 36px; height: 36px; border: 0; border-radius: 18px; background: rgba(20, 24, 22, 0.55); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+  [dir="rtl"] #ark-sound { inset-inline-end: calc(10px + env(safe-area-inset-left)); }
   #ark-sound[hidden] { display: none; }
   #ark-sound svg { width: 20px; height: 20px; }
   #ark-sound .on { display: none; }
