@@ -235,6 +235,28 @@ async function mountGolden(el: HTMLElement) {
         return false;
     };
 
+    // The flythrough's route: the golden places in turn, eased, pulling back between them; morning to night.
+    const route: GoldenPlace[] = ["island_far", "coast_rocks", "waves_beach", "river_pond", "house_fields", "forest_floor", "mountain", "island_far"];
+    let routeViews: ArkCameraView[] | null = null;
+    const flyAt = (t: number) => {
+        const views = routeViews ?? (routeViews = route.map((where) => goldenView(where, world).view));
+        const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+        const angle = (a: number, b: number, k: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
+        t = Math.min(Math.max(t, 0), 1);
+        const leg = Math.min(Math.floor(t * (views.length - 1)), views.length - 2);
+        const k = ease(Math.min(t * (views.length - 1) - leg, 1));
+        const a = views[leg];
+        const b = views[leg + 1];
+        const lift = Math.sin(Math.PI * k) * 0.6;
+        handle.setView({
+            target: {x: a.target.x + (b.target.x - a.target.x) * k, y: a.target.y + (b.target.y - a.target.y) * k, z: a.target.z + (b.target.z - a.target.z) * k},
+            distance: (a.distance + (b.distance - a.distance) * k) * (1 + lift * 2.5),
+            polar: a.polar + (b.polar - a.polar) * k - lift * 0.25,
+            azimuth: angle(a.azimuth, b.azimuth, k)
+        });
+        handle.setHours(10.5 + 11.5 * t);
+    };
+
     return {
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
@@ -293,7 +315,28 @@ async function mountGolden(el: HTMLElement) {
                 modelsLoaded: stats.modelsLoaded
             };
         },
-        stats: () => handle.stats()
+        stats: () => handle.stats(),
+        /**
+         * The flythrough (graphics pass): `seconds` of flight through the golden places in turn, eased, the hour going
+         * from morning through dusk to night, in real time. Returns the frame intervals over the whole flight.
+         */
+        /** The flythrough's view and hour at `t` (0…1): for a frame-by-frame video. */
+        flyAt: (t: number) => flyAt(t),
+        flythrough: async (seconds = 60) => {
+            const intervals: number[] = [];
+            const start = performance.now();
+            let last = start;
+            for (;;) {
+                const now = await nextFrame();
+                intervals.push(now - last);
+                last = now;
+                const t = Math.min((now - start) / 1000 / seconds, 1);
+                flyAt(t);
+                if (t >= 1) break;
+            }
+            const sorted = [...intervals].sort((x, y) => x - y);
+            return {frames: intervals.length, p50: round(sorted[Math.floor(sorted.length * 0.5)]), p95: round(sorted[Math.floor(sorted.length * 0.95)]), p99: round(sorted[Math.floor(sorted.length * 0.99)]), fps: round(intervals.length / seconds), stats: handle.stats()};
+        }
     };
 }
 

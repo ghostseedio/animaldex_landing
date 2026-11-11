@@ -70,3 +70,44 @@ Golden shots added: `waves_beach` and `storm_trees`, each in its own pinned weat
 Still open:
 - `caterpillar_leaf` needs leaf points taken from the real crown geometry. The asset lane's trees bring tagged points.
 - Kelp and seagrass are still flat cards (asset lane).
+
+## Batch 3: polish, trees, tiers (da20c767 and on)
+
+- **Trees:** the asset lane's library (`ark-assets` 43ab2e2c, merged) replaces every decor and forest-fill tree. Zone decides the kind:
+  - oak, beech, birch, willow and snag;
+  - mangrove where the forest meets water;
+  - rainforest emergents of every size;
+  - pine and spruce, acacia, palm, apple.
+- **Tree rendering (`asset-trees.ts`):**
+  - instanced per tree and detail level (lod0, lod1, lod2, card), re-sorted as the camera moves;
+  - level reach 1 / 0.45 / 0.3 by tier;
+  - sway from the assets' own wind weights (trunk, branch, leaf flutter), stronger in wind and storms;
+  - none on bare rock faces high on the mountain;
+  - the procedural shapes stand in until the assets load.
+- **Shared tree mapping:** `tree-assets.ts` is pure, so the renderer, `micro.ts` (bark animals climb the asset trunks) and the sampler agree on every tree.
+- **Mountain:** foothills and two flanking summits beyond the mountain zone make a broad, many-peaked range (main peak 49 m, flanks 42–43 m). Snow lies above 27 m and holds on all but the steepest faces.
+- **Light:** lamp halos are about 7° across close up, and dimmer. The image-based light dips gently at the photographed/generated sky handover (sun 12° up), so dusk and dawn never pop.
+- **Swash:** the lace is soft and broken.
+- **Labels:** region labels fade in only from far.
+- **Underwater (from batch 2):** depth absorption, Snell's window, exponential fog, softer shafts.
+- **Flythrough:** `node scripts/ark-flythrough.mjs` (60 s, real time per tier) plus a frame-by-frame video (`ark-flythrough-60s.mp4`, 1280×720, 30 fps).
+
+The 60 s flythrough runs in real time through island far, coast, waves, river and pond, house, forest floor and mountain, from morning to night. It is vsync-capped at 60 on the M3:
+
+| Device and tier | fps | p95 frame interval | Draw calls / triangles (last view) |
+|---|---|---|---|
+| desktop high | 59.4 | 16.8 ms | 386 / 3.7 M |
+| desktop medium | 59.9 | 16.7 ms | 173 / 1.07 M |
+| desktop low | 57.9 | 16.8 ms | 99 / 0.40 M |
+| phone medium (4× CPU) | 59.4 | 16.8 ms | 160 / 1.03 M |
+| phone low (4× CPU) | 59.7 | 16.7 ms | 100 / 0.40 M |
+
+Batch 3 golden shots (median across the 13 places):
+- desktop: 60 fps, 207–413 calls, 3.7–11.5 M triangles (11.5 M on the forest floor, where every tree around is at lod0), GPU drain 14 ms;
+- phone medium: 60 fps, 71–171 calls, 1.0–2.3 M triangles, GPU drain 5.9 ms.
+
+Known gaps:
+- The real phone frame rate has not been measured: the GPU proxy was unusable under the shared load, and there was no device.
+- The dark diamond in forest_floor and coast_rocks is a canopy tree's trunk right beside the camera, not a rendering fault.
+- caterpillar_leaf needs the asset trees' leaf points wired into the sampler.
+- Kelp and seagrass, the house and fields (props lane), and fish schools are with other lanes.

@@ -216,7 +216,7 @@ export function worldDecor(): DecorItem[] {
         } else {
             const coral: DecorItem = {kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]};
             // Out of the beach's clear shallows (the same random draws either way, so nothing after moves).
-            if (height < -1.15) push(coral);
+            if (height < -1.9) push(coral);
         }
     }
 

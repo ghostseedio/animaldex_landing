@@ -89,11 +89,11 @@ function trunk(height: number, radius: number, lean = 0, colour = BARK): BufferG
 type Blob = {x: number; y: number; z: number; r: number; squash?: number};
 
 /** Soft canopy: blobs whose normals lean out from the canopy's middle, darker inside and below. */
-function canopy(blobs: Blob[], detail = 1): BufferGeometry {
+function canopy(blobs: Blob[], detail = 1, solid = true): BufferGeometry {
     const centre = new Vector3();
     for (const blob of blobs) centre.add(new Vector3(blob.x, blob.y, blob.z));
     centre.divideScalar(blobs.length);
-    const parts = blobs.map((blob, index) => {
+    const parts = (solid ? blobs : []).map((blob, index) => {
         const sphere = new IcosahedronGeometry(blob.r * 0.82, detail);
         sphere.scale(1, blob.squash ?? 0.82, 1);
         sphere.translate(blob.x, blob.y, blob.z);
@@ -230,9 +230,10 @@ function canopyShape(variant: number): BufferGeometry {
         parts.push(finish(piece, () => 0.85, 0, BARK));
         // A pad of leaves over its tip.
         const pad = randomBlobs(random, 4, 0, 0.55, tree.pad.radius, tree.pad.squash).map((blob) => ({...blob, x: blob.x + end.x, y: blob.y + end.y + tree.pad.lift, z: blob.z + end.z}));
-        parts.push(canopy(pad, 0));
+        // Leaf cards only (graphics pass): the solid low-poly pads read as big dark kites close up.
+        parts.push(canopy(pad, 0, false));
     }
-    parts.push(canopy(randomBlobs(random, 7, tree.crown.y, 1.2, tree.crown.radius, tree.crown.squash), 1));
+    parts.push(canopy(randomBlobs(random, 7, tree.crown.y, 1.2, tree.crown.radius, tree.crown.squash), 1, false));
     return mergeGeometries(parts)!;
 }
 
