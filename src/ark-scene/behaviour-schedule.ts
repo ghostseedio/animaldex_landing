@@ -35,9 +35,12 @@ import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
+import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
+/** A night watch stands this many slots (sleep lane: about five minutes). */
+export const NIGHT_WATCH_SLOTS = 4;
 
 /** Each animal's slots are shifted by its own offset (from its id), so a thousand animals don't all change plans in the same frame. */
 export function slotOffset(id: string): number {
@@ -477,12 +480,22 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
     if (animal.roost) return animal.roost;
     const group = animal.group;
-    if (group && !FLOCKING.has(profile.social)) {
-        // The group sleeps together: round its leader's roost, each a little apart.
+    // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
+    const together = sleepStyle(profile.slug).social !== "apart";
+    if (group && (!FLOCKING.has(profile.social) || together)) {
+        // The group sleeps together: round its leader's roost, each a little apart; huddled, piled or a young mammal
+        // against the adult, touching (`sleepSpacing`); on a raised perch in a row along it or a bat's cluster.
         const lead = roostOf(world, group.profile, group.leader);
+        if (lead.point && raised(world, lead) && together) {
+            const tag = lead.point.split(":")[0] as AttachTag;
+            const at = world.sampler.attachPoints(tag, {x: lead.x, z: lead.z, r: 0.3}).find((p) => p.id === lead.point);
+            const off = roostOffset(profile.slug, group.rank, Math.max(animal.length, group.leader.length), at?.yaw ?? 0);
+            if (off) return {...lead, x: lead.x + off.dx, y: lead.y + off.dy, z: lead.z + off.dz};
+        }
         if (!lead.point || !raised(world, lead)) {
             const angle = group.rank * 2.39996;
-            const d = Math.max(animal.length, group.leader.length) * (0.9 + 0.35 * Math.sqrt(group.rank));
+            const close = sleepSpacing(profile.slug, Boolean(animal.young));
+            const d = Math.max(animal.length, group.leader.length) * (close < 1 ? (animal.young && !together ? 0.5 : 0.55 * Math.sqrt(group.rank)) : 0.9 + 0.35 * Math.sqrt(group.rank));
             const x = lead.x + Math.cos(angle) * d;
             const z = lead.z + Math.sin(angle) * d;
             if (wet(world, lead)) return {...waterSpot(world, profile, animal, x, z, () => 0.5)};
@@ -676,7 +689,10 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const watchTurn = size >= 3 ? (slot + hashString(group!.leader.id)) % size === group!.rank : false;
     if (!awake) {
         const roost = roostOf(world, profile, animal);
-        if (watchTurn && !FLOCKING.has(profile.social) && !wasAwake) return {doing: "watch", to: roost, mode: "stay", stay: stayBeats("watch", random, null)};
+        // The night watch (sleep lane): always one of the members (never the leader's turn with nobody up), standing a
+        // few slots at a time (about five minutes), so the herd is never all asleep and the guard changes now and then.
+        const nightWatch = size >= 3 ? ((Math.floor(slot / NIGHT_WATCH_SLOTS) + hashString(group!.leader.id)) % (size - 1)) + 1 === group!.rank : false;
+        if (nightWatch && !FLOCKING.has(profile.social) && !wasAwake) return {doing: "watch", to: roost, mode: "stay", stay: stayBeats("watch", random, null)};
         const travel: TripMode = aquatic(profile) ? "water" : flyer && raised(world, roost) ? "air" : profile.surface && roost.ny < 0.7 ? "surface" : "ground";
         return {doing: wasAwake ? "to_roost" : "sleep", to: roost, mode: wasAwake ? travel : "stay", stay: []};
     }

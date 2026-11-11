@@ -69,7 +69,7 @@ const CLIPS: Record<string, Clip> = {
                 ...(bird ? [{at: 32, label: "superb starlings tucked on a branch", view: (u: number) => view(bird.p.x, bird.p.y + 0.1, bird.p.z, 2.6, 1.3, 0.3 + 0.3 * u)}] : []),
                 ...(gnu ? [{at: 40, label: "the camera walks at a sleeping wildebeest: it wakes with a start", view: (u: number) => view(gnu.p.x, gnu.p.y + 0.8, gnu.p.z, Math.max(16 - 13 * Math.min(u * 1.6, 1), 3), 1.12, 0.9)}] : [])
             ];
-            const doings = [...zebras, ...gnus, ...lions, ...birds].map((x) => `${x.a.slug.split("-")[0]}:${x.doing}`).join(" ");
+            const doings = [...zebras, ...gnus, ...lions, ...birds].map((x) => `${x.a.slug.split("-")[0]}:${x.doing}:${x.a.animal.group ? `${x.a.animal.group.rank}/${x.a.animal.group.size}` : "-"}`).join(" ");
             return {start: ctx.date0, seconds: 56, fps: 10, shots, note: doings};
         }
     },

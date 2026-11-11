@@ -23,6 +23,11 @@ import {
     stepSleep
 } from "@/ark-scene/sleep";
 import {sleepClip, type SleepClipRig} from "@/ark-scene/rig-player";
+import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
+import {NIGHT_WATCH_SLOTS, SLOT_SECONDS, roostOf, scheduleWorld, slotStart, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {sceneSampler} from "@/ark-scene/world-sampler";
+import {placeAnimals} from "@/ark-scene/placement";
+import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 
 // MARK: The styles (stored data)
 
@@ -396,4 +401,63 @@ test("the camera never wakes the animal the viewer is looking at, nor with a cut
     const other = animal("deer2", "red-deer", 0, 0, {asleep: true, shared: {doing: "sleep"}});
     const after = run(cut, [other], 6, {world: (t) => ({camera: {x: 0, y: 2, z: t < 1001 ? -40 : -3}})});
     assert.ok(after.every((f) => !f.out.get("deer2")?.woke));
+});
+
+// MARK: The schedule: the night watch and sleeping together
+
+
+const schedWorld = scheduleWorld(sceneSampler());
+const fixturePlaces = placeAnimals(decodeArkSnapshot(fixtureV2)!.animals);
+const grassHome = (() => {
+    const a = fixtureV2.animals.find((x) => x.zone === "grassland")!;
+    const p = fixturePlaces.get(a.id)!;
+    return {x: p.x, y: p.ground, z: p.z};
+})();
+function herd(slug: string, n: number, length: number, young: number[] = []): ScheduleAnimal[] {
+    const profile = behaviourProfile(slug);
+    const leader: ScheduleAnimal = {id: `${slug}-lead`, zone: "grassland", home: {...grassHome}, length};
+    const list = [leader];
+    for (let r = 1; r < n; r++) list.push({id: `${slug}-${r}`, zone: "grassland", home: {...grassHome}, length: young.includes(r) ? length * 0.5 : length, young: young.includes(r), group: {leader, profile, activity: "diurnal", rank: r, size: n}});
+    return list;
+}
+
+test("a herd keeps one of its members on watch all night, a few slots each, the guard changing now and then", () => {
+    const profile = behaviourProfile("grevys-zebra");
+    const zebras = herd("grevys-zebra", 6, 2.4);
+    const night = Date.UTC(2026, 10, 12, 0, 0) / 1000;
+    const hoursAt = () => 1.5;
+    let changes = 0;
+    let last: string | null = null;
+    const runs: number[] = [];
+    let run = 0;
+    for (let k = 1; k < 40; k++) {
+        const watching = zebras.filter((z) => tripAt(schedWorld, profile, z, slotStart(z, Math.floor(night / SLOT_SECONDS) + k) + 1, hoursAt, "diurnal").doing === "watch");
+        assert.equal(watching.length, 1, `slot ${k}: ${watching.length} on watch`);
+        assert.ok(watching[0].group, "never the leader's turn with nobody up");
+        if (last !== null && watching[0].id !== last) {
+            changes++;
+            runs.push(run);
+            run = 0;
+        }
+        run++;
+        last = watching[0].id;
+    }
+    assert.ok(changes >= 4, `${changes} changes of the guard`);
+    assert.ok(runs.every((r) => r <= NIGHT_WATCH_SLOTS + 1), `watches ${runs.join(",")} slots`);
+});
+
+test("piled pigs and a young mammal sleep touching; a zebra herd sleeps a little apart", () => {
+    const spread = (slug: string, young: number[] = []) => {
+        const profile = behaviourProfile(slug);
+        const list = herd(slug, 6, 1.4, young);
+        const lead = roostOf(schedWorld, profile, list[0]);
+        return list.slice(1).map((a) => ({young: Boolean(a.young), d: Math.hypot(roostOf(schedWorld, profile, a).x - lead.x, roostOf(schedWorld, profile, a).z - lead.z) / 1.4}));
+    };
+    const pigs = spread("domestic-pig");
+    const zebras = spread("grevys-zebra");
+    const mean = (l: Array<{d: number}>) => l.reduce((s, x) => s + x.d, 0) / l.length;
+    assert.ok(mean(pigs) < mean(zebras) * 0.7, `pigs ${mean(pigs).toFixed(2)} vs zebras ${mean(zebras).toFixed(2)} body lengths`);
+    // A foal sleeps against the adult its group keeps to.
+    const foal = spread("grevys-zebra", [3]).find((x) => x.young)!;
+    assert.ok(foal.d < 0.8, `foal ${foal.d.toFixed(2)} body lengths from the adult`);
 });
