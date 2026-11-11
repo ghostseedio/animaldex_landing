@@ -400,10 +400,12 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
         // (The plots are in the version: a new plot rebuilds the walk grid.)
         const plotKey = plots ? `:${plots.map((p) => `${p.id}@${p.x.toFixed(2)},${p.z.toFixed(2)},${p.rotation.toFixed(3)}`).join(";")}` : "";
-        // A building keeps walkers 0.8 m off its walls and a fence 0.9 m off its line, so the walk grid's 2 m cells (whose
-        // centres are tested) never cut a corner nor step between a fence's posts; the gaps of gates stay what they are.
+        // A building keeps walkers ROCK_MARGIN off its walls (a turned plot's corner is up to half a cell's diagonal from
+        // the nearest cell's centre: with 0.8 m two corners of the grown hamlet's houses sat on walkable cells) and a fence
+        // 0.9 m off its line, so the walk grid's 2 m cells (whose centres are tested) never cut a corner nor step between a
+        // fence's posts; the gaps of gates stay what they are.
         const solidAt = (x: number, z: number, clearance: number) => {
-            const margin = 0.8 + clearance;
+            const margin = ROCK_MARGIN + clearance;
             for (const solid of solids) {
                 const local = solid.frame.toLocal(x, z);
                 if (local.x > solid.x0 - margin && local.x < solid.x1 + margin && local.z > solid.z0 - margin && local.z < solid.z1 + margin) return true;
