@@ -11,7 +11,10 @@ import {
     FLOAT_SINK,
     FLOOR_CLEAR,
     fitInWater,
+    heldOffWater,
+    heldTable,
     safeLoopRadius,
+    schoolOffset,
     speciesDepth,
     SURFACE_CLEAR,
     swimRange,
@@ -210,4 +213,60 @@ test("fresh-water species are never in the sea, salt-water species never in the 
         checked++;
     }
     assert.ok(checked > slugs.length * zones.length * 0.9, `${checked} checked`);
+});
+
+test("a school swims level, side by side, at least 1.3 body lengths apart, never stacked", () => {
+    for (const length of [0.3, 1.68, 3.5, 9]) {
+        for (const seed of [0, 0.13, 0.5, 0.77, 0.999]) {
+            const members = Array.from({length: 12}, (_, rank) => schoolOffset(rank, seed, length));
+            for (let i = 0; i < members.length; i++) {
+                for (let j = i + 1; j < members.length; j++) {
+                    // Across the line of travel they are a row apart: a body is longer than it is wide, so they never touch.
+                    assert.ok(Math.abs(members[i].side - members[j].side) >= 1.3 * length - 1e-9, `ranks ${i} and ${j} at ${length} m`);
+                }
+            }
+        }
+    }
+    // One depth for the school: the first one's seed, so over the same water they are level.
+    const tuna = table["bluefin-tuna"];
+    const seed = depthSeed("lead");
+    for (const clock of [0, 1000, 50000]) {
+        const lead = fitInWater(waterSpec(tuna, -10, seed, clock, 0), 0.5);
+        const other = fitInWater(waterSpec(tuna, -10, seed, clock, 0), 0.5);
+        assert.equal(lead.middle, other.middle);
+    }
+});
+
+test("a school's, a reef cluster's and a herd's places are at least a body length apart", () => {
+    for (const [slug, zone] of [["bluefin-tuna", "open_ocean"], ["humpback-whale", "open_ocean"], ["blue-tang", "coral_reef"], ["green-sea-turtle", "coral_reef"], ["koi", "farm_garden"], ["rainbow-trout", "river_lake"], ["mallard", "river_lake"]] as const) {
+        const animals = Array.from({length: 12}, (_, rank) => animalOf(slug, zone, 900000 + rank, 7, rank));
+        const places = placeAnimals(animals);
+        const length = arkBody(animals[0]).display;
+        for (let i = 0; i < animals.length; i++) {
+            for (let j = i + 1; j < animals.length; j++) {
+                const p = places.get(animals[i].id)!;
+                const q = places.get(animals[j].id)!;
+                const d = Math.hypot(p.x - q.x, p.z - q.z);
+                assert.ok(d >= length * 0.999, `${slug} ${i} and ${j} ${d.toFixed(2)} m apart (length ${length.toFixed(2)})`);
+            }
+        }
+    }
+});
+
+test("the hold list keeps a frigatebird and the misfiled butterfly off the water, with a reason", () => {
+    const held = heldTable();
+    assert.ok(held["magnificent-frigatebird"], "frigatebird held");
+    assert.match(held["striped-albatross"] ?? "", /butterfly/);
+    for (const slug of Object.keys(held)) {
+        assert.equal(speciesDepth(slug, "open_ocean"), null, `${slug} has no band`);
+        assert.ok(!table[slug], `${slug} not in the bands`);
+        assert.ok(heldOffWater(slug)!.reason.length > 10);
+        // In the air, awake or asleep, reduced motion or not: never down on the sea.
+        for (const elevation of [-30, 40]) {
+            for (const reducedMotion of [false, true]) {
+                const state = behaviourState({activity: "diurnal", elevation, flyer: true, aloftAlways: true, reducedMotion});
+                assert.ok(state.airborne, `${slug} at ${elevation}° (reduced ${reducedMotion})`);
+            }
+        }
+    }
 });
