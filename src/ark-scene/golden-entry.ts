@@ -14,6 +14,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import * as arkSampler from "@/ark-scene/sampler";
 import {attachPointAt, attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
@@ -443,6 +444,31 @@ async function mountGolden(el: HTMLElement) {
     return {
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
+        /**
+         * The attach points' build as the scene's mount pays for it (the decor already built): the synchronous build's
+         * one long task, and (where the sampler offers it) the sliced build's longest slice. Each from a fresh start.
+         */
+        attachTiming: async () => {
+            const sampler = arkSampler as unknown as {resetAttachPoints: () => void; allAttachPoints: () => unknown[]; prepareAttachPoints?: (sliceMs?: number) => Promise<unknown[]>; attachBuildSlices?: () => number[]};
+            const runs: number[] = [];
+            for (let i = 0; i < 3; i++) {
+                sampler.resetAttachPoints();
+                await nextFrame();
+                const started = performance.now();
+                sampler.allAttachPoints();
+                runs.push(Math.round((performance.now() - started) * 10) / 10);
+            }
+            let sliced: {total: number; longest: number; slices: number} | null = null;
+            if (sampler.prepareAttachPoints && sampler.attachBuildSlices) {
+                sampler.resetAttachPoints();
+                await nextFrame();
+                const started = performance.now();
+                await sampler.prepareAttachPoints(6);
+                const slices = sampler.attachBuildSlices();
+                sliced = {total: Math.round((performance.now() - started) * 10) / 10, longest: Math.round(Math.max(...slices) * 10) / 10, slices: slices.length};
+            }
+            return {syncMs: runs, points: sampler.allAttachPoints().length, sliced};
+        },
         /** Every species' models in, before the first shot (so nothing pops in). */
         prepare: async () => {
             await settle(200);
