@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} a fedélzeten",
             "closed": "Kártya bezárva",
             "motionReduced": "A mozgás csökkentve: ami történt, itt olvasható lejátszás helyett.",
-            "skipToList": "Ugrás a fedélzeti listára"
+            "skipToList": "Ugrás a fedélzeti listára",
+            "resetView": "Vissza az egész Arkhoz"
         },
         "person": {
             "metaTitle": "{name} állatai az Arkon",

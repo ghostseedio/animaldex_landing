@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} om bord",
             "closed": "Kort lukket",
             "motionReduced": "Bevægelse er reduceret: det, der skete, fortælles her i stedet for at blive afspillet.",
-            "skipToList": "Spring til hvem der er om bord"
+            "skipToList": "Spring til hvem der er om bord",
+            "resetView": "Tilbage til hele Ark"
         },
         "person": {
             "metaTitle": "{name}s dyr i Ark",

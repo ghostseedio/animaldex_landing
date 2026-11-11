@@ -300,8 +300,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         onHerd: setHerd,
                         herdBadge: (count) => fillArkWords(words.herd.badge, {count: count.toLocaleString(locale)}),
                         canvasLabel: words.a11y.scene,
-                        // Runtime: the reset button's name (until the Ark words carry it in every language, the scene's English).
-                        resetLabel: (words.a11y as {resetView?: string}).resetView,
+                        resetLabel: words.a11y.resetView,
                         lite: storedLite,
                         onTier: (_tier, lite) => setLiteOn(lite),
                         mineOnly: false,

@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: на борту — {count}",
             "closed": "Картку закрито",
             "motionReduced": "Рух зменшено: події описано тут, а не показано.",
-            "skipToList": "Перейти до списку тих, хто на борту"
+            "skipToList": "Перейти до списку тих, хто на борту",
+            "resetView": "Повернутися до всього Ark"
         },
         "person": {
             "metaTitle": "{name}: тварини в Ark",
