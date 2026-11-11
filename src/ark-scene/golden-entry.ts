@@ -16,13 +16,14 @@ import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
 import {attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
-import {Box3, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
+import {Box3, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, SphereGeometry, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {kelpStandSpot, reefCloseupSpot} from "@/ark-scene/reef";
-import {pinSeaClock} from "@/ark-scene/fish-schools";
+import {fishSchoolAt, fishSchools, pinSeaClock, type FishChaser} from "@/ark-scene/fish-schools";
+import {setFishChasers} from "@/ark-scene/fish-render";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
@@ -229,6 +230,7 @@ async function mountGolden(el: HTMLElement) {
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: {current: Object3D | null} = {current: null};
+    let chaserBody: ThreeMesh | null = null;
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
@@ -324,6 +326,38 @@ async function mountGolden(el: HTMLElement) {
             };
         },
         stats: () => handle.stats(),
+        /** Clips (development): hold the camera on this view. */
+        setView: (view: ArkCameraView) => handle.setView(view),
+        /** Clips (development): run the sea's clock from this epoch second. */
+        pinSea: (epochSeconds: number) => pinSeaClock(epochSeconds),
+        /** Clips: a school now (by id), at the sea's clock. */
+        school: (id: string) => {
+            const school = fishSchools().find((each) => each.id === id);
+            return school ? fishSchoolAt(school) : null;
+        },
+        /**
+         * Clips: one chaser the fish split round (`setFishChasers`), drawn as a plain dark body `length` long heading
+         * `yaw`; null clears it. Stands in for the recipes lane's hunters.
+         */
+        setChaser: (chaser: (FishChaser & {length: number; yaw: number}) | null) => {
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (!chaser) {
+                setFishChasers(null);
+                if (chaserBody && debug) debug.scene.remove(chaserBody);
+                return;
+            }
+            const list: FishChaser[] = [{x: chaser.x, y: chaser.y, z: chaser.z, r: chaser.r}];
+            setFishChasers(() => list);
+            if (!chaserBody) {
+                const body = new SphereGeometry(0.5, 18, 10);
+                body.scale(0.32, 0.3, 1);
+                chaserBody = new ThreeMesh(body, new MeshStandardMaterial({color: "#4a4844", roughness: 0.45}));
+            }
+            chaserBody.scale.setScalar(chaser.length);
+            chaserBody.position.set(chaser.x, chaser.y, chaser.z);
+            chaserBody.rotation.set(0, chaser.yaw, 0);
+            if (debug && !chaserBody.parent) debug.scene.add(chaserBody);
+        },
         /**
          * The flythrough (graphics pass): `seconds` of flight through the golden places in turn, eased, the hour going
          * from morning through dusk to night, in real time. Returns the frame intervals over the whole flight.

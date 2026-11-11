@@ -89,4 +89,15 @@ Decoration only, NOT catalogue animals: never counted, never selectable, never i
 - `schoolFish(school, epochSeconds?) → Vec3[]`: every fish's position (for a predator picking one to lunge at).
 - `seaEpochSeconds()`: the sea's clock (epoch seconds; golden shots pin it with `pinSeaClock`). Pass your own epoch to ask about any moment: the same epoch always gives the same answer.
 
-Bait schools mill on seeded 50 s slots of the clock (about a third of the time for the reef-edge and open-water schools). Behaviour lanes that want a predator to chase a bait ball, or a bird or seal to fish, read `fishSchoolsNear` and steer their animal to `centre`; the fish themselves do not react (nothing is caught, nothing changes in the ecology).
+Bait schools mill on seeded 50 s slots of the clock (about a third of the time for the reef-edge and open-water schools). Behaviour lanes that want a predator to chase a bait ball, or a bird or seal to fish, read `fishSchoolsNear` and steer their animal to `centre`. Nothing is caught and nothing changes in the ecology.
+
+#### Chasers: fish split round a hunter (optional input)
+
+- `setFishChasers(() => chasers)` (`src/ark-scene/fish-render.ts`) takes a function, read once a frame, that returns `Array<{x, y, z, r}>`: each hunter's position and reach in metres. The recipes lane's `recipeScene.chasers` has exactly this shape: `r = max(length × 2.5, 0.8)`, and the array is rebuilt each frame, so pass the function, not the array. `null` clears it. Typical hook, one line where the recipe scene is built: `setFishChasers(() => recipeScene.chasers)`.
+- The fish near a chaser split round it, flee and rejoin behind it. This uses `fleeFrom(p, chasers, offset, flee)` in `fish-schools.ts`, which is pure:
+  - Each fish inside a chaser's reach (`r + 0.6` m) is pushed straight out from it, by half the reach at the middle down to nothing at the edge: `(1 − d/reach)²`. The push up or down is 0.6 of the push sideways.
+  - The school opens a hole of half the reach round the hunter. It never folds over itself: a fish nearer the hunter always stays nearer.
+  - It closes again behind the hunter as it passes.
+  - Each fish is also turned away from the hunter: a flee velocity is added to its heading, and its tail beats harder.
+- The shared closed-form motion stays the base, and the flight is an offset from it. It depends only on the chaser positions, so everyone who sees the same chasers sees the same flight. It applies only to the schools drawn near the camera; far schools, and every school when there are no chasers, are exactly the shared motion.
+

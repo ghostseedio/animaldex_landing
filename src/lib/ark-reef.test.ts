@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {CORAL_MIN_DEPTH, REEF_KINDS, reefCloseupSpot, reefGrowth, reefLandmarks, seaBedAt} from "@/ark-scene/reef";
-import {FISH_KINDS, FISH_LOOKS, SEA_CLOCK_PERIOD, fishPosition, fishSchoolAt, fishSchools, fishSchoolsNear, schoolFish, schoolTime, seaClockSeconds} from "@/ark-scene/fish-schools";
+import {FISH_KINDS, FISH_LOOKS, SEA_CLOCK_PERIOD, fishPosition, fishSchoolAt, fishSchools, fishSchoolsNear, fleeFrom, schoolFish, schoolTime, seaClockSeconds, type FishChaser} from "@/ark-scene/fish-schools";
 import {ZONE_SITES, heightAt} from "@/ark-scene/world";
 
 const EPOCH = 1_794_355_200; // 2026-11-11 00:00 UTC
@@ -90,4 +90,44 @@ test("fish: bait schools ball up some of the time, and the shaders' sea clock wr
     }
     assert.equal(seaClockSeconds(EPOCH), EPOCH % SEA_CLOCK_PERIOD);
     assert.ok(seaClockSeconds(-1) > 0);
+});
+
+test("fish: chasers split a school round them, it flees and rejoins behind (closed form, never folding over)", () => {
+    const flee = (p: {x: number; y: number; z: number}, chasers: FishChaser[]) => {
+        const offset = {x: 0, y: 0, z: 0};
+        const velocity = {x: 0, y: 0, z: 0};
+        const fright = fleeFrom(p, chasers, offset, velocity);
+        return {at: {x: p.x + offset.x, y: p.y + offset.y, z: p.z + offset.z}, offset, velocity, fright};
+    };
+    const seal: FishChaser = {x: 0, y: -3, z: 0, r: 4};
+    const reach = seal.r + 0.6;
+    // No chasers, or out of reach: the shared motion untouched.
+    assert.deepEqual(flee({x: 1, y: -3, z: 0}, []).offset, {x: 0, y: 0, z: 0});
+    assert.equal(flee({x: reach + 0.01, y: -3, z: 0}, [seal]).fright, 0);
+    // Along a ray out from the seal: pushed away, a hole of half the reach, the order kept (no fish passes another).
+    let last = -Infinity;
+    for (let d = 0.01; d < reach; d += 0.05) {
+        const moved = flee({x: d, y: -3, z: 0}, [seal]);
+        assert.ok(moved.at.x >= d, `pushed away at ${d.toFixed(2)}`);
+        assert.ok(moved.at.x >= 0.5 * reach - 0.05, `outside the hole at ${d.toFixed(2)}`);
+        assert.ok(moved.at.x >= last - 1e-9, `order kept at ${d.toFixed(2)}`);
+        assert.ok(moved.velocity.x > 0, "points away");
+        last = moved.at.x;
+    }
+    // Smooth at the edge of its reach (nothing jumps as a hunter comes into range).
+    assert.ok(flee({x: reach - 0.01, y: -3, z: 0}, [seal]).offset.x < 0.001);
+    // Rejoin: as the seal swims on through and away, the fish's offset falls back to nothing.
+    const fish = {x: 0.5, y: -3, z: 0.3};
+    const offsets: number[] = [];
+    for (let k = 0; k <= 40; k++) {
+        const passing: FishChaser = {x: -8 + k * 0.5, y: -3, z: 0, r: 4};
+        const o = flee(fish, [passing]).offset;
+        offsets.push(Math.hypot(o.x, o.y, o.z));
+    }
+    assert.equal(offsets[0], 0);
+    assert.ok(Math.max(...offsets) > 1.5, "split wide as it passes");
+    assert.equal(offsets[offsets.length - 1], 0, "back in its place behind");
+    for (let k = 1; k < offsets.length; k++) assert.ok(Math.abs(offsets[k] - offsets[k - 1]) < 0.6, "no jump frame to frame");
+    // Deterministic.
+    assert.deepEqual(flee({x: 1, y: -2.5, z: 0.4}, [seal]), flee({x: 1, y: -2.5, z: 0.4}, [seal]));
 });
