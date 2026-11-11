@@ -287,10 +287,18 @@ function roundIt(want: number, x: number, z: number, ahead: number, ok: (x: numb
     return want;
 }
 
-/** Whether the straight way between two points stays clear (every quarter metre). */
-function lineClear(ax: number, az: number, bx: number, bz: number, ok: (x: number, z: number) => boolean): boolean {
-    const n = Math.min(Math.max(Math.ceil(Math.hypot(bx - ax, bz - az) / 0.25), 1), 80);
-    for (let i = 1; i <= n; i++) if (!ok(ax + ((bx - ax) * i) / n, az + ((bz - az) * i) / n)) return false;
+/**
+ * Whether the straight way between two points stays clear (every quarter metre), short of the far end's last
+ * `spare` metres (the prey's own spot may be beside a shrub or a rock: the lunge stops short of it anyway).
+ */
+function lineClear(ax: number, az: number, bx: number, bz: number, ok: (x: number, z: number) => boolean, spare = 0): boolean {
+    const d = Math.hypot(bx - ax, bz - az);
+    const n = Math.min(Math.max(Math.ceil(d / 0.25), 1), 80);
+    const last = d > 1e-6 ? Math.max(1 - spare / d, 0) : 0;
+    for (let i = 1; i <= n; i++) {
+        const k = (i / n) * last;
+        if (!ok(ax + (bx - ax) * k, az + (bz - az) * k)) return false;
+    }
     return true;
 }
 
@@ -441,7 +449,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
                         puffs.push({x: p.x, y: ground(p.x, p.z), z: p.z, size: lp * 0.35, kind: "dust"});
                     }
                     // Near enough (or it tires of it), with nothing between: the lunge.
-                    if ((gap - mouth <= lq * 0.35 + lp * 0.25 || since > 6.5) && lineClear(p.x, p.z, q.x, q.z, (x, z) => ok(x, z, predWater))) tLunge = t;
+                    if ((gap - mouth <= lq * 0.35 + lp * 0.25 || since > 6.5) && lineClear(p.x, p.z, q.x, q.z, (x, z) => ok(x, z, predWater), mouth + lq * 0.5)) tLunge = t;
                 }
                 if (tFlee < 0 && t >= tLaunch + react && flee !== "still") {
                     tFlee = t;
@@ -516,10 +524,11 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
         const preyY = flee === "fly" && tc < 0 ? q.y : flee === "fly" ? Math.max(q.y - (t - tc) * 3, yOf(prey, q.x, q.z, false)) : yOf(prey, q.x, q.z, preyWater);
         prq.push({x: q.x, z: q.z, y: preyY - (tc >= 0 ? prey.height * 0.25 * preyDim : 0), yaw: q.yaw, v: q.v, state: preyState, pitch: preyPitch, dim: preyDim, scale: 1 - 0.85 * preyDim, hidden: tc >= 0 && t >= tc + 0.55});
         if (tc >= 0 && t >= tc + 1.4) break;
-        if (t > maxT) {
-            // (Never: the lunge comes at 6.5 s of sprinting at the latest.)
-            tc = t;
-        }
+        // Never let it run on: past `maxT` (its way to the prey blocked all along, or a hunter whose clip caps its sprint
+        // below its prey's pace) it lunges whatever is between, and the catch comes at once after that. (Without the
+        // `tc < 0` the loop reset the catch every step and never ended.)
+        if (t > maxT && tLunge < 0) tLunge = t + DT;
+        if (t > maxT + 1 && tc < 0) tc = t;
     }
     if (tc >= 0) puffs.push({x: lungeTo.x, y: groundAt(lungeTo.x, lungeTo.z), z: lungeTo.z, size: (lp + lq) * 0.6, kind: predWater ? "bubble" : "dust"});
     // A hopper's bounds: arcs over the ground as it goes.

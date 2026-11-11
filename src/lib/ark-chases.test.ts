@@ -234,6 +234,15 @@ test("a chase goes round what is in its way: neither crosses a wall, nor leaves 
     for (let t = 0; t <= swim.seconds; t += 1 / 60) assert.ok(water(swim.prey(t).x, swim.prey(t).z), "the fish stays in the water");
 });
 
+test("a chase always ends: a hunter that cannot reach its prey (a wall all round it, a crawling sprint) still catches it, in bounded time", () => {
+    // (The first scene run of a lion's chase hit the time limit and never ended: the catch was reset every step.)
+    const walled = mealStage("glide", body(-12, 0, 1.8, 1, 70), body(0, 0, 1.6, 1.2, 70), {seed: "walled", flee: "run", clear: (x) => x < -11 || x > -1});
+    assert.ok(walled.catchAt! > 0 && walled.seconds < 20, `walled: catch ${walled.catchAt}, ${walled.seconds} s`);
+    const crawl = mealStage("glide", {...body(-12, 0, 1.8, 1, 70), gait: 0.01}, body(0, 0, 1.6, 1.2, 70), {seed: "crawl", flee: "run"});
+    assert.ok(crawl.catchAt! > 0 && crawl.seconds < 20, `crawl: catch ${crawl.catchAt}, ${crawl.seconds} s`);
+    assert.ok(crawl.prey(crawl.seconds).hidden && walled.prey(walled.seconds).hidden);
+});
+
 test("the server's positions: the hunter where the scene has it near its waypoint (else the waypoint), the prey where it is in its disc (or the disc's edge nearest it)", () => {
     assert.equal(mealEncounter({kind: "meal"}), null);
     assert.equal(mealEncounter({encounter: {predator: {x: 1}, prey: {x: 0, z: 0, r: 2}}}), null);

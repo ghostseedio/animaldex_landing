@@ -42,7 +42,7 @@ const SPECIES: Record<string, Species> = {
     "plains-zebra": {id: "c77f8bc4-c073-4a77-ad24-788b76fbbbda", name: "Plains Zebra", zone: "grassland", activity: "diurnal", sociality: "group"}
 };
 
-type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null; /** A replay to play from the start (a meal's chase). */ play?: ArkAct[]};
+type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null; /** A replay to play from the start (a meal's chase). */ play?: ArkAct[]; /** Closer than the scene's 4 m (a grasshopper's chase): the view held each frame, the near limit lowered. */ close?: boolean};
 type Clip = {cast: Array<[string, string, number]>; hours: number; date: number; find: (ctx: Context) => Moment | null};
 type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: string; slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null; place: {x: number; z: number}; zone: string}>; micro: Array<{id: string; slug: string; at: {x: number; y: number; z: number}}>; hoursAt: (epoch: number) => number; date: number};
 
@@ -230,21 +230,21 @@ const CLIPS: Record<string, Clip> = {
         find: (ctx) => huntMoment(ctx, "pounce", "leap", (k, ep) => {
             const from = ep.keys[ep.keys.indexOf(k) - 1] ?? k;
             const side = Math.atan2(k.to.x - from.from.x, k.to.z - from.from.z) + Math.PI / 2;
-            return {before: 6, after: 3, step: 1 / 48, view: view((from.from.x * 0.4 + k.to.x * 0.6), k.to.y + 0.25, (from.from.z * 0.4 + k.to.z * 0.6), 3, 1.12, side)};
+            return {before: 6, after: 3, step: 1 / 48, close: true, view: view(from.from.x * 0.35 + k.to.x * 0.65, k.to.y + 0.2, from.from.z * 0.35 + k.to.z * 0.65, 2.1, 1.18, side)};
         })
     },
     heron_strike: {
         cast: [["he", "grey-heron", 2]],
         hours: 9,
         date: Date.UTC(2026, 10, 12, 9) / 1000,
-        find: (ctx) => huntMoment(ctx, "wade_spear", "strike", (k) => ({before: 6, after: 2.5, step: 1 / 30, view: view(k.from.x + Math.sin(k.yaw) * 0.5, Math.max(k.from.y, -0.1) + 0.35, k.from.z + Math.cos(k.yaw) * 0.5, 2.3, 0.95, k.yaw + Math.PI / 2)}))
+        find: (ctx) => huntMoment(ctx, "wade_spear", "strike", (k) => ({before: 6, after: 2.5, step: 1 / 30, close: true, view: view(k.from.x + Math.sin(k.yaw) * 0.55, Math.max(k.from.y, -0.1) + 0.25, k.from.z + Math.cos(k.yaw) * 0.55, 2.2, 0.85, k.yaw + Math.PI / 2)}))
     },
     osprey_dive: {
         cast: [["os", "osprey", 2]],
         hours: 10,
         date: Date.UTC(2026, 10, 12, 10) / 1000,
         // (From the side and a little below the hover, the whole drop in frame: the hover, the stoop, the strike, the climb.)
-        find: (ctx) => huntMoment(ctx, "talon_grab", "dive_feet", (k) => ({before: 4, after: 3.5, step: 1 / 40, view: view((k.from.x + k.to.x) / 2, Math.max(k.from.y * 0.45, 2.5), (k.from.z + k.to.z) / 2, Math.max(k.from.y * 2.2, 14), 1.3, Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2)}))
+        find: (ctx) => huntMoment(ctx, "talon_grab", "dive_feet", (k) => ({before: 4, after: 3.5, step: 1 / 40, close: true, view: view(k.to.x, Math.max(k.from.y * 0.4, 2.5), k.to.z, Math.max(k.from.y * 1.6, 11), 1.3, 0.3)}))
     },
     dolphin_chase: {
         cast: [["dl", "spinner-dolphin", 3]],
@@ -260,8 +260,8 @@ const CLIPS: Record<string, Clip> = {
         cast: [["sw", "barn-swallow", 2]],
         hours: 11,
         date: Date.UTC(2026, 10, 12, 11) / 1000,
-        // (The camera follows the swallow: it sweeps metres a second.)
-        find: (ctx) => huntMoment(ctx, "aerial_hawk", "fly", (k) => ({before: 3, after: 2.5, step: 1 / 60, follow: true, view: view(k.from.x, k.from.y, k.from.z, 4.5, 1.3, Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2)}))
+        // (Slow motion, close to the catch: it sweeps metres a second.)
+        find: (ctx) => huntMoment(ctx, "aerial_hawk", "fly", (k) => ({before: 1.2, after: 1.2, step: 1 / 120, close: true, view: view(k.to.x, k.to.y, k.to.z, 3.2, 1.25, Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2)}))
     },
     meal_chase: {
         cast: [["li", "african-lion", 1], ["ze", "plains-zebra", 4]],
@@ -285,7 +285,7 @@ const CLIPS: Record<string, Clip> = {
 };
 
 /** A hunt's moment: the first of the recipe's catches of this block that comes off (`recipe-hunt.ts` draws its quarry). */
-function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key, ep: Episode) => {before: number; after: number; step: number; view: ArkCameraView; follow?: boolean}): Moment | null {
+function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key, ep: Episode) => {before: number; after: number; step: number; view: ArkCameraView; follow?: boolean; close?: boolean}): Moment | null {
     for (const a of ctx.animals) {
         for (const trip of trips(ctx, a, ctx.date, 30)) {
             if (trip.recipe !== recipe) continue;
@@ -295,7 +295,7 @@ function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key,
             const f = frame(k, ep);
             // (Where its quarry is through the hunt, for the record: `recipe-hunt.ts`.)
             const q = [k.t0 - 2, k.t0, k.t1 - 0.05].map((t) => (poseOnTrip(ctx.world, trip, t) as RecipePose).act?.quarry).map((x) => (x ? `${x.look} ${x.phase} ${x.x.toFixed(2)},${x.y.toFixed(2)},${x.z.toFixed(2)}` : "none"));
-            return {start: k.t0 - f.before, seconds: f.before + (k.t1 - k.t0) + f.after, step: f.step, view: f.view, follow: f.follow ? a.id : null, note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}; quarry ${q.join(" | ")}`};
+            return {start: k.t0 - f.before, seconds: f.before + (k.t1 - k.t0) + f.after, step: f.step, view: f.view, close: f.close, follow: f.follow ? a.id : null, note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}; quarry ${q.join(" | ")}`};
         }
     }
     return null;
@@ -344,6 +344,7 @@ async function main() {
     handle.setClockScale(1, clip.date * 1000);
     const until = realPerfNow() + 120_000;
     while (realPerfNow() < until && (!ready || handle.loading())) await wait(200);
+    console.log(`[clip] loaded ${name} in ${((realPerfNow() - (until - 120_000)) / 1000).toFixed(0)} s`);
     const debug = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string; zone: string; activity: ArkBehaviourProfile["activity"] | null}; place: {x: number; z: number; ground: number; micro?: unknown}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>}}).__arkDebug;
     const ctx: Context = {
         world: scheduleWorld(worldSampler()),
@@ -359,6 +360,7 @@ async function main() {
         date: clip.date
     };
     const moment = clip.find(ctx);
+    console.log(`[clip] moment ${moment ? moment.note : "none"}`);
     const api = {
         moment,
         sexes: ctx.animals.map((a) => `${a.id.slice(-4)} ${sexLook(a.id, a.slug).sex}`),
@@ -371,6 +373,10 @@ async function main() {
             } else {
                 fake.perf += ms - fake.date;
                 fake.date = ms;
+            }
+            if (moment?.close) {
+                (debug as unknown as {controls: {minDistance: number}}).controls.minDistance = 0.8;
+                handle.setView(moment.view);
             }
             await frames(3);
         },
@@ -391,6 +397,7 @@ async function main() {
         // A replay (a meal's chase) begins at the first frame.
         if (moment.play) {
             await api.at(moment.start);
+            console.log("[clip] playing the replay");
             handle.play(moment.play);
         }
     }
