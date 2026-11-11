@@ -14,7 +14,7 @@
  * Pure: no three.js.
  */
 
-import {ZONE_SITES} from "@/ark-scene/world";
+import {sampleGround, smoothstep, ZONE_SITES} from "@/ark-scene/world";
 import {COTTAGE} from "@/ark-scene/micro-decor";
 
 export const CROPS = ["pasture", "tilled", "sprouts", "cabbage", "cereal", "maize"] as const;
@@ -109,19 +109,39 @@ export function fieldAt(x: number, z: number): FieldPoint {
     };
 }
 
-/** The crop growing at a point, or null (grass, a keep-out, or the headland). */
+/** A field's middle in the world (batch 5: a field is grass or crop whole, decided at its middle). */
+export function fieldCentre(cell: [number, number]): {x: number; z: number} {
+    const u = (cell[0] + 0.5 - cell[1] * STAGGER) * FIELD_SIZE.along;
+    const v = (cell[1] + 0.5) * FIELD_SIZE.across;
+    // The grid's axes are a hair off unit length: solve the 2 × 2 system exactly.
+    const det = ALONG.x * ACROSS.z - ALONG.z * ACROSS.x;
+    return {x: (u * ACROSS.z - v * ALONG.z) / det, z: (v * ALONG.x - u * ACROSS.x) / det};
+}
+
+/** The crop growing at a point, or null (grass: a field whose middle is in a keep-out, or the headland). */
 export function cropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop, "pasture">}) | null {
-    for (const out of fieldKeepOuts()) if (Math.hypot(x - out.x, z - out.z) < out.r) return null;
     const field = fieldAt(x, z);
+    const middle = fieldCentre(field.cell);
+    for (const out of fieldKeepOuts()) if (Math.hypot(middle.x - out.x, middle.z - out.z) < out.r) return null;
     if (field.crop === "pasture" || field.edge < HEADLAND) return null;
     return field as FieldPoint & {crop: Exclude<Crop, "pasture">};
+}
+
+/**
+ * Whether a crop stands at a point (batch 5): well inside Home's farm (where the ground paints the rows fully), in a
+ * field that grows one, off its headland. The meadow grass keeps out of these, so it grows on the margins only.
+ */
+export function cropsGrowAt(x: number, z: number): boolean {
+    const s = sampleGround(x, z);
+    if ((s.weights.farm_garden ?? 0) * smoothstep(0.6, 1, s.land) < 0.62) return false;
+    return cropAt(x, z) !== null;
 }
 
 /**
  * A point moved across its field's rows onto the nearest row's middle (where the shader paints the plants), or
  * null when no crop grows there. For the close-up plants: deterministic, so everyone's cabbage is on the same row.
  */
-export function snapToRow(x: number, z: number): {x: number; z: number; crop: Exclude<Crop, "pasture">; cell: [number, number]} | null {
+export function snapToRow(x: number, z: number): {x: number; z: number; crop: Exclude<Crop, "pasture">; cell: [number, number]; edge: number; direction: {x: number; z: number}} | null {
     const field = cropAt(x, z);
     if (!field) return null;
     const spacing = CROP_ROWS[field.crop].spacing;
@@ -133,7 +153,7 @@ export function snapToRow(x: number, z: number): {x: number; z: number; crop: Ex
     const sz = z + across.z * shift;
     const snapped = cropAt(sx, sz);
     if (!snapped || snapped.cell[0] !== field.cell[0] || snapped.cell[1] !== field.cell[1]) return null;
-    return {x: sx, z: sz, crop: field.crop, cell: field.cell};
+    return {x: sx, z: sz, crop: field.crop, cell: field.cell, edge: snapped.edge, direction: field.direction};
 }
 
 /**
@@ -144,7 +164,8 @@ export function snapToRow(x: number, z: number): {x: number; z: number; crop: Ex
  */
 export function fieldsGlsl(): string {
     const outs = fieldKeepOuts();
-    const keep = outs.map((o) => `    if (distance(p, vec2(${o.x.toFixed(3)}, ${o.z.toFixed(3)})) < ${o.r.toFixed(3)}) inside = true;`).join("\n");
+    const keep = outs.map((o) => `    if (distance(middle, vec2(${o.x.toFixed(3)}, ${o.z.toFixed(3)})) < ${o.r.toFixed(3)}) inside = true;`).join("\n");
+    const det = ALONG.x * ACROSS.z - ALONG.z * ACROSS.x;
     const shares = SHARES.map((s) => s.toFixed(4));
     const spacings = CROPS.map((c) => (CROP_ROWS[c].spacing || 1).toFixed(3));
     return `
@@ -172,6 +193,10 @@ int arkField(vec2 p, out float row, out float along, out float edge, out vec2 ce
     row = (rowsAlong ? v : u) / spacing;
     along = rowsAlong ? u : v;
     axis = rowsAlong ? vec2(${ACROSS.x}, ${ACROSS.z}) : vec2(${ALONG.x}, ${ALONG.z});
+    // A field is grass or crop whole, decided at its middle.
+    float mu = (cell.x + 0.5 - cell.y * ${STAGGER}) * ${FIELD_SIZE.along.toFixed(1)};
+    float mv = (cell.y + 0.5) * ${FIELD_SIZE.across.toFixed(1)};
+    vec2 middle = vec2(mu * ${ACROSS.z} - mv * ${ALONG.z}, mv * ${ALONG.x} - mu * ${ACROSS.x}) / ${det.toFixed(6)};
     bool inside = false;
 ${keep}
     return inside ? 0 : crop;

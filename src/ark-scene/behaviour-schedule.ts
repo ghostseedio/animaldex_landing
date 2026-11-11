@@ -29,7 +29,8 @@
 import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
-import type {SlicedBuild} from "@/ark-scene/behaviour-build";
+import {waterLevelAt} from "@/ark-scene/water-level";
+import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
@@ -85,9 +86,11 @@ export type ArkBeat = "walk" | "run" | "fly" | "glide" | "swim" | "enter_water" 
 export type TripMode = "ground" | "air" | "water" | "surface" | "stay";
 type LegMode = TripMode | "enter" | "exit" | "pause" | "shadow";
 
-export type Spot = {x: number; y: number; z: number; /** The surface's normal there (up on the ground). */ nx: number; ny: number; nz: number; point: string | null};
+export type Spot = {x: number; y: number; z: number; /** The surface's normal there (up on the ground). */ nx: number; ny: number; nz: number; point: string | null; /** The way it faces when it is left there (a slot's finish), when known. */ yaw?: number};
 
 export type Leg = {
+    /** A pause: the way it faces (the way it came; a pause from a point to itself has no direction of its own). */
+    yaw?: number;
     mode: LegMode;
     from: Spot;
     to: Spot;
@@ -154,6 +157,8 @@ export type ScheduleAnimal = {
     group?: ScheduleGroup | null;
     /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
     threats?: ScheduleThreat[] | null;
+    /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
+    roost?: Spot | null;
 };
 
 /** A predator as its prey sees it: its own schedule animal, profile and activity. */
@@ -275,10 +280,10 @@ const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
 
 const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     drink_edge: ["water_edge"],
-    bask_rock: ["rock_top"],
+    bask_rock: ["rock_top", "log_top"],
     graze_grass: ["grass"],
     perch_branch: ["branch"],
-    perch_rock: ["rock_top", "post"],
+    perch_rock: ["rock_top", "post", "log_top"],
     dig_soil: ["worm_hole", "burrow_entrance"],
     leaf_litter: ["leaf_litter"],
     flower: ["flower"],
@@ -419,6 +424,13 @@ function groundSpot(world: ScheduleWorld, x: number, z: number): Spot {
     return {x, y: Math.max(world.sampler.heightAt(x, z), 0), z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
+/**
+ * The water's surface where the schedule puts something on it (graphics batch 6, `water-level.ts`): the lake's and the
+ * river's fixed level, the sea's mean (0; the scene's depth bands follow the tide). Read when a trip is planned, not
+ * every frame (it samples the ground).
+ */
+const surfaceAt = (x: number, z: number) => waterLevelAt(x, z, 0);
+
 const raised = (world: ScheduleWorld, p: Spot) => p.y > Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.4;
 const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < 0;
 
@@ -446,8 +458,10 @@ export function maxSlopeOf(animal: ScheduleAnimal): number {
 function waterSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, x: number, z: number, random: () => number): Spot {
     const water = world.nav.nearest(x, z, "swim", Math.max(animal.length * 0.6, 0.4)) ?? world.nav.nearest(x, z, "swim", 0.2, 20) ?? {x, z};
     const floor = world.sampler.heightAt(water.x, water.z);
-    const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? 0 : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(-animal.length * 0.4 - random() * Math.max(-floor - animal.length, 0), -0.2));
-    return {x: water.x, y: Math.min(y, 0), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
+    // (On the surface: the lake's and river's fixed level, the sea's mean: the scene's depth bands follow the tide.)
+    const level = surfaceAt(water.x, water.z);
+    const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? level : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(level - animal.length * 0.4 - random() * Math.max(-floor - animal.length, 0), level - 0.2));
+    return {x: water.x, y: Math.min(y, level), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
 /** A point to go to within a range of a centre: walkable land (or water for a swimmer). */
@@ -463,6 +477,7 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 
 /** Its roost: the same place every night (seeded by its id), from its profile's roost kind; a group's members by their leader's. */
 export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    if (animal.roost) return animal.roost;
     const group = animal.group;
     if (group && !FLOCKING.has(profile.social)) {
         // The group sleeps together: round its leader's roost, each a little apart.
@@ -487,7 +502,7 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
         const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
-        const y = profile.roost === "water" && floats(profile) ? 0 : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max(-floor * 0.5, 0.4), -0.3);
+        const y = profile.roost === "water" && floats(profile) ? surfaceAt(water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max(-floor * 0.5, 0.4), -0.3);
         return {x: water.x, y, z: water.z, nx: 0, ny: 1, nz: 0, point: null};
     }
     return {...groundSpot(world, animal.home.x, animal.home.z)};
@@ -555,7 +570,7 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
                 add("bite", 3 + random() * 5);
                 add("chew", 1.5 + random() * 2.5);
                 if (random() < 0.28) add("scan", 2 + random() * 2.5, {turn: (random() - 0.5) * 1.6});
-                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.35 + random() * 0.45, dz: (random() - 0.5) * 0.4, turn: (random() - 0.5) * 0.9});
+                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.35 + random() * 0.45, dz: (random() - 0.5) * 0.2, turn: (random() - 0.5) * 0.45});
             }
             break;
         case "forage":
@@ -563,7 +578,7 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
             for (let n = 0; n < 16; n++) {
                 add("peck", 1.5 + random() * 3);
                 if (random() < 0.3) add("scan", 1.5 + random() * 2, {turn: (random() - 0.5) * 1.4});
-                if (random() < 0.6) add("step", 1, {dx: 0.4 + random() * 0.8, dz: (random() - 0.5) * 0.8, turn: (random() - 0.5) * 1.4});
+                if (random() < 0.6) add("step", 1, {dx: 0.4 + random() * 0.8, dz: (random() - 0.5) * 0.3, turn: (random() - 0.5) * 0.6});
             }
             break;
         case "drink":
@@ -586,7 +601,8 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
             }
             break;
         case "play":
-            for (let n = 0; n < 18; n++) add("play", 0.9 + random() * 0.8, {dx: 0.6 + random() * 0.9, dz: (random() - 0.5) * 1.4, turn: (random() - 0.5) * 2.4});
+            // Dashes and dodges, not spins (its turns were up to 70 degrees a second: young went round in circles).
+            for (let n = 0; n < 18; n++) add("play", 0.9 + random() * 0.8, {dx: 0.6 + random() * 0.9, dz: (random() - 0.5) * 0.7, turn: (random() - 0.5) * 1.2});
             break;
         case "stalk":
             for (let n = 0; n < 6; n++) {
@@ -670,7 +686,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // Air-breathers come up to breathe every few slots, then go back down.
     if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0) {
         const near = world.nav.nearest(animal.home.x + (random() - 0.5) * 8, animal.home.z + (random() - 0.5) * 8, "swim", 0.6) ?? animal.home;
-        return {doing: "breathe", to: {x: near.x, y: 0, z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
+        return {doing: "breathe", to: {x: near.x, y: surfaceAt(near.x, near.z), z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
     const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
@@ -815,7 +831,9 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const onGround = !raised(world, at) && !wet(world, at);
     for (const beat of beats) {
         if (beat.at > seconds) break;
-        yaw += beat.turn ?? 0;
+        // A scan is a look round (the head and its clip): its body shifts a little and comes back, never turns it round.
+        const glance = beat.beat === "scan" ? (beat.turn ?? 0) * 0.3 : 0;
+        if (beat.beat !== "scan") yaw += beat.turn ?? 0;
         if ((beat.dx || beat.dz) && onGround) {
             const l = Math.max(animal.length, 0.05);
             const nx = x + (Math.sin(yaw) * (beat.dx ?? 0) + Math.cos(yaw) * (beat.dz ?? 0)) * l;
@@ -827,10 +845,10 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
                 z = nz;
             }
         }
-        out.push({at: beat.at, beat: beat.beat, x, z, yaw});
+        out.push({at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance});
     }
     const y = onGround ? Math.max(world.sampler.heightAt(x, z), 0) + (at.y - Math.max(world.sampler.heightAt(at.x, at.z), 0)) : at.y;
-    return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z}};
+    return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z, yaw}};
 }
 
 /** A flock member's place beside its leader this slot, and its leader's trips over the slot. */
@@ -865,17 +883,34 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
  * Its time at its destination, placed in the world: the beats from where it arrives, turned to a seeded heading
  * (so where it ends never depends on the way it came), and where it is when they are done.
  */
-function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent): {beats: StayBeat[]; finish: Spot} | null {
+function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent, activity: ArkBehaviourProfile["activity"] | null | undefined, hoursAt: HoursAt): {beats: StayBeat[]; finish: Spot} | null {
     if (!now.to) return null;
-    const yaw = now.face ?? rng(hashString(`${animal.id}#yaw#${slot}`))() * Math.PI * 2;
+    // It arrives facing the way it came: from its last goal to this one (within about 10 degrees, seeded), so it doesn't
+    // turn round on arriving. (Its last goal, not where its last slot ended, which would chain back through every slot;
+    // with no goal in the last four slots, roughly its way out from home.)
+    const roll = rng(hashString(`${animal.id}#yaw#${slot}`))();
+    const before = lastGoal(world, profile, animal, activity, slot, hoursAt);
+    const from = before && Math.hypot(now.to.x - before.x, now.to.z - before.z) > 0.5 ? before : animal.home;
+    const away = Math.hypot(now.to.x - from.x, now.to.z - from.z);
+    const yaw = now.face ?? (away > 0.5 ? Math.atan2(now.to.x - from.x, now.to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
     return placeStay(world, profile, animal, now.to, yaw, now.stay, Infinity);
+}
+
+/** Where its last slots were going (the nearest of the four before with a goal), or null. Pure in (id, slot). */
+function lastGoal(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Spot | null {
+    for (let back = 1; back <= 4; back++) {
+        const earlier = intent(world, profile, animal, activity, slot - back, hoursAt);
+        if (earlier.follow) return null;
+        if (earlier.to) return earlier.to;
+    }
+    return null;
 }
 
 /** Where a slot ends, worked out the same way by every caller (from its intent alone: never from the route there). */
 function finishOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, depth = 0): Spot {
     const i = intent(world, profile, animal, activity, slot, hoursAt);
     if (i.follow && animal.group) return shadowOf(world, animal, slot, hoursAt).finish;
-    const settled = settle(world, profile, animal, slot, i);
+    const settled = settle(world, profile, animal, slot, i, activity, hoursAt);
     if (settled) return settled.finish;
     if (depth < 6) return finishOf(world, profile, animal, activity, slot - 1, hoursAt, depth + 1);
     return groundSpot(world, animal.home.x, animal.home.z);
@@ -979,7 +1014,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const l1 = pathLength(firstPath);
             const l2 = Math.max(pathLength(secondPath), 0.01);
             legs.push({mode: "ground", from: a, to: midSpot, path: firstPath, length: l1, seconds: l1 / speed, beat});
-            legs.push({mode: "pause", from: midSpot, to: midSpot, path: null, length: 0, seconds: 2 + random() * 4, beat: random() < 0.6 ? "scan" : "pause"});
+            legs.push({mode: "pause", from: midSpot, to: midSpot, path: null, length: 0, seconds: 2 + random() * 4, beat: random() < 0.6 ? "scan" : "pause", yaw: alongPath(firstPath, 1).yaw});
             legs.push({mode: "ground", from: midSpot, to: b, path: secondPath, length: l2, seconds: l2 / speed, beat});
         } else legs.push({mode: "ground", from: a, to: b, path, length, seconds: length / speed, beat});
     };
@@ -1074,7 +1109,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
     if (travel > SLOT_SECONDS * 0.8) for (const leg of legs) leg.seconds *= (SLOT_SECONDS * 0.8) / travel;
     travel = Math.min(travel, SLOT_SECONDS * 0.8);
-    const settled = settle(world, profile, animal, slot, {...now, to}) ?? {beats: [], finish: to};
+    const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt) ?? {beats: [], finish: to};
     // Its beats fitted into the time left (all of them, so it ends where `finishOf` says); a shake first after a swim.
     const left = SLOT_SECONDS - travel;
     // The last beat starts at least 3 s before the slot ends, so a last step is finished by then.
@@ -1163,15 +1198,16 @@ function alongRoute(route: NavPoint[], u: number): {x: number; z: number; yaw: n
  */
 function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Trip["shadow"]>, epochSeconds: number, ease: number): {x: number; y: number; z: number; yaw: number} {
     const phase = (shadow.dx * 7.3 + shadow.dz * 3.1) % (Math.PI * 2);
-    const breathe = 1 + ease * (0.18 * Math.sin(epochSeconds * 0.35 + phase) + 0.08 * Math.sin(epochSeconds * 0.9 + phase * 2));
+    // (Slowly and a little: a quick in-and-out round a resting leader read as swimming in circles.)
+    const breathe = 1 + ease * 0.08 * Math.sin(epochSeconds * 0.11 + phase);
     const inWater = at.y < -0.01;
-    const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.25 * Math.sin(epochSeconds * 0.5 + phase)) : at.y;
+    const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.15 * Math.sin(epochSeconds * 0.15 + phase)) : at.y;
     const x = at.x + shadow.dx * breathe;
     const z = at.z + shadow.dz * breathe;
     const floor = world.sampler.heightAt(x, z);
     const ground = at.aloft ? -Infinity : inWater ? floor + 0.2 : Math.max(floor, 0);
     const ceiling = inWater ? -0.1 : Infinity;
-    return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.12 * Math.sin(epochSeconds * 0.4 + phase)};
+    return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.08 * Math.sin(epochSeconds * 0.15 + phase)};
 }
 
 function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSeconds: number): TripPose {
@@ -1181,7 +1217,14 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
     switch (leg.mode) {
         case "ground":
         case "water": {
-            const at = alongPath(leg.path ?? [from, to], u);
+            const route = leg.path ?? [from, to];
+            const at = alongPath(route, u);
+            // It faces a point a metre and a half on along its way: a corner is turned through, not snapped.
+            const total = pathLength(route);
+            if (total > 0.01 && u < 1) {
+                const ahead = alongPath(route, Math.min(u + 1.5 / total, 1), total);
+                if (Math.hypot(ahead.x - at.x, ahead.z - at.z) > 0.05) at.yaw = Math.atan2(ahead.x - at.x, ahead.z - at.z);
+            }
             const ground = world.sampler.heightAt(at.x, at.z);
             const level = (p: Spot) => {
                 const h = world.sampler.heightAt(p.x, p.z);
@@ -1236,7 +1279,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
         }
         case "pause":
         default:
-            return {x: from.x, y: from.y, z: from.z, yaw: Math.atan2(to.x - from.x, to.z - from.z) || 0, moving: false, aloft: false, ...up, beat: leg.beat};
+            return {x: from.x, y: from.y, z: from.z, yaw: leg.yaw ?? (Math.atan2(to.x - from.x, to.z - from.z) || 0), moving: false, aloft: false, ...up, beat: leg.beat};
     }
 }
 
@@ -1278,7 +1321,18 @@ export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: n
     if (into < trip.arrive - trip.start) {
         let t = Math.max(into, 0);
         for (const leg of trip.legs) {
-            if (t < leg.seconds || leg === trip.legs[trip.legs.length - 1]) return legPose(world, leg, leg.seconds > 0 ? Math.min(t / leg.seconds, 1) : 1, trip, epochSeconds);
+            if (t < leg.seconds || leg === trip.legs[trip.legs.length - 1]) {
+                const pose = legPose(world, leg, leg.seconds > 0 ? Math.min(t / leg.seconds, 1) : 1, trip, epochSeconds);
+                // Setting off it turns from the way it was facing to its way over 0.8 s, not in an instant.
+                const since = Math.max(into, 0);
+                if (since < 0.8 && trip.from.yaw !== undefined && !trip.shadow) {
+                    let turn = pose.yaw - trip.from.yaw;
+                    while (turn > Math.PI) turn -= Math.PI * 2;
+                    while (turn < -Math.PI) turn += Math.PI * 2;
+                    return {...pose, yaw: trip.from.yaw + turn * (since / 0.8)};
+                }
+                return pose;
+            }
             t -= leg.seconds;
         }
     }
@@ -1292,7 +1346,7 @@ export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: n
     const stay = trip.stay;
     const last = trip.legs[trip.legs.length - 1];
     const lastPose = last ? legPose(world, last, 1, trip, epochSeconds) : null;
-    const startYaw = lastPose ? lastPose.yaw : stay[0]?.yaw ?? 0;
+    const startYaw = lastPose ? lastPose.yaw : trip.from.yaw ?? stay[0]?.yaw ?? 0;
     const up = {nx: to.nx, ny: to.ny, nz: to.nz};
     if (!stay.length) return {x: to.x, y: to.y, z: to.z, yaw: startYaw, moving: false, aloft: false, ...up, beat: trip.doing === "sleep" || trip.doing === "to_roost" ? "sleep" : "rest"};
     let i = 0;
@@ -1407,22 +1461,124 @@ export type SpacedHome = {home: {x: number; z: number}; range: number | null; pr
  * moved homes and range caps (prey whose range shrank are in it too, with their own home).
  */
 export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: string) => boolean, reachOf: (id: string) => number): Map<string, SpacedHome> {
+    const job = spaceHomesTasks(animals, eats, reachOf);
+    return new SlicedBuild(job.tasks, job.finish).run();
+}
+
+/**
+ * `spaceHomes` as tasks, one predator each, biggest first (`behaviour-build.ts`: about 6 ms a frame), with the same
+ * result to the last digit as the loop it replaced (2026-11-11, the backfill scale: 3,140 animals took 3.4 s on a
+ * phone). The same rule, worked out more cheaply:
+ * - who eats whom once per pair of kinds, and each animal's prey and enemies from an index by kind (was every pair
+ *   of animals, for every animal: 5 million `eats` calls at 3,140 animals);
+ * - a spot's clearance (its distance to the nearest enemy's reach) from a grid of the enemies' homes, nearest cells
+ *   first, stopping where no further enemy can be nearer: the same minimum;
+ * - a candidate spot's walkable test (the map's habitat, a ground sample each) only when the spot could change
+ *   anything: better than the best so far, or clear.
+ */
+export function spaceHomesTasks(animals: HomeInput[], eats: (predator: string, prey: string) => boolean, reachOf: (id: string) => number): {tasks: BuildTask[]; finish: () => Map<string, SpacedHome>} {
     const out = new Map<string, SpacedHome>();
     const home = new Map(animals.map((a) => [a.id, {...a.home}]));
     const reach = new Map(animals.map((a) => [a.id, reachOf(a.id)]));
     const sorted = [...animals].sort((a, b) => b.length - a.length || a.id.localeCompare(b.id));
-    for (const predator of sorted) {
-        const prey = animals.filter((other) => other.id !== predator.id && eats(predator.slug, other.slug));
-        if (!prey.length) continue;
-        const enemies = animals.filter((other) => other.id !== predator.id && (eats(predator.slug, other.slug) || eats(other.slug, predator.slug)));
+    // Each kind's animals in their given order (the order the old filters kept), and who eats whom by kind.
+    const order = new Map(animals.map((a, i) => [a.id, i]));
+    const byKind = new Map<string, HomeInput[]>();
+    for (const a of animals) {
+        const list = byKind.get(a.slug);
+        if (list) list.push(a);
+        else byKind.set(a.slug, [a]);
+    }
+    const kinds = Array.from(byKind.keys());
+    // Each kind's prey kinds and enemy kinds (it eats them, or they eat it), worked out once per kind.
+    const preyKindsOf = new Map<string, string[]>();
+    const enemyKindsOf = new Map<string, string[]>();
+    const preyKinds = (p: string) => {
+        let list = preyKindsOf.get(p);
+        if (!list) preyKindsOf.set(p, (list = kinds.filter((k) => eats(p, k))));
+        return list;
+    };
+    const enemyKinds = (p: string) => {
+        let list = enemyKindsOf.get(p);
+        if (!list) {
+            const prey = new Set(preyKinds(p));
+            enemyKindsOf.set(p, (list = kinds.filter((k) => prey.has(k) || eats(k, p))));
+        }
+        return list;
+    };
+    const ofKinds = (list: string[], not: HomeInput) => {
+        const found: HomeInput[] = [];
+        for (const kind of list) for (const a of byKind.get(kind)!) if (a.id !== not.id) found.push(a);
+        return found.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+    };
+    const GRID = 12;
+    const tasks: BuildTask[] = sorted.map((predator) => once(() => {
+        const itsPrey = preyKinds(predator.slug);
+        if (!itsPrey.length) return;
+        const prey = ofKinds(itsPrey, predator);
+        if (!prey.length) return;
+        const enemies = ofKinds(enemyKinds(predator.slug), predator);
         const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
-        const clearance = (x: number, z: number) => Math.min(...enemies.map((o) => Math.hypot(home.get(o.id)!.x - x, home.get(o.id)!.z - z) - need(o)));
+        // The enemies' homes in a grid (as they are now: earlier predators may have moved), and the most any needs.
+        // (Each enemy as numbers: its home and what it needs do not change during this predator's search.)
+        const cells = new Map<number, number[]>();
+        const cellKey = (i: number, j: number) => (i + 4096) * 8192 + (j + 4096);
+        let needMax = 0;
+        let minI = Infinity;
+        let maxI = -Infinity;
+        let minJ = Infinity;
+        let maxJ = -Infinity;
+        for (const o of enemies) {
+            const at = home.get(o.id)!;
+            const i = Math.floor(at.x / GRID);
+            const j = Math.floor(at.z / GRID);
+            const key = cellKey(i, j);
+            const needs = need(o);
+            const list = cells.get(key);
+            if (list) list.push(at.x, at.z, needs);
+            else cells.set(key, [at.x, at.z, needs]);
+            needMax = Math.max(needMax, needs);
+            minI = Math.min(minI, i);
+            maxI = Math.max(maxI, i);
+            minJ = Math.min(minJ, j);
+            maxJ = Math.max(maxJ, j);
+        }
+        /**
+         * min over enemies of (distance to its home − what it needs), exactly: rings of cells outward till none can be
+         * less. With `above`, it may stop at the first value at or below it (returning that value): the search only asks
+         * whether a spot beats the best so far.
+         */
+        const clearance = (x: number, z: number, above = -Infinity) => {
+            let least = Infinity;
+            if (!enemies.length) return least;
+            const ci = Math.floor(x / GRID);
+            const cj = Math.floor(z / GRID);
+            const last = Math.max(ci - minI, maxI - ci, cj - minJ, maxJ - cj);
+            for (let r = 0; r <= last; r++) {
+                if ((r === 0 ? 0 : (r - 1) * GRID) - needMax >= least) break;
+                for (let di = -r; di <= r; di++) {
+                    const ring = Math.abs(di) === r;
+                    for (let dj = -r; dj <= r; dj += ring ? 1 : 2 * r) {
+                        const list = cells.get(cellKey(ci + di, cj + dj));
+                        if (!list) continue;
+                        for (let n = 0; n < list.length; n += 3) {
+                            const v = Math.hypot(list[n] - x, list[n + 1] - z) - list[n + 2];
+                            if (v < least) {
+                                least = v;
+                                if (least <= above) return least;
+                            }
+                        }
+                    }
+                }
+            }
+            return least;
+        };
         const start = home.get(predator.id)!;
         let best = {x: start.x, z: start.z, c: clearance(start.x, start.z)};
         if (best.c < 0) {
-            const mx = prey.reduce((s, p) => s + home.get(p.id)!.x, 0) / prey.length;
-            const mz = prey.reduce((s, p) => s + home.get(p.id)!.z, 0) / prey.length;
+            const mx = prey.reduce((sum, p) => sum + home.get(p.id)!.x, 0) / prey.length;
+            const mz = prey.reduce((sum, p) => sum + home.get(p.id)!.z, 0) / prey.length;
             const away = Math.atan2(start.x - mx, start.z - mz);
             let found = false;
             for (let d = 3; d <= 120 && !found; d += 3) {
@@ -1430,8 +1586,11 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
                     const a = away + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.27;
                     const x = start.x + Math.sin(a) * d;
                     const z = start.z + Math.cos(a) * d;
+                    // (Its walkable test only where it could matter: a spot no better than the best and not clear
+                    // changes nothing, walkable or not.)
+                    const c = clearance(x, z, best.c);
+                    if (c <= best.c && c < 0) continue;
                     if (!predator.walkable(x, z)) continue;
-                    const c = clearance(x, z);
                     if (c > best.c) best = {x, z, c};
                     if (c >= 0) found = true;
                 }
@@ -1457,8 +1616,8 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
         const nearest = [...prey].sort((a, b) => Math.hypot(home.get(a.id)!.x - at.x, home.get(a.id)!.z - at.z) - Math.hypot(home.get(b.id)!.x - at.x, home.get(b.id)!.z - at.z))[0];
         const shrunk = reach.get(predator.id)! < reachOf(predator.id) - 1e-9;
         out.set(predator.id, {home: {...at}, range: shrunk ? reach.get(predator.id)! : out.get(predator.id)?.range ?? null, prey: {...home.get(nearest.id)!}});
-    }
-    return out;
+    }));
+    return {tasks, finish: () => out};
 }
 
 /** What the recipe engine may use of the schedule (passed in, so it imports no schedule code). */

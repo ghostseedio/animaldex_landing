@@ -4,7 +4,10 @@ import test from "node:test";
 import {NavGrid, navGridBuild, type NavCells} from "@/ark-scene/behaviour-nav";
 import {ScheduleWorldBuild, scheduleWorld} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
-import {ATTACH_TAGS, resetWorldSampler, sceneSampler, sceneSamplerTasks, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {ATTACH_TAGS, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {homePlots} from "@/ark-scene/map/hamlet";
+import {floorObstacles} from "@/ark-scene/floor-assets";
+import {paddockRect, paddockSegments, picketRuns, plotFrame} from "@/ark-scene/props/home-layout";
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
@@ -92,6 +95,12 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
                 if (s.waterDepth <= 0) add({tag: "shade", x: item.x + 0.7, y: s.height, z: item.z + 0.4, ...UP, yaw: item.rotation, size: [0.02, 0.9], zone: s.zone});
             }
         }
+    }
+    // (Graphics batch 6's fallen logs: their tops, added 2026-11-11 to the build, here as there.)
+    for (const log of floorObstacles()) {
+        const s = surface(log.x, log.z);
+        if (s.waterDepth > 0) continue;
+        add({tag: "log_top", x: log.x, y: s.height + Math.max(2 * (log.radius - 0.1), 0.1), z: log.z, ...UP, yaw: 0, size: [0.02, 0.8], zone: s.zone});
     }
     const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
         for (let d = 0; d < 6; d += 0.25) {
@@ -230,4 +239,71 @@ test("the schedule world built between frames is the world built at once, and be
     const early = worldSampler();
     assert.equal(half.run().sampler, early);
     assert.equal(early.version, once.sampler.version);
+});
+
+test("the hamlet's plots: houses, barns, coops and fences block the walk grid, built sliced as all at once", () => {
+    // The map lane's plots for a full hamlet (houses and smallholdings), as the scene sets them beside setAttachHomePlots.
+    const plots = homePlots(900, 220);
+    assert.ok(plots.length >= 6, `plots ${plots.length}`);
+    try {
+        assert.equal(setBehaviourHomePlots(plots), true);
+        assert.equal(setBehaviourHomePlots(plots.map((p) => ({...p}))), false, "the same plots again change nothing");
+        const whole = sceneSampler();
+        assert.ok(whole.version.includes(plots[plots.length - 1].id), "the plots are in the version (a new plot rebuilds the grid)");
+        const job = sceneSamplerTasks();
+        const {result: sliced} = finest(new SlicedBuild(job.tasks, job.finish));
+        assert.equal(sliced.version, whole.version);
+        assert.deepEqual(placesOf(sliced), placesOf(whole));
+        const grid = new NavGrid(whole);
+        const {result: slicedGrid} = finest(navGridBuild(sliced));
+        assert.equal(hashOf(slicedGrid.cells), hashOf(grid.cells));
+        for (const plot of plots) {
+            const frame = plotFrame(plot);
+            // Inside the house or the barn: never walkable.
+            if (plot.kind === "house" || plot.barn) {
+                for (const [lx, lz] of [[0, 0], [1.5, 1], [-1.5, -1]]) {
+                    const w = frame.toWorld(lx, lz);
+                    assert.ok(whole.blocked(w.x, w.z, 0.2) && !grid.walkable(w.x, w.z, 9), `${plot.id} walkable inside its building at ${lx},${lz}`);
+                }
+            }
+            // On a fence run, between its posts: blocked.
+            const runs = plot.kind === "house" ? picketRuns().map(([ax, az, bx, bz]) => ({a: {x: ax, z: az}, b: {x: bx, z: bz}})) : paddockSegments(paddockRect(plot)).filter((s) => !s.gate);
+            for (const run of runs) {
+                const mid = frame.toWorld((run.a.x + run.b.x) / 2, (run.a.z + run.b.z) / 2);
+                assert.ok(whole.blocked(mid.x, mid.z, 0.2), `${plot.id} a fence run is not blocked`);
+            }
+        }
+        // A walker's route past a house plot goes round it: no point of it inside the house.
+        const house = plots.find((p) => p.kind === "house" && p.id !== "house-0") ?? plots[0];
+        const frame = plotFrame(house);
+        const a = frame.toWorld(-9, 0);
+        const b = frame.toWorld(9, 0);
+        const path = grid.path(a, b, "walk", 0.5, 4000, 9);
+        for (let k = 1; k < path.length; k++) {
+            for (let t = 0; t <= 1; t += 0.05) {
+                const p = frame.toLocal(path[k - 1].x + (path[k].x - path[k - 1].x) * t, path[k - 1].z + (path[k].z - path[k - 1].z) * t);
+                assert.ok(!(Math.abs(p.x) < 2.6 && Math.abs(p.z) < 2.0), `the route through ${house.id} crosses the house`);
+            }
+        }
+    } finally {
+        setBehaviourHomePlots(null);
+    }
+});
+
+test("fallen logs: walkers go round them, and their tops are a place for small animals", () => {
+    const logs = floorObstacles();
+    assert.ok(logs.length > 0, "graphics batch 6 has fallen logs");
+    const grid = new NavGrid(allAtOnce);
+    for (const log of logs) assert.ok(allAtOnce.blocked(log.x, log.z, 0.2), `a log at ${log.x.toFixed(1)},${log.z.toFixed(1)} is not an obstacle`);
+    // Every log circle on dry land has a top to stand on, raised over the ground, for animals up to 0.8 m.
+    const tops = allAtOnce.attachPoints("log_top");
+    assert.ok(tops.length > 0 && tops.length <= logs.length);
+    for (const top of tops) {
+        assert.ok(top.y > allAtOnce.heightAt(top.x, top.z), "a log's top is above the ground");
+        assert.ok(top.size[1] <= 0.8);
+    }
+    // The grid's cell under a log's middle circle (the log itself) is not walked through.
+    const middles = logs.filter((_, k) => k % 3 === 1);
+    const blockedCells = middles.filter((log) => !grid.walkable(log.x, log.z)).length;
+    assert.equal(blockedCells, middles.length, `only ${blockedCells} of ${middles.length} log middles off the grid`);
 });

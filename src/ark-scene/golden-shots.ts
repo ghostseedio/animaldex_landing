@@ -110,7 +110,14 @@ export type GoldenWorld = {
     cropField?: () => XZ | null;
 };
 
-export type GoldenView = {place: GoldenPlace; view: ArkCameraView; /** How the anchor was found (for the report). */ anchor: string};
+export type GoldenView = {
+    place: GoldenPlace;
+    view: ArkCameraView;
+    /** How the anchor was found (for the report). */
+    anchor: string;
+    /** A view the user's camera may not take (batch 5: the mountain from low down): the golden page lifts the limits. */
+    camera?: {maxPolar?: number; free?: boolean};
+};
 
 /** The bearing from the island's middle out to a point: the camera stands outside, looking in (as the director's shots do). */
 function outward(point: XZ): number {
@@ -252,8 +259,9 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
                     if (y > peak.y) peak = {x, z, y};
                 }
             }
-            // From the island's middle side, looking up at it.
-            return {place, anchor: `peak ${peak.y.toFixed(1)} m`, view: {target: {x: peak.x, y: peak.y * 0.42, z: peak.z}, distance: 96, polar: 1.3, azimuth: bearing(peak, {x: 0, z: 0}) + 0.3}};
+            // From the island's middle side, low (batch 5, a golden-only camera): the range against the sky, its foot in
+            // view, as a mountain is seen from the valley rather than from a plane at its own height.
+            return {place, anchor: `peak ${peak.y.toFixed(1)} m`, view: {target: {x: peak.x, y: peak.y * 0.5, z: peak.z}, distance: 125, polar: 1.5, azimuth: bearing(peak, {x: 0, z: 0}) + 0.3}, camera: {maxPolar: 1.56, free: true}};
         }
 
         case "caterpillar_leaf":

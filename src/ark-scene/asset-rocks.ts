@@ -2,7 +2,8 @@
  * The asset lane's rocks in the scene (graphics pass, batch 5): every decor
  * rock drawn as its library rock (`rock-assets.ts` picks which and places it),
  * instanced per rock and detail level, re-sorted as the camera moves. The
- * procedural rocks stand in until these load.
+ * procedural rocks stand in until these load. Batch 6: the same instancing
+ * draws the forest floor set (`floor-assets.ts`: litter, twigs, cones, logs).
  *
  * The material keeps the assets' own colours (moss, barnacles, weathering)
  * and adds the place: a fine rock grain from the ground's CC0 rock texture,
@@ -10,13 +11,14 @@
  * and a pale salt line above it.
  */
 
-import {Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Mesh} from "three";
+import {Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Mesh} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
 import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
 
 const LEVELS = ["lod0", "lod1", "lod2"] as const;
@@ -78,33 +80,41 @@ roughnessFactor = mix(roughnessFactor, 0.28, rockWet);`);
     return material;
 }
 
-export class AssetRocks {
+type AssetInfo = {lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>};
+export type AssetPlacement = {id: string; x: number; y: number; z: number; yaw: number; scale: number; up?: [number, number, number]; shade?: number};
+
+/**
+ * Library assets placed many times: instanced per asset and detail level (lod0, lod1, lod2), re-sorted as the camera
+ * moves, culled against the view by the bounds of what each level draws. Far levels cast no shadow.
+ */
+export class AssetInstances {
     readonly group = new Group();
-    /** Ready once every needed rock is loaded (the procedural rocks stand in until then). */
+    /** Ready once every needed asset is loaded. */
     ready = false;
-    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]}>();
-    private readonly material = rockMaterial();
+    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]; info: AssetInfo}>();
     private reach = 1;
     private shadows = true;
     private lastAt = new Vector3(Infinity, 0, 0);
     private framesSince = 0;
 
-    constructor(base = ASSET_BASE) {
+    constructor(placements: AssetPlacement[], infoFor: (id: string) => AssetInfo, private readonly materials: {front: MeshStandardMaterial; double: MeshStandardMaterial}, base = ASSET_BASE, private readonly kind = "asset") {
         const rotation = new Quaternion();
-        const up = new Vector3(0, 1, 0);
+        const turn = new Quaternion();
+        const yAxis = new Vector3(0, 1, 0);
+        const upVector = new Vector3();
         const at = new Vector3();
         const size = new Vector3();
-        for (const item of worldDecor()) {
-            const placed = rockAssetFor(item);
-            if (!placed) continue;
+        for (const placed of placements) {
             let entry = this.byAsset.get(placed.id);
             if (!entry) {
-                entry = {instances: [], meshes: {}, distances: rockAssetInfo(placed.id).lod_distances};
+                const info = infoFor(placed.id);
+                entry = {instances: [], meshes: {}, distances: info.lod_distances, info};
                 this.byAsset.set(placed.id, entry);
             }
-            const matrix = new Matrix4().compose(at.set(placed.x, placed.y, placed.z), rotation.setFromAxisAngle(up, placed.yaw), size.setScalar(placed.scale));
-            const frac = (value: number) => value - Math.floor(value);
-            const shade = 0.92 + 0.16 * frac(item.x * 5.17 + item.z * 2.93);
+            if (placed.up) rotation.setFromUnitVectors(yAxis, upVector.set(placed.up[0], placed.up[1], placed.up[2])).multiply(turn.setFromAxisAngle(yAxis, placed.yaw));
+            else rotation.setFromAxisAngle(yAxis, placed.yaw);
+            const matrix = new Matrix4().compose(at.set(placed.x, placed.y, placed.z), rotation, size.setScalar(placed.scale));
+            const shade = placed.shade ?? 1;
             entry.instances.push({x: placed.x, y: placed.y, z: placed.z, matrix, tint: new Color(shade, shade, shade)});
         }
         void this.load(base.replace(/\/+$/, ""));
@@ -114,28 +124,30 @@ export class AssetRocks {
         const loader = new GLTFLoader();
         loader.setMeshoptDecoder(MeshoptDecoder);
         const jobs: Array<Promise<void>> = [];
-        this.byAsset.forEach((entry, id) => {
-            for (const lod of rockAssetInfo(id).lods) {
-                if (!LEVELS.includes(lod.level)) continue;
+        this.byAsset.forEach((entry) => {
+            for (const lod of entry.info.lods) {
+                const level = lod.level as Level;
+                if (!LEVELS.includes(level)) continue;
                 jobs.push(loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
                     let geometry: BufferGeometry | null = null;
                     gltf.scene.traverse((object) => {
                         if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
                     });
                     if (!geometry) return;
-                    const mesh = new InstancedMesh(geometry, this.material, entry.instances.length);
+                    const mesh = new InstancedMesh(geometry, lod.doubleSided ? this.materials.double : this.materials.front, entry.instances.length);
                     mesh.count = 0;
-                    mesh.frustumCulled = false;
-                    mesh.castShadow = this.shadows;
+                    // Culled against the view by the bounds of the instances drawn at this level (set in update).
+                    mesh.frustumCulled = true;
+                    mesh.castShadow = this.shadows && level !== "lod2";
                     mesh.receiveShadow = true;
-                    mesh.userData.kind = "asset-rock";
-                    entry.meshes[lod.level] = mesh;
+                    mesh.userData.kind = this.kind;
+                    entry.meshes[level] = mesh;
                     this.group.add(mesh);
                 }).catch(() => {}));
             }
         });
         await Promise.all(jobs);
-        // Only take over when every rock can be drawn (a missing set keeps the procedural rocks).
+        // Only take over when every asset can be drawn (a missing set keeps what stood in).
         let complete = true;
         this.byAsset.forEach((entry) => {
             if (!LEVELS.some((level) => entry.meshes[level])) complete = false;
@@ -144,14 +156,15 @@ export class AssetRocks {
         this.lastAt.set(Infinity, 0, 0);
     }
 
-    /** The tier: how far each level reaches (as the trees) and whether rocks cast shadows. */
+    /** The tier: how far each level reaches and whether the near levels cast shadows. */
     setTier(reach: number, shadows: boolean) {
         this.reach = reach;
         this.shadows = shadows;
         this.byAsset.forEach((entry) => {
             for (const level of LEVELS) {
                 const mesh = entry.meshes[level];
-                if (mesh) mesh.castShadow = shadows;
+                // Far levels' shadows fall outside the shadow map's reach anyway.
+                if (mesh) mesh.castShadow = shadows && level !== "lod2";
             }
         });
         this.lastAt.set(Infinity, 0, 0);
@@ -166,7 +179,7 @@ export class AssetRocks {
         this.lastAt.copy(camera);
         this.byAsset.forEach((entry) => {
             const counts: Record<Level, number> = {lod0: 0, lod1: 0, lod2: 0};
-            // Rocks are cheap: full detail a little further than the asset asks, never below lod2 far away.
+            // Full detail a little further than the asset asks on the lower tiers, never below lod2 far away.
             const [d0, d1] = entry.distances.map((d) => d * Math.max(this.reach, 0.5));
             for (const instance of entry.instances) {
                 const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
@@ -186,6 +199,7 @@ export class AssetRocks {
                 mesh.visible = counts[level] > 0;
                 mesh.instanceMatrix.needsUpdate = true;
                 if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+                if (mesh.visible) mesh.computeBoundingSphere();
             }
         });
     }
@@ -199,6 +213,37 @@ export class AssetRocks {
                 mesh.dispose();
             }
         });
-        this.material.dispose();
+        this.materials.front.dispose();
+        if (this.materials.double !== this.materials.front) this.materials.double.dispose();
+    }
+}
+
+/** Every decor rock as its asset rock (batch 5). */
+export class AssetRocks extends AssetInstances {
+    constructor(base = ASSET_BASE) {
+        const placements: AssetPlacement[] = [];
+        const frac = (value: number) => value - Math.floor(value);
+        for (const item of worldDecor()) {
+            const placed = rockAssetFor(item);
+            if (!placed) continue;
+            placements.push({...placed, shade: 0.92 + 0.16 * frac(item.x * 5.17 + item.z * 2.93)});
+        }
+        const material = rockMaterial();
+        super(placements, rockAssetInfo, {front: material, double: material}, base, "asset-rock");
+    }
+}
+
+/** The forest floor's litter, logs, twigs and cones (batch 6): the assets' own colours, a little darker in the shade of the woods. */
+function floorMaterial(doubleSided: boolean): MeshStandardMaterial {
+    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.95, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
+    material.customProgramCacheKey = () => `ark-asset-floor-${doubleSided ? 2 : 1}`;
+    return material;
+}
+
+export class AssetFloor extends AssetInstances {
+    constructor(base = ASSET_BASE) {
+        const frac = (value: number) => value - Math.floor(value);
+        const placements = floorPlacements().map((p) => ({...p, shade: 0.9 + 0.2 * frac(p.x * 3.7 + p.z * 1.9)}));
+        super(placements, floorAssetInfo, {front: floorMaterial(false), double: floorMaterial(true)}, base, "asset-floor");
     }
 }

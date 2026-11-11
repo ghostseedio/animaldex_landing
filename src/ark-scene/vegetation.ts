@@ -673,12 +673,13 @@ vArkCard = arkCard;`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 {
     vec3 root = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-    float sway = sin(arkTime * 1.5 + root.x * 0.21 + root.z * 0.17) + 0.45 * sin(arkTime * 2.9 + root.x * 0.53 - root.z * 0.31);
+    // Frequencies make whole cycles in the shared clock's 600 s window (runtime lane), so every viewer sees the same phase.
+    float sway = sin(arkTime * 1.49749 + root.x * 0.21 + root.z * 0.17) + 0.45 * sin(arkTime * 2.90074 + root.x * 0.53 - root.z * 0.31);
     float bend = pow(max(transformed.y, 0.0) / windHeight, 2.0) * windAmount * arkLeaf;
     transformed.xz += arkWind * sway * bend;
     // Leaves flutter on their own, faster and stronger in wind (graphics pass): trunk a little, crown more, leaves most.
     float gust = length(arkWind);
-    transformed += vec3(sin(arkTime * 6.3 + transformed.y * 3.1 + root.x), sin(arkTime * 5.1 + transformed.x * 2.7 + root.z) * 0.6, cos(arkTime * 5.7 + transformed.z * 2.9)) * 0.035 * arkCard * gust;
+    transformed += vec3(sin(arkTime * 6.30413 + transformed.y * 3.1 + root.x), sin(arkTime * 5.09985 + transformed.x * 2.7 + root.z) * 0.6, cos(arkTime * 5.69675 + transformed.z * 2.9)) * 0.035 * arkCard * gust;
 }`);
     };
     return material;

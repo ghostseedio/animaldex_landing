@@ -30,6 +30,8 @@ import {pinSeaClock} from "@/ark-scene/fish-schools";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
+import {propsFixture, propsShot, type PropsShot} from "@/ark-scene/props/golden-props";
+import type {createPropsModule} from "@/ark-scene/props";
 import {goldenCropField, goldenObstacles} from "@/ark-scene/golden-world";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -224,7 +226,14 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         }
         // Pale bark (birch, beech) in the sun, about chest height, so a black ant shows on it.
         if (shot.tag === "bark") return broadleaf + (/^birch/.test(asset) ? 0 : /^beech/.test(asset) ? 4 : 12) + (1 - (point.open ?? 0)) * 30 - lit(point) * 10 + Math.abs(p.y - heightAt(p.x, p.z) - 1.3) * 2 + Math.hypot(p.x - near.x, p.z - near.z) * 0.02;
-        if (shot.tag === "house_wall") return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4));
+        if (shot.tag === "house_wall") {
+            // Off the side windows (micro-scene.ts: centred 0.4 m off the middle, 1.4 m up, 0.8 × 0.7 m), with a margin:
+            // a gecko half hidden by a window frame is no shot (graphics batch 5).
+            const side = Math.sign(p.x - COTTAGE.x);
+            const windowZ = COTTAGE.z + (side > 0 ? 0.4 : -0.4);
+            const onWindow = Math.abs(p.z - windowZ) < 0.75 && Math.abs(p.y - (COTTAGE.floor + 1.4)) < 0.65;
+            return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4)) + (onWindow ? 20 : 0);
+        }
         if (shot.tag === "rock_face") {
             // Seaward (the camera stands in the shallows), low and wet, near the shore rocks.
             const seaward = (point.normal.x * p.x + point.normal.z * p.z) / (Math.hypot(p.x, p.z) || 1);
@@ -263,7 +272,9 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
             debug.controls.minDistance = holder.minDistance;
             handle.setView(view);
             await nextFrames(3);
-            const blocked = clearSight(debug, view, candidate, holder.current);
+            // The camera above the ground (graphics batch 5: a rock's face can look up a beach, into the sand).
+            const eye = new Vector3().setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(new Vector3(view.target.x, view.target.y, view.target.z));
+            const blocked = eye.y < heightAt(eye.x, eye.z) + 0.15 ? "ground" : clearSight(debug, view, candidate, holder.current);
             if (blocked) {
                 blockers.push(blocked);
                 continue;
@@ -388,8 +399,10 @@ async function mountGolden(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
-    const snapshot = decodeArkSnapshot(fixture);
-    if (!snapshot) throw new Error("fixture did not decode");
+    const decoded = decodeArkSnapshot(fixture);
+    if (!decoded) throw new Error("fixture did not decode");
+    // The props lane's close-ups (`?props=1`): the props' species aboard, in the breeding season, clutches in.
+    const snapshot = params.get("props") ? propsFixture(decoded) : decoded;
     let ready = false;
     const handle = mountArk(el, {
         snapshot,
@@ -492,6 +505,8 @@ async function mountGolden(el: HTMLElement) {
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
             pinSeaClock(GOLDEN_SEA_EPOCH);
+            // A golden-only camera (graphics batch 5): the shot's own limits, for this shot only.
+            (window as unknown as {__arkGoldenCamera?: unknown}).__arkGoldenCamera = "camera" in shot ? (shot as {camera?: unknown}).camera : undefined;
             const debugNow = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
             const hold = () => {
                 if (micro && debugNow) debugNow.controls.minDistance = holder.minDistance;
@@ -514,6 +529,29 @@ async function mountGolden(el: HTMLElement) {
                 }
             }
             return {anchor: shot.anchor, asked: shot.view, actual: handle.view() as ArkCameraView};
+        },
+        /** A props close-up (`props/golden-props.ts`): framed on where the props module says the thing is, in its light and weather. */
+        shootProps: async (name: PropsShot) => {
+            const props = (globalThis as {__arkPropsModule?: ReturnType<typeof createPropsModule>}).__arkPropsModule;
+            if (!props) return {anchor: "no props module", asked: null, actual: handle.view() as ArkCameraView};
+            const plan = propsShot(name, props.marks(), props.stats(), (id) => handle.locate(id));
+            if (!plan) return {anchor: `missing ${name}`, asked: null, actual: handle.view() as ArkCameraView};
+            if (holder.current) {
+                (window as unknown as {__arkDebug?: Debug}).__arkDebug?.scene.remove(holder.current);
+                holder.current = null;
+            }
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (debug) debug.controls.minDistance = plan.minDistance ?? 4;
+            (globalThis as {__arkPropsWeather?: unknown}).__arkPropsWeather = plan.weather;
+            handle.setEnvironment({seaLevel: 0, storm: 0, windDirection: 0.41, wetness: 0, snow: 0, wind: 0.35, ...plan.environment});
+            handle.setHours(plan.hours);
+            handle.setView(plan.view);
+            for (let i = 0; i < 24; i++) {
+                await nextFrame();
+                if (i < 8) handle.setView(plan.view);
+            }
+            await settle(900, 30_000);
+            return {anchor: plan.anchor, asked: plan.view, actual: handle.view() as ArkCameraView, props: props.stats().drawn};
         },
         measure: async (ms = 3000): Promise<Measure> => {
             const {intervals, drains} = await measureFrames(canvas, ms);

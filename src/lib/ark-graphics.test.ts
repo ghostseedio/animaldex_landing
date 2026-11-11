@@ -4,11 +4,14 @@ import {goldenClearance, goldenEye, goldenView, type GoldenPlace, type GoldenWor
 import {goldenObstacles} from "@/ark-scene/golden-world";
 import {nearFadeEnd, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
-import {attachPoints} from "@/ark-scene/sampler";
-import {CROPS, cropAt, fieldAt, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
-import {worldDecor} from "@/ark-scene/decor";
+import {attachPoints, surfaceAt} from "@/ark-scene/sampler";
+import {FRESH_LEVEL, waterLevelAt} from "@/ark-scene/water-level";
+import {CROPS, cropAt, cropsGrowAt, fieldAt, fieldCentre, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
+import {grassTufts, worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
-import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
+import {LAKE, RIVER, TERRAIN_HALF, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
+import {groundArrays, groundGeometry, primeGround} from "@/ark-scene/terrain";
+import {PlaneGeometry} from "three";
 
 /** The golden page's world adapter (golden-entry.ts), without the scene. */
 const world: GoldenWorld = {
@@ -81,7 +84,9 @@ test("graphics: Home's fields: every crop grows somewhere, plants sit on the pai
             assert.equal(at.crop, plant.crop);
             assert.ok(Math.abs(at.row - Math.round(at.row)) < 1e-6, "on a row's middle");
             assert.ok(at.edge >= HEADLAND, "not on the headland");
-            for (const out of fieldKeepOuts()) assert.ok(Math.hypot(plant.x - out.x, plant.z - out.z) >= out.r, "not in the yard, the clearing, the barn or the orchard");
+            // Fields are crop or grass whole, decided at their middle: never a field whose middle is in a keep-out.
+            const middle = fieldCentre(at.cell);
+            for (const out of fieldKeepOuts()) assert.ok(Math.hypot(middle.x - out.x, middle.z - out.z) >= out.r, "not in the yard, the clearing, the barn or the orchard");
         }
     }
     assert.ok(planted > 1000, `${planted} plants`);
@@ -93,8 +98,8 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
     const rocks = worldDecor().filter((item) => item.kind === "rock");
     assert.ok(rocks.length > 100);
     const points = attachPoints({tag: "rock_face"});
-    for (const [i, item] of worldDecor().entries()) {
-        if (item.kind !== "rock") continue;
+    worldDecor().forEach((item, i) => {
+        if (item.kind !== "rock") return;
         const placed = rockAssetFor(item);
         assert.ok(placed, "every rock has an asset");
         assert.equal(placed!.x, item.x);
@@ -108,6 +113,50 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
             const d = {x: point.position.x - placed!.x, y: point.position.y - placed!.y, z: point.position.z - placed!.z};
             assert.ok(Math.hypot(d.x, d.z) <= reach, "on the rock, not beside it");
             assert.ok(d.y >= b.min[1] * placed!.scale - 0.05 && d.y <= b.max[1] * placed!.scale + 0.05, "within the rock's height");
+            assert.ok(point.position.y >= heightAt(point.position.x, point.position.z) - 0.05 || point.hostKind !== "rock", "not buried in the ground");
         }
+    });
+});
+
+test("graphics: meadow grass keeps out of the standing crops (it grows on the margins and the pasture)", () => {
+    const tufts = grassTufts(60000);
+    assert.ok(tufts.length > 1000);
+    assert.equal(tufts.filter((tuft) => cropsGrowAt(tuft.x, tuft.z)).length, 0);
+    // The margins still have grass: tufts in Home's zone, off the crops.
+    assert.ok(tufts.some((tuft) => tuft.zone === "farm_garden"));
+});
+
+test("graphics: the lake and the river keep their own level whatever the tide does; the sea follows the tide", () => {
+    for (const sea of [-0.35, 0, 0.35]) {
+        assert.equal(waterLevelAt(LAKE.x, LAKE.z, sea), FRESH_LEVEL, "the lake");
+        assert.equal(waterLevelAt(RIVER[2][0], RIVER[2][1], sea), FRESH_LEVEL, "the river");
+        assert.equal(waterLevelAt(ZONE_SITES.coral_reef.x, ZONE_SITES.coral_reef.z, sea), sea, "the sea");
+        // The sampler measures depth from the same surface.
+        const lake = surfaceAt(LAKE.x, LAKE.z, {seaLevel: sea, wetness: 0, snow: 0, wind: 0.35, storm: 0});
+        assert.ok(Math.abs(lake.waterDepth + heightAt(LAKE.x, LAKE.z) - FRESH_LEVEL) < 1e-9, "lake depth from its own level");
     }
+});
+
+test("graphics: the ground built from plain arrays (the worker prebuild) is the old plane, bit for bit; primed and built here are identical", () => {
+    const arrays = groundArrays();
+    // The old way: a PlaneGeometry laid flat, each vertex lifted to the ground, three's own normals.
+    const plane = new PlaneGeometry(TERRAIN_HALF * 2, TERRAIN_HALF * 2, arrays.size - 1, arrays.size - 1);
+    plane.rotateX(-Math.PI / 2);
+    const position = plane.getAttribute("position");
+    for (let i = 0; i < position.count; i++) position.setY(i, sampleGround(position.getX(i), position.getZ(i)).height);
+    plane.computeVertexNormals();
+    assert.deepEqual(arrays.positions, position.array, "positions");
+    assert.deepEqual(arrays.normals, plane.getAttribute("normal").array, "normals");
+    assert.deepEqual(arrays.uvs, plane.getAttribute("uv").array, "uvs");
+    assert.deepEqual(arrays.index, plane.getIndex()!.array, "index");
+    // Primed (as the worker hands it over) and built here: the same geometry and depth map.
+    primeGround(groundArrays());
+    const primed = groundGeometry();
+    primeGround(null);
+    const built = groundGeometry();
+    for (const name of ["position", "normal", "uv", "color", "arkLayers", "arkLayers2", "arkRock"]) {
+        assert.deepEqual(primed.geometry.getAttribute(name).array, built.geometry.getAttribute(name).array, name);
+    }
+    assert.deepEqual(primed.geometry.getIndex()!.array, built.geometry.getIndex()!.array, "index");
+    assert.deepEqual(primed.depth.image.data, built.depth.image.data, "depth map");
 });
