@@ -230,8 +230,9 @@ for (const deviceName of devices) {
         // The clock frozen at this shot's own time (an hour apart per shot, always ahead of the page's), then a few
         // frames drawn at it: everything that follows the clock is where it is on every run.
         await page.evaluate((ms) => (window as unknown as GoldenWindow).__arkClock.freeze(ms), 4e7 + index * 3.6e6);
-        await page.evaluate(FRAMES(6));
-        const png = await page.screenshot({type: "png"});
+        await page.evaluate(FRAMES(3));
+        // (A frame on SwiftShader can take seconds on a busy machine: the screenshot waits for one.)
+        const png = await page.screenshot({type: "png", timeout: 300_000});
         await page.evaluate(() => (window as unknown as GoldenWindow).__arkClock.run());
         const tolerance = toleranceFor(id, config);
         const baselineFile = path.join(baselines, `${id}.webp`);
