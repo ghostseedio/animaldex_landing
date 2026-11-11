@@ -226,6 +226,40 @@ The phone profile held 60 fps in every run. It draws about 6 more calls (rock le
 
 Golden sheets: `batch5-desktop-before-after.jpg`, `batch5-phone-before-after.jpg` and `batch5-lake-level-tides.jpg` (mean tide against spring high) in the handover folder's `ark/graphics/`.
 
+## Batch 6: the forest floor set, conifers, shared clock, underwater, sand, bark (cb58a7ce and on)
+
+- **Assets (`ark-assets` 08b35d63 merged):**
+  - the rebuilt emergent buttresses checked on high: lit mossy bark, no black slabs under GTAO;
+  - the forest floor set in the woods (`floor-assets.ts`, drawn by `AssetFloor`, the rocks' instancing generalised as `AssetInstances`): logs (fresh, mossy, rotten), twigs, pine and spruce cones, scattered by zone on gentle ground, off the clearings and clear of trunks; `floorObstacles()` gives the logs to the behaviour lane;
+  - the set's litter patches are not used: their opaque base plate reads as a square rug on our ground (the procedural litter mats cover the floor);
+  - `tree-attach.json` not regenerated here: `scripts/ark-tree-attach.mjs` is on the attach lane's branch, not this one.
+- **Conifers (`windMaterial`):** a pine and spruce variant: needles less saturated and warmer, more sky light through them, most near the camera (they read as heavy dark-teal shapes). Leaves count from a flutter weight of about 0.05 (the conifers' boughs carry small weights).
+- **Runtime lane:**
+  - its forest fill prefilter, applied: the same 508 trees (identical hash), about twice as fast;
+  - every periodic term in the graphics shaders makes whole cycles in the shared clock's 600 s window (their table). `treeSway` on the attach branch must take the same numbers as `windMaterial`.
+- **Underwater:**
+  - the water's underside has the waves' light and a ripple, darker into the distance (it read as a flat teal band over the reef);
+  - a light shaft fades out as the camera comes within about 6 m (one at the lens read as a hard-edged slab).
+  - The house fields' white haze is the props lane's old mist (fixed on their branch in 54a82ee2); none here.
+- **Sand:** warmer and darker, damp in patches, banded, shell grit close up, an ochre savanna edge, warm sand on the grassland and desert coasts (it read as white paper). The white below the range's right flank is the cold cove's ice, by design.
+- **Mountain:** the rock beds blend into the faces (they read as boxy slabs): a smaller shading bend and a fainter lip and underhang; ledge snow weight 0.75 → 0.5 (the only change to the snow formula; the ice and alpine rules are as in batch 5).
+- **Bark close up:** on the trees whose crown reaches over the camera (the near bucket's material), within about 3 m: furrows, grain and cracks as colour and as a bump on the shading normal, a few lichen flecks.
+- **es5:** the graphics test no longer iterates a Map (fixed in c372c52f).
+- **Ground for the worker prebuild (`terrain.ts`):** `groundArrays(tier)` returns the ground as typed arrays with no three.js objects and no DOM. `primeGround(arrays)` hands over arrays built elsewhere, and `groundGeometry` uses them when present. The output is bit for bit the old `PlaneGeometry` (same normals), and primed and built geometry are deep-equal (test). The runtime lane wires the worker.
+
+Same-conditions A/B, batch 5 (79f22ee6 scene source) against batch 6 (f8a2ad0c), interleaved, same six places, tier pinned. The load average was 165 to 382 (other sessions' jobs), so the timings are noisy:
+
+| | interval p50 / p95 ms | scene CPU ms | GPU drain ms | draw calls | triangles |
+|---|---|---|---|---|---|
+| phone medium, batch 5 | 16.7 / 16.8 | 4.6–5.0 | 5.2–5.3 | 140.5 | 1.20 M |
+| phone medium, batch 6 | 16.7 / 16.7 | 6.2–6.7 | 5.3–6.3 | 144 | 1.21 M |
+| desktop high, batch 5 | 16.7 / 16.8 | 2.5–2.8 | 9.4–20.0 | 372–373 | 6.52–6.55 M |
+| desktop high, batch 6 | 16.7 / 16.7 | 2.2–2.8 | 10.6–20.4 | 385–387 | 6.55 M |
+
+The phone profile held 60 fps in every run, with about 4 more draw calls (the floor set) and the same triangles. Its scene CPU looks about 1.5 ms higher at 4× throttle, but under this load that is within the noise. Worth re-measuring on a quiet machine or a real phone.
+
+Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg`, `batch6-bark-closeup.png` and `batch6-buttress-before-after.png` in the handover folder's `ark/graphics/`.
+
 ## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
 
 - **Tree attach points on the drawn trees.** attach.json's points are computed before the level-of-detail cut and the leaves' fold, curl and growth: its leaf points sat a median 1–46 cm off the drawn lod0 leaves. `scripts/ark-tree-attach.mjs` moves each onto the drawn surface (a single leaf within 0.6 m first, else the leaf mass; bark and branch tops on the wood) and records the wind weights there (`src/ark-scene/tree-attach.json`, 1,011 points, 34 KB gzipped). `tree-assets.ts` places them where `asset-trees.ts` draws each tree (one shared `assetTreePlacement`); only decor trees and the fill every tier draws carry them.

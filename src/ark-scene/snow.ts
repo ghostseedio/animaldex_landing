@@ -10,7 +10,7 @@
  * The shader's noise (the line's wander, the wind streaks, the ribs, which rock bed is hard) is per pixel and its
  * hash rounds differently on every GPU, so it cannot be repeated here exactly. It is taken at its mean for the
  * expected cover, and at its worst case for where snow is sure. The patches of snow on the ledges below the line
- * are not counted: they are patchy, never sure.
+ * (weighted 0.5 since graphics batch 6) are not counted: they are patchy, never sure.
  *
  * `src/lib/ark-attach.test.ts` holds this to terrain.ts's lines: change one, change the other.
  */

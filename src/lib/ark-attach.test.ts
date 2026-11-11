@@ -18,13 +18,14 @@ import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/de
 import {COTTAGE, DECOR_SINK, GARDEN_POND, zoneLamp} from "@/ark-scene/micro-decor";
 import {rockAssetFor, rockAttachPoints} from "@/ark-scene/rock-assets";
 import {defaultHomePlots, fencePostTops as homeFencePosts} from "@/ark-scene/props/home-layout";
+import {floorPlacements} from "@/ark-scene/floor-assets";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {rock} from "@/ark-scene/vegetation";
 import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, setAttachHomePlots, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
 import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
 import {LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import {snowCover, snowLine} from "@/ark-scene/snow";
-import {TREE_CLOSE, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
+import {TREE_CLOSE, floorLogTops, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
 
 const root = process.cwd();
 const base = path.join(root, "public", (manifest as {base: string}).base);
@@ -85,11 +86,11 @@ function shaderSway(local: Vector3, w: [number, number, number, number], rootAt:
     const gust = Math.hypot(wind.x, wind.y);
     const along = {x: wind.x / Math.max(gust, 1e-3), y: wind.y / Math.max(gust, 1e-3)};
     const phase = w[1] * 6.2831853;
-    const wave = Math.sin(time * 1.25 + phase + rootAt.x * 0.19 + rootAt.z * 0.15) + 0.4 * Math.sin(time * 2.6 + phase * 1.7 + rootAt.x * 0.4);
+    const wave = Math.sin(time * 1.24617 + phase + rootAt.x * 0.19 + rootAt.z * 0.15) + 0.4 * Math.sin(time * 2.59705 + phase * 1.7 + rootAt.x * 0.4);
     const bend = w[0] * (0.25 + 0.06 * Math.max(local.y, 0));
     const out = new Vector3(along.x, 0, along.y).multiplyScalar((0.35 + 0.65 * wave) * bend * 0.09 * gust);
     const leaf = w[3] * 6.2831853;
-    out.add(new Vector3(Math.sin(time * 7.1 + leaf), 0.6 * Math.sin(time * 6.3 + leaf * 1.3), Math.cos(time * 6.7 + leaf)).multiplyScalar(w[2] * 0.025 * (0.4 + gust)));
+    out.add(new Vector3(Math.sin(time * 7.1 + leaf), 0.6 * Math.sin(time * 6.30413 + leaf * 1.3), Math.cos(time * 6.70206 + leaf)).multiplyScalar(w[2] * 0.025 * (0.4 + gust)));
     return out;
 }
 
@@ -105,6 +106,13 @@ test("attach: tree-attach.json is built from today's attach.json and lod0 trees 
     for (const id of Object.keys(attach).sort()) {
         const lod = assets[id]?.lods.find((l) => l.level === "lod0");
         if (lod) hash.update(readFileSync(path.join(base, lod.file)));
+    }
+    // And the floor set's logs (their tops).
+    const floorFile = path.join(base, "floor", "attach.json");
+    hash.update(readFileSync(floorFile));
+    const floor = JSON.parse(readFileSync(floorFile, "utf8")) as Record<string, Array<{tag: string}>>;
+    for (const id of Object.keys(floor).filter((k) => k.startsWith("log-") && assets[k]?.lods.some((l) => l.level === "lod0") && floor[k].some((row) => row.tag === "log_top")).sort()) {
+        hash.update(readFileSync(path.join(base, assets[id].lods.find((l) => l.level === "lod0")!.file)));
     }
     assert.equal(data.source, hash.digest("hex").slice(0, 32), "tree-attach.json is stale: run node scripts/ark-tree-attach.mjs");
 });
@@ -213,11 +221,11 @@ test("attach: an animal on a leaf moves with the leaf (the CPU sway is the shade
     // The transcription above is of these lines: if the shader changes, update treeSway (tree-assets.ts) with it.
     const shader = readFileSync(path.join(root, "src/ark-scene/asset-trees.ts"), "utf8");
     for (const line of [
-        "float wave = sin(arkTime * 1.25 + phase + root.x * 0.19 + root.z * 0.15) + 0.4 * sin(arkTime * 2.6 + phase * 1.7 + root.x * 0.4);",
+        "float wave = sin(arkTime * 1.24617 + phase + root.x * 0.19 + root.z * 0.15) + 0.4 * sin(arkTime * 2.59705 + phase * 1.7 + root.x * 0.4);",
         "float bend = color_1.x * (0.25 + 0.06 * max(transformed.y, 0.0));",
         "transformed.xz += along * (0.35 + 0.65 * wave) * bend * 0.09 * gust;",
         "float leaf = color_1.w * 6.2831853;",
-        "transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.3 + leaf * 1.3), cos(arkTime * 6.7 + leaf)) * color_1.z * 0.025 * (0.4 + gust);"
+        "transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust);"
     ]) assert.ok(shader.includes(line), `asset-trees.ts wind changed: ${line}`);
     // Still hosts hold still.
     const rock = allAttachPoints().find((point) => point.tag === "rock_face")!;
@@ -396,11 +404,15 @@ function hostFingerprints(hosts: string[]): Map<string, string> {
         if (item) {
             const tree = assetTreePlacement(item);
             const rockAt = rockAssetFor(item);
-            key = {item, tree, trees: tree ? data.source : null, rock: rockAt, rockRows: rockAt ? rockAttachPoints(rockAt) : null, ground: patch(item.x, item.z, Math.max(3 * item.scale, 2))};
+            key = {item, tree, trees: tree ? assetAttachRows(tree.id) : null, rock: rockAt, rockRows: rockAt ? rockAttachPoints(rockAt) : null, ground: patch(item.x, item.z, Math.max(3 * item.scale, 2))};
         } else if (host === "house") key = COTTAGE;
         else if (host.startsWith("lamp-")) key = zoneLamp(host.slice(5) as never);
         else if (host === "garden-pond") key = GARDEN_POND;
         else if (host === "paddock" || host === "picket") key = homeFencePosts(defaultHomePlots()).filter((post) => post.fence === host);
+        else if (host.startsWith("floor")) {
+            const placed = floorPlacements()[Number(host.slice(5))];
+            key = {placed, rows: placed ? floorLogTops(placed.id) : null};
+        }
         else if (host === "lake") key = LAKE;
         else if (host === "ground") {
             if (!terrain) {
@@ -440,6 +452,17 @@ test("attach: no point moves unless the scenery it stands on changed (a baseline
     const points = hostPoints();
     const prints = hostFingerprints(Array.from(points.keys()));
     // Re-record after a deliberate change to the points themselves: ARK_ATTACH_BASELINE=write npx tsx --test src/lib/ark-attach.test.ts
+    // After a scenery change, record only the hosts whose scenery changed (and new ones), keeping every other host's
+    // record as it was (and failing as usual if one of those moved): ARK_ATTACH_BASELINE=update.
+    if (process.env.ARK_ATTACH_BASELINE === "update") {
+        const old = JSON.parse(readFileSync(BASELINE, "utf8")) as {about: string; hosts: Record<string, [string, string]>};
+        const stale = Object.entries(old.hosts).filter(([host, [print, hash]]) => points.has(host) && prints.get(host) === print && points.get(host) !== hash).map(([host]) => host);
+        assert.deepEqual(stale.slice(0, 12), [], "these hosts moved though their scenery did not: not recorded");
+        const hosts: Record<string, [string, string]> = {};
+        Array.from(points.keys()).sort().forEach((host) => (hosts[host] = old.hosts[host] && old.hosts[host][0] === prints.get(host) ? old.hosts[host] : [prints.get(host)!, points.get(host)!]));
+        writeFileSync(BASELINE, JSON.stringify({about: old.about, hosts}, null, 0).replace(/\],"/g, '],\n"') + "\n");
+        return;
+    }
     if (process.env.ARK_ATTACH_BASELINE === "write") {
         const hosts: Record<string, [string, string]> = {};
         Array.from(points.keys()).sort().forEach((host) => (hosts[host] = [prints.get(host)!, points.get(host)!]));
@@ -613,6 +636,8 @@ test("attach: the ground is snow where the terrain shader draws snow, and only t
         "float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);",
         "float snow = snowW * (1.0 - steep * 0.5 * (1.0 - high));",
         "float snowCover = smoothstep(0.22, 0.6, snow);",
+        // (The ledges' patchy snow, now weighted 0.5, is never counted as sure snow here.)
+        "float snowW = max(max(vArkLayers.w, alpine), ledgeSnow * 0.5);",
         "float rib = 1.0 - abs(2.0 * arkFbm(vec2(faceAt.x * 0.16, faceAt.y * 0.035 + 5.0)) - 1.0);"
     ]) assert.ok(terrain.includes(line), `terrain.ts snow changed: ${line}`);
     assert.equal(snowLine(0), 27);
@@ -644,4 +669,35 @@ test("attach: the ground is snow where the terrain shader draws snow, and only t
     assert.ok(snowCover(20, 0.05, 0, 0).mean === 0 && snowCover(20, 0.05, 0, 1).sure > 0.5);
     // The ice is snow, on land.
     assert.ok(snowCover(1, 0.05, 1, 0).sure > 0.5);
+});
+
+test("attach: log points lie on top of the fallen logs the forest floor draws (lod0, within 5 mm), facing up and along the log", async () => {
+    const logs = allAttachPoints().filter((point) => point.tag === "log");
+    const placements = floorPlacements();
+    const drawn = placements.filter((p) => p.id.startsWith("log-"));
+    if (!drawn.length) return;
+    assert.ok(logs.length >= drawn.length, `${logs.length} log points on ${drawn.length} logs`);
+    const meshes = new Map<string, Tree>();
+    const up = new Vector3(0, 1, 0);
+    for (const point of logs) {
+        const placed = placements[Number(point.host.slice(5))];
+        if (!meshes.has(placed.id)) meshes.set(placed.id, await loadTree(placed.id));
+        // asset-rocks.ts's own instance matrix for a floor piece.
+        const rotation = new Quaternion().setFromUnitVectors(up, new Vector3(...placed.up)).multiply(new Quaternion().setFromAxisAngle(up, placed.yaw));
+        const matrix = new Matrix4().compose(new Vector3(placed.x, placed.y, placed.z), rotation, new Vector3(placed.scale, placed.scale, placed.scale));
+        const local = new Vector3(point.position.x, point.position.y, point.position.z).applyMatrix4(matrix.clone().invert());
+        const tree = meshes.get(placed.id)!;
+        let best = Infinity;
+        const q = new Vector3();
+        for (const t of tree.tris) {
+            t.tri.closestPointToPoint(local, q);
+            const d = q.distanceTo(local);
+            // (A log's mesh has a few zero-area triangles: no closest point on those.)
+            if (Number.isFinite(d)) best = Math.min(best, d);
+        }
+        assert.ok(best * placed.scale < 0.004, `${point.id} ${(best * placed.scale).toFixed(4)} m off its log`);
+        assert.ok(point.normal.y > 0.7 && point.hostKind === "log", point.id);
+        const f = point.forward!;
+        assert.ok(Math.abs(f.x * point.normal.x + f.y * point.normal.y + f.z * point.normal.z) < 0.01, `${point.id} forward`);
+    }
 });
