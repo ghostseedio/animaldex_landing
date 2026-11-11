@@ -54,3 +54,4 @@ next-env.d.ts
 /public/ark/ark-prebuild-worker.js
 /public/ark/ark-prebuild-places-worker.js
 /.ark-golden
+/.ark-audit
