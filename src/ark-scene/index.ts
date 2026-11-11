@@ -148,6 +148,7 @@ import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipe
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
+import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -874,17 +875,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let behaviourBuildLongestMs = 0;
     let pendingWire: {list: Entry[]; arkDay: number | null} | null = null;
     const BUILD_SLICE_MS = 6;
-    // A recording (the marketing recorder, the golden shots) builds it at once, so its first frames are as they were.
-    if (options.recording && worldBuild) {
-        world = worldBuild.run();
-        behaviourBuildMs = worldBuild.spentMs;
-        behaviourBuildLongestMs = worldBuild.longestMs;
-        worldBuild = null;
-    }
     // The graphics lane's attach points first, a slice a frame on their own (`prepareAttachPoints`, about 6 ms each): the
-    // places start from them, so this build waits for them rather than building them in one task itself.
-    let attachReady = !worldBuild;
-    if (worldBuild) void prepareAttachPoints().then(() => (attachReady = true));
+    // places start from them, so this build waits for them rather than building them in one task itself. Asked for on
+    // the first frame, after the snapshot has set the hamlet's plots (a reset mid-build would finish it in one go).
+    let attachReady = false;
+    let attachAsked = false;
+    /** The hamlet's plots changed (`setBehaviourHomePlots`): the world is built again, a slice a frame, and rewired. */
+    const restartBehaviourWorld = () => {
+        if (!scheduleOn) return;
+        world = null;
+        worldBuild = new ScheduleWorldBuild();
+        attachReady = false;
+        attachAsked = false;
+    };
     const scheduleWorldNow = (): ScheduleWorld => world!;
     /**
      * Runtime (live budget): whether an animal is settled at its roost now (behaviour's `restingAtRoost`), for
@@ -904,8 +907,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         };
     };
     const stepWorldBuild = (budgetMs: number) => {
-        if (world || !worldBuild || !attachReady) return;
-        const built = worldBuild.step(budgetMs);
+        if (world || !worldBuild) return;
+        // A recording (the marketing recorder, the golden shots) builds it at once on its first frame.
+        if (!options.recording && !attachReady) {
+            if (!attachAsked) {
+                attachAsked = true;
+                void prepareAttachPoints().then(() => (attachReady = true));
+            }
+            return;
+        }
+        const built = options.recording ? worldBuild.run() : worldBuild.step(budgetMs);
         behaviourBuildMs = worldBuild.spentMs;
         behaviourBuildSlices = worldBuild.slices;
         behaviourBuildLongestMs = worldBuild.longestMs;
@@ -1308,6 +1319,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (plotsKey !== hamletPlotsKey) {
                 hamletPlotsKey = plotsKey;
                 setAttachHomePlots(plots);
+                // (The behaviour world's walk grid and places keep wild walkers out of the plots' buildings and fences.)
+                if (setBehaviourHomePlots(plots)) restartBehaviourWorld();
                 for (const sceneModule of modules) (sceneModule as Partial<{setHomePlots: (list: HomePlot[]) => void}>).setHomePlots?.(plots);
             }
             placedAll = placeAnimals(snapshot.animals);
