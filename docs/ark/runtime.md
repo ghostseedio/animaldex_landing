@@ -102,18 +102,17 @@ The owner's decision that captures bring animals aboard (AnimalDex `docs/ark/cap
 
 **Far models by budget and distance:** a big Ark asks up front only for the herds' kinds and the tier's 160 / 120 / 80 kinds nearest the view; the rest are asked for when an animal of the kind is in view within 260 / 160 / 110 m, in the load order of §1 (an animal without its model is drawn as its icon meanwhile).
 
-**Measured** (scripts/ark-scale-fixture.mts and ark-scale-run.mjs from `ark-scale-test`, the same devices and populations; the release build re-run alongside on the same machine for a same-conditions comparison, below):
+**Measured** (scripts/ark-scale-fixture.mts and ark-scale-run.mjs from `ark-scale-test`, the same devices and populations), the release build (a92a19b9) and this branch run one after the other on the same machine, 07:40–08:07 UTC; the Mac's load average ~27–50:
 
 | | Desktop 1× | Desktop 3× | Phone profile 1× | Phone profile 3× |
 |---|---|---|---|---|
-| Mount, one task (ms), dry run → now | 6,753 → 3,489 | 17,870 → 4,095 | 28,226 → 14,339 | 63,214 → 9,772 |
-| Ready (ms) | 7,717 → 4,092 | 18,617 → 4,744 | 29,028 → 15,440 | 64,204 → 10,343 |
-| Scene CPU per frame (ms), the three views | 21–34 → 16–22 | 56–75 → 17–23 | 76–120 → 13–17 | 229–304 → 16–24 |
+| Mount, longest task (ms), release → runtime | 4,514 → 3,489 | 13,411 → 4,095 | 20,362 → 14,339 | 51,584 → 9,772 |
+| Scene CPU per frame (ms), the three views | 18–26 → 16–22 | 35–55 → 17–23 | 42–114 → 13–17 | 151–183 → 16–24 |
+| Frame interval p50 (ms) | 17–33 → 17–33 | 33–67 → 17–33 | 50–117 → 17 | 133–167 → 17–33 |
 | Drawn one by one | 2,447 → 1,195 | 6,225 → 1,179 | 2,339 → 200 | 5,697 → 200 |
-| Load to quiet (s) | 182 → 112 | 125 → 77 | 215 → 40 | 347 (not quiet) → 28 |
-| JS heap (MB) | 95 → 52 | 78 → 123 | 167 → 47 | 269 → 45 |
+| Load to quiet (s) | 78 → 112 | 135 → 77 | 160 → 40 | 297, not quiet → 28 |
 
-The phone profile ran on the low tier both times (the scene drops a tier under the 4× throttle on this loaded Mac): budget 200; on a phone that holds the medium tier it is 400. Per-frame CPU no longer grows with the population: at 3× it is what 1× was. Full tables: `docs/ark/scale/runtime-budget-v1.md` (and `.json`).
+The phone profile ran on the low tier in both builds (the scene drops a tier under the 4× throttle on this loaded Mac): budget 200; a phone that holds the medium tier gets 400. Per-frame CPU no longer grows with the population: 3× costs what 1× does. The desktop's 1× load to quiet is the one number that got slower (the release loaded the island's models in a different order and finished sooner; the branch asks for them as they come into view and was still filling in the near views). Full tables: `docs/ark/scale/runtime-budget-v1.md` (this branch) and `release-same-time-v1.md` (the release, same session); the dry run's own numbers (load ~61) are in `scale-v1.md`.
 
 **What is left: the mount itself.** With the budget, the population's part of the mount is bounded (placing 9,420 animals is ~0.5 s); the rest is the scenery and the behaviour schedule, the same as for 130 animals: 3.5–4 s on the desktop and 10–14 s on the phone profile under this load. No single task under 50 ms needs it split, and the pieces are other lanes' builders, so this is the plan rather than the change:
 1. **A worker prebuild.** Before `mountArk`, a worker computes the seeded, pure data: `worldDecor`, `forestFill`, `grassTufts(tier)`, the ground's height grid, `placeAnimals(snapshot)` and `scheduleWorld(worldSampler())`, and hands them over as typed arrays. Each builder takes a primed cache (one `prime…` export per module: decor.ts, terrain.ts, placement.ts, behaviour-schedule.ts). The worker file is built by `scripts/build-ark-bundle.mjs` into `public/ark/ark-worker.js` (the apps' embed) and loaded with `new Worker(new URL(...))` on the site; without workers, the same functions run on the main thread as today.
