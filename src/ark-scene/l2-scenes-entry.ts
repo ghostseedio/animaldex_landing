@@ -367,21 +367,26 @@ async function mountScenes(el: HTMLElement) {
         swim_stingray: () => {
             const at = site("coral_reef", -4, -2);
             const id = ids.stingray;
-            swimLine(id, nowS() + 1e6, {x: at.x - 4, z: at.z}, Math.PI / 2, 0.4, -3);
-            track(id, 3.2, 1.3, 0.3, 0);
-            return {note: "a common stingray: a wave along its fin's edge", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 4, z: at.z}, Math.PI / 2, 0.4, -3)};
+            const from = {x: at.x - 4, z: at.z};
+            lineStart = nowS() + 1e6;
+            swimLine(id, lineStart, from, Math.PI / 2, 0.4, -3);
+            // From above and behind (the reef's corals hide a side view), the camera on its line.
+            track(id, 2.6, 0.9, -0.6, 0, lineAt(from, Math.PI / 2, 0.4));
+            return {note: "a common stingray: a wave along its fin's edge", watch: [id], go: goLine(() => swimLine(id, lineStart, from, Math.PI / 2, 0.4, -3))};
         },
         swim_reef: () => {
             const at = site("coral_reef", 2, -4);
             const c = ids.clown;
             const t = ids.tang;
-            swimLine(c, nowS() + 1e6, {x: at.x - 2, z: at.z}, Math.PI / 2, 0.18, -1.5);
-            swimLine(t, nowS() + 1e6, {x: at.x - 3, z: at.z + 0.6}, Math.PI / 2, 0.3, -1.5);
-            track(c, 1.6, 1.5, 0.3, 0);
-            return {note: "a clownfish and a blue tang (labriform: rowing with the fins, a light tail)", watch: [c, t], go: () => {
-                swimLine(c, nowS(), {x: at.x - 2, z: at.z}, Math.PI / 2, 0.18, -1.5);
-                swimLine(t, nowS(), {x: at.x - 3, z: at.z + 0.6}, Math.PI / 2, 0.3, -1.5);
-            }};
+            const from = {x: at.x - 3, z: at.z + 0.6};
+            lineStart = nowS() + 1e6;
+            swimLine(c, lineStart, {x: at.x - 2, z: at.z}, Math.PI / 2, 0.18, -1.5);
+            swimLine(t, lineStart, from, Math.PI / 2, 0.3, -1.5);
+            track(t, 1.8, 0.95, -0.6, 0, lineAt(from, Math.PI / 2, 0.3));
+            return {note: "a blue tang and a clownfish (labriform: rowing with the fins, a light tail), from above", watch: [t, c], go: goLine(() => {
+                swimLine(c, lineStart, {x: at.x - 2, z: at.z}, Math.PI / 2, 0.18, -1.5);
+                swimLine(t, lineStart, from, Math.PI / 2, 0.3, -1.5);
+            })};
         },
         swim_eel: () => {
             const id = ids.eel;

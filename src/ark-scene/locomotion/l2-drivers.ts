@@ -299,11 +299,12 @@ export const chainDriver: LocoDriver = {
                 // Lateral undulation: the body laid along its own track (an S-curve fixed on the ground), each point at
                 // its own distance along the body behind the front: no slip.
                 laidOnTrack(state.rest, state.front, shape.side * L * (0.55 + 0.45 * still), L / shape.waves, crawl.cycles, targets);
-                state.rest.forEach((r, k) => {
-                    const s = clamp((state.front - r.z) / L, 0, 1);
-                    const at = leglessPoint(shape, s, crawl.cycles);
-                    targets[k].y += at.lift * L * still;
-                });
+                if (shape.lift > 0) {
+                    for (let k = 0; k < state.rest.length; k++) {
+                        const s = clamp((state.front - state.rest[k].z) / L, 0, 1);
+                        targets[k].y += leglessPoint(shape, s, crawl.cycles).lift * L * still;
+                    }
+                }
             } else {
                 state.rest.forEach((r, k) => {
                     const s = clamp((state.front - r.z) / L, 0, 1);

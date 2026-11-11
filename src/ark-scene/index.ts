@@ -2827,7 +2827,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (moving(pick)) {
                 want = pick.name;
                 mode = "distance";
-            } else if (pick?.name === "slither" && speed > 1e-3 && l2Of(entry, model.behaviour?.plan).style.legless) {
+            } else if (speed > 1e-3 && clip("slither") && !clip("walk") && l2Of(entry, model.behaviour?.plan).style.legless) {
                 // (Lane L2: a legless animal creeping slower than its slither's own pace still crawls, a heavy snake
                 // straight on its belly: the chain driver poses it by the distance it moves.)
                 want = "slither";
