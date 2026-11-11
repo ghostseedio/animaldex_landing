@@ -267,6 +267,38 @@ test("on the spot the body holds still: a dig, a peck or a scrape is the head's 
     assert.ok(holds >= 3, `holds ${holds}`);
 });
 
+test("setting off after a recipe stay it has already turned on the spot: it holds still through its schedule's turn, never turning on the move", () => {
+    forgetRecipes();
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    let setOffs = 0;
+    for (const [slug, length] of [["harbor-seal", 1.6], ["mallard", 0.58], ["grey-heron", 0.95], ["red-fox", 0.9], ["meerkat", 0.3]] as const) {
+        const a = animal(`setoff-${slug}`, slug, {x: -70, z: 22}, length);
+        for (let start = day + SLOT_SECONDS; start < day + 24 * 3600; start += SLOT_SECONDS) {
+            const trip = tripAt(world, a.profile, a.animal, start, hoursAt, null);
+            const before = tripAt(world, a.profile, a.animal, trip.start - 0.01, hoursAt, null);
+            const held = before !== trip ? tripEpisode(world, before) : null;
+            if (!held || held.endYaw === undefined || held.endYaw === null) continue;
+            setOffs++;
+            // Through its schedule's own turn on the spot (or its first moment on its way) and just after it: no turning
+            // on the move (after that, its schedule's way is behaviour's).
+            const first = trip.legs[0];
+            const hold = first && first.mode === "pause" && first.turn ? first.seconds : 0.85;
+            const facing = poseOnTrip(world, trip, trip.start).yaw;
+            for (let t = trip.start + 0.1; t < trip.start + hold; t += 0.1) assert.ok(Math.abs(wrap(poseOnTrip(world, trip, t).yaw - facing)) < 1e-6, `${slug}: turned during its set-off`);
+            let last = poseOnTrip(world, trip, trip.start + hold);
+            let moving = 0;
+            for (let t = trip.start + hold + 0.1; t < trip.start + hold + 1.5; t += 0.1) {
+                const p = poseOnTrip(world, trip, t);
+                if (Math.hypot(p.x - last.x, p.z - last.z) > 0.005) moving += Math.abs(wrap(p.yaw - last.yaw));
+                last = p;
+            }
+            assert.ok(moving < 1, `${slug}: turned ${moving.toFixed(2)} rad on its way off`);
+        }
+    }
+    assert.ok(setOffs >= 5, `set-offs ${setOffs}`);
+});
+
 test("only real cachers cache: squirrels, jays, nutcrackers, hoarding rodents, mustelids; not a camel's fat or a wader's buried prey", () => {
     for (const slug of ["red-squirrel", "eurasian-jay", "clarks-nutcracker", "merriams-kangaroo-rat", "stoat"]) assert.ok(speciesRecipes(slug).recipes.some((r) => r.id === "cache_food"), slug);
     for (const slug of ["dromedary-camel", "african-sacred-ibis", "short-billed-dowitcher", "himalayan-monal", "black-rat", "javan-myna", "red-river-hog", "fat-tailed-dunnart"]) {

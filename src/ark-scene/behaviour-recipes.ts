@@ -655,6 +655,9 @@ const heightOf = (length: number) => Math.max(length * 0.6, 0.05);
 /** How fast it turns on the spot (rad/s, at the eased turn's quickest): behaviour's TURN_RATE, its own set-off's. */
 const TURN_SPOT = 1.6;
 
+/** The most a solo episode's steps turn it in any 20 s before it heads home (rad: about half a circle, so its way home still fits). */
+const TURN_BUDGET = 3.2;
+
 /** A solo leg further than this off its heading (rad) turns on the spot first, then sets off. */
 const TURN_FIRST = 1.2;
 
@@ -725,7 +728,7 @@ function aheadSpot(ctx: BuildContext, step: TemplateStep, pos: P, heading: numbe
     // At the edge of its patch it bends back on the anchor's side, a wide turn (then straight across if it must).
     const homeward = Math.atan2(anchor.x - pos.x, anchor.z - pos.z);
     const toward = wrapAngle(homeward - heading) >= 0 ? 1 : -1;
-    for (const off of [spread * 1.8, spread * 2.8]) {
+    for (const off of [spread * 1.8, spread * 2.8, 0.9, 1.3]) {
         for (const f of [1, 0.7]) {
             const p = at(heading + off * toward, f);
             if (p) return p;
@@ -786,16 +789,17 @@ function legAt(from: P, c: {x: number; z: number} | null, c2: {x: number; z: num
  * than turning on the spot: shorter where the curve would leave the water it swims in or the ground it walks on.
  * `endYaw`: it also arrives along that heading (its schedule's, on the way back), so it needs no turn there either.
  */
-function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading: number, endYaw: number | null): {c: {x: number; z: number}; c2: {x: number; z: number} | null; len: number} | null {
+function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading: number, endYaw: number | null, lineUpWithin = Math.PI / 3): {c: {x: number; z: number}; c2: {x: number; z: number} | null; len: number} | null {
     const flat = Math.hypot(to.x - from.x, to.z - from.z);
     if (flat < 0.05) return null;
     const sampler = world.sampler;
     const wet = (x: number, z: number) => sampler.heightAt(x, z) < -0.02;
-    const medium = block.aloft || block.id === "fly" ? null : wet(from.x, from.z) && wet(to.x, to.z) ? wet : world.nav.walkable(from.x, from.z) && world.nav.walkable(to.x, to.z) ? (x: number, z: number) => world.nav.walkable(x, z) : null;
+    const medium = block.aloft || block.id === "fly" ? null : wet(from.x, from.z) && wet(to.x, to.z) ? wet : onGround(block) ? (x: number, z: number) => walkableAt(world, x, z) : null;
+    const clear = (c: {x: number; z: number} | null, c2: {x: number; z: number} | null) => !medium || wayClear(from, c, c2, to, medium);
     // Lining up with the end heading only where it comes in from behind that heading: from in front it would loop round
     // to come in (it turns at the end instead, at its turn rate).
     const chord = Math.atan2(to.x - from.x, to.z - from.z);
-    const lineUp = endYaw !== null && Math.abs(wrapAngle(endYaw - chord)) < Math.PI / 3 ? endYaw : null;
+    const lineUp = endYaw !== null && Math.abs(wrapAngle(endYaw - chord)) < lineUpWithin ? endYaw : null;
     // Behind it, the control point goes out to the side it turns to: a hook round, not a curve that folds back on
     // itself (there the way it goes flips in an instant).
     const turn = wrapAngle(chord - heading);
@@ -804,9 +808,50 @@ function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading
         const len = flat * f;
         const c = {x: from.x + Math.sin(heading) * len + Math.cos(heading) * len * side, z: from.z + Math.cos(heading) * len - Math.sin(heading) * len * side};
         const c2 = lineUp === null ? null : {x: to.x - Math.sin(lineUp) * len, z: to.z - Math.cos(lineUp) * len};
-        if (!medium || [0.25, 0.5, 0.75].every((k) => medium(legAt(from, c, c2, to, k).x, legAt(from, c, c2, to, k).z))) return {c, c2, len: c2 ? len : 0};
+        if (clear(c, c2)) return {c, c2, len: c2 ? len : 0};
+    }
+    // Something in the way (the garden pond, a rock, a building): round it on one side or the other, a gentle arc.
+    if (medium && !clear(null, null)) {
+        for (const bow of [0.6, -0.6, 1, -1]) {
+            const c = {x: (from.x + to.x) / 2 + Math.cos(chord) * flat * bow, z: (from.z + to.z) / 2 - Math.sin(chord) * flat * bow};
+            if (clear(c, null)) return {c, c2: null, len: 0};
+        }
     }
     return null;
+}
+
+/** On the ground, where the nav's walk grid governs (not in the air, the water or a plunge). */
+function onGround(block: BlockDef): boolean {
+    return !block.aloft && !block.wet && block.id !== "fly" && block.id !== "swim" && block.id !== "dive" && block.id !== "surface";
+}
+
+/** Ground a walker may cross: the nav's own rule (a dry walkable cell, nothing in the way: the garden pond, a rock, a building). */
+function walkableAt(world: ScheduleWorld, x: number, z: number): boolean {
+    return world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.2);
+}
+
+/** Whether a leg's way, sampled every quarter metre or so, stays where `ok` says. */
+function wayClear(from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P, ok: (x: number, z: number) => boolean): boolean {
+    const n = Math.min(Math.max(Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.25), 3), 60);
+    for (let j = 1; j < n; j++) {
+        const at = legAt(from, c, c2, to, j / n);
+        if (!ok(at.x, at.z)) return false;
+    }
+    return true;
+}
+
+/** A ground leg cut short where something blocks its way (it stops at the edge, never crosses). */
+function clippedAtEdge(world: ScheduleWorld, from: P, to: P): P {
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    const n = Math.min(Math.max(Math.ceil(flat / 0.2), 2), 80);
+    let last = from;
+    for (let j = 1; j <= n; j++) {
+        const x = from.x + ((to.x - from.x) * j) / n;
+        const z = from.z + ((to.z - from.z) * j) / n;
+        if (!walkableAt(world, x, z)) return last;
+        last = {x, y: Math.max(world.sampler.heightAt(x, z), 0), z};
+    }
+    return to;
 }
 
 function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, pos: P, random: () => number, heading: number, t: number): P | null {
@@ -892,7 +937,9 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             const centre = step.to === "material" ? nestOrigin(ctx) ?? origin : origin;
             const reach = within(step.r ?? 3);
             // (Material too is gathered ahead, round the nest: each trip goes out on through the nest, not back and forth.)
-            const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (sampler.heightAt(x, z) > 0.03 && world.nav.walkable(x, z) ? {x, y: ground(x, z), z} : null), t);
+            // (Only where its way there is clear ground: never across the garden pond, a rock or a building.)
+            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > 0.03 && walkableAt(world, x, z) && (block.aloft || wayClear(pos, null, null, {x, y: 0, z}, (px, pz) => walkableAt(world, px, pz)));
+            const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (reachable(x, z) ? {x, y: ground(x, z), z} : null), t);
             if (ahead) return ahead;
             if (step.near === "here" && step.to === "ground") return pos;
             for (let k = 0; k < 10; k++) {
@@ -900,7 +947,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
                 const r = reach * (0.35 + 0.65 * Math.sqrt(random()));
                 const x = centre.x + Math.sin(a) * r;
                 const z = centre.z + Math.cos(a) * r;
-                if (sampler.heightAt(x, z) > 0.03 && world.nav.walkable(x, z)) return {x, y: ground(x, z), z};
+                if (reachable(x, z)) return {x, y: ground(x, z), z};
             }
             return null;
         }
@@ -999,8 +1046,12 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     let caught = false;
     const material = species.nest?.materials[0] ?? "twigs";
     const reserve = 4;
-    const sequence = (steps: TemplateStep[]): boolean => {
+    // Its turning over the last 20 s (behaviour's circling measure): a step that would take it past the budget ends the
+    // loop instead, and it heads home with one turn (a puffin in the shallows turned round to dive back, then again for home).
+    const turns: Array<{t: number; turn: number}> = [];
+    const sequence = (steps: TemplateStep[], budgeted = true): boolean => {
         for (const step of steps) {
+            const before = {n: keys.length, t, pos, yaw, carry, caught};
             const draw = step.s ? step.s[0] + (step.s[1] - step.s[0]) * timing() : 0;
             if (step.role && ctx.pair && step.role !== ctx.pair.role) {
                 // The other role's step: this side holds for the same time (so both stay in step).
@@ -1030,6 +1081,11 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             }
             if (!target) return false;
             if (block.id === "go") block = goBlock(owner.profile, kit, world, pos, target);
+            // A ground leg whose way is blocked (the garden pond, a rock, a building) and that no arc gets round stops at the edge.
+            if (block.motion === "travel" && onGround(block) && Math.hypot(target.x - pos.x, target.z - pos.z) > 0.05 && walkableAt(world, pos.x, pos.z)) {
+                const from = pos;
+                if (!wayClear(from, null, null, target, (x, z) => walkableAt(world, x, z)) && !legCurve(world, block, from, target, yaw, null)) target = clippedAtEdge(world, from, target);
+            }
             const distance = Math.hypot(target.x - pos.x, target.y - pos.y, target.z - pos.z);
             const height = Math.max(pos.y - target.y, 0);
             const travelSeconds =
@@ -1057,7 +1113,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                 if (block.id === "clash" && face) want = Math.atan2(face.x - pos.x, face.z - pos.z);
                 else if (flat > 0.03) {
                     // (A walk to meet its rival comes in facing it; a plunge goes straight down its line.)
-                    curve = block.curve === "plunge" ? null : legCurve(world, block, pos, target, yawIn, face ? Math.atan2(face.x - target.x, face.z - target.z) : null);
+                    curve = block.curve === "plunge" ? null : legCurve(world, block, pos, target, yawIn, face ? Math.atan2(face.x - target.x, face.z - target.z) : null, Math.PI / 2);
                     const end = legAt(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1);
                     want = Math.atan2(end.dx, end.dz);
                 }
@@ -1094,6 +1150,20 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             t += seconds;
             pos = target;
             if (step.eat || step.drop) carry = null;
+            if (budgeted && !ctx.pair) {
+                const turn = Math.abs(yaw - before.yaw);
+                const recent = turns.reduce((sum, e) => (e.t > t - 20 ? sum + e.turn : sum), 0);
+                if (turn > 0.05 && recent + turn > TURN_BUDGET) {
+                    keys.length = before.n;
+                    t = before.t;
+                    pos = before.pos;
+                    yaw = before.yaw;
+                    carry = before.carry;
+                    caught = before.caught;
+                    return false;
+                }
+                if (turn > 0.05) turns.push({t, turn});
+            }
         }
         return true;
     };
@@ -1104,7 +1174,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             completed = sequence(template.steps.slice(template.loop));
         }
     }
-    if (template.tail) sequence(template.tail);
+    if (template.tail) sequence(template.tail, false);
     if (!keys.length) return null;
     // The prey is there while it waits for it: a wait, a scan or a hover before a catch shows the school or swarm it watches.
     for (let i = keys.length - 2; i >= 0; i--) {

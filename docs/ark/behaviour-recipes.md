@@ -463,3 +463,17 @@ For behaviour: the landing at the end of a schedule flight can snap round (149°
 - **The loop plan is a half loop now:** out, round and back towards where it began, so the way home lies ahead.
 
 Circling on this branch (with home growth b95b0026): every animal 0.18% facing, 0.06% travel; the test's half 0.10% / 0.04%. Flyers 0.446 turns a minute. New tests: `a plunge dive never goes through the ground`, `a recipe's legs go no faster than its clips carry it`.
+
+## Turns on the spot, set-off and blocked ground (behaviour 16a098d1, release 3a6afbc5)
+
+- **Turn on the spot first.** A solo leg more than 1.2 rad off its heading first turns on the spot, then sets off nearly straight. The turn is a `turn` hold, eased, no faster than 1.6 rad/s (behaviour's `TURN_RATE`); its rig plays its stand, through the `freeze` state's pause. A red fox's stalk round behind it had been a slow loop.
+- **The leg home is a gentle arc.** It turns on the spot first when it must. A stay that keeps its homecoming heading comes in along its way; otherwise it lines up only when its way in is within 60° of that heading, so it never loops. A walk to meet a rival still lines up within 90°.
+- **Set-off.** Behaviour's set-off now turns on the spot. So a recipe stay turns on the spot in its last seconds, from its homecoming heading to the way its next slot sets off (`departureYaw`). It keeps that heading through behaviour's own turn pause, or the first 0.85 s, then follows its schedule; it never turns on the move. A short stay's episode ends 5.5 s before its slot, which leaves time for that turn.
+- **Turning budget:** a solo step that would turn it more than 3.2 rad in 20 s ends the loop, and it heads home with one turn. A puffin in the shallows had turned round to dive back, then again to go home.
+- **Blocked ground:** recipe legs use the nav's own rule (a walkable cell, and `sampler.blocked` clear: the garden pond, rocks, buildings).
+  - Ground targets need a clear straight way.
+  - Curves are checked every quarter metre.
+  - A blocked leg tries a gentle arc round either side, else stops at the edge.
+- **Holds:** no hold shuffles the body (see above).
+
+Measured with the release merged: circling, every animal, 0.15% facing and 0.02% travel. Flyers 0.464 turns a minute. Full npm test 2,243/2,243. New test: setting off after a recipe stay.
