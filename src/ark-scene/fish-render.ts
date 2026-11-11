@@ -12,18 +12,7 @@
  * fish) and pointed along its own motion.
  */
 
-import {
-    BufferAttribute,
-    BufferGeometry,
-    Color,
-    Euler,
-    InstancedBufferAttribute,
-    InstancedMesh,
-    Matrix4,
-    MeshStandardMaterial,
-    Quaternion,
-    Vector3
-} from "three";
+import {BufferAttribute, BufferGeometry, Color, InstancedBufferAttribute, InstancedMesh, MeshStandardMaterial, Vector3} from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {ARK_ENV} from "@/ark-scene/glsl";
 import {FISH_KINDS, FISH_LOOKS, fishSchoolAt, fishSchools, placeFish, schoolFrame, schoolTime, seaEpochSeconds, surgeDirection, type FishKind, type FishLook, type SchoolFrame, type Vec3} from "@/ark-scene/fish-schools";
@@ -179,11 +168,6 @@ export class FishView {
     private triangleCount = 0;
     private readonly materials: MeshStandardMaterial[] = [];
     private readonly p: Vec3 = {x: 0, y: 0, z: 0};
-    private readonly matrix = new Matrix4();
-    private readonly rotation = new Quaternion();
-    private readonly euler = new Euler(0, 0, 0, "YXZ");
-    private readonly at = new Vector3();
-    private readonly scale = new Vector3();
     private frame: SchoolFrame | undefined = undefined;
     private readonly velocity: Vec3 = {x: 0, y: 0, z: 0};
 
@@ -227,7 +211,11 @@ export class FishView {
         return this.triangleCount;
     }
 
-    update(camera: Vector3) {
+    /**
+     * Place every fish drawn this frame. `view` (the camera's forward, unit) lets schools out of the picture be skipped;
+     * without it every school in reach is placed.
+     */
+    update(camera: Vector3, view?: Vector3) {
         const epoch = seaEpochSeconds();
         const seaLevel = ARK_ENV.seaLevel.value;
         const under = camera.y < seaLevel;
@@ -236,13 +224,25 @@ export class FishView {
             entry.farCount = 0;
         });
         for (const school of fishSchools()) {
-            if (Math.hypot(school.home.x - camera.x, school.home.z - camera.z) > school.range + 80) continue;
+            const hx = school.home.x - camera.x;
+            const hz = school.home.z - camera.z;
+            if (hx * hx + hz * hz > (school.range + 80) * (school.range + 80)) continue;
             const now = fishSchoolAt(school, epoch);
-            const distance = Math.max(Math.hypot(now.centre.x - camera.x, now.centre.y - camera.y, now.centre.z - camera.z) - now.radius, 0);
+            const dx = now.centre.x - camera.x;
+            const dy = now.centre.y - camera.y;
+            const dz = now.centre.z - camera.z;
+            const reach = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const distance = Math.max(reach - now.radius, 0);
             // Small fish: from above the water they show only fairly close; under it the water's haze closes in.
             const nearReach = 15 * this.reach;
             const farReach = (under ? 38 : 34) * this.reach * (school.kind === "silver_jack" ? 1.4 : 1);
             if (distance > farReach) continue;
+            // Out of the picture (outside a cone a little wider than the view, its own size allowed for): nothing to place.
+            if (view && distance > 0) {
+                const cos = (dx * view.x + dy * view.y + dz * view.z) / reach;
+                const spread = Math.min(0.85 + Math.asin(Math.min(now.radius / reach, 1)), Math.PI);
+                if (cos < Math.cos(spread)) continue;
+            }
             const entry = this.kinds.get(school.kind);
             if (!entry) continue;
             const near = distance < nearReach;
@@ -254,32 +254,65 @@ export class FishView {
             const matrices = mesh.instanceMatrix.array as Float32Array;
             const beats = (mesh.geometry.getAttribute("arkFish") as InstancedBufferAttribute).array as Float32Array;
             const surge = school.style === "hover" ? surgeDirection(now.centre) : null;
+            const pitchScale = surge ? 0.3 : 1;
             for (let i = 0; i < slots.length; i++) {
                 // A low-discrepancy share of the school (golden-ratio steps): thinned evenly, not from one side.
                 if (this.share < 1 && ((i * 0.618034) % 1) > this.share) continue;
                 const slot = slots[i];
                 const p = placeFish(frame, i, this.p, this.velocity);
                 let vx = this.velocity.x;
-                const vy = this.velocity.y;
+                let vy = this.velocity.y;
                 let vz = this.velocity.z;
                 const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
                 if (surge) {
                     // Hovering: mostly facing into the surge, turning a little on its own; a dart points it where it goes.
                     const own = 0.7 * Math.sin(t * 0.11 * slot.rate + slot.phase * 2);
-                    const fx = surge.x * Math.cos(own) - surge.z * Math.sin(own);
-                    const fz = surge.x * Math.sin(own) + surge.z * Math.cos(own);
+                    const co = Math.cos(own);
+                    const so = Math.sin(own);
+                    const fx = surge.x * co - surge.z * so;
+                    const fz = surge.x * so + surge.z * co;
                     const k = Math.min(Math.max((speed - 0.06) / 0.2, 0), 1);
                     const flip = Math.sin(t * 0.04 + slot.phase) > 0.35 ? -1 : 1;
                     vx = vx * k + fx * flip * (1 - k) * 0.2;
                     vz = vz * k + fz * flip * (1 - k) * 0.2;
                 }
-                const flat = Math.hypot(vx, vz);
-                this.euler.set(Math.max(Math.min(-Math.atan2(vy, flat + 1e-4), 0.5), -0.5) * (surge ? 0.3 : 1), Math.atan2(vx, vz), 0);
-                this.rotation.setFromEuler(this.euler);
+                // Its frame straight from its motion (no angles): forward along it, the climb held to about 27°.
+                let flat = Math.sqrt(vx * vx + vz * vz);
+                if (flat < 1e-5) {
+                    vx = 0;
+                    vz = 1e-5;
+                    flat = 1e-5;
+                }
+                const climb = Math.max(Math.min(vy, flat * 0.55), -flat * 0.55) * pitchScale;
+                const fl = Math.sqrt(flat * flat + climb * climb);
+                const f0 = vx / fl;
+                const f1 = climb / fl;
+                const f2 = vz / fl;
+                // Right = up × forward (level), up = forward × right.
+                const r0 = f2 / (flat / fl);
+                const r2 = -f0 / (flat / fl);
+                const u0 = f1 * r2;
+                const u1 = f2 * r0 - f0 * r2;
+                const u2 = -f1 * r0;
                 const size = look.length * (0.85 + 0.3 * ((slot.phase * 0.159) % 1));
-                this.matrix.compose(this.at.set(p.x, p.y, p.z), this.rotation, this.scale.setScalar(size));
                 const index = near ? entry.nearCount++ : entry.farCount++;
-                this.matrix.toArray(matrices, index * 16);
+                const o = index * 16;
+                matrices[o] = r0 * size;
+                matrices[o + 1] = 0;
+                matrices[o + 2] = r2 * size;
+                matrices[o + 3] = 0;
+                matrices[o + 4] = u0 * size;
+                matrices[o + 5] = u1 * size;
+                matrices[o + 6] = u2 * size;
+                matrices[o + 7] = 0;
+                matrices[o + 8] = f0 * size;
+                matrices[o + 9] = f1 * size;
+                matrices[o + 10] = f2 * size;
+                matrices[o + 11] = 0;
+                matrices[o + 12] = p.x;
+                matrices[o + 13] = p.y;
+                matrices[o + 14] = p.z;
+                matrices[o + 15] = 1;
                 // The tail beat: a steady rhythm per fish (continuous on the shared clock), stronger when it swims fast.
                 const frequency = look.beat * (0.8 + 0.4 * slot.rate);
                 beats[index * 2] = ((t * frequency) % 1) * Math.PI * 2;

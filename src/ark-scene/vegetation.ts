@@ -30,7 +30,8 @@ import {
     CircleGeometry,
     SRGBColorSpace,
     Vector3,
-    type Material
+    type Material,
+    type Object3D
 } from "three";
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKind} from "@/ark-scene/decor";
@@ -769,8 +770,11 @@ export type Vegetation = {
     setFill: (fraction: number) => void;
     /** Hide these decor kinds' own shapes (the asset library's trees stand in for them once loaded). */
     hideKinds: (kinds: Set<string>) => void;
-    /** Under the sea (batch 4): the reef's near and far versions re-sorted round the camera, the fish placed, the surge's clock run. */
-    update: (camera: Vector3) => void;
+    /**
+     * Under the sea (batch 4): the reef's near and far versions re-sorted round the camera, the fish placed (only the
+     * schools in the picture), the surge's clock run.
+     */
+    update: (camera: Object3D) => void;
     triangles: number;
     dispose: () => void;
 };
@@ -856,6 +860,7 @@ export function buildVegetation(maxGrass: number): Vegetation {
     // Under the sea (graphics pass, batch 4): the reef and the ambient fish schools, decoration only.
     const reef = buildReef();
     const fish = new FishView();
+    const seaView = new Vector3();
     meshes.push(...reef.meshes, ...fish.meshes);
 
     return {
@@ -878,8 +883,9 @@ export function buildVegetation(maxGrass: number): Vegetation {
             fish.setTier(Math.max(fraction, 0.35), 0.5 + 0.5 * fraction);
         },
         update: (camera) => {
-            reef.update(camera);
-            fish.update(camera);
+            camera.getWorldDirection(seaView);
+            reef.update(camera.position);
+            fish.update(camera.position, seaView);
         },
         get triangles() {
             return triangles + grassTriangles * grass.count + fillMeshes.reduce((sum, entry) => sum + (entry.mesh.count - entry.base) * entry.triangles, 0) + reef.triangles + fish.triangles;
