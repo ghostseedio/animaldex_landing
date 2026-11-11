@@ -9,7 +9,9 @@ import {FRESH_LEVEL, waterLevelAt} from "@/ark-scene/water-level";
 import {CROPS, cropAt, cropsGrowAt, fieldAt, fieldCentre, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
 import {grassTufts, worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
-import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
+import {LAKE, RIVER, TERRAIN_HALF, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
+import {groundArrays, groundGeometry, primeGround} from "@/ark-scene/terrain";
+import {PlaneGeometry} from "three";
 
 /** The golden page's world adapter (golden-entry.ts), without the scene. */
 const world: GoldenWorld = {
@@ -133,4 +135,28 @@ test("graphics: the lake and the river keep their own level whatever the tide do
         const lake = surfaceAt(LAKE.x, LAKE.z, {seaLevel: sea, wetness: 0, snow: 0, wind: 0.35, storm: 0});
         assert.ok(Math.abs(lake.waterDepth + heightAt(LAKE.x, LAKE.z) - FRESH_LEVEL) < 1e-9, "lake depth from its own level");
     }
+});
+
+test("graphics: the ground built from plain arrays (the worker prebuild) is the old plane, bit for bit; primed and built here are identical", () => {
+    const arrays = groundArrays();
+    // The old way: a PlaneGeometry laid flat, each vertex lifted to the ground, three's own normals.
+    const plane = new PlaneGeometry(TERRAIN_HALF * 2, TERRAIN_HALF * 2, arrays.size - 1, arrays.size - 1);
+    plane.rotateX(-Math.PI / 2);
+    const position = plane.getAttribute("position");
+    for (let i = 0; i < position.count; i++) position.setY(i, sampleGround(position.getX(i), position.getZ(i)).height);
+    plane.computeVertexNormals();
+    assert.deepEqual(arrays.positions, position.array, "positions");
+    assert.deepEqual(arrays.normals, plane.getAttribute("normal").array, "normals");
+    assert.deepEqual(arrays.uvs, plane.getAttribute("uv").array, "uvs");
+    assert.deepEqual(arrays.index, plane.getIndex()!.array, "index");
+    // Primed (as the worker hands it over) and built here: the same geometry and depth map.
+    primeGround(groundArrays());
+    const primed = groundGeometry();
+    primeGround(null);
+    const built = groundGeometry();
+    for (const name of ["position", "normal", "uv", "color", "arkLayers", "arkLayers2", "arkRock"]) {
+        assert.deepEqual(primed.geometry.getAttribute(name).array, built.geometry.getAttribute(name).array, name);
+    }
+    assert.deepEqual(primed.geometry.getIndex()!.array, built.geometry.getIndex()!.array, "index");
+    assert.deepEqual(primed.depth.image.data, built.depth.image.data, "depth map");
 });
