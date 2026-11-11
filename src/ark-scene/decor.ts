@@ -89,7 +89,7 @@ function inVillage(x: number, z: number): boolean {
 }
 
 /** The forests and the high ground keep every tree, even near the hamlet's lanes (the river's far bank). */
-const FOREST_ZONES: ReadonlySet<ArkZone> = new Set(["rainforest", "woodland", "mountains", "polar"]);
+const FOREST_ZONES: ReadonlySet<ArkZone> = new Set<ArkZone>(["rainforest", "woodland", "mountains", "polar"]);
 
 const WOODS_TREES = new Set<DecorKind>(["broadleaf", "rainforest", "conifer"]);
 
