@@ -3,7 +3,7 @@ import test from "node:test";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {canEat, hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
 import {HEAD_LIMITS, clampLook, headLimits, lookAngles, stepHead} from "@/ark-scene/head-look";
-import {ReactiveLayer, minGap, perceive, reactiveEnvelope, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
+import {ReactiveLayer, fleeSpeed, minGap, offsetShare, perceive, reactiveEnvelope, threatScale, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
 
 // MARK: Helpers
 
@@ -17,6 +17,7 @@ function animal(id: string, slug: string, x: number, z: number, extra: Omit<Part
         plan: extra.plan ?? intelProfile(slug).plan,
         length,
         size: b.size,
+        speed: b.speed,
         dominance: b.dominance,
         social: b.social,
         diet: b.diet,
@@ -101,6 +102,41 @@ test("perception: sight in the open, not through a hill; hearing a moving animal
     assert.equal(perceive(chimp, far, world(0, {night: 1})), null, "at night a day animal does not see as far");
 });
 
+// MARK: How alarming a threat is, how fast it runs, and armour
+
+test("a bigger predator, and one coming at it, sets it off sooner; a still one later; a tortoise runs slower than a deer", () => {
+    const deer = animal("deer", "red-deer", 0, 0);
+    const coming = animal("wolf", "eurasian-wolf", 0, 12, {shared: {moving: true, yaw: Math.PI}});
+    const passing = animal("wolf", "eurasian-wolf", 0, 12, {shared: {moving: true, yaw: Math.PI / 2}});
+    const still = animal("wolf", "eurasian-wolf", 0, 12, {shared: {moving: false}});
+    assert.ok(threatScale(deer, coming) > threatScale(deer, passing), "coming at it");
+    assert.ok(threatScale(deer, passing) > threatScale(deer, still), "moving rather than still");
+    const big = animal("lion", "african-lion", 0, 12, {length: 4, shared: {moving: true, yaw: Math.PI / 2}});
+    assert.ok(threatScale(deer, big) > threatScale(deer, passing), "bigger");
+    for (const t of [coming, passing, still, big]) assert.ok(threatScale(deer, t) >= 0.6 && threatScale(deer, t) <= 1.95);
+    const tortoise = animal("t", "leopard-tortoise", 0, 0, {length: 1.2});
+    const deer12 = animal("d", "red-deer", 0, 0, {length: 1.2});
+    assert.ok(fleeSpeed(tortoise) < fleeSpeed(deer12) * 0.6, `tortoise ${fleeSpeed(tortoise).toFixed(1)} vs deer ${fleeSpeed(deer12).toFixed(1)} m/s`);
+    assert.ok(fleeSpeed(animal("e", "african-bush-elephant", 0, 0, {length: 3.5})) <= 8);
+});
+
+test("an armoured animal pulls in and stays put; a sessile one is never moved", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const tortoise = animal("t", "leopard-tortoise", 0, 0, {shared: {doing: "graze"}});
+    const croc = animal("croc", "american-alligator", -12, 1.2, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}});
+    const frames = run(layer, [tortoise, croc], 10, {move: (list, t) => {
+        list.find((i) => i.id === "croc")!.shared.x = -12 + (t - 1000) * 1.5;
+    }});
+    const actions = new Set(frames.map((f) => f.out.get("t")!.action));
+    assert.ok(actions.has("withdraw"), `it withdraws (${Array.from(actions).join(", ")})`);
+    assert.ok(!actions.has("flee"), "it does not run");
+    const pulled = frames.filter((f) => f.out.get("t")!.action === "withdraw");
+    assert.ok(pulled.every((f) => Math.hypot(f.out.get("t")!.dx, f.out.get("t")!.dz) < 0.3), "it stays where it is");
+    assert.ok(pulled[pulled.length - 1].out.get("t")!.crouch > 0.6, "pulled in low");
+    const barnacle = {...animal("b", "acorn-barnacle", 0, 0), sessile: true};
+    assert.equal(reactiveEnvelope(barnacle, true), 0, "a sessile animal has no envelope");
+});
+
 // MARK: Scenario 1: a predator passes a herd
 
 test("a predator passes a herd: the first to notice calls, the alarm runs through the herd, and they run to the herd and away", () => {
@@ -136,6 +172,74 @@ test("a predator passes a herd: the first to notice calls, the alarm runs throug
     // Heads up and toward the wolf when alert.
     const alert = frames.flatMap((f) => Array.from(f.out.entries()).filter(([id, o]) => id !== "wolf" && o.looking === "wolf"));
     assert.ok(alert.length > 0, "they look at the wolf");
+});
+
+test("after running, it holds its ground while the predator is still in view (it never walks back toward it), and looks where it runs", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const deer = animal("deer", "red-deer", 0, 0, {shared: {doing: "graze"}});
+    const wolf = animal("wolf", "eurasian-wolf", -6, 0, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}});
+    // The wolf comes close, then backs off to 16 m and stands there, watching.
+    const frames = run(layer, [deer, wolf], 16, {move: (list, t) => {
+        const w = list.find((i) => i.id === "wolf")!;
+        const k = t - 1000;
+        w.shared.x = k < 3 ? -6 : -6 - Math.min((k - 3) * 2, 10);
+        w.shared.moving = k >= 3 && k < 8;
+    }});
+    const fled = frames.findIndex((f) => f.out.get("deer")!.action === "flee");
+    assert.ok(fled >= 0, "it runs");
+    const runningAhead = frames.slice(fled).filter((f) => f.out.get("deer")!.action === "flee" && f.out.get("deer")!.looking === "ahead").length;
+    assert.ok(runningAhead > 0, "running, it looks where it runs");
+    let peak = 0;
+    for (const f of frames.slice(fled)) {
+        const o = f.out.get("deer")!;
+        const off = Math.hypot(o.dx, o.dz);
+        peak = Math.max(peak, off);
+        // Toward the wolf (at -x) is a smaller dx; while it is still reacting it never gives back more than a step.
+        if (o.action === "alert" || o.action === "flee") assert.ok(off >= peak - 0.5, `holds its ground (${off.toFixed(2)} of ${peak.toFixed(2)} m, ${o.action})`);
+    }
+});
+
+test("an alarm about a lion far off puts the herd on alert, heads up and on it; nobody runs until it comes near", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const herd = Array.from({length: 5}, (_, i) => animal(`z${i}`, "plains-zebra", (i % 3) * 2.4, Math.floor(i / 3) * 2.4, {shared: {doing: "graze", yaw: i * 1.3}}));
+    const lion = animal("lion", "african-lion", -30, 30, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}});
+    // It walks across 30 m off for 12 s.
+    const far = run(layer, [...herd, lion], 12, {move: (list, t) => {
+        list.find((i) => i.id === "lion")!.shared.x = -30 + (t - 1000) * 3;
+    }});
+    assert.ok(far.some((f) => Array.from(f.out.values()).some((o) => o.called)), "someone calls");
+    assert.ok(herd.every((z) => far.some((f) => f.out.get(z.id)!.looking === "lion")), "every head comes up to it");
+    assert.ok(!far.some((f) => herd.some((z) => f.out.get(z.id)!.action === "flee")), "nobody runs from a lion 30 m off");
+    // Then it turns and walks straight at them: they run.
+    const near = run(layer, [...herd, lion], 10, {start: 1012, move: (list, t) => {
+        const l = list.find((i) => i.id === "lion")!;
+        l.shared.x = 6;
+        l.shared.z = 30 - (t - 1012) * 3;
+        l.shared.yaw = Math.PI;
+    }});
+    assert.ok(herd.filter((z) => near.some((f) => f.out.get(z.id)!.action === "flee")).length >= 4, "when it comes near, they run");
+});
+
+test("with the shared layer's wariness: already watching, it notices sooner, adds no avoiding of its own, and runs only if the predator comes close", () => {
+    const first = (doing: string, lionX: number) => {
+        const layer = new ReactiveLayer({tier: "high"});
+        const zebra = animal("wz", "plains-zebra", 0, 0, {shared: {doing, yaw: Math.PI / 2}});
+        const lion = animal("wl", "african-lion", lionX, 0, {shared: {doing: "rest", moving: false, yaw: -Math.PI / 2}});
+        const frames = run(layer, [zebra, lion], 8);
+        return {
+            noticed: frames.findIndex((f) => f.out.get("wz")!.looking === "wl"),
+            fled: frames.some((f) => f.out.get("wz")!.action === "flee"),
+            moved: Math.max(...frames.map((f) => Math.hypot(f.out.get("wz")!.dx, f.out.get("wz")!.dz)))
+        };
+    };
+    // A lion resting 18 m off (beyond its flight distance), in sight.
+    const grazing = first("graze", 18);
+    const watching = first("watch", 18);
+    assert.ok(watching.noticed >= 0 && watching.noticed <= grazing.noticed, `watching notices no later (${watching.noticed} vs ${grazing.noticed} frames)`);
+    assert.ok(!watching.fled, "it does not run from a lion 18 m off that the shared layer already has it watching");
+    assert.ok(watching.moved < 0.3, `no extra avoiding step on top of the shared one (${watching.moved.toFixed(2)} m)`);
+    // The lion close: it runs all the same.
+    assert.ok(first("watch", 5).fled, "a lion 5 m off: it runs");
 });
 
 // MARK: Scenario 2: a pack acts out a hunt (the pack mates not in the act stalk and stop short)
@@ -264,6 +368,30 @@ test("a curious, sharp animal comes to look at the camera; a dull one does not",
     assert.ok(!dullFrames.some((f) => f.out.get("dull")!.action === "investigate_camera"));
 });
 
+test("near a still camera grazers get used to it in a few seconds and graze; a camera walking at them gets their attention", () => {
+    const camActions = new Set(["watch_camera", "investigate_camera", "back_off_camera"]);
+    const herd = Array.from({length: 8}, (_, i) => animal(`cam-deer${i}`, i % 2 ? "red-deer" : "plains-zebra", (i % 4) * 3, Math.floor(i / 4) * 3, {shared: {doing: "graze", yaw: i}}));
+    const still = run(new ReactiveLayer({tier: "high"}), herd.map((h) => ({...h, shared: {...h.shared}})), 40, {world: () => ({camera: {x: 4, y: 1.6, z: -6}})});
+    const later = still.slice(10 * 30);
+    let feed = 0;
+    let cam = 0;
+    for (const f of later) for (const h of herd) {
+        const a = f.out.get(h.id)!.action;
+        if (a === "feed") feed++;
+        if (camActions.has(a)) cam++;
+    }
+    const n = later.length * herd.length;
+    assert.ok(feed / n > 0.55, `grazing is the common case near a still camera (${((100 * feed) / n).toFixed(0)}%)`);
+    assert.ok(cam / n < 0.08, `watching it is brief (${((100 * cam) / n).toFixed(0)}%)`);
+    // Some never pay it any attention; some glance up when they first notice it.
+    const glanced = herd.filter((h) => still.slice(0, 5 * 30).some((f) => f.out.get(h.id)!.action === "watch_camera"));
+    assert.ok(glanced.length >= 1 && glanced.length < herd.length, `a glance from some, not all (${glanced.length} of ${herd.length})`);
+    // A camera walking at them from 14 m to 4 m.
+    const walking = run(new ReactiveLayer({tier: "high"}), herd.map((h) => ({...h, shared: {...h.shared}})), 20, {world: (t) => ({camera: {x: 4, y: 1.6, z: -6 - Math.max(10 - (t - 1000) * 0.8, 0)}})});
+    const noticed = herd.filter((h) => walking.some((f) => camActions.has(f.out.get(h.id)!.action)));
+    assert.ok(noticed.length > glanced.length, `an approaching camera gets more attention (${noticed.length} vs ${glanced.length})`);
+});
+
 // MARK: Sentinels and many eyes
 
 test("a sentinel group keeps one on watch at a time (rotating), the rest feed; it calls first at a raptor", () => {
@@ -362,6 +490,32 @@ test("the reactive layer never moves an animal outside its envelope, never wakes
     assert.ok(sleepers.length === 6);
     // Something did happen to the awake ones.
     assert.ok(frames.some((f) => Array.from(f.out.values()).some((o) => o.action === "flee")));
+});
+
+test("an offset never takes a land animal into the water, nor a water animal onto a shore or out of its depth", () => {
+    // A straight shore at x = 0: water for x < 0, the floor shelving down 0.5 m a metre; land rising the other way.
+    const isWater = (x: number) => x < 0;
+    const ground = (x: number) => x * 0.5;
+    const end = (at: {x: number; z: number; base: number}, dx: number, k: number) => ({x: at.x + dx * k, floor: ground(at.x + dx * k)});
+    // A fish 3 m out, swimming 1 m down, startled toward the shore: it stops where the floor is still under it.
+    const fish = {x: -3, z: 0, base: -1};
+    const k = offsetShare(fish, 5, 0, "water", isWater, ground);
+    assert.ok(k < 1, "the offset is cut");
+    const at = end(fish, 5, k);
+    assert.ok(isWater(at.x) && at.floor <= fish.base + 0.05, `in the water, the floor under its body (${at.x}, floor ${at.floor})`);
+    assert.equal(offsetShare(fish, -3, 0, "water", isWater, ground), 1, "away from the shore it takes all of it");
+    // A duck floating on the surface stays on the water.
+    const duck = {x: -1, z: 0, base: 0};
+    const kd = offsetShare(duck, 3, 0, "water", isWater, ground);
+    assert.ok(isWater(end(duck, 3, kd).x), "the duck stays on the water");
+    // A deer on the bank is never pushed into the water (the rule that was there).
+    const deer = {x: 2, z: 0, base: 1};
+    const kl = offsetShare(deer, -5, 0, "land", isWater, ground);
+    assert.ok(kl < 1 && !isWater(end(deer, -5, kl).x), "the deer stays on land");
+    // In the air (or neither): free.
+    assert.equal(offsetShare(deer, -5, 0, "free", isWater, ground), 1);
+    // Right at the edge with nowhere to go: none of it.
+    assert.equal(offsetShare({x: -0.05, z: 0, base: -0.02}, 4, 0, "water", isWater, ground), 0);
 });
 
 // MARK: Variety

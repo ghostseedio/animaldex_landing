@@ -84,7 +84,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
-import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, reactiveClip, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -129,8 +129,9 @@ import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, schedu
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
+import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
-import {ReactiveLayer, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
+import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {ageOf, speciesCare} from "@/lib/ark-age";
@@ -464,7 +465,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const weather = weatherAt(nowMs, {voyageStartMs: voyageStart, offsetHours: ISLAND_OFFSET_HOURS});
         const live = {seaLevel: seaLevelAt(nowMs, {mean: 0, springRange: 0.7}), wetness: weather.wetness, snow: weather.mountainSnowCover, wind: weather.wind, storm: weather.storm, windDirection: weather.windDirection, cloud: weather.cloud};
         const env = {...live, ...(pinnedEnvironment ?? {})};
-        reactiveWeather = {rain: pinnedEnvironment ? Math.min(env.wetness, 1) * (env.storm > 0.3 ? 1 : 0.6) : weather.rain, wind: env.wind, windDirection: env.windDirection, fog: weather.fog, storm: env.storm};
+        // Fog 0: the scene draws no weather fog yet, and animals must not see less in a fog the viewer can't see (they
+        // would seem to ignore a predator in plain view). When the graphics lane draws it, pass the drawn amount here.
+        reactiveWeather = {rain: pinnedEnvironment ? Math.min(env.wetness, 1) * (env.storm > 0.3 ? 1 : 0.6) : weather.rain, wind: env.wind, windDirection: env.windDirection, fog: 0, storm: env.storm};
         ARK_ENVIRONMENT.seaLevel.value = env.seaLevel;
         ARK_ENVIRONMENT.wetness.value = env.wetness;
         ARK_ENVIRONMENT.snow.value = env.snow;
@@ -828,6 +831,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * animal, as if its schedule said so (a predator walking past a herd at a set time). Never set in production.
      */
     const sharedPins = new Map<string, (epoch: number) => Partial<TripPose & {doing: ArkDoing}>>();
+    /** Development only (the head-look probe): a fixed `arkLook` (yaw, pitch, weight) for an animal, over the reactive layer's. */
+    const forcedLooks = new Map<string, [number, number, number]>();
     /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
         const own = entry.sched!;
@@ -1630,6 +1635,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 plan: intel.plan,
                 length: e.length,
                 size: e.sched.profile.size,
+                speed: e.sched.profile.speed,
+                gait: e.sched.profile.gait,
                 dominance: e.sched.profile.dominance,
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,
@@ -1639,10 +1646,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 parentId: young.parent,
                 youngPlay: young.play,
                 headHeight: c.modelHeight * 0.8,
+                // (The behaviour profile also calls the barnacle goose sessile, from its name: only the "other" plan.)
+                sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving), aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
         reactiveInputs = inputs.length;
+        // Nothing near, or the world's sampler still being built a slice at a time (`worldSamplerReady` on the behaviour
+        // lane's 67d6ddf3; asking for it now would finish the build in one stall): the layer waits a frame.
+        const samplerReady = (worldSampling as unknown as {worldSamplerReady?: () => boolean}).worldSamplerReady;
+        if (!inputs.length || (samplerReady && !samplerReady())) {
+            reactiveMs = performance.now() - t0;
+            return;
+        }
         const sampler = worldSampler();
         reactiveQueries ??= reactiveWorldQueries(sampler, budget.sightSamples);
         reactiveQueries.samples = budget.sightSamples;
@@ -1665,10 +1681,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (o.dx || o.dz) {
                 const ground = Math.max(heightAt(pose.x, pose.z), 0);
                 const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
-                // A land animal is never pushed into the water: the offset shortens until it stays on land.
-                let k = 1;
-                if (onGround) for (let i = 0; i < 3 && sampler.isWater(pose.x + o.dx * k, pose.z + o.dz * k); i++) k *= 0.5;
-                if (onGround && sampler.isWater(pose.x + o.dx * k, pose.z + o.dz * k)) k = 0;
+                // In the water (swimming, walking the floor, floating): it stays in the water, at its depth.
+                const inWater = pose.afloat && !c.entry.sched?.pose?.aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
+                // A land animal is never pushed into the water, nor a water animal onto a shore (`offsetShare`).
+                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
                 pose.x += o.dx * k;
                 pose.z += o.dz * k;
                 if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
@@ -2161,6 +2177,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 mode = "distance";
             }
         }
+        // The reactive layer's action (`reactive.ts`, intelligence-review-30 section 6), on its own feet on land: a flee
+        // runs (or walks, without a run) by the distance it covers, so the feet keep up at any flee speed; a sentinel
+        // stands up and scans (its idle, upright, without a scan); withdrawn or frozen, it holds its idle, low (the
+        // reactive crouch lowers the body).
+        const action = !state.flying && !entry.visitor && !place.canopy && !place.micro && !place.burrow && !where.water ? entry.reactive?.action ?? null : null;
+        const walkNow = groundClip(slug);
+        const reacting = reactiveClip(action, (name) => Boolean(clip(name)), !walkNow?.ground_speed || speed > walkNow.ground_speed * 1.2);
+        if (reacting && (!reacting.byDistance || moving(clip(reacting.name)))) {
+            want = reacting.name;
+            mode = reacting.byDistance ? "distance" : "time";
+        }
         // The schedule's beat picks its own clip where the rig has one (graze, browse, scan, shake_off, into and out of
         // the water); a water animal in its depth band keeps the band's place (`PATH_CARRIED_CLIPS`). While the reactive
         // layer has it watching something (the camera, a predator, its kin), it stops feeding and lifts its head: its idle,
@@ -2182,7 +2209,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!playing) return null;
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
         rigSwitch(state, want, mode === "sync" ? sync : playing.loop ? entry.phase : 0);
-        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 2.5);
+        // By distance, up to 3.5 times the clip's own pace (a flee is capped at the gait's 2.5: the feet never slide).
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
         if (state.from) {
@@ -2589,9 +2617,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
-            if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
+            const forcedLook = forcedLooks.size && level === "near" ? forcedLooks.get(entry.animal.id) : undefined;
+            if (lookAttr && forcedLook) lookAttr.setXYZ(index, forcedLook[0], forcedLook[1], forcedLook[2]);
+            else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
-            if (lookAttr && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
+            if (lookAttr && !forcedLook && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
 
             if (!where.afloat) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
@@ -4126,6 +4156,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
+        forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
+        rigState: (id: string) => {
+            const e = allEntries().find((x) => x.animal.id === id);
+            return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
+        },
         setHome: (id: string, x: number, z: number) => {
             const entry = findEntry(id);
             if (!entry?.sched) return false;

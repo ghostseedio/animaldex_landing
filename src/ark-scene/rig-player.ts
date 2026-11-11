@@ -701,6 +701,29 @@ export function flightClip(input: FlightClipInput): string | null {
 }
 
 /**
+ * The clip for the reactive layer's action (`reactive.ts`; intelligence-review-30 section 6), on its own feet on
+ * land: a flee runs (a walk without a run; a walk too while it is still slow), played by the distance it covers;
+ * a sentinel stands up and scans (its idle, upright, without a scan); withdrawn or frozen, its idle (the reactive
+ * crouch lowers the body). Null: the action has no clip of its own.
+ */
+export function reactiveClip(action: string | null | undefined, has: (name: string) => boolean, fast: boolean): {name: string; byDistance: boolean} | null {
+    switch (action) {
+        case "flee": {
+            const walk = has("walk") ? "walk" : has("slither") ? "slither" : has("hop") ? "hop" : null;
+            const name = has("run") && (fast || !walk) ? "run" : walk;
+            return name ? {name, byDistance: true} : null;
+        }
+        case "sentinel":
+            return has("scan") ? {name: "scan", byDistance: false} : has("idle") ? {name: "idle", byDistance: false} : null;
+        case "withdraw":
+        case "freeze":
+            return has("idle") ? {name: "idle", byDistance: false} : null;
+        default:
+            return null;
+    }
+}
+
+/**
  * The clip for the schedule's beat while it stays somewhere (contract
  * section 4; `behaviour-schedule.ts`): bite and chew graze (browse while it
  * browses), a peck or a drink takes the head down too, a scan looks round,

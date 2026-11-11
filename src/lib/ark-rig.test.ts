@@ -192,6 +192,23 @@ test("rig flight clips: flap to climb, glide down, bank into a turn, soar, hover
     assert.equal(flightClip({...base, has: () => false, open: true}), null, "no flight clip at all: the procedural flight");
 });
 
+test("rig reactive clips: a flee runs by distance (walks while still slow), a sentinel scans upright, withdrawn or frozen its idle", async () => {
+    const {reactiveClip} = await import("@/ark-scene/rig-player");
+    const deer = new Set(["idle", "walk", "run", "graze", "scan"]);
+    const has = (name: string) => deer.has(name);
+    assert.deepEqual(reactiveClip("flee", has, true), {name: "run", byDistance: true});
+    assert.deepEqual(reactiveClip("flee", has, false), {name: "walk", byDistance: true}, "still slow: a walk");
+    assert.deepEqual(reactiveClip("flee", (n) => n === "run", false), {name: "run", byDistance: true}, "no walk: the run");
+    assert.deepEqual(reactiveClip("flee", (n) => n === "walk", true), {name: "walk", byDistance: true}, "no run: the walk, its feet kept by distance");
+    assert.deepEqual(reactiveClip("sentinel", has, false), {name: "scan", byDistance: false});
+    assert.deepEqual(reactiveClip("sentinel", (n) => n === "idle", false), {name: "idle", byDistance: false}, "no scan (a v1 meerkat): its idle, upright");
+    assert.deepEqual(reactiveClip("withdraw", has, false), {name: "idle", byDistance: false});
+    assert.deepEqual(reactiveClip("freeze", has, false), {name: "idle", byDistance: false});
+    assert.equal(reactiveClip("feed", has, false), null);
+    assert.equal(reactiveClip(null, has, false), null);
+    assert.equal(reactiveClip("flee", () => false, true), null);
+});
+
 test("rig beat clips: grazing beats head down, a browser's head up, scan, shake_off, into and out of the water", async () => {
     const {beatClip} = await import("@/ark-scene/rig-player");
     const deer = new Set(["idle", "walk", "graze", "browse", "scan"]);

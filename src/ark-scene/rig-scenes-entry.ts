@@ -27,14 +27,20 @@ const SPECIES: Record<string, {name: string; zone: string; activity: string | nu
     "golden-eagle": {name: "Golden Eagle", zone: "grassland", activity: "diurnal", sociality: null},
     "red-deer": {name: "Red Deer", zone: "grassland", activity: "any", sociality: "group"},
     "domestic-goat": {name: "Domestic Goat", zone: "grassland", activity: "diurnal", sociality: "group"},
-    "plains-zebra": {name: "Plains Zebra", zone: "grassland", activity: "any", sociality: "group"}
+    "plains-zebra": {name: "Plains Zebra", zone: "grassland", activity: "any", sociality: "group"},
+    "african-lion": {name: "African Lion", zone: "grassland", activity: null, sociality: "group"},
+    meerkat: {name: "Meerkat", zone: "desert", activity: "diurnal", sociality: "group"},
+    "martial-eagle": {name: "Martial Eagle", zone: "grassland", activity: "diurnal", sociality: null}
 };
 const CAST: Array<[string, string, number]> = [
     ["duck", "mallard", 1],
     ["eagle", "golden-eagle", 1],
     ["deer", "red-deer", 12],
     ["goat", "domestic-goat", 6],
-    ["zebra", "plains-zebra", 6]
+    ["zebra", "plains-zebra", 6],
+    ["lion", "african-lion", 1],
+    ["meerkat", "meerkat", 6],
+    ["meagle", "martial-eagle", 1]
 ];
 
 function castId(prefix: string, i: number): string {
@@ -271,6 +277,43 @@ async function mountScenes(el: HTMLElement) {
             view(at.x, at.z, 4.2, 0.9, 1.2, 0.9);
             return {note: "the camera 4 m from a resting deer; two more grazing behind it", watch: ids.deer.slice(0, 3)};
         },
+        /** A lion walks past a grazing zebra herd 3 s in: they notice, call, bunch and run (the reactive layer's flee), on their run clips. */
+        herd_flee: () => {
+            const at = site("grassland", 6, 4);
+            ids.zebra.forEach((id, i) => {
+                const a = i * 2.39996;
+                const r = i === 0 ? 0 : 5 * Math.sqrt(i / ids.zebra.length);
+                stand(id, at.x + Math.cos(a) * r, at.z + Math.sin(a) * r, ((i * 1.7) % (Math.PI * 2)) - Math.PI, "graze", [["bite", 6], ["chew", 2], ["scan", 2]], i * 1.3);
+            });
+            const lion = (start: number) =>
+                debug().pinShared(ids.lion[0], (epoch: number) => {
+                    const u = Math.min(Math.max((epoch - start) / 24, 0), 1);
+                    const x = at.x - 40 + 70 * u;
+                    const z = at.z + 9.5;
+                    return {x, z, y: ground(x, z), yaw: Math.PI / 2, moving: u > 0 && u < 1, aloft: false, doing: "wander", beat: "walk"};
+                });
+            lion(nowS() + 1e6);
+            view(at.x - 3, at.z + 2, 17, -0.35, 1.12);
+            return {note: "the lion walks past from the left 3 s in", watch: [...ids.zebra, ...ids.lion], go: () => lion(nowS() + 3)};
+        },
+        /** Meerkats foraging, one on watch; a martial eagle comes over 8 s in: the sentinel calls and the mob runs. */
+        meerkat_sentinel: () => {
+            const at = site("desert", 0, 0);
+            ids.meerkat.forEach((id, i) => {
+                const a = i * 2.39996;
+                const r = i === 0 ? 0 : 2.2 * Math.sqrt(i / ids.meerkat.length);
+                stand(id, at.x + Math.cos(a) * r, at.z + Math.sin(a) * r, ((i * 1.7) % (Math.PI * 2)) - Math.PI, "forage", [["peck", 5], ["scan", 2]], i * 1.1);
+            });
+            const eagle = (start: number) =>
+                debug().pinShared(ids.meagle[0], (epoch: number) => {
+                    const u = Math.min(Math.max((epoch - start) / 10, 0), 1);
+                    const x = at.x + 60 - 100 * u;
+                    return {x, z: at.z + 3, y: ground(x, at.z) + 12, yaw: -Math.PI / 2, moving: true, aloft: true, doing: "soar", beat: "glide"};
+                });
+            eagle(nowS() + 1e6);
+            view(at.x, at.z, 7, 0.5, 1.15, 0.3);
+            return {note: "the martial eagle comes over 8 s in", watch: [...ids.meerkat, ...ids.meagle], go: () => eagle(nowS() + 8)};
+        },
         /** The perf scene: 24 grazers of 3 species round the camera, all within the rig distance (the caps decide how many rig). */
         crowd: () => {
             const at = site("grassland", -6, 8);
@@ -346,7 +389,7 @@ async function mountScenes(el: HTMLElement) {
         },
         /** Every frame from now: each watched animal's clip changes (and its head look's turns), with the time since the start. */
         trace: (watch: string[]) => {
-            const log: Array<{t: number; id: string; clip: string | null; flying: boolean | null; weight: number | null; headYaw: number | null}> = [];
+            const log: Array<{t: number; id: string; clip: string | null; flying: boolean | null; weight: number | null; headYaw: number | null; action: string | null}> = [];
             const last = new Map<string, string>();
             const t0 = performance.now();
             const epoch0 = Date.now() / 1000;
@@ -358,10 +401,11 @@ async function mountScenes(el: HTMLElement) {
                     const e = entries.find((x) => x.animal.id === id);
                     const clip = e?.rig?.now.name ?? null;
                     const yaw = e?.reactive ? Math.round(e.reactive.headYaw * 10) / 10 : null;
-                    const key = `${clip}|${e?.rig?.flying}|${yaw}`;
+                    const action = e?.reactive?.action ?? null;
+                    const key = `${clip}|${e?.rig?.flying}|${yaw}|${action}`;
                     if (last.get(id) !== key) {
                         last.set(id, key);
-                        log.push({t: Math.round(performance.now() - t0) / 1000, id, clip, flying: e?.rig?.flying ?? null, weight: e?.rig ? Math.round(e.rig.weight * 100) / 100 : null, headYaw: yaw});
+                        log.push({t: Math.round(performance.now() - t0) / 1000, id, clip, flying: e?.rig?.flying ?? null, weight: e?.rig ? Math.round(e.rig.weight * 100) / 100 : null, headYaw: yaw, action});
                     }
                 }
                 requestAnimationFrame(step);
