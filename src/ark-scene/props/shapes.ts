@@ -409,24 +409,40 @@ export function turtlePit(r: number, seed = 12, turn = 0, ground: (x: number, z:
         const z = -lx * Math.sin(turn) + lz * Math.cos(turn);
         return new Vector3(x, ground(x, z) + 0.012 + height(rho, theta) * r * 1.4, z);
     };
+    // An indexed grid, smooth-shaded (faceted rings read as a target), then flattened with its colours.
     const positions: number[] = [];
+    for (let ring = 0; ring <= rings; ring++) for (let segment = 0; segment < segments; segment++) positions.push(...point(ring, segment).toArray());
+    const index: number[] = [];
     for (let ring = 0; ring < rings; ring++) {
         for (let segment = 0; segment < segments; segment++) {
-            const a = point(ring, segment);
-            const b = point(ring + 1, segment);
-            const c = point(ring + 1, segment + 1);
-            const d = point(ring, segment + 1);
-            positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z);
+            const a = ring * segments + segment;
+            const b = (ring + 1) * segments + segment;
+            const c = (ring + 1) * segments + ((segment + 1) % segments);
+            const d = ring * segments + ((segment + 1) % segments);
+            index.push(a, b, c, a, c, d);
         }
     }
-    const geometry = new BufferGeometry();
-    geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
-    // Dug sand is darker and damper than the dry surface round it.
-    return paint(geometry, new Color("#cdb68f"), (_, __, x, z) => {
+    const grid = new BufferGeometry();
+    grid.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    grid.setIndex(index);
+    grid.computeVertexNormals();
+    const geometry = grid.toNonIndexed();
+    grid.dispose();
+    const position = geometry.getAttribute("position");
+    const colours = new Float32Array(position.count * 3);
+    const sand = new Color("#cdb68f");
+    for (let i = 0; i < position.count; i++) {
+        const x = position.getX(i);
+        const z = position.getZ(i);
         const rho = Math.hypot(x, z) / r;
-        // Dug sand a shade darker inside the rim, fading out over the apron; a soft mottle, no rings.
-        return 0.86 + 0.1 * smooth(0.8, 1.5, rho) + 0.03 * Math.sin(x * 6.1 + z * 2.3) * Math.cos(z * 5.7 - x * 1.9);
-    });
+        // Dug sand a shade darker inside the rim, fading out over the apron; a soft mottle.
+        const shade = 0.86 + 0.1 * smooth(0.8, 1.5, rho) + 0.03 * Math.sin(x * 6.1 + z * 2.3) * Math.cos(z * 5.7 - x * 1.9);
+        colours[i * 3] = sand.r * shade;
+        colours[i * 3 + 1] = sand.g * shade;
+        colours[i * 3 + 2] = sand.b * shade;
+    }
+    geometry.setAttribute("color", new BufferAttribute(colours, 3));
+    return geometry;
 }
 
 function smooth(a: number, b: number, x: number): number {

@@ -110,7 +110,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "nest_growing": {
             const nest = growingNest(stats);
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 10 + 6, 0.35, 0.9, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
+            return {view: look(nest, nest.radius * 4 + 1.2, 1.0, 0.6, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_eaves": {
             const nest = stats.nests.find((n) => n.form === "mud_cup") ?? stats.nests.find((n) => n.form === "ball");
@@ -128,7 +128,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             if (!mound) return null;
             const mid = {x: mound.x * 0.6 + tree.x * 0.4, y: Math.max(mound.y, tree.y) + 0.45, z: mound.z * 0.6 + tree.z * 0.4};
             // From beyond the mound, along the trail to the trunk it climbs.
-            return {view: look(mid, 4.2, 1.18, Math.atan2(mound.x - tree.x, mound.z - tree.z) + 0.35, 0.3), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
+            return {view: look(mid, 5.5, 0.78, Math.atan2(mound.x - tree.x, mound.z - tree.z) + 0.35, 0.3), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
         }
         case "web_dawn": {
             const web = (spots.webBranch ?? spots.web) as {x: number; y: number; z: number; facing?: number; radius?: number} | undefined;
@@ -191,7 +191,8 @@ function nestTurn(nest: ShotNest): number {
 
 /** The Ark day the growing-nest shot is pinned to: when its nest is a little over half built. */
 function growingNest(stats: PropsStats): ShotNest | null {
-    return stats.nests.find((n) => n.form === "platform" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform") ?? stats.nests.find((n) => n.form === "pendant") ?? null;
+    // The grebe's raft: built in the open, without eggs yet (a nest with eggs is always finished).
+    return stats.nests.find((n) => n.form === "floating") ?? stats.nests.find((n) => n.form === "platform") ?? stats.nests.find((n) => n.form === "pendant") ?? null;
 }
 
 function growingDay(stats: PropsStats): number | null {
