@@ -152,6 +152,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const fitFor = (tier: QualityTier) => ({near: arkBudget(tier).nearTexture, far: arkBudget(tier).farTexture});
     ctx.library.fit = fitFor(ctx.tier());
     ctx.library.paced = true;
+    ctx.library.upload = (map) => {
+        try {
+            ctx.renderer.initTexture(map);
+        } catch {
+            // Uploaded at its first draw instead.
+        }
+    };
 
     // Input: anything the reader does brings the full frame rate back at once.
     const onInput = () => governor.input(performance.now() / 1000);

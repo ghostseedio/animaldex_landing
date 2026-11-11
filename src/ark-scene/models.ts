@@ -138,6 +138,8 @@ export class ModelLibrary {
     gate: ((slug: string, level: Wanted) => boolean) | null = null;
     fit: {near: number; far: number} | null = null;
     paced = false;
+    /** Runtime: put a skin on the GPU as its level is handed over (inside `drain`'s budget), not in the next frame's draw. */
+    upload: ((map: Texture) => void) | null = null;
     private readonly staged: Array<() => void> = [];
     /** GPU bytes per loaded level (`runtime/memory.ts`'s estimate). */
     private readonly levelBytes = new Map<string, {geometry: number; texture: number}>();
@@ -338,6 +340,7 @@ export class ModelLibrary {
                 if (this.disposed) return disposeLevel(far);
                 const behaviour = (json && typeof json === "object" ? (json as {behaviour?: TalkingBehaviour}).behaviour : null) ?? null;
                 this.hand(() => {
+                    if (far.map) this.upload?.(far.map);
                     this.remember(slug, behaviour, far).far = far;
                     this.count(slug, "far", far);
                     this.onLoad(slug);
@@ -346,6 +349,7 @@ export class ModelLibrary {
                 const near = await this.loadGltf(this.url(slug, `${version}.near.glb`), this.fit?.near ?? 0);
                 if (this.disposed) return disposeLevel(near);
                 this.hand(() => {
+                    if (near.map) this.upload?.(near.map);
                     // Asked again after it was let go: the newest copy wins, the older one goes.
                     const model = this.remember(slug, this.models.get(slug)?.behaviour ?? null, near);
                     if (model.near && model.near !== near) disposeLevel(model.near);
