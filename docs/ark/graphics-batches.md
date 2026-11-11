@@ -111,3 +111,29 @@ Known gaps:
 - The dark diamond in forest_floor and coast_rocks is a canopy tree's trunk right beside the camera, not a rendering fault.
 - caterpillar_leaf needs the asset trees' leaf points wired into the sampler.
 - Kelp and seagrass, the house and fields (props lane), and fish schools are with other lanes.
+
+## Batch 4: terrain and near-camera (f04ebfb4 and on)
+
+Lane: terrain and near-camera. The reef, kelp, fish schools (`ark-graphics-reef`) and the leaf/bark attach points (`ark-graphics-attach`) are separate lanes.
+
+- **Near-camera fade (`near-fade.ts`):**
+  - a tree that passes beside the lens dissolves in a fine screen-space dither instead of cutting a dark shard across the picture;
+  - the fade ends at 0.45 × the camera's distance to its target (at most 2.2 m), so a close-up's subject (a flower at 1.1 m, a leaf at 0.55 m, bark at 0.12 m) is never touched;
+  - only on the leaf-card trees (`foliageMaterial`, which cut out already) and on the asset trees whose crown reaches over the camera (a separate "near" bucket in `asset-trees.ts` with a fading copy of `windMaterial`): everything else keeps the GPU's early depth test.
+- **Trees never black (`windMaterial`):** light comes through the leaves from the sky (most where seen from below) and from the sun behind them; shaded bark keeps a little sky bounce; dark bark is lifted and given a grain. All from the scene's own sky, image light and sun, so night stays night. The wind maths is unchanged.
+- **Golden cameras:**
+  - `golden-world.ts` lists the map's trunks, canopy limbs, lamps and buildings; `forest_floor` and `coast_rocks` turn to the nearest bearing whose camera (and the near part of its sight line) stands clear of them, never inside a hill;
+  - `coast_rocks` picks a rock cluster on a real shore (a steep bank behind counts against it) and looks along it from the shallows;
+  - new `fields_close`: low over standing crops well inside the farm.
+- **Mountain (`terrain.ts`):**
+  - rock beds about 5 m thick, dipping a few degrees and folded, hard (dark cliff bands, streaked, shade under their foot) or soft (ledges with a pale lip), thin bedding planes inside, and the ledges bend the shading normal; contrast fades where a bed is a few pixels tall. This replaces the `sin(y + fbm)` swirl that read as a fingerprint;
+  - ribs and gullies down the steep faces (bare ribs through the snow, darker gullies in the rock);
+  - two-scale triplanar rock: the 5 m detail only within ~90 m, a greyed 27 m layer under it out to ~700 m;
+  - scree: a per-vertex layer from the heightfield (gentle ground within ~7 m below steep rock);
+  - snow: the upper third holds snow on all but the steepest hard faces, broken patches on gentle ledges below the line, blue in shade, dimmer at night.
+- **Fields (`fields.ts`, `terrain.ts`, `near-detail.ts`):**
+  - one definition of the fields for the shader and the plants: the shader's 9 × 6.5 m grid, a crop per field (pasture, ploughed, sprouts, cabbages, cereal, maize) and its row direction from an integer hash that is exact on the CPU and the GPU, a headland at each edge; the animals' clearing, the cottage's yard, the barn and the orchard stay grass;
+  - the ground paints each crop's rows (antialiased), the furrows tip the shading normal, cereal ripples as the wind passes;
+  - close up, sprouts, cabbages, wheat and maize stand on the painted rows (`snapToRow`).
+- **Tests:** `src/lib/ark-graphics.test.ts` (fade reach, camera clearance and ground, coast anchor, fields and rows).
+- **Credits:** nothing third-party; everything is drawn in code from the existing CC0 ground textures.

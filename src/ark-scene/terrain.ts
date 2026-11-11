@@ -488,8 +488,10 @@ float arkWet = 0.0;`)
             vec3 rows = mix(soil, plant, cover);
             vec3 blended = mix(soil, plant, coverMean);
             vec3 cropped = mix(blended, rows, rowsClear);
-            // The headland: a grassy strip round the edge.
-            float headland = smoothstep(${(HEADLAND - 0.25).toFixed(2)}, ${(HEADLAND + 0.05).toFixed(2)}, edgeAt);
+            // The headland: a grassy strip round the edge. And rows only well inside the farm: never where it fades out
+            // onto a beach or a bank (there the field keeps its plain tone).
+            float cropsHere = smoothstep(0.62, 0.85, farmW) * (1.0 - smoothstep(0.08, 0.35, sandW)) * (1.0 - smoothstep(0.1, 0.4, vArkLayers2.z));
+            float headland = smoothstep(${(HEADLAND - 0.25).toFixed(2)}, ${(HEADLAND + 0.05).toFixed(2)}, edgeAt) * cropsHere;
             field = mix(field * 0.9, cropped, headland);
             arkFieldSoil = headland * (1.0 - mix(coverMean, cover, rowsClear));
             // Ridges and furrows as shape: the normal tips across the rows.
