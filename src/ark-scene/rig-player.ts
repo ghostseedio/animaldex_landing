@@ -59,6 +59,11 @@ import {
     type RigSetIndex
 } from "@/ark-scene/rig-clips";
 import {gripBones} from "@/ark-scene/map/grip";
+import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
+import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
+import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
+import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
+import {locoGround} from "@/ark-scene/locomotion/ground";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -89,9 +94,26 @@ export type RigModel = {
     lookOff: boolean;
     /** The bones that grip (feet, hands, claws: `map/grip.ts`), each with its rest position (model units). */
     grips: Array<{bone: number; rest: {x: number; y: number; z: number}}>;
+    /**
+     * The locomotion layer on this rig (`locomotion/`): its skeleton, drivers and live pose texture. Null when the
+     * skeleton could not be read (the baked clips play as before).
+     */
+    loco: LocoLayer | null;
+    /** The wing chain for lane L2's flight (`locomotion/flight.ts` rigWingChain); null until L2 publishes it. */
+    wings: RigWingChain | null;
     /** Last time it was drawn (seconds), for letting it go. */
     usedAt: number;
 };
+
+/** Lane L2's wing chain (shoulder, forearm, hand per side, their pivots): its own type when `locomotion/flight.ts` lands. */
+export type RigWingChain = {left: number[]; right: number[]; pivots?: number[][]};
+
+/** Stand-in for L2's `rigWingChain` (locomotion/flight.ts): null until it is published. */
+export function rigWingChain(boneNames: readonly string[], restPivot: (name: string) => [number, number, number] | null): RigWingChain | null {
+    void boneNames;
+    void restPivot;
+    return null;
+}
 
 /**
  * A rig's look chain for the shader (contract section 5): the bones'
@@ -332,6 +354,7 @@ export class RigLibrary {
             this.queued.delete(model.slug);
             model.geometry.dispose();
             model.texture.dispose();
+            model.loco?.dispose();
             this.onEvict(model.slug);
         }
     }
@@ -451,6 +474,12 @@ export class RigLibrary {
         }
         const centre = geometry.boundingBox!.getCenter(new Vector3());
         const flight = flightApproved(own, slug) && Object.keys(clips).some((name) => FLIGHT_CLIPS.has(name));
+        let loco: LocoLayer | null = null;
+        try {
+            loco = new LocoLayer(buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry)), data);
+        } catch (error) {
+            console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
+        }
         this.models.set(slug, {
             slug,
             geometry,
@@ -469,6 +498,8 @@ export class RigLibrary {
             look,
             lookOff: sitting.off,
             grips,
+            loco,
+            wings: rigWingChain(extras.bones, restPivot),
             usedAt: 0
         });
         this.onLoad(slug);
@@ -480,9 +511,41 @@ export class RigLibrary {
         this.models.forEach((model) => {
             model.geometry.dispose();
             model.texture.dispose();
+            model.loco?.dispose();
         });
         this.models.clear();
     }
+}
+
+/**
+ * A rig's skeleton as the locomotion layer reads it (`locomotion/skeleton.ts` buildLocoRig): its texture bones, their
+ * parents and rest matrices (the mesh's space), and the rest mesh with its skin (`restGeometry`).
+ */
+export function rawSkeletonOf(mesh: SkinnedMesh, boneNames: string[], geometry: BufferGeometry, slug: string, entry: Pick<RigEntry, "plan" | "pose">): RawSkeleton {
+    const bones = mesh.skeleton.bones as Bone[];
+    const byName = new Map(bones.map((bone) => [bone.name, bone]));
+    const rest = boneNames.map((name) => {
+        const bone = byName.get(name);
+        if (!bone) throw new Error(`no bone ${name}`);
+        return Array.from(bone.matrixWorld.elements);
+    });
+    const parents = boneNames.map((name) => {
+        let parent = byName.get(name)?.parent ?? null;
+        // The first texture bone up the tree (a parent outside the texture, the rig's root, carries no weight).
+        while (parent && !boneNames.includes(parent.name)) parent = parent.parent;
+        return parent && boneNames.includes(parent.name) ? parent.name : null;
+    });
+    return {
+        slug,
+        plan: typeof entry.plan === "string" ? entry.plan : null,
+        pose: entry.pose ?? null,
+        bones: boneNames,
+        parents,
+        rest,
+        positions: geometry.getAttribute("position").array,
+        joints: geometry.getAttribute("arkJoints").array,
+        weights: geometry.getAttribute("arkWeights").array
+    };
 }
 
 /**
@@ -490,7 +553,7 @@ export class RigLibrary {
  * matrices start from), as a plain geometry with float positions and
  * normals, the uv, and the skin renumbered to the texture's bones.
  */
-function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
+export function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
     const source = mesh.geometry;
     const position = source.getAttribute("position");
     const normal = source.getAttribute("normal");
@@ -600,6 +663,8 @@ export type RigState = {
     /** Its base pose now (contract 8.3), and the transition playing toward another, if any. */
     base: RigBase;
     toward: {clip: string; ends: RigBase} | null;
+    /** The locomotion layer's state on it (`locomotion/layer.ts`), and its gait this frame. */
+    loco?: LocoAnimal;
 };
 
 export const RIG_FADE_SECONDS = 0.25;
@@ -1028,4 +1093,70 @@ export function beatClip(beat: string | null | undefined, doing: string | null |
         default:
             return null;
     }
+}
+
+// MARK: The locomotion layer
+
+export const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+
+/** Whether the locomotion layer poses rigs (development: `globalThis.__arkLoco = false` turns it off for a before/after). */
+export function locoOn(): boolean {
+    return (globalThis as {__arkLoco?: boolean}).__arkLoco !== false;
+}
+
+export type RigLiveInput = {
+    /** The instance as drawn (mesh space to world) and its scale (metres per mesh unit). */
+    instance: Matrix4;
+    scale: number;
+    yaw: number;
+    dt: number;
+    /** The shared clock (s). */
+    clock: number;
+    /** The animal's seed in [0, 1). */
+    seed: number;
+    /** On its own feet on the ground (not flying, swimming, on a branch or a wall, nor lying down). */
+    grounded: boolean;
+    /** The act's state and speed (L7's chases), if any. */
+    actState?: string | null;
+    actSpeed?: number | null;
+    ground?: GroundQuery;
+};
+
+/**
+ * The rigged animal's pose this frame through the locomotion layer, written into its species' live pose texture at
+ * `row` (the instance's index). Returns the clip-row code the shader reads it by (`liveRowCode`), or null: the layer
+ * is off or has no skeleton for this rig, and the baked rows play as before.
+ */
+export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInput, row: number): {code: number; gait: GaitState | null} | null {
+    if (!model.loco || !locoOn() || state.weight <= 0) return null;
+    const now = model.clips[state.now.name];
+    const from = state.from ? model.clips[state.from.name] : undefined;
+    const a: ClipRows | null = now ? clipRows(now, state.now.phase) : null;
+    const b: ClipRows | null = from && state.from ? clipRows(from, state.from.phase) : null;
+    const fromWeight = b ? 1 - easeInOutCubic(Math.min(state.fade, 1)) : 0;
+    const loco = (state.loco ??= newLocoAnimal());
+    if (row >= model.loco.live.rows) return null;
+    const gait = model.loco.pose(
+        loco,
+        {
+            instance: input.instance,
+            scale: input.scale,
+            yaw: input.yaw,
+            dt: input.dt,
+            clock: input.clock,
+            seed: input.seed,
+            ground: input.ground ?? locoGround(),
+            grounded: input.grounded && state.base === "stand" && !state.flying,
+            clipNow: state.now.name,
+            clipFrom: state.from?.name ?? null,
+            clipPhase: state.now.phase,
+            actState: input.actState ?? null,
+            actSpeed: input.actSpeed ?? null
+        },
+        a,
+        b,
+        fromWeight,
+        row
+    );
+    return {code: liveRowCode(row), gait};
 }

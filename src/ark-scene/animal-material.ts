@@ -36,6 +36,7 @@
 
 import {Color, MeshStandardMaterial, Vector2, Vector3, Vector4, type Texture} from "three";
 import type {RigLookChain} from "@/ark-scene/rig-player";
+import {LIVE_DECLARATIONS, LIVE_FETCH} from "@/ark-scene/locomotion/pose-texture";
 import {motionUniforms, type TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
@@ -169,6 +170,7 @@ uniform float motionAxisL2;
  */
 const RIG_DECLARATIONS = `
 uniform highp sampler2D arkBones;
+${LIVE_DECLARATIONS}
 attribute vec4 arkJoints;
 attribute vec4 arkWeights;
 attribute vec4 arkRigA;
@@ -193,11 +195,12 @@ mat4 arkTurn(vec3 pivot, float yaw, float pitch) {
 }
 mat4 arkBone(float row, float bone) {
     int x = int(bone + 0.5) * 3;
-    int y = int(row + 0.5);
+    int y = max(int(row + 0.5), 0);
     vec4 r0 = texelFetch(arkBones, ivec2(x, y), 0);
     vec4 r1 = texelFetch(arkBones, ivec2(x + 1, y), 0);
     vec4 r2 = texelFetch(arkBones, ivec2(x + 2, y), 0);
-    return mat4(r0.x, r1.x, r2.x, 0.0, r0.y, r1.y, r2.y, 0.0, r0.z, r1.z, r2.z, 0.0, r0.w, r1.w, r2.w, 1.0);
+    // The locomotion layer's live pose (a negative row: locomotion/pose-texture.ts).
+${LIVE_FETCH}    return mat4(r0.x, r1.x, r2.x, 0.0, r0.y, r1.y, r2.y, 0.0, r0.z, r1.z, r2.z, 0.0, r0.w, r1.w, r2.w, 1.0);
 }
 mat4 arkBoneAt(vec3 at, float bone) {
     mat4 m = arkBone(at.x, bone) * (1.0 - at.z) + arkBone(at.y, bone) * at.z;
@@ -344,6 +347,8 @@ export type AnimalMaterialOptions = {
     animated: boolean;
     /** A rigged mesh: its bone texture (`rig-player.ts`). */
     rig?: Texture | null;
+    /** A rigged mesh's live pose texture (the locomotion layer, `locomotion/pose-texture.ts`): rows the CPU poses. */
+    pose?: Texture | null;
     /**
      * A rigged mesh's look chain (`rig-player.ts`): its neck and head bones, their rest joints and limits; null without
      * a head bone. (Named apart from `look`, the animal-look pass's surface.)
@@ -391,6 +396,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     };
     if (options.rig) {
         uniforms.arkBones = {value: options.rig};
+        if (options.pose) uniforms.arkPoseBones = {value: options.pose};
         const chain = options.lookChain ?? null;
         uniforms.arkLookBones = {value: new Vector2(chain ? chain.neck : -1, chain ? chain.head : options.lookOff ? -2 : -1)};
         uniforms.arkLookNeckPivot = {value: new Vector3(...(chain?.neckPivot ?? [0, 0, 0]))};
@@ -401,8 +407,8 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     Object.assign(uniforms, lookUniforms(options.look ?? null, level, options.shellLength ?? 0.01));
     material.userData.arkLook = {look: options.look ?? null, level, shell: Boolean(options.shell)};
     material.userData.arkOptions = options;
-    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...lookDefines(material)};
-    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? "-rig" : ""}`;
+    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...(options.rig && options.pose ? {ARK_RIG_LIVE: ""} : {}), ...lookDefines(material)};
+    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? (options.pose ? "-rig-live" : "-rig") : ""}`;
     material.customProgramCacheKey = () => key + lookCacheKey(material);
     if (options.look) registerLookMaterial(material);
     material.onBeforeCompile = (shader) => {
