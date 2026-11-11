@@ -146,7 +146,8 @@ export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
     // On the beach itself, just above the waterline (about 4.5 m inside the coast line), facing the sea.
     seashore: {...coastPoint(SHORE_THETA, -6), spacing: 2.4, kind: "shore", clearing: 8, theta: SHORE_THETA},
     coral_reef: {...coastPoint(SOUTH + 0.62, 15), spacing: 4.2, kind: "sea", clearing: 0},
-    open_ocean: {...coastPoint(SOUTH - 0.5, 30), spacing: 7, kind: "sea", clearing: 0},
+    // Home growth: the south lobe took the old bay, so the open water stands nearer its new coast (18 m out, not 30).
+    open_ocean: {...coastPoint(SOUTH - 0.5, 18), spacing: 7, kind: "sea", clearing: 0},
     river_lake: {x: LAKE.x, z: LAKE.z, spacing: 2.6, kind: "ring", clearing: LAKE.r + 6},
     wetland: {x: 20, z: 10, spacing: 2.6, kind: "land", clearing: 9},
     rainforest: {x: -46, z: 18, spacing: 2.8, kind: "land", clearing: 11},
