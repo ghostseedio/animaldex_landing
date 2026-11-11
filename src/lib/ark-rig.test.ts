@@ -344,3 +344,16 @@ test("rig v6 base poses: lying, side and leaning only through their transitions"
     assert.deepEqual(recipeClip("swim", (n) => n === "paddle"), {name: "paddle", play: "distance"}, "a duck swims with its paddle, by distance");
     assert.equal(recipeClip("stretch", has), null, "no clip: its block's beat");
 });
+
+test("rig direction reads the drawn yaw: an animal turned round by the reactive layer to flee runs forwards", async () => {
+    const {stepReverses} = await import("@/ark-scene/rig-player");
+    const shared = 0; // its schedule faces +z
+    const bodyYaw = Math.PI; // the reactive layer turns it round to flee
+    const drawn = shared + bodyYaw;
+    // It flees toward -z, the way its drawn body faces: its run plays forwards.
+    assert.equal(stepReverses(false, 0, -1, drawn), false);
+    // Read against the shared heading it would wrongly play in reverse.
+    assert.equal(stepReverses(false, 0, -1, shared), true);
+    // Backing off still facing the threat (the drawn body faces +z, moving -z): in reverse.
+    assert.equal(stepReverses(false, 0, -1, shared + 0.1), true);
+});

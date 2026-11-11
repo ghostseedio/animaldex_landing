@@ -2385,6 +2385,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             while (dyaw > Math.PI) dyaw -= Math.PI * 2;
             while (dyaw < -Math.PI) dyaw += Math.PI * 2;
             const ease = Math.min(dt * 4, 1);
+            // The drawn yaw: the shared heading plus the reactive layer's body turn (`stepReactive` adds it to the pose
+            // before this runs), so an animal turned round to flee runs forwards, not in reverse.
             if (flat < 3) state.reverse = stepReverses(state.reverse, dx, dz, where.yaw);
             if (flat < 3) {
                 state.climb += (climbNow - state.climb) * ease;
