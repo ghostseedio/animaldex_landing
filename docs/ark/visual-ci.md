@@ -41,7 +41,9 @@ A change that is meant to change the picture (a graphics batch, a new model set)
    Running the workflow by hand (Actions → Ark visual check → Run workflow, `accept` on) renders straight into `actual/` without comparing, for a set with no baselines yet.
 2. **Locally** (a Mac; SwiftShader as in CI): `npx tsx scripts/ark-visual.mts --update [--only ...]` renders and writes the baselines directly. Look at them before committing.
 
-Baselines are near-lossless WebP (every pixel within a few levels of the render), ~150–400 KB each.
+Baselines are near-lossless WebP (every pixel within a few levels of the render), ~150–400 KB each; the 19 committed ones are 4.3 MB.
+
+**The committed baselines** were rendered on the Mac (SwiftShader, Chromium 1248 from playwright-core 1.63) at ark-runtime-web bd800309, under a load average of ~50 (about 2 minutes a shot). They have not yet been compared with a Linux CI render: if the first CI run differs beyond the tolerances everywhere by the same small amount, accept that run's pictures (step 1) and commit them. Every lane that changes the picture (graphics batch 4, props, animal look, the map) accepts its own new baselines in its merge.
 
 A new shot: add it to `config.json` → `shots`, then accept its baseline (a shot with no baseline reports `new` and does not fail).
 
