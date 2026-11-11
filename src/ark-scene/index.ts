@@ -163,6 +163,7 @@ import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/react
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
+import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {arkOutside} from "@/ark-scene/live-budget";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
@@ -4908,20 +4909,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
     };
 
-    const play = (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}): ArkReplayRun => {
-        if (replay) finishReplay(true);
-        if (!acts.length) return {skip: () => undefined, done: Promise.resolve()};
-        // Everyone the acts name is drawn one by one while it plays, a herd's members too (A14).
-        replayPins = new Set(acts.flatMap((act) => (act.kind === "meal" ? [act.predator.id, act.prey.id] : act.kind === "birth" ? act.young.map((a) => a.id) : act.kind === "extinction" ? [] : [act.animal.id])));
-        refreshLive();
-        // Who arrived or was born since: held back until their act.
-        for (const act of acts) {
-            const ids = act.kind === "arrival" ? [act.animal.id] : act.kind === "birth" ? act.young.map((a) => a.id) : [];
-            for (const id of ids) {
-                const entry = entryById.get(id);
-                if (entry) entry.held = true;
-            }
-        }
+    /** A replay's stand-ins for the animals gone now, with the server's record of each (play, and prepareReplay). */
+    const ghostAnimalsOf = (acts: ArkAct[]): ArkAnimal[] => {
         // Who is gone now (eaten, or died): standing in where they were until their act.
         const gone = new Map<string, ArkEventAnimal>();
         for (const act of acts) {
@@ -4929,7 +4918,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             for (const animal of named) if (!aboard.has(animal.id)) gone.set(animal.id, animal);
         }
         // The server's own record of each (its place included), so it stands where it stood.
-        const ghostAnimals: ArkAnimal[] = Array.from(gone.values()).map((animal) => ({
+        return Array.from(gone.values()).map((animal) => ({
             id: animal.id,
             species_profile_id: animal.species_profile_id,
             name: animal.name,
@@ -4946,6 +4935,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             sociality: animal.sociality,
             activity: animal.activity
         }));
+    };
+    const play = (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}): ArkReplayRun => {
+        if (replay) finishReplay(true);
+        if (!acts.length) return {skip: () => undefined, done: Promise.resolve()};
+        // Everyone the acts name is drawn one by one while it plays, a herd's members too (A14).
+        replayPins = new Set(acts.flatMap((act) => (act.kind === "meal" ? [act.predator.id, act.prey.id] : act.kind === "birth" ? act.young.map((a) => a.id) : act.kind === "extinction" ? [] : [act.animal.id])));
+        refreshLive();
+        // Who arrived or was born since: held back until their act.
+        for (const act of acts) {
+            const ids = act.kind === "arrival" ? [act.animal.id] : act.kind === "birth" ? act.young.map((a) => a.id) : [];
+            for (const id of ids) {
+                const entry = entryById.get(id);
+                if (entry) entry.held = true;
+            }
+        }
+        // Who is gone now (eaten, or died): standing in where they were until their act (`ghostAnimalsOf`).
+        const ghostAnimals = ghostAnimalsOf(acts);
         const places = ghostAnimals.length ? placeAnimals(ghostAnimals) : new Map<string, Placement>();
         ghosts = ghostAnimals.map((animal) => Object.assign(newEntry(animal, places.get(animal.id)!, null), {ghost: true}));
         const after = new Map<Entry, number>();
@@ -5257,6 +5263,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
         },
         play,
+        // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances).
+        resetTransients: () => {
+            reactive.resetAll();
+            for (const entry of allEntries()) {
+                entry.reactive = null;
+                entry.rig = null;
+                entry.glance = 0;
+            }
+        },
+        // Runtime: a replay's departed animals placed in the places worker ahead of play (the map's sampler stays off
+        // the main thread); play then finds them placed.
+        prepareReplay: (acts: ArkAct[]) => {
+            const ghosts = ghostAnimalsOf(acts);
+            return ghosts.length ? prepareGhostPlaces(ghosts).then(() => undefined) : Promise.resolve();
+        },
         setVisitor,
         setTalking,
         talkText: (chunk) => {

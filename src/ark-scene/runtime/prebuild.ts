@@ -10,7 +10,7 @@
  */
 
 import {primeDecor} from "@/ark-scene/decor";
-import {placeAnimals, primePlaces, type Placement} from "@/ark-scene/placement";
+import {placeAnimals, primePlaces, primePlacesFor, type Placement} from "@/ark-scene/placement";
 import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
 import {primeFloorPlacements} from "@/ark-scene/floor-assets";
@@ -109,4 +109,16 @@ export async function prepareArk(options: {snapshot?: ArkSnapshot | null; worker
         places: big && b.data ? "worker" : "main",
         error: a.error ?? b.error
     };
+}
+
+/**
+ * A replay's departed animals (`handle.prepareReplay`): placed in the places worker and handed to `placeAnimals`
+ * for that very list (same ids, same order), so `play` does not build the map's sampler on the main thread.
+ */
+export async function prepareGhostPlaces(animals: ArkAnimal[], placesWorkerUrl = "/ark/ark-prebuild-places-worker.js"): Promise<boolean> {
+    if (typeof Worker === "undefined" || !animals.length) return false;
+    const answer = await ask<{places: Array<[string, Placement]>}>(() => new Worker(placesWorkerUrl), {animals}, 30_000);
+    if (!answer.data) return false;
+    primePlacesFor(animals, new Map(answer.data.places));
+    return true;
 }

@@ -524,7 +524,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                 .then((response) => (response.ok ? response.json() : {events: []}))
                 .then((body: {events?: unknown}) => body.events ?? [])
                 .catch(() => []);
-        void read.then((raw) => {
+        void read.then(async (raw) => {
             const events = decodeArkEvents(raw, snapshotRef.current).filter((event) => Date.parse(event.at) > from);
             const plan = planArkReplay(events);
             if (isQuietArkReplay(plan.summary)) return;
@@ -536,6 +536,10 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                 setSummary(line);
                 return;
             }
+            // Runtime: the departed animals placed in the places worker first, so the replay's start does not build the
+            // map's sampler on the main thread (~1 s on a phone).
+            await scene.prepareReplay?.(plan.acts);
+            if (sceneRef.current !== scene) return;
             setReplay({acts: plan.acts, index: 0, summary: line});
             replaySkipped.current = false;
             const run = scene.play(plan.acts, {onAct: (index) => setReplay((now) => (now ? {...now, index} : now))});

@@ -188,6 +188,9 @@ const CLOCK = `(() => {
     };
 })();`;
 
+/** Draw `n` frames with the frozen clock moved on 1/60 s before each (a string, as FRAMES). */
+const STEPPED = (from: number, n: number) => `new Promise((resolve) => { let k = 0; const step = () => { if (++k > ${n}) return resolve(true); window.__arkClock.freeze(${from} + k * 1000 / 60); requestAnimationFrame(step); }; requestAnimationFrame(step); })`;
+
 /** Draw `n` frames, then resolve (a string for the same reason). */
 const FRAMES = (n: number) => `new Promise((resolve) => { let k = 0; const step = () => (++k >= ${n} ? resolve(true) : requestAnimationFrame(step)); requestAnimationFrame(step); })`;
 
@@ -229,8 +232,12 @@ for (const deviceName of devices) {
         const framed = await page.evaluate(([place, time]) => (window as unknown as GoldenWindow).__arkGolden!.shoot(place, time), [shot.place, shot.time] as const);
         // The clock frozen at this shot's own time (an hour apart per shot, always ahead of the page's), then a few
         // frames drawn at it: everything that follows the clock is where it is on every run.
-        await page.evaluate((ms) => (window as unknown as GoldenWindow).__arkClock.freeze(ms), 4e7 + index * 3.6e6);
-        await page.evaluate(FRAMES(3));
+        // Then everything earlier real-time frames carried is dropped (the reactive layer, rig blends) and a second is
+        // drawn on a frame-locked clock from that instant: a shot is a function of its time only.
+        const at = 4e7 + index * 3.6e6;
+        await page.evaluate((ms) => (window as unknown as GoldenWindow).__arkClock.freeze(ms), at);
+        await page.evaluate(() => (window as unknown as {__arkGolden?: {resetTransients?: () => void}}).__arkGolden?.resetTransients?.());
+        await page.evaluate(STEPPED(at, 60));
         // (A frame on SwiftShader can take seconds on a busy machine: the screenshot waits for one.)
         const png = await page.screenshot({type: "png", timeout: 300_000});
         await page.evaluate(() => (window as unknown as GoldenWindow).__arkClock.run());

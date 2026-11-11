@@ -496,6 +496,16 @@ export class ReactiveLayer {
         this.envelope = options.envelope ?? reactiveEnvelope;
     }
 
+    /** Forget everything carried from earlier frames (the visual CI, when its clock freezes: a shot is then a function of time). */
+    resetAll() {
+        this.agents = new Map();
+        this.frame = 0;
+        this.alarms = [];
+        this.sightCache = new Map();
+        this.camPrev = null;
+        this.camVel = {x: 0, z: 0};
+    }
+
     setTier(tier: ReactiveTier) {
         this.budget = {...REACTIVE_BUDGET[tier]};
     }

@@ -381,6 +381,10 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * decides anything: the acts come from the event log.
      */
     play: (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}) => ArkReplayRun;
+    /** Place a replay's departed animals off the main thread ahead of `play` (runtime lane). */
+    prepareReplay?: (acts: ArkAct[]) => Promise<void>;
+    /** The visual CI: forget the reactive layer's and the rigs' state carried from earlier frames. */
+    resetTransients?: () => void;
     stats: () => ArkSceneStats;
     // The recorder's camera (`?record=1`, src/ark-scene/director.ts); harmless elsewhere.
     /** The camera's view now. */
