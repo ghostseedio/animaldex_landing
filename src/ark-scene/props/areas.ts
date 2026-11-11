@@ -32,7 +32,8 @@ import {caveSite, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sam
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {barnBase, buildHamletBuildings, type HamletBuildings} from "@/ark-scene/props/hamlet-buildings";
-import {barnStyle, chimneyTop, COMPOST, cottageStyle, coopSpot, GARDEN_BEDS, troughSpots, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {barnStyle, bedsOrigin, chimneyTop, COMPOST, cottageStyle, coopSpot, GARDEN_BEDS, troughSpots, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockFence, paddockRect, PICKET_POST_TOP, picketPostsFor, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {inRock} from "@/ark-scene/map/rocks";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 export type Areas = {
@@ -168,6 +169,9 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
             const t = k / count;
             const x = ax + (bx - ax) * t;
             const z = az + (bz - az) * t;
+            // None in a rock as drawn (the fence meets the rock).
+            const w = frame.toWorld(x, z);
+            if (inRock(w.x, w.z, 0.04)) continue;
             const ground = G(x, z);
             const picket = new BoxGeometry(0.075, 0.82, 0.03);
             const tip = new ConeGeometry(0.055, 0.1, 4);
@@ -186,7 +190,7 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
         farParts.push(boxAlong(ax, az, bx, bz, G(ax, az) + 0.4, 0.8, 0.04, "#e6dfd0"));
     };
     for (const [ax, az, bx, bz] of picketRuns()) fence(ax, az, bx, bz);
-    for (const post of picketPosts()) {
+    for (const post of picketPostsFor(plot)) {
         const ground = G(post.x, post.z);
         const turn = -Math.atan2(post.along.z, post.along.x);
         const stake = new BoxGeometry(0.09, PICKET_POST_TOP + 0.05, 0.09);
@@ -205,11 +209,14 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
 
     // The vegetable patch west of the cottage: ridged beds, bean canes in a wigwam.
     const cabbages: PropInstance[] = [];
-    const bedX = GARDEN_BEDS.x0;
+    // Where the patch starts: clear of the rocks as drawn (home-layout.ts bedsOrigin).
+    const beds = bedsOrigin(plot);
+    const bedX = beds.x0;
+    const bedShift = beds.z0 - GARDEN_BEDS.z0;
     for (let row = 0; row < GARDEN_BEDS.rows; row++) {
         const x = bedX + row * GARDEN_BEDS.pitch;
-        const z0 = GARDEN_BEDS.z0;
-        const z1 = GARDEN_BEDS.z1;
+        const z0 = beds.z0;
+        const z1 = beds.z0 + (GARDEN_BEDS.z1 - GARDEN_BEDS.z0);
         const ground = Math.min(G(x, z0), G(x, z1));
         const ridge = new BoxGeometry(0.6, 0.22, 4, 2, 1, 8);
         lumpy(ridge, 0.05, random);
@@ -221,7 +228,7 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
             }
         }
     }
-    const wigwam = house(bedX + 3 * 0.95, 0, 0.4);
+    const wigwam = house(bedX + 3 * 0.95, 0, 0.4 + bedShift);
     const wg = G(wigwam.x, wigwam.z);
     for (let k = 0; k < 6; k++) {
         const a = (k / 6) * Math.PI * 2;
@@ -257,7 +264,7 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
     // Puddles after rain: on the path, by the gate, in the yard.
     const puddles: PropInstance[] = [];
     for (const [x, z, r] of [[-0.2, 5.4, 0.55], [0.4, 8.0, 0.45], [-2.4, 10.4, 0.8], [3.3, 9.8, 0.6], [-1.2, 12.2, 0.9]] as const) puddles.push({x, y: G(x, z) + 0.035, z, turn: random() * 6, scale: r});
-    farParts.push(paint(place(new BoxGeometry(4, 0.4, 0.4), bedX + 1.4, G(bedX + 1.4, 0) + 0.05, 0.4), "#5c4330"));
+    farParts.push(paint(place(new BoxGeometry(4, 0.4, 0.4), bedX + 1.4, G(bedX + 1.4, bedShift) + 0.05, 0.4 + bedShift), "#5c4330"));
     // Onto the plot: turned and moved (the instances' too).
     const near = merge(parts).rotateY(plot.rotation).translate(plot.x, 0, plot.z);
     const far = merge(farParts).rotateY(plot.rotation).translate(plot.x, 0, plot.z);
@@ -332,13 +339,15 @@ function farm(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; centr
 
     // The paddock: beside the barn, post and rail, a gate gap toward the yard (home-layout.ts: the same posts the sampler lists).
     const paddock = paddockRect(plot);
-    for (const segment of paddockSegments(paddock)) {
-        if (segment.gate) continue;
+    // (home-layout.ts paddockFence: no post or rail where a rock as drawn stands; the same posts the sampler lists.)
+    for (const segment of paddockFence(plot)) {
         const pa = at(segment.a.x, segment.a.z);
         const pb = at(segment.b.x, segment.b.z);
         const ga = groundAt(pa.x, pa.z);
         const gb = groundAt(pb.x, pb.z);
-        parts.push(wood(place(new BoxGeometry(0.12, 1.15, 0.12), pa.x, ga + PADDOCK_POST_TOP - 0.575, pa.z, turn + random() * 0.1), "#7a5f43"));
+        const lean = random() * 0.1;
+        if (segment.post) parts.push(wood(place(new BoxGeometry(0.12, 1.15, 0.12), pa.x, ga + PADDOCK_POST_TOP - 0.575, pa.z, turn + lean), "#7a5f43"));
+        if (!segment.rails) continue;
         for (const y of [0.45, 0.9]) parts.push(boxAlong(pa.x, pa.z, pb.x, pb.z, (ga + gb) / 2 + y, 0.09, 0.05, "#8a6b4a"));
         farParts.push(boxAlong(pa.x, pa.z, pb.x, pb.z, (ga + gb) / 2 + 0.6, 0.6, 0.06, "#8a6b4a"));
     }
