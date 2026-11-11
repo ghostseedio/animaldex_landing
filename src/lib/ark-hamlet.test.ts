@@ -68,7 +68,9 @@ test("hamlet: no wild animal on a reserved plot (the spawn validator's populatio
     const {placed} = validateMap();
     placed.forEach((place, id) => {
         if (place.micro || place.canopy || place.water || place.hamlet || place.map?.held) return;
-        assert.ok(!reservedAt(place.x, place.z), `${id} on a reserved plot`);
+        // (A partner stands a step aside from its host, which is what keeps off: a tick by a grazer at a plot's hedge.)
+        const host = place.host ? placed.get(place.host.id) : null;
+        assert.ok(!reservedAt(host?.x ?? place.x, host?.z ?? place.z), `${id} on a reserved plot`);
     });
 });
 

@@ -19,6 +19,7 @@
 import {homeObstacles, type HomePlot} from "@/ark-scene/props/home-layout";
 import {hamletState, plotFootprint, plotSpots, reservedAt, reservedPlots, spotSize, type HamletResident} from "@/ark-scene/map/hamlet";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
+import {inRock} from "@/ark-scene/map/rocks";
 import {withinCapacity, zoneCapacity} from "@/ark-scene/map/capacity";
 import {arkBody} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -57,6 +58,18 @@ export function validatePlots(plots: readonly HomePlot[] = reservedPlots()): Ham
         for (const corner of prints[i]) {
             const g = sampleGround(corner.x, corner.z);
             if (g.land < 0.8 || g.height < 0.3) failures.push({check: "plot_overlap", detail: `${plot.id} reaches off dry land at ${corner.x.toFixed(1)},${corner.z.toFixed(1)}`});
+        }
+        // Not on a rock as drawn (`map/rocks.ts`), anywhere on its land.
+        const [a, b, , d] = prints[i];
+        for (let u = 0; u <= 1.0001; u += 0.05) {
+            for (let v = 0; v <= 1.0001; v += 0.05) {
+                const x = a.x + (b.x - a.x) * u + (d.x - a.x) * v;
+                const z = a.z + (b.z - a.z) * u + (d.z - a.z) * v;
+                if (inRock(x, z, 0.2)) {
+                    failures.push({check: "plot_overlap", detail: `${plot.id} on a drawn rock at ${x.toFixed(1)},${z.toFixed(1)}`});
+                    u = v = 2;
+                }
+            }
         }
         const core = plot.kind === "house" ? 3 : 4.2;
         for (const o of homeObstacles()) if (Math.hypot(o.x - plot.x, o.z - plot.z) < o.r + core * 0.8) failures.push({check: "plot_overlap", detail: `${plot.id}'s ${plot.kind === "house" ? "house" : "barn"} on a tree, rock or building at ${o.x.toFixed(1)},${o.z.toFixed(1)}`});

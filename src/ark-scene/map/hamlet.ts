@@ -33,8 +33,10 @@
  */
 
 import {COTTAGE} from "@/ark-scene/micro-decor";
-import {barnStyle, coopSpot, cottageStyle, defaultHomePlots, GARDEN, homeObstacles, onHomeKeepOut, paddockRect, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {barnStyle, coopSpot, cottageStyle, defaultHomePlots, GARDEN, onHomeKeepOut, paddockRect, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {cropAt, fieldCropAt} from "@/ark-scene/fields";
+import {forestFill, worldDecor} from "@/ark-scene/decor";
+import {inRock} from "@/ark-scene/map/rocks";
 import {bodyOf} from "@/ark-scene/map/species";
 import slotTable from "@/ark-scene/map/hamlet-slots.json";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -149,6 +151,17 @@ function nearestOnLanes(x: number, z: number): {point: {x: number; z: number}; l
 }
 
 const GOOD_ZONES = new Set(["farm_garden", "grassland"]);
+
+/** Trees, shrubs and buildings a plot's house or barn must not stand on (the props' `homeObstacles`, but for the rocks: those are `inRock`, as drawn). */
+let obstacleList: Array<{x: number; z: number; r: number}> | null = null;
+function plotObstacles(): Array<{x: number; z: number; r: number}> {
+    if (obstacleList) return obstacleList;
+    const solid = new Set(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy", "cactus", "shrub", "barn", "hay", "cottage"]);
+    obstacleList = [...worldDecor(), ...forestFill()]
+        .filter((item) => solid.has(item.kind))
+        .map((item) => ({x: item.x, z: item.z, r: item.kind === "shrub" ? 0.5 * item.scale : item.kind === "barn" ? 3.6 : item.kind === "cottage" ? 3.4 : 0.45 * Math.max(item.scale, 1)}));
+    return obstacleList;
+}
 /** The other land zones' sites (their animals' clearings): no plot reaches into one. */
 const OTHER_SITES = Object.entries(ZONE_SITES).filter(([zone, site]) => zone !== "farm_garden" && site.kind === "land").map(([, site]) => site);
 /** A smallholding's yard reaches this far in front of its barn's middle (plotLand: the yard and its margin). */
@@ -195,9 +208,17 @@ function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null 
         }
     }
     if (hi - lo > (plot.kind === "house" ? 2.5 : 3.5)) return null;
+    // Never on a rock as it is drawn (`map/rocks.ts`: the asset rock's box, not the old circle): a garden, a yard or a
+    // paddock on a boulder reads as a bug.
+    for (let lx = land.x0; lx <= land.x1 + 0.01; lx += (land.x1 - land.x0) / Math.ceil(land.x1 - land.x0)) {
+        for (let lz = land.z0; lz <= land.z1 + 0.01; lz += (land.z1 - land.z0) / Math.ceil(land.z1 - land.z0)) {
+            const w = frame.toWorld(lx, lz);
+            if (inRock(w.x, w.z, 0.4)) return null;
+        }
+    }
     const core = CORE[plot.kind];
     let inside = 0;
-    for (const o of homeObstacles()) {
+    for (const o of plotObstacles()) {
         if (Math.abs(o.x - plot.x) > 24 || Math.abs(o.z - plot.z) > 24) continue;
         const p = frame.toLocal(o.x, o.z);
         if (p.x > core.x0 - o.r && p.x < core.x1 + o.r && p.z > core.z0 - o.r && p.z < core.z1 + o.r) return null;
