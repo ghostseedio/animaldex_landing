@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SLOT_SECONDS, tripAt, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, tripAt, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -240,7 +240,7 @@ test("predators keep a safe distance from the animals they eat", () => {
     let samples = 0;
     for (const p of predators) {
         const prey = animals.filter((q) => eats(p.a.model_slug, q.a.model_slug));
-        const safe = Math.max(10, p.animal.length * 6);
+        const safe = Math.max(SAFE_METRES, p.animal.length * 6);
         for (let k = 0; k < 24 * 45; k += 13) {
             const t = DAY + k * SLOT_SECONDS + 7;
             const at = poseOf(p, t);
@@ -312,4 +312,22 @@ test("walkers stay on walkable ground, swimmers in the water", () => {
         }
     }
     assert.ok(walking > 100 && off.length / walking < 0.03, `${off.length} of ${walking} walking samples off the grid: ${Array.from(new Set(off)).join(", ")}`);
+});
+
+test("at the shore nothing jumps: amphibious animals go in and out of the water at their own pace, second by second", () => {
+    // (A route's mid-way pause from the water, and a path whose ends shared a grid cell, used to snap an animal 9-15 m.)
+    let steps = 0;
+    for (const i of animals.filter((x) => amphibious(x.profile))) {
+        let prev = poseOf(i, DAY + 4 * 3600);
+        for (let s = 1; s < 4 * 3600; s += 1) {
+            const p = poseOf(i, DAY + 4 * 3600 + s);
+            if (!p.aloft && !prev.aloft) {
+                const step = Math.hypot(p.x - prev.x, p.y - prev.y, p.z - prev.z);
+                assert.ok(step < 8, `${i.a.model_slug} jumps ${step.toFixed(1)} m in a second (${prev.beat} -> ${p.beat})`);
+                steps++;
+            }
+            prev = p;
+        }
+    }
+    assert.ok(steps > 50000, `steps ${steps}`);
 });

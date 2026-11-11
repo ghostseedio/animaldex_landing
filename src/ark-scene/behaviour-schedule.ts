@@ -884,6 +884,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const mid = alongPath(path, 0.4 + random() * 0.2);
             const midSpot = groundSpot(world, mid.x, mid.z);
             const firstPath = world.nav.path(a, midSpot, "walk", 0.5, 400, maxSlopeOf(animal));
+            // Each half ends where it is going even when the grid can't reach it (from the water, say): it used to stop
+            // short and take no time at all, and the animal jumped to the pause.
+            if (Math.hypot(firstPath[firstPath.length - 1].x - midSpot.x, firstPath[firstPath.length - 1].z - midSpot.z) > 0.01) firstPath.push({x: midSpot.x, z: midSpot.z});
             const secondPath = world.nav.path(midSpot, b, "walk", 0.5, 400, maxSlopeOf(animal));
             if (Math.hypot(secondPath[secondPath.length - 1].x - b.x, secondPath[secondPath.length - 1].z - b.z) > 0.01) secondPath.push({x: b.x, z: b.z});
             const l1 = pathLength(firstPath);
@@ -915,7 +918,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const toWet = wet(world, to);
             if (amphibious(profile) && fromWet !== toWet) {
                 // Into the water at an edge, or out of it at one: walk to the edge, slide in (or swim to it, climb out).
-                const edge = edgeNear(toWet ? from : to);
+                const edge = edgeNear(toWet ? from : to) ?? edgeNear(toWet ? to : from);
                 if (edge) {
                     const out = {x: edge.x + Math.sin(edgeYaw(world, edge)) * Math.max(animal.length, 0.6), z: edge.z + Math.cos(edgeYaw(world, edge)) * Math.max(animal.length, 0.6)};
                     const offshore = waterSpot(world, profile, animal, out.x, out.z, () => 0.3);
@@ -1194,13 +1197,16 @@ export function airborneDoing(doing: ArkDoing): boolean {
 
 // MARK: Predators and prey
 
+/** The least a predator is kept from an animal it eats (or that eats it), beyond both their reaches: 20 m (owner's problem 6). */
+export const SAFE_METRES = 20;
+
 export type HomeInput = {id: string; slug: string; home: {x: number; z: number}; length: number; walkable: (x: number, z: number) => boolean};
 export type SpacedHome = {home: {x: number; z: number}; range: number | null; prey: {x: number; z: number} | null};
 
 /**
  * Predators' home ranges kept a safe distance from their prey's (visual only; the server decides every meal).
  * `reachOf(id)` is how far an animal (a leader with its group round it) can get from its home. A predator whose reach
- * comes within the safe distance (6 body lengths, at least 10 m) of the reach of an animal it eats (or of one that
+ * comes within the safe distance (6 body lengths, at least `SAFE_METRES`) of the reach of an animal it eats (or of one that
  * eats it) is moved to the nearest clear walkable spot, searching outward to 120 m; where none is clear, it goes to
  * the clearest spot found and both ranges shrink until they keep the distance. Biggest predators first. Returns the
  * moved homes and range caps (prey whose range shrank are in it too, with their own home).
@@ -1214,7 +1220,7 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
         const prey = animals.filter((other) => other.id !== predator.id && eats(predator.slug, other.slug));
         if (!prey.length) continue;
         const enemies = animals.filter((other) => other.id !== predator.id && (eats(predator.slug, other.slug) || eats(other.slug, predator.slug)));
-        const safeTo = (other: HomeInput) => Math.max(10, Math.max(predator.length, other.length) * 6);
+        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
         const clearance = (x: number, z: number) => Math.min(...enemies.map((o) => Math.hypot(home.get(o.id)!.x - x, home.get(o.id)!.z - z) - need(o)));
         const start = home.get(predator.id)!;
