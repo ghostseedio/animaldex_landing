@@ -217,22 +217,23 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          */
         frame(nowMs: number): "draw" | "skip" | "sleep" {
             if (!governor.visible()) return "sleep";
-            if (firstFrameMs === null) {
-                // The first frame waits for the scene's shaders, compiled in parallel (never more than 5 s).
-                if (shaders === "pending") {
-                    if (!warming) {
-                        warming = true;
-                        const target = ctx.renderTarget();
-                        const previous = ctx.renderer.getRenderTarget();
-                        if (target) ctx.renderer.setRenderTarget(target);
-                        void warmShaders(ctx.renderer, ctx.scene, ctx.camera as Camera).then((how) => {
-                            shaders = how;
-                        });
-                        ctx.renderer.setRenderTarget(previous);
-                    }
-                    skipped++;
-                    return "skip";
+            // The first frame (and the first after a tier change, whose shadows and finish are new shader variants)
+            // waits for the scene's shaders, compiled in parallel: the last picture stays up meanwhile, and the page
+            // keeps answering. Never longer than the warm-up's own limit.
+            if (shaders === "pending") {
+                if (!warming) {
+                    warming = true;
+                    const target = ctx.renderTarget();
+                    const previous = ctx.renderer.getRenderTarget();
+                    if (target) ctx.renderer.setRenderTarget(target);
+                    void warmShaders(ctx.renderer, ctx.scene, ctx.camera as Camera, firstFrameMs === null ? 5000 : 1500).then((how) => {
+                        shaders = how;
+                        warming = false;
+                    });
+                    ctx.renderer.setRenderTarget(previous);
                 }
+                skipped++;
+                return "skip";
             }
             if (!governor.shouldDraw(nowMs, lastDrawn)) {
                 skipped++;
@@ -250,7 +251,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         activity(busy: boolean, reducedMotion: boolean) {
             const now = performance.now() / 1000;
             // A recording (clips, golden shots) is the director's: every frame, never idle-capped.
-            governor.setActivity({busy: busy || recording || now < busyUntil || wheel.active, reducedMotion});
+            // Models coming in count as moving: their hand-over runs at the full rate, then the page settles.
+            governor.setActivity({busy: busy || recording || now < busyUntil || wheel.active || ctx.library.pending > 0, reducedMotion});
         },
 
         /** Something will move for a while (an arrival's entrance): full rate until then. */
@@ -314,9 +316,10 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             return arkCaps(lite ? "low" : tier);
         },
 
-        /** The tier changed: skins loaded from now on are fitted to it. */
+        /** The tier changed: skins loaded from now on are fitted to it; its new shader variants are compiled before the next draw. */
         tierChanged(tier: QualityTier) {
             ctx.library.fit = fitFor(tier);
+            if (firstFrameMs !== null && !warming) shaders = "pending";
         },
 
         /** After the frame is drawn: the paced hand-over, the budget, the bar and the button. */
