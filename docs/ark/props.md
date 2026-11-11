@@ -97,6 +97,18 @@ The scene's own phone numbers are 71–171 calls and 1.0–2.3 M triangles (grap
 
 The hamlet grows by plots. Each house plot gets its own garden: a picket fence with posts, a path, vegetable beds, compost, a water butt, gutters, moss and a bird box. Each smallholding gets its own yard: a hay shelter (the loft door only when a barn stands there), a paddock on pasture clear of trees, troughs, mud, puddles and a hens' coop. Each is laid out in the plot's frame and seeded by its id, so a new plot is the same for every viewer. The original two plots keep their old seeds.
 
+### The hamlet's buildings and land
+- **Buildings:** `props/hamlet-buildings.ts` draws a cottage on each house plot and a barn or a smaller farm shed on each smallholding, except today's two, which the graphics lane draws. It uses the graphics lane's own builders: `micro-scene.ts` `cottageGeometry(style)` and `vegetation.ts` `barnGeometry(style)`. With `COTTAGE_STYLE` and `BARN_STYLE` they give today's meshes byte for byte, and a test pins their hashes.
+  - Each plot's look comes from its id (`home-layout.ts`). `cottageStyle` sets the limewash, tiles, woodwork, chimney side, a porch or not, and a scale of 0.9–1. `barnStyle` sets the colours and size, or makes a shed.
+  - The garden's house-hung details (gutters, downpipe, moss, bird box) scale with the cottage.
+  - The windows light at night.
+  - The whole hamlet is two draw calls.
+- **Land:** `props/hamlet-land.ts` is pure. It reads the slot table plus the map's footprints, which are baked into `hamlet-footprints.json` (a test checks them against `plotFootprint`). With it:
+  - no crops grow on a reserved plot (`fields.ts` `cropAt` and the shader twin `arkHamletLot`);
+  - no grass tufts grow under a house or a barn, and about half grow on the rest of a plot (`decor.ts` `grassTufts`).
+  - No decor item is moved or removed, so the decor's ids do not shift. `fieldCropAt` is the raw field; the props' paddocks and the map's slot planning keep reading it.
+- **Golden shots:** `hamlet_day`, `hamlet_night`, `hamlet_close_day` and `hamlet_close_night`, with the hamlet at 1× (7 houses, 3 smallholdings).
+
 ## Other lanes
 
 - **Graphics / attach lane (`ark-graphics-attach`, merged here at 4873e79d):** the props use only the sampler's own tags.
