@@ -162,7 +162,8 @@ async function record(cdp, name) {
     };
 }
 
-const query = set ? "rig=/ark-rig/v2" : "";
+// `--query`: more page parameters (the locomotion course's `cast=slug:plan,...`, `loco=0` for the before).
+const query = [set ? "rig=/ark-rig/v2" : "", arg("query", "")].filter(Boolean).join("&");
 const summary = [];
 const wanted = arg("scenes", flag("perf") || flag("island") ? "none" : "");
 for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["duck_flight", "deer_graze", "deer_look"]) {

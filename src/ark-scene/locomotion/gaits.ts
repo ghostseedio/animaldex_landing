@@ -17,6 +17,11 @@
 import type {BodyPlan, GaitName, LocoLeg, LocoRig} from "@/ark-scene/locomotion/types";
 
 export const G = 9.81;
+/**
+ * The fastest stride cycle drawn (cycles a second): 14, four frames a cycle at 60 fps (a cockroach runs at 25: drawn
+ * that fast, its legs alias into a shimmer; an animal that small slides its feet a little instead, out of sight).
+ */
+export const MAX_CADENCE = 14;
 
 /** How a gait moves the body (shares of the hip height, radians). */
 export type GaitSpec = {
@@ -104,8 +109,8 @@ const SPEC = (name: GaitName, s: Partial<GaitSpec>): GaitSpec => ({
 /** The gaits' body motion (offsets come from `legOffset`). */
 export const GAITS: Record<string, GaitSpec> = {
     stand: SPEC("stand", {duty: [1, 1], bob: 0, crouch: 0.02, sway: 0, roll: 0}),
-    walk: SPEC("walk", {duty: [0.78, 0.62], swing: 0.1, bob: 0.018, crouch: 0.035, sway: 0.012, roll: 0.02, bend: 0.03}),
-    ds_walk: SPEC("ds_walk", {duty: [0.78, 0.62], swing: 0.1, bob: 0.02, crouch: 0.05, sway: 0.015, roll: 0.025, bend: 0.03}),
+    walk: SPEC("walk", {duty: [0.72, 0.58], swing: 0.1, bob: 0.018, crouch: 0.035, sway: 0.012, roll: 0.02, bend: 0.03}),
+    ds_walk: SPEC("ds_walk", {duty: [0.74, 0.6], swing: 0.1, bob: 0.02, crouch: 0.05, sway: 0.015, roll: 0.025, bend: 0.03}),
     amble: SPEC("amble", {duty: [0.6, 0.5], swing: 0.09, bob: 0.012, crouch: 0.04, sway: 0.01, roll: 0.02}),
     trot: SPEC("trot", {duty: [0.5, 0.38], swing: 0.15, bob: -0.03, crouch: 0.055, sway: 0.006, roll: 0.012, stride: 1}),
     pace: SPEC("pace", {duty: [0.55, 0.4], swing: 0.13, bob: -0.025, crouch: 0.05, sway: 0.03, roll: 0.06}),
@@ -117,7 +122,7 @@ export const GAITS: Record<string, GaitSpec> = {
     hop: SPEC("hop", {duty: [0.4, 0.3], swing: 0.35, bob: -0.18, crouch: 0.12, pitch: 0.08, flex: 0, sway: 0, roll: 0, stride: 0.7}),
     biped_walk: SPEC("biped_walk", {duty: [0.66, 0.58], swing: 0.12, bob: 0.03, crouch: 0.05, sway: 0.03, roll: 0.03, bend: 0.03}),
     biped_run: SPEC("biped_run", {duty: [0.42, 0.3], swing: 0.22, bob: -0.05, crouch: 0.1, pitch: 0.03, sway: 0.02, roll: 0.02, stride: 1.1}),
-    waddle: SPEC("waddle", {duty: [0.75, 0.66], swing: 0.06, bob: 0.02, crouch: 0.02, sway: 0.06, roll: 0.17, stride: 0.55}),
+    waddle: SPEC("waddle", {duty: [0.75, 0.66], swing: 0.07, bob: 0.02, crouch: 0.05, sway: 0.045, roll: 0.1, stride: 0.6}),
     sprawl: SPEC("sprawl", {duty: [0.72, 0.6], swing: 0.12, bob: 0.008, crouch: 0.03, bend: 0.2, sway: 0.004, roll: 0.03, stride: 0.75}),
     sprawl_run: SPEC("sprawl_run", {duty: [0.5, 0.4], swing: 0.16, bob: -0.01, crouch: 0.0, bend: 0.28, sway: 0.004, roll: 0.03, stride: 0.85}),
     tripod: SPEC("tripod", {duty: [0.6, 0.5], swing: 0.22, bob: 0.008, crouch: 0.03, sway: 0.006, roll: 0.02, bend: 0.03, stride: 0.75}),
@@ -154,11 +159,11 @@ export function gaitLadder(rig: Pick<LocoRig, "plan" | "slug" | "legs">): GaitLa
     if (legs === 2) {
         if (WADDLERS.test(slug) && /(penguin)/.test(slug)) return [["waddle", 0]];
         if (HOPPERS.test(slug) && plan === "flying_bird") return [["hop", 0]];
-        if (WADDLERS.test(slug)) return [["waddle", 0], ["biped_run", 0.9]];
+        if (WADDLERS.test(slug)) return [["waddle", 0], ["biped_run", 0.5]];
         return [["biped_walk", 0], ["biped_run", 0.55]];
     }
     if (legs === 6) return [["wave", 0], ["tripod", 0.03]];
-    if (legs >= 8) return [["wave", 0], ["tetrapod", 0.25]];
+    if (legs >= 8) return [["wave", 0], ["tetrapod", 0.05]];
     // Four legs.
     if (plan === "lizard") return [["sprawl", 0], ["sprawl_run", 0.35]];
     if (plan === "turtle") return [["ds_walk", 0]];
@@ -194,15 +199,21 @@ export function gaitFor(ladder: GaitLadder, froude: number, current: GaitName | 
  * Stride (m a cycle) and cadence (cycles a second) for a speed (m/s) on a hip height (m): Alexander's
  * λ = 2.3·h·Fr^0.3, times the gait's own share, within what the legs reach.
  */
-export function strideFor(speed: number, hip: number, gait: GaitSpec): {stride: number; cadence: number; duty: number; froude: number} {
+export function strideFor(speed: number, hip: number, gait: GaitSpec, maxCadence = MAX_CADENCE, maxSweep = Infinity): {stride: number; cadence: number; duty: number; froude: number} {
     const h = Math.max(hip, 0.005);
     const froude = (speed * speed) / (G * h);
     const t = Math.min(Math.max(froude / 3, 0), 1);
     const duty = gait.duty[0] + (gait.duty[1] - gait.duty[0]) * t;
     let stride = 2.3 * h * Math.pow(Math.max(froude, 1e-4), 0.3) * gait.stride;
-    // A planted foot sweeps stride × duty: at most about 1.1 hip heights (the leg's reach either side of the hip).
-    const most = (1.1 * h) / Math.max(duty, 0.05);
+    // A planted foot sweeps stride × duty: at most 0.8 hip heights (a horse's walk sweeps about 0.75, its trot about
+    // 0.8): further, a nearly straight leg can't reach either end of it without the body sinking.
+    // (And no more than the legs reach with the body barely lowered: short legs take quick little steps.)
+    const most = Math.min(0.8 * h, maxSweep) / Math.max(duty, 0.05);
     stride = Math.min(Math.max(stride, 0.2 * h), most);
+    // No faster than the frame rate can show (an ant's legs at 30 Hz would alias into a shimmer), and every swing at
+    // least two frames long: past that, the stride grows.
+    const fastest = Math.min(maxCadence, (1 - duty) * 30);
+    if (speed / stride > fastest) stride = speed / fastest;
     const cadence = speed > 1e-6 ? speed / stride : 0;
     return {stride, cadence, duty, froude};
 }

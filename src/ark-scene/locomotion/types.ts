@@ -127,6 +127,11 @@ export type LocoRig = {
     minY: number;
     /** The legs' mean hip height over their contact (mesh units): the gait's leg length. 0 without legs. */
     legHeight: number;
+    /**
+     * The length the gait scales with (mesh units): the hip height for upright legs; for sprawling legs (insects,
+     * spiders, crabs, lizards, amphibians, turtles) the hip-to-sole distance, which is what sets their stride.
+     */
+    gaitLength: number;
     /** Bones a full secondary layer would want and this rig lacks (ears, manes, trunks): degrade gracefully, report. */
     missing: string[];
     /** A sitting rest pose (rig contract `pose`: meerkats, hares, kangaroos): its legs can't step; its baked clips play. */

@@ -17,6 +17,8 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {hipShare} from "@/ark-scene/locomotion/flee";
+import {G} from "@/ark-scene/locomotion/gaits";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -42,6 +44,20 @@ const CAST: Array<[string, string, number]> = [
     ["meerkat", "meerkat", 6],
     ["meagle", "martial-eagle", 1]
 ];
+// The locomotion course's cast (`?cast=slug:plan,slug:plan`): one of each, prefixed "c<n>".
+const COURSE_CAST: Array<{slug: string; plan: string}> = (new URLSearchParams(typeof location === "undefined" ? "" : location.search).get("cast") ?? "")
+    .split(",")
+    .filter(Boolean)
+    .map((item) => {
+        const [slug, plan] = item.split(":");
+        return {slug, plan: plan ?? "quadruped"};
+    });
+COURSE_CAST.forEach((c, i) => {
+    if (!SPECIES[c.slug]) SPECIES[c.slug] = {name: c.slug.replace(/-/g, " "), zone: "grassland", activity: "any", sociality: null};
+    CAST.push([`c${i}`, c.slug, 1]);
+});
+// `?loco=0`: the locomotion layer off (the baked clips, as before), for before/after recordings.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("loco") === "0") (globalThis as {__arkLoco?: boolean}).__arkLoco = false;
 
 function castId(prefix: string, i: number): string {
     const k = CAST.findIndex((c) => c[0] === prefix);
@@ -238,7 +254,88 @@ async function mountScenes(el: HTMLElement) {
         });
     };
 
+    /**
+     * The locomotion course (lane L1's golden recordings): on a 9 m circle in the grassland, on its slopes: standing
+     * 1.5 s, a walk (from 1.5 s), a trot (4.5 s), a run (5.5-8.5 s), slowing to a stop (10 s), turning on the spot
+     * 150 degrees (10-12.5 s), a walk off (12.5-15 s). Speeds by Froude number on the drawn hip height (walk 0.25,
+     * trot 0.9, run 2.5), so every size moves at its own natural pace. The camera follows from its side.
+     */
+    const course = (id: string, plan: string, start: number) => {
+        const centre = site("grassland", 8, -10);
+        const radius = 9;
+        const len = () => Math.max(handle.locate(id)?.length ?? 1, 0.02);
+        const hip = () => len() * hipShare(plan);
+        const at = (fr: number) => Math.sqrt(fr * G * hip());
+        const speedAt = (k: number) => {
+            const walk = at(0.25);
+            const trot = at(0.9);
+            const run = at(2.5);
+            if (k < 1.5) return 0;
+            if (k < 2.5) return walk * (k - 1.5);
+            if (k < 4.5) return walk;
+            if (k < 5.5) return walk + (trot - walk) * (k - 4.5);
+            if (k < 6.5) return trot + (run - trot) * (k - 5.5);
+            if (k < 8.5) return run;
+            if (k < 10) return run * (1 - (k - 8.5) / 1.5);
+            if (k < 12.5) return 0;
+            if (k < 13.5) return walk * (k - 12.5);
+            return walk;
+        };
+        debug().setHome(id, centre.x + radius, centre.z);
+        pinPose(id, (epoch: number) => {
+            const k = Math.max(epoch - start, 0);
+            // Distance along the circle, then straight off it after the turn.
+            let s = 0;
+            const h = 1 / 60;
+            for (let u = 0; u < Math.min(k, 12.5); u += h) s += speedAt(u) * Math.min(h, k - u);
+            const a = s / radius;
+            let x = centre.x + Math.cos(a) * radius;
+            let z = centre.z + Math.sin(a) * radius;
+            let yaw = Math.atan2(-Math.sin(a), Math.cos(a));
+            let speed = speedAt(k);
+            if (k >= 10) {
+                // Turning on the spot, 150 degrees to its left, eased; then off along that heading.
+                const turn = (2.62 * Math.min(Math.max(k - 10, 0), 2.5)) / 2.5;
+                const e = (1 - Math.cos((Math.PI * turn) / 2.62)) / 2;
+                yaw += 2.62 * e;
+                if (k >= 12.5) {
+                    let d = 0;
+                    for (let u = 12.5; u < k; u += h) d += speedAt(u) * Math.min(h, k - u);
+                    x += Math.sin(yaw) * d;
+                    z += Math.cos(yaw) * d;
+                } else speed = 0;
+            }
+            const moving = speed > 0.02 * len();
+            const run = speed > at(1.5);
+            return {x, z, y: ground(x, z), yaw, moving, aloft: false, doing: moving ? "wander" : "rest", beat: moving ? (run ? "run" : "walk") : "rest"};
+        });
+    };
+    /** The camera follows an animal from its left side (its heading + 90 degrees), a little above. */
+    const trackSide = (id: string, polar: number) => {
+        const token = ++tracking;
+        debug().controls.minDistance = 0.3;
+        const step = () => {
+            if (token !== tracking) return;
+            const a = handle.locate(id);
+            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * 3.2, 0.6), polar, azimuth: a.yaw + Math.PI / 2});
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    };
+    const courseScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
+        COURSE_CAST.map((c, i) => [
+            `loco_${c.slug}`,
+            () => {
+                const id = ids[`c${i}`][0];
+                course(id, c.plan, nowS() + 1e6);
+                trackSide(id, 1.22);
+                return {note: `${c.slug}: stand, walk, trot, run, stop, turn on the spot, walk off (15 s)`, watch: [id], go: () => course(id, c.plan, nowS())};
+            }
+        ])
+    );
+
     const SCENES: Record<string, () => {note: string; watch: string[]; go?: () => void}> = {
+        ...courseScenes,
         /** The same flight seen from 36 m (past the near level's 25 m): a flying rig is still drawn near, flapping. */
         duck_flight_far: () => {
             const at = site("grassland", 4, 2);
