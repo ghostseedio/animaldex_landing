@@ -38,7 +38,7 @@ import {fieldCropAt} from "@/ark-scene/fields";
 import {bodyOf} from "@/ark-scene/map/species";
 import slotTable from "@/ark-scene/map/hamlet-slots.json";
 import type {ArkAnimal} from "@/ark-scene/types";
-import {riverDistance, sampleGround, zoneAt, ZONE_SITES} from "@/ark-scene/world";
+import {HAMLET_LANES, LANE_WIDTH, laneDistance, riverDistance, sampleGround, zoneAt, ZONE_SITES} from "@/ark-scene/world";
 
 export const HOUSE_RESIDENTS_PER_PLOT = 130;
 export const FARM_RESIDENTS_PER_PLOT = 50;
@@ -55,10 +55,13 @@ export function smallholdingCount(residents: number): number {
 
 // MARK: - Plot slots on reserved land
 
-/** A plot's ground in its own frame (x across, z out the front): the house and its garden; the barn's yard and every paddock the props may fence. */
+/**
+ * A house plot's ground in its own frame (x across, z out the front): the house, its front garden to the picket
+ * fence's gate and a metre of verge past it, the props' vegetable beds on its west side (to x = -7.9) and the compost
+ * bin behind it (to z = -4.9), with the back garden and a side passage the residents use.
+ */
 const FOOTPRINT = {
-    house: {x0: -5.6, x1: 5.6, z0: -3.4, z1: 9.6},
-    smallholding: {x0: -14.5, x1: 14.5, z0: -13.2, z1: 13.2}
+    house: {x0: -8.3, x1: 5.7, z0: -5.4, z1: 9.6}
 } as const;
 /** The part that must be clear of every tree, rock and building: the house, the barn. */
 const CORE = {
@@ -94,48 +97,97 @@ function overlap(a: Array<{x: number; z: number}>, b: Array<{x: number; z: numbe
     return true;
 }
 
-/** A plot's footprint (world corners). */
-export function plotFootprint(plot: HomePlot): Array<{x: number; z: number}> {
-    if (plot.kind === "smallholding") {
-        // The barn's core and the props' own paddock, with a metre round them (their bounding rectangle in the plot's frame).
-        const rect = paddockRect(plot);
-        const core = CORE.smallholding;
-        return corners(plot, {x0: Math.min(core.x0, rect.x0) - 1, x1: Math.max(core.x1, rect.x1) + 1, z0: Math.min(core.z0, rect.z0) - 1, z1: Math.max(core.z1, rect.z1) + 1});
-    }
-    return corners(plot, FOOTPRINT.house);
+/**
+ * A plot's land in its own frame: a house's FOOTPRINT; a smallholding's barn, the props' own paddock and coop (its
+ * run round it) and the yard on the barn's other side (where the yard spots are), with a margin round them.
+ */
+function plotLand(plot: HomePlot): Rect {
+    if (plot.kind === "house") return FOOTPRINT.house;
+    const rect = paddockRect(plot);
+    const core = CORE.smallholding;
+    const coop = coopSpot(plot);
+    const behind = rect.z0 > 0;
+    const yard = 6.2;
+    return {
+        x0: Math.min(core.x0, rect.x0, coop.x - 2.2, -5.8) - 0.6,
+        x1: Math.max(core.x1, rect.x1, coop.x + 2.2, 5.8) + 0.6,
+        z0: Math.min(behind ? -yard : rect.z0, coop.z - 2.2) - 0.6,
+        z1: Math.max(behind ? rect.z1 : yard, coop.z + 2.2) + 0.6
+    };
 }
 
-/** The village's middle: between today's cottage and barn. */
+/** A plot's footprint (world corners). */
+export function plotFootprint(plot: HomePlot): Array<{x: number; z: number}> {
+    return corners(plot, plotLand(plot));
+}
+
+/** The village's middle: the street in front of today's cottage (the first lane's nearest point to its gate). */
 function villageMiddle(): {x: number; z: number} {
-    const [house, farm] = defaultHomePlots();
-    return farm ? {x: (house.x + farm.x) / 2, z: (house.z + farm.z) / 2} : {x: house.x, z: house.z};
+    const [house] = defaultHomePlots();
+    const gate = plotFrame(house).toWorld(0, GARDEN.gateZ);
+    return nearestOnLanes(gate.x, gate.z).point;
+}
+
+/** The nearest point on any lane, its lane, and how far along that lane it is (m). */
+function nearestOnLanes(x: number, z: number): {point: {x: number; z: number}; lane: number; along: number; distance: number} {
+    let best = {point: {x, z}, lane: -1, along: 0, distance: Infinity};
+    HAMLET_LANES.forEach(({points: lane}, li) => {
+        let run = 0;
+        for (let i = 1; i < lane.length; i++) {
+            const [ax, az] = lane[i - 1];
+            const [bx, bz] = lane[i];
+            const length = Math.hypot(bx - ax, bz - az);
+            const t = Math.min(Math.max(((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (length * length), 0), 1);
+            const px = ax + (bx - ax) * t;
+            const pz = az + (bz - az) * t;
+            const d = Math.hypot(x - px, z - pz);
+            if (d < best.distance) best = {point: {x: px, z: pz}, lane: li, along: run + t * length, distance: d};
+            run += length;
+        }
+    });
+    return best;
 }
 
 const GOOD_ZONES = new Set(["farm_garden", "grassland"]);
-/** How far from the village's middle a plot may stand (m), and the turns from facing it that are tried. */
-const REACH = 100;
-const TURNS = [0, 0.4, -0.4, 0.8, -0.8, Math.PI / 2, -Math.PI / 2];
+/** A smallholding's yard reaches this far in front of its barn's middle (plotLand: the yard and its margin). */
+const YARD_FRONT = 7.1;
+/** Or its paddock's far fence this far in front of the barn's middle (a paddock 3.4 m off the barn, 7.4 m deep, and the margin). */
+const PADDOCK_FRONT = 11.7;
+/** How far a plot may stand back from its lane, past the verge (m): where the lane bends, a plot steps back from it. */
+const SETBACKS = [0, 1.5, 3];
+/** Metres kept between neighbouring plots' land (a hedge's or a fence's width). */
+const PLOT_GAP = 1.2;
 
-/** How well a candidate plot fits (lower is better), or null: off dry, gentle land, in a forest, or with something in its core. */
-function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null {
+/** How well a candidate plot fits (lower is better), or null: off dry, gentle land, on a lane, in a forest, or with something in its core. */
+export function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null {
     const frame = plotFrame(plot);
     const zone = zoneAt(sampleGround(plot.x, plot.z)) as string;
     if (!GOOD_ZONES.has(zone) && zone !== "desert") return null;
-    const land = plot.kind === "house" ? FOOTPRINT.house : (() => {
-        const rect = paddockRect(plot);
-        const core = CORE.smallholding;
-        return {x0: Math.min(core.x0, rect.x0), x1: Math.max(core.x1, rect.x1), z0: Math.min(core.z0, rect.z0), z1: Math.max(core.z1, rect.z1)};
-    })();
+    const land = plotLand(plot);
     let lo = Infinity;
     let hi = -Infinity;
     let crops = 0;
     // Every 2 m across its ground and a metre round it, its edges included.
     const span = (a: number, b: number) => Array.from({length: Math.ceil((b - a + 2) / 2) + 1}, (_, i) => Math.min(a - 1 + i * 2, b + 1));
+    const site = ZONE_SITES.farm_garden;
+    // Off the lanes: no part of its land on a lane, but for the corners of its front verge where the lane bends.
+    const ahead = frame.toWorld(0, land.z1);
+    const behind = frame.toWorld(0, land.z0);
+    const forward = laneDistance(ahead.x, ahead.z) < laneDistance(behind.x, behind.z);
+    for (let lx = land.x0; lx <= land.x1 + 0.01; lx += (land.x1 - land.x0) / Math.ceil(land.x1 - land.x0)) {
+        for (let lz = land.z0; lz <= land.z1 + 0.01; lz += (land.z1 - land.z0) / Math.ceil(land.z1 - land.z0)) {
+            const w = frame.toWorld(lx, lz);
+            const verge = forward ? lz > land.z1 - 1.3 : lz < land.z0 + 1.3;
+            if (laneDistance(w.x, w.z) < LANE_WIDTH / 2 + (verge ? -0.5 : 0.1)) return null;
+        }
+    }
     for (const lx of span(land.x0, land.x1)) {
         for (const lz of span(land.z0, land.z1)) {
             const w = frame.toWorld(lx, lz);
             const g = sampleGround(w.x, w.z);
             if (g.land < 0.9 || g.height < 0.4 || riverDistance(w.x, w.z) < 3) return null;
+            // Off the middle of the farm's own clearing, where its zone's animals stand.
+            if (Math.hypot(w.x - site.x, w.z - site.z) < site.clearing - 2) return null;
             lo = Math.min(lo, g.height);
             hi = Math.max(hi, g.height);
             if (fieldCropAt(w.x, w.z)) crops++;
@@ -145,20 +197,71 @@ function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null 
     const core = CORE[plot.kind];
     let inside = 0;
     for (const o of homeObstacles()) {
-        if (Math.abs(o.x - plot.x) > 20 || Math.abs(o.z - plot.z) > 20) continue;
+        if (Math.abs(o.x - plot.x) > 24 || Math.abs(o.z - plot.z) > 24) continue;
         const p = frame.toLocal(o.x, o.z);
         if (p.x > core.x0 - o.r && p.x < core.x1 + o.r && p.z > core.z0 - o.r && p.z < core.z1 + o.r) return null;
         if (p.x > land.x0 && p.x < land.x1 && p.z > land.z0 && p.z < land.z1) inside++;
     }
-    return Math.hypot(plot.x - middle.x, plot.z - middle.z) + crops * 2 + inside * 1.5 + (hi - lo) * 2 + (GOOD_ZONES.has(zone) ? 0 : 25);
+    const along = nearestOnLanes(plot.x, plot.z);
+    return Math.hypot(plot.x - middle.x, plot.z - middle.z) * 0.5 + Math.abs(along.along - nearestOnLanes(middle.x, middle.z).along) * (along.lane === nearestOnLanes(middle.x, middle.z).lane ? 0.5 : 0.8) + along.distance * 0.4 + crops * 2 + inside * 1.5 + (hi - lo) * 2 + (GOOD_ZONES.has(zone) ? 0 : 25);
 }
 
 /**
- * The reserved plots past today's two, in their fixed order (15 houses and
- * 5 smallholdings): each the best-fitting candidate (on a 3 m grid within
- * 100 m of the village, facing its middle or turned) clear of those before it.
- * Slow (a few seconds): `scripts/ark-map-hamlet.mts` writes it to
- * `hamlet-slots.json`, which the scene reads; a test checks it is fresh.
+ * Candidate plots along the lanes, both sides, every metre: a house with its garden's gate on the verge, facing the
+ * lane; a smallholding with its barn's long side along the lane, the yard toward it and the paddock behind. Each set
+ * back and turned a little by a hash of its place, so the street is not a ruled line.
+ */
+export function laneCandidates(kind: HomePlot["kind"]): HomePlot[] {
+    const out: HomePlot[] = [];
+    HAMLET_LANES.forEach(({kind: laneKind, points: lane}, li) => {
+        // Cottages along the streets, smallholdings along the farm tracks.
+        if ((laneKind === "street") !== (kind === "house")) return;
+        for (let i = 1; i < lane.length; i++) {
+            const [ax, az] = lane[i - 1];
+            const [bx, bz] = lane[i];
+            const length = Math.hypot(bx - ax, bz - az);
+            const tx = (bx - ax) / length;
+            const tz = (bz - az) / length;
+            for (let s = 0; s < length; s += 1) {
+                for (const side of [1, -1]) {
+                    const nx = -tz * side;
+                    const nz = tx * side;
+                    const h = hamletHash(`lane:${li}:${i}:${s}:${side}:${kind}`);
+                    for (const setback of SETBACKS) {
+                    const jitter = ((h & 0xff) / 255) * 1.2 + setback;
+                    const turn = (((h >>> 8) & 0xff) / 255 - 0.5) * 0.12;
+                    const px = ax + tx * s;
+                    const pz = az + tz * s;
+                    if (kind === "house") {
+                        // The plot's front (a metre of verge past the garden's gate) on the lane's edge; local +z toward the lane.
+                        const back = LANE_WIDTH / 2 + 0.3 + FOOTPRINT.house.z1 + jitter;
+                        const rotation = Math.round((Math.atan2(-nx, -nz) + turn) * 1000) / 1000;
+                        const x = Math.round((px + nx * back) * 1000) / 1000;
+                        const z = Math.round((pz + nz * back) * 1000) / 1000;
+                        out.push({id: `candidate:house:${li}:${i}:${s}:${side}:${setback}`, kind, x, z, rotation});
+                    } else {
+                        // The barn's long side along the lane: its yard toward the lane (local -z) and the paddock
+                        // behind, or the paddock along the lane (its field gate on it) and the barn behind that.
+                        for (const [form, back, facing] of [["yard", LANE_WIDTH / 2 + YARD_FRONT + jitter, 1], ["paddock", LANE_WIDTH / 2 + PADDOCK_FRONT + jitter, -1]] as const) {
+                            const rotation = Math.round((Math.atan2(nx * facing, nz * facing) + turn) * 1000) / 1000;
+                            const x = Math.round((px + nx * back) * 1000) / 1000;
+                            const z = Math.round((pz + nz * back) * 1000) / 1000;
+                            out.push({id: `candidate:smallholding:${li}:${i}:${s}:${side}:${setback}:${form}`, kind, x, z, rotation, barn: true});
+                        }
+                    }
+                    }
+                }
+            }
+        }
+    });
+    return out;
+}
+
+/**
+ * The reserved plots past today's two, in their fixed order (15 houses and 5 smallholdings): each the best-fitting
+ * candidate along the lanes (nearest the village's middle first, so the hamlet grows out along its street) clear of
+ * those before it. Slow (a few seconds): `scripts/ark-map-hamlet.mts` writes it to `hamlet-slots.json`, which the
+ * scene reads; a test checks it is fresh.
  */
 export function planHamletSlots(): HomePlot[] {
     const middle = villageMiddle();
@@ -166,18 +269,9 @@ export function planHamletSlots(): HomePlot[] {
     const candidates = new Map<HomePlot["kind"], Array<{plot: HomePlot; score: number}>>();
     for (const kind of ["house", "smallholding"] as const) {
         const list: Array<{plot: HomePlot; score: number}> = [];
-        for (let x = middle.x - REACH; x <= middle.x + REACH; x += 3) {
-            for (let z = middle.z - REACH; z <= middle.z + REACH; z += 3) {
-                if (Math.hypot(x - middle.x, z - middle.z) > REACH || Math.hypot(x - middle.x, z - middle.z) < 6) continue;
-                const facing = Math.atan2(middle.x - x, middle.z - z);
-                for (const turn of TURNS) {
-                    // (Each candidate its own id: the props cache a plot's paddock by its id.)
-                    const rotation = Math.round((facing + turn) * 1000) / 1000;
-                    const plot: HomePlot = {id: `candidate:${kind}:${x}:${z}:${rotation}`, kind, x, z, rotation, ...(kind === "smallholding" ? {barn: true} : {})};
-                    const score = fitness(plot, middle);
-                    if (score !== null) list.push({plot, score});
-                }
-            }
+        for (const plot of laneCandidates(kind)) {
+            const score = fitness(plot, middle);
+            if (score !== null) list.push({plot, score});
         }
         list.sort((a, b) => a.score - b.score || a.plot.x - b.plot.x || a.plot.z - b.plot.z || a.plot.rotation - b.plot.rotation);
         candidates.set(kind, list);
@@ -188,7 +282,7 @@ export function planHamletSlots(): HomePlot[] {
         for (const {plot} of candidates.get(kind)!) {
             // (Its footprint by its candidate id: the props cache a paddock by the plot's id.)
             const footprint = plotFootprint(plot);
-            if (taken.some((other) => overlap(footprint, other, 1))) continue;
+            if (taken.some((other) => overlap(footprint, other, PLOT_GAP))) continue;
             const placed: HomePlot = {...plot, id: `${kind}-${counts[kind] + 1}`};
             taken.push(footprint);
             counts[kind]++;

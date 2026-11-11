@@ -16,7 +16,7 @@ import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
 import {cropsGrowAt} from "@/ark-scene/fields";
 import {hamletKeeps} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
-import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {fbm, LAKE, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type DecorKind =
@@ -141,6 +141,8 @@ export function worldDecor(): DecorItem[] {
         const site = ZONE_SITES[zone];
         if (Math.hypot(x - site.x, z - site.z) < site.clearing) continue;
         if (riverDistance(x, z) < 4) continue;
+        // The hamlet's village (home growth): Home's own trees keep off its lanes and the plots along them.
+        if (zone === "farm_garden" && laneDistance(x, z) < VILLAGE_REACH) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
@@ -424,6 +426,7 @@ export function forestFill(): FillItem[] {
         if (riverDistance(x, z) < 5) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
         if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
+        if (zone === "farm_garden" && laneDistance(x, z) < VILLAGE_REACH) continue;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
         if (taken.has(key)) continue;
         taken.add(key);

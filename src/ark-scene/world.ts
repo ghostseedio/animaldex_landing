@@ -89,7 +89,19 @@ export function coastRadius(theta: number): number {
     return 78
         + 5.5 * Math.sin(3 * theta + 1.1)
         + 3.5 * Math.sin(5 * theta - 0.4)
-        + 2 * Math.sin(9 * theta + 2.3);
+        + 2 * Math.sin(9 * theta + 2.3)
+        + homeLobe(theta);
+}
+
+/**
+ * The home district's land (2026-11-11, owner decision: grow the home area for the hamlet's full 16 houses and 6
+ * smallholdings, map/hamlet.ts): the south-east coast reaches further out, filling the old bay in front of Home and
+ * the desert, between the river's mouth and the grassland's shore. Metres added to the coast at this bearing.
+ */
+export const HOME_LOBE = Number(process.env.ARK_LOBE ?? 20);
+export function homeLobe(theta: number): number {
+    const degrees = ((((theta * 180) / Math.PI) % 360) + 360) % 360;
+    return HOME_LOBE * smoothstep(Number(process.env.ARK_L0 ?? 22), Number(process.env.ARK_L1 ?? 52), degrees) * (1 - smoothstep(Number(process.env.ARK_L2 ?? 82), Number(process.env.ARK_L3 ?? 106), degrees));
 }
 
 /** A point at this bearing, `offset` metres outside the coast (negative: inland). */
@@ -133,7 +145,7 @@ export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
     rainforest: {x: -46, z: 18, spacing: 2.8, kind: "land", clearing: 11},
     woodland: {x: -40, z: -26, spacing: 2.8, kind: "land", clearing: 11},
     grassland: {x: 38, z: -10, spacing: 3, kind: "land", clearing: 14},
-    desert: {x: 48, z: 34, spacing: 2.8, kind: "land", clearing: 12},
+    desert: {x: Number(process.env.ARK_DX ?? 48), z: Number(process.env.ARK_DZ ?? 34), spacing: 2.8, kind: "land", clearing: 12},
     mountains: {x: -8, z: -46, spacing: 2.8, kind: "land", clearing: 11},
     polar: {...coastPoint(-Math.PI / 2 + 0.55, -13), spacing: 2.8, kind: "land", clearing: 11}
 };
@@ -150,10 +162,13 @@ const ZONE_CENTRES: Record<LandZone, {x: number; z: number}> = {
     rainforest: {x: -48, z: 20},
     woodland: {x: -42, z: -26},
     grassland: {x: 40, z: -12},
-    desert: {x: 50, z: 36},
+    desert: {x: Number(process.env.ARK_DX ?? 48) + 2, z: Number(process.env.ARK_DZ ?? 34) + 2},
     mountains: {x: -10, z: -50},
     polar: {x: ZONE_SITES.polar.x + 4, z: ZONE_SITES.polar.z - 4}
 };
+
+/** Zones whose area reaches round more than one centre (the nearest counts): Home's district spreads east along the coast. */
+const MORE_CENTRES: Partial<Record<LandZone, Array<{x: number; z: number}>>> = process.env.ARK_MORE ? JSON.parse(process.env.ARK_MORE) : {};
 
 /**
  * The visitors' landing (the chat's animal shown in the Ark before one is
@@ -242,6 +257,31 @@ export function riverDistance(x: number, z: number): number {
     return best;
 }
 
+/**
+ * The hamlet's lanes (home growth, 2026-11-11): earth lanes the plots front onto. `map/hamlet.ts` plans the reserved
+ * plots along them, `terrain.ts` paints them, and the fields keep their crops off the village round them (`fields.ts`).
+ * Polylines of (x, z); the first is the village street past today's cottage.
+ */
+export type HamletLane = {
+    /** A street (cottages front onto it) or a farm track (the smallholdings' yards and paddocks open onto it). */
+    kind: "street" | "track";
+    points: Array<[number, number]>;
+};
+export const HAMLET_LANES: HamletLane[] = process.env.ARK_LANES ? JSON.parse(process.env.ARK_LANES) : [];
+/** A lane's width (m), its verges not counted. */
+export const LANE_WIDTH = 3.2;
+/** How far from a lane the village's plots reach (a lane, a house's depth and a margin): Home's own trees keep out. */
+export const VILLAGE_REACH = 19;
+
+/** Metres to the nearest lane's middle line. */
+export function laneDistance(x: number, z: number): number {
+    let best = Infinity;
+    for (const {points} of HAMLET_LANES) {
+        for (let i = 1; i < points.length; i++) best = Math.min(best, distanceToSegment(x, z, points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]));
+    }
+    return best;
+}
+
 /** Rolling hills (graphics pass, batch 2): broad rises 0…1, for the forests and the grassland. */
 function hills(x: number, z: number): number {
     return smoothstep(0.32, 0.82, fbm(x * 0.017 + 40, z * 0.017 - 12));
@@ -317,7 +357,11 @@ export function sampleGround(x: number, z: number): GroundSample {
     // Zone weights: nearest centre wins, blended over a few metres, the edges warped so they never run straight.
     const wx = x + 14 * (fbm(x * 0.02 + 5, z * 0.02) - 0.5);
     const wz = z + 14 * (fbm(x * 0.02, z * 0.02 + 5) - 0.5);
-    const distances = LAND_ZONES.map((zone) => Math.hypot(wx - ZONE_CENTRES[zone].x, wz - ZONE_CENTRES[zone].z));
+    const distances = LAND_ZONES.map((zone) => {
+        const d = Math.hypot(wx - ZONE_CENTRES[zone].x, wz - ZONE_CENTRES[zone].z);
+        const more = MORE_CENTRES[zone];
+        return more ? Math.min(d, ...more.map((c) => Math.hypot(wx - c.x, wz - c.z))) : d;
+    });
     const nearest = Math.min(...distances);
     const raw = distances.map((d) => Math.exp(-(d - nearest) / SOFTNESS));
     const total = raw.reduce((sum, w) => sum + w, 0);
