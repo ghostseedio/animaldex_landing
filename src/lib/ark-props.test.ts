@@ -644,5 +644,5 @@ test("props rocks: no fence post, coop, trough, hay shelter, bed or compost of a
             }
         }
     }
-    assert.deepEqual([...new Set(hits)], []);
+    assert.deepEqual(Array.from(new Set(hits)), []);
 });
