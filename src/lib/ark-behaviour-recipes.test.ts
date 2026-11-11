@@ -5,7 +5,7 @@ import full from "../../data/ark/behaviour-recipes.json";
 import {ARK_RECIPE_STATES, BLOCKS} from "@/ark-scene/behaviour-blocks";
 import {AFTER_STYLES, ENTRY_STYLES, EXIT_STYLES, POSTURES, TEMPLATES, type PreyKind} from "@/ark-scene/recipe-templates";
 import {coatOf as _coatOf, decodeRecipeRow, emergencePoint, forgetRecipes, microMurmuration, molehillsOf, setNestSource, sexDim, swarmFlock, swarmPoint, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
-import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {behaviourProfile, freeBodyLengthsPerSecond} from "@/ark-scene/behaviour-profile";
 import {basePoseOnTrip, poseOnTrip, recipeCoat, roostOf, scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 
@@ -124,6 +124,61 @@ test("a kingfisher fishes from a perch by the water: a steep dive under the surf
         assert.ok(world.sampler.heightAt(dive.to.x, dive.to.z) < -0.25, "into open water");
     }
     assert.ok(dives >= 5, `dives ${dives}`);
+});
+
+test("a plunge dive never goes through the ground: a clear drop from its perch, else it hovers out over the water first", () => {
+    // (The home area grew and a kingfisher's perch ended up on a bank 11 m over the lake, 5 m back: its dives went through the bank.)
+    forgetRecipes();
+    const day = Math.floor(Date.UTC(2026, 6, 14, 6) / 1000);
+    let dives = 0;
+    let hovered = 0;
+    for (const [slug, length] of [["common-kingfisher", 0.17], ["osprey", 0.6]] as const) {
+        for (const [hx, hz] of [[-70, 22], [-85, 5], [-55, 15], [-75, -5]]) {
+            const a = animal(`plunge-${slug}-${hx}-${hz}`, slug, {x: hx, z: hz}, length);
+            for (let t = day; t < day + 4 * 3600; t += SLOT_SECONDS) {
+                const trip = tripAt(world, a.profile, a.animal, t, hoursAt, "diurnal");
+                if (trip.recipe !== "perch_plunge" && trip.recipe !== "talon_grab") continue;
+                const episode = tripEpisode(world, trip);
+                const i = episode ? episode.keys.findIndex((k) => k.block.id === "dive_air" || k.block.id === "dive_feet") : -1;
+                if (!episode || i < 0) continue;
+                dives++;
+                if (episode.keys[i - 1]?.block.id === "hover") hovered++;
+                const dive = episode.keys[i];
+                for (const u of [0.2, 0.4, 0.6, 0.8]) {
+                    const p = poseOnTrip(world, trip, dive.t0 + (dive.t1 - dive.t0) * u) as RecipePose;
+                    assert.ok(p.y > Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.05, `${slug} at ${hx},${hz}: under the ground ${u} into its dive`);
+                }
+                assert.ok(world.sampler.heightAt(dive.to.x, dive.to.z) < -0.25, "into open water");
+            }
+        }
+    }
+    assert.ok(dives >= 20, `dives ${dives}`);
+    assert.ok(hovered >= 1, `none hovered (${dives} dives)`);
+});
+
+test("a recipe's legs go no faster than its clips carry it: a seal chases fish at its own swimming pace", () => {
+    // (The release's rig check: harbour seals swam their chase at 2.1 times their clip's pace, a fixed 0.3 m/s.)
+    forgetRecipes();
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    for (const [slug, length] of [["harbor-seal", 1.6], ["emperor-penguin", 1.29], ["mallard", 0.79]] as const) {
+        const a = animal(`pace-${slug}`, slug, {x: -70, z: 22}, length);
+        const swim = freeBodyLengthsPerSecond(a.profile) * length * 1.4;
+        let legs = 0;
+        for (let start = day; start < day + 24 * 3600; start += SLOT_SECONDS) {
+            const trip = tripAt(world, a.profile, a.animal, start, hoursAt, null);
+            const episode = trip.recipe ? tripEpisode(world, trip) : null;
+            if (!episode || episode.other) continue;
+            for (const k of episode.keys) {
+                if (!["swim", "dive", "surface"].includes(k.block.id) || k.toBase) continue;
+                const flat = Math.hypot(k.to.x - k.from.x, k.to.z - k.from.z);
+                if (flat < 0.05) continue;
+                legs++;
+                // Along its curve (at least the straight way) it takes at least as long as its swimming pace allows.
+                assert.ok(Math.hypot(flat, k.to.y - k.from.y) / (k.t1 - k.t0) <= swim * 1.001, `${slug} ${k.block.id}: ${(Math.hypot(flat, k.to.y - k.from.y) / (k.t1 - k.t0)).toFixed(2)} m/s over ${swim.toFixed(2)}`);
+            }
+        }
+        assert.ok(legs >= 3, `${slug}: ${legs} swimming legs`);
+    }
 });
 
 test("episodes are deterministic and continuous: the same poses from a fresh world, no jumps between frames", () => {
