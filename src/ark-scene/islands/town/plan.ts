@@ -256,9 +256,12 @@ function houseRow(ctx: Ctx, id: string, block: Box, side: 1 | -1, street: string
         // The parcel, turned so its own +z is towards the street.
         const parcel = sub(block, lx, lz, pitch, depth, side === 1 ? 0 : Math.PI);
         const r = rng(hashText(pid));
-        const width = HOUSE.w + (r() - 0.5) * 1.2;
+        // Semi-detached pairs: each house against the wall it shares with its pair, its drive on the outer side.
+        const pairSide = (i % 2 === 0 ? 1 : -1) * side;
+        const pair = count % 2 === 0 || i < count - 1;
+        const width = pair ? Math.min(6.5 + (r() - 0.5) * 0.4, pitch - 2.9) : HOUSE.w + (r() - 0.5) * 1.2;
         const deep = HOUSE.d + (r() - 0.5) * 1.0;
-        const offset = (r() - 0.5) * Math.max(pitch - width - 3.2, 0);
+        const offset = pair ? pairSide * (pitch / 2 - width / 2) : (r() - 0.5) * Math.max(pitch - width - 3.2, 0);
         const frontZ = depth / 2 - HOUSE.setback;
         const house = sub(parcel, offset, frontZ - deep / 2, width, deep);
         const floors = r() < 0.12 ? 1 : 2;
@@ -269,8 +272,8 @@ function houseRow(ctx: Ctx, id: string, block: Box, side: 1 | -1, street: string
         const back = sub(parcel, 0, -depth / 2 + backDepth / 2, pitch, backDepth);
         // The drive: beside the house on its wider side, from the street to the house's front.
         const driveSide = offset > 0 ? -1 : 1;
-        const driveX = offset + driveSide * (width / 2 + 1.5);
-        const drive = Math.abs(driveX) + 1.4 < pitch / 2 ? sub(parcel, driveX, depth / 2 - HOUSE.setback / 2 - 0.4, 2.6, HOUSE.setback + 0.8) : null;
+        const driveX = offset + driveSide * (width / 2 + 1.4);
+        const drive = Math.abs(driveX) + 1.2 <= pitch / 2 ? sub(parcel, driveX, depth / 2 - HOUSE.setback / 2 - 0.4, 2.4, HOUSE.setback + 0.8) : null;
         ctx.parcels.push({id: pid, kind: "house", at: parcel, front, back, building: bid, households: 1, street, drive, seed: hashText(pid)});
         // The boundary between gardens (a fence) and the front wall or hedge.
         const left = local(parcel, -pitch / 2, depth / 2);
@@ -330,7 +333,9 @@ function flatsCourt(ctx: Ctx, id: string, block: Box, streets: string[], sides: 
         // Two blocks on one side ("nn"): side by side, each in its half.
         const twin = s.length === 2;
         const half = twin ? (sides.slice(0, k).includes(s) ? 1 : -1) : 0;
-        const room = twin ? along / 2 - 3 : along - 11;
+        // East and west blocks stand between the north and south ones: shorter, so the corners keep a gap.
+        const between = (s[0] === "e" || s[0] === "w") && sides.some((o) => o[0] === "n" || o[0] === "s");
+        const room = twin ? along / 2 - 3 : between ? along - 2 * (FLATS.d + 2) - 2 : along - 11;
         const w = Math.min(FLATS.w + (r() - 0.5) * 2, room);
         const shift = half * (along / 4 + 0.5);
         const at =
@@ -510,7 +515,7 @@ function buildPlan(): TownPlan {
     addBuilding(ctx, {id: "harbour_office", kind: "harbour_office", at: box(-30, 116, 9, 7, Math.PI / 2), floors: 2, eaves: 6, roof: "hip", households: 0, top: 9});
     addBuilding(ctx, {id: "fish_shed", kind: "fish_shed", at: box(62, 128, 18, 9, -Math.PI / 2), floors: 1, eaves: 4.5, roof: "gable", households: 0, top: 7});
     addBuilding(ctx, {id: "lighthouse", kind: "lighthouse", at: box(36, 166, 5, 5), floors: 5, eaves: 16, roof: "none", households: 0, top: 19, tall: {x: 36, z: 166, y: 18}});
-    addBuilding(ctx, {id: "lock_house", kind: "lock_house", at: box(25, 97, 7, 6, Math.PI / 2), floors: 2, eaves: 5.4, roof: "gable", households: 0, top: 8});
+    addBuilding(ctx, {id: "lock_house", kind: "lock_house", at: box(28, 96, 5.8, 5.4, Math.PI / 2), floors: 2, eaves: 5.4, roof: "gable", households: 0, top: 8});
 
     // MARK: Homes east of Park Road: two columns of blocks between the straight streets, four rows.
     const colA = {x0: 57, x1: 113};
@@ -683,7 +688,7 @@ function buildPlan(): TownPlan {
     zooRow("zoo_c", -1, 23.5, [["primate_house", 4], ["penguin_pool", 1], ["small_mammals", 1]], 8);
     zooRow("zoo_c", 1, 20, [["aviary", 5]], 8);
     // Walking north up the spine, side 1 is east (towards the park), side -1 the 9 m strip before the rows.
-    zooRow("zoo_spine", 1, 12, [["childrens_farm", 2]], 14);
+    zooRow("zoo_spine", 1, 12, [["childrens_farm", 2], ["small_mammals", 1]], 14);
     zooRow("zoo_spine", -1, 8.5, [["aviary", 1]], 12);
     ctx.greens.push({id: "zoo_lawn", kind: "zoo_lawn", poly: [{x: -200, z: -190}, {x: -54, z: -190}, {x: -54, z: 16}, {x: -200, z: 16}]});
 

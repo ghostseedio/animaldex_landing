@@ -4,6 +4,9 @@
  * parcel, green, water, farm and zoo slot, drawn from `islands/town/plan.ts` at 1 px = `--scale` m.
  *
  *   npx tsx scripts/ark-town-plan.mts [--out .ark-golden/town/plan.png] [--scale 2]
+ *   npx tsx scripts/ark-town-plan.mts --validate [--real <snapshot.json>]   the validator (exit 1 on errors); the
+ *                                     snapshot is read in place for its house and farm counts only
+ *   npx tsx scripts/ark-town-plan.mts --obstacles [--json <file>]           L5's obstacle footprints
  */
 
 import {mkdirSync, writeFileSync} from "node:fs";
@@ -21,6 +24,30 @@ const arg = (name: string, fallback: string) => {
     return at >= 0 && argv[at + 1] ? argv[at + 1] : fallback;
 };
 const scale = Number(arg("scale", "2"));
+if (argv.includes("--validate")) {
+    const {validateTown} = await import("../src/ark-scene/islands/town/validate");
+    let real: {house?: number; farm?: number} | undefined;
+    const file = arg("real", "");
+    if (file) {
+        const snapshot = JSON.parse((await import("node:fs")).readFileSync(file, "utf8")) as {animals: Array<{area?: string | null}>};
+        real = {house: snapshot.animals.filter((a) => a.area === "house").length, farm: snapshot.animals.filter((a) => a.area === "farm").length};
+    }
+    const result = validateTown(undefined, real);
+    console.log(JSON.stringify(result.metrics, null, 1));
+    for (const w of result.warnings) console.log("warning:", w);
+    for (const e of result.errors) console.log("ERROR:", e);
+    console.log(`${result.errors.length} errors, ${result.warnings.length} warnings`);
+    process.exit(result.errors.length ? 1 : 0);
+}
+if (argv.includes("--obstacles")) {
+    const {townObstaclesJSON} = await import("../src/ark-scene/islands/town/obstacles");
+    const file = path.resolve(arg("json", path.join(root, ".ark-golden", "town", "town-obstacles.json")));
+    mkdirSync(path.dirname(file), {recursive: true});
+    const json = townObstaclesJSON();
+    writeFileSync(file, json);
+    console.log(`${file}: ${(json.length / 1024).toFixed(0)} KB`);
+    process.exit(0);
+}
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "town", "plan.png")));
 mkdirSync(path.dirname(out), {recursive: true});
 
