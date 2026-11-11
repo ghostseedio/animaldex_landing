@@ -101,7 +101,7 @@ export function coastRadius(theta: number): number {
  * desert, which moved onto it). Zero west of the river's mouth (the reef, the rainforest) and north of the
  * grassland's shore (the ice, the mountain).
  */
-const HOME_LOBE = {south: 32, southFrom: [16, 46], southTo: [97, 119], east: 30, eastFrom: [-50, -8], eastTo: [40, 60]} as const;
+const HOME_LOBE = {south: 32, southFrom: [16, 46], southTo: [97, 119], east: 30, eastFrom: [-44, -8], eastTo: [40, 60]} as const;
 export function homeLobe(theta: number): number {
     const turned = ((((theta * 180) / Math.PI) % 360) + 360) % 360;
     const degrees = turned > 180 ? turned - 360 : turned;
@@ -153,7 +153,7 @@ export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
     woodland: {x: -40, z: -26, spacing: 2.8, kind: "land", clearing: 11},
     // Home growth: the grassland's animals gather further north and west (the hamlet's farms are where they stood),
     // and the desert moved onto the new east shore (Home took its old ground).
-    grassland: {x: 32, z: -30, spacing: 3, kind: "land", clearing: 14},
+    grassland: {x: 25, z: -27, spacing: 3, kind: "land", clearing: 14},
     desert: {x: 103, z: -6, spacing: 2.8, kind: "land", clearing: 12},
     mountains: {x: -8, z: -46, spacing: 2.8, kind: "land", clearing: 11},
     polar: {...coastPoint(-Math.PI / 2 + 0.55, -13), spacing: 2.8, kind: "land", clearing: 11}
@@ -447,7 +447,9 @@ export function sampleGround(x: number, z: number): GroundSample {
     if (x > VILLAGE_BOX.x0 && x < VILLAGE_BOX.x1 && z > VILLAGE_BOX.z0 && z < VILLAGE_BOX.z1) {
         const lane = laneDistance(x, z);
         if (lane < VILLAGE_REACH + 8) {
-            const flat = 0.9 * smoothstep(VILLAGE_REACH + 8, VILLAGE_REACH - 2, lane);
+            // (Only the open ground the hamlet stands on: the ice, the mountain and the forests keep their shape.)
+            const wild = (weights.polar ?? 0) + (weights.mountains ?? 0) + (weights.rainforest ?? 0) + (weights.woodland ?? 0);
+            const flat = 0.9 * smoothstep(VILLAGE_REACH + 8, VILLAGE_REACH - 2, lane) * Math.max(0, 1 - 2 * wild);
             height += (1.1 + 0.5 * fbm(x * 0.045, z * 0.045) - height) * flat;
         }
     }

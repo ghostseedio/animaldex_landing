@@ -70,3 +70,12 @@ export function withinCapacity<T extends {id: string; zone: string}>(animals: re
     });
     return kept;
 }
+
+/**
+ * Hands the table to the runtime lane's rule E (`live-budget.ts` setArkZoneCapacity), when that lane is in. Guarded:
+ * a build without it passes nothing. On release, `index.ts` calls `wireZoneCapacity(liveBudget)` once with
+ * `import * as liveBudget from "@/ark-scene/live-budget"`.
+ */
+export function wireZoneCapacity(budget: {setArkZoneCapacity?: (capacity: ((zone: string) => number | null) | null) => void}): void {
+    budget.setArkZoneCapacity?.(zoneCapacity);
+}
