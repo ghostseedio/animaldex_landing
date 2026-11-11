@@ -5,7 +5,7 @@ recordings (--downloads; each recipe source has its download URL and licence
 page), and writes for each bed:
 
   public/ark/sound/ambient/<id>.webm   Opus in WebM (Chrome, Firefox, Safari 17+)
-  public/ark/sound/ambient/<id>.m4a    AAC-LC in MP4 (the fallback)
+  public/ark/sound/ambient/<id>.m4a    AAC-LC in MP4 (the fallback; AudioToolbox, so macOS)
 
 plus, in --work, the loop WAV, a check sheet (<id>-check.png: the whole loop's
 spectrogram over its waveform, and the seam twice over: 6 s either side of the
@@ -16,10 +16,15 @@ The loop: a stretch of the recording L + X seconds long; its last X seconds
 are crossfaded into its first X (equal power for uncorrelated sound), so
 sample L-1 runs straight into sample 0. L is searched within the recipe's
 range for the point where the head and the tail sound most alike (envelope
-and spectrum), so the crossfade blends like with like. Both encodes decode to
-exactly L seconds from sample 0 (checked), so the engine loops 0..L.
+and spectrum), so the crossfade blends like with like. A limiter (run round
+the loop, so its gain is continuous across the loop point) holds the peaks
+while the loop is brought to its loudness. Each file holds the loop with PAD
+seconds of its own end before it and of its own start after it: the engine
+loops from PAD to PAD + L. Decoded, both encodes line up with the loop to the
+sample (checked) and match its loudness (each encode is measured and redone
+with a correcting gain).
 
-Needs ffmpeg (with libopus) and Python 3 with numpy. No network, no paid
+Needs ffmpeg (with libopus and AudioToolbox's aac_at, i.e. on macOS) and Python 3 with numpy. No network, no paid
 services. Run from the landing repo root:
 
   python3 scripts/ark-ambient/make_beds.py --downloads <dir> --work <dir> [--only rain,surf]
@@ -217,13 +222,15 @@ def padded(loop: np.ndarray) -> np.ndarray:
     return np.concatenate([loop[-p:], loop, loop[:p]])
 
 
-def encode_one(loop: np.ndarray, work: str, path: str, fmt: str, kbps: int, gain_db: float = 0.0) -> None:
+def encode_one(loop: np.ndarray, work: str, path: str, fmt: str, kbps: int, gain_db: float = 0.0, pad: bool = True) -> None:
     wav = os.path.join(work, f"_encode-{fmt}.wav")
-    write_wav(wav, padded(loop) * 10 ** (gain_db / 20))
+    write_wav(wav, (padded(loop) if pad else loop) * 10 ** (gain_db / 20))
     if fmt == "webm":
         run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "libopus", "-b:a", f"{kbps}k", "-vbr", "on", "-compression_level", "10", "-application", "audio", "-map_metadata", "-1", path])
     else:
-        run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "aac", "-b:a", f"{kbps}k", "-map_metadata", "-1", "-movflags", "+faststart", path])
+        # Apple's AudioToolbox AAC: ffmpeg's own AAC encoder drifts over its first ~10 s (about 2 dB of band level),
+        # which shows at the loop point; AudioToolbox is steady from the first frame (and is what Safari decodes).
+        run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "aac_at", "-aac_at_mode", "cvbr", "-b:a", f"{kbps}k", "-map_metadata", "-1", "-movflags", "+faststart", path])
 
 
 def offset_of(reference: np.ndarray, y: np.ndarray) -> int:
@@ -276,7 +283,7 @@ def make_bed(recipe: dict, downloads: str, work: str, out_dir: str) -> dict:
     loop_wav = os.path.join(work, f"{bed}-loop.wav")
     write_wav(loop_wav, loop)
     # Bitrates within ~145 KB a file: Opus 28k and AAC 32k unless the loop is long.
-    seconds = len(loop) / SR
+    seconds = len(loop) / SR + 2 * PAD
     budget = int(145 * 1024 * 8 / 1000 / seconds) - 1
     kbps = {"webm": min(recipe.get("opus_kbps", 28), budget), "m4a": min(recipe.get("aac_kbps", 32), budget)}
     n = len(loop)
@@ -312,6 +319,51 @@ def make_bed(recipe: dict, downloads: str, work: str, out_dir: str) -> dict:
     return report
 
 
+def make_oneshot(recipe: dict, downloads: str, work: str, out_dir: str) -> dict:
+    """A one-shot (thunder): a cut with fades, at its loudness, no loop and no padding."""
+    shot = recipe["id"]
+    x = decode(os.path.join(downloads, recipe["file"]), recipe["start"], recipe["duration"], recipe.get("filters", ""))
+    n = len(x)
+    t = np.arange(n) / SR
+    fade_in = np.clip(t / max(recipe.get("fade_in", 0.02), 1e-3), 0, 1)
+    fade_out = np.clip((n / SR - t) / max(recipe.get("fade_out", 3.0), 1e-3), 0, 1)
+    x = x * np.sin(fade_in * np.pi / 2) ** 2 * np.sin(fade_out * np.pi / 2) ** 2
+    target = recipe.get("lufs", -20.0)
+    ceiling = recipe.get("true_peak", -1.5)
+    first = loudness(x)
+    x = x * 10 ** ((target - first["lufs"]) / 20)
+    for _ in range(3):
+        x = limit(x, ceiling - 0.6)
+        now = loudness(x)
+        if abs(now["lufs"] - target) < 0.2:
+            break
+        x = x * 10 ** ((target - now["lufs"]) / 20)
+    final = loudness(x)
+    report = {"id": shot, "duration_seconds": round(n / SR, 4), "loop": final, "files": {}}
+    decoded = {}
+    for fmt, kbps in (("webm", recipe.get("opus_kbps", 28)), ("m4a", recipe.get("aac_kbps", 32))):
+        path = os.path.join(out_dir, f"{shot}.{fmt}")
+        gain_db = 0.0
+        for _ in range(3):
+            encode_one(x, work, path, fmt, kbps, gain_db, pad=False)
+            y = decode(path)
+            heard = loudness(y[:n])
+            miss = final["lufs"] - heard["lufs"]
+            if abs(miss) < 0.3:
+                break
+            gain_db += miss
+        decoded[fmt] = y[:n]
+        report["files"][fmt] = {"bytes": os.path.getsize(path), "kbps": kbps, "gain_db": round(gain_db, 2), "decoded_seconds": round(len(y) / SR, 4), "offset_samples": offset_of(x, y), "loudness": loudness(y[:n])}
+    wav = os.path.join(work, f"{shot}-sheet.wav")
+    write_wav(wav, np.concatenate([decoded["webm"], np.zeros(SR // 2), decoded["m4a"]]))
+    sheet = os.path.join(work, f"{shot}-check.png")
+    run([FFMPEG, "-v", "error", "-y", "-i", wav, "-filter_complex",
+         "[0:a]asplit[a][b];[a]showspectrumpic=s=1100x260:legend=1:fscale=log:color=intensity:scale=log:gain=2,pad=1400:ih[s];"
+         "[b]showwavespic=s=1400x90:colors=0x66ccff:scale=sqrt[w];[s][w]vstack=inputs=2", "-frames:v", "1", sheet])
+    report["sheet"] = sheet
+    return report
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--downloads", required=True)
@@ -321,7 +373,9 @@ def main() -> None:
     ap.add_argument("--only", default="")
     args = ap.parse_args()
     with open(args.recipe, encoding="utf-8") as f:
-        recipes = json.load(f)["beds"]
+        book = json.load(f)
+    recipes = book["beds"]
+    oneshots = book.get("oneshots", [])
     only = {s for s in args.only.split(",") if s}
     os.makedirs(args.work, exist_ok=True)
     os.makedirs(args.out, exist_ok=True)
@@ -337,6 +391,15 @@ def main() -> None:
         reports[recipe["id"]] = make_bed(recipe, args.downloads, args.work, args.out)
         r = reports[recipe["id"]]
         print(f"  {r['loop_seconds']} s, {r['loop']['lufs']} LUFS, TP {r['loop']['true_peak']}, webm {r['files']['webm']['bytes']} B, m4a {r['files']['m4a']['bytes']} B", file=sys.stderr)
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(reports, f, indent=1)
+    for recipe in oneshots:
+        if only and recipe["id"] not in only:
+            continue
+        print(f"{recipe['id']} (one-shot)…", file=sys.stderr, flush=True)
+        reports[recipe["id"]] = make_oneshot(recipe, args.downloads, args.work, args.out)
+        r = reports[recipe["id"]]
+        print(f"  {r['duration_seconds']} s, {r['loop']['lufs']} LUFS, TP {r['loop']['true_peak']}, webm {r['files']['webm']['bytes']} B, m4a {r['files']['m4a']['bytes']} B", file=sys.stderr)
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(reports, f, indent=1)
 

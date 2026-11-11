@@ -53,6 +53,14 @@
  *   `underwater` when the camera is below the sea's surface. The scene can
  *   measure these with `sampler.ts` (`surfaceAt`, `place("river_source")`…).
  *
+ * Thunder: `thunderClaps({fromMs, toMs, storm})` lists the claps to play as
+ * one-shots (not loops) in a window, each `distance / speed of sound` after
+ * one of `lightningAt`'s flashes (`src/lib/ark-clock.ts`), so the sky flashes
+ * and then it rumbles, the same for every viewer. Ask for back-to-back
+ * windows (e.g. each second, [t, t + 1000)) and schedule each clap at `at`;
+ * a clap is in exactly one window. The storm bed carries the rain and the
+ * far rumble between them.
+ *
  * The bed table is `ambient-beds.json`; the recordings and their licences are
  * in `docs/ark-credits.md` ("Ambient beds").
  */
@@ -112,13 +120,24 @@ export type AmbientBedDef = {
     sources: AmbientSource[];
 };
 
-type AmbientTable = {version: number; path: string; formats: string[]; loopStart: number; beds: AmbientBedDef[]};
+export type AmbientThunderDef = {
+    near: {id: string; seconds: number};
+    far: {id: string; seconds: number};
+    /** Claps nearer than this (km) crack (`near`); the rest rumble (`far`). */
+    nearKm: number;
+    level: number;
+    ready: boolean;
+    sources: AmbientSource[];
+};
+
+type AmbientTable = {version: number; path: string; formats: string[]; loopStart: number; beds: AmbientBedDef[]; thunder: AmbientThunderDef};
 
 export const AMBIENT_TABLE = table as unknown as AmbientTable;
 export const AMBIENT_BEDS: readonly AmbientBedDef[] = AMBIENT_TABLE.beds;
 export const AMBIENT_PATH = AMBIENT_TABLE.path;
 /** Seconds into every file where its loop starts (the wrap-around padding before it). */
 export const AMBIENT_LOOP_START = AMBIENT_TABLE.loopStart;
+export const AMBIENT_THUNDER: AmbientThunderDef = AMBIENT_TABLE.thunder;
 
 /** At most this many beds at once by default (the sound tiers' "high"; pass `maxBeds` for medium 3, low 2). */
 export const AMBIENT_MAX_BEDS = 5;
@@ -403,11 +422,90 @@ export function selectAmbientBeds(input: AmbientInput, beds: readonly AmbientBed
         });
 }
 
+// ---------------------------------------------------------------------------
+// Thunder
+
+/** `lightningAt`'s flash grid (src/lib/ark-clock.ts): one possible flash per slot. */
+const FLASH_SLOT_MS = 2300;
+/** Kilometres a second. */
+const SOUND_SPEED_KM_S = 0.343;
+const THUNDER_MAX_KM = 8;
+
+/**
+ * The lightning flashes between `fromMs` and `toMs`, as `lightningAt` draws
+ * them (same seed, same slots): when each flash starts, and its slot.
+ */
+export function lightningFlashes(fromMs: number, toMs: number, storm: number, seed = "ark"): Array<{at: number; slot: number}> {
+    if (!(storm > 0.05) || !(toMs > fromMs) || !Number.isFinite(fromMs) || !Number.isFinite(toMs)) return [];
+    const out: Array<{at: number; slot: number}> = [];
+    const last = Math.floor(toMs / FLASH_SLOT_MS);
+    for (let slot = Math.floor(fromMs / FLASH_SLOT_MS); slot <= last; slot++) {
+        if (unit(seed, "flash", slot) > 0.06 * storm) continue;
+        const at = slot * FLASH_SLOT_MS + unit(seed, "flash-at", slot) * 1800;
+        if (at >= fromMs && at < toMs) out.push({at, slot});
+    }
+    return out;
+}
+
+export type AmbientThunderClap = {
+    id: string;
+    url: string;
+    fallbackUrl: string;
+    /** When the sound starts (ms since the epoch). */
+    at: number;
+    /** The flash it follows. */
+    flashAt: number;
+    distanceKm: number;
+    gain: number;
+    pan?: number;
+};
+
+/**
+ * The thunder claps that start between `fromMs` and `toMs`: one after each
+ * flash, `distance / speed of sound` later (a seeded 0.6–8 km, mostly far),
+ * a crack when near and a low rumble when far, quieter with distance, from a
+ * seeded bearing (panned when `yaw` is given), in the order they sound. The
+ * same for every viewer.
+ */
+export function thunderClaps(input: {fromMs: number; toMs: number; storm: number; seed?: string; yaw?: number; format?: "webm" | "m4a"; baseUrl?: string}, def: AmbientThunderDef = AMBIENT_THUNDER): AmbientThunderClap[] {
+    if (!def.ready) return [];
+    const seed = input.seed ?? "ark";
+    const storm = clamp01(finiteOr(input.storm, 0));
+    const format = input.format === "m4a" ? "m4a" : "webm";
+    const other = format === "webm" ? "m4a" : "webm";
+    const base = input.baseUrl ?? "";
+    const lead = (THUNDER_MAX_KM / SOUND_SPEED_KM_S) * 1000;
+    return lightningFlashes(input.fromMs - lead, input.toMs, storm, seed)
+        .map(({at, slot}) => {
+            const distanceKm = Math.round((0.6 + (THUNDER_MAX_KM - 0.6) * Math.pow(unit(seed, "thunder-km", slot), 1.4)) * 100) / 100;
+            const near = distanceKm < def.nearKm;
+            const id = near ? def.near.id : def.far.id;
+            const gain = Math.round(def.level * Math.min(Math.max(1.8 / distanceKm, 0.12), 1) * (0.6 + 0.4 * storm) * 1000) / 1000;
+            const bearing = unit(seed, "thunder-dir", slot) * Math.PI * 2;
+            const clap: AmbientThunderClap = {
+                id,
+                url: bedUrl(id, format, base),
+                fallbackUrl: bedUrl(id, other, base),
+                at: Math.round(at + (distanceKm / SOUND_SPEED_KM_S) * 1000),
+                flashAt: Math.round(at),
+                distanceKm,
+                gain
+            };
+            const pan = panToward({x: 0, z: 0, yaw: input.yaw}, {x: Math.sin(bearing), z: Math.cos(bearing)}, Infinity, 1);
+            if (pan !== 0) clap.pan = pan;
+            return clap;
+        })
+        .filter((clap) => clap.at >= input.fromMs && clap.at < input.toMs)
+        .sort((a, b) => a.at - b.at || a.flashAt - b.flashAt);
+}
+
 /** The credits for the beds playing (or heard in this visit), in the Sounds panel's shape (`ArkSoundCredit`). */
-export function ambientCredits(ids: readonly string[], beds: readonly AmbientBedDef[] = AMBIENT_BEDS): Array<{recordist: string; license: string; source: string; page: string | null}> {
+export function ambientCredits(ids: readonly string[], beds: readonly AmbientBedDef[] = AMBIENT_BEDS, thunder: AmbientThunderDef = AMBIENT_THUNDER): Array<{recordist: string; license: string; source: string; page: string | null}> {
     const seen = new Set<string>();
     const out: Array<{recordist: string; license: string; source: string; page: string | null}> = [];
-    beds.filter((bed) => ids.indexOf(bed.id) >= 0).forEach((bed) => {
+    const heard: Array<{sources: AmbientSource[]}> = beds.filter((bed) => ids.indexOf(bed.id) >= 0);
+    if (ids.indexOf(thunder.near.id) >= 0 || ids.indexOf(thunder.far.id) >= 0) heard.push(thunder);
+    heard.forEach((bed) => {
         bed.sources.forEach((s) => {
             const key = `${s.recordist}|${s.license}|${s.page}`;
             if (seen.has(key)) return;

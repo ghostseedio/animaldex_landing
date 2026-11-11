@@ -185,5 +185,13 @@
             "pan": true,
             "sources": []
         }
-    ]
+    ],
+    "thunder": {
+        "near": {"id": "thunder_near", "seconds": 18},
+        "far": {"id": "thunder_far", "seconds": 16},
+        "nearKm": 2.2,
+        "level": 0.9,
+        "ready": false,
+        "sources": []
+    }
 }

@@ -5,21 +5,24 @@ import test from "node:test";
 import {
     AMBIENT_BEDS,
     AMBIENT_MAX_BEDS,
+    AMBIENT_THUNDER,
     AMBIENT_PATH,
     AMBIENT_UNDERWATER_LOWPASS_HZ,
     ambientCredits,
     ambientGains,
     approachGain,
+    lightningFlashes,
     loopOffset,
     panToward,
     selectAmbientBeds,
+    thunderClaps,
     timeCurves,
     zoneFactor,
     type AmbientBedDef,
     type AmbientInput
 } from "@/ark-scene/ambient-beds";
 import {ARK_ZONES} from "@/ark-scene/types";
-import {islandHours, tideAt, weatherAt} from "@/lib/ark-clock";
+import {islandHours, lightningAt, tideAt, weatherAt} from "@/lib/ark-clock";
 
 /** Every bed as if its files were in: the selection logic is tested whatever is shipped. */
 const ALL: AmbientBedDef[] = AMBIENT_BEDS.map((bed) => ({...bed, ready: true, loopSeconds: bed.loopSeconds ?? 30}));
@@ -67,7 +70,9 @@ test("ready beds have both files, small, a loop length and credited free licence
         }
         assert.ok(bed.sources.length > 0, `${bed.id} has no credits`);
         for (const s of bed.sources) {
-            assert.ok(["CC0 1.0", "Public domain"].includes(s.license), `${bed.id}: ${s.license}`);
+            // CC0, public domain, or a recordist's own Public Domain Mark: nothing NC, ND or SA (docs/ark-credits.md).
+            assert.ok(["CC0 1.0", "Public domain", "Public Domain Mark 1.0"].includes(s.license), `${bed.id}: ${s.license}`);
+            assert.ok(Array.isArray(s.segment) && s.segment[1] > s.segment[0], `${bed.id} segment`);
             assert.ok(s.recordist && s.source && /^https:\/\//.test(s.page), `${bed.id} credit`);
         }
     }
@@ -253,4 +258,47 @@ test("credits for the beds heard, deduplicated", () => {
     assert.deepEqual(ambientCredits(["a", "b"], beds).map((c) => c.recordist), ["R", "NPS"]);
     assert.deepEqual(ambientCredits(["b"], beds).length, 2);
     assert.deepEqual(ambientCredits([], beds), []);
+});
+
+test("lightning flashes are lightningAt's flashes, both ways", () => {
+    const from = Date.UTC(2026, 10, 11, 3);
+    const to = from + 20 * 60_000;
+    const flashes = lightningFlashes(from, to, 1);
+    // "A couple a minute" in a full storm.
+    assert.ok(flashes.length > 20 && flashes.length < 80, `${flashes.length} flashes in 20 minutes`);
+    for (const f of flashes) assert.ok(lightningAt(f.at + 30, 1) > 0, `flash at ${f.at}`);
+    // Every lit moment belongs to a flash that started at most 420 ms before.
+    for (let t = from + 500; t < to; t += 37) {
+        if (lightningAt(t, 1) > 0) assert.ok(flashes.some((f) => f.at <= t && t - f.at <= 420), `lit at ${t}`);
+    }
+    assert.deepEqual(lightningFlashes(from, to, 0.04), []);
+    assert.ok(lightningFlashes(from, to, 0.3).length < flashes.length);
+});
+
+test("thunder follows each flash by its distance, the same for everyone, once per window", () => {
+    const def = {...AMBIENT_THUNDER, ready: true};
+    const from = Date.UTC(2026, 10, 11, 3);
+    const span = 30 * 60_000;
+    const whole = thunderClaps({fromMs: from, toMs: from + span, storm: 1}, def);
+    assert.ok(whole.length > 30, `${whole.length} claps`);
+    assert.deepEqual(whole, thunderClaps({fromMs: from, toMs: from + span, storm: 1}, def));
+    const windows: typeof whole = [];
+    for (let t = from; t < from + span; t += 1000) windows.push(...thunderClaps({fromMs: t, toMs: t + 1000, storm: 1}, def));
+    assert.deepEqual(windows, whole);
+    for (const c of whole) {
+        assert.ok(c.at >= from && c.at < from + span);
+        assert.ok(Math.abs(c.at - c.flashAt - (c.distanceKm / 0.343) * 1000) <= 1);
+        assert.ok(c.distanceKm >= 0.6 && c.distanceKm <= 8);
+        assert.equal(c.id, c.distanceKm < def.nearKm ? "thunder_near" : "thunder_far");
+        assert.equal(c.url, `/ark/sound/ambient/${c.id}.webm`);
+        assert.ok(c.gain > 0 && c.gain <= 1);
+        assert.equal(c.pan, undefined);
+    }
+    const near = whole.filter((c) => c.id === "thunder_near");
+    const far = whole.filter((c) => c.id === "thunder_far");
+    assert.ok(near.length > 0 && far.length > near.length);
+    assert.ok(Math.min(...near.map((c) => c.gain)) > Math.max(...far.map((c) => c.gain)) * 0.99);
+    assert.ok(thunderClaps({fromMs: from, toMs: from + span, storm: 1, yaw: 0.4}, def).some((c) => typeof c.pan === "number"));
+    assert.deepEqual(thunderClaps({fromMs: from, toMs: from + span, storm: 0}, def), []);
+    assert.deepEqual(thunderClaps({fromMs: from, toMs: from + span, storm: 1}, {...def, ready: false}), []);
 });
