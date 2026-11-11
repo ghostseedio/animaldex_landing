@@ -234,13 +234,14 @@ export class ArkLighting {
 
         this.sky.material.uniforms.sunPosition.value.copy(sunDirection);
         this.skyCopy.material.uniforms.sunPosition.value.copy(sunDirection);
-        this.sky.visible = day.night < 0.995;
+        // Under water the domes stay hidden (setUnderwater): else the sky shows past the terrain's edge as a white band.
+        this.sky.visible = day.night < 0.995 && !this.underwater;
         this.nightMaterial.uniforms.horizon.value.set(day.horizon);
         this.nightMaterial.uniforms.zenith.value.set(day.zenith);
         this.nightMaterial.uniforms.night.value = day.night;
-        this.nightDome.visible = day.night > 0.005;
-        this.nightCopy.visible = this.nightDome.visible;
-        this.skyCopy.visible = this.sky.visible;
+        this.nightDome.visible = day.night > 0.005 && !this.underwater;
+        this.nightCopy.visible = day.night > 0.005;
+        this.skyCopy.visible = day.night < 0.995;
 
         this.sun.color.set(day.light.color);
         this.sun.intensity = day.light.intensity * (1 - 0.35 * ARK_ENV.cloud.value) * (this.underwater ? 0.5 : 1);
@@ -256,14 +257,18 @@ export class ArkLighting {
         this.scene.environmentIntensity = day.environment;
 
         // The photographed sky by day: the image-based light from real clouds and sky, turned so its sun is ours.
+        // Where it hands over to the generated sky (the sun 12° up) the sky light dips softly either side, so the
+        // swap never pops (batch 3: smooth day, dusk, night and dawn).
+        const handover = 0.4 + 0.6 * MathUtils.smoothstep(Math.abs(day.elevation - 12), 0, 5);
         if (this.dayEnvironment && day.elevation > 12) {
             this.builtFor = null;
             this.scene.environment = this.dayEnvironment;
             this.scene.environmentRotation.set(0, Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING, 0);
-            this.scene.environmentIntensity = day.environment * 1.15;
+            this.scene.environmentIntensity = day.environment * 1.15 * handover;
             return;
         }
         this.scene.environmentRotation.set(0, 0, 0);
+        this.scene.environmentIntensity = day.environment * handover;
         const key = Math.round(day.elevation / 3);
         if (this.builtFor !== key) {
             this.builtFor = key;

@@ -43,7 +43,7 @@ const arg = (name, fallback) => {
 };
 const flag = (name) => process.argv.includes(`--${name}`);
 
-const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"];
+const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "reef_closeup", "kelp_forest", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"];
 const TIMES = ["day", "dusk", "night"];
 const DEVICES = {
     desktop: {viewport: {width: 1440, height: 900}, deviceScaleFactor: 1, isMobile: false, hasTouch: false, cpuThrottle: 1},
@@ -107,14 +107,14 @@ const server = createServer((request, response) => {
         if (!existsSync(file)) return response.writeHead(404).end();
         return response.writeHead(200, {"Content-Type": closeUp[1] ? "application/json" : "image/ktx2", "Cache-Control": "no-store"}).end(readFileSync(file));
     }
-    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/basis/");
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/basis/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
     if (!file.startsWith(folder) || !existsSync(file)) {
         response.writeHead(404).end();
         return;
     }
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".wasm") ? "application/wasm" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".wasm") ? "application/wasm" : file.endsWith(".glb") ? "model/gltf-binary" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

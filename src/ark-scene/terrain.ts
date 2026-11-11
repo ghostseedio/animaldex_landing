@@ -301,10 +301,11 @@ float arkWet = 0.0;`)
     float farmW = vArkLayers.z;
     // Mountain snow (graphics pass): continuous above a snow line that wanders with the ground, soft-edged, sliding off
     // steep faces (rock shows there), combed into wind streaks. The weather's snow cover brings the line down.
-    float snowLine = 23.0 - 11.0 * envSnow;
+    float snowLine = 27.0 - 12.0 * envSnow;
     float slopeHere = 1.0 - clamp(normalize(vArkNormal).y, 0.0, 1.0);
     float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5));
-    alpine *= 1.0 - smoothstep(0.3, 0.55, slopeHere + 0.12 * (arkNoise(p * 0.4) - 0.5));
+    // Snow holds on all but the steepest faces of the range; rock shows through only there.
+    alpine *= 1.0 - smoothstep(0.48, 0.78, slopeHere + 0.14 * (arkNoise(p * 0.4) - 0.5));
     float streak = smoothstep(0.25, 0.75, arkNoise(vec2(dot(p, vec2(0.8, 0.6)) * 0.12, dot(p, vec2(-0.6, 0.8)) * 1.4)));
     alpine *= mix(0.65, 1.0, streak) * smoothstep(0.0, 0.25, alpine);
     float snowW = max(vArkLayers.w, alpine);
@@ -424,7 +425,8 @@ float arkWet = 0.0;`)
             float run = 0.5 + 0.5 * sin(phase);
             float reach = (0.12 + 0.3 * run * run) * (0.8 + 0.8 * envWind);
             float film = smoothstep(reach + 0.02, reach - 0.06, h);
-            float lace = smoothstep(0.035, 0.0, abs(h - reach)) * smoothstep(0.35, 0.75, arkNoise(p * 3.2 + vec2(arkTime * 0.3, 0.0)));
+            // A soft, broken lace (not a dashed line): wider and fading where the noise is low.
+            float lace = smoothstep(0.06, 0.0, abs(h - reach)) * smoothstep(0.3, 0.8, arkFbm(p * 1.4 + vec2(arkTime * 0.2, 0.0))) * 0.65;
             // The sand a wave just left: wet for a while above the film.
             float left = smoothstep(reach + 0.25, reach, h) * (1.0 - film);
             ground = mix(ground, ground * vec3(0.62, 0.66, 0.68), film * beachy * 0.85);

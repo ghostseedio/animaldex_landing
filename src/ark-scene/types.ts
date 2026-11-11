@@ -235,6 +235,8 @@ export type ArkSceneOptions = {
     closeUpBase?: string | null;
     /** Where the KTX2 transcoder is (`basis_transcoder.js` / `.wasm`). Default "/ark/basis/". */
     basisBase?: string;
+    /** The asset library (trees, plants, rocks): `<assetBase>/trees/oak-a.lod0.glb`… Default its manifest's base, "/ark/assets/v1". */
+    assetBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
     onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
     /**

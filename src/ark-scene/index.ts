@@ -100,6 +100,8 @@ import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, m
 import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
+import {AssetTrees} from "@/ark-scene/asset-trees";
+import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
@@ -492,6 +494,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     scene.add(nearDetail.group);
+    // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
+    const assetTrees = new AssetTrees(options.assetBase);
+    scene.add(assetTrees.group);
+    let assetTreesShown = false;
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
     const motes = buildMotes(260);
@@ -555,6 +561,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         vegetation.setGrassCount(settings.grass);
         vegetation.setFill(settings.fill);
         nearDetail.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
+        // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
+        assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
@@ -4049,6 +4057,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail.update(controls.target, viewDistance);
+        assetTrees.update(camera.position);
+        vegetation.update(camera);
+        if (assetTrees.ready && !assetTreesShown) {
+            assetTreesShown = true;
+            vegetation.hideKinds(ASSET_TREE_KINDS);
+        }
         lighting.fitShadow(controls.target, viewDistance);
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
@@ -4326,6 +4340,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rings.dispose();
             landscape.dispose();
             nearDetail.dispose();
+            assetTrees.dispose();
             vegetation.dispose();
             micro.dispose();
             for (const sceneModule of modules) sceneModule.dispose();
