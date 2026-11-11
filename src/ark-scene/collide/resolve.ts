@@ -39,7 +39,7 @@ export type ResolvePose = {
     /** The animal its recipe pairs it with now (they may touch). */
     partner?: string | null;
     /** The surface points it is on (`attach.ts`): what each is on is its surface, not something it stands in. */
-    attached?: ReadonlyArray<{x: number; z: number; r?: number}> | null;
+    attached?: ReadonlyArray<{x: number; z: number; r?: number; host?: string}> | null;
     /** Held where it is (perched up on a branch or a rock's top: moving it would leave it in the air); others move round it. */
     fixed?: boolean;
 };
@@ -49,9 +49,11 @@ export const SEPARATION_SLACK = 0.1;
 /** A recipe's pair may come this close (a share of their radii summed): a predator reaches its prey. */
 export const PARTNER_CONTACT = 0.6;
 
-function exempt(c: Collider, attached: ResolvePose["attached"]): boolean {
+function exempt(c: Collider, attached: ResolvePose["attached"], fixed?: boolean): boolean {
+    // (Perched up in a tree: among its own branches, the trunk beside it is the tree it is in.)
+    if (fixed && c.kind === "trunk") return true;
     if (!attached) return false;
-    for (const q of attached) if (colliderDistance(c, q.x, q.z) < (q.r ?? 0.15)) return true;
+    for (const q of attached) if ((q.host && (c.id === `trunk:${q.host}` || c.id === `rock:${q.host}`)) || colliderDistance(c, q.x, q.z) < (q.r ?? 0.15)) return true;
     return false;
 }
 
@@ -72,11 +74,11 @@ function spinePoints(body: ResolveBody, x: number, z: number, yaw: number): Arra
 const scratch: Collider[] = [];
 
 /** The deepest overlap of a body with something solid it meets (its capsule, its height), its spine point and the outward way. */
-function deepest(set: ColliderSet, body: ResolveBody, x: number, z: number, y: number, yaw: number, attached: ResolvePose["attached"]): {depth: number; nx: number; nz: number} | null {
+function deepest(set: ColliderSet, body: ResolveBody, x: number, z: number, y: number, yaw: number, attached: ResolvePose["attached"], fixed?: boolean): {depth: number; nx: number; nz: number} | null {
     let best: {depth: number; nx: number; nz: number} | null = null;
     for (const [px, pz] of spinePoints(body, x, z, yaw)) {
         for (const c of set.near(px, pz, body.radius + 0.01, scratch)) {
-            if (c.soft || !bodyMeets(c, body.radius) || !spansCollider(c, y, body.height) || exempt(c, attached)) continue;
+            if (c.soft || !bodyMeets(c, body.radius) || !spansCollider(c, y, body.height) || exempt(c, attached, fixed)) continue;
             const d = colliderDistance(c, px, pz);
             const depth = body.radius - d;
             if (depth <= 0.002 || (best && depth <= best.depth)) continue;
@@ -108,7 +110,7 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
     // (Aloft too: only what its height reaches into, a trunk below the crown on a low flight, a barn's wall.)
     let stuck = false;
     for (let step = 0; step < 6; step++) {
-        const hit = deepest(set, body, x, z, pose.y, pose.yaw, pose.attached);
+        const hit = deepest(set, body, x, z, pose.y, pose.yaw, pose.attached, pose.fixed);
         if (!hit) {
             stuck = false;
             break;
@@ -117,7 +119,7 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
         x += hit.nx * (hit.depth + 0.003);
         z += hit.nz * (hit.depth + 0.003);
     }
-    if (stuck && deepest(set, body, x, z, pose.y, pose.yaw, pose.attached)) {
+    if (stuck && deepest(set, body, x, z, pose.y, pose.yaw, pose.attached, pose.fixed)) {
         const step = Math.max(body.radius * 0.5, 0.05);
         for (let ring = 1; ring * step <= 3; ring++) {
             const d = ring * step;
@@ -126,7 +128,7 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
                 const a = (k / n) * Math.PI * 2;
                 const px = pose.x + Math.sin(a) * d;
                 const pz = pose.z + Math.cos(a) * d;
-                if (!deepest(set, body, px, pz, pose.y, pose.yaw, pose.attached)) return {x: px, z: pz, moved: d};
+                if (!deepest(set, body, px, pz, pose.y, pose.yaw, pose.attached, pose.fixed)) return {x: px, z: pz, moved: d};
             }
         }
     }
@@ -135,7 +137,7 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
 
 /** The way out of the solid thing that stops a move at (x, z) (its outward normal there), or null. */
 function blockerNormal(set: ColliderSet, body: ResolveBody, x: number, z: number, pose: ResolvePose): {nx: number; nz: number} | null {
-    const hit = deepest(set, body, x, z, pose.y, pose.yaw, pose.attached);
+    const hit = deepest(set, body, x, z, pose.y, pose.yaw, pose.attached, pose.fixed);
     return hit ? {nx: hit.nx, nz: hit.nz} : null;
 }
 

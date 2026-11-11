@@ -13,7 +13,7 @@
  */
 
 import {bodyMeets, colliderDistance, segmentDistance, spansCollider, type Collider, type ColliderKind, type ColliderSet} from "@/ark-scene/collide/colliders";
-import {maxSlopeOf, poseOnTrip, tripAt, SLOT_SECONDS} from "@/ark-scene/behaviour-schedule";
+import {maxSlopeOf, poseOnTrip, restingAtRoost, tripAt, SLOT_SECONDS} from "@/ark-scene/behaviour-schedule";
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import type {RecipePose} from "@/ark-scene/behaviour-recipes";
 import {residentAt, type Sim, type SimAnimal} from "@/lib/ark-collide/sim";
@@ -41,7 +41,7 @@ export type Pose = {
      * The surface points it is on (a gecko on bark, a toad in a rock's crevice, a bird on a branch) or climbing between:
      * the thing each is on is its surface, not something it passes through (a rock's box is its bounds, its face inside them).
      */
-    attached?: Array<{x: number; z: number; r?: number}> | null;
+    attached?: Array<{x: number; z: number; r?: number; host?: string}> | null;
     /** Asleep at its roost (a sleeping huddle lies together). */
     asleep?: boolean;
     /** Perched up on a surface (held there by the collisions' layer). */
@@ -63,7 +63,11 @@ export function schedulePoseOf(sim: Sim, routed = false): PoseOf {
             const act = p.act;
             const partner = (act as {with?: string | null} | null | undefined)?.with ?? null;
             const attached = attachedOn(trip, epoch);
-            const fixed = !p.aloft && Boolean(attached) && p.y > Math.max(sim.world.sampler.heightAt(p.x, p.z), 0) + 0.3;
+            const phase = tripPhase(trip, epoch);
+            const fixed = (phase === "stay" || phase === "pause") && !p.aloft && Boolean(attached) && p.y > Math.max(sim.world.sampler.heightAt(p.x, p.z), 0) + 0.3;
+            // (Asleep or resting in its den, burrow, cave, crevice or tree hole: out of sight, not measured.)
+            const hidden = (trip.doing === "sleep" || trip.doing === "rest" || trip.doing === "to_roost") && epoch >= trip.arrive && restingAtRoost(sim.world, s.profile, s.sched, epoch, sim.hoursAt, s.a.activity).enclosed;
+            if (hidden) return null;
             return {x: p.x, y: p.y, z: p.z, yaw: p.yaw, aloft: p.aloft, moving: p.moving, source: act ? `recipe:${act.recipe}:${act.block}` : `${tripPhase(trip, epoch)}:${p.beat}`, attached, partner, asleep: trip.doing === "sleep" && epoch >= trip.arrive, fixed};
         }
         if (s.resident) {
@@ -172,7 +176,7 @@ export type CollideReport = {
     samples: number;
     passThrough: {animals: number; samples: number; byKind: Record<string, number>; bySource: Record<string, number>; byKindSource: Record<string, number>; bySlug: Record<string, number>; worst: Hit[]};
     fenceCrossings: {animals: number; count: number; bySource: Record<string, number>; examples: Hit[]};
-    /** On ground steeper than its walk takes (half again its slope: a cliff face), not climbing, not on a surface. */
+    /** On ground twice as steep as its walk takes (a cliff face), not climbing, not on a surface. */
     cliffs: {animals: number; samples: number; bySource: Record<string, number>; examples: Hit[]};
     overlaps: {pairs: number; samples: number; bySource: Record<string, number>; examples: Array<{a: string; b: string; t: number; depth: number; source: string}>};
     ms: number;
@@ -201,8 +205,10 @@ export function bodyHit(set: ColliderSet, s: SimAnimal, p: Pose, scratch: Collid
     for (const [x, z] of spine(s, p)) {
         for (const c of set.near(x, z, r + 0.01, scratch)) {
             if (c.soft || !bodyMeets(c, r) || !spansCollider(c, p.y, s.body.height)) continue;
+            // (Perched up in a tree: the trunk beside it is the tree it is in.)
+            if (p.fixed && c.kind === "trunk") continue;
             // (What it is on, it is on: the trunk under a gecko, the rock round a toad in its crevice.)
-            if (on && on.some((q) => colliderDistance(c, q.x, q.z) < (q.r ?? 0.15))) continue;
+            if (on && on.some((q) => (q.host && (c.id === `trunk:${q.host}` || c.id === `rock:${q.host}`)) || colliderDistance(c, q.x, q.z) < (q.r ?? 0.15))) continue;
             const depth = r - colliderDistance(c, x, z);
             if (depth > passTolerance(r) && (!best || depth > best.depth)) best = {collider: c, depth};
         }
@@ -292,12 +298,12 @@ export function measureCollisions(sim: Sim, set: ColliderSet, posesAt: PosesAt, 
                 bump(report.passThrough.bySlug, s.a.model_slug);
                 keepWorst({id: s.a.id, slug: s.a.model_slug, t, kind: hit.collider.kind, collider: hit.collider.id, depth: Math.round(hit.depth * 1000) / 1000, source: p.source, x: Math.round(p.x * 100) / 100, z: Math.round(p.z * 100) / 100});
             }
-            // On a cliff face: a walker on the ground (not climbing, not on a surface) where the ground is steeper than
-            // half again what its walk takes.
+            // On a cliff face: a walker on the ground (not climbing, not on a surface) where the ground is twice as steep
+            // as its walk takes.
             if (!p.aloft && !p.attached && !p.source.startsWith("surface") && s.sched && p.y > 0.05) {
                 const ground = sim.world.sampler.heightAt(p.x, p.z);
                 const walker = s.profile.move !== "fly" && s.profile.move !== "swim";
-                if (walker && Math.abs(p.y - ground) < 0.1 && sim.world.sampler.slope(p.x, p.z) > maxSlopeOf(s.sched) * 1.5) {
+                if (walker && Math.abs(p.y - ground) < 0.1 && sim.world.sampler.slope(p.x, p.z) > maxSlopeOf(s.sched) * 2) {
                     report.cliffs.samples++;
                     cliffAnimals.add(s.a.id);
                     bump(report.cliffs.bySource, sourceKey(p.source));

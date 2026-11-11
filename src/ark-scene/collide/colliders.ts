@@ -213,9 +213,10 @@ export class ColliderSet {
     }
 
     /** How far a point is from the nearest solid thing of any kind, whatever its gaps and height (m), up to `cap`: the paths'. */
-    distance(x: number, z: number, cap = 4): number {
+    distance(x: number, z: number, cap = 4, skip?: (c: Collider) => boolean): number {
         let best = cap;
         for (const c of this.near(x, z, cap, this.scratch)) {
+            if (skip && skip(c)) continue;
             const d = colliderDistance(c, x, z);
             if (d < best) best = d;
         }
@@ -223,13 +224,13 @@ export class ColliderSet {
     }
 
     /** `sweep` against every solid thing, whatever its gaps and height (the paths': a walker never threads a picket fence). */
-    sweepAll(ax: number, az: number, bx: number, bz: number, radius: number, slack = 0.01): number {
+    sweepAll(ax: number, az: number, bx: number, bz: number, radius: number, slack = 0.01, skip?: (c: Collider) => boolean): number {
         const length = Math.hypot(bx - ax, bz - az);
         const need = radius - slack;
         let s = 0;
         for (let guard = 0; guard < 4000; guard++) {
             const t = length > 0 ? s / length : 1;
-            const free = this.distance(ax + (bx - ax) * t, az + (bz - az) * t, radius + 2) - need;
+            const free = this.distance(ax + (bx - ax) * t, az + (bz - az) * t, radius + 2, skip) - need;
             if (free < 0) return Math.max(t, 0);
             if (s >= length) return 1;
             s = Math.min(s + Math.max(free, 0.02), length);
@@ -246,7 +247,7 @@ export class ColliderSet {
 // MARK: Building the set
 
 /** The trunk of a decor or forest-fill tree as drawn: its radius (world m), its foot and how high it shows. */
-function trunkCollider(item: DecorItem, n: number): CircleCollider | null {
+function trunkCollider(item: DecorItem, host: string): CircleCollider | null {
     const asset = assetTrunk(item);
     let radius: number;
     let height: number;
@@ -265,7 +266,7 @@ function trunkCollider(item: DecorItem, n: number): CircleCollider | null {
         height = trunk.height * item.scale;
     }
     const y0 = item.y - DECOR_SINK - 0.2;
-    return {shape: "circle", kind: "trunk", id: `trunk:${item.kind}:${n}`, cx: item.x, cz: item.z, r: radius, reach: radius, y0, y1: y0 + Math.max(height, 0.5), gap: 0};
+    return {shape: "circle", kind: "trunk", id: `trunk:${host}`, cx: item.x, cz: item.z, r: radius, reach: radius, y0, y1: y0 + Math.max(height, 0.5), gap: 0};
 }
 
 const TREE_KINDS = new Set<DecorItem["kind"]>(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy", "cactus"]);
@@ -370,10 +371,12 @@ export function buildGates(plots: HomePlot[] | null): Gate[] {
 /** Every collider in the world for these plots (the hamlet's: `map/hamlet.ts` hamletPlotsFor; today's by default). */
 export function buildColliders(plots: HomePlot[] | null): Collider[] {
     const out: Collider[] = [];
-    const items = [...worldDecor(), ...forestFill()];
-    items.forEach((item, n) => {
+    // (Named by the scenery's own hosts, `decor<i>` and `fill<i>` (sampler.ts): a perch on a tree names its tree.)
+    const decor = worldDecor();
+    const items: Array<{item: DecorItem; host: string}> = [...decor.map((item, i) => ({item, host: `decor${i}`})), ...forestFill().map((item, i) => ({item: item as DecorItem, host: `fill${i}`}))];
+    items.forEach(({item, host}, n) => {
         if (TREE_KINDS.has(item.kind)) {
-            const trunk = trunkCollider(item, n);
+            const trunk = trunkCollider(item, host);
             if (trunk) out.push(trunk);
         } else if (item.kind === "fence") {
             // vegetation.ts fence(): rails 2.45 m along the item's own x (turned by its rotation about y), posts at ±1.2 m.
@@ -401,8 +404,14 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
         const r = GARDEN_POND.radius + POND_STONES;
         out.push({shape: "circle", kind: "pond", id: "pond:garden", cx: GARDEN_POND.x, cz: GARDEN_POND.z, r, reach: r, y0: g - 1, y1: g + 0.4, gap: 0});
     }
+    // (A decor rock named by its host, `decor<i>`, as its faces and tops are; any other drawn rock by its place in the list.)
+    const rockHosts = new Map<string, string>();
+    decor.forEach((item, i) => {
+        if (item.kind === "rock") rockHosts.set(`${item.x.toFixed(2)},${item.z.toFixed(2)}`, `decor${i}`);
+    });
     drawnRocks().forEach((rock, n) => {
-        out.push({shape: "box", kind: "rock", id: `rock:${n}`, cx: rock.x, cz: rock.z, cos: rock.cos, sin: rock.sin, hx0: rock.hx0, hx1: rock.hx1, hz0: rock.hz0, hz1: rock.hz1, y0: rock.y0, y1: rock.y1, reach: rock.reach, gap: 0});
+        const host = rockHosts.get(`${rock.x.toFixed(2)},${rock.z.toFixed(2)}`);
+        out.push({shape: "box", kind: "rock", id: host ? `rock:${host}` : `rock:${n}`, cx: rock.x, cz: rock.z, cos: rock.cos, sin: rock.sin, hx0: rock.hx0, hx1: rock.hx1, hz0: rock.hz0, hz1: rock.hz1, y0: rock.y0, y1: rock.y1, reach: rock.reach, gap: 0});
     });
     floorObstacles().forEach((log, n) => {
         const g = sampleGround(log.x, log.z).height;

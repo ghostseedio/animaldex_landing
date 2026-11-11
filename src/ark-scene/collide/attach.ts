@@ -53,8 +53,23 @@ export function onSurface(point: string | null | undefined, tagOf?: (id: string)
     return ON_SURFACE.has(tag);
 }
 
+/** Places on a rock: the rocks touching such a place (within ROCK_TOUCH) are its surface too. */
+const ROCKY: ReadonlySet<string> = new Set(["rock_face", "rock_top", "cliff_ledge", "ledge", "cave_mouth", "den", "rock_foot"]);
+const ROCK_TOUCH = 0.6;
+function tagOfPoint(point: string | null | undefined): string {
+    if (!point) return "";
+    return (point.startsWith("map:") ? point.slice(4) : point).split(":")[0];
+}
+
 /** How far from a climb's end the thing it climbs may be (m): a branch's trunk, a rock top's rock. */
 export const CLIMBED = 1.6;
+
+/** The scenery host a place is on (`decor12`, `fill3`: a tree, a rock), from its id (`<tag>:<host>:<n>`), or null. */
+export function hostOf(point: string | null | undefined): string | null {
+    if (!point) return null;
+    const parts = (point.startsWith("map:") ? point.slice(4) : point).split(":");
+    return parts.length >= 3 && /^(decor|fill)\d+$/.test(parts[1]) ? parts[1] : null;
+}
 
 /** The bit of a trip that holds it now: a leg's mode, or "stay" at its destination, "shadow" beside its leader. */
 export function tripPhase(trip: {shadow?: unknown; arrive: number; start: number; legs: ReadonlyArray<{mode: string; seconds: number}>}, epoch: number): string {
@@ -81,10 +96,16 @@ type TripLike = {
  * The surface points a trip has it on now, or climbing between (`behaviour-schedule.ts` Trip): at a branch, a rock's
  * face, a burrow's mouth; on a climb's way up or down. Null when it is on open ground or in the air.
  */
-export function attachedOn(trip: TripLike, epoch: number): Array<{x: number; z: number; r?: number}> | null {
-    const out: Array<{x: number; z: number; r?: number}> = [];
+export function attachedOn(trip: TripLike, epoch: number): Array<{x: number; z: number; r?: number; host?: string}> | null {
+    const out: Array<{x: number; z: number; r?: number; host?: string}> = [];
     const on = (spot: {x: number; z: number; point: string | null}, r?: number) => {
-        if (onSurface(spot.point)) out.push(r ? {x: spot.x, z: spot.z, r} : {x: spot.x, z: spot.z});
+        if (!onSurface(spot.point)) return;
+        // (The whole of the tree or rock it is on: a bird on a branch beside its trunk. On a rock's face or top, the rocks
+        // touching it too: a toad in the crevice between two, a lizard across two tops.)
+        const host = hostOf(spot.point);
+        const rocky = ROCKY.has(tagOfPoint(spot.point));
+        const reach = Math.max(r ?? 0, rocky ? ROCK_TOUCH : 0);
+        out.push({x: spot.x, z: spot.z, ...(reach ? {r: reach} : {}), ...(host ? {host} : {})});
     };
     const phase = tripPhase(trip, epoch);
     if (phase === "stay") on(trip.to);

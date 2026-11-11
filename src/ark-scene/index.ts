@@ -149,7 +149,7 @@ import {arkThriveOf} from "@/ark-scene/thrive";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, bodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {attachedOn} from "@/ark-scene/collide/attach";
+import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
@@ -1225,7 +1225,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? null,
         attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
         // (Perched up on a surface: held there, never eased off its branch into the air.)
-        fixed: !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && attachedOn(entry.sched.trip, epoch))
+        fixed: !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && (tripPhase(entry.sched.trip, epoch) === "stay" || tripPhase(entry.sched.trip, epoch) === "pause") && attachedOn(entry.sched.trip, epoch))
     });
     /** A hamlet resident out of doors (on its spot, or walking its door route), before the collisions; null indoors. */
     const residentBase = (entry: Entry): (ResolvePose & {yaw: number}) | null => {
@@ -5243,7 +5243,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
         rigState: (id: string) => {

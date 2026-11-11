@@ -66,6 +66,40 @@ async function main() {
             await wait(400);
         },
         locate: (id: string) => handle.locate(id),
+        /**
+         * The collisions' cost on the real clock (the clock running, the camera where it is): over `ms`, the frames drawn,
+         * their mean interval, and the collisions' own time a frame (ms) with how many poses it moved.
+         */
+        cost: async (ms: number) => {
+            fake = null;
+            handle.setClockScale(1);
+            const debug = (window as unknown as {__arkDebug?: {collisions?: () => {ms: number; pushed: number; eased: number; clusters: number}}}).__arkDebug;
+            const before = debug?.collisions?.() ?? null;
+            let frames = 0;
+            const started = realPerfNow();
+            await new Promise<void>((resolve) => {
+                const tick = () => {
+                    frames++;
+                    if (realPerfNow() - started < ms) requestAnimationFrame(tick);
+                    else resolve();
+                };
+                requestAnimationFrame(tick);
+            });
+            const after = debug?.collisions?.() ?? null;
+            const spent = realPerfNow() - started;
+            return {frames, meanFrameMs: spent / Math.max(frames, 1), collisionsMsPerFrame: before && after ? (after.ms - before.ms) / Math.max(frames, 1) : null, pushedPerFrame: before && after ? (after.pushed - before.pushed) / Math.max(frames, 1) : null, easedPerFrame: before && after ? (after.eased - before.eased) / Math.max(frames, 1) : null, stats: handle.stats()};
+        },
+        /** The drawn animal of this species nearest a point (its id), or null. */
+        find: (slug: string, x: number, z: number) => {
+            const debug = (window as unknown as {__arkDebug?: {entries: () => Array<{animal: {id: string; model_slug: string}; middle?: {x: number; z: number} | null}>}}).__arkDebug;
+            let best: {id: string; d: number} | null = null;
+            for (const entry of debug?.entries() ?? []) {
+                if (entry.animal.model_slug !== slug || !entry.middle) continue;
+                const d = Math.hypot(entry.middle.x - x, entry.middle.z - z);
+                if (!best || d < best.d) best = {id: entry.animal.id, d};
+            }
+            return best && best.d < 30 ? best.id : null;
+        },
         stats: () => handle.stats()
     };
 }

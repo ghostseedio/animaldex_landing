@@ -17,7 +17,7 @@
  */
 
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
-import type {ColliderSet} from "@/ark-scene/collide/colliders";
+import type {Collider, ColliderSet} from "@/ark-scene/collide/colliders";
 import {chunked, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {TERRAIN_HALF} from "@/ark-scene/world";
 
@@ -199,9 +199,9 @@ export class NavGrid {
         return this.solid ? this.solid.distance(x, z, CLEAR_CAP) : CLEAR_CAP;
     }
 
-    /** A straight run from a to b for a body of this radius touches nothing solid (none known: always). */
-    runClear(a: NavPoint, b: NavPoint, radius: number): boolean {
-        return !this.solid || this.solid.sweepAll(a.x, a.z, b.x, b.z, radius) >= 1;
+    /** A straight run from a to b for a body of this radius touches nothing solid (none known: always); `skip`: what it may go over. */
+    runClear(a: NavPoint, b: NavPoint, radius: number, skip?: (c: Collider) => boolean): boolean {
+        return !this.solid || this.solid.sweepAll(a.x, a.z, b.x, b.z, radius, 0.01, skip) >= 1;
     }
 
     /** Is the step from cell k by STEPS[d] clear of everything solid for this class? (Cached; both ways at once.) */
@@ -246,7 +246,8 @@ export class NavGrid {
         const [i, j] = this.cellOf(x, z);
         const k = j * SIZE + i;
         if (i < 1 || j < 1 || i >= SIZE - 1 || j >= SIZE - 1 || this.height[k] <= 0.05 || this.steep[k] > maxSlope) return false;
-        return this.sampler.heightAt(x, z) > 0.02 && this.clearanceAt(x, z) >= radius;
+        // (Nor on a cliff's face: the ground right there no steeper than its walk takes, a quarter again.)
+        return this.sampler.heightAt(x, z) > 0.02 && this.sampler.slope(x, z) <= maxSlope * 1.25 && this.clearanceAt(x, z) >= radius;
     }
 
     /** Per body class and slope: each cell's steps through a fence's gate to a cell on its far side (`gateJumps`). */

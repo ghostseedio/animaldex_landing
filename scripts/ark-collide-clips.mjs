@@ -95,11 +95,29 @@ for (const shot of shots) {
         await window.__collide.frame(epoch, v);
         await window.__collide.settle(60000);
     }, [shot.t - lead, view]);
+    if (process.argv.includes("--cost")) {
+        // The cost at this place, on the real clock (the scene running as a viewer sees it), not a recording.
+        const cost = await page.evaluate(async () => window.__collide.cost(8000));
+        summary.push({kind: shot.kind, label, cost: {frames: cost.frames, meanFrameMs: +cost.meanFrameMs.toFixed(2), collisionsMsPerFrame: cost.collisionsMsPerFrame === null ? null : +cost.collisionsMsPerFrame.toFixed(3), pushedPerFrame: cost.pushedPerFrame, easedPerFrame: cost.easedPerFrame, near: cost.stats.near, far: cost.stats.far, live: cost.stats.live}});
+        console.log(shot.kind, label, JSON.stringify(summary[summary.length - 1].cost));
+        await context.close();
+        continue;
+    }
     const n = Math.round((lead + tail) * fps);
     const canvas = await page.$("canvas");
+    // The camera follows the moment's animal (the drawn one of its species nearest the spot), keeping its own angle.
+    const subject = await page.evaluate(([id, slug, x, z]) => (id && window.__collide.locate(id) ? id : window.__collide.find(slug, x, z)), [shot.id, shot.slug, shot.x, shot.z]);
     for (let i = 0; i < n; i++) {
         const epoch = shot.t - lead + i / fps;
-        await page.evaluate(async ([e, v]) => window.__collide.frame(e, v), [epoch, view]);
+        await page.evaluate(async ([e, v, id]) => {
+            const at = id ? window.__collide.locate(id) : null;
+            const follow = at ? {...v, target: {x: at.x, y: at.ground + Math.min(at.height * 0.5, 1.2), z: at.z}} : v;
+            await window.__collide.frame(e, follow);
+            if (id) {
+                const now = window.__collide.locate(id);
+                if (now) await window.__collide.frame(e, {...v, target: {x: now.x, y: now.ground + Math.min(now.height * 0.5, 1.2), z: now.z}});
+            }
+        }, [epoch, view, subject]);
         await canvas.screenshot({path: path.join(dir, `${String(i).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
     }
     try {
@@ -108,10 +126,10 @@ for (const shot of shots) {
     } catch (error) {
         errors.push(String(error).slice(0, 300));
     }
-    summary.push({kind: shot.kind, slug: shot.slug, t: shot.t, label, frames: n, errors: errors.slice(0, 5)});
+    summary.push({kind: shot.kind, slug: shot.slug, t: shot.t, label, frames: n, followed: Boolean(subject), errors: errors.slice(0, 5)});
     console.log(shot.kind, label, n, "frames", errors.length ? errors[0] : "");
     await context.close();
 }
-writeFileSync(path.join(out, `clips-${label}.json`), JSON.stringify(summary, null, 1));
+writeFileSync(path.join(out, process.argv.includes("--cost") ? `cost-${label}.json` : `clips-${label}.json`), JSON.stringify(summary, null, 1));
 await browser.close();
 server.close();

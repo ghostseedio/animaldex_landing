@@ -29,7 +29,8 @@
 import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
-import {onSurface} from "@/ark-scene/collide/attach";
+import {hostOf, onSurface} from "@/ark-scene/collide/attach";
+import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
@@ -1497,7 +1498,20 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             // (Collisions: up onto a rock or a tree from the ground it first walks to its foot, round whatever is in the
             // way, and climbs from there; down, the same the other way: never a straight line through a trunk, a fence or
             // the rock itself from wherever it was.)
+            // Its foot: the nearest ground round the spot its body fits at whose straight climb to the spot crosses nothing
+            // but what it climbs (the spot's own tree or rock: `collide/attach.ts` hostOf), searched outwards.
             const footOf = (p: Spot): Spot | null => {
+                const host = hostOf(p.point);
+                const own = (c: Collider) => (host !== null && (c.id === `trunk:${host}` || c.id === `rock:${host}`)) || colliderDistance(c, p.x, p.z) < 0.4;
+                for (let ring = 1; ring <= 8; ring++) {
+                    const d = 0.25 + ring * 0.4;
+                    for (let k = 0; k < 12; k++) {
+                        const a = (k / 12) * Math.PI * 2;
+                        const x = p.x + Math.sin(a) * d;
+                        const z = p.z + Math.cos(a) * d;
+                        if (world.nav.fits(x, z, bodyR, maxSlopeOf(animal)) && world.nav.runClear({x, z}, p, bodyR * 0.5, own)) return groundSpot(world, x, z);
+                    }
+                }
                 const at = world.nav.nearest(p.x, p.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyR);
                 return at ? groundSpot(world, at.x, at.z) : null;
             };
