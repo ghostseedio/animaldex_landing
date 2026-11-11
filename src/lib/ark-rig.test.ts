@@ -253,3 +253,53 @@ test("rig beat clips: grazing beats head down, a browser's head up, scan, shake_
     assert.equal(beatClip("walk", "wander", has), null);
     assert.equal(beatClip(null, null, has), null);
 });
+
+test("rig pace and direction: v1 clips cycle at sweep / duty, the ground clip fits the pace, a step back plays the walk backwards", async () => {
+    const {withCycleSpeed, paceClip, stepReverses, cyclesFor} = await import("@/ark-scene/rig-player");
+    // The red deer's v1 walk: stride (the sweep) 0.1915 in 0.809 s, duty 0.62. The body covers sweep / duty per cycle.
+    const v1walk = {name: "walk", frames: 24, loop: true, seconds: 0.809, ground_speed: 0.2367, stride: 0.1915, duty: 0.62, pass: true, row: 0, rows: 25};
+    const walk = withCycleSpeed(v1walk, 1);
+    assert.ok(Math.abs(walk.ground_speed! - 0.2367 / 0.62) < 1e-9);
+    assert.ok(Math.abs(cyclesFor(walk, 0.1915 / 0.62) - 1) < 1e-3, "one cycle per sweep / duty: the feet stay planted (the v1 numbers are rounded)");
+    assert.equal(withCycleSpeed({...v1walk, duty: undefined}, 1).ground_speed, 0.2367 / 0.62, "no duty stated: the contract's 0.62");
+    assert.equal(withCycleSpeed(v1walk, 2).ground_speed, 0.2367, "a v2 file is already per cycle");
+    assert.equal(withCycleSpeed({...v1walk, name: "idle", ground_speed: undefined}, 1).ground_speed, undefined);
+    // The ground clip by pace.
+    const slow = {...walk, ground_speed: 0.4};
+    const run = {...walk, name: "run", ground_speed: 1.2};
+    const hop = {...walk, name: "hop", ground_speed: 2};
+    assert.equal(paceClip(0.5, [run, slow])?.name, "walk", "within 1.5x of the walk");
+    assert.equal(paceClip(0.7, [slow, run])?.name, "run");
+    assert.equal(paceClip(0.65, [slow, run], "walk")?.name, "walk", "the one playing keeps a margin");
+    assert.equal(paceClip(5, [slow, run, hop])?.name, "hop", "faster than all: the fastest");
+    assert.equal(paceClip(1, [slow])?.name, "walk", "only a walk: the walk");
+    assert.equal(paceClip(1, []), null);
+    // Facing +z (yaw 0): a step to -z is a step back, a step to +x sideways.
+    assert.equal(stepReverses(false, 0, -1, 0), true);
+    assert.equal(stepReverses(false, 1, 0, 0), false, "sideways: forwards");
+    assert.equal(stepReverses(true, 0.3, -0.2, 0), true, "still more back than forward: keeps reversing");
+    assert.equal(stepReverses(true, 0, 1, 0), false);
+    assert.equal(stepReverses(true, 0, 0, 0), true, "no step: no change");
+});
+
+test("rig gait of movers with no rig: a pace by the distance covered, a bob with every step, none standing still", async () => {
+    const {stepGait, gaitMoving, gaitPose} = await import("@/ark-scene/rig-player");
+    let g = stepGait(null, 0, 0, 0, 2);
+    assert.equal(g.speed, 0);
+    for (let i = 1; i <= 60; i++) g = stepGait(g, 0, i * (1.6 / 60), 1 / 60, 2);
+    assert.ok(g.speed > 1 && g.speed <= 1.6, `pace ${g.speed}`);
+    assert.ok(gaitMoving(g, 2));
+    assert.ok(Math.abs(g.phase - 1.6 / 1.2) < 1e-9, "a cycle every 0.6 body lengths");
+    let bobbed = 0;
+    for (let i = 0; i < 30; i++) {
+        g = stepGait(g, 0, g.z + 0.03, 1 / 60, 2);
+        bobbed = Math.max(bobbed, gaitPose(g, 2, 1.4).bob);
+    }
+    assert.ok(bobbed > 0.02 && bobbed <= 0.035 * 1.4 + 1e-9, `bob ${bobbed}`);
+    let still = g;
+    for (let i = 0; i < 120; i++) still = stepGait(still, still.x, still.z, 1 / 60, 2);
+    assert.equal(gaitMoving(still, 2), false);
+    assert.equal(gaitPose(still, 2, 1.4).weight, 0, "standing: no bob");
+    const jump = stepGait({x: 0, z: 0, phase: 0, speed: 0}, 50, 0, 1 / 60, 2);
+    assert.equal(jump.phase, 0, "a jump to a new spot is no step");
+});

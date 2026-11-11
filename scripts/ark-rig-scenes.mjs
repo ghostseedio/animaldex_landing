@@ -164,7 +164,7 @@ async function record(cdp, name) {
 
 const query = set ? "rig=/ark-rig/v2" : "";
 const summary = [];
-const wanted = arg("scenes", flag("perf") ? "none" : "");
+const wanted = arg("scenes", flag("perf") || flag("island") ? "none" : "");
 for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["duck_flight", "deer_graze", "deer_look"]) {
     const {context, page, errors, cdp} = await open(deviceName, query);
     const prepared = await page.evaluate(() => window.__arkRig.prepare());
@@ -222,6 +222,54 @@ for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["du
     };
     summary.push(row);
     log(name, JSON.stringify(row).slice(0, 600));
+}
+
+// `--island`: the owner's view (`/ark?fixture=1`, the default camera, live models and rigs): a video and, per moving
+// animal, its time moving backwards (facing > 90 degrees from its way), gliding (moving with no rig), the clip's pace
+// against its ground speed, and how much its way turns.
+if (flag("island")) {
+    const device = DEVICES[deviceName];
+    const context = await browser.newContext({viewport: device.viewport, deviceScaleFactor: device.deviceScaleFactor, isMobile: device.isMobile, hasTouch: device.hasTouch, userAgent: device.userAgent});
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(String(error)));
+    const cdp = await context.newCDPSession(page);
+    await page.goto(`${base}/rig.html?island=1${arg("quality", "") ? `&quality=${arg("quality", "")}` : ""}${arg("view", "") ? `&view=${arg("view", "")}` : ""}${flag("no-mover-gait") ? "&moverGait=0" : ""}`);
+    await page.waitForFunction(() => window.__arkIsland || window.__arkRigError, null, {timeout: 240_000});
+    const failed = await page.evaluate(() => window.__arkRigError);
+    if (failed) throw new Error(failed);
+    const prepared = await page.evaluate(() => window.__arkIsland.prepare());
+    log("island prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, near: prepared.stats.near, far: prepared.stats.far, rigged: prepared.stats.rigged}));
+    const label = arg("label", "island");
+    const stop = await record(cdp, label);
+    const {rows, stats} = await page.evaluate((sec) => window.__arkIsland.motion(sec), seconds);
+    const video = await stop();
+    await context.close();
+    const movers = rows.filter((r) => r.moving > 1);
+    const sum = (k) => movers.reduce((a, r) => a + r[k], 0);
+    const ratios = movers.map((r) => r.ratioMedian).filter((v) => v !== null).sort((a, b) => a - b);
+    const ground = movers.filter((r) => !/fly|soar/.test(r.doing));
+    const summaryRow = {
+        label,
+        video: video ? path.basename(video.file) : null,
+        animals: rows.length,
+        movers: movers.length,
+        movingSeconds: Math.round(sum("moving")),
+        backwardsShare: Math.round((sum("backwards") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
+        backwardsOver1s: movers.filter((r) => r.backRunMax > 1).map((r) => `${r.slug}(${r.backRunMax}s)`),
+        glideShare: Math.round((sum("glide") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
+        glideNearShare: Math.round((sum("glideNear") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
+        riggedShare: Math.round((sum("rigged") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
+        paceRatioMedian: ratios.length ? ratios[Math.floor(ratios.length / 2)] : null,
+        paceRatioOver1_5: movers.filter((r) => r.ratioMedian !== null && r.ratioMedian > 1.5).map((r) => `${r.slug}(${r.ratioMedian})`),
+        groundTurnsPerMinuteMedian: ground.length ? ground.map((r) => r.turnsPerMinute).sort((a, b) => a - b)[Math.floor(ground.length / 2)] : null,
+        groundCircling: ground.filter((r) => r.turnsPerMinute > 1.5 && r.moving > 4).map((r) => `${r.slug}(${r.turnsPerMinute}/min, ${r.doing})`),
+        stats: {tier: stats.tier, near: stats.near, far: stats.far, rigged: stats.rigged, rigsLoaded: stats.rigsLoaded},
+        errors: errors.slice(0, 3)
+    };
+    writeFileSync(path.join(out, `${label}.json`), JSON.stringify({summary: summaryRow, rows}, null, 1));
+    summary.push(summaryRow);
+    log("island", JSON.stringify(summaryRow));
 }
 
 const perf = [];
