@@ -73,6 +73,10 @@ export interface ArkMapSampler {
     /** The square of the world that holds anything: |x|, |z| ≤ half. */
     readonly half: number;
     ground(x: number, z: number): GroundSurface;
+    /** Is a body of this radius (m) at (x, z) inside scenery (a trunk, a rock, a building)? */
+    blocked(x: number, z: number, radius: number): boolean;
+    /** Optional: something tall (a tree, a shrub, a big rock) stands just in front of this spot from the default camera (the south). */
+    covered?(x: number, z: number): boolean;
     anchors(): readonly MapAnchor[];
     attachPoints(): readonly AttachPoint[];
 }
@@ -85,7 +89,7 @@ export interface ArkMapSampler {
  * the meadow's, a burrow's entrance in the desert is the desert's).
  */
 export const ATTACH_MEANS: Record<AttachTag, {own: readonly MapTag[]; context: readonly MapTag[]}> = {
-    leaf: {own: ["leaves"], context: ["canopy", "scrub", "garden", "forest_floor", "marsh_reeds", "flower_meadow", "grassland", "farm_barn", "town_park", "bamboo", "mangrove", "logs_deadwood", "compost"]},
+    leaf: {own: ["leaves"], context: ["canopy", "scrub", "garden", "forest_floor", "marsh_reeds", "stream_river", "lake", "pond", "waterfall_rapids", "flower_meadow", "grassland", "farm_barn", "town_park", "bamboo", "mangrove", "logs_deadwood", "compost"]},
     branch: {own: ["canopy", "host_nests"], context: ["scrub", "garden", "mangrove", "bamboo", "town_park", "farm_barn"]},
     bark: {own: ["trunks_bark"], context: ["canopy", "logs_deadwood", "garden", "town_park", "farm_barn", "mangrove"]},
     flower_head: {own: ["flower_meadow"], context: ["garden", "grassland", "scrub", "town_park", "farm_barn", "mountain_alpine", "tundra", "marsh_reeds", "desert_sand"]},

@@ -356,9 +356,10 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         const slotHash = hashString(key);
         const ownHash = hashString(animal.id);
         // The Ark map (B3): its spawn tag's place on the terrain, from the same zone, slot and rank.
-        const mapped = mapPlace(animal, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal), arkBody(animal).metres);
+        const mapped = mapPlace(animal, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal), arkBody(animal).metres, slotKind(animal, slotIndex));
         if (mapped) {
             const chosen: Placement = {x: mapped.x, z: mapped.z, ground: mapped.ground, yaw: mapped.yaw, water: mapped.water, sea: mapped.map.sea, map: mapped.map};
+            if (mapped.covered) chosen.covered = true;
             if (mapped.micro) {
                 const point = surfacePoint(mapped.micro, zoneKey as ArkAnimal["zone"]);
                 Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), micro: mapped.micro});

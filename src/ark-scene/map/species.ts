@@ -11,9 +11,11 @@
 import table from "@/ark-scene/map/species.json";
 import {speciesLayer} from "@/ark-scene/layers";
 import {MAP_ATTACHMENTS, MAP_MOVES, MAP_TAGS, type HostGroup, type MapAttachment, type MapMove, type MapRole, type MapTag} from "@/ark-scene/map/tags";
-import type {ArkZone} from "@/ark-scene/types";
+import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
+import type {ArkActivity} from "@/lib/ark-daylight";
+import holds from "@/ark-scene/map/validator-holds.json";
 
-type Row = [number, string, number, number, number, string, string, string];
+type Row = [number, string, number, number, number, string, string, string, number, string];
 const TABLE = table as unknown as {held: string[]; hosts: Record<HostGroup, {ids: string[]; slugs: string[]}>; points: Record<string, Record<string, number>>; species: Record<string, Row>};
 
 export type MapSpecies = {
@@ -33,7 +35,9 @@ export type MapSpecies = {
     fallback: boolean;
 };
 
-const HELD = new Set(TABLE.held);
+/** The validator's reviewed hold list (`validator-holds.json`): species it cannot place well on this terrain yet, each with its reason. */
+const REVIEWED = (holds as unknown as {species: Record<string, string>}).species;
+const HELD = new Set([...TABLE.held, ...Object.keys(REVIEWED)]);
 const known = new Map<string, MapSpecies | null>();
 
 /** Decision 2 (the Antarctic ones) and the host-absent head louse: never placed on the map. */
@@ -111,6 +115,17 @@ export function isHost(group: HostGroup, slug: string, kindId: string | null | u
 /** The launch points (decision 6): per spawn tag, per zone. */
 export function launchPoints(): Record<string, Record<string, number>> {
     return TABLE.points;
+}
+
+/** The table's voyage zone and stored activity of a species (for the validator; the scene has the server's). */
+export function mapSpeciesStored(slug: string): {zone: ArkZone; activity: ArkActivity | null} | null {
+    const row = TABLE.species[slug];
+    return row ? {zone: ARK_ZONES[row[8]] ?? "farm_garden", activity: (row[9] || null) as ArkActivity | null} : null;
+}
+
+/** The decision-2 holds and the validator's reviewed holds, with why. */
+export function mapHolds(): {decision: string[]; reviewed: Record<string, string>} {
+    return {decision: TABLE.held, reviewed: REVIEWED};
 }
 
 /** Every listed slug (for the tests and the probes). */

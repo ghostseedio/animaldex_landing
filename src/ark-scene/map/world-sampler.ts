@@ -10,7 +10,7 @@
  * suits; the graphics lane draws them (and may move them: the map follows).
  */
 
-import {worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {DecorObstacles, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {canopyTrees} from "@/ark-scene/layers";
 import {canopyTree, COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, LAMP, LEAF_LIFT, limbAt, microDecor, zoneLamp, MICRO_ZONES} from "@/ark-scene/micro-decor";
 import {porchLight, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
@@ -81,6 +81,40 @@ class WorldSampler implements ArkMapSampler {
     private pointList: AttachPoint[] | null = null;
     private coastCliff = new Map<number, number>();
     private building = false;
+    private obstacles: DecorObstacles | null = null;
+    private rocks: Map<string, DecorItem[]> | null = null;
+
+    blocked(x: number, z: number, radius: number): boolean {
+        this.obstacles ??= new DecorObstacles(worldDecor());
+        return this.obstacles.blocked(x, z, radius);
+    }
+
+    covered(x: number, z: number): boolean {
+        this.obstacles ??= new DecorObstacles(worldDecor());
+        return this.obstacles.covers(x, z);
+    }
+
+    /** Beside a rock (a boulder, a stone): within a couple of metres of its side. */
+    private byRock(x: number, z: number): boolean {
+        if (!this.rocks) {
+            this.rocks = new Map();
+            for (const item of worldDecor()) {
+                if (item.kind !== "rock" || item.scale < 0.5) continue;
+                const key = `${Math.floor(item.x / 4)},${Math.floor(item.z / 4)}`;
+                const list = this.rocks.get(key) ?? [];
+                list.push(item);
+                this.rocks.set(key, list);
+            }
+        }
+        const cx = Math.floor(x / 4);
+        const cz = Math.floor(z / 4);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                for (const item of this.rocks.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(item.x - x, item.z - z) < 0.9 * item.scale + 1.8) return true;
+            }
+        }
+        return false;
+    }
 
     /** How much of a cliff the coast is at this bearing (for kelp and tide pools offshore of it). */
     private cliffAt(theta: number): number {
@@ -109,15 +143,22 @@ class WorldSampler implements ArkMapSampler {
         const lakeDistance = Math.hypot(x - LAKE.x, z - LAKE.z);
         const riverWidth = 2 + 1.2 * Math.min(Math.max((z + 4) / 94, 0), 1);
         const inLake = lakeDistance < LAKE.r + 0.6 && s.height < 0.02;
+        const inGardenPond = Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius * 0.85;
         const inRiver = s.river < riverWidth + 0.6 && s.height < 0.02 && s.inland > -2;
         const mouth = Math.hypot(x - MOUTH[0], z - MOUTH[1]);
         const estuary = s.river < 11 && s.inland < 16 && s.inland > -10 && mouth < 40;
         const height = s.height;
         let water: GroundSurface["water"] = null;
         let zone: ArkZone = landZone(s);
+        if (inGardenPond) {
+            // The garden pond's water stands above the ground round it.
+            return {height: GARDEN_POND.y - 0.5, water: "fresh", depth: 0.5, zone: "farm_garden", tags: ["garden_pond", "pond"]};
+        }
         if (inLake || inRiver || (height < 0 && (w.wetland ?? 0) > 0.35 && s.inland > 4)) {
             water = "fresh";
             if (inLake) add("lake");
+            // The lake's shallow margin is a pond's water too (lily pads, newts, pond snails).
+            if (inLake && height > -1.1) add("pond");
             if (inRiver) {
                 add("stream_river");
                 if (riverAlong(x, z) < 0.3) add("waterfall_rapids");
@@ -171,14 +212,16 @@ class WorldSampler implements ArkMapSampler {
             if (s.cliff > 0.25 && s.inland > -3 && s.inland < 6 && height < 3) add("rocky_shore");
             if (s.cliff > 0.35 && s.inland >= 0 && s.inland < 12 && height > 1) add("sea_cliffs");
             if (estuary && height < 1.2) add("estuary", "mangrove", "mudflat");
-            if (estuary && height < 0.6 && (w.desert ?? 0) > 0.2) add("salt_lake");
+            if (estuary && height < 0.6) add("salt_lake");
+            if (this.byRock(x, z)) add("rocks_boulders");
             if (s.river < riverWidth + 3.5 && s.inland > 2) add("stream_river");
             if (s.river < riverWidth + 3.5 && s.inland > 2 && riverAlong(x, z) < 0.3) add("waterfall_rapids");
             if (lakeDistance < LAKE.r + 3) add("lake", "marsh_reeds");
             if ((w.wetland ?? 0) > 0.35) add("marsh_reeds");
             if ((w.wetland ?? 0) > 0.35 && height < 0.35) add("pond");
             if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.6) add("garden_pond");
-            if (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 2 && Math.abs(z - COTTAGE.z) < COTTAGE.depth / 2 + COTTAGE.porch.depth + 2) add("house");
+            // The house and the ground round it (its walls, its porch, the yard where the pets are).
+            if (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 4.5 && Math.abs(z - COTTAGE.z) < COTTAGE.depth / 2 + COTTAGE.porch.depth + 4.5) add("house");
             if (farm && cottage < 16) add("garden");
             if (this.near(x, z, "compost")) add("compost");
             if (farm) add("farm_barn", "on_hosts");
@@ -254,8 +297,12 @@ class WorldSampler implements ArkMapSampler {
             tree.limbs.forEach((limb, l) => {
                 for (const t of [0.3, 0.55, 0.8]) {
                     const p = limbAt(limb, tree.base, t);
-                    const [x, y, z] = world(p.x, p.y + p.radius, p.z);
-                    push(t > 0.7 ? "leaf" : "branch", `${hashString(`${item.x},${item.z}`)}#${l}#${t}`, x, y, z, [0, 1, 0], turn(p.dx, p.dy, p.dz), anchor.zone);
+                    // Up, square to the limb: the top of the limb, heading along it.
+                    let [nx, ny, nz] = [-p.dx * p.dy, 1 - p.dy * p.dy, -p.dz * p.dy];
+                    const nl = Math.hypot(nx, ny, nz) || 1;
+                    [nx, ny, nz] = [nx / nl, ny / nl, nz / nl];
+                    const [x, y, z] = world(p.x + nx * p.radius, p.y + ny * p.radius, p.z + nz * p.radius);
+                    push(t > 0.7 ? "leaf" : "branch", `${hashString(`${item.x},${item.z}`)}#${l}#${t}`, x, y, z, turn(nx, ny, nz), turn(p.dx, p.dy, p.dz), anchor.zone);
                 }
             });
             for (let k = 0; k < 4; k++) {

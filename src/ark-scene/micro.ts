@@ -436,7 +436,7 @@ function attachSurfacePoint(place: MicroPlace, point: AttachPoint, along: number
     const by = nz * tx - nx * tz;
     const bz = nx * ty - ny * tx;
     [tx, ty, tz] = [tx * c + bx * sn, ty * c + by * sn, tz * c + bz * sn];
-    const reach = point.tag === "flower_head" || point.tag === "leaf" || point.tag === "porch_light" ? 0.025 : point.tag === "tide_pool" || point.tag === "worm_hole" || point.tag === "burrow_entrance" ? 0.12 : 0.3;
+    const reach = point.tag === "flower_head" || point.tag === "leaf" || point.tag === "porch_light" ? 0.025 : point.tag === "tide_pool" ? 0.4 : point.tag === "worm_hole" || point.tag === "burrow_entrance" ? 0.6 : 0.3;
     const u = clamp(place.offAlong + along, -reach, reach);
     const v = clamp(place.offAcross, -reach, reach);
     const cx = ny * tz - nz * ty;
