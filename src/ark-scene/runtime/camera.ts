@@ -23,6 +23,36 @@ import {heightAt} from "@/ark-scene/world";
 /** The camera's own radius (m): how close its eye comes to a surface. */
 export const CAMERA_RADIUS = 0.35;
 
+/**
+ * The camera's reach (m), at true scale (motion pass §3): `near` the nearest it usually comes to its target, `close`
+ * the nearest to a small animal (an ant, a gecko: true size, so a few centimetres off), `far` the farthest (the whole
+ * island, and a whale whole on a phone held upright).
+ */
+export const CAMERA_RANGE = {near: 4, close: 0.08, far: 340} as const;
+
+/**
+ * How far from an animal the camera stands to meet it (m), by the length it is drawn at (true size) and the view's
+ * aspect (width over height): a small one about a fifth of the view (a 1 cm beetle from 7 cm, a mouse from about a
+ * metre); a mid-sized one in its surroundings, as before (`10 + 4 L`: a fox from about 13 m); a whale or an elephant
+ * far enough back to be seen whole across the narrower side of the view (a 25 m blue whale on an upright phone from
+ * about 115 m).
+ */
+export function meetDistance(length: number, aspect: number, fovDegrees = 38): number {
+    const L = Math.max(length, 0.001);
+    const small = Math.max(L * 7, 0.12);
+    const context = 10 + 4 * L;
+    const t = Math.min(Math.max((L - 0.15) / 0.85, 0), 1);
+    const blend = t * t * (3 - 2 * t);
+    const near = small + (context - small) * blend;
+    return Math.min(Math.max(near, fitWhole(L, aspect, fovDegrees)), CAMERA_RANGE.far);
+}
+
+/** The distance (m) at which a length fills 70% of the narrower side of the view. */
+export function fitWhole(length: number, aspect: number, fovDegrees = 38): number {
+    const vertical = 2 * Math.tan((fovDegrees * Math.PI) / 360);
+    return length / (0.7 * vertical * Math.min(Math.max(aspect, 0.3), 1));
+}
+
 /** `rank` (0–1, forest fill only): drawn, and so an obstacle, only under the tier's fill share. */
 type Ellipsoid = {kind: "ellipsoid"; x: number; y: number; z: number; rx: number; ry: number; rz: number; solid: boolean; rank?: number};
 type Capsule = {kind: "capsule"; x: number; z: number; y0: number; y1: number; r: number; rank?: number};

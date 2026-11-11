@@ -7,7 +7,8 @@
  * nothing here is random: the same animal looks and moves the same for
  * every viewer.
  *
- * - size: how long it is drawn (`arkBody`);
+ * - size: how long it is drawn (`arkBody`): its true length, in real metres
+ *   (true-scale lane, motion pass §3: no curve, no floor, no cap);
  * - speed: how fast it moves (`bodyLengthsPerSecond`);
  * - dominance and rarity: where in its zone it stands (`placement.ts`);
  * - intelligence: how varied its idles are and how often it glances at a
@@ -15,8 +16,9 @@
  *
  * Where they come from: the snapshot's own `stats` / `length_m` when the
  * server sends them, else `species-stats.json`, generated from the live
- * catalogue by `scripts/ark-species-stats.mts` (every species that can come
- * aboard).
+ * catalogue, the data-gap lengths and the ark models by
+ * `scripts/ark-species-stats.mts` (every species that can come aboard; its
+ * sizes and their sources are listed in `docs/ark/true-scale.md`).
  */
 
 import table from "@/ark-scene/species-stats.json";
@@ -28,8 +30,12 @@ export const ARK_STAT_KEYS = ["size", "speed", "dominance", "rarity", "intellige
 /** An animal's own stats and stored length, as the snapshot may carry them. */
 export type ArkStatsSource = {model_slug: string; stats?: Partial<ArkStats> | null; length_m?: number | null};
 
-type Row = [number, number, number, number, number] | [number, number, number, number, number, number];
-const SPECIES = (table as unknown as {species: Record<string, Row>}).species;
+type Row = [number, number, number, number, number];
+/** [drawn length of the model along its body axis (m), body length (m), index into `sources`]. */
+type LengthRow = [number, number, number];
+const TABLE = table as unknown as {species: Record<string, Row>; lengths: Record<string, LengthRow>; sources: string[]};
+const SPECIES = TABLE.species;
+const LENGTHS = TABLE.lengths;
 
 /** The middle of the scale, for a species the catalogue has no stats for. */
 const MIDDLE: ArkStats = {size: 30, speed: 50, dominance: 50, rarity: 30, intelligence: 40};
@@ -56,12 +62,10 @@ export function arkStats(animal: ArkStatsSource): ArkStats {
     return out;
 }
 
-/** A stored body length (m) for the species, if one is known. */
+/** The snapshot's own stored body length (m), if the server sends one. */
 export function storedLength(animal: ArkStatsSource): number | null {
     const own = animal.length_m;
-    if (typeof own === "number" && Number.isFinite(own) && own > 0) return own;
-    const row = SPECIES[animal.model_slug];
-    return row && row.length > 5 && row[5]! > 0 ? row[5]! : null;
+    return typeof own === "number" && Number.isFinite(own) && own > 0 ? own : null;
 }
 
 // MARK: Size
@@ -115,17 +119,7 @@ export function lengthFromMass(massKg: number): number {
     return 0.33 * Math.cbrt(massKg);
 }
 
-/** Drawn no smaller than this (m): below it the animal also gets a marker. */
-export const ARK_SIZE_FLOOR = 0.18;
-/** Drawn no larger than this (m): the whales. */
-export const ARK_SIZE_CAP = 9;
-
-/** On-screen length (m) for a body length (m): L^0.6 keeps a mouse visible beside an elephant. */
-export function screenLength(lengthM: number): number {
-    return clamp(1.2 * Math.max(lengthM, 0) ** 0.6, ARK_SIZE_FLOOR, ARK_SIZE_CAP);
-}
-
-/** Body lengths (m) by body plan, for a species with neither a stored length nor stats (a visitor the catalogue lacks). */
+/** Body lengths (m) by body plan, for a species with neither a known length nor stats (a visitor the catalogue lacks). */
 const PLAN_LENGTH_M: Record<string, number> = {
     mammal: 1.2,
     bird: 0.45,
@@ -135,42 +129,60 @@ const PLAN_LENGTH_M: Record<string, number> = {
     fish: 0.6,
     ray: 1.5,
     cetacean: 6,
-    arthropod: 0.2,
-    insect: 0.05,
+    arthropod: 0.02,
+    insect: 0.015,
+    butterfly: 0.05,
     sessile: 0.2,
-    jellyfish: 0.4,
-    cephalopod: 0.8,
-    worm: 0.2
+    jellyfish: 0.3,
+    cephalopod: 0.6,
+    worm: 0.1,
+    snake: 1.2,
+    eel: 0.8,
+    flatfish: 0.4,
+    slow_invertebrate: 0.04
 };
 
+/**
+ * Where a size comes from (`docs/ark/true-scale.md`):
+ * - stored: the catalogue's own measurement (the traits lane's `length_m`, or the stats basis' size clause);
+ * - data-gap: a generated typical adult length (the data-gap work's way: kept apart and labelled), where nothing is stored;
+ * - estimate: the size stat through the catalogue's mass anchors (`L = 0.33 · mass^(1/3)`);
+ * - plan: the body plan's typical length, for a species the catalogue lacks.
+ */
+export type ArkSizeSource = "stored" | "data-gap" | "estimate" | "plan";
+
 export type ArkBody = {
-    /** Body length in metres. */
+    /** Body length in metres: head and body for a mammal (no tail), the whole animal otherwise. */
     metres: number;
-    /** stored: a measurement; estimate: from the size stat through mass; plan: the body plan's typical length. */
-    source: "stored" | "estimate" | "plan";
-    /** Drawn length in world metres. */
+    source: ArkSizeSource;
+    /** Drawn length (m) along the model's body axis (`bodyAxisExtent`): true to life, nothing compressed or capped. */
     display: number;
-    /** At the floor: it gets a marker so it can be found. */
+    /**
+     * Always false at true scale (nothing is drawn larger than life, so there is no floor): kept for the scene's
+     * marker rule, which marks any animal a few pixels across (`sizes.ts` findMarker).
+     */
     floor: boolean;
 };
 
-/** How long the animal is, and how long it is drawn. */
+/** How long the animal is, and how long its model is drawn: true to life (motion pass §3). */
 export function arkBody(animal: ArkStatsSource, plan?: string | null): ArkBody {
+    const row = LENGTHS[animal.model_slug];
     const stored = storedLength(animal);
-    let metres: number;
-    let source: ArkBody["source"];
     if (stored !== null) {
-        metres = stored;
-        source = "stored";
-    } else if (hasArkStats(animal)) {
-        metres = lengthFromMass(massFromSize(arkStats(animal).size));
-        source = "estimate";
-    } else {
-        metres = PLAN_LENGTH_M[plan ?? ""] ?? 1;
-        source = "plan";
+        // The server's own measurement: drawn in the same proportion as the table draws the species (its tail).
+        const along = row && row[1] > 0 ? row[0] / row[1] : 1;
+        return {metres: stored, source: "stored", display: stored * along, floor: false};
     }
-    const raw = 1.2 * metres ** 0.6;
-    return {metres, source, display: screenLength(metres), floor: raw <= ARK_SIZE_FLOOR};
+    // A known length (stored, else the data-gap value) wins over the size stat, which only estimates one.
+    if (row) {
+        return {metres: row[1], source: (TABLE.sources[row[2]] ?? "estimate") as ArkSizeSource, display: row[0], floor: false};
+    }
+    if (hasArkStats(animal)) {
+        const metres = lengthFromMass(massFromSize(arkStats(animal).size));
+        return {metres, source: "estimate", display: metres, floor: false};
+    }
+    const metres = PLAN_LENGTH_M[plan ?? ""] ?? 1;
+    return {metres, source: "plan", display: metres, floor: false};
 }
 
 /**
@@ -217,9 +229,14 @@ export function bodyLengthsPerSecond(speed: number): number {
     return clamp(0.6 + clamp(speed, 0, 100) / 100 * 1.4, 0.6, 2);
 }
 
-/** How fast it moves on screen (m/s), from its drawn length. A chase at full pace. */
+/**
+ * How fast it moves on screen (m/s), from its drawn length: a chase at full pace. True scale (motion pass §3): by
+ * dynamic similarity (`√(g·L)`, as legged gaits scale), so a 25 m whale is not 25 times a 1 m antelope's pace and a
+ * mouse still darts; the speed stat sets the share of it (a quarter at 0, all of it at 100), so a cheetah outruns a lion.
+ */
 export function moveSpeed(animal: ArkStatsSource, display: number): number {
-    return clamp(bodyLengthsPerSecond(arkStats(animal).speed) * display, 0.25, 9);
+    const share = 0.25 + 0.75 * clamp(arkStats(animal).speed, 0, 100) / 100;
+    return clamp(share * Math.sqrt(9.81 * Math.max(display, 0)), 0.03, 12);
 }
 
 /** Its idle loops (a swimmer's, a flyer's) against the middle of the scale: about 0.6× to 1.5×. */

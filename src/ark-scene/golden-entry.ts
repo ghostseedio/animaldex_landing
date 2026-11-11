@@ -18,7 +18,6 @@ import * as arkSampler from "@/ark-scene/sampler";
 import {attachPointAt, attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
-import {microDrawnLength} from "@/ark-scene/micro";
 import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
 import {Box3, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Raycaster, SphereGeometry, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -303,8 +302,8 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         const model = gltf.scene;
         const box = new Box3().setFromObject(model);
         const size = box.getSize(new Vector3());
-        // True to size close by, never under the scene's 16 pixels (index.ts microDrawnLength), as a tapped animal is.
-        const drawn = microDrawnLength(length, displayLength(shot.slug), distance, window.innerHeight || 900, debug.camera.fov, 16);
+        // True to size (motion pass §3), as the scene draws it.
+        const drawn = displayLength(shot.slug);
         model.scale.setScalar(drawn / bodyAxisExtent(shot.slug, null, size));
         model.position.y = -box.min.y * model.scale.y;
         model.traverse((object) => {
