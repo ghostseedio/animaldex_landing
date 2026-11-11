@@ -15,7 +15,7 @@ import {allAttachPoints, surfaceAt, type AttachPoint} from "@/ark-scene/sampler"
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import type {Placement} from "@/ark-scene/placement";
-import {ZONE_SITES, hashString, seeded} from "@/ark-scene/world";
+import {ZONE_SITES, hashString, sampleGround, seeded} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 import type {NestPlan} from "@/ark-scene/props/presence";
 import {propsPoints, type PropsPoint} from "@/ark-scene/props/sampler";
@@ -83,6 +83,21 @@ function spiral<T>(x: number, z: number, reach: number, step: number, ok: (px: n
         if (found) return found;
     }
     return null;
+}
+
+/**
+ * The ground's height under an attach point (the same as `surfaceAt(x, z).height`: the ground sample's height), kept
+ * per point: at the captures' scale hundreds of nests ask about the same thousands of trunk and branch points, and a
+ * ground sample each time was most of the mount (the runtime lane's measure, docs/ark/runtime.md).
+ */
+const groundUnderPoint = new Map<string, number>();
+function groundUnder(point: AttachPoint): number {
+    let height = groundUnderPoint.get(point.id);
+    if (height === undefined) {
+        height = sampleGround(point.position.x, point.position.z).height;
+        groundUnderPoint.set(point.id, height);
+    }
+    return height;
 }
 
 /** Up the attach list once (by tag), so a site search does not refilter thousands of points. */
@@ -198,7 +213,7 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
             } else {
                 // A fork low in the crown: the nearest branch two to six metres up.
                 const low = pool.filter((point) => {
-                    const ground = surfaceAt(point.position.x, point.position.z).height;
+                    const ground = groundUnder(point);
                     return point.position.y - ground > 1.4 && point.position.y - ground < 7;
                 });
                 for (const point of low.length ? low : pool) {
@@ -213,11 +228,13 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
             // `bark` point more than a metre up, where the props cut one.
             const byDistance = (a: AttachPoint, b: AttachPoint) => dist(a.position, from) - dist(b.position, from) || a.id.localeCompare(b.id);
             const hollows = pointsTagged("tree_hollow").filter((point) => dist(point.position, from) < 80).sort(byDistance);
-            const bark = pointsTagged("bark").filter((point) => TREE_KINDS.has(point.hostKind) && Math.abs(point.normal.y) < 0.35 && point.position.y - surfaceAt(point.position.x, point.position.z).height > 1.0).sort(byDistance);
+            // The cheap tests first and the nearest first; the height over the ground only for the points looked at.
+            const bark = pointsTagged("bark").filter((point) => TREE_KINDS.has(point.hostKind) && Math.abs(point.normal.y) < 0.35).sort(byDistance);
             const pool = [...hollows, ...bark];
             for (const point of pool) {
                 if (out.length >= count) break;
                 if (used.has(point.host)) continue;
+                if (point.tag === "bark" && !(point.position.y - groundUnder(point) > 1.0)) continue;
                 // A `tree_hollow` is a hole the asset tree draws itself: the props add nothing over it.
                 if (take(point.id, {x: point.position.x, y: point.position.y, z: point.position.z, turn: Math.atan2(point.normal.x, point.normal.z), drawn: point.tag === "tree_hollow"})) used.add(point.host);
             }
