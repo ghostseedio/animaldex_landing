@@ -28,6 +28,7 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
+import {mapPlace, type MapPlace} from "@/ark-scene/map/place";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
@@ -59,6 +60,10 @@ export type Placement = {
     canopy?: CanopyPlace;
     /** An underground animal: its burrow (the entrance at its spot, the tunnel and the chamber below). */
     burrow?: Burrow;
+    /** At sea: the sea's swimmers loop about their spot (the map's sea tags, else a sea zone). */
+    sea?: boolean;
+    /** Its place on the Ark map (`map/place.ts`): the tag it stands for, its roost, its partner role; absent when placed by its zone. */
+    map?: MapPlace;
 };
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -351,6 +356,28 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         const key = `${zoneKey}#${slotIndex}`;
         const slotHash = hashString(key);
         const ownHash = hashString(animal.id);
+        // The Ark map (B3): its spawn tag's place on the terrain, from the same zone, slot and rank.
+        const mapped = mapPlace(animal, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal), arkBody(animal).metres, slotKind(animal, slotIndex));
+        if (mapped) {
+            const chosen: Placement = {x: mapped.x, z: mapped.z, ground: mapped.ground, yaw: mapped.yaw, water: mapped.water, sea: mapped.map.sea, map: mapped.map};
+            if (mapped.covered) chosen.covered = true;
+            if (mapped.micro) {
+                const point = surfacePoint(mapped.micro, zoneKey as ArkAnimal["zone"]);
+                Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), micro: mapped.micro});
+            }
+            if (mapped.canopy) {
+                const point = canopyPoint(zoneKey as ArkAnimal["zone"], mapped.canopy);
+                Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), canopy: mapped.canopy});
+            }
+            if (mapped.burrow) chosen.burrow = mapped.burrow;
+            const cluster = clusters.get(key)!;
+            if (cluster.count > 1) {
+                chosen.leader = cluster.leader;
+                chosen.rank = rank;
+            }
+            placed.set(animal.id, chosen);
+            continue;
+        }
         // A small animal lives at its microhabitat: its slot's point on its spot's surfaces, its rank a step about it.
         const small = microPlace(animal.model_slug, zoneKey as ArkAnimal["zone"], slotIndex, rank, arkBody(animal).metres);
         if (small) {
@@ -405,6 +432,7 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
             spot = clusterSpot(zoneKey, site, centreIndex, centre, gap, rank, slotHash) ?? centre;
         }
         const chosen = placementAt(site, spot.x, spot.z, slotHash);
+        chosen.sea = site.kind === "sea";
         // A cluster faces much the same way, each a little turned; a lone one as its slot says.
         if (rank > 0 && site.kind !== "sea") chosen.yaw += (((ownHash >>> 20) % 100) / 100 - 0.5) * 0.9;
         if (kind === "cover" && rank === 0 && obstacles.covers(spot.x, spot.z)) chosen.covered = true;
