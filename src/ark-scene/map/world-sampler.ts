@@ -19,6 +19,7 @@ import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround, seeded, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
 import {navGrid} from "@/ark-scene/behaviour-nav";
+import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 
@@ -31,6 +32,7 @@ const SIZES: Record<AttachTag, {min: number; max: number}> = {
     tide_pool: {min: 0.003, max: 0.35},
     house_wall: {min: 0.002, max: 0.3},
     porch_light: {min: 0.003, max: 0.1},
+    house_eave: {min: 0.002, max: 0.2},
     worm_hole: {min: 0.005, max: 0.35},
     burrow_entrance: {min: 0.03, max: 0.6}
 };
@@ -290,67 +292,30 @@ class WorldSampler implements ArkMapSampler {
 
     attachPoints(): readonly AttachPoint[] {
         if (this.pointList) return this.pointList;
-        const anchors = this.anchors();
         const points: AttachPoint[] = [];
         const push = (tag: AttachTag, key: string, x: number, y: number, z: number, normal: [number, number, number], tangent: [number, number, number], zone?: ArkZone) => {
             points.push({id: `${tag}:${key}`, tag, x, y, z, normal, tangent, size: SIZES[tag], zone: zone ?? landZone(sampleGround(x, z))});
         };
-        // Canopy trees: branches along each limb, leaves at the limb tips and on the crown, bark up the trunk.
-        for (const anchor of anchors.filter((a) => a.name === "canopy_tree")) {
-            const host = canopyTrees(anchor.zone).find((h) => h.item.x === anchor.x && h.item.z === anchor.z)!;
-            const item = host.item;
-            const tree = canopyTree(item.variant % 2);
-            const c = Math.cos(item.rotation);
-            const s = Math.sin(item.rotation);
-            const world = (lx: number, ly: number, lz: number): [number, number, number] => [item.x + (lx * c + lz * s) * item.scale, item.y - DECOR_SINK + ly * item.scale, item.z + (-lx * s + lz * c) * item.scale];
-            const turn = (lx: number, ly: number, lz: number): [number, number, number] => [lx * c + lz * s, ly, -lx * s + lz * c];
-            tree.limbs.forEach((limb, l) => {
-                for (const t of [0.3, 0.55, 0.8]) {
-                    const p = limbAt(limb, tree.base, t);
-                    // Up, square to the limb: the top of the limb, heading along it.
-                    let [nx, ny, nz] = [-p.dx * p.dy, 1 - p.dy * p.dy, -p.dz * p.dy];
-                    const nl = Math.hypot(nx, ny, nz) || 1;
-                    [nx, ny, nz] = [nx / nl, ny / nl, nz / nl];
-                    const [x, y, z] = world(p.x + nx * p.radius, p.y + ny * p.radius, p.z + nz * p.radius);
-                    push(t > 0.7 ? "leaf" : "branch", `${hashString(`${item.x},${item.z}`)}#${l}#${t}`, x, y, z, turn(nx, ny, nz), turn(p.dx, p.dy, p.dz), anchor.zone);
-                }
-            });
-            for (let k = 0; k < 4; k++) {
-                const angle = k / 4 * Math.PI * 2 + 0.4;
-                const h = 1 + k * 0.7;
-                const r = tree.base + (tree.top - tree.base) * h / tree.height + 0.01;
-                const [x, y, z] = world(Math.sin(angle) * r, h, Math.cos(angle) * r);
-                push("bark", `${hashString(`${item.x},${item.z}`)}#trunk${k}`, x, y, z, turn(Math.sin(angle), 0, Math.cos(angle)), [0, 1, 0], anchor.zone);
-            }
-            const [cx, cy, cz] = world(0.3, tree.crown.y + tree.crown.radius * tree.crown.squash * 0.95, 0.2);
-            push("leaf", `${hashString(`${item.x},${item.z}`)}#crown`, cx, cy, cz, [0, 1, 0], turn(1, 0, 0), anchor.zone);
+        // The graphics lane's attach points (`sampler.ts`, docs/ark/graphics-interface.md): leaves round every tree's crown,
+        // branches under it, bark on the trunks, the canopy trees' limbs (on top: branches; the trunk: bark), flower heads,
+        // rock faces on the drawn rock, tide pools, the cottage's walls and eaves, the porch light and the lamps, the leaf
+        // litter, worm holes and burrows. Their ids and normals as they are, a heading from their yaw, and their largest body
+        // (any smaller one fits: a 2 mm spider on a wall).
+        for (const point of allAttachPoints()) {
+            const tag = SCENERY_TAG[point.tag];
+            if (!tag) continue;
+            const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
+            points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw), size: {min: Math.min(point.size[0], 0.001), max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z))});
         }
-        // Other trees' trunks (one in three), rocks' tops and faces, reeds, shrubs: from the decor.
+        // What the scenery interface does not offer yet: the reeds' and shrubs' tops (a reed warbler's, a dragonfly's perch).
         const decor = worldDecor();
         decor.forEach((item, i) => {
-            const trunk = trunkOf(item.kind, item.variant % (item.kind === "broadleaf" || item.kind === "orchard" ? 3 : item.kind === "rainforest" ? 2 : 1));
-            if (trunk && i % 3 === 0) {
-                const angle = (hashString(`${i}`) % 360) / 180 * Math.PI;
-                const h = Math.min(0.6 + (i % 5) * 0.25, trunk.clear) * item.scale;
-                const r = (trunk.radius + (trunk.top - trunk.radius) * h / (trunk.height * item.scale)) * item.scale + 0.01;
-                push("bark", `tree${i}`, item.x + Math.sin(angle) * r, item.y - DECOR_SINK + h, item.z + Math.cos(angle) * r, [Math.sin(angle), 0, Math.cos(angle)], [0, 1, 0]);
-            }
-            if (item.kind === "rock" && item.scale > 0.45) {
-                const top = item.y - DECOR_SINK + 0.75 * item.scale;
-                push("rock_face", `rock${i}`, item.x, top, item.z, [0, 1, 0], [Math.cos(item.rotation), 0, Math.sin(item.rotation)]);
-                const s = sampleGround(item.x, item.z);
-                // A rock at the waterline of a rocky coast holds a tide pool beside it.
-                if (s.height < 0.2 && s.height > -0.9 && s.cliff > 0.2) {
-                    const side = item.scale * 0.9;
-                    push("tide_pool", `pool${i}`, item.x + side, 0.02, item.z, [0, 1, 0], [0, 0, 1], "seashore");
-                }
-            }
             if ((item.kind === "reed" || item.kind === "shrub") && i % 2 === 0) {
                 const top = item.y - DECOR_SINK + (item.kind === "reed" ? 1.1 : 0.7) * item.scale;
                 push("leaf", `${item.kind}${i}`, item.x, top, item.z, [0, 1, 0], [Math.cos(item.rotation), 0, Math.sin(item.rotation)]);
             }
         });
-        // The microhabitats' props: flower heads, fallen leaves, the lamps.
+        // The micro corners' props (`micro-decor.ts`, drawn by micro-scene): their flower heads and fallen leaves.
         for (const [i, item] of Array.from(microDecor().entries())) {
             if (item.kind === "flower") {
                 const stem = FLOWER_SHAPE.stem[item.variant % 3] * item.scale;
@@ -358,23 +323,6 @@ class WorldSampler implements ArkMapSampler {
                 push("flower_head", `flower${i}`, item.x, y, item.z, [0, 1, 0], [Math.cos(item.rotation), 0, Math.sin(item.rotation)], item.zone);
             } else if (item.kind === "leaf" && i % 2 === 0) {
                 push("leaf", `litter${i}`, item.x, item.y + LEAF_LIFT + 0.004, item.z, [0, 1, 0], [Math.cos(item.rotation), 0, Math.sin(item.rotation)], item.zone);
-            }
-        }
-        for (const zone of MICRO_ZONES) {
-            if (zone === "farm_garden") continue;
-            const lamp = zoneLamp(zone);
-            push("porch_light", `lamp:${zone}`, lamp.x, lamp.y + LAMP.height + 0.12, lamp.z, [0, 1, 0], [1, 0, 0], zone);
-        }
-        const light = porchLight();
-        push("porch_light", "porch", light.x, light.y, light.z + 0.06, [0, 0, 1], [1, 0, 0], "farm_garden");
-        // The cottage's walls: a grid on each of the four.
-        for (let host = 0; host < 4; host++) {
-            for (let a = 0; a < 5; a++) {
-                for (let b = 0; b < 3; b++) {
-                    const place: MicroPlace = {spot: "house", surface: "wall", host, a: (a + 0.5) / 5, b: (b + 0.5) / 3, heading: 0, offAlong: 0, offAcross: 0};
-                    const p = surfacePoint(place, "farm_garden");
-                    push("house_wall", `wall${host}#${a}#${b}`, p.x, p.y, p.z, [p.nx, p.ny, p.nz], [p.tx, p.ty, p.tz], "farm_garden");
-                }
             }
         }
         // Worm holes and burrow entrances in the ground that holds soil or burrows (a jittered grid).
@@ -396,6 +344,26 @@ class WorldSampler implements ArkMapSampler {
         this.pointList = points;
         return points;
     }
+}
+
+/** The scenery interface's attach tags as the map's (`sampler.ts` ATTACH_MEANS): a pond's surface is the water species' (`water.ts`), hang points not yet used. */
+const SCENERY_TAG: Partial<Record<SceneryTag, AttachTag>> = {
+    leaf: "leaf", branch: "branch", bark: "bark", flower_head: "flower_head", rock_face: "rock_face", tide_pool: "tide_pool",
+    house_wall: "house_wall", house_eave: "house_eave", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf",
+    worm_hole: "worm_hole", burrow: "burrow_entrance", canopy_perch: "branch", canopy_climb: "bark"
+};
+
+/** A heading along a surface: +z laid onto it (or +x where the surface faces along z), turned `yaw` about its normal. */
+function headingOf(n: [number, number, number], yaw: number): [number, number, number] {
+    let base: [number, number, number] = Math.abs(n[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
+    const d = base[0] * n[0] + base[1] * n[1] + base[2] * n[2];
+    base = [base[0] - d * n[0], base[1] - d * n[1], base[2] - d * n[2]];
+    const l = Math.hypot(...base) || 1;
+    const t: [number, number, number] = [base[0] / l, base[1] / l, base[2] / l];
+    const b: [number, number, number] = [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]];
+    const c = Math.cos(yaw);
+    const sn = Math.sin(yaw);
+    return [t[0] * c + b[0] * sn, t[1] * c + b[1] * sn, t[2] * c + b[2] * sn];
 }
 
 let shared: WorldSampler | null = null;

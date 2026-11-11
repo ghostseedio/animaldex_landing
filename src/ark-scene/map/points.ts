@@ -333,7 +333,21 @@ export class MapPoints {
         if (!found) {
             // (The ground's own points, a hole or a pool, never on a launch point: a small one is never under a big one's feet.)
             const low = (point: AttachPoint) => point.tag === "worm_hole" || point.tag === "burrow_entrance" || point.tag === "tide_pool";
-            const fitting = this.sampler.attachPoints().filter((point) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5)));
+            const candidates = this.sampler.attachPoints().filter((point) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5)));
+            // Points a body's length and a little apart (a small rock's four faces are one place for a puffin), in a fixed order.
+            const gap = Math.max(length * 1.2, 0.03);
+            const fitting: AttachPoint[] = [];
+            const near = new Map<string, AttachPoint[]>();
+            const cell = (x: number, z: number) => `${Math.floor(x / 2)},${Math.floor(z / 2)}`;
+            for (const point of candidates) {
+                const [cx, cz] = [Math.floor(point.x / 2), Math.floor(point.z / 2)];
+                let clear = true;
+                for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - point.x, other.y - point.y, other.z - point.z) >= gap);
+                if (!clear) continue;
+                fitting.push(point);
+                const key = cell(point.x, point.z);
+                near.set(key, [...(near.get(key) ?? []), point]);
+            }
             const own = fitting.filter((point) => point.zone === zone);
             found = own.length ? {list: own, own: true} : {list: fitting, own: false};
             this.attachLists.set(key, found);

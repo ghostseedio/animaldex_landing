@@ -99,7 +99,7 @@ const HEX_SPIRAL: Array<[number, number]> = (() => {
 })();
 const SPOT_OF: Record<AttachTag, MicroSpot> = {
     leaf: "leaf_litter", branch: "bark", bark: "bark", flower_head: "flowers", rock_face: "rocks", tide_pool: "pond_surface",
-    house_wall: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter"
+    house_wall: "house", house_eave: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter"
 };
 
 let enabled = true;
@@ -159,7 +159,7 @@ function canopyMode(species: MapSpecies): LayerMode {
 /** The heading a small animal takes on its point, and its rank's offset, as `micro.ts` does. */
 function attachPlace(point: AttachPoint, key: number, level: number, rank: number, length: number): MicroPlace {
     const hash = hashString(`${point.id}#${key}`);
-    const clinger = point.tag === "house_wall" || point.tag === "bark";
+    const clinger = point.tag === "house_wall" || point.tag === "house_eave" || point.tag === "bark";
     const heading = clinger ? ((hash & 1) ? 0 : Math.PI) + (((hash >>> 3) % 100) / 100 - 0.5) * 1.2 : ((hash >>> 3) % 360) / 180 * Math.PI;
     const gap = Math.max(length * 3.2, 0.035);
     // A second cluster on the point a few body lengths along; a cluster's members in a small spiral.
@@ -240,7 +240,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         for (const tag of order) {
             const found = all.attachOf(tag, trueLength, zone, holes);
             // A bird on bark only where its own text names bark (woodpeckers, nuthatches, treecreepers).
-            const list = species.move === "fly" && tag !== "trunks_bark" ? found.list.filter((point) => point.tag !== "bark") : found.list;
+            // Upside down under the eaves: crawlers only (geckos, spiders), never a bird or a moth at rest.
+            const list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb"));
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
