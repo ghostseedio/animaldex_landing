@@ -27,7 +27,7 @@ import {eggLength, eggLook, nestRadius, type NestForm, type NestProfile, type Ne
 import {buildOf, nestStage, registerNestSites, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
 import {nestFarGeometry, nestGeometry} from "@/ark-scene/props/nest-shapes";
 import {nestSpots} from "@/ark-scene/props/nest-sites";
-import {displayLength} from "@/ark-scene/sizes";
+import {arkBody} from "@/ark-scene/stats";
 import {groundAt, namedPlace, propRandom, propsPoints, type PropsPoint} from "@/ark-scene/props/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {microCorner} from "@/ark-scene/micro-decor";
@@ -46,7 +46,7 @@ export type Homes = {
     /** Whether the cave's bats' roost shows. */
     roost: boolean;
     /** Where the nests are (for the golden shots and the other lanes): form, site, position, size. */
-    nests: Array<{key: string; speciesId: string; siteId: string; form: NestForm; site: NestSite; x: number; y: number; z: number; radius: number; sitter: string | null}>;
+    nests: Array<{key: string; speciesId: string; siteId: string; form: NestForm; site: NestSite; x: number; y: number; z: number; turn: number; radius: number; sitter: string | null}>;
     /** Every nest site drawn, as the recipes lane reads them (`nest-growth.ts` nestSites). */
     nestSites: NestSiteInfo[];
     /** Set every nest's build stage for Ark day `t` (`nest-growth.ts` nestStage); true when one changed. */
@@ -143,7 +143,17 @@ const EGG_FLOOR: Partial<Record<NestForm, number>> = {cup: 0.31, platform: 0.34,
 /** How far a nest's detail is drawn, against the tier's near radius. */
 const NEST_REACH: Partial<Record<NestForm, number>> = {eyrie: 1.8, megapode: 1.6, mound: 1.3, platform: 1.3, pendant: 1.0, cup: 0.8, mud_cup: 0.8, ball: 0.9, dome: 1.0, scrape: 0.7, pebbles: 0.8, floating: 1.0, down_bowl: 0.9};
 
-export function buildHomes(presence: Presence, placeOf: (id: string) => Placement | null, tier: PropsTier, drawnLength: (slug: string) => number = (slug) => displayLength(slug, "bird")): Homes {
+/** Sites where the bird stands on its nest in the scene: there the nest fits the drawn bird; elsewhere it is the scenery's scale. */
+const SAT_ON = new Set<NestSite>(["ground", "shore", "water_margin"]);
+
+/** A bird's drawn length and its real one (`stats.ts` arkBody). */
+export type BirdBody = {drawn: number; metres: number};
+const birdBody = (slug: string): BirdBody => {
+    const body = arkBody({model_slug: slug}, "bird");
+    return {drawn: body.display, metres: body.metres};
+};
+
+export function buildHomes(presence: Presence, placeOf: (id: string) => Placement | null, tier: PropsTier, bodyOf: (slug: string) => BirdBody = birdBody): Homes {
     const group = new Group();
     group.name = "props:homes";
     const batches: LodBatch[] = [];
@@ -177,7 +187,10 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     const nestSites: NestSiteInfo[] = [];
     for (const plan of presence.nests) {
         const profile = plan.profile;
-        const drawn = drawnLength(plan.slug);
+        const body = bodyOf(plan.slug);
+        // On the ground the sitter stands in it (so it fits the drawn bird); up a tree, on a cliff or a wall it is
+        // the scenery's size (a little over life, so it reads): a weaver's purse is a hand across, an eyrie two metres.
+        const drawn = SAT_ON.has(profile.site) ? body.drawn : Math.max(body.metres * 1.35, body.drawn * 0.3);
         const radius = nestRadius(profile, drawn);
         const spots = nestSpots(plan, radius, placeOf, used);
         const random = propRandom(plan.key);
@@ -197,7 +210,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
                 ...buildOf(profile)
             };
             nestSites.push(info);
-            nestsOut.push({key: plan.key, speciesId: plan.speciesId, siteId: spot.siteId, form: profile.form, site: profile.site, x: spot.x, y: spot.y, z: spot.z, radius, sitter: info.sitter});
+            nestsOut.push({key: plan.key, speciesId: plan.speciesId, siteId: spot.siteId, form: profile.form, site: profile.site, x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, radius, sitter: info.sitter});
             if (profile.form === "hole" || profile.form === "barn") {
                 // A hole in the trunk (or the barn's gable): the nest is inside, out of sight; its mouth about a fifth of the bird.
                 const mouth = Math.max(0.05, 0.12 * drawn) * (profile.form === "barn" ? 1.6 : 1);
@@ -238,7 +251,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         });
     }
     registerNestSites(nestSites);
-    const nestMaterial = propMaterial({texture: 1, textureScale: 5, textureStrength: 0.3, roughness: 0.95, growth: true});
+    const nestMaterial = propMaterial({texture: 1, textureScale: 5, textureStrength: 0.3, roughness: 0.95, growth: true, doubleSide: true});
     extraMaterials.push(nestMaterial);
     const nestBatches: Array<{batch: LodBatch; sites: NestSiteInfo[]}> = [];
     let seed = 0;

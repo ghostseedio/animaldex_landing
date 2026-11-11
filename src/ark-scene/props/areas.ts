@@ -22,8 +22,8 @@
  * capped by tier (`kit.ts`).
  */
 
-import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
-import {worldDecor} from "@/ark-scene/decor";
+import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
+import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
@@ -99,16 +99,25 @@ function garden(): {near: BufferGeometry; far: BufferGeometry; chimney: Vector3;
         const at = house(sx + Math.sign(sx) * 0.07, 0.02, sz + Math.sign(sz) * 0.07);
         parts.push(paint(place(moss, at.x, at.y, at.z), "#5e7a3a", (_, i) => 0.7 + ((i * 7) % 9) / 30));
     }
+    // Moss cushions on the roof: low clumps of small lumps in the lower, damper half, dark olive with lighter tips.
+    const mossTones = ["#4f6430", "#5d7334", "#6e7f3c", "#56602f"];
     for (let k = 0; k < 9; k++) {
         const side = k % 2 ? 1 : -1;
-        const fromRidge = 0.3 + random() * 1.5;
+        const fromRidge = 0.9 + random() * 1.1;
         const x = (random() - 0.5) * (C.width - 0.6);
-        const cushion = new SphereGeometry(0.12 + random() * 0.1, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2);
-        cushion.scale(1.4, 0.4, 1);
         const slope = Math.atan(C.ridge / halfD);
-        cushion.rotateX(side * slope);
-        const at = house(x, roofHeight(fromRidge) + ROOF_THICKNESS - 0.02, side * fromRidge);
-        parts.push(paint(place(cushion, at.x, at.y, at.z), "#6b8a3e", () => 0.85));
+        const lumps = 4 + Math.floor(random() * 5);
+        for (let j = 0; j < lumps; j++) {
+            const lump = new IcosahedronGeometry(0.035 + random() * 0.04, 1);
+            lumpy(lump, 0.35, random);
+            lump.scale(1.3, 0.45, 1.1);
+            lump.rotateX(side * slope);
+            const dx = (random() - 0.5) * 0.22;
+            const dr = (random() - 0.5) * 0.18;
+            const at = house(x + dx, roofHeight(fromRidge + dr) + ROOF_THICKNESS - 0.01, side * (fromRidge + dr));
+            const tone = mossTones[Math.floor(random() * mossTones.length)];
+            parts.push(paint(place(lump, at.x, at.y, at.z), tone, (y) => 0.8 + 0.25 * Math.min(Math.max((y - at.y) * 12 + 0.5, 0), 1)));
+        }
     }
 
     // The bird box on the east wall, facing out.
@@ -281,8 +290,8 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     const doorAt = at(3.3, 0.85);
     parts.push(wood(place(door, doorAt.x, bg + 3.75, doorAt.z, turn + 0.9), "#9b4b36"));
 
-    // The paddock: south of the barn, post and rail, a gate gap toward the yard.
-    const paddock = {x0: -4.5, x1: 5, z0: 3.4, z1: 10.8};
+    // The paddock: beside the barn, post and rail, a gate gap toward the yard; on the side where no tree stands in its fence line.
+    const paddock = clearPaddock(b, c, s);
     const corners: Array<[number, number]> = [[paddock.x0, paddock.z0], [paddock.x1, paddock.z0], [paddock.x1, paddock.z1], [paddock.x0, paddock.z1]];
     for (let e = 0; e < 4; e++) {
         const [ax, az] = corners[e];
@@ -307,7 +316,8 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     const water: BufferGeometry[] = [];
     const mud: PropInstance[] = [];
     const puddles: PropInstance[] = [];
-    for (const [lx, lz, length] of [[2.6, 6.2, 2.2], [1.2, 3.0, 1.6]] as const) {
+    const troughSpots: Array<[number, number, number]> = [[paddock.x0 + (paddock.x1 - paddock.x0) * 0.75, paddock.z0 + (paddock.z1 - paddock.z0) * 0.38, 2.2], [1.2, 3.0, 1.6]];
+    for (const [lx, lz, length] of troughSpots) {
         const p = at(lx, lz);
         const g = groundAt(p.x, p.z);
         troughs.push({x: p.x, y: g, z: p.z, turn, scale: length / 2, tall: 1});
@@ -328,6 +338,58 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     puddles.push({x: gateAt.x + 0.4, y: groundAt(gateAt.x + 0.4, gateAt.z) + 0.03, z: gateAt.z, turn: 1, scale: 0.9});
     const middle = at((paddock.x0 + paddock.x1) / 2, (paddock.z0 + paddock.z1) / 2);
     return {near: merge(parts), far: merge(farParts), centre: new Vector3(middle.x, groundAt(middle.x, middle.z), middle.z), troughs, water: merge(water.map((g) => paint(g, "#ffffff"))), mud, puddles};
+}
+
+/** Trees and rocks the props must not run a fence or a wall through (the decor's and the forest fill's). */
+function obstacles(): Array<{x: number; z: number; r: number}> {
+    const solid = new Set(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "rock", "canopy", "cactus", "shrub", "barn", "hay"]);
+    return [...worldDecor(), ...forestFill()].filter((item) => solid.has(item.kind)).map((item) => ({x: item.x, z: item.z, r: item.kind === "rock" ? item.scale * 0.9 : item.kind === "shrub" ? 0.5 * item.scale : item.kind === "barn" ? 3.6 : 0.45 * Math.max(item.scale, 1)}));
+}
+
+/**
+ * The paddock's rectangle in the barn's frame: of the candidates round the
+ * barn (south and north, shifted along it), the one on open, dry land whose
+ * fence line no tree, rock or the barn stands in (fewest trees inside next).
+ */
+function clearPaddock(b: {x: number; z: number}, c: number, s: number): {x0: number; x1: number; z0: number; z1: number} {
+    const width = 9.5;
+    const depth = 7.4;
+    const near = obstacles().filter((o) => Math.hypot(o.x - b.x, o.z - b.z) < 30);
+    const local = (o: {x: number; z: number}) => {
+        const dx = o.x - b.x;
+        const dz = o.z - b.z;
+        return {x: dx * c - dz * s, z: dx * s + dz * c};
+    };
+    const world = (lx: number, lz: number) => ({x: b.x + lx * c + lz * s, z: b.z - lx * s + lz * c});
+    let best = {x0: -4.5, x1: 5, z0: 3.4, z1: 10.8};
+    let bestScore = Infinity;
+    for (const side of [1, -1]) {
+        for (const shift of [0, -3, 3, -6, 6]) {
+            for (const gap of [3.4, 5]) {
+                const z0 = side > 0 ? gap : -gap - depth;
+                const rect = {x0: shift - width / 2, x1: shift + width / 2, z0, z1: z0 + depth};
+                let score = Math.abs(shift) * 0.05 + (gap - 3.4) * 0.1 + (side < 0 ? 0.2 : 0);
+                for (const [lx, lz] of [[rect.x0, rect.z0], [rect.x1, rect.z0], [rect.x1, rect.z1], [rect.x0, rect.z1], [(rect.x0 + rect.x1) / 2, (rect.z0 + rect.z1) / 2]]) {
+                    const p = world(lx, lz);
+                    const ground = sampleGround(p.x, p.z);
+                    if (ground.land < 0.9 || ground.height < 0.4 || riverDistance(p.x, p.z) < 3) score += 100;
+                }
+                for (const o of near) {
+                    const p = local(o);
+                    const inside = p.x > rect.x0 && p.x < rect.x1 && p.z > rect.z0 && p.z < rect.z1;
+                    const edge = Math.min(Math.abs(p.x - rect.x0), Math.abs(p.x - rect.x1), Math.abs(p.z - rect.z0), Math.abs(p.z - rect.z1));
+                    const onLine = (p.x > rect.x0 - o.r - 0.6 && p.x < rect.x1 + o.r + 0.6 && p.z > rect.z0 - o.r - 0.6 && p.z < rect.z1 + o.r + 0.6) && (inside ? edge < o.r + 0.6 : true);
+                    if (onLine) score += 10;
+                    else if (inside) score += 1;
+                }
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = rect;
+                }
+            }
+        }
+    }
+    return best;
 }
 
 // MARK: - Mountain and the ice

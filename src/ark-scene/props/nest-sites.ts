@@ -162,22 +162,25 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
         case "tree_fork":
         case "tree_top":
         case "branch_tip": {
-            if (sitter?.canopy && out.length === 0) take(`canopy:${plan.sitter}:0`, {x: sitter.x, y: sitter.ground - radius * 0.15, z: sitter.z, turn: sitter.yaw});
+            if (sitter?.canopy && out.length === 0 && plan.profile.site !== "tree_top") take(`canopy:${plan.sitter}:0`, {x: sitter.x, y: sitter.ground - radius * 0.15, z: sitter.z, turn: sitter.yaw});
             const branches = pointsTagged("branch").filter((point) => TREE_KINDS.has(point.hostKind) && point.size[1] >= Math.min(radius * 0.4, 0.3));
             const near = branches.filter((point) => dist(point.position, from) < 70).sort((a, b) => dist(a.position, from) - dist(b.position, from) || a.id.localeCompare(b.id));
             const pool = near.length ? near : branches;
             if (plan.profile.site === "tree_top") {
-                // The highest branch of each nearby tree; the nearest such tree first.
+                // On top of the crown, where herons, storks and fish eagles build: the highest upward-facing
+                // `leaf` point of each nearby tree (on the crown's outside), the nest settled into the leaves.
                 const tops = new Map<string, AttachPoint>();
-                for (const point of pool) {
+                for (const point of pointsTagged("leaf")) {
+                    if (!TREE_KINDS.has(point.hostKind) || point.normal.y < 0.6 || dist(point.position, from) > 70) continue;
                     const top = tops.get(point.host);
                     if (!top || point.position.y > top.position.y) tops.set(point.host, point);
                 }
                 const ranked = Array.from(tops.values()).sort((a, b) => dist(a.position, from) - dist(b.position, from) || a.id.localeCompare(b.id));
                 for (const point of ranked) {
                     if (out.length >= count) break;
-                    take(point.id, {x: point.position.x, y: point.position.y - radius * 0.1, z: point.position.z, turn: point.yaw});
+                    take(point.id, {x: point.position.x, y: point.position.y - radius * 0.3, z: point.position.z, turn: point.yaw});
                 }
+                if (out.length === 0 && sitter?.canopy) take(`canopy:${plan.sitter}:0`, {x: sitter.x, y: sitter.ground - radius * 0.15, z: sitter.z, turn: sitter.yaw});
             } else if (plan.profile.site === "branch_tip") {
                 // Out at the tips of one tree's branches (a weaver colony hangs from one tree).
                 const first = pool[0];

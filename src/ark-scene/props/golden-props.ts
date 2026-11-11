@@ -98,9 +98,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(nest, nest.radius * 4.5 + 1.5, 1.12, turn, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_heronry": {
-            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
+            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 5 + 2.5, 1.05, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            return {view: look(nest, nest.radius * 6 + 3, 0.85, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_weavers": {
             const nest = stats.nests.find((n) => n.form === "pendant");
@@ -108,14 +108,14 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(nest, nest.radius * 9 + 1.2, 1.5, 0.4, -nest.radius * 1.2), hours: 9, weather: null, environment: calm, anchor: `pendant ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_growing": {
-            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top") ?? stats.nests.find((n) => n.form === "pendant");
+            const nest = growingNest(stats);
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 4 + 1.6, 0.95, 0.9, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
+            return {view: look(nest, nest.radius * 5 + 2, 0.8, 0.9, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_eaves": {
             const nest = stats.nests.find((n) => n.form === "mud_cup") ?? stats.nests.find((n) => n.form === "ball");
             if (!nest) return null;
-            return {view: look(nest, 2.6, 1.62, nestTurn(nest), -0.1), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
+            return {view: look(nest, 1.7, 1.78, nestTurn(nest), 0.05), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_grebe": {
             const nest = stats.nests.find((n) => n.form === "floating");
@@ -176,18 +176,18 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
 
 type ShotNest = PropsStats["nests"][number];
 
-/** A nest's heading out (its site's turn, from the registered sites). */
+/** A nest's heading out (its site's turn: away from the wall, out over the drop). */
 function nestTurn(nest: ShotNest): number {
-    const module = (globalThis as {__arkPropsModule?: {nestSites: () => Array<{siteId: string; position: {x: number; z: number}; up: {x: number; z: number}}>}}).__arkPropsModule;
-    const site = module?.nestSites().find((s) => s.siteId === nest.siteId);
-    if (site && Math.hypot(site.up.x, site.up.z) > 0.05) return Math.atan2(site.up.x, site.up.z);
-    // A wall nest faces out from the wall; else from the island's middle outward.
-    return Math.atan2(nest.x, nest.z);
+    return nest.turn;
 }
 
 /** The Ark day the growing-nest shot is pinned to: when its nest is a little over half built. */
+function growingNest(stats: PropsStats): ShotNest | null {
+    return stats.nests.find((n) => n.form === "platform" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform") ?? stats.nests.find((n) => n.form === "pendant") ?? null;
+}
+
 function growingDay(stats: PropsStats): number | null {
-    const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top") ?? stats.nests.find((n) => n.form === "pendant");
+    const nest = growingNest(stats);
     if (!nest) return null;
     let lo = 0;
     let hi = 365;

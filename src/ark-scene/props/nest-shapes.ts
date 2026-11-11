@@ -24,7 +24,7 @@ const WEATHERED = hex("#6b5a48", "#7d6a55", "#5b4a3a", "#8a8378", "#6f6458", "#9
 const DRY_GRASS = hex("#a58f63", "#8c7a55", "#b49f71", "#9b8a62", "#7f7150");
 const FRESH_GRASS = hex("#8ea158", "#9fae66", "#b8a46a", "#7f9450", "#a9a066");
 const MOSS = hex("#6d7a3c", "#5e6b33", "#7b8546", "#86804e");
-const DOWN = hex("#c9beae", "#b5a996", "#ddd5c9", "#a99d8b");
+const DOWN = hex("#a89c8c", "#8f8476", "#c2b8aa", "#7d7366", "#b3a998");
 const FEATHERS = hex("#ece7dd", "#d9d2c4", "#f4f0e8");
 const LEAVES = hex("#5b6b2e", "#6b7a34", "#7c6a3a", "#4d5a28");
 const MUD = hex("#7a644a", "#6a5640", "#857057", "#5e4c38", "#8f7a5f");
@@ -225,12 +225,12 @@ function cup(w: Weave, lining: NestProfile["lining"]) {
 function sticks(w: Weave, lining: NestProfile["lining"], deep: boolean) {
     const h = deep ? 0.75 : 0.42;
     const outer: Array<[number, number]> = deep
-        ? [[0, 0], [0.55, 0], [0.86, 0.3], [0.92, 0.6], [0.78, 0.75]]
-        : [[0, 0], [0.55, 0], [0.86, 0.18], [0.84, 0.36], [0.66, 0.42]];
-    const cupPart: Array<[number, number]> = deep ? [[0.78, 0.75], [0.5, 0.69], [0.26, 0.65], [0, 0.64]] : [[0.66, 0.42], [0.46, 0.37], [0.22, 0.34], [0, 0.33]];
-    w.lathe(outer, 12, () => w.pick(WEATHERED, 0.55), 0.32, 0.08);
+        ? [[0, 0], [0.5, 0], [0.76, 0.3], [0.8, 0.6], [0.7, 0.74]]
+        : [[0, 0], [0.5, 0], [0.76, 0.18], [0.74, 0.36], [0.6, 0.41]];
+    const cupPart: Array<[number, number]> = deep ? [[0.7, 0.74], [0.5, 0.69], [0.26, 0.65], [0, 0.64]] : [[0.6, 0.41], [0.46, 0.37], [0.22, 0.34], [0, 0.33]];
+    w.lathe(outer, 12, () => w.pick(WEATHERED, 0.78), 0.32, 0.08);
     w.lathe(cupPart, 12, () => w.pick(liningPalette(lining), 0.8), 0.88, 0.04);
-    const count = deep ? 150 : 90;
+    const count = deep ? 220 : 130;
     for (let k = 0; k < count; k++) {
         const f = k / count;
         const y = 0.02 + f * (h - 0.04) + (w.random() - 0.5) * 0.04;
@@ -243,7 +243,7 @@ function sticks(w: Weave, lining: NestProfile["lining"], deep: boolean) {
         const dx = Math.cos(a) * length / 2;
         const dz = Math.sin(a) * length / 2;
         const kink = new Vector3((w.random() - 0.5) * 0.1, (w.random() - 0.3) * 0.06, (w.random() - 0.5) * 0.1);
-        w.strand([new Vector3(cx - dx, y - 0.02 + (w.random() - 0.5) * 0.04, cz - dz), new Vector3(cx, y, cz).add(kink), new Vector3(cx + dx, y + (w.random() - 0.5) * 0.08, cz + dz)], (deep ? 0.032 : 0.028) + w.random() * 0.022, w.pick(WEATHERED), 0.02 + 0.84 * f);
+        w.strand([new Vector3(cx - dx, y - 0.02 + (w.random() - 0.5) * 0.04, cz - dz), new Vector3(cx, y, cz).add(kink), new Vector3(cx + dx, y + (w.random() - 0.5) * 0.08, cz + dz)], (deep ? 0.016 : 0.014) + w.random() * (deep ? 0.016 : 0.012), w.pick(WEATHERED), 0.02 + 0.84 * f);
     }
     // The lining: green sprigs (eagles bring them all season), soft grass, or nothing for a pigeon's flimsy platform.
     if (lining !== "none") {
@@ -264,10 +264,10 @@ function downBowl(w: Weave, lining: NestProfile["lining"]) {
     const inner: Array<[number, number]> = [[0.75, 0.33], [0.6, 0.26], [0.3, 0.17], [0, 0.15]];
     w.lathe(outer, 14, () => w.pick(DRY_GRASS, 0.7), 0.3, 0.07);
     w.lathe(inner, 14, () => w.pick(DRY_GRASS, 0.6), 0.55, 0.05);
-    for (let k = 0; k < 90; k++) {
+    for (let k = 0; k < 140; k++) {
         const h = w.random();
         const y = 0.03 + h * 0.27;
-        w.strand(arc(w, radiusAt(outer, y) + 0.03, y, w.random() * Math.PI * 2, 0.8 + w.random() * 1.4, 0.08), 0.022 + w.random() * 0.012, w.pick(k % 5 ? DRY_GRASS : FRESH_GRASS), 0.04 + 0.62 * h);
+        w.strand(arc(w, radiusAt(outer, y) + 0.03, y, w.random() * Math.PI * 2, 0.8 + w.random() * 1.4, 0.08), 0.014 + w.random() * 0.01, w.pick(k % 5 ? DRY_GRASS : FRESH_GRASS), 0.04 + 0.62 * h);
     }
     // Stems standing round it: the cover it is hidden in.
     for (let k = 0; k < 22; k++) {
@@ -276,15 +276,18 @@ function downBowl(w: Weave, lining: NestProfile["lining"]) {
         const tall = 0.35 + w.random() * 0.55;
         const lean = (w.random() - 0.5) * 0.4;
         const base = new Vector3(Math.sin(a) * d, 0, Math.cos(a) * d);
-        w.strand([base, base.clone().add(new Vector3(Math.sin(a) * lean * 0.3, tall * 0.5, Math.cos(a) * lean * 0.3)), base.clone().add(new Vector3(Math.sin(a) * lean, tall, Math.cos(a) * lean))], 0.016, w.pick(k % 3 ? FRESH_GRASS : DRY_GRASS), 0);
+        w.strand([base, base.clone().add(new Vector3(Math.sin(a) * lean * 0.3, tall * 0.5, Math.cos(a) * lean * 0.3)), base.clone().add(new Vector3(Math.sin(a) * lean, tall, Math.cos(a) * lean))], 0.011, w.pick(k % 3 ? FRESH_GRASS : DRY_GRASS, 1.15), 0);
     }
     // The down (or leaves) the bird adds as it lays.
     const soft = liningPalette(lining);
-    for (let k = 0; k < 24; k++) {
+    const tufts = lining === "down" ? 46 : 24;
+    for (let k = 0; k < tufts; k++) {
         const a = w.random() * Math.PI * 2;
-        const d = 0.35 + w.random() * 0.45;
-        const y = radiusAt(inner, d) * 0 + 0.17 + d * 0.2;
-        w.blob(new Vector3(Math.sin(a) * d, y, Math.cos(a) * d), lining === "down" ? 0.12 : 0.09, lining === "down" ? [1.2, 0.7, 1.1] : [1.5, 0.3, 1], w.pick(soft), 0.72 + 0.28 * (k / 24), lining === "down" ? 0.4 : 0.3, lining === "down" ? 1 : 0);
+        const d = 0.2 + w.random() * 0.62;
+        const y = 0.16 + d * 0.2 + w.random() * 0.03;
+        // Down: soft grey-brown tufts heaped round the cup, a pale tip to each; leaves: flat and brown.
+        if (lining === "down") w.blob(new Vector3(Math.sin(a) * d, y, Math.cos(a) * d), 0.075 + w.random() * 0.03, [1.25, 0.6, 1.1], w.pick(soft, 1.0 + 0.15 * w.random()), 0.72 + 0.28 * (k / tufts), 0.55, 1);
+        else w.blob(new Vector3(Math.sin(a) * d, y, Math.cos(a) * d), 0.09, [1.5, 0.3, 1], w.pick(soft), 0.72 + 0.28 * (k / tufts), 0.3, 0);
     }
 }
 
@@ -384,13 +387,22 @@ function ball(w: Weave, lining: NestProfile["lining"], centreZ: number, palette:
 /** A woven purse hung from a twig (y = 0), its entrance tube below: a weaver's, an oriole's. */
 function pendant(w: Weave) {
     const body: Array<[number, number]> = [[0.08, 0.02], [0.45, -0.25], [0.8, -0.6], [0.88, -0.95], [0.72, -1.3], [0.35, -1.55], [0.05, -1.62]];
-    w.lathe(body, 12, () => w.pick(FRESH_GRASS, 0.55), 0.35, 0.06);
-    // Rings of woven blades round the body, top first (the weaver's first ring is its perch).
-    for (let k = 0; k < 120; k++) {
+    w.lathe(body, 12, () => w.pick(FRESH_GRASS, 0.8), 0.35, 0.06);
+    // Blades woven every way over the body, top first (the weaver's first ring is its perch).
+    for (let k = 0; k < 170; k++) {
         const t = w.random();
-        const y = -0.02 - t * 1.55;
-        const r = radiusAt(body, y) + 0.03;
-        w.strand(arc(w, r, y, w.random() * Math.PI * 2, 0.9 + w.random() * 1.4, 0.06, 5), 0.024 + w.random() * 0.01, w.pick(k % 4 ? FRESH_GRASS : DRY_GRASS), 0.12 + 0.6 * t);
+        const y0 = -0.02 - t * 1.5;
+        const a = w.random() * Math.PI * 2;
+        const span = 0.5 + w.random() * 0.9;
+        const drop = (w.random() - 0.5) * 0.7;
+        const points: Vector3[] = [];
+        for (let s2 = 0; s2 <= 5; s2++) {
+            const u = s2 / 5;
+            const y = Math.min(-0.02, y0 + drop * u);
+            const r = radiusAt(body, y) + 0.025 + (w.random() - 0.5) * 0.03;
+            points.push(new Vector3(Math.sin(a + span * u) * r, y, Math.cos(a + span * u) * r));
+        }
+        w.strand(points, 0.018 + w.random() * 0.01, w.pick(k % 4 ? FRESH_GRASS : DRY_GRASS), 0.12 + 0.6 * t);
     }
     // Long blades knotted round the twig above it.
     for (let k = 0; k < 8; k++) {
