@@ -342,25 +342,27 @@ function pebbleRing(w: Weave) {
 
 /** A half cup of mud pellets against a wall (−z), lined with feathers; `closed`: a martin's, shut to a hole at the top. */
 function mudCup(w: Weave, closed: boolean) {
-    const rows = closed ? 12 : 8;
-    // Inside, dark (seen through the gaps and the entrance).
-    w.lathe([[0, 0.1], [0.55, 0.15], [0.7, 0.5], [closed ? 0.3 : 0.6, closed ? 0.95 : 0.8]], 10, () => DARK.clone(), 0.45, 0);
+    // A quarter sphere against the wall, narrow at the bottom, widest at the top where it meets the eave
+    // (a martin's is shut to the eave, a hole at its top front; a swallow's is open, feathers at its rim).
+    const rows = closed ? 13 : 10;
+    const top = closed ? 1.25 : 1.0;
+    w.lathe([[0, 0.12], [0.45, 0.25], [0.7, 0.7], [0.75, top]], 10, () => DARK.clone(), 0.45, 0);
     for (let j = 0; j < rows; j++) {
         const t = j / (rows - 1);
-        const y = 0.06 + j * 0.095;
-        const r = closed ? Math.sin(Math.min(1, 0.25 + t * 1.1) * Math.PI * 0.95) * 0.85 + 0.12 : 0.35 + 0.55 * Math.sin(t * Math.PI * 0.5);
-        const count = Math.max(3, Math.round(r * 11));
+        const y = 0.04 + t * (top - 0.08);
+        const r = 0.2 + 0.72 * Math.sin(Math.min(t * 1.15, 1) * Math.PI / 2);
+        const count = Math.max(3, Math.round(r * 14));
         for (let k = 0; k <= count; k++) {
-            const a = -Math.PI / 2 + (k / count) * Math.PI + (w.random() - 0.5) * 0.12;
+            const a = -Math.PI / 2 + (k / count) * Math.PI + (w.random() - 0.5) * 0.1;
             // The entrance: a gap at the top front of a closed cup.
-            if (closed && j >= rows - 4 && j < rows - 1 && Math.abs(a) < 0.45) continue;
-            w.blob(new Vector3(Math.sin(a) * r, y, Math.cos(a) * r * 0.92), 0.085, [1.1, 0.8, 1], w.pick(MUD), 0.04 + 0.86 * t, 0.25);
+            if (closed && t > 0.72 && t < 0.97 && Math.abs(a) < 0.34) continue;
+            w.blob(new Vector3(Math.sin(a) * r, y, Math.cos(a) * r * 0.95), 0.07, [1.15, 0.75, 1], w.pick(MUD), 0.04 + 0.86 * t, 0.25);
         }
     }
     if (!closed) {
         for (let k = 0; k < 8; k++) {
             const a = (w.random() - 0.5) * 2.2;
-            w.blob(new Vector3(Math.sin(a) * 0.55, 0.78, Math.cos(a) * 0.5), 0.07, [1.4, 0.5, 0.8], w.pick(FEATHERS), 0.95, 0.4);
+            w.blob(new Vector3(Math.sin(a) * 0.6, top - 0.02, Math.cos(a) * 0.55), 0.07, [1.4, 0.5, 0.8], w.pick(FEATHERS), 0.95, 0.4);
         }
     }
 }

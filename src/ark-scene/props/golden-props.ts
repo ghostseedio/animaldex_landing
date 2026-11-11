@@ -127,7 +127,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const tree = spots.antsTree ?? mound;
             if (!mound) return null;
             const mid = {x: mound.x * 0.6 + tree.x * 0.4, y: Math.max(mound.y, tree.y) + 0.45, z: mound.z * 0.6 + tree.z * 0.4};
-            return {view: look(mid, 3.6, 1.15, Math.atan2(mound.x - tree.x, mound.z - tree.z) + Math.PI / 2), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
+            return {view: look(mid, 3.2, 1.2, Math.atan2(mound.x - tree.x, mound.z - tree.z) + Math.PI / 2, 0.2), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
         }
         case "web_dawn": {
             const web = (spots.webBranch ?? spots.web) as {x: number; y: number; z: number; facing?: number; radius?: number} | undefined;
@@ -149,12 +149,16 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "farm": {
             const farm = spots.farm;
             if (!farm) return null;
-            return {view: look(farm, 19, 1.08, -0.5, 0.6), hours: 16.5, weather: {wetness: 0.7, puddles: 0.8}, environment: {...calm, wetness: 0.7}, anchor: "paddock + troughs (after rain)"};
+            // From beyond the paddock, looking back over it at the barn.
+            const barn = spots.barn ?? {x: farm.x, y: farm.y, z: farm.z - 1};
+            return {view: look(farm, 17, 1.05, Math.atan2(farm.x - barn.x, farm.z - barn.z) + 0.25, 0.6), hours: 16.5, weather: {wetness: 0.7, puddles: 0.8}, environment: {...calm, wetness: 0.7}, anchor: "paddock + troughs (after rain)"};
         }
         case "mountain_scree": {
             const outcrop = spots.outcrop;
             if (!outcrop) return null;
-            return {view: look(outcrop, 10, 1.18, 0.4, 0.6), hours: 8.5, weather: {cold: 0.9, snowCover: 0.6, wind: 0.8}, environment: {wetness: 0, snow: 0.2, wind: 0.8}, anchor: "strata outcrop + scree + drifts"};
+            // From below, looking up the scree fan at the outcrop.
+            const out = (outcrop as {turn?: number}).turn ?? 0.4;
+            return {view: look(outcrop, 12, 1.12, out, 0.6), hours: 8.5, weather: {cold: 0.9, snowCover: 0.6, wind: 0.8}, environment: {wetness: 0, snow: 0.2, wind: 0.8}, anchor: "strata outcrop + scree + drifts"};
         }
         case "cave_roost": {
             const cave = marks.cave;

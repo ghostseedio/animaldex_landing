@@ -340,6 +340,12 @@ function farm(): {near: BufferGeometry; far: BufferGeometry; centre: Vector3; tr
     return {near: merge(parts), far: merge(farParts), centre: new Vector3(middle.x, groundAt(middle.x, middle.z), middle.z), troughs, water: merge(water.map((g) => paint(g, "#ffffff"))), mud, puddles};
 }
 
+/** The barn's middle (for the golden shots' framing). */
+function barnMark(): Record<string, {x: number; y: number; z: number}> {
+    const barn = worldDecor().find((item) => item.kind === "barn");
+    return barn ? {barn: {x: barn.x, y: barn.y, z: barn.z}} : {};
+}
+
 /** Trees and rocks the props must not run a fence or a wall through (the decor's and the forest fill's). */
 function obstacles(): Array<{x: number; z: number; r: number}> {
     const solid = new Set(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "rock", "canopy", "cactus", "shrub", "barn", "hay"]);
@@ -559,7 +565,7 @@ export function buildAreas(tier: PropsTier): Areas {
         pieces,
         chimney: g.chimney,
         farm: f.centre,
-        marks: {chimney: g.chimney, farm: f.centre, ...(m.outcrops.length ? {outcrop: m.outcrops.reduce((best, o) => (o.y > best.y && o.y < 30 ? o : best), m.outcrops[0])} : {})},
+        marks: {chimney: g.chimney, farm: f.centre, ...barnMark(), ...(m.outcrops.length ? {outcrop: m.outcrops.reduce((best, o) => (o.y > best.y && o.y < 30 ? o : best), m.outcrops[0])} : {})},
         setWeather: (w) => {
             puddleMaterial.opacity = Math.min(w.puddles * 1.2, 0.92);
             const key = `${w.puddles > 0.05}|${w.snowCover > 0.35}|${w.cold > 0.55}`;

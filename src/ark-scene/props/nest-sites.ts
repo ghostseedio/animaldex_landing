@@ -244,7 +244,7 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
                     const z = point.z - Math.sin(wall) * along - Math.cos(wall) * back;
                     // Under the roof: on the long walls the roof slopes down past the wall's top, so the nest's top
                     // stays under the roof's underside at the nest's outer edge (micro.ts roofHeight, the drawn roof).
-                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.25 : 1.0);
+                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.3 : 1.05);
                     const reach = radius * (plan.profile.form === "ball" ? 1.3 : 0.95);
                     const longWall = Math.abs(Math.cos(wall)) > 0.5;
                     const top = longWall ? COTTAGE.floor + roofHeight(COTTAGE.depth / 2 + reach) - ROOF_THICKNESS - 0.02 : point.y;

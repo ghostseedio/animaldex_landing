@@ -261,10 +261,16 @@ export function hiveBox(): BufferGeometry {
 /** Comb in a hollow: three hanging plates of hexagon-shaded wax, golden (fits inside `hollow(r)`). */
 export function comb(r: number): BufferGeometry {
     const parts: BufferGeometry[] = [];
-    for (let k = 0; k < 3; k++) {
-        const plate = new SphereGeometry(r * 0.5, 24, 18);
-        plate.scale(0.5, 1, 0.16);
-        parts.push(paint(place(plate, (k - 1) * r * 0.3, -r * 0.15, r * 0.2), new Color("#d9a43a"), (y, i, x) => 0.62 + 0.38 * Math.abs(Math.sin(x * 140) * Math.sin(y * 120 + (Math.floor(x * 44) % 2) * 1.57))));
+    // Wild comb: parallel sheets of wax hanging from the hollow's roof, seen edge-on from its mouth (old comb darker
+    // at the top, fresh pale wax at the hanging edges), cells a shade on each face.
+    for (let k = 0; k < 4; k++) {
+        const plate = new SphereGeometry(r * 0.5, 14, 12);
+        plate.scale(0.12, 1.05, 0.62);
+        const tone = new Color(k % 2 ? "#b9802a" : "#c99436");
+        parts.push(paint(place(plate, (k - 1.5) * r * 0.24, -r * 0.08, r * 0.05), tone, (y, i, x, z) => {
+            const age = 0.78 + 0.3 * Math.min(Math.max(-y / r, 0), 1);
+            return age * (0.86 + 0.14 * Math.abs(Math.sin(z * 90) * Math.sin(y * 78 + (Math.floor(z * 30) % 2) * 1.57)));
+        }));
     }
     return merge(parts);
 }
@@ -371,7 +377,7 @@ export function lair(r: number, seed = 11): BufferGeometry {
  * half a metre down, never seen), and a fan of sand flung out behind (+z,
  * toward the sea). Standing on y = 0, the sand's own grain from the material.
  */
-export function turtlePit(r: number, seed = 12): BufferGeometry {
+export function turtlePit(r: number, seed = 12, turn = 0, ground: (x: number, z: number) => number = () => 0): BufferGeometry {
     const random = seeded(5300 + seed);
     const rings = 12;
     const segments = 28;
@@ -391,7 +397,12 @@ export function turtlePit(r: number, seed = 12): BufferGeometry {
     const point = (ring: number, segment: number) => {
         const rho = (ring / rings) * reach;
         const theta = (segment / segments) * Math.PI * 2;
-        return new Vector3(Math.sin(theta) * rho * r, height(rho, theta) * r * 1.4, Math.cos(theta) * rho * r);
+        // Turned to face the sea (+z local), on the beach's own heights (`ground`, relative to the middle).
+        const lx = Math.sin(theta) * rho * r;
+        const lz = Math.cos(theta) * rho * r;
+        const x = lx * Math.cos(turn) + lz * Math.sin(turn);
+        const z = -lx * Math.sin(turn) + lz * Math.cos(turn);
+        return new Vector3(x, ground(x, z) + 0.012 + height(rho, theta) * r * 1.4, z);
     };
     const positions: number[] = [];
     for (let ring = 0; ring < rings; ring++) {
@@ -406,9 +417,9 @@ export function turtlePit(r: number, seed = 12): BufferGeometry {
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
     // Dug sand is darker and damper than the dry surface round it.
-    return paint(geometry, new Color("#cdb68f"), (y, i, x, z) => {
+    return paint(geometry, new Color("#cdb68f"), (_, i, x, z) => {
         const rho = Math.hypot(x, z) / r;
-        return (rho < 1.15 ? 0.82 : 0.95) + 0.06 * Math.sin(i * 0.37) + Math.min(y / r, 0.05);
+        return (rho < 1.15 ? 0.84 : 0.96) + 0.05 * Math.sin(i * 0.37);
     });
 }
 
