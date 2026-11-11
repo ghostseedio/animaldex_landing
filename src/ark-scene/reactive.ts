@@ -303,7 +303,7 @@ type Agent = {
     /** The threat it is reacting to (id, where it was last perceived, when), and when it first noticed it. */
     threat: {id: string; slug: string; x: number; z: number; seen: number; noticed: number} | null;
     /** When it last heard an alarm (and where from), and when it reacts to it. */
-    heard: {x: number; z: number; tx: number; tz: number; at: number; reactAt: number; caller: string; threat: string} | null;
+    heard: {x: number; z: number; tx: number; tz: number; at: number; reactAt: number; caller: string; threat: string; flight: boolean} | null;
     /** The prey it is watching or stalking. */
     prey: {id: string; x: number; z: number; seen: number} | null;
     /** The last time it reacted (alarm level counts from here) and called. */
@@ -605,7 +605,7 @@ export class ReactiveLayer {
             if (!own && (!caused || caused.id === me.id || !this.eats(caused, me))) continue;
             if (call.threat === me.id) continue;
             const delay = d * 0.09 + 0.08 + unit(me.id, "alarm", Math.floor(call.at * 10)) * 0.22 + (own ? 0 : 0.25) + Math.max(person.fleeDelay - 0.35, 0);
-            agent.heard = {x: call.x, z: call.z, tx: call.tx, tz: call.tz, at: call.at, reactAt: call.at + delay, caller: call.caller, threat: call.threat};
+            agent.heard = {x: call.x, z: call.z, tx: call.tx, tz: call.tz, at: call.at, reactAt: call.at + delay, caller: call.caller, threat: call.threat, flight: false};
         }
         // Silent spread: one of its group running from a threat sets it off too (a herd runs together), a moment later.
         if (!agent.heard || world.now - agent.heard.at > 10) {
@@ -614,7 +614,7 @@ export class ReactiveLayer {
                 if (!other || other.mode !== "flee" || !other.threat) continue;
                 const d = Math.hypot(k.shared.x - me.shared.x, k.shared.z - me.shared.z);
                 const at = world.now;
-                agent.heard = {x: k.shared.x, z: k.shared.z, tx: other.threat.x, tz: other.threat.z, at, reactAt: at + 0.15 + d * 0.06 + unit(me.id, "follow-flight", Math.floor(at)) * 0.25, caller: k.id, threat: other.threat.id};
+                agent.heard = {x: k.shared.x, z: k.shared.z, tx: other.threat.x, tz: other.threat.z, at, reactAt: at + 0.15 + d * 0.06 + unit(me.id, "follow-flight", Math.floor(at)) * 0.25, caller: k.id, threat: other.threat.id, flight: true};
                 break;
             }
         }
@@ -709,7 +709,10 @@ export class ReactiveLayer {
                 action = "freeze";
                 target = {...agent.offset};
                 crouchWant = 0.6;
-            } else if (close || heardNow) {
+            } else if (close || (heardNow && (heardNow.flight || Boolean(byId.get(heardNow.threat)?.shared.aloft) || Math.hypot(me.shared.x - heardNow.tx, me.shared.z - heardNow.tz) < flightDistance * 2))) {
+                // It runs from what it sees close, from its group running, from an alarm about a raptor (it comes fast),
+                // or from one about a threat not far off; an alarm about one far away on the ground only puts it on
+                // alert (head up, looking where the caller looked).
                 action = "flee";
                 const away = {x: dx / d, z: dz / d};
                 // From a raptor overhead it makes for cover (a burrow, a bush, a tree), not for the open with its group.
