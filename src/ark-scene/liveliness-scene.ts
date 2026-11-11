@@ -12,14 +12,15 @@
 
 import {Color, Group, Vector3, type Fog, type PerspectiveCamera, type WebGLRenderer} from "three";
 import {ArkAudio, type ArkAudioAnimal, type ArkAudioBed} from "@/ark-scene/ark-audio";
-import {selectAmbientBeds} from "@/ark-scene/ambient-beds-stub";
+import {ambientCredits, AMBIENT_THUNDER, bedUrl, selectAmbientBeds, thunderClaps, type AmbientInput} from "@/ark-scene/ambient-beds";
+import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {sizeOf} from "@/ark-scene/ark-variation";
 import type {QualityTier} from "@/ark-scene/post";
 import {attachPoints, type ArkEnvironment} from "@/ark-scene/sampler";
 import {Traces, TRACE_WITHIN} from "@/ark-scene/traces";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {WeatherFx} from "@/ark-scene/weather-fx";
-import {LAKE, riverDistance, sampleGround, zoneAt} from "@/ark-scene/world";
+import {coastRadius, LAKE, RIVER, sampleGround} from "@/ark-scene/world";
 import {ageOf, speciesCare, type ArkAge} from "@/lib/ark-age";
 import {arkDayAt, lightningAt, seaLevelAt, shoreAt, tideAt, weatherAt, type ArkShore, type ArkTide, type ArkWeather} from "@/lib/ark-clock";
 import {
@@ -42,7 +43,7 @@ import {
     type ShelterKind,
     type ShelterProfile
 } from "@/lib/ark-liveliness";
-import {callMood, type ArkCallMood, type ArkSoundTier} from "@/lib/ark-sound";
+import {ARK_SOUND_TIERS, callMood, type ArkCallMood, type ArkSoundTier} from "@/lib/ark-sound";
 
 /** A schedule pose as the scene has it (`behaviour-schedule.ts` `TripPose` plus its doing). */
 export type LivePose = {x: number; y: number; z: number; yaw: number; moving: boolean; aloft: boolean; doing: string};
@@ -120,6 +121,8 @@ export class ArkLiveliness {
     private alarms: string[] = [];
     private beds: ArkAudioBed[] = [];
     private bedsAt = -1;
+    /** Thunder is asked for in back-to-back windows: the next one starts here (shared ms). */
+    private thunderTo = 0;
     private wornAt = -1e9;
     private wornCentre = new Vector3(1e9, 0, 0);
     private wornQueue: LiveAnimal[] = [];
@@ -426,13 +429,38 @@ export class ArkLiveliness {
         this.traces.step(elapsed);
         // Sound: the animals heard this frame, the beds round the camera (a few times a second).
         if (this.audio.playing) {
-            if (elapsed - this.bedsAt > 0.5 || elapsed < this.bedsAt) {
+            const forward = new Vector3().setFromMatrixColumn(camera.matrixWorld, 2).negate();
+            const yaw = Math.atan2(forward.x, forward.z);
+            if (elapsed - this.bedsAt > 0.4 || elapsed < this.bedsAt) {
                 this.bedsAt = elapsed;
+                // The beds round what the camera looks at (`ambient-beds.ts`, the ambient lane), from the scene's water and zones.
                 const ground = sampleGround(target.x, target.z);
-                const lakeEdge = Math.hypot(target.x - LAKE.x, target.z - LAKE.z) - LAKE.r;
-                const water = {shore: clamp01(1 - ground.inland / 22), river: clamp01(1 - riverDistance(target.x, target.z) / 14), pond: clamp01(1 - lakeEdge / 14)};
-                const input = {zone: ground.height < -0.5 ? (ground.reef > 0.5 ? "coral_reef" : "open_ocean") : zoneAt(ground), weather: this.weather, hour: hours, tide: this.tide, cameraPos: {x: camera.position.x, y: camera.position.y, z: camera.position.z}, nearWater: Math.max(water.shore, water.river, water.pond), water, underwater};
-                this.beds = selectAmbientBeds(input);
+                const zone: AmbientInput["zone"] = ground.height < -0.5 ? (ground.reef > 0.5 ? "coral_reef" : "open_ocean") : (ground.weights as unknown as Record<string, number>);
+                const input: AmbientInput = {
+                    zone,
+                    weather: {rain: this.environment.rain, wind: this.environment.wind, storm: this.environment.storm, insects: this.weather.insects, cold: this.weather.cold},
+                    hour: hours,
+                    tide: {height: Math.min(Math.max(this.seaLevel / 0.35, -1), 1)},
+                    cameraPos: {x: target.x, y: target.y, z: target.z, yaw},
+                    nearWater: {...waterNear(target.x, target.z, this.seaLevel), underwater},
+                    eyeDistance: camera.position.distanceTo(target),
+                    format: this.audio.format,
+                    maxBeds: ARK_SOUND_TIERS[soundTier(this.tier, this.lite)].beds,
+                    nowMs: this.nowMs
+                };
+                this.beds = selectAmbientBeds(input).map((bed) => ({...bed, credits: ambientCredits([bed.id])}));
+            }
+            // Thunder after each of the storm's flashes, the sound's travel time later (the same flashes `lightningAt` draws).
+            if (this.environment.storm > 0.05) {
+                const from = Math.max(this.thunderTo, this.nowMs);
+                const to = this.nowMs + 1500;
+                this.audio.preload([AMBIENT_THUNDER.near.id, AMBIENT_THUNDER.far.id].map((id) => bedUrl(id, this.audio.format)));
+                for (const clap of thunderClaps({fromMs: from, toMs: to, storm: this.environment.storm, yaw, format: this.audio.format})) {
+                    this.audio.shot({...clap, credits: ambientCredits([clap.id])}, this.nowMs);
+                }
+                this.thunderTo = to;
+            } else {
+                this.thunderTo = this.nowMs;
             }
             const right = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
             right.y = 0;
@@ -506,6 +534,49 @@ export class ArkLiveliness {
 
 function clamp01(value: number): number {
     return Math.min(Math.max(value, 0), 1);
+}
+
+/** The river's line every 1.5 m, with how shallow it runs (the terrain draws white water where it is shallow). */
+let riverSamples: Array<{x: number; z: number; shallow: boolean}> | null = null;
+function riverPoints(heightAt: (x: number, z: number) => number) {
+    if (riverSamples) return riverSamples;
+    const out: Array<{x: number; z: number; shallow: boolean}> = [];
+    for (let i = 1; i < RIVER.length; i++) {
+        const [ax, az] = RIVER[i - 1];
+        const [bx, bz] = RIVER[i];
+        const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 1.5));
+        for (let k = 0; k < steps; k++) {
+            const x = ax + ((bx - ax) * k) / steps;
+            const z = az + ((bz - az) * k) / steps;
+            const depth = -heightAt(x, z);
+            out.push({x, z, shallow: depth > 0.05 && depth < 0.55});
+        }
+    }
+    riverSamples = out;
+    return out;
+}
+
+/**
+ * Metres from (x, z) to the sea, the river, its white water, the lake and the garden pond (and where, for panning),
+ * measured on the scene's own map (`world.ts`). There is no waterfall on the island (none is drawn).
+ */
+export function waterNear(x: number, z: number, seaLevel: number, heightAt: (x: number, z: number) => number = (px, pz) => sampleGround(px, pz).height): NonNullable<AmbientInput["nearWater"]> {
+    const ground = sampleGround(x, z);
+    const theta = Math.atan2(z, x);
+    const coast = coastRadius(theta);
+    const sea = ground.height < seaLevel && ground.inland < 0 ? {distance: 0, x, z} : {distance: Math.max(ground.inland, 0), x: Math.cos(theta) * coast, z: Math.sin(theta) * coast};
+    let river = {distance: Infinity, x, z};
+    let rapids = {distance: Infinity, x, z};
+    for (const p of riverPoints(heightAt)) {
+        const d = Math.hypot(p.x - x, p.z - z);
+        if (d < river.distance) river = {distance: d, x: p.x, z: p.z};
+        if (p.shallow && d < rapids.distance) rapids = {distance: d, x: p.x, z: p.z};
+    }
+    const lakeD = Math.hypot(x - LAKE.x, z - LAKE.z);
+    const lake = {distance: Math.max(lakeD - LAKE.r, 0), x: LAKE.x, z: LAKE.z};
+    const pondD = Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z);
+    const pond = {distance: Math.max(pondD - GARDEN_POND.radius, 0), x: GARDEN_POND.x, z: GARDEN_POND.z};
+    return {sea, river: Number.isFinite(river.distance) ? river : null, rapids: Number.isFinite(rapids.distance) ? rapids : null, waterfall: null, lake, pond};
 }
 
 /** The sound tier for a quality tier (the lighter view hears as the low tier). */

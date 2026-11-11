@@ -91,7 +91,7 @@ const page = await context.newPage();
 // Every request for the sounds bucket, to show nothing is fetched before sound is turned on.
 const soundRequests = [];
 page.on("request", (request) => {
-    if (/animal-chat-sounds/.test(request.url())) soundRequests.push({at: Date.now(), url: request.url()});
+    if (/animal-chat-sounds|\/ark\/sound\//.test(request.url())) soundRequests.push({at: Date.now(), url: request.url()});
 });
 const errors = [];
 page.on("pageerror", (error) => errors.push(String(error)));
@@ -274,7 +274,9 @@ if (only.includes("printtest")) {
 if (only.includes("sound")) {
     // Off until the tap: no context, no request. Then on (the harness's click stands for the viewer's tap).
     await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment(calm), CALM);
-    await page.evaluate(() => window.__arkGolden.shoot("river_pond", "day"));
+    await page.evaluate(() => window.__arkGolden.shoot("forest_floor", "day"));
+    // Dawn: the chorus (birds, frogs and mammals with a voice call most).
+    await page.evaluate(() => window.__arkGolden.handle.setHours(6.3));
     await wait(3000);
     const before = await page.evaluate(() => ({unlocked: window.__arkDebug.liveliness.audio.unlocked, sound: window.__arkGolden.handle.sound()}));
     notes.soundBefore = {...before, requests: soundRequests.length};
@@ -288,12 +290,21 @@ if (only.includes("sound")) {
         document.body.appendChild(button);
     });
     await page.click("#sound-tap");
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 16; i++) {
         await wait(2500);
         const now = await page.evaluate(() => ({stats: window.__arkGolden.handle.stats().liveliness, counts: window.__arkDebug.liveliness.audio.counts, credits: window.__arkGolden.handle.sound().credits.length}));
         log("sound", i, JSON.stringify(now));
         notes[`sound-${i}`] = now;
     }
+    // A storm: the storm bed, and thunder after the flashes.
+    await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment({...calm, storm: 1, rain: 1, wind: 0.8, wetness: 0.9, cloud: 1}), CALM);
+    for (let i = 0; i < 12; i++) {
+        await wait(3000);
+        const now = await page.evaluate(() => ({counts: window.__arkDebug.liveliness.audio.counts, beds: window.__arkDebug.liveliness.audio.activity().beds}));
+        log("storm", i, JSON.stringify(now));
+        notes[`storm-${i}`] = now;
+    }
+    await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment(calm), CALM);
     notes.soundRequests = soundRequests.length;
     notes.soundUrls = soundRequests.slice(0, 12).map((r) => r.url.replace(/^https:\/\/[^/]+/, ""));
     await page.evaluate(() => window.__arkGolden.handle.setSound(false));

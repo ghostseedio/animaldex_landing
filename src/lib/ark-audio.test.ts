@@ -184,24 +184,65 @@ test("player: beds fade in, cross over and are let go; off stops new calls", asy
     audio.dispose();
 });
 
-test("stand-in beds: the published habitat banks by place, hour and weather, credited", async () => {
-    const {selectAmbientBeds} = await import("@/ark-scene/ambient-beds-stub");
-    const weather = {rain: 0, wind: 0.3, storm: 0, insects: 1};
-    const shore = selectAmbientBeds({zone: "seashore", weather, hour: 12, tide: {height: 0}, cameraPos: {x: 0, y: 8, z: 0}, nearWater: 1});
-    assert.ok(shore.some((b) => b.id === "waves" && b.url === "habitat/shore/sprite-9f77a0de.m4a"));
-    assert.ok(shore.every((b) => (b.credits?.length ?? 0) > 0));
-    const forest = selectAmbientBeds({zone: "woodland", weather, hour: 12, tide: {height: 0}, cameraPos: {x: 0, y: 8, z: 0}, nearWater: 0});
-    assert.ok(forest.some((b) => b.id === "forest_day"));
-    const under = selectAmbientBeds({zone: "coral_reef", weather, hour: 12, tide: {height: 0}, cameraPos: {x: 0, y: -3, z: 0}, nearWater: 1, underwater: true});
-    assert.deepEqual(under.map((b) => b.id), ["underwater"]);
-    assert.ok(under[0].url.includes("/reef/"));
-    // The player fetches a bucket-relative bed from the sound bucket.
+test("ambient beds through the player: loop points, the seam blended once, M4A where WebM fails, thunder after its flash", async () => {
+    const {selectAmbientBeds, thunderClaps, ambientCredits, AMBIENT_LOOP_START} = await import("@/ark-scene/ambient-beds");
+    const {waterNear} = await import("@/ark-scene/liveliness-scene");
+    // On the beach: the sea is near, so the surf or the shore bed plays.
+    const near = waterNear(70, 0, 0);
+    assert.ok(near.sea && typeof near.sea === "object" && near.sea.distance < 15, JSON.stringify(near.sea));
+    const beds = selectAmbientBeds({zone: "seashore", weather: {rain: 0, wind: 0.4, storm: 0, insects: 1, cold: 0.3}, hour: 12, tide: {height: 0}, cameraPos: {x: 70, y: 1, z: 0}, nearWater: near, format: "webm", nowMs: 1_000_000}).map((bed) => ({...bed, credits: ambientCredits([bed.id])}));
+    assert.ok(beds.length > 0);
+    assert.ok(beds.every((b) => b.credits.length > 0 && /\.webm$/.test(b.url) && /\.m4a$/.test(b.fallbackUrl)));
     const log: string[] = [];
     const ctx = new FakeContext();
-    const audio = new ArkAudio({soundBase: "https://store.example", tier: "high", fetch: fakeFetch(log), createContext: () => ctx as unknown as AudioContext});
+    let blended = 0;
+    ctx.decodeAudioData = (_data: ArrayBuffer, ok: (b: unknown) => void) => {
+        ok({duration: 120, sampleRate: 8000, numberOfChannels: 1, getChannelData: () => {
+            blended++;
+            return new Float32Array(8000 * 120);
+        }});
+        return undefined;
+    };
+    const fetchBeds = async (url: string) => {
+        log.push(url);
+        // WebM can't be read here (as on older Safari): the M4A must be used.
+        if (/\.webm$/.test(url)) return {ok: false, json: async () => null, arrayBuffer: async () => new ArrayBuffer(0)};
+        return {ok: true, json: async () => null, arrayBuffer: async () => new ArrayBuffer(8)};
+    };
+    const audio = new ArkAudio({soundBase: null, tier: "high", fetch: fetchBeds, createContext: () => ctx as unknown as AudioContext});
     audio.unlock();
-    audio.step(frame(0, [], {beds: shore}));
+    for (let t = 0; t < 4000; t += 200) {
+        ctx.currentTime = t / 1000;
+        audio.step(frame(1_000_000 + t, [], {beds}));
+        await settle();
+    }
+    assert.ok(log.some((url) => url.endsWith(".webm")) && log.some((url) => url.endsWith(".m4a")), "tried WebM, then the M4A");
+    assert.equal(audio.activity().beds, Math.min(beds.length, ARK_SOUND_TIERS.high.beds));
+    const looped = ctx.sources.filter((s) => s.loop);
+    assert.ok(looped.length > 0);
+    for (const source of looped) {
+        const loop = source as unknown as {loopStart: number; loopEnd: number};
+        assert.equal(loop.loopStart, AMBIENT_LOOP_START);
+        assert.ok(loop.loopEnd > loop.loopStart);
+        // Started inside its loop.
+        assert.ok(source.started[0][1] >= loop.loopStart && source.started[0][1] < loop.loopEnd);
+    }
+    assert.equal(blended, looped.length, "each buffer's seam blended once");
+    // Thunder: a storm's claps play as one-shots at their moments.
+    let claps: ReturnType<typeof thunderClaps> = [];
+    let from = 1_000_000;
+    while (!claps.length && from < 1_000_000 + 3_600_000) {
+        claps = thunderClaps({fromMs: from, toMs: from + 60_000, storm: 1, format: "m4a"});
+        from += 60_000;
+    }
+    assert.ok(claps.length > 0, "a storm thunders within the hour");
+    const clap = claps[0];
+    assert.ok(clap.at > clap.flashAt, "sound after the flash");
+    audio.preload([clap.url]);
     await settle();
-    assert.ok(log.includes("https://store.example/storage/v1/object/public/animal-chat-sounds/v1/habitat/shore/sprite-9f77a0de.m4a"));
+    ctx.currentTime = 10;
+    assert.equal(audio.shot({...clap, credits: ambientCredits([clap.id])}, clap.at - 500), true);
+    assert.equal(audio.shot({...clap, credits: ambientCredits([clap.id])}, clap.at - 400), false, "once");
+    assert.ok(audio.credits().length > 0);
     audio.dispose();
 });

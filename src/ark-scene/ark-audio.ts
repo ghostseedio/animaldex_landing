@@ -20,6 +20,7 @@
  * while sound is off or the page is hidden.
  */
 
+import {blendLoopSeam} from "@/ark-scene/ambient-beds";
 import {alarmCall, bedsToPlay, planCalls, type ArkBedWanted, type ArkCallSource, type ArkListener, type ArkPlannedCall} from "@/lib/ark-audio-plan";
 import {ARK_SOUND_BUCKET_PATH, ARK_SOUND_TIERS, callVoice, parseSoundManifest, soundAudioUrl, soundCreditLines, soundManifestUrl, speciesCallPace, type ArkCallMood, type ArkSoundCredit, type ArkSoundManifest, type ArkSoundTier} from "@/lib/ark-sound";
 
@@ -36,7 +37,21 @@ export type ArkAudioAnimal = {
 export type ArkAudioBed = ArkBedWanted & {
     /** The bed's recordists (it is not played without them). */
     credits?: ArkSoundCredit[];
+    /** The other format, where `url`'s can't be decoded (WebM Opus on older Safari and iOS web views). */
+    fallbackUrl?: string;
+    /** Loop from `loopStart` to `loopStart + loopSeconds` (s into the buffer); the whole buffer without them. */
+    loopStart?: number;
+    loopSeconds?: number;
+    /** Seconds to reach a new gain (a time constant of ramp / 3). */
+    ramp?: number;
+    /** Where to start in the buffer (s, inside the loop): the same moment for every viewer. */
+    offset?: number;
+    /** Muffled (under water). */
+    lowpassHz?: number;
 };
+
+/** A one-shot (thunder after lightning): when it sounds (shared ms), how loud, from where. */
+export type ArkAudioShot = {id: string; url: string; fallbackUrl?: string; at: number; gain: number; pan?: number; credits?: ArkSoundCredit[]};
 
 export type ArkAudioFrame = {
     /** The shared moment (ms since the epoch): calls fall at the same instants for everyone. */
@@ -73,7 +88,17 @@ const BED_LEVEL = 0.5;
 const CALL_LEVEL = 0.9;
 
 type Voice = {source: AudioBufferSourceNode; gain: GainNode; ends: number; mood: ArkCallMood; loudness: number; animalId: string};
-type Bed = {source: AudioBufferSourceNode; gain: GainNode; pan: StereoPannerNode | null; url: string; fadingOut: boolean; stopAt: number};
+type Bed = {source: AudioBufferSourceNode; gain: GainNode; pan: StereoPannerNode | null; url: string; fadingOut: boolean; stopAt: number; ramp: number};
+
+/** WebM Opus where the browser says it can play it, else M4A (Safari, iOS web views). */
+function preferredFormat(): "webm" | "m4a" {
+    try {
+        const probe = typeof document !== "undefined" ? document.createElement("audio") : null;
+        return probe && probe.canPlayType('audio/webm; codecs="opus"') ? "webm" : "m4a";
+    } catch {
+        return "m4a";
+    }
+}
 
 function defaultContext(): AudioContext | null {
     const scope = globalThis as unknown as {AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext};
@@ -110,14 +135,20 @@ export class ArkAudio {
     /** Each animal's latest call: when it starts (shared ms) and how long it lasts (ms), for its head to come up with it. */
     private readonly calling = new Map<string, {at: number; ms: number}>();
     private readonly bedCredits = new Map<string, ArkSoundCredit[]>();
+    /** Buffers whose loop seam is already blended. */
+    private readonly seamed = new WeakSet<AudioBuffer>();
+    private readonly shotsStarted = new Set<string>();
     private disposed = false;
     /** How many calls and beds have started (for the page's tests and the perf numbers). */
-    readonly counts = {calls: 0, alarms: 0, beds: 0, fetches: 0};
+    readonly counts = {calls: 0, alarms: 0, beds: 0, fetches: 0, shots: 0};
+    /** The beds' format this device decodes: WebM Opus where it can, else M4A (AAC). */
+    readonly format: "webm" | "m4a";
 
     constructor(private readonly options: ArkAudioOptions) {
         this.volume = Math.min(Math.max(options.volume ?? 0.7, 0), 1);
         this.tier = options.tier;
         this.fetcher = options.fetch ?? ((url) => fetch(url, {cache: "force-cache"}));
+        this.format = preferredFormat();
     }
 
     /** The context exists (the viewer has tapped sound on at least once). */
@@ -308,7 +339,8 @@ export class ArkAudio {
             this.scheduledTo = nowMs + LOOKAHEAD_MS;
             return;
         }
-        this.muffle?.frequency.setTargetAtTime(frame.underwater ? 650 : 20000, ctx.currentTime, 0.15);
+        const lowpass = frame.beds.reduce((low, bed) => (bed.lowpassHz && bed.lowpassHz < low ? bed.lowpassHz : low), frame.underwater ? 650 : 20000);
+        this.muffle?.frequency.setTargetAtTime(lowpass, ctx.currentTime, 0.15);
 
         // Who could call: its own (or its kind's) bank, credited, not held back.
         const sources: ArkCallSource[] = [];
@@ -443,25 +475,49 @@ export class ArkAudio {
     private stepBeds(frame: ArkAudioFrame, nowMs: number) {
         const ctx = this.ctx!;
         const resolved = frame.beds.flatMap((bed) => {
-            const url = (bed.credits?.length ?? 0) > 0 ? this.resolve(bed.url) : null;
+            if ((bed.credits?.length ?? 0) === 0) return [];
+            // Its own format, or the other where this one failed to decode here.
+            const first = this.resolve(bed.url);
+            const other = bed.fallbackUrl ? this.resolve(bed.fallbackUrl) : null;
+            const url = first && this.buffers.get(first) === null && other ? other : first;
             return url ? [{...bed, url}] : [];
         });
         const wanted = bedsToPlay(resolved, ARK_SOUND_TIERS[this.tier].beds);
         const keep = new Set(wanted.map((bed) => bed.id));
         for (const bed of wanted) {
             const level = Math.min(Math.max(bed.gain, 0), 1) * BED_LEVEL;
+            const constant = Math.max((bed.ramp ?? 2.4) / 3, 0.05);
             const playing = this.beds.get(bed.id);
-            if (playing && !playing.fadingOut && playing.url === bed.url) {
-                playing.gain.gain.setTargetAtTime(level, ctx.currentTime, 0.8);
+            if (playing && playing.url === bed.url) {
+                // Still sounding (or fading out and wanted again): to its new level.
+                playing.fadingOut = false;
+                playing.stopAt = Infinity;
+                playing.gain.gain.setTargetAtTime(level, ctx.currentTime, constant);
                 if (playing.pan) playing.pan.pan.setTargetAtTime(bed.pan ?? 0, ctx.currentTime, 0.5);
                 continue;
             }
             const buffer = this.bufferOf(bed.url, nowMs);
             if (!buffer) continue;
-            if (playing) this.fadeBed(playing, ctx.currentTime);
+            // Another file for the same bed (its fallback): the old one stops.
+            if (playing) {
+                playing.fadingOut = true;
+                playing.stopAt = 0;
+                this.retireBeds(ctx.currentTime);
+            }
+            const loopStart = bed.loopStart ?? 0;
+            const looped = typeof bed.loopSeconds === "number" && bed.loopSeconds > 0 && loopStart + bed.loopSeconds <= buffer.duration;
+            // Once per buffer: the loop's first milliseconds continue from its last, so the codec leaves no tick at the seam.
+            if (looped && !this.seamed.has(buffer)) {
+                for (let c = 0; c < buffer.numberOfChannels; c++) blendLoopSeam(buffer.getChannelData(c), buffer.sampleRate, loopStart, bed.loopSeconds!);
+                this.seamed.add(buffer);
+            }
             const source = ctx.createBufferSource();
             source.buffer = buffer;
             source.loop = true;
+            if (looped) {
+                source.loopStart = loopStart;
+                source.loopEnd = loopStart + bed.loopSeconds!;
+            }
             const gain = ctx.createGain();
             gain.gain.value = 0;
             let pan: StereoPannerNode | null = null;
@@ -472,10 +528,11 @@ export class ArkAudio {
             } else {
                 source.connect(gain).connect(this.muffle!);
             }
-            // Each bed starts at its own point of its loop (not all at the top).
-            source.start(ctx.currentTime, (buffer.duration * ((nowMs / 1000) % 97)) / 97);
-            gain.gain.setTargetAtTime(level, ctx.currentTime, 0.8);
-            this.beds.set(bed.id, {source, gain, pan, url: bed.url, fadingOut: false, stopAt: Infinity});
+            // At the shared point of its loop (the same moment for every viewer), else its own point of the buffer.
+            const at = looped && typeof bed.offset === "number" && bed.offset >= loopStart && bed.offset < loopStart + bed.loopSeconds! ? bed.offset : looped ? loopStart : (buffer.duration * ((nowMs / 1000) % 97)) / 97;
+            source.start(ctx.currentTime, at);
+            gain.gain.setTargetAtTime(level, ctx.currentTime, constant);
+            this.beds.set(bed.id, {source, gain, pan, url: bed.url, fadingOut: false, stopAt: Infinity, ramp: Math.max(bed.ramp ?? 2.4, 0.3)});
             this.counts.beds++;
             if (bed.credits && !this.bedCredits.has(bed.url)) {
                 this.bedCredits.set(bed.url, bed.credits);
@@ -489,8 +546,8 @@ export class ArkAudio {
 
     private fadeBed(bed: Bed, at: number) {
         bed.fadingOut = true;
-        bed.gain.gain.setTargetAtTime(0, at, 0.6);
-        bed.stopAt = at + 3;
+        bed.gain.gain.setTargetAtTime(0, at, bed.ramp / 3);
+        bed.stopAt = at + bed.ramp * 1.6;
     }
 
     private retireBeds(at: number) {
@@ -506,6 +563,62 @@ export class ArkAudio {
             }
             if (this.beds.get(id) === bed) this.beds.delete(id);
         });
+    }
+
+    /** Fetch (and decode) these now, ahead of need (thunder once a storm is near). Only while sound is on. */
+    preload(urls: Array<string | undefined>) {
+        if (!this.ctx || !this.on) return;
+        const now = Date.now();
+        for (const url of urls) {
+            const resolved = url ? this.resolve(url) : null;
+            if (resolved) this.bufferOf(resolved, now);
+        }
+    }
+
+    /**
+     * A one-shot at its shared moment (thunder `at`, after its flash): played once, panned, not counted against the
+     * calls' cap; skipped when its sprite isn't in yet or its moment has passed.
+     */
+    shot(clip: ArkAudioShot, nowMs: number): boolean {
+        const ctx = this.ctx;
+        if (!ctx || !this.master || !this.on || this.hidden || (clip.credits?.length ?? 0) === 0) return false;
+        const key = `${clip.id}@${clip.at}`;
+        if (this.shotsStarted.has(key) || clip.at < nowMs - 250) return false;
+        const first = this.resolve(clip.url);
+        const other = clip.fallbackUrl ? this.resolve(clip.fallbackUrl) : null;
+        const url = first && this.buffers.get(first) === null && other ? other : first;
+        const buffer = url ? this.bufferOf(url, nowMs) : null;
+        if (!buffer) return false;
+        this.shotsStarted.add(key);
+        if (this.shotsStarted.size > 256) this.shotsStarted.clear();
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.value = Math.min(Math.max(clip.gain, 0), 1) * BED_LEVEL * 1.6;
+        let pan: StereoPannerNode | null = null;
+        if (typeof ctx.createStereoPanner === "function") {
+            pan = ctx.createStereoPanner();
+            pan.pan.value = clip.pan ?? 0;
+            source.connect(gain).connect(pan).connect(this.muffle!);
+        } else {
+            source.connect(gain).connect(this.muffle!);
+        }
+        source.start(ctx.currentTime + Math.max(0, (clip.at - nowMs) / 1000));
+        source.onended = () => {
+            try {
+                source.disconnect();
+                gain.disconnect();
+                pan?.disconnect();
+            } catch {
+                // Gone.
+            }
+        };
+        this.counts.shots++;
+        if (clip.credits && !this.bedCredits.has(clip.id)) {
+            this.bedCredits.set(clip.id, clip.credits);
+            this.options.onCredits?.();
+        }
+        return true;
     }
 
     /** Every recording heard in this visit (calls and beds), one line per recordist, licence and source. */
