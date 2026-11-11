@@ -177,6 +177,8 @@ export type ArkSceneOptions = {
     hours?: number | null;
     /** The behaviour schedule (`behaviour-schedule.ts`): animals walk, fly, swim, sleep at their roosts and visit places by the time and their ids. Default on. */
     behaviour?: boolean;
+    /** The local reactive layer (`reactive.ts`): animals near the camera look round, react to predators, sounds and the camera. Default on (off with reduced motion). */
+    reactive?: boolean;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
     /**
@@ -278,6 +280,10 @@ export type ArkSceneHandle = {
     locate: (id: string) => ArkLocated | null;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
+    /** What the local reactive layer has an animal doing this frame (its action, head look, offset, alarm); null outside its budget. */
+    reactive: (id: string) => ArkReactiveSnapshot | null;
+    /** The reactive layer's cost and counts on the last frame (for the perf report and the audit lane). */
+    reactiveStats: () => ArkReactiveStats;
     /** The ground's height at a point (never below the sea). */
     heightAt: (x: number, z: number) => number;
     /** Ask for these species' models, near and far (resolves once asked; `loading` says when they are in). */
@@ -298,3 +304,7 @@ export type ArkSceneHandle = {
     setCutaway: (open: boolean | null) => void;
     dispose: () => void;
 };
+
+/** One animal's reactive state, as the page and the audit lane read it (`reactive.ts` ReactiveOut). */
+export type ArkReactiveSnapshot = {action: string; headYaw: number; headPitch: number; headWeight: number; dx: number; dz: number; bodyYaw: number; crouch: number; called: boolean; alarmed: number; looking: string | null};
+export type ArkReactiveStats = {tier: string; agents: number; inputs: number; perceptions: number; sightChecks: number; alarms: number; ms: number};
