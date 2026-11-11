@@ -112,3 +112,74 @@ What I saw on the sheets and in the numbers:
 - **Before turning rigs on widely:** fix the turned birds' facing (14 species), let rigs play on the sea floor and in shallow water, and re-run the walks with longer strides.
 
 Many species are not broken: 1,912 have a usable ground clip. So Part 3 went ahead.
+
+## Part 2: one behaviour state (the hawk bug)
+
+**Branch:** `ark-behaviour-state` (ed156b50), small, so it can ship on its own.
+
+**Cause.**
+- The scene sent a selected flyer down to its spot. For canopy birds that spot is a tree, so the hawk "jumped into a tree" when tapped.
+- Separately, the tap card worked out "Asleep now" from a clock of its own.
+
+**Fix.**
+- Each animal has one state (`behaviour-state.ts`), and the animation targets, the card (`onBehaviour`, `handle.behaviour`) and follow all read it.
+- Selecting or following is not an input to it. A flying bird stays in the air and the camera goes up to it. A moth at the porch light stays there.
+
+**Test.**
+- `ark-behaviour-state.test.ts` takes a fixture sample over 48 hours of the day: the animation and the card always agree.
+- An in-scene check made 50 selections over 5 hours and found 0 mismatches.
+
+On `ark-behaviour` the state comes from the schedule (below): asleep is the schedule's sleep, flying is its pose in the air, breathing is the sea's breath cycle. The same test still holds.
+
+## Part 3: NPC-style behaviour (branch `ark-behaviour`)
+
+### Behaviour profiles (all species, stored data only)
+
+- **Generator.** `scripts/ark-behaviour-profiles.mts` uses deterministic keyword rules and taxon priors, with no AI calls. Its inputs are all stored data:
+  - a read-only export of the live catalogue: `voyage_species`, `voyage_species_traits`, `species_field_guide`, taxonomy, and the parent species' text for breeds;
+  - the rig manifest (body plan, the clips that passed, the gait);
+  - the map lane's B1 microhabitat inventory;
+  - `voyage_food_links`, for predator spacing.
+- **Output.**
+  - Full profiles with a source for every field: `data/ark/behaviour-profiles.json` (2,626 species; 2,555 aboard and not excluded). A source is one of:
+    - `{field, phrase}`: the verbatim stored phrase that decided it;
+    - `{rule}`: from the body plan or the taxonomy;
+    - `{default}`: no data, so the body-plan default, flagged in `defaults`.
+  - The compact rows the scene reads: `src/ark-scene/behaviours.json`.
+  - Who eats whom, as the scene needs it: `src/ark-scene/food-links.json`.
+- **Fields.**
+  - movement: primary and secondary;
+  - activity and day rhythm (two peaks, siesta);
+  - roost; social structure; diet;
+  - behaviour weights: rest, wander, forage, graze, drink, perch, soar, fly, swim, dive, bask, burrow, climb, groom, hide, flee, flock, visit_flowers, circle_light, stalk;
+  - places used: drink_edge, bask_rock, graze_grass, perch_branch, perch_rock, dig_soil, leaf_litter, flower, porch_light, cave_mouth, cliff_ledge, sea_dive, tide_pool, bark, wall, burrow_mouth, reeds, water_surface, reef, shade;
+  - flight altitude band; surface crawling (any surface, or upside down too);
+  - air-breathing; seabed walking;
+  - size, speed, dominance, and the rig's gait.
+- **Defaults.** The fields most often filled from body-plan defaults, among live species, are social and roost, followed by activity and diet. Each is flagged.
+- **Hand-read audits.** Two Sonnet subagents each read 50 random profiles against their stored text.
+  - The first audit drove the rule fixes: taxon priors, larval sentences ignored, words about prey or anatomy no longer counted, roost word collisions fixed, flower visits only for nectar feeders.
+  - The second audit (after the fixes) found these fields WRONG or MISSING out of 50: move 7, activity 3, roost 7, social 3, diet 6, behaviour weights 13, places 19.
+  - Its rule bugs were fixed in the generator: family extras, the large-bird soar default, nectar from "flowers", "pack ice", "dig a nest", negations like "cannot", the spider/gecko upside-down rule, eels and seals, bottom-dwellers, insect swarms.
+
+### Performance (fixture page; headless Chrome, Metal; machine shared with other lanes, load average about 30)
+
+| | 200 on | 200 off | 1,000 on | 1,000 off |
+|---|---|---|---|---|
+| Desktop 1440×900, whole Ark: fps (p95 frame ms) | 77 (28.9) | 75.6 (30.2) | 78 (28.5) | 65.8 (33.5) |
+| Desktop, close: fps (p95) | 100 (23.5) | 112.7 (14.5) | 104 (16.0) | 85.5 (25.6) |
+| Phone proxy (412×915 at 2.6×, CPU 4× slower), whole: fps | 75.3 | 50.6 | 29.0 | 20.5 |
+| Phone proxy, close: fps | 73.6 | 71.9 | 32.5 | 27.1 |
+| Schedule main-thread ms a frame (desktop / phone) | 0.10–0.18 / 0.58 | – | 0.45–1.0 / 3.9–4.5 | – |
+
+- **Level of detail.** Near animals and the one looked at are posed every frame; far models twice a second; icons once a second. It is the same function at every rate, so nothing jumps.
+- **Memo.** Intents and trips are memoised per world, clock, animal and slot.
+- **Cost (fixed).** Before the level-of-detail fix, icons were posed every frame: 9–10 ms a frame at 1,000 animals on desktop, and 47 ms on the phone proxy.
+- **Load.** Building the places and the walk grid takes 0.58 s on desktop and 2.6 s on the phone proxy, once at load. That is a main-thread stall; it is the next thing to move to a worker or chunk.
+- **Noise.** The on/off differences are within the noise of the shared machine.
+
+### Recording and stills
+
+- `scratchpad/ark/web-shots/behaviour/day-night/day-night.mp4`: four moments at 10× (dawn, midday, dusk, night) and a whole island day in 20 s, with the island hour and the counts of what the animals are doing written over it.
+- `sheet-day-night.jpg`.
+- `still-{graze,drink,perch,swim,watch,sleep,stalk}.png` and `sheet-stills.jpg`.

@@ -35,7 +35,7 @@ import {
 } from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
-import {fbm, LAKE, noise, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
+import {fbm, LAKE, noise, RIVER, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 
 /** How rough the sea is: 1 in the usual breeze, more in wind and storms (set with the environment). */
@@ -51,6 +51,25 @@ function srgb(hex: string): Color {
 }
 
 // MARK: - Ground
+
+/** The river's direction downstream at a point: along its nearest segment (radians, atan2(dz, dx); always 0…π, it runs south). */
+function flowAngle(x: number, z: number): number {
+    let best = Infinity;
+    let angle = Math.PI / 2;
+    for (let i = 1; i < RIVER.length; i++) {
+        const [ax, az] = RIVER[i - 1];
+        const [bx, bz] = RIVER[i];
+        const dx = bx - ax;
+        const dz = bz - az;
+        const t = Math.min(Math.max(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0), 1);
+        const d = Math.hypot(x - ax - dx * t, z - az - dz * t);
+        if (d < best) {
+            best = d;
+            angle = Math.atan2(dz, dx);
+        }
+    }
+    return Math.min(Math.max(angle, 0), Math.PI);
+}
 
 function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     const geometry = new PlaneGeometry(TERRAIN_HALF * 2, TERRAIN_HALF * 2, SEGMENTS, SEGMENTS);
@@ -124,7 +143,8 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
         depthPixels[at + 1] = Math.round(sample.reef * 255);
         const fresh = smoothstep(LAKE.r + 4, LAKE.r, Math.hypot(x - LAKE.x, z - LAKE.z)) + (sample.river < 5 && sample.inland > 4 ? 1 : 0);
         depthPixels[at + 2] = Math.round(Math.min(fresh, 1) * 255);
-        depthPixels[at + 3] = 255;
+        // The river's flow (graphics pass): its direction downstream as an angle in 0.5…1 (0 = still water).
+        depthPixels[at + 3] = sample.river < 5 && sample.inland > 3 && Math.hypot(x - LAKE.x, z - LAKE.z) > LAKE.r + 2 ? Math.round((0.5 + flowAngle(x, z) / (Math.PI * 2)) * 255) : 0;
     }
 
     // Ambient occlusion from the ground's own shape: a vertex lower than its
@@ -366,6 +386,10 @@ float arkWet = 0.0;`)
         ground = mix(ground, soilTone * 1.05, wSoil * 0.55);
         ground = mix(ground, mudTone * 1.1, wMud * 0.6);
         arkWet = max(arkWet, wMud * 0.6);
+        // Living grass, not khaki (graphics pass): richer green where nothing else covers the ground, drier on the rises.
+        float grassy = (1.0 - wSand) * (1.0 - wWet) * (1.0 - wForest) * (1.0 - wSoil) * (1.0 - wMud) * (1.0 - wRock) * (1.0 - smoothstep(0.25, 0.75, snow)) * (1.0 - wFarm);
+        float rise = smoothstep(0.45, 0.75, arkFbm(p * 0.05 + 7.0));
+        ground = mix(ground, ground * mix(vec3(0.78, 1.08, 0.6), vec3(1.0, 0.98, 0.8), rise * 0.6) * 1.04, grassy * 0.7);
         vec3 tex = arkGroundTex(0.0, p, 0.34) / groundMeans[0];
         vec3 nor = groundLite > 0.5 ? vec3(0.0, 0.0, 1.0) : arkGroundNor(0.0, p, 0.34);
         vec3 col = tex;
@@ -505,7 +529,11 @@ vec2 waves(vec2 p, float t, float calm) {
 void main() {
     vec2 uv = (vWorld.xz + halfSize) / (2.0 * halfSize);
     float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
-    vec3 at = texture2D(depthMap, clamp(uv, 0.0, 1.0)).rgb;
+    vec4 atFull = texture2D(depthMap, clamp(uv, 0.0, 1.0));
+    vec3 at = atFull.rgb;
+    // The river flows (graphics pass): ripples carried downstream, streaks of foam over the shallows and stones.
+    float flowing = smoothstep(0.42, 0.5, atFull.a) * inside;
+    vec2 flowDir = vec2(cos((atFull.a - 0.5) * 6.2831853), sin((atFull.a - 0.5) * 6.2831853));
     float depth = mix(10.0, at.r * 12.0, inside) + seaLevel;
     float reefy = at.g * inside;
     float fresh = at.b * inside;
@@ -513,7 +541,7 @@ void main() {
 
     // Fresh water is calmer; far away the waves fade before they shimmer.
     float calm = mix(1.0, 0.35, fresh) * (1.0 - smoothstep(60.0, 260.0, distanceToEye) * 0.85) * windStrength;
-    vec2 slope = waves(vWorld.xz, arkTime, calm);
+    vec2 slope = waves(vWorld.xz - flowDir * arkTime * 1.4 * flowing, arkTime, calm + flowing * 0.8);
     vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
     vec3 view = normalize(cameraPosition - vWorld);
 
@@ -540,6 +568,12 @@ void main() {
     float lines = smoothstep(0.6, 1.0, sin(depth * 7.0 - arkTime * 1.4 + arkNoise(vWorld.xz * 0.5) * 3.0));
     float lace = smoothstep(0.35, 0.75, arkNoise(vWorld.xz * 1.8 + arkTime * 0.3));
     float foam = shore * (lines * 0.55 + (1.0 - smoothstep(0.0, 0.18, depth)) * 0.9) * mix(0.55, 1.0, lace) * inside * (1.0 - fresh * 0.75);
+    if (flowing > 0.01) {
+        vec2 q = vec2(dot(vWorld.xz, flowDir), dot(vWorld.xz, vec2(-flowDir.y, flowDir.x)));
+        float streak = smoothstep(0.62, 0.9, arkNoise(vec2(q.x * 0.35 - arkTime * 1.6, q.y * 2.6))) * smoothstep(0.7, 0.2, depth);
+        float rapids = smoothstep(0.55, 0.85, arkNoise(vWorld.xz * 1.3 - flowDir * arkTime * 2.0)) * smoothstep(0.55, 0.15, depth);
+        foam = max(foam, (streak * 0.55 + rapids * 0.7) * flowing);
+    }
     colour = mix(colour, foamColor * mix(0.2, 1.0, daylight), clamp(foam, 0.0, 0.9));
 
     // Clear in the shallows, so what lives there shows through; opaque where it's deep.
