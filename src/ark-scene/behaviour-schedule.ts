@@ -530,6 +530,15 @@ function waterSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     return {x: water.x, y: Math.min(y, level), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
+/**
+ * A group member's own side of its group: a point on its own bearing from the group's middle, a little over half the
+ * group's spread out (bearings a golden angle apart by rank, each turned a little by its id, the same every slot).
+ */
+function memberSide(centre: {x: number; z: number}, animal: ScheduleAnimal, rank: number, radius: number): {x: number; z: number} {
+    const bearing = rank * 2.399963 + ((hashString(`${animal.id}#side`) % 1000) / 1000 - 0.5) * 0.5;
+    return {x: centre.x + Math.sin(bearing) * radius * 0.55, z: centre.z + Math.cos(bearing) * radius * 0.55};
+}
+
 /** A point to go to within a range of a centre: walkable land (or water for a swimmer). */
 function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}, radius: number, random: () => number): Spot {
     const r = radius * Math.sqrt(random());
@@ -954,6 +963,11 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     // A group member keeps within its group's spread of its leader (both capped where predator and prey were kept apart).
     const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), (group.leader.range ?? Infinity) / 2) : homeRadius(profile, animal);
     const groupAnimal: ScheduleAnimal = group ? {...animal, home: {x: centre.x, y: animal.home.y, z: centre.z}} : animal;
+    // Its own side of the group (a member's goals are looked for close round a point on its own bearing from the
+    // leader's place, not anywhere round the place itself): four members picking spots at random round one point stood
+    // in an even row once in about 650 moments (the capybaras' and lions' rows); round their own sides, a third of the
+    // spread across, about once in 200,000.
+    const own = group ? memberSide(centre, animal, group.rank, radius) : centre;
     // Shared wariness (visual only; flee-envelope.md §6.3.3): a predator it can see at its slot's start, awake, from the
     // predator's own schedule (the same for every viewer), sends it to the far side of its range to watch it. Near the
     // camera the local layer (`reactive.ts`) adds the look, the alarm and any dash on top. (Its own seeded stream: an
@@ -962,12 +976,13 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     if (threat) {
         const wary = rng(hashString(`${animal.id}#wary#${slot}`));
         const away = {x: centre.x + ((centre.x - threat.x) / threat.d) * radius * 0.7, z: centre.z + ((centre.z - threat.z) / threat.d) * radius * 0.7};
-        const spot = rangeSpot(world, profile, groupAnimal, away, Math.max(radius * 0.25, 0.5), wary);
+        // (A member a little to its own side of the line off the predator: not all of a group's watchers on that line.)
+        const spot = rangeSpot(world, profile, groupAnimal, group ? memberSide(away, animal, group.rank, radius * 0.6) : away, Math.max(radius * 0.25, 0.5), wary);
         return {doing: "watch", to: spot, mode: aquatic(profile) ? "water" : profile.move === "fly" ? "air" : "ground", stay: stayBeats("watch", wary, null), face: Math.atan2(threat.x - spot.x, threat.z - spot.z)};
     }
     if (watchTurn) {
         // At the group's edge, facing out.
-        const spot = rangeSpot(world, profile, groupAnimal, centre, radius * 0.9, random);
+        const spot = rangeSpot(world, profile, groupAnimal, own, radius * (group ? 0.3 : 0.9), random);
         return {doing: "watch", to: spot, mode: aquatic(profile) ? "water" : "ground", stay: stayBeats("watch", random, null)};
     }
     // A flocking species' member flies with its leader when its leader is in the air (most of the time, not always).
@@ -983,7 +998,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // Young play near their group.
     if (animal.young && group && random() < 0.45) {
-        return {doing: "play", to: rangeSpot(world, profile, groupAnimal, centre, Math.max(radius * 0.5, 1), random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats("play", random, null)};
+        return {doing: "play", to: rangeSpot(world, profile, groupAnimal, own, Math.max(radius * (group ? 0.3 : 0.5), 1), random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats("play", random, null)};
     }
     // Its own choice; a group member is a little less likely to do just what its leader does now.
     const leaderDoing = group ? leaderIntentAt(world, group, start + 1, hoursAt).doing : null;
@@ -1015,7 +1030,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
             // Water and lights may be a little beyond its usual ground: never more than half again its range (`rangeReach`).
-            const point = placeNear(world, centre, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * 1.4, cap), random());
+            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), cap), random());
             if (point) {
                 const up = point.y > world.sampler.heightAt(point.x, point.z) + 0.5;
                 // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
@@ -1043,10 +1058,10 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         case "soar": {
             // A goal: a perch, a feeding spot on the ground, or (a floater) the water.
             const roll = random();
-            const perch = roll < 0.5 ? placeNear(world, centre, animal.length, perchTags(profile), radius, random()) : null;
+            const perch = roll < 0.5 ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
-            return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, centre, radius, random), mode: "air", stay: stayBeats("forage", random, null)};
+            return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, own, radius * (group ? 0.3 : 1), random), mode: "air", stay: stayBeats("forage", random, null)};
         }
         case "swim":
         case "dive":
@@ -1061,7 +1076,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             return {
                 // (A swimmer feeding is foraging, cruising is swimming: its states stay its own, not all "swim".)
                 doing: profile.move === "swim" ? (behaviour === "wander" ? "swim" : doing) : behaviour === "wander" && profile.surface ? "crawl" : doing,
-                to: rangeSpot(world, profile, groupAnimal, centre, radius, random),
+                to: rangeSpot(world, profile, groupAnimal, own, radius * (group ? 0.3 : 1), random),
                 mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground",
                 stay: stayBeats(doing, random, null)
             };
@@ -1139,8 +1154,11 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank));
     // (On the ground, a place by its leader it can stand at the slot's end: else it slid to the nearest open cell over
     // the slot's last seconds, sideways or backwards, the default view's sparrow. A few seeded tries, then that.)
+    // (On its own bearing from its leader, as a herd member's own side (`memberSide`), each slot a little off it, wider
+    // a try at a time: a school's members at random bearings stood in an even row now and then, like the herds.)
+    const bearing = group.rank * 2.399963 + ((hashString(`${animal.id}#side`) % 1000) / 1000 - 0.5) * 0.5;
     for (let attempt = 0; attempt < 6; attempt++) {
-        const a = random() * Math.PI * 2;
+        const a = bearing + (random() - 0.5) * (0.7 + attempt * 0.6);
         const d = (0.8 + random() * 2.2) * spread;
         dx = Math.cos(a) * d;
         dz = Math.sin(a) * d;
