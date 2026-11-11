@@ -222,9 +222,18 @@ float arkWet = clamp(vArkLookV.x, 0.0, 1.0) * arkWetTake;
 float arkDust = clamp(vArkLookV.y, 0.0, 1.0);
 float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
 // Asleep: the lids shut over the eye (the skin round it, read blurred from a coarse mip of its texture), a darker line
-// where they meet; the eye's gloss, dome and catchlight go with it.
-float arkLidAmount = arkEyeAmount * clamp(vArkEyesShut, 0.0, 1.0);
-arkEyeAmount *= 1.0 - clamp(vArkEyesShut, 0.0, 1.0);
+// where they meet; the eye's gloss, dome and catchlight go with it. The lids cover the painted eye, which is wider than
+// the eyeball's dome: an almond round the nearer eye in the rest pose, long along the head, shorter up and down.
+float arkEyesShut = clamp(vArkEyesShut, 0.0, 1.0);
+float arkLidAmount = 0.0;
+float arkLidSeam = 0.0;
+if (arkEyesShut > 0.001 && arkEye.w > 0.0) {
+    vec3 arkEyeAt = length(vArkRest - arkEye.xyz) < length(vArkRest - arkEye2) ? arkEye.xyz : arkEye2;
+    vec3 arkLidD = (vArkRest - arkEyeAt) / arkEye.w;
+    arkLidAmount = (1.0 - smoothstep(0.7, 1.0, length(vec3(arkLidD.x / 3.0, arkLidD.y / 2.7, arkLidD.z / 4.2)))) * arkEyesShut;
+    arkLidSeam = 1.0 - smoothstep(0.25, 0.55, abs(arkLidD.y));
+}
+arkEyeAmount *= 1.0 - arkEyesShut;
 #ifdef ARK_SHELL
 {
     // Strands: a jittered point in each small cell of the rest pose; a layer keeps the round patch round it, thinner outward.
@@ -252,12 +261,10 @@ diffuseColor.rgb *= 1.0 - 0.35 * arkEyeAmount;
 if (arkLidAmount > 0.001) {
     vec3 arkLid = diffuseColor.rgb;
 #ifdef USE_MAP
-    arkLid = texture2D(map, vMapUv, 5.0).rgb * 0.9;
+    arkLid = texture2D(map, vMapUv, 5.0).rgb * 0.92;
 #endif
-    // Where the lids meet: across the eye, level in the model (its rest pose), at the nearer eye's middle.
-    vec3 arkEyeAt = length(vArkRest - arkEye.xyz) < length(vArkRest - arkEye2) ? arkEye.xyz : arkEye2;
-    float arkSeam = 1.0 - smoothstep(0.08, 0.2, abs(vArkRest.y - arkEyeAt.y) / max(arkEye.w, 1e-5));
-    arkLid *= 1.0 - 0.45 * arkSeam;
+    // Where the lids meet: a darker line across the eye, level in the model's rest pose.
+    arkLid *= 1.0 - 0.55 * arkLidSeam;
     diffuseColor.rgb = mix(diffuseColor.rgb, arkLid, arkLidAmount);
 }
 #endif

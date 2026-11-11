@@ -2975,6 +2975,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
 
         look.begin(lookWeather, worldMs());
+        // Development: the sleep clips' page draws the same frame with the eyes open, to compare (`sleep-entry.ts`).
+        const eyesOpenForDev = process.env.NODE_ENV !== "production" && Boolean((globalThis as {__arkEyesOpen?: boolean}).__arkEyesOpen);
         const needs = new Map<string, {near: number; far: number; rig: number}>();
         for (const candidate of candidates) {
             const {entry} = candidate;
@@ -3195,7 +3197,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
             // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, slept ? packSleep(slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0));
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0));
             setVary(mesh.geometry, index, animal.id);
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;

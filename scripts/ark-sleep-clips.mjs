@@ -26,6 +26,8 @@ const clips = arg("clips", "night,den").split(",");
 const width = Number(arg("width", "1280"));
 const height = Number(arg("height", "720"));
 const quality = arg("quality", "high");
+/** Device pixels per CSS pixel (stills to crop close: `--scale 3`). */
+const scaleFactor = Number(arg("scale", "1"));
 const range = arg("frames", null)?.split("-").map(Number) ?? null;
 /** Single frames only (stills to look at): `--at 80,200`. */
 const only = arg("at", null)?.split(",").map(Number) ?? null;
@@ -71,7 +73,7 @@ const browser = await chromium.launch({executablePath, headless: true, args: ["-
 const summary = {};
 for (const clip of clips) {
     try {
-        const context = await browser.newContext({viewport: {width, height}});
+        const context = await browser.newContext({viewport: {width, height}, deviceScaleFactor: scaleFactor});
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", (e) => errors.push(e.message));
@@ -101,6 +103,11 @@ for (const clip of clips) {
                 return label;
             }, i);
             await page.screenshot({path: path.join(dir, `${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
+            if (only && process.argv.includes("--compare-eyes")) {
+                await page.evaluate(() => window.__clip.eyesOpen(true));
+                await page.screenshot({path: path.join(dir, `${String(k).padStart(4, "0")}-open.jpg`), type: "jpeg", quality: 85});
+                await page.evaluate(() => window.__clip.eyesOpen(false));
+            }
             k++;
             if (i % 50 === 0) console.log(clip, i, label);
         }

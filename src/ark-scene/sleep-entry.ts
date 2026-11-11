@@ -11,7 +11,7 @@
  */
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
-import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
+import type {ArkCameraView, ArkLocated, ArkSceneHandle} from "@/ark-scene/types";
 import {scheduleWorld, SLOT_SECONDS, tripAt, poseOnTrip, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -37,7 +37,7 @@ type Ctx = {
     date0: number;
 };
 /** A shot: from `at` seconds into the clip, the camera (fixed, or moving with the clip's time). */
-type Shot = {at: number; label: string; view: (u: number) => ArkCameraView};
+type Shot = {at: number; label: string; view: (u: number, locate: (id: string) => ArkLocated | null) => ArkCameraView};
 type Script = {start: number; seconds: number; fps: number; shots: Shot[]; note: string};
 type Clip = {cast: Array<[string, number]>; hours: number | null; date: number; find: (ctx: Ctx) => Script | null};
 
@@ -83,6 +83,28 @@ const CLIPS: Record<string, Clip> = {
             const lions = ctx.animals.map((a) => ({a, p: poseOnTrip(ctx.world, tripAt(ctx.world, a.profile, a.animal, t, ctx.hoursAt, a.activity), t)}));
             const shots: Shot[] = lions.map((l, i) => ({at: i * 3, label: `lion ${l.a.id.slice(-2)}`, view: () => view(l.p.x, l.p.y + 0.4, l.p.z, 4.2, 1.05, 0.4 + i * 1.1)}));
             return {start: ctx.date0, seconds: lions.length * 3, fps: 10, shots, note: "lab"};
+        }
+    },
+    eyes: {
+        // Development: close on sleeping heads (eyes shut, breathing) at midday, then the same heads awake at 18:30.
+        cast: [["african-lion", 6]],
+        hours: Number(new URLSearchParams(location.search).get("hours") ?? 13),
+        date: Date.UTC(2026, 10, 12, 13) / 1000,
+        find: (ctx) => {
+            const t = ctx.date0 + 30;
+            const list = ctx.animals.map((a) => ({a, p: poseOnTrip(ctx.world, tripAt(ctx.world, a.profile, a.animal, t, ctx.hoursAt, a.activity), t)}));
+            const shots: Shot[] = list.map((l, i) => ({
+                at: i * 4,
+                label: `${l.a.slug} ${l.a.id.slice(-2)} head`,
+                // Where it is drawn now (the scene's own), its head a little ahead of its middle.
+                view: (_u, locate) => {
+                    const at = locate(l.a.id) ?? {x: l.p.x, y: l.p.y, z: l.p.z, yaw: l.p.yaw, length: l.a.animal.length, height: 1, ground: l.p.y, awake: false};
+                    const hx = at.x + Math.sin(at.yaw) * at.length * 0.36;
+                    const hz = at.z + Math.cos(at.yaw) * at.length * 0.36;
+                    return view(hx, at.ground + at.height * 0.3, hz, 4, 1.32, at.yaw + 0.45);
+                }
+            }));
+            return {start: ctx.date0, seconds: list.length * 4, fps: 10, shots, note: "eyes"};
         }
     },
     den: {
@@ -186,10 +208,15 @@ async function main() {
     const api = {
         script: script ? {seconds: script.seconds, fps: script.fps, note: script.note, shots: script.shots.map((s) => ({at: s.at, label: s.label}))} : null,
         /** Frame `i` of the clip: the world time, the camera, and a label. */
+        /** Development: draw the eyes open (to compare the shut ones). */
+        eyesOpen: async (open: boolean) => {
+            (globalThis as {__arkEyesOpen?: boolean}).__arkEyesOpen = open;
+            await frames(3);
+        },
         frame: async (i: number) => {
             const s = i / script!.fps;
             const {shot, u} = shotAt(s);
-            const v = shot.view(u);
+            const v = shot.view(u, (id) => handle.locate(id));
             handle.setView(v);
             await setAt(script!.start + s);
             // What the animals in view are doing (development: the sleep, the reactive layer's wake).
@@ -201,7 +228,7 @@ async function main() {
         }
     };
     if (script) {
-        handle.setView(script.shots[0].view(0));
+        handle.setView(script.shots[0].view(0, (id) => handle.locate(id)));
         await setAt(script.start - 3);
         const wait2 = realPerfNow() + 30_000;
         while (realPerfNow() < wait2 && handle.loading()) await wait(200);
