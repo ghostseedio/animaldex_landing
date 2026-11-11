@@ -359,6 +359,10 @@ const FAMILY_PRIORS: Record<string, Prior> = {
     Phocoenidae: {social: "group"},
     Monodontidae: {social: "group"},
     Accipitridae: {social: "solitary"},
+    // Crocodilians walk the bank and swim (their text often says neither).
+    Crocodylidae: {also: ["swim"]},
+    Alligatoridae: {also: ["swim"]},
+    Gavialidae: {also: ["swim"]},
     // Ants and termites: the colony's nest (underground, in a mound or in wood) where the text does not say.
     Formicidae: {roost: "burrow"},
     Termitidae: {roost: "burrow"},

@@ -280,3 +280,26 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 ### Behaviour (`ark-behaviour`)
 - **Sea otter profile.** The sea otter's profile is `move: walk` with no swim, so the schedule walks it on land. Its stored text says it floats and dives for shellfish. With the profile fixed (`move: swim`, `moves: walk`), its `shell_tool` recipe takes over.
 - **Starlings.** House starlings are micro animals (`microhabitats.json`: house), so they are off the schedule. Their murmuration is the one hook in `pose()` for micro animals.
+
+## Clips (looked at frame by frame)
+
+**How they were made.**
+- `node scripts/ark-recipe-clips.mjs --out <dir> --clips kingfisher,stags,murmuration,nest,heron`, at 1280×720, high tier, headless Chromium on Metal.
+- Each clip is a cast-only snapshot at a pinned hour. The page finds the moment with the engine's own pure functions, then steps a controlled clock frame by frame. The world time per frame is exact, so a one-second dive gets its every frame; the kingfisher is at half speed.
+- Frames, video and contact sheets are in the lane's scratch folder `recipes/clips/` (the report gives the absolute paths). They are not committed.
+
+| Clip | What it shows |
+|---|---|
+| **Kingfisher plunge-dive** (`common-kingfisher`, river_lake, 10:00) | Perched on a low branch on the bank, about 3.6 m over the water. It scans, takes off, and drops body-vertical, nose down (the plunge pitch on the standing model), into the water about 5.6 m out. It comes up with a fish crossways in its bill, flies back low with it, beats it on the branch and swallows. |
+| **Stags clashing** (`red-deer`, 8 cast, 6 of them males by seeded sex; 6 October, 06:24, in the rut) | Two stags of the group leave it, walk to each other, roar and walk side by side. Then they turn head to head, antlers locked and heads down, pushing for about 8 s. They part, the loser walks off and the other roars. The clip is staged in the grassland for an open view (red deer live in the woodland zone, where trunks hid it). |
+| **Murmuration** (`european-starling`, house starlings, 17:48) | Over the cottage at dusk, 1,400 ambient flockmates and the catalogue starlings swirl in one stretching, turning cloud. |
+| **Nest growing** (`barn-swallow`, from 1 April, its nesting months) | The swallow flies in with mud, lands on its nest, places it and flies off. Stills on days 0.3, 1, 2, 3, 4 and 5.5 show the nest from a few pieces to a full ring with walls. Here it was on a rock: no house wall was within 12 m of its home. This drawing is the fallback until the props lane's nests are wired. |
+| **Heron fishing** (`grey-heron`, wetland, 09:00) | It wades into the shallows, feet on the bottom, and stands still with small fish under the water round its legs. It strikes, and the school splits away from its bill. It holds a fish crossways, swallows, then wades on. |
+
+**What I fixed from looking:**
+- The plunge was too fast from a high bank (about 30 m/s at the water); it is now 4–20 m/s by height, gathering speed.
+- Dives went to the water's very edge; they now go to open water at least 0.45 m deep.
+- Perches by the water were 13 m up; they are now low first.
+- The fish school popped in only at the strike; it is now there while the hunter waits. The fish were too big and above the surface; they are now sized to the hunter and kept under the surface.
+- Nests were deep in tree crowns; they are now on low branches first.
+- The murmuration was too sparse to read; it now has 1,400 birds, each at least a few pixels on screen.

@@ -99,7 +99,7 @@ const CLIPS: Record<string, Clip> = {
             if (!entry) return null;
             const m = microMurmuration(entry.id, entry.slug, entry.at, ctx.date + 1200, ctx.hoursAt(0), heightAt);
             const c = m?.act.flock?.centre ?? entry.at;
-            return {start: ctx.date + 1200, seconds: 30, step: 1 / 6, view: view(c.x, c.y + 20, c.z, 45, 1.3, 0.9), note: `centre ${c.x.toFixed(1)},${c.z.toFixed(1)}`};
+            return {start: ctx.date + 1200, seconds: 30, step: 1 / 6, view: view(c.x, c.y, c.z, 90, 1.36, 0.9), note: `centre ${c.x.toFixed(1)},${c.z.toFixed(1)}`};
         }
     },
     nest: {
