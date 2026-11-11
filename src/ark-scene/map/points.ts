@@ -29,7 +29,7 @@
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {attachFits, attachPointTags, type ArkMapSampler, type AttachPoint} from "@/ark-scene/map/sampler";
 import {launchPoints} from "@/ark-scene/map/species";
-import {MAP_TAGS, type MapTag} from "@/ark-scene/map/tags";
+import {FRESH_TAGS, MAP_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {WaterCells} from "@/ark-scene/map/water";
 import {ZONE_SITES} from "@/ark-scene/world";
 
@@ -348,6 +348,30 @@ export class MapPoints {
         return best ? {x: best.x, z: best.z} : null;
     }
 
+    private seaNear = new Map<string, boolean>();
+
+    /** Is the sea within `reach` of a spot (16 bearings, every 3 m or nearer out to the reach: a narrow inlet too)? */
+    seaWithin(x: number, z: number, reach: number): boolean {
+        const key = `${Math.round(x * 2)},${Math.round(z * 2)},${reach}`;
+        const known = this.seaNear.get(key);
+        if (known !== undefined) return known;
+        let found = this.sampler.ground(x, z).water === "sea";
+        const steps = Math.max(2, Math.ceil(reach / 3));
+        for (let n = 1; n <= steps && !found; n++) {
+            const d = (reach * n) / steps;
+            for (let k = 0; k < 16 && !found; k++) if (this.sampler.ground(x + Math.cos((k / 16) * Math.PI * 2) * d, z + Math.sin((k / 16) * Math.PI * 2) * d).water === "sea") found = true;
+        }
+        this.seaNear.set(key, found);
+        return found;
+    }
+
+    /** In the sea, or on ground its tide or its surf reaches (lower than `DEN_DRY` within `SURF_REACH` of it). */
+    inSurf(x: number, z: number): boolean {
+        const g = this.sampler.ground(x, z);
+        if (g.water === "sea") return true;
+        return g.water === null && g.height < DEN_DRY && this.seaWithin(x, z, SURF_REACH);
+    }
+
     /** The map tags an attach point stands for (its own and its ground's). */
     /** The one tag a point's list is (of the tags it stands for, by a hash of its id: the same for every viewer). */
     ownerOf(point: AttachPoint): MapTag | null {
@@ -442,7 +466,10 @@ export class MapPoints {
             // (Each point is one tag's, as each ground cell is: a point that stands for two tags, a desert shrub's top for
             // the sand and the scrub, is in one of their lists only, so two kinds' clusters never pick the same point.)
             // (A tag that owns no point its body fits takes the points that stand for it, shared: a toad by the lake.)
-            const usable = (point: AttachPoint) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5));
+            // (A land kind's rock face, ledge or hole is never in the sea, its tide or its surf: a gundi on a boulder off the
+            // desert's new coast, a rock hyrax's den in the surf. A shore's or the water's own kinds keep theirs.)
+            const landTag = !SEA_TAGS.has(tag) && !FRESH_TAGS.has(tag) && !SURF_TAGS.has(tag);
+            const usable = (point: AttachPoint) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5)) && !(landTag && LOW_POINTS.has(point.tag) && this.inSurf(point.x, point.z));
             const shared = this.sampler.attachPoints().filter(usable);
             const owned = shared.filter((point) => this.ownerOf(point) === tag);
             const candidates = owned.some((point) => point.zone === zone) || (owned.length && !shared.some((point) => point.zone === zone)) ? owned : shared;
@@ -467,6 +494,20 @@ export class MapPoints {
         return found;
     }
 }
+
+/**
+ * Dry land above the sea (m over its mean): the spring tide's high water is
+ * 0.35 (`ark-clock.ts` seaLevelAt, a range of 0.7) and the surf runs a
+ * quarter of a metre up the shore past it. A den, or a land kind's rock face,
+ * ledge or hole, is never lower than this within `SURF_REACH` of the sea.
+ */
+export const DEN_DRY = 0.6;
+/** How far from the sea low ground is the tide's or the surf's (m). */
+export const SURF_REACH = 6;
+/** The shore's own tags: their kinds live in the tide and the surf (a crab's rock, a puffin's sea ledge). */
+const SURF_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["rocky_shore", "sandy_beach", "sea_cliffs", "mudflat"]);
+/** The points on the ground or low on a rock, where the tide and the surf reach. */
+const LOW_POINTS: ReadonlySet<string> = new Set(["rock_face", "ledge", "burrow_entrance", "worm_hole"]);
 
 /** A hauled-out diver's shore: dry ground at most this far from the sea (m). */
 export const SHORE_REACH = 7;

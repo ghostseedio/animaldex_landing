@@ -68,6 +68,8 @@ export type MapPlace = {
     /** Its cluster's key (zone and slot) and its point's level (0: on the point). */
     key: number;
     level: number;
+    /** Whose place it is (its species and drawn length), for its den on the schedule (`scheduleRoost`). */
+    who?: {slug: string; length: number};
 };
 
 /** A perch: a bird's, a bat's or a small vertebrate's attach point, as the surface it stands on (its back to `n`, heading `t`). */
@@ -201,6 +203,12 @@ function attachPlace(point: AttachPoint, key: number, level: number, rank: numbe
  * is its drawn length, `trueLength` its true body length (m).
  */
 export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number, length: number, trueLength: number, kind: "core" | "edge" | "cover" | "plain" = "plain"): MapPlacement | null {
+    const placed = mapPlaceOn(animal, zone, slot, rank, length, trueLength, kind);
+    if (placed) placed.map.who = {slug: animal.model_slug, length};
+    return placed;
+}
+
+function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number, length: number, trueLength: number, kind: "core" | "edge" | "cover" | "plain"): MapPlacement | null {
     if (!enabled) return null;
     const key = clusterKey(zone, slot);
     const ownHash = hashString(animal.id);
@@ -548,6 +556,10 @@ export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: num
  */
 export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): ScheduleSpot | null {
     const roost = place.map?.roost;
+    // (A burrow or a sleeping ground of its text in the tide or the surf: its den on dry land instead, when it has one.)
+    const wetDen = roost && (roost.kind === "burrow" || roost.kind === "ground" || roost.kind === "attach") && !denIsDry(roost.burrow?.x ?? roost.x, roost.burrow?.z ?? roost.z);
+    const dry = wetDen && place.map?.who && typeof (place as {x?: number}).x === "number" ? coastalDen(place.map, (place as {x: number}).x, (place as {z: number}).z, (place as {ground?: number}).ground ?? 0) : null;
+    if (dry) return dry;
     if (roost) {
         if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`};
         if (roost.kind === "canopy" && roost.canopy) {
@@ -558,10 +570,68 @@ export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: A
         return {x: roost.x, y: roost.y, z: roost.z, nx: 0, ny: 1, nz: 0, point: `map:${roost.tag}`};
     }
     const perch = place.perch;
+    // (A den on its perch in the tide or the surf, a desert rain frog's hole on the beach: its den on dry land instead.)
+    const wetPerch = perch && place.map?.who && !denIsDry(perch.x, perch.z) ? coastalDen(place.map, perch.x, perch.z, perch.y) : null;
+    if (wetPerch) return wetPerch;
     if (perch) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
     // A hauled-out diver rests where it stands on its shore (a penguin colony on the cove's ice).
     const at = place as {x?: number; z?: number; ground?: number};
-    if (place.map?.shore && typeof at.x === "number" && typeof at.z === "number") return {x: at.x, y: at.ground ?? 0, z: at.z, nx: 0, ny: 1, nz: 0, point: `map:shore`};
+    if (place.map?.shore && typeof at.x === "number" && typeof at.z === "number") {
+        // (A burrow-nesting penguin's or a crevice auklet's den above the surf, though it stands in the splash: dry land.)
+        const den = place.map.who && !denIsDry(at.x, at.z) ? coastalDen(place.map, at.x, at.z, at.ground ?? 0) : null;
+        return den ?? {x: at.x, y: at.ground ?? 0, z: at.z, nx: 0, ny: 1, nz: 0, point: `map:shore`};
+    }
+    // A den by the sea on dry land (a rock hyrax's crevice, a porcupine's cave): never a boulder in the surf.
+    if (place.map?.who && typeof at.x === "number" && typeof at.z === "number") return coastalDen(place.map, at.x, at.z, at.ground ?? 0);
+    return null;
+}
+
+/** A den is found for an animal living within this of the sea (the schedule's own choice reaches up to its range, about this far). */
+const COAST_REACH = 40;
+/** Roosts that are dens (`behaviour-profile.ts` roost), and the map's points that make one. */
+const DEN_POINTS: Partial<Record<string, AttachTag[]>> = {cave: ["rock_face", "ledge"], crevice: ["rock_face", "ledge"], burrow: ["burrow_entrance"], den: ["burrow_entrance", "rock_face"], tree_hole: ["tree_hollow", "bark", "branch"]};
+
+/** The kind of den its schedule's roost is (a cave, a crevice, a burrow, a den, a tree hole), or null when it sleeps in the open. */
+export function denKindOf(slug: string): string | null {
+    const roost = behaviourProfile(slug).roost;
+    return DEN_POINTS[roost] ? roost : null;
+}
+
+/** Dry land for a den: not in any water, and above the sea's tide and surf (`points.ts` DEN_DRY, inSurf). */
+export function denIsDry(x: number, z: number): boolean {
+    const all = mapPoints();
+    return all.sampler.ground(x, z).water === null && !all.inSurf(x, z);
+}
+
+/**
+ * The den of a land animal living by the sea, on dry land: a point of its den's kind within 15 m of its home (nearer
+ * ones likelier, seeded by its cluster), never one in the tide or the surf; none, the ground at home if that is dry,
+ * else the nearest dry ground within 30 m. Null (the schedule's own choice) for one living inland, a water animal, or
+ * one whose roost is not a den.
+ */
+function coastalDen(map: MapPlace, x: number, z: number, ground: number): ScheduleSpot | null {
+    const who = map.who!;
+    const profile = behaviourProfile(who.slug);
+    const kinds = DEN_POINTS[profile.roost];
+    if (!kinds || map.water || !mapPoints().seaWithin(x, z, COAST_REACH)) return null;
+    const sampler = mapPoints().sampler;
+    const near = sampler
+        .attachPoints()
+        .filter((point) => kinds.includes(point.tag) && Math.hypot(point.x - x, point.z - z) <= 15 && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
+        .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    if (near.length) {
+        const roll = (hashString(`${who.slug}#den#${map.key}`) % 1000) / 1000;
+        const point = near[Math.floor(roll ** 1.4 * near.length)];
+        return {x: point.x, y: point.y, z: point.z, nx: point.normal[0], ny: point.normal[1], nz: point.normal[2], point: `map:${point.id}`};
+    }
+    if (denIsDry(x, z)) return {x, y: ground, z, nx: 0, ny: 1, nz: 0, point: "map:den"};
+    for (let k = 1; k < 400; k++) {
+        const r = 0.5 * Math.sqrt(k);
+        if (r > 30) break;
+        const tx = x + Math.cos(k * GOLDEN) * r;
+        const tz = z + Math.sin(k * GOLDEN) * r;
+        if (denIsDry(tx, tz) && !sampler.blocked(tx, tz, 0.3) && !sampler.reserved?.(tx, tz)) return {x: tx, y: sampler.ground(tx, tz).height, z: tz, nx: 0, ny: 1, nz: 0, point: "map:den"};
+    }
     return null;
 }
 

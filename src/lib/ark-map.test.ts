@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import holds from "@/ark-scene/map/validator-holds.json";
 import table from "@/ark-scene/map/species.json";
-import {mapHabitatAt, mapPlace, mapPoints, onSchedule, scheduleRoost, setArkMapSampler} from "@/ark-scene/map/place";
+import {denIsDry, denKindOf, mapHabitatAt, mapPlace, mapPoints, onSchedule, scheduleRoost, setArkMapSampler} from "@/ark-scene/map/place";
 import {bodyOf} from "@/ark-scene/map/species";
 import fixture from "@/ark-scene/fixtures/snapshot.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {groupSpread, rangeReach, scheduleWorld, spaceHomes} from "@/ark-scene/behaviour-schedule";
+import {groupSpread, rangeReach, roostOf, scheduleWorld, spaceHomes} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
@@ -244,8 +244,11 @@ test("map + behaviour: every bird, bat and grazer is on the behaviour schedule (
             perched++;
             const roost = scheduleRoost(place, animal.zone);
             assert.ok(roost, `${animal.model_slug} has a roost`);
-            // Its own perch, or the roost its text names (sleep_pattern).
-            if (!place.map?.roost) assert.deepEqual([roost.x, roost.y, roost.z], [place.perch.x, place.perch.y, place.perch.z], animal.model_slug);
+            // Its own perch, or the roost its text names (sleep_pattern); a den-dweller's perch in the tide or the surf (a
+            // Surinam toad's hole by the sea), its den on dry land instead.
+            const wetDen = Boolean(denKindOf(animal.model_slug)) && !denIsDry(place.perch.x, place.perch.z);
+            if (wetDen) assert.ok(denIsDry(roost.x, roost.z) || roost.y - mapPoints().sampler.ground(roost.x, roost.z).height >= 1, `${animal.model_slug}'s den on dry land`);
+            else if (!place.map?.roost) assert.deepEqual([roost.x, roost.y, roost.z], [place.perch.x, place.perch.y, place.perch.z], animal.model_slug);
         }
     }
     assert.deepEqual(off, [], `${off.length} off the schedule: ${off.slice(0, 12).join(", ")}`);
@@ -337,4 +340,29 @@ test("inRock finds a rock just over a cell edge: a body at the edge of a cell ne
     // The case the old lookup missed is really tested: bodies touching a rock from a cell it is not listed in.
     assert.ok(edgeCases > 20, `${edgeCases} bodies touch a rock from a cell it is not listed in`);
     assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} bodies where inRock disagrees with the rocks checked one by one`);
+});
+
+test("dens on dry land: no land animal's den, as its schedule takes it, in the sea, its tide or its surf", () => {
+    // (The rock hyrax's den on a boulder in the surf, 2026-11-11.) Every den-dweller aboard (a cave, a crevice, a burrow, a
+    // den, a tree hole), each catalogue species twice and both fixtures: where the behaviour schedule sends it to sleep (the
+    // map's den when it lives by the sea, else the schedule's own choice) is never in the sea, nor on ground the spring
+    // tide or the surf reaches. A water animal's home and den are the water's; a den up a tree is above the surf.
+    const world = scheduleWorld(sceneSampler());
+    const all = mapPoints();
+    const wrong: string[] = [];
+    let dens = 0;
+    for (const animals of [validatorAnimals(), decodeArkSnapshot(fixture)!.animals, decodeArkSnapshot(fixtureV2)!.animals]) {
+        const places = placeAnimals(animals);
+        for (const a of animals) {
+            const p = places.get(a.id);
+            if (!p || p.water || !onSchedule(p, a.model_slug) || !denKindOf(a.model_slug)) continue;
+            const animal = {id: a.id, zone: a.zone, home: {x: p.x, y: p.ground, z: p.z}, length: displayLength(a), sea: false, roost: scheduleRoost(p, a.zone)};
+            const den = roostOf(world, behaviourProfile(a.model_slug), animal);
+            dens++;
+            if (den.y - all.sampler.ground(den.x, den.z).height >= 1) continue;
+            if (all.inSurf(den.x, den.z)) wrong.push(`${a.model_slug} ${a.id.slice(-6)}: its ${denKindOf(a.model_slug)} at ${den.x.toFixed(1)},${den.z.toFixed(1)} (${den.point ?? "ground"})`);
+        }
+    }
+    assert.ok(dens > 1000, `${dens} dens`);
+    assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} dens in the sea's tide or surf`);
 });
