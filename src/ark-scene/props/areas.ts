@@ -26,7 +26,8 @@ import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Grou
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
-import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
+import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, runSteps, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
+import {hamletLandAt} from "@/ark-scene/props/hamlet-land";
 import {caveSite, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
@@ -383,15 +384,17 @@ function barnMark(): Record<string, {x: number; y: number; z: number}> {
 
 // MARK: - Mountain and the ice
 
-function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: PropInstance[]; polarDrifts: PropInstance[]; icicles: PropInstance[]} {
+function* mountain(): Generator<void, {outcrops: PropInstance[]; scree: PropInstance[]; drifts: PropInstance[]; polarDrifts: PropInstance[]; icicles: PropInstance[]}, void> {
     const random = propRandom("mountain");
     const outcrops: PropInstance[] = [];
     const scree: PropInstance[] = [];
     const cave = caveSite();
     // The ground's cliff ledges (not the rock tops'): the way out of the cliff is the ledge's `forward`.
     const ledges = propsPoints("ledge").filter((point) => point.host === "ground" && (point.zone === "mountains" || point.zone === "polar")).map((point) => ({...point, normal: point.forward ?? point.normal}));
-    ledges.forEach((ledge, k) => {
-        if (k % 2) return;
+    for (let k = 0; k < ledges.length; k++) {
+        const ledge = ledges[k];
+        if (k % 2) continue;
+        if (k % 16 === 0) yield;
         const size = 1.6 + random() * 2.2;
         // Its back into the slope: a little uphill of the ledge point, sunk in.
         const x = ledge.x - ledge.normal.x * size * 0.3;
@@ -410,7 +413,8 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
             if (normal.y < 0.72) continue;
             scree.push({x: px, y: ground.height - 0.03, z: pz, turn: random() * 6, scale: 0.3 + random() * random() * 1.8, tint: new Color().setHSL(0.08, 0.06, 0.4 + random() * 0.18)});
         }
-    });
+    }
+    yield;
     // Snow drifts: in the lee of rocks and outcrops high on the mountain (shown with the snow), always on the ice.
     const drifts: PropInstance[] = [];
     const polarDrifts: PropInstance[] = [];
@@ -454,13 +458,14 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
 
 // MARK: - Grassland
 
-function grassland(): {tussocks: PropInstance[][]; flowers: PropInstance[]; mounds: PropInstance[]} {
+function* grassland(): Generator<void, {tussocks: PropInstance[][]; flowers: PropInstance[]; mounds: PropInstance[]}, void> {
     const random = propRandom("grassland");
     const tussocks: PropInstance[][] = [[], [], []];
     const flowers: PropInstance[] = [];
     const meadow = new Set(["grassland", "woodland", "farm_garden", "river_lake", "mountains", "desert"]);
     const site = ZONE_SITES.grassland;
     for (let k = 0; k < 9000; k++) {
+        if (k % 600 === 0) yield;
         const x = site.x + (random() * 2 - 1) * 46;
         const z = site.z + (random() * 2 - 1) * 46;
         const ground = sampleGround(x, z);
@@ -493,10 +498,18 @@ function grassland(): {tussocks: PropInstance[][]; flowers: PropInstance[]; moun
         const z = site.z + dz;
         mounds.push({x, y: groundAt(x, z) - 0.05, z, turn: dx, scale: s});
     }
-    return {tussocks, flowers, mounds};
+    // Not on the hamlet's reserved plots (props/hamlet-land.ts): no tussock under a house or a barn, no wildflowers on
+    // a plot; filtered after the draws, so every other one stays where it was.
+    return {tussocks: tussocks.map((list) => list.filter((item) => hamletLandAt(item.x, item.z) !== "core")), flowers: flowers.filter((item) => !hamletLandAt(item.x, item.z)), mounds};
 }
 
+/** All the areas at once (the tests): `buildAreasSteps` run to its end. */
 export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots()): Areas {
+    return runSteps(buildAreasSteps(tier, plots));
+}
+
+/** The areas, a step at a time (each plot, the mountain's ledges, the meadow's samples), for the scene's slices (`kit.ts` runSliced). */
+export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHomePlots()): Generator<void, Areas, void> {
     const group = new Group();
     group.name = "props:areas";
     const warm = propMaterial();
@@ -522,8 +535,16 @@ export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots
     };
 
     // The home area's plots (home-layout.ts): each house plot its garden, each smallholding its yard, paddock and coop.
-    const gardens = plots.filter((plot) => plot.kind === "house").map((plot) => ({plot, built: garden(plot)}));
-    const farms = plots.filter((plot) => plot.kind === "smallholding").map((plot) => ({plot, built: farm(plot)}));
+    const gardens: Array<{plot: HomePlot; built: ReturnType<typeof garden>}> = [];
+    for (const plot of plots.filter((p) => p.kind === "house")) {
+        yield;
+        gardens.push({plot, built: garden(plot)});
+    }
+    const farms: Array<{plot: HomePlot; built: ReturnType<typeof farm>}> = [];
+    for (const plot of plots.filter((p) => p.kind === "smallholding")) {
+        yield;
+        farms.push({plot, built: farm(plot)});
+    }
     for (const {plot, built} of gardens) {
         const centre = plotFrame(plot).toWorld(0, 3);
         addPiece(new LodPiece(`garden:${plot.id}`, new Vector3(centre.x, plotFrame(plot).floor, centre.z), built.near, built.far, warm, {near: 70, far: 220, shadow: true}));
@@ -539,19 +560,22 @@ export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots
     const puddles = addBatch(new LodBatch("puddles", [...gardens.flatMap(({built}) => built.puddles), ...farms.flatMap(({built}) => built.puddles)], shapes.puddle(1), null, puddleMaterial, {cap: 16, reach: 1.2}));
     puddles.hidden = true;
     // The other plots' cottages and barns (today's two are the graphics lane's).
+    yield;
     const buildings = buildHamletBuildings(plots);
     group.add(buildings.group);
     const firstGarden = gardens[0]?.built;
     const firstFarm = farms[0]?.built;
 
-    const m = mountain();
+    yield;
+    const m = yield* mountain();
     addBatch(new LodBatch("strata", m.outcrops, shapes.strataOutcrop(2.5, 2.2), paint(new BoxGeometry(2.2, 1.8, 1.2).translate(0, 0.9, 0), "#8f8576"), cold, {cap: 40, reach: 2.2, farReach: 1, shadow: true}));
     addBatch(new LodBatch("scree", m.scree, shapes.screeStone(0.22), null, cold, {cap: 2600, reach: 0.9}));
     const drifts = addBatch(new LodBatch("snow-drifts", m.drifts, shapes.snowDrift(2.4), null, snow, {cap: 60, reach: 1.6}));
     addBatch(new LodBatch("polar-drifts", m.polarDrifts, shapes.snowDrift(2.4, 2), null, snow, {cap: 60, reach: 1.6}));
     const icicles = addBatch(new LodBatch("icicles", m.icicles, shapes.icicle(0.45), null, new MeshStandardMaterial({vertexColors: true, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.85}), {cap: 120, reach: 0.6, fine: true}));
 
-    const gr = grassland();
+    yield;
+    const gr = yield* grassland();
     gr.tussocks.forEach((items, kind) => addBatch(new LodBatch(`tussock-${kind}`, items, shapes.tussock(kind, kind === 1 ? 0.55 : 0.42), null, foliage, {cap: kind === 0 ? 900 : 600, reach: 0.85})));
     for (let variant = 0; variant < 3; variant++) {
         const items = gr.flowers.filter((flower) => flower.tall === variant).map((flower) => ({...flower, tall: undefined}));

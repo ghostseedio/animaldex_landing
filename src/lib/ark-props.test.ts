@@ -539,3 +539,52 @@ test("props hamlet land: the baked footprints are still the map's; no crops on a
     // The decor's own items are not moved or removed (their ids, `decor<n>`, stay).
     assert.equal(worldDecor().filter((item) => item.kind === "flower" && hamletLandAt(item.x, item.z)).length, 0);
 });
+
+// MARK: - Built in slices, the same as all at once
+
+import {buildAreasSteps} from "@/ark-scene/props/areas";
+import {buildHomesSteps} from "@/ark-scene/props/homes";
+import {runSliced} from "@/ark-scene/props/kit";
+
+test("props slices: the homes and the areas built a slice at a time are the same as built at once (and they do pause)", async () => {
+    const snapshot = propsFixture(decodeArkSnapshot(fixture)!);
+    const places = placeAnimals(snapshot.animals);
+    const presence = propsPresence(snapshot);
+    const placeOf = (id: string) => places.get(id) ?? null;
+    let steps = 0;
+    const counted = function* <T>(inner: Generator<void, T, void>): Generator<void, T, void> {
+        let next = inner.next();
+        while (!next.done) {
+            steps++;
+            yield;
+            next = inner.next();
+        }
+        return next.value;
+    };
+    // The smallest slices there are: every step its own frame.
+    const sliced = (await runSliced(counted(buildHomesSteps(presence, placeOf, PROPS_TIERS.medium)), 0))!;
+    assert.ok(steps > 20, `${steps} steps`);
+    const whole = buildHomes(presence, placeOf, PROPS_TIERS.medium);
+    const view = (homes: typeof whole) => ({
+        nests: homes.nests,
+        marks: homes.marks,
+        webs: homes.webs,
+        sites: homes.nestSites,
+        batches: homes.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry), batch.far ? geometryHash(batch.far.geometry) : null])
+    });
+    assert.deepEqual(view(sliced), view(whole));
+    const plots = homePlots(7 * 130, 3 * 50);
+    steps = 0;
+    const areasSliced = (await runSliced(counted(buildAreasSteps(PROPS_TIERS.medium, plots)), 0))!;
+    assert.ok(steps > 20, `${steps} area steps`);
+    const areasWhole = buildAreas(PROPS_TIERS.medium, plots);
+    const areaView = (areas: typeof areasWhole) => ({
+        marks: areas.marks,
+        pieces: areas.pieces.map((piece) => [piece.name, geometryHash(piece.near.geometry), piece.far ? geometryHash(piece.far.geometry) : null]),
+        batches: areas.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry)]),
+        buildings: areas.buildings.triangles
+    });
+    assert.deepEqual(areaView(areasSliced), areaView(areasWhole));
+    for (const built of [sliced, whole]) built.dispose();
+    for (const built of [areasSliced, areasWhole]) built.dispose();
+});

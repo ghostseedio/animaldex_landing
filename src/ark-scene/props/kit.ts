@@ -480,3 +480,35 @@ export class LodPiece {
         this.far?.geometry.dispose();
     }
 }
+
+// MARK: - Building in slices
+
+/** Run a builder's steps to their end at once. */
+export function runSteps<T>(steps: Generator<void, T, void>): T {
+    let next = steps.next();
+    while (!next.done) next = steps.next();
+    return next.value;
+}
+
+/**
+ * Run a builder's steps a few milliseconds a frame (`sliceMs`, like the sampler's `prepareAttachPoints`), so a big
+ * build is no long task. Resolves with what it built, or null when `cancelled()` turned true between slices (a newer
+ * build took its place). The result is the same as `runSteps`'s.
+ */
+export function runSliced<T>(steps: Generator<void, T, void>, sliceMs = 6, cancelled: () => boolean = () => false): Promise<T | null> {
+    const later = (run: () => void) => (typeof requestAnimationFrame === "function" ? requestAnimationFrame(() => run()) : setTimeout(run, 0));
+    return new Promise((resolve) => {
+        const slice = () => {
+            if (cancelled()) {
+                resolve(null);
+                return;
+            }
+            const until = performance.now() + sliceMs;
+            let next = steps.next();
+            while (!next.done && performance.now() < until) next = steps.next();
+            if (next.done) resolve(next.value);
+            else later(slice);
+        };
+        later(slice);
+    });
+}
