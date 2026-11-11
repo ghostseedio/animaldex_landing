@@ -216,9 +216,22 @@ function hourly(profile: ArkBehaviourProfile, behaviour: ArkBehaviour, weight: n
     }
 }
 
-function pick(profile: ArkBehaviourProfile, hours: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null): ArkBehaviour {
+/**
+ * Its own leanings (problem 7: every animal of a kind doing the same thing): each behaviour's pull times 0.65-1.35,
+ * and its busy hours shifted up to 45 minutes either way, both its own for life (seeded by its id), so two of a kind
+ * with the same profile still choose differently, and not all at the same dawn.
+ */
+function leaning(id: string, behaviour: ArkBehaviour): number {
+    return 0.65 + 0.7 * ((hashString(`${id}#lean#${behaviour}`) % 1000) / 1000);
+}
+function chronotype(id: string): number {
+    return (((hashString(`${id}#chrono`) % 1000) / 1000) - 0.5) * 1.5;
+}
+
+function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null): ArkBehaviour {
+    const hours = (((hoursNow + chronotype(id)) % 24) + 24) % 24;
     const entries = (Object.entries(profile.weights) as Array<[ArkBehaviour, number]>)
-        .map(([b, w]) => [b, b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)] as const)
+        .map(([b, w]) => [b, (b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)) * leaning(id, b)] as const)
         .filter(([, w]) => w > 0);
     const total = entries.reduce((sum, [, w]) => sum + w, 0);
     if (!total) return "rest";
@@ -675,7 +688,12 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // A school keeps together nearly always (a loose cluster round its leader).
     if (group && FLOCKING.has(profile.social) && (flyer || aquatic(profile)) && random() < (aquatic(profile) ? 0.9 : 0.75)) {
         const lead = leaderIntentAt(world, group, start + 1, hoursAt);
-        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to) return {doing: lead.doing, to: null, mode: lead.mode, stay: [], follow: true};
+        // Its place is by its leader; what it does there is its own (a school's fish feed or cruise, a flock's birds fly),
+        // so a school is one shape but not one state (problem 7).
+        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to) {
+            const own: ArkDoing = lead.mode === "air" ? "fly" : random() < 0.45 ? "forage" : "swim";
+            return {doing: own, to: null, mode: lead.mode, stay: [], follow: true};
+        }
     }
     // Young play near their group.
     if (animal.young && group && random() < 0.45) {
@@ -683,7 +701,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     }
     // Its own choice; a group member is a little less likely to do just what its leader does now.
     const leaderDoing = group ? leaderIntentAt(world, group, start + 1, hoursAt).doing : null;
-    let behaviour = pick(profile, hours, random(), personality.boldness, personality.curiosity, leaderDoing as ArkBehaviour | null);
+    let behaviour = pick(profile, animal.id, hours, random(), personality.boldness, personality.curiosity, leaderDoing as ArkBehaviour | null);
     // A browser's grazing is at bushes and trees.
     let doing: ArkDoing = behaviour as ArkDoing;
     if ((behaviour === "graze" || behaviour === "forage") && (profile.diet === "browser" || profile.diet === "fruit") && walks(profile) && !flyer) doing = "browse";
@@ -752,7 +770,8 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         case "forage":
         case "graze":
             return {
-                doing: profile.move === "swim" ? "swim" : behaviour === "wander" && profile.surface ? "crawl" : doing,
+                // (A swimmer feeding is foraging, cruising is swimming: its states stay its own, not all "swim".)
+                doing: profile.move === "swim" ? (behaviour === "wander" ? "swim" : doing) : behaviour === "wander" && profile.surface ? "crawl" : doing,
                 to: rangeSpot(world, profile, groupAnimal, centre, radius, random),
                 mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground",
                 stay: stayBeats(doing, random, null)

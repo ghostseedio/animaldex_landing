@@ -813,7 +813,8 @@ function profile(row: Row): Profile {
     if (diet.value === "grazer" || (diet.also.includes("grazer") && ["browser", "seeds", "omnivore"].includes(diet.value) && !all.has("fly"))) add("graze", 0.7, src.diet as Source);
     if (all.has("fly")) add("fly", plan === "flying_insect" ? 0.6 : 0.5);
     if (all.has("perch")) add("perch", 0.45);
-    if (all.has("swim")) add("swim", moves.primary === "swim" ? 0.9 : 0.3);
+    // (A swimmer's cruising is one of its states, not all of them: 0.55 against forage 0.5, so its days vary.)
+    if (all.has("swim")) add("swim", moves.primary === "swim" ? 0.55 : 0.3);
     if (all.has("climb")) add("climb", moves.primary === "climb" ? 0.7 : 0.3);
     if (all.has("burrow")) add("burrow", moves.primary === "burrow" ? 0.8 : 0.3);
     const land = !SEA_ZONES.has(zone) && moves.primary !== "swim" && mobile;

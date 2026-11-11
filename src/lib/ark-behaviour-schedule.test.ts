@@ -428,3 +428,23 @@ test("flyers fly to places, not round in circles: under half a full turn a minut
     assert.ok(perMinute < 0.5, `${perMinute.toFixed(2)} full turns a minute in the air`);
     assert.ok(circling / air < 0.1, `circling ${((circling / air) * 100).toFixed(1)}% of air time`);
 });
+
+test("a kind is not all doing one thing: every species of 3+ awake together shares one state rarely (the audit's measure)", () => {
+    // ark-audit metrics.ts: per species with 3+ aboard, at moments all are awake, whether all have the same doing.
+    // (Problem 7. 13.2% before: a swimmer's every state read "swim", a school's members took their leader's.)
+    const bySpecies = new Map<string, Item[]>();
+    for (const i of animals) bySpecies.set(i.a.model_slug, [...(bySpecies.get(i.a.model_slug) ?? []), i]);
+    let awake = 0;
+    let same = 0;
+    for (const members of Array.from(bySpecies.values())) {
+        if (members.length < 3) continue;
+        for (let s = 0; s < 24 * 3600; s += 30) {
+            const doings = members.map((m) => tripOf(m, DAY + s).doing);
+            if (doings.some((d) => d === "sleep" || d === "to_roost")) continue;
+            awake++;
+            if (new Set(doings).size === 1) same++;
+        }
+    }
+    assert.ok(awake > 10000, `awake moments ${awake}`);
+    assert.ok(same / awake < 0.08, `${((same / awake) * 100).toFixed(1)}% of awake moments a whole species in one state`);
+});
