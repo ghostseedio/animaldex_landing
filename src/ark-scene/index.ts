@@ -2918,6 +2918,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail.update(controls.target, viewDistance);
         assetTrees.update(camera.position);
+        vegetation.update(camera);
         if (assetTrees.ready && !assetTreesShown) {
             assetTreesShown = true;
             vegetation.hideKinds(ASSET_TREE_KINDS);

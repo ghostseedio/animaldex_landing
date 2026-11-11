@@ -28,3 +28,5 @@ Every mesh in `public/ark/assets/v1/` (trees, plants, rocks, forest floor) is ge
 | Trees (12 kinds, 33 variants), plants, rocks, forest floor | generated: `scripts/ark-assets/{trees,plants,rocks,floor}.py` | CC0 1.0 (made in this repo) | AnimalDex (asset lane, 2026-11-11) | `public/ark/assets/v1/<set>/*.glb`, `<set>/attach.json`, `src/ark-scene/assets-manifest.json` |
 
 Tools (not shipped): Blender 5.2 (GPL-3.0, renders the contact sheets only; nothing from it is in the output), gltfpack 1.3.0 (MIT, npm `gltfpack@1.3.0`, meshopt compression; the same pinned tool the model lane uses), Pillow (HPND, contact-sheet layout), three.js `GLTFLoader` + `MeshoptDecoder` (MIT, existing dependency, `scripts/ark-assets/verify.mjs`).
+
+Batch 4, reef and coast water (`reef.ts`, `reef-render.ts`, `fish-schools.ts`, `fish-render.ts`): no third-party assets. Every coral, sponge, anemone, kelp and seagrass shape, every fish and every surface pattern is built in code.
