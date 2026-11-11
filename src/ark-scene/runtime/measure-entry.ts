@@ -58,7 +58,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
         const mountStart = performance.now();
         const handle = mountArk(el, {
             snapshot,
-            modelBase: MODELS,
+            // `?models=<base>`: the model files from elsewhere (the measure script's simulated cached CDN).
+            modelBase: params.get("models") ?? MODELS,
             iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
             onReady: () => {
                 firstFrame = performance.now();

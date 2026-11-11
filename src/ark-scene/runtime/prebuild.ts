@@ -13,6 +13,8 @@ import {primeDecor} from "@/ark-scene/decor";
 import {placeAnimals, primePlaces, type Placement} from "@/ark-scene/placement";
 import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
+import {primeFloorPlacements} from "@/ark-scene/floor-assets";
+import {primeWheatStands} from "@/ark-scene/near-detail";
 import type {ArkZone} from "@/ark-scene/types";
 import {tierFor, type QualityTier} from "@/ark-scene/post";
 import {GRASS_BUILD} from "@/ark-scene/runtime/budgets";
@@ -44,6 +46,8 @@ export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[
     if (data.decor && data.fill && data.grass) primeDecor({decor: data.decor, fill: data.fill, grass: {count: data.grass.count, tufts: unpackGrass(data.grass)}});
     primeGroundIfAble(data.ground);
     if (data.reef) primeReefGrowth(data.reef);
+    if (data.floor) primeFloorPlacements(data.floor);
+    if (data.wheat) primeWheatStands(data.wheat);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
     if (data.capacities) primeZoneCapacities(data.capacities);
 }

@@ -119,7 +119,7 @@ const FAR_UPFRONT: Record<QualityTier, number> = {high: 160, medium: 120, low: 8
 const FAR_IN_VIEW: Record<QualityTier, number> = {high: 150, medium: 120, low: 80};
 
 /** The mount's steps' share per frame (ms) before the first frame. */
-const MOUNT_SLICE_MS = 40;
+const MOUNT_SLICE_MS = 25;
 
 /** The shader warm-up's synchronous share per frame (ms). */
 const WARM_SLICE_MS = 30;
