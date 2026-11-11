@@ -1005,7 +1005,8 @@ export class ReactiveLayer {
      * perceives with its eyes shut and its hearing dulled (`SLEEP_SIGHT`, `SLEEP_HEARING`; smell as awake), on its
      * own perception frames. It wakes at a threat it perceives inside its flight distance, an alarm call it hears
      * (its own kind's, or another's about something that eats it too), its group running close by, or the camera
-     * coming at it (closing at 0.6–6 m/s: a walk, not a cut) inside half its flight distance. A still camera never
+     * coming at it (closing at 0.6–6 m/s: a walk, not a cut) inside half its flight distance (a quarter for a hunter,
+     * which sleeps deeper). A still camera never
      * wakes it, nor the camera coming to the animal the viewer selected or follows (`watched`).
      */
     private awakeHere(me: ReactiveInput, agent: Agent, world: ReactiveWorld, around: (x: number, z: number, r: number) => ReactiveInput[], byId: Map<string, ReactiveInput>, stats: ReactiveStats): boolean {
@@ -1058,7 +1059,9 @@ export class ReactiveLayer {
         if (cam && !me.watched) {
             const d = Math.hypot(cam.x - me.shared.x, cam.z - me.shared.z);
             const closing = d > 1e-3 ? ((me.shared.x - cam.x) * this.camVel.x + (me.shared.z - cam.z) * this.camVel.z) / d : 0;
-            if (closing > 0.6 && closing < 6 && d < Math.min(flight * 0.5, 14)) return wake("camera");
+            // (A hunter sleeps deeper than its prey: a lion wakes for the camera only at a quarter of its flight distance.)
+            const hunter = p.hunt.some((h) => h !== "filter" && h !== "scavenge");
+            if (closing > 0.6 && closing < 6 && d < Math.min(flight * (hunter ? 0.25 : 0.5), 14)) return wake("camera");
         }
         return false;
     }

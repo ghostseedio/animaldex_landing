@@ -140,7 +140,7 @@ The packed sleep value `arkInstance.w` (`packSleep`) carries `eyes shut 0…1`.
   - a threat it perceives inside its flight distance;
   - an alarm call it hears through its dulled hearing (its own kind's, or another's about a threat that eats it too);
   - its group running past;
-  - the camera walking at it (closing at 0.6–6 m/s) inside half its flight distance. A deer wakes before a lion.
+  - the camera walking at it (closing at 0.6–6 m/s) inside half its flight distance, a quarter for a hunter (it sleeps deeper). A deer wakes when the camera walks within about 5 m; a lion only within about 1.3 m, inside the camera's 4 m minimum.
 - **What never wakes it:** a still camera, a camera cut (a jump faster than 25 m/s resets the camera's velocity), and the camera flying to the animal the viewer selected or follows (`watched`).
 - **Woken, it is awake here.** It reacts like any awake animal (alert, flee, watch the camera) and counts as a threat again if it hunts. The scene gets it up (`rest` → 0, `sleepNow.down` false, a quick get-up), and after 18–32 s of calm it lies down again.
 
