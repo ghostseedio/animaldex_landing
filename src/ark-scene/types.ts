@@ -162,7 +162,7 @@ export type ArkSceneStats = {
     rigsLoaded: number;
     rigBytes: number;
     /** The liveliness wiring this frame: sheltering, young at heel, moved off the tide, rain drops, traces, sound. */
-    liveliness?: {sheltering: number; young: number; tideMoved: number; drops: number; haze: number; prints: number; ripples: number; worn: number; voices: number; beds: number; soundOn: boolean};
+    liveliness?: {/** Main-thread ms a frame in the wiring (mean of the last 60). */ ms: number; /** Last frame's split (ms). */ split?: {pose: number; drawn: number; step: number}; sheltering: number; young: number; tideMoved: number; drops: number; haze: number; prints: number; ripples: number; worn: number; voices: number; beds: number; soundOn: boolean};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */

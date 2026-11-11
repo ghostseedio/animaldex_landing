@@ -28,11 +28,12 @@ const flag = (name) => process.argv.includes(`--${name}`);
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "liveliness")));
 const only = arg("only", "rain,tide,young,prints").split(",");
 const deviceName = arg("device", "desktop");
+const quality = arg("quality", "auto");
 mkdirSync(out, {recursive: true});
 
 const DEVICES = {
     desktop: {viewport: {width: 1280, height: 760}, deviceScaleFactor: 1, isMobile: false, hasTouch: false},
-    phone: {viewport: {width: 360, height: 760}, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (Linux; Android 14; SM-A356B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"}
+    phone: {cpuThrottle: 4, viewport: {width: 360, height: 760}, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (Linux; Android 14; SM-A356B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"}
 };
 
 // MARK: build + serve (as scripts/ark-golden-shots.mjs)
@@ -46,7 +47,7 @@ await build({
     format: "iife",
     platform: "browser",
     target: ["es2020"],
-    minify: true,
+    minify: !flag("no-minify"),
     tsconfig: path.join(root, "tsconfig.json"),
     define: {"process.env.NODE_ENV": JSON.stringify("development")},
     logLevel: "warning"
@@ -86,8 +87,14 @@ const browser = await chromium.launch({
     headless: !flag("headed"),
     args: [...(flag("headed") ? [] : ["--headless=new"]), "--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]
 });
-const context = await browser.newContext(DEVICES[deviceName]);
+const {cpuThrottle, ...device} = DEVICES[deviceName];
+const context = await browser.newContext(device);
 const page = await context.newPage();
+if (cpuThrottle) {
+    // As the golden shots' phone: 4x CPU throttle (DevTools), so the numbers compare.
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", {rate: cpuThrottle});
+}
 // Every request for the sounds bucket, to show nothing is fetched before sound is turned on.
 const soundRequests = [];
 page.on("request", (request) => {
@@ -98,7 +105,7 @@ page.on("pageerror", (error) => errors.push(String(error)));
 page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
 });
-await page.goto(`${base}/golden.html`);
+await page.goto(`${base}/golden.html${quality === "auto" ? "" : `?quality=${quality}`}`);
 await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 180_000});
 const failed = await page.evaluate(() => window.__arkGoldenError);
 if (failed) throw new Error(failed);
@@ -308,6 +315,57 @@ if (only.includes("sound")) {
     notes.soundRequests = soundRequests.length;
     notes.soundUrls = soundRequests.slice(0, 12).map((r) => r.url.replace(/^https:\/\/[^/]+/, ""));
     await page.evaluate(() => window.__arkGolden.handle.setSound(false));
+}
+
+if (only.includes("perf")) {
+    // The wiring's own main-thread time against the frame's, calm at five places, then in heavy rain at two.
+    const rows = [];
+    const measure = async (place, weather) => {
+        // Framed first (a shot pins its own calm weather), then the weather asked for.
+        await page.evaluate(async ([p, env]) => {
+            await window.__arkGolden.shoot(p, "day");
+            window.__arkGolden.handle.setEnvironment(env);
+        }, [place, weather]);
+        await wait(2500);
+        const m = await page.evaluate(() => window.__arkGolden.measure(3000));
+        const live = await page.evaluate(() => window.__arkGolden.handle.stats().liveliness);
+        const row = {place, rain: weather.rain ?? 0, intervalP50: m.intervalP50, intervalP95: m.intervalP95, cpuMs: m.cpuMs, livelinessMs: live.ms, split: live.split, drawCalls: m.drawCalls, tier: m.tier, sheltering: live.sheltering, drops: live.drops, prints: live.prints};
+        log("perf", JSON.stringify(row));
+        rows.push(row);
+        if (row.rain) await frame(`${place}-rain`, "perf");
+    };
+    for (const place of ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond"]) await measure(place, CALM);
+    const RAIN = {...CALM, rain: 0.9, storm: 0.3, wind: 0.6, wetness: 0.85, cloud: 0.95};
+    for (const place of ["house_fields", "forest_floor"]) await measure(place, RAIN);
+    // Later in the same rain (most animals walking in or under cover by now), with a CPU profile of the walk.
+    await wait(12000);
+    if (flag("profile")) {
+        const cdp = await context.newCDPSession(page);
+        await cdp.send("Profiler.enable");
+        await cdp.send("Profiler.setSamplingInterval", {interval: 200});
+        await cdp.send("Profiler.start");
+        await wait(3000);
+        const {profile} = await cdp.send("Profiler.stop");
+        const self = new Map();
+        const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+        const counts = new Map();
+        for (const id of profile.samples) counts.set(id, (counts.get(id) ?? 0) + 1);
+        counts.forEach((n, id) => {
+            const node = byId.get(id);
+            const key = `${node.callFrame.functionName || "(anon)"} ${node.callFrame.lineNumber}`;
+            self.set(key, (self.get(key) ?? 0) + n);
+        });
+        const total = profile.samples.length;
+        notes.profile = Array.from(self.entries()).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([k, n]) => `${(100 * n / total).toFixed(1)}% ${k}`);
+        log("profile", JSON.stringify(notes.profile, null, 1));
+    }
+    await wait(3000);
+    const m = await page.evaluate(() => window.__arkGolden.measure(3000));
+    const live = await page.evaluate(() => window.__arkGolden.handle.stats().liveliness);
+    rows.push({place: "forest_floor+20s", rain: 0.9, intervalP50: m.intervalP50, intervalP95: m.intervalP95, cpuMs: m.cpuMs, livelinessMs: live.ms, split: live.split, drawCalls: m.drawCalls, tier: m.tier, sheltering: live.sheltering, drops: live.drops, prints: live.prints});
+    log("perf", JSON.stringify(rows[rows.length - 1]));
+    await frame("forest_floor-rain-late", "perf");
+    notes.perf = rows;
 }
 
 writeFileSync(path.join(out, "notes.json"), JSON.stringify({frames, notes, errors}, null, 2));

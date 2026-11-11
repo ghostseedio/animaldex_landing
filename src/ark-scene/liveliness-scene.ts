@@ -17,6 +17,27 @@ import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {sizeOf} from "@/ark-scene/ark-variation";
 import type {QualityTier} from "@/ark-scene/post";
 import {attachPoints, type ArkEnvironment} from "@/ark-scene/sampler";
+
+/** The trunks (bark attach points) in 10 m cells, built once: an animal's cover is looked up near its home, not over all of them. */
+let trunkGrid: Map<string, Array<{x: number; z: number; nx: number; nz: number; id: string}>> | null = null;
+function trunksNear(x: number, z: number, radius: number): Array<{x: number; z: number; nx: number; nz: number; id: string}> {
+    if (!trunkGrid) {
+        const grid = new Map<string, Array<{x: number; z: number; nx: number; nz: number; id: string}>>();
+        for (const p of attachPoints({tag: "bark"})) {
+            const key = `${Math.floor(p.position.x / 10)},${Math.floor(p.position.z / 10)}`;
+            const cell = grid.get(key) ?? [];
+            cell.push({x: p.position.x, z: p.position.z, nx: p.normal.x, nz: p.normal.z, id: p.id});
+            grid.set(key, cell);
+        }
+        trunkGrid = grid;
+    }
+    const out: Array<{x: number; z: number; nx: number; nz: number; id: string}> = [];
+    const reach = Math.ceil(radius / 10);
+    const cx = Math.floor(x / 10);
+    const cz = Math.floor(z / 10);
+    for (let i = -reach; i <= reach; i++) for (let k = -reach; k <= reach; k++) for (const p of trunkGrid.get(`${cx + i},${cz + k}`) ?? []) if (Math.hypot(p.x - x, p.z - z) <= radius) out.push(p);
+    return out;
+}
 import {Traces, TRACE_WITHIN} from "@/ark-scene/traces";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {WeatherFx} from "@/ark-scene/weather-fx";
@@ -86,13 +107,15 @@ export type LiveOptions = {
 /** A pinned environment (golden shots, clips): any field pins it; the rest follow the clock. */
 export type LivePin = Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number; rain: number; fog: number}>;
 
+/** The longest walk to shelter (ms): cover is within 22 m and the slowest pace is 0.45 m/s. */
+const SHELTER_LONGEST_MS = (22 / 0.45 + 2) * 1000;
 /** How the young are worked out again (s): growth is slow. */
 const AGE_EVERY = 30;
 /** Plans whose young play (the rest only keep close). */
 const DAWN_SINGERS = new Set(["bird", "frog", "mammal"]);
 
 type Young = {age: ArkAge; parent: string | null; at: number};
-type Shelter = {kind: ShelterKind; spot: {x: number; y: number; z: number} | null; travelMs: number};
+type Shelter = {/** The kind it was asked for (the cache key; `kind` may have fallen back to hunkering). */ asked: ShelterKind; kind: ShelterKind; spot: {x: number; y: number; z: number} | null; travelMs: number; /** The spot's height over the ground (a roost up a tree), worked out once. */ up: number};
 
 export class ArkLiveliness {
     readonly root = new Group();
@@ -110,6 +133,8 @@ export class ArkLiveliness {
     private readonly shelters = new Map<string, Shelter>();
     private readonly anchors = new Map<string, {at: number; pose: LivePose}>();
     private readonly young = new Map<string, Young>();
+    /** Each walker's ground, sampled again only after it has moved a little (a full height sample is not free on a phone). */
+    private readonly grounds = new Map<string, {x: number; z: number; y: number}>();
     private parents = new Map<string, string>();
     private arkDayNow = 0;
     private reducedMotion = false;
@@ -131,6 +156,12 @@ export class ArkLiveliness {
     /** Per-frame numbers for the scene's stats. */
     readonly counts = {sheltering: 0, young: 0, tideMoved: 0};
     private last = {sheltering: 0, young: 0, tideMoved: 0};
+    /** Main-thread time this frame in the wiring (ms), and the last few frames' (for the stats' mean). */
+    private spent = 0;
+    private readonly spentFrames: number[] = [];
+    /** This frame's split (ms): the shared pose, the drawn animals, the frame's own step. */
+    private split = {pose: 0, drawn: 0, step: 0};
+    private lastSplit = {pose: 0, drawn: 0, step: 0};
 
     constructor(options: LiveOptions) {
         this.options = options;
@@ -254,7 +285,7 @@ export class ArkLiveliness {
     private shelterOf(entry: LiveAnimal, kind: ShelterKind): Shelter {
         const id = entry.animal.id;
         const known = this.shelters.get(id);
-        if (known && known.kind === kind) return known;
+        if (known && known.asked === kind) return known;
         let spot: Shelter["spot"] = null;
         // Too big to stand under a crown (an elephant, a giraffe): it hunkers in the open instead.
         let use: ShelterKind = kind === "cover" && entry.length > 2.6 ? "hunker" : kind;
@@ -265,8 +296,7 @@ export class ArkLiveliness {
             else use = "cover";
         }
         if (use === "cover") {
-            const trunks = attachPoints({tag: "bark", near: {x: home.x, z: home.z, radius: 22}}).map((p) => ({x: p.position.x, z: p.position.z, nx: p.normal.x, nz: p.normal.z, id: p.id}));
-            const at = coverSpot(id, home, entry.length, trunks, 22);
+            const at = coverSpot(id, home, entry.length, trunksNear(home.x, home.z, 22), 22);
             if (at) {
                 const y = this.options.hooks.heightAt(at.x, at.z);
                 // Never into the water.
@@ -275,9 +305,20 @@ export class ArkLiveliness {
             if (!spot) use = "hunker";
         }
         const distance = spot ? Math.hypot(spot.x - home.x, spot.z - home.z) : 0;
-        const shelter: Shelter = {kind: use, spot, travelMs: use === "hunker" ? 2500 : Math.max(2500, (distance / shelterPace(entry.length)) * 1000)};
+        const up = spot ? spot.y - this.options.hooks.heightAt(spot.x, spot.z) : 0;
+        const shelter: Shelter = {asked: kind, kind: use, spot, up, travelMs: use === "hunker" ? 2500 : Math.max(2500, (distance / shelterPace(entry.length)) * 1000)};
         this.shelters.set(id, shelter);
         return shelter;
+    }
+
+    /** The ground under a walker (at or above the sea's mean), sampled again once it is 25 cm from the last sample. */
+    private groundOf(id: string, x: number, z: number): number {
+        const known = this.grounds.get(id);
+        if (known && Math.abs(known.x - x) + Math.abs(known.z - z) < 0.25) return known.y;
+        const y = Math.max(this.options.hooks.heightAt(x, z), 0);
+        this.grounds.set(id, {x, z, y});
+        if (this.grounds.size > 400) this.grounds.clear();
+        return y;
     }
 
     /** Its schedule pose at a past moment, remembered while that moment holds (where it set off from). */
@@ -296,9 +337,12 @@ export class ArkLiveliness {
         if (entry.depth || entry.place.water) return pose;
         const kind = shelterKind(this.options.hooks.profileOf(entry), this.options.hooks.planOf(entry.animal.model_slug));
         if (kind === "none") return pose;
-        const shelter = this.shelterOf(entry, kind);
         const pinned = this.pinnedCover;
-        const state = shelterAt(pinned ? {stateAt: () => pinned} : this.flips, entry.animal.id, nowMs, shelter.travelMs);
+        const flips = pinned ? {stateAt: () => pinned} : this.flips;
+        // Out in the open even on the longest walk: nothing to work out (its cover is found only once it shelters).
+        if (shelterAt(flips, entry.animal.id, nowMs, SHELTER_LONGEST_MS).level <= 0) return pose;
+        const shelter = this.shelterOf(entry, kind);
+        const state = shelterAt(flips, entry.animal.id, nowMs, shelter.travelMs);
         if (state.level <= 0) return pose;
         this.counts.sheltering++;
         const wind = backToWindYaw(entry.animal.id, this.environment.windDirection);
@@ -327,10 +371,10 @@ export class ArkLiveliness {
         const sz = from ? from.z : pose.z;
         const x = sx + (spot.x - sx) * k;
         const z = sz + (spot.z - sz) * k;
-        const up = spot.y - this.options.hooks.heightAt(spot.x, spot.z);
+        const up = shelter.up;
         // A roost up a tree: flown to, not walked.
         const flying = up > 0.4 && state.moving;
-        const ground = Math.max(this.options.hooks.heightAt(x, z), 0);
+        const ground = state.level >= 1 ? spot.y - up : this.groundOf(entry.animal.id, x, z);
         const y = flying ? Math.max(sy + (spot.y - sy) * k, ground) + Math.sin(Math.PI * k) * 1.5 : state.level >= 1 ? spot.y : up > 0.4 ? sy + (spot.y - sy) * k : ground;
         const heading = state.going ? yawToward(spot.x - sx, spot.z - sz) : yawToward(pose.x - spot.x, pose.z - spot.z);
         return Object.assign({}, pose, {
@@ -352,6 +396,15 @@ export class ArkLiveliness {
      */
     sharedPose<P extends LivePose>(entry: LiveAnimal, pose: P, epochSeconds: number): P {
         if (this.reducedMotion) return pose;
+        const started = performance.now();
+        const out = this.sharedPoseNow(entry, pose, epochSeconds);
+        const took = performance.now() - started;
+        this.spent += took;
+        this.split.pose += took;
+        return out;
+    }
+
+    private sharedPoseNow<P extends LivePose>(entry: LiveAnimal, pose: P, epochSeconds: number): P {
         const nowMs = epochSeconds * 1000;
         let out = pose;
         const age = this.ageOf(entry);
@@ -363,7 +416,7 @@ export class ArkLiveliness {
             if (raw) {
                 const lead = this.sheltered(parent, raw, nowMs - HEEL_LAG_SECONDS * 1000);
                 const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: age.follow.distance, carried: age.carried}, age.play, nowMs);
-                const ground = Math.max(this.options.hooks.heightAt(heel.x, heel.z), 0);
+                const ground = this.groundOf(entry.animal.id, heel.x, heel.z);
                 this.counts.young++;
                 out = Object.assign({}, pose, {
                     x: heel.x,
@@ -383,7 +436,8 @@ export class ArkLiveliness {
 
     /** At high water: a land animal standing on covered ground walks up the beach. */
     private offTheTide<P extends LivePose>(entry: LiveAnimal, pose: P): P {
-        if (entry.depth || pose.aloft || this.seaLevel <= 0.02) return pose;
+        // (Standing well above the water: nothing to sample.)
+        if (entry.depth || pose.aloft || this.seaLevel <= 0.02 || pose.y >= this.seaLevel + 0.04) return pose;
         const ground = this.options.hooks.heightAt(pose.x, pose.z);
         // Only one standing on land the schedule meant as land (at or above the mean sea), now under the tide.
         if (ground < -0.02 || pose.y < ground - 0.02 || ground >= this.seaLevel + 0.04) return pose;
@@ -397,10 +451,19 @@ export class ArkLiveliness {
 
     /** One animal drawn near the camera this frame: its traces, and (with sound on) whether and how it calls. */
     drawn(entry: LiveAnimal, at: {x: number; base: number; z: number; yaw: number; afloat: boolean; inWater: boolean}, info: {distance: number; asleep: boolean; aloft: boolean; resting: boolean; alarmed: number; called: boolean; hours: number}, elapsed: number) {
+        const started = performance.now();
+        this.drawnNow(entry, at, info, elapsed);
+        const took = performance.now() - started;
+        this.spent += took;
+        this.split.drawn += took;
+    }
+
+    private drawnNow(entry: LiveAnimal, at: {x: number; base: number; z: number; yaw: number; afloat: boolean; inWater: boolean}, info: {distance: number; asleep: boolean; aloft: boolean; resting: boolean; alarmed: number; called: boolean; hours: number}, elapsed: number) {
         const plan = this.options.hooks.planOf(entry.animal.model_slug) ?? "";
         if (info.distance < TRACE_WITHIN && !info.aloft) {
             const surface = at.inWater && Math.abs(at.base - this.seaLevel) < Math.max(entry.drawnHeight * 0.6, 0.15);
-            const wading = !at.inWater && !entry.depth && this.options.hooks.heightAt(at.x, at.z) < this.seaLevel - 0.02;
+            // (Only near the water's level is the ground worth sampling: a full height sample per animal per frame is not free.)
+            const wading = !at.inWater && !entry.depth && at.base < this.seaLevel + 0.3 && this.options.hooks.heightAt(at.x, at.z) < this.seaLevel - 0.02;
             this.traces.observe({id: entry.animal.id, x: at.x, y: at.base, z: at.z, yaw: at.yaw, length: entry.length, onGround: !at.afloat && !at.inWater, atSurface: surface || wading, bird: plan === "bird", distance: info.distance}, elapsed, this.environment);
         }
         if (this.audio.playing) {
@@ -420,6 +483,7 @@ export class ArkLiveliness {
 
     /** After the animals: the weather drawn, the traces' clocks, the sound, the worn paths. */
     step(elapsed: number, nowMs: number, camera: PerspectiveCamera, target: Vector3, fog: Fog | null, horizon: Color, width: number, height: number, hours: number, scheduled: () => LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
+        const started = performance.now();
         // The world's moment this frame (the environment itself is read every 2 s; calls need the moment now).
         this.nowMs = nowMs;
         const underwater = camera.position.y < this.seaLevel - 0.02;
@@ -473,6 +537,13 @@ export class ArkLiveliness {
         this.audioAnimals = [];
         this.alarms = [];
         this.stepWorn(target, scheduled, routeOf);
+        this.split.step += performance.now() - started;
+        this.spent += performance.now() - started;
+        this.spentFrames.push(this.spent);
+        this.lastSplit = this.split;
+        this.split = {pose: 0, drawn: 0, step: 0};
+        if (this.spentFrames.length > 60) this.spentFrames.shift();
+        this.spent = 0;
         this.last = {...this.counts};
         this.counts.sheltering = 0;
         this.counts.young = 0;
@@ -483,7 +554,9 @@ export class ArkLiveliness {
     stats() {
         const traces = this.traces.stats();
         const sound = this.audio.activity();
-        return {...this.last, drops: this.weatherFx.now.drops, haze: Math.round(this.weatherFx.now.haze * 100) / 100, ...traces, voices: sound.voices, beds: sound.beds, soundOn: sound.on};
+        const ms = this.spentFrames.length ? this.spentFrames.reduce((sum, v) => sum + v, 0) / this.spentFrames.length : 0;
+        const r = (v: number) => Math.round(v * 1000) / 1000;
+        return {...this.last, ms: r(ms), split: {pose: r(this.lastSplit.pose), drawn: r(this.lastSplit.drawn), step: r(this.lastSplit.step)}, drops: this.weatherFx.now.drops, haze: Math.round(this.weatherFx.now.haze * 100) / 100, ...traces, voices: sound.voices, beds: sound.beds, soundOn: sound.on};
     }
 
     /**
