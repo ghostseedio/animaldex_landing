@@ -10,7 +10,7 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkHerdKeys} from "@/ark-scene/herds";
 import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
 import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkPopulation, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
-import {isAwake, localHours, sunElevation} from "@/lib/ark-daylight";
+import {cardSaysAsleep, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {arkBringerLabel, arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
 import {fixtureArkStory} from "@/lib/ark-story";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
@@ -33,6 +33,8 @@ type Props = {
     words: ArkWords;
     talkTitles: {a: string; an: string};
     modelBase: string;
+    /** Development's `?rig=`: another rig folder, or null for no rigs; absent: beside the model set. */
+    rigBase?: string | null;
     /** `?focus=`: a species_profile_id or slug to fly to once the Ark is in view. */
     focus?: string | null;
     fixtureLife?: ArkFixtureLife | null;
@@ -152,13 +154,16 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
+export default function ArkView({locale, initial, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark"}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null>(initial);
     const snapshotRef = useRef(snapshot);
     const [selected, setSelected] = useState<ArkAnimal | null>(null);
+    /** What the selected animal is doing now, as the scene animates it (never worked out here from a clock of the page's own). */
+    const [selectedState, setSelectedState] = useState<{id: string; state: ArkBehaviourState} | null>(null);
+    const onBehaviour = useCallback((id: string, state: ArkBehaviourState) => setSelectedState({id, state}), []);
     const [mineOnly, setMineOnly] = useState(false);
     const [ready, setReady] = useState(false);
     const [failed, setFailed] = useState(false);
@@ -272,8 +277,12 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                     handle = mountArk(el, {
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
+                        ...(rigBase !== undefined ? {rigBase} : {}),
+                        // Development: `?behaviour=0` turns the behaviour schedule off (the placed spots, as before).
+                        ...(process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).get("behaviour") === "0" ? {behaviour: false} : {}),
                         iconUrl: arkIconUrl,
                         onSelect,
+                        onBehaviour,
                         onHerd: setHerd,
                         herdBadge: (count) => fillArkWords(words.herd.badge, {count: count.toLocaleString(locale)}),
                         canvasLabel: words.a11y.scene,
@@ -749,7 +758,7 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         arrived={dateFormat.format(new Date(selected.arrived_at))}
                         life={life?.id === selected.id ? life : null}
                         arkDay={snapshot?.ark_day ?? null}
-                        asleep={!isAwake(selected.activity ?? null, sunElevation(hours ?? localHours(new Date())))}
+                        asleep={cardSaysAsleep(selectedState?.id === selected.id ? selectedState.state : sceneRef.current?.behaviour(selected.id))}
                         following={following}
                         onFollow={toggleFollow}
                         storyOpen={storyOpen}

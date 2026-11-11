@@ -1,0 +1,257 @@
+/**
+ * What the behaviour system knows of the world: the ground's height, water,
+ * slope and zone at any point, and the places animals go to (a branch to
+ * perch on, a flower head, a rock face, a tide pool, the porch light, a
+ * burrow mouth, a drinking spot at the water's edge), each with its position,
+ * surface normal, heading, tag and size range.
+ *
+ * Everything comes from the graphics lane's scenery interface
+ * (`sampler.ts`: `surfaceAt`, `attachPoints`, docs/ark/graphics-interface.md),
+ * which owns the terrain and the scenery. Its attach points are used as they
+ * are (mapped to the behaviour system's tags); the few places it does not
+ * offer (water edges, grazing grass, rock tops, cliff ledges, cave mouths,
+ * reeds, shade) are generated here from its `surfaceAt` and the scenery's own
+ * items. Nothing is hand-placed, so when the graphics lane reworks the terrain
+ * this all rebuilds (`version`).
+ */
+
+import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {allAttachPoints, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
+import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
+import type {ArkZone} from "@/ark-scene/types";
+import {hashString, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
+
+/** The behaviour system's place tags. */
+export const ATTACH_TAGS = [
+    "leaf",
+    "branch",
+    "bark",
+    "flower",
+    "rock_face",
+    "rock_top",
+    "tide_pool",
+    "house_wall",
+    "porch_light",
+    "worm_hole",
+    "burrow_entrance",
+    "water_edge",
+    "pond_surface",
+    "grass",
+    "leaf_litter",
+    "cliff_ledge",
+    "cave_mouth",
+    "reeds",
+    "shade"
+] as const;
+export type AttachTag = (typeof ATTACH_TAGS)[number];
+
+export type AttachPoint = {
+    id: string;
+    tag: AttachTag;
+    x: number;
+    y: number;
+    z: number;
+    /** The surface normal (unit): up on the ground, out of a wall, down under the eaves. */
+    nx: number;
+    ny: number;
+    nz: number;
+    /** Heading round the normal (radians). */
+    yaw: number;
+    /** The body lengths (m) it suits. */
+    size: [number, number];
+    zone: ArkZone;
+};
+
+export interface ArkWorldSampler {
+    /** Changes whenever the terrain or scenery does: anything built from the sampler is rebuilt. */
+    readonly version: string;
+    heightAt(x: number, z: number): number;
+    /** Under water there (the sea, the lake, the river, a pond). */
+    isWater(x: number, z: number): boolean;
+    /** The ground's steepness there (rise over run). */
+    slope(x: number, z: number): number;
+    zoneAt(x: number, z: number): ArkZone;
+    /** Every place with this tag (optionally within r metres of a point). */
+    attachPoints(tag: AttachTag, near?: {x: number; z: number; r: number}): readonly AttachPoint[];
+    /** A solid obstacle there (a trunk, a rock, a wall) for something of this clearance. */
+    blocked(x: number, z: number, clearance: number): boolean;
+}
+
+/** The scenery's tags as the behaviour system uses them (the hanging points under limbs are for hangers only, not used yet). */
+const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
+    leaf: "leaf",
+    branch: "branch",
+    canopy_perch: "branch",
+    bark: "bark",
+    canopy_climb: "bark",
+    flower_head: "flower",
+    rock_face: "rock_face",
+    tide_pool: "tide_pool",
+    house_wall: "house_wall",
+    house_eave: "house_wall",
+    porch_light: "porch_light",
+    lamp: "porch_light",
+    leaf_litter: "leaf_litter",
+    worm_hole: "worm_hole",
+    burrow: "burrow_entrance",
+    pond_surface: "pond_surface"
+};
+
+class GridIndex {
+    private readonly cells = new Map<string, AttachPoint[]>();
+    constructor(private readonly cell: number) {}
+    add(point: AttachPoint) {
+        const key = `${Math.floor(point.x / this.cell)},${Math.floor(point.z / this.cell)}`;
+        const list = this.cells.get(key);
+        if (list) list.push(point);
+        else this.cells.set(key, [point]);
+    }
+    near(x: number, z: number, r: number): AttachPoint[] {
+        const out: AttachPoint[] = [];
+        const span = Math.ceil(r / this.cell);
+        const cx = Math.floor(x / this.cell);
+        const cz = Math.floor(z / this.cell);
+        for (let dx = -span; dx <= span; dx++) {
+            for (let dz = -span; dz <= span; dz++) {
+                for (const p of this.cells.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(p.x - x, p.z - z) <= r) out.push(p);
+            }
+        }
+        return out;
+    }
+}
+
+const TREE_KINDS = new Set<DecorItem["kind"]>(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy"]);
+const UP = {nx: 0, ny: 1, nz: 0};
+
+/** The sampler over the graphics lane's scenery interface. */
+export function sceneSampler(): ArkWorldSampler {
+    const points = new Map<AttachTag, AttachPoint[]>();
+    const indexes = new Map<AttachTag, GridIndex>();
+    const add = (point: Omit<AttachPoint, "id"> & {id?: string}) => {
+        const list = points.get(point.tag) ?? [];
+        const full = {...point, id: point.id ?? `${point.tag}:${list.length}`} as AttachPoint;
+        list.push(full);
+        points.set(point.tag, list);
+        let index = indexes.get(point.tag);
+        if (!index) indexes.set(point.tag, (index = new GridIndex(8)));
+        index.add(full);
+    };
+    const surface = (x: number, z: number) => surfaceAt(x, z);
+    const height = (x: number, z: number) => surface(x, z).height;
+
+    // The scenery's own points (trees, flowers, rocks, the house, lamps, ponds, the ground's holes and litter).
+    const scenery: SceneryPoint[] = allAttachPoints();
+    for (const p of scenery) {
+        const tag = FROM_SCENERY[p.tag];
+        if (!tag) continue;
+        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone});
+    }
+
+    // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
+    const obstacles: Array<[number, number, number]> = [];
+    const items: DecorItem[] = [...worldDecor(), ...forestFill()];
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (TREE_KINDS.has(item.kind)) {
+            const sx = item.x + 1.4 * item.scale;
+            const sz = item.z + 1.1 * item.scale;
+            const s = surface(sx, sz);
+            if (s.waterDepth <= 0 && i % 2 === 0) add({tag: "shade", x: sx, y: s.height, z: sz, ...UP, yaw: item.rotation, size: [0.05, 4], zone: s.zone});
+            obstacles.push([item.x, item.z, 0.35 * item.scale]);
+        } else if (item.kind === "rock") {
+            const s = surface(item.x, item.z);
+            add({tag: "rock_top", x: item.x, y: item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
+            if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
+            obstacles.push([item.x, item.z, 0.85 * item.scale]);
+        } else if (item.kind === "reed") {
+            add({tag: "reeds", x: item.x, y: item.y, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.2], zone: surface(item.x, item.z).zone});
+        } else if (item.kind === "shrub" || item.kind === "cactus") {
+            if (i % 2 === 0) {
+                const s = surface(item.x + 0.7, item.z + 0.4);
+                if (s.waterDepth <= 0) add({tag: "shade", x: item.x + 0.7, y: s.height, z: item.z + 0.4, ...UP, yaw: item.rotation, size: [0.02, 0.9], zone: s.zone});
+            }
+            obstacles.push([item.x, item.z, 0.5 * item.scale]);
+        } else if (item.kind === "barn") obstacles.push([item.x, item.z, 5.5]);
+    }
+    obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
+
+    // Water edges: just dry ground at the lake, along the river, round the garden pond, walked out from the water.
+    const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
+        for (let d = 0; d < 6; d += 0.25) {
+            const px = x + Math.cos(outward) * d;
+            const pz = z + Math.sin(outward) * d;
+            const s = surface(px, pz);
+            if (s.waterDepth <= 0 && s.height > 0.05) {
+                add({tag: "water_edge", x: px, y: s.height, z: pz, ...UP, yaw: outward + Math.PI, size: [0.02, 6], zone: zone ?? s.zone});
+                return;
+            }
+        }
+    };
+    for (let k = 0; k < 28; k++) {
+        const a = (k / 28) * Math.PI * 2;
+        edge(LAKE.x + Math.cos(a) * (LAKE.r - 1), LAKE.z + Math.sin(a) * (LAKE.r - 1), a, "river_lake");
+    }
+    for (let s = 0; s + 1 < RIVER.length; s++) {
+        const [ax, az] = RIVER[s];
+        const [bx, bz] = RIVER[s + 1];
+        const normal = Math.atan2(bx - ax, -(bz - az));
+        for (let t = 0.2; t < 1; t += 0.3) {
+            edge(ax + (bx - ax) * t, az + (bz - az) * t, normal);
+            edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI);
+        }
+    }
+    for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2;
+        edge(GARDEN_POND.x + Math.cos(a) * GARDEN_POND.radius * 0.6, GARDEN_POND.z + Math.sin(a) * GARDEN_POND.radius * 0.6, a, "farm_garden");
+    }
+
+    // A lattice over the land: grazing grass where the ground is grass, ledges where the coast is a cliff.
+    const step = 6;
+    for (let x = -TERRAIN_HALF; x <= TERRAIN_HALF; x += step) {
+        for (let z = -TERRAIN_HALF; z <= TERRAIN_HALF; z += step) {
+            const jitter = hashString(`${x},${z}`);
+            const px = x + ((jitter % 97) / 97 - 0.5) * step;
+            const pz = z + (((jitter >> 7) % 97) / 97 - 0.5) * step;
+            const s = surface(px, pz);
+            if (s.waterDepth > 0 || s.height <= 0.05) continue;
+            if (s.cliff > 0.45 && s.normal.y > 0.6) add({tag: "cliff_ledge", x: px, y: s.height, z: pz, ...UP, yaw: Math.atan2(-px, -pz), size: [0.1, 1.5], zone: s.zone});
+            if ((s.weights.grass ?? 0) > 0.45 && s.normal.y > 0.85) add({tag: "grass", x: px, y: s.height, z: pz, ...UP, yaw: 0, size: [0.05, 6], zone: s.zone});
+        }
+    }
+
+    const obstacleIndex = new Map<string, Array<[number, number, number]>>();
+    for (const o of obstacles) {
+        const key = `${Math.floor(o[0] / 6)},${Math.floor(o[1] / 6)}`;
+        const list = obstacleIndex.get(key) ?? [];
+        list.push(o);
+        obstacleIndex.set(key, list);
+    }
+    const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
+    return {
+        version: `scene:${items.length}:${scenery.length}:${counts}`,
+        heightAt: height,
+        isWater: (x, z) => surface(x, z).waterDepth > 0,
+        slope: (x, z) => {
+            const n = surface(x, z).normal;
+            return Math.sqrt(Math.max(1 - n.y * n.y, 0)) / Math.max(n.y, 0.05);
+        },
+        zoneAt: (x, z) => surface(x, z).zone,
+        attachPoints: (tag, near) => (near ? indexes.get(tag)?.near(near.x, near.z, near.r) ?? [] : points.get(tag) ?? []),
+        blocked: (x, z, clearance) => {
+            const cx = Math.floor(x / 6);
+            const cz = Math.floor(z / 6);
+            for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const [ox, oz, r] of obstacleIndex.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
+            return false;
+        }
+    };
+}
+
+let shared: ArkWorldSampler | null = null;
+/** The sampler in use, built once from the scenery (and again whenever `resetWorldSampler` is called after a terrain change). */
+export function worldSampler(): ArkWorldSampler {
+    if (!shared) shared = sceneSampler();
+    return shared;
+}
+export function resetWorldSampler() {
+    shared = null;
+}

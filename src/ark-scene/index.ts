@@ -82,7 +82,8 @@ import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Sha
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
-import {ARK_RIG_MANIFEST, rigClip} from "@/ark-scene/rig-clips";
+import {rigBaseFrom} from "@/ark-scene/rig-clips";
+import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
@@ -118,6 +119,10 @@ import {
     type ArkVisitor
 } from "@/ark-scene/types";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
+import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {poseOnTrip, scheduleWorld, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {worldSampler} from "@/ark-scene/world-sampler";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
@@ -132,6 +137,20 @@ const NEAR_SPECIES_CAP = 60;
 const MODEL_CAP = 150;
 /** The lighter view (A18): fewer near models, fewer models before icons. */
 const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
+/**
+ * Rigged animals (`rig-player.ts`): at most this many at once (and of this
+ * many species: one draw call each), within this distance unless they are
+ * the viewer's own, selected or followed. The lighter view has fewer; reduced
+ * motion none.
+ */
+const RIG_CAPS_DRAWN = {animals: 24, species: 12};
+const RIG_CAPS_DRAWN_LITE = {animals: 8, species: 4};
+const RIG_WITHIN = 20;
+/** Seconds a rig takes to fade in or out against the procedural motion. */
+const RIG_BLEND_SECONDS = 0.5;
+/** Rigs not drawn for this long are let go (keeping this many). */
+const RIG_KEEP_SECONDS = 45;
+const RIG_KEEP = 24;
 const LOAD_NEAR_WITHIN = 48;
 const FOV = 38;
 const MAX_DISTANCE = 340;
@@ -179,6 +198,9 @@ const MAX_GRASS = TIER_SETTINGS.high.grass;
 
 type Level = "near" | "far" | "token";
 
+/** An animal on the behaviour schedule: its profile and home, its trip (and its leader's, for a group's follower), its pose now. */
+type Sched = {animal: ScheduleAnimal; profile: ArkBehaviourProfile; trip: Trip | null; lead: Trip | null; pose: (TripPose & {doing: ArkDoing}) | null; at: number};
+
 type Entry = {
     animal: ArkAnimal;
     place: Placement;
@@ -218,7 +240,12 @@ type Entry = {
     visitor?: boolean;
     /** Which way it faced when last drawn. */
     yawNow?: number;
-    /** Awake by its species' activity and the hour; `rest` eases to 1 asleep. */
+    /**
+     * What it is doing now (`behaviour-state.ts`): the one state its animation, where it is drawn,
+     * the tap card and follow mode all read. Never changed by selecting or following it.
+     */
+    state: ArkBehaviourState;
+    /** Awake (`state` not asleep); `rest` eases to 1 asleep. */
     awake: boolean;
     rest: number;
     /** The loop's angle now, for a swimmer or a flyer (it slows asleep). */
@@ -233,13 +260,41 @@ type Entry = {
     ghost?: boolean;
     /** An act's pose, drawn in place of its own. */
     act?: ActPose | null;
+    /** Its rig (`rig-player.ts`): the clip playing and how far the rig has faded in; absent until first rigged. */
+    rig?: RigState | null;
+    /** Chosen for a rig this frame (within the caps). */
+    rigOn?: boolean;
+    /**
+     * Its behaviour schedule (`behaviour-schedule.ts`): its profile, its home, the trip it is on and where that puts it
+     * now. Null for animals the schedule doesn't move (small animals at their microhabitats, burrowers, the visitor).
+     */
+    sched?: Sched | null;
+    /** Turned to look at a predator passing (visual only), eased. */
+    glance?: number;
+    /** A rigged animal on the ground walks about its spot now and then (`stepWander`). */
+    wander?: Wander | null;
+    /** A leaper in the air: how far across (0…1), else 0. */
+    leapK?: number;
+    /** An underground animal out of its burrow: how far through the peek (0…1), else -1. */
+    peek?: number;
 };
+
+/**
+ * A rigged animal's walk about its spot: from it, a few body lengths, and
+ * back, at its walk clip's own ground speed so its feet stay planted. It
+ * only sets off while its rig is fully in, and stops wherever it is when the
+ * rig is to go (then it stands there, procedural, until it walks back).
+ */
+type Wander = {x: number; z: number; heading: number; walking: boolean; until: number; tx: number; tz: number; trips: number};
 
 type SpeciesMeshes = {
     near: InstancedMesh | null;
     far: InstancedMesh | null;
     nearMaterial: MeshStandardMaterial | null;
     farMaterial: MeshStandardMaterial | null;
+    /** The rigged near mesh (its own geometry and bone texture), while the species' rig is loaded. */
+    rig?: InstancedMesh | null;
+    rigMaterial?: MeshStandardMaterial | null;
 };
 
 /** A herd's members past its representatives (A14): standing where the server placed them, drawn cheaply. */
@@ -355,7 +410,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let pinnedHours = typeof options.hours === "number" && Number.isFinite(options.hours) ? options.hours : null;
     // Island time (graphics pass): the same hour for every viewer and the livestream, from the shared clock
     // (`src/lib/ark-clock.ts`), not the viewer's own clock. `hours` / `setHours` still pin it (golden shots, recordings).
-    const hoursNow = () => pinnedHours ?? islandHours(Date.now(), ISLAND_OFFSET_HOURS);
+    // The world's time (ms): the clock, or (development, `setClockScale`) the clock run faster for a day-night recording.
+    let clockScale = 1;
+    let clockAnchor = Date.now();
+    let clockAnchorReal = clockAnchor;
+    const worldMs = () => (clockScale === 1 ? Date.now() : clockAnchor + (Date.now() - clockAnchorReal) * clockScale);
+    const hoursNow = () => pinnedHours ?? islandHours(worldMs(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
     let pinnedEnvironment: Partial<ArkEnvironment & {windDirection: number}> | null = null;
     let environmentAt = 0;
@@ -457,6 +517,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const library = new ModelLibrary(options.modelBase, 4);
     const species = new Map<string, SpeciesMeshes>();
+    // The rigs: the manifest beside the model set (or the page's own), read once; nothing while motion is reduced.
+    const rigBase = options.rigBase === undefined ? rigBaseFrom(options.modelBase) : options.rigBase;
+    const rigs = new RigLibrary(rigBase, RIG_CAPS);
+    rigs.onEvict = (slug) => {
+        const meshes = species.get(slug);
+        if (meshes?.rig) {
+            scene.remove(meshes.rig);
+            meshes.rig.dispose();
+            meshes.rigMaterial?.dispose();
+            meshes.rig = null;
+            meshes.rigMaterial = null;
+        }
+        for (const entry of entries) if (entry.animal.model_slug === slug && entry.rig) entry.rig.weight = 0;
+    };
     let entries: Entry[] = [];
     let entryById = new Map<string, Entry>();
     // The visitor (a panel beside a chat only): drawn and pickable, never counted.
@@ -582,10 +656,103 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Snapshot
 
+    /** The hour's sun, which says who is asleep (from the species' activity only; none known: awake by day). */
+    let sunElevation = lighting.daylight.elevation;
+    /** A bird of the air over land: it flies while awake. */
+    const fliesOver = (animal: ArkAnimal) => FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea";
+
+    // MARK: The behaviour schedule (NPC-style, visual only)
+
+    /** On unless the page turns it off: every animal's behaviour from the time and its id (`behaviour-schedule.ts`). */
+    const scheduleOn = options.behaviour !== false;
+    let world: ScheduleWorld | null = null;
+    /** The places and the walk grid, from the graphics lane's scenery interface (built once, on the first animal). */
+    const scheduleWorldNow = () => (world ??= scheduleWorld(worldSampler()));
+    const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
+    const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
+    const makeSched = (animal: ArkAnimal, place: Placement, length: number): Sched | null => {
+        if (!scheduleOn || place.micro || place.burrow) return null;
+        const sea = ZONE_SITES[animal.zone]?.kind === "sea";
+        return {
+            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea},
+            profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
+            trip: null,
+            lead: null,
+            pose: null,
+            at: -1
+        };
+    };
+    /** Moved by its schedule now (not in an act or a moment, not with reduced motion). */
+    const scheduled = (entry: Pick<Entry, "sched" | "visitor" | "act" | "moment">): boolean => Boolean(entry.sched) && !reducedMotion && !entry.visitor && !entry.act && !entry.moment;
+    const tripFor = (holder: Sched, key: "trip" | "lead", profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkAnimal["activity"], epoch: number): Trip => {
+        let trip = holder[key];
+        if (!trip || epoch < trip.start || epoch >= trip.end) holder[key] = trip = tripAt(scheduleWorldNow(), profile, animal, epoch, scheduleHours, activity, trip);
+        return trip;
+    };
+    /**
+     * Where its schedule puts it now. A follower in a herd, flock, school or troop keeps to its leader: the leader's
+     * pose a moment earlier, out to one side by its rank, so the group moves (and sleeps) together and turns together.
+     */
+    const schedulePose = (entry: Entry, epoch: number): TripPose & {doing: ArkDoing} => {
+        const own = entry.sched!;
+        const scheduleWorld = scheduleWorldNow();
+        const leader = entry.leader && entry.leader.sched && entry.leader.animal.model_slug === entry.animal.model_slug && GROUPED.has(own.profile.social) && !entry.leader.act ? entry.leader : null;
+        if (leader) {
+            const rank = entry.place.rank ?? 1;
+            const lag = 0.4 + 0.3 * rank;
+            const trip = tripFor(own, "lead", leader.sched!.profile, leader.sched!.animal, leader.animal.activity, epoch - lag);
+            const at = poseOnTrip(scheduleWorld, trip, epoch - lag);
+            const angle = at.yaw + Math.PI + (rank % 2 ? 1 : -1) * (0.5 + 0.25 * Math.floor(rank / 2));
+            const d = (1 + 0.45 * Math.sqrt(rank)) * Math.max(entry.length, leader.length) * 1.1;
+            const x = at.x + Math.sin(angle) * d;
+            const z = at.z + Math.cos(angle) * d;
+            const ground = heightAt(x, z);
+            const inWater = at.y < Math.max(heightAt(at.x, at.z), 0) - 0.01;
+            const y = at.aloft ? at.y + ((rank % 3) - 1) * 0.5 : inWater ? Math.max(at.y, ground + 0.2) : Math.max(ground, 0);
+            return {...at, x, y, z, doing: trip.doing};
+        }
+        const trip = tripFor(own, "trip", own.profile, own.animal, entry.animal.activity, epoch);
+        return {...poseOnTrip(scheduleWorld, trip, epoch), doing: trip.doing};
+    };
+    /** Its schedule's pose, worked out again now (every frame close by; twice a second far away: the same function, so nothing jumps). */
+    const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
+        const own = entry.sched!;
+        const watched = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
+        if (!own.pose || entry.level !== "far" || watched || epoch - own.at > 0.5 || epoch < own.at) {
+            own.pose = schedulePose(entry, epoch);
+            own.at = epoch;
+        }
+        const target = own.pose.aloft ? 1 : 0;
+        entry.air += (target - entry.air) * Math.min(dt * 6, 1);
+        if (Math.abs(target - entry.air) < 0.002) entry.air = target;
+    };
+
+    /** Its one behaviour state now: its schedule (or the hour and its species), and whether it is acting out a server event. Never the selection. */
+    const stateOf = (entry: Pick<Entry, "animal" | "visitor" | "act"> & Partial<Pick<Entry, "sched" | "moment">>): ArkBehaviourState =>
+        behaviourState({
+            activity: entry.animal.activity,
+            elevation: sunElevation,
+            flyer: fliesOver(entry.animal),
+            acting: Boolean(entry.act),
+            visitor: entry.visitor,
+            reducedMotion,
+            scheduled: entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment}) ? {doing: entry.sched.pose.doing, aloft: entry.sched.pose.aloft} : null
+        });
+
     const newEntry = (animal: ArkAnimal, place: Placement, arrivedAt: number | null): Entry => {
         const phase = phaseOf(animal.id);
         const body = arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan);
+        // It starts as it is now: a sleeping hawk on its roost, an awake one in the air (no drop from the sky on load).
+        const sched = makeSched(animal, place, body.display);
+        if (sched && !reducedMotion) {
+            const trip = (sched.trip = tripAt(scheduleWorldNow(), sched.profile, sched.animal, worldMs() / 1000, scheduleHours, animal.activity));
+            sched.pose = {...poseOnTrip(scheduleWorldNow(), trip, worldMs() / 1000), doing: trip.doing};
+            sched.at = worldMs() / 1000;
+        }
+        const state = stateOf({animal, visitor: false, act: null, sched});
+        const targets = sched?.pose ? {...animationTargets(state), air: sched.pose.aloft ? 1 : 0} : animationTargets(state);
         return {
+            sched,
             animal,
             place,
             length: body.display,
@@ -601,23 +768,39 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             phase,
             middle: null,
             drawnHeight: 1,
-            air: FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea" ? 1 : 0,
+            air: targets.air,
             lift: 0,
-            awake: true,
-            rest: 0,
+            state,
+            awake: !state.asleep,
+            rest: targets.rest,
             loop: phase * Math.PI * 2
         };
     };
 
-    /** Who is asleep this hour: from the species' activity only (none known: awake by day). */
-    let sunElevation = lighting.daylight.elevation;
+    /** The selected animal's state as last told to the page (its tap card). */
+    let toldState: ArkBehaviourState | null = null;
+    const tellState = () => {
+        const entry = selectedId ? findEntry(selectedId) : null;
+        const state = entry ? entry.state : null;
+        if (sameBehaviour(state, toldState)) return;
+        toldState = state;
+        if (entry && state) options.onBehaviour?.(entry.animal.id, state);
+    };
+    /** Each animal's state for the hour (and the act it is in): who is asleep, who is in the air. */
+    const refreshState = (entry: Entry) => {
+        entry.state = stateOf(entry);
+        entry.awake = !entry.state.asleep;
+        if (reducedMotion) {
+            const targets = animationTargets(entry.state);
+            entry.rest = targets.rest;
+            entry.air = targets.air;
+        }
+    };
     const applyHours = () => {
         sunElevation = lighting.daylight.elevation;
-        for (const entry of allEntries()) {
-            entry.awake = entry.visitor ? true : isAwake(entry.animal.activity ?? null, sunElevation);
-            if (reducedMotion) entry.rest = entry.awake ? 0 : 1;
-        }
+        for (const entry of allEntries()) refreshState(entry);
         for (const herd of herds) for (const member of herd.members) member.awake = isAwake(member.activity ?? null, sunElevation);
+        tellState();
     };
 
     /** The badge over a herd: its count, tappable (the population panel is the way in for the keyboard). */
@@ -861,7 +1044,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const basisY = new Vector3();
     const basisZ = new Vector3();
     const basisMatrix = new Matrix4();
-    let counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0};
+    let counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
     const DIM_SPECK = new Color("#cfc3ad");
 
     /** A herd this frame: how many members are drawn (nearest first), how many of them as models. */
@@ -965,8 +1148,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     type Pose = {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean; surface?: SurfacePoint};
 
     /**
-     * A small animal on its surface: it crawls slowly to and fro along it (a
-     * glide: the rigs that passed have no clips in the scene yet), turning
+     * A small animal on its surface: it crawls slowly to and fro along it (its
+     * rig's walk or climb close by, a glide otherwise), turning
      * round in the pauses; asleep it keeps still. A moth at the cottage
      * circles the porch light at night, while it is awake.
      */
@@ -975,9 +1158,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const micro = place.micro!;
         const surface = micro.surface;
         const L = entry.trueLength;
-        // Procedural: a glide (a rigged walk only when the published manifest has one that passed; none is published yet).
-        const walk = rigClip(ARK_RIG_MANIFEST, entry.animal.model_slug, "walk");
-        void walk;
         const reach = surface === "around" || surface === "roof" ? 0 : surface === "water" ? 0.2 : surface === "flower" ? Math.min(0.02, 2 * L) : Math.min(Math.max(5 * L, 0.03), 0.35);
         const period = 11 + 9 * entry.phase;
         const u = (((time / period + entry.phase) % 1) + 1) % 1;
@@ -1040,8 +1220,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * A canopy animal on its tree: a percher sits still on its limb or the
      * crown; a climber crawls to and fro along its limb or up and down the
      * trunk; a leaper leaps to the next limb now and then and back; a hanger
-     * hangs under its limb, swaying a little. (Procedural: no climbing,
-     * leaping or hanging clips are in the scene.)
+     * hangs under its limb, swaying a little. Close by, a rig that has them
+     * climbs, leaps, hangs and perches with its own clips (`rigFor`).
      */
     const canopyPose = (entry: Entry, time: number): Pose => {
         const place = entry.place.canopy!;
@@ -1075,6 +1255,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             point.ny = point.ny * c + by * sn;
             point.nz = point.nz * c + bz * sn;
         }
+        entry.leapK = 0;
         if (place.mode === "leap" && awake > 0.5 && !reducedMotion) {
             // Over to the next limb (0.42–0.5 of its cycle), a while there, and back (0.92–1).
             const other = canopyPoint(zone, leapTarget(place), 0);
@@ -1082,7 +1263,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const k = u >= 0.42 && u < 0.5 ? easeInOut((u - 0.42) / 0.08) : u >= 0.92 ? 1 - easeInOut((u - 0.92) / 0.08) : there ? 1 : 0;
             if (k > 0) {
                 const flying = k < 1;
-                const arc = flying ? Math.sin(Math.PI * k) * 0.9 : 0;
+                entry.leapK = flying ? k : 0;
+                // A rig's leap carries its own rise: the path's arc gives way to it.
+                const rigLeap = entry.rig && entry.rig.now.name === "leap" ? entry.rig.weight : 0;
+                const arc = flying ? Math.sin(Math.PI * k) * 0.9 * (1 - rigLeap) : 0;
                 const x = point.x + (other.x - point.x) * k;
                 const y = point.y + (other.y - point.y) * k + arc;
                 const z = point.z + (other.z - point.z) * k;
@@ -1108,11 +1292,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Along the tunnel: 1 in the chamber, 0 at the entrance.
         const t = u < 0.45 ? 1 : u < 0.55 ? 1 - easeInOut((u - 0.45) / 0.1) : u < 0.75 ? 0 : u < 0.85 ? easeInOut((u - 0.75) / 0.1) : 1;
         const peeking = u >= 0.55 && u < 0.75;
+        entry.peek = peeking ? (u - 0.55) / 0.2 : -1;
         const at = tunnelPoint(burrow, Math.max(t, 0.02));
         const ahead = tunnelPoint(burrow, Math.min(Math.max(t, 0.02) + 0.05, 1));
         const outward = u >= 0.45 && u < 0.75;
         const yaw = Math.atan2((ahead.x - at.x) * (outward ? -1 : 1), (ahead.z - at.z) * (outward ? -1 : 1));
         entry.buried = !peeking;
+        if (peeking && entry.rig && entry.rig.weight > 0 && rigs.clip(entry.animal.model_slug, "emerge") && rigs.clip(entry.animal.model_slug, "burrow")) {
+            // Its rig's emerge and burrow carry it up out of the ground and back down: at the mouth, at ground level.
+            return {x: burrow.x, z: burrow.z, base: burrow.ground, yaw, pitch: 0, roll: 0, afloat: true};
+        }
         if (peeking) {
             // Head and shoulders out of the mouth, looking about.
             const rise = Math.sin(Math.PI * Math.min((u - 0.55) / 0.2, 1));
@@ -1155,6 +1344,71 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x: at.x, z: at.z, base: at.y, yaw: at.yaw, pitch: at.pitch, roll: at.roll, afloat: at.afloat};
     };
 
+    /**
+     * Close to the camera (visual only, from what is drawn): animals on the ground don't stand inside each other (each
+     * is pushed half the overlap apart), and prey turns its head to a predator passing within a few metres. Nothing
+     * here changes a schedule; it only nudges what is drawn this frame.
+     */
+    const keepApart = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose}>, dt: number) => {
+        const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft).sort((a, b) => a.distance - b.distance).slice(0, 80);
+        for (let i = 0; i < near.length; i++) {
+            const a = near[i];
+            const pa = a.entry.sched!.profile;
+            let look: number | null = null;
+            for (let j = 0; j < near.length; j++) {
+                if (i === j) continue;
+                const b = near[j];
+                const dx = b.pose.x - a.pose.x;
+                const dz = b.pose.z - a.pose.z;
+                const d = Math.hypot(dx, dz);
+                const room = (a.entry.length + b.entry.length) * 0.42;
+                if (j > i && d < room && d > 1e-4) {
+                    const push = (room - d) / 2;
+                    for (const [c, sign] of [[a, -1], [b, 1]] as const) {
+                        const onGround = Math.abs(c.pose.base - Math.max(heightAt(c.pose.x, c.pose.z), 0)) < 0.05;
+                        c.pose.x += (dx / d) * push * sign;
+                        c.pose.z += (dz / d) * push * sign;
+                        if (onGround) c.pose.base = Math.max(heightAt(c.pose.x, c.pose.z), 0);
+                    }
+                }
+                // A predator (a meat or fish eater bigger than it) moving within 6 m: it looks.
+                const pb = b.entry.sched!.profile;
+                const hunter = (pb.diet === "meat" || pb.diet === "fish") && (pb.size ?? 0) > (pa.size ?? 0) && b.entry.sched!.pose?.moving;
+                if (hunter && pa.diet !== "meat" && d < 6 && !a.entry.sched!.pose?.moving && a.entry.awake) look = Math.atan2(dx, dz) - a.pose.yaw;
+            }
+            while (look !== null && look > Math.PI) look -= Math.PI * 2;
+            while (look !== null && look < -Math.PI) look += Math.PI * 2;
+            const want = look === null ? 0 : Math.max(Math.min(look, 1.2), -1.2);
+            a.entry.glance = (a.entry.glance ?? 0) + (want - (a.entry.glance ?? 0)) * Math.min(dt * 3, 1);
+        }
+    };
+
+    /** Nose down going downhill, up going uphill: the ground's slope along its heading over its length (so its feet meet the slope). */
+    const slopePitch = (x: number, z: number, yaw: number, length: number) => {
+        const half = Math.max(length * 0.4, 0.05);
+        const front = Math.max(heightAt(x + Math.sin(yaw) * half, z + Math.cos(yaw) * half), 0);
+        const back = Math.max(heightAt(x - Math.sin(yaw) * half, z - Math.cos(yaw) * half), 0);
+        return Math.max(Math.min(Math.atan2(back - front, half * 2), 0.45), -0.45);
+    };
+
+    /** Its schedule's pose as the scene draws it: banked into the turn when circling, the head a little down asleep. */
+    const fromSchedule = (entry: Entry): Pose => {
+        const at = entry.sched!.pose!;
+        const ground = heightAt(at.x, at.z);
+        const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
+        const onLand = !at.aloft && ground > 0.02 && Math.abs(at.y - ground) < 0.05;
+        const glance = entry.glance ?? 0;
+        return {
+            x: at.x,
+            z: at.z,
+            base: at.y,
+            yaw: at.yaw + glance,
+            pitch: at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + (onLand ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0),
+            roll: circling ? -0.35 * entry.air : 0,
+            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0
+        };
+    };
+
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
         // An act's pose, from a replayed event.
         if (entry.act) {
@@ -1166,6 +1420,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = momentAt(entry, model, modelHeight, time);
             if (at) return at;
         }
+        if (scheduled(entry) && entry.sched!.pose) return fromSchedule(entry);
         if (place.micro && !entry.visitor) return microPose(entry, reducedMotion ? 0 : time);
         // (A bird of the air flies from its perch, and comes back to it to rest.)
         if (place.canopy && !entry.visitor && entry.air <= 0.001) return canopyPose(entry, reducedMotion ? 0 : time);
@@ -1238,9 +1493,268 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let base = place.ground;
         if (place.water && place.ground < -0.45) base = -(SWIMMING_PLANS.has(plan) ? 0.5 : 0.28) * modelHeight;
         else if (place.water) base = Math.max(place.ground, -0.3);
+        const wander = entry.wander;
+        if (wander && (wander.x || wander.z) && !place.water) {
+            // Walked off its spot (its rig's walk): on the ground where it is now.
+            const x = place.x + wander.x;
+            const z = place.z + wander.z;
+            return {x, z, base: Math.max(heightAt(x, z), 0), yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false};
+        }
         // Asleep: a little lower at the front, as the head goes down.
-        return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        return {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
     };
+
+    // MARK: Rigs
+
+    /** On its own feet on land: where a rigged animal may walk about its spot. */
+    const onFoot = (entry: Entry) =>
+        !scheduled(entry) &&
+        !entry.visitor && !entry.place.micro && !entry.place.canopy && !entry.place.burrow && !entry.place.water && ZONE_SITES[entry.animal.zone]?.kind !== "sea" && entry.air <= 0.001 && !entry.act && !entry.moment;
+    /** A number in [0, 1) for this animal and this count (the same every visit). */
+    const wanderRandom = (entry: Entry, n: number) => {
+        const x = Math.sin(entry.phase * 12.9898 * 1000 + n * 78.233) * 43758.5453;
+        return x - Math.floor(x);
+    };
+    const groundClip = (slug: string): RigClipData | null => rigs.clip(slug, "walk") ?? rigs.clip(slug, "slither") ?? rigs.clip(slug, "hop");
+
+    /**
+     * A rigged animal on land walks about its spot now and then: out a few
+     * body lengths onto open ground, a while there, and back. Only while its
+     * rig is fully in (so its feet move with it, at its walk's own ground
+     * speed); it stops where it is when the rig is to go, or it falls asleep,
+     * or it is looked at.
+     */
+    const stepWander = (entry: Entry, modelScale: number, dt: number, now: number) => {
+        if (!onFoot(entry) || reducedMotion) {
+            if (entry.wander) entry.wander.walking = false;
+            return;
+        }
+        const clip = groundClip(entry.animal.model_slug);
+        if (!clip?.ground_speed) {
+            if (entry.wander) entry.wander.walking = false;
+            return;
+        }
+        const place = entry.place;
+        const wander = (entry.wander ??= {x: 0, z: 0, heading: place.yaw, walking: false, until: now + 3 + entry.phase * 6, tx: 0, tz: 0, trips: 0});
+        // Only awake (its one behaviour state); being looked at or followed changes nothing.
+        const free = Boolean(entry.rigOn) && (entry.rig?.weight ?? 0) >= 0.999 && entry.state.kind === "awake";
+        if (!free) {
+            wander.walking = false;
+            wander.until = Math.max(wander.until, now + 2);
+            return;
+        }
+        if (wander.walking) {
+            const dx = wander.tx - wander.x;
+            const dz = wander.tz - wander.z;
+            const left = Math.hypot(dx, dz);
+            let turn = Math.atan2(dx, dz) - wander.heading;
+            while (turn > Math.PI) turn -= Math.PI * 2;
+            while (turn < -Math.PI) turn += Math.PI * 2;
+            const most = 1.6 * dt;
+            wander.heading += Math.min(Math.max(turn, -most), most);
+            // Slowly while it turns towards where it is going; at its walk's own speed once it faces it.
+            const speed = clip.ground_speed! * modelScale * (Math.abs(turn) > 0.6 ? 0.3 : 1);
+            const step = Math.min(speed * dt, left);
+            if (left <= Math.max(step * 1.5, 0.004) || left < 0.12 * entry.length) {
+                wander.walking = false;
+                wander.until = now + 5 + 10 * wanderRandom(entry, wander.trips + 0.25);
+                return;
+            }
+            wander.x += Math.sin(wander.heading) * step;
+            wander.z += Math.cos(wander.heading) * step;
+            return;
+        }
+        if (now < wander.until) return;
+        wander.trips++;
+        let tx = 0;
+        let tz = 0;
+        if (Math.hypot(wander.x, wander.z) < 0.2 * entry.length) {
+            // Out onto open ground: dry land about as high as its spot.
+            const angle = wanderRandom(entry, wander.trips) * Math.PI * 2;
+            const reach = Math.min(Math.max(entry.length * (1.5 + 2.5 * wanderRandom(entry, wander.trips + 0.5)), 0.35), 6);
+            tx = Math.sin(angle) * reach;
+            tz = Math.cos(angle) * reach;
+            const level = Math.max(place.ground, 0);
+            for (const f of [0.35, 0.7, 1]) {
+                const h = heightAt(place.x + tx * f, place.z + tz * f);
+                if (h < 0.05 || Math.abs(h - level) > Math.max(0.8, entry.length)) {
+                    wander.until = now + 4;
+                    return;
+                }
+            }
+        }
+        wander.tx = tx;
+        wander.tz = tz;
+        wander.walking = true;
+    };
+
+    const rigHere = new Vector3();
+    const rigLift = new Vector3();
+    /**
+     * An animal's rig this frame, when it has one ready and is close enough:
+     * fades it in or out (never in the middle of a peek out of its burrow),
+     * picks the clip for what the scene is doing with it, and moves the clip
+     * on — by the distance it moved for walking, running, climbing, slithering,
+     * hopping and swimming (so the feet stay planted whatever the pace), with
+     * the path for a leap or a burrow's emerge, by time otherwise. Null: draw
+     * it procedural. The clip follows the animal's one behaviour state
+     * (`behaviour-state.ts`): asleep, its idle (slowed); flying, no rig at all
+     * (flight clips are held: the shader glide); awake, what the scene is doing
+     * with it.
+     */
+    const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
+        const slug = entry.animal.model_slug;
+        const rig = rigs.get(slug);
+        const turned = (d: number) => ((Math.round(d) % 360) + 360) % 360;
+        if (!rig || model.placeholder || turned(rig.facingDeg) !== turned(model.facing)) {
+            if (entry.rig) entry.rig.weight = 0;
+            return null;
+        }
+        const state = (entry.rig ??= newRigState());
+        // Reduced motion: no rigs (the scene's clock stands still, so nothing would fade): straight back to the near model.
+        if (reducedMotion) {
+            state.weight = 0;
+            state.last = null;
+            return null;
+        }
+        const target = entry.rigOn && !entry.state.airborne && entry.air <= 0.001 && !entry.visitor ? 1 : 0;
+        const peeking = (entry.peek ?? -1) >= 0;
+        if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
+        rigHere.set(where.x, where.base, where.z);
+        let moved = state.last ? rigHere.distanceTo(state.last) / Math.max(modelScale, 1e-6) : 0;
+        // A jump (a new spot, an act's cut): no stride for it.
+        if (moved > 3) moved = 0;
+        state.last = (state.last ?? new Vector3()).copy(rigHere);
+        if (state.weight <= 0) return null;
+        const speed = dt > 0 ? moved / dt : 0;
+        const clip = (name: string) => rigs.clip(slug, name);
+        const moving = (move: RigClipData | null): move is RigClipData => Boolean(move?.ground_speed) && speed > move!.ground_speed! * (state.now.name === move!.name ? 0.12 : 0.3);
+        let want: string | null = null;
+        let mode: "distance" | "time" | "sync" = "time";
+        let sync = 0;
+        const place = entry.place;
+        const up = where.surface ? where.surface.ny : 1;
+        if (entry.state.asleep && !entry.act) {
+            // Asleep: its idle, slow (and the head lowered by the material's droop); never a walk.
+        } else if (place.canopy && !entry.visitor) {
+            const kind = place.canopy.mode;
+            const move = (up < 0.6 ? clip("climb") : null) ?? clip("walk") ?? clip("climb");
+            if (kind === "hang" && clip("hang")) want = "hang";
+            else if (kind === "leap" && (entry.leapK ?? 0) > 0 && clip("leap")) {
+                want = "leap";
+                mode = "sync";
+                sync = entry.leapK!;
+            } else if (kind === "perch" && clip("perch")) want = "perch";
+            else if (moving(move)) {
+                want = move.name;
+                mode = "distance";
+            }
+        } else if (place.micro && !entry.visitor) {
+            const move = (up < 0.6 ? clip("climb") : null) ?? clip("walk") ?? clip("climb") ?? clip("slither") ?? clip("hop");
+            if (moving(move)) {
+                want = move.name;
+                mode = "distance";
+            }
+        } else if (place.burrow && !entry.visitor) {
+            const peek = entry.peek ?? -1;
+            if (peek >= 0 && clip("emerge") && clip("burrow")) {
+                if (peek < 0.35) {
+                    want = "emerge";
+                    mode = "sync";
+                    sync = peek / 0.35;
+                } else if (peek > 0.65) {
+                    want = "burrow";
+                    mode = "sync";
+                    sync = (peek - 0.65) / 0.35;
+                }
+            } else {
+                const move = clip("walk");
+                if (moving(move)) {
+                    want = move.name;
+                    mode = "distance";
+                }
+            }
+        } else if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(model.behaviour?.plan ?? "")) {
+            const swim = clip("swim");
+            if (swim) {
+                want = "swim";
+                mode = swim.ground_speed ? "distance" : "time";
+            }
+        } else {
+            const walk = groundClip(slug);
+            const run = clip("run");
+            if (run && walk?.ground_speed && speed > walk.ground_speed * 1.6) {
+                want = "run";
+                mode = "distance";
+            } else if (moving(walk)) {
+                want = walk.name;
+                mode = "distance";
+            } else if (!walk && moving(run)) {
+                want = "run";
+                mode = "distance";
+            }
+        }
+        if (!want && clip("idle")) want = "idle";
+        if (!want) {
+            // Nothing for standing still (an idle that did not pass): its moving clip held at its first frame.
+            const any = Object.values(rig.clips)[0];
+            if (!any) return null;
+            want = any.name;
+            mode = "sync";
+            sync = 0;
+        }
+        rigSwitch(state, want, mode === "sync" ? sync : 0);
+        const playing = rig.clips[want];
+        if (!playing) return null;
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 2.5);
+        else if (mode === "sync") state.now.phase = sync;
+        else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : 1);
+        if (state.from) {
+            state.fade += dt / RIG_FADE_SECONDS;
+            const from = rig.clips[state.from.name];
+            if (from && from.loop) state.from.phase += dt / from.seconds;
+            if (state.fade >= 1 || !from) state.from = null;
+        }
+        rig.usedAt = lastUpdate;
+        return rig;
+    };
+
+    /** The rigged near mesh of a species (its own geometry, the near level's skin, its bone texture). */
+    const instancedRigFor = (model: SpeciesModel, rig: RigModel, needed: number): InstancedMesh | null => {
+        const meshes = speciesMeshes(model.slug);
+        let mesh = meshes.rig ?? null;
+        if (mesh && mesh.instanceMatrix.count >= needed) return mesh;
+        const capacity = Math.max(needed, 4, mesh ? mesh.instanceMatrix.count * 2 : 0);
+        let material = meshes.rigMaterial ?? null;
+        if (!material) {
+            const box = (model.near ?? model.far)?.geometry.boundingBox ?? rig.geometry.boundingBox!;
+            material = animalMaterial({map: model.near?.map ?? model.far?.map ?? null, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: true, rig: rig.texture});
+            meshes.rigMaterial = material;
+        }
+        if (mesh) {
+            scene.remove(mesh);
+            mesh.dispose();
+        }
+        mesh = new InstancedMesh(rig.geometry, material, capacity);
+        mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+        for (const [name, size] of [["arkInstance", 3], ["arkRigA", 4], ["arkRigB", 4]] as const) {
+            const attribute = new InstancedBufferAttribute(new Float32Array(capacity * size), size);
+            attribute.setUsage(DynamicDrawUsage);
+            rig.geometry.setAttribute(name, attribute);
+        }
+        mesh.frustumCulled = false;
+        mesh.castShadow = TIER_SETTINGS[tier].shadows > 0;
+        mesh.receiveShadow = true;
+        mesh.count = 0;
+        scene.add(mesh);
+        meshes.rig = mesh;
+        return mesh;
+    };
+    rigs.onLoad = (slug) => {
+        const rig = rigs.get(slug);
+        if (rig) rig.usedAt = lastUpdate;
+    };
+    let lastEvict = 0;
 
     let lastUpdate = 0;
     const IDLE_ABILITIES = {jaw: false, eyes: true, nose: false, tail: false};
@@ -1254,7 +1768,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Seen from far, animals are drawn a little larger, like figures on a model; close up, true to size.
         const exaggerate = 1 + Math.min(Math.max((viewDistance - 40) / 120, 0), 1.3);
 
-        type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean};
+        type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean; rig: RigModel | null};
+        const epochNow = worldMs() / 1000;
         const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
         for (const entry of allEntries()) {
@@ -1264,26 +1779,27 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.middle = null;
                 continue;
             }
-            // Asleep eases in; an animal in an act is wide awake.
-            const restTarget = entry.awake || entry.act ? 0 : 1;
-            if (!reducedMotion) entry.rest += (restTarget - entry.rest) * Math.min(dt * 1.5, 1);
+            // Its schedule first (where it is and what it is doing now), then its one state from that.
+            if (scheduled(entry)) stepSchedule(entry, epochNow, dt);
+            // Its one state (its schedule, or the hour and its species, an act it is in) sets what it does: asleep eases in,
+            // a flyer takes to the air or comes down to its roost. Selecting or following it never changes this.
+            refreshState(entry);
+            const targets = animationTargets(entry.state);
+            if (!reducedMotion) entry.rest += (targets.rest - entry.rest) * Math.min(dt * 1.5, 1);
             // Loops (a swimmer's, a flyer's) slow almost to a stop asleep.
             const plan = model?.behaviour?.plan ?? "";
             const pace = 1 - 0.85 * entry.rest;
             // Its speed sets the pace: a tuna laps the reef, a turtle drifts.
             if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(plan)) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace;
             else if (entry.air > 0.001) entry.loop += dt * (0.16 + entry.phase * 0.08) * pace * entry.pace;
-            // A flyer that is selected comes down to its spot (unless followed), and so does a sleeping one; otherwise it takes to the air again.
-            if (FLYERS.has(slug) && ZONE_SITES[entry.animal.zone]?.kind !== "sea" && !entry.act) {
-                const target = (selectedId === entry.animal.id && followId !== entry.animal.id) || reducedMotion || !entry.awake ? 0 : 1;
-                entry.air += (target - entry.air) * 0.02;
-            }
+            // A flyer comes down to its roost to sleep and takes to the air again awake (an act flies its own path).
+            if (fliesOver(entry.animal) && !entry.act && !scheduled(entry)) entry.air += (targets.air - entry.air) * 0.02;
             entry.lift += ((selectedId === entry.animal.id ? 1 : 0) - entry.lift) * 0.08;
             let skip = false;
             if (entry.micro && !entry.act) {
-                // A moth at the cottage goes to the porch light at night while it is awake (not while it is looked at).
+                // A moth at the cottage goes to the porch light at night while it is awake (looked at or not).
                 if (entry.micro.moth && (entry.place.micro?.spot === "house" || entry.place.micro?.spot === "lamp")) {
-                    const want = entry.awake && night > 0.35 && selectedId !== entry.animal.id && !reducedMotion ? 1 : 0;
+                    const want = entry.awake && night > 0.35 && !reducedMotion ? 1 : 0;
                     entry.toLight = (entry.toLight ?? 0) + (want - (entry.toLight ?? 0)) * Math.min(dt * 0.5, 1);
                 }
                 // True to size close by; never smaller on screen than MICRO_MIN_PIXELS; the usual length (and the marker) from afar.
@@ -1295,6 +1811,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             const modelScale = model ? entry.length / model.bodyLength : 1;
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
+            if (model && entry.rig) stepWander(entry, modelScale, dt, now);
             const where = pose(entry, model, modelHeight, now);
             // Only the layer the camera is in is drawn in full: under the sea nothing of the land; above it not the deep;
             // the underground only in the cutaway (or peeking out of its burrow).
@@ -1309,9 +1826,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (distance < LOAD_NEAR_WITHIN && library.has(slug)) library.request(slug, "near");
             sphere.center.copy(position);
             sphere.radius = entry.length * 2 + 3;
-            candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale, skip});
+            candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale, skip, rig: null});
         }
 
+        // The page's tap card says what the selected animal is doing now, from the same state.
+        tellState();
+        if (scheduleOn && !reducedMotion) keepApart(candidates, dt);
         const nearWanted = candidates
             .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
             .sort((a, b) => a.distance - b.distance);
@@ -1328,29 +1848,65 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Models for the nearest MODEL_CAP in view; past that, icons.
         const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, cap.models).map((c) => c.entry.animal.id));
 
+        // Rigs: the viewer's own, the one looked at or followed, then the nearest, within the caps (none with reduced motion).
+        rigs.caps = liteOn() ? RIG_CAPS_LITE : RIG_CAPS;
+        const rigCap = reducedMotion ? null : liteOn() ? RIG_CAPS_DRAWN_LITE : RIG_CAPS_DRAWN;
+        const rigPriority = (entry: Entry) => (entry.animal.id === selectedId || entry.animal.id === followId ? 0 : entry.animal.mine ? 1 : 2);
+        const rigWanted = rigCap
+            ? candidates
+                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && c.entry.air <= 0.001 && (c.distance < RIG_WITHIN || rigPriority(c.entry) < 2) && rigs.available(c.entry.animal.model_slug))
+                  .sort((a, b) => rigPriority(a.entry) - rigPriority(b.entry) || a.distance - b.distance)
+            : [];
+        const rigSpecies = new Set<string>();
+        let rigCount = 0;
+        for (const candidate of candidates) candidate.entry.rigOn = false;
+        for (const candidate of rigWanted) {
+            if (!rigCap || rigCount >= rigCap.animals) break;
+            const slug = candidate.entry.animal.model_slug;
+            if (!rigSpecies.has(slug) && rigSpecies.size >= rigCap.species) continue;
+            rigSpecies.add(slug);
+            rigCount++;
+            candidate.entry.rigOn = true;
+            rigs.request(slug);
+        }
+        let rigged = 0;
+        for (const candidate of candidates) {
+            const {entry, model} = candidate;
+            if (!model || !nearIds.has(entry.animal.id) || !candidate.visible || candidate.skip) {
+                if (entry.rig) {
+                    entry.rig.weight = 0;
+                    entry.rig.last = null;
+                }
+                continue;
+            }
+            candidate.rig = rigFor(entry, model, candidate.pose, candidate.modelScale, dt);
+            if (candidate.rig) rigged++;
+        }
+
         const perMesh = new Map<InstancedMesh, number>();
         const used = new Set<InstancedMesh>();
         const tokenList: TokenInstance[] = [];
         const shadowList: Shadow[] = [];
         const ringList: Ring[] = [];
         const dotList: FindDot[] = [];
-        counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0};
+        counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
 
-        const needs = new Map<string, {near: number; far: number}>();
+        const needs = new Map<string, {near: number; far: number; rig: number}>();
         for (const candidate of candidates) {
             const {entry} = candidate;
             const level: Level = nearIds.has(entry.animal.id) ? "near" : modelled.has(entry.animal.id) ? "far" : "token";
             entry.level = level;
             if (!candidate.visible || level === "token" || candidate.skip) continue;
-            const need = needs.get(entry.animal.model_slug) ?? {near: 0, far: 0};
-            need[level]++;
+            const need = needs.get(entry.animal.model_slug) ?? {near: 0, far: 0, rig: 0};
+            if (level === "near" && candidate.rig) need.rig++;
+            else need[level]++;
             needs.set(entry.animal.model_slug, need);
         }
         // The herds' members (A14): how many as the far model this frame, the rest as specks.
         const herdPlans = planHerds(cameraPosition, exaggerate, now);
         for (const herd of herdPlans) {
             if (!herd.figures) continue;
-            const need = needs.get(herd.slug) ?? {near: 0, far: 0};
+            const need = needs.get(herd.slug) ?? {near: 0, far: 0, rig: 0};
             need.far += herd.figures;
             needs.set(herd.slug, need);
         }
@@ -1358,6 +1914,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const model = library.get(slug)!;
             if (need.near) instancedFor(model, "near", need.near);
             if (need.far) instancedFor(model, "far", need.far);
+            const rig = need.rig ? rigs.get(slug) : undefined;
+            if (rig) instancedRigFor(model, rig, need.rig);
         });
 
         for (const candidate of candidates) {
@@ -1445,7 +2003,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 continue;
             }
 
-            const mesh = (level === "near" ? species.get(animal.model_slug)?.near : species.get(animal.model_slug)?.far) ?? null;
+            const rig = level === "near" ? candidate.rig : null;
+            const meshes = species.get(animal.model_slug);
+            const mesh = (level === "near" ? (rig ? meshes?.rig : meshes?.near) : meshes?.far) ?? null;
             if (!mesh || !model) continue;
             const index = perMesh.get(mesh) ?? 0;
             perMesh.set(mesh, index + 1);
@@ -1467,6 +2027,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 euler.set(where.pitch, where.yaw, where.roll);
                 rotation.setFromEuler(euler);
                 position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
+            }
+            const state = rig ? entry.rig : null;
+            if (rig && state) {
+                // A leap's clip carries the body forward itself: take that off the path's own motion.
+                const leap = state.now.name === "leap" ? rig.clips.leap : undefined;
+                if (leap) {
+                    rootOffset(rig, leap, state.now.phase, rigLift).multiplyScalar(s * state.weight).applyQuaternion(rotation);
+                    position.x -= rigLift.x;
+                    position.z -= rigLift.z;
+                }
+                const clipNow = rig.clips[state.now.name];
+                const [a0, a1, at] = clipNow ? clipRows(clipNow, state.now.phase) : [0, 0, 0];
+                (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, a0, a1, at, clipNow ? state.weight : 0);
+                const clipFrom = state.from ? rig.clips[state.from.name] : undefined;
+                if (clipFrom && state.from) {
+                    const [b0, b1, bt] = clipRows(clipFrom, state.from.phase);
+                    (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, b0, b1, bt, 1 - easeInOut(Math.min(state.fade, 1)));
+                } else {
+                    (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
+                }
             }
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
@@ -1525,7 +2105,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         specks.end();
 
         species.forEach((meshes) => {
-            for (const mesh of [meshes.near, meshes.far]) {
+            for (const mesh of [meshes.near, meshes.far, meshes.rig ?? null]) {
                 if (!mesh) continue;
                 const count = used.has(mesh) ? perMesh.get(mesh) ?? 0 : 0;
                 mesh.count = count;
@@ -1533,9 +2113,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (count) {
                     mesh.instanceMatrix.needsUpdate = true;
                     (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).needsUpdate = true;
+                    if (mesh === meshes.rig) {
+                        (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).needsUpdate = true;
+                        (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).needsUpdate = true;
+                    }
                 }
             }
         });
+        counts.rigged = rigged;
+        if (now - lastEvict > 5) {
+            lastEvict = now;
+            rigs.evict(now - RIG_KEEP_SECONDS, RIG_KEEP);
+        }
         // The splashes of the moments.
         for (let i = ripples.length - 1; i >= 0; i--) {
             const age = now - ripples[i].start;
@@ -1650,7 +2239,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
         const looked = selectedId ? findEntry(selectedId) : null;
-        const aloft = viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro));
+        const aloft = viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
         const lift = (aloft ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
         // (Not while following: a flyer is followed up in the air.)
         if (Math.abs(lift) > 0.001 && !followId) {
@@ -1969,6 +2558,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (followId && followId !== id) endFollow();
         const entry = findEntry(id);
         options.onSelect?.(entry?.animal ?? null);
+        toldState = null;
+        tellState();
         if (entry && flyTo) {
             // A selection from the page (the HUD, `?focus=`) ends the opening, as a touch does.
             opening = false;
@@ -1976,8 +2567,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             lastTouch = performance.now() / 1000;
             const distance = camera.position.distanceTo(controls.target);
             if (entry.place.micro) {
-                // (A moth at the light settles back on the wall to be looked at.)
-                entry.toLight = 0;
                 // A small animal: right up to it, from out along its surface (in front of a wall, beside a trunk, above a flower).
                 // The right distance for its size: about a fifth of the view's height.
                 const point = surfacePoint(entry.place.micro, entry.animal.zone);
@@ -1995,6 +2584,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 fly(under(), Math.min(3 + entry.length * 2.2, 14), distance > 30 ? 2 : 1.4, 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
+                return;
+            }
+            // A bird of the air in flight stays in the air: the camera goes up to it and keeps it in view.
+            const aloft = entry.state.airborne && entry.air > 0.5;
+            if (aloft && !close) {
+                const at = middleNow(entry);
+                fly(at, 8 + entry.length * 4, distance > 30 ? 2 : 1.4, CLOSE_POLAR);
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? middleNow(entry) : null);
                 return;
             }
             // A canopy animal: up at its height, from the clearing's side of its tree (the forest round it would hide it).
@@ -2281,6 +2878,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             air: 0,
             lift: 0,
             visitor: true,
+            state: behaviourState({activity: null, elevation: 0, flyer: false, visitor: true}),
             awake: true,
             rest: 0,
             loop: 0
@@ -2853,7 +3451,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         micro.step(camera.position);
         stepTalking(elapsed);
         // The hour: read again every minute (the light changes only a little).
-        if (now - lastClock > 60 && !replay) {
+        if (now - lastClock > (clockScale > 1 ? 0.25 : 60) && !replay) {
             lastClock = now;
             setLight();
         }
@@ -2886,9 +3484,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     controls.target.z += dz;
                     camera.position.x += dx;
                     camera.position.z += dz;
-                    // A small animal crawls up and down its wall or trunk too: kept in view.
+                    // A small animal crawls up and down its wall or trunk, a flyer climbs and comes down: kept in view.
                     const dy = tracked.y - lastTracked.y;
-                    if (findEntry(selectedId)?.micro && Math.abs(dy) < 1) {
+                    const trackedEntry = findEntry(selectedId);
+                    if ((trackedEntry?.micro || (trackedEntry && trackedEntry.air > 0.001)) && Math.abs(dy) < 1) {
                         controls.target.y += dy;
                         camera.position.y += dy;
                     }
@@ -2980,6 +3579,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         },
         follow,
+        setClockScale: (scale) => {
+            // Development: the world's time runs `scale` times faster from now (a day-night recording); 1 is the clock again.
+            const now = worldMs();
+            clockAnchor = now;
+            clockAnchorReal = Date.now();
+            clockScale = Math.max(Number.isFinite(scale) ? scale : 1, 1);
+            if (clockScale === 1) clockAnchor = clockAnchorReal = Date.now();
+            setLight();
+        },
         setHours: (hours) => {
             pinnedHours = typeof hours === "number" && Number.isFinite(hours) ? hours : null;
             setLight();
@@ -3028,6 +3636,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
         },
+        behaviour: (id) => findEntry(id)?.state ?? null,
         heightAt: (x, z) => Math.max(heightAt(x, z), 0),
         preload: async (slugs) => {
             await library.ready();
@@ -3089,7 +3698,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             live: entries.length,
             placeholders: library.placeholderCount,
             tier,
-            lite: liteOn()
+            lite: liteOn(),
+            rigged: counts.rigged,
+            rigsLoaded: rigs.loadedCount,
+            rigBytes: rigs.bytes
         }),
         dispose: () => {
             disposed = true;
@@ -3109,9 +3721,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             species.forEach((meshes) => {
                 meshes.near?.dispose();
                 meshes.far?.dispose();
+                meshes.rig?.dispose();
                 meshes.nearMaterial?.dispose();
                 meshes.farMaterial?.dispose();
+                meshes.rigMaterial?.dispose();
             });
+            rigs.dispose();
             talking.actor?.dispose();
             replay = null;
             dust.dispose();
