@@ -23,9 +23,10 @@ import {heightAt} from "@/ark-scene/world";
 /** The camera's own radius (m): how close its eye comes to a surface. */
 export const CAMERA_RADIUS = 0.35;
 
-type Ellipsoid = {kind: "ellipsoid"; x: number; y: number; z: number; rx: number; ry: number; rz: number; solid: boolean};
-type Capsule = {kind: "capsule"; x: number; z: number; y0: number; y1: number; r: number};
-type Box = {kind: "box"; x: number; z: number; y0: number; y1: number; hx: number; hz: number; rotation: number};
+/** `rank` (0–1, forest fill only): drawn, and so an obstacle, only under the tier's fill share. */
+type Ellipsoid = {kind: "ellipsoid"; x: number; y: number; z: number; rx: number; ry: number; rz: number; solid: boolean; rank?: number};
+type Capsule = {kind: "capsule"; x: number; z: number; y0: number; y1: number; r: number; rank?: number};
+type Box = {kind: "box"; x: number; z: number; y0: number; y1: number; hx: number; hz: number; rotation: number; rank?: number};
 export type CameraObstacle = Ellipsoid | Capsule | Box;
 
 /**
@@ -82,7 +83,7 @@ export class CameraObstacles {
     private readonly cells = new Map<string, CameraObstacle[]>();
     readonly count: number;
 
-    constructor(items: DecorItem[], extra: CameraObstacle[] = []) {
+    constructor(items: Array<DecorItem & {rank?: number}>, extra: CameraObstacle[] = []) {
         let count = 0;
         const add = (obstacle: CameraObstacle) => {
             const reach = obstacle.kind === "ellipsoid" ? Math.max(obstacle.rx, obstacle.rz) : obstacle.kind === "capsule" ? obstacle.r : Math.hypot(obstacle.hx, obstacle.hz);
@@ -100,15 +101,19 @@ export class CameraObstacles {
             }
             count++;
         };
-        for (const item of items) for (const obstacle of obstaclesOf(item)) add(obstacle);
+        for (const item of items) {
+            for (const obstacle of obstaclesOf(item)) {
+                if (typeof item.rank === "number") obstacle.rank = item.rank;
+                add(obstacle);
+            }
+        }
         for (const obstacle of extra) add(obstacle);
         this.count = count;
     }
 
-    /** The scene's: the decor, the forest fill a tier draws (`fillShare` of it, by rank) and the cottage. */
-    static forScene(fillShare: number): CameraObstacles {
-        const fill = forestFill().filter((item) => item.rank < fillShare);
-        return new CameraObstacles([...worldDecor(), ...fill], [cottageObstacle()]);
+    /** The scene's: the decor, the whole forest fill (with its ranks: `collideCamera` keeps a tier's share) and the cottage. */
+    static forScene(): CameraObstacles {
+        return new CameraObstacles([...worldDecor(), ...forestFill()], [cottageObstacle()]);
     }
 
     near(x: number, z: number): CameraObstacle[] {
@@ -186,6 +191,8 @@ export type CollideOptions = {
     clearance: number;
     /** Close to a small animal (a close-up): only solid things (trunks, rocks, walls) push, by less. */
     closeUp: boolean;
+    /** The forest fill's share the tier draws (default all). */
+    fill?: number;
 };
 
 /**
@@ -210,6 +217,7 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
     const margin = options.closeUp ? 0.06 : CAMERA_RADIUS;
     for (let pass = 0; pass < 2; pass++) {
         for (const obstacle of obstacles.near(camera.x, camera.z)) {
+            if (obstacle.rank !== undefined && obstacle.rank >= (options.fill ?? 1)) continue;
             const solid = obstacle.kind !== "ellipsoid" || obstacle.solid;
             if (options.closeUp && !solid) continue;
             if (inside(obstacle, target, 0.05)) continue;

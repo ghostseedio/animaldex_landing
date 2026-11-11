@@ -101,6 +101,8 @@ test("runtime bridge: ark:visible and ark:power are read strictly; anything malf
     assert.deepEqual(parsePowerMessage({type: "ark:power", battery: 35, thermal: "hot", saver: 1}), {battery: 0.35});
     assert.equal(lowBattery({battery: 0.1, charging: false}), true);
     assert.equal(lowBattery({battery: 0.1}), false);
-    assert.equal(pressureThermal("critical"), "critical");
+    // CPU pressure is not only heat: critical counts as serious, serious as fair (no change).
+    assert.equal(pressureThermal("critical"), "serious");
+    assert.equal(pressureThermal("serious"), "fair");
     assert.equal(pressureThermal("whatever"), "nominal");
 });

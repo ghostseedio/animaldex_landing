@@ -17,9 +17,18 @@ test("runtime camera: the scenery's trees, rocks and buildings are obstacles; so
         const item = decor.find((d) => d.kind === kind);
         if (item) assert.equal(obstaclesOf(item).length, 0, kind);
     }
-    const all = CameraObstacles.forScene(1);
-    const fewer = CameraObstacles.forScene(0.3);
-    assert.ok(all.count > fewer.count && fewer.count > decor.length / 4, `${all.count} vs ${fewer.count}`);
+    const all = CameraObstacles.forScene();
+    assert.ok(all.count > decor.length / 4, `${all.count} obstacles`);
+    // The forest fill's trees are obstacles only within the tier's share (what it draws).
+    const fillTree = {...tree, x: 500, z: 500, rank: 0.5};
+    const ranked = new CameraObstacles([fillTree]);
+    const eye = () => new Vector3(500.05, tree.y + 1, 500);
+    const drawn = eye();
+    collideCamera(ranked, drawn, {x: 0, y: 0, z: 0}, {...options, diving: true, fill: 0.6});
+    assert.ok(drawn.x > 500.3, "drawn at this tier: pushed");
+    const notDrawn = eye();
+    collideCamera(ranked, notDrawn, {x: 0, y: 0, z: 0}, {...options, diving: true, fill: 0.3});
+    assert.equal(notDrawn.x, 500.05, "not drawn at this tier: no obstacle");
 });
 
 test("runtime camera: out of a trunk at once, sideways; out of a crown gently; ignored when the target is inside", () => {

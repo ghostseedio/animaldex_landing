@@ -39,10 +39,17 @@ export function parsePowerMessage(message: unknown): Partial<ArkPower> | null | 
     return power;
 }
 
-/** The Compute Pressure API's states, as heat. */
+/**
+ * The Compute Pressure API's states, as heat. CPU pressure is not only heat (a busy machine reads `serious` too), so
+ * it counts for less than the apps' thermal state: `critical` is `serious` (30 fps, the low tier), the rest at most
+ * `fair` (no change). Only a pressure that lasts counts (`PRESSURE_HOLD_SECONDS`, in `watchBrowserPower`).
+ */
 export function pressureThermal(state: string): ArkThermal {
-    return state === "critical" ? "critical" : state === "serious" ? "serious" : state === "fair" ? "fair" : "nominal";
+    return state === "critical" ? "serious" : state === "serious" || state === "fair" ? "fair" : "nominal";
 }
+
+/** A `critical` CPU pressure must last this long before it caps anything. */
+export const PRESSURE_HOLD_SECONDS = 20;
 
 type BatteryManager = EventTarget & {level: number; charging: boolean};
 type PressureRecord = {source: string; state: string};
@@ -94,9 +101,26 @@ export function watchBrowserPower(governor: RenderGovernor): () => void {
     const Pressure = (globalThis as {PressureObserver?: new (callback: (records: PressureRecord[]) => void) => PressureObserverLike}).PressureObserver;
     if (typeof Pressure === "function") {
         try {
+            let criticalSince = 0;
+            let held: ReturnType<typeof setTimeout> | null = null;
             const observer = new Pressure((records) => {
                 const last = records[records.length - 1];
-                if (last) governor.setBrowserPower({thermal: pressureThermal(last.state)});
+                if (!last) return;
+                const thermal = pressureThermal(last.state);
+                if (thermal !== "serious") {
+                    criticalSince = 0;
+                    if (held) clearTimeout(held);
+                    held = null;
+                    governor.setBrowserPower({thermal});
+                    return;
+                }
+                if (!criticalSince) {
+                    criticalSince = Date.now();
+                    held = setTimeout(() => governor.setBrowserPower({thermal: "serious"}), PRESSURE_HOLD_SECONDS * 1000);
+                }
+            });
+            stops.push(() => {
+                if (held) clearTimeout(held);
             });
             observer.observe("cpu", {sampleInterval: 2000}).catch(() => undefined);
             stops.push(() => observer.disconnect());
