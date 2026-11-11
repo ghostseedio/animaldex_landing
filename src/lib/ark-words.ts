@@ -6,6 +6,7 @@
  */
 
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
+import type {ArkLiveWords} from "@/lib/ark-live-words";
 
 export type ArkHudWords = {
     label: string;
@@ -375,6 +376,8 @@ export type ArkWords = {
     capture: ArkCaptureWords;
     herd: ArkHerdWords;
     lite: ArkLiteWords;
+    /** The live log over the world and the population bars (owner, 2026-11-11). */
+    live: ArkLiveWords;
     sound: ArkSoundWords;
     a11y: ArkA11yWords;
     person: ArkPersonWords;

@@ -74,7 +74,7 @@ ships OFF; while off, every read answers exactly as today.
 | Close-up skins | on, when present | web (`closeUpBase`) | Read beside the model set (`…/v1/ark-closeup`); 404 until uploaded, then the near models only |
 | Live budget | on | web (`arkOutside`, runtime) | How many animals are live per tier; the rest rest out of sight |
 
-Development-only switches (never in production): `?fixture=`, `?models=local`, `?rigv=`, `__arkDebug`, `__arkGoldenCamera`.
+Development-only switches (never in production): `?fixture=`, `?feed=1` (the live HUD's made-up feed), `?models=local`, `?rigv=`, `__arkDebug`, `__arkGoldenCamera`. The embed's live HUD is opt-in: `?hud=1|log|bars` (`docs/ark/live-hud.md`).
 
 ## 3. Server migrations, in order (owner runs; never `db push`)
 Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained rehearsal builders under

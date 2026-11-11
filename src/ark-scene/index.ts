@@ -163,6 +163,7 @@ import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {arkOutside} from "@/ark-scene/live-budget";
+import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -2860,8 +2861,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const recipeNear = new Map<string, {at: number; marks: RecipeMark[]; nest: RecipeNest | null; coat: RecipeCoat | null}>();
     const COATING = new Set(["wallow", "dust_bathe", "roll", "bathe", "dabble", "surface_dive", "chase_fish", "perch_plunge", "air_plunge", "talon_grab", "pouch_scoop", "river_fish"]);
     const MARKING = new Set(["root_dig", "dig_burrow", "dust_bathe", "wallow", "bury_sand", "beach_nest", "cache_food", "pounce"]);
+    // The live log's "seen" (`lib/ark-live-log.ts`): who is in view near the camera, and the logged recipes they run now.
+    let seenActs: ArkSeenAct[] = [];
+    const seenNear = new Set<string>();
     const stepRecipeScene = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose; modelHeight: number}>, now: number, epoch: number) => {
         if (!world) return;
+        seenActs = [];
+        seenNear.clear();
         const actors: RecipeActor[] = [];
         const marks: RecipeMark[] = [];
         const nests: RecipeNest[] = [];
@@ -2876,6 +2882,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!own?.pose || c.distance > 90) continue;
             const act = (own.pose as RecipePose).act;
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
+            if (c.visible) {
+                seenNear.add(c.entry.animal.id);
+                if (act && arkSeenKind(act.recipe)) {
+                    const a = c.entry.animal;
+                    seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: act.recipe, episode: act.episode, block: act.block, fish: Boolean((act.catch?.ok && act.catch.kind === "fish") || act.carry?.item === "fish")});
+                }
+            }
             if (c.distance > 45) continue;
             const recipes = speciesRecipes(c.entry.animal.model_slug).recipes;
             let near = recipeNear.get(c.entry.animal.id);
@@ -5140,6 +5153,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         reactive: (id) => {
             const r = findEntry(id)?.reactive;
             return r ? {...r} : null;
+        },
+        seen: () => {
+            const alarms = [];
+            for (const call of reactive.recentAlarms()) {
+                const caller = seenNear.has(call.caller) ? findEntry(call.caller)?.animal : null;
+                if (caller) alarms.push({id: caller.id, name: caller.name, speciesId: caller.kind_species_profile_id || caller.species_profile_id || `slug:${caller.model_slug}`, zone: caller.zone, at: call.at, threat: call.threat || null});
+            }
+            return {acts: reducedMotion ? [] : seenActs.slice(), alarms: reducedMotion ? [] : alarms};
         },
         reactiveStats: () => ({tier: reactiveTierNow ?? reactiveTier(), agents: reactive.stats.agents, inputs: reactiveInputs, perceptions: reactive.stats.perceptions, sightChecks: reactive.stats.sightChecks, alarms: reactive.stats.alarms, ms: reactiveMs}),
         heightAt: (x, z) => Math.max(heightAt(x, z), 0),
