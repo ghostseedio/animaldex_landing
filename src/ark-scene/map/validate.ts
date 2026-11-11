@@ -22,6 +22,8 @@
  *   with no perch that fits may land on its ground or water instead, and a
  *   flyer never sits in a worm hole or a burrow's entrance;
  * - sleeps (by the behaviour state) where its roost tag does not hold;
+ * - walks, crawls, hops or digs where behaviour's walk grid does not let
+ *   it walk (the slope; a mountain animal's steeper);
  * - (a partner with its host aboard) is not on its host's back, at its feet
  *   or beside it as its role says, or is in the water beside a host on land.
  *
@@ -41,13 +43,14 @@ import {attachFits} from "@/ark-scene/map/sampler";
 import {mapSlugs, mapSpecies, mapSpeciesStored} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {waterSuits} from "@/ark-scene/map/water";
+import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {depthSeed, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion} from "@/ark-scene/sea-depth";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {arkBody} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {sunElevation} from "@/lib/ark-daylight";
 
-export const VALIDATOR_CHECKS = ["floats_or_sinks", "inside_scenery", "wrong_medium", "wrong_depth_band", "wrong_water", "invalid_surface", "wrong_facing", "small_not_on_attach_point", "roost_invalid"] as const;
+export const VALIDATOR_CHECKS = ["floats_or_sinks", "inside_scenery", "wrong_medium", "wrong_depth_band", "wrong_water", "invalid_surface", "wrong_facing", "small_not_on_attach_point", "roost_invalid", "off_walk_grid"] as const;
 export type ValidatorCheck = typeof VALIDATOR_CHECKS[number];
 export type ValidatorFailure = {slug: string; check: ValidatorCheck; detail: string; rank: number};
 
@@ -198,6 +201,9 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
         const expected = species.attach === "ice" ? 0.25 : species.attach === "surface" ? 0 : ground.height;
         if (species.attach !== "water" && Math.abs(place.ground - expected) > 0.05) fail("floats_or_sinks", `at ${place.ground.toFixed(2)} m, its surface at ${expected.toFixed(2)} m`);
         if (!ground.water && sampler.blocked(place.x, place.z, Math.min(Math.max(length * 0.2, 0.1), 0.6))) fail("inside_scenery", `in a trunk, rock or building at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+        // A walker where behaviour's walk grid lets it walk (a farm goat never on a cliff it cannot leave; the mountains' ibex on steep ground).
+        const walker = ["walk", "crawl", "slither", "hop", "burrow"].includes(species.move);
+        if (!ground.water && walker && sampler.walkable && !sampler.walkable(place.x, place.z, animal.zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE)) fail("off_walk_grid", `${species.move} at ${place.x.toFixed(1)},${place.z.toFixed(1)}, off behaviour's walk grid`);
         if (!Number.isFinite(place.yaw)) fail("wrong_facing", "no heading");
         if (place.burrow) {
             const chamber = tunnelPoint(place.burrow, 1);
